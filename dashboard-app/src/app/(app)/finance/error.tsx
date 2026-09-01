@@ -15,12 +15,12 @@ export default function FinanceError({
   }, [error]);
 
   return (
-    <main className="px-4 pt-6">
+    <div className="max-w-xl pt-6">
       <ErrorInline
         message="Finance could not be loaded."
         detail={error.digest ? `Reference ${error.digest}` : error.message}
         onRetry={reset}
       />
-    </main>
+    </div>
   );
 }

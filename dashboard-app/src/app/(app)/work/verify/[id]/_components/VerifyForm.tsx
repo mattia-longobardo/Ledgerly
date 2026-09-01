@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { ErrorInline } from "@/components/ui/ErrorInline";
 import { Sheet } from "@/components/ui/Sheet";
 import { cn } from "@/components/ui/cn";
@@ -178,7 +179,7 @@ export function VerifyForm(props: VerifyFormProps) {
       <section
         role="status"
         aria-live="polite"
-        className="flex flex-col items-center gap-3 px-4 py-16 text-center"
+        className="flex flex-col items-center gap-3 py-16 text-center"
       >
         <span aria-hidden className="text-display-sm text-positive">
           ✓
@@ -200,19 +201,25 @@ export function VerifyForm(props: VerifyFormProps) {
   }
 
   return (
-    <div className="lg:grid lg:grid-cols-[55fr_45fr] lg:gap-6 lg:px-4">
-      {/* Desktop only: the PDF holds the left 55 %. */}
-      <div className="hidden lg:block">
-        <div className="sticky top-4 h-[calc(100dvh-6rem)]">
+    <PageGrid className="pt-5">
+      {/*
+        Desktop only: the PDF holds seven of twelve columns and stays put while
+        the form scrolls beside it. This screen is the clearest case for the
+        wider shell — the source document and the fields that transcribe it used
+        to fight over one 896 px column, so verifying meant scrolling between
+        them.
+      */}
+      <Panel span={7} ariaLabel="Payslip document" className="hidden lg:block">
+        <div className="sticky top-4 h-[calc(100dvh-7rem)]">
           <PdfFrame documentId={props.documentId} />
         </div>
-      </div>
+      </Panel>
 
-      <div className="flex min-w-0 flex-col">
+      <Panel span={5} ariaLabel="Verify fields">
         {props.nav}
 
         {props.checks.length > 0 && (
-          <section className="px-4 pt-4 lg:px-0">
+          <section className="pt-4">
             <h2 className="text-caption tracking-wide text-fg-muted uppercase">Computed checks</h2>
             <ul className="mt-2 flex flex-col gap-1.5">
               {props.checks.map((check) => (
@@ -239,7 +246,7 @@ export function VerifyForm(props: VerifyFormProps) {
         )}
 
         {error !== null && (
-          <div className="px-4 pt-4 lg:px-0">
+          <div className="pt-4">
             <ErrorInline message={error} onRetry={confirm} />
           </div>
         )}
@@ -249,7 +256,7 @@ export function VerifyForm(props: VerifyFormProps) {
             event.preventDefault();
             confirm();
           }}
-          className="mt-4 flex flex-col gap-4 px-4 lg:px-0"
+          className="mt-4 flex flex-col gap-4"
         >
           {props.fields.map((field) => {
             const low = field.confidence === "low";
@@ -308,7 +315,7 @@ export function VerifyForm(props: VerifyFormProps) {
                         onClick={() =>
                           candidate.value !== null && set(field.name, toInput(candidate.value))
                         }
-                        className="num inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-surface px-3 text-body-sm text-fg disabled:opacity-40"
+                        className="num inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-surface px-3 text-body-sm text-fg transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:bg-bg disabled:text-fg-muted"
                       >
                         <span className="text-caption text-fg-muted">{candidate.source}</span>
                         {decimal(candidate.value, field.unit)}
@@ -348,7 +355,7 @@ export function VerifyForm(props: VerifyFormProps) {
 
           {/* Peek bar + actions ride together above the tab bar on mobile. */}
           <div
-            className="sticky z-20 -mx-4 mt-2 bg-surface hairline-t lg:static lg:mx-0 lg:bg-transparent"
+            className="sticky z-20 mt-2 bg-surface hairline-t [margin-inline:calc(-1*var(--axis-bleed))] lg:static lg:mx-0 lg:bg-transparent"
             style={{ bottom: PEEK_OFFSET }}
           >
             <button
@@ -367,7 +374,7 @@ export function VerifyForm(props: VerifyFormProps) {
               </span>
             </button>
 
-            <div className="safe-b flex gap-2 px-4 py-3 lg:px-0">
+            <div className="safe-b flex flex-wrap gap-2 px-4 py-3 lg:px-0">
               <button
                 type="submit"
                 disabled={pending}
@@ -392,7 +399,7 @@ export function VerifyForm(props: VerifyFormProps) {
             </div>
           </div>
         </form>
-      </div>
+      </Panel>
 
       <Sheet
         open={pdfOpen}
@@ -405,6 +412,6 @@ export function VerifyForm(props: VerifyFormProps) {
           <PdfFrame documentId={props.documentId} />
         </div>
       </Sheet>
-    </div>
+    </PageGrid>
   );
 }

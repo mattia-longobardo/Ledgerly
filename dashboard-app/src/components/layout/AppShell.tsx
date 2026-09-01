@@ -70,19 +70,37 @@ export interface AppShellProps {
 }
 
 /**
- * One level of navigation only: a 56 px bottom tab bar on mobile, a slim left
+ * One level of navigation only: a 56 px bottom tab bar on mobile, a 240 px left
  * sidebar from 1024 px up. Never both, never nested.
+ *
+ * The content column is fluid. It was capped at 896 px, a prose reading width,
+ * which is right for an article and wrong for an instrument panel: at 1920 that
+ * left 48 % of the usable area empty.
+ *
+ * The only cap left is 2100 px. It is a stop against a single row of figures
+ * running the width of an ultrawide, not a column: reading width is held by
+ * `max-w-prose` on the prose blocks that need it, which is where the constraint
+ * actually belongs. 2100 is the widest cap that still keeps unused space under
+ * 12 % at 2560, the acceptance number this redesign was measured against.
  */
 export function AppShell({ children, sidebarFooter }: AppShellProps) {
   const pathname = usePathname() ?? "/";
 
   return (
-    <div className="min-h-dvh bg-bg lg:pl-52">
-      <nav
-        aria-label="Sections"
-        className="fixed inset-y-0 left-0 z-30 hidden w-52 flex-col border-r border-border bg-surface px-3 py-4 lg:flex"
+    <div className="min-h-dvh bg-bg lg:pl-60">
+      {/* First tab stop on every route: keyboard users skip the sidebar. */}
+      <a
+        href="#main"
+        className="sr-only z-50 focus-visible:not-sr-only focus-visible:fixed focus-visible:top-3 focus-visible:left-3 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:rounded-md focus-visible:bg-accent focus-visible:px-4 focus-visible:text-body-sm focus-visible:font-medium focus-visible:text-accent-contrast"
       >
-        <BrandLockup className="axis-rule mx-2 pb-4" />
+        Skip to content
+      </a>
+
+      <nav
+        aria-label="Main"
+        className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col overflow-y-auto overscroll-contain border-r border-border bg-surface px-3 py-4 lg:flex"
+      >
+        <BrandLockup className="axis-rule mx-2 pb-4 [--axis-bleed:0.75rem]" />
         <ul className="mt-4 flex flex-col gap-0.5">
           {TABS.map((tab) => {
             const active = isActive(pathname, tab.href);
@@ -96,7 +114,7 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
                     "before:absolute before:top-2 before:bottom-2 before:-left-3 before:w-0.5 before:rounded-xs before:bg-accent before:transition-opacity",
                     active
                       ? "bg-surface-raised text-accent before:opacity-100"
-                      : "text-fg-muted before:opacity-0 hover:text-fg",
+                      : "text-fg-muted before:opacity-0 hover:bg-surface-hover hover:text-fg",
                   )}
                 >
                   {tab.icon}
@@ -112,9 +130,21 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
         </div>
       </nav>
 
-      <div className="mx-auto w-full max-w-3xl pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:max-w-4xl lg:pb-0">
+      {/*
+        The gutter lives here and nowhere else, so `--axis-bleed` can track it:
+        an axis rule always reaches the edge of the box that owns it, at every
+        width, without a single page knowing what the current padding is.
+
+        This is also the app's one `<main>`, so there is exactly one main
+        landmark per route and the skip link always has somewhere to land.
+      */}
+      <main
+        id="main"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-[2100px] px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] [--axis-bleed:1rem] outline-none lg:px-6 lg:pb-10 lg:[--axis-bleed:1.5rem] xl:px-8 xl:[--axis-bleed:2rem]"
+      >
         {children}
-      </div>
+      </main>
 
       <nav
         aria-label="Sections"

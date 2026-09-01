@@ -138,7 +138,7 @@ export async function llmConfigStatus(): Promise<LlmConfigStatus> {
     hasStoredKey: l.settingsKey !== undefined,
     disabledReason:
       keySource === null
-        ? "No API key — payslips are parsed by the deterministic rules alone."
+        ? "No API key. Payslips are parsed by the deterministic rules alone."
         : model === ""
           ? "No model — payslips are parsed by the deterministic rules alone."
           : null,

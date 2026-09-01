@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -63,8 +64,8 @@ const RUN_TIME = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Rome",
 });
 
-/** Stacked on mobile, one grid column each from `lg:` up. */
-const COLUMN = "flex flex-col gap-8";
+/** The rhythm between settings blocks. Applied to the panel BODY. */
+const COLUMN = "flex flex-col gap-10";
 
 export default async function SettingsPage() {
   await requireUserOrRedirect("/settings");
@@ -93,12 +94,12 @@ export default async function SettingsPage() {
   const hasInitialValue = entries.some((e) => e.entryType === "initial");
 
   return (
-    <main className="pb-8">
+    <>
       <PageHeader
         title="Settings"
         eyebrow={
-          <Link href="/" className="text-fg-muted">
-            ← Home
+          <Link href="/" className="text-fg-muted transition-colors hover:text-fg">
+            &larr; Home
           </Link>
         }
       />
@@ -109,8 +110,8 @@ export default async function SettingsPage() {
         (jobs + their run log) reads together, and the run list is the one
         section long enough to balance the short forms.
       */}
-      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-4">
-        <div className={cn(COLUMN, "lg:col-start-1 lg:row-start-1")}>
+      <PageGrid className="pt-5">
+        <Panel span={6} ariaLabel="Configuration" bodyClassName={COLUMN}>
           <SettingsSection title="Vacation fund">
             <VacationSetupForm
               monthlyAmount={rate === null ? "" : String(rate).replace(".", ",")}
@@ -128,7 +129,7 @@ export default async function SettingsPage() {
           <SettingsSection title="Funds">
             {funds.length === 0 ? (
               <p className="text-body-sm text-fg-muted">
-                No funds registered — the seed migration has not run.
+                No funds registered. The seed migration has not run.
               </p>
             ) : (
               <ul className="hairline-t">
@@ -136,7 +137,7 @@ export default async function SettingsPage() {
                   <li key={fund.id}>
                     <Link
                       href={`/finance/funds/${fund.slug}`}
-                      className="flex min-h-11 items-center gap-3 py-2 hairline-b"
+                      className="flex min-h-11 items-center gap-3 py-2 hairline-b transition-colors hover:bg-surface-hover"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body text-fg">{fund.name}</span>
@@ -148,7 +149,7 @@ export default async function SettingsPage() {
                         </span>
                       </span>
                       <span aria-hidden className="shrink-0 text-body-sm text-accent">
-                        Settings →
+                        Settings &rarr;
                       </span>
                     </Link>
                   </li>
@@ -193,9 +194,9 @@ export default async function SettingsPage() {
                 three-item control from spanning the whole desktop column. */}
             <ThemeToggle variant="segmented" className="max-w-xs" />
           </SettingsSection>
-        </div>
+        </Panel>
 
-        <div className={cn(COLUMN, "mt-8 lg:col-start-2 lg:row-start-1 lg:mt-0")}>
+        <Panel span={6} ariaLabel="Operations" bodyClassName={COLUMN}>
           <SettingsSection title="Scheduled jobs">
             <ul className="hairline-t">
               {JOBS.map((job, index) => {
@@ -221,7 +222,7 @@ export default async function SettingsPage() {
             footnote={
               <>
                 A poisoned month has stopped retrying on its own. Clearing it queues the cached
-                values for the next sweep — it never re-reads the Wallet API. Current month:{" "}
+                values for the next sweep; it never re-reads the Wallet API. Current month:{" "}
                 <span className="num">{formatMonth(now)}</span>.
               </>
             }
@@ -229,7 +230,7 @@ export default async function SettingsPage() {
             {runs.length === 0 ? (
               <EmptyState
                 title="Cron has never fired"
-                description="No job has run yet. Either the sidecar is not up, or it cannot reach the app on the internal network — “Run the snapshot now” above tests that path."
+                description="No job has run yet. Either the sidecar is not up, or it cannot reach the app on the internal network. “Run the snapshot now” above tests that path."
               />
             ) : (
               <ul className="hairline-t">
@@ -274,8 +275,8 @@ export default async function SettingsPage() {
               </ul>
             )}
           </SettingsSection>
-        </div>
-      </div>
-    </main>
+        </Panel>
+      </PageGrid>
+    </>
   );
 }

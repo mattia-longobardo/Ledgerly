@@ -782,7 +782,7 @@ async function toggleOnce(
         op: step.op,
         outcome: "unexpected_action",
         action: body.action,
-        error: `expected the server to report "${wanted}" but it reported "${body.action}" — the day changed in Trek since this plan was read`,
+        error: `expected the server to report "${wanted}" but it reported "${body.action}"; the day changed in Trek since this plan was read`,
       };
     }
     return { date: step.date, op: step.op, outcome: "applied", action: body.action };

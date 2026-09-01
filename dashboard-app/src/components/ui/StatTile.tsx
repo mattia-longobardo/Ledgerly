@@ -28,6 +28,11 @@ export interface StatTileProps {
  * identically-boxed cards flattens hierarchy, which is the opposite of what a
  * reading instrument wants. `StatGrid` supplies the hairlines that group them,
  * and `emphasis="primary"` is the only thing that lifts.
+ *
+ * Each tile is a three-row subgrid of its cluster, so the labels sit on one
+ * baseline, the figures on the next and the footnotes on the third — even when
+ * one label wraps to two lines and its neighbours do not. Without this the row
+ * is visibly ragged at any width where a single label happens to wrap.
  */
 export function StatTile({
   label,
@@ -40,7 +45,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 bg-bg p-4",
+        "subgrid-rows row-span-3 gap-1 bg-bg p-4",
         emphasis === "primary" && "bg-surface",
         className,
       )}
@@ -53,36 +58,46 @@ export function StatTile({
       >
         {label}
       </span>
-      <span className="num text-display-sm leading-tight text-fg">{value}</span>
-      {(sub !== undefined || delta !== undefined) && (
-        <span className="mt-1 flex flex-wrap items-center gap-2">
-          {delta}
-          {sub !== undefined && <span className="text-body-sm text-fg-muted">{sub}</span>}
-        </span>
-      )}
+      <span className="num self-end text-display-sm leading-tight text-fg">{value}</span>
+      {/* Always rendered, so the third subgrid row exists in every tile and the
+          cluster keeps one footnote baseline even when a tile has no footnote. */}
+      <span className="mt-1 flex flex-wrap items-center gap-2">
+        {delta}
+        {sub !== undefined && <span className="text-body-sm text-fg-muted">{sub}</span>}
+      </span>
     </div>
   );
 }
+
+export interface StatGridProps {
+  children: ReactNode;
+  /**
+   * Tiles per row once the container is wide enough. The step down happens on
+   * the CLUSTER's width, not the viewport's: the same four figures are 2x2 in a
+   * 4-column panel and 1x4 across a full row, and neither placement needs the
+   * page to tell it which it is.
+   */
+  columns?: 2 | 3 | 4;
+  className?: string;
+}
+
+const WIDE: Record<2 | 3 | 4, string> = {
+  2: "@xl:grid-cols-2",
+  3: "@xl:grid-cols-2 @3xl:grid-cols-3",
+  4: "@xl:grid-cols-2 @3xl:grid-cols-4",
+};
 
 /**
  * Groups tiles into one instrument cluster. The hairlines are drawn by the
  * container as a 1px grid gap over the border colour, so every seam is shared
  * and no tile owns a box of its own.
  */
-export function StatGrid({
-  children,
-  columns = 2,
-  className,
-}: {
-  children: ReactNode;
-  columns?: 2 | 3;
-  className?: string;
-}) {
+export function StatGrid({ children, columns = 2, className }: StatGridProps) {
   return (
     <div
       className={cn(
-        "grid gap-px overflow-hidden rounded-md border border-border bg-border",
-        columns === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3",
+        "@container grid auto-rows-auto grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border",
+        WIDE[columns],
         className,
       )}
     >

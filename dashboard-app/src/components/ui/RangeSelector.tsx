@@ -72,13 +72,13 @@ export function RangeSelector({
   const customActive = custom !== null;
 
   return (
-    <div
-      className={cn(
-        "sticky top-0 z-20 flex items-center gap-2 bg-bg/95 px-4 py-2 backdrop-blur hairline-b",
-        className,
-      )}
-    >
-      <div className="-mx-1 min-w-0 flex-1 overflow-x-auto px-1">
+    /*
+     * Inline, in the header of the panel it controls. It used to be a sticky
+     * full-width bar of its own, which read as a second page header and cost a
+     * row of vertical space on every screen that showed a chart.
+     */
+    <div className={cn("flex min-w-0 max-w-full items-center gap-2", className)}>
+      <div className="-mx-1 min-w-0 flex-1 overflow-x-auto px-1 py-0.5">
         <SegmentedControl
           options={OPTIONS}
           value={value}
@@ -159,7 +159,7 @@ export function RangeSelector({
           </label>
           <p aria-live="polite" className="text-body-sm text-fg-muted">
             {valid
-              ? `${formatMonthLong(`${from}-01`)} — ${formatMonthLong(`${to}-01`)}`
+              ? `${formatMonthLong(`${from}-01`)} to ${formatMonthLong(`${to}-01`)}`
               : "Choose two months to apply a custom range."}
           </p>
         </div>

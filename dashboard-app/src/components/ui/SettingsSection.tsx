@@ -14,11 +14,16 @@ export interface SettingsSectionProps {
 }
 
 /**
- * One settings block: heading → optional description → body → optional
- * footnote. Carries the 16 px mobile gutter itself and drops it at `lg:`,
- * where the page's grid wrapper owns the gutter instead — the same idiom as
- * Home and the fund detail page. Adding a settings section is therefore one
- * element in one of the page's two columns, never a block of repeated markup.
+ * One settings block: heading and its rationale on the left, the controls they
+ * describe on the right.
+ *
+ * This is the one screen where a split header earns its place, because the
+ * right column carries controls rather than filler prose. In a narrow column it
+ * collapses to the obvious stack: heading, description, controls, footnote.
+ *
+ * The split is a container query on the SECTION, not the viewport, so a section
+ * placed in a narrow column stacks and the same section across a full row
+ * splits, with no page-level breakpoint to keep in sync.
  */
 export function SettingsSection({
   title,
@@ -28,13 +33,21 @@ export function SettingsSection({
   className,
 }: SettingsSectionProps) {
   return (
-    <section className={cn("px-4 lg:px-0", className)}>
-      <h2 className="text-caption tracking-wide text-fg-muted uppercase">{title}</h2>
-      {description !== undefined && (
-        <p className="mt-1 text-body-sm text-fg-muted">{description}</p>
-      )}
-      <div className="mt-3">{children}</div>
-      {footnote !== undefined && <p className="mt-3 text-body-sm text-fg-muted">{footnote}</p>}
+    <section
+      className={cn("@container grid gap-x-6 gap-y-3 @2xl:grid-cols-12", className)}
+    >
+      <div className="@2xl:col-span-4">
+        <h2 className="text-caption tracking-wide text-fg-muted uppercase">{title}</h2>
+        {description !== undefined && (
+          <p className="mt-1 max-w-prose text-body-sm text-fg-muted">{description}</p>
+        )}
+      </div>
+      <div className="min-w-0 @2xl:col-span-8">
+        {children}
+        {footnote !== undefined && (
+          <p className="mt-3 max-w-prose text-body-sm text-fg-muted">{footnote}</p>
+        )}
+      </div>
     </section>
   );
 }

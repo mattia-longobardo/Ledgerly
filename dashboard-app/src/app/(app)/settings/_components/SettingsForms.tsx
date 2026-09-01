@@ -27,9 +27,9 @@ const FIELD =
 const FIELD_NARROW = `${FIELD} max-w-48`;
 const LABEL = "text-caption tracking-wide text-fg-muted uppercase";
 const PRIMARY =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast disabled:opacity-40";
+  "inline-flex min-h-11 self-start items-center justify-center gap-2 rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-40";
 const SECONDARY =
-  "inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-surface px-4 text-body-sm font-medium text-fg disabled:opacity-40";
+  "inline-flex min-h-11 self-start items-center justify-center rounded-md border border-border bg-surface px-4 text-body-sm font-medium text-fg transition-colors hover:bg-surface-hover disabled:opacity-40";
 
 function Spinner() {
   return (
@@ -321,7 +321,7 @@ export function LlmForm(props: LlmFormProps) {
           />
           <span className="text-body-sm text-fg-muted">
             {props.hasKey
-              ? `${KEY_STATUS[props.keySource ?? ""] ?? "Configured"}. The stored key is never sent back to this page — type a new one to replace it.`
+              ? `${KEY_STATUS[props.keySource ?? ""] ?? "Configured"}. The stored key is never sent back to this page; type a new one to replace it.`
               : "Without a key the payslip parser falls back to its deterministic rules alone."}
           </span>
         </label>

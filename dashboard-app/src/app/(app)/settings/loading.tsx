@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-/** Mirrors `SettingsSection`: caption heading, then the body. */
+/** Mirrors `SettingsSection`: heading column, then the controls column. */
 function SkeletonSection({ children }: { children: ReactNode }) {
   return (
-    <span className="block px-4 lg:px-0">
-      <Skeleton className="h-2.5 w-28" />
-      <span className="mt-3 block">{children}</span>
+    <span className="@container grid gap-x-6 gap-y-3 @2xl:grid-cols-12">
+      <span className="block @2xl:col-span-4">
+        <Skeleton className="h-2.5 w-28" />
+      </span>
+      <span className="block min-w-0 @2xl:col-span-8">{children}</span>
     </span>
   );
 }
@@ -44,19 +47,19 @@ function SkeletonList({ rows }: { rows: number }) {
 }
 
 /**
- * Kept in lockstep with `settings/page.tsx`: same two-column grid at `lg:`,
- * same gutter ownership, same narrow fields — so nothing jumps on hydrate.
+ * Kept in lockstep with `settings/page.tsx`: same 6 + 6 panels, same split
+ * sections, same narrow fields, so nothing jumps on hydrate.
  */
 export default function SettingsLoading() {
   return (
-    <div className="pt-4 pb-8">
-      <div className="px-4 pb-3">
+    <div className="pt-4">
+      <div className="pb-3">
         <Skeleton className="h-2.5 w-16" />
         <Skeleton className="mt-2 h-7 w-28" />
       </div>
 
-      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-4">
-        <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-1">
+      <PageGrid className="pt-5">
+        <Panel span={6} bodyClassName="flex flex-col gap-10">
           <SkeletonSection>
             <span className="block space-y-3">
               <SkeletonField />
@@ -87,9 +90,9 @@ export default function SettingsLoading() {
           <SkeletonSection>
             <Skeleton className="h-12 w-full max-w-xs rounded-md" />
           </SkeletonSection>
-        </div>
+        </Panel>
 
-        <div className="mt-8 flex flex-col gap-8 lg:col-start-2 lg:row-start-1 lg:mt-0">
+        <Panel span={6} bodyClassName="flex flex-col gap-10">
           <SkeletonSection>
             <span className="block">
               <SkeletonList rows={3} />
@@ -99,8 +102,8 @@ export default function SettingsLoading() {
           <SkeletonSection>
             <SkeletonList rows={6} />
           </SkeletonSection>
-        </div>
-      </div>
+        </Panel>
+      </PageGrid>
     </div>
   );
 }

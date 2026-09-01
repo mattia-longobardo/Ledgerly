@@ -70,6 +70,22 @@ function monthTick(seconds: number): string {
   return d.getUTCMonth() === 0 ? `${month} ’${String(d.getUTCFullYear()).slice(2)}` : month;
 }
 
+/**
+ * uPlot picks tick positions from the pixel width, so a wide plot over a short
+ * span asks for more splits than there are months and the axis reads
+ * "OCT OCT OCT NOV NOV". The scale is monthly; a second tick inside one month
+ * carries no information, so the repeat is dropped rather than drawn.
+ */
+function monthTicks(splits: readonly number[]): (string | null)[] {
+  let previous: string | null = null;
+  return splits.map((s) => {
+    const label = monthTick(s);
+    if (label === previous) return null;
+    previous = label;
+    return label;
+  });
+}
+
 function compactValue(v: number): string {
   const abs = Math.abs(v);
   if (abs >= 1_000_000) return `${formatNumber(Math.round(v / 100_000) / 10)}M`;
@@ -189,7 +205,7 @@ export function TimeSeriesChart({
       },
       scales: { x: { time: true } },
       axes: [
-        { ...axisBase, size: 28, values: (_u, splits) => splits.map((s) => monthTick(s)) },
+        { ...axisBase, size: 28, values: (_u, splits) => monthTicks(splits) },
         {
           ...axisBase,
           size: 48,
