@@ -1,0 +1,31 @@
+### SYNTHETIC FIXTURE - a December tredicesima arriving as its OWN Paperless
+### document (the normal path per PLAN section 4). It carries no ordinary-month
+### rows: no ordinary salary line and no leave-residual grid. Invented figures.
+### MUST be replaced with a real anonymised payslip before M6 ships.
+
+Mod. Cedolino TS
+REPLY S.P.A. - VIA ROBERT KOCH 1/4 - 20152 MILANO
+DIPENDENTE XXXXX XXXXX                    MATRICOLA 000123
+QUALIFICA IMPIEGATO LIV. D2               PERIODO DI PAGA DICEMBRE 2026
+
+COD DESCRIZIONE                   QUANTITA      BASE     COMPETENZE   RITENUTE
+900 TREDICESIMA MENSILITA             1,00                  3.000,00
+500 FONDO C/DIPE                      1,24                                37,20
+501 FONDO C/AZIENDA                   1,55                    46,50
+
+TOTALE COMPETENZE            3.000,00
+TOTALE RITENUTE              1.005,40
+IMPON. CONTR. SOC.           3.000,00
+TOTALE CONTRIBUTI SOCIALI      283,50
+TOTALE LORDO                 3.000,00
+
+IMPONIBILE IRPEF             2.716,50
+IRPEF LORDA                    700,00
+TOTALE DETRAZIONI                0,00
+TOTALE TRATTENUTE IRPEF        621,00
+
+IRPEF ERARIO                   621,00
+ADDIZIONALE REGIONALE           45,30
+ADDIZIONALE COMUNALE            18,40
+ARROTONDAMENTO                   0,00
+NETTO BUSTA                  1.994,60
