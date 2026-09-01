@@ -82,7 +82,9 @@ export function AmountField({
     <div className={cn("flex flex-col gap-3", className)}>
       <label className="flex flex-col gap-1.5">
         <span className="text-caption tracking-wide text-fg-muted uppercase">{label}</span>
-        <span className="flex items-center gap-2 rounded-md border border-border bg-surface px-3">
+        {/* The ring moves to the wrapper: the euro glyph and the field are one
+            control, so outlining the input alone would ring half of it. */}
+        <span className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring">
           <span aria-hidden className="num text-display-sm text-fg-muted">
             €
           </span>
@@ -92,7 +94,9 @@ export function AmountField({
             inputMode="decimal"
             autoComplete="off"
             placeholder="0,00"
-            className="num min-h-14 w-full bg-transparent text-display-sm text-fg outline-none placeholder:text-fg-muted"
+            /* The field grows to the number instead of sitting at a width
+               guessed for the longest amount anyone might type. */
+            className="num min-h-14 min-w-0 flex-1 bg-transparent text-display-sm text-fg outline-none field-sizing-content placeholder:text-fg-muted"
           />
         </span>
       </label>
@@ -106,7 +110,7 @@ export function AmountField({
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md border border-border bg-surface text-body-sm font-medium text-fg"
             >
               <span aria-hidden>{chip.label}</span>
-              <span className="sr-only">{`${chip.srLabel} — ${formatEur(max * chip.fraction)}`}</span>
+              <span className="sr-only">{`${chip.srLabel}, ${formatEur(max * chip.fraction)}`}</span>
             </button>
           ))}
         </div>

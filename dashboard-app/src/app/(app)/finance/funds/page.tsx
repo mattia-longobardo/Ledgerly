@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sparkline } from "@/components/chart/Sparkline";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,18 +22,18 @@ export default async function FundsPage() {
   const [funds, gain] = await Promise.all([loadFunds(), loadPortfolioGain()]);
 
   return (
-    <main className="pb-8">
+    <>
       <PageHeader title="Funds" segmented={<FinanceTabs />} />
 
       {funds.length === 0 ? (
-        <div className="px-4 pt-4">
+        <div className="max-w-xl pt-6">
           <EmptyState
             title="No funds registered"
             description="Fideuram and Fondo Cometa are seeded by the database migration. If this is empty, the migration has not run yet."
             action={
               <Link
                 href="/settings"
-                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast"
+                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
               >
                 Open settings
               </Link>
@@ -40,36 +41,47 @@ export default async function FundsPage() {
           />
         </div>
       ) : (
-        <div className="grid gap-3 px-4 pt-4 sm:grid-cols-2">
-          {funds.map((view) => (
-            <Link
-              key={view.fund.id}
-              href={`/finance/funds/${view.fund.slug}`}
-              className="flex flex-col gap-2 rounded-md border border-border bg-surface p-4"
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="text-heading-sm text-fg">{view.fund.name}</span>
-                <Sparkline values={carryForward(view.points).map((p) => p.value)} width={72} />
-              </span>
+        <PageGrid className="pt-5">
+          <Panel span={12} ariaLabel="Funds">
+            {/*
+              The card count steps on the PANEL's width, not the viewport's, so
+              this same grid is 1-up in a sidebar and 4-up across a 1920 row
+              without the page telling it which it is.
+            */}
+            <div className="@container grid gap-4 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+              {funds.map((view) => (
+                <Link
+                  key={view.fund.id}
+                  href={`/finance/funds/${view.fund.slug}`}
+                  className="flex flex-col gap-2 rounded-md border border-border bg-surface p-4 transition-colors hover:bg-surface-hover"
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-heading-sm text-fg">
+                      {view.fund.name}
+                    </span>
+                    <Sparkline values={carryForward(view.points).map((p) => p.value)} width={72} />
+                  </span>
 
-              <MoneyValue value={view.value} size="display-sm" cents="muted" />
+                  <MoneyValue value={view.value} size="display-sm" cents="muted" />
 
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                {view.absReturn !== null && (
-                  <DeltaBadge value={view.absReturn} context="return since inception" />
-                )}
-                <span className="num text-caption text-fg-muted">
-                  {formatEur(view.deposited)} deposited
-                </span>
-              </span>
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {view.absReturn !== null && (
+                      <DeltaBadge value={view.absReturn} context="return since inception" />
+                    )}
+                    <span className="num text-caption text-fg-muted">
+                      {formatEur(view.deposited)} deposited
+                    </span>
+                  </span>
 
-              <StaleBadge capturedAt={view.capturedAt} stale={view.stale} />
-            </Link>
-          ))}
-        </div>
+                  <StaleBadge capturedAt={view.capturedAt} stale={view.stale} />
+                </Link>
+              ))}
+            </div>
+          </Panel>
+
+          <MonthlyGainPanel gain={gain} />
+        </PageGrid>
       )}
-
-      {funds.length > 0 && <MonthlyGainPanel gain={gain} />}
-    </main>
+    </>
   );
 }

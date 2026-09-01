@@ -26,12 +26,13 @@ export function BrandMark({ className, ...rest }: SVGProps<SVGSVGElement>) {
   );
 }
 
-/** Mark plus wordmark. The weight split carries the hierarchy — never colour alone. */
+/** Mark plus wordmark. The weight split carries the hierarchy, never colour alone. */
 export function BrandLockup({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2.5 text-fg", className)}>
       <BrandMark className="h-5 w-5" />
-      <span className="text-body-sm tracking-tight">
+      {/* A product name is not prose: machine translation must leave it alone. */}
+      <span translate="no" className="text-body-sm tracking-tight">
         <span className="font-semibold">Finance</span>
         <span className="text-fg-muted"> Dashboard</span>
       </span>

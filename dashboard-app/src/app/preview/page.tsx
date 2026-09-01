@@ -13,7 +13,7 @@ import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AccountRow } from "@/components/ui/AccountRow";
+import { AccountList, AccountRow } from "@/components/ui/AccountRow";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorInline } from "@/components/ui/ErrorInline";
@@ -294,7 +294,7 @@ function Gallery() {
       </Section>
 
       <Section title="Accounts">
-        <div className="hairline-t">
+        <AccountList>
           <AccountRow
             name="Revolut"
             value={12480.9}
@@ -340,7 +340,7 @@ function Gallery() {
             capturedAt={OLD}
             stale
           />
-        </div>
+        </AccountList>
         <div className="flex flex-wrap items-center gap-4 px-4">
           <StaleBadge capturedAt={FRESH} />
           <StaleBadge capturedAt={OLD} stale />
@@ -467,7 +467,7 @@ function Gallery() {
                   status: "poisoned",
                   tone: "text-negative",
                   error:
-                    "wallet: GET /api/v1/accounts failed after 3 attempts — ECONNREFUSED 10.0.0.4:8080",
+                    "wallet: GET /api/v1/accounts failed after 3 attempts, ECONNREFUSED 10.0.0.4:8080",
                 },
               ].map((run) => (
                 <li

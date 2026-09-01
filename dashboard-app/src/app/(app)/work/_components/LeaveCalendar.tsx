@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Panel } from "@/components/layout/PageGrid";
 import { ErrorInline } from "@/components/ui/ErrorInline";
 import { MonthGrid } from "@/components/ui/MonthGrid";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -132,12 +133,12 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
       const s = result.data;
       setToast(
         s.status === "disabled"
-          ? "Trek sync is off — no credential is configured."
+          ? "Trek sync is off: no credential is configured."
           : // Nothing ran: the hourly pass owns the sync right now. Saying
             // "0 in, 0 out" would read as "Trek has no news", which is a
             // different and wrong statement.
             s.status === "skipped"
-            ? "A sync is already running — it will finish in a moment."
+            ? "A sync is already running. It will finish in a moment."
             : `Synced with Trek · ${s.pulled} in, ${s.pushed} out`,
       );
       router.refresh();
@@ -147,11 +148,10 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
   const stats = view.cachedStats?.stats ?? null;
 
   return (
-    <section className="mt-8">
-      <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-4">
-        <h2 className="min-w-0 flex-1 text-caption tracking-wide text-fg-muted uppercase">
-          Leave calendar
-        </h2>
+    <Panel
+      span={7}
+      title="Leave calendar"
+      action={
         <button type="button" onClick={sync} disabled={pending} className={SECONDARY}>
           {pending && (
             <span
@@ -159,19 +159,19 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
               className="mr-2 size-4 animate-spin rounded-full border-2 border-border border-t-fg"
             />
           )}
-          Sync now
+          {pending ? "Syncing…" : "Sync now"}
         </button>
-      </div>
-
+      }
+    >
       {!view.configured && (
-        <p className="px-4 pt-1 text-body-sm text-fg-muted">
-          Trek sync is off — no credential is configured. Days edited here are saved on the
+        <p className="pt-1 text-body-sm text-fg-muted">
+          Trek sync is off: no credential is configured. Days edited here are saved on the
           dashboard and will be sent to Trek as soon as one is.
         </p>
       )}
 
       {error !== null && (
-        <div className="px-4 pt-2">
+        <div className="pt-2">
           <ErrorInline message={error} />
         </div>
       )}
@@ -181,7 +181,7 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
           app models. The payslip residual sits beside them instead of being
           silently reconciled into one number. */}
       {stats !== null && (
-        <div className="mt-2 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-border">
+        <div className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-border">
           {[
             { label: "Allowance", value: stats.totalAvailable },
             { label: "Used", value: stats.used },
@@ -197,7 +197,7 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
         </div>
       )}
 
-      <p className="num px-4 pt-2 text-caption text-fg-muted">
+      <p className="num pt-2 text-caption text-fg-muted">
         {`${formatDays(view.plannedDaysYtd)} on the calendar in ${view.year}`}
         {stats !== null && ` · Trek counts ${formatDays(stats.used)} used, ${formatDays(stats.compUsed)} comp`}
         {view.pendingCount > 0 && ` · ${view.pendingCount} waiting to reach Trek`}
@@ -205,7 +205,7 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
 
       {/* Requirement 4: a month planned for X days that ended up more or fewer. */}
       {view.flagged.length > 0 && (
-        <ul className="mt-3 flex flex-col gap-2 px-4">
+        <ul className="mt-3 flex flex-col gap-2">
           {view.flagged.map((v) => (
             <li
               key={v.month}
@@ -220,6 +220,9 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
         </ul>
       )}
 
+      {/* Twelve month grids is the one genuinely heavy list in the app. Each
+          month renders only once it is near the viewport, with its height
+          reserved so nothing jumps. */}
       <div className="mt-3 hairline-t">
         {view.months.map((m) => (
           <MonthGrid
@@ -235,7 +238,7 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
         ))}
       </div>
 
-      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3 text-caption text-fg-muted">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-caption text-fg-muted">
         <span className="flex items-center gap-1.5">
           <span aria-hidden className="size-2.5 rounded-full bg-accent" /> taken
         </span>
@@ -260,7 +263,7 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
           if (!open) setEditing(null);
         }}
         title={editing === null ? "Leave" : editing.date}
-        description="Trek stores whole and half days only — there is no morning/afternoon."
+        description="Trek stores whole and half days only. There is no morning or afternoon."
         height="auto"
         footer={
           <div className="flex gap-2">
@@ -315,6 +318,6 @@ export function LeaveCalendar({ view }: LeaveCalendarProps) {
           if (!open) setToast(null);
         }}
       />
-    </section>
+    </Panel>
   );
 }

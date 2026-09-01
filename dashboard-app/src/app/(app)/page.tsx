@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Sparkline } from "@/components/chart/Sparkline";
 import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { AccountRow } from "@/components/ui/AccountRow";
+import { AccountList, AccountRow } from "@/components/ui/AccountRow";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
@@ -19,9 +20,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };
 
 function spark(account: AccountView) {
-  return (
-    <Sparkline values={carryForward(account.points).map((p) => p.value)} />
-  );
+  return <Sparkline values={carryForward(account.points).map((p) => p.value)} />;
 }
 
 /**
@@ -30,32 +29,25 @@ function spark(account: AccountView) {
  * stays a Server Component. Fixed at 12 months and deliberately not
  * interactive; /finance owns range and per-account selection.
  */
-function netWorthSeries(
-  total: AccountView,
-  earliestMonth: string | null,
-): Series[] {
+function netWorthSeries(total: AccountView, earliestMonth: string | null): Series[] {
   const months = rangeToMonths("12M", { earliest: earliestMonth });
-  const byMonth = new Map(
-    carryForward(total.points).map((p) => [p.month, p.value] as const),
-  );
+  const byMonth = new Map(carryForward(total.points).map((p) => [p.month, p.value] as const));
   return [
     {
       key: total.key,
       label: "Net worth",
-      points: months.map((month) => ({
-        month,
-        value: byMonth.get(month) ?? null,
-      })),
+      points: months.map((month) => ({ month, value: byMonth.get(month) ?? null })),
     },
   ];
 }
 
+/** Mobile only: on desktop the sidebar already carries this. */
 function SettingsLink() {
   return (
     <Link
       href="/settings"
       aria-label="Settings"
-      className="inline-flex size-11 items-center justify-center rounded-md border border-border bg-surface text-fg-muted"
+      className="inline-flex size-11 items-center justify-center rounded-md border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg lg:hidden"
     >
       <svg
         aria-hidden
@@ -75,42 +67,6 @@ function SettingsLink() {
   );
 }
 
-function NavCard({
-  href,
-  title,
-  detail,
-}: {
-  href: string;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-h-24 flex-col justify-between rounded-md border border-border bg-surface p-4"
-    >
-      <span className="flex items-center justify-between gap-2">
-        <span className="text-heading-sm text-fg">{title}</span>
-        <svg
-          aria-hidden
-          viewBox="0 0 20 20"
-          width={18}
-          height={18}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-fg-muted"
-        >
-          <path d="M7.5 4.5 13 10l-5.5 5.5" />
-        </svg>
-      </span>
-      <span className="text-body-sm text-fg-muted">{detail}</span>
-    </Link>
-  );
-}
-
 export default async function HomePage() {
   await requireUserOrRedirect("/");
 
@@ -123,81 +79,105 @@ export default async function HomePage() {
   const ringMax = (remainingDays ?? 0) + ferie.takenDaysYtd;
 
   return (
-    <main className="pb-8">
-      <PageHeader
-        title="Total balance"
-        eyebrow={formatDateLine(new Date())}
-        action={<SettingsLink />}
-      />
+    <>
+      <PageHeader title="Total balance" eyebrow={formatDateLine(new Date())} action={<SettingsLink />} />
 
-      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-4">
-        <section className="lg:contents">
+      {/*
+        Two reads on the top row, their detail on the second. `order` puts the
+        curve above the leave gauge on a phone, where the plan reads top to
+        bottom; from `lg` the DOM order is the grid order and the gauge sits
+        beside the figure it is not competing with.
+      */}
+      <PageGrid className="pt-5">
+        <Panel
+          span={8}
+          ariaLabel="Net worth"
+          className="order-1 lg:order-none"
+          bodyClassName="axis-rule-live pb-6"
+        >
           {/* Hero — net worth, summed here from the latest known value of every
               account: the four the app reads plus the five hand-tracked ones.
               Teable's TOTAL column is deliberately not used; its formula omits
               Fondo Cometa, and on the rows this app appends (Date + ING +
               Revolut only) it omits every hand-tracked account too. The chart
               below is built from the same sum, so the two always agree. */}
-          <div className="axis-rule-live mb-5 px-4 pb-6 lg:col-start-1 lg:px-0">
-            {total.balance === null ? (
-              <EmptyState
-                title="No balances yet"
-                description="Nothing has been snapshotted from Teable or Wallet so far. Run the snapshot job once and this page fills in."
-                action={
-                  <Link
-                    href="/settings"
-                    className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast"
-                  >
-                    Open settings
-                  </Link>
-                }
-              />
-            ) : (
-              <>
-                <MoneyValue
-                  value={total.balance}
-                  size="display-lg"
-                  cents="muted"
-                />
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {delta.abs !== null && (
-                    <DeltaBadge
-                      value={delta.abs}
-                      percent={delta.pct}
-                      context="versus last month"
-                    />
-                  )}
-                  <StaleBadge
-                    capturedAt={total.capturedAt}
-                    stale={total.stale}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* The curve for the figure above. The number and its history belong on
-              the same screen; /finance is the drill-down, not the first read. */}
-          {total.balance !== null && (
-            <div className="mb-6 px-4 lg:col-start-1 lg:px-0">
-              <div className="text-caption tracking-wide text-fg-muted uppercase">
-                Last 12 months
+          {total.balance === null ? (
+            <EmptyState
+              title="No balances yet"
+              description="Nothing has been snapshotted from Teable or Wallet so far. Run the snapshot job once and this page fills in."
+              action={
+                <Link
+                  href="/settings"
+                  className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+                >
+                  Open settings
+                </Link>
+              }
+            />
+          ) : (
+            <>
+              <MoneyValue value={total.balance} size="display-lg" cents="muted" />
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {delta.abs !== null && (
+                  <DeltaBadge value={delta.abs} percent={delta.pct} context="versus last month" />
+                )}
+                <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
               </div>
-              <TimeSeriesChart
-                series={netWorthSeries(total, accounts.earliestMonth)}
-                label="Net worth by month"
-                height={200}
-                area
-                className="mt-2"
+            </>
+          )}
+        </Panel>
+
+        {/* Vacation gauge — payslip-authoritative residuals, shown in days. */}
+        <Panel
+          span={4}
+          spanMd={4}
+          ariaLabel="Leave remaining"
+          className="order-3 lg:order-none"
+          bodyClassName="axis-rule flex items-center gap-4 pb-6"
+        >
+          <ProgressRing
+            value={remainingDays ?? 0}
+            max={ringMax > 0 ? ringMax : 1}
+            label="Leave remaining this year"
+          >
+            <span className="text-caption">{formatNumber(remainingDays)}</span>
+          </ProgressRing>
+          <div className="min-w-0">
+            <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
+            <div className="num text-display-sm text-fg">
+              {remainingDays === null ? "-" : formatDays(remainingDays)}
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="num text-caption text-fg-muted">
+                {formatNumber(ferie.takenDaysYtd)} d taken in {ferie.year}
+              </span>
+              <StaleBadge
+                capturedAt={ferie.latest?.verifiedAt ?? null}
+                stale={ferie.latest === null}
               />
             </div>
-          )}
+          </div>
+        </Panel>
 
-          {/* Account strip. Revolut opens onto its sub-accounts; each visible
-              hand-tracked account is its own row (an empty Teable cell reads as
-              0), and a hidden one simply gets no row while still counting in the
-              total above. */}
-          <div className="hairline-t lg:col-start-1 lg:rounded-md lg:border lg:border-border lg:bg-surface">
+        {/* The curve for the figure above. The number and its history belong on
+            the same screen; /finance is the drill-down, not the first read. */}
+        {total.balance !== null && (
+          <Panel span={8} title="Last 12 months" className="order-2 lg:order-none">
+            <TimeSeriesChart
+              series={netWorthSeries(total, accounts.earliestMonth)}
+              label="Net worth by month"
+              height={340}
+              area
+            />
+          </Panel>
+        )}
+
+        {/* Account strip. Revolut opens onto its sub-accounts; each visible
+            hand-tracked account is its own row (an empty Teable cell reads as
+            0), and a hidden one simply gets no row while still counting in the
+            total above. */}
+        <Panel span={4} spanMd={4} title="Accounts" className="order-4 lg:order-none">
+          <AccountList>
             {managed.map((account) =>
               account.key === "revolut_total" ? (
                 <AccountRow
@@ -241,54 +221,9 @@ export default async function HomePage() {
                 sparkline={spark(account)}
               />
             ))}
-          </div>
-        </section>
-
-        <section className="lg:col-start-2 lg:row-start-1 lg:row-end-4">
-          {/* Vacation tile — payslip-authoritative residuals, shown in days. */}
-          <div className="axis-rule flex items-center gap-4 px-4 pb-5 lg:mt-0 lg:px-0">
-            <ProgressRing
-              value={remainingDays ?? 0}
-              max={ringMax > 0 ? ringMax : 1}
-              label="Leave remaining this year"
-            >
-              <span className="text-caption">
-                {formatNumber(remainingDays)}
-              </span>
-            </ProgressRing>
-            <div className="min-w-0">
-              <div className="text-caption tracking-wide text-fg-muted uppercase">
-                Ferie + ROL
-              </div>
-              <div className="num text-display-sm text-fg">
-                {remainingDays === null ? "-" : formatDays(remainingDays)}
-              </div>
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="num text-caption text-fg-muted">
-                  {formatNumber(ferie.takenDaysYtd)} d taken in {ferie.year}
-                </span>
-                <StaleBadge
-                  capturedAt={ferie.latest?.verifiedAt ?? null}
-                  stale={ferie.latest === null}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 px-4 sm:grid-cols-2 lg:mt-6 lg:grid-cols-1 lg:px-0">
-            <NavCard
-              href="/finance"
-              title="Finance"
-              detail="Wealth, funds, vacation fund"
-            />
-            <NavCard
-              href="/work"
-              title="Work"
-              detail="Leave, salary, payslips"
-            />
-          </div>
-        </section>
-      </div>
-    </main>
+          </AccountList>
+        </Panel>
+      </PageGrid>
+    </>
   );
 }

@@ -50,7 +50,7 @@ export default async function SignInPage({
             ) : (
               <>
                 Sign-in failed.{" "}
-                <span className="text-fg-muted">Try again — the error was logged.</span>
+                <span className="text-fg-muted">Try again. The error was logged.</span>
               </>
             )}
           </p>

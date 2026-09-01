@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Panel } from "@/components/layout/PageGrid";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/components/ui/cn";
 import type { LeaveTakenMonth } from "@/lib/calc/payroll";
@@ -17,8 +18,8 @@ export interface LeaveByMonthProps {
 /**
  * Leave used, one row per month, read off the verified payslips. Read-only by
  * nature rather than by omission: these are payroll's figures, and the editable
- * day list — the leave calendar rendered just above — is the other side of the
- * comparison, not a duplicate of this one.
+ * day list (the leave calendar beside it) is the other side of the comparison,
+ * not a duplicate of this one.
  *
  * Deliberately not a day grid: the payslip reports a monthly total in hours and
  * never says *which* days, so drawing dated dots would invent detail the source
@@ -37,32 +38,31 @@ export function LeaveByMonth({
   const peak = months.reduce((max, m) => Math.max(max, m.totalDays), 0);
 
   return (
-    <section className="mt-8">
-      <div className="flex min-h-11 items-center gap-3 px-4">
-        <h2 className="min-w-0 flex-1 text-caption tracking-wide text-fg-muted uppercase">
-          Ferie e ROL used
-        </h2>
-        {hasUsage && (
+    <Panel
+      span={5}
+      title="Ferie e ROL used"
+      action={
+        hasUsage ? (
           <span className="num shrink-0 text-body-sm text-fg-muted">
             {formatDays(ytdDays)} in {year}
           </span>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
       {!hasUsage ? (
-        <div className="px-4 pt-2">
+        <div>
           <EmptyState
             title="Nothing used yet"
             description={
               pendingCount > 0
-                ? `Used days are read off the payslips, never entered by hand — they appear here once ${pendingCount === 1 ? "the payslip waiting for you is" : `the ${pendingCount} payslips waiting for you are`} verified.`
+                ? `Used days are read off the payslips, never entered by hand. They appear here once ${pendingCount === 1 ? "the payslip waiting for you is" : `the ${pendingCount} payslips waiting for you are`} verified.`
                 : "Used days are read off the payslips, never entered by hand. Nothing shows here until a verified payslip reports ferie or ROL hours."
             }
             action={
               firstPendingId === null ? undefined : (
                 <Link
                   href={`/work/verify/${firstPendingId}`}
-                  className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast"
+                  className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
                 >
                   Verify a payslip
                 </Link>
@@ -72,12 +72,15 @@ export function LeaveByMonth({
         </div>
       ) : (
         <>
-          <p className="px-4 pb-2 text-body-sm text-fg-muted">
+          <p className="pb-2 text-body-sm text-fg-muted">
             Monthly totals from the verified payslips. The payslip states hours, not dates.
           </p>
+          {/* Twelve months is short, but the list sits below the fold on a
+              phone and this skips its layout until it is scrolled to. The
+              reserved height keeps the scrollbar honest, so it costs no CLS. */}
           <ul className="hairline-t">
             {months.map((m) => (
-              <li key={m.month} className="hairline-b px-4 py-3">
+              <li key={m.month} className="lazy-block hairline-b py-3 [contain-intrinsic-size:auto_5.5rem]">
                 <div className="flex min-h-11 flex-col justify-center gap-1.5">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="num min-w-0 flex-1 truncate text-body text-fg">
@@ -111,6 +114,6 @@ export function LeaveByMonth({
           </ul>
         </>
       )}
-    </section>
+    </Panel>
   );
 }

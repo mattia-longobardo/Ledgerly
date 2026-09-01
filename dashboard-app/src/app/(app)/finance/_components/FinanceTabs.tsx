@@ -39,6 +39,7 @@ export function FinanceTabs() {
       onChange={(next) => router.push(HREF[next])}
       label="Finance view"
       fullWidth
+      className="sm:max-w-lg"
     />
   );
 }

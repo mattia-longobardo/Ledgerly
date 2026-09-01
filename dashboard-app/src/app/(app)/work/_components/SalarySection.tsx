@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Panel } from "@/components/layout/PageGrid";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatGrid, StatTile } from "@/components/ui/StatTile";
 import type { MonthPoint } from "@/lib/contracts";
@@ -39,38 +40,33 @@ export function SalarySection({ windows }: SalarySectionProps) {
   );
 
   return (
-    <section className="mt-8">
-      <div className="flex flex-wrap items-center gap-3 px-4">
-        <h2 className="min-w-0 flex-1 text-caption tracking-wide text-fg-muted uppercase">
-          Salary
-        </h2>
+    <Panel
+      span={5}
+      title="Salary"
+      action={
         <SegmentedControl
           options={OPTIONS}
           value={key}
           onChange={setKey}
           label="Averaging window"
         />
-      </div>
+      }
+    >
+      <StatGrid>
+        <StatTile
+          label={`Avg net ${key} m`}
+          value={formatEur(active?.avgNet ?? null)}
+          sub="Tredicesima excluded"
+        />
+        <StatTile
+          label={`Avg taxes ${key} m`}
+          value={formatEur(active?.avgTaxes ?? null)}
+          sub="Per ordinary month"
+        />
+      </StatGrid>
 
-      <div className="mt-3 px-4">
-        <StatGrid>
-          <StatTile
-            label={`Avg net ${key} m`}
-            value={formatEur(active?.avgNet ?? null)}
-            sub="Tredicesima excluded"
-          />
-          <StatTile
-            label={`Avg taxes ${key} m`}
-            value={formatEur(active?.avgTaxes ?? null)}
-            sub="Per ordinary month"
-          />
-        </StatGrid>
-      </div>
-
-      <div className="mt-4 px-4">
-        <h3 className="text-caption tracking-wide text-fg-muted uppercase">
-          Net per month
-        </h3>
+      <div className="mt-5">
+        <h3 className="text-caption tracking-wide text-fg-muted uppercase">Net per month</h3>
         {points.every((p) => p.value === null) ? (
           <p className="mt-2 text-body-sm text-fg-muted">
             Not enough history yet.
@@ -103,6 +99,6 @@ export function SalarySection({ windows }: SalarySectionProps) {
           </ul>
         )}
       </div>
-    </section>
+    </Panel>
   );
 }

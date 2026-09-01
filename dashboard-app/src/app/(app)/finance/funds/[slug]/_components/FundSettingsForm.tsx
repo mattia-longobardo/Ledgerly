@@ -112,7 +112,7 @@ export function FundSettingsForm(props: FundSettingsFormProps) {
           <p className="text-body-sm text-fg-muted">
             {mode === "fixed"
               ? "A fixed amount is booked every month."
-              : "Deposits come from the verified payslip's contributions — employee plus employer."}
+              : "Deposits come from the verified payslip's contributions: employee plus employer."}
           </p>
         </fieldset>
 

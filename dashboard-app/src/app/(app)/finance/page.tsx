@@ -34,7 +34,7 @@ export default async function FinanceOverviewPage() {
   const hasData = accounts.total.balance !== null || list.some((a) => a.balance !== null);
 
   return (
-    <main className="pb-8">
+    <>
       <PageHeader title="Finance" segmented={<FinanceTabs />} />
 
       {hasData ? (
@@ -52,14 +52,14 @@ export default async function FinanceOverviewPage() {
           earliestMonth={accounts.earliestMonth}
         />
       ) : (
-        <div className="px-4 pt-4">
+        <div className="max-w-xl pt-6">
           <EmptyState
             title="No history yet"
             description="Balances arrive with the monthly snapshot job. Once it has run at least twice there is a curve to draw."
             action={
               <Link
                 href="/settings"
-                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast"
+                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
               >
                 Run the snapshot job
               </Link>
@@ -67,6 +67,6 @@ export default async function FinanceOverviewPage() {
           />
         </div>
       )}
-    </main>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
 import { MoneyValue } from "@/components/ui/MoneyValue";
@@ -49,111 +50,47 @@ export default async function FundDetailPage({
   const effective = view.effective;
 
   return (
-    <main className="pb-8">
+    <>
       <PageHeader
         title={view.fund.name}
         eyebrow={
-          <Link href="/finance/funds" className="text-fg-muted">
-            ← Funds
+          <Link href="/finance/funds" className="text-fg-muted transition-colors hover:text-fg">
+            &larr; Funds
           </Link>
         }
       />
 
-      <div className="px-4">
-        <MoneyValue value={view.value} size="display" cents="muted" />
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          {view.absReturn !== null && (
-            <DeltaBadge value={view.absReturn} context="return since inception" />
-          )}
-          <span className="num text-caption text-fg-muted">
-            {formatEur(view.deposited)} deposited
-          </span>
-          <StaleBadge capturedAt={view.capturedAt} stale={view.stale} />
-        </div>
-      </div>
+      <PageGrid className="pt-5">
+        {/* The read and the curve that explains it, on one panel. */}
+        <Panel span={7} ariaLabel={`${view.fund.name} value`}>
+          <div className="axis-rule-live pb-6">
+            <MoneyValue value={view.value} size="display" cents="muted" />
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {view.absReturn !== null && (
+                <DeltaBadge value={view.absReturn} context="return since inception" />
+              )}
+              <span className="num text-caption text-fg-muted">
+                {formatEur(view.deposited)} deposited
+              </span>
+              <StaleBadge capturedAt={view.capturedAt} stale={view.stale} />
+            </div>
+          </div>
 
-      {/* Desktop: chart left, table right. Mobile: stacked, chart first. */}
-      <div className="mt-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:px-4">
-        <section className="px-4 lg:px-0">
-          <h2 className="text-caption tracking-wide text-fg-muted uppercase">
-            Deposited vs value
+          <h2 className="mt-5 text-caption tracking-wide text-fg-muted uppercase">
+            Deposited versus value
           </h2>
           <TimeSeriesChart
             series={series}
             label={`${view.fund.name}: deposited versus value by month`}
-            height={200}
+            height={320}
             area={false}
-            className="mt-2"
+            className="mt-3"
           />
-        </section>
+        </Panel>
 
-        <section className="mt-6 lg:mt-0">
-          <h2 className="px-4 text-caption tracking-wide text-fg-muted uppercase lg:px-0">
-            Monthly return
-          </h2>
-          {table.length === 0 ? (
-            <p className="px-4 pt-2 text-body-sm text-fg-muted lg:px-0">
-              Not enough history yet.
-            </p>
-          ) : (
-            <div className="mt-2 overflow-x-auto">
-              <table className="w-full min-w-72 border-collapse">
-                <thead>
-                  <tr className="hairline-b">
-                    <th
-                      scope="col"
-                      className="px-4 py-2 text-left text-caption tracking-wide text-fg-muted uppercase lg:px-0"
-                    >
-                      Month
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-2 text-right text-caption tracking-wide text-fg-muted uppercase"
-                    >
-                      Δ €
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-2 text-right text-caption tracking-wide text-fg-muted uppercase lg:px-0"
-                    >
-                      Δ %
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.map((row) => (
-                    <tr key={row.month} className="hairline-b">
-                      <th
-                        scope="row"
-                        className="num px-4 py-2 text-left text-body-sm font-normal text-fg lg:px-0"
-                      >
-                        {formatMonth(row.month)}
-                      </th>
-                      <td
-                        className={cellTone(row.monthAbs, "num px-4 py-2 text-right text-body-sm")}
-                      >
-                        {formatDelta(row.monthAbs)}
-                      </td>
-                      <td
-                        className={cellTone(
-                          row.monthPct,
-                          "num px-4 py-2 text-right text-body-sm lg:px-0",
-                        )}
-                      >
-                        {formatPercent(row.monthPct, { signed: true })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-
-      <section className="mt-8 px-4">
-        <h2 className="text-caption tracking-wide text-fg-muted uppercase">Settings</h2>
-        <div className="mt-3">
+        {/* Controls, not filler prose: the one legitimate place for a framed
+            panel on this screen is the block you type into. */}
+        <Panel span={5} title="Settings" chrome="framed">
           <FundSettingsForm
             fundId={view.fund.id}
             fundName={view.fund.name}
@@ -163,9 +100,62 @@ export default async function FundDetailPage({
             fixedMonthlyAmount={effective?.fixedMonthlyAmount ?? ""}
             currentMonth={now.slice(0, 7)}
           />
-        </div>
-      </section>
-    </main>
+        </Panel>
+
+        <Panel span={7} title="Monthly return">
+          {table.length === 0 ? (
+            <p className="text-body-sm text-fg-muted">Not enough history yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-72 border-collapse">
+                <thead>
+                  <tr className="hairline-b">
+                    <th
+                      scope="col"
+                      className="py-2 pr-3 text-left text-caption tracking-wide text-fg-muted uppercase"
+                    >
+                      Month
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-2 text-right text-caption tracking-wide text-fg-muted uppercase"
+                    >
+                      &Delta; &euro;
+                    </th>
+                    <th
+                      scope="col"
+                      className="py-2 pl-3 text-right text-caption tracking-wide text-fg-muted uppercase"
+                    >
+                      &Delta; %
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.map((row) => (
+                    <tr key={row.month} className="hairline-b">
+                      <th
+                        scope="row"
+                        className="num py-1.5 pr-3 text-left text-body-sm font-normal text-fg"
+                      >
+                        {formatMonth(row.month)}
+                      </th>
+                      <td className={cellTone(row.monthAbs, "num px-3 py-1.5 text-right text-body-sm")}>
+                        {formatDelta(row.monthAbs)}
+                      </td>
+                      <td
+                        className={cellTone(row.monthPct, "num py-1.5 pl-3 text-right text-body-sm")}
+                      >
+                        {formatPercent(row.monthPct, { signed: true })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      </PageGrid>
+    </>
   );
 }
 

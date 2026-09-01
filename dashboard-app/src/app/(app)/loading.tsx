@@ -1,17 +1,26 @@
-import { SkeletonHero, SkeletonRows, SkeletonTile } from "@/components/ui/Skeleton";
+import { PageGrid, Panel } from "@/components/layout/PageGrid";
+import { SkeletonChart, SkeletonHero, SkeletonRows } from "@/components/ui/Skeleton";
 
-/** Content-shaped placeholders; spinners are reserved for buttons. */
+/**
+ * Content-shaped placeholders; spinners are reserved for buttons. The skeleton
+ * is laid out on the same grid as the page it stands in for, so the figures do
+ * not jump columns when the data lands.
+ */
 export default function AppLoading() {
   return (
-    <div className="px-4 pt-4 pb-8">
-      <SkeletonHero />
-      <div className="-mx-4 mt-6">
+    <PageGrid className="pt-10">
+      <Panel span={8}>
+        <SkeletonHero />
+      </Panel>
+      <Panel span={4}>
+        <SkeletonHero />
+      </Panel>
+      <Panel span={8}>
+        <SkeletonChart />
+      </Panel>
+      <Panel span={4}>
         <SkeletonRows rows={5} />
-      </div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <SkeletonTile />
-        <SkeletonTile />
-      </div>
-    </div>
+      </Panel>
+    </PageGrid>
   );
 }

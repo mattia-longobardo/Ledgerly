@@ -27,28 +27,28 @@ const FIELD_META: readonly FieldMeta[] = [
   { name: "taxes", label: "Taxes", hint: "TOTALE TRATTENUTE IRPEF + addizionali", unit: "eur" },
   {
     name: "fundContribEmployee",
-    label: "Cometa — my share",
+    label: "Cometa, my share",
     hint: "FONDO C/DIPE",
     unit: "eur",
   },
   {
     name: "fundContribEmployer",
-    label: "Cometa — employer",
+    label: "Cometa, employer",
     hint: "FONDO C/AZIENDA",
     unit: "eur",
   },
-  { name: "ferieBalance", label: "Ferie residue", hint: "FERIE RES. — in hours", unit: "hours" },
-  { name: "rolBalance", label: "ROL residui", hint: "ROL. RES. — in hours", unit: "hours" },
+  { name: "ferieBalance", label: "Ferie residue", hint: "FERIE RES., in hours", unit: "hours" },
+  { name: "rolBalance", label: "ROL residui", hint: "ROL. RES., in hours", unit: "hours" },
   {
     name: "ferieTaken",
     label: "Ferie godute",
-    hint: "FERIE GOD. — hours used, reported one month in arrears",
+    hint: "FERIE GOD., hours used, reported one month in arrears",
     unit: "hours",
   },
   {
     name: "rolTaken",
     label: "ROL goduti",
-    hint: "ROL. GOD. — hours used, reported one month in arrears; blank means none",
+    hint: "ROL. GOD., hours used, reported one month in arrears; blank means none",
     unit: "hours",
   },
 ];
@@ -111,17 +111,17 @@ export default async function VerifyPayslipPage({
   const checks: SanityCheck[] = extraction?.checks ?? [];
 
   return (
-    <main className="pb-8">
+    <>
       <PageHeader
         title={`${formatMonth(payslip.month)} payslip`}
         eyebrow={
-          <Link href="/work" className="text-fg-muted">
-            ← Work
+          <Link href="/work" className="text-fg-muted transition-colors hover:text-fg">
+            &larr; Work
           </Link>
         }
       />
 
-      <p className="px-4 pb-4 text-body-sm text-fg-muted lg:px-8">
+      <p className="max-w-prose pt-4 text-body-sm text-fg-muted">
         {payslip.status === "verified"
           ? "Already verified. Saving again re-writes the confirmed values and logs the corrections."
           : "Nothing here counts towards a statistic until it is confirmed."}
@@ -148,6 +148,6 @@ export default async function VerifyPayslipPage({
         pending={pending}
         nav={<QueueNav pending={pending} currentId={payslip.id} />}
       />
-    </main>
+    </>
   );
 }

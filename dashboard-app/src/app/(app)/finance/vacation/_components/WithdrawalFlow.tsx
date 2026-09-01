@@ -83,7 +83,7 @@ export function WithdrawalFlow({ balance, today }: WithdrawalFlowProps) {
           value={amount}
           onChange={setAmount}
           max={balance > 0 ? balance : null}
-          hint={`Available: ${formatEur(balance)}. This is a tracked note only — the app never writes to your Wallet account, so move the money out of Revolut Savings yourself.`}
+          hint={`Available: ${formatEur(balance)}. This is a tracked note only. The app never writes to your Wallet account, so move the money out of Revolut Savings yourself.`}
         />
       ),
     },
@@ -131,7 +131,7 @@ export function WithdrawalFlow({ balance, today }: WithdrawalFlowProps) {
             resultValue={resulting}
           />
           <p className="text-body-sm text-fg-muted">
-            Recorded as an annotation only. Nothing is sent to the Wallet API — make the matching
+            Recorded as an annotation only. Nothing is sent to the Wallet API, so make the matching
             transfer out of the Revolut Savings sub-account by hand.
           </p>
         </div>
@@ -142,12 +142,12 @@ export function WithdrawalFlow({ balance, today }: WithdrawalFlowProps) {
   return (
     <>
       {error !== null && (
-        <div className="px-4 pb-3">
+        <div className="pb-3">
           <ErrorInline message={error} />
         </div>
       )}
 
-      <div className="px-4">
+      <div>
         <button
           type="button"
           onClick={() => {
@@ -155,7 +155,7 @@ export function WithdrawalFlow({ balance, today }: WithdrawalFlowProps) {
             setError(null);
             setOpen(true);
           }}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
         >
           Record withdrawal
         </button>
@@ -179,7 +179,7 @@ export function WithdrawalFlow({ balance, today }: WithdrawalFlowProps) {
       <Toast
         open={undoId !== null}
         message="Withdrawal recorded"
-        detail="Tracked annotation only — no Wallet write."
+        detail="Tracked annotation only, no Wallet write."
         duration={UNDO_MS}
         onUndo={undo}
         onOpenChange={(next) => {

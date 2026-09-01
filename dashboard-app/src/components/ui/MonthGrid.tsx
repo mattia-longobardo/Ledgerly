@@ -228,13 +228,19 @@ export function MonthGrid({
                   type="button"
                   disabled={!selectable}
                   onClick={() => onSelectDay(iso)}
-                  aria-label={`${day} ${formatMonthLong(`${month}-01`)}${entry ? ` — ${describeDay(entry)}` : " — no leave"}`}
+                  aria-label={`${day} ${formatMonthLong(`${month}-01`)}${entry ? `, ${describeDay(entry)}` : ", no leave"}`}
                   className={cn(
                     "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-xs border",
                     entry === undefined
                       ? "border-transparent bg-surface"
                       : "border-border bg-surface-raised",
-                    selectable ? "text-fg" : "cursor-not-allowed text-fg-muted opacity-40",
+                    // An unselectable day still has to be READABLE: it is a
+                    // date, not a decoration. The browser's own disabled colour
+                    // takes it to about 2:1, so the token is set explicitly and
+                    // the affordance is carried by the cursor and the ground.
+                    selectable
+                      ? "text-fg"
+                      : "cursor-not-allowed bg-bg text-fg-muted disabled:text-fg-muted",
                   )}
                 >
                   <span className="num text-caption leading-none">{day}</span>
