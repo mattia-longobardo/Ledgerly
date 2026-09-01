@@ -57,7 +57,7 @@ export async function alertJobFailure(alert: JobFailureAlert): Promise<boolean> 
   const scope = alert.monthKey ? ` (${alert.monthKey})` : "";
   const attempts = alert.attempts ? `\nattempts: ${alert.attempts}` : "";
   return notify({
-    title: `Dashboard: ${alert.job} failed${scope}`,
+    title: `Finance Dashboard: ${alert.job} failed${scope}`,
     message: `${alert.error}${attempts}`,
     priority: 8,
   });
@@ -73,7 +73,7 @@ export interface RetrySuccessAlert {
 export async function alertSuccessAfterRetry(alert: RetrySuccessAlert): Promise<boolean> {
   const scope = alert.monthKey ? ` (${alert.monthKey})` : "";
   return notify({
-    title: `Dashboard: ${alert.job} recovered${scope}`,
+    title: `Finance Dashboard: ${alert.job} recovered${scope}`,
     message: `Succeeded after ${alert.attempts} attempts.${alert.detail ? `\n${alert.detail}` : ""}`,
     priority: 4,
   });

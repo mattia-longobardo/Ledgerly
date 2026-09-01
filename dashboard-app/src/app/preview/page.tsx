@@ -20,7 +20,11 @@ import { ErrorInline } from "@/components/ui/ErrorInline";
 import { MoneyValue } from "@/components/ui/MoneyValue";
 import { MonthGrid } from "@/components/ui/MonthGrid";
 import { ProgressRing } from "@/components/ui/ProgressRing";
-import { RangeSelector, type MonthRange, type RangeKey } from "@/components/ui/RangeSelector";
+import {
+  RangeSelector,
+  type MonthRange,
+  type RangeKey,
+} from "@/components/ui/RangeSelector";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SettingsSection } from "@/components/ui/SettingsSection";
 import { Sheet } from "@/components/ui/Sheet";
@@ -39,7 +43,7 @@ import {
   SkeletonTile,
 } from "@/components/ui/Skeleton";
 import { StaleBadge } from "@/components/ui/StaleBadge";
-import { StatTile } from "@/components/ui/StatTile";
+import { StatGrid, StatTile } from "@/components/ui/StatTile";
 import { Toast } from "@/components/ui/Toast";
 import { cn } from "@/components/ui/cn";
 
@@ -85,7 +89,18 @@ const MONTHS = [
 ] as const;
 
 const TOTALS = [
-  41200, 42150, 41980, 45300, 46110, 46980, 47420, null, 49010, 50240, 51120, 52380,
+  41200,
+  42150,
+  41980,
+  45300,
+  46110,
+  46980,
+  47420,
+  null,
+  49010,
+  50240,
+  51120,
+  52380,
 ] as const;
 
 const FUND = [
@@ -106,17 +121,29 @@ const SAMPLE_SERIES: readonly Series[] = [
 ];
 
 const SHORT_SERIES: readonly Series[] = [
-  { key: "total", label: "Total wealth", points: [{ month: "2025-08", value: 52380 }] },
+  {
+    key: "total",
+    label: "Total wealth",
+    points: [{ month: "2025-08", value: 52380 }],
+  },
 ];
 
 const NOW = new Date("2025-08-31T18:40:00Z");
 const FRESH = new Date("2025-08-31T18:25:00Z");
 const OLD = new Date("2025-08-27T09:05:00Z");
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="flex flex-col gap-3 py-6 hairline-b">
-      <h2 className="px-4 text-caption tracking-widest text-fg-muted uppercase">{title}</h2>
+      <h2 className="px-4 text-caption tracking-widest text-fg-muted uppercase">
+        {title}
+      </h2>
       {children}
     </section>
   );
@@ -125,7 +152,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Gallery() {
   const [range, setRange] = useState<RangeKey>("12M");
   const [custom, setCustom] = useState<MonthRange | null>(null);
-  const [view, setView] = useState<"overview" | "funds" | "vacation">("overview");
+  const [view, setView] = useState<"overview" | "funds" | "vacation">(
+    "overview",
+  );
   const [months, setMonths] = useState<"3" | "6" | "12">("6");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -152,14 +181,18 @@ function Gallery() {
       content: (
         <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-caption tracking-wide text-fg-muted uppercase">Label</span>
+            <span className="text-caption tracking-wide text-fg-muted uppercase">
+              Label
+            </span>
             <input
               placeholder="Flights to Lisbon"
               className="min-h-11 rounded-md border border-border bg-surface px-3 text-body text-fg"
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-caption tracking-wide text-fg-muted uppercase">Month</span>
+            <span className="text-caption tracking-wide text-fg-muted uppercase">
+              Month
+            </span>
             <input
               type="month"
               defaultValue="2025-08"
@@ -210,8 +243,16 @@ function Gallery() {
         <div className="flex flex-col gap-2 px-4">
           <MoneyValue value={52380.44} size="display" />
           <div className="flex flex-wrap items-center gap-2">
-            <DeltaBadge value={1260.12} percent={2.47} context="versus last month" />
-            <DeltaBadge value={-318.4} percent={-0.61} context="versus last month" />
+            <DeltaBadge
+              value={1260.12}
+              percent={2.47}
+              context="versus last month"
+            />
+            <DeltaBadge
+              value={-318.4}
+              percent={-0.61}
+              context="versus last month"
+            />
             <DeltaBadge value={0} context="versus last month" />
           </div>
           <div className="flex flex-wrap items-baseline gap-4">
@@ -224,19 +265,31 @@ function Gallery() {
       </Section>
 
       <Section title="Stat tiles">
-        <div className="grid grid-cols-2 gap-3 px-4">
-          <StatTile label="Days taken YTD" value={formatDays(11.5)} sub="of 26 d" />
-          <StatTile
-            label="Days remaining"
-            value={formatDays(14.5)}
-            sub="Ferie 12 d · ROL 2,5 d"
-          />
-          <StatTile
-            label="Avg net · 3 m"
-            value={<MoneyValue value={2214.33} size="display-sm" />}
-            delta={<DeltaBadge value={62.5} />}
-          />
-          <StatTile label="RAL" value={<MoneyValue value={38500} size="display-sm" cents="hide" />} />
+        <div className="px-4">
+          <StatGrid>
+            <StatTile
+              label="Days taken YTD"
+              value={formatDays(11.5)}
+              sub="of 26 d"
+            />
+            <StatTile
+              emphasis="primary"
+              label="Days remaining"
+              value={formatDays(14.5)}
+              sub="Ferie 12 d · ROL 2,5 d"
+            />
+            <StatTile
+              label="Avg net · 3 m"
+              value={<MoneyValue value={2214.33} size="display-sm" />}
+              delta={<DeltaBadge value={62.5} />}
+            />
+            <StatTile
+              label="RAL"
+              value={
+                <MoneyValue value={38500} size="display-sm" cents="hide" />
+              }
+            />
+          </StatGrid>
         </div>
       </Section>
 
@@ -250,18 +303,43 @@ function Gallery() {
             defaultExpanded
           >
             <AccountRow name="Main" value={3210.4} nested capturedAt={FRESH} />
-            <AccountRow name="Savings" value={7070.5} nested capturedAt={FRESH} />
-            <AccountRow name="Holidays" value={2200} nested capturedAt={FRESH} />
+            <AccountRow
+              name="Savings"
+              value={7070.5}
+              nested
+              capturedAt={FRESH}
+            />
+            <AccountRow
+              name="Holidays"
+              value={2200}
+              nested
+              capturedAt={FRESH}
+            />
           </AccountRow>
           <AccountRow
             name="ING"
             value={8940.12}
             capturedAt={OLD}
             stale
-            sparkline={<Sparkline values={[8100, 8400, null, 8700, 8940]} tone="positive" />}
+            sparkline={
+              <Sparkline
+                values={[8100, 8400, null, 8700, 8940]}
+                tone="positive"
+              />
+            }
           />
-          <AccountRow name="Fondo Cometa" value={9605.2} capturedAt={FRESH} href="#" />
-          <AccountRow name="Mediolanum" value={8393.13} capturedAt={OLD} stale />
+          <AccountRow
+            name="Fondo Cometa"
+            value={9605.2}
+            capturedAt={FRESH}
+            href="#"
+          />
+          <AccountRow
+            name="Mediolanum"
+            value={8393.13}
+            capturedAt={OLD}
+            stale
+          />
         </div>
         <div className="flex flex-wrap items-center gap-4 px-4">
           <StaleBadge capturedAt={FRESH} />
@@ -282,10 +360,18 @@ function Gallery() {
           maxMonth="2025-08"
         />
         <div className="px-4">
-          <TimeSeriesChart series={SAMPLE_SERIES} label="Total wealth by month" height={200} />
+          <TimeSeriesChart
+            series={SAMPLE_SERIES}
+            label="Total wealth by month"
+            height={200}
+          />
         </div>
         <div className="px-4">
-          <TimeSeriesChart series={SHORT_SERIES} label="A series with one point" height={140} />
+          <TimeSeriesChart
+            series={SHORT_SERIES}
+            label="A series with one point"
+            height={140}
+          />
         </div>
         <div className="flex items-center gap-4 px-4">
           <Sparkline values={[...TOTALS]} />
@@ -301,7 +387,9 @@ function Gallery() {
           </ProgressRing>
           <div className="flex flex-col">
             <span className="text-body text-fg">Ferie + ROL</span>
-            <span className="text-body-sm text-fg-muted">14,5 of 26 days left</span>
+            <span className="text-body-sm text-fg-muted">
+              14,5 of 26 days left
+            </span>
           </div>
         </div>
         <SegmentedControl
@@ -326,7 +414,10 @@ function Gallery() {
               { day: 22, kind: "half", hours: 4 },
             ]}
           />
-          <MonthGrid month="2025-07" days={[{ day: 4, kind: "half", hours: 2 }]} />
+          <MonthGrid
+            month="2025-07"
+            days={[{ day: 4, kind: "half", hours: 2 }]}
+          />
           <MonthGrid month="2025-06" days={[]} />
         </div>
       </Section>
@@ -349,7 +440,8 @@ function Gallery() {
                 className="num min-h-11 w-full max-w-48 min-w-0 rounded-md border border-border bg-surface px-3 text-body text-fg"
               />
               <span className="text-body-sm text-fg-muted">
-                Payslips state ferie and ROL in hours; days are hours ÷ this number.
+                Payslips state ferie and ROL in hours; days are hours ÷ this
+                number.
               </span>
             </label>
           </SettingsSection>
@@ -378,17 +470,32 @@ function Gallery() {
                     "wallet: GET /api/v1/accounts failed after 3 attempts — ECONNREFUSED 10.0.0.4:8080",
                 },
               ].map((run) => (
-                <li key={run.id} className="flex min-h-11 items-center gap-3 py-2 hairline-b">
+                <li
+                  key={run.id}
+                  className="flex min-h-11 items-center gap-3 py-2 hairline-b"
+                >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body text-fg">{run.label}</span>
-                    <span className="num block truncate text-caption text-fg-muted">{run.meta}</span>
+                    <span className="block truncate text-body text-fg">
+                      {run.label}
+                    </span>
+                    <span className="num block truncate text-caption text-fg-muted">
+                      {run.meta}
+                    </span>
                     {run.error !== undefined && (
-                      <span title={run.error} className="block truncate text-caption text-fg-muted">
+                      <span
+                        title={run.error}
+                        className="block truncate text-caption text-fg-muted"
+                      >
                         {run.error}
                       </span>
                     )}
                   </span>
-                  <span className={cn("num shrink-0 text-caption whitespace-nowrap", run.tone)}>
+                  <span
+                    className={cn(
+                      "num shrink-0 text-caption whitespace-nowrap",
+                      run.tone,
+                    )}
+                  >
                     {run.status}
                   </span>
                 </li>
@@ -423,7 +530,8 @@ function Gallery() {
           </button>
         </div>
         <p className="px-4 text-body-sm text-fg-muted">
-          Overlays portal to the document, so they follow the page theme rather than this panel.
+          Overlays portal to the document, so they follow the page theme rather
+          than this panel.
         </p>
       </Section>
 
@@ -466,8 +574,8 @@ function Gallery() {
       >
         <div className="flex flex-col gap-3">
           <p className="text-body text-fg">
-            The workhorse mobile surface: 60 % height by default, drag-to-dismiss on the header,
-            safe-area padded, scrollable body.
+            The workhorse mobile surface: 60 % height by default,
+            drag-to-dismiss on the header, safe-area padded, scrollable body.
           </p>
           <SkeletonText lines={8} />
         </div>
@@ -505,8 +613,8 @@ export default function PreviewPage() {
 
       <div className="hairline-b bg-warning/10 px-4 py-3">
         <p className="text-body-sm text-fg">
-          <span className="font-semibold">Dev-only preview.</span> Every design-system component
-          with sample data, rendered in both palettes.
+          <span className="font-semibold">Dev-only preview.</span> Every
+          design-system component with sample data, rendered in both palettes.
         </p>
         <div className="mt-2">
           <ThemeToggle variant="segmented" />

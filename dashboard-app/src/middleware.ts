@@ -108,6 +108,11 @@ export default function middleware(request: NextRequest) {
   return withCsp(NextResponse.redirect(url), pathname);
 }
 
+// `brand/` is excluded for the same reason as the icon paths: the favicon and
+// manifest icons are fetched by the browser with no session, so gating them
+// 307s the tab icon to /signin and it silently never renders. They are public
+// brand assets and carry nothing sensitive.
+//
 // `output: standalone` does not ship a working edge bundle for middleware:
 // without this the file compiles to .next/server/edge/, is absent from the
 // image, and every request logs "must export a function". Node runtime also
@@ -116,6 +121,6 @@ export const runtime = "nodejs";
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|icons/|apple-icon|icon).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|brand/|icons/|apple-icon|icon).*)",
   ],
 };

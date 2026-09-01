@@ -4,10 +4,18 @@ import { plexMono, plexSans } from "@/styles/fonts";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Personal finance and work dashboard",
+  title: { default: "Finance Dashboard", template: "%s · Finance Dashboard" },
+  description: "Your money, instrumented.",
+  applicationName: "Finance Dashboard",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Dashboard" },
+  icons: {
+    icon: [
+      { url: "/brand/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Finance" },
   robots: { index: false, follow: false },
 };
 

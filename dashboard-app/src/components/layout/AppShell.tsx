@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode, SVGProps } from "react";
 import { ThemeToggle } from "../ThemeToggle";
+import { BrandLockup } from "../ui/Brand";
 import { cn } from "../ui/cn";
 
 type IconProps = SVGProps<SVGSVGElement>;
@@ -81,10 +82,8 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
         aria-label="Sections"
         className="fixed inset-y-0 left-0 z-30 hidden w-52 flex-col border-r border-border bg-surface px-3 py-4 lg:flex"
       >
-        <span className="px-2 pb-4 text-caption tracking-widest text-fg-muted uppercase">
-          Dashboard
-        </span>
-        <ul className="flex flex-col gap-1">
+        <BrandLockup className="axis-rule mx-2 pb-4" />
+        <ul className="mt-4 flex flex-col gap-0.5">
           {TABS.map((tab) => {
             const active = isActive(pathname, tab.href);
             return (
@@ -93,8 +92,11 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
                   href={tab.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-11 items-center gap-3 rounded-md px-3 text-body transition-colors duration-150 ease-out",
-                    active ? "bg-surface-raised text-accent" : "text-fg-muted",
+                    "relative flex min-h-11 items-center gap-3 rounded-md px-3 text-body transition-colors duration-150 ease-out",
+                    "before:absolute before:top-2 before:bottom-2 before:-left-3 before:w-0.5 before:rounded-xs before:bg-accent before:transition-opacity",
+                    active
+                      ? "bg-surface-raised text-accent before:opacity-100"
+                      : "text-fg-muted before:opacity-0 hover:text-fg",
                   )}
                 >
                   {tab.icon}

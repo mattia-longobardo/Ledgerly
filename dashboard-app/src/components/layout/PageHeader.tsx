@@ -23,7 +23,9 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col gap-3 bg-bg px-4 pt-4 pb-3",
+        "flex flex-col gap-3 bg-bg px-4 pt-5 pb-4",
+        // The rule bleeds past the gutter, echoing the mark's axis overshoot.
+        !segmented && "axis-rule",
         sticky && "sticky top-0 z-20 hairline-b",
         className,
       )}
@@ -31,9 +33,11 @@ export function PageHeader({
       <div className="flex min-h-11 items-center gap-3">
         <div className="min-w-0 flex-1">
           {eyebrow !== undefined && (
-            <div className="text-caption tracking-wide text-fg-muted uppercase">{eyebrow}</div>
+            <div className="text-caption tracking-widest text-fg-muted uppercase">{eyebrow}</div>
           )}
-          <h1 className="truncate text-heading text-fg">{title}</h1>
+          <h1 className="truncate text-heading font-semibold tracking-tight text-fg lg:text-display-sm">
+            {title}
+          </h1>
         </div>
         {action}
       </div>

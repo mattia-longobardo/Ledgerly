@@ -16,6 +16,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // `next dev` otherwise writes its own CLAUDE.md / AGENTS.md into this
+  // directory on every start, shadowing the ones at the repo root.
+  agentRules: false,
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ["pg"],

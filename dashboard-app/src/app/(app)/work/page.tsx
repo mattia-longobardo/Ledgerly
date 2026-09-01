@@ -3,10 +3,22 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
 import { StaleBadge } from "@/components/ui/StaleBadge";
-import { StatTile } from "@/components/ui/StatTile";
+import { StatGrid, StatTile } from "@/components/ui/StatTile";
 import { cn } from "@/components/ui/cn";
-import { averageNet, averageTaxes, leaveTakenYtd, netPerMonthSeries, ral } from "@/lib/calc/payroll";
-import { formatDays, formatEur, formatMonth, formatNumber, hoursToDays } from "@/lib/format";
+import {
+  averageNet,
+  averageTaxes,
+  leaveTakenYtd,
+  netPerMonthSeries,
+  ral,
+} from "@/lib/calc/payroll";
+import {
+  formatDays,
+  formatEur,
+  formatMonth,
+  formatNumber,
+  hoursToDays,
+} from "@/lib/format";
 import { allPayslips, verifiedPayslips } from "@/lib/repo/payslips";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { loadFerie } from "../_lib/vacation";
@@ -21,9 +33,15 @@ export const metadata = { title: "Work" };
 const STATUS_CHIP: Record<string, { label: string; className: string }> = {
   verified: { label: "verified", className: "bg-positive/10 text-positive" },
   parsed: { label: "needs review", className: "bg-warning/10 text-warning" },
-  discovered: { label: "not parsed", className: "bg-surface text-fg-muted border border-border" },
+  discovered: {
+    label: "not parsed",
+    className: "bg-surface text-fg-muted border border-border",
+  },
   rejected: { label: "rejected", className: "bg-negative/10 text-negative" },
-  superseded: { label: "superseded", className: "bg-surface text-fg-muted border border-border" },
+  superseded: {
+    label: "superseded",
+    className: "bg-surface text-fg-muted border border-border",
+  },
 };
 
 export default async function WorkPage() {
@@ -80,50 +98,69 @@ export default async function WorkPage() {
         </div>
       )}
 
-      {/* 2×2 at 360 px; the four figures that answer "where am I?" */}
-      <div className="grid grid-cols-2 gap-3 px-4">
-        <StatTile
-          label={`Days taken ${year}`}
-          value={formatDays(taken.totalDays)}
-          sub={
-            <span className="num">
-              {`Ferie ${formatDays(taken.ferieDays)} · ROL ${formatDays(taken.rolDays)}`}
-            </span>
-          }
-        />
-        <StatTile
-          label="Days remaining"
-          value={remaining.combinedDays === null ? "—" : formatDays(remaining.combinedDays)}
-          sub={
-            <span className="num">
-              {`Ferie ${formatDays(hoursToDays(remaining.ferieHours, ferie.hoursPerDay))} · ROL ${formatDays(hoursToDays(remaining.rolHours, ferie.hoursPerDay))}`}
-            </span>
-          }
-        />
-        <StatTile
-          label="Avg net 3 m"
-          value={<MoneyValue value={windows[0]?.avgNet ?? null} size="display-sm" cents="muted" />}
-          sub="Tredicesima excluded"
-        />
-        <StatTile
-          label="RAL"
-          value={
-            <MoneyValue
-              value={annual.isProjected ? (annual.projected ?? annual.ytdGross) : annual.ytdGross}
-              size="display-sm"
-              cents="muted"
-            />
-          }
-          sub={
-            annual.isProjected ? (
-              <span className="num text-warning">
-                Projected · YTD {formatEur(annual.ytdGross)}
+      {/* 2×2 at 360 px; the four figures that answer "where am I?". One cluster
+          sharing its seams, with the remaining-days gauge lifted as the read
+          this screen exists to give. */}
+      <div className="px-4">
+        <StatGrid>
+          <StatTile
+            label={`Days taken ${year}`}
+            value={formatDays(taken.totalDays)}
+            sub={
+              <span className="num">
+                {`Ferie ${formatDays(taken.ferieDays)} · ROL ${formatDays(taken.rolDays)}`}
               </span>
-            ) : (
-              "Gross, tredicesima included"
-            )
-          }
-        />
+            }
+          />
+          <StatTile
+            emphasis="primary"
+            label="Days remaining"
+            value={
+              remaining.combinedDays === null
+                ? "-"
+                : formatDays(remaining.combinedDays)
+            }
+            sub={
+              <span className="num">
+                {`Ferie ${formatDays(hoursToDays(remaining.ferieHours, ferie.hoursPerDay))} · ROL ${formatDays(hoursToDays(remaining.rolHours, ferie.hoursPerDay))}`}
+              </span>
+            }
+          />
+          <StatTile
+            label="Avg net 3 m"
+            value={
+              <MoneyValue
+                value={windows[0]?.avgNet ?? null}
+                size="display-sm"
+                cents="muted"
+              />
+            }
+            sub="Tredicesima excluded"
+          />
+          <StatTile
+            label="RAL"
+            value={
+              <MoneyValue
+                value={
+                  annual.isProjected
+                    ? (annual.projected ?? annual.ytdGross)
+                    : annual.ytdGross
+                }
+                size="display-sm"
+                cents="muted"
+              />
+            }
+            sub={
+              annual.isProjected ? (
+                <span className="num text-warning">
+                  Projected · YTD {formatEur(annual.ytdGross)}
+                </span>
+              ) : (
+                "Gross, tredicesima included"
+              )
+            }
+          />
+        </StatGrid>
       </div>
 
       <p className="num px-4 pt-2 text-caption text-fg-muted">
@@ -131,7 +168,10 @@ export default async function WorkPage() {
         {remaining.permessiHours !== null &&
           ` · permessi ${formatNumber(remaining.permessiHours)} h (not in the headline)`}
         {" · "}
-        <StaleBadge capturedAt={ferie.latest?.verifiedAt ?? null} stale={ferie.latest === null} />
+        <StaleBadge
+          capturedAt={ferie.latest?.verifiedAt ?? null}
+          stale={ferie.latest === null}
+        />
       </p>
 
       <LeaveCalendar view={calendar} />
@@ -147,7 +187,9 @@ export default async function WorkPage() {
       <SalarySection windows={windows} />
 
       <section className="mt-8">
-        <h2 className="px-4 pb-2 text-caption tracking-wide text-fg-muted uppercase">Payslips</h2>
+        <h2 className="px-4 pb-2 text-caption tracking-wide text-fg-muted uppercase">
+          Payslips
+        </h2>
         {payslips.length === 0 ? (
           <div className="px-4">
             <EmptyState
@@ -180,7 +222,9 @@ export default async function WorkPage() {
                       <span className="num block text-body text-fg">
                         {formatMonth(payslip.month)}
                         {payslip.isThirteenth && (
-                          <span className="ml-2 text-caption text-fg-muted">13ª</span>
+                          <span className="ml-2 text-caption text-fg-muted">
+                            13ª
+                          </span>
                         )}
                       </span>
                       <span
