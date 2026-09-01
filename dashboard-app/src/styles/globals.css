@@ -244,7 +244,6 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
-      view-transition-name: none !important;
     }
   }
 }
@@ -371,16 +370,9 @@
 }
 
 /*
- * Cross-fade between the three top-level sections. Feedback that the route
- * changed, nothing more: no slide, no scale, no stagger. Reduced motion drops
- * the names entirely via the base layer above, which disables the transition.
+ * No `@view-transition` rule here. It is a CROSS-DOCUMENT feature, and every
+ * navigation between the three sections is client-side, so the rule would sit
+ * in the stylesheet doing nothing at all. The same-document API needs React's
+ * still-experimental <ViewTransition>, which is not worth an experimental flag
+ * for a 140 ms cross-fade on a three-tab app.
  */
-@view-transition {
-  navigation: auto;
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 140ms;
-  animation-timing-function: ease-out;
-}
