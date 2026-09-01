@@ -1,0 +1,108 @@
+# ---------------------------------------------------------------------------
+# Segreti e configurazione d'ambiente
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*_token
+*.credentials.json
+
+# ---------------------------------------------------------------------------
+# Dati personali / documenti finanziari (non devono mai finire nel repo)
+# ---------------------------------------------------------------------------
+*.pdf
+.work/
+
+# ---------------------------------------------------------------------------
+# Dipendenze
+# ---------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/versions
+
+# ---------------------------------------------------------------------------
+# Build / output Next.js
+# ---------------------------------------------------------------------------
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+.turbo/
+.swc/
+
+# ---------------------------------------------------------------------------
+# Test (Playwright, Vitest)
+# ---------------------------------------------------------------------------
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+coverage/
+.nyc_output/
+
+# ---------------------------------------------------------------------------
+# Log e file temporanei
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.pid
+*.seed
+*.tmp
+tmp/
+
+# ---------------------------------------------------------------------------
+# Database locali / dump
+# ---------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+pgdata/
+
+# ---------------------------------------------------------------------------
+# Tooling agenti: si versiona la config condivisa, non lo stato locale
+# ---------------------------------------------------------------------------
+.claude/settings.local.json
+.claude/*.local.json
+.claude/state/
+.claude/jobs/
+.codex/*.local.json
+
+# graphify: il grafo si versiona, cache e path assoluti della macchina no
+graphify-out/cache/
+graphify-out/cost.json
+graphify-out/.graphify_root
+graphify-out/.graphify_python
+
+# ---------------------------------------------------------------------------
+# Sistema operativo ed editor
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
