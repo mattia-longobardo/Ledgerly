@@ -1,0 +1,8 @@
+# Monthly snapshot — 23:59 on the 1st, TZ=Europe/Rome on the container
+59 23 1 * * curl -fsS --retry 3 --max-time 300 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST http://dashboard-app:3000/api/jobs/monthly-snapshot
+# Sweep: snapshot catch-up + payslip polling fallback + Teable-write retries
+7 * * * *  curl -fsS -H "X-Cron-Secret: ${CRON_SECRET}" -X POST http://dashboard-app:3000/api/jobs/sweep
+# Wallet refresh — Wallet syncs at noon, so once a day at local noon is enough
+0 12 * * * curl -fsS --retry 3 --max-time 300 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST http://dashboard-app:3000/api/jobs/wallet-refresh
+# Trek leave sync — pull the Vacay calendar, push dashboard edits (:23, clear of the sweep)
+23 * * * * curl -fsS -H "X-Cron-Secret: ${CRON_SECRET}" -X POST http://dashboard-app:3000/api/jobs/trek-sync

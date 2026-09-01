@@ -1,0 +1,10 @@
+### SYNTHETIC FIXTURE - unreadable OCR output (skewed scan). The pipeline must
+### degrade to an all-low-confidence row for assisted manual entry, never throw
+### (PLAN section 4, "Failure handling").
+
+M0d, (edn|ino T5 ~~~~ ###
+;;;  \/\/  ..  ,,, |||
+R3PLy 5.p./-\  ?? ?? ??
+............................
+c0d d3scr1z10n3 ~~ ~~ ~~ ~~
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
