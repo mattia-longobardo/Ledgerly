@@ -85,6 +85,8 @@ pgdata/
 
 # graphify: il grafo si versiona, cache e path assoluti della macchina no
 graphify-out/cache/
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+graphify-out/*.sig
 graphify-out/cost.json
 graphify-out/.graphify_root
 graphify-out/.graphify_python

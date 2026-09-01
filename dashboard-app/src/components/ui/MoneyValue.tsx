@@ -1,13 +1,14 @@
 import { formatEur, splitEur, type Money } from "@/lib/format";
 import { cn } from "./cn";
 
-export type MoneySize = "body" | "display-sm" | "display";
+export type MoneySize = "body" | "display-sm" | "display" | "display-lg";
 export type CentsMode = "full" | "muted" | "hide";
 
 const SIZE_CLASS: Record<MoneySize, string> = {
   body: "text-body",
   "display-sm": "text-display-sm",
   display: "text-display",
+  "display-lg": "text-display sm:text-display-lg",
 };
 
 export interface MoneyValueProps {

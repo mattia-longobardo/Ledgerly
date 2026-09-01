@@ -33,7 +33,7 @@ function toNumber(v: Money): number | null {
 /** `1.234,56 €` — never returns NaN; nullish renders an em dash. */
 export function formatEur(v: Money, opts?: { cents?: boolean }): string {
   const n = toNumber(v);
-  if (n === null) return "—";
+  if (n === null) return "-";
   return (opts?.cents === false ? EUR_NO_CENTS : EUR).format(n);
 }
 
@@ -43,7 +43,7 @@ export function formatEur(v: Money, opts?: { cents?: boolean }): string {
  */
 export function splitEur(v: Money): { main: string; cents: string; suffix: string } {
   const n = toNumber(v);
-  if (n === null) return { main: "—", cents: "", suffix: "" };
+  if (n === null) return { main: "-", cents: "", suffix: "" };
   const parts = EUR.formatToParts(n);
   let main = "";
   let cents = "";
@@ -67,19 +67,19 @@ export function splitEur(v: Money): { main: string; cents: string; suffix: strin
 /** Signed delta with a true minus glyph — colour is never the only signal. */
 export function formatDelta(v: Money): string {
   const n = toNumber(v);
-  if (n === null) return "—";
+  if (n === null) return "-";
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
   return `${sign}${EUR.format(Math.abs(n))}`;
 }
 
 export function formatPercent(v: number | null | undefined, opts?: { signed?: boolean }): string {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  if (v === null || v === undefined || !Number.isFinite(v)) return "-";
   const sign = opts?.signed ? (v > 0 ? "+" : v < 0 ? "−" : "") : "";
   return `${sign}${PCT.format(Math.abs(v))} %`;
 }
 
 export function formatNumber(v: number | null | undefined): string {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  if (v === null || v === undefined || !Number.isFinite(v)) return "-";
   return NUM.format(v);
 }
 
@@ -91,7 +91,7 @@ export function hoursToDays(hours: Money, hoursPerDay = 8): number | null {
 }
 
 export function formatDays(v: number | null | undefined): string {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  if (v === null || v === undefined || !Number.isFinite(v)) return "-";
   return `${NUM.format(v)} d`;
 }
 

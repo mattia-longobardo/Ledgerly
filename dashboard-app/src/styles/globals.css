@@ -24,6 +24,8 @@
   --text-display-sm--line-height: 2.125rem;
   --text-display: 2.5rem;
   --text-display--line-height: 2.75rem;
+  --text-display-lg: 3.25rem;
+  --text-display-lg--line-height: 3.375rem;
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -204,6 +206,50 @@
 
 @utility hairline-b {
   border-bottom: 1px solid var(--color-border);
+}
+
+/*
+ * The brand mark is an F standing on a chart axis whose rule overshoots the
+ * stem on both sides. That overshoot is the identity's load-bearing detail, so
+ * it is the app's divider too: `axis-rule` bleeds past the 1rem page gutter the
+ * way the mark's rule bleeds past its glyph. Structure, not decoration.
+ */
+@utility axis-rule {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: -1rem;
+    right: -1rem;
+    bottom: 0;
+    height: 1px;
+    background: var(--color-border);
+  }
+}
+
+/*
+ * Same rule, with the accent segment that marks the live value — the mark's
+ * short bar. Reserved for the one primary read on a screen.
+ */
+@utility axis-rule-live {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: -1rem;
+    right: -1rem;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      var(--color-accent) 0,
+      var(--color-accent) 4.5rem,
+      var(--color-border) 4.5rem,
+      var(--color-border) 100%
+    );
+  }
 }
 
 @utility safe-b {

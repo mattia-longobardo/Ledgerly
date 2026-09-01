@@ -50,10 +50,10 @@ function FundTable({ fund }: { fund: PerFundGain }) {
                 )}
               </th>
               <td className="num px-3 py-2 text-right whitespace-nowrap text-fg-muted">
-                {row.paidIn > 0 ? formatEur(row.paidIn) : "—"}
+                {row.paidIn > 0 ? formatEur(row.paidIn) : "-"}
               </td>
               <td className="px-3 py-2 text-right whitespace-nowrap">
-                {row.opening ? <span className="text-fg-muted">—</span> : <Pct value={row.pct} />}
+                {row.opening ? <span className="text-fg-muted">-</span> : <Pct value={row.pct} />}
               </td>
               <td
                 className={cn(

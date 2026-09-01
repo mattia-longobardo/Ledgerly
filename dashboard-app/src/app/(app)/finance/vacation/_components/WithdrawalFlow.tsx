@@ -125,7 +125,7 @@ export function WithdrawalFlow({ balance, today }: WithdrawalFlowProps) {
           <ConfirmSummary
             rows={[
               { label: "Withdrawal", value: formatEur(parsed ?? 0) },
-              { label: "Label", value: note.trim() === "" ? "—" : note.trim() },
+              { label: "Label", value: note.trim() === "" ? "-" : note.trim() },
               { label: "Date", value: occurredOn },
             ]}
             resultValue={resulting}

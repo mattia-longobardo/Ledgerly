@@ -1,4 +1,5 @@
 import { PROVIDER_ID } from "@/auth";
+import { BrandMark } from "@/components/ui/Brand";
 import { SignInButton } from "./SignInButton";
 
 export const metadata = { title: "Sign in" };
@@ -27,7 +28,11 @@ export default async function SignInPage({
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-6 text-fg">
       <div className="w-full max-w-sm rounded-md border border-border bg-surface p-8">
-        <h1 className="text-heading-sm">Personal dashboard</h1>
+        <BrandMark className="h-8 w-8 text-fg" />
+        <h1 className="mt-4 text-heading-sm tracking-tight">
+          <span className="font-semibold">Finance</span>
+          <span className="text-fg-muted"> Dashboard</span>
+        </h1>
         <p className="mt-2 text-body-sm text-fg-muted">
           Single-user access. Sign in with Authentik to continue.
         </p>

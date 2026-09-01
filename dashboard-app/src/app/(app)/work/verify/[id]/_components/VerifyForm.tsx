@@ -52,7 +52,7 @@ export interface VerifyFormProps {
 const PEEK_OFFSET = "calc(3.5rem + env(safe-area-inset-bottom, 0px))";
 
 function decimal(value: number | null, unit: "eur" | "hours"): string {
-  if (value === null) return "—";
+  if (value === null) return "-";
   return unit === "eur" ? formatEur(value) : `${formatNumber(value)} h`;
 }
 
@@ -292,7 +292,7 @@ export function VerifyForm(props: VerifyFormProps) {
                     onChange={(event) => set(field.name, event.target.value)}
                     inputMode="decimal"
                     autoComplete="off"
-                    placeholder="—"
+                    placeholder="-"
                     className="num min-h-11 rounded-md border border-border bg-surface px-3 text-body text-fg"
                   />
                 </label>

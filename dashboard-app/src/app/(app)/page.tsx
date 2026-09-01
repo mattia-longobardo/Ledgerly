@@ -100,7 +100,7 @@ export default async function HomePage() {
               Fondo Cometa, and on the rows this app appends (Date + ING +
               Revolut only) it omits every hand-tracked account too. The chart
               below is built from the same sum, so the two always agree. */}
-          <div className="px-4 pb-5 lg:col-start-1 lg:px-0">
+          <div className="axis-rule-live mb-5 px-4 pb-6 lg:col-start-1 lg:px-0">
             {total.balance === null ? (
               <EmptyState
                 title="No balances yet"
@@ -116,8 +116,8 @@ export default async function HomePage() {
               />
             ) : (
               <>
-                <MoneyValue value={total.balance} size="display" cents="muted" />
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <MoneyValue value={total.balance} size="display-lg" cents="muted" />
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                   {delta.abs !== null && (
                     <DeltaBadge value={delta.abs} percent={delta.pct} context="versus last month" />
                   )}
@@ -180,7 +180,7 @@ export default async function HomePage() {
 
         <section className="lg:col-start-2 lg:row-start-1 lg:row-end-4">
           {/* Vacation tile — payslip-authoritative residuals, shown in days. */}
-          <div className="mt-6 flex items-center gap-4 px-4 lg:mt-0 lg:rounded-md lg:border lg:border-border lg:bg-surface lg:p-4">
+          <div className="axis-rule flex items-center gap-4 px-4 pb-5 lg:mt-0 lg:px-0">
             <ProgressRing
               value={remainingDays ?? 0}
               max={ringMax > 0 ? ringMax : 1}
@@ -191,7 +191,7 @@ export default async function HomePage() {
             <div className="min-w-0">
               <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
               <div className="num text-display-sm text-fg">
-                {remainingDays === null ? "—" : formatDays(remainingDays)}
+                {remainingDays === null ? "-" : formatDays(remainingDays)}
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="num text-caption text-fg-muted">
