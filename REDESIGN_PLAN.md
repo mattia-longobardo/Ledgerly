@@ -389,12 +389,18 @@ committed and deployable.
 
 ---
 
-## Open question for approval
+## Resolved: information architecture
 
-The plan **deletes `NavCard`** from Home and **moves the net-worth chart from
-Finance to Home**. That changes what each screen is for, which is an information
-architecture change, not just layout. It is the right call (Home currently shows a
-number with no curve, Finance shows a curve with no number), but it is the one
-decision here that is genuinely yours rather than mine. Say if you want the current
-IA preserved instead, and Wave 1 keeps both screens as they are and only fixes
-their width.
+**Approved 2026-09-02.** The net-worth curve belongs on Home, next to the figure
+it describes. Done ahead of the redesign in commit `chart on home`:
+
+- Home now renders a fixed 12-month net-worth curve directly beneath the primary
+  read, built server-side (`netWorthSeries`) so Home stays a Server Component.
+- `/finance` keeps its interactive chart. It is the drill-down (range selector,
+  per-account selection); Home is the first read. They are different jobs, so the
+  chart was added to Home rather than removed from Finance. If you want Finance
+  stripped to an account list, say so and Wave 1 does it.
+- `NavCard` deletion on Home is still part of Wave 1 (Section 3.1), not yet done.
+
+Wave 1 therefore starts from a Home that already has the curve; A4 places it into
+the 12-column grid (span 8) rather than introducing it.

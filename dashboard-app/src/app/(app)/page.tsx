@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sparkline } from "@/components/chart/Sparkline";
+import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AccountRow } from "@/components/ui/AccountRow";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
@@ -7,9 +8,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { StaleBadge } from "@/components/ui/StaleBadge";
-import { carryForward, deltaOverRange } from "@/lib/calc/series";
+import { carryForward, deltaOverRange, rangeToMonths } from "@/lib/calc/series";
 import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
+import type { Series } from "@/lib/contracts";
 import { loadAccounts, type AccountView } from "./_lib/accounts";
 import { loadFerie } from "./_lib/vacation";
 
@@ -17,7 +19,35 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };
 
 function spark(account: AccountView) {
-  return <Sparkline values={carryForward(account.points).map((p) => p.value)} />;
+  return (
+    <Sparkline values={carryForward(account.points).map((p) => p.value)} />
+  );
+}
+
+/**
+ * The net-worth curve for the figure directly above it. Built here on the
+ * server: `TimeSeriesChart` is a client leaf, but it takes plain data, so Home
+ * stays a Server Component. Fixed at 12 months and deliberately not
+ * interactive; /finance owns range and per-account selection.
+ */
+function netWorthSeries(
+  total: AccountView,
+  earliestMonth: string | null,
+): Series[] {
+  const months = rangeToMonths("12M", { earliest: earliestMonth });
+  const byMonth = new Map(
+    carryForward(total.points).map((p) => [p.month, p.value] as const),
+  );
+  return [
+    {
+      key: total.key,
+      label: "Net worth",
+      points: months.map((month) => ({
+        month,
+        value: byMonth.get(month) ?? null,
+      })),
+    },
+  ];
 }
 
 function SettingsLink() {
@@ -45,7 +75,15 @@ function SettingsLink() {
   );
 }
 
-function NavCard({ href, title, detail }: { href: string; title: string; detail: string }) {
+function NavCard({
+  href,
+  title,
+  detail,
+}: {
+  href: string;
+  title: string;
+  detail: string;
+}) {
   return (
     <Link
       href={href}
@@ -116,16 +154,44 @@ export default async function HomePage() {
               />
             ) : (
               <>
-                <MoneyValue value={total.balance} size="display-lg" cents="muted" />
+                <MoneyValue
+                  value={total.balance}
+                  size="display-lg"
+                  cents="muted"
+                />
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                   {delta.abs !== null && (
-                    <DeltaBadge value={delta.abs} percent={delta.pct} context="versus last month" />
+                    <DeltaBadge
+                      value={delta.abs}
+                      percent={delta.pct}
+                      context="versus last month"
+                    />
                   )}
-                  <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
+                  <StaleBadge
+                    capturedAt={total.capturedAt}
+                    stale={total.stale}
+                  />
                 </div>
               </>
             )}
           </div>
+
+          {/* The curve for the figure above. The number and its history belong on
+              the same screen; /finance is the drill-down, not the first read. */}
+          {total.balance !== null && (
+            <div className="mb-6 px-4 lg:col-start-1 lg:px-0">
+              <div className="text-caption tracking-wide text-fg-muted uppercase">
+                Last 12 months
+              </div>
+              <TimeSeriesChart
+                series={netWorthSeries(total, accounts.earliestMonth)}
+                label="Net worth by month"
+                height={200}
+                area
+                className="mt-2"
+              />
+            </div>
+          )}
 
           {/* Account strip. Revolut opens onto its sub-accounts; each visible
               hand-tracked account is its own row (an empty Teable cell reads as
@@ -186,10 +252,14 @@ export default async function HomePage() {
               max={ringMax > 0 ? ringMax : 1}
               label="Leave remaining this year"
             >
-              <span className="text-caption">{formatNumber(remainingDays)}</span>
+              <span className="text-caption">
+                {formatNumber(remainingDays)}
+              </span>
             </ProgressRing>
             <div className="min-w-0">
-              <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
+              <div className="text-caption tracking-wide text-fg-muted uppercase">
+                Ferie + ROL
+              </div>
               <div className="num text-display-sm text-fg">
                 {remainingDays === null ? "-" : formatDays(remainingDays)}
               </div>
@@ -206,8 +276,16 @@ export default async function HomePage() {
           </div>
 
           <div className="mt-6 grid gap-3 px-4 sm:grid-cols-2 lg:mt-6 lg:grid-cols-1 lg:px-0">
-            <NavCard href="/finance" title="Finance" detail="Wealth, funds, vacation fund" />
-            <NavCard href="/work" title="Work" detail="Leave, salary, payslips" />
+            <NavCard
+              href="/finance"
+              title="Finance"
+              detail="Wealth, funds, vacation fund"
+            />
+            <NavCard
+              href="/work"
+              title="Work"
+              detail="Leave, salary, payslips"
+            />
           </div>
         </section>
       </div>
