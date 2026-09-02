@@ -21,6 +21,27 @@ RUN ./node_modules/.bin/esbuild src/lib/db/migrate.ts \
       --external:cloudflare:sockets \
       --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
       --outfile=migrate.mjs
+# The Teable import and its reconciliation are one-off, hand-run migrations:
+# they ship with the image so the runbook can exec them against the live
+# database, and they are never part of the entrypoint.
+RUN ./node_modules/.bin/esbuild scripts/migrate-teable.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --target=node22 \
+      --external:pg-native \
+      --external:cloudflare:sockets \
+      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
+      --outfile=migrate-teable.mjs
+RUN ./node_modules/.bin/esbuild scripts/validate-teable-migration.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --target=node22 \
+      --external:pg-native \
+      --external:cloudflare:sockets \
+      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
+      --outfile=validate-teable.mjs
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache wget
@@ -33,6 +54,8 @@ COPY --from=builder --chown=1000:1000 /app/.next/standalone ./
 COPY --from=builder --chown=1000:1000 /app/.next/static ./.next/static
 COPY --from=builder --chown=1000:1000 /app/public ./public
 COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
+COPY --from=builder --chown=1000:1000 /app/migrate-teable.mjs ./migrate-teable.mjs
+COPY --from=builder --chown=1000:1000 /app/validate-teable.mjs ./validate-teable.mjs
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh && mkdir -p /app/.next/cache && chown -R 1000:1000 /app/.next
