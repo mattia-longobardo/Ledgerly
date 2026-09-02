@@ -1,4 +1,4 @@
-import { boolean, check, index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 const tz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
@@ -58,7 +58,7 @@ export const userRoles = pgTable(
     roleCode: text("role_code").notNull().references(() => roles.code),
     grantedAt: tz("granted_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("user_roles_uq").on(t.userId, t.roleCode)],
+  (t) => [primaryKey({ columns: [t.userId, t.roleCode] })],
 );
 
 export const auditEvents = pgTable(
