@@ -170,7 +170,9 @@ export type JobName =
   | "payslip_ingest"
   | "sweep"
   | "wallet_refresh"
-  | "trek_sync";
+  | "trek_sync"
+  | "monthly_close"
+  | "wallet_accounts_sync";
 
 export type JobStatus =
   | "running"
