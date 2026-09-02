@@ -18,7 +18,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * a function". Never have both files — that is a hard build error.
  */
 
-const PUBLIC_PREFIXES = ["/api/health", "/api/auth/", "/api/jobs/"] as const;
+// "/api/v1/" is listed here too: Hono's own auth middleware (see
+// src/platform/http/app.ts) is the real gate for that tree, since it needs a
+// session to build the OpenAPI document. This layer remains defence in depth
+// for pages only.
+const PUBLIC_PREFIXES = ["/api/health", "/api/auth/", "/api/jobs/", "/api/v1/"] as const;
 const PUBLIC_PATHS = ["/api/health", "/signin"] as const;
 
 function isPublic(pathname: string): boolean {
