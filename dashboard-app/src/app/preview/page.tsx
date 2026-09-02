@@ -11,6 +11,8 @@ import { formatDateLine, formatDays } from "@/lib/format";
 import { Sparkline } from "@/components/chart/Sparkline";
 import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
 import { AppShell } from "@/components/layout/AppShell";
+import { permissionsForRoles } from "@/platform/auth/permissions";
+import { buildNavigation } from "@/platform/capabilities/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountList, AccountRow } from "@/components/ui/AccountRow";
@@ -604,9 +606,25 @@ function Gallery() {
   );
 }
 
+/** Everything switched on, so the preview shows the widest navigation the shell can draw. */
+const PREVIEW_NAV = buildNavigation({
+  features: {
+    accounts: true,
+    funds: true,
+    budgets: true,
+    expenses: true,
+    interests: true,
+    payroll: true,
+    timeoff: true,
+  },
+  integrations: { wallet: "connected", trek: "connected", payroll: "connected" },
+  permissions: permissionsForRoles(["owner"]),
+  data: { hasAccounts: true, hasPayrollRecords: true },
+});
+
 export default function PreviewPage() {
   return (
-    <AppShell>
+    <AppShell items={PREVIEW_NAV}>
       <style href="preview-panels" precedence="low">
         {PANEL_CSS}
       </style>
