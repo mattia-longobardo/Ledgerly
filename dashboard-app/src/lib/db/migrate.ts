@@ -51,5 +51,24 @@ await db.execute(sql`
   WHERE NOT EXISTS (SELECT 1 FROM tracked_accounts)
 `);
 
+/**
+ * Bootstrap the owner from the legacy allowlist, once. After this the users
+ * table governs access and AUTHORIZED_SUB is read only while the table is empty.
+ */
+const bootstrapSub = process.env.AUTHORIZED_SUB;
+if (bootstrapSub) {
+  await db.execute(sql`
+    WITH org AS (SELECT id FROM organizations ORDER BY created_at LIMIT 1),
+    u AS (
+      INSERT INTO users (organization_id, email, display_name)
+      SELECT org.id, ${process.env.AUTHORIZED_EMAIL ?? null}, 'Owner' FROM org
+      WHERE NOT EXISTS (SELECT 1 FROM users)
+      RETURNING id
+    ),
+    r AS (INSERT INTO user_roles (user_id, role_code) SELECT id, 'owner' FROM u)
+    INSERT INTO user_identities (user_id, provider, subject) SELECT id, 'authentik', ${bootstrapSub} FROM u
+  `);
+}
+
 console.log("migrations applied and fund + tracked-account registries seeded");
 await pool.end();

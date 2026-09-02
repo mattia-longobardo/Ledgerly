@@ -29,6 +29,13 @@
       "when": 1788275053393,
       "tag": "0003_special_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788357247767,
+      "tag": "0004_identity",
+      "breakpoints": true
     }
   ]
 }
