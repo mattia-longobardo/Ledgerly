@@ -35,7 +35,8 @@ CREATE TABLE "user_identities" (
 CREATE TABLE "user_roles" (
 	"user_id" uuid NOT NULL,
 	"role_code" text NOT NULL,
-	"granted_at" timestamp with time zone DEFAULT now() NOT NULL
+	"granted_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "user_roles_user_id_role_code_pk" PRIMARY KEY("user_id","role_code")
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -60,7 +61,6 @@ ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_code_roles_code_fk" FOR
 ALTER TABLE "users" ADD CONSTRAINT "users_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_events_entity_idx" ON "audit_events" USING btree ("entity_type","entity_id","created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE UNIQUE INDEX "user_identities_provider_subject_uq" ON "user_identities" USING btree ("provider","subject");--> statement-breakpoint
-CREATE UNIQUE INDEX "user_roles_uq" ON "user_roles" USING btree ("user_id","role_code");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_uq" ON "users" USING btree (lower("email")) WHERE email IS NOT NULL;--> statement-breakpoint
 INSERT INTO roles (code, label) VALUES ('owner','Owner'),('admin','Administrator'),('member','Member'),('viewer','Viewer') ON CONFLICT DO NOTHING;
 --> statement-breakpoint
