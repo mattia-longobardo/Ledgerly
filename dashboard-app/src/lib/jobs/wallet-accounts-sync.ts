@@ -9,22 +9,32 @@
  * Like every daily job here it alerts on failure: a missed run is a full day of
  * stale accounts and there is no second attempt an hour later.
  *
- * The user loop uses the pool client directly because `users` carries no RLS —
- * it is an identity table, and the job needs to see everyone. Each user's sync
- * then runs inside `withUserContext`, so every account statement it makes is
- * scoped by the database itself and not merely by the predicates in the
- * repositories.
+ * It syncs exactly one user: the owner. The Wallet credential is a single
+ * file-mounted token, so there is one upstream identity to sync and one person
+ * it belongs to; `provider_links` is unique on (provider, entity_type,
+ * external_id) with no user in the key, so running the same external ids for a
+ * second user would hand that user's account the first user's link. Per-user
+ * provider connections are a later phase, and this job grows a loop only then.
+ *
+ * The owner lookup uses the pool client directly because `users` and
+ * `user_roles` are identity tables and carry no RLS. The sync itself runs under
+ * `withUserContext(..., role: "system")`, which by design *bypasses* the RLS
+ * policies rather than enforcing them — the guard there is the explicit
+ * `user_id` predicate every repository method carries, not the database.
  */
 
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { alertJobFailure } from "@/lib/clients/gotify";
 import { errorMessage } from "@/lib/clients/http";
 import type { JobResult } from "@/lib/contracts";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { userRoles, users } from "@/lib/db/schema";
 import { walletToken } from "@/lib/env";
 import { finishRun, startRun, withJobLock } from "@/lib/repo/jobs";
-import { syncProviderAccounts } from "@/modules/accounts/application/sync-provider-accounts";
+import {
+  syncProviderAccounts,
+  type SyncProviderAccountsResult,
+} from "@/modules/accounts/application/sync-provider-accounts";
 import { DrizzleAccountsRepository } from "@/modules/accounts/infrastructure/drizzle-accounts-repository";
 import { DrizzleProviderLinksRepository } from "@/modules/accounts/infrastructure/drizzle-provider-links-repository";
 import { walletAccountsSource } from "@/modules/accounts/infrastructure/wallet-adapter";
@@ -52,29 +62,29 @@ function walletConfigured(): boolean {
   }
 }
 
-async function syncEveryUser(): Promise<Record<string, unknown>> {
-  const rows = await db.select({ id: users.id }).from(users).where(eq(users.status, "active"));
-  const totals = { users: 0, created: 0, updated: 0, adopted: 0, balances: 0, missing: 0 };
+/** The oldest active owner; there is only ever one in practice. */
+async function ownerId(): Promise<string | null> {
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .where(and(eq(userRoles.roleCode, "owner"), eq(users.status, "active")))
+    .orderBy(asc(users.createdAt))
+    .limit(1);
+  return row?.id ?? null;
+}
 
-  for (const { id: userId } of rows) {
-    const counts = await withUserContext(db, { userId, role: "system" }, (tx) =>
-      syncProviderAccounts({
-        accounts: new DrizzleAccountsRepository(tx),
-        links: new DrizzleProviderLinksRepository(tx),
-        clock,
-        audit: (e) => recordAudit(tx, e),
-        source: walletAccountsSource(clock),
-      })(userId),
-    );
-    totals.users += 1;
-    totals.created += counts.created;
-    totals.updated += counts.updated;
-    totals.adopted += counts.adopted;
-    totals.balances += counts.balances;
-    totals.missing += counts.missing;
-  }
-
-  return totals;
+async function syncOwner(userId: string): Promise<Record<string, unknown>> {
+  const counts: SyncProviderAccountsResult = await withUserContext(db, { userId, role: "system" }, (tx) =>
+    syncProviderAccounts({
+      accounts: new DrizzleAccountsRepository(tx),
+      links: new DrizzleProviderLinksRepository(tx),
+      clock,
+      audit: (e) => recordAudit(tx, e),
+      source: walletAccountsSource(clock),
+    })(userId),
+  );
+  return { ...counts };
 }
 
 /**
@@ -94,7 +104,15 @@ export async function runWalletAccountsSync(input: RunWalletAccountsSyncInput = 
       return { job: JOB_NAME, status: "already_done", detail: skipped };
     }
 
-    const detail = await withJobLock(LOCK_KEY, syncEveryUser);
+    // No owner is a not-yet-bootstrapped install, not a failure.
+    const owner = await ownerId();
+    if (!owner) {
+      const skipped = { reason: "no_owner" };
+      await finishRun(run.id, "already_done", { detail: skipped });
+      return { job: JOB_NAME, status: "already_done", detail: skipped };
+    }
+
+    const detail = await withJobLock(LOCK_KEY, () => syncOwner(owner));
 
     // Lock not acquired: a concurrent invocation owns the sync. A `curl
     // --retry` after a timeout lands here, and must not read as an error.

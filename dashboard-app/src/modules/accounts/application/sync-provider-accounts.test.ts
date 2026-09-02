@@ -119,6 +119,24 @@ describe("syncProviderAccounts", () => {
     expect(await deps.accounts.list(USER_ID)).toHaveLength(1);
   });
 
+  it("re-points a link left behind by a deleted account instead of stalling on it", async () => {
+    const { deps } = harness();
+    const source = { provider: "wallet", fetchAccounts: async () => [provided()] };
+    await syncProviderAccounts({ ...deps, source })(USER_ID);
+    const [first] = await deps.accounts.list(USER_ID);
+    // The account is gone but its link row survives, as a hard delete of an
+    // account whose link was flagged missing leaves it.
+    expect(await deps.accounts.delete(USER_ID, first!.id)).toBe(true);
+
+    const r = await syncProviderAccounts({ ...deps, source })(USER_ID);
+
+    expect(r).toMatchObject({ created: 1, adopted: 0, updated: 0, balances: 1 });
+    const [rebuilt] = await deps.accounts.list(USER_ID);
+    expect(rebuilt?.id).not.toBe(first!.id);
+    expect(await deps.links.liveFor("account", rebuilt!.id)).toMatchObject({ externalId: "w1" });
+    expect(await deps.links.liveFor("account", first!.id)).toBeNull();
+  });
+
   it("follows a provider rename while the local name is untouched", async () => {
     const { deps } = harness();
     const seen = [provided()];
