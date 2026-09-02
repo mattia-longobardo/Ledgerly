@@ -10,8 +10,13 @@ import {
 } from "./wallet-accounts";
 
 const accountSchema = z.object({
+  id: z.string(),
   name: z.string(),
   currencyCode: z.string(),
+  archived: z.boolean().default(false),
+  accountType: z.string().optional(),
+  isInvestmentAccount: z.boolean().optional(),
+  updatedAt: z.string().optional(),
   balance: z.object({
     currentBalance: z.number(),
   }),
