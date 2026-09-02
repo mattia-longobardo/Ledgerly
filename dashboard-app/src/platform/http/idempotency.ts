@@ -47,7 +47,12 @@ export function idempotency(deps: {
       })
       .onConflictDoUpdate({
         target: [idempotencyKeys.principalId, idempotencyKeys.key],
-        set: { statusCode: res.status, responseBody: body },
+        set: {
+          requestHash,
+          statusCode: res.status,
+          responseBody: body,
+          expiresAt: new Date(deps.now().getTime() + TTL_MS),
+        },
       });
   };
 }
