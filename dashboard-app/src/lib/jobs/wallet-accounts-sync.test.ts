@@ -33,7 +33,7 @@ const store = vi.hoisted(() => {
     nextRunId: 1,
     lockHeld: false,
     tokenConfigured: true,
-    activeUserIds: [] as string[],
+    owners: [] as string[],
   };
 });
 
@@ -75,11 +75,19 @@ vi.mock("@/lib/env", async (importOriginal) => {
   };
 });
 
-// Only the active-user query runs against `db` here; every account statement
-// goes through the mocked user context below.
+// Only the owner lookup runs against `db` here; every account statement goes
+// through the mocked user context below.
 vi.mock("@/lib/db", () => ({
   db: {
-    select: () => ({ from: () => ({ where: async () => store.activeUserIds.map((id) => ({ id })) }) }),
+    select: () => ({
+      from: () => ({
+        innerJoin: () => ({
+          where: () => ({
+            orderBy: () => ({ limit: async () => store.owners.map((id) => ({ id })).slice(0, 1) }),
+          }),
+        }),
+      }),
+    }),
   },
 }));
 
@@ -119,25 +127,37 @@ beforeEach(() => {
   store.nextRunId = 1;
   store.lockHeld = false;
   store.tokenConfigured = true;
-  store.activeUserIds = ["user-1", "user-2"];
+  store.owners = ["owner-1"];
   vi.clearAllMocks();
   vi.mocked(httpRequest).mockResolvedValue(new Response("{}", { status: 200 }));
 });
 
 describe("runWalletAccountsSync", () => {
-  it("syncs every active user under their own context and totals the counts", async () => {
+  it("syncs the owner, once, under the owner's own context", async () => {
     const result = await runWalletAccountsSync({ trigger: "cron" });
 
     expect(result).toMatchObject({
       job: JOB_NAME,
       status: "success",
-      detail: { users: 2, created: 2, updated: 4, adopted: 0, balances: 6, missing: 2 },
+      detail: { created: 1, updated: 2, adopted: 0, balances: 3, missing: 1 },
     });
+    // One credential, one user: a second user would be handed the owner's
+    // provider links, which are unique on the external id alone.
     expect(vi.mocked(withUserContext).mock.calls.map((c) => c[1])).toEqual([
-      { userId: "user-1", role: "system" },
-      { userId: "user-2", role: "system" },
+      { userId: "owner-1", role: "system" },
     ]);
     expect(store.runs[0]).toMatchObject({ jobName: JOB_NAME, trigger: "cron", status: "success" });
+    expect(alerts()).toEqual([]);
+  });
+
+  it("records a skipped run when the install has no owner yet", async () => {
+    store.owners = [];
+
+    const result = await runWalletAccountsSync();
+
+    expect(result).toMatchObject({ job: JOB_NAME, status: "already_done", detail: { reason: "no_owner" } });
+    expect(store.runs[0]?.status).toBe("already_done");
+    expect(syncProviderAccounts).not.toHaveBeenCalled();
     expect(alerts()).toEqual([]);
   });
 

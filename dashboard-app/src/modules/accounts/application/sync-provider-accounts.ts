@@ -86,14 +86,15 @@ export function syncProviderAccounts(deps: SyncProviderAccountsDeps) {
 
     for (const account of incoming) {
       const link = links.get(account.externalId);
+      // A link can outlive its account: once a link is flagged missing the
+      // account is deletable, and the row is left behind pointing at nothing.
+      // Such a link is treated as no link at all — the adopt/create path below
+      // re-points it at the new account, which is safe precisely because that
+      // account is brand new and so has no link of its own to collide with
+      // under the unique index on (provider, entity).
+      const current = link ? await deps.accounts.get(userId, link.entityId) : null;
 
-      if (link) {
-        const current = await deps.accounts.get(userId, link.entityId);
-        // A link with no entity behind it cannot be repaired from here:
-        // re-pointing the external id at a new row is exactly what the unique
-        // index on (provider, entity) forbids. Leave it for the next run.
-        if (!current) continue;
-
+      if (link && current) {
         const changes: AccountPatch = {};
         const status = nextStatus(current.status, account);
         if (status !== current.status) changes.status = status;
