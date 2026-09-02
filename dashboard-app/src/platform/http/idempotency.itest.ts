@@ -39,4 +39,43 @@ describe("idempotency middleware", () => {
     });
     expect(missing.status).toBe(428);
   });
+
+  it("starts a fresh 24h window after a key's stored response has expired", async () => {
+    const db = await testDb();
+    let calls = 0;
+    let now = new Date("2026-09-02T10:00:00Z");
+    const app = new OpenAPIHono<{ Variables: { principal: Principal } }>();
+    app.onError((err, c) =>
+      err instanceof ApiError ? c.json(toErrorBody(err, "t"), err.status as 422) : c.text("boom", 500),
+    );
+    app.use("*", async (c, next) => {
+      c.set("principal", testPrincipal());
+      await next();
+    });
+    app.post("/x", idempotency({ db, now: () => now }), async (c) => {
+      calls += 1;
+      return c.json({ n: calls }, 201);
+    });
+    const h = { "content-type": "application/json", "idempotency-key": "k2" };
+
+    const first = await app.request("/x", { method: "POST", headers: h, body: JSON.stringify({ v: 1 }) });
+    expect(first.status).toBe(201);
+    expect(await first.json()).toEqual({ n: 1 });
+    expect(calls).toBe(1);
+
+    now = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+
+    const afterExpiry = await app.request("/x", { method: "POST", headers: h, body: JSON.stringify({ v: 2 }) });
+    expect(afterExpiry.status).toBe(201);
+    expect(await afterExpiry.json()).toEqual({ n: 2 });
+    expect(calls).toBe(2);
+
+    const replay = await app.request("/x", { method: "POST", headers: h, body: JSON.stringify({ v: 2 }) });
+    expect(replay.status).toBe(201);
+    expect(await replay.json()).toEqual({ n: 2 });
+    expect(calls).toBe(2);
+
+    const differentBody = await app.request("/x", { method: "POST", headers: h, body: JSON.stringify({ v: 3 }) });
+    expect(differentBody.status).toBe(422);
+  });
 });
