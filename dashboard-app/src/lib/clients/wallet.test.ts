@@ -35,7 +35,7 @@ function json(body: unknown, status = 200, headers: Record<string, string> = {})
 }
 
 function account(name: string, currentBalance: number, currencyCode = "EUR") {
-  return { name, currencyCode, balance: { currentBalance } };
+  return { id: `acc-${name}`, name, currencyCode, archived: false, balance: { currentBalance } };
 }
 
 const ALL_ACCOUNTS = [
