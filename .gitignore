@@ -16,6 +16,8 @@ secrets/
 # ---------------------------------------------------------------------------
 *.pdf
 .work/
+# Teable exports: real balances, written by scripts/migrate-teable.ts
+docs/migration/*.json
 
 # ---------------------------------------------------------------------------
 # Dipendenze
