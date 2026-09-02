@@ -3,12 +3,13 @@ import { randomUUID } from "node:crypto";
 import type { DbClient } from "@/lib/db/client";
 import { PermissionDeniedError, type Principal } from "@/platform/auth/principal";
 import { ApiError, toErrorBody } from "./errors";
+import { rateLimit } from "./rate-limit";
 
 export interface ApiDeps {
   db: DbClient;
   authenticate(req: Request): Promise<Principal | null>;
   now(): Date;
-  /** Task 7 wires the Postgres limiter; unit tests without a db pass false. */
+  /** Set to false to skip the Postgres-backed limiter, e.g. in unit tests without a db. */
   rateLimitEnabled?: boolean;
 }
 export type ApiEnv = { Variables: { principal: Principal; requestId: string } };
@@ -35,6 +36,8 @@ export function createApiApp(deps: ApiDeps): ApiApp {
     c.set("principal", principal);
     await next();
   });
+
+  if (deps.rateLimitEnabled !== false) app.use("*", rateLimit({ db: deps.db, now: deps.now }));
 
   app.onError((err, c) => {
     const requestId = c.get("requestId") ?? "unknown";
