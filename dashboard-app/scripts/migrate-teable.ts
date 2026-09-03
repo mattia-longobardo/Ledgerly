@@ -2,7 +2,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { and, asc, eq } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "@/lib/db/schema";
 import type { DbClient } from "@/lib/db/client";
 import { balanceSnapshots, funds, userRoles, users } from "@/lib/db/schema";
 import { romeDate } from "@/lib/time";
@@ -33,6 +35,14 @@ import { withSystemContext } from "@/platform/db/context";
  * rather than duplicated, and balances upsert on `(account, day, source)`. Run
  * it twice and the second run reports every account reused and rewrites the
  * same figures.
+ *
+ * Deliberately does not import `db` from `@/lib/db`: that module is a Proxy
+ * whose first property access calls `env()`, which requires the whole app's
+ * environment (`AUTH_*`, `OIDC_*`, `PAPERLESS_*`, ...) — none of which this
+ * one-off script needs or should be made to depend on. It builds its own
+ * client from `DATABASE_URL` alone, exactly like `src/lib/db/migrate.ts`
+ * does, so it runs with nothing but `DATABASE_URL` set (plus `TEABLE_URL`/
+ * `TEABLE_TOKEN` for the live-fetch fallback).
  */
 
 const USAGE = `Usage: npm run migrate:teable -- --from <export.json> [--dry-run]
@@ -51,8 +61,9 @@ Options:
   --help         Show this message.
 
 Environment:
+  DATABASE_URL               The database to import into (required). This is
+                             the only application env var this script needs.
   TEABLE_URL, TEABLE_TOKEN   Only consulted when --from is omitted.
-  DATABASE_URL               The database to import into (required).
   MIGRATION_OUT_DIR          Where the JSON export is written. Defaults to the
                              repository's docs/migration/ directory, which does
                              not exist inside the container image.
@@ -155,97 +166,104 @@ if (fromPath) {
   console.log(`Exported ${records.length} Teable record(s) and ${points.length} point(s) to ${exportPath}`);
 }
 
-const legacy = await withSystemContext(db, async (tx) => ({
-  owner: await resolveOwner(tx),
-  funds: await tx.select({ slug: funds.slug, name: funds.name }).from(funds).orderBy(asc(funds.id)),
-  // Ascending so "the last row of a day wins" is decided on the capture order
-  // the table itself recorded.
-  walletSnapshots: await tx
-    .select({
-      accountKey: balanceSnapshots.accountKey,
-      balance: balanceSnapshots.balance,
-      capturedAt: balanceSnapshots.capturedAt,
-    })
-    .from(balanceSnapshots)
-    .where(eq(balanceSnapshots.source, "wallet"))
-    .orderBy(asc(balanceSnapshots.capturedAt)),
-}));
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+const db = drizzle(pool, { schema });
 
-// The `tracked_accounts` registry was retired along with Teable; the export
-// this script now reads was written while it still existed, so its own
-// `points` already reflect every hand-tracked column. Nothing here relies on
-// re-reading a registry the database no longer has.
-const plan = planTeableImport({
-  userId: legacy.owner.id,
-  tracked: [],
-  funds: legacy.funds,
-  points,
-  walletSnapshots: legacy.walletSnapshots,
-});
+try {
+  const legacy = await withSystemContext(db, async (tx) => ({
+    owner: await resolveOwner(tx),
+    funds: await tx.select({ slug: funds.slug, name: funds.name }).from(funds).orderBy(asc(funds.id)),
+    // Ascending so "the last row of a day wins" is decided on the capture order
+    // the table itself recorded.
+    walletSnapshots: await tx
+      .select({
+        accountKey: balanceSnapshots.accountKey,
+        balance: balanceSnapshots.balance,
+        capturedAt: balanceSnapshots.capturedAt,
+      })
+      .from(balanceSnapshots)
+      .where(eq(balanceSnapshots.source, "wallet"))
+      .orderBy(asc(balanceSnapshots.capturedAt)),
+  }));
 
-console.log(
-  `Planned ${plan.accounts.length} account(s) and ${plan.balances.length} balance(s); skipped ${plan.skipped.length} key(s)`,
-);
-for (const account of plan.accounts) console.log(`  account ${account.key} -> "${account.name}" (${account.type})`);
-for (const s of plan.skipped) console.log(`  skipped ${s.key}: ${s.reason}`);
+  // The `tracked_accounts` registry was retired along with Teable; the export
+  // this script now reads was written while it still existed, so its own
+  // `points` already reflect every hand-tracked column. Nothing here relies on
+  // re-reading a registry the database no longer has.
+  const plan = planTeableImport({
+    userId: legacy.owner.id,
+    tracked: [],
+    funds: legacy.funds,
+    points,
+    walletSnapshots: legacy.walletSnapshots,
+  });
 
-if (dryRun) {
-  console.log("Dry run: nothing was written to the database.");
-  process.exit(0);
+  console.log(
+    `Planned ${plan.accounts.length} account(s) and ${plan.balances.length} balance(s); skipped ${plan.skipped.length} key(s)`,
+  );
+  for (const account of plan.accounts) console.log(`  account ${account.key} -> "${account.name}" (${account.type})`);
+  for (const s of plan.skipped) console.log(`  skipped ${s.key}: ${s.reason}`);
+
+  if (dryRun) {
+    console.log("Dry run: nothing was written to the database.");
+  } else {
+    /** Comfortably under Postgres' bind-parameter ceiling, whatever the history's size. */
+    const BATCH = 500;
+
+    const result = await withSystemContext(db, async (tx) => {
+      const repo = new DrizzleAccountsRepository(tx);
+      const existing = await repo.list(legacy.owner.id, { includeArchived: true });
+      const byName = new Map(existing.map((a) => [a.name.toLowerCase(), a.id]));
+
+      const idByKey = new Map<string, string>();
+      let created = 0;
+      let reused = 0;
+
+      for (const account of plan.accounts) {
+        const hit = byName.get(account.name.toLowerCase());
+        if (hit) {
+          idByKey.set(account.key, hit);
+          reused += 1;
+          continue;
+        }
+        const row = await repo.create({
+          userId: legacy.owner.id,
+          groupId: null,
+          name: account.name,
+          type: account.type,
+          currency: "EUR",
+          origin: account.origin,
+          provider: null,
+          status: "active",
+          includeInNetWorth: account.includeInNetWorth,
+          notes: null,
+          sortOrder: account.sortOrder,
+        });
+        byName.set(row.name.toLowerCase(), row.id);
+        idByKey.set(account.key, row.id);
+        created += 1;
+      }
+
+      // `capturedAt` is the day the figure is true for, not the moment of the
+      // import: stamping the whole history with "now" would make a 2024 balance
+      // look freshly captured everywhere staleness is judged.
+      const rows: NewBalance[] = plan.balances.map((b) => ({
+        accountId: idByKey.get(b.key)!,
+        asOf: b.asOf,
+        balance: b.balance,
+        available: null,
+        source: b.source,
+        capturedAt: new Date(`${b.asOf}T00:00:00Z`),
+      }));
+      for (let i = 0; i < rows.length; i += BATCH) await repo.recordBalances(rows.slice(i, i + BATCH));
+
+      return { accounts: { created, reused }, balances: rows.length, skipped: plan.skipped };
+    });
+
+    console.log(JSON.stringify(result, null, 2));
+  }
+} finally {
+  await pool.end();
 }
 
-/** Comfortably under Postgres' bind-parameter ceiling, whatever the history's size. */
-const BATCH = 500;
-
-const result = await withSystemContext(db, async (tx) => {
-  const repo = new DrizzleAccountsRepository(tx);
-  const existing = await repo.list(legacy.owner.id, { includeArchived: true });
-  const byName = new Map(existing.map((a) => [a.name.toLowerCase(), a.id]));
-
-  const idByKey = new Map<string, string>();
-  let created = 0;
-  let reused = 0;
-
-  for (const account of plan.accounts) {
-    const hit = byName.get(account.name.toLowerCase());
-    if (hit) {
-      idByKey.set(account.key, hit);
-      reused += 1;
-      continue;
-    }
-    const row = await repo.create({
-      userId: legacy.owner.id,
-      groupId: null,
-      name: account.name,
-      type: account.type,
-      currency: "EUR",
-      origin: account.origin,
-      provider: null,
-      status: "active",
-      includeInNetWorth: account.includeInNetWorth,
-      notes: null,
-      sortOrder: account.sortOrder,
-    });
-    byName.set(row.name.toLowerCase(), row.id);
-    idByKey.set(account.key, row.id);
-    created += 1;
-  }
-
-  // `capturedAt` is the day the figure is true for, not the moment of the
-  // import: stamping the whole history with "now" would make a 2024 balance
-  // look freshly captured everywhere staleness is judged.
-  const rows: NewBalance[] = plan.balances.map((b) => ({
-    accountId: idByKey.get(b.key)!,
-    asOf: b.asOf,
-    balance: b.balance,
-    available: null,
-    source: b.source,
-    capturedAt: new Date(`${b.asOf}T00:00:00Z`),
-  }));
-  for (let i = 0; i < rows.length; i += BATCH) await repo.recordBalances(rows.slice(i, i + BATCH));
-
-  return { accounts: { created, reused }, balances: rows.length, skipped: plan.skipped };
-});
-
-console.log(JSON.stringify(result, null, 2));
 process.exit(0);

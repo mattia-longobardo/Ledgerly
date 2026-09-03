@@ -133,6 +133,14 @@ rm -f journal-full.json journal-0006.json
 
 ## Step 3 — import the legacy history
 
+`scripts/migrate-teable.ts` (`migrate-teable.mjs` in the image) builds its
+own database client straight from `DATABASE_URL` — it deliberately does not
+import the app's shared `db` module, which would pull in the full
+`env()` validation (`AUTH_*`, `OIDC_*`, `PAPERLESS_*`, `CRON_SECRET`, ...).
+The only environment this script needs is `DATABASE_URL`, `MIGRATION_OUT_DIR`,
+and (live-fetch only) `TEABLE_URL`/`TEABLE_TOKEN` — nothing else from the
+app's own configuration is required or read.
+
 `docs/migration/` does not exist inside the image, so mount it directly as
 the script's output (and input, for `--from`) directory:
 
@@ -166,6 +174,10 @@ keys) and, in live mode, writes the JSON snapshot to
 `docs/migration/teable-allocation-<date>.json`.
 
 ## Step 4 — validate
+
+Same story as step 3: `scripts/validate-teable-migration.ts`
+(`validate-teable.mjs`) builds its own client from `DATABASE_URL` alone and
+needs no other application environment variable.
 
 ```bash
 docker run --rm --network db_internal \
@@ -234,15 +246,17 @@ Trigger a Wallet sync immediately rather than waiting for the daily tick:
 
 ```bash
 curl -X POST "https://$DASHBOARD_HOST/api/v1/integrations/wallet/sync" \
-  -H "Cookie: __Host-authjs.session-token=<your session cookie>" \
-  -H "Idempotency-Key: $(uuidgen)"
+  -H "Cookie: __Host-authjs.session-token=<your session cookie>"
 ```
 
-(Sign in via the browser first and copy the `__Host-authjs.session-token`
+Sign in via the browser first and copy the `__Host-authjs.session-token`
 cookie; the endpoint requires `integrations.manage` and there is no
-machine-auth path for it in Phase 1.) Or just wait — `wallet_accounts_sync`
-runs daily at local noon via the `dashboard-cron` sidecar (see the three tick
-schedules below).
+machine-auth path for it in Phase 1. No `Idempotency-Key` header is needed:
+only `POST /accounts` and `POST /accounts/{id}/balances` require one (see
+`registerAccountRoutes` in `src/modules/accounts/api/routes.ts`) — the wallet
+sync route isn't wrapped with that middleware. Or just wait —
+`wallet_accounts_sync` runs daily at local noon via the `dashboard-cron`
+sidecar (see the three tick schedules below).
 
 Then:
 
