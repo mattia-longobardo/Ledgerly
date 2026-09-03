@@ -86,8 +86,8 @@ export const providerLinks = pgTable(
     missingSince: tz("missing_since"),
   },
   (t) => [
-    uniqueIndex("provider_links_external_uq").on(t.provider, t.entityType, t.externalId),
-    uniqueIndex("provider_links_entity_uq").on(t.provider, t.entityType, t.entityId),
+    uniqueIndex("provider_links_external_uq").on(t.userId, t.provider, t.entityType, t.externalId),
+    uniqueIndex("provider_links_entity_uq").on(t.userId, t.provider, t.entityType, t.entityId),
   ],
 );
 

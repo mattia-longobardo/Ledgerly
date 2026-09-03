@@ -72,7 +72,12 @@ export class DrizzleProviderLinksRepository implements ProviderLinksRepository {
         lastSeenAt: seenAt,
       })
       .onConflictDoUpdate({
-        target: [providerLinks.provider, providerLinks.entityType, providerLinks.externalId],
+        target: [
+          providerLinks.userId,
+          providerLinks.provider,
+          providerLinks.entityType,
+          providerLinks.externalId,
+        ],
         // Seeing the entity again revives it: first_seen_at stays as it was.
         set: {
           entityId: sql`excluded.entity_id`,

@@ -57,6 +57,13 @@
       "when": 1788398885246,
       "tag": "0007_retire_teable",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788478686914,
+      "tag": "0008_provider_links_user_key",
+      "breakpoints": true
     }
   ]
 }
