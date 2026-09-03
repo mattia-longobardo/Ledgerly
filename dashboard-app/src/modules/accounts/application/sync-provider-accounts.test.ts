@@ -7,7 +7,9 @@ import {
   MemoryProviderLinksRepository,
 } from "../infrastructure/memory-repositories";
 import type { NewAccount, ProviderAccount } from "./ports";
-import { syncProviderAccounts } from "./sync-provider-accounts";
+import { assertWalletSyncAllowed, syncProviderAccounts } from "./sync-provider-accounts";
+import { PermissionDeniedError } from "@/platform/auth/principal";
+import { testPrincipal } from "@/test/principal";
 
 const USER_ID = "00000000-0000-7000-8000-000000000001";
 
@@ -220,5 +222,17 @@ describe("syncProviderAccounts", () => {
       entityId: "wallet",
       after: { created: 1, updated: 0, adopted: 0, balances: 1, missing: 0 },
     });
+  });
+});
+
+describe("assertWalletSyncAllowed", () => {
+  it("lets the owner through", () => {
+    expect(() => assertWalletSyncAllowed(testPrincipal({ roles: ["owner"] }))).not.toThrow();
+  });
+  it("refuses an admin, who holds the permission but is not the owner", () => {
+    expect(() => assertWalletSyncAllowed(testPrincipal({ roles: ["admin"] }))).toThrow(PermissionDeniedError);
+  });
+  it("refuses a principal without the permission at all", () => {
+    expect(() => assertWalletSyncAllowed(testPrincipal({ roles: ["viewer"] }))).toThrow(PermissionDeniedError);
   });
 });

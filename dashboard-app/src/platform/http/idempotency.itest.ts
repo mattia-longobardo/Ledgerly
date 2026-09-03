@@ -40,6 +40,40 @@ describe("idempotency middleware", () => {
     expect(missing.status).toBe(428);
   });
 
+  it("does not cache a 5xx, so the retry reaches the handler and its success is replayed", async () => {
+    const db = await testDb();
+    let calls = 0;
+    const app = new OpenAPIHono<{ Variables: { principal: Principal } }>();
+    app.onError((err, c) =>
+      err instanceof ApiError ? c.json(toErrorBody(err, "t"), err.status as 422) : c.text("boom", 500),
+    );
+    app.use("*", async (c, next) => {
+      c.set("principal", testPrincipal());
+      await next();
+    });
+    app.post("/x", idempotency({ db, now: () => new Date() }), async (c) => {
+      calls += 1;
+      if (calls === 1) return c.json({ error: "upstream down" }, 503);
+      return c.json({ n: calls }, 201);
+    });
+    const h = { "content-type": "application/json", "idempotency-key": "k3" };
+    const body = JSON.stringify({ v: 1 });
+
+    const failed = await app.request("/x", { method: "POST", headers: h, body });
+    expect(failed.status).toBe(503);
+    expect(calls).toBe(1);
+
+    const retried = await app.request("/x", { method: "POST", headers: h, body });
+    expect(retried.status).toBe(201);
+    expect(await retried.json()).toEqual({ n: 2 });
+    expect(calls).toBe(2);
+
+    const replay = await app.request("/x", { method: "POST", headers: h, body });
+    expect(replay.status).toBe(201);
+    expect(await replay.json()).toEqual({ n: 2 });
+    expect(calls).toBe(2);
+  });
+
   it("starts a fresh 24h window after a key's stored response has expired", async () => {
     const db = await testDb();
     let calls = 0;

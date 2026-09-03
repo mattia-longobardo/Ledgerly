@@ -30,6 +30,27 @@ Machine-to-machine job triggers (`POST /api/jobs/tick?tier=...`) are a
 separate, non-`/api/v1` endpoint authenticated by `X-Cron-Secret`, not part of
 this document.
 
+## `X-Requested-With` on writes
+
+Every `POST`/`PUT`/`PATCH`/`DELETE` authenticated by the session cookie must
+carry an `X-Requested-With` header with any non-empty value; without it the
+request is refused with `403 csrf_required` before it reaches a handler
+(spec §8.3, `src/platform/http/app.ts`).
+
+The header's *value* is never inspected — only its presence. It works because
+a cross-site HTML form cannot set a custom header: adding one forces a CORS
+preflight, which this app answers for nobody, so a hostile page can no longer
+ride along on the browser's cookie. Reads (`GET`) are unaffected.
+
+```bash
+curl -X POST "https://$DASHBOARD_HOST/api/v1/integrations/wallet/sync" \
+  -H "Cookie: __Host-authjs.session-token=<cookie>" \
+  -H "X-Requested-With: curl"
+```
+
+Personal access tokens (Phase 8) will be exempt: a token is never attached to
+a request automatically, so there is nothing to forge.
+
 ## Error envelope
 
 Every error response has the same shape:
@@ -49,12 +70,14 @@ Every error response has the same shape:
 
 | Code | Status | When |
 |---|---|---|
-| `validation_failed` | 422 (or 428 for a missing header) | request body/query fails its Zod schema |
+| `validation_failed` | 422 (or 428 for a missing `Idempotency-Key`) | request body/query fails its Zod schema |
 | `unauthorized` | 401 | no session |
 | `permission_denied` | 403 | session lacks the required permission |
+| `csrf_required` | 403 | cookie-authenticated write without `X-Requested-With` (see the section above) |
 | `not_found` | 404 | no such resource, or it belongs to another user (RLS makes the two indistinguishable) |
 | `conflict` | 409 | e.g. deleting an account still referenced elsewhere without `confirmSynced` |
-| `version_mismatch` | 409 (or 428 if no version was sent) | optimistic-concurrency check failed |
+| `version_mismatch` | 409 | optimistic-concurrency check failed |
+| `precondition_required` | 428 | a write that needs a version sent none (no `If-Match`, no body `version`) |
 | `idempotency_key_reused` | 422 | same `Idempotency-Key` sent with a different request body |
 | `rate_limited` | 429 | over the per-minute limit |
 | `integration_unavailable` | 503 | e.g. Wallet sync called with no token configured |
@@ -94,6 +117,8 @@ Send any client-generated unique string (a UUID is fine). The server hashes
   (including the original status code), no re-execution.
 - Same key, different request → `422 idempotency_key_reused`.
 - New key → executes normally and gets cached.
+- A `5xx` is **not** cached: a retry with the same key runs the handler again
+  rather than replaying a transient failure for 24 hours.
 
 This makes retried creates safe under a flaky connection: retry with the same
 key and you get the account you already created back, not a duplicate.
@@ -107,7 +132,7 @@ say which version you're updating:
 - `If-Match: "3"` header (quotes optional, stripped if present), **or**
 - `"version": 3` in the request body.
 
-If neither is present: `428 version_mismatch`. If the version doesn't match
+If neither is present: `428 precondition_required`. If the version doesn't match
 the current one: `409 version_mismatch` — someone else changed it first;
 re-`GET`, look at the fresh `version`, and retry.
 
@@ -137,7 +162,8 @@ Run this after adding or changing a route, before committing.
 All under `/api/v1`, all requiring a session. Every route also requires a
 permission, enforced inside the use case it calls (reads need
 `accounts.read`, writes need `accounts.write`, deletes need
-`accounts.delete`, the Wallet sync needs `integrations.manage`) — see
+`accounts.delete`, the Wallet sync needs `integrations.manage` *and* the
+`owner` role) — see
 `src/platform/auth/permissions.ts` for the full grant per role:
 
 | Method | Path | Notes |
@@ -153,10 +179,16 @@ permission, enforced inside the use case it calls (reads need
 | `POST` | `/account-groups` | |
 | `PATCH` | `/account-groups/{id}` | |
 | `DELETE` | `/account-groups/{id}` | accounts in the group become ungrouped, not deleted |
-| `POST` | `/integrations/wallet/sync` | requires `integrations.manage`; `503 integration_unavailable` if no Wallet token is configured |
+| `POST` | `/integrations/wallet/sync` | owner only (`integrations.manage` **and** the `owner` role); `503 integration_unavailable` if no Wallet token is configured |
 | `GET` | `/net-worth` | `?months=` — total and per-account monthly series |
 
 See [`openapi.json`](./openapi.json) for the full request/response schemas,
 or serve it with any Swagger UI / Redoc instance pointed at
 `https://<dashboard-host>/api/v1/openapi.json` (itself session-gated, per the
 smoke test).
+
+**Base URL.** Every path key in the document is already absolute
+(`/api/v1/accounts`, …), so `servers` is `[{ "url": "/" }]` — the origin root.
+Resolve a request as origin + path key; do not prepend `/api/v1` a second
+time. Point a client at `https://<dashboard-host>` as its server, not at
+`https://<dashboard-host>/api/v1`.

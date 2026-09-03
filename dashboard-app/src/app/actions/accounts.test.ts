@@ -56,6 +56,37 @@ describe("accounts actions", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("refuses half an opening balance rather than dropping it", async () => {
+    const dateOnly = await createAccountAction(
+      form({ name: "Revolut", type: "checking", currency: "EUR", openingBalanceAsOf: "2026-09-01" }),
+    );
+    expect(dateOnly).toEqual({
+      ok: false,
+      error: "Enter both a date and an amount for the opening balance.",
+    });
+
+    const amountOnly = await createAccountAction(
+      form({ name: "Revolut", type: "checking", currency: "EUR", openingBalance: "10.00" }),
+    );
+    expect(amountOnly).toEqual({
+      ok: false,
+      error: "Enter both a date and an amount for the opening balance.",
+    });
+  });
+
+  it("records an opening balance when both halves are present", async () => {
+    const result = await createAccountAction(
+      form({
+        name: "Revolut",
+        type: "checking",
+        currency: "EUR",
+        openingBalanceAsOf: "2026-09-01",
+        openingBalance: "10.00",
+      }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("refuses a viewer", async () => {
     setPrincipalForTests(testPrincipal({ roles: ["viewer"] }));
     const result = await createAccountAction(

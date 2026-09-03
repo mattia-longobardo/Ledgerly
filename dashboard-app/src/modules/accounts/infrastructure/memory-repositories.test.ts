@@ -61,6 +61,31 @@ describe("MemoryAccountsRepository", () => {
     expect(latest.get(account.id)?.balance).toBe("20.00");
   });
 
+  it("latestBalancesBefore returns the newest balance strictly older than the bound", async () => {
+    const repo = new MemoryAccountsRepository();
+    const account = await repo.create(newAccount());
+    const other = await repo.create(newAccount({ name: "Other", userId: "u2" }));
+    await repo.recordBalances([
+      { accountId: account.id, asOf: "2025-11-30", balance: "10.00", available: null, source: "manual" },
+      { accountId: account.id, asOf: "2025-12-31", balance: "20.00", available: null, source: "manual" },
+      { accountId: account.id, asOf: "2026-01-05", balance: "30.00", available: null, source: "manual" },
+      { accountId: other.id, asOf: "2025-12-31", balance: "99.00", available: null, source: "manual" },
+    ]);
+    const seeds = await repo.latestBalancesBefore("u1", [account.id, other.id], "2026-01-01");
+    expect(seeds.get(account.id)?.balance).toBe("20.00");
+    // Another user's account is not the caller's to seed from.
+    expect(seeds.has(other.id)).toBe(false);
+  });
+
+  it("latestBalancesBefore is empty when nothing predates the bound", async () => {
+    const repo = new MemoryAccountsRepository();
+    const account = await repo.create(newAccount());
+    await repo.recordBalances([
+      { accountId: account.id, asOf: "2026-01-05", balance: "30.00", available: null, source: "manual" },
+    ]);
+    expect((await repo.latestBalancesBefore("u1", [account.id], "2026-01-01")).size).toBe(0);
+  });
+
   it("list excludes archived accounts unless includeArchived is set", async () => {
     const repo = new MemoryAccountsRepository();
     const active = await repo.create(newAccount({ name: "Active" }));

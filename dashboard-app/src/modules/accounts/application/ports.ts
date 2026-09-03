@@ -29,6 +29,8 @@ export interface AccountsRepository {
   delete(userId: string, id: string): Promise<boolean>;
   latestBalances(userId: string): Promise<Map<string, BalancePoint>>; // keyed by accountId
   history(userId: string, accountIds: string[], sinceAsOf: string): Promise<BalancePoint[]>;
+  /** The newest balance strictly before `beforeAsOf`, per account: the seed a windowed series carries forward from. Keyed by accountId. */
+  latestBalancesBefore(userId: string, accountIds: string[], beforeAsOf: string): Promise<Map<string, BalancePoint>>;
   recordBalances(rows: NewBalance[]): Promise<void>; // upsert on (accountId, asOf, source)
   hasReferences(accountId: string): Promise<boolean>; // false in Phase 1; budgets and interest rules will consult it
 }

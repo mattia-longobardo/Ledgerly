@@ -224,8 +224,14 @@ Only once the report is clean (or the single expected current-month case is
 understood and accepted):
 
 ```bash
-docker compose up -d dashboard-app dashboard-cron
+docker compose up -d --force-recreate dashboard-app dashboard-cron
 ```
+
+`--force-recreate` is load-bearing for the sidecar: the crontab is a bind
+mount, so Compose sees no change to `dashboard-cron` and would leave the
+running container alone — and supercronic reads `/etc/crontab` once, at
+start. Without the flag the sidecar keeps running the schedules it was
+started with. Confirm the new ones took with the log check in step 6.
 
 This starts the container from the unmodified image: `entrypoint.sh` runs
 the real `/app/migrate.mjs` with its own, untouched journal. `0000`–`0006`
@@ -246,12 +252,17 @@ Trigger a Wallet sync immediately rather than waiting for the daily tick:
 
 ```bash
 curl -X POST "https://$DASHBOARD_HOST/api/v1/integrations/wallet/sync" \
-  -H "Cookie: __Host-authjs.session-token=<your session cookie>"
+  -H "Cookie: __Host-authjs.session-token=<your session cookie>" \
+  -H "X-Requested-With: curl"
 ```
 
+`X-Requested-With` is required on every cookie-authenticated write (spec
+§8.3); without it the call answers `403 csrf_required`. The value is not
+checked — only its presence.
+
 Sign in via the browser first and copy the `__Host-authjs.session-token`
-cookie; the endpoint requires `integrations.manage` and there is no
-machine-auth path for it in Phase 1. No `Idempotency-Key` header is needed:
+cookie; the endpoint is the owner's alone (it requires `integrations.manage`
+*and* the `owner` role) and there is no machine-auth path for it in Phase 1. No `Idempotency-Key` header is needed:
 only `POST /accounts` and `POST /accounts/{id}/balances` require one (see
 `registerAccountRoutes` in `src/modules/accounts/api/routes.ts`) — the wallet
 sync route isn't wrapped with that middleware. Or just wait —
@@ -286,7 +297,7 @@ image:
 
 ```bash
 docker tag dashboard:pre-phase1 dashboard:latest
-docker compose up -d dashboard-app dashboard-cron
+docker compose up -d --force-recreate dashboard-app dashboard-cron
 ```
 
 No data is lost; the imported accounts/balances stay in the database, unused
@@ -303,7 +314,7 @@ set -a; source /home/mattia/docker/db/.env; set +a
 docker exec -i postgres psql -U "$DB_USERNAME" -d dashboard -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 docker exec -i postgres psql -U "$DB_USERNAME" -d dashboard < "backup-<DATE>.sql"
 docker tag dashboard:pre-phase1 dashboard:latest
-docker compose up -d dashboard-app dashboard-cron
+docker compose up -d --force-recreate dashboard-app dashboard-cron
 ```
 
 Treat this as a last resort — it discards everything written since the

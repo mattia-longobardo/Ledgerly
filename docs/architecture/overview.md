@@ -124,23 +124,35 @@ name rather than by tier.
 base path `/api/v1`, wired into Next.js via
 `src/app/api/v1/[[...route]]/route.ts` (`hono/vercel`'s `handle`). Middleware
 order: request id → authenticate (session cookie today; see
-`docs/api/README.md`) → rate limit → route handlers → `onError`.
+`docs/api/README.md`) → CSRF header check → rate limit → route handlers →
+`onError`.
 
 - **Error envelope**: `{ error: { code, message, requestId, details? } }`
   (`src/platform/http/errors.ts`, `ApiError`/`toErrorBody`). `code` is one of
   a fixed catalogue: `validation_failed`, `unauthorized`, `permission_denied`,
-  `not_found`, `conflict`, `version_mismatch`, `idempotency_key_reused`,
-  `rate_limited`, `integration_unavailable`, `internal`.
+  `csrf_required`, `not_found`, `conflict`, `version_mismatch`,
+  `precondition_required`, `idempotency_key_reused`, `rate_limited`,
+  `integration_unavailable`, `internal`.
+- **CSRF (spec §8.3)**: a `POST`/`PUT`/`PATCH`/`DELETE` authenticated by the
+  session cookie must carry `X-Requested-With` with any non-empty value, or it
+  is refused with `403 csrf_required` before any handler runs.
+  `ApiDeps.authenticate` reports *how* the caller authenticated (`{ principal, method:
+  "session" | "token" }`) precisely so the check can exempt a token, which a
+  browser never attaches by itself. Only the header's presence is checked: a
+  cross-site form cannot set one without a CORS preflight this app answers for
+  nobody.
 - **Idempotency**: `src/platform/http/idempotency.ts`. Required (`428` if
   missing) on `POST /accounts` and `POST /accounts/{id}/balances` via
   `Idempotency-Key`. Keyed on `(principalId, key)`, stores a sha256 of
   `METHOD path\nbody`, replays the stored response on an exact repeat, and
   returns `422 idempotency_key_reused` if the same key is reused with a
-  different request. TTL 24h (`idempotency_keys` table, migration `0005`).
+  different request. TTL 24h (`idempotency_keys` table, migration `0005`). A
+  `5xx` is never stored — caching a transient failure would hand it straight
+  back to the retry that was meant to escape it.
 - **Versioning (optimistic concurrency)**: `src/platform/http/versioning.ts`.
   Every mutable entity carries `version`; `PATCH` reads it from `If-Match`
-  (falls back to body `version`), `428` if neither is present, `409
-  version_mismatch` from the use case if it's stale.
+  (falls back to body `version`), `428 precondition_required` if neither is
+  present, `409 version_mismatch` from the use case if it's stale.
 - **Pagination**: cursor-based, `GET /accounts/{id}/balances` — `cursor` is
   the base64url of the previous page's last `asOf`, response is `{ items,
   nextCursor? }`, `limit` clamped to `[1, 200]` (default 50).
@@ -182,7 +194,12 @@ two separate questions per the module's own doc comment:
 `src/platform/capabilities/probes.ts` (`realProbes`) is the production
 wiring — file reads for token presence, `COUNT(*)` queries for data — kept
 apart from `resolve.ts` precisely so the resolver stays free of IO for its
-own tests.
+own tests. Both data probes take the principal's `userId`: `accounts` carries
+`FORCE ROW LEVEL SECURITY`, so `hasAccounts` counts inside
+`withUserContext` — the same count on the bare pool sees no rows at all and
+would answer "no accounts" for everybody. `hasPayrollRecords` still counts
+`payslips` directly; that table has no RLS until payroll becomes a module
+(Phase 4).
 
 `src/platform/capabilities/navigation.ts` (`buildNavigation`) and
 `src/modules/home/cards.ts` are both pure functions of the resulting
@@ -210,3 +227,27 @@ Per the spec's phased plan (§11), Phase 1 explicitly does not include:
   tables exist behind any of these links yet.
 - The payroll/earnings/timeoff domain moving out of `src/lib/*` into its own
   module (Phase 4).
+
+## Known deviations
+
+Places where what is on disk knowingly departs from the target shape, with the
+phase that closes each:
+
+- **No RLS on `audit_events`, `idempotency_keys` and `rate_limit_windows`**
+  (Phase 2). Every other user-scoped table has `FORCE ROW LEVEL SECURITY`;
+  these three do not. They are written by middleware and by the audit sink,
+  which run *outside* any `withUserContext` transaction — the rate limiter
+  counts before a route handler opens one, the idempotency middleware reads and
+  writes around the handler, and `recordAudit` is called with the request's own
+  connection. A policy of the usual shape would make all three invisible to
+  themselves. Rows are still scoped by an explicit `principal_id`/actor column
+  in every query, so the exposure is an in-process one, not a cross-user API
+  read. The policies arrive with the per-user connection work in Phase 2, which
+  gives these paths a user context to run in.
+- **Wallet sync is owner-only** rather than permission-only.
+  `integrations.manage` is granted to `admin` and `member` too, but a sync rewrites the whole
+  household account graph, and until Phase 2 gives an integration connection
+  its own owner there is no per-user connection to scope it to. Enforced in one
+  place, `assertWalletSyncAllowed`
+  (`src/modules/accounts/application/sync-provider-accounts.ts`), shared by the
+  API route and the Server Action.

@@ -41,6 +41,16 @@ describe("accounts use cases", () => {
     expect(audit).toHaveLength(1);
   });
 
+  it("carries a pre-window balance across the whole trend", async () => {
+    const { deps } = harness();
+    const account = await createManualAccount(deps)(testPrincipal(), { name: "EToro", type: "investment" });
+    await deps.accounts.recordBalances([
+      { accountId: account.id, asOf: "2024-06-30", balance: "1500.00", available: null, source: "manual" },
+    ]);
+    const [item] = await listAccounts(deps)(testPrincipal());
+    expect(item?.trend.every((p) => p.value === 1500)).toBe(true);
+  });
+
   it("viewer cannot create", async () => {
     const { deps } = harness();
     await expect(

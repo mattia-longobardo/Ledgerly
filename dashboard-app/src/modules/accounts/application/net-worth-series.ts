@@ -38,18 +38,20 @@ export function netWorthSeries(deps: UseCaseDeps) {
       (a) => a.includeInNetWorth && (a.status === "active" || a.status === "unavailable"),
     );
 
+    const includedIds = included.map((a) => a.id);
     const latestBalances = await deps.accounts.latestBalances(principal.userId);
-    const history = await deps.accounts.history(
-      principal.userId,
-      included.map((a) => a.id),
-      monthKeys[0]!,
-    );
+    const history = await deps.accounts.history(principal.userId, includedIds, monthKeys[0]!);
+    // An account whose newest balance predates the window still holds money;
+    // without this seed it would contribute null to every month, the headline
+    // included.
+    const seeds = await deps.accounts.latestBalancesBefore(principal.userId, includedIds, monthKeys[0]!);
 
     const perAccount: NetWorthAccountSeries[] = included.map((account) => ({
       account,
       series: monthlySeries(
         history.filter((p) => p.accountId === account.id),
         monthKeys,
+        seeds.get(account.id) ?? null,
       ),
       latest: latestBalances.get(account.id) ?? null,
     }));

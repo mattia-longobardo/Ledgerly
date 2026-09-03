@@ -83,6 +83,24 @@ export class MemoryAccountsRepository implements AccountsRepository {
       .sort((a, b) => a.asOf.localeCompare(b.asOf));
   }
 
+  async latestBalancesBefore(
+    userId: string,
+    accountIds: string[],
+    beforeAsOf: string,
+  ): Promise<Map<string, BalancePoint>> {
+    const ownedIds = new Set(this.accounts.filter((a) => a.userId === userId).map((a) => a.id));
+    const wanted = new Set(accountIds.filter((id) => ownedIds.has(id)));
+    const seeds = new Map<string, BalancePoint>();
+    for (const b of this.balances) {
+      if (!wanted.has(b.accountId) || b.asOf >= beforeAsOf) continue;
+      const current = seeds.get(b.accountId);
+      if (!current || b.asOf > current.asOf || (b.asOf === current.asOf && b.capturedAt > current.capturedAt)) {
+        seeds.set(b.accountId, b);
+      }
+    }
+    return seeds;
+  }
+
   async recordBalances(rows: NewBalance[]): Promise<void> {
     for (const row of rows) {
       const point: BalancePoint = { ...row, capturedAt: row.capturedAt ?? new Date() };

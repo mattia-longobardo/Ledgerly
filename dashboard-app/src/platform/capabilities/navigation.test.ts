@@ -7,8 +7,8 @@ const probes = {
   walletConfigured: () => false,
   trekConfigured: () => false,
   payrollConfigured: () => true,
-  hasAccounts: async () => false,
-  hasPayrollRecords: async () => false,
+  hasAccounts: async (_userId: string) => false,
+  hasPayrollRecords: async (_userId: string) => false,
 };
 
 describe("buildNavigation", () => {

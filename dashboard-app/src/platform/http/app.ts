@@ -6,15 +6,30 @@ import { registerAccountRoutes } from "@/modules/accounts/api/routes";
 import { ApiError, toErrorBody } from "./errors";
 import { rateLimit } from "./rate-limit";
 
+/**
+ * How the caller proved who they are. Cookie-authenticated requests are the
+ * ones a third-party page can make on the user's behalf, so only those need the
+ * CSRF header below; a token, once it exists (Phase 8), is never sent
+ * automatically by a browser and so is exempt.
+ */
+export type AuthMethod = "session" | "token";
+
+export interface Authenticated {
+  principal: Principal;
+  method: AuthMethod;
+}
+
 export interface ApiDeps {
   db: DbClient;
-  authenticate(req: Request): Promise<Principal | null>;
+  authenticate(req: Request): Promise<Authenticated | null>;
   now(): Date;
   /** Set to false to skip the Postgres-backed limiter, e.g. in unit tests without a db. */
   rateLimitEnabled?: boolean;
 }
-export type ApiEnv = { Variables: { principal: Principal; requestId: string } };
+export type ApiEnv = { Variables: { principal: Principal; authMethod: AuthMethod; requestId: string } };
 export type ApiApp = OpenAPIHono<ApiEnv>;
+
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export function createApiApp(deps: ApiDeps): ApiApp {
   const app = new OpenAPIHono<ApiEnv>({
@@ -32,9 +47,28 @@ export function createApiApp(deps: ApiDeps): ApiApp {
   });
 
   app.use("*", async (c, next) => {
-    const principal = await deps.authenticate(c.req.raw);
-    if (!principal) throw new ApiError(401, "unauthorized", "Sign in to use the API");
-    c.set("principal", principal);
+    const authenticated = await deps.authenticate(c.req.raw);
+    if (!authenticated) throw new ApiError(401, "unauthorized", "Sign in to use the API");
+    c.set("principal", authenticated.principal);
+    c.set("authMethod", authenticated.method);
+    await next();
+  });
+
+  /**
+   * Spec §8.3. A cookie rides along on any cross-site form post, so a writing
+   * request authenticated by one has to carry something a cross-site form
+   * cannot set. `X-Requested-With` is that something: adding a custom header
+   * puts the request behind a CORS preflight, which this app answers for
+   * nobody.
+   */
+  app.use("*", async (c, next) => {
+    if (
+      UNSAFE_METHODS.has(c.req.method.toUpperCase()) &&
+      c.get("authMethod") === "session" &&
+      !(c.req.header("x-requested-with") ?? "").trim()
+    ) {
+      throw new ApiError(403, "csrf_required", "Send the X-Requested-With header with cookie-authenticated requests");
+    }
     await next();
   });
 
@@ -62,7 +96,9 @@ export function createApiApp(deps: ApiDeps): ApiApp {
   app.doc("/openapi.json", {
     openapi: "3.1.0",
     info: { title: "Finance Dashboard API", version: "1.0.0" },
-    servers: [{ url: "/api/v1" }],
+    // Every path key is already absolute (`/api/v1/...`), so the server must be
+    // the origin root: anything else and a consumer resolves `/api/v1/api/v1/...`.
+    servers: [{ url: "/" }],
   });
 
   registerAllRoutes(app, deps);
