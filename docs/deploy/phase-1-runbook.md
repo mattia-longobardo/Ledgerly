@@ -131,6 +131,16 @@ Clean up the scratch files:
 rm -f journal-full.json journal-0006.json
 ```
 
+**Rehearsal finding (2026-09-03):** the migrator's fund-registry seed used a
+single `INSERT ... ON CONFLICT DO UPDATE`, and Postgres checks `NOT NULL` on
+the proposed row before it resolves the conflict. In this two-wave window
+`funds.teable_column NOT NULL` still exists, so the seed crashed after
+`0004`–`0006` had committed and before the owner row was bootstrapped. The
+seed is now update-then-insert (`src/lib/db/migrate.ts`); if you see
+`null value in column "teable_column"` here, you are running an image built
+before commit `33bf33b`. Rehearse this step on a restored dump before running
+it against production.
+
 ## Step 3 — import the legacy history
 
 `scripts/migrate-teable.ts` (`migrate-teable.mjs` in the image) builds its
