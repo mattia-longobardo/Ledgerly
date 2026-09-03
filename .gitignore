@@ -112,3 +112,6 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# superpowers SDD scratch (ledgers, briefs, review packages)
+.superpowers/
