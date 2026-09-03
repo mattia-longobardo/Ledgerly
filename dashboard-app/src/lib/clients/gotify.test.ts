@@ -8,8 +8,6 @@ const BASE_ENV: Record<string, string> = {
   OIDC_CLIENT_ID: "client",
   OIDC_CLIENT_SECRET: "secret",
   AUTHORIZED_SUB: "sub-123",
-  TEABLE_URL: "https://teable.example.test",
-  TEABLE_TOKEN: "teable-token",
   PAPERLESS_URL: "https://paperless.example.test",
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
@@ -88,9 +86,9 @@ describe("notify", () => {
 describe("alert helpers", () => {
   it("sends job failures at priority 8", async () => {
     const { alertJobFailure } = await loadGotify(CONFIGURED);
-    await alertJobFailure({ job: "monthly_snapshot", error: "wallet 401", monthKey: "2026-09-01" });
+    await alertJobFailure({ job: "monthly_close", error: "wallet 401", monthKey: "2026-09-01" });
     expect(body().priority).toBe(8);
-    expect(String(body().title)).toContain("monthly_snapshot");
+    expect(String(body().title)).toContain("monthly_close");
     expect(String(body().message)).toContain("wallet 401");
   });
 

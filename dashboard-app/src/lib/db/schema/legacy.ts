@@ -24,7 +24,6 @@ export const funds = pgTable("funds", {
   id: smallint("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
-  teableColumn: text("teable_column").notNull(),
 });
 
 export const fundSettings = pgTable(
@@ -155,24 +154,6 @@ export const balanceSnapshots = pgTable(
   ],
 );
 
-export const monthlySnapshots = pgTable(
-  "monthly_snapshots",
-  {
-    monthKey: date("month_key").primaryKey(),
-    ing: money("ing").notNull(),
-    revolut: money("revolut").notNull(),
-    status: text("status").notNull(),
-    teableRecordId: text("teable_record_id"),
-    capturedAt: tz("captured_at").notNull(),
-  },
-  (t) => [
-    check(
-      "monthly_snapshots_status_ck",
-      sql`${t.status} IN ('pending_teable','done','poisoned','missed')`,
-    ),
-  ],
-);
-
 export const jobRuns = pgTable(
   "job_runs",
   {
@@ -251,43 +232,11 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: tz("updated_at").notNull().defaultNow(),
 });
 
-/**
- * The hand-tracked accounts (EToro, Buddy Bank, IsyBank, Mediolanum, Binance …)
- * — the ones the owner types into the Teable Allocation table by hand.
- *
- * They used to be a hardcoded five-tuple in `accounts.ts`. They live here now
- * because the registry, not the array, is the source of truth for WHICH
- * hand-tracked accounts exist: an account stays listed (and valued at 0) even
- * after its Teable column is deleted, and it can be hidden from the list
- * without ceasing to count in the net-worth total. Deleting the row is the only
- * thing that removes an account entirely.
- *
- * `slug` is the account key used everywhere else (it is what lands in
- * `balance_snapshots.account_key`); `teable_column` is the Allocation column it
- * is read from, kept separate because the two need not match and the column can
- * be renamed or removed under the account. `sort_order` fixes the display order
- * independently of insertion; `visible` drives the list, never the total.
- */
-export const trackedAccounts = pgTable(
-  "tracked_accounts",
-  {
-    slug: text("slug").primaryKey(),
-    label: text("label").notNull(),
-    teableColumn: text("teable_column").notNull(),
-    visible: boolean("visible").notNull().default(true),
-    sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: tz("created_at").notNull().defaultNow(),
-  },
-  (t) => [index("tracked_accounts_sort_idx").on(t.sortOrder, t.slug)],
-);
-
 export type Fund = typeof funds.$inferSelect;
 export type FundSetting = typeof fundSettings.$inferSelect;
 export type FundDeposit = typeof fundDeposits.$inferSelect;
 export type VacationEntry = typeof vacationLedger.$inferSelect;
 export type Payslip = typeof payslips.$inferSelect;
 export type BalanceSnapshot = typeof balanceSnapshots.$inferSelect;
-export type MonthlySnapshot = typeof monthlySnapshots.$inferSelect;
 export type JobRun = typeof jobRuns.$inferSelect;
 export type LeaveDay = typeof leaveDays.$inferSelect;
-export type TrackedAccount = typeof trackedAccounts.$inferSelect;

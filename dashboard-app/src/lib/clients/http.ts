@@ -1,7 +1,7 @@
 import type { ZodType } from "zod";
 import { UpstreamError } from "@/lib/contracts";
 
-export type UpstreamService = "teable" | "wallet" | "paperless" | "gotify" | "trek";
+export type UpstreamService = "wallet" | "paperless" | "gotify" | "trek";
 
 export type SleepFn = (ms: number) => Promise<void>;
 

@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { jobRuns, monthlySnapshots } from "@/lib/db/schema";
+import { jobRuns } from "@/lib/db/schema";
 import type { JobName, JobStatus } from "@/lib/contracts";
 
 export async function startRun(input: {
@@ -72,59 +72,3 @@ export async function withJobLock<T>(key: string, fn: () => Promise<T>): Promise
   });
 }
 
-export async function getMonthlySnapshot(monthKey: string) {
-  const [row] = await db
-    .select()
-    .from(monthlySnapshots)
-    .where(eq(monthlySnapshots.monthKey, monthKey))
-    .limit(1);
-  return row ?? null;
-}
-
-/** Phase 2 of the snapshot job: Postgres is the idempotency authority. */
-export async function persistPending(input: {
-  monthKey: string;
-  ing: string;
-  revolut: string;
-  capturedAt: Date;
-}) {
-  const [row] = await db
-    .insert(monthlySnapshots)
-    .values({ ...input, status: "pending_teable" })
-    .onConflictDoNothing({ target: monthlySnapshots.monthKey })
-    .returning();
-  return row ?? (await getMonthlySnapshot(input.monthKey));
-}
-
-/** Phase 3: the Teable record id is the proof the write landed. */
-export async function markSnapshotDone(monthKey: string, teableRecordId: string) {
-  await db
-    .update(monthlySnapshots)
-    .set({ status: "done", teableRecordId })
-    .where(eq(monthlySnapshots.monthKey, monthKey));
-}
-
-export async function markSnapshotStatus(monthKey: string, status: "poisoned" | "missed") {
-  await db.update(monthlySnapshots).set({ status }).where(eq(monthlySnapshots.monthKey, monthKey));
-}
-
-export async function pendingTeableWrites() {
-  return db
-    .select()
-    .from(monthlySnapshots)
-    .where(eq(monthlySnapshots.status, "pending_teable"))
-    .orderBy(monthlySnapshots.monthKey);
-}
-
-export async function attemptsFor(jobName: JobName, dedupeKey: string): Promise<number> {
-  const result = await db.execute<{ n: string }>(sql`
-    SELECT count(*)::text AS n FROM job_runs
-    WHERE job_name = ${jobName} AND dedupe_key = ${dedupeKey} AND status = 'failed'
-  `);
-  return Number(result.rows[0]?.n ?? 0);
-}
-
-export async function allMonthKeys(): Promise<string[]> {
-  const rows = await db.select({ k: monthlySnapshots.monthKey }).from(monthlySnapshots);
-  return rows.map((r) => r.k);
-}

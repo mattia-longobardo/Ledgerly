@@ -35,10 +35,11 @@ function account(
 
 describe("sumBalances", () => {
   it("sums the real Allocation figures without float drift", () => {
-    // The live 2026-08 Allocation row. Teable's TOTAL cell reads 21 494,35
-    // because its formula is ING+Buddy Bank+Mediolanum+IsyBank+EToro+Binance+
-    // Fideuram+Revolut — Fondo Cometa is not a term in it, so the old hero was
-    // permanently missing the pension fund on top of everything else.
+    // The live 2026-08 Allocation row. The legacy spreadsheet's TOTAL cell read
+    // 21 494,35 because its formula was ING+Buddy Bank+Mediolanum+IsyBank+
+    // EToro+Binance+Fideuram+Revolut — Fondo Cometa was not a term in it, so
+    // the old hero was permanently missing the pension fund on top of
+    // everything else.
     expect(
       sumBalances([
         account("ing", "6955.46"),
@@ -202,8 +203,9 @@ describe("netWorth", () => {
   });
 
   it("judges the whole total against one explicit budget", () => {
-    // 20 hours old: far past Teable's 1 h display budget, but the hero is not
-    // a Teable figure — it is a sum, and its budget is the slowest contributor's.
+    // 20 hours old: far past the legacy figure's 1 h display budget, but the
+    // hero is not that figure — it is a sum, and its budget is the slowest
+    // contributor's.
     const stamp = ago(20 * 60 * 60 * 1000);
     const fresh = netWorth([account("ing", "1.00", { capturedAt: stamp })], { now: NOW });
     expect(fresh.stale).toBe(false);

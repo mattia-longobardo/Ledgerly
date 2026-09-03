@@ -19,10 +19,6 @@ const schema = z.object({
   AUTHORIZED_SUB: z.string().min(1),
   AUTHORIZED_EMAIL: z.string().optional(),
 
-  TEABLE_URL: z.url(),
-  TEABLE_TOKEN: z.string().min(1),
-  TEABLE_TABLE_ID: z.string().default("tblSgA94MQaiutzohCC"),
-
   WALLET_API_URL: z.url().default("https://rest.budgetbakers.com/wallet/v1/api"),
   WALLET_TOKEN_FILE: z.string().default("/secrets/wallet-token"),
 

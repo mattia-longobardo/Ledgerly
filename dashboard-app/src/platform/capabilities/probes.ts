@@ -26,6 +26,6 @@ export const realProbes: CapabilityProbes = {
   trekConfigured: () => trekConfig() !== null,
   // Replaced by the document-store probe in Phase 4.
   payrollConfigured: () => Boolean(env().PAPERLESS_URL),
-  hasAccounts: () => countIsNonZero(sql`SELECT count(*)::text AS n FROM balance_snapshots`),
+  hasAccounts: () => countIsNonZero(sql`SELECT count(*)::text AS n FROM accounts`),
   hasPayrollRecords: () => countIsNonZero(sql`SELECT count(*)::text AS n FROM payslips WHERE status = 'verified'`),
 };

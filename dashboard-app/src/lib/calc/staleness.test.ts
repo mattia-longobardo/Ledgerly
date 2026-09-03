@@ -17,14 +17,14 @@ describe("isStale", () => {
   });
 
   it("treats a missing capture as stale", () => {
-    expect(isStale(null, DISPLAY_STALENESS_MS.teable, NOW)).toBe(true);
-    expect(isStale(undefined, DISPLAY_STALENESS_MS.teable, NOW)).toBe(true);
-    expect(isStale("not a date", DISPLAY_STALENESS_MS.teable, NOW)).toBe(true);
+    expect(isStale(null, DISPLAY_STALENESS_MS.legacy, NOW)).toBe(true);
+    expect(isStale(undefined, DISPLAY_STALENESS_MS.legacy, NOW)).toBe(true);
+    expect(isStale("not a date", DISPLAY_STALENESS_MS.legacy, NOW)).toBe(true);
   });
 
   it("accepts ISO strings and future timestamps", () => {
-    expect(isStale("2026-08-01T11:55:00Z", DISPLAY_STALENESS_MS.teable, NOW)).toBe(false);
-    expect(isStale("2026-08-01T13:00:00Z", DISPLAY_STALENESS_MS.teable, NOW)).toBe(false);
+    expect(isStale("2026-08-01T11:55:00Z", DISPLAY_STALENESS_MS.legacy, NOW)).toBe(false);
+    expect(isStale("2026-08-01T13:00:00Z", DISPLAY_STALENESS_MS.legacy, NOW)).toBe(false);
   });
 });
 
@@ -41,14 +41,14 @@ describe("classify", () => {
     expect(classify(ago(20 * HOUR), "wallet", NOW).stale).toBe(false);
     expect(classify(ago(27 * HOUR), "wallet", NOW).stale).toBe(true);
 
-    expect(classify(ago(20 * 60_000), "teable", NOW).stale).toBe(false);
-    expect(classify(ago(20 * HOUR), "teable", NOW).stale).toBe(true);
+    expect(classify(ago(20 * 60_000), "legacy", NOW).stale).toBe(false);
+    expect(classify(ago(20 * HOUR), "legacy", NOW).stale).toBe(true);
     expect(classify(ago(20 * HOUR), "history", NOW).stale).toBe(false);
   });
 
   it("pins the budgets so a cadence change has to come here first", () => {
     expect(DISPLAY_STALENESS_MS.wallet).toBe(26 * HOUR);
-    expect(DISPLAY_STALENESS_MS.teable).toBe(1 * HOUR);
+    expect(DISPLAY_STALENESS_MS.legacy).toBe(1 * HOUR);
     expect(DISPLAY_STALENESS_MS.history).toBe(24 * HOUR);
   });
 

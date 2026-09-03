@@ -6,7 +6,7 @@
  * always has a newer `captured_at` than the `history` row for the same month,
  * so `captured_at DESC` alone silently picked the carried-forward figure for
  * every month the app was running through, and the backfill — and any
- * correction typed into Teable — could never surface.
+ * correction typed into the old spreadsheet — could never surface.
  *
  * The Postgres semantics behind the clause were checked against a live
  * PostgreSQL 18 with a table-free `SELECT ... FROM (VALUES ...)`:
@@ -15,7 +15,7 @@
  *     → wallet (NULL kind) and history rank above latest, newest first inside
  *       that rank.
  *   ORDER BY (kind = 'latest') ASC          → NULL sorts LAST, i.e. a wallet
- *       reading would rank BELOW a Teable `latest` row. Hence the COALESCE.
+ *       reading would rank BELOW a hand-typed `latest` row. Hence the COALESCE.
  */
 
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -28,7 +28,7 @@ function compile(keys: string[], since?: string) {
 }
 
 describe("monthlyHistoryQuery", () => {
-  it("ranks a Teable `latest` row below everything else for the month", () => {
+  it("ranks a hand-typed `latest` row below everything else for the month", () => {
     const { sql } = compile(["cometa"]);
 
     // A month holding BOTH a `history` row (stamped at the month's first

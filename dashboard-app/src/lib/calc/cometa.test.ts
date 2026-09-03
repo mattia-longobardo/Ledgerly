@@ -103,7 +103,7 @@ describe("Cometa credited deposits drive the fund return", () => {
     { month: "2026-07-01", amount: 280.6 },
     { month: "2026-08-01", amount: 280.6 },
   ];
-  /** The recorded Teable value the fund page compares against. */
+  /** The recorded value the fund page compares against. */
   const VALUE = 2228.13;
   /** The month the fund page renders for. */
   const AS_OF = "2026-09-01";

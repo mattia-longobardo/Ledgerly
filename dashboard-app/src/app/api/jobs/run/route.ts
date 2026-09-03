@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { isUnauthorizedError, requireUser, unauthorizedResponse } from "@/lib/auth/require-user";
-import { runMonthlySnapshot } from "@/lib/jobs/monthly-snapshot";
 import { ingestPayslipDocument } from "@/lib/jobs/payslip-ingest";
 import { runSweep } from "@/lib/jobs/sweep";
 import { runTrekSyncJob } from "@/lib/jobs/trek-sync-job";
@@ -9,15 +8,6 @@ import { runWalletRefresh } from "@/lib/jobs/wallet-refresh";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.discriminatedUnion("job", [
-  z.object({
-    job: z.literal("monthly_snapshot"),
-    monthKey: z
-      .string()
-      .regex(/^\d{4}-\d{2}-01$/, "monthKey must be a month key pinned to the 1st")
-      .optional(),
-    /** Clears `poisoned`/`missed` — the manual action PLAN §5 reserves for the owner. */
-    force: z.boolean().default(false),
-  }),
   z.object({ job: z.literal("sweep") }),
   z.object({ job: z.literal("wallet_refresh") }),
   z.object({ job: z.literal("payslip_ingest"), docId: z.number().int().positive() }),
@@ -27,11 +17,7 @@ const bodySchema = z.discriminatedUnion("job", [
   }),
 ]);
 
-/**
- * The in-app "run now" / clear-poisoned target. Session-authenticated rather
- * than secret-authenticated: this is the only path allowed to revive a month
- * whose automatic retries have stopped, so it must be attributable to the owner.
- */
+/** The in-app "run now" target. Session-authenticated, so every manual run is attributable to the owner. */
 export async function POST(req: Request) {
   try {
     await requireUser();
@@ -71,18 +57,9 @@ export async function POST(req: Request) {
     return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
   }
 
-  if (input.job === "trek_sync") {
-    const result = await runTrekSyncJob({
-      trigger: "manual",
-      ...(input.year !== undefined ? { year: input.year } : {}),
-    });
-    return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
-  }
-
-  const result = await runMonthlySnapshot({
+  const result = await runTrekSyncJob({
     trigger: "manual",
-    ...(input.monthKey ? { monthKey: input.monthKey } : {}),
-    force: input.force,
+    ...(input.year !== undefined ? { year: input.year } : {}),
   });
   return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
 }
