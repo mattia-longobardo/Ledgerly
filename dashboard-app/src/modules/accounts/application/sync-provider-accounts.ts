@@ -81,10 +81,19 @@ function balanceRow(accountId: string, incoming: ProviderAccount, capturedAt: Da
 }
 
 export function syncProviderAccounts(deps: SyncProviderAccountsDeps) {
-  return async (userId: string): Promise<SyncProviderAccountsResult> => {
+  /**
+   * `prefetched` exists so the caller can do the provider round trip *before*
+   * opening the database transaction. A slow provider otherwise holds one of
+   * the pool's eight connections — and, inside a job, an advisory lock — for
+   * the whole conversation.
+   */
+  return async (
+    userId: string,
+    prefetched?: readonly ProviderAccount[],
+  ): Promise<SyncProviderAccountsResult> => {
     const { provider } = deps.source;
     const now = deps.clock.now();
-    const incoming = await deps.source.fetchAccounts();
+    const incoming = prefetched ?? (await deps.source.fetchAccounts());
     const externalIds = incoming.map((a) => a.externalId);
     const links = await deps.links.byExternal(userId, provider, "account", externalIds);
 

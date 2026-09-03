@@ -103,6 +103,12 @@ vi.mock("@/modules/accounts/application/sync-provider-accounts", () => ({
   })),
 }));
 
+// The job now fetches before opening the transaction (see the note in
+// syncProviderAccounts), so this mock stands in for the real HTTP round trip.
+vi.mock("@/modules/accounts/infrastructure/wallet-adapter", () => ({
+  walletAccountsSource: vi.fn(() => ({ provider: "wallet", fetchAccounts: vi.fn(async () => []) })),
+}));
+
 vi.mock("@/lib/clients/http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/clients/http")>();
   return { ...actual, httpRequest: vi.fn(async () => new Response("{}", { status: 200 })) };

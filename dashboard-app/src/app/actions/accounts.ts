@@ -211,14 +211,13 @@ export async function syncWalletAction(): Promise<
   }
 
   try {
+    const source = walletAccountsSource({ now: () => new Date() });
+    const incoming = await source.fetchAccounts();
     const result = await runForPrincipal((deps, principal) => {
       // The use case itself does not gate on a permission — the route and this
       // action are the two callers, and both go through the shared check.
       assertWalletSyncAllowed(principal);
-      return syncProviderAccounts({
-        ...deps,
-        source: walletAccountsSource(deps.clock),
-      })(principal.userId);
+      return syncProviderAccounts({ ...deps, source })(principal.userId, incoming);
     });
     revalidateAccounts();
     return succeed(result);

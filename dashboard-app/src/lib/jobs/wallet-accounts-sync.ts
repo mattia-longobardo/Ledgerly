@@ -76,6 +76,9 @@ async function ownerId(): Promise<string | null> {
 }
 
 async function syncOwner(userId: string): Promise<Record<string, unknown>> {
+  const source = walletAccountsSource(clock);
+  // Outside the transaction on purpose: see the note in syncProviderAccounts.
+  const incoming = await source.fetchAccounts();
   const counts: SyncProviderAccountsResult = await withUserContext(db, { userId, role: "system" }, (tx) =>
     syncProviderAccounts({
       accounts: new DrizzleAccountsRepository(tx),
@@ -83,8 +86,8 @@ async function syncOwner(userId: string): Promise<Record<string, unknown>> {
       groups: new DrizzleGroupsRepository(tx),
       clock,
       audit: (e) => recordAudit(tx, e),
-      source: walletAccountsSource(clock),
-    })(userId),
+      source,
+    })(userId, incoming),
   );
   return { ...counts };
 }

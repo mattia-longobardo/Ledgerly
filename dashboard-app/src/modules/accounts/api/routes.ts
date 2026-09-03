@@ -573,11 +573,11 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
       throw new ApiError(503, "integration_unavailable", "Budget Makers Wallet is not configured");
     }
     try {
+      const source = walletAccountsSource({ now: () => deps.now() });
+      const incoming = await source.fetchAccounts();
       const result = await withUserContext(deps.db, { userId: principal.userId }, (tx) => {
         const useCaseDeps: UseCaseDeps = accountDeps(tx, c.get("requestId"));
-        return syncProviderAccounts({ ...useCaseDeps, source: walletAccountsSource(useCaseDeps.clock) })(
-          principal.userId,
-        );
+        return syncProviderAccounts({ ...useCaseDeps, source })(principal.userId, incoming);
       });
       return c.json(result, 200);
     } catch (err) {
