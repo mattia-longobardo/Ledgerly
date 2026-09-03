@@ -26,10 +26,15 @@ Resume from here with any model. Read this file, then the spec, then the plan.
 - RLS on `audit_events`, `idempotency_keys`, `rate_limit_windows` is deferred to Phase 2 (R19), documented in `docs/architecture/overview.md` under "Known deviations".
 - Restore is only valid from `archived`; a restored synced account with a missing link becomes `unavailable` (R13).
 
+## Deployment status (2026-09-03, later the same day)
+
+Phase 1 is DEPLOYED to production. The runbook was first rehearsed on a restored dump, which found three defects fixed in commits `33bf33b` (fund seed vs `funds.teable_column`) and `86f8ac0` (current-month cells pinned to a future day; validator now classifies expected differences). Production sequence: backup `.work/backups/pre-phase1-2026-09-03-1517.sql` (git-ignored), image `dashboard:pre-phase1` kept for rollback, migrations 0004–0006, Teable import from `docs/migration/teable-allocation-2026-09-03.json` (10 accounts, 65 balances), validation exit 0 (6 expected differences: empty-cell months and the current month), then the new image applied 0007. First Wallet sync adopted the 4 imported Wallet accounts and created 4 more; net worth after sync matched the live balances. Teable and the legacy tables are gone from the app; the Teable container itself is still running and can be stopped by hand.
+
+Known follow-ups from the deploy: two Wallet accounts that are archived upstream ("Buddybank - Personal Savings", "Isybank S.p.A - Main") now exist as `unavailable` synced accounts at 0.00 next to the manual "Buddy Bank" and "IsyBank" entries; the owner may archive or exclude them from net worth. Months where a hand-tracked Teable cell was empty now carry the previous value forward instead of showing 0 (spec §10.1).
+
 ## Before Phase 2
 
-1. Rehearse `docs/deploy/phase-1-runbook.md` against a restored dump of the `dashboard` database, then run it for real while Teable and the legacy tables still exist (migration 0007 drops them).
-2. Decide whether to push `main` to `origin`.
+1. Decide whether to push `main` to `origin` (still not pushed).
 3. Open questions needed later, not now: Phase 3 — should the app take over posting interest to the Wallet (retiring `wallet-manager`)? Phase 4 — ClamAV container acceptable; payroll retention (default 10 years)? Phase 8 — app-level TOTP after an Authentik login, or exempt SSO logins?
 
 ## How to continue
