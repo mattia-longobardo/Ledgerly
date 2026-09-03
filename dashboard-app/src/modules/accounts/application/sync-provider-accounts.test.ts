@@ -6,7 +6,7 @@ import {
   MemoryGroupsRepository,
   MemoryProviderLinksRepository,
 } from "../infrastructure/memory-repositories";
-import type { NewAccount, ProviderAccount } from "./ports";
+import type { AccountsSource, NewAccount, ProviderAccount } from "./ports";
 import { assertWalletSyncAllowed, syncProviderAccounts } from "./sync-provider-accounts";
 import { PermissionDeniedError } from "@/platform/auth/principal";
 import { testPrincipal } from "@/test/principal";
@@ -222,6 +222,34 @@ describe("syncProviderAccounts", () => {
       entityId: "wallet",
       after: { created: 1, updated: 0, adopted: 0, balances: 1, missing: 0 },
     });
+  });
+
+  it("uses pre-fetched accounts and never calls the source", async () => {
+    const { deps } = harness();
+    let fetches = 0;
+    const source: AccountsSource = {
+      provider: "wallet",
+      fetchAccounts: async () => {
+        fetches += 1;
+        return [];
+      },
+    };
+    const prefetched: ProviderAccount[] = [
+      {
+        externalId: "ext-1",
+        name: "Prefetched",
+        type: "checking",
+        currency: "EUR",
+        archived: false,
+        balance: "10.00",
+        available: null,
+        asOf: "2026-09-04",
+        updatedAt: null,
+      },
+    ];
+    const result = await syncProviderAccounts({ ...deps, source })(USER_ID, prefetched);
+    expect(fetches).toBe(0);
+    expect(result.created).toBe(1);
   });
 });
 
