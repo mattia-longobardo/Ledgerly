@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { randomUUID } from "node:crypto";
 import type { DbClient } from "@/lib/db/client";
 import { PermissionDeniedError, type Principal } from "@/platform/auth/principal";
+import { registerAccountRoutes } from "@/modules/accounts/api/routes";
 import { ApiError, toErrorBody } from "./errors";
 import { rateLimit } from "./rate-limit";
 
@@ -52,6 +53,12 @@ export function createApiApp(deps: ApiDeps): ApiApp {
     c.json(toErrorBody(new ApiError(404, "not_found", "No such route"), c.get("requestId") ?? "unknown"), 404),
   );
 
+  app.openAPIRegistry.registerComponent("securitySchemes", "session", {
+    type: "apiKey",
+    in: "cookie",
+    name: "__Host-authjs.session-token",
+  });
+
   app.doc("/openapi.json", {
     openapi: "3.1.0",
     info: { title: "Finance Dashboard API", version: "1.0.0" },
@@ -62,5 +69,7 @@ export function createApiApp(deps: ApiDeps): ApiApp {
   return app;
 }
 
-/** Route modules register here; Task 18 adds accounts. */
-export function registerAllRoutes(_app: ApiApp, _deps: ApiDeps): void {}
+/** Route modules register here. */
+export function registerAllRoutes(app: ApiApp, deps: ApiDeps): void {
+  registerAccountRoutes(app, deps);
+}

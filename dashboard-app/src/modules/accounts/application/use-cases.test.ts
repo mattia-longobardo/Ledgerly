@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MemoryAccountsRepository, MemoryClock, MemoryProviderLinksRepository } from "../infrastructure/memory-repositories";
+import {
+  MemoryAccountsRepository,
+  MemoryClock,
+  MemoryGroupsRepository,
+  MemoryProviderLinksRepository,
+} from "../infrastructure/memory-repositories";
 import { createManualAccount } from "./create-manual-account";
 import { deleteAccount } from "./delete-account";
 import { getAccountDetail } from "./get-account-detail";
@@ -15,6 +20,7 @@ function harness() {
   const deps = {
     accounts: new MemoryAccountsRepository(),
     links: new MemoryProviderLinksRepository(),
+    groups: new MemoryGroupsRepository(),
     clock: new MemoryClock(new Date("2026-09-02T12:00:00Z")),
     audit: async (e: unknown) => {
       audit.push(e);

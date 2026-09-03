@@ -1,4 +1,4 @@
-import type { Account, AccountType, BalancePoint } from "../domain/account";
+import type { Account, AccountGroup, AccountType, BalancePoint } from "../domain/account";
 
 export type NewAccount = Omit<Account, "id" | "version" | "createdAt" | "updatedAt" | "archivedAt">;
 
@@ -68,4 +68,12 @@ export interface AccountsSource {
 
 export interface Clock {
   now(): Date;
+}
+
+export interface GroupsRepository {
+  list(userId: string): Promise<AccountGroup[]>;
+  get(userId: string, id: string): Promise<AccountGroup | null>;
+  create(userId: string, name: string, sortOrder?: number): Promise<AccountGroup | "duplicate_name">;
+  rename(userId: string, id: string, name: string): Promise<AccountGroup | "duplicate_name" | null>;
+  delete(userId: string, id: string): Promise<boolean>;
 }

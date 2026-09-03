@@ -1,5 +1,5 @@
 import type { AuditInput } from "@/platform/audit/record";
-import type { AccountsRepository, Clock, ProviderLinksRepository } from "./ports";
+import type { AccountsRepository, Clock, GroupsRepository, ProviderLinksRepository } from "./ports";
 
 /**
  * Everything the account use cases reach for. Kept as one bag so a route, a
@@ -9,6 +9,7 @@ import type { AccountsRepository, Clock, ProviderLinksRepository } from "./ports
 export interface UseCaseDeps {
   accounts: AccountsRepository;
   links: ProviderLinksRepository;
+  groups: GroupsRepository;
   clock: Clock;
   audit(e: AuditInput): Promise<void>;
 }

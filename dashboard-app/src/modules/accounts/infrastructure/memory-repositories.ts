@@ -1,8 +1,9 @@
-import type { Account, BalancePoint } from "../domain/account";
+import type { Account, AccountGroup, BalancePoint } from "../domain/account";
 import type {
   AccountPatch,
   AccountsRepository,
   Clock,
+  GroupsRepository,
   NewAccount,
   NewBalance,
   ProviderLink,
@@ -154,6 +155,45 @@ export class MemoryProviderLinksRepository implements ProviderLinksRepository {
       newlyMissing.push(link.entityId);
     }
     return newlyMissing;
+  }
+}
+
+/** In-memory stand-in for the Drizzle-backed groups repository. */
+export class MemoryGroupsRepository implements GroupsRepository {
+  private groups: AccountGroup[] = [];
+
+  async list(userId: string): Promise<AccountGroup[]> {
+    return this.groups
+      .filter((g) => g.userId === userId)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  }
+
+  async get(userId: string, id: string): Promise<AccountGroup | null> {
+    return this.groups.find((g) => g.userId === userId && g.id === id) ?? null;
+  }
+
+  async create(userId: string, name: string, sortOrder = 0): Promise<AccountGroup | "duplicate_name"> {
+    if (this.groups.some((g) => g.userId === userId && g.name === name)) return "duplicate_name";
+    const now = new Date();
+    const group: AccountGroup = { id: crypto.randomUUID(), userId, name, sortOrder, createdAt: now, updatedAt: now };
+    this.groups.push(group);
+    return group;
+  }
+
+  async rename(userId: string, id: string, name: string): Promise<AccountGroup | "duplicate_name" | null> {
+    const index = this.groups.findIndex((g) => g.userId === userId && g.id === id);
+    if (index === -1) return null;
+    if (this.groups.some((g) => g.userId === userId && g.id !== id && g.name === name)) return "duplicate_name";
+    const updated: AccountGroup = { ...this.groups[index]!, name, updatedAt: new Date() };
+    this.groups[index] = updated;
+    return updated;
+  }
+
+  async delete(userId: string, id: string): Promise<boolean> {
+    const index = this.groups.findIndex((g) => g.userId === userId && g.id === id);
+    if (index === -1) return false;
+    this.groups.splice(index, 1);
+    return true;
   }
 }
 

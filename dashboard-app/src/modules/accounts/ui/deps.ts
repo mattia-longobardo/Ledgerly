@@ -1,22 +1,11 @@
 import { db } from "@/lib/db";
-import type { DbClient } from "@/lib/db/client";
-import { recordAudit } from "@/platform/audit/record";
 import type { Principal } from "@/platform/auth/principal";
 import { requirePrincipal } from "@/platform/auth/require-principal";
 import { withUserContext } from "@/platform/db/context";
 import type { UseCaseDeps } from "../application/deps";
-import { DrizzleAccountsRepository } from "../infrastructure/drizzle-accounts-repository";
-import { DrizzleProviderLinksRepository } from "../infrastructure/drizzle-provider-links-repository";
+import { accountDeps } from "../infrastructure/deps";
 
-/** The production assembly of `UseCaseDeps`, bound to one transaction. */
-export function accountDeps(tx: DbClient, requestId?: string | null): UseCaseDeps {
-  return {
-    accounts: new DrizzleAccountsRepository(tx),
-    links: new DrizzleProviderLinksRepository(tx),
-    clock: { now: () => new Date() },
-    audit: (e) => recordAudit(tx, { ...e, requestId: requestId ?? null }),
-  };
-}
+export { accountDeps } from "../infrastructure/deps";
 
 /**
  * Resolve the caller, open a transaction carrying their identity so RLS
