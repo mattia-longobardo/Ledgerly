@@ -11,7 +11,6 @@ import type { JobName } from "@/lib/contracts";
 import { formatMonth } from "@/lib/format";
 import { llmConfigStatus } from "@/lib/payroll/llm-config";
 import { listFunds } from "@/lib/repo/funds";
-import { list as listTrackedAccounts } from "@/lib/repo/tracked-accounts";
 import { lastSuccess, recentRuns } from "@/lib/repo/jobs";
 import { SETTING_KEYS, getSetting } from "@/lib/repo/settings";
 import { balance as ledgerBalance, ledger, rates } from "@/lib/repo/vacation";
@@ -23,7 +22,6 @@ import {
   HoursPerDayForm,
   LlmForm,
   RunSnapshotButton,
-  TrackedAccountsForm,
   VacationSetupForm,
 } from "./_components/SettingsForms";
 
@@ -71,10 +69,9 @@ export default async function SettingsPage() {
   await requireUserOrRedirect("/settings");
 
   const now = monthKey(new Date());
-  const [funds, trackedAccounts, runs, successes, rateRows, entries, balance, hoursRaw, llm] =
+  const [funds, runs, successes, rateRows, entries, balance, hoursRaw, llm] =
     await Promise.all([
       listFunds(),
-      listTrackedAccounts(),
       recentRuns(undefined, 20),
       Promise.all(JOBS.map((job) => lastSuccess(job))),
       rates(),
@@ -88,7 +85,9 @@ export default async function SettingsPage() {
 
   const parsedHours = Number(hoursRaw);
   const hoursPerDay =
-    Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : DEFAULT_HOURS_PER_DAY;
+    Number.isFinite(parsedHours) && parsedHours > 0
+      ? parsedHours
+      : DEFAULT_HOURS_PER_DAY;
 
   const rate = effectiveRate(rateRows, now);
   const hasInitialValue = entries.some((e) => e.entryType === "initial");
@@ -98,7 +97,10 @@ export default async function SettingsPage() {
       <PageHeader
         title="Settings"
         eyebrow={
-          <Link href="/" className="text-fg-muted transition-colors hover:text-fg">
+          <Link
+            href="/"
+            className="text-fg-muted transition-colors hover:text-fg"
+          >
             &larr; Home
           </Link>
         }
@@ -114,7 +116,9 @@ export default async function SettingsPage() {
         <Panel span={6} ariaLabel="Configuration" bodyClassName={COLUMN}>
           <SettingsSection title="Vacation fund">
             <VacationSetupForm
-              monthlyAmount={rate === null ? "" : String(rate).replace(".", ",")}
+              monthlyAmount={
+                rate === null ? "" : String(rate).replace(".", ",")
+              }
               effectiveFrom={now.slice(0, 7)}
               hasInitialValue={hasInitialValue}
               currentMonth={now.slice(0, 7)}
@@ -140,7 +144,9 @@ export default async function SettingsPage() {
                       className="flex min-h-11 items-center gap-3 py-2 hairline-b transition-colors hover:bg-surface-hover"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body text-fg">{fund.name}</span>
+                        <span className="block truncate text-body text-fg">
+                          {fund.name}
+                        </span>
                         <span
                           title={fund.teableColumn}
                           className="num block truncate text-caption text-fg-muted"
@@ -148,7 +154,10 @@ export default async function SettingsPage() {
                           Teable column “{fund.teableColumn}”
                         </span>
                       </span>
-                      <span aria-hidden className="shrink-0 text-body-sm text-accent">
+                      <span
+                        aria-hidden
+                        className="shrink-0 text-body-sm text-accent"
+                      >
                         Settings &rarr;
                       </span>
                     </Link>
@@ -159,17 +168,15 @@ export default async function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
-            title="Conti"
-            description="The accounts you keep by hand in Teable. Hide one to drop its row from Home and Finance while it still counts in the total; delete one to remove it and its Teable column for good."
+            title="Accounts"
+            description="Manual and synced accounts, their groups, and archived accounts now live in Finance."
           >
-            <TrackedAccountsForm
-              accounts={trackedAccounts.map((a) => ({
-                slug: a.slug,
-                label: a.label,
-                teableColumn: a.teableColumn,
-                visible: a.visible,
-              }))}
-            />
+            <Link
+              href="/finance/management/accounts"
+              className="inline-flex min-h-11 items-center gap-1.5 text-body-sm font-medium text-accent transition-colors hover:text-accent-hover"
+            >
+              Finance &rsaquo; Management &rarr;
+            </Link>
           </SettingsSection>
 
           <SettingsSection
@@ -202,11 +209,17 @@ export default async function SettingsPage() {
               {JOBS.map((job, index) => {
                 const run = successes[index] ?? null;
                 return (
-                  <li key={job} className="flex min-h-11 items-center gap-3 py-2 hairline-b">
+                  <li
+                    key={job}
+                    className="flex min-h-11 items-center gap-3 py-2 hairline-b"
+                  >
                     <span className="min-w-0 flex-1 truncate text-body text-fg">
                       {JOB_LABEL[job] ?? job}
                     </span>
-                    <StaleBadge capturedAt={run?.startedAt ?? null} stale={run === null} />
+                    <StaleBadge
+                      capturedAt={run?.startedAt ?? null}
+                      stale={run === null}
+                    />
                   </li>
                 );
               })}
@@ -221,8 +234,9 @@ export default async function SettingsPage() {
             title="Recent runs"
             footnote={
               <>
-                A poisoned month has stopped retrying on its own. Clearing it queues the cached
-                values for the next sweep; it never re-reads the Wallet API. Current month:{" "}
+                A poisoned month has stopped retrying on its own. Clearing it
+                queues the cached values for the next sweep; it never re-reads
+                the Wallet API. Current month:{" "}
                 <span className="num">{formatMonth(now)}</span>.
               </>
             }
@@ -235,7 +249,10 @@ export default async function SettingsPage() {
             ) : (
               <ul className="hairline-t">
                 {runs.map((run) => (
-                  <li key={run.id} className="flex min-h-11 items-center gap-3 py-2 hairline-b">
+                  <li
+                    key={run.id}
+                    className="flex min-h-11 items-center gap-3 py-2 hairline-b"
+                  >
                     {/*
                       `run.error` is a free-form DB string with no length or
                       whitespace guarantee, so it gets its own truncated line

@@ -23,7 +23,18 @@ export default async function FundsPage() {
 
   return (
     <>
-      <PageHeader title="Funds" segmented={<FinanceTabs />} />
+      <PageHeader
+        title="Funds"
+        segmented={<FinanceTabs />}
+        action={
+          <Link
+            href="/finance/vacation"
+            className="text-body-sm text-accent transition-colors hover:text-accent-hover"
+          >
+            Vacation fund &rarr;
+          </Link>
+        }
+      />
 
       {funds.length === 0 ? (
         <div className="max-w-xl pt-6">
@@ -59,14 +70,24 @@ export default async function FundsPage() {
                     <span className="min-w-0 truncate text-heading-sm text-fg">
                       {view.fund.name}
                     </span>
-                    <Sparkline values={carryForward(view.points).map((p) => p.value)} width={72} />
+                    <Sparkline
+                      values={carryForward(view.points).map((p) => p.value)}
+                      width={72}
+                    />
                   </span>
 
-                  <MoneyValue value={view.value} size="display-sm" cents="muted" />
+                  <MoneyValue
+                    value={view.value}
+                    size="display-sm"
+                    cents="muted"
+                  />
 
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {view.absReturn !== null && (
-                      <DeltaBadge value={view.absReturn} context="return since inception" />
+                      <DeltaBadge
+                        value={view.absReturn}
+                        context="return since inception"
+                      />
                     )}
                     <span className="num text-caption text-fg-muted">
                       {formatEur(view.deposited)} deposited
