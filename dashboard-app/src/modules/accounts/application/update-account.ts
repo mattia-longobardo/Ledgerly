@@ -2,16 +2,39 @@ import { z } from "zod";
 import { assertPermission, type Principal } from "@/platform/auth/principal";
 import type { Account } from "../domain/account";
 import type { UseCaseDeps } from "./deps";
-import { InvalidInputError, NotFoundError, VersionMismatchError } from "./errors";
+import {
+  InvalidInputError,
+  NotFoundError,
+  VersionMismatchError,
+} from "./errors";
 
 export const updateAccountSchema = z.object({
   name: z.string().trim().min(1, "Enter a name.").max(120).optional(),
-  type: z.enum(["checking", "savings", "cash", "investment", "pension_fund", "crypto", "credit", "other"]).optional(),
+  type: z
+    .enum([
+      "checking",
+      "savings",
+      "cash",
+      "investment",
+      "pension_fund",
+      "crypto",
+      "credit",
+      "other",
+    ])
+    .optional(),
   currency: z.string().length(3).toUpperCase().optional(),
   groupId: z.string().uuid().nullable().optional(),
   includeInNetWorth: z.boolean().optional(),
   notes: z.string().max(2000).nullable().optional(),
   sortOrder: z.number().int().optional(),
+  /**
+   * Restore only: the one status transition this endpoint accepts. Archiving
+   * and marking unavailable are use-case-driven (`deleteAccount`, the provider
+   * sync), never a raw field a caller can set — so the only value the schema
+   * lets through is the one that undoes an archive.
+   */
+  status: z.enum(["active"]).optional(),
+  archivedAt: z.null().optional(),
 });
 export type UpdateAccountInput = z.input<typeof updateAccountSchema>;
 
@@ -25,15 +48,28 @@ export function updateAccount(deps: UseCaseDeps) {
     assertPermission(principal, "accounts.write");
     const parsed = updateAccountSchema.safeParse(raw);
     if (!parsed.success) {
-      throw new InvalidInputError(parsed.error.issues[0]?.message ?? "Invalid input", parsed.error.issues);
+      throw new InvalidInputError(
+        parsed.error.issues[0]?.message ?? "Invalid input",
+        parsed.error.issues,
+      );
     }
     const patch = parsed.data;
     const before = await deps.accounts.get(principal.userId, id);
     if (!before) throw new NotFoundError();
-    if (before.origin === "synced" && (patch.type !== undefined || patch.currency !== undefined)) {
-      throw new InvalidInputError("Type and currency are managed by the provider");
+    if (
+      before.origin === "synced" &&
+      (patch.type !== undefined || patch.currency !== undefined)
+    ) {
+      throw new InvalidInputError(
+        "Type and currency are managed by the provider",
+      );
     }
-    const result = await deps.accounts.update(principal.userId, id, expectedVersion, patch);
+    const result = await deps.accounts.update(
+      principal.userId,
+      id,
+      expectedVersion,
+      patch,
+    );
     if (result === null) throw new NotFoundError();
     if (result === "version_mismatch") throw new VersionMismatchError();
     await deps.audit({
