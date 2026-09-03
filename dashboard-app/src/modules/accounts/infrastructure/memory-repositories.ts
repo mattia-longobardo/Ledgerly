@@ -150,7 +150,11 @@ export class MemoryProviderLinksRepository implements ProviderLinksRepository {
 
   async upsertSeen(userId: string, link: Omit<ProviderLink, "missingSince">, seenAt: Date): Promise<void> {
     const index = this.links.findIndex(
-      (l) => l.provider === link.provider && l.entityType === link.entityType && l.externalId === link.externalId,
+      (l) =>
+        l.userId === userId &&
+        l.provider === link.provider &&
+        l.entityType === link.entityType &&
+        l.externalId === link.externalId,
     );
     const stored: StoredProviderLink = { ...link, userId, missingSince: null, seenAt };
     if (index === -1) this.links.push(stored);
