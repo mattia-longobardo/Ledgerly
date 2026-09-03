@@ -116,6 +116,52 @@ describe("accounts use cases", () => {
     expect(await deleteAccount(deps)(testPrincipal(), synced.id)).toEqual({ outcome: "archived" });
   });
 
+  it("refuses to restore an account that is not archived", async () => {
+    const { deps } = harness();
+    const a = await createManualAccount(deps)(testPrincipal(), { name: "x", type: "cash" });
+    await expect(
+      updateAccount(deps)(testPrincipal(), a.id, a.version, { status: "active" }),
+    ).rejects.toThrow(/only an archived account/i);
+  });
+
+  it("restores an archived manual account to active and clears archivedAt", async () => {
+    const { deps } = harness();
+    const a = await createManualAccount(deps)(testPrincipal(), { name: "x", type: "cash" });
+    const archived = await deps.accounts.update(testPrincipal().userId, a.id, a.version, {
+      status: "archived", archivedAt: deps.clock.now(),
+    });
+    if (archived === null || archived === "version_mismatch") throw new Error("setup failed");
+    const restored = await updateAccount(deps)(testPrincipal(), a.id, archived.version, {
+      status: "active", archivedAt: null,
+    });
+    expect(restored.status).toBe("active");
+    expect(restored.archivedAt).toBeNull();
+  });
+
+  it("restores an archived synced account to unavailable when its link is still missing", async () => {
+    const { deps } = harness();
+    const synced = await deps.accounts.create({
+      userId: testPrincipal().userId, groupId: null, name: "ING", type: "checking", currency: "EUR",
+      origin: "synced", provider: "wallet", status: "active", includeInNetWorth: true, notes: null, sortOrder: 0,
+    });
+    await deps.links.upsertSeen(
+      testPrincipal().userId,
+      { provider: "wallet", entityType: "account", entityId: synced.id, externalId: "ext-1", metadata: {} },
+      deps.clock.now(),
+    );
+    // The provider stopped reporting this account: the link is now missing.
+    await deps.links.markMissing(testPrincipal().userId, "wallet", "account", [], deps.clock.now());
+    const archived = await deps.accounts.update(testPrincipal().userId, synced.id, synced.version, {
+      status: "archived", archivedAt: deps.clock.now(),
+    });
+    if (archived === null || archived === "version_mismatch") throw new Error("setup failed");
+    const restored = await updateAccount(deps)(testPrincipal(), synced.id, archived.version, {
+      status: "active", archivedAt: null,
+    });
+    expect(restored.status).toBe("unavailable");
+    expect(restored.archivedAt).toBeNull();
+  });
+
   it("refuses to change the type or currency of a synced account", async () => {
     const { deps } = harness();
     const synced = await deps.accounts.create({
