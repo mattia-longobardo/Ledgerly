@@ -135,6 +135,27 @@ describe("MemoryProviderLinksRepository", () => {
     );
     expect(await repo.liveFor("account", "acc-1")).not.toBeNull();
   });
+
+  it("keeps two users' links separate when they share a provider external id", async () => {
+    const repo = new MemoryProviderLinksRepository();
+    await repo.upsertSeen(
+      "u1",
+      { provider: "wallet", entityType: "account", entityId: "acc-1", externalId: "ext-1", metadata: { owner: "u1" } },
+      new Date("2026-01-01"),
+    );
+    await repo.upsertSeen(
+      "u2",
+      { provider: "wallet", entityType: "account", entityId: "acc-2", externalId: "ext-1", metadata: { owner: "u2" } },
+      new Date("2026-01-01"),
+    );
+
+    const u1Links = await repo.byExternal("u1", "wallet", "account", ["ext-1"]);
+    const u2Links = await repo.byExternal("u2", "wallet", "account", ["ext-1"]);
+    expect(u1Links.get("ext-1")?.entityId).toBe("acc-1");
+    expect(u1Links.get("ext-1")?.metadata).toEqual({ owner: "u1" });
+    expect(u2Links.get("ext-1")?.entityId).toBe("acc-2");
+    expect(u2Links.get("ext-1")?.metadata).toEqual({ owner: "u2" });
+  });
 });
 
 describe("MemoryClock", () => {

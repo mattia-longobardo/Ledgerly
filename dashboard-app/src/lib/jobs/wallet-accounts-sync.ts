@@ -11,10 +11,10 @@
  *
  * It syncs exactly one user: the owner. The Wallet credential is a single
  * file-mounted token, so there is one upstream identity to sync and one person
- * it belongs to; `provider_links` is unique on (provider, entity_type,
- * external_id) with no user in the key, so running the same external ids for a
- * second user would hand that user's account the first user's link. Per-user
- * provider connections are a later phase, and this job grows a loop only then.
+ * it belongs to; `provider_links` is unique on (user_id, provider, entity_type,
+ * external_id), so a second user syncing the same external ids gets their own
+ * links rather than colliding with the owner's. Per-user provider connections
+ * are a later phase, and this job grows a loop only then.
  *
  * The owner lookup uses the pool client directly because `users` and
  * `user_roles` are identity tables and carry no RLS. The sync itself runs under
