@@ -2,10 +2,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { and, eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import { toCents, fromCents } from "@/lib/calc/money";
 import { netWorth, type NetWorthContributor } from "@/lib/calc/networth";
 import type { MonthPoint } from "@/lib/contracts";
-import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import type { DbClient } from "@/lib/db/client";
 import { userRoles, users } from "@/lib/db/schema";
 import { monthlyHistoryQuery } from "@/lib/repo/balances";
@@ -27,6 +29,17 @@ import { withSystemContext, withUserContext } from "@/platform/db/context";
  * `account_balances`. Any month where they disagree by a single cent is a
  * migration defect and fails the run, because after Teable is switched off the
  * legacy series is gone and there is nothing left to compare against.
+ *
+ * Deliberately does not import `db` from `@/lib/db`: that module is a Proxy
+ * whose first property access calls `env()`, which requires the whole app's
+ * environment (`AUTH_*`, `OIDC_*`, `PAPERLESS_*`, ...) — none of which this
+ * one-off script needs or should be made to depend on. It builds its own
+ * client from `DATABASE_URL` alone, exactly like `src/lib/db/migrate.ts`
+ * does, so it runs with nothing but `DATABASE_URL` set. `monthlyHistoryQuery`
+ * is imported from `@/lib/repo/balances` for its pure SQL-builder only — that
+ * module also imports `db` from `@/lib/db` at its own top level, but never
+ * touches it except inside functions this script never calls, so importing
+ * it does not by itself reach `env()`.
  */
 
 const MONTHS = 24;
@@ -122,7 +135,8 @@ Compares the legacy net-worth series with the migrated one, month by month,
 writes docs/migration/teable-reconciliation.md and exits 1 on any difference.
 
 Environment:
-  DATABASE_URL        The database to read both series from (required).
+  DATABASE_URL        The database to read both series from (required). This
+                      is the only application env var this script needs.
   MIGRATION_OUT_DIR   Where the reconciliation report is written. Defaults to
                       the repository's docs/migration/ directory, which does not
                       exist inside the container image.
@@ -187,17 +201,6 @@ function readOnlyDeps(tx: DbClient): UseCaseDeps {
   };
 }
 
-const principal = await withSystemContext(db, ownerPrincipal);
-
-const legacy = await legacySeriesFromSnapshots(db, MONTHS);
-const migrated = await withUserContext(db, { userId: principal.userId }, (tx) =>
-  netWorthSeries(readOnlyDeps(tx))(principal, MONTHS),
-);
-
-const before = centsByMonth(legacy.total.points);
-const after = centsByMonth(migrated.total);
-const months = [...new Set([...before.keys(), ...after.keys()])].sort();
-
 interface Row {
   month: string;
   legacy: number | null | undefined;
@@ -206,61 +209,82 @@ interface Row {
   matches: boolean;
 }
 
-const rows: Row[] = months.map((month) => {
-  const a = before.get(month);
-  const b = after.get(month);
-  // A month that is a gap on one side and a figure on the other is a mismatch
-  // even when the figure happens to be zero: the two series disagree about
-  // whether anything is known at all.
-  const matches = (a ?? null) === (b ?? null);
-  const difference = a === null || a === undefined || b === null || b === undefined ? null : b - a;
-  return { month, legacy: a, migrated: b, difference, matches };
-});
-
-const mismatches = rows.filter((r) => !r.matches);
-
 /** Two gaps are not a difference; a gap facing a figure has no numeric one. */
 function differenceLabel(r: Row): string {
   if (r.difference !== null) return show(r.difference);
   return r.matches ? "—" : "gap";
 }
 
-const header = `${"month".padEnd(12)}${"legacy".padStart(16)}${"migrated".padStart(16)}${"difference".padStart(16)}`;
-console.log(header);
-console.log("-".repeat(header.length));
-for (const r of rows) {
-  console.log(
-    `${r.month.padEnd(12)}${show(r.legacy).padStart(16)}${show(r.migrated).padStart(16)}${differenceLabel(r).padStart(16)}`,
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+const db = drizzle(pool, { schema });
+
+let exitCode = 0;
+try {
+  const principal = await withSystemContext(db, ownerPrincipal);
+
+  const legacy = await legacySeriesFromSnapshots(db, MONTHS);
+  const migrated = await withUserContext(db, { userId: principal.userId }, (tx) =>
+    netWorthSeries(readOnlyDeps(tx))(principal, MONTHS),
   );
+
+  const before = centsByMonth(legacy.total.points);
+  const after = centsByMonth(migrated.total);
+  const months = [...new Set([...before.keys(), ...after.keys()])].sort();
+
+  const rows: Row[] = months.map((month) => {
+    const a = before.get(month);
+    const b = after.get(month);
+    // A month that is a gap on one side and a figure on the other is a mismatch
+    // even when the figure happens to be zero: the two series disagree about
+    // whether anything is known at all.
+    const matches = (a ?? null) === (b ?? null);
+    const difference = a === null || a === undefined || b === null || b === undefined ? null : b - a;
+    return { month, legacy: a, migrated: b, difference, matches };
+  });
+
+  const mismatches = rows.filter((r) => !r.matches);
+
+  const header = `${"month".padEnd(12)}${"legacy".padStart(16)}${"migrated".padStart(16)}${"difference".padStart(16)}`;
+  console.log(header);
+  console.log("-".repeat(header.length));
+  for (const r of rows) {
+    console.log(
+      `${r.month.padEnd(12)}${show(r.legacy).padStart(16)}${show(r.migrated).padStart(16)}${differenceLabel(r).padStart(16)}`,
+    );
+  }
+
+  const verdict = mismatches.length === 0
+    ? `Every one of the ${rows.length} months matches to the cent.`
+    : `${mismatches.length} of ${rows.length} months differ: ${mismatches.map((r) => r.month).join(", ")}.`;
+  console.log(`\n${verdict}`);
+
+  mkdirSync(outDir, { recursive: true });
+  const reportPath = join(outDir, "teable-reconciliation.md");
+  writeFileSync(
+    reportPath,
+    [
+      "# Teable migration reconciliation",
+      "",
+      `Generated: ${new Date().toISOString()}`,
+      "",
+      `Net worth over the last ${MONTHS} months, computed twice on the same database:`,
+      "the legacy series from `balance_snapshots`, the migrated one from `account_balances`.",
+      "",
+      "| Month | Legacy | Migrated | Difference |",
+      "| --- | ---: | ---: | ---: |",
+      ...rows.map(
+        (r) => `| ${r.month} | ${show(r.legacy)} | ${show(r.migrated)} | ${differenceLabel(r)} |`,
+      ),
+      "",
+      verdict,
+      "",
+    ].join("\n"),
+  );
+  console.log(`Report written to ${reportPath}`);
+
+  exitCode = mismatches.length === 0 ? 0 : 1;
+} finally {
+  await pool.end();
 }
 
-const verdict = mismatches.length === 0
-  ? `Every one of the ${rows.length} months matches to the cent.`
-  : `${mismatches.length} of ${rows.length} months differ: ${mismatches.map((r) => r.month).join(", ")}.`;
-console.log(`\n${verdict}`);
-
-mkdirSync(outDir, { recursive: true });
-const reportPath = join(outDir, "teable-reconciliation.md");
-writeFileSync(
-  reportPath,
-  [
-    "# Teable migration reconciliation",
-    "",
-    `Generated: ${new Date().toISOString()}`,
-    "",
-    `Net worth over the last ${MONTHS} months, computed twice on the same database:`,
-    "the legacy series from `balance_snapshots`, the migrated one from `account_balances`.",
-    "",
-    "| Month | Legacy | Migrated | Difference |",
-    "| --- | ---: | ---: | ---: |",
-    ...rows.map(
-      (r) => `| ${r.month} | ${show(r.legacy)} | ${show(r.migrated)} | ${differenceLabel(r)} |`,
-    ),
-    "",
-    verdict,
-    "",
-  ].join("\n"),
-);
-console.log(`Report written to ${reportPath}`);
-
-process.exit(mismatches.length === 0 ? 0 : 1);
+process.exit(exitCode);
