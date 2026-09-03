@@ -25,7 +25,7 @@ export interface FundView {
    */
   deposits: FundDepositRow[];
   points: MonthPoint[];
-  /** Latest observed Teable value; gaps are not carried forward into figures. */
+  /** Latest observed value; gaps are not carried forward into figures. */
   value: number | null;
   deposited: number;
   absReturn: number | null;
@@ -36,7 +36,7 @@ export interface FundView {
 }
 
 /**
- * The fund's Teable column is cached under a `balance_snapshots.account_key`
+ * The fund's hand-typed balance is cached under a `balance_snapshots.account_key`
  * equal to its slug, so one read covers every fund.
  */
 export async function loadFunds(): Promise<FundView[]> {
@@ -68,7 +68,7 @@ export async function loadFunds(): Promise<FundView[]> {
       .sort((a, b) => (a.month < b.month ? -1 : 1));
 
     const snapshot = latest.find((l) => l.accountKey === fund.slug) ?? null;
-    const info = classify(snapshot?.capturedAt ?? null, "teable");
+    const info = classify(snapshot?.capturedAt ?? null, "legacy");
 
     const value = currentValue(points, now);
     const deposited = totalDeposited(fundSettings, fundDeposits, now);

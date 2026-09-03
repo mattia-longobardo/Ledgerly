@@ -50,6 +50,13 @@
       "when": 1788376452713,
       "tag": "0006_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788398205986,
+      "tag": "0007_retire_teable",
+      "breakpoints": true
     }
   ]
 }

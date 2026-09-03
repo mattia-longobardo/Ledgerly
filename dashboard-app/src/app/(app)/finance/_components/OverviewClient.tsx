@@ -11,20 +11,30 @@ import { RangeSelector, type MonthRange, type RangeKey } from "@/components/ui/R
 import type { MonthPoint, Series } from "@/lib/contracts";
 import { carryForward, deltaOverRange, rangeToMonths, type RangeSpec } from "@/lib/calc/series";
 import { cn } from "@/components/ui/cn";
+import { formatAsOf } from "@/lib/format";
+import type { Money } from "@/lib/format";
 
 export interface OverviewAccount {
   key: string;
   label: string;
-  balance: string | null;
+  balance: Money;
   capturedAt: Date | null;
   stale: boolean;
   points: MonthPoint[];
+}
+
+/** A row in the "Data sources" line — how the figures above were populated. */
+export interface OverviewSource {
+  name: string;
+  lastUpdated: Date | null;
+  state: "fresh" | "stale" | "missing";
 }
 
 export interface OverviewClientProps {
   total: OverviewAccount;
   accounts: readonly OverviewAccount[];
   earliestMonth: string | null;
+  sources: readonly OverviewSource[];
 }
 
 const PRESET: Record<RangeKey, RangeSpec> = {
@@ -103,7 +113,7 @@ function toSeries(account: OverviewAccount, months: readonly string[]): Series {
  * URL stays truthful and the back button works without refetching a server
  * component for a purely local filter.
  */
-export function OverviewClient({ total, accounts, earliestMonth }: OverviewClientProps) {
+export function OverviewClient({ total, accounts, earliestMonth, sources }: OverviewClientProps) {
   const [state, setState] = useState<ViewState>(DEFAULT_STATE);
 
   // Hydration-safe: the server rendered the default view, so the URL is read
@@ -207,6 +217,22 @@ export function OverviewClient({ total, accounts, earliestMonth }: OverviewClien
             />
           ))}
         </AccountList>
+
+        {/* Where the figures above came from, and how much they can be
+            trusted: one line per way a balance enters the system. */}
+        <ul className="mt-4 flex flex-col gap-1 hairline-t pt-3">
+          {sources.map((source) => (
+            <li
+              key={source.name}
+              className="flex items-center justify-between gap-3 text-caption text-fg-muted"
+            >
+              <span className="truncate">{source.name}</span>
+              <span className={cn("num whitespace-nowrap", source.state === "stale" && "text-warning")}>
+                {source.state === "missing" ? "no data yet" : `as of ${formatAsOf(source.lastUpdated)}`}
+              </span>
+            </li>
+          ))}
+        </ul>
       </Panel>
     </PageGrid>
   );

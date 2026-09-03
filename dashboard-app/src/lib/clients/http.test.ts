@@ -30,13 +30,13 @@ beforeEach(() => {
 describe("httpRequest", () => {
   it("returns the response on 2xx", async () => {
     fetchMock.mockResolvedValue(json({ ok: true }));
-    const res = await httpRequest("teable", "https://x/y");
+    const res = await httpRequest("wallet", "https://x/y");
     expect(res.status).toBe(200);
   });
 
   it("throws a non-retryable HttpError with the raw payload on 4xx", async () => {
     fetchMock.mockResolvedValue(json({ message: "Invalid field name" }, 400));
-    const err = await httpRequest("teable", "https://x/y").catch((e: unknown) => e);
+    const err = await httpRequest("wallet", "https://x/y").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(HttpError);
     const httpErr = err as HttpError;
     expect(httpErr.status).toBe(400);
@@ -113,7 +113,7 @@ describe("withRetry", () => {
 
   it("fails fast on a non-retryable error", async () => {
     const { delays, sleep } = recordingSleep();
-    const fn = vi.fn().mockRejectedValue(new HttpError("teable", "bad field", 400, null, false));
+    const fn = vi.fn().mockRejectedValue(new HttpError("wallet", "bad field", 400, null, false));
     await expect(withRetry(fn, { sleep, jitter: () => 0 })).rejects.toThrow("bad field");
     expect(fn).toHaveBeenCalledTimes(1);
     expect(delays).toEqual([]);

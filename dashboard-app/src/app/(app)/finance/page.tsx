@@ -2,9 +2,9 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
-import { loadAccounts } from "../_lib/accounts";
+import { loadOverview } from "@/modules/accounts/ui/load-overview";
 import { FinanceTabs } from "./_components/FinanceTabs";
-import { OverviewClient, type OverviewAccount } from "./_components/OverviewClient";
+import { OverviewClient, type OverviewAccount, type OverviewSource } from "./_components/OverviewClient";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Finance" };
@@ -15,23 +15,27 @@ const HISTORY_MONTHS = 120;
 export default async function FinanceOverviewPage() {
   await requireUserOrRedirect("/finance");
 
-  const accounts = await loadAccounts(HISTORY_MONTHS);
-  // The managed accounts plus each VISIBLE hand-tracked account as its own row.
-  // Hidden ones are omitted from the list but still sit inside `accounts.total`.
-  const visibleHandTracked = accounts.handTracked.filter((a) => a.visible);
-  const list: OverviewAccount[] = [...accounts.managed, ...visibleHandTracked].map((a) => ({
-    key: a.key,
-    label: a.label,
-    balance: a.balance,
-    capturedAt: a.capturedAt,
-    stale: a.stale,
-    points: a.points,
+  const { netWorth, accounts, sources } = await loadOverview(HISTORY_MONTHS);
+  const staleById = new Map(accounts.map((a) => [a.account.id, a.stale]));
+
+  // The rows below the chart: every account net worth counts, with the
+  // staleness `listAccounts` already computed for it.
+  const list: OverviewAccount[] = netWorth.perAccount.map((row) => ({
+    key: row.account.id,
+    label: row.account.name,
+    balance: row.latest?.balance ?? null,
+    capturedAt: row.latest?.capturedAt ?? null,
+    stale: staleById.get(row.account.id) ?? false,
+    points: row.series,
   }));
 
-  // The total is a sum of the rows in `list`, so it is non-null exactly when at
-  // least one of them is. Both are checked anyway — cheap, and it keeps the
-  // empty state honest if the definition ever changes again.
-  const hasData = accounts.total.balance !== null || list.some((a) => a.balance !== null);
+  const dataSources: OverviewSource[] = sources.map((s) => ({
+    name: s.name,
+    lastUpdated: s.lastUpdated,
+    state: s.state,
+  }));
+
+  const hasData = netWorth.perAccount.length > 0;
 
   return (
     <>
@@ -40,28 +44,28 @@ export default async function FinanceOverviewPage() {
       {hasData ? (
         <OverviewClient
           total={{
-            key: accounts.total.key,
-            // Net worth: Σ of the latest known value of every account below.
+            key: "total",
             label: "Total wealth",
-            balance: accounts.total.balance,
-            capturedAt: accounts.total.capturedAt,
-            stale: accounts.total.stale,
-            points: accounts.total.points,
+            balance: netWorth.total.at(-1)?.value ?? null,
+            capturedAt: netWorth.asOf,
+            stale: netWorth.stale,
+            points: netWorth.total,
           }}
           accounts={list}
-          earliestMonth={accounts.earliestMonth}
+          earliestMonth={netWorth.months[0] ?? null}
+          sources={dataSources}
         />
       ) : (
         <div className="max-w-xl pt-6">
           <EmptyState
-            title="No history yet"
-            description="Balances arrive with the monthly snapshot job. Once it has run at least twice there is a curve to draw."
+            title="No accounts yet"
+            description="Add an account by hand, or connect Budget Makers Wallet to bring in what it already tracks."
             action={
               <Link
-                href="/settings"
+                href="/finance/accounts"
                 className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
               >
-                Run the snapshot job
+                Go to Accounts
               </Link>
             }
           />

@@ -20,8 +20,6 @@ const store = vi.hoisted(() => {
     OIDC_CLIENT_ID: "client",
     OIDC_CLIENT_SECRET: "secret",
     AUTHORIZED_SUB: "sub-123",
-    TEABLE_URL: "https://teable.example.test",
-    TEABLE_TOKEN: "teable-token",
     PAPERLESS_URL: "https://paperless.example.test",
     PAPERLESS_TOKEN: "paperless-token",
     CRON_SECRET: "c".repeat(20),

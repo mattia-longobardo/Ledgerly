@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Sparkline } from "@/components/chart/Sparkline";
 import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
 import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,37 +8,17 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { StaleBadge } from "@/components/ui/StaleBadge";
-import { carryForward, deltaOverRange, rangeToMonths } from "@/lib/calc/series";
+import { deltaOverRange } from "@/lib/calc/series";
 import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import type { Series } from "@/lib/contracts";
-import { loadAccounts, type AccountView } from "./_lib/accounts";
+import { loadOverview } from "@/modules/accounts/ui/load-overview";
 import { loadFerie } from "./_lib/vacation";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };
 
-function spark(account: AccountView) {
-  return <Sparkline values={carryForward(account.points).map((p) => p.value)} />;
-}
-
-/**
- * The net-worth curve for the figure directly above it. Built here on the
- * server: `TimeSeriesChart` is a client leaf, but it takes plain data, so Home
- * stays a Server Component. Fixed at 12 months and deliberately not
- * interactive; /finance owns range and per-account selection.
- */
-function netWorthSeries(total: AccountView, earliestMonth: string | null): Series[] {
-  const months = rangeToMonths("12M", { earliest: earliestMonth });
-  const byMonth = new Map(carryForward(total.points).map((p) => [p.month, p.value] as const));
-  return [
-    {
-      key: total.key,
-      label: "Net worth",
-      points: months.map((month) => ({ month, value: byMonth.get(month) ?? null })),
-    },
-  ];
-}
+const CHART_MONTHS = 12;
 
 /** Mobile only: on desktop the sidebar already carries this. */
 function SettingsLink() {
@@ -70,10 +49,18 @@ function SettingsLink() {
 export default async function HomePage() {
   await requireUserOrRedirect("/");
 
-  const [accounts, ferie] = await Promise.all([loadAccounts(), loadFerie()]);
-  const { total, managed, revolutSubs, handTracked } = accounts;
-  const visibleHandTracked = handTracked.filter((a) => a.visible);
-  const delta = deltaOverRange(total.points, 1);
+  const [overview, ferie] = await Promise.all([loadOverview(), loadFerie()]);
+  const { netWorth, accounts } = overview;
+
+  // Empty exactly when no account is counted towards net worth — never a
+  // zero standing in for "nothing here yet".
+  const hasIncludedAccounts = netWorth.perAccount.length > 0;
+  const total = hasIncludedAccounts ? (netWorth.total.at(-1)?.value ?? null) : null;
+  const delta = deltaOverRange(netWorth.total, 1);
+
+  const chartSeries: Series[] = [
+    { key: "total", label: "Net worth", points: netWorth.total.slice(-CHART_MONTHS) },
+  ];
 
   const remainingDays = ferie.remaining.combinedDays;
   const ringMax = (remainingDays ?? 0) + ferie.takenDaysYtd;
@@ -95,35 +82,32 @@ export default async function HomePage() {
           className="order-1 lg:order-none"
           bodyClassName="axis-rule-live pb-6"
         >
-          {/* Hero — net worth, summed here from the latest known value of every
-              account: the four the app reads plus the five hand-tracked ones.
-              Teable's TOTAL column is deliberately not used; its formula omits
-              Fondo Cometa, and on the rows this app appends (Date + ING +
-              Revolut only) it omits every hand-tracked account too. The chart
-              below is built from the same sum, so the two always agree. */}
-          {total.balance === null ? (
+          {/* Hero — net worth, the last known value of every account counted
+              towards it, from the accounts module's own series. Links to the
+              Accounts screen, which is the detail behind this figure. */}
+          {total === null ? (
             <EmptyState
               title="No balances yet"
-              description="Nothing has been snapshotted from Teable or Wallet so far. Run the snapshot job once and this page fills in."
+              description="Add an account, or connect Budget Makers Wallet, and this page fills in."
               action={
                 <Link
-                  href="/settings"
+                  href="/finance/accounts"
                   className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
                 >
-                  Open settings
+                  Go to Accounts
                 </Link>
               }
             />
           ) : (
-            <>
-              <MoneyValue value={total.balance} size="display-lg" cents="muted" />
+            <Link href="/finance/accounts" className="block transition-opacity hover:opacity-80">
+              <MoneyValue value={total} size="display-lg" cents="muted" />
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {delta.abs !== null && (
                   <DeltaBadge value={delta.abs} percent={delta.pct} context="versus last month" />
                 )}
-                <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
+                <StaleBadge capturedAt={netWorth.asOf} stale={netWorth.stale} />
               </div>
-            </>
+            </Link>
           )}
         </Panel>
 
@@ -161,67 +145,40 @@ export default async function HomePage() {
 
         {/* The curve for the figure above. The number and its history belong on
             the same screen; /finance is the drill-down, not the first read. */}
-        {total.balance !== null && (
+        {total !== null && (
           <Panel span={8} title="Last 12 months" className="order-2 lg:order-none">
-            <TimeSeriesChart
-              series={netWorthSeries(total, accounts.earliestMonth)}
-              label="Net worth by month"
-              height={340}
-              area
-            />
+            <TimeSeriesChart series={chartSeries} label="Net worth by month" height={340} area />
           </Panel>
         )}
 
-        {/* Account strip. Revolut opens onto its sub-accounts; each visible
-            hand-tracked account is its own row (an empty Teable cell reads as
-            0), and a hidden one simply gets no row while still counting in the
-            total above. */}
-        <Panel span={4} spanMd={4} title="Accounts" className="order-4 lg:order-none">
-          <AccountList>
-            {managed.map((account) =>
-              account.key === "revolut_total" ? (
+        {/* Account strip: every non-archived account, in the accounts module's
+            own order. Links to Accounts for management. */}
+        <Panel
+          span={4}
+          spanMd={4}
+          title="Accounts"
+          className="order-4 lg:order-none"
+          action={
+            <Link href="/finance/accounts" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+              View all
+            </Link>
+          }
+        >
+          {accounts.length === 0 ? (
+            <p className="text-body-sm text-fg-muted">No accounts yet.</p>
+          ) : (
+            <AccountList>
+              {accounts.map((item) => (
                 <AccountRow
-                  key={account.key}
-                  name={account.label}
-                  value={account.balance}
-                  capturedAt={account.capturedAt}
-                  stale={account.stale}
-                  sparkline={spark(account)}
-                >
-                  {revolutSubs.map((sub) => (
-                    <AccountRow
-                      key={sub.key}
-                      nested
-                      name={sub.label}
-                      value={sub.balance}
-                      capturedAt={sub.capturedAt}
-                      stale={sub.stale}
-                    />
-                  ))}
-                </AccountRow>
-              ) : (
-                <AccountRow
-                  key={account.key}
-                  name={account.label}
-                  value={account.balance}
-                  capturedAt={account.capturedAt}
-                  stale={account.stale}
-                  sparkline={spark(account)}
+                  key={item.account.id}
+                  name={item.account.name}
+                  value={item.latest?.balance ?? null}
+                  capturedAt={item.latest?.capturedAt ?? null}
+                  stale={item.stale}
                 />
-              ),
-            )}
-
-            {visibleHandTracked.map((account) => (
-              <AccountRow
-                key={account.key}
-                name={account.label}
-                value={account.balance}
-                capturedAt={account.capturedAt}
-                stale={account.stale}
-                sparkline={spark(account)}
-              />
-            ))}
-          </AccountList>
+              ))}
+            </AccountList>
+          )}
         </Panel>
       </PageGrid>
     </>

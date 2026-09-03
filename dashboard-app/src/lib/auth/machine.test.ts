@@ -21,8 +21,6 @@ Object.assign(process.env, {
   OIDC_CLIENT_ID: "dashboard",
   OIDC_CLIENT_SECRET: "client-secret",
   AUTHORIZED_SUB: "00000000-0000-0000-0000-000000000001",
-  TEABLE_URL: "https://teable.example",
-  TEABLE_TOKEN: "teable-token",
   PAPERLESS_URL: "https://paperless.example",
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET,

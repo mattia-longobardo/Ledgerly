@@ -17,30 +17,26 @@ import { balance as ledgerBalance, ledger, rates } from "@/lib/repo/vacation";
 import { monthKey } from "@/lib/time";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { DEFAULT_HOURS_PER_DAY } from "../_lib/vacation";
-import {
-  ClearPoisonedButton,
-  HoursPerDayForm,
-  LlmForm,
-  RunSnapshotButton,
-  VacationSetupForm,
-} from "./_components/SettingsForms";
+import { HoursPerDayForm, LlmForm, VacationSetupForm } from "./_components/SettingsForms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings" };
 
 const JOBS: readonly JobName[] = [
-  "monthly_snapshot",
+  "monthly_close",
   "payslip_ingest",
   "sweep",
   "wallet_refresh",
+  "wallet_accounts_sync",
   "trek_sync",
 ];
 
 const JOB_LABEL: Record<string, string> = {
-  monthly_snapshot: "Monthly snapshot",
+  monthly_close: "Monthly close",
   payslip_ingest: "Payslip ingest",
   sweep: "Sweep",
   wallet_refresh: "Wallet refresh",
+  wallet_accounts_sync: "Wallet accounts sync",
   trek_sync: "Trek leave sync",
 };
 
@@ -147,12 +143,6 @@ export default async function SettingsPage() {
                         <span className="block truncate text-body text-fg">
                           {fund.name}
                         </span>
-                        <span
-                          title={fund.teableColumn}
-                          className="num block truncate text-caption text-fg-muted"
-                        >
-                          Teable column “{fund.teableColumn}”
-                        </span>
                       </span>
                       <span
                         aria-hidden
@@ -224,27 +214,16 @@ export default async function SettingsPage() {
                 );
               })}
             </ul>
-
-            <div className="mt-4">
-              <RunSnapshotButton />
-            </div>
           </SettingsSection>
 
           <SettingsSection
             title="Recent runs"
-            footnote={
-              <>
-                A poisoned month has stopped retrying on its own. Clearing it
-                queues the cached values for the next sweep; it never re-reads
-                the Wallet API. Current month:{" "}
-                <span className="num">{formatMonth(now)}</span>.
-              </>
-            }
+            footnote={<>Current month: <span className="num">{formatMonth(now)}</span>.</>}
           >
             {runs.length === 0 ? (
               <EmptyState
                 title="Cron has never fired"
-                description="No job has run yet. Either the sidecar is not up, or it cannot reach the app on the internal network. “Run the snapshot now” above tests that path."
+                description="No job has run yet. Either the sidecar is not up, or it cannot reach the app on the internal network."
               />
             ) : (
               <ul className="hairline-t">
@@ -284,9 +263,6 @@ export default async function SettingsPage() {
                     >
                       {run.status.replace(/_/g, " ")}
                     </span>
-                    {run.status === "poisoned" && run.dedupeKey !== null && (
-                      <ClearPoisonedButton month={run.dedupeKey} />
-                    )}
                   </li>
                 ))}
               </ul>

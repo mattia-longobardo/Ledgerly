@@ -1,11 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { planTeableImport, type TeableImportInput } from "./teable-import";
+import { pivotExportedRecords, planTeableImport, type TeableImportInput } from "./teable-import";
 
 const OWNER = "00000000-0000-7000-8000-000000000001";
 
 function input(overrides: Partial<TeableImportInput> = {}): TeableImportInput {
   return { userId: OWNER, tracked: [], funds: [], points: [], walletSnapshots: [], ...overrides };
 }
+
+describe("pivotExportedRecords", () => {
+  it("turns exported rows into (key, month, value) points, skipping cells the row lacks", () => {
+    const points = pivotExportedRecords([
+      { id: "rec_aug", fields: { Date: "2026-08-01", ING: 1234.56, Fideuram: "5.100,00", TOTAL: 6334.56 } },
+      { id: "rec_no_date", fields: { ING: 1 } },
+    ]);
+
+    expect(points).toEqual([
+      { key: "fideuram", column: "Fideuram", month: "2026-08-01", value: 5100 },
+      { key: "ing", column: "ING", month: "2026-08-01", value: 1234.56 },
+      { key: "total", column: "TOTAL", month: "2026-08-01", value: 6334.56 },
+    ]);
+  });
+
+  it("keeps an empty cell a gap rather than a zero", () => {
+    const points = pivotExportedRecords([
+      { id: "rec", fields: { Date: "2026-08-01", "Fondo Cometa": null } },
+    ]);
+
+    expect(points).toEqual([{ key: "cometa", column: "Fondo Cometa", month: "2026-08-01", value: null }]);
+  });
+});
 
 describe("planTeableImport", () => {
   it("dates a Teable cell to the end of its month and collapses same-day wallet rows", () => {

@@ -1,13 +1,15 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { and, eq } from "drizzle-orm";
-import { loadAccounts } from "@/app/(app)/_lib/accounts";
-import { toCents } from "@/lib/calc/money";
+import { and, eq, sql } from "drizzle-orm";
+import { toCents, fromCents } from "@/lib/calc/money";
+import { netWorth, type NetWorthContributor } from "@/lib/calc/networth";
 import type { MonthPoint } from "@/lib/contracts";
 import { db } from "@/lib/db";
 import type { DbClient } from "@/lib/db/client";
 import { userRoles, users } from "@/lib/db/schema";
+import { monthlyHistoryQuery } from "@/lib/repo/balances";
+import { addMonths, monthKey } from "@/lib/time";
 import type { UseCaseDeps } from "@/modules/accounts/application/deps";
 import { netWorthSeries } from "@/modules/accounts/application/net-worth-series";
 import { DrizzleAccountsRepository } from "@/modules/accounts/infrastructure/drizzle-accounts-repository";
@@ -28,6 +30,91 @@ import { withSystemContext, withUserContext } from "@/platform/db/context";
  */
 
 const MONTHS = 24;
+
+/**
+ * The four accounts the app itself managed, plus the five the owner used to
+ * type in by hand. This is the same set `src/app/(app)/_lib/accounts.ts`
+ * (deleted along with Teable) read before it was retired — and the same five
+ * hand-tracked keys the export written by `migrate-teable.ts` carries. Fixed
+ * here rather than read from a `tracked_accounts` registry because that
+ * table went with the rest of the retirement migration.
+ */
+const APP_MANAGED_KEYS = ["fideuram", "cometa", "ing", "revolut_total"] as const;
+const HAND_TRACKED_KEYS = ["etoro", "buddy_bank", "isybank", "mediolanum", "binance"] as const;
+const LEGACY_KEYS = [...APP_MANAGED_KEYS, ...HAND_TRACKED_KEYS];
+
+interface LegacyLatest extends Record<string, unknown> {
+  accountKey: string;
+  balance: string;
+  capturedAt: Date;
+}
+
+interface LegacyMonthly extends Record<string, unknown> {
+  accountKey: string;
+  month: string;
+  balance: string;
+}
+
+/**
+ * The legacy net-worth series, computed straight from `balance_snapshots`
+ * exactly as the deleted `_lib/accounts.ts` loader did: one point per account
+ * per month (the last snapshot within the month, carried forward across
+ * gaps), reconciled against the newest snapshot for the current month so a
+ * same-month correction is never shadowed by a stale history row, then summed
+ * across the four managed accounts and the five hand-tracked ones.
+ */
+export async function legacySeriesFromSnapshots(
+  dbClient: DbClient,
+  months: number,
+): Promise<{ total: { points: MonthPoint[] } }> {
+  const since = addMonths(monthKey(new Date()), -(months - 1));
+
+  const latestResult = await dbClient.execute<LegacyLatest>(sql`
+    SELECT DISTINCT ON (account_key)
+      account_key AS "accountKey",
+      balance,
+      captured_at AS "capturedAt"
+    FROM balance_snapshots
+    WHERE account_key IN (${sql.join(
+      LEGACY_KEYS.map((k) => sql`${k}`),
+      sql`, `,
+    )})
+    ORDER BY account_key, captured_at DESC
+  `);
+  const monthlyResult = await dbClient.execute<LegacyMonthly>(monthlyHistoryQuery([...LEGACY_KEYS], since));
+
+  const pointsByKey = new Map<string, MonthPoint[]>();
+  for (const row of monthlyResult.rows) {
+    const list = pointsByKey.get(row.accountKey) ?? [];
+    list.push({ month: row.month, value: fromCents(toCents(row.balance)) });
+    pointsByKey.set(row.accountKey, list);
+  }
+  for (const list of pointsByKey.values()) list.sort((a, b) => (a.month < b.month ? -1 : 1));
+
+  // The current month's authoritative value is the latest snapshot, not
+  // whatever `monthlyHistoryQuery`'s tie-break happened to pick for it — see
+  // the long comment on that function for why the two can disagree.
+  for (const row of latestResult.rows) {
+    const list = pointsByKey.get(row.accountKey);
+    if (!list) continue;
+    const month = monthKey(new Date(row.capturedAt));
+    const point = list.find((p) => p.month === month);
+    if (point) point.value = fromCents(toCents(row.balance));
+  }
+
+  const latestByKey = new Map(latestResult.rows.map((r) => [r.accountKey, r]));
+  const contributors: NetWorthContributor[] = LEGACY_KEYS.map((key) => {
+    const latest = latestByKey.get(key);
+    return {
+      key,
+      balance: latest?.balance ?? null,
+      capturedAt: latest ? new Date(latest.capturedAt) : null,
+      points: pointsByKey.get(key) ?? [],
+    };
+  });
+
+  return { total: { points: netWorth(contributors).points } };
+}
 
 const USAGE = `Usage: npm run migrate:teable:validate
 
@@ -102,7 +189,7 @@ function readOnlyDeps(tx: DbClient): UseCaseDeps {
 
 const principal = await withSystemContext(db, ownerPrincipal);
 
-const legacy = await loadAccounts(MONTHS);
+const legacy = await legacySeriesFromSnapshots(db, MONTHS);
 const migrated = await withUserContext(db, { userId: principal.userId }, (tx) =>
   netWorthSeries(readOnlyDeps(tx))(principal, MONTHS),
 );
