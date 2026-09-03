@@ -114,3 +114,47 @@ describe("HOME_CARDS and visibleCards", () => {
     expect(visibleCards(viewer)).toHaveLength(4);
   });
 });
+
+/**
+ * The exact scenarios the Home page composes against: which cards
+ * `page.tsx` renders, and when a permission gate — as opposed to a
+ * feature/integration one — is the reason a card's content is withheld.
+ */
+describe("Home composition", () => {
+  it("accounts_sync is absent when Wallet is not configured", () => {
+    const notConfigured = visibleCards(caps({ integrations: { ...caps().integrations, wallet: "not_configured" } }));
+    expect(notConfigured.some((c) => c.key === "accounts_sync")).toBe(false);
+
+    const configured = visibleCards(caps({ integrations: { ...caps().integrations, wallet: "connected" } }));
+    expect(configured.some((c) => c.key === "accounts_sync")).toBe(true);
+  });
+
+  it("leave is absent when the timeoff feature is off", () => {
+    const off = visibleCards(caps({ features: { ...caps().features, timeoff: false } }));
+    expect(off.some((c) => c.key === "leave")).toBe(false);
+
+    const on = visibleCards(caps({ features: { ...caps().features, timeoff: true } }));
+    expect(on.some((c) => c.key === "leave")).toBe(true);
+  });
+
+  it("a viewer gets permission_denied only for cards that declare a permission they lack", () => {
+    const viewer = caps({
+      permissions: permissionsForRoles(["viewer"]),
+      features: { ...caps().features, timeoff: true },
+      integrations: { ...caps().integrations, wallet: "connected" },
+    });
+
+    // None of the real HOME_CARDS declares a `permission` today, so a
+    // viewer — who only holds `accounts.read` — is denied none of them.
+    for (const card of visibleCards(viewer)) {
+      expect(cardState(card, viewer)).toBeNull();
+    }
+
+    // A card that DOES declare one a viewer lacks is denied, distinctly
+    // from one whose declared permission the viewer does hold.
+    const readGated: HomeCard = { ...HOME_CARDS[0]!, requires: { permission: "accounts.read" } };
+    const writeGated: HomeCard = { ...HOME_CARDS[0]!, requires: { permission: "accounts.write" } };
+    expect(cardState(readGated, viewer)).toBeNull();
+    expect(cardState(writeGated, viewer)).toEqual({ state: "permission_denied" });
+  });
+});
