@@ -196,6 +196,7 @@ try {
     funds: legacy.funds,
     points,
     walletSnapshots: legacy.walletSnapshots,
+    today: romeDate(new Date()),
   });
 
   console.log(

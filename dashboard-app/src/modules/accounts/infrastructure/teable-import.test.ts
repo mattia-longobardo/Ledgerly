@@ -109,4 +109,21 @@ describe("planTeableImport", () => {
       { key: "isybank", asOf: "2026-03-31", balance: "12.50", source: "migration" },
     ]);
   });
+
+  it("never pins a cell to a future day: the current month lands on today", () => {
+    const plan = planTeableImport(
+      input({
+        today: "2026-09-03",
+        points: [
+          { key: "isybank", month: "2026-08-01", value: 441.51 },
+          { key: "isybank", month: "2026-09-01", value: 450 },
+        ],
+      }),
+    );
+
+    expect(plan.balances.map((b) => [b.key, b.asOf, b.balance])).toEqual([
+      ["isybank", "2026-08-31", "441.51"],
+      ["isybank", "2026-09-03", "450.00"],
+    ]);
+  });
 });
