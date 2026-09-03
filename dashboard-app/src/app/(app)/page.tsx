@@ -10,15 +10,20 @@ import { ProgressRing } from "@/components/ui/ProgressRing";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { deltaOverRange } from "@/lib/calc/series";
 import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
-import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import type { Series } from "@/lib/contracts";
-import { loadOverview } from "@/modules/accounts/ui/load-overview";
+import { loadOverview, type SourceFreshness } from "@/modules/accounts/ui/load-overview";
+import { cardState, visibleCards, type CardKey } from "@/modules/home/cards";
+import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
+import { realProbes } from "@/platform/capabilities/probes";
+import { resolveCapabilities } from "@/platform/capabilities/resolve";
+import { loadFunds, type FundView } from "./finance/_lib/funds";
 import { loadFerie } from "./_lib/vacation";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };
 
 const CHART_MONTHS = 12;
+const WALLET_SOURCE_NAME = "Budget Makers Wallet";
 
 /** Mobile only: on desktop the sidebar already carries this. */
 function SettingsLink() {
@@ -46,10 +51,92 @@ function SettingsLink() {
   );
 }
 
-export default async function HomePage() {
-  await requireUserOrRedirect("/");
+/** Rendered instead of a card's content when `cardState` denies the permission it requires. */
+function PermissionDeniedPanel({ span, title }: { span: 4 | 6 | 8 | 12; title: string }) {
+  return (
+    <Panel span={span} spanMd={4} title={title}>
+      <p className="text-body-sm text-fg-muted">You do not have access to this card.</p>
+    </Panel>
+  );
+}
 
-  const [overview, ferie] = await Promise.all([loadOverview(), loadFerie()]);
+/** Σ of the funds' latest known values — null only when every fund is unvalued, never a zero. */
+function totalFundValue(funds: readonly FundView[]): {
+  value: number | null;
+  capturedAt: Date | null;
+  stale: boolean;
+} {
+  let value: number | null = null;
+  let capturedAt: Date | null = null;
+  let stale = false;
+  for (const f of funds) {
+    if (f.value !== null) value = (value ?? 0) + f.value;
+    if (f.capturedAt && (!capturedAt || f.capturedAt < capturedAt)) capturedAt = f.capturedAt;
+    if (f.stale) stale = true;
+  }
+  return { value, capturedAt, stale };
+}
+
+export default async function HomePage() {
+  const principal = await requirePrincipalOrRedirect();
+  const caps = await resolveCapabilities(principal, realProbes);
+  const visible = visibleCards(caps);
+  const isVisible = (key: CardKey) => visible.some((c) => c.key === key);
+  const denial = (key: CardKey) => {
+    const card = visible.find((c) => c.key === key);
+    return card ? cardState(card, caps) : null;
+  };
+
+  const [overview, funds, ferie] = await Promise.all([
+    isVisible("total_balance") || isVisible("accounts_sync") ? loadOverview() : null,
+    isVisible("funds") ? loadFunds() : null,
+    isVisible("leave") ? loadFerie() : null,
+  ]);
+
+  return (
+    <>
+      <PageHeader title="Total balance" eyebrow={formatDateLine(new Date())} action={<SettingsLink />} />
+
+      <PageGrid className="pt-5">
+        {isVisible("total_balance") &&
+          (denial("total_balance") ? (
+            <PermissionDeniedPanel span={8} title="Net worth" />
+          ) : (
+            <TotalBalanceCards overview={overview!} />
+          ))}
+
+        {isVisible("leave") &&
+          (denial("leave") ? (
+            <PermissionDeniedPanel span={4} title="Leave" />
+          ) : (
+            <LeaveCard ferie={ferie!} />
+          ))}
+
+        {isVisible("accounts_sync") &&
+          (denial("accounts_sync") ? (
+            <PermissionDeniedPanel span={4} title="Accounts sync" />
+          ) : (
+            <AccountsSyncCard sources={overview!.sources} />
+          ))}
+
+        {isVisible("funds") &&
+          (denial("funds") ? (
+            <PermissionDeniedPanel span={4} title="Funds" />
+          ) : (
+            <FundsCard funds={funds!} />
+          ))}
+      </PageGrid>
+    </>
+  );
+}
+
+/**
+ * `total_balance`: the hero, its 12-month chart, and the account strip — one
+ * card by gate (all three disappear together behind the same capability
+ * check), rendered as three panels so the desktop grid can lay the chart and
+ * the strip side by side.
+ */
+function TotalBalanceCards({ overview }: { overview: Awaited<ReturnType<typeof loadOverview>> }) {
   const { netWorth, accounts } = overview;
 
   // Empty exactly when no account is counted towards net worth — never a
@@ -62,125 +149,170 @@ export default async function HomePage() {
     { key: "total", label: "Net worth", points: netWorth.total.slice(-CHART_MONTHS) },
   ];
 
+  return (
+    <>
+      <Panel span={8} ariaLabel="Net worth" bodyClassName="axis-rule-live pb-6">
+        {/* Hero — net worth, the last known value of every account counted
+            towards it, from the accounts module's own series. Links to the
+            Accounts screen, which is the detail behind this figure. */}
+        {total === null ? (
+          <EmptyState
+            title="No balances yet"
+            description="Add an account, or connect Budget Makers Wallet, and this page fills in."
+            action={
+              <Link
+                href="/finance/accounts"
+                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+              >
+                Go to Accounts
+              </Link>
+            }
+          />
+        ) : (
+          <Link href="/finance/accounts" className="block transition-opacity hover:opacity-80">
+            <MoneyValue value={total} size="display-lg" cents="muted" />
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {delta.abs !== null && (
+                <DeltaBadge value={delta.abs} percent={delta.pct} context="versus last month" />
+              )}
+              <StaleBadge capturedAt={netWorth.asOf} stale={netWorth.stale} />
+            </div>
+          </Link>
+        )}
+      </Panel>
+
+      {/* The curve for the figure above. The number and its history belong on
+          the same screen; /finance is the drill-down, not the first read. */}
+      {total !== null && (
+        <Panel span={8} title="Last 12 months">
+          <TimeSeriesChart series={chartSeries} label="Net worth by month" height={340} area />
+        </Panel>
+      )}
+
+      {/* Account strip: every non-archived account, in the accounts module's
+          own order. Links to Accounts for management. */}
+      <Panel
+        span={4}
+        spanMd={4}
+        title="Accounts"
+        action={
+          <Link href="/finance/accounts" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+            View all
+          </Link>
+        }
+      >
+        {accounts.length === 0 ? (
+          <p className="text-body-sm text-fg-muted">No accounts yet.</p>
+        ) : (
+          <AccountList>
+            {accounts.map((item) => (
+              <AccountRow
+                key={item.account.id}
+                name={item.account.name}
+                value={item.latest?.balance ?? null}
+                capturedAt={item.latest?.capturedAt ?? null}
+                stale={item.stale}
+              />
+            ))}
+          </AccountList>
+        )}
+      </Panel>
+    </>
+  );
+}
+
+/** `leave`: unchanged from before this task — payslip-authoritative residuals, shown in days. */
+function LeaveCard({ ferie }: { ferie: Awaited<ReturnType<typeof loadFerie>> }) {
   const remainingDays = ferie.remaining.combinedDays;
   const ringMax = (remainingDays ?? 0) + ferie.takenDaysYtd;
 
   return (
-    <>
-      <PageHeader title="Total balance" eyebrow={formatDateLine(new Date())} action={<SettingsLink />} />
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Leave"
+      action={
+        <Link href="/work" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          Go to Work
+        </Link>
+      }
+      bodyClassName="axis-rule flex items-center gap-4 pb-6"
+    >
+      <ProgressRing
+        value={remainingDays ?? 0}
+        max={ringMax > 0 ? ringMax : 1}
+        label="Leave remaining this year"
+      >
+        <span className="text-caption">{formatNumber(remainingDays)}</span>
+      </ProgressRing>
+      <div className="min-w-0">
+        <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
+        <div className="num text-display-sm text-fg">
+          {remainingDays === null ? "-" : formatDays(remainingDays)}
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="num text-caption text-fg-muted">
+            {formatNumber(ferie.takenDaysYtd)} d taken in {ferie.year}
+          </span>
+          <StaleBadge capturedAt={ferie.latest?.verifiedAt ?? null} stale={ferie.latest === null} />
+        </div>
+      </div>
+    </Panel>
+  );
+}
 
-      {/*
-        Two reads on the top row, their detail on the second. `order` puts the
-        curve above the leave gauge on a phone, where the plan reads top to
-        bottom; from `lg` the DOM order is the grid order and the gauge sits
-        beside the figure it is not competing with.
-      */}
-      <PageGrid className="pt-5">
-        <Panel
-          span={8}
-          ariaLabel="Net worth"
-          className="order-1 lg:order-none"
-          bodyClassName="axis-rule-live pb-6"
-        >
-          {/* Hero — net worth, the last known value of every account counted
-              towards it, from the accounts module's own series. Links to the
-              Accounts screen, which is the detail behind this figure. */}
-          {total === null ? (
-            <EmptyState
-              title="No balances yet"
-              description="Add an account, or connect Budget Makers Wallet, and this page fills in."
-              action={
-                <Link
-                  href="/finance/accounts"
-                  className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-                >
-                  Go to Accounts
-                </Link>
-              }
-            />
-          ) : (
-            <Link href="/finance/accounts" className="block transition-opacity hover:opacity-80">
-              <MoneyValue value={total} size="display-lg" cents="muted" />
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                {delta.abs !== null && (
-                  <DeltaBadge value={delta.abs} percent={delta.pct} context="versus last month" />
-                )}
-                <StaleBadge capturedAt={netWorth.asOf} stale={netWorth.stale} />
-              </div>
-            </Link>
-          )}
-        </Panel>
+/** `accounts_sync`: the Wallet source's freshness, from the same read `total_balance` uses. */
+function AccountsSyncCard({ sources }: { sources: readonly SourceFreshness[] }) {
+  const wallet = sources.find((s) => s.name === WALLET_SOURCE_NAME);
 
-        {/* Vacation gauge — payslip-authoritative residuals, shown in days. */}
-        <Panel
-          span={4}
-          spanMd={4}
-          ariaLabel="Leave remaining"
-          className="order-3 lg:order-none"
-          bodyClassName="axis-rule flex items-center gap-4 pb-6"
-        >
-          <ProgressRing
-            value={remainingDays ?? 0}
-            max={ringMax > 0 ? ringMax : 1}
-            label="Leave remaining this year"
-          >
-            <span className="text-caption">{formatNumber(remainingDays)}</span>
-          </ProgressRing>
-          <div className="min-w-0">
-            <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
-            <div className="num text-display-sm text-fg">
-              {remainingDays === null ? "-" : formatDays(remainingDays)}
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="num text-caption text-fg-muted">
-                {formatNumber(ferie.takenDaysYtd)} d taken in {ferie.year}
-              </span>
-              <StaleBadge
-                capturedAt={ferie.latest?.verifiedAt ?? null}
-                stale={ferie.latest === null}
-              />
-            </div>
+  return (
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Accounts sync"
+      action={
+        <Link href="/settings" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          Settings
+        </Link>
+      }
+    >
+      {!wallet || wallet.state === "missing" ? (
+        <p className="text-body-sm text-fg-muted">{WALLET_SOURCE_NAME} has not synced yet.</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-body text-fg">{WALLET_SOURCE_NAME}</span>
+          <StaleBadge capturedAt={wallet.lastUpdated} stale={wallet.state === "stale"} />
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+/** `funds`: the total of the same per-fund figures the Funds page shows individually. */
+function FundsCard({ funds }: { funds: readonly FundView[] }) {
+  const total = totalFundValue(funds);
+
+  return (
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Funds"
+      action={
+        <Link href="/finance/funds" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          View all
+        </Link>
+      }
+    >
+      {funds.length === 0 ? (
+        <p className="text-body-sm text-fg-muted">No funds registered.</p>
+      ) : (
+        <>
+          <MoneyValue value={total.value} size="display-sm" cents="muted" />
+          <div className="mt-2">
+            <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
           </div>
-        </Panel>
-
-        {/* The curve for the figure above. The number and its history belong on
-            the same screen; /finance is the drill-down, not the first read. */}
-        {total !== null && (
-          <Panel span={8} title="Last 12 months" className="order-2 lg:order-none">
-            <TimeSeriesChart series={chartSeries} label="Net worth by month" height={340} area />
-          </Panel>
-        )}
-
-        {/* Account strip: every non-archived account, in the accounts module's
-            own order. Links to Accounts for management. */}
-        <Panel
-          span={4}
-          spanMd={4}
-          title="Accounts"
-          className="order-4 lg:order-none"
-          action={
-            <Link href="/finance/accounts" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
-              View all
-            </Link>
-          }
-        >
-          {accounts.length === 0 ? (
-            <p className="text-body-sm text-fg-muted">No accounts yet.</p>
-          ) : (
-            <AccountList>
-              {accounts.map((item) => (
-                <AccountRow
-                  key={item.account.id}
-                  name={item.account.name}
-                  value={item.latest?.balance ?? null}
-                  capturedAt={item.latest?.capturedAt ?? null}
-                  stale={item.stale}
-                />
-              ))}
-            </AccountList>
-          )}
-        </Panel>
-      </PageGrid>
-    </>
+        </>
+      )}
+    </Panel>
   );
 }

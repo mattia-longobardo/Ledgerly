@@ -1,5 +1,5 @@
 {
-  "id": "9c82a895-7421-43df-ae3a-6a4d58bb767c",
+  "id": "9b612a94-cde8-4a95-8630-107261ea0e68",
   "prevId": "29ebcb90-7be1-496a-8390-4a9219940711",
   "version": "7",
   "dialect": "postgresql",
@@ -116,12 +116,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "balance_snapshots_source_ck": {
-          "name": "balance_snapshots_source_ck",
-          "value": "\"balance_snapshots\".\"source\" IN ('wallet','teable')"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.fund_deposits": {

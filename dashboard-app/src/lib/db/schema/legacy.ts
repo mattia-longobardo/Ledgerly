@@ -142,16 +142,20 @@ export const balanceSnapshots = pgTable(
   "balance_snapshots",
   {
     id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    /**
+     * No CHECK on this column any more: it used to be constrained to
+     * `('wallet','teable')`, but the retirement migration (0007) dropped
+     * that constraint along with the rest of the Teable integration — the
+     * table is a read-only archive now (until Phase 9), and 'wallet' is the
+     * only value anything still writes.
+     */
     source: text("source").notNull(),
     accountKey: text("account_key").notNull(),
     balance: money("balance").notNull(),
     capturedAt: tz("captured_at").notNull().defaultNow(),
     raw: jsonb("raw"),
   },
-  (t) => [
-    check("balance_snapshots_source_ck", sql`${t.source} IN ('wallet','teable')`),
-    index("balance_snapshots_account_captured_idx").on(t.accountKey, t.capturedAt.desc()),
-  ],
+  (t) => [index("balance_snapshots_account_captured_idx").on(t.accountKey, t.capturedAt.desc())],
 );
 
 export const jobRuns = pgTable(
