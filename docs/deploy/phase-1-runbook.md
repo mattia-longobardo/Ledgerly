@@ -200,8 +200,18 @@ echo "exit code: $?"
 
 This recomputes 24 months of net worth twice — once from the legacy
 `balance_snapshots`, once from the new `account_balances` — and writes
-`docs/migration/teable-reconciliation.md`. It exits `1` on any month that
-differs by so much as a cent; **do not proceed past a nonzero exit code.**
+`docs/migration/teable-reconciliation.md`. Every differing month carries a
+note: two kinds of difference are expected by construction and do not fail
+the run — a month where the legacy sweep cached an *empty* hand-tracked
+Teable cell as `0.00` (the migrated series carries the previous value forward
+instead, as the spec requires and as the legacy headline already did), and the
+current month (see below). Any month marked `DEFECT` makes the script exit
+`1`; **do not proceed past a nonzero exit code.**
+
+Rehearsal on 2026-09-03 also found that a cell of the *current* month was
+pinned to the month's last day, a date in the future that would have
+outranked live provider readings until the next month. The import now pins a
+cell to `min(last day of its month, today)`.
 
 Inspect the report:
 

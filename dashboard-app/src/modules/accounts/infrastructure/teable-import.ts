@@ -25,6 +25,14 @@ export interface TeableImportInput {
   funds: { slug: string; name: string }[];
   points: { key: string; month: string; value: number | null }[];
   walletSnapshots: { accountKey: string; balance: string; capturedAt: Date }[];
+  /**
+   * Today's civil date (`YYYY-MM-DD`, Europe/Rome). A cell is pinned to the
+   * last day of its month, but never to a day in the future: the current
+   * month's cell lands on today instead, so provider readings captured later
+   * today and every later day outrank it. Without the clamp a September cell
+   * would sit on 30 September and beat every live balance until October.
+   */
+  today?: string;
 }
 
 export interface PlannedAccount {
@@ -162,7 +170,8 @@ export function planTeableImport(input: TeableImportInput): TeableImportPlan {
       skip(point.key, `unreadable Teable value for ${point.month}`);
       continue;
     }
-    const asOf = lastDayOfMonth(point.month);
+    const monthEnd = lastDayOfMonth(point.month);
+    const asOf = input.today && input.today < monthEnd ? input.today : monthEnd;
     migrated.set(`${point.key} ${asOf}`, {
       key: point.key,
       asOf,

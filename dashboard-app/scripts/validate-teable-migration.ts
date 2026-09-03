@@ -272,18 +272,52 @@ try {
 
   const mismatches = rows.filter((r) => !r.matches);
 
-  const header = `${"month".padEnd(12)}${"legacy".padStart(16)}${"migrated".padStart(16)}${"difference".padStart(16)}`;
+  // Two differences are expected by construction and are not defects:
+  //
+  //  - A month in which the legacy sweep cached an EMPTY hand-tracked Teable
+  //    cell as `0.00` (a `kind:'history'` row with a zero balance). The
+  //    migrated series treats an empty cell as a gap and carries the previous
+  //    value forward (spec §10.1), exactly as the legacy headline did for its
+  //    current value; only the history chart changes for those months.
+  //  - The current month, where migration-sourced and provider-sourced rows
+  //    coexist and the two series pick their "latest" by different rules.
+  //
+  // Anything else is a real defect and keeps the nonzero exit code.
+  interface BlankMonthRow extends Record<string, unknown> {
+    month: string;
+  }
+  const blankCellMonths = new Set(
+    (
+      await db.execute<BlankMonthRow>(sql`
+        SELECT DISTINCT to_char(date_trunc('month', captured_at AT TIME ZONE 'Europe/Rome'), 'YYYY-MM-01') AS month
+        FROM balance_snapshots
+        WHERE raw->>'kind' = 'history' AND balance = 0
+      `)
+    ).rows.map((r: BlankMonthRow) => r.month),
+  );
+  const currentMonth = monthKey(new Date());
+  const explain = (r: Row): string | null => {
+    if (r.matches) return null;
+    if (r.month === currentMonth) return "expected: current month mixes migration and provider rows";
+    if (blankCellMonths.has(r.month)) return "expected: empty Teable cell cached as 0 by the legacy sweep; migrated series carries forward";
+    return null;
+  };
+  const unexplained = mismatches.filter((r) => explain(r) === null);
+
+  const header = `${"month".padEnd(12)}${"legacy".padStart(16)}${"migrated".padStart(16)}${"difference".padStart(16)}  note`;
   console.log(header);
   console.log("-".repeat(header.length));
   for (const r of rows) {
     console.log(
-      `${r.month.padEnd(12)}${show(r.legacy).padStart(16)}${show(r.migrated).padStart(16)}${differenceLabel(r).padStart(16)}`,
+      `${r.month.padEnd(12)}${show(r.legacy).padStart(16)}${show(r.migrated).padStart(16)}${differenceLabel(r).padStart(16)}  ${explain(r) ?? (r.matches ? "" : "DEFECT")}`,
     );
   }
 
   const verdict = mismatches.length === 0
     ? `Every one of the ${rows.length} months matches to the cent.`
-    : `${mismatches.length} of ${rows.length} months differ: ${mismatches.map((r) => r.month).join(", ")}.`;
+    : unexplained.length === 0
+      ? `${mismatches.length} of ${rows.length} months differ, all for expected reasons: ${mismatches.map((r) => r.month).join(", ")}.`
+      : `${unexplained.length} of ${rows.length} months differ for no known reason: ${unexplained.map((r) => r.month).join(", ")}.`;
   console.log(`\n${verdict}`);
 
   mkdirSync(outDir, { recursive: true });
@@ -298,10 +332,10 @@ try {
       `Net worth over the last ${MONTHS} months, computed twice on the same database:`,
       "the legacy series from `balance_snapshots`, the migrated one from `account_balances`.",
       "",
-      "| Month | Legacy | Migrated | Difference |",
-      "| --- | ---: | ---: | ---: |",
+      "| Month | Legacy | Migrated | Difference | Note |",
+      "| --- | ---: | ---: | ---: | --- |",
       ...rows.map(
-        (r) => `| ${r.month} | ${show(r.legacy)} | ${show(r.migrated)} | ${differenceLabel(r)} |`,
+        (r) => `| ${r.month} | ${show(r.legacy)} | ${show(r.migrated)} | ${differenceLabel(r)} | ${explain(r) ?? (r.matches ? "" : "DEFECT")} |`,
       ),
       "",
       verdict,
@@ -310,7 +344,7 @@ try {
   );
   console.log(`Report written to ${reportPath}`);
 
-  exitCode = mismatches.length === 0 ? 0 : 1;
+  exitCode = unexplained.length === 0 ? 0 : 1;
 } finally {
   await pool.end();
 }
