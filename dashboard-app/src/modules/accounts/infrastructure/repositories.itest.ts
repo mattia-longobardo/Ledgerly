@@ -172,6 +172,52 @@ describe("DrizzleAccountsRepository", () => {
     expect(history.map((p) => p.asOf)).toEqual(["2026-02-28", "2026-03-31"]);
   });
 
+  it("seeds a windowed series from the newest balance strictly before the window", async () => {
+    const { a, b } = await seedUsers();
+    const { mine, theirs } = await asUser(a, async (repo) => {
+      const mine = await repo.create(manualAccount(a, { name: "Dormant" }));
+      await repo.recordBalances([
+        { accountId: mine.id, asOf: "2025-10-31", balance: "10.00", available: null, source: "manual" },
+        {
+          accountId: mine.id,
+          asOf: "2025-12-31",
+          balance: "20.00",
+          available: null,
+          source: "manual",
+          capturedAt: new Date("2025-12-31T08:00:00Z"),
+        },
+        {
+          // Same day, captured later: the newer capture is the seed.
+          accountId: mine.id,
+          asOf: "2025-12-31",
+          balance: "21.00",
+          available: null,
+          source: "provider",
+          capturedAt: new Date("2025-12-31T20:00:00Z"),
+        },
+        { accountId: mine.id, asOf: "2026-02-28", balance: "30.00", available: null, source: "manual" },
+      ]);
+      return { mine, theirs: null };
+    });
+    const other = await asUser(b, async (repo) => {
+      const other = await repo.create(manualAccount(b, { name: "Theirs" }));
+      await repo.recordBalances([
+        { accountId: other.id, asOf: "2025-12-31", balance: "99.00", available: null, source: "manual" },
+      ]);
+      return other;
+    });
+    expect(theirs).toBeNull();
+
+    const seeds = await asUser(a, (repo) => repo.latestBalancesBefore(a, [mine.id, other.id], "2026-01-01"));
+    expect(seeds.get(mine.id)).toMatchObject({ asOf: "2025-12-31", balance: "21.00", source: "provider" });
+    // RLS keeps the other user's row out even though its id was asked for.
+    expect(seeds.has(other.id)).toBe(false);
+
+    const none = await asUser(a, (repo) => repo.latestBalancesBefore(a, [mine.id], "2025-01-01"));
+    expect(none.size).toBe(0);
+    expect((await asUser(a, (repo) => repo.latestBalancesBefore(a, [], "2026-01-01"))).size).toBe(0);
+  });
+
   it("prefers the most recently captured row when two sources share the latest date", async () => {
     const { a } = await seedUsers();
     const account = await asUser(a, (repo) => repo.create(manualAccount(a)));

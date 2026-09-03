@@ -122,6 +122,27 @@ describe("netWorthSeries", () => {
     expect(result.total.at(-1)?.value).toBeNull();
   });
 
+  it("carries an account whose only balance predates the window into every month", async () => {
+    const deps = harness();
+    const dormant = await deps.accounts.create(newAccount({ name: "EToro" }));
+    await deps.accounts.recordBalances([
+      {
+        accountId: dormant.id,
+        // Two years back: outside the 13-month window the headline is computed over.
+        asOf: "2024-06-30",
+        balance: "1500.00",
+        available: null,
+        source: "manual",
+        capturedAt: new Date("2024-06-30T09:00:00Z"),
+      },
+    ]);
+
+    const result = await netWorthSeries(deps)(testPrincipal());
+
+    expect(result.perAccount[0]?.series.every((p) => p.value === 1500)).toBe(true);
+    expect(result.total.at(-1)).toEqual({ month: "2026-09-01", value: 1500 });
+  });
+
   it("requires the read permission", async () => {
     const deps = harness();
     await expect(netWorthSeries(deps)(testPrincipal({ roles: [] }))).rejects.toThrow(PermissionDeniedError);

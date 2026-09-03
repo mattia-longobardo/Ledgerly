@@ -28,6 +28,7 @@ import {
   type RecordManualBalanceInput,
 } from "@/modules/accounts/application/record-manual-balance";
 import {
+  assertWalletSyncAllowed,
   syncProviderAccounts,
   type SyncProviderAccountsResult,
 } from "@/modules/accounts/application/sync-provider-accounts";
@@ -37,10 +38,7 @@ import {
 } from "@/modules/accounts/application/update-account";
 import { walletAccountsSource } from "@/modules/accounts/infrastructure/wallet-adapter";
 import { runForPrincipal } from "@/modules/accounts/ui/deps";
-import {
-  assertPermission,
-  PermissionDeniedError,
-} from "@/platform/auth/principal";
+import { PermissionDeniedError } from "@/platform/auth/principal";
 import { errorMessage, fail, succeed, text, type ActionResult } from "./types";
 
 function revalidateAccounts(id?: string): void {
@@ -82,6 +80,11 @@ export async function createAccountAction(
 ): Promise<ActionResult<{ id: string }>> {
   const asOf = text(formData.get("openingBalanceAsOf"));
   const balance = text(formData.get("openingBalance"));
+  // Half an opening balance is a typo, not an instruction: silently dropping it
+  // would create the account and lose the figure the owner just typed.
+  if ((asOf === null) !== (balance === null)) {
+    return fail("Enter both a date and an amount for the opening balance.");
+  }
 
   const input: CreateManualAccountInput = {
     name: requiredText(formData, "name"),
@@ -210,8 +213,8 @@ export async function syncWalletAction(): Promise<
   try {
     const result = await runForPrincipal((deps, principal) => {
       // The use case itself does not gate on a permission — the route and this
-      // action are the two callers, and each is responsible for checking it.
-      assertPermission(principal, "integrations.manage");
+      // action are the two callers, and both go through the shared check.
+      assertWalletSyncAllowed(principal);
       return syncProviderAccounts({
         ...deps,
         source: walletAccountsSource(deps.clock),
@@ -220,6 +223,9 @@ export async function syncWalletAction(): Promise<
     revalidateAccounts();
     return succeed(result);
   } catch (err) {
+    if (err instanceof PermissionDeniedError) {
+      return fail("Only the owner can sync Budget Makers Wallet in this release.");
+    }
     return fail(mapError(err));
   }
 }

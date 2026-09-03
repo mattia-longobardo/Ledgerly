@@ -96,6 +96,25 @@ export async function legacySeriesFromSnapshots(
   `);
   const monthlyResult = await dbClient.execute<LegacyMonthly>(monthlyHistoryQuery([...LEGACY_KEYS], since));
 
+  // The seed: the newest snapshot from before the window, per account. The
+  // migrated series carries one forward across the whole window (see the `seed`
+  // argument of `monthlySeries` in the accounts domain), so the legacy side has
+  // to do the same or the two disagree for every account last touched before
+  // the window opened — a difference in the comparison, not in the data.
+  const seedResult = await dbClient.execute<LegacyLatest>(sql`
+    SELECT DISTINCT ON (account_key)
+      account_key AS "accountKey",
+      balance,
+      captured_at AS "capturedAt"
+    FROM balance_snapshots
+    WHERE account_key IN (${sql.join(
+      LEGACY_KEYS.map((k) => sql`${k}`),
+      sql`, `,
+    )})
+      AND captured_at < ${`${since}T00:00:00Z`}
+    ORDER BY account_key, captured_at DESC
+  `);
+
   const pointsByKey = new Map<string, MonthPoint[]>();
   for (const row of monthlyResult.rows) {
     const list = pointsByKey.get(row.accountKey) ?? [];
@@ -113,6 +132,15 @@ export async function legacySeriesFromSnapshots(
     const month = monthKey(new Date(row.capturedAt));
     const point = list.find((p) => p.month === month);
     if (point) point.value = fromCents(toCents(row.balance));
+  }
+
+  // Placed at the window's first month so `sumSeries` carries it forward from
+  // there; a month the window itself observed always wins over the seed.
+  for (const row of seedResult.rows) {
+    const list = pointsByKey.get(row.accountKey) ?? [];
+    if (list.some((p) => p.month === since)) continue;
+    list.unshift({ month: since, value: fromCents(toCents(row.balance)) });
+    pointsByKey.set(row.accountKey, list);
   }
 
   const latestByKey = new Map(latestResult.rows.map((r) => [r.accountKey, r]));

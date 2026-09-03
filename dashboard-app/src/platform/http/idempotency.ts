@@ -34,6 +34,10 @@ export function idempotency(deps: {
     await next();
 
     const res = c.res.clone();
+    // A 5xx is not an outcome worth remembering. Caching one would hand the
+    // client its own transient failure back for the next 24 hours, which is the
+    // opposite of what retrying with the same key is for.
+    if (res.status >= 500) return;
     const body = await res.json().catch(() => null);
     await deps.db
       .insert(idempotencyKeys)

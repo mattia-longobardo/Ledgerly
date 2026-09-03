@@ -8,5 +8,5 @@ export function parseExpectedVersion(input: { ifMatch: string | null; body: unkn
       ? (input.body as { version?: unknown }).version
       : undefined;
   if (typeof v === "number" && Number.isInteger(v)) return v;
-  throw new ApiError(428, "version_mismatch", "Send the current version in If-Match or body.version");
+  throw new ApiError(428, "precondition_required", "Send the current version in If-Match or body.version");
 }

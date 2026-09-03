@@ -5,7 +5,7 @@ import { testPrincipal } from "@/test/principal";
 export async function buildOpenApiDocument(): Promise<unknown> {
   const app = createApiApp({
     db: {} as never,
-    authenticate: async () => testPrincipal(),
+    authenticate: async () => ({ principal: testPrincipal(), method: "session" as const }),
     now: () => new Date(0),
     rateLimitEnabled: false,
   });

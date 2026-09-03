@@ -142,6 +142,44 @@ export class DrizzleAccountsRepository implements AccountsRepository {
     return rows.map((r) => ({ ...r, source: r.source as BalanceSource }));
   }
 
+  async latestBalancesBefore(
+    userId: string,
+    accountIds: string[],
+    beforeAsOf: string,
+  ): Promise<Map<string, BalancePoint>> {
+    if (accountIds.length === 0) return new Map();
+    const res = await this.db.execute<{
+      account_id: string;
+      as_of: string;
+      balance: string;
+      available: string | null;
+      source: string;
+      captured_at: string;
+    }>(sql`
+      SELECT DISTINCT ON (b.account_id) b.account_id, b.as_of::text, b.balance, b.available, b.source, b.captured_at
+      FROM account_balances b JOIN accounts a ON a.id = b.account_id
+      WHERE a.user_id = ${userId}
+        AND b.account_id IN (${sql.join(
+          accountIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+        AND b.as_of < ${beforeAsOf}
+      ORDER BY b.account_id, b.as_of DESC, b.captured_at DESC`);
+    return new Map(
+      res.rows.map((r) => [
+        r.account_id,
+        {
+          accountId: r.account_id,
+          asOf: r.as_of,
+          balance: r.balance,
+          available: r.available,
+          source: r.source as BalanceSource,
+          capturedAt: new Date(r.captured_at),
+        },
+      ]),
+    );
+  }
+
   async recordBalances(rows: NewBalance[]): Promise<void> {
     if (rows.length === 0) return;
     await this.db

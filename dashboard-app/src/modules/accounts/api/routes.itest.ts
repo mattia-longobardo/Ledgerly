@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import { organizations, users } from "@/lib/db/schema";
 import { createApiApp, type ApiDeps } from "@/platform/http/app";
-import { permissionsForRoles } from "@/platform/auth/permissions";
+import { permissionsForRoles, type RoleCode } from "@/platform/auth/permissions";
 import type { Principal } from "@/platform/auth/principal";
 import {
   AccountGroupListResponseSchema,
@@ -29,11 +29,17 @@ describe("accounts routes", () => {
 
     const deps: ApiDeps = {
       db,
-      authenticate: async (req: Request): Promise<Principal | null> => {
+      authenticate: async (req: Request) => {
         const id = req.headers.get("x-test-user");
         if (!id) return null;
-        const roles = ["owner"] as const;
-        return { userId: id, organizationId: org!.id, roles: [...roles], permissions: permissionsForRoles(roles) };
+        const roles = [(req.headers.get("x-test-role") ?? "owner") as RoleCode];
+        const principal: Principal = {
+          userId: id,
+          organizationId: org!.id,
+          roles,
+          permissions: permissionsForRoles(roles),
+        };
+        return { principal, method: "session" as const };
       },
       now: () => new Date("2026-09-02T10:00:00Z"),
       rateLimitEnabled: false,
@@ -42,8 +48,14 @@ describe("accounts routes", () => {
     return { app, userA: userA!, userB: userB! };
   }
 
+  /** Writes are cookie-authenticated here, so they all carry the CSRF header the app requires. */
   function headers(userId: string, extra: Record<string, string> = {}) {
-    return { "content-type": "application/json", "x-test-user": userId, ...extra };
+    return {
+      "content-type": "application/json",
+      "x-test-user": userId,
+      "x-requested-with": "fetch",
+      ...extra,
+    };
   }
 
   it("covers create, idempotent replay, list, versioned update, balances pagination, cross-user 404 and delete", async () => {
@@ -219,6 +231,37 @@ describe("accounts routes", () => {
     const body = await res.json();
     expect(ErrorResponseSchema.parse(body)).toBeTruthy();
     expect(body.error.code).toBe("integration_unavailable");
+  });
+
+  it("wallet sync is the owner's alone, even for an admin holding integrations.manage", async () => {
+    const { app, userA } = await seed();
+    const res = await app.request("/api/v1/integrations/wallet/sync", {
+      method: "POST",
+      headers: headers(userA.id, { "x-test-role": "admin" }),
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(ErrorResponseSchema.parse(body)).toBeTruthy();
+    expect(body.error.code).toBe("permission_denied");
+  });
+
+  it("refuses a cookie-authenticated write that omits X-Requested-With", async () => {
+    const { app, userA } = await seed();
+    const res = await app.request("/api/v1/accounts", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-test-user": userA.id, "idempotency-key": "csrf1" },
+      body: JSON.stringify({ name: "Checking", type: "checking" }),
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(ErrorResponseSchema.parse(body)).toBeTruthy();
+    expect(body.error.code).toBe("csrf_required");
+
+    // Reads are untouched by the check.
+    const list = await app.request("/api/v1/accounts", {
+      headers: { "x-test-user": userA.id },
+    });
+    expect(list.status).toBe(200);
   });
 
   it("net worth reports totals for included accounts", async () => {

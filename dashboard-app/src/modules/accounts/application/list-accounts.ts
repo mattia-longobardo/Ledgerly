@@ -44,12 +44,12 @@ export function listAccounts(deps: UseCaseDeps) {
     const now = deps.clock.now();
     const months = trendMonths(now, opts?.months ?? DEFAULT_TREND_MONTHS);
     const accounts = await deps.accounts.list(principal.userId, { includeArchived: opts?.includeArchived });
+    const accountIds = accounts.map((a) => a.id);
     const latestBalances = await deps.accounts.latestBalances(principal.userId);
-    const history = await deps.accounts.history(
-      principal.userId,
-      accounts.map((a) => a.id),
-      months[0]!,
-    );
+    const history = await deps.accounts.history(principal.userId, accountIds, months[0]!);
+    // The last balance from before the window, so an account nobody has touched
+    // in a while shows its known figure across the trend instead of a flat gap.
+    const seeds = await deps.accounts.latestBalancesBefore(principal.userId, accountIds, months[0]!);
     return accounts.map((account) => {
       const latest = latestBalances.get(account.id) ?? null;
       return {
@@ -58,6 +58,7 @@ export function listAccounts(deps: UseCaseDeps) {
         trend: monthlySeries(
           history.filter((p) => p.accountId === account.id),
           months,
+          seeds.get(account.id) ?? null,
         ),
         stale: isStale(account, latest, now),
       };

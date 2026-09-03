@@ -20,7 +20,7 @@ import { listAccounts } from "../application/list-accounts";
 import { netWorthSeries, type NetWorthAccountSeries } from "../application/net-worth-series";
 import type { ProviderLink } from "../application/ports";
 import { recordManualBalance } from "../application/record-manual-balance";
-import { syncProviderAccounts } from "../application/sync-provider-accounts";
+import { assertWalletSyncAllowed, syncProviderAccounts } from "../application/sync-provider-accounts";
 import { updateAccount } from "../application/update-account";
 import { walletAccountsSource } from "../infrastructure/wallet-adapter";
 import {
@@ -139,10 +139,29 @@ function decodeCursor(cursor: string): string {
   return Buffer.from(cursor, "base64url").toString("utf8");
 }
 
+function errorResponse(description: string) {
+  return { description, content: { "application/json": { schema: ErrorResponseSchema } } };
+}
+
+/**
+ * Answerable on every route, because the middleware that produces them runs
+ * ahead of every handler: authentication, the CSRF header check (`403
+ * csrf_required` on a cookie-authenticated write) and the rate limiter. Spread
+ * into each route so the document says so rather than leaving a consumer to
+ * infer it.
+ */
+const commonErrorResponses = {
+  401: errorResponse("Not signed in (`unauthorized`)."),
+  403: errorResponse("Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`)."),
+  429: errorResponse("Over the per-minute rate limit (`rate_limited`)."),
+};
+
 const errorResponses = {
-  404: { description: "Not found", content: { "application/json": { schema: ErrorResponseSchema } } },
-  409: { description: "Conflict", content: { "application/json": { schema: ErrorResponseSchema } } },
-  422: { description: "Validation failed", content: { "application/json": { schema: ErrorResponseSchema } } },
+  404: errorResponse("Not found (`not_found`)."),
+  409: errorResponse("Version or reference conflict (`version_mismatch`, `conflict`)."),
+  422: errorResponse("Validation failed (`validation_failed`, `idempotency_key_reused`)."),
+  428: errorResponse("A required precondition header is missing (`validation_failed` for `Idempotency-Key`, `precondition_required` for the version)."),
+  503: errorResponse("The upstream integration is unavailable (`integration_unavailable`)."),
 };
 
 const listAccountsRoute = createRoute({
@@ -156,6 +175,7 @@ const listAccountsRoute = createRoute({
       description: "The caller's accounts, each with its latest balance and a monthly trend.",
       content: { "application/json": { schema: AccountListResponseSchema } },
     },
+    ...commonErrorResponses,
   },
 });
 
@@ -169,6 +189,8 @@ const createAccountRoute = createRoute({
   responses: {
     201: { description: "The created account.", content: { "application/json": { schema: AccountSchema } } },
     422: errorResponses[422],
+    428: errorResponses[428],
+    ...commonErrorResponses,
   },
 });
 
@@ -181,6 +203,7 @@ const getAccountRoute = createRoute({
   responses: {
     200: { description: "Account detail.", content: { "application/json": { schema: AccountDetailSchema } } },
     404: errorResponses[404],
+    ...commonErrorResponses,
   },
 });
 
@@ -199,6 +222,8 @@ const updateAccountRoute = createRoute({
     404: errorResponses[404],
     409: errorResponses[409],
     422: errorResponses[422],
+    428: errorResponses[428],
+    ...commonErrorResponses,
   },
 });
 
@@ -218,6 +243,7 @@ const deleteAccountRoute = createRoute({
     },
     404: errorResponses[404],
     409: errorResponses[409],
+    ...commonErrorResponses,
   },
 });
 
@@ -235,6 +261,8 @@ const recordBalanceRoute = createRoute({
     201: { description: "The recorded balance.", content: { "application/json": { schema: BalancePointSchema } } },
     404: errorResponses[404],
     422: errorResponses[422],
+    428: errorResponses[428],
+    ...commonErrorResponses,
   },
 });
 
@@ -248,6 +276,7 @@ const listBalancesRoute = createRoute({
   responses: {
     200: { description: "A page of balances.", content: { "application/json": { schema: BalancesPageSchema } } },
     404: errorResponses[404],
+    ...commonErrorResponses,
   },
 });
 
@@ -258,6 +287,7 @@ const listGroupsRoute = createRoute({
   security: [{ session: [] }],
   responses: {
     200: { description: "The caller's account groups.", content: { "application/json": { schema: AccountGroupListResponseSchema } } },
+    ...commonErrorResponses,
   },
 });
 
@@ -270,6 +300,7 @@ const createGroupRoute = createRoute({
   responses: {
     201: { description: "The created group.", content: { "application/json": { schema: AccountGroupSchema } } },
     422: errorResponses[422],
+    ...commonErrorResponses,
   },
 });
 
@@ -286,6 +317,7 @@ const renameGroupRoute = createRoute({
     200: { description: "The renamed group.", content: { "application/json": { schema: AccountGroupSchema } } },
     404: errorResponses[404],
     422: errorResponses[422],
+    ...commonErrorResponses,
   },
 });
 
@@ -301,6 +333,7 @@ const deleteGroupRoute = createRoute({
       content: { "application/json": { schema: DeleteResponseSchema } },
     },
     404: errorResponses[404],
+    ...commonErrorResponses,
   },
 });
 
@@ -311,6 +344,8 @@ const walletSyncRoute = createRoute({
   security: [{ session: [] }],
   responses: {
     200: { description: "Reconciliation counts.", content: { "application/json": { schema: WalletSyncResultSchema } } },
+    503: errorResponses[503],
+    ...commonErrorResponses,
   },
 });
 
@@ -322,6 +357,7 @@ const netWorthRoute = createRoute({
   request: { query: NetWorthQuerySchema },
   responses: {
     200: { description: "Net worth over time.", content: { "application/json": { schema: NetWorthSeriesSchema } } },
+    ...commonErrorResponses,
   },
 });
 
@@ -530,7 +566,7 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
 
   app.openapi(walletSyncRoute, async (c) => {
     const principal = c.get("principal");
-    assertPermission(principal, "integrations.manage");
+    assertWalletSyncAllowed(principal);
     try {
       walletToken();
     } catch {

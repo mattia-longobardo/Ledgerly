@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "/api/v1"
+      "url": "/"
     }
   ],
   "components": {
@@ -690,6 +690,36 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -723,8 +753,48 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
-            "description": "Validation failed",
+            "description": "Validation failed (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required precondition header is missing (`validation_failed` for `Idempotency-Key`, `precondition_required` for the version).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -777,8 +847,38 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -830,8 +930,28 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -841,7 +961,7 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "Version or reference conflict (`version_mismatch`, `conflict`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -851,7 +971,27 @@
             }
           },
           "422": {
-            "description": "Validation failed",
+            "description": "Validation failed (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required precondition header is missing (`validation_failed` for `Idempotency-Key`, `precondition_required` for the version).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -905,8 +1045,28 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -916,7 +1076,17 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "Version or reference conflict (`version_mismatch`, `conflict`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -970,8 +1140,28 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -981,7 +1171,27 @@
             }
           },
           "422": {
-            "description": "Validation failed",
+            "description": "Validation failed (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required precondition header is missing (`validation_failed` for `Idempotency-Key`, `precondition_required` for the version).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1059,8 +1269,38 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1089,6 +1329,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccountGroupListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1124,8 +1394,38 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
-            "description": "Validation failed",
+            "description": "Validation failed (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1178,8 +1478,28 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1189,7 +1509,17 @@
             }
           },
           "422": {
-            "description": "Validation failed",
+            "description": "Validation failed (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1231,8 +1561,38 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1261,6 +1621,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WalletSyncResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The upstream integration is unavailable (`integration_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1296,6 +1696,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NetWorthSeries"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

@@ -11,7 +11,11 @@ const app = createApiApp({
   db,
   async authenticate() {
     const user = await getUserOrNull();
-    return user ? resolvePrincipal(db, { provider: PROVIDER_ID, subject: user.id }) : null;
+    if (!user) return null;
+    const principal = await resolvePrincipal(db, { provider: PROVIDER_ID, subject: user.id });
+    // The session cookie is the only way in today; Phase 8's tokens will report
+    // "token" here and so skip the CSRF header requirement.
+    return principal ? { principal, method: "session" as const } : null;
   },
   now: () => new Date(),
 });

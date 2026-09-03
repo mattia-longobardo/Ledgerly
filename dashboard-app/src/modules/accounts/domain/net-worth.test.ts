@@ -20,6 +20,24 @@ describe("monthlySeries", () => {
   it("is null before the first known value", () => {
     expect(monthlySeries([p("2026-02-01", "5.00")], ["2026-01-01", "2026-02-01"])[0]?.value).toBeNull();
   });
+  it("carries a seed from before the window into every month", () => {
+    const s = monthlySeries([], ["2026-01-01", "2026-02-01"], p("2025-11-14", "40.00"));
+    expect(s).toEqual([
+      { month: "2026-01-01", value: 40 },
+      { month: "2026-02-01", value: 40 },
+    ]);
+  });
+  it("lets the first in-window balance override the seed from that month on", () => {
+    const s = monthlySeries([p("2026-02-03", "7.00")], ["2026-01-01", "2026-02-01"], p("2025-11-14", "40.00"));
+    expect(s).toEqual([
+      { month: "2026-01-01", value: 40 },
+      { month: "2026-02-01", value: 7 },
+    ]);
+  });
+  it("ignores a seed that is not older than the window", () => {
+    const s = monthlySeries([], ["2026-01-01", "2026-02-01"], p("2026-01-05", "40.00"));
+    expect(s[0]?.value).toBeNull();
+  });
 });
 
 describe("totalSeries", () => {

@@ -22,8 +22,9 @@ export interface CapabilityProbes {
   walletConfigured(): boolean;
   trekConfigured(): boolean;
   payrollConfigured(): boolean;
-  hasAccounts(): Promise<boolean>;
-  hasPayrollRecords(): Promise<boolean>;
+  /** Both take the principal's id: `accounts` is behind RLS, so the count only means something inside that user's context. */
+  hasAccounts(userId: string): Promise<boolean>;
+  hasPayrollRecords(userId: string): Promise<boolean>;
 }
 
 /**
@@ -46,7 +47,10 @@ export async function resolveCapabilities(principal: Principal, probes: Capabili
   const wallet: IntegrationState = probes.walletConfigured() ? "connected" : "not_configured";
   const trek: IntegrationState = probes.trekConfigured() ? "connected" : "not_configured";
   const payroll: IntegrationState = probes.payrollConfigured() ? "connected" : "not_configured";
-  const [hasAccounts, hasPayrollRecords] = await Promise.all([probes.hasAccounts(), probes.hasPayrollRecords()]);
+  const [hasAccounts, hasPayrollRecords] = await Promise.all([
+    probes.hasAccounts(principal.userId),
+    probes.hasPayrollRecords(principal.userId),
+  ]);
   return {
     features: {
       accounts: true,
