@@ -11,6 +11,7 @@ import { userRoles, users } from "@/lib/db/schema";
 import type { UseCaseDeps } from "@/modules/accounts/application/deps";
 import { netWorthSeries } from "@/modules/accounts/application/net-worth-series";
 import { DrizzleAccountsRepository } from "@/modules/accounts/infrastructure/drizzle-accounts-repository";
+import { DrizzleGroupsRepository } from "@/modules/accounts/infrastructure/drizzle-groups-repository";
 import { DrizzleProviderLinksRepository } from "@/modules/accounts/infrastructure/drizzle-provider-links-repository";
 import { permissionsForRoles } from "@/platform/auth/permissions";
 import type { Principal } from "@/platform/auth/principal";
@@ -93,6 +94,7 @@ function readOnlyDeps(tx: DbClient): UseCaseDeps {
   return {
     accounts: new DrizzleAccountsRepository(tx),
     links: new DrizzleProviderLinksRepository(tx),
+    groups: new DrizzleGroupsRepository(tx),
     clock: { now: () => new Date() },
     audit: async () => {},
   };

@@ -40,6 +40,15 @@ export interface BalancePoint {
   capturedAt: Date;
 }
 
+export interface AccountGroup {
+  id: string;
+  userId: string;
+  name: string;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export type DeletionDecision = "hard_delete" | "archive" | "blocked_linked";
 
 /**

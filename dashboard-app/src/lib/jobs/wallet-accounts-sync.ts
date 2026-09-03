@@ -36,6 +36,7 @@ import {
   type SyncProviderAccountsResult,
 } from "@/modules/accounts/application/sync-provider-accounts";
 import { DrizzleAccountsRepository } from "@/modules/accounts/infrastructure/drizzle-accounts-repository";
+import { DrizzleGroupsRepository } from "@/modules/accounts/infrastructure/drizzle-groups-repository";
 import { DrizzleProviderLinksRepository } from "@/modules/accounts/infrastructure/drizzle-provider-links-repository";
 import { walletAccountsSource } from "@/modules/accounts/infrastructure/wallet-adapter";
 import { recordAudit } from "@/platform/audit/record";
@@ -79,6 +80,7 @@ async function syncOwner(userId: string): Promise<Record<string, unknown>> {
     syncProviderAccounts({
       accounts: new DrizzleAccountsRepository(tx),
       links: new DrizzleProviderLinksRepository(tx),
+      groups: new DrizzleGroupsRepository(tx),
       clock,
       audit: (e) => recordAudit(tx, e),
       source: walletAccountsSource(clock),

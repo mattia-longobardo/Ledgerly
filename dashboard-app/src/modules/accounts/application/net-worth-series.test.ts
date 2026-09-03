@@ -4,6 +4,7 @@ import { testPrincipal } from "@/test/principal";
 import {
   MemoryAccountsRepository,
   MemoryClock,
+  MemoryGroupsRepository,
   MemoryProviderLinksRepository,
 } from "../infrastructure/memory-repositories";
 import type { NewAccount } from "./ports";
@@ -15,6 +16,7 @@ function harness() {
   const deps = {
     accounts: new MemoryAccountsRepository(),
     links: new MemoryProviderLinksRepository(),
+    groups: new MemoryGroupsRepository(),
     clock: new MemoryClock(NOW),
     audit: async () => {},
   };

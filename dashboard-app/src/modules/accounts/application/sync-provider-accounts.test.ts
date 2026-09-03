@@ -3,6 +3,7 @@ import type { AuditInput } from "@/platform/audit/record";
 import {
   MemoryAccountsRepository,
   MemoryClock,
+  MemoryGroupsRepository,
   MemoryProviderLinksRepository,
 } from "../infrastructure/memory-repositories";
 import type { NewAccount, ProviderAccount } from "./ports";
@@ -15,6 +16,7 @@ function harness() {
   const deps = {
     accounts: new MemoryAccountsRepository(),
     links: new MemoryProviderLinksRepository(),
+    groups: new MemoryGroupsRepository(),
     clock: new MemoryClock(new Date("2026-09-02T12:00:00Z")),
     audit: async (e: AuditInput) => {
       audit.push(e);
