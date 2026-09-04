@@ -78,6 +78,13 @@
       "when": 1788480737613,
       "tag": "0010_integrations",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788529410257,
+      "tag": "0011_transactions",
+      "breakpoints": true
     }
   ]
 }
