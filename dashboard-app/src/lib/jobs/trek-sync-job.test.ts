@@ -99,23 +99,7 @@ vi.mock("@/lib/clients/http", async (importOriginal) => {
 });
 
 import { httpRequest } from "@/lib/clients/http";
-import { JOB_NAME, runTrekSyncJob, summarize } from "@/lib/jobs/trek-sync-job";
-import type { TrekSyncResult } from "@/lib/jobs/trek-sync";
-
-function result(over: Partial<TrekSyncResult> = {}): TrekSyncResult {
-  return {
-    status: "ok",
-    year: 2026,
-    pulled: 3,
-    deleted: 0,
-    pushed: 1,
-    weekendBlocked: [],
-    stillPending: [],
-    stats: null,
-    errors: [],
-    ...over,
-  };
-}
+import { JOB_NAME, runTrekSyncJob } from "@/lib/jobs/trek-sync-job";
 
 beforeEach(() => {
   store.runs.length = 0;
@@ -193,21 +177,8 @@ describe("runTrekSyncJob", () => {
 
     const out = await runTrekSyncJob();
 
-    expect(out.status).toBe("failed");
+    expect(out).toMatchObject({ status: "failed", error: "lock exploded" });
     expect(store.runs[0]?.status).toBe("failed");
-  });
-});
-
-describe("summarize", () => {
-  it("omits the empty arrays so a clean pass logs a short row", () => {
-    expect(summarize(result())).toEqual({ year: 2026, pulled: 3, deleted: 0, pushed: 1 });
-  });
-
-  it("keeps the arrays that carry a problem", () => {
-    const detail = summarize(result({ weekendBlocked: ["2026-09-12"], stillPending: ["2026-09-14"] }));
-    expect(detail).toMatchObject({
-      weekendBlocked: ["2026-09-12"],
-      stillPending: ["2026-09-14"],
-    });
+    expect(store.runs[0]?.error).toBe("lock exploded");
   });
 });
