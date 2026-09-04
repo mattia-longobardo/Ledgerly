@@ -16,7 +16,7 @@ describe("permissions", () => {
     expect(p.permissions.has("accounts.write")).toBe(false);
   });
   it("owner has every permission", () => {
-    expect(base(["owner"]).permissions.size).toBe(10);
+    expect(base(["owner"]).permissions.size).toBe(12);
   });
   it("assertPermission throws a typed error", () => {
     expect(() => assertPermission(base(["viewer"]), "admin.users")).toThrow(PermissionDeniedError);
