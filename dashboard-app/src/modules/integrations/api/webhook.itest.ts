@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { closeDb, resetDb, testDb } from "@/test/db";
-import { auditEvents, organizations, users } from "@/lib/db/schema";
+import { auditEvents, organizations, users, webhookDeliveries } from "@/lib/db/schema";
 import { createApiApp, type ApiDeps } from "@/platform/http/app";
 import { withSystemContext } from "@/platform/db/context";
 import { permissionsForRoles, type RoleCode } from "@/platform/auth/permissions";
@@ -177,5 +177,59 @@ describe("webhook route", () => {
 
     const runs = await app.request("/api/v1/integrations/wallet/sync-runs", { headers: headers(userA.id) });
     expect((await runs.json()).items).toHaveLength(0);
+  });
+
+  it("refuses a signed body that is not JSON with the same flat 404, not Hono's own 400", async () => {
+    const { app, userA } = await seed();
+    await app.request("/api/v1/integrations/wallet/connect", {
+      method: "POST",
+      headers: headers(userA.id),
+      body: JSON.stringify({ credentials: { token: "good", webhookSecret: "hook-secret" } }),
+    });
+
+    // This is the assertion that pins the deviation from the brief's literal
+    // route body schema (a Zod `z.unknown()`, which `@hono/zod-openapi` would
+    // treat as "validate this" and call `c.req.json()` on before the handler
+    // — and hence before the signature is ever checked — 400ing a signed,
+    // non-JSON delivery with Hono's own "Malformed JSON in request body"
+    // instead of this route's flat, uninformative rejection). A future edit
+    // that swaps the route's documentation-only schema for a real Zod one
+    // would restore parse-before-verify and fail this test.
+    const raw = "not json at all";
+    const signature = `sha256=${createHmac("sha256", "hook-secret").update(raw, "utf8").digest("hex")}`;
+    const res = await app.request("/api/v1/webhooks/wallet", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-signature": signature },
+      body: raw,
+    });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+  });
+
+  it("refuses an oversized body with the flat 404 before hashing or opening a transaction", async () => {
+    const { app, db, userA } = await seed();
+    await app.request("/api/v1/integrations/wallet/connect", {
+      method: "POST",
+      headers: headers(userA.id),
+      body: JSON.stringify({ credentials: { token: "good", webhookSecret: "hook-secret" } }),
+    });
+
+    // Larger than the route's 1 MB cap. The signature does not need to be
+    // valid — an oversized body is refused before it would ever be checked.
+    const oversized = `{"event":"accounts.changed","padding":"${"a".repeat(1_100_000)}"}`;
+    const res = await app.request("/api/v1/webhooks/wallet", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-signature": "sha256=0".padEnd(71, "0") },
+      body: oversized,
+    });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+
+    // No transaction was opened for it: unlike every other rejection reason,
+    // an oversized body writes no delivery row at all — there would be
+    // nothing to attribute it to, and recording one is exactly the write-cost
+    // this cap exists to avoid paying on an anonymous caller's say-so.
+    const deliveries = await withSystemContext(db, (tx) => tx.select().from(webhookDeliveries));
+    expect(deliveries).toHaveLength(0);
   });
 });

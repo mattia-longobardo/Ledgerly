@@ -240,6 +240,21 @@ const syncRunsRoute = createRoute({
   },
 });
 
+/**
+ * A rejected webhook request already costs a transaction, a scan of every
+ * connected candidate for the provider, one AES-GCM decrypt and one HMAC per
+ * candidate, and an INSERT into `webhook_deliveries` — and this route has no
+ * rate limiter (deliberately deferred to Phase 9; see `app.ts`). Without a
+ * cap, an anonymous caller could grow that table and burn write throughput
+ * without bound just by posting large bodies. 1 MB comfortably covers any
+ * real provider payload today (spec §6's examples are all small JSON
+ * objects), and an oversized body is rejected before it is hashed or a
+ * transaction is opened — it never reaches `handleWebhook` at all, and no
+ * delivery row is written for it (there is nothing to attribute it to; the
+ * connection is not yet known).
+ */
+const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
+
 const webhookRoute = createRoute({
   method: "post",
   path: "/webhooks/{provider}",
@@ -381,6 +396,13 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
 
   app.openapi(webhookRoute, async (c) => {
     const providerCode = c.req.param("provider")!;
+    // Cheap check first, before reading anything: a caller that is honest
+    // about `Content-Length` is rejected without the body ever being read
+    // into memory at all.
+    const declaredLength = Number(c.req.header("content-length"));
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_WEBHOOK_BODY_BYTES) {
+      throw new ApiError(404, "not_found", "No such webhook endpoint");
+    }
     // `c.req.text()`, not `c.req.raw.text()`: nothing here validates the body
     // (see `webhookRoute` above), so the underlying stream is still open and
     // either read works — but going through Hono's own request object is what
@@ -388,6 +410,12 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
     // the first time anything reads it and hands back the same raw bytes on a
     // second read rather than re-consuming (or failing on) the stream.
     const rawBody = await c.req.text();
+    // Belt and braces for a caller that lied about (or omitted)
+    // `Content-Length`: still refuse before `handleWebhook` hashes the body
+    // and opens a transaction over it.
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_WEBHOOK_BODY_BYTES) {
+      throw new ApiError(404, "not_found", "No such webhook endpoint");
+    }
     // No `withSystemContext` here: `handleWebhook` opens exactly the contexts
     // it needs (Global Constraints), and it enqueues rather than syncing, so
     // nothing a user owns is ever written under `app.role = 'system'`.

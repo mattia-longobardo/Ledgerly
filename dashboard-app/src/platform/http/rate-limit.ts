@@ -5,11 +5,24 @@ import type { Principal } from "@/platform/auth/principal";
 import { withUserContext } from "@/platform/db/context";
 import { ApiError } from "./errors";
 
-export function rateLimit(deps: {
-  db: DbClient;
-  now(): Date;
-  limit?: number;
-}): MiddlewareHandler<{ Variables: { principal: Principal } }> {
+/**
+ * Generic over the caller's env, constrained to what this middleware actually
+ * reads (`principal`), rather than fixed to `{ Variables: { principal:
+ * Principal } }` with the call site casting the result to fit. A cast at the
+ * call site (`as unknown as MiddlewareHandler<ApiEnv>`) would silence a type
+ * error today and silently swallow a real one tomorrow, if this middleware
+ * ever grows to read a second `Variables` key the caller's env does not
+ * carry; a generic constraint keeps that check live. The default type
+ * parameter keeps every existing call site — which passes no explicit env —
+ * working exactly as before.
+ */
+export function rateLimit<E extends { Variables: { principal: Principal } } = { Variables: { principal: Principal } }>(
+  deps: {
+    db: DbClient;
+    now(): Date;
+    limit?: number;
+  },
+): MiddlewareHandler<E> {
   const limit = deps.limit ?? 300;
   return async (c, next) => {
     const start = new Date(Math.floor(deps.now().getTime() / 60_000) * 60_000);
