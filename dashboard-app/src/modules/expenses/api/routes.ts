@@ -3,6 +3,7 @@ import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { withUserContext } from "@/platform/db/context";
+import type { Transaction, TransactionCategory, TransactionLabel } from "../domain/transaction";
 import { getTransaction } from "../application/get-transaction";
 import { listCategories } from "../application/list-categories";
 import { listLabels } from "../application/list-labels";
@@ -50,6 +51,58 @@ function toApiError(err: unknown): ApiError {
   if (err instanceof NotFoundError) return new ApiError(404, "not_found", err.message);
   if (err instanceof VersionMismatchError) return new ApiError(409, "version_mismatch", err.message);
   throw err;
+}
+
+/**
+ * Picks exactly the fields `TransactionSchema` declares. The domain
+ * `Transaction` also carries `userId` and `syncRunId` — an internal foreign
+ * key to the sync run that produced the row — neither of which is product
+ * data the wire contract should expose. Never spread the domain object
+ * directly into a response body: that leaks whatever the domain type adds
+ * next, silently, past the OpenAPI contract.
+ */
+function transactionDto(t: Transaction) {
+  return {
+    id: t.id,
+    accountId: t.accountId,
+    occurredAt: t.occurredAt.toISOString(),
+    bookedAt: t.bookedAt ? t.bookedAt.toISOString() : null,
+    amount: t.amount,
+    currency: t.currency,
+    type: t.type,
+    state: t.state,
+    categoryId: t.categoryId,
+    payee: t.payee,
+    note: t.note,
+    transferGroupId: t.transferGroupId,
+    source: t.source,
+    version: t.version,
+    createdAt: t.createdAt.toISOString(),
+    updatedAt: t.updatedAt.toISOString(),
+  };
+}
+
+/** Picks exactly the fields `TransactionCategorySchema` declares — see `transactionDto`. Drops `userId`, `parentId`, `createdAt`, `updatedAt`. */
+function categoryDto(c: TransactionCategory) {
+  return {
+    id: c.id,
+    name: c.name,
+    groupName: c.groupName,
+    kind: c.kind,
+    color: c.color,
+    source: c.source,
+    archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
+  };
+}
+
+/** Picks exactly the fields `TransactionLabelSchema` declares — see `transactionDto`. Drops `userId`, `createdAt`, `updatedAt`. */
+function labelDto(l: TransactionLabel) {
+  return {
+    id: l.id,
+    name: l.name,
+    color: l.color,
+    source: l.source,
+  };
 }
 
 const listRoute = createRoute({
@@ -116,8 +169,8 @@ export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
       return c.json(
         {
           items: result.items.map((i) => ({
-            transaction: { ...i.transaction, occurredAt: i.transaction.occurredAt.toISOString(), bookedAt: i.transaction.bookedAt?.toISOString() ?? null, createdAt: i.transaction.createdAt.toISOString(), updatedAt: i.transaction.updatedAt.toISOString() },
-            category: i.category ? { ...i.category, archivedAt: i.category.archivedAt?.toISOString() ?? null } : null,
+            transaction: transactionDto(i.transaction),
+            category: i.category ? categoryDto(i.category) : null,
             labelIds: i.labelIds,
           })),
           nextCursor: result.nextCursor,
@@ -136,8 +189,8 @@ export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
       const detail = await withUserContext(deps.db, { userId: principal.userId }, (tx) => getTransaction(expenseDeps(tx, c.get("requestId")))(principal, id));
       return c.json(
         {
-          transaction: { ...detail.transaction, occurredAt: detail.transaction.occurredAt.toISOString(), bookedAt: detail.transaction.bookedAt?.toISOString() ?? null, createdAt: detail.transaction.createdAt.toISOString(), updatedAt: detail.transaction.updatedAt.toISOString() },
-          category: detail.category ? { ...detail.category, archivedAt: detail.category.archivedAt?.toISOString() ?? null } : null,
+          transaction: transactionDto(detail.transaction),
+          category: detail.category ? categoryDto(detail.category) : null,
           labelIds: detail.labelIds,
         },
         200,
@@ -159,8 +212,8 @@ export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
       const detail = await withUserContext(deps.db, { userId: principal.userId }, (tx) => getTransaction(expenseDeps(tx, c.get("requestId")))(principal, id));
       return c.json(
         {
-          transaction: { ...updated, occurredAt: updated.occurredAt.toISOString(), bookedAt: updated.bookedAt?.toISOString() ?? null, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() },
-          category: detail.category ? { ...detail.category, archivedAt: detail.category.archivedAt?.toISOString() ?? null } : null,
+          transaction: transactionDto(updated),
+          category: detail.category ? categoryDto(detail.category) : null,
           labelIds: detail.labelIds,
         },
         200,
@@ -173,12 +226,12 @@ export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
   app.openapi(categoriesRoute, async (c) => {
     const principal = c.get("principal");
     const items = await withUserContext(deps.db, { userId: principal.userId }, (tx) => listCategories(expenseDeps(tx, c.get("requestId")))(principal));
-    return c.json({ items: items.map((i) => ({ ...i, archivedAt: i.archivedAt?.toISOString() ?? null })) }, 200);
+    return c.json({ items: items.map(categoryDto) }, 200);
   });
 
   app.openapi(labelsRoute, async (c) => {
     const principal = c.get("principal");
     const items = await withUserContext(deps.db, { userId: principal.userId }, (tx) => listLabels(expenseDeps(tx, c.get("requestId")))(principal));
-    return c.json({ items }, 200);
+    return c.json({ items: items.map(labelDto) }, 200);
   });
 }

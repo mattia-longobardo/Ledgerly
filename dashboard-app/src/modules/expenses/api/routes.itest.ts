@@ -5,7 +5,15 @@ import { createApiApp } from "@/platform/http/app";
 import { permissionsForRoles } from "@/platform/auth/permissions";
 import { withUserContext } from "@/platform/db/context";
 import { DrizzleTransactionsRepository } from "@/modules/expenses/infrastructure/drizzle-transactions-repository";
+import { DrizzleCategoriesRepository } from "@/modules/expenses/infrastructure/drizzle-categories-repository";
+import { DrizzleLabelsRepository } from "@/modules/expenses/infrastructure/drizzle-labels-repository";
 import { closeDb, resetDb, testDb } from "@/test/db";
+
+/** Narrows a `T | "duplicate_name"` create() result, failing loudly if a name collision was not expected. */
+function assertCreated<T>(result: T | "duplicate_name"): T {
+  if (result === "duplicate_name") throw new Error("expected create() to succeed, got duplicate_name");
+  return result;
+}
 
 async function seedUser() {
   const testdb = await testDb();
@@ -99,5 +107,57 @@ describe("expenses API", () => {
     });
     expect(res.status).toBe(404);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe("not_found");
+  });
+
+  it("returns exactly the declared fields on transaction, category and label shapes — no domain internals leak", async () => {
+    const { userId, accountId, organizationId } = await seedUser();
+    const { category, label } = await withUserContext(db, { userId }, async (tx) => {
+      const category = assertCreated(
+        await new DrizzleCategoriesRepository(tx).create({
+          userId, name: "Groceries", groupName: null, kind: "expense", color: null, parentId: null, source: "manual", archivedAt: null,
+        }),
+      );
+      const label = assertCreated(
+        await new DrizzleLabelsRepository(tx).create({ userId, name: "recurring", color: null, source: "manual" }),
+      );
+      const transactions = new DrizzleTransactionsRepository(tx);
+      const created = await transactions.create({
+        userId, accountId, occurredAt: new Date(), bookedAt: null, amount: "-5.00", currency: "EUR",
+        type: "expense", state: "cleared", categoryId: category.id, payee: null, note: null,
+        transferGroupId: null, source: "manual", syncRunId: null,
+      });
+      await transactions.setLabels(userId, created.id, [label.id]);
+      return { category, label };
+    });
+
+    const app = appFor(userId, organizationId);
+    const headers = { "x-requested-with": "test" };
+
+    const txRes = await app.request("/api/v1/transactions", { headers });
+    expect(txRes.status).toBe(200);
+    const txBody = (await txRes.json()) as { items: [{ transaction: object; category: object; labelIds: string[] }] };
+    expect(txBody.items).toHaveLength(1);
+    expect(Object.keys(txBody.items[0]!.transaction).sort()).toEqual(
+      [
+        "accountId", "amount", "bookedAt", "categoryId", "createdAt", "currency", "id", "note",
+        "occurredAt", "payee", "source", "state", "transferGroupId", "type", "updatedAt", "version",
+      ].sort(),
+    );
+    expect(Object.keys(txBody.items[0]!.category!).sort()).toEqual(
+      ["archivedAt", "color", "groupName", "id", "kind", "name", "source"].sort(),
+    );
+    expect(txBody.items[0]!.labelIds).toEqual([label.id]);
+
+    const catRes = await app.request("/api/v1/transaction-categories", { headers });
+    expect(catRes.status).toBe(200);
+    const catBody = (await catRes.json()) as { items: object[] };
+    expect(catBody.items.find((c) => (c as { id: string }).id === category.id)).toBeDefined();
+    expect(Object.keys(catBody.items[0]!).sort()).toEqual(["archivedAt", "color", "groupName", "id", "kind", "name", "source"].sort());
+
+    const labelRes = await app.request("/api/v1/transaction-labels", { headers });
+    expect(labelRes.status).toBe(200);
+    const labelBody = (await labelRes.json()) as { items: object[] };
+    expect(labelBody.items.find((l) => (l as { id: string }).id === label.id)).toBeDefined();
+    expect(Object.keys(labelBody.items[0]!).sort()).toEqual(["color", "id", "name", "source"].sort());
   });
 });
