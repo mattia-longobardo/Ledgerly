@@ -72,6 +72,25 @@ export const UpdateTransactionRequestSchema = z.object({
 export const CategoryListResponseSchema = z.object({ items: z.array(TransactionCategorySchema) }).openapi("CategoryListResponse");
 export const LabelListResponseSchema = z.object({ items: z.array(TransactionLabelSchema) }).openapi("LabelListResponse");
 
+export const CadenceSchema = z.enum(["weekly", "biweekly", "monthly", "quarterly", "annual"]).openapi("Cadence");
+
+export const RecurringPatternSchema = z
+  .object({
+    id: z.string().uuid(),
+    payee: z.string(),
+    cadence: CadenceSchema,
+    amountLow: z.string(),
+    amountHigh: z.string(),
+    currency: z.string(),
+    lastSeenAt: z.string(),
+    nextExpectedAt: z.string().nullable(),
+    occurrenceCount: z.number(),
+  })
+  .openapi("RecurringPattern");
+export const RecurringPatternListResponseSchema = z
+  .object({ items: z.array(RecurringPatternSchema) })
+  .openapi("RecurringPatternListResponse");
+
 // `ErrorResponseSchema` itself is NOT declared here: it is imported from
 // `@/modules/accounts/api/schemas` in routes.ts, the app's one existing
 // `.openapi("ErrorResponse")` registration. Every route in this app shares

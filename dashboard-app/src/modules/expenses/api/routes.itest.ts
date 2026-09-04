@@ -160,4 +160,20 @@ describe("expenses API", () => {
     expect(labelBody.items.find((l) => (l as { id: string }).id === label.id)).toBeDefined();
     expect(Object.keys(labelBody.items[0]!).sort()).toEqual(["color", "id", "name", "source"].sort());
   });
+
+  it("lists recurring patterns for the caller", async () => {
+    const { userId, organizationId } = await seedUser();
+    const { withUserContext } = await import("@/platform/db/context");
+    const { DrizzleRecurringRepository } = await import("@/modules/expenses/infrastructure/drizzle-recurring-repository");
+    await withUserContext(db, { userId }, (tx) =>
+      new DrizzleRecurringRepository(tx).replaceAll(userId, [
+        { payee: "Netflix", cadence: "monthly", amountLow: "-15.99", amountHigh: "-15.99", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 4 },
+      ]),
+    );
+    const app = appFor(userId, organizationId);
+    const res = await app.request("/api/v1/transactions/recurring-patterns", { headers: { "x-requested-with": "test" } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: { payee: string }[] };
+    expect(body.items.map((i) => i.payee)).toEqual(["Netflix"]);
+  });
 });

@@ -2,6 +2,7 @@ import { getTransaction } from "../application/get-transaction";
 import { NotFoundError } from "../application/errors";
 import { listCategories } from "../application/list-categories";
 import { listLabels } from "../application/list-labels";
+import { listRecurringPatterns } from "../application/list-recurring-patterns";
 import { listTransactions } from "../application/list-transactions";
 import type { ListTransactionsOptions } from "../application/ports";
 import { runForPrincipal } from "./run";
@@ -51,6 +52,35 @@ function toRow(item: {
     labelIds: item.labelIds,
     version: item.transaction.version,
   };
+}
+
+export interface RecurringPatternRow {
+  id: string;
+  payee: string;
+  cadence: string;
+  amountLow: string;
+  amountHigh: string;
+  currency: string;
+  lastSeenAt: string;
+  nextExpectedAt: string | null;
+  occurrenceCount: number;
+}
+
+export async function loadRecurringPatterns(): Promise<RecurringPatternRow[]> {
+  return runForPrincipal(async (deps, principal) => {
+    const patterns = await listRecurringPatterns(deps)(principal);
+    return patterns.map((p) => ({
+      id: p.id,
+      payee: p.payee,
+      cadence: p.cadence,
+      amountLow: p.amountLow,
+      amountHigh: p.amountHigh,
+      currency: p.currency,
+      lastSeenAt: p.lastSeenAt.toISOString(),
+      nextExpectedAt: p.nextExpectedAt?.toISOString() ?? null,
+      occurrenceCount: p.occurrenceCount,
+    }));
+  });
 }
 
 export async function loadTransactionsPage(

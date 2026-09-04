@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { loadTransactionsPage } from "@/modules/expenses/ui/load-transactions";
+import { loadRecurringPatterns, loadTransactionsPage } from "@/modules/expenses/ui/load-transactions";
 import { TransactionsTable } from "@/modules/expenses/ui/TransactionsTable";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
@@ -44,7 +44,10 @@ export default async function ExpensesPage() {
     );
   }
 
-  const page = await loadTransactionsPage({ limit: PAGE_SIZE });
+  const [page, patterns] = await Promise.all([
+    loadTransactionsPage({ limit: PAGE_SIZE }),
+    loadRecurringPatterns(),
+  ]);
 
   return (
     <>
@@ -55,6 +58,18 @@ export default async function ExpensesPage() {
           initialNextCursor={page.nextCursor}
           pageSize={PAGE_SIZE}
         />
+        {patterns.length > 0 ? (
+          <div className="pt-8">
+            <h2 className="text-body-sm font-medium text-muted">Recurring</h2>
+            <ul className="mt-2 flex flex-col gap-1 text-body-sm">
+              {patterns.map((p) => (
+                <li key={p.id}>
+                  {p.payee} — {p.cadence}, {p.amountLow === p.amountHigh ? p.amountLow : `${p.amountLow}–${p.amountHigh}`} {p.currency}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </>
   );

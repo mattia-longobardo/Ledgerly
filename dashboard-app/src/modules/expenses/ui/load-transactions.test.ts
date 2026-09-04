@@ -7,7 +7,7 @@ import {
 } from "../infrastructure/memory-repositories";
 import { testPrincipal } from "@/test/principal";
 import { setExpenseDepsFactoryForTests, setPrincipalForTests } from "./run";
-import { loadTransactionsPage } from "./load-transactions";
+import { loadRecurringPatterns, loadTransactionsPage } from "./load-transactions";
 
 describe("loadTransactionsPage", () => {
   it("flattens dates to ISO strings and carries the category name", async () => {
@@ -53,6 +53,41 @@ describe("loadTransactionsPage", () => {
     expect(page.rows).toHaveLength(1);
     expect(page.rows[0]).toMatchObject({ amount: "-10.00", categoryName: "Groceries" });
     expect(typeof page.rows[0]!.occurredAt).toBe("string");
+    setExpenseDepsFactoryForTests(null);
+    setPrincipalForTests(null);
+  });
+});
+
+describe("loadRecurringPatterns", () => {
+  it("flattens a stored pattern's dates to ISO strings", async () => {
+    const deps = {
+      transactions: new MemoryTransactionsRepository(),
+      categories: new MemoryCategoriesRepository(),
+      labels: new MemoryLabelsRepository(),
+      recurring: new MemoryRecurringPatternsRepository(),
+      clock: { now: () => new Date("2026-09-05T00:00:00Z") },
+      audit: async () => {},
+    };
+    await deps.recurring.replaceAll("00000000-0000-7000-8000-000000000001", [
+      {
+        payee: "Netflix",
+        cadence: "monthly",
+        amountLow: "-15.99",
+        amountHigh: "-15.99",
+        currency: "EUR",
+        lastSeenAt: new Date("2026-08-01T00:00:00Z"),
+        nextExpectedAt: new Date("2026-09-01T00:00:00Z"),
+        occurrenceCount: 4,
+      },
+    ]);
+
+    setExpenseDepsFactoryForTests(() => deps);
+    setPrincipalForTests(testPrincipal());
+    const rows = await loadRecurringPatterns();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ payee: "Netflix", cadence: "monthly", occurrenceCount: 4 });
+    expect(rows[0]!.lastSeenAt).toBe("2026-08-01T00:00:00.000Z");
+    expect(rows[0]!.nextExpectedAt).toBe("2026-09-01T00:00:00.000Z");
     setExpenseDepsFactoryForTests(null);
     setPrincipalForTests(null);
   });

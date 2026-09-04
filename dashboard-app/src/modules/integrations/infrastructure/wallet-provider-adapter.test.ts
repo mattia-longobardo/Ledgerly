@@ -316,6 +316,11 @@ describe("wallet provider adapter — transactions sync", () => {
     );
     expect(stats.transactionsCreated).toBe(1);
     expect(stats.skippedNoAccount).toBe(0);
+    // The fixture's single record is not itself recurring (recurring
+    // detection needs three or more), so 0 is the correct value here —
+    // asserting `typeof` rather than a literal keeps this from silently
+    // passing if the field disappears.
+    expect(typeof stats.patternsDetected).toBe("number");
     // The cursor `apply` hands the engine is the Rome date this run's `fetch`
     // was called at — asserted here rather than assumed, since nothing else
     // in this test exercises what `setCursor` was actually called with.

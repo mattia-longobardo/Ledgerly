@@ -31,6 +31,7 @@ import {
   WALLET_PROVIDER,
 } from "@/modules/accounts/infrastructure/wallet-adapter";
 import { expenseDeps } from "@/modules/expenses/infrastructure/deps";
+import { detectRecurringPatterns } from "@/modules/expenses/application/detect-recurring-patterns";
 import { syncProviderTransactions } from "@/modules/expenses/application/sync-provider-transactions";
 import {
   prefetchedWalletTransactionsSource,
@@ -136,8 +137,9 @@ const transactionsSync: SyncHandler<TransactionsSyncPayload> = {
     const links = accountDeps(ctx.db).links;
     const source = prefetchedWalletTransactionsSource(payload.transactions, payload.categories);
     const result = await syncProviderTransactions({ ...expenses, links, source })(ctx.connection.userId, null);
+    const patterns = await detectRecurringPatterns(expenses)(ctx.connection.userId);
     ctx.setCursor({ sinceDate: payload.nextSinceDate });
-    return { ...result };
+    return { ...result, patternsDetected: patterns.length };
   },
 };
 

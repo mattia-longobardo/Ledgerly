@@ -7,6 +7,7 @@ import type { Transaction, TransactionCategory, TransactionLabel } from "../doma
 import { getTransaction } from "../application/get-transaction";
 import { listCategories } from "../application/list-categories";
 import { listLabels } from "../application/list-labels";
+import { listRecurringPatterns } from "../application/list-recurring-patterns";
 import { listTransactions } from "../application/list-transactions";
 import { updateTransaction } from "../application/update-transaction";
 import { NotFoundError, VersionMismatchError } from "../application/errors";
@@ -16,6 +17,7 @@ import {
   CategoryListResponseSchema,
   LabelListResponseSchema,
   ListTransactionsQuerySchema,
+  RecurringPatternListResponseSchema,
   TransactionListItemSchema,
   TransactionListResponseSchema,
   UpdateTransactionRequestSchema,
@@ -158,6 +160,14 @@ const labelsRoute = createRoute({
   responses: { 200: { content: { "application/json": { schema: LabelListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
 
+const recurringRoute = createRoute({
+  method: "get",
+  path: "/transactions/recurring-patterns",
+  tags: ["Expenses"],
+  security: [{ session: [] }],
+  responses: { 200: { content: { "application/json": { schema: RecurringPatternListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
+});
+
 export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
   app.openapi(listRoute, async (c) => {
     const principal = c.get("principal");
@@ -180,6 +190,33 @@ export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
     } catch (err) {
       throw toApiError(err);
     }
+  });
+
+  // Registered before `getRoute`: both match `/transactions/*`, and Hono's
+  // router breaks that tie by registration order rather than specificity —
+  // this static route must be added first or `/transactions/recurring-patterns`
+  // is captured by `getRoute`'s `{id}` param and fails its uuid validation.
+  app.openapi(recurringRoute, async (c) => {
+    const principal = c.get("principal");
+    const items = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+      listRecurringPatterns(expenseDeps(tx, c.get("requestId")))(principal),
+    );
+    return c.json(
+      {
+        items: items.map((p) => ({
+          id: p.id,
+          payee: p.payee,
+          cadence: p.cadence,
+          amountLow: p.amountLow,
+          amountHigh: p.amountHigh,
+          currency: p.currency,
+          lastSeenAt: p.lastSeenAt.toISOString(),
+          nextExpectedAt: p.nextExpectedAt?.toISOString() ?? null,
+          occurrenceCount: p.occurrenceCount,
+        })),
+      },
+      200,
+    );
   });
 
   app.openapi(getRoute, async (c) => {
