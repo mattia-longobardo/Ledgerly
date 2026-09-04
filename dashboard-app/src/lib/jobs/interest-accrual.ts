@@ -40,15 +40,6 @@ export interface RunInterestAccrualJobInput {
 }
 
 /**
- * How far back `tryPost` will look for an unposted, posting-eligible accrual
- * on top of today's — bounded so a rule stuck broken (a stale link, a
- * revoked connection) accumulates a capped backlog to sweep rather than an
- * ever-growing one. 30 days covers any outage this system is realistically
- * expected to self-heal from before someone notices.
- */
-const POST_LOOKBACK_DAYS = 30;
-
-/**
  * A post-phase failure means money may already be at Wallet while the local
  * ledger is not yet caught up — a materially different situation from an
  * ordinary accrual failure (a bad rate, a missing balance). Reported
@@ -62,29 +53,40 @@ class PostFailedError extends Error {
   }
 }
 
-function daysBefore(dateStr: string, days: number): string {
-  const d = new Date(`${dateStr}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - days);
-  return d.toISOString().slice(0, 10);
-}
-
 async function activeRules(asOf: string): Promise<InterestRule[]> {
   return withSystemContext(db, (tx) => interestDeps(tx).rules.listActiveForAllUsers(asOf));
 }
 
 /**
- * Posts every currently-unposted, posting-eligible accrual for `rule` within
- * `POST_LOOKBACK_DAYS` of `accrualDate` — not just today's — so a Wallet
- * outage or a temporarily-missing connection does not silently and
- * permanently lose that day's posting once the underlying problem clears.
+ * Posts *only* today's accrual (`accrualDate`) — deliberately not a
+ * lookback over recent unposted days. An earlier version of this function
+ * swept up to 30 days of backlog so a Wallet outage wouldn't permanently
+ * lose a day once the underlying problem cleared; that swept the exact
+ * backlog a rule accumulates during the analyze-only parallel run this
+ * module's own cut-over document recommends (`docs/migration/wallet-manager-cutover.md`),
+ * and would back-post up to a month of days the instant `postingMode` flips
+ * to `post_to_provider` — `shouldPost` has no notion of *when* posting was
+ * enabled, only whether it is enabled now. The only thing standing between
+ * that and duplicated real money was `findPostedRecord` matching the
+ * standalone container's own records, which rests on an unverified
+ * assumption (whether Wallet's `recordDate=eq.<day>` filter is day-grained
+ * against the container's full-timestamp `recordDate`). Bounding the sweep
+ * correctly needs a fact this schema does not carry — when posting was
+ * turned on for this rule — so the sweep is removed outright rather than
+ * narrowed. A missed day is now recorded (see the `interest_post_skipped`
+ * log line and the `postFailed`/skip counters below) for an operator to act
+ * on deliberately; automatic backlog recovery is left to a later phase that
+ * can add the column and the runbook step it needs together.
  *
- * Every read here (the candidate accruals, the provider link) is its own
- * short `withUserContext` transaction, closed before the next step starts;
- * so is each accrual's final write. `shouldPost` is the idempotency gate —
- * an accrual already carrying `postedAt`/`entryId` is filtered out here, and
- * `postWalletInterestEntry` itself asks Wallet for an existing record before
- * ever posting again, closing the window where a previous run's crash left
- * local state saying "not yet posted" after Wallet already has it.
+ * Every read here (the accrual, the provider link) is its own short
+ * `withUserContext` transaction, closed before the next step starts; so is
+ * the final write. `shouldPost` is the idempotency gate — an accrual
+ * already carrying `postedAt`/`entryId` is never posted again — and
+ * `postWalletInterestEntry` itself asks Wallet for an existing record
+ * before ever posting again, closing the window where a previous run's
+ * crash left local state saying "not yet posted" after Wallet already has
+ * it (see `postWalletInterestEntry`'s own docs for what that check does and
+ * does not guarantee).
  *
  * This function's *own* transactions are never held across the Wallet round
  * trip — but the job loop's `withJobLock` (in `runInterestAccrualJob`,
@@ -96,13 +98,11 @@ async function activeRules(asOf: string): Promise<InterestRule[]> {
  * tick), the same shape `wallet-accounts-sync.ts` already documents and
  * relies on for its own provider round trip.
  */
-async function tryPost(rule: InterestRule, accrualDate: string): Promise<number> {
-  const from = daysBefore(accrualDate, POST_LOOKBACK_DAYS);
-  const candidates = await withUserContext(db, { userId: rule.userId, role: "system" }, (tx) =>
-    interestDeps(tx).accruals.forRule(rule.id, from, accrualDate),
+async function tryPost(rule: InterestRule, accrualDate: string): Promise<boolean> {
+  const [accrual] = await withUserContext(db, { userId: rule.userId, role: "system" }, (tx) =>
+    interestDeps(tx).accruals.forRule(rule.id, accrualDate, accrualDate),
   );
-  const eligible = candidates.filter((a) => shouldPost(rule, a));
-  if (eligible.length === 0) return 0;
+  if (!accrual || !shouldPost(rule, accrual)) return false;
 
   const link = await withUserContext(db, { userId: rule.userId, role: "system" }, (tx) => accountDeps(tx).links.liveFor("account", rule.accountId));
   // `liveFor` matches on entity type/id and "not missing" only — it does not
@@ -110,18 +110,14 @@ async function tryPost(rule: InterestRule, accrualDate: string): Promise<number>
   // account must be rejected explicitly before its `externalId` is ever
   // trusted as a Wallet account id.
   if (!link || link.provider !== WALLET_PROVIDER) {
-    console.warn(
-      JSON.stringify({ level: "warn", event: "interest_post_skipped", ruleId: rule.id, reason: "no_live_wallet_link", pending: eligible.length }),
-    );
-    return 0;
+    console.warn(JSON.stringify({ level: "warn", event: "interest_post_skipped", ruleId: rule.id, accrualDate, reason: "no_live_wallet_link" }));
+    return false;
   }
 
   const opened = await openConnection(integrationDeps(db))(rule.userId, "wallet");
   if (!opened) {
-    console.warn(
-      JSON.stringify({ level: "warn", event: "interest_post_skipped", ruleId: rule.id, reason: "wallet_not_connected", pending: eligible.length }),
-    );
-    return 0;
+    console.warn(JSON.stringify({ level: "warn", event: "interest_post_skipped", ruleId: rule.id, accrualDate, reason: "wallet_not_connected" }));
+    return false;
   }
   const token = opened.credentials.token;
   if (!token) {
@@ -130,46 +126,33 @@ async function tryPost(rule: InterestRule, accrualDate: string): Promise<number>
     // than sending `Bearer undefined` and letting the resulting 401 read as
     // an authentication rejection it never was.
     console.warn(
-      JSON.stringify({
-        level: "warn",
-        event: "interest_post_skipped",
-        ruleId: rule.id,
-        reason: "wallet_connection_missing_token",
-        pending: eligible.length,
-      }),
+      JSON.stringify({ level: "warn", event: "interest_post_skipped", ruleId: rule.id, accrualDate, reason: "wallet_connection_missing_token" }),
     );
-    return 0;
+    return false;
   }
 
-  let postedCount = 0;
-  for (const accrual of eligible) {
-    try {
-      const posted = await postWalletInterestEntry({ token, walletAccountId: link.externalId, rule, accrual });
-      // `recordPostedEntry` creates the paid entry and marks the accrual
-      // posted in one transaction; if `markPosted` reports it affected no
-      // row, it throws rather than returning — this money has already
-      // reached Wallet, so that failure must surface loudly (as a
-      // `PostFailedError`, caught distinctly by the job loop below) rather
-      // than be swallowed as a quiet skip.
-      await withUserContext(db, { userId: rule.userId, role: "system" }, (tx) =>
-        recordPostedEntry(interestDeps(tx))(rule, accrual, posted.note, posted.transactionId),
-      );
-      postedCount += 1;
-    } catch (err) {
-      throw new PostFailedError(
-        `interest post failed for rule ${rule.id} on accrual ${accrual.accrualDate} (${postedCount} of ${eligible.length} posted this run): ${errorMessage(err)}`,
-        { cause: err },
-      );
-    }
+  try {
+    const posted = await postWalletInterestEntry({ token, walletAccountId: link.externalId, rule, accrual });
+    // `recordPostedEntry` creates the paid entry and marks the accrual
+    // posted in one transaction; if `markPosted` reports it affected no
+    // row, it throws rather than returning — this money has already
+    // reached Wallet, so that failure must surface loudly (as a
+    // `PostFailedError`, caught distinctly by the job loop below) rather
+    // than be swallowed as a quiet skip.
+    await withUserContext(db, { userId: rule.userId, role: "system" }, (tx) =>
+      recordPostedEntry(interestDeps(tx))(rule, accrual, posted.note, posted.transactionId),
+    );
+    return true;
+  } catch (err) {
+    throw new PostFailedError(`interest post failed for rule ${rule.id} on accrual ${accrualDate}: ${errorMessage(err)}`, { cause: err });
   }
-  return postedCount;
 }
 
-async function accrueRule(rule: InterestRule, accrualDate: string): Promise<{ accrued: boolean; posted: number }> {
+async function accrueRule(rule: InterestRule, accrualDate: string): Promise<{ accrued: boolean; posted: boolean }> {
   const result = await withUserContext(db, { userId: rule.userId, role: "system" }, (tx) =>
     runInterestAccrual(interestDeps(tx))(rule, accrualDate),
   );
-  if (!result.accrued) return { accrued: false, posted: 0 };
+  if (!result.accrued) return { accrued: false, posted: false };
   const posted = await tryPost(rule, accrualDate);
   return { accrued: true, posted };
 }
@@ -198,7 +181,7 @@ export async function runInterestAccrualJob(input: RunInterestAccrualJobInput): 
       try {
         const outcome = await withJobLock(`${LOCK_KEY}:${rule.id}`, () => accrueRule(rule, asOf));
         if (outcome?.accrued) accrued += 1;
-        if (outcome?.posted) posted += outcome.posted;
+        if (outcome?.posted) posted += 1;
       } catch (err) {
         if (err instanceof PostFailedError) {
           postFailed += 1;

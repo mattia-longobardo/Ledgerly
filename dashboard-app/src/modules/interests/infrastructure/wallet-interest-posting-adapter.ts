@@ -17,27 +17,27 @@ export interface PostWalletInterestResult {
 }
 
 /**
- * Rounds away binary floating-point noise (e.g. `0.0225 * 0.74 * 100` lands
- * on `1.6649999999999998`, not `1.665`) before the final display rounding, so
- * `.toFixed` rounds the intended decimal value instead of a value one ULP
- * below it.
+ * Built from the accrual's own stored figures (`gross`, `tax`, `net`,
+ * `balanceBasis`) rather than the rule's *current* `annualRate`/`taxRate`.
+ * The rule is mutable — a rate can be edited any time after an accrual was
+ * computed under a different one — so asserting "X%/y" at post time would
+ * describe whatever the rule says *now*, not what actually produced this
+ * amount. The accrual's own numbers are what was actually computed and
+ * cannot drift after the fact; stating them plainly is always true.
  */
-function cleanPct(n: number): number {
-  return Number(n.toFixed(10));
+function buildNote(rule: InterestRule, accrual: InterestAccrual): string {
+  const gross = Number(accrual.gross).toFixed(2);
+  const tax = Number(accrual.tax).toFixed(2);
+  return `${rule.noteMarker} gross ${gross}, tax ${tax}, net ${accrual.net} on ${accrual.balanceBasis}`;
 }
 
-function buildNote(rule: InterestRule, accrual: InterestAccrual): string {
-  const ratePct = cleanPct(Number(rule.annualRate) * 100).toFixed(2);
-  const netRatePct = cleanPct(Number(rule.annualRate) * (1 - Number(rule.taxRate)) * 100).toFixed(2);
-  const taxPct = cleanPct(Number(rule.taxRate) * 100).toFixed(0);
-  return `${rule.noteMarker} ${ratePct}%/y (net ${netRatePct}%, -${taxPct}% tax) on ${accrual.balanceBasis}`;
-}
+/** A found record is treated as "not this accrual's" unless its amount matches to the cent (a small float-noise allowance, not a real tolerance for a different amount). */
+const AMOUNT_MATCH_EPSILON = 0.005;
 
 /**
- * Reuses `interest.py`'s exact note format and its "post uncategorised
- * rather than fail" behavior when the named category is not found
- * (`Wallet Manager/app/interest.py:163-164`). The only file in this task
- * that names a Wallet field.
+ * Reuses `interest.py`'s "post uncategorised rather than fail" behavior
+ * when the named category is not found (`Wallet Manager/app/interest.py:163-164`).
+ * The only file in this task that names a Wallet field.
  *
  * No transaction is open anywhere in this function's call stack — it is
  * called only from `tryPost` in `src/lib/jobs/interest-accrual.ts`, strictly
@@ -51,6 +51,18 @@ function buildNote(rule: InterestRule, accrual: InterestAccrual): string {
  * `markPosted` write leaves local state saying "not yet posted" even though
  * Wallet already has the record; asking Wallet directly closes that window
  * without ever sending the interest twice.
+ *
+ * That check is scoped by `noteMarker`, not by rule — the query only knows
+ * "an account, a day, a substring of the note", and `noteMarker` defaults to
+ * the same value (`auto-interest`) for every rule. Two `post_to_provider`
+ * rules on the same account posting the same day, or a user's own record
+ * whose note happens to contain the marker, would otherwise match a record
+ * that is not this accrual's, and this accrual would get marked posted
+ * against someone else's Wallet record — a silent under-post (this
+ * accrual's interest is never actually sent) plus a false "posted" row. The
+ * amount is checked before trusting a match for exactly this reason: it is
+ * not proof of ownership, but a mismatch is proof of *non*-ownership, and
+ * that is thrown as a loud failure rather than accepted.
  *
  * `postRecords` is called with `attempts: 1`: a write must not retry on the
  * same terms as a read. `withRetry`'s default policy retries on 409 and any
@@ -72,6 +84,12 @@ export async function postWalletInterestEntry(input: PostWalletInterestInput): P
     noteContains: input.rule.noteMarker,
   });
   if (existing) {
+    const expectedAmount = Number(input.accrual.net);
+    if (Math.abs(existing.amount - expectedAmount) > AMOUNT_MATCH_EPSILON) {
+      throw new Error(
+        `Wallet already has a record dated ${input.accrual.accrualDate} on account ${input.walletAccountId} whose note contains "${input.rule.noteMarker}" (record ${existing.id}, amount ${existing.amount}), but that does not match this accrual's net (${expectedAmount}) — refusing to mark this accrual posted against what is very likely a different rule's or a user's own record`,
+      );
+    }
     return { note: existing.note ?? note, transactionId: existing.id };
   }
 
