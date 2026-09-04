@@ -42,6 +42,15 @@ RUN ./node_modules/.bin/esbuild scripts/validate-teable-migration.ts \
       --external:cloudflare:sockets \
       --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
       --outfile=validate-teable.mjs
+RUN ./node_modules/.bin/esbuild scripts/import-file-credentials.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --target=node22 \
+      --external:pg-native \
+      --external:cloudflare:sockets \
+      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
+      --outfile=import-file-credentials.mjs
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache wget
@@ -56,6 +65,7 @@ COPY --from=builder --chown=1000:1000 /app/public ./public
 COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
 COPY --from=builder --chown=1000:1000 /app/migrate-teable.mjs ./migrate-teable.mjs
 COPY --from=builder --chown=1000:1000 /app/validate-teable.mjs ./validate-teable.mjs
+COPY --from=builder --chown=1000:1000 /app/import-file-credentials.mjs ./import-file-credentials.mjs
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh && mkdir -p /app/.next/cache && chown -R 1000:1000 /app/.next
