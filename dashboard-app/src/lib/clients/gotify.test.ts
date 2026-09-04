@@ -12,6 +12,7 @@ const BASE_ENV: Record<string, string> = {
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
+  APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
 };
 
 const fetchMock = vi.fn();

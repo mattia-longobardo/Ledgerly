@@ -24,6 +24,7 @@ const store = vi.hoisted(() => {
     PAPERLESS_TOKEN: "paperless-token",
     CRON_SECRET: "c".repeat(20),
     WEBHOOK_SECRET: "w".repeat(20),
+    APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
     GOTIFY_URL: "https://gotify.example.test",
     GOTIFY_TOKEN: "gotify-token",
   });

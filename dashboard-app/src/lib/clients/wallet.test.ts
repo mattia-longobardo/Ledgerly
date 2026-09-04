@@ -19,6 +19,7 @@ process.env.PAPERLESS_URL = "https://paperless.example.test";
 process.env.PAPERLESS_TOKEN = "paperless-token";
 process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
+process.env.APP_ENCRYPTION_KEY = `unit:${Buffer.alloc(32, 9).toString("base64")}`;
 process.env.WALLET_API_URL = "https://wallet.example.test/wallet/v1/api";
 process.env.WALLET_TOKEN_FILE = tokenFile;
 

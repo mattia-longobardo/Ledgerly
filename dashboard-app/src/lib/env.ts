@@ -19,6 +19,14 @@ const schema = z.object({
   AUTHORIZED_SUB: z.string().min(1),
   AUTHORIZED_EMAIL: z.string().optional(),
 
+  /**
+   * Credential encryption keys, `keyId:base64key[,keyId:base64key]…`, active
+   * key first (spec §6, §12). Parsed by
+   * `src/platform/integrations/crypto.ts`. Required: an integration cannot be
+   * connected without it.
+   */
+  APP_ENCRYPTION_KEY: z.string().min(1),
+
   WALLET_API_URL: z.url().default("https://rest.budgetbakers.com/wallet/v1/api"),
   WALLET_TOKEN_FILE: z.string().default("/secrets/wallet-token"),
 
@@ -86,6 +94,17 @@ export function env(): Env {
   }
   cached = parsed.data;
   return cached;
+}
+
+/**
+ * Test seam. `env()` memoises the parsed schema in a module-scope `cached`, so
+ * a test that rewrites `process.env` after some earlier module already called
+ * `env()` would otherwise keep reading the old values — silently, and with no
+ * way to tell. Never called outside tests; the production process resolves its
+ * environment once and keeps it.
+ */
+export function resetEnvCache(): void {
+  cached = null;
 }
 
 /**

@@ -21,6 +21,7 @@ process.env.PAPERLESS_TOKEN = "paperless-token";
 process.env.PAPERLESS_PAYSLIP_TAG_ID = "22";
 process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
+process.env.APP_ENCRYPTION_KEY = `unit:${Buffer.alloc(32, 9).toString("base64")}`;
 
 const fetchMock = vi.fn();
 globalThis.fetch = fetchMock as unknown as typeof fetch;

@@ -25,6 +25,7 @@ Object.assign(process.env, {
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET,
   WEBHOOK_SECRET,
+  APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
 });
 
 function request(headers: Record<string, string> = {}, url = "https://dashboard.example/api/jobs/snapshot"): Request {
