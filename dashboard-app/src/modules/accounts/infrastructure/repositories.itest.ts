@@ -323,4 +323,25 @@ describe("DrizzleProviderLinksRepository", () => {
     expect(await asLinkUser(b, (repo) => repo.byExternal(b, "gocardless", "account", ["ext-1"]))).toEqual(new Map());
     expect(await asLinkUser(b, (repo) => repo.liveFor("account", account.id))).toBeNull();
   });
+
+  it("round-trips a non-account entity type (transaction)", async () => {
+    const { a } = await seedUsers();
+    const entityId = crypto.randomUUID();
+    const link = {
+      provider: "wallet",
+      entityType: "transaction" as const,
+      entityId,
+      externalId: "ext-tx-1",
+      metadata: {},
+    };
+
+    await asLinkUser(a, (repo) => repo.upsertSeen(a, link, new Date("2026-03-01T00:00:00Z")));
+
+    const found = await asLinkUser(a, (repo) => repo.byExternal(a, "wallet", "transaction", ["ext-tx-1"]));
+    expect(found.get("ext-tx-1")).toEqual({ ...link, missingSince: null });
+    expect(await asLinkUser(a, (repo) => repo.liveFor("transaction", entityId))).toEqual({
+      ...link,
+      missingSince: null,
+    });
+  });
 });

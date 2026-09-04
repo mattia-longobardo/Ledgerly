@@ -96,7 +96,10 @@ function monthPointDto(m: MonthPoint) {
 function providerLinkDto(l: ProviderLink) {
   return {
     provider: l.provider,
-    entityType: l.entityType,
+    // This route only ever resolves a link via `liveFor("account", id)`, so the
+    // link handed to this DTO is always an account link; the repository's
+    // `entityType` is a wider union because other modules now share it too.
+    entityType: l.entityType as "account",
     entityId: l.entityId,
     externalId: l.externalId,
     metadata: l.metadata,
