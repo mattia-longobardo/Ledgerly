@@ -1,13 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { transactionLabels, type TransactionLabelRow } from "@/lib/db/schema";
 import type { LabelsRepository, NewLabel } from "../application/ports";
 import type { TransactionLabel } from "../domain/transaction";
-
-/** Postgres reports a unique-index violation as pg error code 23505, wrapped by drizzle-orm 0.45 on `.cause`. */
-function isUniqueViolation(err: unknown): boolean {
-  return (err as { cause?: { code?: string } } | undefined)?.cause?.code === "23505";
-}
 
 function toLabel(row: TransactionLabelRow): TransactionLabel {
   return {

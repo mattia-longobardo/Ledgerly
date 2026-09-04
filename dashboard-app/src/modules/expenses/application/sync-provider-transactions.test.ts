@@ -139,4 +139,27 @@ describe("syncProviderTransactions", () => {
     const links = await deps.links.byExternal("user-1", "wallet", "transaction", [first.externalId]);
     expect(links.get(first.externalId)?.entityId).toBe(all[0]!.id);
   });
+
+  it("treats two incoming categories sharing one externalId within the same batch as one category, not two", async () => {
+    const { deps } = harness();
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-1", externalId: "wallet-acc-1", metadata: {} }, new Date());
+    // Same externalId, different name — a defensive case (Wallet's shapes are
+    // unverified), mirroring the transaction-side test above.
+    const catA: ProviderCategory = { externalId: "wc-1", name: "Groceries", groupName: null, kind: "expense" };
+    const catB: ProviderCategory = { externalId: "wc-1", name: "Groceries (renamed)", groupName: null, kind: "expense" };
+    const txn = record({ categoryExternalId: "wc-1" });
+    const source = { provider: "wallet", fetchTransactions: async () => [txn], fetchCategories: async () => [catA, catB] };
+
+    const result = await syncProviderTransactions({ ...deps, source })("user-1", null);
+
+    expect(result.categoriesCreated).toBe(1);
+    const categories = await deps.categories.list("user-1");
+    expect(categories).toHaveLength(1);
+
+    const links = await deps.links.byExternal("user-1", "wallet", "category", [catA.externalId]);
+    expect(links.get(catA.externalId)?.entityId).toBe(categories[0]!.id);
+    expect(result.transactionsCreated).toBe(1);
+    const allTx = await deps.transactions.listAll("user-1");
+    expect(allTx[0]!.categoryId).toBe(categories[0]!.id);
+  });
 });

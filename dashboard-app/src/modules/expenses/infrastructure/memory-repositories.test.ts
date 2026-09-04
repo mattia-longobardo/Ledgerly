@@ -60,12 +60,19 @@ describe("MemoryTransactionsRepository", () => {
   });
 
   it("tie-breaks equal occurredAt by insertion order (newest created first), matching time-ordered uuidv7 ids", async () => {
+    // Six rows, not two: with only two, a regression to a random id
+    // generator (e.g. crypto.randomUUID()) would still land in the
+    // "expected" order about half the time. Six rows landing in exact
+    // reverse-creation order is a 1-in-720 coincidence under random ids,
+    // so this only passes when the tie-break is genuinely id-ordered.
     const repo = new MemoryTransactionsRepository();
     const sameDay = new Date("2026-09-01T00:00:00Z");
-    const first = await repo.create(tx({ occurredAt: sameDay }));
-    const second = await repo.create(tx({ occurredAt: sameDay }));
+    const created = [];
+    for (let i = 0; i < 6; i += 1) {
+      created.push(await repo.create(tx({ occurredAt: sameDay })));
+    }
     const page = await repo.list("u1", {});
-    expect(page.items.map((t) => t.id)).toEqual([second.id, first.id]);
+    expect(page.items.map((t) => t.id)).toEqual([...created].reverse().map((t) => t.id));
   });
 
   it("setLabels and labelsFor round-trip", async () => {

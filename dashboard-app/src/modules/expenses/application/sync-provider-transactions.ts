@@ -65,6 +65,12 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
         categoryIdByExternal.set(c.externalId, link.entityId);
         continue;
       }
+      // A mutable snapshot, same reasoning as `transactionLinks` below: two
+      // incoming categories sharing one `externalId` within the same batch
+      // (a defensive case, not an expected one) must not both take the
+      // create branch. Each record processed updates this map in place, so
+      // a later record with the same externalId sees the category the
+      // earlier one just resolved instead of creating a duplicate.
       const existing = await deps.categories.findByName(userId, c.name);
       let local: TransactionCategory;
       if (existing) {
@@ -96,6 +102,17 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
       }
       await deps.links.upsertSeen(userId, { provider, entityType: "category", entityId: local.id, externalId: c.externalId, metadata: { name: c.name } }, now);
       categoryIdByExternal.set(c.externalId, local.id);
+      // Keep the in-run snapshot current so a repeat of this externalId
+      // later in the same batch finds this category rather than creating
+      // another.
+      categoryLinks.set(c.externalId, {
+        provider,
+        entityType: "category",
+        entityId: local.id,
+        externalId: c.externalId,
+        metadata: { name: c.name },
+        missingSince: null,
+      });
     }
 
     // 2. Transactions. An account must already be linked by the accounts
