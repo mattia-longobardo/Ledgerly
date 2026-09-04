@@ -4,6 +4,7 @@ import type { DbClient } from "@/lib/db/client";
 import { PermissionDeniedError, type Principal } from "@/platform/auth/principal";
 import { registerAccountRoutes } from "@/modules/accounts/api/routes";
 import { registerIntegrationRoutes } from "@/modules/integrations/api/routes";
+import { registerExpenseRoutes } from "@/modules/expenses/api/routes";
 import { ApiError, toErrorBody } from "./errors";
 import { rateLimit } from "./rate-limit";
 
@@ -142,4 +143,5 @@ export function createApiApp(deps: ApiDeps): ApiApp {
 export function registerAllRoutes(app: ApiApp, deps: ApiDeps): void {
   registerAccountRoutes(app, deps);
   registerIntegrationRoutes(app, deps);
+  registerExpenseRoutes(app, deps);
 }
