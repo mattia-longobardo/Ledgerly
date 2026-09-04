@@ -501,9 +501,9 @@ function translateAuth(err: unknown): unknown {
   const status = err instanceof HttpError ? err.status : null;
   return new UpstreamError(
     TREK,
-    `Trek rejected the MCP token (HTTP ${status}). TREK_TOKEN_FILE must hold a ` +
-      `static trek_… token minted in Trek's UI (Settings → MCP tokens) or via ` +
-      `POST /api/auth/mcp-tokens, carrying the vacay scope group with write access`,
+    `Trek rejected the MCP token (HTTP ${status}). Reconnect the Trek integration ` +
+      `with a fresh static trek_… token minted in Trek's UI (Settings → MCP tokens) ` +
+      `or via POST /api/auth/mcp-tokens, carrying the vacay scope group with write access`,
     err instanceof HttpError ? err.detail : null,
     false,
   );

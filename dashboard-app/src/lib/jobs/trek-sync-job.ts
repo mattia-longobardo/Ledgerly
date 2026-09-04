@@ -33,7 +33,6 @@ import { runSyncForUser } from "@/modules/integrations/application/run-sync";
 import { integrationDeps } from "@/modules/integrations/infrastructure/deps";
 import { openOwnerConnection } from "@/modules/integrations/infrastructure/owner-connection";
 import { ensureProvidersRegistered } from "@/platform/integrations/register-all";
-import { type TrekSyncResult } from "./trek-sync";
 
 export const JOB_NAME = "trek_sync" as const;
 
@@ -43,18 +42,6 @@ export const JOB_NAME = "trek_sync" as const;
 
 export interface RunTrekSyncJobInput {
   trigger?: "cron" | "manual";
-}
-
-/** Everything the run log should keep, minus the noisy full arrays. */
-export function summarize(result: TrekSyncResult): Record<string, unknown> {
-  return {
-    year: result.year,
-    pulled: result.pulled,
-    deleted: result.deleted,
-    pushed: result.pushed,
-    ...(result.weekendBlocked.length > 0 ? { weekendBlocked: result.weekendBlocked } : {}),
-    ...(result.stillPending.length > 0 ? { stillPending: result.stillPending } : {}),
-  };
 }
 
 /**
