@@ -1,4 +1,5 @@
 import { assertPermission, type Principal } from "@/platform/auth/principal";
+import { redactCredentials } from "@/platform/integrations/redact-credentials";
 import type {
   DisconnectPolicy,
   IntegrationConnection,
@@ -60,6 +61,11 @@ export function connectIntegration(deps: IntegrationDeps) {
     // ── 2. The provider round trip, outside every transaction.
     const test = await provider.testConnection(parsed.data, settings);
     const status = statusAfterTest(test);
+    // `test.message` is the provider's own text — an HTTP client that folds a
+    // URL or a header into its error message can put this connection's own
+    // credential into it, and this is a column the owner's Settings UI
+    // renders straight back to them.
+    const lastError = test.ok ? null : redactCredentials(test.message, parsed.data);
 
     // ── 3. One transaction for every write.
     const connection = await deps.inUserContext(principal.userId, async (d) => {
@@ -102,7 +108,7 @@ export function connectIntegration(deps: IntegrationDeps) {
       await d.connections.recordState(row.id, {
         status,
         lastTestAt: now,
-        lastError: test.ok ? null : test.message,
+        lastError,
       });
 
       // Ruling P2-C4: a connection's schedulable work is its `sync_jobs` rows,
@@ -129,7 +135,7 @@ export function connectIntegration(deps: IntegrationDeps) {
           ...row,
           status,
           lastTestAt: now,
-          lastError: test.ok ? null : test.message,
+          lastError,
         }
       );
     });

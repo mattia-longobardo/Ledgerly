@@ -164,6 +164,12 @@ per connection, via `IntegrationsList`/`SyncRunsTable`), and
 `GET /api/v1/integrations/{provider}/sync-runs` (most recent first, `limit`
 1–10, default 10).
 
+A `sync_queue` job in Settings › Administration can be reported as
+`success` while draining a batch that contained individually failed runs —
+the job's own status only reflects whether the drain itself ran, not
+whether every row it drained succeeded — so the Integrations page above is
+where those per-run failures are actually visible.
+
 ## 6. Inbound webhooks
 
 `POST /api/v1/webhooks/{provider}` is the one unauthenticated route in the

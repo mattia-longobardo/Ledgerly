@@ -82,6 +82,20 @@ describe("integration lifecycle", () => {
     expect(connection.lastError).toBe("401 from the provider");
   });
 
+  it("redacts a credential the provider's message echoes back before it reaches lastError", async () => {
+    const deps = makeDeps();
+    const secret = "sk-live-91mN7fQ2xyz";
+    nextTest = { ok: false, message: `upstream rejected token ${secret}` };
+    const { connection } = await connectIntegration(deps)(principal, {
+      provider: "wallet",
+      credentials: { token: secret },
+    });
+    expect(connection.lastError).not.toContain(secret);
+    expect(connection.lastError).toContain("[redacted]");
+    const stored = await deps.connections.get(principal.userId, connection.id);
+    expect(stored?.lastError).not.toContain(secret);
+  });
+
   it("reconnecting replaces the credential on the same row", async () => {
     const deps = makeDeps();
     const first = await connectIntegration(deps)(principal, {
@@ -124,6 +138,18 @@ describe("integration lifecycle", () => {
     const connection = await deps.connections.getByProvider(principal.userId, "wallet");
     expect(connection?.status).toBe("error");
     expect(connection?.lastTestAt).toEqual(new Date("2026-09-04T09:00:00Z"));
+  });
+
+  it("redacts a credential the provider's message echoes back from a failed test", async () => {
+    const deps = makeDeps();
+    const secret = "sk-live-91mN7fQ2xyz";
+    await connectIntegration(deps)(principal, { provider: "wallet", credentials: { token: secret } });
+    nextTest = { ok: false, message: `upstream rejected token ${secret}` };
+    const result = await testIntegrationConnection(deps)(principal, "wallet");
+    expect(result.ok).toBe(false);
+    const connection = await deps.connections.getByProvider(principal.userId, "wallet");
+    expect(connection?.lastError).not.toContain(secret);
+    expect(connection?.lastError).toContain("[redacted]");
   });
 
   it("refuses to test a provider that was never connected", async () => {

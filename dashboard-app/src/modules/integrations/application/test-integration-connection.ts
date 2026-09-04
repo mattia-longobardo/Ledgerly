@@ -1,4 +1,5 @@
 import { assertPermission, type Principal } from "@/platform/auth/principal";
+import { redactCredentials } from "@/platform/integrations/redact-credentials";
 import type { ProviderCode, TestResult } from "@/platform/integrations/types";
 import { statusAfterTest } from "../domain/connection";
 import type { IntegrationDeps } from "./deps";
@@ -28,7 +29,11 @@ export function testIntegrationConnection(deps: IntegrationDeps) {
       await d.connections.recordState(opened.connection.id, {
         status: statusAfterTest(result),
         lastTestAt: d.clock.now(),
-        lastError: result.ok ? null : result.message,
+        // `result.message` is the provider's own text — an HTTP client that
+        // folds a URL or a header into its error message can put this
+        // connection's own credential into it, and this is a column the
+        // owner's Settings UI renders straight back to them.
+        lastError: result.ok ? null : redactCredentials(result.message, opened.credentials),
       });
       await d.audit({
         actorUserId: principal.userId,
