@@ -1,46 +1,30 @@
 /**
- * Daily Wallet account sync.
+ * Daily Wallet account sync, now a thin wrapper over the integration engine:
+ * the reconciliation, the credential and the run recording all live there, and
+ * this file owns only the `job_runs` row, the advisory lock and the alert.
  *
- * Sibling of `wallet-refresh`, and deliberately separate from it: the refresh
- * writes the two legacy balance snapshots the Home page still reads, while this
- * one reconciles the accounts module — which accounts exist, what they are
- * called, and one provider balance point per account per day.
+ * It still syncs exactly one user — the owner — because the schedule is
+ * process-wide and there is no per-user cron. Per-user schedules arrive with
+ * `sync_jobs` becoming dispatchable in a later phase.
  *
- * Like every daily job here it alerts on failure: a missed run is a full day of
- * stale accounts and there is no second attempt an hour later.
- *
- * It syncs exactly one user: the owner. The Wallet credential is a single
- * file-mounted token, so there is one upstream identity to sync and one person
- * it belongs to; `provider_links` is unique on (user_id, provider, entity_type,
- * external_id), so a second user syncing the same external ids gets their own
- * links rather than colliding with the owner's. Per-user provider connections
- * are a later phase, and this job grows a loop only then.
- *
- * The owner lookup uses the pool client directly because `users` and
- * `user_roles` are identity tables and carry no RLS. The sync itself runs under
- * `withUserContext(..., role: "system")`, which by design *bypasses* the RLS
- * policies rather than enforcing them — the guard there is the explicit
- * `user_id` predicate every repository method carries, not the database.
+ * The provider fetch happens inside `runSyncForUser`, in its own short-lived
+ * pool connection, before `runSyncForUser` opens a second one for the apply
+ * phase — never nested inside the one `withJobLock` here holds for the
+ * `job_runs` bookkeeping and the advisory lock. The benefit over the Phase 1
+ * shape is a single held pool connection during the sync's round trip instead
+ * of two: this job's own transaction is only ever open for the bookkeeping,
+ * not for the length of the Wallet conversation.
  */
 
-import { and, asc, eq } from "drizzle-orm";
 import { alertJobFailure } from "@/lib/clients/gotify";
 import { errorMessage } from "@/lib/clients/http";
 import type { JobResult } from "@/lib/contracts";
 import { db } from "@/lib/db";
-import { userRoles, users } from "@/lib/db/schema";
-import { walletToken } from "@/lib/env";
 import { finishRun, startRun, withJobLock } from "@/lib/repo/jobs";
-import {
-  syncProviderAccounts,
-  type SyncProviderAccountsResult,
-} from "@/modules/accounts/application/sync-provider-accounts";
-import { DrizzleAccountsRepository } from "@/modules/accounts/infrastructure/drizzle-accounts-repository";
-import { DrizzleGroupsRepository } from "@/modules/accounts/infrastructure/drizzle-groups-repository";
-import { DrizzleProviderLinksRepository } from "@/modules/accounts/infrastructure/drizzle-provider-links-repository";
-import { walletAccountsSource } from "@/modules/accounts/infrastructure/wallet-adapter";
-import { recordAudit } from "@/platform/audit/record";
-import { withUserContext } from "@/platform/db/context";
+import { ensureProvidersRegistered } from "@/platform/integrations/register-all";
+import { runSyncForUser } from "@/modules/integrations/application/run-sync";
+import { integrationDeps } from "@/modules/integrations/infrastructure/deps";
+import { openOwnerConnection } from "@/modules/integrations/infrastructure/owner-connection";
 
 export const JOB_NAME = "wallet_accounts_sync" as const;
 
@@ -51,73 +35,33 @@ export interface RunWalletAccountsSyncInput {
   trigger?: "cron" | "manual";
 }
 
-const clock = { now: () => new Date() };
-
-/** `walletToken()` throws when the token file is missing or empty. */
-function walletConfigured(): boolean {
-  try {
-    walletToken();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** The oldest active owner; there is only ever one in practice. */
-async function ownerId(): Promise<string | null> {
-  const [row] = await db
-    .select({ id: users.id })
-    .from(users)
-    .innerJoin(userRoles, eq(userRoles.userId, users.id))
-    .where(and(eq(userRoles.roleCode, "owner"), eq(users.status, "active")))
-    .orderBy(asc(users.createdAt))
-    .limit(1);
-  return row?.id ?? null;
-}
-
 async function syncOwner(userId: string): Promise<Record<string, unknown>> {
-  const source = walletAccountsSource(clock);
-  // Outside the transaction on purpose: see the note in syncProviderAccounts.
-  const incoming = await source.fetchAccounts();
-  const counts: SyncProviderAccountsResult = await withUserContext(db, { userId, role: "system" }, (tx) =>
-    syncProviderAccounts({
-      accounts: new DrizzleAccountsRepository(tx),
-      links: new DrizzleProviderLinksRepository(tx),
-      groups: new DrizzleGroupsRepository(tx),
-      clock,
-      audit: (e) => recordAudit(tx, e),
-      source,
-    })(userId, incoming),
-  );
-  return { ...counts };
+  const run = await runSyncForUser(integrationDeps(db))(userId, {
+    provider: "wallet",
+    kind: "accounts",
+    trigger: "cron",
+  });
+  if (run.status === "failed") throw new Error(run.error ?? "wallet accounts sync failed");
+  return { runId: run.id, status: run.status, ...run.stats };
 }
 
-/**
- * Never throws. Every path ends in a `job_runs` row and a `JobResult`,
- * including the unconfigured one and the one where another invocation already
- * holds the lock.
- */
+/** Never throws. Every path ends in a `job_runs` row and a `JobResult`. */
 export async function runWalletAccountsSync(input: RunWalletAccountsSyncInput = {}): Promise<JobResult> {
+  ensureProvidersRegistered();
   const run = await startRun({ jobName: JOB_NAME, trigger: input.trigger ?? "cron" });
 
   try {
-    // No credential is a configuration state, not a failure: recorded so the
-    // run log explains the silence, but never alerted on.
-    if (!walletConfigured()) {
-      const skipped = { reason: "wallet_not_configured" };
-      await finishRun(run.id, "already_done", { detail: skipped });
-      return { job: JOB_NAME, status: "already_done", detail: skipped };
-    }
-
-    // No owner is a not-yet-bootstrapped install, not a failure.
-    const owner = await ownerId();
+    // No owner, no connection, an unusable connection and a missing credential
+    // are all the same answer: nothing to sync. A configuration state, not a
+    // failure — recorded so the run log explains the silence, never alerted on.
+    const owner = await openOwnerConnection("wallet");
     if (!owner) {
-      const skipped = { reason: "no_owner" };
+      const skipped = { reason: "wallet_not_connected" };
       await finishRun(run.id, "already_done", { detail: skipped });
       return { job: JOB_NAME, status: "already_done", detail: skipped };
     }
 
-    const detail = await withJobLock(LOCK_KEY, () => syncOwner(owner));
+    const detail = await withJobLock(LOCK_KEY, () => syncOwner(owner.userId));
 
     // Lock not acquired: a concurrent invocation owns the sync. A `curl
     // --retry` after a timeout lands here, and must not read as an error.

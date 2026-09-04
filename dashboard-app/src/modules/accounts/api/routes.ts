@@ -1,7 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { MonthPoint } from "@/lib/contracts";
 import { UpstreamError } from "@/lib/contracts";
-import { walletToken } from "@/lib/env";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
 import { idempotency } from "@/platform/http/idempotency";
@@ -13,16 +12,13 @@ import { createGroup, deleteGroup, listGroups, renameGroup } from "../applicatio
 import { createManualAccount } from "../application/create-manual-account";
 import { deleteAccount } from "../application/delete-account";
 import { accountDeps } from "../infrastructure/deps";
-import type { UseCaseDeps } from "../application/deps";
 import { DeletionBlockedError, InvalidInputError, NotFoundError, VersionMismatchError } from "../application/errors";
 import { getAccountDetail } from "../application/get-account-detail";
 import { listAccounts } from "../application/list-accounts";
 import { netWorthSeries, type NetWorthAccountSeries } from "../application/net-worth-series";
 import type { ProviderLink } from "../application/ports";
 import { recordManualBalance } from "../application/record-manual-balance";
-import { assertWalletSyncAllowed, syncProviderAccounts } from "../application/sync-provider-accounts";
 import { updateAccount } from "../application/update-account";
-import { walletAccountsSource } from "../infrastructure/wallet-adapter";
 import {
   AccountDetailQuerySchema,
   AccountDetailSchema,
@@ -47,7 +43,6 @@ import {
   RecordBalanceRequestSchema,
   RenameGroupRequestSchema,
   UpdateAccountRequestSchema,
-  WalletSyncResultSchema,
 } from "./schemas";
 
 /**
@@ -337,18 +332,6 @@ const deleteGroupRoute = createRoute({
   },
 });
 
-const walletSyncRoute = createRoute({
-  method: "post",
-  path: "/integrations/wallet/sync",
-  tags: ["Integrations"],
-  security: [{ session: [] }],
-  responses: {
-    200: { description: "Reconciliation counts.", content: { "application/json": { schema: WalletSyncResultSchema } } },
-    503: errorResponses[503],
-    ...commonErrorResponses,
-  },
-});
-
 const netWorthRoute = createRoute({
   method: "get",
   path: "/net-worth",
@@ -559,27 +542,6 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
         deleteGroup(accountDeps(tx, c.get("requestId")))(principal, id),
       );
       return c.json({ deleted: true as const }, 200);
-    } catch (err) {
-      throw toApiError(err);
-    }
-  });
-
-  app.openapi(walletSyncRoute, async (c) => {
-    const principal = c.get("principal");
-    assertWalletSyncAllowed(principal);
-    try {
-      walletToken();
-    } catch {
-      throw new ApiError(503, "integration_unavailable", "Budget Makers Wallet is not configured");
-    }
-    try {
-      const source = walletAccountsSource({ now: () => deps.now() });
-      const incoming = await source.fetchAccounts();
-      const result = await withUserContext(deps.db, { userId: principal.userId }, (tx) => {
-        const useCaseDeps: UseCaseDeps = accountDeps(tx, c.get("requestId"));
-        return syncProviderAccounts({ ...useCaseDeps, source })(principal.userId, incoming);
-      });
-      return c.json(result, 200);
     } catch (err) {
       throw toApiError(err);
     }

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { walletToken } from "@/lib/env";
 import type { Account, AccountGroup } from "@/modules/accounts/domain/account";
 import {
   createGroup,
@@ -28,15 +27,9 @@ import {
   type RecordManualBalanceInput,
 } from "@/modules/accounts/application/record-manual-balance";
 import {
-  assertWalletSyncAllowed,
-  syncProviderAccounts,
-  type SyncProviderAccountsResult,
-} from "@/modules/accounts/application/sync-provider-accounts";
-import {
   updateAccount,
   type UpdateAccountInput,
 } from "@/modules/accounts/application/update-account";
-import { walletAccountsSource } from "@/modules/accounts/infrastructure/wallet-adapter";
 import { runForPrincipal } from "@/modules/accounts/ui/deps";
 import { PermissionDeniedError } from "@/platform/auth/principal";
 import { errorMessage, fail, succeed, text, type ActionResult } from "./types";
@@ -196,35 +189,6 @@ export async function recordBalanceAction(
     revalidateAccounts(id);
     return succeed(null);
   } catch (err) {
-    return fail(mapError(err));
-  }
-}
-
-/** Header action on the accounts list. Requires `WALLET_TOKEN_FILE`; reports rather than throws when it is unset. */
-export async function syncWalletAction(): Promise<
-  ActionResult<SyncProviderAccountsResult>
-> {
-  try {
-    walletToken();
-  } catch {
-    return fail("Budget Makers Wallet is not configured.");
-  }
-
-  try {
-    const source = walletAccountsSource({ now: () => new Date() });
-    const incoming = await source.fetchAccounts();
-    const result = await runForPrincipal((deps, principal) => {
-      // The use case itself does not gate on a permission — the route and this
-      // action are the two callers, and both go through the shared check.
-      assertWalletSyncAllowed(principal);
-      return syncProviderAccounts({ ...deps, source })(principal.userId, incoming);
-    });
-    revalidateAccounts();
-    return succeed(result);
-  } catch (err) {
-    if (err instanceof PermissionDeniedError) {
-      return fail("Only the owner can sync Budget Makers Wallet in this release.");
-    }
     return fail(mapError(err));
   }
 }

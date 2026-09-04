@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { WalletAccount } from "@/lib/clients/wallet";
-import { mapWalletAccount } from "./wallet-adapter";
+import { mapWalletAccount, prefetchedWalletSource, walletAccountsSource } from "./wallet-adapter";
+
+vi.mock("@/lib/clients/wallet", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/clients/wallet")>();
+  return { ...actual, getAccounts: vi.fn() };
+});
+
+const { getAccounts } = await import("@/lib/clients/wallet");
 
 function raw(over: Partial<WalletAccount> = {}): WalletAccount {
   return {
@@ -68,5 +75,29 @@ describe("mapWalletAccount", () => {
 
   it("has no updated-at when the provider does not send one", () => {
     expect(mapWalletAccount(raw(), "2026-09-02").updatedAt).toBeNull();
+  });
+});
+
+describe("walletAccountsSource", () => {
+  it("fetches with the given token and maps every account", async () => {
+    vi.mocked(getAccounts).mockResolvedValueOnce([raw()]);
+
+    const source = walletAccountsSource({ now: () => new Date("2026-09-02T09:00:00Z") }, "test-token");
+    const rows = await source.fetchAccounts();
+
+    expect(getAccounts).toHaveBeenCalledWith({ token: "test-token" });
+    expect(source.provider).toBe("wallet");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ externalId: "w1", balance: "251.00" });
+  });
+});
+
+describe("prefetchedWalletSource", () => {
+  it("names the provider and hands back exactly what it was given", async () => {
+    const mapped = mapWalletAccount(raw(), "2026-09-02");
+    const source = prefetchedWalletSource([mapped]);
+
+    expect(source.provider).toBe("wallet");
+    await expect(source.fetchAccounts()).resolves.toEqual([mapped]);
   });
 });

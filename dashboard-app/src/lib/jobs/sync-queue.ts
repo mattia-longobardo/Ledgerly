@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { finishRun, startRun, withJobLock } from "@/lib/repo/jobs";
 import { drainSyncQueue } from "@/modules/integrations/application/drain-sync-queue";
 import { integrationDeps } from "@/modules/integrations/infrastructure/deps";
+import { ensureProvidersRegistered } from "@/platform/integrations/register-all";
 
 export const JOB_NAME = "sync_queue" as const;
 export const LOCK_KEY = JOB_NAME;
@@ -21,12 +22,12 @@ export interface RunSyncQueueInput {
  * The advisory lock is belt and braces: `runs.claim` already makes a double
  * execution impossible, so a second tick would simply find nothing.
  *
- * No `ensureProvidersRegistered()` call here: the provider registry bootstrap
- * (`@/platform/integrations/register-all`) does not exist yet — it lands with
- * the first real adapter — and until a provider is registered no connection
- * can exist for `drainSyncQueue` to find work against.
+ * `ensureProvidersRegistered()` runs first because a queued row can name any
+ * registered provider's kind: draining against an empty registry would resolve
+ * no handler for a real connection's sync and fail every row it dequeues.
  */
 export async function runSyncQueue(input: RunSyncQueueInput = {}): Promise<JobResult> {
+  ensureProvidersRegistered();
   const run = await startRun({ jobName: JOB_NAME, trigger: input.trigger ?? "cron" });
   try {
     const drained = await withJobLock(LOCK_KEY, () => drainSyncQueue(integrationDeps(db))(20));

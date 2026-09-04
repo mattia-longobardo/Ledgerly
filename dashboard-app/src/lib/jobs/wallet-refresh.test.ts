@@ -23,12 +23,12 @@ const store = vi.hoisted(() => {
     PAPERLESS_TOKEN: "paperless-token",
     CRON_SECRET: "c".repeat(20),
     WEBHOOK_SECRET: "w".repeat(20),
-    APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+    APP_ENCRYPTION_KEY: `k1:${Buffer.alloc(32, 1).toString("base64")}`,
     GOTIFY_URL: "https://gotify.example.test",
     GOTIFY_TOKEN: "gotify-token",
     SNAPSHOT_GRACE_DAYS: "3",
   });
-  return { runs: [] as RunRow[], nextRunId: 1, lockHeld: false };
+  return { runs: [] as RunRow[], nextRunId: 1, lockHeld: false, connected: true };
 });
 
 vi.mock("@/lib/repo/jobs", () => ({
@@ -68,6 +68,18 @@ vi.mock("@/lib/repo/balances", () => ({ recordSnapshots: vi.fn(async () => undef
 
 vi.mock("@/lib/clients/wallet", () => ({ getBalances: vi.fn() }));
 
+vi.mock("@/modules/integrations/infrastructure/owner-connection", () => ({
+  openOwnerConnection: vi.fn(async () =>
+    store.connected
+      ? {
+          userId: "00000000-0000-7000-8000-000000000001",
+          connection: { id: "c1", provider: "wallet", status: "connected" },
+          credentials: { token: "test-token" },
+        }
+      : null,
+  ),
+}));
+
 vi.mock("@/lib/clients/http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/clients/http")>();
   return { ...actual, httpRequest: vi.fn(async () => new Response("{}", { status: 200 })) };
@@ -77,6 +89,7 @@ import { httpRequest } from "@/lib/clients/http";
 import { getBalances } from "@/lib/clients/wallet";
 import { recordSnapshots } from "@/lib/repo/balances";
 import { finishRun, withJobLock } from "@/lib/repo/jobs";
+import { openOwnerConnection } from "@/modules/integrations/infrastructure/owner-connection";
 import { JOB_NAME, runWalletRefresh } from "@/lib/jobs/wallet-refresh";
 
 const NOON = new Date("2026-09-01T10:00:00Z");
@@ -102,12 +115,21 @@ beforeEach(() => {
   store.runs.length = 0;
   store.nextRunId = 1;
   store.lockHeld = false;
+  store.connected = true;
   vi.clearAllMocks();
   vi.mocked(getBalances).mockResolvedValue(BALANCES);
   vi.mocked(httpRequest).mockResolvedValue(new Response("{}", { status: 200 }));
 });
 
 describe("runWalletRefresh", () => {
+  it("resolves the owner's token and passes it straight to getBalances", async () => {
+    const result = await runWalletRefresh({ now: NOON });
+
+    expect(result).toMatchObject({ job: JOB_NAME, status: "success" });
+    expect(openOwnerConnection).toHaveBeenCalledWith("wallet");
+    expect(getBalances).toHaveBeenCalledWith({ token: "test-token" });
+  });
+
   it("writes ING, the Revolut total and the three sub-accounts at `now`", async () => {
     const result = await runWalletRefresh({ now: NOON });
 
@@ -145,6 +167,22 @@ describe("runWalletRefresh", () => {
   it("defaults the trigger to cron", async () => {
     await runWalletRefresh({ now: NOON });
     expect(store.runs[0]?.trigger).toBe("cron");
+  });
+
+  it("records a skipped run and stays silent when Wallet is not connected", async () => {
+    store.connected = false;
+
+    const result = await runWalletRefresh({ now: NOON });
+
+    expect(result).toMatchObject({
+      job: JOB_NAME,
+      status: "already_done",
+      detail: { reason: "wallet_not_connected" },
+    });
+    expect(store.runs[0]?.status).toBe("already_done");
+    expect(getBalances).not.toHaveBeenCalled();
+    expect(recordSnapshots).not.toHaveBeenCalled();
+    expect(alerts()).toEqual([]);
   });
 
   it("takes the job lock, so `curl --retry` cannot double-write", async () => {

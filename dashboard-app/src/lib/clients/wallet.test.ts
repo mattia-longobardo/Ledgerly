@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { UpstreamError } from "@/lib/contracts";
 import { getAccounts, getBalances, reduceBalances } from "./wallet";
-
-const tokenFile = join(mkdtempSync(join(tmpdir(), "wallet-token-")), "token");
-writeFileSync(tokenFile, "jwt-token\n");
 
 process.env.DATABASE_URL = "postgres://dashboard@localhost/dashboard";
 process.env.AUTH_URL = "https://dash.example.test";
@@ -21,7 +15,6 @@ process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
 process.env.APP_ENCRYPTION_KEY = `unit:${Buffer.alloc(32, 9).toString("base64")}`;
 process.env.WALLET_API_URL = "https://wallet.example.test/wallet/v1/api";
-process.env.WALLET_TOKEN_FILE = tokenFile;
 
 const fetchMock = vi.fn();
 globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -58,7 +51,7 @@ describe("getBalances", () => {
   it("sums Revolut + Savings + Holidays and reads ING straight through", async () => {
     fetchMock.mockImplementation(async () => json({ accounts: ALL_ACCOUNTS }));
 
-    const balances = await getBalances();
+    const balances = await getBalances({ token: "t" });
 
     expect(balances.ing).toBe(1000);
     expect(balances.revolut).toBeCloseTo(275.75, 2);
@@ -70,17 +63,15 @@ describe("getBalances", () => {
     });
   });
 
-  it("re-reads the token file on every request", async () => {
+  it("sends the given token as the bearer header, per call", async () => {
     fetchMock.mockImplementation(async () => json({ accounts: ALL_ACCOUNTS }));
-    await getBalances();
-    writeFileSync(tokenFile, "rotated-token\n");
-    await getBalances();
+    await getBalances({ token: "jwt-token" });
+    await getBalances({ token: "rotated-token" });
 
     const first = (fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Record<string, string>;
     const second = (fetchMock.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
     expect(first.authorization).toBe("Bearer jwt-token");
     expect(second.authorization).toBe("Bearer rotated-token");
-    writeFileSync(tokenFile, "jwt-token\n");
   });
 
   it("throws rather than returning a partial when an account is missing", () => {
@@ -107,7 +98,7 @@ describe("getBalances", () => {
     fetchMock.mockImplementation(async () =>
       json({ accounts: [{ name: "ING - Salary", currencyCode: "EUR" }] }),
     );
-    const err = (await getBalances({ sleep: async () => {} }).catch(
+    const err = (await getBalances({ token: "t", sleep: async () => {} }).catch(
       (e: unknown) => e,
     )) as UpstreamError;
     expect(err).toBeInstanceOf(UpstreamError);
@@ -122,7 +113,7 @@ describe("retry policy", () => {
       .mockResolvedValueOnce(json({ error: "init_sync in progress" }, 409))
       .mockResolvedValueOnce(json({ accounts: ALL_ACCOUNTS }));
 
-    await getBalances({ sleep, jitter: () => 0 });
+    await getBalances({ token: "t", sleep, jitter: () => 0 });
 
     expect(delays).toEqual([30_000]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -134,7 +125,7 @@ describe("retry policy", () => {
       .mockResolvedValueOnce(json({}, 429, { "retry-after": "90" }))
       .mockResolvedValueOnce(json({ accounts: ALL_ACCOUNTS }));
 
-    await getBalances({ sleep, jitter: () => 0 });
+    await getBalances({ token: "t", sleep, jitter: () => 0 });
 
     expect(delays).toEqual([90_000]);
   });
@@ -145,7 +136,7 @@ describe("retry policy", () => {
       .mockResolvedValueOnce(json({}, 429))
       .mockResolvedValueOnce(json({ accounts: ALL_ACCOUNTS }));
 
-    await getBalances({ sleep, jitter: () => 0 });
+    await getBalances({ token: "t", sleep, jitter: () => 0 });
 
     expect(delays).toEqual([60_000]);
   });
@@ -154,7 +145,7 @@ describe("retry policy", () => {
     const { delays, sleep } = recordingSleep();
     fetchMock.mockImplementation(async () => json({}, 500));
 
-    await expect(getAccounts({ sleep, jitter: () => 0 })).rejects.toThrow(UpstreamError);
+    await expect(getAccounts({ token: "t", sleep, jitter: () => 0 })).rejects.toThrow(UpstreamError);
 
     expect(delays).toEqual([2000, 4000, 8000, 16000]);
     expect(fetchMock).toHaveBeenCalledTimes(5);
@@ -166,7 +157,7 @@ describe("retry policy", () => {
       json({ detail: "authentication failed with status: 403" }, 401),
     );
 
-    const err = (await getAccounts({ sleep }).catch((e: unknown) => e)) as UpstreamError;
+    const err = (await getAccounts({ token: "t", sleep }).catch((e: unknown) => e)) as UpstreamError;
 
     expect(err).toBeInstanceOf(UpstreamError);
     expect(err.retryable).toBe(false);
@@ -179,7 +170,7 @@ describe("retry policy", () => {
 
   it("fails fast on other 4xx", async () => {
     fetchMock.mockImplementation(async () => json({ message: "nope" }, 404));
-    await expect(getAccounts({ sleep: async () => {} })).rejects.toThrow(UpstreamError);
+    await expect(getAccounts({ token: "t", sleep: async () => {} })).rejects.toThrow(UpstreamError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

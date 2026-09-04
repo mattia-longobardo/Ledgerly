@@ -139,16 +139,6 @@ export const NetWorthSeriesSchema = z
   })
   .openapi("NetWorthSeries");
 
-export const WalletSyncResultSchema = z
-  .object({
-    created: z.number(),
-    updated: z.number(),
-    adopted: z.number(),
-    balances: z.number(),
-    missing: z.number(),
-  })
-  .openapi("WalletSyncResult");
-
 export const ErrorResponseSchema = z
   .object({
     error: z.object({

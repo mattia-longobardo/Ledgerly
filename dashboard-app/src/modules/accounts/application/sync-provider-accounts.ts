@@ -15,23 +15,9 @@
  *    there, becomes `unavailable`; its history stays.
  */
 
-import { assertPermission, PermissionDeniedError, type Principal } from "@/platform/auth/principal";
 import type { Account, AccountStatus } from "../domain/account";
 import type { UseCaseDeps } from "./deps";
 import type { AccountPatch, AccountsSource, NewBalance, ProviderAccount } from "./ports";
-
-/**
- * Who may pull from a provider. The API route and the Server Action are the two
- * callers and each used to check `integrations.manage` on its own, which let an
- * admin start a sync that rewrites another household member's account graph.
- * Until Phase 2 gives connections a per-user owner, the household owner is the
- * only principal allowed to run one — the check lives here so the two callers
- * cannot drift.
- */
-export function assertWalletSyncAllowed(principal: Principal): void {
-  assertPermission(principal, "integrations.manage");
-  if (!principal.roles.includes("owner")) throw new PermissionDeniedError("integrations.manage");
-}
 
 export interface SyncProviderAccountsResult {
   created: number;
@@ -83,9 +69,13 @@ function balanceRow(accountId: string, incoming: ProviderAccount, capturedAt: Da
 export function syncProviderAccounts(deps: SyncProviderAccountsDeps) {
   /**
    * `prefetched` exists so the caller can do the provider round trip *before*
-   * opening the database transaction. A slow provider otherwise holds one of
-   * the pool's eight connections — and, inside a job, an advisory lock — for
-   * the whole conversation.
+   * opening the database transaction. For the Wallet job, `syncOwner` still
+   * runs inside `withJobLock`'s own transaction and advisory lock for its
+   * whole duration — prefetching does not lift the round trip out from under
+   * either of those. What it does buy is one held pool connection during the
+   * round trip instead of two: the job's own transaction stays open the whole
+   * time regardless, but a second one is no longer opened *around* the
+   * provider call as well, and only opens afterwards, briefly, for the write.
    */
   return async (
     userId: string,

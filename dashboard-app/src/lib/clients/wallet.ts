@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { UpstreamError } from "@/lib/contracts";
-import { env, walletToken } from "@/lib/env";
+import { env } from "@/lib/env";
 import { HttpError, requestJson, withRetry, type SleepFn } from "./http";
 import {
   REVOLUT_COMPONENT_KEYS,
@@ -37,6 +37,13 @@ export interface WalletBalances {
 }
 
 export interface WalletCallOptions {
+  /**
+   * The bearer token, always passed in. It used to be read from
+   * `WALLET_TOKEN_FILE` on every request; since Phase 2 the credential lives
+   * encrypted in `integration_connections` and is resolved by the caller, so
+   * this module no longer touches the filesystem or the environment for it.
+   */
+  token: string;
   /** Injectable so tests don't sit through the backoff. */
   sleep?: SleepFn;
   jitter?: () => number;
@@ -51,9 +58,8 @@ function baseUrl(): string {
   return env().WALLET_API_URL.replace(/\/+$/, "");
 }
 
-function headers(): Record<string, string> {
-  // Re-read per request: the token file is hot-swapped without a restart.
-  return { authorization: `Bearer ${walletToken()}` };
+function headers(opts: WalletCallOptions): Record<string, string> {
+  return { authorization: `Bearer ${opts.token}` };
 }
 
 function isInitSync(err: HttpError): boolean {
@@ -93,12 +99,12 @@ function retryPolicy(opts: WalletCallOptions) {
   };
 }
 
-export async function getAccounts(opts: WalletCallOptions = {}): Promise<WalletAccount[]> {
+export async function getAccounts(opts: WalletCallOptions): Promise<WalletAccount[]> {
   try {
     const body = await withRetry(
       () =>
         requestJson("wallet", `${baseUrl()}/accounts?limit=200`, accountsSchema, {
-          headers: headers(),
+          headers: headers(opts),
           signal: opts.signal,
         }),
       retryPolicy(opts),
@@ -158,6 +164,6 @@ export function reduceBalances(accounts: readonly WalletAccount[]): WalletBalanc
   return { ing, revolut, breakdown };
 }
 
-export async function getBalances(opts: WalletCallOptions = {}): Promise<WalletBalances> {
+export async function getBalances(opts: WalletCallOptions): Promise<WalletBalances> {
   return reduceBalances(await getAccounts(opts));
 }
