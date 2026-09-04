@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { IntegrationConnection } from "@/platform/integrations/types";
 import type { IntegrationDeps } from "./deps";
 import { enqueueSync } from "./enqueue-sync";
+import { SyncDisabledError } from "./errors";
 
 export interface WebhookOutcome {
   accepted: boolean;
@@ -110,20 +111,20 @@ export function handleWebhook(deps: IntegrationDeps) {
           runIds.push(run.id);
         }
       } catch (err) {
-        // `enqueueSync` throws `SyncDisabledError` when the connection's
-        // `sync_jobs` row for this kind has been switched off. That must not
-        // blow up the whole request (an uncaught throw here would roll back
-        // this transaction, discarding the delivery row below along with it,
-        // and surface as a 500 that a provider retries forever) — it is
-        // exactly the kind of verified-but-refused delivery this table exists
-        // to record.
+        // Only `SyncDisabledError` — the connection's `sync_jobs` row for
+        // this kind has been switched off — is a verified-but-refused
+        // delivery worth recording and answering with the flat rejection.
+        // Anything else (a DB error, a constraint violation) is a genuine
+        // infrastructure failure: it must surface as a 500 that alerts
+        // operators, not get silently filed away as a routine rejection.
+        if (!(err instanceof SyncDisabledError)) throw err;
         await d.deliveries.record({
           connectionId: matched.id,
           provider: code,
           event: requests[0]?.event ?? "unknown",
           payloadHash,
           status: "rejected",
-          error: `Could not queue sync: ${err instanceof Error ? err.message : String(err)}`,
+          error: `Could not queue sync: ${err.message}`,
           receivedAt,
         });
         return { accepted: false, connectionId: matched.id, runIds: [] };

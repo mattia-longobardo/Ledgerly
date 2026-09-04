@@ -232,4 +232,56 @@ describe("webhook route", () => {
     const deliveries = await withSystemContext(db, (tx) => tx.select().from(webhookDeliveries));
     expect(deliveries).toHaveLength(0);
   });
+
+  it("refuses an oversized body with no Content-Length header, abandoning the stream instead of buffering it fully", async () => {
+    const { app, db, userA } = await seed();
+    await app.request("/api/v1/integrations/wallet/connect", {
+      method: "POST",
+      headers: headers(userA.id),
+      body: JSON.stringify({ credentials: { token: "good", webhookSecret: "hook-secret" } }),
+    });
+
+    // A `ReadableStream` body, not a string: `fetch`'s `Request` cannot know
+    // the total length up front for a stream, so it sends no `Content-Length`
+    // at all (the real-world equivalent is `Transfer-Encoding: chunked`) —
+    // precisely the case a `Content-Length` pre-check cannot catch, and
+    // exactly what an attacker would use to defeat one.
+    //
+    // `pulls` counts how many chunks the server actually consumed. A body
+    // read via `c.req.text()` (buffer everything, then check) would drain
+    // every chunk before ever checking the size — i.e. `pulls` would reach
+    // `chunkCount`. A capped, incremental read abandons the stream as soon as
+    // the running total crosses 1 MB, which happens after 17 of these 64 KiB
+    // chunks (1088 KiB) — well before the 32 offered (2 MB total). Asserting
+    // `pulls < chunkCount` is what actually distinguishes the two
+    // implementations; asserting only the response status would pass against
+    // either.
+    const chunkSize = 64 * 1024;
+    const chunk = new TextEncoder().encode("a".repeat(chunkSize));
+    const chunkCount = 32; // 32 * 64 KiB = 2 MiB, comfortably over the 1 MB cap
+    let pulls = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        if (pulls > chunkCount) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+    });
+
+    const res = await app.request("/api/v1/webhooks/wallet", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-signature": `sha256=${"0".repeat(64)}` },
+      body: stream,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("not_found");
+    expect(pulls).toBeLessThan(chunkCount);
+
+    const deliveries = await withSystemContext(db, (tx) => tx.select().from(webhookDeliveries));
+    expect(deliveries).toHaveLength(0);
+  });
 });

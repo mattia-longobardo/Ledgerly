@@ -255,6 +255,45 @@ const syncRunsRoute = createRoute({
  */
 const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
 
+/** Distinguishes "read the whole thing, it fits" from "gave up, it doesn't" without a sentinel error. */
+type CappedRead = { ok: true; text: string } | { ok: false };
+
+/**
+ * Reads a request body up to `maxBytes`, abandoning the read as soon as more
+ * than that has arrived, rather than buffering the whole thing and checking
+ * afterwards.
+ *
+ * A `Content-Length` header is what a well-behaved client sends, but nothing
+ * requires a caller to send one — omitting it, or using
+ * `Transfer-Encoding: chunked`, is the obvious way to defeat a header-only
+ * check — so a pre-check against that header (kept in the route handler as a
+ * cheap fast path for the honest case) is necessary but not sufficient. This
+ * reads the underlying stream directly and stops pulling chunks the moment
+ * the cap is exceeded, so an oversized, uncapped-header body never sits fully
+ * buffered in memory even briefly.
+ */
+async function readBodyCapped(body: ReadableStream<Uint8Array> | null, maxBytes: number): Promise<CappedRead> {
+  if (!body) return { ok: true, text: "" };
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        return { ok: false };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return { ok: true, text: Buffer.concat(chunks).toString("utf8") };
+}
+
 const webhookRoute = createRoute({
   method: "post",
   path: "/webhooks/{provider}",
@@ -403,19 +442,15 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
     if (Number.isFinite(declaredLength) && declaredLength > MAX_WEBHOOK_BODY_BYTES) {
       throw new ApiError(404, "not_found", "No such webhook endpoint");
     }
-    // `c.req.text()`, not `c.req.raw.text()`: nothing here validates the body
-    // (see `webhookRoute` above), so the underlying stream is still open and
-    // either read works — but going through Hono's own request object is what
-    // keeps this safe if that ever changes, since Hono caches the body text
-    // the first time anything reads it and hands back the same raw bytes on a
-    // second read rather than re-consuming (or failing on) the stream.
-    const rawBody = await c.req.text();
-    // Belt and braces for a caller that lied about (or omitted)
-    // `Content-Length`: still refuse before `handleWebhook` hashes the body
-    // and opens a transaction over it.
-    if (Buffer.byteLength(rawBody, "utf8") > MAX_WEBHOOK_BODY_BYTES) {
-      throw new ApiError(404, "not_found", "No such webhook endpoint");
-    }
+    // Not `c.req.text()`: that buffers the whole body before anything can be
+    // checked, which is exactly the unbounded read the `Content-Length`
+    // pre-check above cannot force on its own — a caller can omit that header
+    // or send `Transfer-Encoding: chunked`. Reading the raw stream directly,
+    // capped, means an oversized body is abandoned mid-read rather than fully
+    // buffered first and measured after.
+    const read = await readBodyCapped(c.req.raw.body, MAX_WEBHOOK_BODY_BYTES);
+    if (!read.ok) throw new ApiError(404, "not_found", "No such webhook endpoint");
+    const rawBody = read.text;
     // No `withSystemContext` here: `handleWebhook` opens exactly the contexts
     // it needs (Global Constraints), and it enqueues rather than syncing, so
     // nothing a user owns is ever written under `app.role = 'system'`.
