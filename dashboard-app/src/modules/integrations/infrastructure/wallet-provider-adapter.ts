@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { getAccounts } from "@/lib/clients/wallet";
 import { errorMessage } from "@/lib/clients/http";
+import { romeDate } from "@/lib/time";
 import { hmacSignatureVerifier, webhookEventName } from "@/platform/integrations/webhook-signature";
 import type {
   DisconnectContext,
@@ -29,6 +30,13 @@ import {
   walletAccountsSource,
   WALLET_PROVIDER,
 } from "@/modules/accounts/infrastructure/wallet-adapter";
+import { expenseDeps } from "@/modules/expenses/infrastructure/deps";
+import { syncProviderTransactions } from "@/modules/expenses/application/sync-provider-transactions";
+import {
+  prefetchedWalletTransactionsSource,
+  walletTransactionsSource,
+} from "@/modules/expenses/infrastructure/wallet-transactions-adapter";
+import type { ProviderCategory, ProviderTransaction } from "@/modules/expenses/application/ports";
 
 const credentialSchema = z.object({
   token: z.string().min(1),
@@ -70,6 +78,50 @@ const accountsSync: SyncHandler<ProviderAccount[]> = {
     const deps = accountDeps(ctx.db);
     const source = prefetchedWalletSource(incoming);
     const result = await syncProviderAccounts({ ...deps, source })(ctx.connection.userId, incoming);
+    return { ...result };
+  },
+};
+
+interface TransactionsSyncPayload {
+  transactions: ProviderTransaction[];
+  categories: ProviderCategory[];
+  nextSinceDate: string;
+}
+
+const RECORDS_LOOKBACK_DAYS = 7;
+
+/** Re-fetches a short overlap before the last cursor to catch late edits; the sync is idempotent so overlap never duplicates anything. */
+function lookback(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Incremental, cursor-based, exactly like `accountsSync` splits where the
+ * network is: `fetch` makes the Wallet round trips (records + categories)
+ * with no transaction open, `apply` does the whole reconciliation inside one.
+ * The cursor is the Rome date this pass ran; the next pass re-requests from
+ * `RECORDS_LOOKBACK_DAYS` before that, so a record whose `updatedAt` moved
+ * after the fact is still picked up.
+ */
+const transactionsSync: SyncHandler<TransactionsSyncPayload> = {
+  schedule: "hourly",
+
+  async fetch(ctx: SyncFetchContext): Promise<TransactionsSyncPayload> {
+    const cursor = ctx.cursor as { sinceDate: string } | null;
+    const sinceDate = cursor ? lookback(cursor.sinceDate, RECORDS_LOOKBACK_DAYS) : null;
+    const source = walletTransactionsSource(ctx.credentials.token!);
+    const [transactions, categories] = await Promise.all([source.fetchTransactions(sinceDate), source.fetchCategories()]);
+    return { transactions, categories, nextSinceDate: romeDate(ctx.clock.now()) };
+  },
+
+  async apply(ctx: SyncApplyContext, payload: TransactionsSyncPayload): Promise<Record<string, number>> {
+    const expenses = expenseDeps(ctx.db);
+    const links = accountDeps(ctx.db).links;
+    const source = prefetchedWalletTransactionsSource(payload.transactions, payload.categories);
+    const result = await syncProviderTransactions({ ...expenses, links, source })(ctx.connection.userId, null);
+    ctx.setCursor({ sinceDate: payload.nextSinceDate });
     return { ...result };
   },
 };
@@ -153,7 +205,7 @@ export const walletProvider: IntegrationProvider = {
     { name: "webhookSecret", label: "Webhook secret", secret: true, placeholder: "Optional" },
   ],
   testConnection: (credentials) => testConnection(credentials),
-  syncs: { accounts: accountsSync },
+  syncs: { accounts: accountsSync, transactions: transactionsSync },
   webhook: {
     verify: hmacSignatureVerifier(),
     toSyncRequests: (payload): SyncRequest[] => [

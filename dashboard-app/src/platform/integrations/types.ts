@@ -21,7 +21,7 @@ export type IntegrationCapability =
 
 export type ConnectionStatus = "disconnected" | "connected" | "error" | "disabled";
 export type DisconnectPolicy = "keep" | "archive" | "purge";
-export type SyncKind = "accounts" | "leave";
+export type SyncKind = "accounts" | "leave" | "transactions";
 export type SyncTrigger = "cron" | "manual" | "webhook" | "api";
 
 /**
