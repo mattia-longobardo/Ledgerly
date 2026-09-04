@@ -122,7 +122,8 @@ export type JobName =
   | "monthly_close"
   | "wallet_accounts_sync"
   | "wallet_transactions_sync"
-  | "sync_queue";
+  | "sync_queue"
+  | "interest_accrual";
 
 export type JobStatus =
   | "running"
