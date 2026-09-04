@@ -49,10 +49,10 @@ beforeEach(() => {
 describe("postWalletInterestEntry", () => {
   it("posts against the resolved Wallet account id with the matched category, and a note built from the accrual's own figures", async () => {
     const result = await postWalletInterestEntry({ token: "t", walletAccountId: "w1", rule, accrual });
-    // Built from `accrual.gross`/`accrual.tax`/`accrual.net`, not the rule's
-    // current `annualRate`/`taxRate` — a rate edited after this accrual was
-    // computed must not relabel this posted amount with the wrong figure.
-    expect(result.note).toBe("auto-interest gross 0.06, tax 0.02, net 0.05 on 1000.00");
+    // Built from `accrual.net`, not the rule's current `annualRate`/`taxRate`
+    // — a rate edited after this accrual was computed must not relabel this
+    // posted amount with the wrong figure.
+    expect(result.note).toBe("auto-interest net 0.05 on 1000.00");
     expect(postRecordsMock).toHaveBeenCalledWith(
       { token: "t", attempts: 1 },
       [{ accountId: "w1", amount: 0.05, recordDate: "2026-09-05T00:00:00Z", note: result.note, categoryId: "c1" }],
@@ -62,7 +62,7 @@ describe("postWalletInterestEntry", () => {
   it("the note does not change when the rule's rate is edited after the accrual was computed", async () => {
     const editedRule = { ...rule, annualRate: "0.10", taxRate: "0.0" };
     const result = await postWalletInterestEntry({ token: "t", walletAccountId: "w1", rule: editedRule, accrual });
-    expect(result.note).toBe("auto-interest gross 0.06, tax 0.02, net 0.05 on 1000.00");
+    expect(result.note).toBe("auto-interest net 0.05 on 1000.00");
   });
 
   it("posts uncategorised, not failing, when the named category is not found", async () => {
