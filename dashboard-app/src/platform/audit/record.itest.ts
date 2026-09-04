@@ -11,8 +11,9 @@ describe("recordAudit", () => {
     const db = await testDb();
     // `audit_events` carries FORCE ROW LEVEL SECURITY since migration 0009.
     // Every real caller already runs inside a user or system context (see
-    // `accountDeps` and `wallet-accounts-sync.ts`); this null-actor write is
-    // system-attributed, so it belongs in a system context too.
+    // `accountDeps` and `wallet-accounts-sync.ts`); no current caller passes
+    // `actorUserId: null`, but a write with no actor at all would need system
+    // context, so this exercises that case too.
     await withSystemContext(db, (tx) =>
       recordAudit(tx, {
         actorUserId: null,

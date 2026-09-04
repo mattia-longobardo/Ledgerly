@@ -52,9 +52,20 @@ export function parseEncryptionKeys(raw: string): Map<string, Buffer> {
     if (keys.has(keyId)) {
       throw new CredentialCryptoError(`APP_ENCRYPTION_KEY repeats the key id ${keyId}`);
     }
-    const key = Buffer.from(entry.slice(separator + 1), "base64");
+    const value = entry.slice(separator + 1);
+    const key = Buffer.from(value, "base64");
     if (key.length !== 32) {
       throw new CredentialCryptoError(`APP_ENCRYPTION_KEY key ${keyId} is not 32 bytes once base64-decoded`);
+    }
+    // `Buffer.from(..., "base64")` is lenient — it silently drops characters
+    // outside the base64 alphabet (whitespace, a stray symbol) instead of
+    // failing, so a garbled key can still decode to a valid-looking 32 bytes.
+    // Re-encoding and comparing (padding stripped, since a value may omit
+    // the trailing `=`) is what catches that: a key that round-trips cleanly
+    // is unambiguous, and one that doesn't would otherwise fail silently
+    // later, as every credential sealed under it becoming undecryptable.
+    if (key.toString("base64").replace(/=+$/, "") !== value.replace(/=+$/, "")) {
+      throw new CredentialCryptoError(`APP_ENCRYPTION_KEY key ${keyId} is not valid base64`);
     }
     keys.set(keyId, key);
   }
@@ -113,6 +124,16 @@ export function createCredentialCipher(raw: string): CredentialCipher {
       }
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
         throw new CredentialCryptoError("Credential blob did not contain an object");
+      }
+      // The check above proves only that `parsed` is a non-null, non-array
+      // object — not that every value in it is a string. Without this, a
+      // blob holding a nested object (or a number, a boolean) for one of its
+      // fields would be handed back cast to `Record<string, string>` while
+      // actually holding something else. The message names no field value:
+      // this is decrypted credential material, and a message built from it
+      // would risk leaking plaintext to whatever catches this error.
+      if (Object.values(parsed).some((v) => typeof v !== "string")) {
+        throw new CredentialCryptoError("Credential blob contained a non-string field");
       }
       return parsed as Record<string, string>;
     },

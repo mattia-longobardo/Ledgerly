@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 import { env, resetEnvCache } from "./env";
 
 // `env()` validates the whole schema, so every required variable has to be present.
@@ -15,7 +16,7 @@ Object.assign(process.env, {
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
-  APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+  APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
 });
 resetEnvCache();
 

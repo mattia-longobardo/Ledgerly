@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpstreamError } from "@/lib/contracts";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 import { getAccounts, getBalances, reduceBalances } from "./wallet";
 
 process.env.DATABASE_URL = "postgres://dashboard@localhost/dashboard";
@@ -13,7 +14,7 @@ process.env.PAPERLESS_URL = "https://paperless.example.test";
 process.env.PAPERLESS_TOKEN = "paperless-token";
 process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
-process.env.APP_ENCRYPTION_KEY = `unit:${Buffer.alloc(32, 9).toString("base64")}`;
+process.env.APP_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
 process.env.WALLET_API_URL = "https://wallet.example.test/wallet/v1/api";
 
 const fetchMock = vi.fn();
