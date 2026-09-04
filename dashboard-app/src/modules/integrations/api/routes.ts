@@ -268,12 +268,20 @@ const webhookRoute = createRoute({
   },
 });
 
-/** 1–200, default 20; anything else is a 422 rather than a silent clamp. */
+/**
+ * 1-10, default 10; anything else is a 422 rather than a silent clamp.
+ *
+ * The ceiling matches what `listIntegrations` can actually deliver — its
+ * `recentRuns` is capped at 10 per connection — so the route never advertises
+ * a page size it cannot honour. A caller that needs more than the last 10 runs
+ * is not something this route promises; a genuinely paginated runs endpoint is
+ * a later phase's concern.
+ */
 function parseLimit(raw: string | undefined): number {
-  if (raw === undefined) return 20;
+  if (raw === undefined) return 10;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1 || n > 200) {
-    throw new ApiError(422, "validation_failed", "limit must be an integer between 1 and 200");
+  if (!Number.isInteger(n) || n < 1 || n > 10) {
+    throw new ApiError(422, "validation_failed", "limit must be an integer between 1 and 10");
   }
   return n;
 }

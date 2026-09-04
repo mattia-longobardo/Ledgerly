@@ -53,7 +53,12 @@ export const SyncRunSchema = z.object({
 export const SyncRunsPageSchema = z.object({ items: z.array(SyncRunSchema) });
 export const SyncResponseSchema = z.object({ run: SyncRunSchema });
 export const SyncRunsQuerySchema = z.object({
-  limit: z.string().optional().openapi({ param: { name: "limit", in: "query" }, example: "20" }),
+  /** 1-10, default 10 — `listIntegrations` never surfaces more than 10 recent runs per connection. */
+  limit: z.string().optional().openapi({
+    param: { name: "limit", in: "query" },
+    description: "1-10, default 10.",
+    example: "10",
+  }),
 });
 
 export const TestResultSchema = z.object({ ok: z.boolean(), message: z.string() });

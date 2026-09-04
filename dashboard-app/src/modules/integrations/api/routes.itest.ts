@@ -176,4 +176,31 @@ describe("integration routes", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error.code).toBe("conflict");
   });
+
+  it("accepts a sync-runs limit of 1-10, defaults to 10, and rejects anything else with 422", async () => {
+    const { app, userA } = await seed();
+    const h = headers(userA.id);
+
+    const defaulted = await app.request("/api/v1/integrations/wallet/sync-runs", { headers: h });
+    expect(defaulted.status).toBe(200);
+    expect(SyncRunsPageSchema.parse(await defaulted.json())).toBeTruthy();
+
+    const lowerBound = await app.request("/api/v1/integrations/wallet/sync-runs?limit=1", { headers: h });
+    expect(lowerBound.status).toBe(200);
+
+    const upperBound = await app.request("/api/v1/integrations/wallet/sync-runs?limit=10", { headers: h });
+    expect(upperBound.status).toBe(200);
+
+    const tooHigh = await app.request("/api/v1/integrations/wallet/sync-runs?limit=11", { headers: h });
+    expect(tooHigh.status).toBe(422);
+    expect((await tooHigh.json()).error.code).toBe("validation_failed");
+
+    const tooLow = await app.request("/api/v1/integrations/wallet/sync-runs?limit=0", { headers: h });
+    expect(tooLow.status).toBe(422);
+    expect((await tooLow.json()).error.code).toBe("validation_failed");
+
+    const notAnInteger = await app.request("/api/v1/integrations/wallet/sync-runs?limit=abc", { headers: h });
+    expect(notAnInteger.status).toBe(422);
+    expect((await notAnInteger.json()).error.code).toBe("validation_failed");
+  });
 });
