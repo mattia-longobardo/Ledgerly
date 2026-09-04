@@ -90,7 +90,14 @@ interface TransactionsSyncPayload {
 
 const RECORDS_LOOKBACK_DAYS = 7;
 
-/** Re-fetches a short overlap before the last cursor to catch late edits; the sync is idempotent so overlap never duplicates anything. */
+/**
+ * `getRecords`'s `sinceDate` filters on `recordDate`, not `updatedAt` — so
+ * re-fetching a short overlap before the last cursor only recovers a record
+ * that was edited late but is still *dated* inside the re-fetched window; a
+ * genuinely old record edited today is not caught by this and needs a manual
+ * resync. The sync is idempotent, so the overlap never duplicates anything it
+ * re-fetches.
+ */
 function lookback(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() - days);
@@ -102,8 +109,16 @@ function lookback(dateStr: string, days: number): string {
  * network is: `fetch` makes the Wallet round trips (records + categories)
  * with no transaction open, `apply` does the whole reconciliation inside one.
  * The cursor is the Rome date this pass ran; the next pass re-requests from
- * `RECORDS_LOOKBACK_DAYS` before that, so a record whose `updatedAt` moved
- * after the fact is still picked up.
+ * `RECORDS_LOOKBACK_DAYS` before that (see `lookback`'s own caveat on what
+ * that overlap does and does not catch).
+ *
+ * First run (no cursor yet): `sinceDate` is `null`, so `getRecords` omits the
+ * filter entirely and the Wallet API applies its own default window —
+ * documented as roughly three months (`GetRecordsOptions.sinceDate` in
+ * `@/lib/clients/wallet`). The cursor then jumps straight to today, so a
+ * transaction older than that initial window is never imported by any later
+ * run of this handler. That is a deliberate scope decision for this phase,
+ * not an oversight — a full historical backfill is out of scope here.
  */
 const transactionsSync: SyncHandler<TransactionsSyncPayload> = {
   schedule: "hourly",
