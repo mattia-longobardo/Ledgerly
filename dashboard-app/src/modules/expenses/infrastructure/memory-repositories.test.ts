@@ -54,6 +54,18 @@ describe("MemoryTransactionsRepository", () => {
     const created = await repo.create(tx());
     const result = await repo.update("u1", created.id, created.version + 1, { note: "x" });
     expect(result).toBe("version_mismatch");
+    const stored = await repo.get("u1", created.id);
+    expect(stored?.note).toBeNull();
+    expect(stored?.version).toBe(created.version);
+  });
+
+  it("tie-breaks equal occurredAt by insertion order (newest created first), matching time-ordered uuidv7 ids", async () => {
+    const repo = new MemoryTransactionsRepository();
+    const sameDay = new Date("2026-09-01T00:00:00Z");
+    const first = await repo.create(tx({ occurredAt: sameDay }));
+    const second = await repo.create(tx({ occurredAt: sameDay }));
+    const page = await repo.list("u1", {});
+    expect(page.items.map((t) => t.id)).toEqual([second.id, first.id]);
   });
 
   it("setLabels and labelsFor round-trip", async () => {
@@ -84,7 +96,11 @@ describe("MemoryRecurringPatternsRepository", () => {
     await repo.replaceAll("u1", [
       { payee: "Netflix", cadence: "monthly", amountLow: "-15.99", amountHigh: "-15.99", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 4 },
     ]);
+    await repo.replaceAll("u2", [
+      { payee: "Spotify", cadence: "monthly", amountLow: "-9.99", amountHigh: "-9.99", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 4 },
+    ]);
     await repo.replaceAll("u1", []);
     expect(await repo.list("u1")).toEqual([]);
+    expect((await repo.list("u2")).map((p) => p.payee)).toEqual(["Spotify"]);
   });
 });

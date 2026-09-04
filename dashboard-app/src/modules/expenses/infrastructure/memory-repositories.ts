@@ -14,8 +14,23 @@ import type {
   LabelsRepository,
 } from "../application/ports";
 
-function randomId(): string {
-  return crypto.randomUUID();
+/**
+ * Production ids default to `uuidv7()`, which is time-ordered, and
+ * `list()`/`listAll()` tie-break equal `occurredAt` values on `desc(id)`. A
+ * fake that generated ids with `crypto.randomUUID()` (v4, random) would make
+ * that tie-break effectively random instead of chronological — untestable
+ * divergence from production for same-day imports, which are ordinary, not
+ * hypothetical. This generator is not a real UUIDv7, only order-compatible
+ * with one: a millisecond timestamp prefix (ties broken across calls in the
+ * same millisecond by a monotonic sequence) so ids created later always sort
+ * greater than ids created earlier, matching uuidv7's time-ordering.
+ */
+let sequence = 0;
+function monotonicId(): string {
+  sequence += 1;
+  const timestamp = Date.now().toString(16).padStart(12, "0");
+  const seq = sequence.toString(16).padStart(8, "0");
+  return `${timestamp}-${seq}`;
 }
 
 /** In-memory stand-in for the Drizzle-backed repository, used by unit tests. */
@@ -53,7 +68,7 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
 
   async create(input: NewTransaction): Promise<Transaction> {
     const now = new Date();
-    const row: Transaction = { ...input, id: randomId(), version: 1, createdAt: now, updatedAt: now };
+    const row: Transaction = { ...input, id: monotonicId(), version: 1, createdAt: now, updatedAt: now };
     this.rows.push(row);
     return row;
   }
@@ -109,7 +124,7 @@ export class MemoryCategoriesRepository implements CategoriesRepository {
 
   async create(input: NewCategory): Promise<TransactionCategory> {
     const now = new Date();
-    const row: TransactionCategory = { ...input, id: randomId(), createdAt: now, updatedAt: now };
+    const row: TransactionCategory = { ...input, id: monotonicId(), createdAt: now, updatedAt: now };
     this.rows.push(row);
     return row;
   }
@@ -128,7 +143,7 @@ export class MemoryLabelsRepository implements LabelsRepository {
 
   async create(input: NewLabel): Promise<TransactionLabel> {
     const now = new Date();
-    const row: TransactionLabel = { ...input, id: randomId(), createdAt: now, updatedAt: now };
+    const row: TransactionLabel = { ...input, id: monotonicId(), createdAt: now, updatedAt: now };
     this.rows.push(row);
     return row;
   }
@@ -144,7 +159,7 @@ export class MemoryRecurringPatternsRepository implements RecurringPatternsRepos
   async replaceAll(userId: string, patterns: readonly DetectedPattern[]): Promise<void> {
     this.rows = this.rows.filter((r) => r.userId !== userId);
     for (const p of patterns) {
-      this.rows.push({ ...p, id: randomId(), userId });
+      this.rows.push({ ...p, id: monotonicId(), userId });
     }
   }
 }
