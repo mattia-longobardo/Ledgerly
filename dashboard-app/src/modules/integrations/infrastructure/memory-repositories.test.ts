@@ -38,6 +38,48 @@ describe("memory connections repository", () => {
     expect(await repo.update(USER, created.id, 1, { disconnectPolicy: "purge" })).toBe("version_mismatch");
   });
 
+  it("lists a user's connections sorted by provider, matching the Drizzle repository's order", async () => {
+    const repo = new MemoryConnectionsRepository();
+    await repo.create({ userId: USER, provider: "wallet", status: "connected", settings: {}, disconnectPolicy: "keep" });
+    await repo.create({ userId: USER, provider: "trek", status: "connected", settings: {}, disconnectPolicy: "keep" });
+
+    // Inserted wallet-then-trek, but list() must come back alphabetical
+    // ("trek" before "wallet") — the same order the Drizzle repository
+    // produces — so a unit test against this fake cannot pass on an order
+    // the real database would never return.
+    expect((await repo.list(USER)).map((c) => c.provider)).toEqual(["trek", "wallet"]);
+  });
+
+  it("excludes a non-connected connection from webhook candidates, per its port contract", async () => {
+    const repo = new MemoryConnectionsRepository();
+    const connected = await repo.create({
+      userId: USER,
+      provider: "wallet",
+      status: "connected",
+      settings: {},
+      disconnectPolicy: "keep",
+    });
+    await repo.create({
+      userId: OTHER,
+      provider: "wallet",
+      status: "error",
+      settings: {},
+      disconnectPolicy: "keep",
+    });
+    await repo.create({
+      userId: OTHER,
+      provider: "trek",
+      status: "connected",
+      settings: {},
+      disconnectPolicy: "keep",
+    });
+
+    // Only the connected "wallet" connection qualifies: the errored "wallet"
+    // connection must not look like a valid webhook target, and the
+    // connected "trek" connection is the wrong provider.
+    expect((await repo.candidatesForWebhook("wallet")).map((c) => c.id)).toEqual([connected.id]);
+  });
+
   it("round-trips credentials and clears them on null", async () => {
     const repo = new MemoryConnectionsRepository();
     const cipher = memoryCipher();

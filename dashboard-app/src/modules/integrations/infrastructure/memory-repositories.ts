@@ -34,7 +34,10 @@ export class MemoryConnectionsRepository implements ConnectionsRepository {
   }
 
   async list(userId: string): Promise<IntegrationConnection[]> {
-    return this.rows.filter((r) => r.connection.userId === userId).map((r) => r.connection);
+    return this.rows
+      .filter((r) => r.connection.userId === userId)
+      .map((r) => r.connection)
+      .sort((a, b) => a.provider.localeCompare(b.provider));
   }
 
   async get(userId: string, id: string): Promise<IntegrationConnection | null> {
@@ -109,7 +112,9 @@ export class MemoryConnectionsRepository implements ConnectionsRepository {
   }
 
   async candidatesForWebhook(provider: ProviderCode): Promise<IntegrationConnection[]> {
-    return this.rows.filter((r) => r.connection.provider === provider).map((r) => r.connection);
+    return this.rows
+      .filter((r) => r.connection.provider === provider && r.connection.status === "connected")
+      .map((r) => r.connection);
   }
 }
 
