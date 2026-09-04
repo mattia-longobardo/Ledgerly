@@ -41,14 +41,6 @@ export default async function FundsPage() {
           <EmptyState
             title="No funds registered"
             description="Fideuram and Fondo Cometa are seeded by the database migration. If this is empty, the migration has not run yet."
-            action={
-              <Link
-                href="/settings"
-                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
-              >
-                Open settings
-              </Link>
-            }
           />
         </div>
       ) : (

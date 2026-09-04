@@ -271,7 +271,10 @@ function AccountsSyncCard({ sources }: { sources: readonly SourceFreshness[] }) 
       spanMd={4}
       title="Accounts sync"
       action={
-        <Link href="/settings" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+        <Link
+          href="/settings/integrations/wallet"
+          className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover"
+        >
           Settings
         </Link>
       }
