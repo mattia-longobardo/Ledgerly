@@ -96,16 +96,33 @@ within a few days of ACT/365 accrual — it is not worth trying to seed.
    Any one of these failing for a given day means that day is accrued but
    not posted — visible on the rule's detail page, never silently treated as
    `post_to_provider` having taken effect.
-   The posted record uses the same note-marker convention
-   (`auto-interest` by default, configurable per rule via `noteMarker`) so it
-   looks the same in the Wallet app as a record the container would have
-   posted. One visible difference: the container posts `recordDate` as the
-   exact moment it ran (e.g. `2026-09-05T05:00:03Z`, whatever `RUN_AT_UTC`
-   plus a few seconds of runtime happens to be); the dashboard posts midnight
-   UTC of the accrual date (`2026-09-05T00:00:00Z`). Both land on the same
-   calendar day in the Wallet app, but if you're comparing timestamps rather
-   than dates, expect this shift the day posting cuts over — it is not a
-   sign anything is wrong.
+
+   **The flip is not retroactive.** The dashboard only ever posts the
+   accrual it computes on the day its own daily job runs — it never looks
+   back and posts the days accrued during step 2's parallel run while the
+   rule was still `analyze_only`. Those days stay in the ledger as
+   computed-but-unposted (visible on the rule's detail page); they are not
+   posted automatically, on the flip or ever, and the container is already
+   stopped by step 3 so nothing else posts them either. If you want that
+   backlog posted to Wallet too, that is a manual step outside this
+   procedure — this is a deliberate scope boundary, not an oversight: a rule
+   that could tell "accrued while analyze_only" apart from "accrued after
+   the flip" would need to record *when* posting was turned on, which
+   nothing in this phase's schema does.
+
+   The posted record's note starts with the same marker
+   (`auto-interest` by default, configurable per rule via `noteMarker`), but
+   the rest of the note's text is not identical to the container's: the
+   dashboard states the accrual's own gross/tax/net figures rather than an
+   annual-rate percentage, so a rate edited on the rule after an accrual was
+   computed never mislabels an already-posted amount. Two other visible
+   differences: the container posts `recordDate` as the exact moment it ran
+   (e.g. `2026-09-05T05:00:03Z`, whatever `RUN_AT_UTC` plus a few seconds of
+   runtime happens to be); the dashboard posts midnight UTC of the accrual
+   date (`2026-09-05T00:00:00Z`). Both land on the same calendar day in the
+   Wallet app, but if you're comparing timestamps rather than dates, expect
+   this shift the day posting cuts over — it is not a sign anything is
+   wrong.
 5. **Monitor for a few more days.** `Finance › Interests › Rules › [id]`
    shows each day's accrual and whether it posted; `job_runs` (Settings ›
    Administration) shows the `interest_accrual` job's own history, including
@@ -124,11 +141,13 @@ within a few days of ACT/365 accrual — it is not worth trying to seed.
 
 Flip the rule back to `postingMode: "analyze_only"` and restart the
 `wallet-manager` container (`docker compose -f ".../Wallet Manager/docker-compose.yml" start wallet-manager`).
-Step 3 stops the container before step 4 enables posting, and the two are
-never both posting at once, so there is no double-posted day to reconcile
-away — restarting the container simply resumes posting from the next day the
-container's own `RUN_AT_UTC` schedule fires, using its own `state.json` carry,
-which was never touched while it was stopped.
+Step 3 stops the container before step 4 enables posting, the two are never
+both posting at once, and the dashboard only ever posts the single day its
+own daily job computes on the day it runs — it never sweeps or back-posts a
+range of days. So there is no double-posted day to reconcile away:
+restarting the container simply resumes posting from the next day the
+container's own `RUN_AT_UTC` schedule fires, using its own `state.json`
+carry, which was never touched while it was stopped.
 
 ## What a crash leaves behind, and why this procedure avoids relying on it
 
