@@ -1,8 +1,9 @@
-# Architecture overview — Phase 0 + Phase 1
+# Architecture overview — Phase 0 + Phase 1 + Phase 2
 
 This describes what `dashboard-app` actually is after Phase 0 (platform
-foundations) and Phase 1 (accounts, Teable retirement). It follows the target
-shape from
+foundations), Phase 1 (accounts, Teable retirement), and Phase 2 (the
+integration framework, encrypted credentials, inbound webhooks). It follows
+the target shape from
 [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](../superpowers/specs/2026-09-02-finance-company-platform-design.md)
 §3; read that document for the rationale, this one for what is on disk today.
 
@@ -17,6 +18,12 @@ src/
     api/               Hono routes (routes.ts) + Zod schemas (schemas.ts)
     ui/                 server-component loaders (load-overview.ts), client components
   modules/home/         Home page card composition (cards.ts)
+  modules/integrations/
+    domain/             connection status machine, describeDisconnectPolicy — no IO
+    application/         connect/test/sync/disconnect use cases, drain-sync-queue, deps.ts (IntegrationDeps)
+    infrastructure/       Drizzle repositories, wallet-provider-adapter.ts, trek-provider-adapter.ts
+    api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
+    ui/                     Settings › Integrations loaders and components
   platform/
     auth/               Principal, permission catalogue, resolvePrincipal, require-principal
     capabilities/       resolveCapabilities, buildNavigation, the production probes
@@ -24,9 +31,11 @@ src/
     http/               createApiApp, ApiError, idempotency, rate limiting, versioning
     jobs/               job registry, tick dispatch
     audit/               recordAudit
+    integrations/         the IntegrationProvider contract (types.ts), the provider registry,
+                            credential encryption (crypto.ts), shared HMAC webhook verification
   lib/                  everything not yet migrated into a module: db client/schema/migrate,
-                          env, jobs (sweep, trek-sync, wallet-refresh, monthly-close, wallet-accounts-sync),
-                          payroll parsing, calc (money/net-worth/cometa), clients (wallet, trek, paperless)
+                          env, jobs (sweep, trek-sync, wallet-refresh, monthly-close, wallet-accounts-sync,
+                          sync-queue), payroll parsing, calc (money/net-worth/cometa), clients (wallet, trek, paperless)
   app/                   Next.js routes only — thin, call use cases and render ui/
 ```
 
@@ -177,6 +186,45 @@ role (`owner`, `admin`, `member`, `viewer`). `assertPermission(principal,
 permission)` throws `PermissionDeniedError`, caught by `app.onError` and
 turned into `403 permission_denied`.
 
+## Integration framework
+
+Full guide: [`docs/integrations/README.md`](../integrations/README.md).
+
+`src/platform/integrations/types.ts` defines the provider-neutral
+`IntegrationProvider` contract; `wallet-provider-adapter.ts` and
+`trek-provider-adapter.ts` (`src/modules/integrations/infrastructure/`) are
+the only two files that implement it, and the only two allowed to name a
+Wallet or Trek field. Everything upstream — the use cases in
+`src/modules/integrations/application/`, the Drizzle repositories, and the
+REST routes — speaks only `ProviderCode` and `SyncKind`.
+
+A connection's credential is encrypted under `APP_ENCRYPTION_KEY`
+(`src/platform/integrations/crypto.ts`) and stored in
+`integration_connections.credentials_ciphertext`; it is never returned by
+an API response, logged, or written into an audit `before`/`after` payload.
+
+**The sync engine (`run-sync.ts`) is the single place a sync run is
+recorded**, whether it was triggered by a cron tick, a manual "Sync now",
+the REST API, or a webhook-queued row drained by `drain-sync-queue.ts`. Every
+one of those paths ends up calling `runSyncForUser`/`resumeQueuedSync`, so
+there is exactly one code path that opens the provider round trip, writes the
+`sync_runs` row, advances a cursor on success, and updates the connection's
+`status`/`lastSyncAt`/`lastError` — a job wrapper such as
+`wallet-accounts-sync.ts` owns nothing but its own `job_runs` bookkeeping and
+advisory lock around that call.
+
+**Why a webhook does not sync immediately.** `POST
+/api/v1/webhooks/{provider}` (`handle-webhook.ts`) verifies the signature
+against each connected candidate's own secret, then — in the same system
+context — records one `webhook_deliveries` row regardless of outcome and, on
+success, enqueues a `queued` `sync_runs` row per requested sync (`enqueue-
+sync.ts`) and returns `202`. Nothing runs the sync inline: a webhook request
+has no principal and must not write a user's domain data under `app.role =
+'system'`. The hourly `sync_queue` job (`drain-sync-queue.ts`) is what
+actually drains those `queued` rows, one connection-owner user context at a
+time, so a webhook's effect only lands on the database at the next hourly
+tick — never in the same request that received it.
+
 ## Capability-driven navigation and Home
 
 `src/platform/capabilities/resolve.ts` (`resolveCapabilities`) is a pure
@@ -192,14 +240,19 @@ two separate questions per the module's own doc comment:
   state instead of a wall of zeros.
 
 `src/platform/capabilities/probes.ts` (`realProbes`) is the production
-wiring — file reads for token presence, `COUNT(*)` queries for data — kept
-apart from `resolve.ts` precisely so the resolver stays free of IO for its
-own tests. Both data probes take the principal's `userId`: `accounts` carries
-`FORCE ROW LEVEL SECURITY`, so `hasAccounts` counts inside
-`withUserContext` — the same count on the bare pool sees no rows at all and
-would answer "no accounts" for everybody. `hasPayrollRecords` still counts
-`payslips` directly; that table has no RLS until payroll becomes a module
-(Phase 4).
+wiring, kept apart from `resolve.ts` precisely so the resolver stays free of
+IO for its own tests. There used to be a `walletConfigured()`/`trekConfigured()`
+pair here that answered "is there a token file" — both are gone. In their
+place, `connectionProbes(db)`'s `connectionStates(userId)` reads each
+provider's row straight out of `integration_connections` (inside that user's
+own `withUserContext`, since the table carries RLS) and maps its `status` to
+an `IntegrationState`: "is it wired up" is now a question about a stored
+connection, not a mounted file. The two data probes (`hasAccounts`,
+`hasPayrollRecords`) are unchanged: `accounts` carries `FORCE ROW LEVEL
+SECURITY`, so `hasAccounts` counts inside `withUserContext` — the same count
+on the bare pool sees no rows at all and would answer "no accounts" for
+everybody. `hasPayrollRecords` still counts `payslips` directly; that table
+has no RLS until payroll becomes a module (Phase 4).
 
 `src/platform/capabilities/navigation.ts` (`buildNavigation`) and
 `src/modules/home/cards.ts` are both pure functions of the resulting
@@ -212,14 +265,17 @@ HTTP, per the use-case rule above.
 
 ## What's deferred to later phases
 
-Per the spec's phased plan (§11), Phase 1 explicitly does not include:
+Per the spec's phased plan (§11), Phase 2 explicitly does not include:
 
 - Personal access tokens for the API (Phase 8) — session cookie is the only
   auth today.
-- Outbound webhooks (Phase 9).
-- `integration_connections` with encrypted, UI-managed credentials (Phase 2)
-  — Phase 1 still reads the Wallet token from a mounted file
-  (`WALLET_TOKEN_FILE`).
+- Outbound webhooks (Phase 9). Replay protection, retention, and rate
+  limiting for the *inbound* webhook endpoint are also carried to Phase 9.
+- Per-user sync schedules. `sync_jobs` rows exist, carry a `schedule` tier
+  and a `cursor`, and can switch a kind off — but the cron tiers
+  (`src/platform/jobs/register-all.ts`) still dispatch `wallet_accounts_sync`
+  and `trek_sync` for the connection owner only; there is no per-user
+  dispatch of the tiers themselves yet.
 - Budgets, Expenses, Interests, and Management beyond the placeholder
   navigation entries `buildNavigation` already renders (Budgets
   unconditionally, Expenses/Interests once Wallet is connected, Management
@@ -231,23 +287,8 @@ Per the spec's phased plan (§11), Phase 1 explicitly does not include:
 ## Known deviations
 
 Places where what is on disk knowingly departs from the target shape, with the
-phase that closes each:
-
-- **No RLS on `audit_events`, `idempotency_keys` and `rate_limit_windows`**
-  (Phase 2). Every other user-scoped table has `FORCE ROW LEVEL SECURITY`;
-  these three do not. They are written by middleware and by the audit sink,
-  which run *outside* any `withUserContext` transaction — the rate limiter
-  counts before a route handler opens one, the idempotency middleware reads and
-  writes around the handler, and `recordAudit` is called with the request's own
-  connection. A policy of the usual shape would make all three invisible to
-  themselves. Rows are still scoped by an explicit `principal_id`/actor column
-  in every query, so the exposure is an in-process one, not a cross-user API
-  read. The policies arrive with the per-user connection work in Phase 2, which
-  gives these paths a user context to run in.
-- **Wallet sync is owner-only** rather than permission-only.
-  `integrations.manage` is granted to `admin` and `member` too, but a sync rewrites the whole
-  household account graph, and until Phase 2 gives an integration connection
-  its own owner there is no per-user connection to scope it to. Enforced in one
-  place, `assertWalletSyncAllowed`
-  (`src/modules/accounts/application/sync-provider-accounts.ts`), shared by the
-  API route and the Server Action.
+phase that closes each. Phase 2 closed the two deviations Phase 1 recorded
+here (RLS now covers `audit_events`, `idempotency_keys` and
+`rate_limit_windows`, per migration `0009`; the Wallet sync is no longer
+owner-only, since a connection now has an owner of its own) — none remain
+open at the close of this phase.

@@ -80,7 +80,7 @@ Every error response has the same shape:
 | `precondition_required` | 428 | a write that needs a version sent none (no `If-Match`, no body `version`) |
 | `idempotency_key_reused` | 422 | same `Idempotency-Key` sent with a different request body |
 | `rate_limited` | 429 | over the per-minute limit |
-| `integration_unavailable` | 503 | e.g. Wallet sync called with no token configured |
+| `integration_unavailable` | 503 | the provider itself failed or was unreachable during connect/test/sync (an `UpstreamError`) — not the same as "not connected", which is a `409 conflict` |
 | `internal` | 500 | unhandled — logged server-side with `requestId`, nothing else leaks |
 
 `requestId` is also echoed on the response as the `x-request-id` header
@@ -141,6 +141,47 @@ re-`GET`, look at the fresh `version`, and retry.
 The whole surface is namespaced `/api/v1` — a breaking change gets `/api/v2`
 alongside it, not an in-place change. There is no per-route version header.
 
+## Integrations
+
+Full narrative guide: [`docs/integrations/README.md`](../integrations/README.md).
+
+`POST /integrations/{provider}/connect`'s request body carries a
+write-only `credentials` object — the exact fields depend on the provider
+(`GET /integrations` lists each one's `credentialFields`). It is never
+echoed back: no response schema in this API has a `credentials` field at
+all, so there is nothing to accidentally leave populated later.
+
+`POST /integrations/{provider}/sync` answers `{ "run": SyncRun }` and is
+**idempotent per running job**: a second call while a sync for that
+`(connection, kind)` is already in flight returns the run already in
+progress rather than starting a second one against the same provider.
+
+`POST /webhooks/{provider}` is the one unauthenticated route under
+`/api/v1` — no session cookie, and therefore no `X-Requested-With` either.
+It verifies `X-Signature: sha256=<hex>` (HMAC-SHA256 over the raw body)
+against the receiving connection's own `webhookSecret` instead. Any failure
+— bad signature, unknown provider, unreadable body, or a sync it would
+queue being switched off — answers a flat `404`, the same for every cause,
+so the endpoint never confirms what does or doesn't exist. A successful
+call answers `202` and queues the work; it does not run the sync inline
+(see `docs/integrations/README.md` §6).
+
+### Breaking changes in Phase 2
+
+`POST /api/v1/integrations/wallet/sync` **keeps its path**, but:
+
+- It now answers `{ "run": SyncRun }` instead of the Phase-1 result shape —
+  the counts that used to be the top-level response body are now under
+  `run.stats`.
+- It no longer requires the `owner` role. The only permission it checks is
+  `integrations.manage` — a connection has its own owner now, so the
+  Phase-1 restriction (a sync rewrites the whole household account graph,
+  and there was no per-connection owner to scope it to) no longer applies.
+- A `sync_runs` row returned from this or any integrations route can be
+  `status: "queued"` — a run a webhook created before anything executed it.
+  A caller that only expected `running`/`success`/`failed` should treat
+  `queued` as "accepted, not yet started," not as an error shape.
+
 ## Regenerating `openapi.json`
 
 The document is generated from the same `createRoute`/Zod schemas the route
@@ -157,14 +198,15 @@ npm test                   # openapi-drift.test.ts should now pass
 
 Run this after adding or changing a route, before committing.
 
-## Endpoints (Phase 1)
+## Endpoints (Phase 1 + Phase 2)
 
-All under `/api/v1`, all requiring a session. Every route also requires a
-permission, enforced inside the use case it calls (reads need
-`accounts.read`, writes need `accounts.write`, deletes need
-`accounts.delete`, the Wallet sync needs `integrations.manage` *and* the
-`owner` role) — see
-`src/platform/auth/permissions.ts` for the full grant per role:
+All under `/api/v1`. Every route requires a session *except* the inbound
+webhook, which authenticates itself by HMAC instead (see **Integrations**
+below). Every session route also requires a permission, enforced inside the
+use case it calls (reads need `accounts.read`, writes need
+`accounts.write`, deletes need `accounts.delete`, every integrations route
+needs `integrations.manage`) — see `src/platform/auth/permissions.ts` for
+the full grant per role:
 
 | Method | Path | Notes |
 |---|---|---|
@@ -179,8 +221,14 @@ permission, enforced inside the use case it calls (reads need
 | `POST` | `/account-groups` | |
 | `PATCH` | `/account-groups/{id}` | |
 | `DELETE` | `/account-groups/{id}` | accounts in the group become ungrouped, not deleted |
-| `POST` | `/integrations/wallet/sync` | owner only (`integrations.manage` **and** the `owner` role); `503 integration_unavailable` if no Wallet token is configured |
 | `GET` | `/net-worth` | `?months=` — total and per-account monthly series |
+| `GET` | `/integrations` | every registered provider, with its connection when there is one |
+| `POST` | `/integrations/{provider}/connect` | stores and tests a credential; a failed test is still `200` |
+| `POST` | `/integrations/{provider}/test` | re-tests the stored credential |
+| `POST` | `/integrations/{provider}/sync` | see **Breaking changes in Phase 2** below |
+| `POST` | `/integrations/{provider}/disconnect` | destroys the credential and applies a disconnect policy |
+| `GET` | `/integrations/{provider}/sync-runs` | `?limit=` (1–10, default 10) — most recent first |
+| `POST` | `/webhooks/{provider}` | **not** session-authenticated — see **Integrations** below |
 
 See [`openapi.json`](./openapi.json) for the full request/response schemas,
 or serve it with any Swagger UI / Redoc instance pointed at
