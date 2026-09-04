@@ -69,24 +69,74 @@ describe("syncProviderTransactions", () => {
     const first = await run("user-1", null);
     expect(first).toMatchObject({ transactionsCreated: 1, categoriesCreated: 1, labelsCreated: 1, skippedNoAccount: 0 });
 
+    const afterFirst = await deps.transactions.listAll("user-1");
+    expect(afterFirst).toHaveLength(1);
+    const { version: versionAfterFirst, updatedAt: updatedAtAfterFirst } = afterFirst[0]!;
+
     const second = await run("user-1", null);
+    // The weaker check: nothing new is created.
     expect(second.transactionsCreated).toBe(0);
+    // The load-bearing check: nothing is even patched. `getRecords`'s cursor
+    // deliberately re-fetches an overlapping window on every run, so a second
+    // pass over an unchanged record must be a complete no-op on that row — not
+    // merely "no new row" — or `version`/`updatedAt` would churn forever on
+    // every re-fetch of the same data.
+    expect(second.transactionsUpdated).toBe(0);
     const all = await deps.transactions.listAll("user-1");
     expect(all).toHaveLength(1);
     expect(all[0]!.categoryId).not.toBeNull();
+    expect(all[0]!.version).toBe(versionAfterFirst);
+    expect(all[0]!.updatedAt).toEqual(updatedAtAfterFirst);
   });
 
-  it("pairs two legs of a transfer sharing a counter-record id", async () => {
+  it("pairs two legs of a transfer sharing a counter-record id, stably across a second run", async () => {
     const { deps } = harness();
     await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-1", externalId: "wallet-acc-1", metadata: {} }, new Date());
     await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-2", externalId: "wallet-acc-2", metadata: {} }, new Date());
     const legA = record({ externalId: "wr-a", accountExternalId: "wallet-acc-1", amount: "-50.00", type: "transfer", categoryExternalId: null, labelExternalIds: [], externalTransferRef: "wr-b" });
     const legB = record({ externalId: "wr-b", accountExternalId: "wallet-acc-2", amount: "50.00", type: "transfer", categoryExternalId: null, labelExternalIds: [], externalTransferRef: "wr-a" });
     const source = { provider: "wallet", fetchTransactions: async () => [legA, legB], fetchCategories: async () => [] };
-    await syncProviderTransactions({ ...deps, source })("user-1", null);
+    const run = syncProviderTransactions({ ...deps, source });
+
+    await run("user-1", null);
+    const afterFirst = await deps.transactions.listAll("user-1");
+    expect(afterFirst).toHaveLength(2);
+    expect(afterFirst[0]!.transferGroupId).not.toBeNull();
+    expect(afterFirst[0]!.transferGroupId).toBe(afterFirst[1]!.transferGroupId);
+    const versionsAfterFirst = new Map(afterFirst.map((t) => [t.id, t.version]));
+
+    const second = await run("user-1", null);
+    expect(second.transactionsCreated).toBe(0);
+    expect(second.transactionsUpdated).toBe(0);
+    const afterSecond = await deps.transactions.listAll("user-1");
+    expect(afterSecond).toHaveLength(2);
+    // Pairing is stable: same group, and re-pairing an already-paired leg is a
+    // no-op — its version does not churn on a second run.
+    expect(afterSecond[0]!.transferGroupId).toBe(afterFirst[0]!.transferGroupId);
+    expect(afterSecond[1]!.transferGroupId).toBe(afterFirst[1]!.transferGroupId);
+    for (const t of afterSecond) {
+      expect(t.version).toBe(versionsAfterFirst.get(t.id));
+    }
+  });
+
+  it("treats two incoming records sharing one externalId within the same batch as one transaction, not two", async () => {
+    const { deps } = harness();
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-1", externalId: "wallet-acc-1", metadata: {} }, new Date());
+    // Same externalId, different note — the second is what should win, since
+    // it is processed after the first within the same run.
+    const first = record({ note: "first note" });
+    const second = record({ note: "second note" });
+    const source = { provider: "wallet", fetchTransactions: async () => [first, second], fetchCategories: async () => [category] };
+
+    const result = await syncProviderTransactions({ ...deps, source })("user-1", null);
+
+    expect(result.transactionsCreated).toBe(1);
+    expect(result.transactionsUpdated).toBe(1);
     const all = await deps.transactions.listAll("user-1");
-    expect(all).toHaveLength(2);
-    expect(all[0]!.transferGroupId).not.toBeNull();
-    expect(all[0]!.transferGroupId).toBe(all[1]!.transferGroupId);
+    expect(all).toHaveLength(1);
+    expect(all[0]!.note).toBe("second note");
+
+    const links = await deps.links.byExternal("user-1", "wallet", "transaction", [first.externalId]);
+    expect(links.get(first.externalId)?.entityId).toBe(all[0]!.id);
   });
 });
