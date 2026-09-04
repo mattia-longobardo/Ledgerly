@@ -34,8 +34,18 @@ export function importFileCredentials(deps: IntegrationDeps) {
         result.skipped.push({ provider, reason: "no_file" });
         continue;
       }
-      const existing = await deps.connections.getByProvider(principal.userId, provider);
-      if (existing && (await deps.connections.readCredentials(principal.userId, existing.id))) {
+      // RLS on `integration_connections` resolves only inside a transaction
+      // that has set `app.user_id` — calling these two reads directly on
+      // `deps` runs them on the bare pool, where the policy matches nothing
+      // and `existing` is always null. Wrapping the check (not the write
+      // below, which `connectIntegration` opens its own context around) is
+      // what lets the skip branch see a real row.
+      const alreadyConnected = await deps.inUserContext(principal.userId, async (d) => {
+        const existing = await d.connections.getByProvider(principal.userId, provider);
+        if (!existing) return false;
+        return Boolean(await d.connections.readCredentials(principal.userId, existing.id));
+      });
+      if (alreadyConnected) {
         result.skipped.push({ provider, reason: "already_connected" });
         continue;
       }
@@ -43,12 +53,16 @@ export function importFileCredentials(deps: IntegrationDeps) {
       result.imported.push(provider);
     }
 
-    await deps.audit({
-      actorUserId: principal.userId,
-      action: "integration.import_file_credentials",
-      entityType: "integration_connection",
-      after: { imported: result.imported, skipped: result.skipped },
-    });
+    // Same reason as the read above: `audit_events` is FORCE RLS too, and its
+    // WITH CHECK requires `app.user_id` to be set to the acting user.
+    await deps.inUserContext(principal.userId, (d) =>
+      d.audit({
+        actorUserId: principal.userId,
+        action: "integration.import_file_credentials",
+        entityType: "integration_connection",
+        after: { imported: result.imported, skipped: result.skipped },
+      }),
+    );
     return result;
   };
 }

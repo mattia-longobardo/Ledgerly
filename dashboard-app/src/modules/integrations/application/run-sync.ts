@@ -1,4 +1,5 @@
 import { assertPermission, type Principal } from "@/platform/auth/principal";
+import { redactCredentials } from "@/platform/integrations/redact-credentials";
 import type {
   IntegrationConnection,
   ProviderCode,
@@ -182,30 +183,6 @@ async function execute(
   } catch (err) {
     return recordFailure(deps, userId, input, kind, prepared, err);
   }
-}
-
-const REDACTED = "[redacted]";
-
-/**
- * A handler's thrown message is arbitrary text from a provider client, and an
- * HTTP client that folds a URL or a header into its error message can put the
- * connection's own credential into it. This is the one place that holds
- * `prepared.credentials`, so it is the one place that can close that leak
- * before the message reaches `sync_runs.error` or an audit payload — both of
- * which Task 18 renders straight to the Settings UI.
- *
- * Only the exact values this run was handed are redacted. Guessing at
- * credential-shaped substrings would either miss a credential in an unexpected
- * shape or redact something that was never secret; replacing known values is
- * the one rule that cannot do either.
- */
-function redactCredentials(message: string, credentials: Record<string, string>): string {
-  let redacted = message;
-  for (const value of Object.values(credentials)) {
-    if (!value) continue;
-    redacted = redacted.split(value).join(REDACTED);
-  }
-  return redacted;
 }
 
 /** One place decides what a failed run looks like, so the two catch sites cannot drift. */
