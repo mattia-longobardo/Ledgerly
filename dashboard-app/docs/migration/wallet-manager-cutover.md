@@ -26,7 +26,13 @@ step 2 below will not agree:
 | `WALLET_TAX_RATE` | Withholding tax rate, decimal fraction | `taxRate` |
 | `WALLET_DAY_COUNT` | Day-count basis (almost always `365`) | `dayCount` |
 | `WALLET_CATEGORY_NAME` | Category the interest record is filed under | `providerCategoryRef` |
-| `NOTE_MARKER` (container default `auto-interest`) | Prefix on every posted record's note | `noteMarker` |
+| `NOTE_MARKER` | Prefix on every posted record's note | `noteMarker` |
+
+`NOTE_MARKER` is a code default (`auto-interest`, set in `interest.py` itself)
+rather than a variable `Wallet Manager/.env.example` ships — it is not present
+in `.env` unless an operator added it there deliberately. Check `.env` first;
+if it is absent, the container is using `auto-interest`, which is also the
+dashboard rule's own default, so most deployments need no change here.
 
 `Wallet Manager/data/state.json` carries the container's own `last_date` and
 sub-cent `carry` — the dashboard does not read this file and does not need
@@ -51,12 +57,25 @@ within a few days of ACT/365 accrual — it is not worth trying to seed.
    keeps posting to Wallet as before, unaffected by the dashboard's rule.
    Compare the dashboard's `Finance › Interests › Rules › [id]`
    reconciliation view against the container's own posted records for the
-   same days — the two should agree to the cent, since both implement the
-   same ACT/365 simple-daily formula against the same account balance.
-   If they disagree, do not proceed to step 3 until you understand why —
-   a mismatched `annualRate`, `taxRate`, or `dayCount` between the rule and
-   the container's `.env` is the most likely cause.
-3. **Once satisfied, stop the `wallet-manager` container**:
+   same days. **If they disagree, check the balance source before anything
+   else**: `interest.py` reads the account's *live* balance at
+   `WALLET_RUN_AT_UTC` every day, while the dashboard uses the latest
+   *synced snapshot* on or before the accrual date (whatever the Wallet
+   accounts sync last captured). If the sync and the container's run time
+   don't line up — a balance-changing transaction posted between the sync
+   and the container's run, or the sync itself lagging by more than a day —
+   the two will disagree by design, for a reason that has nothing to do with
+   rate, tax, or day-count configuration. Only once that's ruled out is a
+   mismatched `annualRate`, `taxRate`, or `dayCount` between the rule and the
+   container's `.env` the next thing to check. The two should agree to the
+   cent on a day the balance didn't move between the sync and the
+   container's run, since both implement the same ACT/365 simple-daily
+   formula.
+3. **Once satisfied, stop the `wallet-manager` container.** A gentler
+   intermediate step, if you want more runway before fully committing, is to
+   set `WALLET_DRY_RUN=true` in the container's `.env` and restart it: it
+   keeps computing and logging what it would post, without actually posting,
+   while you finish validating the dashboard side. When ready to cut over:
    ```
    docker compose -f "/home/mattia/docker/projects/Wallet Manager/docker-compose.yml" stop wallet-manager
    ```
@@ -80,11 +99,20 @@ within a few days of ACT/365 accrual — it is not worth trying to seed.
    The posted record uses the same note-marker convention
    (`auto-interest` by default, configurable per rule via `noteMarker`) so it
    looks the same in the Wallet app as a record the container would have
-   posted.
+   posted. One visible difference: the container posts `recordDate` as the
+   exact moment it ran (e.g. `2026-09-05T05:00:03Z`, whatever `RUN_AT_UTC`
+   plus a few seconds of runtime happens to be); the dashboard posts midnight
+   UTC of the accrual date (`2026-09-05T00:00:00Z`). Both land on the same
+   calendar day in the Wallet app, but if you're comparing timestamps rather
+   than dates, expect this shift the day posting cuts over — it is not a
+   sign anything is wrong.
 5. **Monitor for a few more days.** `Finance › Interests › Rules › [id]`
    shows each day's accrual and whether it posted; `job_runs` (Settings ›
-   Administration) shows the `interest_accrual` job's own success/failure
-   history, including a `posted` count per run.
+   Administration) shows the `interest_accrual` job's own history, including
+   `posted` (accruals actually posted this run), `failed` (an ordinary
+   accrual problem — a bad rate, a missing balance) and `postFailed` (a
+   post-phase problem specifically, alerted immediately since it can mean
+   money already reached Wallet before the local ledger caught up) per run.
 6. **Decommission the container** once confident: remove the `wallet-manager`
    service from `Wallet Manager/docker-compose.yml`, its `.env` entries, and
    the `Wallet Manager/data/` volume (`state.json`, `token`, `heartbeat`).
@@ -105,12 +133,17 @@ which was never touched while it was stopped.
 ## What a crash leaves behind, and why this procedure avoids relying on it
 
 Posting to Wallet and marking the dashboard's own accrual as posted are two
-separate steps (a network call, then a database write) — a process crash
-between them is possible in principle, and is documented in
-`.superpowers/sdd/2026-09-05-phase-3-expenses-and-interests/task-19-report.md`.
-This cut-over procedure does not depend on that window ever being hit: at no
-point in steps 1–6 are both the container and the dashboard rule posting at
-the same time, so the risk that matters here — the *same* day being posted
-twice by two different systems that don't know about each other — is
-structural (stop-then-flip), not a race that has to be tolerated on a lucky
-day.
+separate steps (a network call, then a database write). A process crash
+between them is possible in principle; the dashboard's own posting adapter
+asks Wallet itself for an existing record (the same check `interest.py` uses,
+`already_posted_today`) before ever posting again, so a crash there does not
+turn into a double-post on the dashboard's next run — see
+`.superpowers/sdd/2026-09-05-phase-3-expenses-and-interests/task-19-report.md`
+for the full account of that mechanism and what residual risk remains.
+
+This cut-over procedure does not depend on that mechanism anyway: at no point
+in steps 1–6 are both the container and the dashboard rule posting at the
+same time, so the risk that matters here — the *same* day being posted twice
+by two different systems that don't know about each other's note markers —
+is structural (stop-then-flip), not a race that has to be tolerated on a
+lucky day.

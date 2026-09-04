@@ -40,9 +40,24 @@ describe("recordPostedEntry", () => {
     // `upsert` actually stored, exactly as `tryPost` re-reads the accrual via
     // `forRule` before posting, never with a separately-constructed object.
     const stored = await deps.accruals.upsert(accrual);
-    const entry = await recordPostedEntry(deps)(rule, stored, "auto-interest 2.25%/y (net 1.67%, -26% tax) on 1000.00");
+    const entry = await recordPostedEntry(deps)(rule, stored, "auto-interest 2.25%/y (net 1.67%, -26% tax) on 1000.00", "wallet-record-1");
     expect(entry.kind).toBe("paid");
+    expect(entry.transactionId).toBe("wallet-record-1");
     expect(await deps.entries.listForRule("r1", "paid")).toHaveLength(1);
+  });
+
+  it("defaults transactionId to null when the caller does not have one", async () => {
+    const deps = {
+      rules: new MemoryInterestRulesRepository(),
+      accruals: new MemoryInterestAccrualsRepository(),
+      entries: new MemoryInterestEntriesRepository(),
+      balances: { latestBalanceAsOf: async () => null },
+      clock: { now: () => new Date("2026-09-05T09:00:00Z") },
+      audit: async () => {},
+    };
+    const stored = await deps.accruals.upsert(accrual);
+    const entry = await recordPostedEntry(deps)(rule, stored, "auto-interest note");
+    expect(entry.transactionId).toBeNull();
   });
 
   it("treats markPosted affecting no row as a failure, not as a successful post (carried Task 16 requirement)", async () => {

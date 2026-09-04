@@ -286,12 +286,35 @@ export interface PostRecordInput {
   categoryId?: string;
 }
 
-/** Used only by the optional interest-posting adapter (Task 19), behind a per-rule switch. */
-export async function postRecords(opts: WalletCallOptions, records: PostRecordInput[]): Promise<void> {
+/**
+ * The POST response shape has never been verified against a live token
+ * (same limitation as every other Wallet endpoint — see `getAccounts`'
+ * comment on `WalletCallOptions`). It plausibly comes back either wrapped
+ * (`{ records: [...] }`, matching every read endpoint's own shape) or as a
+ * bare array (a common REST convention for "here is what you just created").
+ * Either is accepted; anything else — including the empty object this
+ * endpoint may simply reply with — degrades to an empty list rather than
+ * throwing: unlike a read, a wrong guess here must not turn a successful
+ * money-moving POST into a reported failure. The cost of that leniency is
+ * only that `transactionId` stays unset when the shape doesn't match.
+ */
+const postRecordsResponseSchema = z
+  .union([recordsSchema.transform((v) => v.records), z.array(recordSchema)])
+  .catch([]);
+
+/**
+ * Used only by the optional interest-posting adapter (Task 19), behind a
+ * per-rule switch. `attempts` is left to the caller rather than defaulted
+ * here: a write must not retry on the same terms as a read (see the call
+ * site in `wallet-interest-posting-adapter.ts`, which passes `attempts: 1`
+ * — a 409/5xx after Wallet has already persisted the record must not
+ * resubmit the identical body).
+ */
+export async function postRecords(opts: WalletCallOptions, records: PostRecordInput[]): Promise<WalletRecord[]> {
   try {
-    await withRetry(
+    return await withRetry(
       () =>
-        requestJson("wallet", `${baseUrl()}/records`, z.unknown(), {
+        requestJson("wallet", `${baseUrl()}/records`, postRecordsResponseSchema, {
           method: "POST",
           headers: { ...headers(opts), "content-type": "application/json" },
           body: JSON.stringify(records),
@@ -299,6 +322,46 @@ export async function postRecords(opts: WalletCallOptions, records: PostRecordIn
         }),
       retryPolicy(opts),
     );
+  } catch (err) {
+    throw translate(err);
+  }
+}
+
+export interface FindPostedRecordOptions extends WalletCallOptions {
+  accountId: string;
+  /** `YYYY-MM-DD`, matched by exact equality — same grain `interest.py` uses. */
+  recordDate: string;
+  /** Matched by substring, same as `interest.py`'s `note=contains.<marker>`. */
+  noteContains: string;
+}
+
+/**
+ * Provider-side duplicate check, mirroring `interest.py`'s
+ * `already_posted_today` (`Wallet Manager/app/interest.py:167-173`) exactly —
+ * same three filters (`accountId`, `recordDate=eq.<day>`, `note=contains.<marker>`),
+ * same `limit=5` — because that shape is the one piece of this API already
+ * proven against a live token, in the script this module retires. Used as
+ * the second line of defence against a crash between a successful POST and
+ * the local `markPosted` write: local state says "not yet posted", but this
+ * asks Wallet itself before ever posting again.
+ */
+export async function findPostedRecord(opts: FindPostedRecordOptions): Promise<WalletRecord | null> {
+  try {
+    const params = new URLSearchParams({
+      accountId: opts.accountId,
+      recordDate: `eq.${opts.recordDate}`,
+      note: `contains.${opts.noteContains}`,
+      limit: "5",
+    });
+    const body = await withRetry(
+      () =>
+        requestJson("wallet", `${baseUrl()}/records?${params.toString()}`, recordsSchema, {
+          headers: headers(opts),
+          signal: opts.signal,
+        }),
+      retryPolicy(opts),
+    );
+    return body.records[0] ?? null;
   } catch (err) {
     throw translate(err);
   }
