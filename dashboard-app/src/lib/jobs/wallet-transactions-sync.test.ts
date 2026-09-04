@@ -9,12 +9,6 @@ interface RunRow {
   detail: Record<string, unknown> | null;
 }
 
-interface EnsureCall {
-  connectionId: string;
-  kind: string;
-  schedule: string;
-}
-
 const store = vi.hoisted(() => {
   Object.assign(process.env, {
     DATABASE_URL: "postgres://dashboard@localhost/dashboard",
@@ -38,7 +32,6 @@ const store = vi.hoisted(() => {
     nextRunId: 1,
     lockHeld: false,
     connected: true,
-    ensureCalls: [] as EnsureCall[],
     syncRun: { id: "r1", status: "success", stats: { created: 2, patternsDetected: 0 }, error: null } as {
       id: string;
       status: "success" | "failed";
@@ -87,26 +80,6 @@ vi.mock("@/modules/integrations/infrastructure/owner-connection", () => ({
   ),
 }));
 
-// The real `integrationDeps` opens a transaction on the production pool —
-// unreachable from a unit test — so this stands in with just enough of
-// `IntegrationDeps` for `syncOwner`'s backfill call: `inUserContext` runs the
-// callback against a fake bag whose `jobs.ensure` records what it was asked
-// for, the same idempotent insert-then-read `connectIntegration` calls at
-// connect time.
-vi.mock("@/modules/integrations/infrastructure/deps", () => ({
-  integrationDeps: () => ({
-    inUserContext: async (_userId: string, fn: (d: unknown) => unknown) =>
-      fn({
-        jobs: {
-          ensure: vi.fn(async (input: EnsureCall) => {
-            store.ensureCalls.push(input);
-            return { id: "job-transactions-1", ...input, enabled: true, cursor: null };
-          }),
-        },
-      }),
-  }),
-}));
-
 vi.mock("@/modules/integrations/application/run-sync", () => ({
   runSyncForUser: () => async () => store.syncRun,
 }));
@@ -134,7 +107,6 @@ beforeEach(() => {
   store.nextRunId = 1;
   store.lockHeld = false;
   store.connected = true;
-  store.ensureCalls.length = 0;
   store.syncRun = { id: "r1", status: "success", stats: { created: 2, patternsDetected: 0 }, error: null };
   vi.clearAllMocks();
   vi.mocked(httpRequest).mockResolvedValue(new Response("{}", { status: 200 }));
@@ -154,12 +126,6 @@ describe("runWalletTransactionsSync", () => {
     expect(alerts()).toEqual([]);
   });
 
-  it("backfills the transactions sync_jobs row for the owner's connection before syncing — the carried-gap fix", async () => {
-    await runWalletTransactionsSync();
-
-    expect(store.ensureCalls).toEqual([{ connectionId: "c1", kind: "transactions", schedule: "hourly" }]);
-  });
-
   it("records a skipped run and stays silent when Wallet is not connected", async () => {
     store.connected = false;
 
@@ -171,7 +137,6 @@ describe("runWalletTransactionsSync", () => {
       detail: { reason: "wallet_not_connected" },
     });
     expect(store.runs[0]?.status).toBe("already_done");
-    expect(store.ensureCalls).toEqual([]);
     expect(alerts()).toEqual([]);
   });
 

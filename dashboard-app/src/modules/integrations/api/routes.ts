@@ -194,7 +194,7 @@ const syncRoute = createRoute({
   tags: ["Integrations"],
   security: [{ session: [] }],
   description:
-    "Idempotent per running job: a second call while a run is in flight returns that run. `kind` defaults to the provider's only sync.",
+    "Idempotent per running job: a second call while a run is in flight returns that run. `kind` defaults to the provider's first declared sync when omitted — for Wallet that is `accounts`, not `transactions`; pass `kind` explicitly to target another one.",
   request: {
     params: ProviderParamSchema,
     body: { content: { "application/json": { schema: SyncRequestBodySchema } } },

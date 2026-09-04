@@ -3,6 +3,7 @@ import { z } from "zod";
 import { testPrincipal } from "@/test/principal";
 import { PermissionDeniedError } from "@/platform/auth/principal";
 import { testIntegrationDeps } from "@/test/integration-deps";
+import { MemorySyncJobsRepository } from "../infrastructure/memory-repositories";
 import type {
   IntegrationProvider,
   ProviderRegistry,
@@ -171,6 +172,31 @@ describe("runSync", () => {
     expect(job!.id).toBe((await deps.jobs.find(connection.id, "accounts"))!.id);
   });
 
+  it("ensures the job row for a kind that has none, and persists its cursor on the very first run", async () => {
+    const deps = makeDeps();
+    const connection = await connected(deps);
+    // A connection whose `sync_jobs` row for this kind is missing entirely —
+    // the shape of one made before the provider declared this `SyncKind`, or
+    // reached by a manual trigger naming a kind nothing has synced yet (the
+    // carried gap Task 12 closed: `prepare()` used to `find()` this row and
+    // silently drop the cursor write when it came back `undefined`).
+    Object.assign(deps, { jobs: new MemorySyncJobsRepository() });
+    expect(await deps.jobs.find(connection.id, "accounts")).toBeNull();
+
+    applyImpl = async (ctx) => {
+      expect(ctx.cursor).toBeNull();
+      ctx.setCursor({ since: "2026-09-04" });
+      return { created: 1 };
+    };
+    const run = await runSync(deps)(principal, { provider: "wallet", kind: "accounts", trigger: "manual" });
+    expect(run.status).toBe("success");
+
+    const job = await deps.jobs.find(connection.id, "accounts");
+    expect(job).not.toBeNull();
+    expect(job!.cursor).toEqual({ since: "2026-09-04" });
+    expect(run.jobId).toBe(job!.id);
+  });
+
   it("returns the running run instead of starting a second one", async () => {
     const deps = makeDeps();
     const connection = await connected(deps);
@@ -202,12 +228,15 @@ describe("runSync", () => {
       runSync(deps)(principal, { provider: "wallet", kind: "leave", trigger: "manual" }),
     ).rejects.toBeInstanceOf(SyncNotSupportedError);
 
+    // `prepare()` now `ensure()`s the job row rather than merely `find()`ing
+    // it — this stubs `ensure` (not `find`) to simulate the same "disabled"
+    // state a real reconnect-preserving row would have.
     const job = await deps.jobs.find(connection.id, "accounts");
-    Object.assign(deps.jobs, { find: async () => ({ ...job!, enabled: false }) });
+    Object.assign(deps.jobs, { ensure: async () => ({ ...job!, enabled: false }) });
     await expect(
       runSync(deps)(principal, { provider: "wallet", kind: "accounts", trigger: "manual" }),
     ).rejects.toBeInstanceOf(SyncDisabledError);
-    Object.assign(deps.jobs, { find: async () => job });
+    Object.assign(deps.jobs, { ensure: async () => job! });
 
     await deps.connections.recordState(connection.id, { status: "disabled" });
     await expect(
@@ -273,12 +302,13 @@ describe("the sync queue", () => {
     // must not be confused with the FK-cascade case: the connection and job
     // both still exist, only `enabled` changed, so `prepare()` throws
     // `SyncDisabledError` synchronously, before `execute()`'s own try/catch
-    // exists to catch it.
+    // exists to catch it. Stubs `ensure` (not `find`) — `prepare()` now
+    // resolves the job row through `ensure()`.
     const jobA = await deps.jobs.find(connectionA.id, "accounts");
-    const originalFind = deps.jobs.find.bind(deps.jobs);
+    const originalEnsure = deps.jobs.ensure.bind(deps.jobs);
     Object.assign(deps.jobs, {
-      find: async (connectionId: string, kind: "accounts" | "leave") =>
-        connectionId === connectionA.id ? { ...jobA!, enabled: false } : originalFind(connectionId, kind),
+      ensure: async (input: Parameters<typeof originalEnsure>[0]) =>
+        input.connectionId === connectionA.id ? { ...jobA!, enabled: false } : originalEnsure(input),
     });
 
     const drained = await drainSyncQueue(deps)(10);
@@ -312,10 +342,10 @@ describe("the sync queue", () => {
 
     // Same setup as the test above: A fails before execution even starts.
     const jobA = await deps.jobs.find(connectionA.id, "accounts");
-    const originalFind = deps.jobs.find.bind(deps.jobs);
+    const originalEnsure = deps.jobs.ensure.bind(deps.jobs);
     Object.assign(deps.jobs, {
-      find: async (connectionId: string, kind: "accounts" | "leave") =>
-        connectionId === connectionA.id ? { ...jobA!, enabled: false } : originalFind(connectionId, kind),
+      ensure: async (input: Parameters<typeof originalEnsure>[0]) =>
+        input.connectionId === connectionA.id ? { ...jobA!, enabled: false } : originalEnsure(input),
     });
 
     // And now the bookkeeping write the catch block uses to record that

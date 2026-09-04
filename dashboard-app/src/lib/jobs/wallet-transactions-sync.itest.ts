@@ -98,9 +98,10 @@ describe("wallet transactions sync job — the carried gap", () => {
     const jobAfterFirst = await withUserContext(db, { userId: user!.id }, (tx) =>
       new DrizzleSyncJobsRepository(tx).find(connection.id, "transactions"),
     );
-    // The row now exists — the job self-heals it before the sync ever runs —
-    // and the run's cursor was actually written to it, proving the write
-    // Task 8 left silently discarded (`prepared.jobId` was null) now lands.
+    // The row now exists — `run-sync.ts`'s own `prepare()` `ensure()`s it
+    // before the sync ever runs, whichever caller reached it — and the run's
+    // cursor was actually written to it, proving the write Task 8 left
+    // silently discarded (`prepared.jobId` was null) now lands.
     expect(jobAfterFirst).not.toBeNull();
     const cursor = jobAfterFirst!.cursor as { sinceDate: string } | null;
     expect(cursor?.sinceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
