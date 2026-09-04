@@ -9,8 +9,8 @@ import { integrationDeps } from "@/modules/integrations/infrastructure/deps";
 /**
  * The signed-in user's connection for a provider, with its credential open, or
  * null when they have not connected it. Every caller treats null as "the
- * integration is off" rather than an error — the same contract the deleted
- * `trekConfig()` had.
+ * integration is off" rather than an error — the same contract Phase 1's
+ * environment-based Trek credential lookup had before it was retired.
  *
  * `require-principal` is imported dynamically, exactly as
  * `modules/accounts/ui/run.ts` does it: a static import drags in `@/auth` and
