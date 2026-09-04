@@ -143,4 +143,25 @@ describe("runInterestAccrualJob", () => {
     );
     expect(badAccrued).toHaveLength(0);
   });
+
+  it("does not post when the rule's postingMode is post_to_provider but the account has no live Wallet link", async () => {
+    const db = await testDb();
+    const [org] = await db.insert(organizations).values({ name: "P" }).returning();
+    const [user] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
+    const [account] = await withSystemContext(db, (tx) =>
+      tx.insert(accounts).values({ userId: user!.id, name: "Savings", type: "savings", origin: "manual" }).returning(),
+    );
+    await withSystemContext(db, (tx) =>
+      tx.insert(accountBalances).values({ accountId: account!.id, asOf: "2026-09-05", balance: "1000.00", source: "manual" }),
+    );
+    await withSystemContext(db, (tx) =>
+      new DrizzleInterestRulesRepository(tx).create({
+        userId: user!.id, accountId: account!.id, annualRate: "0.0225", taxRate: "0.26", dayCount: 365,
+        compounding: "simple_daily", effectiveFrom: "2026-01-01", effectiveTo: null,
+        postingMode: "post_to_provider", providerCategoryRef: null, noteMarker: "auto-interest",
+      }),
+    );
+    const result = await runInterestAccrualJob({ trigger: "manual", now: new Date("2026-09-05T12:00:00Z") });
+    expect(result.detail).toMatchObject({ accrued: 1, posted: 0 });
+  });
 });

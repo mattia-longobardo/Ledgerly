@@ -55,7 +55,14 @@ export interface InterestAccrualsRepository {
   forRule(ruleId: string, from: string, to: string): Promise<InterestAccrual[]>;
   latestCarry(ruleId: string): Promise<{ accrualDate: string; carryAfter: string } | null>;
   upsert(input: NewInterestAccrual): Promise<InterestAccrual>;
-  markPosted(id: string, entryId: string, postedAt: Date): Promise<void>;
+  /**
+   * Returns whether it actually affected a row — `false` for a wrong owner
+   * or simply a wrong id. A caller that posts money to an external provider
+   * and then calls this must treat `false` as a failure, not as success:
+   * silently doing nothing here is exactly how the same interest gets posted
+   * twice on the next run.
+   */
+  markPosted(id: string, entryId: string, postedAt: Date): Promise<boolean>;
 }
 
 export interface InterestEntry {

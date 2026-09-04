@@ -76,6 +76,19 @@ describe("MemoryInterestAccrualsRepository", () => {
     expect(reUpserted.entryId).toBe("entry-1");
     expect(reUpserted.net).toBe("0.07");
   });
+
+  it("markPosted reports whether it affected a row — false on a mismatched id, true on a real match", async () => {
+    const repo = new MemoryInterestAccrualsRepository();
+    const created = await repo.upsert({ ruleId: "r1", accrualDate: "2026-09-01", balanceBasis: "1000.00", gross: "0.061644", tax: "0.016027", net: "0.05", carryAfter: "-0.005617", source: "computed", postedAt: null, entryId: null });
+
+    // A wrong id — wrong owner, or simply a typo — must not be reported as a
+    // successful post: the caller relies on this to avoid double-posting the
+    // same interest on the next run.
+    await expect(repo.markPosted("does-not-exist", "entry-1", new Date())).resolves.toBe(false);
+    expect((await repo.forRule("r1", "2026-09-01", "2026-09-01"))[0]!.postedAt).toBeNull();
+
+    await expect(repo.markPosted(created.id, "entry-1", new Date())).resolves.toBe(true);
+  });
 });
 
 describe("MemoryInterestEntriesRepository", () => {

@@ -140,6 +140,25 @@ describe("DrizzleInterestAccrualsRepository", () => {
     });
   });
 
+  it("markPosted reports whether it affected a row — false on a mismatched id, true on a real match", async () => {
+    const { userId, accountId } = await seed();
+    const db = await testDb();
+    await withUserContext(db, { userId }, async (tx) => {
+      const rules = new DrizzleInterestRulesRepository(tx);
+      const rule = await rules.create(newRule(userId, accountId));
+      const accruals = new DrizzleInterestAccrualsRepository(tx);
+      const created = await accruals.upsert({ ruleId: rule.id, accrualDate: "2026-09-01", balanceBasis: "1000.00", gross: "0.061644", tax: "0.016027", net: "0.05", carryAfter: "-0.005617", source: "computed", postedAt: null, entryId: null });
+
+      // A wrong id must not be reported as a successful post — the caller
+      // relies on this to avoid double-posting the same interest on retry.
+      await expect(accruals.markPosted(crypto.randomUUID(), crypto.randomUUID(), new Date())).resolves.toBe(false);
+      const [untouched] = await accruals.forRule(rule.id, "2026-09-01", "2026-09-01");
+      expect(untouched!.postedAt).toBeNull();
+
+      await expect(accruals.markPosted(created.id, crypto.randomUUID(), new Date())).resolves.toBe(true);
+    });
+  });
+
   it("forRule orders by accrualDate ascending, matching the memory repository's ORDER BY", async () => {
     const { userId, accountId } = await seed();
     const db = await testDb();
