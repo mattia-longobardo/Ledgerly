@@ -66,7 +66,7 @@ Expenses module
   src/modules/expenses/domain/transaction.test.ts
   src/modules/expenses/domain/recurring.ts                          detectRecurring pure function
   src/modules/expenses/domain/recurring.test.ts
-  src/modules/expenses/application/ports.ts                         TransactionsRepository, CategoriesRepository, LabelsRepository, RecurringPatternsRepository, ProviderTransactionsSource
+  src/modules/expenses/application/ports.ts                         TransactionsRepository, CategoriesRepository, LabelsRepository, RecurringPatternsRepository, TransactionsSource
   src/modules/expenses/application/deps.ts                          UseCaseDeps
   src/modules/expenses/application/errors.ts                        NotFoundError, VersionMismatchError, InvalidInputError
   src/modules/expenses/application/list-transactions.ts             listTransactions
@@ -3057,11 +3057,11 @@ git commit -m "feat(expenses): add list/get/update transaction and list categori
 - Create: `src/modules/expenses/api/schemas.ts`
 - Create: `src/modules/expenses/api/routes.ts`
 - Create: `src/modules/expenses/api/routes.itest.ts`
-- Modify: `src/platform/http/app.ts:157-161` (`registerAllRoutes`: add the one call to `registerExpenseRoutes(app, deps)`)
+- Modify: `src/platform/http/app.ts:141-145` (`registerAllRoutes`: add the one call to `registerExpenseRoutes(app, deps)`)
 - Regenerate: `docs/api/openapi.json`
 
 **Interfaces:**
-- Consumes: `listTransactions`, `getTransaction`, `updateTransaction`, `listCategories`, `listLabels` from `../application/*` (Task 9); `expenseDeps` from `../infrastructure/deps` (Task 5); `withUserContext` from `@/platform/db/context`; `ApiApp`, `ApiDeps` from `@/platform/http/app`; `ApiError`, `toErrorBody` from `@/platform/http/errors`; `parseExpectedVersion` from `@/platform/http/versioning`; `NotFoundError`, `VersionMismatchError` from `../application/errors`.
+- Consumes: `listTransactions`, `getTransaction`, `updateTransaction`, `listCategories`, `listLabels` from `../application/*` (Task 9); `expenseDeps` from `../infrastructure/deps` (Task 5); `withUserContext` from `@/platform/db/context`; `ApiApp`, `ApiDeps` from `@/platform/http/app`; `ApiError`, `toErrorBody` from `@/platform/http/errors`; `parseExpectedVersion` from `@/platform/http/versioning`; `NotFoundError`, `VersionMismatchError` from `../application/errors`; `ErrorResponseSchema` from `@/modules/accounts/api/schemas` (existing — the app's one shared copy, imported rather than redeclared; see the corrected Ruling P3-11).
 - Produces:
 ```ts
 export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void;
@@ -3219,11 +3219,12 @@ export const UpdateTransactionRequestSchema = z.object({
 export const CategoryListResponseSchema = z.object({ items: z.array(TransactionCategorySchema) }).openapi("CategoryListResponse");
 export const LabelListResponseSchema = z.object({ items: z.array(TransactionLabelSchema) }).openapi("LabelListResponse");
 
-// Duplicated in every module's schemas.ts today (accounts, integrations) rather
-// than shared — this file follows that existing convention, not a new one.
-export const ErrorResponseSchema = z
-  .object({ error: z.object({ code: z.string(), message: z.string(), requestId: z.string(), details: z.unknown().optional() }) })
-  .openapi("ErrorResponse");
+// `ErrorResponseSchema` itself is NOT declared here: it is imported from
+// `@/modules/accounts/api/schemas` in routes.ts, the app's one existing
+// `.openapi("ErrorResponse")` registration. Every route in this app shares
+// one `OpenAPIHono` instance, so a second module-local declaration tagged
+// with the same OpenAPI component name would collide with it at
+// `npm run openapi:generate` time — see the corrected Ruling P3-11.
 ```
 
 - [ ] **Step 4: Write `routes.ts`**
@@ -3242,9 +3243,9 @@ import { listTransactions } from "../application/list-transactions";
 import { updateTransaction } from "../application/update-transaction";
 import { NotFoundError, VersionMismatchError } from "../application/errors";
 import { expenseDeps } from "../infrastructure/deps";
+import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import {
   CategoryListResponseSchema,
-  ErrorResponseSchema,
   LabelListResponseSchema,
   ListTransactionsQuerySchema,
   TransactionListItemSchema,
@@ -3260,8 +3261,13 @@ function errorResponse(description: string) {
 }
 
 /**
- * Duplicated per module (accounts, integrations, and now expenses each define
- * their own) rather than shared — this file follows that existing convention.
+ * `ErrorResponseSchema` itself is the one shared copy, imported from
+ * `@/modules/accounts/api/schemas` above — not redeclared here. Only this
+ * `errorResponse()`/`commonErrorResponses` wiring is duplicated per module
+ * (accounts, integrations, and now expenses each define their own), the way
+ * accounts and integrations already do; that part is a plain object of route
+ * descriptions, not an OpenAPI component registration, so duplicating it
+ * carries none of `ErrorResponseSchema`'s collision risk.
  */
 const commonErrorResponses = {
   401: errorResponse("Not signed in (`unauthorized`)."),
@@ -3465,10 +3471,11 @@ git commit -m "feat(expenses): add the REST API for transactions, categories and
 - Produces:
 ```ts
 export function runForPrincipal<T>(fn: (deps: UseCaseDeps, principal: Principal) => Promise<T>): Promise<T>;
-export interface TransactionRow { id: string; occurredAt: string; amount: string; currency: string; type: string; state: string; payee: string | null; note: string | null; categoryName: string | null; labelIds: string[]; version: number; }
+export interface TransactionRow { id: string; occurredAt: string; amount: string; currency: string; type: string; state: string; payee: string | null; note: string | null; categoryId: string | null; categoryName: string | null; labelIds: string[]; version: number; }
 export function loadTransactionsPage(opts: ListTransactionsOptions): Promise<{ rows: TransactionRow[]; nextCursor: string | null }>;
 export function loadTransactionDetail(id: string): Promise<{ row: TransactionRow; categories: { id: string; name: string }[]; labels: { id: string; name: string }[] } | null>;
 ```
+`TransactionRow` carries both `categoryId` (the raw foreign key, needed by `TransactionEditForm`'s `<select>` default value) and `categoryName` (the display label) — the same pair Step 4's implementation and both loader functions below actually return.
 The Expenses page keeps its existing "Connect Budget Makers Wallet" empty state when `Capabilities.features.expenses` is `false` — this task adds the `false`/`true` branch around the existing markup; it does not replace the empty-state copy.
 
 - [ ] **Step 1: Write the failing test — the page renders the setup state when disconnected, and the table when connected**
@@ -3903,15 +3910,17 @@ git commit -m "feat(expenses): add list and detail pages, replacing the setup st
 - Modify: `src/modules/expenses/api/schemas.ts` (add `RecurringPatternSchema` + list response)
 - Modify: `src/modules/expenses/api/routes.ts` (add `GET /transactions/recurring-patterns`)
 - Modify: `src/modules/expenses/api/routes.itest.ts`
+- Modify: `src/modules/expenses/ui/load-transactions.ts` (add `loadRecurringPatterns`)
 - Modify: `src/app/(app)/finance/expenses/page.tsx` (render the detected patterns beneath the table)
 - Regenerate: `docs/api/openapi.json`
 
 **Interfaces:**
-- Consumes: `detectRecurring`, `DetectedPattern` from `../domain/recurring` (Task 3); `UseCaseDeps`, `RecurringPatternRecord` from `./ports` (Task 4); `assertPermission` from `@/platform/auth/principal`.
+- Consumes: `detectRecurring`, `DetectedPattern` from `../domain/recurring` (Task 3); `UseCaseDeps`, `RecurringPatternRecord` from `./ports` (Task 4); `assertPermission` from `@/platform/auth/principal`; `runForPrincipal` from `../ui/run` (Task 11).
 - Produces:
 ```ts
 export function detectRecurringPatterns(deps: UseCaseDeps): (userId: string) => Promise<DetectedPattern[]>;
 export function listRecurringPatterns(deps: UseCaseDeps): (principal: Principal) => Promise<RecurringPatternRecord[]>;
+export function loadRecurringPatterns(): Promise<RecurringPatternRow[]>;
 ```
 - Modifies `transactionsSync.apply` (Task 8) to add one call site: `await detectRecurringPatterns(expenses)(ctx.connection.userId);` right after `syncProviderTransactions(...)`, and folds its count into the returned stats as `patternsDetected`.
 
@@ -4101,22 +4110,103 @@ Expected: PASS.
 
 - [ ] **Step 9: Surface it on the Expenses page**
 
-In `src/app/(app)/finance/expenses/page.tsx`, add below `<TransactionsTable rows={page.rows} />`:
-```tsx
-{patterns.length > 0 ? (
-  <div className="pt-8">
-    <h2 className="text-body-sm font-medium text-muted">Recurring</h2>
-    <ul className="mt-2 flex flex-col gap-1 text-body-sm">
-      {patterns.map((p) => (
-        <li key={p.id}>
-          {p.payee} — {p.cadence}, {p.amountLow === p.amountHigh ? p.amountLow : `${p.amountLow}–${p.amountHigh}`} {p.currency}
-        </li>
-      ))}
-    </ul>
-  </div>
-) : null}
+In `src/modules/expenses/ui/load-transactions.ts`, add the import `import { listRecurringPatterns } from "../application/list-recurring-patterns";` and a new loader, following the same `runForPrincipal` shape as `loadTransactionsPage`/`loadTransactionDetail`:
+
+```ts
+export interface RecurringPatternRow {
+  id: string;
+  payee: string;
+  cadence: string;
+  amountLow: string;
+  amountHigh: string;
+  currency: string;
+  lastSeenAt: string;
+  nextExpectedAt: string | null;
+  occurrenceCount: number;
+}
+
+export async function loadRecurringPatterns(): Promise<RecurringPatternRow[]> {
+  return runForPrincipal(async (deps, principal) => {
+    const patterns = await listRecurringPatterns(deps)(principal);
+    return patterns.map((p) => ({
+      id: p.id,
+      payee: p.payee,
+      cadence: p.cadence,
+      amountLow: p.amountLow,
+      amountHigh: p.amountHigh,
+      currency: p.currency,
+      lastSeenAt: p.lastSeenAt.toISOString(),
+      nextExpectedAt: p.nextExpectedAt?.toISOString() ?? null,
+      occurrenceCount: p.occurrenceCount,
+    }));
+  });
+}
 ```
-with `patterns` loaded alongside `page` via a small addition to `load-transactions.ts` (`loadRecurringPatterns()`, following the same `runForPrincipal(listRecurringPatterns(deps)(principal))` shape as the other loaders) and fetched with `Promise.all` in the page component.
+
+In `src/app/(app)/finance/expenses/page.tsx`, fetch it alongside `page` with `Promise.all` and render it below the table:
+
+```tsx
+import Link from "next/link";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
+import { realProbes } from "@/platform/capabilities/probes";
+import { resolveCapabilities } from "@/platform/capabilities/resolve";
+import { loadRecurringPatterns, loadTransactionsPage } from "@/modules/expenses/ui/load-transactions";
+import { TransactionsTable } from "@/modules/expenses/ui/TransactionsTable";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Expenses" };
+
+export default async function ExpensesPage() {
+  const principal = await requirePrincipalOrRedirect();
+  const caps = await resolveCapabilities(principal, realProbes);
+
+  if (!caps.features.expenses) {
+    return (
+      <>
+        <PageHeader title="Expenses" />
+        <div className="max-w-xl pt-6">
+          <EmptyState
+            title="Connect Budget Makers Wallet"
+            description="Expenses are read from your Wallet transactions. Connect the integration and the first sync will fill this page."
+            action={
+              <Link
+                href="/settings/integrations/wallet"
+                className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+              >
+                Go to Integrations
+              </Link>
+            }
+          />
+        </div>
+      </>
+    );
+  }
+
+  const [page, patterns] = await Promise.all([loadTransactionsPage({ limit: 50 }), loadRecurringPatterns()]);
+  return (
+    <>
+      <PageHeader title="Expenses" />
+      <div className="pt-6">
+        <TransactionsTable rows={page.rows} />
+        {patterns.length > 0 ? (
+          <div className="pt-8">
+            <h2 className="text-body-sm font-medium text-muted">Recurring</h2>
+            <ul className="mt-2 flex flex-col gap-1 text-body-sm">
+              {patterns.map((p) => (
+                <li key={p.id}>
+                  {p.payee} — {p.cadence}, {p.amountLow === p.amountHigh ? p.amountLow : `${p.amountLow}–${p.amountHigh}`} {p.currency}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </>
+  );
+}
+```
 
 - [ ] **Step 10: Build and typecheck**
 
@@ -4784,6 +4874,34 @@ describe("MemoryInterestAccrualsRepository", () => {
     const rows = await repo.forRule("r1", "2026-09-01", "2026-09-03");
     expect(rows.map((r) => r.accrualDate)).toEqual(["2026-09-01", "2026-09-02"]);
   });
+
+  it("upsert on a re-accrued day preserves postedAt/entryId set by markPosted, rather than resetting them to null (Ruling P3-16)", async () => {
+    const repo = new MemoryInterestAccrualsRepository();
+    const created = await repo.upsert({ ruleId: "r1", accrualDate: "2026-09-01", balanceBasis: "1000.00", gross: "0.061644", tax: "0.016027", net: "0.05", carryAfter: "-0.005617", source: "computed", postedAt: null, entryId: null });
+    const postedAt = new Date("2026-09-02T06:00:00Z");
+    await repo.markPosted(created.id, "entry-1", postedAt);
+
+    // `runInterestAccrual` always calls `upsert` with `postedAt: null, entryId: null`
+    // regardless of whether the accrual was posted earlier — the same call shape
+    // a re-run of the job makes on a day it already accrued and posted.
+    const reUpserted = await repo.upsert({
+      ruleId: "r1",
+      accrualDate: "2026-09-01",
+      balanceBasis: "1200.00",
+      gross: "0.09",
+      tax: "0.02",
+      net: "0.07",
+      carryAfter: "0.000000",
+      source: "computed",
+      postedAt: null,
+      entryId: null,
+    });
+
+    expect(reUpserted.id).toBe(created.id);
+    expect(reUpserted.postedAt).toEqual(postedAt);
+    expect(reUpserted.entryId).toBe("entry-1");
+    expect(reUpserted.net).toBe("0.07");
+  });
 });
 
 describe("MemoryInterestEntriesRepository", () => {
@@ -5017,7 +5135,22 @@ export class MemoryInterestAccrualsRepository implements InterestAccrualsReposit
       this.rows.push(row);
       return row;
     }
-    const updated: InterestAccrual = { ...this.rows[index]!, ...input };
+    // Mirrors DrizzleInterestAccrualsRepository.upsert's onConflictDoUpdate `set`
+    // list exactly: only the computed fields are replaced on conflict.
+    // `postedAt`/`entryId` are never touched here — every caller (including
+    // `runInterestAccrual`) always passes `postedAt: null, entryId: null`, so
+    // spreading `input` over them would silently un-post an accrual that
+    // `markPosted` already posted, and `shouldPost`'s idempotency check would
+    // then post it to Wallet a second time (Ruling P3-16).
+    const existing = this.rows[index]!;
+    const updated: InterestAccrual = {
+      ...existing,
+      balanceBasis: input.balanceBasis,
+      gross: input.gross,
+      tax: input.tax,
+      net: input.net,
+      carryAfter: input.carryAfter,
+    };
     this.rows[index] = updated;
     return updated;
   }
@@ -5135,6 +5268,30 @@ describe("DrizzleInterestAccrualsRepository", () => {
       const rows = await accruals.forRule(rule.id, "2026-09-01", "2026-09-02");
       expect(rows).toHaveLength(1);
       expect(rows[0]!.carryAfter).toBe("0.000000");
+    });
+  });
+
+  it("upsert on a re-accrued day preserves postedAt/entryId set by markPosted, rather than resetting them to null (Ruling P3-16)", async () => {
+    const { userId, accountId } = await seed();
+    const db = await testDb();
+    await withUserContext(db, { userId }, async (tx) => {
+      const rules = new DrizzleInterestRulesRepository(tx);
+      const rule = await rules.create({ userId, accountId, annualRate: "0.0225", taxRate: "0.26", dayCount: 365, compounding: "simple_daily", effectiveFrom: "2026-01-01", effectiveTo: null, postingMode: "analyze_only", providerCategoryRef: null, noteMarker: "auto-interest" });
+      const accruals = new DrizzleInterestAccrualsRepository(tx);
+      const created = await accruals.upsert({ ruleId: rule.id, accrualDate: "2026-09-01", balanceBasis: "1000.00", gross: "0.061644", tax: "0.016027", net: "0.05", carryAfter: "-0.005617", source: "computed", postedAt: null, entryId: null });
+      const postedAt = new Date("2026-09-02T06:00:00Z");
+      const entryId = crypto.randomUUID();
+      await accruals.markPosted(created.id, entryId, postedAt);
+
+      // The daily job re-upserts today's accrual with `postedAt: null, entryId:
+      // null` every time it runs, even on a day it already posted — the
+      // conflict path must not undo `markPosted`'s write.
+      const reUpserted = await accruals.upsert({ ruleId: rule.id, accrualDate: "2026-09-01", balanceBasis: "1200.00", gross: "0.09", tax: "0.02", net: "0.07", carryAfter: "0.000000", source: "computed", postedAt: null, entryId: null });
+
+      expect(reUpserted.id).toBe(created.id);
+      expect(reUpserted.postedAt?.toISOString()).toBe(postedAt.toISOString());
+      expect(reUpserted.entryId).toBe(entryId);
+      expect(reUpserted.net).toBe("0.07");
     });
   });
 });
@@ -5265,6 +5422,11 @@ export class DrizzleInterestAccrualsRepository implements InterestAccrualsReposi
   }
 
   async upsert(input: NewInterestAccrual): Promise<InterestAccrual> {
+    // `set` deliberately omits `postedAt`/`entryId`: every caller (including
+    // `runInterestAccrual`) always passes `postedAt: null, entryId: null` on
+    // `input`, and this repository's contract is that a conflict never resets
+    // what `markPosted` already recorded — `MemoryInterestAccrualsRepository.upsert`
+    // preserves the same two columns identically on conflict (Ruling P3-16).
     const [row] = await this.db
       .insert(interestAccruals)
       .values(input)
@@ -6341,10 +6503,11 @@ posting exactly as it does today until an operator deliberately flips a rule.
 
 ## Steps
 
-1. **Create a dashboard rule matching the container's `.env` today** (`Finance
-   › Interests › New rule`): the same account, `ANNUAL_RATE`, tax rate (from
-   `TAX_RATE`/`WALLET_TAX_RATE`), and day count (`DAY_COUNT`, almost always
-   `365`). Leave `postingMode` at its default, `analyze_only`.
+1. **Create a dashboard rule matching the container's `.env` today**, using
+   the create-rule form on the Interests list page (`/finance/interests` —
+   there is no separate "new rule" route): the same account, `ANNUAL_RATE`,
+   tax rate (from `TAX_RATE`/`WALLET_TAX_RATE`), and day count (`DAY_COUNT`,
+   almost always `365`). Leave `postingMode` at its default, `analyze_only`.
 2. **Let both run in parallel for at least a week.** The dashboard's daily job
    computes and stores an accrual every day; the container keeps posting to
    Wallet as before. Compare the dashboard's `Finance › Interests › Rules ›
@@ -6400,7 +6563,7 @@ git commit -m "feat(interests): add the optional per-rule posting adapter and th
 - Regenerate: `docs/api/openapi.json`
 
 **Interfaces:**
-- Consumes: `createInterestRule`, `updateInterestRule`, `listInterestRules`, `getInterestRuleDetail` from `../application/*` (Task 17); `interestDeps` from `../infrastructure/deps` (Task 16); `NotFoundError`, `VersionMismatchError` from `../application/errors` (Task 15).
+- Consumes: `createInterestRule`, `updateInterestRule`, `listInterestRules`, `getInterestRuleDetail` from `../application/*` (Task 17); `interestDeps` from `../infrastructure/deps` (Task 16); `NotFoundError`, `VersionMismatchError` from `../application/errors` (Task 15); `ErrorResponseSchema` from `@/modules/accounts/api/schemas` (existing — the app's one shared copy, imported rather than redeclared; see the corrected Ruling P3-11).
 - Produces:
 ```ts
 export function registerInterestRoutes(app: ApiApp, deps: ApiDeps): void;
@@ -6591,9 +6754,9 @@ export const GetRuleDetailQuerySchema = z.object({
   projectionDays: z.coerce.number().int().min(1).max(365).optional(),
 });
 
-export const ErrorResponseSchema = z
-  .object({ error: z.object({ code: z.string(), message: z.string(), requestId: z.string(), details: z.unknown().optional() }) })
-  .openapi("ErrorResponse");
+// `ErrorResponseSchema` itself is NOT declared here: it is imported from
+// `@/modules/accounts/api/schemas` in routes.ts, the app's one existing
+// `.openapi("ErrorResponse")` registration — see the corrected Ruling P3-11.
 ```
 
 - [ ] **Step 4: Write `routes.ts`**
@@ -6611,9 +6774,9 @@ import { listInterestRules } from "../application/list-interest-rules";
 import { updateInterestRule } from "../application/update-interest-rule";
 import { NotFoundError, VersionMismatchError } from "../application/errors";
 import { interestDeps } from "../infrastructure/deps";
+import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import {
   CreateInterestRuleRequestSchema,
-  ErrorResponseSchema,
   GetRuleDetailQuerySchema,
   InterestRuleDetailSchema,
   InterestRuleListResponseSchema,
@@ -6628,6 +6791,13 @@ function errorResponse(description: string) {
   return { description, content: { "application/json": { schema: ErrorResponseSchema } } };
 }
 
+/**
+ * `ErrorResponseSchema` itself is the one shared copy, imported above from
+ * `@/modules/accounts/api/schemas` — not redeclared here. Only this
+ * `errorResponse()`/`commonErrorResponses` wiring is duplicated per module,
+ * matching accounts, integrations and expenses; it is a plain object of
+ * route descriptions, not an OpenAPI component registration.
+ */
 const commonErrorResponses = {
   401: errorResponse("Not signed in (`unauthorized`)."),
   403: errorResponse("Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`)."),
@@ -6790,15 +6960,17 @@ git commit -m "feat(interests): add the REST API for interest rules"
 - Create: `src/app/(app)/finance/interests/rules/[id]/loading.tsx`
 
 **Interfaces:**
-- Consumes: `createInterestRule`, `updateInterestRule`, `listInterestRules`, `getInterestRuleDetail` from `../application/*` (Task 17); `interestDeps` from `../infrastructure/deps` (Task 16); `resolveCapabilities`, `realProbes` from `@/platform/capabilities/*` (existing, unchanged); `requirePrincipalOrRedirect` from `@/platform/auth/require-principal` (existing).
+- Consumes: `createInterestRule`, `updateInterestRule`, `listInterestRules`, `getInterestRuleDetail` from `../application/*` (Task 17); `interestDeps` from `../infrastructure/deps` (Task 16); `resolveCapabilities`, `realProbes` from `@/platform/capabilities/*` (existing, unchanged); `requirePrincipalOrRedirect` from `@/platform/auth/require-principal` (existing); `listAccounts` from `@/modules/accounts/application/list-accounts` (existing) and `accountDeps` from `@/modules/accounts/infrastructure/deps` (existing) — reused here the same way Task 19's job wiring reuses `accountDeps`, to populate the create-rule form's account dropdown; the interests module has no accounts repository of its own.
 - Produces:
 ```ts
 export function runForPrincipal<T>(fn: (deps: UseCaseDeps, principal: Principal) => Promise<T>): Promise<T>;
 export interface RuleRow { id: string; accountId: string; annualRate: string; taxRate: string; postingMode: string; effectiveFrom: string; version: number; }
 export function loadInterestRules(): Promise<RuleRow[]>;
 export function loadInterestRuleDetail(id: string, opts: { periodStart: string; periodEnd: string }): Promise<{ rule: RuleRow; accruals: unknown[]; reconciliationStatus: string; projection: unknown[] } | null>;
+export interface EligibleAccount { id: string; name: string; }
+export function loadEligibleAccounts(): Promise<EligibleAccount[]>;
 ```
-The Interests page keeps its existing "Connect Budget Makers Wallet" empty state when `Capabilities.features.interests` is `false` — same shape as Task 11's Expenses page change.
+The Interests page keeps its existing "Connect Budget Makers Wallet" empty state when `Capabilities.features.interests` is `false` — same shape as Task 11's Expenses page change. When capable, the list page also renders `RuleForm` as its create-rule affordance (Ruling P3-17): the spec's page map (§4) has no separate "new rule" route, so `RuleForm` and `createInterestRuleAction` (Step 6/7 below) get their one real caller here instead of on a route this plan does not build.
 
 - [ ] **Step 1: Write the failing loader test**
 
@@ -6877,6 +7049,10 @@ export { runForPrincipal, setInterestDepsFactoryForTests, setPrincipalForTests }
 
 ```ts
 // src/modules/interests/ui/load-interests.ts
+import { db } from "@/lib/db";
+import { withUserContext } from "@/platform/db/context";
+import { accountDeps } from "@/modules/accounts/infrastructure/deps";
+import { listAccounts } from "@/modules/accounts/application/list-accounts";
 import { getInterestRuleDetail } from "../application/get-interest-rule-detail";
 import { listInterestRules } from "../application/list-interest-rules";
 import { runForPrincipal } from "./run";
@@ -6921,6 +7097,25 @@ export async function loadInterestRuleDetail(
       projection: detail.projection.map((p) => ({ date: p.date, net: p.net })),
     };
   });
+}
+
+export interface EligibleAccount {
+  id: string;
+  name: string;
+}
+
+/**
+ * The interests module has no accounts repository of its own, so this loader
+ * reuses the accounts module's own use case and deps bag directly — the same
+ * cross-module reuse Task 19's job wiring already relies on (`accountDeps`),
+ * not a new pattern. It opens its own `withUserContext`, never nested inside
+ * `runForPrincipal`'s.
+ */
+export async function loadEligibleAccounts(): Promise<EligibleAccount[]> {
+  const { requirePrincipal } = await import("@/platform/auth/require-principal");
+  const principal = await requirePrincipal();
+  const items = await withUserContext(db, { userId: principal.userId }, (tx) => listAccounts(accountDeps(tx))(principal, { months: 1 }));
+  return items.map((i) => ({ id: i.account.id, name: i.account.name }));
 }
 ```
 
@@ -7119,7 +7314,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
 import { resolveCapabilities } from "@/platform/capabilities/resolve";
-import { loadInterestRules } from "@/modules/interests/ui/load-interests";
+import { loadEligibleAccounts, loadInterestRules } from "@/modules/interests/ui/load-interests";
+import { RuleForm } from "@/modules/interests/ui/RuleForm";
 import { RulesTable } from "@/modules/interests/ui/RulesTable";
 
 export const dynamic = "force-dynamic";
@@ -7151,17 +7347,24 @@ export default async function InterestsPage() {
     );
   }
 
-  const rows = await loadInterestRules();
+  const [rows, accounts] = await Promise.all([loadInterestRules(), loadEligibleAccounts()]);
   return (
     <>
       <PageHeader title="Interests" />
-      <div className="pt-6">
+      <div className="flex flex-col gap-8 pt-6">
         <RulesTable rows={rows} />
+        <div className="max-w-md">
+          <h2 className="text-body-sm font-medium text-muted">New rule</h2>
+          <div className="pt-4">
+            <RuleForm accounts={accounts} />
+          </div>
+        </div>
       </div>
     </>
   );
 }
 ```
+There is no separate "new rule" route: the spec's page map (§4) lists only `/finance/interests` and `/finance/interests/rules/[id]`, so the create-rule form (`RuleForm`, wired to `createInterestRuleAction` in Step 6) lives on the list page itself (Ruling P3-17).
 
 ```tsx
 // src/app/(app)/finance/interests/loading.tsx
@@ -7352,8 +7555,9 @@ entrypoint applies both migrations on boot.
    `{"kind":"transactions"}` in the body (see `docs/api/README.md`'s
    `X-Requested-With` example for the exact headers) — then reload
    `/finance/expenses` and confirm rows appear.
-4. Create one interest rule against a real synced Wallet account (`Finance ›
-   Interests › New rule`), leave `postingMode` at its default
+4. Create one interest rule against a real synced Wallet account using the
+   create-rule form on the Interests list page (`/finance/interests` — there
+   is no separate "new rule" route), leave `postingMode` at its default
    `analyze_only`, and confirm `job_runs` (Settings › Administration) shows
    an `interest_accrual` success on the next daily tick.
 5. Confirm `npm run test:integration -- interest-accrual` was green on the
@@ -7476,10 +7680,14 @@ git commit -m "docs(handoff): record the Phase 3 checkpoint and execution ledger
 - **P3-8:** the daily interest-accrual job (Task 18) iterates **every user with an active rule** (`InterestRulesRepository.listActiveForAllUsers`, read once under `withSystemContext`), unlike `monthly-close.ts`'s Phase-0/1-era single-owner assumption — interest rules are per-user from the start, and one rule's failure is caught and logged per-rule so it cannot jam every other user's run.
 - **P3-9:** posting to the provider is a push, never a `SyncKind` — it does not go through the sync engine. The job reads what it needs (the stored accrual, the account's live provider link, the opened connection) in short, sequential, never-nested transactions, then calls the Wallet API with no transaction open, then records the result in one final short transaction — the same fetch/apply discipline every pull sync in this codebase already follows, applied to a push.
 - **P3-10:** the real BudgetBakers `/records` and `/categories` field names have not been verified against a live token in this environment (same limitation Phase 2's checkpoint recorded for its own UI walkthrough). Every field guess is isolated behind `wallet-transactions-adapter.ts` and `wallet-interest-posting-adapter.ts` and validated by Zod, so a shape mismatch fails loudly and non-retryably rather than silently mis-mapping data; `docs/deploy/phase-3-runbook.md` carries a manual verification step for whoever holds a real token.
-- **P3-11:** `ErrorResponseSchema`/`commonErrorResponses` are duplicated per-module (`expenses/api/schemas.ts` and `routes.ts`, `interests/api/schemas.ts` and `routes.ts`) rather than extracted into a shared location — this matches the convention accounts and integrations already established independently; Task 10 originally proposed centralising it and was corrected after confirming (by reading both existing files) that no shared copy exists today.
+- **P3-11 (corrected — see P3-15):** the earlier version of this ruling claimed `ErrorResponseSchema` is duplicated per-module today and that "no shared copy exists" — that claim is false: `src/modules/integrations/api/routes.ts:27` already imports `ErrorResponseSchema` from `@/modules/accounts/api/schemas`, the app's one existing `.openapi("ErrorResponse")` registration. The real, established convention is share-by-import for `ErrorResponseSchema` itself; only the `errorResponse()`/`commonErrorResponses` wiring around it (plain route-description objects, not OpenAPI component registrations) is duplicated per module, matching accounts and integrations. Tasks 10, 12 and 20 are written to import the shared schema — see P3-15.
 - **P3-12:** `TransactionPatch` is widened to include `transferGroupId` in Task 7, the task that first needs to write it (transfer pairing), rather than speculatively in Task 4 where it would have had no caller yet.
 - **P3-13:** recurring-pattern detection (Task 12) runs as the last step of the transactions sync's `apply` phase — a full recompute from every transaction on file, replacing the previous set — rather than as a separately scheduled job. It is cheap (pure in-memory grouping over what the sync already loaded) and always reflects the latest sync.
 - **P3-14:** no new required environment variables this phase. Interest-rule parameters (rate, tax rate, day count, posting mode) live in per-rule database rows, a deliberate change from `interest.py`'s single env-var-configured account — this is exactly what spec §7.6 calls out as the "changed" behavior versus the legacy script.
+- **P3-15 (pre-flight repair; supersedes P3-11):** `ErrorResponseSchema` is imported from `@/modules/accounts/api/schemas` — the app's one existing `.openapi("ErrorResponse")` registration — in Tasks 10, 12 and 20, not redeclared. All routes across all four modules (accounts, integrations, expenses, interests) register onto the same shared `ApiApp`/`OpenAPIHono` instance, so a second module-local schema tagged with the same OpenAPI component name would collide at `npm run openapi:generate` time rather than merely duplicate. Only the per-module `errorResponse()`/`commonErrorResponses` wiring around it stays duplicated, matching the accounts/integrations precedent exactly — that wiring is a plain object of route descriptions, not an OpenAPI component registration, so it carries none of the schema's collision risk.
+- **P3-16 (pre-flight repair):** both `InterestAccrualsRepository.upsert` implementations (Tasks 15, 16) preserve `postedAt`/`entryId` on conflict, identically: `MemoryInterestAccrualsRepository.upsert` now sets only `balanceBasis`/`gross`/`tax`/`net`/`carryAfter` from `input` on an existing row, the same field list `DrizzleInterestAccrualsRepository.upsert`'s `onConflictDoUpdate` `set` already used. Before this fix, the memory repository spread `...input` last, and since every caller (`runInterestAccrual`) always upserts with `postedAt: null, entryId: null`, a second upsert of an already-posted accrual made it look unposted to `shouldPost` (Task 19) under the fake — a real double-post risk that no test caught. Tasks 15 and 16 each now carry a test that upserts an accrual, marks it posted, upserts the same accrual again with changed amounts, and asserts it stays posted with the same `entryId`.
+- **P3-17 (pre-flight repair):** the Interests list page (`/finance/interests`, Task 21) renders `RuleForm` as its create-rule affordance, giving `RuleForm` and `createInterestRuleAction` a real caller. The spec's page map (§4) lists only `/finance/interests` and `/finance/interests/rules/[id]` — no create route — so this plan does not invent one; a later phase can move rule creation to its own page if the list page becomes crowded. `docs/deploy/phase-3-runbook.md` (Task 22) and `docs/migration/wallet-manager-cutover.md` (Task 19) both point the operator at the list page's form rather than a "Finance › Interests › New rule" path that no task builds.
+- **P3-18 (pre-flight repair, mechanical):** four small factual corrections made in the same pass: Task 10's file reference for `registerAllRoutes` corrected from `app.ts:157-161` to the real `app.ts:141-145` (the file is 145 lines total); Task 11's `TransactionRow` **Produces** block now includes `categoryId`, matching its own Step 4 implementation and both loader functions; the top-level **File Structure** block now names the expenses source port `TransactionsSource`, matching every consumer (Task 4's own code, Task 7) instead of the stray `ProviderTransactionsSource`; Task 12's Step 9 now gives the actual `loadRecurringPatterns` code and the full updated `page.tsx`, replacing the plan's one prose-only code step.
 
 ## Self-review against the Phase 3 scope
 
