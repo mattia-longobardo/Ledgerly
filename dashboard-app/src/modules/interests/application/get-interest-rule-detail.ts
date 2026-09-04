@@ -57,8 +57,14 @@ export function getInterestRuleDetail(deps: UseCaseDeps) {
     );
 
     const currentBalance = await deps.balances.latestBalanceAsOf(principal.userId, rule.accountId, opts.periodEnd);
+    // `runInterestAccrual` only ever computes for `simple_daily` compounding
+    // (a `monthly`/`none` rule is accepted by the schema for forward
+    // compatibility but produces no accrual there) — the projection must
+    // honor that same gate, or a `monthly`/`none` rule would get a confident
+    // multi-day forecast computed with the simple-daily formula for interest
+    // the accrual job has explicitly promised never to post.
     const projection =
-      currentBalance !== null && rule.dayCount !== "actual"
+      currentBalance !== null && rule.compounding === "simple_daily" && rule.dayCount !== "actual"
         ? projectInterest(
             { balance: currentBalance, annualRate: rule.annualRate, taxRate: rule.taxRate, dayCount: rule.dayCount },
             new Date(`${opts.periodEnd}T00:00:00Z`),

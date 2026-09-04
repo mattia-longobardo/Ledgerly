@@ -107,4 +107,34 @@ describe("createInterestRule, updateInterestRule, listInterestRules", () => {
       updateInterestRule(deps)(testPrincipal(), rule.id, rule.version, { taxRate: "1.5" }),
     ).rejects.toThrow(InvalidInputError);
   });
+
+  // The shape-only regex accepts calendar-impossible strings like
+  // "2026-13-45" (month 13, day 45); a rule carrying one would then have an
+  // effectiveFrom nothing else in the system could reason about correctly.
+  it("rejects a calendar-impossible effectiveFrom", async () => {
+    const deps = harness();
+    await expect(
+      createInterestRule(deps)(testPrincipal(), {
+        accountId: "acc-1",
+        annualRate: "0.0225",
+        taxRate: "0.26",
+        dayCount: 365,
+        effectiveFrom: "2026-13-45",
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it("update rejects a calendar-impossible effectiveTo in the patch", async () => {
+    const deps = harness();
+    const rule = await createInterestRule(deps)(testPrincipal(), {
+      accountId: "acc-1",
+      annualRate: "0.0225",
+      taxRate: "0.26",
+      dayCount: 365,
+      effectiveFrom: "2026-01-01",
+    });
+    await expect(
+      updateInterestRule(deps)(testPrincipal(), rule.id, rule.version, { effectiveTo: "2026-02-30" }),
+    ).rejects.toThrow(InvalidInputError);
+  });
 });

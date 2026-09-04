@@ -137,4 +137,28 @@ describe("getInterestRuleDetail", () => {
     });
     expect(detail.projection).toEqual([]);
   });
+
+  // `runInterestAccrual` only ever computes for `simple_daily` compounding —
+  // a `monthly` (or `none`) rule gets no accrual there, ever. The projection
+  // must honor the same gate: otherwise a rule the accrual job will never
+  // post for gets a confident multi-day forecast computed with the
+  // simple-daily formula anyway, which is a wrong number, not an absent one.
+  it("produces no projection for a rule whose compounding is not simple_daily", async () => {
+    const deps = harness();
+    const rule = await createInterestRule(deps)(testPrincipal(), {
+      accountId: "acc-1",
+      annualRate: "0.0225",
+      taxRate: "0.26",
+      dayCount: 365,
+      compounding: "monthly",
+      effectiveFrom: "2026-01-01",
+    });
+
+    const detail = await getInterestRuleDetail(deps)(testPrincipal(), rule.id, {
+      periodStart: "2026-09-01",
+      periodEnd: "2026-09-30",
+      projectionDays: 3,
+    });
+    expect(detail.projection).toEqual([]);
+  });
 });
