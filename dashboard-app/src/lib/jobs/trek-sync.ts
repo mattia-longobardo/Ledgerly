@@ -22,8 +22,6 @@ import {
   applyDesiredState,
   getEntries,
   getStats,
-  isTrekNotConfigured,
-  trekConfigured,
   type TrekCallOptions,
   type TrekYearStats,
 } from "@/lib/clients/trek";
@@ -77,7 +75,8 @@ export interface RunTrekSyncInput {
    * pay for them.
    */
   withStats?: boolean;
-  call?: TrekCallOptions;
+  /** The credential, resolved by the caller from the integration vault. */
+  call: TrekCallOptions;
 }
 
 function empty(status: TrekSyncStatus, year: number): TrekSyncResult {
@@ -99,12 +98,6 @@ function empty(status: TrekSyncStatus, year: number): TrekSyncResult {
  * advisory lock; see the ⚠ note at the top of the file for why it is held here
  * and not in the job wrapper.
  *
- * Never throws for the ordinary "Trek is not set up" case — it returns
- * `disabled`, so an unconfigured install renders a plain notice instead of an
- * error page, and a scheduled caller does not raise an alert every run. The
- * config check comes BEFORE the lock so an unconfigured install does not open a
- * transaction to discover it has nothing to do.
- *
  * `pg_try_advisory_xact_lock` does not wait: a losing caller returns `skipped`
  * immediately, which is what makes it safe to hold this lock on the request
  * path of a dashboard Save. The WINNER, though, keeps a transaction — and so
@@ -112,18 +105,30 @@ function empty(status: TrekSyncStatus, year: number): TrekSyncResult {
  * That was already true of the hourly pass; it is now also true of a Save, so a
  * slow Trek costs a connection for as long as it is slow.
  */
-export async function runTrekSync(input: RunTrekSyncInput = {}): Promise<TrekSyncResult> {
+export async function runTrekSync(input: RunTrekSyncInput): Promise<TrekSyncResult> {
   const year = input.year ?? (input.now ?? new Date()).getFullYear();
-  if (!trekConfigured()) return empty("disabled", year);
-
   const result = await withJobLock(TREK_SYNC_LOCK_KEY, () => syncPass(input, year));
   return result ?? empty("skipped", year);
+}
+
+/**
+ * The result a caller reports when there is no Trek connection at all.
+ *
+ * `runTrekSync` used to answer this itself, from `trekConfigured()`. It cannot
+ * any more — "is Trek set up" is a question about `integration_connections`,
+ * which this module knows nothing about — so the answer moved to the callers
+ * that *can* ask it, and this is the shape they hand back. `TrekSyncStatus`
+ * keeps its `"disabled"` member and the Work page keeps rendering "Trek sync is
+ * off" from it; only the place the decision is taken has changed.
+ */
+export function disabledTrekSync(year: number): TrekSyncResult {
+  return empty("disabled", year);
 }
 
 /** One full bidirectional pass: PUSH local edits, then PULL Trek's answer. */
 async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSyncResult> {
   const now = input.now ?? new Date();
-  const opts = input.call ?? {};
+  const opts = input.call;
 
   const result: TrekSyncResult = {
     status: "ok",
@@ -208,7 +213,6 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
     if (result.errors.length > 0) result.status = "partial";
     return result;
   } catch (err) {
-    if (isTrekNotConfigured(err)) return empty("disabled", year);
     result.status = "failed";
     result.errors.push(err instanceof Error ? err.message : String(err));
     return result;

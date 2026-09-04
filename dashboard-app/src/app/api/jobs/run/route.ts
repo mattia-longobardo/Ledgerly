@@ -11,10 +11,7 @@ const bodySchema = z.discriminatedUnion("job", [
   z.object({ job: z.literal("sweep") }),
   z.object({ job: z.literal("wallet_refresh") }),
   z.object({ job: z.literal("payslip_ingest"), docId: z.number().int().positive() }),
-  z.object({
-    job: z.literal("trek_sync"),
-    year: z.number().int().min(2000).max(2100).optional(),
-  }),
+  z.object({ job: z.literal("trek_sync") }),
 ]);
 
 /** The in-app "run now" target. Session-authenticated, so every manual run is attributable to the owner. */
@@ -57,9 +54,6 @@ export async function POST(req: Request) {
     return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
   }
 
-  const result = await runTrekSyncJob({
-    trigger: "manual",
-    ...(input.year !== undefined ? { year: input.year } : {}),
-  });
+  const result = await runTrekSyncJob({ trigger: "manual" });
   return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
 }

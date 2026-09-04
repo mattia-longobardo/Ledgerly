@@ -1,3 +1,4 @@
+import { trekProvider } from "@/modules/integrations/infrastructure/trek-provider-adapter";
 import { walletProvider } from "@/modules/integrations/infrastructure/wallet-provider-adapter";
 import { registerProvider } from "./registry";
 
@@ -8,4 +9,5 @@ export function ensureProvidersRegistered(): void {
   if (done) return;
   done = true;
   registerProvider(walletProvider);
+  registerProvider(trekProvider);
 }
