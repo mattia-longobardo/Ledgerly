@@ -71,6 +71,13 @@
       "when": 1788479810645,
       "tag": "0009_platform_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788480737613,
+      "tag": "0010_integrations",
+      "breakpoints": true
     }
   ]
 }

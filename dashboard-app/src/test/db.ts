@@ -21,13 +21,23 @@ export async function testDb(): Promise<NodePgDatabase<typeof schema>> {
   return db;
 }
 
-/** Truncate everything except drizzle's own bookkeeping. */
+/**
+ * Tables the migrations own outright. They hold no test data, no row a test
+ * creates points at them, and clearing them would discard a catalogue only a
+ * migration knows how to write — so a test needing it back would have to keep a
+ * second copy of the migration's seed in sync by hand.
+ */
+const STATIC_TABLES = ["integration_providers"];
+
+/** Clear everything except drizzle's own bookkeeping and the static catalogues. */
 export async function resetDb(): Promise<void> {
   const d = await testDb();
   const res = await d.execute<{ table_name: string }>(sql`
     SELECT table_name FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name NOT LIKE '__drizzle%'`);
-  const names = res.rows.map((r) => `"${r.table_name}"`);
+  const names = res.rows
+    .filter((r) => !STATIC_TABLES.includes(r.table_name))
+    .map((r) => `"${r.table_name}"`);
   if (names.length) await d.execute(sql.raw(`TRUNCATE ${names.join(", ")} RESTART IDENTITY CASCADE`));
 }
 
