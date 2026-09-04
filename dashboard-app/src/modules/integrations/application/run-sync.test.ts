@@ -119,6 +119,30 @@ describe("runSync", () => {
     expect((await deps.connections.getByProvider(principal.userId, "wallet"))?.status).toBe("error");
   });
 
+  it("redacts the credential from a failed run's error before it is persisted or audited", async () => {
+    const deps = makeDeps();
+    const auditCalls: Record<string, unknown>[] = [];
+    Object.assign(deps, {
+      audit: async (e: Record<string, unknown>) => {
+        auditCalls.push(e);
+      },
+    });
+    const secret = "sk-live-91mN7fQ2xyz";
+    await connectIntegration(deps)(principal, { provider: "wallet", credentials: { token: secret } });
+    fetchImpl = async () => {
+      throw new Error(`upstream rejected token ${secret}`);
+    };
+
+    const run = await runSync(deps)(principal, { provider: "wallet", kind: "accounts", trigger: "manual" });
+    expect(run.status).toBe("failed");
+    expect(run.error).not.toContain(secret);
+    expect(run.error).toContain("[redacted]");
+
+    const failureAudit = auditCalls.find((a) => a.action === "integration.sync_failed");
+    expect(failureAudit).toBeDefined();
+    expect(JSON.stringify(failureAudit)).not.toContain(secret);
+  });
+
   it("persists a cursor on success and leaves it alone on failure", async () => {
     const deps = makeDeps();
     const connection = await connected(deps);
@@ -230,6 +254,48 @@ describe("the sync queue", () => {
     // The same row, executed — not a second one.
     expect(await deps.runs.queued(10)).toEqual([]);
     expect((await deps.runs.recent(connection.id, 10)).filter((r) => r.trigger === "webhook")).toHaveLength(1);
+  });
+
+  it("finishes a row that fails before execution as failed, and still drains the rest of the batch", async () => {
+    const deps = makeDeps();
+    const principalB = testPrincipal({ userId: "00000000-0000-7000-8000-000000000002" });
+    const connectionA = await connected(deps);
+    const { connection: connectionB } = await connectIntegration(deps)(principalB, {
+      provider: "wallet",
+      credentials: { token: "t" },
+    });
+
+    const queuedA = await enqueueSync(deps)(connectionA, "accounts", "webhook");
+    const queuedB = await enqueueSync(deps)(connectionB, "accounts", "webhook");
+
+    // A's job is disabled after it was queued but before the tick — the same
+    // shape as somebody switching a kind off from Settings in between. This
+    // must not be confused with the FK-cascade case: the connection and job
+    // both still exist, only `enabled` changed, so `prepare()` throws
+    // `SyncDisabledError` synchronously, before `execute()`'s own try/catch
+    // exists to catch it.
+    const jobA = await deps.jobs.find(connectionA.id, "accounts");
+    const originalFind = deps.jobs.find.bind(deps.jobs);
+    Object.assign(deps.jobs, {
+      find: async (connectionId: string, kind: "accounts" | "leave") =>
+        connectionId === connectionA.id ? { ...jobA!, enabled: false } : originalFind(connectionId, kind),
+    });
+
+    const drained = await drainSyncQueue(deps)(10);
+
+    // B ran despite A blowing up first in the same batch — that is the whole
+    // point: one bad row must not stall the rest of the tick.
+    expect(fetched).toHaveLength(1);
+    const resultA = drained.find((r) => r.id === queuedA.id);
+    const resultB = drained.find((r) => r.id === queuedB.id);
+    expect(resultA?.status).toBe("failed");
+    expect(resultA?.error).toMatch(/switched off/);
+    expect(resultB?.status).toBe("success");
+
+    // The failed row is finished, not left `queued` — an oldest-first queue
+    // that never resolves it would pick it first again on every future tick.
+    expect(await deps.runs.queued(10)).toEqual([]);
+    expect((await deps.runs.recent(connectionA.id, 10))[0]!.status).toBe("failed");
   });
 
   it("refuses to enqueue a disabled kind", async () => {
