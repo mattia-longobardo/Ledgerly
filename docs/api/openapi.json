@@ -553,33 +553,6 @@
           "deleted"
         ]
       },
-      "WalletSyncResult": {
-        "type": "object",
-        "properties": {
-          "created": {
-            "type": "number"
-          },
-          "updated": {
-            "type": "number"
-          },
-          "adopted": {
-            "type": "number"
-          },
-          "balances": {
-            "type": "number"
-          },
-          "missing": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "created",
-          "updated",
-          "adopted",
-          "balances",
-          "missing"
-        ]
-      },
       "NetWorthSeries": {
         "type": "object",
         "properties": {
@@ -1593,70 +1566,6 @@
           },
           "429": {
             "description": "Over the per-minute rate limit (`rate_limited`).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/integrations/wallet/sync": {
-      "post": {
-        "tags": [
-          "Integrations"
-        ],
-        "security": [
-          {
-            "session": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Reconciliation counts.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WalletSyncResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in (`unauthorized`).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Over the per-minute rate limit (`rate_limited`).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "The upstream integration is unavailable (`integration_unavailable`).",
             "content": {
               "application/json": {
                 "schema": {

@@ -224,27 +224,6 @@ describe("accounts routes", () => {
     expect((await detail.json()).account.groupId).toBeNull();
   });
 
-  it("wallet sync answers 503 integration_unavailable when Wallet has no token configured", async () => {
-    const { app, userA } = await seed();
-    const res = await app.request("/api/v1/integrations/wallet/sync", { method: "POST", headers: headers(userA.id) });
-    expect(res.status).toBe(503);
-    const body = await res.json();
-    expect(ErrorResponseSchema.parse(body)).toBeTruthy();
-    expect(body.error.code).toBe("integration_unavailable");
-  });
-
-  it("wallet sync is the owner's alone, even for an admin holding integrations.manage", async () => {
-    const { app, userA } = await seed();
-    const res = await app.request("/api/v1/integrations/wallet/sync", {
-      method: "POST",
-      headers: headers(userA.id, { "x-test-role": "admin" }),
-    });
-    expect(res.status).toBe(403);
-    const body = await res.json();
-    expect(ErrorResponseSchema.parse(body)).toBeTruthy();
-    expect(body.error.code).toBe("permission_denied");
-  });
-
   it("refuses a cookie-authenticated write that omits X-Requested-With", async () => {
     const { app, userA } = await seed();
     const res = await app.request("/api/v1/accounts", {

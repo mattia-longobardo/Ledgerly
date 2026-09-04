@@ -68,13 +68,32 @@ export function mapWalletAccount(raw: WalletAccount, asOf: string): ProviderAcco
   };
 }
 
-export function walletAccountsSource(clock: Clock): AccountsSource {
+/**
+ * `token` is passed in rather than read here: the credential lives in the
+ * encrypted vault from Phase 2 on, and an adapter that reached for it itself
+ * could not be used on behalf of a second user.
+ */
+export function walletAccountsSource(clock: Clock, token: string): AccountsSource {
   return {
     provider: WALLET_PROVIDER,
     async fetchAccounts(): Promise<ProviderAccount[]> {
       const asOf = romeDate(clock.now());
-      const raw = await getAccounts();
+      const raw = await getAccounts({ token });
       return raw.map((a) => mapWalletAccount(a, asOf));
     },
+  };
+}
+
+/**
+ * An `AccountsSource` over accounts that have already been fetched.
+ *
+ * The sync engine's apply phase has the rows but, by design, no credential —
+ * and `syncProviderAccounts` still needs a `source` for its `provider` field.
+ * This is that source: it names the provider and hands back what it was given.
+ */
+export function prefetchedWalletSource(accounts: readonly ProviderAccount[]): AccountsSource {
+  return {
+    provider: WALLET_PROVIDER,
+    fetchAccounts: async () => [...accounts],
   };
 }

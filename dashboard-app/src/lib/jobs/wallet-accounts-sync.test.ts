@@ -22,7 +22,7 @@ const store = vi.hoisted(() => {
     PAPERLESS_TOKEN: "paperless-token",
     CRON_SECRET: "c".repeat(20),
     WEBHOOK_SECRET: "w".repeat(20),
-    APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+    APP_ENCRYPTION_KEY: `k1:${Buffer.alloc(32, 1).toString("base64")}`,
     GOTIFY_URL: "https://gotify.example.test",
     GOTIFY_TOKEN: "gotify-token",
     WALLET_API_URL: "https://wallet.example.test/wallet/v1/api",
@@ -31,8 +31,13 @@ const store = vi.hoisted(() => {
     runs: [] as RunRow[],
     nextRunId: 1,
     lockHeld: false,
-    tokenConfigured: true,
-    owners: [] as string[],
+    connected: true,
+    syncRun: { id: "r1", status: "success", stats: { created: 2 }, error: null } as {
+      id: string;
+      status: "success" | "failed";
+      stats: Record<string, number>;
+      error: string | null;
+    },
   };
 });
 
@@ -63,52 +68,23 @@ vi.mock("@/lib/repo/jobs", () => ({
   ),
 }));
 
-vi.mock("@/lib/env", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/env")>();
-  return {
-    ...actual,
-    walletToken: vi.fn(() => {
-      if (!store.tokenConfigured) throw new Error("Wallet token file /run/secrets/wallet is empty");
-      return "jwt-token";
-    }),
-  };
-});
-
-// Only the owner lookup runs against `db` here; every account statement goes
-// through the mocked user context below.
-vi.mock("@/lib/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        innerJoin: () => ({
-          where: () => ({
-            orderBy: () => ({ limit: async () => store.owners.map((id) => ({ id })).slice(0, 1) }),
-          }),
-        }),
-      }),
-    }),
-  },
+vi.mock("@/modules/integrations/infrastructure/owner-connection", () => ({
+  openOwnerConnection: vi.fn(async () =>
+    store.connected
+      ? {
+          userId: "00000000-0000-7000-8000-000000000001",
+          connection: { id: "c1", provider: "wallet", status: "connected" },
+          credentials: { token: "test-token" },
+        }
+      : null,
+  ),
 }));
 
-vi.mock("@/platform/db/context", () => ({
-  withUserContext: vi.fn(async <T,>(_db: unknown, _ctx: unknown, fn: (tx: unknown) => Promise<T>) => fn({})),
+vi.mock("@/modules/integrations/application/run-sync", () => ({
+  runSyncForUser: () => async () => store.syncRun,
 }));
 
-vi.mock("@/modules/accounts/application/sync-provider-accounts", () => ({
-  syncProviderAccounts: vi.fn(() => async () => ({
-    created: 1,
-    updated: 2,
-    adopted: 0,
-    balances: 3,
-    missing: 1,
-  })),
-}));
-
-// The job now fetches before opening the transaction (see the note in
-// syncProviderAccounts), so this mock stands in for the real HTTP round trip.
-vi.mock("@/modules/accounts/infrastructure/wallet-adapter", () => ({
-  walletAccountsSource: vi.fn(() => ({ provider: "wallet", fetchAccounts: vi.fn(async () => []) })),
-}));
+vi.mock("@/platform/integrations/register-all", () => ({ ensureProvidersRegistered: vi.fn() }));
 
 vi.mock("@/lib/clients/http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/clients/http")>();
@@ -117,8 +93,8 @@ vi.mock("@/lib/clients/http", async (importOriginal) => {
 
 import { httpRequest } from "@/lib/clients/http";
 import { withJobLock } from "@/lib/repo/jobs";
-import { syncProviderAccounts } from "@/modules/accounts/application/sync-provider-accounts";
-import { withUserContext } from "@/platform/db/context";
+import { openOwnerConnection } from "@/modules/integrations/infrastructure/owner-connection";
+import { runSyncForUser } from "@/modules/integrations/application/run-sync";
 import { JOB_NAME, runWalletAccountsSync } from "@/lib/jobs/wallet-accounts-sync";
 
 function alerts(): Array<{ title: string; message: string }> {
@@ -131,53 +107,37 @@ beforeEach(() => {
   store.runs.length = 0;
   store.nextRunId = 1;
   store.lockHeld = false;
-  store.tokenConfigured = true;
-  store.owners = ["owner-1"];
+  store.connected = true;
+  store.syncRun = { id: "r1", status: "success", stats: { created: 2 }, error: null };
   vi.clearAllMocks();
   vi.mocked(httpRequest).mockResolvedValue(new Response("{}", { status: 200 }));
 });
 
 describe("runWalletAccountsSync", () => {
-  it("syncs the owner, once, under the owner's own context", async () => {
+  it("syncs the owner, once, through the sync engine", async () => {
     const result = await runWalletAccountsSync({ trigger: "cron" });
 
     expect(result).toMatchObject({
       job: JOB_NAME,
       status: "success",
-      detail: { created: 1, updated: 2, adopted: 0, balances: 3, missing: 1 },
+      detail: { runId: "r1", status: "success", created: 2 },
     });
-    // One credential, one user: a second user would be handed the owner's
-    // provider links, which are unique on the external id alone.
-    expect(vi.mocked(withUserContext).mock.calls.map((c) => c[1])).toEqual([
-      { userId: "owner-1", role: "system" },
-    ]);
+    expect(vi.mocked(openOwnerConnection)).toHaveBeenCalledWith("wallet");
     expect(store.runs[0]).toMatchObject({ jobName: JOB_NAME, trigger: "cron", status: "success" });
     expect(alerts()).toEqual([]);
   });
 
-  it("records a skipped run when the install has no owner yet", async () => {
-    store.owners = [];
-
-    const result = await runWalletAccountsSync();
-
-    expect(result).toMatchObject({ job: JOB_NAME, status: "already_done", detail: { reason: "no_owner" } });
-    expect(store.runs[0]?.status).toBe("already_done");
-    expect(syncProviderAccounts).not.toHaveBeenCalled();
-    expect(alerts()).toEqual([]);
-  });
-
-  it("records a skipped run and stays silent when Wallet is not configured", async () => {
-    store.tokenConfigured = false;
+  it("records a skipped run and stays silent when Wallet is not connected", async () => {
+    store.connected = false;
 
     const result = await runWalletAccountsSync();
 
     expect(result).toMatchObject({
       job: JOB_NAME,
       status: "already_done",
-      detail: { reason: "wallet_not_configured" },
+      detail: { reason: "wallet_not_connected" },
     });
     expect(store.runs[0]?.status).toBe("already_done");
-    expect(syncProviderAccounts).not.toHaveBeenCalled();
     expect(alerts()).toEqual([]);
   });
 
@@ -188,14 +148,11 @@ describe("runWalletAccountsSync", () => {
 
     expect(withJobLock).toHaveBeenCalledWith(JOB_NAME, expect.any(Function));
     expect(result).toMatchObject({ status: "already_done", detail: { reason: "lock_not_acquired" } });
-    expect(syncProviderAccounts).not.toHaveBeenCalled();
     expect(alerts()).toEqual([]);
   });
 
   it("never throws: a failure becomes a failed run, a JobResult and an alert", async () => {
-    vi.mocked(syncProviderAccounts).mockImplementationOnce(() => async () => {
-      throw new Error("wallet 502");
-    });
+    store.syncRun = { id: "r1", status: "failed", stats: {}, error: "wallet 502" };
 
     const result = await runWalletAccountsSync();
 
@@ -210,5 +167,11 @@ describe("runWalletAccountsSync", () => {
   it("defaults the trigger to cron", async () => {
     await runWalletAccountsSync();
     expect(store.runs[0]?.trigger).toBe("cron");
+  });
+
+  it("registers the providers before the first sync can be dispatched", async () => {
+    const { ensureProvidersRegistered } = await import("@/platform/integrations/register-all");
+    await runWalletAccountsSync();
+    expect(ensureProvidersRegistered).toHaveBeenCalled();
   });
 });
