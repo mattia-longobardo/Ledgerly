@@ -4,6 +4,11 @@ import { transactionLabels, type TransactionLabelRow } from "@/lib/db/schema";
 import type { LabelsRepository, NewLabel } from "../application/ports";
 import type { TransactionLabel } from "../domain/transaction";
 
+/** Postgres reports a unique-index violation as pg error code 23505, wrapped by drizzle-orm 0.45 on `.cause`. */
+function isUniqueViolation(err: unknown): boolean {
+  return (err as { cause?: { code?: string } } | undefined)?.cause?.code === "23505";
+}
+
 function toLabel(row: TransactionLabelRow): TransactionLabel {
   return {
     id: row.id,
@@ -43,8 +48,20 @@ export class DrizzleLabelsRepository implements LabelsRepository {
     return row ? toLabel(row) : null;
   }
 
-  async create(input: NewLabel): Promise<TransactionLabel> {
-    const [row] = await this.db.insert(transactionLabels).values(input).returning();
-    return toLabel(row!);
+  async create(input: NewLabel): Promise<TransactionLabel | "duplicate_name"> {
+    try {
+      // Runs in a nested transaction (a Postgres SAVEPOINT under drizzle-orm
+      // 0.45's node-postgres session) so that a caught unique-violation rolls
+      // back only this statement: without the savepoint, the surrounding
+      // withUserContext transaction would be left aborted and every later
+      // query on it would fail with "current transaction is aborted".
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx.insert(transactionLabels).values(input).returning();
+        return toLabel(row!);
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) return "duplicate_name";
+      throw err;
+    }
   }
 }

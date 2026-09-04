@@ -54,9 +54,28 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
     if (opts.to) filtered = filtered.filter((t) => t.occurredAt.toISOString() < opts.to!);
     if (opts.labelId) filtered = filtered.filter((t) => this.labelLinks.get(t.id)?.has(opts.labelId!));
 
-    const startIndex = opts.cursor ? filtered.findIndex((t) => t.id === opts.cursor) + 1 : 0;
-    const page = filtered.slice(startIndex, startIndex + limit);
-    const nextCursor = startIndex + limit < filtered.length ? page[page.length - 1]!.id : null;
+    if (opts.cursor) {
+      // Anchors on the (occurredAt, id) sort key, exactly like the Drizzle
+      // repository's SQL tuple comparison `(occurred_at, id) < (anchor...)`:
+      // the anchor row is looked up by userId + id alone, regardless of the
+      // other filters above, and every row that sorts after it under the
+      // same ORDER BY occurredAt DESC, id DESC is kept. This is standard
+      // keyset pagination and cheap in SQL — the real repository is the
+      // source of truth for this shape. One consequence: a cursor is only
+      // valid against the filter set it was issued under; changing filters
+      // between pages of the same cursor is not a supported flow.
+      const anchor = this.rows.find((t) => t.userId === userId && t.id === opts.cursor);
+      if (anchor) {
+        filtered = filtered.filter(
+          (t) =>
+            t.occurredAt.getTime() < anchor.occurredAt.getTime() ||
+            (t.occurredAt.getTime() === anchor.occurredAt.getTime() && t.id.localeCompare(anchor.id) < 0),
+        );
+      }
+    }
+
+    const page = filtered.slice(0, limit);
+    const nextCursor = filtered.length > limit ? page[page.length - 1]!.id : null;
     const labelsByTransaction = new Map<string, string[]>();
     for (const t of page) labelsByTransaction.set(t.id, [...(this.labelLinks.get(t.id) ?? [])]);
     return { items: page, labelsByTransaction, nextCursor };
@@ -93,9 +112,10 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
     this.labelLinks.set(id, new Set(labelIds));
   }
 
-  async labelsFor(_userId: string, ids: string[]): Promise<Map<string, string[]>> {
+  async labelsFor(userId: string, ids: string[]): Promise<Map<string, string[]>> {
+    const owned = new Set(this.rows.filter((t) => t.userId === userId).map((t) => t.id));
     const out = new Map<string, string[]>();
-    for (const id of ids) out.set(id, [...(this.labelLinks.get(id) ?? [])]);
+    for (const id of ids) out.set(id, owned.has(id) ? [...(this.labelLinks.get(id) ?? [])] : []);
     return out;
   }
 
@@ -122,7 +142,8 @@ export class MemoryCategoriesRepository implements CategoriesRepository {
     return this.rows.find((c) => c.userId === userId && c.name === name) ?? null;
   }
 
-  async create(input: NewCategory): Promise<TransactionCategory> {
+  async create(input: NewCategory): Promise<TransactionCategory | "duplicate_name"> {
+    if (this.rows.some((c) => c.userId === input.userId && c.name === input.name)) return "duplicate_name";
     const now = new Date();
     const row: TransactionCategory = { ...input, id: monotonicId(), createdAt: now, updatedAt: now };
     this.rows.push(row);
@@ -141,7 +162,8 @@ export class MemoryLabelsRepository implements LabelsRepository {
     return this.rows.find((l) => l.userId === userId && l.name === name) ?? null;
   }
 
-  async create(input: NewLabel): Promise<TransactionLabel> {
+  async create(input: NewLabel): Promise<TransactionLabel | "duplicate_name"> {
+    if (this.rows.some((l) => l.userId === input.userId && l.name === input.name)) return "duplicate_name";
     const now = new Date();
     const row: TransactionLabel = { ...input, id: monotonicId(), createdAt: now, updatedAt: now };
     this.rows.push(row);

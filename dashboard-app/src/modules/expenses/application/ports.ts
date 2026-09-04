@@ -38,7 +38,8 @@ export interface CategoriesRepository {
   list(userId: string, opts?: { includeArchived?: boolean }): Promise<TransactionCategory[]>;
   get(userId: string, id: string): Promise<TransactionCategory | null>;
   findByName(userId: string, name: string): Promise<TransactionCategory | null>;
-  create(input: NewCategory): Promise<TransactionCategory>;
+  /** `(userId, name)` is unique — a caller creating a name that already exists gets "duplicate_name" back, never a thrown constraint error. */
+  create(input: NewCategory): Promise<TransactionCategory | "duplicate_name">;
 }
 
 export type NewLabel = Omit<TransactionLabel, "id" | "createdAt" | "updatedAt">;
@@ -46,7 +47,8 @@ export type NewLabel = Omit<TransactionLabel, "id" | "createdAt" | "updatedAt">;
 export interface LabelsRepository {
   list(userId: string): Promise<TransactionLabel[]>;
   findByName(userId: string, name: string): Promise<TransactionLabel | null>;
-  create(input: NewLabel): Promise<TransactionLabel>;
+  /** `(userId, name)` is unique — a caller creating a name that already exists gets "duplicate_name" back, never a thrown constraint error. */
+  create(input: NewLabel): Promise<TransactionLabel | "duplicate_name">;
 }
 
 export interface RecurringPatternRecord {

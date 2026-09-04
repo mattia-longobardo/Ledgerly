@@ -128,14 +128,20 @@ export class DrizzleTransactionsRepository implements TransactionsRepository {
     });
   }
 
-  async labelsFor(_userId: string, ids: string[]): Promise<Map<string, string[]>> {
+  async labelsFor(userId: string, ids: string[]): Promise<Map<string, string[]>> {
     const map = new Map<string, string[]>();
     for (const id of ids) map.set(id, []);
     if (ids.length === 0) return map;
+    // Joins back to `transactions` to filter by userId explicitly, rather
+    // than leaning on the `transaction_label_links` RLS policy alone — this
+    // method's only call site (`list()`) already scopes `ids` to the caller,
+    // but the port takes a `userId` and a system-context caller with an
+    // unscoped id list must not see another user's labels.
     const rows = await this.db
-      .select()
+      .select({ transactionId: transactionLabelLinks.transactionId, labelId: transactionLabelLinks.labelId })
       .from(transactionLabelLinks)
-      .where(inArray(transactionLabelLinks.transactionId, ids));
+      .innerJoin(transactions, eq(transactions.id, transactionLabelLinks.transactionId))
+      .where(and(eq(transactions.userId, userId), inArray(transactionLabelLinks.transactionId, ids)));
     for (const r of rows) map.get(r.transactionId)?.push(r.labelId);
     return map;
   }
