@@ -38,6 +38,12 @@ export function runInterestAccrual(deps: UseCaseDeps) {
   return async (rule: InterestRule, accrualDate: string): Promise<RunInterestAccrualResult> => {
     if (rule.compounding !== "simple_daily" || rule.dayCount === "actual") return { accrued: false };
     const balance = await deps.balances.latestBalanceAsOf(rule.userId, rule.accountId, accrualDate);
+    // "There was no balance to compute against" and "the interest for that
+    // day was zero" are different facts — this returns before `dailyInterest`
+    // is ever called and before `accruals.upsert` is ever reached, so a day
+    // with no balance basis gets no accrual row at all, not a fabricated
+    // `net: "0.00"` one that would later reconcile as though a real zero had
+    // been computed.
     if (balance === null) return { accrued: false };
 
     const prior = await deps.accruals.latestCarry(rule.id);

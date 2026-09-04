@@ -56,6 +56,13 @@ describe("runInterestAccrual", () => {
     expect(rows).toHaveLength(1);
   });
 
+  // "There was no balance to compute against" and "the interest for that day
+  // was zero" are different facts (Task 18 review). A day with no balance
+  // basis must be recorded as no accrual at all — never as a fabricated
+  // `net: "0.00"` row, which would later reconcile as though a real,
+  // computed zero had been evaluated for that day. `toHaveLength(0)` (not
+  // e.g. a check on `net`) is the assertion that rules a zero-value row out
+  // entirely: nothing is written for the day, full stop.
   it("does nothing and never invents a balance when the account has none on file", async () => {
     const deps = harness(null);
     const result = await runInterestAccrual(deps)(rule, "2026-09-05");
