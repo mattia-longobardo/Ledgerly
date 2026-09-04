@@ -22,9 +22,13 @@ describe("MemoryInterestRulesRepository", () => {
   it("listActiveForAllUsers excludes a rule whose effectiveTo has passed", async () => {
     const repo = new MemoryInterestRulesRepository();
     await repo.create(rule({ effectiveTo: "2026-06-30" }));
-    await repo.create(rule({ effectiveTo: null }));
+    const stillActive = await repo.create(rule({ effectiveTo: null }));
     const active = await repo.listActiveForAllUsers("2026-09-05");
-    expect(active).toHaveLength(1);
+    // Asserts *which* rule survives, by id — with exactly two candidates,
+    // a reversed comparison (`<=` swapped for `>=`) would also produce a
+    // single-element array, just with the expired rule instead of the
+    // still-active one, and `toHaveLength(1)` alone would not catch that.
+    expect(active.map((r) => r.id)).toEqual([stillActive.id]);
   });
 });
 
@@ -81,5 +85,16 @@ describe("MemoryInterestEntriesRepository", () => {
     await repo.create({ userId: "u1", accountId: "acc-1", occurredAt: new Date(), gross: "1.00", net: "0.74", kind: "paid", transactionId: null, ruleId: "r1", source: "provider" });
     expect(await repo.listForRule("r1", "paid")).toHaveLength(1);
     expect(await repo.listForRule("r1")).toHaveLength(2);
+  });
+
+  it("listForRule orders by occurredAt ascending, matching the Drizzle repository's ORDER BY", async () => {
+    const repo = new MemoryInterestEntriesRepository();
+    // Inserted out of chronological order so a reversed (or absent) sort
+    // would fail this assertion, not just the row count.
+    await repo.create({ userId: "u1", accountId: "acc-1", occurredAt: new Date("2026-09-03T00:00:00Z"), gross: "1.00", net: "0.74", kind: "projected", transactionId: "third", ruleId: "r1", source: "computed" });
+    await repo.create({ userId: "u1", accountId: "acc-1", occurredAt: new Date("2026-09-01T00:00:00Z"), gross: "1.00", net: "0.74", kind: "projected", transactionId: "first", ruleId: "r1", source: "computed" });
+    await repo.create({ userId: "u1", accountId: "acc-1", occurredAt: new Date("2026-09-02T00:00:00Z"), gross: "1.00", net: "0.74", kind: "projected", transactionId: "second", ruleId: "r1", source: "computed" });
+    const rows = await repo.listForRule("r1");
+    expect(rows.map((r) => r.transactionId)).toEqual(["first", "second", "third"]);
   });
 });
