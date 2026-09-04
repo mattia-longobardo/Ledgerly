@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fromCents, toCents } from "@/lib/calc/money";
 import { dailyInterest, projectInterest } from "./accrual";
 
 describe("dailyInterest", () => {
@@ -80,6 +81,86 @@ describe("dailyInterest", () => {
     const withZero = dailyInterest({ balance: "5000.00", annualRate: "0.015", taxRate: "0.26", dayCount: 365, carry: "0" });
     const withEmpty = dailyInterest({ balance: "5000.00", annualRate: "0.015", taxRate: "0.26", dayCount: 365, carry: "" });
     expect(withEmpty).toEqual(withZero);
+  });
+
+  // --- Strict parsing: an absent or malformed amount must throw, never silently become 0 or a truncated value ---
+
+  it("throws rather than treating a missing balance as a zero accrual", () => {
+    expect(() => dailyInterest({ balance: "", annualRate: "0.0225", taxRate: "0.26", dayCount: 365, carry: "0" })).toThrow(/balance/);
+  });
+
+  it("throws on a bare '-' balance rather than treating it as zero", () => {
+    expect(() => dailyInterest({ balance: "-", annualRate: "0.0225", taxRate: "0.26", dayCount: 365, carry: "0" })).toThrow(/balance/);
+  });
+
+  it("throws on a missing annualRate or taxRate, never defaulting to zero", () => {
+    expect(() => dailyInterest({ balance: "100.00", annualRate: "", taxRate: "0.26", dayCount: 365, carry: "0" })).toThrow(/annualRate/);
+    expect(() => dailyInterest({ balance: "100.00", annualRate: "0.0225", taxRate: "", dayCount: 365, carry: "0" })).toThrow(/taxRate/);
+  });
+
+  it("throws on a two-dot balance instead of silently dropping the trailing segment (1.2.3 must not become 1.2)", () => {
+    expect(() => dailyInterest({ balance: "1.2.3", annualRate: "0.0225", taxRate: "0.26", dayCount: 365, carry: "0" })).toThrow(/balance/);
+  });
+
+  it("throws on a two-dot carry too, even though an empty carry is allowed", () => {
+    expect(() => dailyInterest({ balance: "100.00", annualRate: "0.0225", taxRate: "0.26", dayCount: 365, carry: "0.1.2" })).toThrow(/carry/);
+  });
+
+  // --- Rate validation: rejected, not silently run (Important 4 — chosen resolution) ---
+
+  it("rejects a negative annualRate rather than accruing negative interest forever", () => {
+    expect(() => dailyInterest({ balance: "1000.00", annualRate: "-0.01", taxRate: "0.26", dayCount: 365, carry: "0" })).toThrow(/annualRate/);
+  });
+
+  it("rejects a taxRate above 1 (a likely percentage-vs-fraction typo, e.g. '1.26' meaning 26%)", () => {
+    expect(() => dailyInterest({ balance: "1000.00", annualRate: "0.02", taxRate: "1.26", dayCount: 365, carry: "0" })).toThrow(/taxRate/);
+  });
+
+  it("rejects a negative taxRate", () => {
+    expect(() => dailyInterest({ balance: "1000.00", annualRate: "0.02", taxRate: "-0.01", dayCount: 365, carry: "0" })).toThrow(/taxRate/);
+  });
+
+  it("accepts taxRate at both closed-interval endpoints, 0 and 1", () => {
+    expect(() => dailyInterest({ balance: "1000.00", annualRate: "0.02", taxRate: "0", dayCount: 365, carry: "0" })).not.toThrow();
+    expect(() => dailyInterest({ balance: "1000.00", annualRate: "0.02", taxRate: "1", dayCount: 365, carry: "0" })).not.toThrow();
+  });
+});
+
+describe("dailyInterest conservation invariant", () => {
+  it("for a single day, net + carryAfter equals (gross - tax) + priorCarry, within the documented per-call truncation", () => {
+    const priorCarry = "0.123456";
+    const r = dailyInterest({ balance: "13729.65", annualRate: "0.0225", taxRate: "0.26", dayCount: 365, carry: priorCarry });
+    const netRawApprox = Number(r.gross) - Number(r.tax);
+    const lhs = Number(r.net) + Number(r.carryAfter);
+    const rhs = netRawApprox + Number(priorCarry);
+    // Three independent 6-decimal-place truncations (gross, tax, carryAfter)
+    // each bound the error at < 1e-6 (measured: 0 for this input, since the
+    // truncations happen to cancel); 1e-5 leaves headroom for inputs where
+    // they don't, while still catching a real regression (a dropped carry,
+    // a sign flip, a wrong clamp order) by three orders of magnitude.
+    expect(Math.abs(lhs - rhs)).toBeLessThan(1e-5);
+  });
+
+  it("over many days, the sum of posted net amounts plus the final carry equals the sum of net-of-tax raw accrual, to within the documented per-day truncation", () => {
+    const input = { balance: "1234.56", annualRate: "0.0225", taxRate: "0.26", dayCount: 365 as const };
+    const days = 365;
+    let carry = "0";
+    let sumNetCents = 0;
+    let sumNetRawApprox = 0;
+    for (let i = 0; i < days; i += 1) {
+      const r = dailyInterest({ ...input, carry });
+      sumNetCents += toCents(r.net)!;
+      sumNetRawApprox += Number(r.gross) - Number(r.tax);
+      carry = r.carryAfter;
+    }
+    const lhs = fromCents(sumNetCents) + Number(carry);
+    // Measured for this input: ~5.2e-7/day (~1.9e-4 over the full year).
+    // The bound is linear in days, not geometric — the carry is only ever
+    // added, never multiplied by the rate, so there is no feedback path for
+    // one day's truncation to compound into the next. 5e-6/day leaves ~10x
+    // headroom over the measured value while staying five orders of
+    // magnitude tighter than a cent for a full year.
+    expect(Math.abs(lhs - sumNetRawApprox)).toBeLessThan(days * 5e-6);
   });
 });
 
