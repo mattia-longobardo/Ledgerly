@@ -43,6 +43,19 @@ export function TransactionEditForm({ row, categories }: TransactionEditFormProp
         <span className={LABEL}>Category</span>
         <select name="categoryId" defaultValue={row.categoryId ?? ""} className={FIELD}>
           <option value="">Uncategorized</option>
+          {/*
+           * `categories` is `listCategories`, which excludes archived rows.
+           * If this transaction's own category was archived after it was
+           * recorded, its id has no matching option below, and the browser
+           * would silently fall back to whichever option sorts first — a
+           * displayed category that does not match what is actually stored,
+           * and a save that would then overwrite it. Render the current
+           * category as its own option so the selected value always mirrors
+           * `row.categoryId`, never a browser default.
+           */}
+          {row.categoryId !== null && !categories.some((c) => c.id === row.categoryId) && (
+            <option value={row.categoryId}>{row.categoryName ?? "Archived category"}</option>
+          )}
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}

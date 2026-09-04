@@ -50,7 +50,11 @@ export default async function ExpensesPage() {
     <>
       <PageHeader title="Expenses" />
       <div className="pt-6">
-        <TransactionsTable rows={page.rows} />
+        <TransactionsTable
+          initialRows={page.rows}
+          initialNextCursor={page.nextCursor}
+          pageSize={PAGE_SIZE}
+        />
       </div>
     </>
   );
