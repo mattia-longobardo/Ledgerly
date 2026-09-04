@@ -14,15 +14,6 @@ function SkeletonSection({ children }: { children: ReactNode }) {
   );
 }
 
-function SkeletonField() {
-  return (
-    <span className="block space-y-2">
-      <Skeleton className="h-2.5 w-24" />
-      <Skeleton className="h-11 w-48 rounded-md" />
-    </span>
-  );
-}
-
 /** The Payslip AI fields are full-width: a base URL and a key are long. */
 function SkeletonWideField() {
   return (
@@ -47,35 +38,18 @@ function SkeletonList({ rows }: { rows: number }) {
 }
 
 /**
- * Kept in lockstep with `settings/page.tsx`: same 6 + 6 panels, same split
- * sections, same narrow fields, so nothing jumps on hydrate.
+ * Kept in lockstep with `settings/admin/page.tsx`: same 6 + 6 panels, same
+ * split sections, so nothing jumps on hydrate.
  */
-export default function SettingsLoading() {
+export default function AdminSettingsLoading() {
   return (
     <div className="pt-4">
       <div className="pb-3">
-        <Skeleton className="h-2.5 w-16" />
-        <Skeleton className="mt-2 h-7 w-28" />
+        <Skeleton className="mt-2 h-7 w-40" />
       </div>
 
       <PageGrid className="pt-5">
         <Panel span={6} bodyClassName="flex flex-col gap-10">
-          <SkeletonSection>
-            <span className="block space-y-3">
-              <SkeletonField />
-              <SkeletonField />
-              <Skeleton className="h-11 w-44 rounded-md" />
-            </span>
-          </SkeletonSection>
-          <SkeletonSection>
-            <span className="block space-y-3">
-              <SkeletonField />
-              <Skeleton className="h-11 w-20 rounded-md" />
-            </span>
-          </SkeletonSection>
-          <SkeletonSection>
-            <SkeletonList rows={3} />
-          </SkeletonSection>
           <SkeletonSection>
             <SkeletonList rows={5} />
           </SkeletonSection>
@@ -87,17 +61,11 @@ export default function SettingsLoading() {
               <Skeleton className="h-11 w-20 rounded-md" />
             </span>
           </SkeletonSection>
-          <SkeletonSection>
-            <Skeleton className="h-12 w-full max-w-xs rounded-md" />
-          </SkeletonSection>
         </Panel>
 
         <Panel span={6} bodyClassName="flex flex-col gap-10">
           <SkeletonSection>
-            <span className="block">
-              <SkeletonList rows={3} />
-              <Skeleton className="mt-4 h-11 w-48 rounded-md" />
-            </span>
+            <SkeletonList rows={7} />
           </SkeletonSection>
           <SkeletonSection>
             <SkeletonList rows={6} />
