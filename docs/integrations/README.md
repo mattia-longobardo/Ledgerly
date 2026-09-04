@@ -124,6 +124,43 @@ never synced from (`isUsable`). A `connected` connection that fails a sync
 moves to `error`; a `connected` or `error` connection that passes `test`
 moves to `connected`.
 
+### `transactions` (Wallet)
+
+Incremental and cursor-based, unlike the `accounts` `SyncKind`'s full listing:
+the cursor is `{ sinceDate: string }`, the Rome date the last successful pass
+ran. Each pass re-requests from a week before that date (`RECORDS_LOOKBACK_DAYS`
+in `wallet-provider-adapter.ts`) rather than exactly from it, so a record whose
+`updatedAt` changed after the cursor moved past it is still picked up on the
+next pass — safe because every write this handler makes is an idempotent
+upsert keyed by `provider_links`, never an append. `fetch` makes two Wallet
+round trips (`/records`, `/categories`) with no transaction open; `apply`
+delegates the whole reconciliation — transactions, categories, labels,
+transfer pairing — to `syncProviderTransactions` in the expenses module, the
+same fetch/apply split `accountsSync` uses.
+
+### The optional interest-posting adapter
+
+Not a `SyncKind` — it is a push, not a pull, so it does not go through the
+sync engine at all. `src/lib/jobs/interest-accrual.ts`, after computing a
+day's accrual, calls `openConnection` and a live `provider_links` lookup in
+short, sequential, un-nested transactions, then calls
+`postWalletInterestEntry` (`src/modules/interests/infrastructure/
+wallet-interest-posting-adapter.ts`) with no transaction open, exactly like
+every other Wallet network call in this codebase. It only fires when a rule's
+`postingMode` is `"post_to_provider"` — the default is `"analyze_only"`
+(spec §13.2).
+
+It posts **only the current day's accrual** — there is deliberately no
+automatic sweep over a backlog of unposted days. An earlier version of this
+job did sweep up to 30 days on the theory that a Wallet outage shouldn't
+permanently lose a day; that sweep had no way to tell "a day this rule was
+never meant to post" from "a day posting failed on," so it was removed
+outright rather than narrowed (see the job's own doc comment for the full
+reasoning). A day that fails to post is logged
+(`interest_post_skipped`/`interest_post_failed`) and counted in the job's
+`job_runs` detail for an operator to act on; recovering it is a deliberate
+manual act, never something the next tick does on its own.
+
 The three disconnect policies, and the exact sentence
 `describeDisconnectPolicy` returns for each (the UI and the API share this
 string verbatim so they can never describe a policy differently):

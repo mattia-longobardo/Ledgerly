@@ -182,6 +182,33 @@ call answers `202` and queues the work; it does not run the sync inline
   A caller that only expected `running`/`success`/`failed` should treat
   `queued` as "accepted, not yet started," not as an error shape.
 
+## Expenses
+
+`GET /transactions`, `GET /transactions/{id}`, `PATCH /transactions/{id}`,
+`GET /transaction-categories`, `GET /transaction-labels`,
+`GET /transactions/recurring-patterns`. Transactions, categories and labels
+are read-only from the Wallet sync's point of view — the sync creates and
+updates them; a user can only recategorise, label and annotate what already
+exists. `PATCH /transactions/{id}` follows the same `If-Match`/`version`
+convention as `PATCH /accounts/{id}`.
+
+## Interests
+
+`GET /interest-rules`, `POST /interest-rules`, `GET /interest-rules/{id}`
+(accepts `periodStart`, `periodEnd`, `projectionDays` query parameters and
+returns the rule together with its accruals, entries, a reconciliation
+summary for the period, and a forward projection), `PATCH /interest-rules/{id}`.
+The reconciliation summary's `status` is one of `matched`, `missing`,
+`delayed`, `anomalous`, or `no_data` — `no_data` means no accrual rows exist
+for the period yet (the daily job hasn't reached it), which is a distinct
+fact from `matched` and never reported as a match made from zero evidence.
+Every rule defaults to `postingMode: "analyze_only"`; flipping it to
+`"post_to_provider"` is the only way this API ever writes to Wallet, and only
+for a rule whose account is still a live synced Wallet account with a
+connected integration — see
+[`docs/migration/wallet-manager-cutover.md`](../migration/wallet-manager-cutover.md)
+for the operational procedure.
+
 ## Regenerating `openapi.json`
 
 The document is generated from the same `createRoute`/Zod schemas the route
