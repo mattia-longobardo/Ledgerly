@@ -79,7 +79,12 @@ export class DrizzleInterestAccrualsRepository implements InterestAccrualsReposi
     return toAccrual(row!);
   }
 
-  async markPosted(id: string, entryId: string, postedAt: Date): Promise<void> {
-    await this.db.update(interestAccruals).set({ entryId, postedAt }).where(eq(interestAccruals.id, id));
+  async markPosted(id: string, entryId: string, postedAt: Date): Promise<boolean> {
+    const rows = await this.db
+      .update(interestAccruals)
+      .set({ entryId, postedAt })
+      .where(eq(interestAccruals.id, id))
+      .returning({ id: interestAccruals.id });
+    return rows.length > 0;
   }
 }

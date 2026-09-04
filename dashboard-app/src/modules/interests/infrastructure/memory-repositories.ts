@@ -109,10 +109,11 @@ export class MemoryInterestAccrualsRepository implements InterestAccrualsReposit
     return updated;
   }
 
-  async markPosted(id: string, entryId: string, postedAt: Date): Promise<void> {
+  async markPosted(id: string, entryId: string, postedAt: Date): Promise<boolean> {
     const index = this.rows.findIndex((a) => a.id === id);
-    if (index === -1) return;
+    if (index === -1) return false;
     this.rows[index] = { ...this.rows[index]!, postedAt, entryId };
+    return true;
   }
 }
 
