@@ -4,3 +4,4 @@ export * from "./platform";
 export * from "./accounts";
 export * from "./integrations";
 export * from "./transactions";
+export * from "./interests";
