@@ -204,4 +204,29 @@ describe("interests API", () => {
     expect(body.error.code).toBe("internal");
     expect(body.error.requestId).toBeTruthy();
   });
+
+  // `taxRate` is a bare `z.string()` at the wire schema (`UpdateInterestRuleRequestSchema`),
+  // so "1.5" clears OpenAPI-layer validation and only `updateInterestRule`'s
+  // own stricter Zod refinement (taxRate must be <= 1) rejects it, by
+  // throwing `InvalidInputError`. This proves `toApiError`'s mapping of that
+  // to 422 validation_failed is actually reachable through the route, not
+  // just present in the code — without it this would fall through to the
+  // generic onError handler as an uncaught Error and answer 500.
+  it("rejects a PATCH with a tax rate above 1 as 422 validation_failed", async () => {
+    const { userId, organizationId, accountId } = await seedUser();
+    const app = appFor(userId, organizationId);
+    const createRes = await app.request("/api/v1/interest-rules", {
+      method: "POST",
+      headers: { "x-requested-with": "test", "content-type": "application/json" },
+      body: JSON.stringify({ accountId, annualRate: "0.0225", taxRate: "0.26", dayCount: 365, effectiveFrom: "2026-01-01" }),
+    });
+    const created = (await createRes.json()) as { id: string; version: number };
+    const patchRes = await app.request(`/api/v1/interest-rules/${created.id}`, {
+      method: "PATCH",
+      headers: { "x-requested-with": "test", "content-type": "application/json", "if-match": String(created.version) },
+      body: JSON.stringify({ taxRate: "1.5" }),
+    });
+    expect(patchRes.status).toBe(422);
+    expect(((await patchRes.json()) as { error: { code: string } }).error.code).toBe("validation_failed");
+  });
 });
