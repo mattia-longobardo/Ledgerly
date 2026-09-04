@@ -20,7 +20,7 @@
  *    version when something in it actually changed.
  */
 
-import type { ProviderLinksRepository } from "@/modules/accounts/application/ports";
+import type { ProviderLink, ProviderLinksRepository } from "@/modules/accounts/application/ports";
 import { pairTransfers, type TransferCandidate } from "../domain/transaction";
 import type { TransactionCategory, TransactionLabel } from "../domain/transaction";
 import type { TransactionPatch, TransactionsSource, UseCaseDeps } from "./ports";
@@ -107,6 +107,12 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
       "account",
       [...new Set(incoming.map((t) => t.accountExternalId))],
     );
+    // A mutable snapshot: two incoming records sharing one `externalId` within
+    // the same batch (a defensive case, not an expected one — but Wallet's
+    // shapes are unverified) must not both take the create branch below. Each
+    // record processed updates this map in place, so a later record with the
+    // same externalId sees the transaction the earlier one just created or
+    // updated, and takes the update branch instead of creating a duplicate.
     const transactionLinks = await deps.links.byExternal(
       userId,
       provider,
@@ -163,6 +169,10 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
         localId = created.id;
       }
       await deps.links.upsertSeen(userId, { provider, entityType: "transaction", entityId: localId, externalId: t.externalId, metadata: {} }, now);
+      // Keep the in-run snapshot current so a repeat of this externalId later
+      // in the same batch finds this transaction rather than creating another.
+      const seenLink: ProviderLink = { provider, entityType: "transaction", entityId: localId, externalId: t.externalId, metadata: {}, missingSince: null };
+      transactionLinks.set(t.externalId, seenLink);
 
       const labelIds: string[] = [];
       for (const labelName of t.labelExternalIds) {
