@@ -933,6 +933,303 @@
           "color",
           "source"
         ]
+      },
+      "InterestRuleListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterestRule"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "InterestRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "annualRate": {
+            "type": "string"
+          },
+          "taxRate": {
+            "type": "string"
+          },
+          "dayCount": {
+            "$ref": "#/components/schemas/DayCount"
+          },
+          "compounding": {
+            "$ref": "#/components/schemas/Compounding"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "nullable": true
+          },
+          "postingMode": {
+            "$ref": "#/components/schemas/PostingMode"
+          },
+          "providerCategoryRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "noteMarker": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "annualRate",
+          "taxRate",
+          "dayCount",
+          "compounding",
+          "effectiveFrom",
+          "effectiveTo",
+          "postingMode",
+          "providerCategoryRef",
+          "noteMarker",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DayCount": {
+        "anyOf": [
+          {
+            "type": "number",
+            "enum": [
+              360
+            ]
+          },
+          {
+            "type": "number",
+            "enum": [
+              365
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "actual"
+            ]
+          }
+        ]
+      },
+      "Compounding": {
+        "type": "string",
+        "enum": [
+          "simple_daily",
+          "monthly",
+          "none"
+        ]
+      },
+      "PostingMode": {
+        "type": "string",
+        "enum": [
+          "analyze_only",
+          "post_to_provider"
+        ]
+      },
+      "InterestRuleDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InterestRule"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "accruals": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/InterestAccrual"
+                }
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/InterestEntry"
+                }
+              },
+              "reconciliation": {
+                "$ref": "#/components/schemas/ReconciliationSummary"
+              },
+              "projection": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProjectionPoint"
+                }
+              }
+            },
+            "required": [
+              "accruals",
+              "entries",
+              "reconciliation",
+              "projection"
+            ]
+          }
+        ]
+      },
+      "InterestAccrual": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accrualDate": {
+            "type": "string"
+          },
+          "balanceBasis": {
+            "type": "string"
+          },
+          "gross": {
+            "type": "string"
+          },
+          "tax": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "carryAfter": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "accrualDate",
+          "balanceBasis",
+          "gross",
+          "tax",
+          "net",
+          "carryAfter",
+          "postedAt"
+        ]
+      },
+      "InterestEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "gross": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "paid",
+              "projected",
+              "adjustment"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "computed",
+              "provider",
+              "manual"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "occurredAt",
+          "gross",
+          "net",
+          "kind",
+          "source"
+        ]
+      },
+      "ReconciliationSummary": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string"
+          },
+          "periodEnd": {
+            "type": "string"
+          },
+          "accruedTotal": {
+            "type": "string"
+          },
+          "paidTotal": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "matched",
+              "missing",
+              "delayed",
+              "anomalous",
+              "no_data"
+            ]
+          },
+          "differenceCents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "periodStart",
+          "periodEnd",
+          "accruedTotal",
+          "paidTotal",
+          "status",
+          "differenceCents"
+        ]
+      },
+      "ProjectionPoint": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "net": {
+            "type": "string"
+          },
+          "cumulativeNet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "net",
+          "cumulativeNet"
+        ]
       }
     },
     "parameters": {}
@@ -3650,6 +3947,525 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LabelListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interest-rules": {
+      "get": {
+        "tags": [
+          "Interests"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterestRuleListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Interests"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "annualRate": {
+                    "type": "string"
+                  },
+                  "taxRate": {
+                    "type": "string"
+                  },
+                  "dayCount": {
+                    "$ref": "#/components/schemas/DayCount"
+                  },
+                  "compounding": {
+                    "$ref": "#/components/schemas/Compounding"
+                  },
+                  "effectiveFrom": {
+                    "type": "string"
+                  },
+                  "effectiveTo": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "postingMode": {
+                    "$ref": "#/components/schemas/PostingMode"
+                  },
+                  "providerCategoryRef": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "noteMarker": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "accountId",
+                  "annualRate",
+                  "taxRate",
+                  "dayCount",
+                  "effectiveFrom"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterestRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interest-rules/{id}": {
+      "get": {
+        "tags": [
+          "Interests"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "periodStart",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "periodEnd",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "required": false,
+            "name": "projectionDays",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterestRuleDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Interests"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "annualRate": {
+                    "type": "string"
+                  },
+                  "taxRate": {
+                    "type": "string"
+                  },
+                  "dayCount": {
+                    "$ref": "#/components/schemas/DayCount"
+                  },
+                  "compounding": {
+                    "$ref": "#/components/schemas/Compounding"
+                  },
+                  "effectiveTo": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "postingMode": {
+                    "$ref": "#/components/schemas/PostingMode"
+                  },
+                  "providerCategoryRef": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "noteMarker": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterestRule"
                 }
               }
             }
