@@ -3,7 +3,7 @@ import type { Cadence, DetectedPattern } from "../domain/recurring";
 import type { RecordSource, Transaction, TransactionCategory, TransactionLabel } from "../domain/transaction";
 
 export type NewTransaction = Omit<Transaction, "id" | "version" | "createdAt" | "updatedAt">;
-export type TransactionPatch = Partial<Pick<Transaction, "categoryId" | "note" | "state" | "payee">>;
+export type TransactionPatch = Partial<Pick<Transaction, "categoryId" | "note" | "state" | "payee" | "transferGroupId">>;
 
 export interface ListTransactionsOptions {
   accountId?: string;
