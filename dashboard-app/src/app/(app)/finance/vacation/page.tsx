@@ -57,7 +57,7 @@ export default async function VacationFundPage() {
             description="Set the monthly amount and the opening value once, in settings. There is no preset."
             action={
               <Link
-                href="/settings"
+                href="/settings/personal"
                 className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
               >
                 Set it up
