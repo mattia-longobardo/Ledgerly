@@ -7,7 +7,7 @@ import {
 } from "../infrastructure/memory-repositories";
 import { testPrincipal } from "@/test/principal";
 import { setExpenseDepsFactoryForTests, setPrincipalForTests } from "./run";
-import { loadRecurringPatterns, loadTransactionsPage } from "./load-transactions";
+import { loadRecurringPatterns, loadTransactionDetail, loadTransactionsPage } from "./load-transactions";
 
 describe("loadTransactionsPage", () => {
   it("flattens dates to ISO strings and carries the category name", async () => {
@@ -53,6 +53,30 @@ describe("loadTransactionsPage", () => {
     expect(page.rows).toHaveLength(1);
     expect(page.rows[0]).toMatchObject({ amount: "-10.00", categoryName: "Groceries" });
     expect(typeof page.rows[0]!.occurredAt).toBe("string");
+    setExpenseDepsFactoryForTests(null);
+    setPrincipalForTests(null);
+  });
+});
+
+describe("loadTransactionDetail", () => {
+  it("rethrows a non-NotFoundError from the use case instead of returning null", async () => {
+    const baseTransactions = new MemoryTransactionsRepository();
+    const transactions = Object.create(baseTransactions) as MemoryTransactionsRepository;
+    transactions.get = async () => {
+      throw new Error("boom");
+    };
+    const deps = {
+      transactions,
+      categories: new MemoryCategoriesRepository(),
+      labels: new MemoryLabelsRepository(),
+      recurring: new MemoryRecurringPatternsRepository(),
+      clock: { now: () => new Date("2026-09-05T00:00:00Z") },
+      audit: async () => {},
+    };
+
+    setExpenseDepsFactoryForTests(() => deps);
+    setPrincipalForTests(testPrincipal());
+    await expect(loadTransactionDetail("00000000-0000-7000-8000-000000000099")).rejects.toThrow("boom");
     setExpenseDepsFactoryForTests(null);
     setPrincipalForTests(null);
   });

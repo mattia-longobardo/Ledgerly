@@ -10,7 +10,7 @@ import { listLabels } from "../application/list-labels";
 import { listRecurringPatterns } from "../application/list-recurring-patterns";
 import { listTransactions } from "../application/list-transactions";
 import { updateTransaction } from "../application/update-transaction";
-import { NotFoundError, VersionMismatchError } from "../application/errors";
+import { InvalidInputError, NotFoundError, VersionMismatchError } from "../application/errors";
 import { expenseDeps } from "../infrastructure/deps";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import {
@@ -49,9 +49,10 @@ const commonErrorResponses = {
   429: errorResponse("Over the per-minute rate limit (`rate_limited`)."),
 };
 
-function toApiError(err: unknown): ApiError {
+export function toApiError(err: unknown): ApiError {
   if (err instanceof NotFoundError) return new ApiError(404, "not_found", err.message);
   if (err instanceof VersionMismatchError) return new ApiError(409, "version_mismatch", err.message);
+  if (err instanceof InvalidInputError) return new ApiError(422, "validation_failed", err.message, err.issues);
   throw err;
 }
 

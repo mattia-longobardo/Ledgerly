@@ -226,6 +226,41 @@ describe("DrizzleInterestEntriesRepository", () => {
       expect(paidOnly.map((e) => e.id)).toEqual([earlier.id]);
     });
   });
+
+  it("scopes entries to their own owner via the direct user_id RLS policy — the owner sees it, another user does not", async () => {
+    const { a, b } = await seedTwoUsers();
+    const db = await testDb();
+    const bRuleId = await withUserContext(db, { userId: b.userId }, (tx) =>
+      new DrizzleInterestRulesRepository(tx).create(newRule(b.userId, b.accountId)).then((r) => r.id),
+    );
+    const bEntry = await withUserContext(db, { userId: b.userId }, (tx) =>
+      new DrizzleInterestEntriesRepository(tx).create({
+        userId: b.userId,
+        accountId: b.accountId,
+        occurredAt: new Date("2026-09-01"),
+        gross: "1.00",
+        net: "0.74",
+        kind: "paid",
+        transactionId: null,
+        ruleId: bRuleId,
+        source: "computed",
+      }),
+    );
+
+    // The owner sees it — `interest_entries` carries `user_id` directly, no
+    // join needed.
+    await withUserContext(db, { userId: b.userId }, async (tx) => {
+      const entries = new DrizzleInterestEntriesRepository(tx);
+      expect((await entries.listForRule(bRuleId)).map((e) => e.id)).toEqual([bEntry.id]);
+    });
+
+    // Another user, asking by the same ruleId, sees nothing — RLS filters on
+    // `user_id`, not on whether the caller happens to know the rule's id.
+    await withUserContext(db, { userId: a.userId }, async (tx) => {
+      const entries = new DrizzleInterestEntriesRepository(tx);
+      expect(await entries.listForRule(bRuleId)).toEqual([]);
+    });
+  });
 });
 
 describe("drizzleAccountBalanceLookup", () => {

@@ -1,13 +1,9 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { transactionCategories, type TransactionCategoryRow } from "@/lib/db/schema";
 import type { CategoriesRepository, NewCategory } from "../application/ports";
 import type { TransactionCategory } from "../domain/transaction";
-
-/** Postgres reports a unique-index violation as pg error code 23505, wrapped by drizzle-orm 0.45 on `.cause`. */
-function isUniqueViolation(err: unknown): boolean {
-  return (err as { cause?: { code?: string } } | undefined)?.cause?.code === "23505";
-}
 
 function toCategory(row: TransactionCategoryRow): TransactionCategory {
   return {

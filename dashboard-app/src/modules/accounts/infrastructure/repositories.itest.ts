@@ -4,6 +4,7 @@ import { withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewAccount } from "../application/ports";
 import { DrizzleAccountsRepository } from "./drizzle-accounts-repository";
+import { DrizzleGroupsRepository } from "./drizzle-groups-repository";
 import { DrizzleProviderLinksRepository } from "./drizzle-provider-links-repository";
 
 /** Identity tables carry no RLS, so the seed runs on the bare connection. */
@@ -250,6 +251,44 @@ describe("DrizzleAccountsRepository", () => {
     const { a } = await seedUsers();
     const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
     expect(await asUser(a, (repo) => repo.hasReferences(account.id))).toBe(false);
+  });
+});
+
+describe("DrizzleGroupsRepository", () => {
+  beforeEach(resetDb);
+  afterAll(closeDb);
+
+  /** Runs `fn` with a repository bound to a transaction that carries the user's RLS context. */
+  async function asGroupUser<T>(userId: string, fn: (repo: DrizzleGroupsRepository) => Promise<T>): Promise<T> {
+    const db = await testDb();
+    return withUserContext(db, { userId }, (tx) => fn(new DrizzleGroupsRepository(tx)));
+  }
+
+  it("create() rejects a duplicate (userId, name) with duplicate_name, and the surrounding transaction survives to run another statement", async () => {
+    const { a } = await seedUsers();
+    await asGroupUser(a, async (repo) => {
+      await repo.create(a, "Everyday");
+      const second = await repo.create(a, "Everyday");
+      expect(second).toBe("duplicate_name");
+      // If the caught unique-violation had left the surrounding transaction
+      // aborted (no savepoint), this next statement — on the same open
+      // transaction — would fail with "current transaction is aborted",
+      // not merely return the wrong thing.
+      expect((await repo.list(a)).map((g) => g.name)).toEqual(["Everyday"]);
+    });
+  });
+
+  it("rename() rejects a rename onto an existing name with duplicate_name, and the surrounding transaction survives to run another statement", async () => {
+    const { a } = await seedUsers();
+    await asGroupUser(a, async (repo) => {
+      await repo.create(a, "Everyday");
+      const toRename = await repo.create(a, "Savings");
+      if (toRename === "duplicate_name") throw new Error("expected create() to succeed, got duplicate_name");
+      const second = await repo.rename(a, toRename.id, "Everyday");
+      expect(second).toBe("duplicate_name");
+      // Same aborted-transaction hazard as create() above, exercised via rename().
+      expect((await repo.list(a)).map((g) => g.name).sort()).toEqual(["Everyday", "Savings"]);
+    });
   });
 });
 
