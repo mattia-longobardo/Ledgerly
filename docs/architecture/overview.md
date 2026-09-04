@@ -1,9 +1,9 @@
-# Architecture overview — Phase 0 + Phase 1 + Phase 2
+# Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3
 
 This describes what `dashboard-app` actually is after Phase 0 (platform
-foundations), Phase 1 (accounts, Teable retirement), and Phase 2 (the
-integration framework, encrypted credentials, inbound webhooks). It follows
-the target shape from
+foundations), Phase 1 (accounts, Teable retirement), Phase 2 (the
+integration framework, encrypted credentials, inbound webhooks), and Phase 3
+(Expenses and Interests). It follows the target shape from
 [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](../superpowers/specs/2026-09-02-finance-company-platform-design.md)
 §3; read that document for the rationale, this one for what is on disk today.
 
@@ -24,6 +24,18 @@ src/
     infrastructure/       Drizzle repositories, wallet-provider-adapter.ts, trek-provider-adapter.ts
     api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
     ui/                     Settings › Integrations loaders and components
+  modules/expenses/
+    domain/             Transaction, TransactionCategory, TransactionLabel, transfer pairing, recurring detection — no IO
+    application/         list/get/update transaction, list categories/labels, sync-provider-transactions, detect-recurring-patterns, ports.ts
+    infrastructure/       Drizzle repositories, the Wallet transactions adapter
+    api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
+    ui/                     Expenses list/detail loaders and components
+  modules/interests/
+    domain/             dailyInterest, projectInterest, reconcileInterest — no IO, ported from Wallet Manager's interest.py
+    application/         rule CRUD, run-interest-accrual, get-interest-rule-detail, post-interest-entry, ports.ts
+    infrastructure/       Drizzle repositories, the Wallet interest-posting adapter
+    api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
+    ui/                     Interests list/rule-detail loaders and components
   platform/
     auth/               Principal, permission catalogue, resolvePrincipal, require-principal
     capabilities/       resolveCapabilities, buildNavigation, the production probes
@@ -39,11 +51,16 @@ src/
   app/                   Next.js routes only — thin, call use cases and render ui/
 ```
 
-Only `accounts` is a full module today; everything payroll/trek/paperless-related
-still lives under `src/lib/*` and moves into its own module in a later phase
-(§11 Phase 4 and after). `src/modules/home/cards.ts` is the first cross-module
-composition point: it reads `Capabilities` and the accounts overview to decide
-what Home shows.
+`accounts`, `expenses` and `interests` are full modules; everything
+payroll/trek/paperless-related still lives under `src/lib/*` and moves into
+its own module in a later phase (§11 Phase 4 and after). Transactions sync
+through the same `IntegrationProvider`/`SyncKind` framework as accounts
+(`transactions` on the Wallet provider, cursor-based and incremental — Task 8
+of the Phase 3 plan), and interest accrual is a new daily job
+(`src/lib/jobs/interest-accrual.ts`) in the shape of `monthly-close.ts`, but
+iterating every user with an active rule rather than a single owner.
+`src/modules/home/cards.ts` is the first cross-module composition point: it
+reads `Capabilities` and the accounts overview to decide what Home shows.
 
 ## The use-case rule
 
@@ -276,11 +293,13 @@ Per the spec's phased plan (§11), Phase 2 explicitly does not include:
   (`src/platform/jobs/register-all.ts`) still dispatch `wallet_accounts_sync`
   and `trek_sync` for the connection owner only; there is no per-user
   dispatch of the tiers themselves yet.
-- Budgets, Expenses, Interests, and Management beyond the placeholder
-  navigation entries `buildNavigation` already renders (Budgets
-  unconditionally, Expenses/Interests once Wallet is connected, Management
-  for principals holding `finance.manage`) — no domain module, use cases, or
-  tables exist behind any of these links yet.
+- Budgets and Management beyond the placeholder navigation entries
+  `buildNavigation` already renders (Budgets unconditionally, Management for
+  principals holding `finance.manage`) — no domain module, use cases, or
+  tables exist behind either link yet. Expenses and Interests are no longer
+  in this list: Phase 3 gave both a full module (transactions/categories/
+  labels, and interest rules/accruals/entries), reachable once Wallet is
+  connected.
 - The payroll/earnings/timeoff domain moving out of `src/lib/*` into its own
   module (Phase 4).
 
