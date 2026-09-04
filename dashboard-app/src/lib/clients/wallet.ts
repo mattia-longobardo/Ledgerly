@@ -168,6 +168,25 @@ export async function getBalances(opts: WalletCallOptions): Promise<WalletBalanc
   return reduceBalances(await getAccounts(opts));
 }
 
+const CATEGORIES_LIMIT = 200;
+const RECORDS_LIMIT = 500;
+
+/**
+ * A page that comes back exactly at the requested limit may mean there are
+ * more items beyond it. No pagination cursor for these endpoints has been
+ * confirmed against a live token, so silently returning a full first page as
+ * "the dataset" would silently understate money. Refuse instead of guessing.
+ */
+function assertPageNotTruncated(endpoint: string, count: number, limit: number): void {
+  if (count < limit) return;
+  throw new UpstreamError(
+    "wallet",
+    `Wallet /${endpoint} returned exactly the requested limit (${limit}) — the result may be truncated and pagination is not implemented; refusing to treat a possibly-partial page as complete`,
+    { count, limit },
+    false,
+  );
+}
+
 const categorySchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -181,12 +200,13 @@ export async function getCategories(opts: WalletCallOptions): Promise<WalletCate
   try {
     const body = await withRetry(
       () =>
-        requestJson("wallet", `${baseUrl()}/categories?limit=200`, categoriesSchema, {
+        requestJson("wallet", `${baseUrl()}/categories?limit=${CATEGORIES_LIMIT}`, categoriesSchema, {
           headers: headers(opts),
           signal: opts.signal,
         }),
       retryPolicy(opts),
     );
+    assertPageNotTruncated("categories", body.categories.length, CATEGORIES_LIMIT);
     return body.categories;
   } catch (err) {
     throw translate(err);
@@ -199,7 +219,7 @@ const recordSchema = z.object({
   amount: z.number(),
   currencyCode: z.string(),
   categoryId: z.string().nullable().optional(),
-  labels: z.array(z.string()).optional().default([]),
+  labels: z.array(z.string()).default([]),
   recordType: z.string().optional(),
   recordState: z.string().optional(),
   note: z.string().nullable().optional(),
@@ -211,6 +231,28 @@ const recordSchema = z.object({
 const recordsSchema = z.object({ records: z.array(recordSchema) });
 export type WalletRecord = z.infer<typeof recordSchema>;
 
+/**
+ * `recordType`/`recordState` are optional because their field names were
+ * never verified against a live token. A single record genuinely omitting
+ * one is plausible; every record in a whole non-empty page omitting it is
+ * far more likely to mean the field-name guess is wrong than that the field
+ * is truly absent everywhere — mirrors the all-or-nothing invariant
+ * `reduceBalances` already enforces for missing accounts (§ above).
+ */
+function assertFieldSeenSomewhere(
+  records: readonly WalletRecord[],
+  field: "recordType" | "recordState",
+): void {
+  if (records.length === 0) return;
+  if (records.some((r) => r[field] !== undefined)) return;
+  throw new UpstreamError(
+    "wallet",
+    `every record in a page of ${records.length} is missing "${field}" — likely a wrong field-name guess, not a genuine absence across the whole page`,
+    { sampleIds: records.slice(0, 5).map((r) => r.id) },
+    false,
+  );
+}
+
 export interface GetRecordsOptions extends WalletCallOptions {
   /** ISO date; the API defaults to a three-month window when this is omitted. */
   sinceDate?: string;
@@ -221,12 +263,15 @@ export async function getRecords(opts: GetRecordsOptions): Promise<WalletRecord[
     const filter = opts.sinceDate ? `&recordDate=gte.${opts.sinceDate}` : "";
     const body = await withRetry(
       () =>
-        requestJson("wallet", `${baseUrl()}/records?limit=500${filter}`, recordsSchema, {
+        requestJson("wallet", `${baseUrl()}/records?limit=${RECORDS_LIMIT}${filter}`, recordsSchema, {
           headers: headers(opts),
           signal: opts.signal,
         }),
       retryPolicy(opts),
     );
+    assertFieldSeenSomewhere(body.records, "recordType");
+    assertFieldSeenSomewhere(body.records, "recordState");
+    assertPageNotTruncated("records", body.records.length, RECORDS_LIMIT);
     return body.records;
   } catch (err) {
     throw translate(err);
