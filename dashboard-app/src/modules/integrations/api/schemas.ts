@@ -40,7 +40,7 @@ export const SyncRunSchema = z.object({
   connectionId: z.string(),
   /** The `sync_jobs` row this run belongs to, or null. */
   jobId: z.string().nullable(),
-  kind: z.enum(["accounts", "leave"]),
+  kind: z.enum(["accounts", "leave", "transactions"]),
   /** `queued` is a webhook-created run the hourly `sync_queue` job has not reached yet. */
   status: z.enum(["queued", "running", "success", "failed", "skipped"]),
   trigger: z.enum(["cron", "manual", "webhook", "api"]),
@@ -75,7 +75,7 @@ export const ConnectResponseSchema = z.object({
   test: TestResultSchema,
 });
 
-export const SyncRequestBodySchema = z.object({ kind: z.enum(["accounts", "leave"]).optional() });
+export const SyncRequestBodySchema = z.object({ kind: z.enum(["accounts", "leave", "transactions"]).optional() });
 export const DisconnectRequestSchema = z.object({ policy: z.enum(["keep", "archive", "purge"]).optional() });
 export const DisconnectResponseSchema = z.object({ policy: z.enum(["keep", "archive", "purge"]) });
 

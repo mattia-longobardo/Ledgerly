@@ -2193,7 +2193,8 @@
                     "type": "string",
                     "enum": [
                       "accounts",
-                      "leave"
+                      "leave",
+                      "transactions"
                     ]
                   }
                 }
@@ -2226,7 +2227,8 @@
                           "type": "string",
                           "enum": [
                             "accounts",
-                            "leave"
+                            "leave",
+                            "transactions"
                           ]
                         },
                         "status": {
@@ -2539,7 +2541,8 @@
                             "type": "string",
                             "enum": [
                               "accounts",
-                              "leave"
+                              "leave",
+                              "transactions"
                             ]
                           },
                           "status": {

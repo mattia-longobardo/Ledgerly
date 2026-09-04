@@ -21,6 +21,10 @@ vi.mock("@/lib/clients/wallet", () => ({
       },
     ];
   }),
+  getRecords: vi.fn(async () => [
+    { id: "r1", accountId: "w1", amount: -12.5, currencyCode: "EUR", recordType: "expense", recordState: "cleared", recordDate: "2026-09-04T08:00:00Z", categoryId: "c1", labels: [] },
+  ]),
+  getCategories: vi.fn(async () => [{ id: "c1", name: "Groceries", group: null }]),
 }));
 
 /**
@@ -46,6 +50,27 @@ vi.mock("@/modules/accounts/infrastructure/deps", async () => {
       },
     }),
     __disconnectFixture: { accounts, links, audit },
+  };
+});
+
+vi.mock("@/modules/expenses/infrastructure/deps", async () => {
+  const { MemoryCategoriesRepository, MemoryLabelsRepository, MemoryRecurringPatternsRepository, MemoryTransactionsRepository } = await import(
+    "@/modules/expenses/infrastructure/memory-repositories"
+  );
+  const transactions = new MemoryTransactionsRepository();
+  const categories = new MemoryCategoriesRepository();
+  const labels = new MemoryLabelsRepository();
+  const recurring = new MemoryRecurringPatternsRepository();
+  return {
+    expenseDeps: () => ({
+      transactions,
+      categories,
+      labels,
+      recurring,
+      clock: { now: () => new Date("2026-09-04T09:00:00Z") },
+      audit: async () => {},
+    }),
+    __expenseFixture: { transactions },
   };
 });
 
@@ -255,5 +280,35 @@ describe("wallet provider adapter onDisconnect", () => {
     expect(await fixture.accounts.get("purge-2", referenced.id)).toMatchObject({ status: "archived" });
     const line = fixture.audit.at(-1);
     expect(line).toMatchObject({ after: { policy: "purge", archived: 1, deleted: 0 } });
+  });
+});
+
+describe("wallet provider adapter — transactions sync", () => {
+  it("declares a transactions sync handler and links a fetched record to an already-synced account", async () => {
+    const fixture = await disconnectFixture(); // reuses the accounts memory links repository already seeded by the existing accountDeps mock
+    await fixture.links.upsertSeen("u1", { provider: "wallet", entityType: "account", entityId: "local-1", externalId: "w1", metadata: {} }, new Date());
+
+    expect(walletProvider.syncs.transactions).toBeDefined();
+    const payload = await walletProvider.syncs.transactions!.fetch({
+      connection: connectionFixture(),
+      credentials: { token: "good" },
+      runId: "run-1",
+      clock: { now: () => new Date("2026-09-04T09:00:00Z") },
+      cursor: null,
+    });
+    const stats = await walletProvider.syncs.transactions!.apply(
+      {
+        connection: connectionFixture(),
+        runId: "run-1",
+        db: unusedDb,
+        clock: { now: () => new Date("2026-09-04T09:00:00Z") },
+        cursor: null,
+        setCursor: () => {},
+        audit: async () => {},
+      },
+      payload,
+    );
+    expect(stats.transactionsCreated).toBe(1);
+    expect(stats.skippedNoAccount).toBe(0);
   });
 });
