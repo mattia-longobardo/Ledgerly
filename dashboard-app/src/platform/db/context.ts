@@ -3,7 +3,14 @@ import type { DbClient } from "@/lib/db/client";
 
 export interface UserContext {
   userId: string;
-  role?: "user" | "system";
+  /**
+   * `system` bypasses the per-user predicate for cross-user jobs (Ruling R7).
+   * `admin` is its read-side counterpart: the Administration area reads other
+   * users' audit rows through an explicit policy, never through a bypass role
+   * (spec §5). It never widens a WITH CHECK clause — an admin cannot forge a
+   * row attributed to somebody else.
+   */
+  role?: "user" | "system" | "admin";
 }
 
 /** set_config(..., true) is transaction-scoped: nothing leaks to the pooled connection. */
