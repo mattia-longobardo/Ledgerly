@@ -1,5 +1,6 @@
 import { registerJob } from "./registry";
 import { runSweep } from "@/lib/jobs/sweep";
+import { runSyncQueue } from "@/lib/jobs/sync-queue";
 import { runTrekSyncJob } from "@/lib/jobs/trek-sync-job";
 import { runWalletRefresh } from "@/lib/jobs/wallet-refresh";
 import { runWalletAccountsSync } from "@/lib/jobs/wallet-accounts-sync";
@@ -15,4 +16,5 @@ export function ensureJobsRegistered(): void {
   registerJob({ name: "wallet_refresh", tier: "daily", run: (i) => runWalletRefresh({ trigger: i.trigger, now: i.now }) });
   registerJob({ name: "wallet_accounts_sync", tier: "daily", run: (i) => runWalletAccountsSync({ trigger: i.trigger }) });
   registerJob({ name: "monthly_close", tier: "monthly", run: (i) => runMonthlyClose({ trigger: i.trigger, now: i.now }) });
+  registerJob({ name: "sync_queue", tier: "hourly", run: (i) => runSyncQueue({ trigger: i.trigger }) });
 }
