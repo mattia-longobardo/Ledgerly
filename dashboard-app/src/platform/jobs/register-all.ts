@@ -6,6 +6,7 @@ import { runWalletRefresh } from "@/lib/jobs/wallet-refresh";
 import { runWalletAccountsSync } from "@/lib/jobs/wallet-accounts-sync";
 import { runWalletTransactionsSync } from "@/lib/jobs/wallet-transactions-sync";
 import { runMonthlyClose } from "@/lib/jobs/monthly-close";
+import { runInterestAccrualJob } from "@/lib/jobs/interest-accrual";
 
 let done = false;
 
@@ -20,4 +21,5 @@ export function ensureJobsRegistered(): void {
   registerJob({ name: "wallet_transactions_sync", tier: "hourly", run: (i) => runWalletTransactionsSync({ trigger: i.trigger }) });
   registerJob({ name: "monthly_close", tier: "monthly", run: (i) => runMonthlyClose({ trigger: i.trigger, now: i.now }) });
   registerJob({ name: "sync_queue", tier: "hourly", run: (i) => runSyncQueue({ trigger: i.trigger }) });
+  registerJob({ name: "interest_accrual", tier: "daily", run: (i) => runInterestAccrualJob({ trigger: i.trigger, now: i.now }) });
 }
