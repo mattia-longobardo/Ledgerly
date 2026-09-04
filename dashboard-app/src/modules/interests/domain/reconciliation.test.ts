@@ -34,14 +34,25 @@ describe("reconcileInterest", () => {
 
   // --- Boundary cases beyond the brief's happy-path set ---
 
-  it("treats no accrual and no payment as matched, not missing", () => {
+  it("reports no_data (not matched) when there are no accrual records at all — no basis to compare", () => {
     const summary = reconcileInterest([], [], period);
-    expect(summary).toMatchObject({ status: "matched", accruedTotal: "0.00", paidTotal: "0.00", differenceCents: 0 });
+    expect(summary).toMatchObject({ status: "no_data", accruedTotal: "0.00", paidTotal: "0.00", differenceCents: 0 });
   });
 
-  it("reports anomalous, not missing, when something was paid but nothing accrued", () => {
+  it("reports no_data, not anomalous, when something was paid but there is no accrual record for the period", () => {
+    // Distinct from "anomalous": that status asserts the ledger was
+    // evaluated and found a real discrepancy. With zero accrual records we
+    // cannot assert that — the accrual job may simply not have run yet.
     const summary = reconcileInterest([], [{ occurredAt: new Date("2026-09-15"), net: "0.50" }], period);
-    expect(summary.status).toBe("anomalous");
+    expect(summary.status).toBe("no_data");
+  });
+
+  it("reports matched, not no_data, when the ledger explicitly recorded zero accrual and nothing was paid", () => {
+    // Distinct from the empty-accruals case above: here there IS accrual
+    // evidence for the period (the job ran and found nothing owed), so
+    // matched is the honest status, not no_data.
+    const summary = reconcileInterest([{ accrualDate: "2026-09-01", net: "0.00" }], [], period);
+    expect(summary).toMatchObject({ status: "matched", accruedTotal: "0.00" });
   });
 
   it("matches at exactly a 1-cent difference (rounding noise, not a discrepancy)", () => {
