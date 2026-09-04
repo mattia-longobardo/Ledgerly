@@ -121,6 +121,7 @@ export type JobName =
   | "trek_sync"
   | "monthly_close"
   | "wallet_accounts_sync"
+  | "wallet_transactions_sync"
   | "sync_queue";
 
 export type JobStatus =

@@ -26,6 +26,7 @@ const JOBS: readonly JobName[] = [
   "sweep",
   "wallet_refresh",
   "wallet_accounts_sync",
+  "wallet_transactions_sync",
   "trek_sync",
   "sync_queue",
 ];
@@ -36,6 +37,7 @@ const JOB_LABEL: Record<string, string> = {
   sweep: "Sweep",
   wallet_refresh: "Wallet refresh",
   wallet_accounts_sync: "Wallet accounts sync",
+  wallet_transactions_sync: "Wallet transactions sync",
   trek_sync: "Trek leave sync",
   sync_queue: "Webhook sync queue",
 };
