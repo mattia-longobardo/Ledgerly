@@ -97,6 +97,19 @@ within a few days of ACT/365 accrual — it is not worth trying to seed.
    not posted — visible on the rule's detail page, never silently treated as
    `post_to_provider` having taken effect.
 
+   **A day that did not post will not post itself later.** There is no
+   automatic retry or backlog sweep — the daily job only ever attempts
+   *today's* accrual. If a day was skipped (missing link, disconnected
+   Wallet, or a `postFailed` alert) and you fix the underlying problem, the
+   one lever that actually recovers that day is **re-triggering the daily
+   job manually, on the same Rome-calendar day the accrual is dated**:
+   re-running it re-upserts the accrual and re-attempts the post, exactly as
+   a retried cron tick would. **That lever expires at the Rome-date
+   rollover** — once the calendar day has turned over, no in-app path posts
+   that day's interest any more, and the only way to get it into Wallet is
+   entering it there by hand. Fix the connection or link problem the same
+   day it's noticed, or accept that day stays computed-but-unposted.
+
    **The flip is not retroactive.** The dashboard only ever posts the
    accrual it computes on the day its own daily job runs — it never looks
    back and posts the days accrued during step 2's parallel run while the
@@ -113,10 +126,15 @@ within a few days of ACT/365 accrual — it is not worth trying to seed.
    The posted record's note starts with the same marker
    (`auto-interest` by default, configurable per rule via `noteMarker`), but
    the rest of the note's text is not identical to the container's: the
-   dashboard states the accrual's own gross/tax/net figures rather than an
-   annual-rate percentage, so a rate edited on the rule after an accrual was
-   computed never mislabels an already-posted amount. Two other visible
-   differences: the container posts `recordDate` as the exact moment it ran
+   dashboard states only the accrual's own posted `net` amount and the
+   balance it was computed on, not an annual-rate percentage — a rate edited
+   on the rule after an accrual was computed can never mislabel an
+   already-posted amount this way. (It also deliberately omits the accrual's
+   gross and withheld-tax figures: at 6-decimal precision with a sub-cent
+   carry rolled into the next day, `gross − tax` does not equal `net` to the
+   cent, and showing all three would read as an arithmetic error that isn't
+   one.) Two other visible differences: the container posts `recordDate` as
+   the exact moment it ran
    (e.g. `2026-09-05T05:00:03Z`, whatever `RUN_AT_UTC` plus a few seconds of
    runtime happens to be); the dashboard posts midnight UTC of the accrual
    date (`2026-09-05T00:00:00Z`). Both land on the same calendar day in the
@@ -144,10 +162,23 @@ Flip the rule back to `postingMode: "analyze_only"` and restart the
 Step 3 stops the container before step 4 enables posting, the two are never
 both posting at once, and the dashboard only ever posts the single day its
 own daily job computes on the day it runs — it never sweeps or back-posts a
-range of days. So there is no double-posted day to reconcile away:
-restarting the container simply resumes posting from the next day the
-container's own `RUN_AT_UTC` schedule fires, using its own `state.json`
-carry, which was never touched while it was stopped.
+range of days. So there is no double-posted day to reconcile away for any
+day *before* the rollback: restarting the container simply resumes posting
+from the next day the container's own `RUN_AT_UTC` schedule fires, using its
+own `state.json` carry, which was never touched while it was stopped.
+
+**The rollback day itself is timing-conditional, not automatically safe.**
+If the dashboard's daily job has already posted day D before you flip back
+and restart the container, and the container then runs for D too (either
+`WALLET_RUN_ON_START=true`, or `RUN_AT_UTC` still ahead later that day) —
+`state.json`'s stale `last_date` won't skip it, since the dashboard's post
+never touched that file. The only thing preventing a duplicate at that point
+is the container's own `already_posted_today` matching the dashboard's
+`recordDate: "<D>T00:00:00Z"` under its `recordDate=eq.<D>` filter — the same
+day-grain assumption this cut-over depends on elsewhere and that has not been
+verified against a live token (see the crash-recovery section below).
+Flip back and restart the container *before* that day's dashboard job runs,
+or check Wallet for day D yourself before assuming the rollback is clean.
 
 ## What a crash leaves behind, and why this procedure avoids relying on it
 

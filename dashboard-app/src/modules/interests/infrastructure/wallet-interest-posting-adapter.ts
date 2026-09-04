@@ -17,18 +17,24 @@ export interface PostWalletInterestResult {
 }
 
 /**
- * Built from the accrual's own stored figures (`gross`, `tax`, `net`,
- * `balanceBasis`) rather than the rule's *current* `annualRate`/`taxRate`.
- * The rule is mutable — a rate can be edited any time after an accrual was
- * computed under a different one — so asserting "X%/y" at post time would
- * describe whatever the rule says *now*, not what actually produced this
- * amount. The accrual's own numbers are what was actually computed and
- * cannot drift after the fact; stating them plainly is always true.
+ * Built from the accrual's own stored `net`/`balanceBasis` rather than the
+ * rule's *current* `annualRate`/`taxRate`. The rule is mutable — a rate can
+ * be edited any time after an accrual was computed under a different one —
+ * so asserting "X%/y" at post time would describe whatever the rule says
+ * *now*, not what actually produced this amount.
+ *
+ * Deliberately states only `net` and `balanceBasis`, not `gross`/`tax`:
+ * `gross` and `tax` are stored at 6-decimal precision and `net` is the
+ * *rounded*, carry-adjusted cent amount actually posted — `gross - tax`
+ * does not equal `net` to the cent (the difference is the day's sub-cent
+ * carry, `accrual.carryAfter`, rolled into the next day's accrual rather
+ * than shown here). Displaying all three invites an operator to check that
+ * the note's own arithmetic reconciles and find that it doesn't; `net` is
+ * the only figure that matches the amount actually posted, so it's the
+ * only one shown.
  */
 function buildNote(rule: InterestRule, accrual: InterestAccrual): string {
-  const gross = Number(accrual.gross).toFixed(2);
-  const tax = Number(accrual.tax).toFixed(2);
-  return `${rule.noteMarker} gross ${gross}, tax ${tax}, net ${accrual.net} on ${accrual.balanceBasis}`;
+  return `${rule.noteMarker} net ${accrual.net} on ${accrual.balanceBasis}`;
 }
 
 /** A found record is treated as "not this accrual's" unless its amount matches to the cent (a small float-noise allowance, not a real tolerance for a different amount). */
