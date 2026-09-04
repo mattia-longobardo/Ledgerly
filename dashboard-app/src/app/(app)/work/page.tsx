@@ -183,7 +183,7 @@ export default async function WorkPage() {
                 description="Payslips arrive from Paperless as soon as one is tagged Payroll. Nothing here is entered by hand."
                 action={
                   <Link
-                    href="/settings"
+                    href="/settings/admin"
                     className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
                   >
                     Check the job runs
