@@ -176,6 +176,23 @@ describe("retry policy", () => {
   });
 });
 
+function minimalCategory(id: string) {
+  return { id, name: `Category ${id}`, group: null };
+}
+
+function minimalRecord(id: string, overrides: Record<string, unknown> = {}) {
+  return {
+    id,
+    accountId: "a1",
+    amount: 1,
+    currencyCode: "EUR",
+    recordType: "expense",
+    recordState: "cleared",
+    recordDate: "2026-09-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
 describe("getCategories", () => {
   it("returns the category list", async () => {
     fetchMock.mockResolvedValueOnce(
@@ -183,6 +200,15 @@ describe("getCategories", () => {
     );
     const categories = await getCategories({ token: "t" });
     expect(categories).toEqual([{ id: "c1", name: "Interest, dividends", group: "Income" }]);
+  });
+
+  it("throws when a full page of categories may be truncated", async () => {
+    const categories = Array.from({ length: 200 }, (_, i) => minimalCategory(`c${i}`));
+    fetchMock.mockResolvedValueOnce(json({ categories }));
+    const err = (await getCategories({ token: "t" }).catch((e: unknown) => e)) as UpstreamError;
+    expect(err).toBeInstanceOf(UpstreamError);
+    expect(err.message).toContain("truncated");
+    expect(err.retryable).toBe(false);
   });
 });
 
@@ -224,6 +250,52 @@ describe("getRecords", () => {
     const records = await getRecords({ token: "t" });
     expect(records).toHaveLength(1);
     expect(records[0]!.amount).toBe(-12.5);
+  });
+
+  it("throws naming the field when every record in a non-empty page is missing recordType", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({
+        records: [
+          minimalRecord("r1", { recordType: undefined }),
+          minimalRecord("r2", { recordType: undefined }),
+        ],
+      }),
+    );
+    const err = (await getRecords({ token: "t" }).catch((e: unknown) => e)) as UpstreamError;
+    expect(err).toBeInstanceOf(UpstreamError);
+    expect(err.message).toContain("recordType");
+    expect(err.retryable).toBe(false);
+  });
+
+  it("throws naming the field when every record in a non-empty page is missing recordState", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({
+        records: [minimalRecord("r1", { recordState: undefined })],
+      }),
+    );
+    const err = (await getRecords({ token: "t" }).catch((e: unknown) => e)) as UpstreamError;
+    expect(err).toBeInstanceOf(UpstreamError);
+    expect(err.message).toContain("recordState");
+    expect(err.retryable).toBe(false);
+  });
+
+  it("does not throw when only some records in the page are missing recordType/recordState", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({
+        records: [minimalRecord("r1", { recordType: undefined }), minimalRecord("r2")],
+      }),
+    );
+    const records = await getRecords({ token: "t" });
+    expect(records).toHaveLength(2);
+  });
+
+  it("throws when a full page of records may be truncated", async () => {
+    const records = Array.from({ length: 500 }, (_, i) => minimalRecord(`r${i}`));
+    fetchMock.mockResolvedValueOnce(json({ records }));
+    const err = (await getRecords({ token: "t" }).catch((e: unknown) => e)) as UpstreamError;
+    expect(err).toBeInstanceOf(UpstreamError);
+    expect(err.message).toContain("truncated");
+    expect(err.retryable).toBe(false);
   });
 });
 
