@@ -1,4 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { MiddlewareHandler } from "hono";
 import { randomUUID } from "node:crypto";
 import type { DbClient } from "@/lib/db/client";
 import { PermissionDeniedError, type Principal } from "@/platform/auth/principal";
@@ -32,6 +33,20 @@ export type ApiApp = OpenAPIHono<ApiEnv>;
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/**
+ * Paths that authenticate themselves. Only the inbound webhook qualifies
+ * today: it carries no cookie and no token, and proves itself with an HMAC
+ * over the raw body under the receiving connection's own secret.
+ *
+ * `c.req.path` is the full request pathname, basePath included, so these are
+ * absolute.
+ */
+const PUBLIC_PREFIXES = ["/api/v1/webhooks/"];
+
+function isPublic(path: string): boolean {
+  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
 export function createApiApp(deps: ApiDeps): ApiApp {
   const app = new OpenAPIHono<ApiEnv>({
     defaultHook: (result) => {
@@ -48,6 +63,7 @@ export function createApiApp(deps: ApiDeps): ApiApp {
   });
 
   app.use("*", async (c, next) => {
+    if (isPublic(c.req.path)) return next();
     const authenticated = await deps.authenticate(c.req.raw);
     if (!authenticated) throw new ApiError(401, "unauthorized", "Sign in to use the API");
     c.set("principal", authenticated.principal);
@@ -61,8 +77,12 @@ export function createApiApp(deps: ApiDeps): ApiApp {
    * cannot set. `X-Requested-With` is that something: adding a custom header
    * puts the request behind a CORS preflight, which this app answers for
    * nobody.
+   *
+   * The inbound webhook is exempt (`isPublic`): it carries no cookie at all —
+   * `authMethod` is never set on that path — and is verified by HMAC instead.
    */
   app.use("*", async (c, next) => {
+    if (isPublic(c.req.path)) return next();
     if (
       UNSAFE_METHODS.has(c.req.method.toUpperCase()) &&
       c.get("authMethod") === "session" &&
@@ -73,7 +93,18 @@ export function createApiApp(deps: ApiDeps): ApiApp {
     await next();
   });
 
-  if (deps.rateLimitEnabled !== false) app.use("*", rateLimit({ db: deps.db, now: deps.now }));
+  if (deps.rateLimitEnabled !== false) {
+    // The limiter counts per principal, and a webhook has none — calling it on
+    // a public path would throw on `c.get("principal").userId`. Rate limiting
+    // the webhook endpoint is a Phase 9 concern and needs a different key
+    // (the connection, or the source address), not this one.
+    // Cast: `rateLimit`'s declared env is the narrow `{ principal }` it
+    // actually reads, but Hono's `Context` is invariant in `Variables`, so it
+    // does not structurally widen to `ApiEnv` on its own even though every
+    // `ApiEnv` context has everything the limiter needs.
+    const limiter = rateLimit({ db: deps.db, now: deps.now }) as unknown as MiddlewareHandler<ApiEnv>;
+    app.use("*", (c, next) => (isPublic(c.req.path) ? next() : limiter(c, next)));
+  }
 
   app.onError((err, c) => {
     const requestId = c.get("requestId") ?? "unknown";

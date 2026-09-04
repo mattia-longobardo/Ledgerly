@@ -73,3 +73,8 @@ export const ConnectResponseSchema = z.object({
 export const SyncRequestBodySchema = z.object({ kind: z.enum(["accounts", "leave"]).optional() });
 export const DisconnectRequestSchema = z.object({ policy: z.enum(["keep", "archive", "purge"]).optional() });
 export const DisconnectResponseSchema = z.object({ policy: z.enum(["keep", "archive", "purge"]) });
+
+export const WebhookResponseSchema = z.object({
+  accepted: z.boolean(),
+  runIds: z.array(z.string()),
+});

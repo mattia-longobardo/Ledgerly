@@ -19,6 +19,7 @@ import {
   SyncNotSupportedError,
   UnknownProviderError,
 } from "@/modules/integrations/application/errors";
+import { handleWebhook } from "@/modules/integrations/application/handle-webhook";
 import { listIntegrations, type IntegrationSummary } from "@/modules/integrations/application/list-integrations";
 import { runSync } from "@/modules/integrations/application/run-sync";
 import { testIntegrationConnection } from "@/modules/integrations/application/test-integration-connection";
@@ -36,6 +37,7 @@ import {
   SyncRunsPageSchema,
   SyncRunsQuerySchema,
   TestResultSchema,
+  WebhookResponseSchema,
 } from "./schemas";
 
 /**
@@ -238,6 +240,34 @@ const syncRunsRoute = createRoute({
   },
 });
 
+const webhookRoute = createRoute({
+  method: "post",
+  path: "/webhooks/{provider}",
+  tags: ["Integrations"],
+  // No `security`: this endpoint authenticates itself with an HMAC over the
+  // raw body, using the receiving connection's own webhook secret. It is
+  // therefore also the one /api/v1 route exempt from `X-Requested-With`.
+  description:
+    "Verifies `X-Signature: sha256=<hex>` over the raw body and queues the provider's syncs. The work runs on the next `sync_queue` tick, not in this request.",
+  request: {
+    params: ProviderParamSchema,
+    // A plain OpenAPI schema, not a Zod one: `@hono/zod-openapi` only wires up
+    // its automatic body validator for a Zod schema, and that validator would
+    // call `c.req.json()` before the handler runs, both consuming the body and
+    // rejecting a signed-but-non-JSON delivery with a generic 400 before the
+    // signature is ever checked. This route validates and reads the raw body
+    // itself (`handleWebhook`), so the schema here is documentation only.
+    body: { content: { "application/json": { schema: { type: "object" } } } },
+  },
+  responses: {
+    202: {
+      description: "Signature verified; syncs queued.",
+      content: { "application/json": { schema: WebhookResponseSchema } },
+    },
+    404: errorResponse("The signature did not verify against any connection, or the provider does not exist."),
+  },
+});
+
 /** 1–200, default 20; anything else is a 422 rather than a silent clamp. */
 function parseLimit(raw: string | undefined): number {
   if (raw === undefined) return 20;
@@ -339,5 +369,28 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
     } catch (err) {
       throw toApiError(err);
     }
+  });
+
+  app.openapi(webhookRoute, async (c) => {
+    const providerCode = c.req.param("provider")!;
+    // `c.req.text()`, not `c.req.raw.text()`: nothing here validates the body
+    // (see `webhookRoute` above), so the underlying stream is still open and
+    // either read works — but going through Hono's own request object is what
+    // keeps this safe if that ever changes, since Hono caches the body text
+    // the first time anything reads it and hands back the same raw bytes on a
+    // second read rather than re-consuming (or failing on) the stream.
+    const rawBody = await c.req.text();
+    // No `withSystemContext` here: `handleWebhook` opens exactly the contexts
+    // it needs (Global Constraints), and it enqueues rather than syncing, so
+    // nothing a user owns is ever written under `app.role = 'system'`.
+    const outcome = await handleWebhook(integrationDeps(deps.db, c.get("requestId")))({
+      provider: providerCode,
+      rawBody,
+      headers: c.req.raw.headers,
+    });
+    // One answer for "no such provider", "bad signature" and "signed but
+    // unreadable": a machine endpoint must not confirm what exists.
+    if (!outcome.accepted) throw new ApiError(404, "not_found", "No such webhook endpoint");
+    return c.json({ accepted: true, runIds: outcome.runIds }, 202);
   });
 }
