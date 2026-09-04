@@ -1,4 +1,5 @@
 import { getTransaction } from "../application/get-transaction";
+import { NotFoundError } from "../application/errors";
 import { listCategories } from "../application/list-categories";
 import { listLabels } from "../application/list-labels";
 import { listTransactions } from "../application/list-transactions";
@@ -67,7 +68,13 @@ export async function loadTransactionDetail(id: string): Promise<{
   labels: { id: string; name: string }[];
 } | null> {
   return runForPrincipal(async (deps, principal) => {
-    const detail = await getTransaction(deps)(principal, id).catch(() => null);
+    // Only a missing transaction renders as "not found" — anything else (a
+    // database failure, a permission edge, a bug in the use case) is a real
+    // error and must surface as one, not get erased into a 404.
+    const detail = await getTransaction(deps)(principal, id).catch((err: unknown) => {
+      if (err instanceof NotFoundError) return null;
+      throw err;
+    });
     if (!detail) return null;
     const [categories, labels] = await Promise.all([
       listCategories(deps)(principal),
