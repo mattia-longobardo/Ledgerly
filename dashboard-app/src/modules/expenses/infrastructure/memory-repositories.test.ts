@@ -75,6 +75,37 @@ describe("MemoryTransactionsRepository", () => {
     const map = await repo.labelsFor("u1", [created.id]);
     expect(map.get(created.id)?.sort()).toEqual(["label-1", "label-2"]);
   });
+
+  it("labelsFor filters by userId explicitly: another user's id comes back empty, matching the Drizzle repository's join", async () => {
+    const repo = new MemoryTransactionsRepository();
+    const mine = await repo.create(tx({ userId: "u1" }));
+    const theirs = await repo.create(tx({ userId: "u2" }));
+    await repo.setLabels("u2", theirs.id, ["label-1"]);
+
+    const map = await repo.labelsFor("u1", [mine.id, theirs.id]);
+    expect(map.get(mine.id)).toEqual([]);
+    expect(map.get(theirs.id)).toEqual([]);
+    expect((await repo.labelsFor("u2", [theirs.id])).get(theirs.id)).toEqual(["label-1"]);
+  });
+
+  it("a cursor anchors on the (occurredAt, id) sort key regardless of filters, matching the Drizzle repository's tuple comparison", async () => {
+    const repo = new MemoryTransactionsRepository();
+    // The middle transaction by date is excluded from the `type: "expense"`
+    // filter below, so it never appears in the filtered list itself — but a
+    // cursor pointing at it must still anchor the page on its (occurredAt,
+    // id) position, the same way the Drizzle repository's SQL tuple
+    // comparison does (the anchor row is looked up independently of the
+    // other filters). The old index-within-filtered-array approach would
+    // have failed to find it and silently restarted from the top instead.
+    const oldest = await repo.create(tx({ occurredAt: new Date("2026-09-01T00:00:00Z"), type: "expense" }));
+    const excludedAnchor = await repo.create(tx({ occurredAt: new Date("2026-09-02T00:00:00Z"), type: "income" }));
+    const newest = await repo.create(tx({ occurredAt: new Date("2026-09-03T00:00:00Z"), type: "expense" }));
+
+    const page = await repo.list("u1", { type: "expense", cursor: excludedAnchor.id });
+    expect(page.items.map((t) => t.id)).toEqual([oldest.id]);
+    // Sanity check: without the cursor, both expense rows are present.
+    expect((await repo.list("u1", { type: "expense" })).items.map((t) => t.id)).toEqual([newest.id, oldest.id]);
+  });
 });
 
 describe("MemoryCategoriesRepository and MemoryLabelsRepository", () => {
@@ -87,6 +118,23 @@ describe("MemoryCategoriesRepository and MemoryLabelsRepository", () => {
     const labels = new MemoryLabelsRepository();
     await labels.create({ userId: "u1", name: "Recurring", color: null, source: "manual" });
     expect(await labels.findByName("u1", "Recurring")).not.toBeNull();
+  });
+
+  it("rejects a duplicate (userId, name) with duplicate_name, matching the Drizzle repository's unique index", async () => {
+    const categories = new MemoryCategoriesRepository();
+    const first = await categories.create({ userId: "u1", name: "Groceries", groupName: null, kind: "expense", color: null, parentId: null, source: "manual", archivedAt: null });
+    expect(first).not.toBe("duplicate_name");
+    expect(await categories.create({ userId: "u1", name: "Groceries", groupName: null, kind: "expense", color: null, parentId: null, source: "manual", archivedAt: null })).toBe("duplicate_name");
+    // A different user, or a different name, is unaffected.
+    expect(await categories.create({ userId: "u2", name: "Groceries", groupName: null, kind: "expense", color: null, parentId: null, source: "manual", archivedAt: null })).not.toBe("duplicate_name");
+    expect(await categories.list("u1")).toHaveLength(1);
+
+    const labels = new MemoryLabelsRepository();
+    const firstLabel = await labels.create({ userId: "u1", name: "Recurring", color: null, source: "manual" });
+    expect(firstLabel).not.toBe("duplicate_name");
+    expect(await labels.create({ userId: "u1", name: "Recurring", color: null, source: "manual" })).toBe("duplicate_name");
+    expect(await labels.create({ userId: "u2", name: "Recurring", color: null, source: "manual" })).not.toBe("duplicate_name");
+    expect(await labels.list("u1")).toHaveLength(1);
   });
 });
 

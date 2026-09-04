@@ -4,6 +4,11 @@ import { transactionCategories, type TransactionCategoryRow } from "@/lib/db/sch
 import type { CategoriesRepository, NewCategory } from "../application/ports";
 import type { TransactionCategory } from "../domain/transaction";
 
+/** Postgres reports a unique-index violation as pg error code 23505, wrapped by drizzle-orm 0.45 on `.cause`. */
+function isUniqueViolation(err: unknown): boolean {
+  return (err as { cause?: { code?: string } } | undefined)?.cause?.code === "23505";
+}
+
 function toCategory(row: TransactionCategoryRow): TransactionCategory {
   return {
     id: row.id,
@@ -58,8 +63,20 @@ export class DrizzleCategoriesRepository implements CategoriesRepository {
     return row ? toCategory(row) : null;
   }
 
-  async create(input: NewCategory): Promise<TransactionCategory> {
-    const [row] = await this.db.insert(transactionCategories).values(input).returning();
-    return toCategory(row!);
+  async create(input: NewCategory): Promise<TransactionCategory | "duplicate_name"> {
+    try {
+      // Runs in a nested transaction (a Postgres SAVEPOINT under drizzle-orm
+      // 0.45's node-postgres session) so that a caught unique-violation rolls
+      // back only this statement: without the savepoint, the surrounding
+      // withUserContext transaction would be left aborted and every later
+      // query on it would fail with "current transaction is aborted".
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx.insert(transactionCategories).values(input).returning();
+        return toCategory(row!);
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) return "duplicate_name";
+      throw err;
+    }
   }
 }

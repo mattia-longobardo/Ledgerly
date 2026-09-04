@@ -7,6 +7,12 @@ import { DrizzleCategoriesRepository } from "./drizzle-categories-repository";
 import { DrizzleLabelsRepository } from "./drizzle-labels-repository";
 import { DrizzleRecurringRepository } from "./drizzle-recurring-repository";
 
+/** Narrows a `T | "duplicate_name"` create() result, failing the test loudly if a name collision was not expected. */
+function assertCreated<T>(result: T | "duplicate_name"): T {
+  if (result === "duplicate_name") throw new Error("expected create() to succeed, got duplicate_name");
+  return result;
+}
+
 function newTx(userId: string, accountId: string, over: Partial<Parameters<DrizzleTransactionsRepository["create"]>[0]> = {}) {
   return {
     userId,
@@ -86,8 +92,8 @@ describe("DrizzleTransactionsRepository", () => {
     const db = await testDb();
     await withUserContext(db, { userId }, async (tx) => {
       const labels = new DrizzleLabelsRepository(tx);
-      const l1 = await labels.create({ userId, name: "Recurring", color: null, source: "manual" });
-      const l2 = await labels.create({ userId, name: "Work", color: null, source: "manual" });
+      const l1 = assertCreated(await labels.create({ userId, name: "Recurring", color: null, source: "manual" }));
+      const l2 = assertCreated(await labels.create({ userId, name: "Work", color: null, source: "manual" }));
       const repo = new DrizzleTransactionsRepository(tx);
       const created = await repo.create({ userId, accountId, occurredAt: new Date(), bookedAt: null, amount: "-5.00", currency: "EUR", type: "expense", state: "cleared", categoryId: null, payee: null, note: null, transferGroupId: null, source: "manual", syncRunId: null });
       await repo.setLabels(userId, created.id, [l1.id, l2.id]);
@@ -122,6 +128,25 @@ describe("DrizzleTransactionsRepository", () => {
       // anchor on b's row (which would silently exclude a's own transaction).
       const page = await repo.list(a.userId, { cursor: theirs.id });
       expect(page.items.map((t) => t.id)).toEqual([mine.id]);
+    });
+  });
+
+  it("labelsFor filters by userId explicitly — even under a system context, ids belonging to another user come back empty", async () => {
+    const { a, b } = await seedTwoUsers();
+    const db = await testDb();
+    await withSystemContext(db, async (tx) => {
+      const labels = new DrizzleLabelsRepository(tx);
+      const label = assertCreated(await labels.create({ userId: b.userId, name: "Theirs", color: null, source: "manual" }));
+      const repo = new DrizzleTransactionsRepository(tx);
+      const theirs = await repo.create(newTx(b.userId, b.accountId));
+      await repo.setLabels(b.userId, theirs.id, [label.id]);
+
+      // Asking as user a, for an id that belongs to user b's transaction:
+      // nothing must come back, even though the system context bypasses RLS.
+      const map = await repo.labelsFor(a.userId, [theirs.id]);
+      expect(map.get(theirs.id)).toEqual([]);
+      // Sanity check: the same id, asked as its real owner, does return the label.
+      expect((await repo.labelsFor(b.userId, [theirs.id])).get(theirs.id)).toEqual([label.id]);
     });
   });
 });
@@ -171,6 +196,20 @@ describe("DrizzleCategoriesRepository", () => {
       expect(await repo.findByName(a.userId, "Rent")).toBeNull();
     });
   });
+
+  it("rejects a duplicate (userId, name) with duplicate_name instead of throwing, matching the memory repository's contract", async () => {
+    const { userId } = await seed();
+    const db = await testDb();
+    await withUserContext(db, { userId }, async (tx) => {
+      const repo = new DrizzleCategoriesRepository(tx);
+      const base = { userId, groupName: null, kind: "expense" as const, color: null, parentId: null, source: "manual" as const, archivedAt: null };
+      const first = assertCreated(await repo.create({ ...base, name: "Groceries" }));
+      const second = await repo.create({ ...base, name: "Groceries" });
+      expect(second).toBe("duplicate_name");
+      // Only the first row exists — the rejected insert did not land.
+      expect((await repo.list(userId)).map((c) => c.id)).toEqual([first.id]);
+    });
+  });
 });
 
 describe("DrizzleLabelsRepository", () => {
@@ -197,6 +236,18 @@ describe("DrizzleLabelsRepository", () => {
       await repo.create({ userId: b.userId, name: "Theirs", color: null, source: "manual" });
       expect((await repo.list(a.userId)).map((l) => l.name)).toEqual(["Mine"]);
       expect(await repo.findByName(a.userId, "Theirs")).toBeNull();
+    });
+  });
+
+  it("rejects a duplicate (userId, name) with duplicate_name instead of throwing, matching the memory repository's contract", async () => {
+    const { userId } = await seed();
+    const db = await testDb();
+    await withUserContext(db, { userId }, async (tx) => {
+      const repo = new DrizzleLabelsRepository(tx);
+      const first = assertCreated(await repo.create({ userId, name: "Recurring", color: null, source: "manual" }));
+      const second = await repo.create({ userId, name: "Recurring", color: null, source: "manual" });
+      expect(second).toBe("duplicate_name");
+      expect((await repo.list(userId)).map((l) => l.id)).toEqual([first.id]);
     });
   });
 });
