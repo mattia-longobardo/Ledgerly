@@ -21,7 +21,12 @@ export function shouldPost(rule: InterestRule, accrual: InterestAccrual): boolea
  * the next run believing nothing has posted yet.
  */
 export function recordPostedEntry(deps: UseCaseDeps) {
-  return async (rule: InterestRule, accrual: InterestAccrual, postedNote: string): Promise<InterestEntry> => {
+  return async (
+    rule: InterestRule,
+    accrual: InterestAccrual,
+    postedNote: string,
+    transactionId: string | null = null,
+  ): Promise<InterestEntry> => {
     const entry = await deps.entries.create({
       userId: rule.userId,
       accountId: rule.accountId,
@@ -29,7 +34,13 @@ export function recordPostedEntry(deps: UseCaseDeps) {
       gross: Number(accrual.gross).toFixed(2),
       net: accrual.net,
       kind: "paid",
-      transactionId: null,
+      // The Wallet record's own id, when the posting adapter could determine
+      // one — either from a fresh POST's response or from an existing record
+      // found via `findPostedRecord`'s crash-recovery check — for later
+      // reconciliation against Wallet. `null` when the response shape didn't
+      // match anything recognised (the POST response has never been verified
+      // against a live token).
+      transactionId,
       ruleId: rule.id,
       source: "provider",
     });

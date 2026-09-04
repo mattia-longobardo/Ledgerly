@@ -5,6 +5,7 @@ import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewInterestRule } from "@/modules/interests/application/ports";
 import { DrizzleInterestRulesRepository } from "@/modules/interests/infrastructure/drizzle-interest-rules-repository";
 import { DrizzleInterestAccrualsRepository } from "@/modules/interests/infrastructure/drizzle-interest-accruals-repository";
+import { DrizzleProviderLinksRepository } from "@/modules/accounts/infrastructure/drizzle-provider-links-repository";
 import { runInterestAccrualJob } from "./interest-accrual";
 
 /** A fresh user with a savings account and a balance on file for `asOf`. */
@@ -163,5 +164,38 @@ describe("runInterestAccrualJob", () => {
     );
     const result = await runInterestAccrualJob({ trigger: "manual", now: new Date("2026-09-05T12:00:00Z") });
     expect(result.detail).toMatchObject({ accrued: 1, posted: 0 });
+  });
+
+  it("does not post against a live link to a different provider — liveFor matches by entity, not by provider", async () => {
+    const db = await testDb();
+    const [org] = await db.insert(organizations).values({ name: "P" }).returning();
+    const [user] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
+    const [account] = await withSystemContext(db, (tx) =>
+      tx.insert(accounts).values({ userId: user!.id, name: "Savings", type: "savings", origin: "manual" }).returning(),
+    );
+    await withSystemContext(db, (tx) =>
+      tx.insert(accountBalances).values({ accountId: account!.id, asOf: "2026-09-05", balance: "1000.00", source: "manual" }),
+    );
+    // A live link exists for this account, but for a different provider —
+    // `ProviderLinksRepository.liveFor` matches on entity type/id and
+    // "not missing" only, so without an explicit provider check on the
+    // caller's side, `link.externalId` here would be trusted as a Wallet
+    // account id even though it belongs to something else entirely.
+    await withSystemContext(db, (tx) =>
+      new DrizzleProviderLinksRepository(tx).upsertSeen(
+        user!.id,
+        { provider: "trek", entityType: "account", entityId: account!.id, externalId: "trek-external-id", metadata: {} },
+        new Date("2026-09-01T00:00:00Z"),
+      ),
+    );
+    await withSystemContext(db, (tx) =>
+      new DrizzleInterestRulesRepository(tx).create({
+        userId: user!.id, accountId: account!.id, annualRate: "0.0225", taxRate: "0.26", dayCount: 365,
+        compounding: "simple_daily", effectiveFrom: "2026-01-01", effectiveTo: null,
+        postingMode: "post_to_provider", providerCategoryRef: null, noteMarker: "auto-interest",
+      }),
+    );
+    const result = await runInterestAccrualJob({ trigger: "manual", now: new Date("2026-09-05T12:00:00Z") });
+    expect(result.detail).toMatchObject({ accrued: 1, posted: 0, postFailed: 0 });
   });
 });

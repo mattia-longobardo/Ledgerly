@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpstreamError } from "@/lib/contracts";
 import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
-import { getAccounts, getBalances, getCategories, getRecords, postRecords, reduceBalances } from "./wallet";
+import { findPostedRecord, getAccounts, getBalances, getCategories, getRecords, postRecords, reduceBalances } from "./wallet";
 
 process.env.DATABASE_URL = "postgres://dashboard@localhost/dashboard";
 process.env.AUTH_URL = "https://dash.example.test";
@@ -309,5 +309,59 @@ describe("postRecords", () => {
     expect(JSON.parse((init as RequestInit).body as string)).toEqual([
       { accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" },
     ]);
+  });
+
+  it("returns [] rather than throwing when the response shape is unrecognised — a wrong guess here must not turn a successful post into a reported failure", async () => {
+    fetchMock.mockResolvedValueOnce(json({ unexpected: "shape" }));
+    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+    expect(result).toEqual([]);
+  });
+
+  it("surfaces the created record's id when the response is a bare array", async () => {
+    fetchMock.mockResolvedValueOnce(json([{ id: "created-1", accountId: "a1", amount: 0.63, currencyCode: "EUR", recordDate: "2026-09-01T00:00:00Z" }]));
+    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+    expect(result[0]!.id).toBe("created-1");
+  });
+
+  it("surfaces the created record's id when the response is wrapped in { records }", async () => {
+    fetchMock.mockResolvedValueOnce(json({ records: [{ id: "created-2", accountId: "a1", amount: 0.63, currencyCode: "EUR", recordDate: "2026-09-01T00:00:00Z" }] }));
+    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+    expect(result[0]!.id).toBe("created-2");
+  });
+
+  it("does not retry on a 500 when attempts: 1 is given — a write must not resubmit an identical body on a hint the first attempt already landed", async () => {
+    fetchMock.mockImplementation(async () => json({}, 500));
+    await expect(
+      postRecords({ token: "t", attempts: 1, sleep: async () => {} }, [
+        { accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" },
+      ]),
+    ).rejects.toThrow(UpstreamError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("findPostedRecord", () => {
+  it("queries with interest.py's exact filter shape: accountId, recordDate=eq.<day>, note=contains.<marker>, limit=5", async () => {
+    fetchMock.mockResolvedValueOnce(json({ records: [] }));
+    await findPostedRecord({ token: "t", accountId: "w1", recordDate: "2026-09-05", noteContains: "auto-interest" });
+    const url = fetchMock.mock.calls[0]![0] as string;
+    expect(url).toContain("accountId=w1");
+    expect(url).toContain("recordDate=eq.2026-09-05");
+    expect(url).toContain(`note=${encodeURIComponent("contains.auto-interest")}`);
+    expect(url).toContain("limit=5");
+  });
+
+  it("returns null when nothing matches", async () => {
+    fetchMock.mockResolvedValueOnce(json({ records: [] }));
+    const found = await findPostedRecord({ token: "t", accountId: "w1", recordDate: "2026-09-05", noteContains: "auto-interest" });
+    expect(found).toBeNull();
+  });
+
+  it("returns the first matching record when one exists", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({ records: [{ id: "r1", accountId: "w1", amount: 0.05, currencyCode: "EUR", recordDate: "2026-09-05T00:00:00Z", note: "auto-interest 2.25%/y" }] }),
+    );
+    const found = await findPostedRecord({ token: "t", accountId: "w1", recordDate: "2026-09-05", noteContains: "auto-interest" });
+    expect(found?.id).toBe("r1");
   });
 });
