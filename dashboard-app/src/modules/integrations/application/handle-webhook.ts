@@ -52,7 +52,17 @@ export function handleWebhook(deps: IntegrationDeps) {
       for (const connection of await d.connections.candidatesForWebhook(code)) {
         const sealed = await d.connections.readCredentials(connection.userId, connection.id);
         if (!sealed) continue;
-        const secret = d.cipher.open(sealed).webhookSecret ?? "";
+        let secret: string;
+        try {
+          secret = d.cipher.open(sealed).webhookSecret ?? "";
+        } catch {
+          // `cipher.open` throws `CredentialCryptoError` for a blob whose
+          // `keyId` has since rotated out of `APP_ENCRYPTION_KEY`, or one that
+          // is simply malformed. One connection's stale credential must not
+          // deny delivery to every other connected user of this provider —
+          // skip it and keep looking, the same as `!secret`/no-match below.
+          continue;
+        }
         if (!secret) continue;
         if (!webhook.verify({ rawBody: input.rawBody, headers: input.headers }, secret)) continue;
         matched = connection;
@@ -94,9 +104,29 @@ export function handleWebhook(deps: IntegrationDeps) {
 
       const requests = webhook.toSyncRequests(payload);
       const runIds: string[] = [];
-      for (const request of requests) {
-        const run = await enqueueSync(d)(matched, request.kind, "webhook");
-        runIds.push(run.id);
+      try {
+        for (const request of requests) {
+          const run = await enqueueSync(d)(matched, request.kind, "webhook");
+          runIds.push(run.id);
+        }
+      } catch (err) {
+        // `enqueueSync` throws `SyncDisabledError` when the connection's
+        // `sync_jobs` row for this kind has been switched off. That must not
+        // blow up the whole request (an uncaught throw here would roll back
+        // this transaction, discarding the delivery row below along with it,
+        // and surface as a 500 that a provider retries forever) — it is
+        // exactly the kind of verified-but-refused delivery this table exists
+        // to record.
+        await d.deliveries.record({
+          connectionId: matched.id,
+          provider: code,
+          event: requests[0]?.event ?? "unknown",
+          payloadHash,
+          status: "rejected",
+          error: `Could not queue sync: ${err instanceof Error ? err.message : String(err)}`,
+          receivedAt,
+        });
+        return { accepted: false, connectionId: matched.id, runIds: [] };
       }
 
       await d.deliveries.record({

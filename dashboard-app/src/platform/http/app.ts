@@ -1,5 +1,4 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import type { MiddlewareHandler } from "hono";
 import { randomUUID } from "node:crypto";
 import type { DbClient } from "@/lib/db/client";
 import { PermissionDeniedError, type Principal } from "@/platform/auth/principal";
@@ -98,11 +97,13 @@ export function createApiApp(deps: ApiDeps): ApiApp {
     // a public path would throw on `c.get("principal").userId`. Rate limiting
     // the webhook endpoint is a Phase 9 concern and needs a different key
     // (the connection, or the source address), not this one.
-    // Cast: `rateLimit`'s declared env is the narrow `{ principal }` it
-    // actually reads, but Hono's `Context` is invariant in `Variables`, so it
-    // does not structurally widen to `ApiEnv` on its own even though every
-    // `ApiEnv` context has everything the limiter needs.
-    const limiter = rateLimit({ db: deps.db, now: deps.now }) as unknown as MiddlewareHandler<ApiEnv>;
+    // `rateLimit<ApiEnv>`, not a cast on the result: `rateLimit` is generic in
+    // the caller's env (constrained to what it actually reads), so this asks
+    // it for a handler typed against `ApiEnv` directly rather than silencing a
+    // mismatch after the fact — a real one, if this middleware ever grows to
+    // read a second `Variables` key `ApiEnv` doesn't carry, would still fail
+    // to typecheck here.
+    const limiter = rateLimit<ApiEnv>({ db: deps.db, now: deps.now });
     app.use("*", (c, next) => (isPublic(c.req.path) ? next() : limiter(c, next)));
   }
 

@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { testPrincipal } from "@/test/principal";
 import { testIntegrationDeps } from "@/test/integration-deps";
+import { CredentialCryptoError, type CredentialCipher, type SealedCredential } from "@/platform/integrations/crypto";
 import type { IntegrationProvider, ProviderRegistry } from "@/platform/integrations/types";
 import { hmacSignatureVerifier } from "@/platform/integrations/webhook-signature";
-import type { MemoryWebhookDeliveriesRepository } from "../infrastructure/memory-repositories";
+import { memoryCipher, type MemoryWebhookDeliveriesRepository } from "../infrastructure/memory-repositories";
+import type { SyncJob, SyncJobsRepository } from "./ports";
 import { connectIntegration } from "./connect-integration";
 import type { IntegrationDeps } from "./deps";
 import { drainSyncQueue } from "./drain-sync-queue";
@@ -43,12 +45,12 @@ function provider(): IntegrationProvider {
   };
 }
 
-function makeDeps(): IntegrationDeps {
+function makeDeps(overrides: Partial<IntegrationDeps> = {}): IntegrationDeps {
   const registry: ProviderRegistry = {
     get: (code) => (code === "wallet" ? provider() : null),
     list: () => [provider()],
   };
-  return testIntegrationDeps({ registry });
+  return testIntegrationDeps({ registry, ...overrides });
 }
 
 function signature(secret: string): Headers {
@@ -179,5 +181,84 @@ describe("handleWebhook", () => {
     const queued = await deps.runs.queued(10);
     expect(queued).toHaveLength(1);
     expect(queued[0]!.connectionId).toBe(connectionB.connection.id);
+  });
+
+  it("skips a connection whose credential blob fails to decrypt, rather than denying every other candidate", async () => {
+    // Wraps the memory cipher so opening connection A's specific blob throws
+    // `CredentialCryptoError` — standing in for a real blob whose `keyId` has
+    // rotated out of `APP_ENCRYPTION_KEY`, or one that is simply malformed.
+    const inner = memoryCipher();
+    const flaky: CredentialCipher = {
+      activeKeyId: inner.activeKeyId,
+      seal: inner.seal,
+      open: (sealed: SealedCredential) => {
+        const data = inner.open(sealed);
+        if (data.token === "broken") throw new CredentialCryptoError("Credential blob is malformed");
+        return data;
+      },
+    };
+    const deps = makeDeps({ cipher: flaky });
+
+    const userB = testPrincipal({ userId: "00000000-0000-7000-8000-000000000003" });
+    await connectIntegration(deps)(principal, {
+      provider: "wallet",
+      credentials: { token: "broken", webhookSecret: "secret-a" },
+    });
+    const connectionB = await connectIntegration(deps)(userB, {
+      provider: "wallet",
+      credentials: { token: "t", webhookSecret: "secret-b" },
+    });
+
+    const outcome = await handleWebhook(deps)({
+      provider: "wallet",
+      rawBody: BODY,
+      headers: signature("secret-b"),
+    });
+    expect(outcome.accepted).toBe(true);
+    expect(outcome.connectionId).toBe(connectionB.connection.id);
+    expect(outcome.runIds).toHaveLength(1);
+    const deliveries = (deps.deliveries as MemoryWebhookDeliveriesRepository).rows;
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]!.status).toBe("accepted");
+  });
+
+  it("rejects with a reason, and records the delivery, when the matched sync is switched off", async () => {
+    // Stands in for a `sync_jobs` row with `enabled: false` — nothing in this
+    // codebase can set that yet, so it is faked directly at the port.
+    const disabledJobs: SyncJobsRepository = {
+      ensure: async (input): Promise<SyncJob> => ({ id: "job-1", ...input, enabled: false, cursor: null }),
+      find: async (connectionId, kind): Promise<SyncJob | null> => ({
+        id: "job-1",
+        connectionId,
+        kind,
+        schedule: "daily",
+        enabled: false,
+        cursor: null,
+      }),
+      listForConnection: async () => [],
+      setCursor: async () => {},
+    };
+    const deps = makeDeps({ jobs: disabledJobs });
+    await connectIntegration(deps)(principal, {
+      provider: "wallet",
+      credentials: { token: "t", webhookSecret: SECRET },
+    });
+
+    const outcome = await handleWebhook(deps)({
+      provider: "wallet",
+      rawBody: BODY,
+      headers: signature(SECRET),
+    });
+    // Verified-but-refused: not the flat "unverifiable" rejection (the
+    // signature and connection ARE known), but no run is queued and no sync
+    // is left silently un-attempted — it is recorded so the delivery is
+    // traceable.
+    expect(outcome.accepted).toBe(false);
+    expect(outcome.runIds).toEqual([]);
+    expect(await deps.runs.queued(10)).toEqual([]);
+    const delivery = (deps.deliveries as MemoryWebhookDeliveriesRepository).rows[0]!;
+    expect(delivery.status).toBe("rejected");
+    expect(delivery.connectionId).not.toBeNull();
+    expect(delivery.error).toMatch(/switched off|disabled/i);
   });
 });
