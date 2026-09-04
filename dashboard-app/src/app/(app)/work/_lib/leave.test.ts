@@ -18,7 +18,16 @@ const trekState = vi.hoisted(() => ({ getCachedTrekStats: vi.fn(async () => null
 const payroll = vi.hoisted(() => ({ leaveTakenByMonth: vi.fn(() => []) }));
 const vacation = vi.hoisted(() => ({ hoursPerDay: vi.fn(async () => 8) }));
 
-vi.mock("@/lib/clients/trek", () => ({ trekConfigured: vi.fn(() => true) }));
+const principal = vi.hoisted(() => ({ connected: true }));
+
+vi.mock("@/modules/integrations/ui/principal-connection", () => ({
+  openPrincipalConnection: vi.fn(async () =>
+    principal.connected
+      ? { connection: { id: "c1" }, credentials: { baseUrl: "https://trek.example", token: "trek_t" } }
+      : null,
+  ),
+  isProviderConnectedForPrincipal: vi.fn(async () => principal.connected),
+}));
 vi.mock("@/lib/repo/leave", () => repo);
 vi.mock("@/lib/repo/payslips", () => payslips);
 vi.mock("@/lib/repo/trek-state", () => trekState);
@@ -54,6 +63,7 @@ function monthOf(rows: { month: string }[], month: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  principal.connected = true;
   repo.daysInYear.mockResolvedValue([]);
   repo.earliestDate.mockResolvedValue(null);
   payroll.leaveTakenByMonth.mockReturnValue([]);

@@ -14,9 +14,22 @@ import type { TrekSyncResult } from "@/lib/jobs/trek-sync";
 const auth = vi.hoisted(() => ({ requireUser: vi.fn(async () => ({ sub: "sub-123" })) }));
 const trek = vi.hoisted(() => ({
   isWeekendBlocked: vi.fn(() => false),
-  trekConfigured: vi.fn(() => true),
 }));
-const sync = vi.hoisted(() => ({ runTrekSync: vi.fn() }));
+const store = vi.hoisted(() => ({ connected: true }));
+const sync = vi.hoisted(() => ({
+  runTrekSync: vi.fn(),
+  disabledTrekSync: vi.fn((year: number) => ({
+    status: "disabled" as const,
+    year,
+    pulled: 0,
+    deleted: 0,
+    pushed: 0,
+    weekendBlocked: [],
+    stillPending: [],
+    stats: null,
+    errors: [],
+  })),
+}));
 const repo = vi.hoisted(() => ({
   stageUpsert: vi.fn(async () => null),
   stageDelete: vi.fn(async () => null),
@@ -28,6 +41,12 @@ vi.mock("next/cache", () => cache);
 vi.mock("@/lib/auth/require-user", () => auth);
 vi.mock("@/lib/clients/trek", () => trek);
 vi.mock("@/lib/jobs/trek-sync", () => sync);
+vi.mock("@/modules/integrations/ui/principal-connection", () => ({
+  openPrincipalConnection: vi.fn(async () =>
+    store.connected ? { connection: { id: "c1" }, credentials: { baseUrl: "https://trek.example", token: "trek_t" } } : null,
+  ),
+  isProviderConnectedForPrincipal: vi.fn(async () => store.connected),
+}));
 vi.mock("@/lib/repo/leave", () => repo);
 
 const { setLeaveDay, removeLeaveDay, syncLeaveNow } = await import("./leave");
@@ -51,8 +70,8 @@ const DAY = { date: "2026-03-02", fraction: 1, kind: "vacation" } as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  store.connected = true;
   trek.isWeekendBlocked.mockReturnValue(false);
-  trek.trekConfigured.mockReturnValue(true);
   sync.runTrekSync.mockResolvedValue(result());
   repo.dayAt.mockResolvedValue({
     date: "2026-03-02",
@@ -90,6 +109,26 @@ describe("setLeaveDay", () => {
     if (!out.ok) return;
     expect(out.data).toMatchObject({ syncPending: false, queued: false });
     expect(out.data.message).toContain("sent to Trek");
+  });
+
+  it("resolves the credential from the signed-in user's own connection", async () => {
+    await setLeaveDay(DAY);
+
+    expect(sync.runTrekSync).toHaveBeenCalledWith(
+      expect.objectContaining({ call: { config: { baseUrl: "https://trek.example", token: "trek_t" } } }),
+    );
+  });
+
+  it("still saves the day when Trek is not connected, and says sync is off", async () => {
+    store.connected = false;
+
+    const out = await setLeaveDay(DAY);
+
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(repo.stageUpsert).toHaveBeenCalledTimes(1);
+    expect(sync.runTrekSync).not.toHaveBeenCalled();
+    expect(out.data.message).toMatch(/Trek sync is off\.$/);
   });
 
   it("succeeds — queued, not failed — when another pass holds the sync lock", async () => {

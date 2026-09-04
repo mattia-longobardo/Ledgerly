@@ -21,9 +21,6 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { UpstreamError } from "@/lib/contracts";
 import {
   applyDesiredState,
@@ -34,13 +31,9 @@ import {
   isWeekendBlockedError,
   planToggles,
   resetTrekAuthCache,
-  trekConfigured,
   type DesiredDay,
   type TrekEntry,
 } from "./trek";
-
-const tokenFile = join(mkdtempSync(join(tmpdir(), "trek-token-")), "token");
-writeFileSync(tokenFile, "trek_live_abcdef\n");
 
 process.env.DATABASE_URL = "postgres://dashboard@localhost/dashboard";
 process.env.AUTH_URL = "https://dash.example.test";
@@ -55,8 +48,8 @@ process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
 process.env.APP_ENCRYPTION_KEY = `unit:${Buffer.alloc(32, 9).toString("base64")}`;
 process.env.WALLET_TOKEN_FILE = "/nonexistent-wallet-token";
-process.env.TREK_URL = "https://trek.example.test";
-process.env.TREK_TOKEN_FILE = tokenFile;
+
+const CONFIG = { baseUrl: "https://trek.example", token: "trek_test" };
 
 const SESSION_ID = "sess-1234";
 
@@ -190,7 +183,6 @@ const LIVE_STATS = {
 beforeEach(() => {
   fetchMock.mockReset();
   resetTrekAuthCache();
-  writeFileSync(tokenFile, "trek_live_abcdef\n");
 });
 
 // ── The pure toggle plan: the safety-critical piece ──────────────────────────
@@ -319,8 +311,8 @@ describe("the MCP session", () => {
   it("initializes once, notifies, and reuses the session across calls", async () => {
     serve(() => entriesPayload([liveEntry()]));
 
-    await getEntries(2026);
-    await getEntries(2026);
+    await getEntries(2026, { config: CONFIG });
+    await getEntries(2026, { config: CONFIG });
 
     expect(callsTo("initialize")).toHaveLength(1);
     expect(callsTo("notifications/initialized")).toHaveLength(1);
@@ -336,15 +328,15 @@ describe("the MCP session", () => {
 
   it("presents the static token as a bearer on every request", async () => {
     serve(() => entriesPayload([]));
-    await getEntries(2026);
+    await getEntries(2026, { config: CONFIG });
 
     expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
     for (const call of rpcs()) {
-      expect(call.headers.authorization).toBe("Bearer trek_live_abcdef");
+      expect(call.headers.authorization).toBe("Bearer trek_test");
       expect(call.headers.accept).toContain("text/event-stream");
     }
     for (const call of fetchMock.mock.calls) {
-      expect(String(call[0])).toBe("https://trek.example.test/mcp");
+      expect(String(call[0])).toBe("https://trek.example/mcp");
     }
   });
 
@@ -356,7 +348,7 @@ describe("the MCP session", () => {
       return toolResult(id, entriesPayload([liveEntry()]));
     });
 
-    const entries = await getEntries(2026);
+    const entries = await getEntries(2026, { config: CONFIG });
 
     expect(entries).toHaveLength(1);
     expect(callsTo("initialize")).toHaveLength(2);
@@ -366,7 +358,7 @@ describe("the MCP session", () => {
   it("gives up after a second 401 rather than looping", async () => {
     serve(() => jsonError({ error: "invalid token" }, 401));
 
-    const err = (await getEntries(2026).catch((e: unknown) => e)) as UpstreamError;
+    const err = (await getEntries(2026, { config: CONFIG }).catch((e: unknown) => e)) as UpstreamError;
 
     expect(err).toBeInstanceOf(UpstreamError);
     expect(err.retryable).toBe(false);
@@ -384,7 +376,7 @@ describe("the MCP session", () => {
       }),
     );
 
-    const err = (await getEntries(2026, { sleep: async () => {} }).catch(
+    const err = (await getEntries(2026, { config: CONFIG, sleep: async () => {} }).catch(
       (e: unknown) => e,
     )) as UpstreamError;
 
@@ -403,33 +395,22 @@ describe("the MCP session", () => {
       return toolResult(id, entriesPayload([]));
     });
 
-    await getEntries(2026);
+    await getEntries(2026, { config: CONFIG });
 
     expect(callsTo("initialize")).toHaveLength(2);
     expect(callsTo("tools/call")).toHaveLength(2);
   });
 
-  it("reads the token file per call, so a rotated secret takes effect", async () => {
+  it("opens a new session when the credential rotates, so the old session is never reused", async () => {
     serve(() => entriesPayload([]));
-    await getEntries(2026);
-    writeFileSync(tokenFile, "trek_rotated_999\n");
-    await getEntries(2026);
+    await getEntries(2026, { config: CONFIG });
+    const rotated = { ...CONFIG, token: "trek_rotated_999" };
+    await getEntries(2026, { config: rotated });
 
     // The session is keyed to the credential, so rotating forces a new handshake.
     expect(callsTo("initialize")).toHaveLength(2);
     const last = rpcs().at(-1);
     expect(last?.headers.authorization).toBe("Bearer trek_rotated_999");
-  });
-});
-
-// ── Degrading when unconfigured ──────────────────────────────────────────────
-
-describe("when no credential is configured", () => {
-  it("reports itself off and never reaches the network", async () => {
-    writeFileSync(tokenFile, "");
-    expect(trekConfigured()).toBe(false);
-    await expect(getEntries(2026)).rejects.toThrow(/not configured/);
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
@@ -439,7 +420,7 @@ describe("getEntries", () => {
   it("parses the double-nested live shape and keeps 0.5 a half day", async () => {
     serve(() => entriesPayload([liveEntry()]));
 
-    const entries = await getEntries(2026);
+    const entries = await getEntries(2026, { config: CONFIG });
 
     expect(entries).toEqual([
       { id: 7, date: "2026-07-06", note: "", fraction: 0.5, kind: "vacation" },
@@ -450,7 +431,7 @@ describe("getEntries", () => {
 
   it("coerces any fraction that is not 0.5 to a full day, as Trek's server does", async () => {
     serve(() => entriesPayload([liveEntry({ fraction: 0.25 })]));
-    const entries = await getEntries(2026);
+    const entries = await getEntries(2026, { config: CONFIG });
     expect(entries[0]?.fraction).toBe(1);
   });
 
@@ -462,21 +443,21 @@ describe("getEntries", () => {
     ];
     serve(() => entriesPayload(entries));
 
-    const parsed = await getEntries(2026);
+    const parsed = await getEntries(2026, { config: CONFIG });
     expect(parsed).toHaveLength(27);
     expect(parsed.reduce((sum, e) => sum + e.fraction, 0)).toBe(26);
   });
 
   it("fails loudly on an unknown kind rather than guessing a stats bucket", async () => {
     serve(() => entriesPayload([liveEntry({ kind: "sabbatical" })]));
-    const err = (await getEntries(2026).catch((e: unknown) => e)) as UpstreamError;
+    const err = (await getEntries(2026, { config: CONFIG }).catch((e: unknown) => e)) as UpstreamError;
     expect(err).toBeInstanceOf(UpstreamError);
     expect(err.retryable).toBe(false);
   });
 
   it("still reads a singly-nested payload, should Trek ever stop wrapping twice", async () => {
     serve(() => ({ entries: [liveEntry()] }));
-    expect(await getEntries(2026)).toHaveLength(1);
+    expect(await getEntries(2026, { config: CONFIG })).toHaveLength(1);
   });
 });
 
@@ -484,7 +465,7 @@ describe("getStats", () => {
   it("maps the live shape to camelCase", async () => {
     serve(() => ({ stats: [LIVE_STATS] }));
 
-    const stats = await getStats(2026);
+    const stats = await getStats(2026, { config: CONFIG });
 
     expect(stats).toEqual({
       year: 2026,
@@ -503,17 +484,17 @@ describe("getStats", () => {
 
   it("reads the same row through the entries tool's double nesting", async () => {
     serve(() => ({ stats: { stats: [LIVE_STATS] } }));
-    expect((await getStats(2026))?.used).toBe(26);
+    expect((await getStats(2026, { config: CONFIG }))?.used).toBe(26);
   });
 
   it("reads a bare single row too, since the nesting is not pinned upstream", async () => {
     serve(() => ({ stats: LIVE_STATS }));
-    expect((await getStats(2026))?.remaining).toBe(7);
+    expect((await getStats(2026, { config: CONFIG }))?.remaining).toBe(7);
   });
 
   it("returns null rather than throwing when Trek reports no rows", async () => {
     serve(() => ({ stats: [] }));
-    expect(await getStats(2026)).toBeNull();
+    expect(await getStats(2026, { config: CONFIG })).toBeNull();
   });
 });
 
@@ -536,13 +517,16 @@ describe("applyDesiredState", () => {
       kind: "vacation",
     }));
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [
-        { date: "2026-03-02", fraction: 1, kind: "vacation" }, // already agrees
-        { date: "2026-03-03", fraction: 1, kind: "vacation" }, // new
-      ],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [
+          { date: "2026-03-02", fraction: 1, kind: "vacation" }, // already agrees
+          { date: "2026-03-03", fraction: 1, kind: "vacation" }, // new
+        ],
+      },
+      { config: CONFIG },
+    );
 
     const toggles = callsTo("tools/call", "toggle_vacay_entry");
     expect(toggles).toHaveLength(1);
@@ -564,10 +548,13 @@ describe("applyDesiredState", () => {
       throw new Error("must not toggle");
     });
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [{ date: "2026-03-02", fraction: 0.5, kind: "comp" }],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [{ date: "2026-03-02", fraction: 0.5, kind: "comp" }],
+      },
+      { config: CONFIG },
+    );
 
     expect(callsTo("tools/call", "toggle_vacay_entry")).toHaveLength(0);
     expect(result.results).toEqual([]);
@@ -580,10 +567,13 @@ describe("applyDesiredState", () => {
       kind: "vacation",
     }));
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [{ date: "2026-03-02", fraction: 0.5, kind: "vacation" }],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [{ date: "2026-03-02", fraction: 0.5, kind: "vacation" }],
+      },
+      { config: CONFIG },
+    );
 
     expect(callsTo("tools/call", "toggle_vacay_entry")[0]?.args).toEqual({
       date: "2026-03-02",
@@ -603,11 +593,14 @@ describe("applyDesiredState", () => {
       action: "removed",
     }));
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [],
-      removals: ["2026-03-02"],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [],
+        removals: ["2026-03-02"],
+      },
+      { config: CONFIG },
+    );
 
     expect(callsTo("tools/call", "toggle_vacay_entry")[0]?.args).toEqual({
       date: "2026-03-02",
@@ -623,10 +616,13 @@ describe("applyDesiredState", () => {
       toolResult(id, { error: "Weekend days are blocked on this plan" }, true),
     );
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [{ date: "2026-03-07", fraction: 1, kind: "vacation" }],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [{ date: "2026-03-07", fraction: 1, kind: "vacation" }],
+      },
+      { config: CONFIG },
+    );
 
     expect(result.results).toEqual([
       { date: "2026-03-07", op: "insert", outcome: "weekend_blocked", action: null },
@@ -638,10 +634,13 @@ describe("applyDesiredState", () => {
     // result, and as a plain result whose text is `{"error":…}`.
     serveYear([], () => ({ error: "Weekend days are blocked on this plan" }));
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [{ date: "2026-03-08", fraction: 1, kind: "vacation" }],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [{ date: "2026-03-08", fraction: 1, kind: "vacation" }],
+      },
+      { config: CONFIG },
+    );
 
     expect(result.results[0]?.outcome).toBe("weekend_blocked");
   });
@@ -651,10 +650,13 @@ describe("applyDesiredState", () => {
     // there first. A second toggle here would delete the day.
     serveYear([], () => ({ action: "updated" }));
 
-    const result = await applyDesiredState({
-      year: 2026,
-      desired: [{ date: "2026-03-03", fraction: 1, kind: "vacation" }],
-    });
+    const result = await applyDesiredState(
+      {
+        year: 2026,
+        desired: [{ date: "2026-03-03", fraction: 1, kind: "vacation" }],
+      },
+      { config: CONFIG },
+    );
 
     expect(result.results[0]?.outcome).toBe("unexpected_action");
     expect(callsTo("tools/call", "toggle_vacay_entry")).toHaveLength(1);
@@ -665,7 +667,7 @@ describe("applyDesiredState", () => {
 
     const result = await applyDesiredState(
       { year: 2026, desired: [{ date: "2026-03-03", fraction: 1, kind: "vacation" }] },
-      { sleep: async () => {} },
+      { config: CONFIG, sleep: async () => {} },
     );
 
     // A 500 is retryable in general, but a retried toggle can silently DELETE.
@@ -688,7 +690,7 @@ describe("applyDesiredState", () => {
           { date: "2026-03-04", fraction: 0.5, kind: "vacation" },
         ],
       },
-      { sleep: async () => {} },
+      { config: CONFIG, sleep: async () => {} },
     );
 
     expect(result.results.map((r) => r.outcome)).toEqual(["failed", "applied"]);
@@ -696,10 +698,13 @@ describe("applyDesiredState", () => {
 
   it("only ever calls the two vacay tools it is allowed to", async () => {
     serveYear([], () => ({ action: "added" }));
-    await applyDesiredState({
-      year: 2026,
-      desired: [{ date: "2026-03-03", fraction: 1, kind: "vacation" }],
-    });
+    await applyDesiredState(
+      {
+        year: 2026,
+        desired: [{ date: "2026-03-03", fraction: 1, kind: "vacation" }],
+      },
+      { config: CONFIG },
+    );
     // Never the company-holiday tool, which wipes every user's day.
     const tools = callsTo("tools/call").map((r) => r.tool);
     expect(new Set(tools)).toEqual(new Set(["get_vacay_entries", "toggle_vacay_entry"]));

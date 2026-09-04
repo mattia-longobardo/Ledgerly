@@ -10,9 +10,11 @@
  *
  * ── TRANSPORT: MCP, NOT REST ─────────────────────────────────────────────────
  * Everything here speaks JSON-RPC 2.0 to `POST {baseUrl}/mcp`, authenticated
- * with a STATIC `trek_…` token (`TREK_TOKEN_FILE`). The REST vacay API accepts
- * only a session JWT minted from an email+password, which this app deliberately
- * no longer holds. Trek 4.1.1's `toggle_vacay_entry` tool finally accepts
+ * with a STATIC `trek_…` token that comes from the caller's `TrekCallOptions.
+ * config` — the connection's own credential, opened from the integration
+ * vault, not a file this module reads itself. The REST vacay API accepts only
+ * a session JWT minted from an email+password, which this app deliberately no
+ * longer holds. Trek 4.1.1's `toggle_vacay_entry` tool finally accepts
  * `fraction` and `kind`, which is what made the swap possible — earlier builds
  * hardcoded `fraction: 1` and so could not express a half day.
  *
@@ -60,7 +62,7 @@ import { createHash } from "node:crypto";
 import { z, type ZodType } from "zod";
 import type { LeaveFraction, LeaveKind } from "@/lib/calc/leave-day";
 import { UpstreamError } from "@/lib/contracts";
-import { trekConfig, type TrekConfig } from "@/lib/env";
+import type { TrekConfig } from "@/lib/env";
 import {
   HttpError,
   httpRequest,
@@ -101,28 +103,6 @@ export interface TrekYearStats {
   compUsed: number;
   windowStart: string;
   windowEnd: string;
-}
-
-/** Thrown instead of hitting the network when there is no credential at all. */
-export class TrekNotConfiguredError extends Error {
-  constructor() {
-    super("Trek is not configured (TREK_URL and TREK_TOKEN_FILE)");
-    this.name = "TrekNotConfiguredError";
-  }
-}
-
-export function isTrekNotConfigured(err: unknown): err is TrekNotConfiguredError {
-  return err instanceof TrekNotConfiguredError;
-}
-
-export function trekConfigured(): boolean {
-  return trekConfig() !== null;
-}
-
-function config(): TrekConfig {
-  const cfg = trekConfig();
-  if (cfg === null) throw new TrekNotConfiguredError();
-  return cfg;
 }
 
 // ── Response contracts ───────────────────────────────────────────────────────
@@ -298,6 +278,8 @@ const CLIENT_INFO = { name: "personal-dashboard", version: "1" };
 const MCP_ACCEPT = "application/json, text/event-stream";
 
 export interface TrekCallOptions {
+  /** The credential, resolved by the caller from the integration vault. */
+  config: TrekConfig;
   /** Injectable so tests don't sit through the backoff. */
   sleep?: SleepFn;
   jitter?: () => number;
@@ -670,9 +652,9 @@ function parseOrThrow<T>(schema: ZodType<T>, raw: unknown, what: string): T {
 
 export async function getEntries(
   year: number,
-  opts: TrekCallOptions = {},
+  opts: TrekCallOptions,
 ): Promise<TrekEntry[]> {
-  const cfg = config();
+  const cfg = opts.config;
   const payload = await mcpCall(cfg, opts, "get_vacay_entries", { year }, (fn) =>
     withRetry(fn, retryPolicy(opts)),
   );
@@ -691,9 +673,9 @@ export async function getEntries(
  */
 export async function getStats(
   year: number,
-  opts: TrekCallOptions = {},
+  opts: TrekCallOptions,
 ): Promise<TrekYearStats | null> {
-  const cfg = config();
+  const cfg = opts.config;
   const payload = await mcpCall(cfg, opts, "get_vacay_stats", { year }, (fn) =>
     withRetry(fn, retryPolicy(opts)),
   );
@@ -809,9 +791,9 @@ async function toggleOnce(
  */
 export async function applyDesiredState(
   input: ApplyDesiredStateInput,
-  opts: TrekCallOptions = {},
+  opts: TrekCallOptions,
 ): Promise<ApplyDesiredStateResult> {
-  const cfg = config();
+  const cfg = opts.config;
   const before = await getEntries(input.year, opts);
   const plan = planToggles(before, input.desired, input.removals ?? []);
 
