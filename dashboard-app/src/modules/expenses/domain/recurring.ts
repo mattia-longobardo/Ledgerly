@@ -42,50 +42,66 @@ function cadenceFor(gaps: readonly number[]): Cadence | undefined {
   )?.[0];
 }
 
+interface ParsedCandidate {
+  readonly candidate: RecurringCandidate;
+  /** Signed integer cents — never a parsed float. */
+  readonly cents: number;
+}
+
 /**
- * Groups by payee (case-insensitive), then looks for three or more gaps that
- * all land in the same cadence's day band, with amounts within 10% of the
- * group's median — the same median-band shape `payroll/confidence.ts` uses
- * for fund reconciliation. Amounts are compared in integer cents (never as
- * parsed floats) so the band check can't drift on rounding. Two occurrences
- * are never enough: one repeat is a coincidence, not a pattern.
+ * Groups by payee (case-insensitive), currency and amount sign — a debit and
+ * an unrelated credit of the same magnitude, or the same payee billing in two
+ * currencies, must never be treated as one series just because they share a
+ * name. Within each group, looks for three or more gaps that all land in the
+ * same cadence's day band, with amounts within 10% of the group's median —
+ * the same median-band shape `payroll/confidence.ts` uses for fund
+ * reconciliation. Amounts are compared in integer cents (never as parsed
+ * floats) so the band check can't drift on rounding; a candidate whose amount
+ * fails to parse, or is exactly zero (no sign to group by), is dropped rather
+ * than guessed at. Two occurrences are never enough: one repeat is a
+ * coincidence, not a pattern.
  */
 export function detectRecurring(transactions: readonly RecurringCandidate[]): DetectedPattern[] {
-  const byPayee = new Map<string, RecurringCandidate[]>();
+  const byGroup = new Map<string, ParsedCandidate[]>();
   for (const t of transactions) {
-    const key = t.payee.trim().toLowerCase();
-    if (!key) continue;
-    const list = byPayee.get(key) ?? [];
-    list.push(t);
-    byPayee.set(key, list);
+    const payeeKey = t.payee.trim().toLowerCase();
+    if (!payeeKey) continue;
+    const cents = toCents(t.amount);
+    if (cents === null || cents === 0) continue;
+    const key = `${payeeKey} ${t.currency} ${cents < 0 ? "-" : "+"}`;
+    const list = byGroup.get(key) ?? [];
+    list.push({ candidate: t, cents });
+    byGroup.set(key, list);
   }
 
   const patterns: DetectedPattern[] = [];
-  for (const group of byPayee.values()) {
+  for (const group of byGroup.values()) {
     if (group.length < MIN_OCCURRENCES) continue;
 
-    const sorted = [...group].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+    const sorted = [...group].sort(
+      (a, b) => a.candidate.occurredAt.getTime() - b.candidate.occurredAt.getTime(),
+    );
 
     const gaps: number[] = [];
     for (let i = 1; i < sorted.length; i += 1) {
-      gaps.push((sorted[i]!.occurredAt.getTime() - sorted[i - 1]!.occurredAt.getTime()) / DAY_MS);
+      gaps.push(
+        (sorted[i]!.candidate.occurredAt.getTime() - sorted[i - 1]!.candidate.occurredAt.getTime()) / DAY_MS,
+      );
     }
     const cadence = cadenceFor(gaps);
     if (!cadence) continue;
 
-    const parsedCents = sorted.map((t) => toCents(t.amount));
-    if (parsedCents.some((c) => c === null)) continue;
-    const cents = parsedCents.map((c) => Math.abs(c!)).sort((a, b) => a - b);
-    const median = cents[Math.floor(cents.length / 2)]!;
-    if (median === 0 || !cents.every((c) => Math.abs(c - median) <= median * AMOUNT_BAND)) continue;
+    const absCents = sorted.map((p) => Math.abs(p.cents)).sort((a, b) => a - b);
+    const median = absCents[Math.floor(absCents.length / 2)]!;
+    if (!absCents.every((c) => Math.abs(c - median) <= median * AMOUNT_BAND)) continue;
 
-    const last = sorted[sorted.length - 1]!;
+    const last = sorted[sorted.length - 1]!.candidate;
     const avgGapDays = gaps.reduce((sum, g) => sum + g, 0) / gaps.length;
     patterns.push({
       payee: last.payee,
       cadence,
-      amountLow: fromCents(cents[0]!).toFixed(2),
-      amountHigh: fromCents(cents[cents.length - 1]!).toFixed(2),
+      amountLow: fromCents(absCents[0]!).toFixed(2),
+      amountHigh: fromCents(absCents[absCents.length - 1]!).toFixed(2),
       currency: last.currency,
       lastSeenAt: last.occurredAt,
       nextExpectedAt: new Date(last.occurredAt.getTime() + avgGapDays * DAY_MS),
