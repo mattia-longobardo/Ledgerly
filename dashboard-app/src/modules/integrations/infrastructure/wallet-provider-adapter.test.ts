@@ -5,6 +5,7 @@ import type { DisconnectContext, IntegrationConnection } from "@/platform/integr
 import type { MemoryAccountsRepository, MemoryProviderLinksRepository } from "@/modules/accounts/infrastructure/memory-repositories";
 import type { NewAccount, ProviderAccount } from "@/modules/accounts/application/ports";
 import { unusedDb } from "@/test/integration-deps";
+import { getRecords } from "@/lib/clients/wallet";
 import { walletProvider } from "./wallet-provider-adapter";
 
 vi.mock("@/lib/clients/wallet", () => ({
@@ -21,7 +22,9 @@ vi.mock("@/lib/clients/wallet", () => ({
       },
     ];
   }),
-  getRecords: vi.fn(async () => [
+  // Records its own call arguments (rather than ignoring them) so the
+  // handler's cursor window can actually be asserted, not just assumed.
+  getRecords: vi.fn(async (_opts: { token: string; sinceDate?: string }) => [
     { id: "r1", accountId: "w1", amount: -12.5, currencyCode: "EUR", recordType: "expense", recordState: "cleared", recordDate: "2026-09-04T08:00:00Z", categoryId: "c1", labels: [] },
   ]),
   getCategories: vi.fn(async () => [{ id: "c1", name: "Groceries", group: null }]),
@@ -296,6 +299,7 @@ describe("wallet provider adapter — transactions sync", () => {
       clock: { now: () => new Date("2026-09-04T09:00:00Z") },
       cursor: null,
     });
+    let nextCursor: unknown;
     const stats = await walletProvider.syncs.transactions!.apply(
       {
         connection: connectionFixture(),
@@ -303,12 +307,38 @@ describe("wallet provider adapter — transactions sync", () => {
         db: unusedDb,
         clock: { now: () => new Date("2026-09-04T09:00:00Z") },
         cursor: null,
-        setCursor: () => {},
+        setCursor: (next) => {
+          nextCursor = next;
+        },
         audit: async () => {},
       },
       payload,
     );
     expect(stats.transactionsCreated).toBe(1);
     expect(stats.skippedNoAccount).toBe(0);
+    // The cursor `apply` hands the engine is the Rome date this run's `fetch`
+    // was called at — asserted here rather than assumed, since nothing else
+    // in this test exercises what `setCursor` was actually called with.
+    expect(nextCursor).toEqual({ sinceDate: "2026-09-04" });
+  });
+
+  it("re-requests records from seven days before the stored cursor", async () => {
+    vi.mocked(getRecords).mockClear();
+
+    await walletProvider.syncs.transactions!.fetch({
+      connection: connectionFixture(),
+      credentials: { token: "good" },
+      runId: "run-2",
+      clock: { now: () => new Date("2026-09-04T09:00:00Z") },
+      cursor: { sinceDate: "2026-09-04" },
+    });
+
+    // Guards the lookback arithmetic itself: a sign flip (or an off-by-one)
+    // here would silently skip a week of records on every run while every
+    // other test in the suite stays green, since the mock ignores its
+    // arguments unless a test inspects them.
+    expect(vi.mocked(getRecords)).toHaveBeenCalledWith(
+      expect.objectContaining({ sinceDate: "2026-08-28" }),
+    );
   });
 });
