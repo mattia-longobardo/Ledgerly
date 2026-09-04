@@ -16,9 +16,9 @@ import type {
  * The bag handed to a use case is bound to the **pool**, not to a transaction:
  * a use case opens its own, through `inUserContext`, around the database work
  * and around nothing else. That is what keeps a provider round trip — a
- * connection test, a Wallet page fetch, a Trek MCP conversation — outside every
- * transaction, which is the rule Task 2 established and this phase must not
- * quietly undo.
+ * connection test, or a provider's account-listing round trip — outside
+ * every transaction, which is the rule Task 2 established and this phase
+ * must not quietly undo.
  */
 export interface IntegrationDeps {
   connections: ConnectionsRepository;

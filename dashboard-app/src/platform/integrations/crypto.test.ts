@@ -54,6 +54,17 @@ describe("parseEncryptionKeys", () => {
     expect(() => parseEncryptionKeys(`k1:${randomBytes(16).toString("base64")}`)).toThrow(CredentialCryptoError);
     expect(() => parseEncryptionKeys(`k1:${K1},k1:${K2}`)).toThrow(CredentialCryptoError);
   });
+
+  it("refuses a garbled key that still base64-decodes to 32 bytes", () => {
+    // `Buffer.from(..., "base64")` is lenient: it silently drops characters
+    // outside the base64 alphabet (here, an embedded space) rather than
+    // failing, so a key entered with a stray whitespace character can still
+    // decode to a valid-looking 32 bytes. Without a round-trip check this
+    // would be accepted, and the mistake would only surface later as every
+    // credential sealed under it becoming undecryptable.
+    const garbled = `${K1.slice(0, 10)} ${K1.slice(10)}`;
+    expect(() => parseEncryptionKeys(`k1:${garbled}`)).toThrow(CredentialCryptoError);
+  });
 });
 
 describe("credential cipher", () => {
@@ -90,6 +101,28 @@ describe("credential cipher", () => {
     const two = createCredentialCipher(`k2:${K2},k1:${K1}`);
     const underK2 = two.seal({ token: "x" });
     expect(() => two.open({ keyId: "k1", ciphertext: underK2.ciphertext })).toThrow(CredentialCryptoError);
+  });
+
+  it("refuses a blob whose JSON object has a non-string value", () => {
+    // The guard above `open()`'s cast only proves the parsed value is a
+    // non-null, non-array object — a blob containing a nested object (or a
+    // number, or a boolean) for one of its fields would otherwise be handed
+    // back typed as `Record<string, string>` while actually holding
+    // something else.
+    const secretLookingValue = "wallet-secret-nested-marker";
+    const body = JSON.stringify({ token: "ok", nested: { evil: secretLookingValue } });
+    const ciphertext = sealRawBody("k1", Buffer.from(K1, "base64"), body);
+    const cipher = createCredentialCipher(`k1:${K1}`);
+
+    let caught: unknown;
+    try {
+      cipher.open({ keyId: "k1", ciphertext });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(CredentialCryptoError);
+    expect(String((caught as Error).message)).not.toContain(secretLookingValue);
   });
 
   it("never lets decrypted plaintext escape via a JSON.parse SyntaxError", () => {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpstreamError } from "@/lib/contracts";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 import {
   clearPayslipTagIdCache,
   downloadOriginal,
@@ -21,7 +22,7 @@ process.env.PAPERLESS_TOKEN = "paperless-token";
 process.env.PAPERLESS_PAYSLIP_TAG_ID = "22";
 process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
-process.env.APP_ENCRYPTION_KEY = `unit:${Buffer.alloc(32, 9).toString("base64")}`;
+process.env.APP_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
 
 const fetchMock = vi.fn();
 globalThis.fetch = fetchMock as unknown as typeof fetch;

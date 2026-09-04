@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 
 const BASE_ENV: Record<string, string> = {
   DATABASE_URL: "postgres://dashboard@localhost/dashboard",
@@ -12,7 +13,7 @@ const BASE_ENV: Record<string, string> = {
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
-  APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+  APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
 };
 
 const fetchMock = vi.fn();

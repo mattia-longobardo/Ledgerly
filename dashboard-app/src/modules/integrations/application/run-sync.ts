@@ -1,7 +1,6 @@
 import { assertPermission, type Principal } from "@/platform/auth/principal";
 import type {
   IntegrationConnection,
-  IntegrationProvider,
   ProviderCode,
   SyncHandler,
   SyncKind,
@@ -30,7 +29,6 @@ export interface RunSyncInput {
 }
 
 interface Resolved {
-  provider: IntegrationProvider;
   handler: SyncHandler;
   kind: SyncKind;
 }
@@ -42,7 +40,7 @@ function resolve(deps: IntegrationDeps, input: RunSyncInput): Resolved {
   if (!kind) throw new SyncNotSupportedError(`${input.provider} has no sync to run`);
   const handler = provider.syncs[kind];
   if (!handler) throw new SyncNotSupportedError(`${input.provider} has no ${kind} sync`);
-  return { provider, handler, kind };
+  return { handler, kind };
 }
 
 interface Prepared {

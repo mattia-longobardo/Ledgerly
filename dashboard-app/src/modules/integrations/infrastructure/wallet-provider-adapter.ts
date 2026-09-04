@@ -107,6 +107,15 @@ async function onDisconnect(ctx: DisconnectContext): Promise<void> {
       archived += 1;
       continue;
     }
+    // `origin: "manual"` is a deliberate override, not the account's real
+    // origin: `deletionDecision` otherwise refuses to hard-delete anything
+    // whose origin is `"synced"` at all (it always answers "archive"), which
+    // is the right default for an account that merely lost its live link in
+    // passing. Here the user has explicitly asked to purge this connection,
+    // so an unreferenced account it created should follow the same rule a
+    // manual account would — hard-delete if nothing else references it,
+    // archive otherwise — rather than being kept forever just because it was
+    // once synced.
     const decision = deletionDecision(
       { ...account, origin: "manual" },
       { hasLiveProviderLink: false, hasReferences: await deps.accounts.hasReferences(account.id) },

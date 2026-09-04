@@ -7,6 +7,7 @@ import {
   verifyCronSecret,
   verifyWebhookSecret,
 } from "@/lib/auth/machine";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 
 const CRON_SECRET = "cron-secret-0123456789abcdef";
 const WEBHOOK_SECRET = "webhook-secret-0123456789abcdef";
@@ -25,7 +26,7 @@ Object.assign(process.env, {
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET,
   WEBHOOK_SECRET,
-  APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+  APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
 });
 
 function request(headers: Record<string, string> = {}, url = "https://dashboard.example/api/jobs/snapshot"): Request {

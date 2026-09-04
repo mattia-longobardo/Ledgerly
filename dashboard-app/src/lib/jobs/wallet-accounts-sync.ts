@@ -7,13 +7,13 @@
  * process-wide and there is no per-user cron. Per-user schedules arrive with
  * `sync_jobs` becoming dispatchable in a later phase.
  *
- * The provider fetch happens inside `runSyncForUser`, in its own short-lived
- * pool connection, before `runSyncForUser` opens a second one for the apply
- * phase — never nested inside the one `withJobLock` here holds for the
- * `job_runs` bookkeeping and the advisory lock. The benefit over the Phase 1
- * shape is a single held pool connection during the sync's round trip instead
- * of two: this job's own transaction is only ever open for the bookkeeping,
- * not for the length of the Wallet conversation.
+ * `withJobLock` holds its advisory lock for the whole call below, including
+ * the Wallet round trip inside `runSyncForUser` — that lock is what keeps two
+ * instances of this job from running at once, and it is not released early.
+ * What changed from the Phase 1 shape is the pool connections, not the lock:
+ * `runSyncForUser`'s `fetch` phase makes its Wallet call with no transaction
+ * open, and its `apply` phase opens its own afterwards, so this job holds one
+ * pool connection during the round trip instead of two.
  */
 
 import { alertJobFailure } from "@/lib/clients/gotify";

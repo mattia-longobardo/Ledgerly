@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PayslipExtraction } from "@/lib/contracts";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 
 interface RunRow {
   id: number;
@@ -24,12 +25,17 @@ const store = vi.hoisted(() => {
     PAPERLESS_TOKEN: "paperless-token",
     CRON_SECRET: "c".repeat(20),
     WEBHOOK_SECRET: "w".repeat(20),
-    APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+    // `vi.hoisted()`'s callback runs before any import binding in this file
+    // is initialized (that is the whole point of the hoist), so
+    // TEST_ENCRYPTION_KEY cannot be referenced from in here — it is set
+    // right below instead, still ahead of the static imports that trigger
+    // `env()`.
     GOTIFY_URL: "https://gotify.example.test",
     GOTIFY_TOKEN: "gotify-token",
   });
   return { runs: [] as RunRow[], nextRunId: 1 };
 });
+process.env.APP_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
 
 vi.mock("@/lib/repo/jobs", () => ({
   startRun: vi.fn(

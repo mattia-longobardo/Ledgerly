@@ -114,8 +114,9 @@ export async function runTrekSync(input: RunTrekSyncInput): Promise<TrekSyncResu
 /**
  * The result a caller reports when there is no Trek connection at all.
  *
- * `runTrekSync` used to answer this itself, from `trekConfigured()`. It cannot
- * any more — "is Trek set up" is a question about `integration_connections`,
+ * `runTrekSync` used to decide this itself, by checking the environment for a
+ * configured Trek credential directly. It cannot any more — "is Trek set up"
+ * is a question about `integration_connections`,
  * which this module knows nothing about — so the answer moved to the callers
  * that *can* ask it, and this is the shape they hand back. `TrekSyncStatus`
  * keeps its `"disabled"` member and the Work page keeps rendering "Trek sync is

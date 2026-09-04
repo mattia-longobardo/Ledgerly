@@ -42,12 +42,24 @@ export function drainSyncQueue(deps: IntegrationDeps) {
         // kill every row after it in this tick, including other connections'.
         // Finishing it here is what keeps the doc comment above true.
         const error = err instanceof Error ? err.message : String(err);
-        const failed = await deps.inSystemContext(async (d) => {
-          const finishedAt = d.clock.now();
-          await d.runs.finish(row.id, { status: "failed", stats: {}, error, finishedAt });
-          return { ...row, status: "failed" as const, error, finishedAt };
-        });
-        done.push(failed);
+        // This bookkeeping write is itself just another database write, and
+        // it can fail the same way the one `execute()` guards against can:
+        // if it throws here, unwrapped, the exception escapes this catch
+        // block and kills the rest of the tick — the exact failure mode this
+        // whole catch exists to prevent, one layer deeper. Swallowing it
+        // leaves `row` `queued`; the next tick will pick it up and try again,
+        // which is strictly better than losing every row after it in this one.
+        try {
+          const failed = await deps.inSystemContext(async (d) => {
+            const finishedAt = d.clock.now();
+            await d.runs.finish(row.id, { status: "failed", stats: {}, error, finishedAt });
+            return { ...row, status: "failed" as const, error, finishedAt };
+          });
+          done.push(failed);
+        } catch {
+          // Not recorded in `done`: there is nothing accurate to report — the
+          // write that would have produced it is exactly what failed.
+        }
       }
     }
 

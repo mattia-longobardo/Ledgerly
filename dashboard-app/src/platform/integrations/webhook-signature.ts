@@ -32,10 +32,11 @@ export function verifyHmacSignature(input: {
  * adapter may override.
  */
 export function hmacSignatureVerifier(
-  headerName: string = DEFAULT_SIGNATURE_HEADER,
+  headerName?: string,
 ): (req: WebhookRequest, secret: string) => boolean {
+  const header = headerName ?? DEFAULT_SIGNATURE_HEADER;
   return (req, secret) =>
-    verifyHmacSignature({ rawBody: req.rawBody, presented: req.headers.get(headerName), secret });
+    verifyHmacSignature({ rawBody: req.rawBody, presented: req.headers.get(header), secret });
 }
 
 /**

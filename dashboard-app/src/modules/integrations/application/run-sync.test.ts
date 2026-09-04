@@ -298,6 +298,49 @@ describe("the sync queue", () => {
     expect((await deps.runs.recent(connectionA.id, 10))[0]!.status).toBe("failed");
   });
 
+  it("still drains the rest of the batch when the failure bookkeeping write itself throws", async () => {
+    const deps = makeDeps();
+    const principalB = testPrincipal({ userId: "00000000-0000-7000-8000-000000000003" });
+    const connectionA = await connected(deps);
+    const { connection: connectionB } = await connectIntegration(deps)(principalB, {
+      provider: "wallet",
+      credentials: { token: "t" },
+    });
+
+    const queuedA = await enqueueSync(deps)(connectionA, "accounts", "webhook");
+    await enqueueSync(deps)(connectionB, "accounts", "webhook");
+
+    // Same setup as the test above: A fails before execution even starts.
+    const jobA = await deps.jobs.find(connectionA.id, "accounts");
+    const originalFind = deps.jobs.find.bind(deps.jobs);
+    Object.assign(deps.jobs, {
+      find: async (connectionId: string, kind: "accounts" | "leave") =>
+        connectionId === connectionA.id ? { ...jobA!, enabled: false } : originalFind(connectionId, kind),
+    });
+
+    // And now the bookkeeping write the catch block uses to record that
+    // failure ALSO throws — the same failure mode the guard exists to
+    // prevent, one layer deeper. This must not escape the loop and take out
+    // every row after it, including connection B's.
+    const originalFinish = deps.runs.finish.bind(deps.runs);
+    Object.assign(deps.runs, {
+      finish: async (id: string, patch: Parameters<typeof originalFinish>[1]) =>
+        id === queuedA.id ? Promise.reject(new Error("db write failed")) : originalFinish(id, patch),
+    });
+
+    const drained = await drainSyncQueue(deps)(10);
+
+    // B still ran and is reported, despite A's bookkeeping write blowing up.
+    expect(fetched).toHaveLength(1);
+    expect(drained.some((r) => r.status === "success")).toBe(true);
+    expect(drained.find((r) => r.id === queuedA.id)).toBeUndefined();
+
+    // A's row could not be marked failed — its bookkeeping write is exactly
+    // what threw — so it is left `queued` rather than lost silently; the next
+    // tick will pick it up and retry.
+    expect((await deps.runs.queued(10)).map((r) => r.id)).toEqual([queuedA.id]);
+  });
+
   it("refuses to enqueue a disabled kind", async () => {
     const deps = makeDeps();
     const connection = await connected(deps);
