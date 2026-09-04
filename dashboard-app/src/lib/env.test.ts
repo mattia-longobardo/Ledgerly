@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+import { env, resetEnvCache } from "./env";
+
+// `env()` validates the whole schema, so every required variable has to be present.
+Object.assign(process.env, {
+  NODE_ENV: "test",
+  DATABASE_URL: "postgres://dashboard:pw@localhost:5432/dashboard",
+  AUTH_URL: "https://dashboard.example",
+  AUTH_SECRET: "0123456789abcdef0123456789abcdef",
+  OIDC_ISSUER: "https://auth.example/application/o/dashboard/",
+  OIDC_CLIENT_ID: "dashboard",
+  OIDC_CLIENT_SECRET: "client-secret",
+  AUTHORIZED_SUB: "00000000-0000-0000-0000-000000000001",
+  PAPERLESS_URL: "https://paperless.example",
+  PAPERLESS_TOKEN: "paperless-token",
+  CRON_SECRET: "c".repeat(20),
+  WEBHOOK_SECRET: "w".repeat(20),
+  APP_ENCRYPTION_KEY: `unit:${Buffer.alloc(32, 9).toString("base64")}`,
+});
+resetEnvCache();
+
+describe("resetEnvCache", () => {
+  it("makes the next env() call observe a variable changed after the first call", () => {
+    process.env.CRON_SECRET = "x".repeat(20);
+    resetEnvCache();
+    expect(env().CRON_SECRET).toBe("x".repeat(20));
+
+    // Without a reset, env() would keep returning the memoised "x" value.
+    process.env.CRON_SECRET = "y".repeat(20);
+    resetEnvCache();
+    expect(env().CRON_SECRET).toBe("y".repeat(20));
+  });
+});

@@ -101,7 +101,16 @@ export function createCredentialCipher(raw: string): CredentialCipher {
       } catch {
         throw new CredentialCryptoError("Credential blob failed authentication");
       }
-      const parsed: unknown = JSON.parse(json);
+      // JSON.parse must stay guarded: on failure Node embeds the offending
+      // input in a native SyntaxError message, and at this point that input
+      // is decrypted credential material. Letting that error escape would
+      // leak plaintext into whatever catches it upstream.
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(json);
+      } catch {
+        throw new CredentialCryptoError("Credential blob did not contain JSON");
+      }
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
         throw new CredentialCryptoError("Credential blob did not contain an object");
       }
