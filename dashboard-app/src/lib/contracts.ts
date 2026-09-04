@@ -120,7 +120,8 @@ export type JobName =
   | "wallet_refresh"
   | "trek_sync"
   | "monthly_close"
-  | "wallet_accounts_sync";
+  | "wallet_accounts_sync"
+  | "sync_queue";
 
 export type JobStatus =
   | "running"
