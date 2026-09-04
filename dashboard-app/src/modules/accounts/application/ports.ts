@@ -35,9 +35,11 @@ export interface AccountsRepository {
   hasReferences(accountId: string): Promise<boolean>; // false in Phase 1; budgets and interest rules will consult it
 }
 
+export type ProviderLinkEntityType = "account" | "transaction" | "category" | "label";
+
 export interface ProviderLink {
   provider: string;
-  entityType: "account";
+  entityType: ProviderLinkEntityType;
   entityId: string;
   externalId: string;
   metadata: Record<string, unknown>;
@@ -45,10 +47,10 @@ export interface ProviderLink {
 }
 
 export interface ProviderLinksRepository {
-  byExternal(userId: string, provider: string, entityType: "account", externalIds: string[]): Promise<Map<string, ProviderLink>>; // keyed by externalId
-  liveFor(entityType: "account", entityId: string): Promise<ProviderLink | null>; // null when missingSince is set
+  byExternal(userId: string, provider: string, entityType: ProviderLinkEntityType, externalIds: string[]): Promise<Map<string, ProviderLink>>; // keyed by externalId
+  liveFor(entityType: ProviderLinkEntityType, entityId: string): Promise<ProviderLink | null>; // null when missingSince is set
   upsertSeen(userId: string, link: Omit<ProviderLink, "missingSince">, seenAt: Date): Promise<void>;
-  markMissing(userId: string, provider: string, entityType: "account", seenExternalIds: string[], at: Date): Promise<string[]>; // entityIds newly marked missing
+  markMissing(userId: string, provider: string, entityType: ProviderLinkEntityType, seenExternalIds: string[], at: Date): Promise<string[]>; // entityIds newly marked missing
 }
 
 export interface ProviderAccount {

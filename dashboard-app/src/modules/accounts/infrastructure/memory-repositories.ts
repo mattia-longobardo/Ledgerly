@@ -7,6 +7,7 @@ import type {
   NewAccount,
   NewBalance,
   ProviderLink,
+  ProviderLinkEntityType,
   ProviderLinksRepository,
 } from "../application/ports";
 
@@ -129,7 +130,7 @@ export class MemoryProviderLinksRepository implements ProviderLinksRepository {
   async byExternal(
     userId: string,
     provider: string,
-    entityType: "account",
+    entityType: ProviderLinkEntityType,
     externalIds: string[],
   ): Promise<Map<string, ProviderLink>> {
     const wanted = new Set(externalIds);
@@ -142,7 +143,7 @@ export class MemoryProviderLinksRepository implements ProviderLinksRepository {
     return result;
   }
 
-  async liveFor(entityType: "account", entityId: string): Promise<ProviderLink | null> {
+  async liveFor(entityType: ProviderLinkEntityType, entityId: string): Promise<ProviderLink | null> {
     const link = this.links.find((l) => l.entityType === entityType && l.entityId === entityId);
     if (!link || link.missingSince !== null) return null;
     return link;
@@ -164,7 +165,7 @@ export class MemoryProviderLinksRepository implements ProviderLinksRepository {
   async markMissing(
     userId: string,
     provider: string,
-    entityType: "account",
+    entityType: ProviderLinkEntityType,
     seenExternalIds: string[],
     at: Date,
   ): Promise<string[]> {

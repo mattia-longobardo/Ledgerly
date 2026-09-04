@@ -1,12 +1,12 @@
 import { and, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { providerLinks, type ProviderLinkRow } from "@/lib/db/schema";
-import type { ProviderLink, ProviderLinksRepository } from "../application/ports";
+import type { ProviderLink, ProviderLinkEntityType, ProviderLinksRepository } from "../application/ports";
 
 function toLink(row: ProviderLinkRow): ProviderLink {
   return {
     provider: row.provider,
-    entityType: row.entityType as "account",
+    entityType: row.entityType as ProviderLinkEntityType,
     entityId: row.entityId,
     externalId: row.externalId,
     metadata: row.metadata as Record<string, unknown>,
@@ -25,7 +25,7 @@ export class DrizzleProviderLinksRepository implements ProviderLinksRepository {
   async byExternal(
     userId: string,
     provider: string,
-    entityType: "account",
+    entityType: ProviderLinkEntityType,
     externalIds: string[],
   ): Promise<Map<string, ProviderLink>> {
     if (externalIds.length === 0) return new Map();
@@ -43,7 +43,7 @@ export class DrizzleProviderLinksRepository implements ProviderLinksRepository {
     return new Map(rows.map((r) => [r.externalId, toLink(r)]));
   }
 
-  async liveFor(entityType: "account", entityId: string): Promise<ProviderLink | null> {
+  async liveFor(entityType: ProviderLinkEntityType, entityId: string): Promise<ProviderLink | null> {
     const [row] = await this.db
       .select()
       .from(providerLinks)
@@ -91,7 +91,7 @@ export class DrizzleProviderLinksRepository implements ProviderLinksRepository {
   async markMissing(
     userId: string,
     provider: string,
-    entityType: "account",
+    entityType: ProviderLinkEntityType,
     seenExternalIds: string[],
     at: Date,
   ): Promise<string[]> {

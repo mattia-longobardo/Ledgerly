@@ -156,6 +156,18 @@ describe("MemoryProviderLinksRepository", () => {
     expect(u2Links.get("ext-1")?.entityId).toBe("acc-2");
     expect(u2Links.get("ext-1")?.metadata).toEqual({ owner: "u2" });
   });
+
+  it("round-trips a non-account entity type", async () => {
+    const repo = new MemoryProviderLinksRepository();
+    const now = new Date("2026-09-05T00:00:00Z");
+    await repo.upsertSeen(
+      "user-1",
+      { provider: "wallet", entityType: "transaction", entityId: "tx-1", externalId: "ext-1", metadata: {} },
+      now,
+    );
+    const found = await repo.byExternal("user-1", "wallet", "transaction", ["ext-1"]);
+    expect(found.get("ext-1")?.entityType).toBe("transaction");
+  });
 });
 
 describe("MemoryClock", () => {
