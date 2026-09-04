@@ -261,4 +261,32 @@ describe("handleWebhook", () => {
     expect(delivery.connectionId).not.toBeNull();
     expect(delivery.error).toMatch(/switched off|disabled/i);
   });
+
+  it("lets a genuine infrastructure failure in enqueueSync surface, rather than filing it as a routine rejection", async () => {
+    // Not `SyncDisabledError` — a plain infrastructure failure (a DB error, a
+    // constraint violation) reaching the same catch site must NOT be treated
+    // like a verified-but-refused delivery: it has to keep propagating so it
+    // surfaces as a 500 that alerts operators, instead of a 404 and a quiet
+    // "rejected" delivery row that hides the real problem.
+    const brokenJobs: SyncJobsRepository = {
+      ensure: async (input): Promise<SyncJob> => ({ id: "job-1", ...input, enabled: true, cursor: null }),
+      find: async () => {
+        throw new Error("connection to the database was lost");
+      },
+      listForConnection: async () => [],
+      setCursor: async () => {},
+    };
+    const deps = makeDeps({ jobs: brokenJobs });
+    await connectIntegration(deps)(principal, {
+      provider: "wallet",
+      credentials: { token: "t", webhookSecret: SECRET },
+    });
+
+    await expect(
+      handleWebhook(deps)({ provider: "wallet", rawBody: BODY, headers: signature(SECRET) }),
+    ).rejects.toThrow("connection to the database was lost");
+    // No delivery row either: the transaction this ran in never got to commit
+    // one, exactly as an uncaught error inside it should behave.
+    expect((deps.deliveries as MemoryWebhookDeliveriesRepository).rows).toEqual([]);
+  });
 });
