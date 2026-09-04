@@ -1,5 +1,6 @@
 import type { Principal } from "@/platform/auth/principal";
 import type { Permission } from "@/platform/auth/permissions";
+import type { ProviderCode } from "@/platform/integrations/types";
 
 export type IntegrationState = "connected" | "error" | "disconnected" | "not_configured";
 
@@ -19,10 +20,10 @@ export interface Capabilities {
 }
 
 export interface CapabilityProbes {
-  walletConfigured(): boolean;
-  trekConfigured(): boolean;
+  /** Connection status per provider for this user, straight from integration_connections. */
+  connectionStates(userId: string): Promise<Record<ProviderCode, IntegrationState>>;
+  /** Still environment-driven until the document store lands in Phase 4. */
   payrollConfigured(): boolean;
-  /** Both take the principal's id: `accounts` is behind RLS, so the count only means something inside that user's context. */
   hasAccounts(userId: string): Promise<boolean>;
   hasPayrollRecords(userId: string): Promise<boolean>;
 }
@@ -34,23 +35,25 @@ export interface CapabilityProbes {
  * Two different questions live here on purpose. `features` answers "should this
  * section be reachable" — accounts, funds and budgets are hand-entered, so they
  * are on everywhere; expenses and interests only mean something once the wallet
- * is wired up. `integrations` answers "what is the state of the wire", which the
- * Settings page reports even when the matching feature is off. `data` is the
- * emptiness signal: a section can exist and still have nothing in it, and the
- * two must not be conflated — hiding a section because it is empty leaves the
- * user with no way to fill it.
+ * is wired up. `integrations` reports the state of a stored connection rather
+ * than the presence of a mounted file, which is why "wired up" and "configured"
+ * have stopped being the same question — the Settings page reports it even
+ * when the matching feature is off. `data` is the emptiness signal: a section
+ * can exist and still have nothing in it, and the two must not be conflated —
+ * hiding a section because it is empty leaves the user with no way to fill it.
  *
  * Probes are injected rather than imported so this module stays free of `@/lib/db`
  * and `node:fs`: it is pure, and its tests need no database and no environment.
  */
 export async function resolveCapabilities(principal: Principal, probes: CapabilityProbes): Promise<Capabilities> {
-  const wallet: IntegrationState = probes.walletConfigured() ? "connected" : "not_configured";
-  const trek: IntegrationState = probes.trekConfigured() ? "connected" : "not_configured";
-  const payroll: IntegrationState = probes.payrollConfigured() ? "connected" : "not_configured";
-  const [hasAccounts, hasPayrollRecords] = await Promise.all([
+  const [states, hasAccounts, hasPayrollRecords] = await Promise.all([
+    probes.connectionStates(principal.userId),
     probes.hasAccounts(principal.userId),
     probes.hasPayrollRecords(principal.userId),
   ]);
+  const wallet = states.wallet;
+  const trek = states.trek;
+  const payroll: IntegrationState = probes.payrollConfigured() ? "connected" : "not_configured";
   return {
     features: {
       accounts: true,

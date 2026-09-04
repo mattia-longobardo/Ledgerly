@@ -87,7 +87,7 @@ describe("HOME_CARDS and visibleCards", () => {
   it("defines the four cards with their target sections", () => {
     expect(HOME_CARDS.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave"]);
     expect(HOME_CARDS.find((c) => c.key === "total_balance")?.href).toBe("/finance/accounts");
-    expect(HOME_CARDS.find((c) => c.key === "accounts_sync")?.href).toBe("/settings");
+    expect(HOME_CARDS.find((c) => c.key === "accounts_sync")?.href).toBe("/settings/integrations");
     expect(HOME_CARDS.find((c) => c.key === "funds")?.href).toBe("/finance/funds");
     expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/work");
   });

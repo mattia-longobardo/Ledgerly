@@ -1,8 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { accounts, organizations, users } from "@/lib/db/schema";
+import { accounts, integrationConnections, organizations, users } from "@/lib/db/schema";
 import { withSystemContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
-import { dataProbes } from "./probes";
+import { connectionProbes, dataProbes } from "./probes";
 
 /**
  * The regression this pins: `accounts` carries `FORCE ROW LEVEL SECURITY`, so
@@ -63,5 +63,30 @@ describe("dataProbes.hasAccounts", () => {
     );
 
     expect(await dataProbes(db).hasAccounts(owner!.id)).toBe(false);
+  });
+});
+
+describe("connectionProbes", () => {
+  beforeEach(resetDb);
+  afterAll(closeDb);
+
+  it("reports each user's own connection state and nobody else's", async () => {
+    const db = await testDb();
+    const [org] = await db.insert(organizations).values({ name: "P" }).returning();
+    const [a] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
+    const [b] = await db.insert(users).values({ organizationId: org!.id, displayName: "B" }).returning();
+
+    // FORCE ROW LEVEL SECURITY: on the bare pool this insert is rejected by the
+    // WITH CHECK clause, so the fixture runs in the system context.
+    await withSystemContext(db, (tx) =>
+      tx.insert(integrationConnections).values({ userId: a!.id, provider: "wallet", status: "connected" }),
+    );
+
+    const probes = connectionProbes(db);
+    expect(await probes.connectionStates(a!.id)).toEqual({ wallet: "connected", trek: "not_configured" });
+    expect(await probes.connectionStates(b!.id)).toEqual({
+      wallet: "not_configured",
+      trek: "not_configured",
+    });
   });
 });
