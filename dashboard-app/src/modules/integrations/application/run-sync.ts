@@ -67,6 +67,7 @@ async function prepare(
   userId: string,
   input: RunSyncInput,
   kind: SyncKind,
+  handler: SyncHandler,
   claimRunId: string | null,
 ): Promise<Prepared | { joined: SyncRun } | null> {
   const connection = await d.connections.getByProvider(userId, input.provider);
@@ -76,9 +77,19 @@ async function prepare(
   }
 
   // Ruling P2-C4: `sync_jobs` is where a kind is switched off without
-  // disconnecting the provider, and where its cursor lives.
-  const job = await d.jobs.find(connection.id, kind);
-  if (job && !job.enabled) {
+  // disconnecting the provider, and where its cursor lives. `ensure()`, not
+  // `find()`: a trigger can reach a kind before `connectIntegration` ever
+  // created its row — a connection that predates the kind (a provider that
+  // grew a new `SyncKind` after some connections already existed), or a
+  // manual `POST .../sync` naming a kind nothing has synced yet. `ensure()`
+  // is the same idempotent insert-then-read `connectIntegration` itself uses,
+  // so this never re-enables a kind somebody switched off — it only creates
+  // the row when one is genuinely missing. Without this, `job` would be
+  // `undefined`, `jobId` below would be `null`, and `execute()`'s cursor
+  // write is unconditionally guarded on `prepared.jobId` — so the run would
+  // succeed while its cursor silently never persisted.
+  const job = await d.jobs.ensure({ connectionId: connection.id, kind, schedule: handler.schedule });
+  if (!job.enabled) {
     throw new SyncDisabledError(`${input.provider}'s ${kind} sync is switched off`);
   }
 
@@ -96,7 +107,7 @@ async function prepare(
     ? await d.runs.claim(claimRunId, startedAt)
     : await d.runs.start({
         connectionId: connection.id,
-        jobId: job?.id ?? null,
+        jobId: job.id,
         kind,
         trigger: input.trigger,
         startedAt,
@@ -106,8 +117,8 @@ async function prepare(
   return {
     connection,
     credentials: d.cipher.open(sealed),
-    jobId: job?.id ?? null,
-    cursor: job?.cursor ?? null,
+    jobId: job.id,
+    cursor: job.cursor,
     run,
   };
 }
@@ -217,7 +228,7 @@ async function recordFailure(
 export function runSyncForUser(deps: IntegrationDeps) {
   return async (userId: string, input: RunSyncInput): Promise<SyncRun> => {
     const { handler, kind } = resolve(deps, input);
-    const prepared = await deps.inUserContext(userId, (d) => prepare(d, userId, input, kind, null));
+    const prepared = await deps.inUserContext(userId, (d) => prepare(d, userId, input, kind, handler, null));
     // `prepare` only answers null when it lost a claim, and nothing is claimed
     // on this path — `runs.start` always returns a row.
     if (prepared === null) throw new ConnectionNotFoundError(`${input.provider} sync could not be started`);
@@ -234,7 +245,7 @@ export function runSyncForUser(deps: IntegrationDeps) {
 export function resumeQueuedSync(deps: IntegrationDeps) {
   return async (userId: string, input: RunSyncInput, runId: string): Promise<SyncRun | null> => {
     const { handler, kind } = resolve(deps, input);
-    const prepared = await deps.inUserContext(userId, (d) => prepare(d, userId, input, kind, runId));
+    const prepared = await deps.inUserContext(userId, (d) => prepare(d, userId, input, kind, handler, runId));
     if (prepared === null || "joined" in prepared) return null;
     return execute(deps, userId, input, kind, handler, prepared);
   };
