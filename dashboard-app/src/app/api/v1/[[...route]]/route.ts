@@ -4,8 +4,11 @@ import { PROVIDER_ID } from "@/auth";
 import { getUserOrNull } from "@/lib/auth/require-user";
 import { resolvePrincipal } from "@/platform/auth/principal";
 import { createApiApp } from "@/platform/http/app";
+import { ensureProvidersRegistered } from "@/platform/integrations/register-all";
 
 export const dynamic = "force-dynamic";
+
+ensureProvidersRegistered();
 
 const app = createApiApp({
   db,
