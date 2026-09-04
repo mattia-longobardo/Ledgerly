@@ -37,6 +37,16 @@ export function buildNavigation(c: Capabilities): NavItem[] {
   ];
   // `/work` keeps its route until Phase 4 renames it; the label already reads Company.
   if (c.features.payroll || c.features.timeoff) items.push({ href: "/work", label: "Company", iconKey: "company" });
-  items.push({ href: "/settings", label: "Settings", iconKey: "settings" });
+
+  const settings: NavChild[] = [
+    { href: "/settings/personal", label: "Personal" },
+    { href: "/settings/security", label: "Security" },
+    { href: "/settings/account", label: "Account" },
+    { href: "/settings/integrations", label: "Integrations" },
+  ];
+  // Administration is the one area whose absence is correct rather than
+  // discouraging: a member has nothing to do there.
+  if (c.permissions.has("admin.users")) settings.push({ href: "/settings/admin", label: "Administration" });
+  items.push({ href: "/settings", label: "Settings", iconKey: "settings", children: settings });
   return items;
 }

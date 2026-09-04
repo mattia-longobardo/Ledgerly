@@ -1,10 +1,11 @@
-import { readFileSync } from "node:fs";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import type { DbClient } from "@/lib/db/client";
-import { env, trekConfig } from "@/lib/env";
+import { integrationConnections } from "@/lib/db/schema";
+import { env } from "@/lib/env";
 import { withUserContext } from "@/platform/db/context";
-import type { CapabilityProbes } from "./resolve";
+import type { ConnectionStatus } from "@/platform/integrations/types";
+import type { CapabilityProbes, IntegrationState } from "./resolve";
 
 async function countIsNonZero(client: DbClient, query: ReturnType<typeof sql>): Promise<boolean> {
   const res = await client.execute<{ n: string }>(query);
@@ -35,6 +36,36 @@ export function dataProbes(client: DbClient): Pick<CapabilityProbes, "hasAccount
   };
 }
 
+/** `disabled` reads as `disconnected` to the UI: both mean "nothing will sync". */
+export function stateForStatus(status: ConnectionStatus | null): IntegrationState {
+  if (status === null) return "not_configured";
+  if (status === "connected") return "connected";
+  if (status === "error") return "error";
+  return "disconnected";
+}
+
+/**
+ * Connection state per provider for a user, read straight from
+ * `integration_connections` inside that user's own RLS context — a bare-pool
+ * read would see no rows and answer "not connected" for everybody.
+ */
+export function connectionProbes(client: DbClient): Pick<CapabilityProbes, "connectionStates"> {
+  return {
+    connectionStates: (userId) =>
+      withUserContext(client, { userId }, async (tx) => {
+        const rows = await tx
+          .select({ provider: integrationConnections.provider, status: integrationConnections.status })
+          .from(integrationConnections)
+          .where(eq(integrationConnections.userId, userId));
+        const byProvider = new Map(rows.map((r) => [r.provider, r.status as ConnectionStatus]));
+        return {
+          wallet: stateForStatus(byProvider.get("wallet") ?? null),
+          trek: stateForStatus(byProvider.get("trek") ?? null),
+        };
+      }),
+  };
+}
+
 /**
  * The production wiring for `resolveCapabilities`. Kept apart from `resolve.ts`
  * so the resolver stays importable from a unit test: this file touches the
@@ -42,15 +73,8 @@ export function dataProbes(client: DbClient): Pick<CapabilityProbes, "hasAccount
  * server layout.
  */
 export const realProbes: CapabilityProbes = {
-  walletConfigured: () => {
-    try {
-      return readFileSync(env().WALLET_TOKEN_FILE, "utf8").trim().length > 0;
-    } catch {
-      return false;
-    }
-  },
-  trekConfigured: () => trekConfig() !== null,
   // Replaced by the document-store probe in Phase 4.
   payrollConfigured: () => Boolean(env().PAPERLESS_URL),
+  ...connectionProbes(db),
   ...dataProbes(db),
 };

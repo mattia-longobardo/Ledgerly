@@ -36,7 +36,7 @@ export type CardState<T> =
  */
 export const HOME_CARDS: readonly HomeCard[] = [
   { key: "total_balance", title: "Total balance", href: "/finance/accounts", requires: {} },
-  { key: "accounts_sync", title: "Accounts sync", href: "/settings", requires: { integration: "wallet" } },
+  { key: "accounts_sync", title: "Accounts sync", href: "/settings/integrations", requires: { integration: "wallet" } },
   { key: "funds", title: "Funds", href: "/finance/funds", requires: {} },
   { key: "leave", title: "Leave", href: "/work", requires: { feature: "timeoff" } },
 ];
