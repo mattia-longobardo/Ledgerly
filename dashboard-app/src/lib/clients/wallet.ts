@@ -167,3 +167,94 @@ export function reduceBalances(accounts: readonly WalletAccount[]): WalletBalanc
 export async function getBalances(opts: WalletCallOptions): Promise<WalletBalances> {
   return reduceBalances(await getAccounts(opts));
 }
+
+const categorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  group: z.string().nullable().optional(),
+  isIncome: z.boolean().optional(),
+});
+const categoriesSchema = z.object({ categories: z.array(categorySchema) });
+export type WalletCategory = z.infer<typeof categorySchema>;
+
+export async function getCategories(opts: WalletCallOptions): Promise<WalletCategory[]> {
+  try {
+    const body = await withRetry(
+      () =>
+        requestJson("wallet", `${baseUrl()}/categories?limit=200`, categoriesSchema, {
+          headers: headers(opts),
+          signal: opts.signal,
+        }),
+      retryPolicy(opts),
+    );
+    return body.categories;
+  } catch (err) {
+    throw translate(err);
+  }
+}
+
+const recordSchema = z.object({
+  id: z.string(),
+  accountId: z.string(),
+  amount: z.number(),
+  currencyCode: z.string(),
+  categoryId: z.string().nullable().optional(),
+  labels: z.array(z.string()).optional().default([]),
+  recordType: z.string().optional(),
+  recordState: z.string().optional(),
+  note: z.string().nullable().optional(),
+  recordDate: z.string(),
+  updatedAt: z.string().optional(),
+  partyName: z.string().nullable().optional(),
+  transferCounterRecordId: z.string().nullable().optional(),
+});
+const recordsSchema = z.object({ records: z.array(recordSchema) });
+export type WalletRecord = z.infer<typeof recordSchema>;
+
+export interface GetRecordsOptions extends WalletCallOptions {
+  /** ISO date; the API defaults to a three-month window when this is omitted. */
+  sinceDate?: string;
+}
+
+export async function getRecords(opts: GetRecordsOptions): Promise<WalletRecord[]> {
+  try {
+    const filter = opts.sinceDate ? `&recordDate=gte.${opts.sinceDate}` : "";
+    const body = await withRetry(
+      () =>
+        requestJson("wallet", `${baseUrl()}/records?limit=500${filter}`, recordsSchema, {
+          headers: headers(opts),
+          signal: opts.signal,
+        }),
+      retryPolicy(opts),
+    );
+    return body.records;
+  } catch (err) {
+    throw translate(err);
+  }
+}
+
+export interface PostRecordInput {
+  accountId: string;
+  amount: number;
+  recordDate: string;
+  note: string;
+  categoryId?: string;
+}
+
+/** Used only by the optional interest-posting adapter (Task 19), behind a per-rule switch. */
+export async function postRecords(opts: WalletCallOptions, records: PostRecordInput[]): Promise<void> {
+  try {
+    await withRetry(
+      () =>
+        requestJson("wallet", `${baseUrl()}/records`, z.unknown(), {
+          method: "POST",
+          headers: { ...headers(opts), "content-type": "application/json" },
+          body: JSON.stringify(records),
+          signal: opts.signal,
+        }),
+      retryPolicy(opts),
+    );
+  } catch (err) {
+    throw translate(err);
+  }
+}

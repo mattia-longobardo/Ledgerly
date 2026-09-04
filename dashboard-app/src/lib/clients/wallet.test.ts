@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpstreamError } from "@/lib/contracts";
 import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
-import { getAccounts, getBalances, reduceBalances } from "./wallet";
+import { getAccounts, getBalances, getCategories, getRecords, postRecords, reduceBalances } from "./wallet";
 
 process.env.DATABASE_URL = "postgres://dashboard@localhost/dashboard";
 process.env.AUTH_URL = "https://dash.example.test";
@@ -173,5 +173,69 @@ describe("retry policy", () => {
     fetchMock.mockImplementation(async () => json({ message: "nope" }, 404));
     await expect(getAccounts({ token: "t", sleep: async () => {} })).rejects.toThrow(UpstreamError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getCategories", () => {
+  it("returns the category list", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({ categories: [{ id: "c1", name: "Interest, dividends", group: "Income" }] }),
+    );
+    const categories = await getCategories({ token: "t" });
+    expect(categories).toEqual([{ id: "c1", name: "Interest, dividends", group: "Income" }]);
+  });
+});
+
+describe("getRecords", () => {
+  it("appends a recordDate gte filter when sinceDate is given", async () => {
+    fetchMock.mockResolvedValueOnce(json({ records: [] }));
+    await getRecords({ token: "t", sinceDate: "2026-08-01" });
+    const url = fetchMock.mock.calls[0]![0] as string;
+    expect(url).toContain("recordDate=gte.2026-08-01");
+  });
+
+  it("omits the filter when sinceDate is not given", async () => {
+    fetchMock.mockResolvedValueOnce(json({ records: [] }));
+    await getRecords({ token: "t" });
+    const url = fetchMock.mock.calls[0]![0] as string;
+    expect(url).not.toContain("recordDate");
+  });
+
+  it("parses a record with the fields the sync handler needs", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({
+        records: [
+          {
+            id: "r1",
+            accountId: "a1",
+            amount: -12.5,
+            currencyCode: "EUR",
+            categoryId: "c1",
+            labels: ["l1"],
+            recordType: "expense",
+            recordState: "cleared",
+            note: "Coffee",
+            recordDate: "2026-09-01T08:00:00Z",
+            updatedAt: "2026-09-01T08:00:00Z",
+          },
+        ],
+      }),
+    );
+    const records = await getRecords({ token: "t" });
+    expect(records).toHaveLength(1);
+    expect(records[0]!.amount).toBe(-12.5);
+  });
+});
+
+describe("postRecords", () => {
+  it("POSTs the records array with a bearer header", async () => {
+    fetchMock.mockResolvedValueOnce(json({}));
+    await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect((init as RequestInit).method).toBe("POST");
+    expect((init as RequestInit).headers).toMatchObject({ authorization: "Bearer t" });
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual([
+      { accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" },
+    ]);
   });
 });
