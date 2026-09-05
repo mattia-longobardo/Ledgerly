@@ -1,4 +1,4 @@
-import { and, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { interestRules, type InterestRuleRow } from "@/lib/db/schema";
 import type { InterestRule, InterestRulePatch, InterestRulesRepository, NewInterestRule } from "../application/ports";
@@ -37,7 +37,13 @@ export class DrizzleInterestRulesRepository implements InterestRulesRepository {
   constructor(private readonly db: DbClient) {}
 
   async list(userId: string): Promise<InterestRule[]> {
-    const rows = await this.db.select().from(interestRules).where(eq(interestRules.userId, userId));
+    // Explicit order, matching every other list in this phase: without it,
+    // Postgres returns physical (heap/ctid) order, which an `UPDATE` changes
+    // by writing a new tuple version — two rules would swap position on
+    // reload after either was edited. `id` is uuidv7 (time-ordered) and never
+    // changes on update, so ordering by it gives the same stable
+    // creation-order the fake's plain array-insertion order already has.
+    const rows = await this.db.select().from(interestRules).where(eq(interestRules.userId, userId)).orderBy(asc(interestRules.id));
     return rows.map(toRule);
   }
 
