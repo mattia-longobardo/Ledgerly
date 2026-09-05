@@ -137,6 +137,29 @@ describe("Drizzle payroll repositories", () => {
     expect(all.length).toBe(2);
   });
 
+  it("raises the import unique index by name — one import cannot back two records", async () => {
+    // Isolates `payroll_records_import_uq` specifically: the second record
+    // uses a different periodStart/kind than the first so
+    // `payroll_records_period_uq` cannot also be the one that fires. This is
+    // the fourth of the plan's four global uniqueness claims
+    // (`payroll_imports` sha/idempotency-key, `payroll_records` import/period)
+    // and the only one not otherwise proven against real Postgres in this file.
+    const { db, a } = await seedUsers();
+    const imp = await withUserContext(db, { userId: a }, (tx) =>
+      new DrizzlePayrollImportsRepository(tx).create(newImport(a, "a".repeat(64))),
+    );
+    await withUserContext(db, { userId: a }, (tx) =>
+      new DrizzlePayrollRecordsRepository(tx).create(newRecord(a, imp.id)),
+    );
+    const err: unknown = await withUserContext(db, { userId: a }, (tx) =>
+      new DrizzlePayrollRecordsRepository(tx).create(
+        newRecord(a, imp.id, { periodStart: "2026-09-01", periodEnd: "2026-09-30", kind: "bonus" }),
+      ),
+    ).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as { cause?: { message?: string } }).cause?.message).toMatch(/payroll_records_import_uq/);
+  });
+
   it("replaceForRecord replaces wholesale and reads back the same scales the fake produces", async () => {
     const { db, a } = await seedUsers();
     const recordId = await withUserContext(db, { userId: a }, async (tx) => {
