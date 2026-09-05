@@ -1,5 +1,6 @@
 import { trekProvider } from "@/modules/integrations/infrastructure/trek-provider-adapter";
 import { walletProvider } from "@/modules/integrations/infrastructure/wallet-provider-adapter";
+import { siloProvider } from "@/modules/payroll/infrastructure/silo-provider-adapter";
 import { registerProvider } from "./registry";
 
 let done = false;
@@ -10,4 +11,5 @@ export function ensureProvidersRegistered(): void {
   done = true;
   registerProvider(walletProvider);
   registerProvider(trekProvider);
+  registerProvider(siloProvider);
 }

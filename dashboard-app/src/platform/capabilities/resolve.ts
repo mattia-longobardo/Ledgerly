@@ -22,7 +22,7 @@ export interface Capabilities {
 export interface CapabilityProbes {
   /** Connection status per provider for this user, straight from integration_connections. */
   connectionStates(userId: string): Promise<Record<ProviderCode, IntegrationState>>;
-  /** Still environment-driven until the document store lands in Phase 4. */
+  /** Whether a document store (silo or local path) is configured at all, independent of any connection. */
   payrollConfigured(): boolean;
   hasAccounts(userId: string): Promise<boolean>;
   hasPayrollRecords(userId: string): Promise<boolean>;
@@ -53,7 +53,17 @@ export async function resolveCapabilities(principal: Principal, probes: Capabili
   ]);
   const wallet = states.wallet;
   const trek = states.trek;
-  const payroll: IntegrationState = probes.payrollConfigured() ? "connected" : "not_configured";
+  // Spec §6's feature matrix: the payroll feature needs a *store*, which is
+  // either a connected `payroll_silo` integration or a configured local path.
+  // A connection in `error` reports as `error` rather than being flattened into
+  // "off" — the Settings page needs to say which, and a store that is present
+  // but broken must not silently fall back to the local-path answer.
+  const payroll: IntegrationState =
+    states.payroll_silo !== "not_configured"
+      ? states.payroll_silo
+      : probes.payrollConfigured()
+        ? "connected"
+        : "not_configured";
   return {
     features: {
       accounts: true,

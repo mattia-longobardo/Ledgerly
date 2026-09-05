@@ -7,6 +7,7 @@ const probes = (o: Partial<{ wallet: IntegrationState; trek: IntegrationState; p
   connectionStates: async (_userId: string) => ({
     wallet: o.wallet ?? ("not_configured" as IntegrationState),
     trek: o.trek ?? ("not_configured" as IntegrationState),
+    payroll_silo: "not_configured" as IntegrationState,
   }),
   payrollConfigured: () => o.payroll ?? false,
   hasAccounts: async (_userId: string) => true,
@@ -54,5 +55,34 @@ describe("resolveCapabilities", () => {
   it("manual features are always on", async () => {
     const c = await resolveCapabilities(testPrincipal(), probes({}));
     expect(c.features).toMatchObject({ accounts: true, funds: true, budgets: true });
+  });
+
+  it("reports payroll from the silo connection, and falls back to the local-path probe", async () => {
+    const base = {
+      payrollConfigured: () => false,
+      hasAccounts: async () => true,
+      hasPayrollRecords: async () => false,
+    };
+    const connected = await resolveCapabilities(testPrincipal(), {
+      ...base,
+      connectionStates: async () => ({ wallet: "disconnected" as const, trek: "disconnected" as const, payroll_silo: "connected" as const }),
+    });
+    expect(connected.features.payroll).toBe(true);
+    expect(connected.integrations.payroll).toBe("connected");
+
+    const localOnly = await resolveCapabilities(testPrincipal(), {
+      ...base,
+      payrollConfigured: () => true,
+      connectionStates: async () => ({ wallet: "disconnected" as const, trek: "disconnected" as const, payroll_silo: "not_configured" as const }),
+    });
+    expect(localOnly.features.payroll).toBe(true);
+
+    const errored = await resolveCapabilities(testPrincipal(), {
+      ...base,
+      payrollConfigured: () => true,
+      connectionStates: async () => ({ wallet: "disconnected" as const, trek: "disconnected" as const, payroll_silo: "error" as const }),
+    });
+    expect(errored.features.payroll).toBe(false);
+    expect(errored.integrations.payroll).toBe("error");
   });
 });

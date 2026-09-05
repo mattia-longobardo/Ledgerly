@@ -10,7 +10,7 @@ import type { AuditInput } from "@/platform/audit/record";
 import type { Clock } from "@/platform/clock";
 
 /** Ruling P2-C6: `payroll_silo` joins in Phase 4, with the document store it needs. */
-export type ProviderCode = "wallet" | "trek";
+export type ProviderCode = "wallet" | "trek" | "payroll_silo";
 
 export type IntegrationCapability =
   | "accounts"

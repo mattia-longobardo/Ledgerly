@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import type { DbClient } from "@/lib/db/client";
 import { integrationConnections } from "@/lib/db/schema";
-import { env } from "@/lib/env";
+import { documentStoreConfigured } from "@/modules/payroll/infrastructure/document-store-resolver";
 import { withUserContext } from "@/platform/db/context";
 import type { ConnectionStatus } from "@/platform/integrations/types";
 import type { CapabilityProbes, IntegrationState } from "./resolve";
@@ -15,15 +15,17 @@ async function countIsNonZero(client: DbClient, query: ReturnType<typeof sql>): 
 /**
  * The two data probes, bound to a database client.
  *
- * `hasAccounts` counts inside `withUserContext`: `accounts` carries
- * `FORCE ROW LEVEL SECURITY`, so the same count on the bare pool — with no
- * `app.user_id` set — sees no rows at all and answers "no accounts" for
- * everybody. `payslips` has no RLS yet (it moves into its own module in Phase
- * 4), so its count runs as it always has and simply ignores the user.
+ * Both count inside `withUserContext`: `accounts` and `payroll_records` both
+ * carry `FORCE ROW LEVEL SECURITY`, so the same count on the bare pool — with
+ * no `app.user_id` set — sees no rows at all and answers "no data" for
+ * everybody. `hasPayrollRecords` used to count the legacy `payslips` table on
+ * the pool handle and ignore its `userId` argument entirely; Phase 4 moved
+ * payroll into its own RLS-protected module, so it now counts what it is named
+ * after, for the user it was asked about.
  *
- * Split from `realProbes` so an integration test can point the pair at a test
- * database instead of the app-wide `db` proxy, which would need the whole
- * environment to resolve.
+ * Superseded records are excluded (Ruling R4-12): a user whose only record has
+ * been superseded and not replaced has no earnings to show, and reporting
+ * otherwise would send them to a page with an empty table and no explanation.
  */
 export function dataProbes(client: DbClient): Pick<CapabilityProbes, "hasAccounts" | "hasPayrollRecords"> {
   return {
@@ -31,8 +33,10 @@ export function dataProbes(client: DbClient): Pick<CapabilityProbes, "hasAccount
       withUserContext(client, { userId }, (tx) =>
         countIsNonZero(tx, sql`SELECT count(*)::text AS n FROM accounts WHERE status <> 'archived'`),
       ),
-    hasPayrollRecords: () =>
-      countIsNonZero(client, sql`SELECT count(*)::text AS n FROM payslips WHERE status = 'verified'`),
+    hasPayrollRecords: (userId) =>
+      withUserContext(client, { userId }, (tx) =>
+        countIsNonZero(tx, sql`SELECT count(*)::text AS n FROM payroll_records WHERE superseded_at IS NULL`),
+      ),
   };
 }
 
@@ -61,6 +65,9 @@ export function connectionProbes(client: DbClient): Pick<CapabilityProbes, "conn
         return {
           wallet: stateForStatus(byProvider.get("wallet") ?? null),
           trek: stateForStatus(byProvider.get("trek") ?? null),
+          // Widening `ProviderCode` widens this return type, so the third key is
+          // required, not optional — the compiler is the call-site check.
+          payroll_silo: stateForStatus(byProvider.get("payroll_silo") ?? null),
         };
       }),
   };
@@ -73,8 +80,10 @@ export function connectionProbes(client: DbClient): Pick<CapabilityProbes, "conn
  * server layout.
  */
 export const realProbes: CapabilityProbes = {
-  // Replaced by the document-store probe in Phase 4.
-  payrollConfigured: () => Boolean(env().PAPERLESS_URL),
+  // Phase 4: the document store, not `PAPERLESS_URL`. Both driver cases are
+  // answerable without touching the database, which matters because this runs
+  // on every request.
+  payrollConfigured: () => documentStoreConfigured(),
   ...connectionProbes(db),
   ...dataProbes(db),
 };
