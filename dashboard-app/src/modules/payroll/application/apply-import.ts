@@ -1,0 +1,164 @@
+import type { Principal } from "@/platform/auth/principal";
+import { assertPermission } from "@/platform/auth/principal";
+import { componentsFromExtraction, grossOf, netOf } from "../domain/components";
+import { DEFAULT_MAPPING_RULES } from "../domain/mapping";
+import { monthOfPeriod, periodFor, recordKindOf } from "../domain/period";
+import type { MappingTarget, NewPayrollComponent, PayrollComponent, PayrollImport, PayrollMappingRule, PayrollRecord, UseCaseDeps } from "./ports";
+import { ConflictError, InvalidInputError, NotFoundError } from "./errors";
+
+/**
+ * No migration seeds `payroll_mapping_rules` with the global catalogue (see
+ * `repositories.itest.ts`): `PayrollMappingRulesRepository.listFor` only ever
+ * returns what is actually in the table, i.e. a user's own rules. The global
+ * catalogue lives in code (`DEFAULT_MAPPING_RULES`) and is merged in here, the
+ * one use case that classifies components — `MemoryPayrollMappingRulesRepository`
+ * merges the same catalogue itself, purely so its fake matches the real
+ * repository's contract from the caller's point of view.
+ */
+const GLOBAL_MAPPING_RULES: readonly PayrollMappingRule[] = DEFAULT_MAPPING_RULES.map((rule, i) => ({
+  ...rule,
+  id: `global-${String(i).padStart(3, "0")}`,
+  userId: null,
+}));
+
+export interface AppliedImport {
+  import: PayrollImport;
+  record: PayrollRecord;
+  components: PayrollComponent[];
+  /** The record this apply superseded, or null when the period was free. */
+  supersededRecordId: string | null;
+  fundDeposit: "written" | "no_fund" | "no_amount";
+}
+
+function fundHalves(components: readonly NewPayrollComponent[]): {
+  fundSlug: string | null;
+  employee: string | null;
+  employer: string | null;
+} {
+  let fundSlug: string | null = null;
+  let employee: string | null = null;
+  let employer: string | null = null;
+  for (const component of components) {
+    const target = component.mappedTo as MappingTarget | null;
+    if (!target || target.kind !== "fund_contribution") continue;
+    fundSlug = target.fundSlug;
+    if (target.part === "employee") employee = component.amount;
+    else employer = component.amount;
+  }
+  return { fundSlug, employee, employer };
+}
+
+/**
+ * Turns a verified import into the money: one `payroll_record`, its
+ * `payroll_components`, and the legacy `fund_deposits` row that keeps the Funds
+ * page working until Phase 5 (Ruling R4-6).
+ *
+ * Every write here is Postgres-only, so this is the one use case in the module
+ * that runs start to finish inside the caller's single transaction — which is
+ * exactly what makes the supersede-then-insert of Ruling R4-4 safe against
+ * `payroll_records_period_uq`: the old record is marked superseded and the new
+ * one inserted with no committed moment in between where either two live
+ * records or none exist.
+ *
+ * Idempotent and re-runnable, not reversible. Re-applying recomputes the
+ * record's fields, bumps its version and replaces its components wholesale.
+ * There is no `unapply`: the reverse of a wrong apply is a replacement import
+ * that supersedes it, because the derived rows have no pre-state to restore.
+ */
+export function applyImport(deps: UseCaseDeps) {
+  return async (principal: Principal, importId: string): Promise<AppliedImport> => {
+    assertPermission(principal, "payroll.review");
+    const found = await deps.imports.get(principal.userId, importId);
+    if (!found) throw new NotFoundError();
+    if (found.status !== "verified") {
+      throw new ConflictError("Only a verified import can be applied.", "not_verified");
+    }
+    if (!found.extraction) throw new ConflictError("This import has no extraction to apply.", "not_verified");
+    const month = found.extraction.month;
+    if (!month) {
+      throw new InvalidInputError("This payslip has no pay period. Set the month on the review screen first.");
+    }
+
+    const period = periodFor(month);
+    const kind = recordKindOf(found.extraction.isThirteenth);
+    const userRules = await deps.mappingRules.listFor(principal.userId);
+    const rules = [...GLOBAL_MAPPING_RULES, ...userRules];
+    const components = componentsFromExtraction(found.extraction, rules);
+    const now = deps.clock.now();
+
+    const existing = await deps.records.getByImport(principal.userId, importId);
+    let record: PayrollRecord;
+    let supersededRecordId: string | null = null;
+
+    if (existing) {
+      // A re-apply. The period is already this record's own, so nothing is
+      // superseded and `payroll_records_period_uq` is untouched.
+      const updated = await deps.records.update(principal.userId, existing.id, {
+        periodEnd: period.periodEnd,
+        gross: grossOf(components),
+        net: netOf(components),
+        corrections: found.extraction.fields as unknown as PayrollRecord["corrections"],
+      });
+      if (!updated) throw new NotFoundError();
+      record = updated;
+    } else {
+      const live = await deps.records.liveForPeriod(principal.userId, period.periodStart, kind);
+      if (live) {
+        // Ruling R4-4. Marking the old record superseded *first* is what frees
+        // the partial unique index for the insert below, inside this one
+        // transaction.
+        supersededRecordId = live.id;
+        await deps.records.supersede(principal.userId, live.id, live.id, now);
+      }
+      record = await deps.records.create({
+        userId: principal.userId,
+        importId,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        payDate: null,
+        kind,
+        currency: "EUR",
+        gross: grossOf(components),
+        net: netOf(components),
+        verifiedAt: now,
+        verifiedBy: principal.userId,
+        corrections: found.extraction.fields as unknown as PayrollRecord["corrections"],
+      });
+      if (supersededRecordId) {
+        // The forward pointer needs the new record's id, which did not exist a
+        // moment ago. Same transaction, so no reader ever sees the gap.
+        await deps.records.supersede(principal.userId, supersededRecordId, record.id, now);
+        await deps.imports.patch(principal.userId, live!.importId, { status: "superseded" });
+      }
+    }
+
+    const written = await deps.components.replaceForRecord(record.id, components);
+
+    const { fundSlug, employee, employer } = fundHalves(components);
+    const fundDeposit = fundSlug
+      ? await deps.funds.upsertForRecord({ fundSlug, month: monthOfPeriod(period.periodStart), employee, employer })
+      : ("no_amount" as const);
+
+    const updatedImport = await deps.imports.patch(principal.userId, importId, { status: "applied", error: null });
+    if (!updatedImport) throw new NotFoundError();
+
+    await deps.audit({
+      actorUserId: principal.userId,
+      action: "payroll.import_applied",
+      entityType: "payroll_import",
+      entityId: importId,
+      // Ids and counts. The amounts are on the record; repeating them here would
+      // make `audit_events` a second, unredacted copy of the payslip.
+      after: {
+        recordId: record.id,
+        periodStart: period.periodStart,
+        kind,
+        componentCount: written.length,
+        supersededRecordId,
+        fundDeposit,
+      },
+    });
+
+    return { import: updatedImport, record, components: written, supersededRecordId, fundDeposit };
+  };
+}
