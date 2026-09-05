@@ -92,6 +92,13 @@
       "when": 1788550245481,
       "tag": "0012_interests",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788590526854,
+      "tag": "0013_expenses_ownership_fixes",
+      "breakpoints": true
     }
   ]
 }

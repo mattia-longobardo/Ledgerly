@@ -167,7 +167,7 @@ describe("expenses API", () => {
     const { DrizzleRecurringRepository } = await import("@/modules/expenses/infrastructure/drizzle-recurring-repository");
     await withUserContext(db, { userId }, (tx) =>
       new DrizzleRecurringRepository(tx).replaceAll(userId, [
-        { payee: "Netflix", cadence: "monthly", amountLow: "-15.99", amountHigh: "-15.99", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 4 },
+        { payee: "Netflix", cadence: "monthly", amountLow: "-15.99", amountHigh: "-15.99", currency: "EUR", sign: "-", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 4 },
       ]),
     );
     const app = appFor(userId, organizationId);
@@ -175,5 +175,66 @@ describe("expenses API", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: { payee: string }[] };
     expect(body.items.map((i) => i.payee)).toEqual(["Netflix"]);
+  });
+
+  // A3: `from`/`to` must be validated as real date-times at the schema
+  // boundary — an unparseable value used to reach `new Date(opts.from)` in
+  // the repository and blow up as an uncaught 500.
+  it("rejects an unparseable `from` with 422 validation_failed instead of a 500", async () => {
+    const { userId, organizationId } = await seedUser();
+    const app = appFor(userId, organizationId);
+    const res = await app.request("/api/v1/transactions?from=banana", { headers: { "x-requested-with": "test" } });
+    expect(res.status).toBe(422);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("validation_failed");
+  });
+
+  // A3: a `from` with a non-UTC offset must be compared as an instant, not as
+  // text — `"2026-08-31T22:30:00Z"` is `>= "2026-09-01T00:00:00+02:00"` as an
+  // instant but sorts before it lexically.
+  it("includes a row at a non-UTC-offset `from` boundary, comparing instants rather than ISO text", async () => {
+    const { userId, organizationId, accountId } = await seedUser();
+    await withUserContext(db, { userId }, (tx) =>
+      new DrizzleTransactionsRepository(tx).create({
+        userId, accountId, occurredAt: new Date("2026-08-31T22:30:00Z"), bookedAt: null, amount: "-5.00", currency: "EUR",
+        type: "expense", state: "cleared", categoryId: null, payee: null, note: null,
+        transferGroupId: null, source: "manual", syncRunId: null,
+      }),
+    );
+    const app = appFor(userId, organizationId);
+    const res = await app.request(
+      `/api/v1/transactions?from=${encodeURIComponent("2026-09-01T00:00:00+02:00")}`,
+      { headers: { "x-requested-with": "test" } },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: unknown[] };
+    expect(body.items).toHaveLength(1);
+  });
+
+  // A5: another user's labelId/categoryId must be refused end-to-end, not
+  // merely accepted and later resolve to nothing on read.
+  it("refuses a PATCH carrying another user's labelId and categoryId with 422", async () => {
+    const owner = await seedUser();
+    const intruder = await seedUser();
+    const created = await withUserContext(db, { userId: owner.userId }, (tx) =>
+      new DrizzleTransactionsRepository(tx).create({
+        userId: owner.userId, accountId: owner.accountId, occurredAt: new Date(), bookedAt: null, amount: "-5.00", currency: "EUR",
+        type: "expense", state: "cleared", categoryId: null, payee: null, note: null,
+        transferGroupId: null, source: "manual", syncRunId: null,
+      }),
+    );
+    const intruderLabel = await withUserContext(db, { userId: intruder.userId }, (tx) =>
+      new DrizzleLabelsRepository(tx).create({ userId: intruder.userId, name: "Not yours", color: null, source: "manual" }),
+    );
+    if (intruderLabel === "duplicate_name") throw new Error("unexpected duplicate_name");
+    const app = appFor(owner.userId, owner.organizationId);
+    const res = await app.request(`/api/v1/transactions/${created.id}`, {
+      method: "PATCH",
+      headers: { "x-requested-with": "test", "content-type": "application/json", "if-match": String(created.version) },
+      body: JSON.stringify({ labelIds: [intruderLabel.id] }),
+    });
+    expect(res.status).toBe(422);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("validation_failed");
+    const links = await withUserContext(db, { userId: owner.userId }, (tx) => new DrizzleTransactionsRepository(tx).labelsFor(owner.userId, [created.id]));
+    expect(links.get(created.id)).toEqual([]);
   });
 });

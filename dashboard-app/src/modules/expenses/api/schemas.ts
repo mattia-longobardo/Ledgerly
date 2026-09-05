@@ -50,13 +50,23 @@ export const TransactionListResponseSchema = z
   .object({ items: z.array(TransactionListItemSchema), nextCursor: z.string().nullable() })
   .openapi("TransactionListResponse");
 
+/**
+ * A bare `z.string()` accepted anything, including `"banana"` — the fake
+ * repository silently returned an empty page for it, while the Drizzle
+ * repository's `new Date(opts.from)` produced an Invalid Date that later
+ * blew up as a 500 (`RangeError` on `.toISOString()`). Reject it here
+ * instead, at the schema boundary, so both sides agree it never reaches a
+ * repository at all.
+ */
+const dateTimeString = z.string().refine((v) => !Number.isNaN(Date.parse(v)), { message: "must be a valid date-time" });
+
 export const ListTransactionsQuerySchema = z.object({
   accountId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
   labelId: z.string().uuid().optional(),
   type: TransactionTypeSchema.optional(),
-  from: z.string().optional(),
-  to: z.string().optional(),
+  from: dateTimeString.optional(),
+  to: dateTimeString.optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
 });

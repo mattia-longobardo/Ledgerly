@@ -1,7 +1,7 @@
 import type { Principal } from "@/platform/auth/principal";
 import { assertPermission } from "@/platform/auth/principal";
 import type { Transaction } from "../domain/transaction";
-import { NotFoundError, VersionMismatchError } from "./errors";
+import { InvalidInputError, NotFoundError, VersionMismatchError } from "./errors";
 import type { TransactionPatch, UseCaseDeps } from "./ports";
 
 export interface UpdateTransactionInput {
@@ -20,7 +20,17 @@ export function updateTransaction(deps: UseCaseDeps) {
   ): Promise<Transaction> => {
     assertPermission(principal, "expenses.write");
     const patch: TransactionPatch = {};
-    if (input.categoryId !== undefined) patch.categoryId = input.categoryId;
+    if (input.categoryId !== undefined) {
+      // A category id resolving to null through the caller's own `list()`
+      // read is not itself a leak, but an unverified id would still write a
+      // cross-tenant foreign key into `transactions` — FK checks are not
+      // subject to RLS. Refuse it outright rather than let it land.
+      if (input.categoryId !== null) {
+        const owned = await deps.categories.get(principal.userId, input.categoryId);
+        if (!owned) throw new InvalidInputError("categoryId must belong to the caller");
+      }
+      patch.categoryId = input.categoryId;
+    }
     if (input.note !== undefined) patch.note = input.note;
     if (input.state !== undefined) patch.state = input.state;
     const result = await deps.transactions.update(principal.userId, id, expectedVersion, patch);

@@ -1,5 +1,7 @@
+import { fromCents, toCents } from "@/lib/calc/money";
 import type { DetectedPattern } from "../domain/recurring";
 import type { Transaction, TransactionCategory, TransactionLabel } from "../domain/transaction";
+import { InvalidInputError } from "../application/errors";
 import type {
   CategoriesRepository,
   ListTransactionsOptions,
@@ -13,6 +15,25 @@ import type {
   TransactionsRepository,
   LabelsRepository,
 } from "../application/ports";
+
+/**
+ * Mirrors the `numeric(16, 2)` column scale `transactions.amount` and
+ * `recurring_patterns.amount_low`/`amount_high` carry in Postgres: the real
+ * repository always reads back a two-decimal string (Postgres pads or rounds
+ * to the column's declared scale on write), so a fake that stored the raw
+ * input verbatim would let a string-comparing test pass here and fail there.
+ * Goes through integer cents rather than `Number()`, matching this
+ * codebase's money-parsing rule.
+ */
+function normalizeMoney(value: string): string {
+  const cents = toCents(value);
+  return cents === null ? value : fromCents(cents).toFixed(2);
+}
+
+/** Strips explicit `undefined` values so a spread merge can't null out a field the caller never meant to touch — Drizzle's `mapUpdateSet` already drops them before the `SET` clause is built. */
+function definedEntries<T extends object>(patch: T): Partial<T> {
+  return Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
 
 /**
  * Production ids default to `uuidv7()`, which is time-ordered, and
@@ -38,6 +59,16 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
   private rows: Transaction[] = [];
   private labelLinks = new Map<string, Set<string>>();
 
+  /**
+   * Optional, matching production only when supplied: the Drizzle repository
+   * always joins `transaction_labels` to check ownership before inserting a
+   * `transaction_label_links` row (see `setLabels` below and A5's ruling), so
+   * a harness that exercises label assignment must construct this with the
+   * `MemoryLabelsRepository` it also wires up, or the fake would silently
+   * accept another user's label id where production refuses it.
+   */
+  constructor(private readonly labels?: MemoryLabelsRepository) {}
+
   private sorted(userId: string): Transaction[] {
     return this.rows
       .filter((t) => t.userId === userId)
@@ -50,8 +81,20 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
     if (opts.accountId) filtered = filtered.filter((t) => t.accountId === opts.accountId);
     if (opts.categoryId) filtered = filtered.filter((t) => t.categoryId === opts.categoryId);
     if (opts.type) filtered = filtered.filter((t) => t.type === opts.type);
-    if (opts.from) filtered = filtered.filter((t) => t.occurredAt.toISOString() >= opts.from!);
-    if (opts.to) filtered = filtered.filter((t) => t.occurredAt.toISOString() < opts.to!);
+    // Compared as `Date`s, exactly like the Drizzle repository's
+    // `gte`/`lt` against `new Date(opts.from/to)` — a lexical string compare
+    // against the raw ISO param would silently disagree with Postgres for
+    // any offset other than Z (e.g. `+02:00` sorts differently as text than
+    // as an instant). The schema boundary (`ListTransactionsQuerySchema`)
+    // already rejects an unparseable value before it reaches here.
+    if (opts.from) {
+      const from = new Date(opts.from);
+      filtered = filtered.filter((t) => t.occurredAt.getTime() >= from.getTime());
+    }
+    if (opts.to) {
+      const to = new Date(opts.to);
+      filtered = filtered.filter((t) => t.occurredAt.getTime() < to.getTime());
+    }
     if (opts.labelId) filtered = filtered.filter((t) => this.labelLinks.get(t.id)?.has(opts.labelId!));
 
     if (opts.cursor) {
@@ -78,16 +121,27 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
     const nextCursor = filtered.length > limit ? page[page.length - 1]!.id : null;
     const labelsByTransaction = new Map<string, string[]>();
     for (const t of page) labelsByTransaction.set(t.id, [...(this.labelLinks.get(t.id) ?? [])]);
-    return { items: page, labelsByTransaction, nextCursor };
+    return { items: page.map((t) => ({ ...t })), labelsByTransaction, nextCursor };
   }
 
   async get(userId: string, id: string): Promise<Transaction | null> {
-    return this.rows.find((t) => t.userId === userId && t.id === id) ?? null;
+    const row = this.rows.find((t) => t.userId === userId && t.id === id);
+    // A copy, not the stored reference: a caller mutating the returned object
+    // must never corrupt the store, the way a caller mutating a row returned
+    // from a real query can never reach back into Postgres either.
+    return row ? { ...row } : null;
   }
 
   async create(input: NewTransaction): Promise<Transaction> {
     const now = new Date();
-    const row: Transaction = { ...input, id: monotonicId(), version: 1, createdAt: now, updatedAt: now };
+    const row: Transaction = {
+      ...input,
+      amount: normalizeMoney(input.amount),
+      id: monotonicId(),
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+    };
     this.rows.push(row);
     return row;
   }
@@ -102,13 +156,32 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
     if (index === -1) return null;
     const current = this.rows[index]!;
     if (current.version !== expectedVersion) return "version_mismatch";
-    const updated: Transaction = { ...current, ...patch, version: current.version + 1, updatedAt: new Date() };
+    // Drizzle's `mapUpdateSet` drops explicit `undefined` values before
+    // building the `SET` clause, so an unset field is left untouched rather
+    // than nulled — the spread below must agree, or a patch built with an
+    // explicit `undefined` (e.g. `{ note: undefined }`) would erase the
+    // field here but leave it alone in production.
+    const updated: Transaction = {
+      ...current,
+      ...definedEntries(patch),
+      version: current.version + 1,
+      updatedAt: new Date(),
+    };
     this.rows[index] = updated;
     return updated;
   }
 
   async setLabels(userId: string, id: string, labelIds: string[]): Promise<void> {
     if (!this.rows.some((t) => t.userId === userId && t.id === id)) return;
+    // Matches the Drizzle repository's ownership predicate: a labelId that
+    // does not belong to this user must never be linked, even though the
+    // FK alone would happily accept it (FK checks are not subject to RLS).
+    if (labelIds.length > 0 && this.labels) {
+      const owned = new Set((await this.labels.list(userId)).map((l) => l.id));
+      if (labelIds.some((labelId) => !owned.has(labelId))) {
+        throw new InvalidInputError("labelIds must belong to the caller");
+      }
+    }
     this.labelLinks.set(id, new Set(labelIds));
   }
 
@@ -120,7 +193,7 @@ export class MemoryTransactionsRepository implements TransactionsRepository {
   }
 
   async listAll(userId: string): Promise<Transaction[]> {
-    return this.sorted(userId);
+    return this.sorted(userId).map((t) => ({ ...t }));
   }
 }
 
@@ -181,7 +254,13 @@ export class MemoryRecurringPatternsRepository implements RecurringPatternsRepos
   async replaceAll(userId: string, patterns: readonly DetectedPattern[]): Promise<void> {
     this.rows = this.rows.filter((r) => r.userId !== userId);
     for (const p of patterns) {
-      this.rows.push({ ...p, id: monotonicId(), userId });
+      this.rows.push({
+        ...p,
+        amountLow: normalizeMoney(p.amountLow),
+        amountHigh: normalizeMoney(p.amountHigh),
+        id: monotonicId(),
+        userId,
+      });
     }
   }
 }

@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
-import { transactionLabelLinks, transactions, type TransactionRow } from "@/lib/db/schema";
+import { transactionLabelLinks, transactionLabels, transactions, type TransactionRow } from "@/lib/db/schema";
+import { InvalidInputError } from "../application/errors";
 import type {
   ListTransactionsOptions,
   ListTransactionsPage,
@@ -121,6 +122,20 @@ export class DrizzleTransactionsRepository implements TransactionsRepository {
         .where(and(eq(transactions.userId, userId), eq(transactions.id, id)))
         .limit(1);
       if (!owned) return;
+      if (labelIds.length > 0) {
+        // FK checks are not subject to RLS, so `transaction_label_links`'s FK
+        // to `transaction_labels` alone would happily accept another user's
+        // label id. Verify ownership explicitly before writing anything —
+        // the whole call is refused rather than silently dropping the
+        // offending id, so a caller that built a bad request finds out.
+        const ownedLabels = await tx
+          .select({ id: transactionLabels.id })
+          .from(transactionLabels)
+          .where(and(eq(transactionLabels.userId, userId), inArray(transactionLabels.id, labelIds)));
+        if (ownedLabels.length !== new Set(labelIds).size) {
+          throw new InvalidInputError("labelIds must belong to the caller");
+        }
+      }
       await tx.delete(transactionLabelLinks).where(eq(transactionLabelLinks.transactionId, id));
       if (labelIds.length > 0) {
         await tx.insert(transactionLabelLinks).values(labelIds.map((labelId) => ({ transactionId: id, labelId })));
