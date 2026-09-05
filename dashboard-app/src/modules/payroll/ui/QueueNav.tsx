@@ -9,7 +9,7 @@ export interface QueueNavProps {
 }
 
 function monthText(entry: QueueEntry): string {
-  return entry.isThirteenth ? `${formatMonth(entry.month)} · 13ª` : formatMonth(entry.month);
+  return entry.isThirteenth ? `${formatMonth(entry.month)} · 13th month` : formatMonth(entry.month);
 }
 
 /**

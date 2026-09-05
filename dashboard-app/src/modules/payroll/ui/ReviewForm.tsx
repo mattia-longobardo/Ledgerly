@@ -330,7 +330,7 @@ export function ReviewForm(props: ReviewFormProps) {
               className="size-5 accent-accent"
             />
             <span className="text-body text-fg">
-              This is the tredicesima
+              This is the 13th month payment
               <span className="block text-caption text-fg-muted">
                 Excluded from monthly averages, included in annual totals and Cometa deposits.
               </span>
