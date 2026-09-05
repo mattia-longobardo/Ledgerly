@@ -84,9 +84,9 @@ container restarts and the tmpfs is lost.
 
 ## Paperless → payroll document store
 
-`npm run migrate:paperless` pulls the original PDF of every **verified** payslip
-out of Paperless while the client and its token still exist, stores it in the
-payroll document store, and creates the matching `payroll_imports`,
+`tsx scripts/migrate-paperless.ts` pulls the original PDF of every **verified**
+payslip out of Paperless while the client and its token still exist, stores it
+in the payroll document store, and creates the matching `payroll_imports`,
 `payroll_records` and `payroll_components` rows. `npm run migrate:paperless:validate`
 then diffs every migrated record against its legacy `payslips` row — gross, net,
 taxes and both Cometa halves, compared as decimal strings — and exits non-zero on
@@ -101,6 +101,13 @@ adds it, *before* the Paperless client and its environment variables are removed
 status `discovered`, `parsed`, `rejected` or `superseded` are deliberately left
 behind: they were never confirmed by a person, and the legacy `payslips` table
 stays as the frozen archive holding them.
+
+**The script does not survive wave 2.** The Paperless-removal commit deletes
+`scripts/migrate-paperless.ts` along with its `migrate:paperless` npm alias —
+it can never be re-run safely once the client it depends on is gone, so on
+`main` today only `migrate:paperless:validate` still exists. The invocation
+above only works on the wave-1 image, run directly with `tsx` rather than
+through an npm script, since that alias no longer exists to run it through.
 
 The run writes `docs/migration/paperless-reconciliation.md`, which is the record
 that outlives the script.
