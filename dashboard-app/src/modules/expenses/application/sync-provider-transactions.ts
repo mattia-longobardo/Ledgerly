@@ -138,6 +138,11 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
     );
 
     const transferCandidates: TransferCandidate[] = [];
+    // Raw (unsorted) counterpart external id per leg created/updated this
+    // run, keyed by this leg's local id. Used below to reconsider a leg that
+    // does not pair within this run's own batch — see the block after
+    // `pairTransfers`.
+    const counterpartExternalIdByLocalId = new Map<string, string>();
 
     for (const t of incoming) {
       const accountLink = accountLinks.get(t.accountExternalId);
@@ -160,9 +165,12 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
           // A lost version race means the user edited this transaction while
           // the sync was running; their edit wins and the next run
           // reconciles from the newer row, exactly like the accounts sync's
-          // equivalent best-effort patch.
-          await deps.transactions.update(userId, current.id, current.version, patch);
-          result.transactionsUpdated += 1;
+          // equivalent best-effort patch. Only a patch that actually landed
+          // counts as an update — a "version_mismatch" or "null" (row raced
+          // away or vanished) is a no-op for stats purposes, not a hidden
+          // extra update.
+          const updated = await deps.transactions.update(userId, current.id, current.version, patch);
+          if (updated && updated !== "version_mismatch") result.transactionsUpdated += 1;
         }
         localId = current.id;
       } else {
@@ -224,6 +232,7 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
         // use case (or the domain function) knowing anything Wallet-specific.
         const pairKey = [t.externalId, t.externalTransferRef].sort().join("|");
         transferCandidates.push({ id: localId, accountId: accountLink.entityId, amount: t.amount, occurredAt: t.occurredAt, externalTransferRef: pairKey });
+        counterpartExternalIdByLocalId.set(localId, t.externalTransferRef);
       }
     }
 
@@ -233,6 +242,61 @@ export function syncProviderTransactions(deps: SyncProviderTransactionsDeps) {
       const row = await deps.transactions.get(userId, transactionId);
       if (row && row.transferGroupId !== groupId) {
         await deps.transactions.update(userId, transactionId, row.version, { transferGroupId: groupId });
+      }
+    }
+
+    // 3b. Cross-run reconciliation (ruling P3-C45). `pairTransfers` above only
+    // ever sees legs fetched *this run* — a leg whose counterpart cleared
+    // more than `RECORDS_LOOKBACK_DAYS` ago (a delayed-clearing credit, an
+    // account linked into the app after the debit leg already synced, ...)
+    // never appears in the same `incoming` batch as its partner, so it would
+    // otherwise stay unpaired forever, double-counting one transfer as two
+    // separate movements.
+    //
+    // This does not scan the transactions table by date. Wallet's own
+    // `transferCounterRecordId` already names the counterpart leg's external
+    // id directly (see the doc comment above), so for any leg that failed to
+    // pair this run, a single targeted provider-link lookup on that exact
+    // external id either finds the counterpart — however long ago it
+    // synced — or confirms it has never synced. Bounded by the number of
+    // unpaired legs in this batch, not by a window or a table size.
+    //
+    // This whole `apply` runs inside one transaction (see module doc above),
+    // so a thrown error here would roll back every category, transaction and
+    // label already reconciled this run — the exact "one bad row rolls back
+    // the whole import" failure this ruling exists to avoid for pairing.
+    // Every lookup below is therefore guarded: a missing link, a vanished
+    // row, or a lost version race is treated as "not pairable this run" and
+    // skipped rather than thrown — the leg simply stays a pairing candidate
+    // on the next run.
+    const unpairedLegs = [...counterpartExternalIdByLocalId.entries()].filter(([localId]) => !groups.has(localId));
+    if (unpairedLegs.length > 0) {
+      const counterpartExternalIds = [...new Set(unpairedLegs.map(([, ref]) => ref))];
+      const counterpartLinks = await deps.links.byExternal(userId, provider, "transaction", counterpartExternalIds);
+      for (const [legId, counterpartExternalId] of unpairedLegs) {
+        try {
+          const counterpartLink = counterpartLinks.get(counterpartExternalId);
+          if (!counterpartLink || counterpartLink.entityId === legId) continue;
+          const [leg, counterpart] = await Promise.all([
+            deps.transactions.get(userId, legId),
+            deps.transactions.get(userId, counterpartLink.entityId),
+          ]);
+          if (!leg || !counterpart || leg.transferGroupId !== null) continue;
+          // Reuse the counterpart's existing group id if it already has one
+          // (stable across however many runs it took to find this leg);
+          // otherwise mint the same canonical id `pairTransfers` would have.
+          const groupId = counterpart.transferGroupId ?? [leg.id, counterpart.id].sort()[0]!;
+          if (leg.transferGroupId !== groupId) {
+            await deps.transactions.update(userId, leg.id, leg.version, { transferGroupId: groupId });
+          }
+          if (counterpart.transferGroupId !== groupId) {
+            await deps.transactions.update(userId, counterpart.id, counterpart.version, { transferGroupId: groupId });
+          }
+        } catch {
+          // See the guard note above: skip this pair, keep reconciling the
+          // rest of the run.
+          continue;
+        }
       }
     }
 
