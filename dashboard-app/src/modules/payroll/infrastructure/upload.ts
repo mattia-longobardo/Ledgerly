@@ -52,6 +52,25 @@ export async function uploadPayslip(principal: Principal, input: UploadInput): P
     await resolution.store.put(reserved.storageKey!, input.bytes, "application/pdf");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // `store.put` can fail after partially (or fully) writing the object —
+    // most stores give no atomicity guarantee across a failed PUT (Finding
+    // 5, B2 whole-branch review). `markUploadFailed` nulls `storageKey` on
+    // the row so nothing keeps pointing at possibly-nonexistent bytes, but
+    // that alone can orphan a real object outside every retention path:
+    // `purgeExpiredOriginals` only ever selects rows with a non-null
+    // `storage_key`, so a row that no longer has one can never have this
+    // object swept for it. Best-effort delete, right here with no
+    // transaction open (same I/O discipline as everywhere else in this
+    // module), closes that gap for the one path that can create it. If the
+    // delete itself fails (the store is also the thing that just failed),
+    // the object stays orphaned until a real sweep exists — swallowed
+    // deliberately so a failed cleanup never masks or replaces the original
+    // upload failure being recorded below.
+    try {
+      await resolution.store.delete(reserved.storageKey!);
+    } catch {
+      // Best-effort only — see comment above.
+    }
     await withUserContext(db, { userId: principal.userId }, (tx) =>
       markUploadFailed(payrollDeps(tx, opts))(principal, reserved.id, message),
     );
