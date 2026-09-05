@@ -31,23 +31,32 @@ export interface PurgeExpiredOriginalsOptions {
  * The job body Task 14 schedules on the daily tier (Ruling R4-5). Follows
  * `src/lib/jobs/interest-accrual.ts`'s shape for a cross-user batch: one
  * short `withSystemContext` transaction reads the batch, then each item's
- * actual work — the network delete and the DB write that follows it — runs
- * in its own short transaction, opened and closed per item, never shared with
- * the batch read or with any other item.
+ * actual work — the network delete and the DB write that follows it — is
+ * written as its own short transaction, opened and closed per item, never
+ * shared with the batch read or with any other item, *when this function is
+ * called on its own*.
  *
- * This is the property that makes it safe to run unattended: **no
- * transaction ever spans more than one item's work**, so up to a hundred
- * sequential network deletes never pin one pooled connection for the length
- * of the whole run (Ruling R4-8's discipline — the exact defect Task 10 was
- * fixed to avoid, worse here because it is a batch). One item's failure
- * (a delete that throws, a store that is not configured for that user, a
- * write that fails) is caught, counted in `failed`, and the loop moves on —
- * the row keeps its `storage_key`, so the next run retries it, and it cannot
- * jam any other user's purge for the day.
+ * It is not called on its own: `payroll-retention.ts` (the job) wraps this
+ * whole function in `withJobLock`, which opens its own `db.transaction(...)`
+ * for the advisory lock and runs this function's entire body — the batch
+ * read and every item's network delete and DB write — inside that one open
+ * outer transaction for the length of the run. So, contrary to what the
+ * per-item transactions here might suggest in isolation, a transaction *does*
+ * span more than one item's work whenever this runs as the scheduled job;
+ * up to a hundred sequential network deletes do sit inside one held-open
+ * connection. This is a known, pre-existing characteristic of `withJobLock`
+ * itself (shared with `wallet-accounts-sync.ts`, `interest-accrual.ts`, and
+ * `sync-queue.ts`), not something Phase 4 introduced or fixed, and out of
+ * this function's control.
  *
- * Idempotent by construction: `listPurgeableForAllUsers` never selects a row
+ * What actually makes an interrupted or retried run safe is idempotency, not
+ * transaction isolation: `listPurgeableForAllUsers` never selects a row
  * whose `storage_key` is already null, so a half-finished run (or a retried
- * failure) resumes cleanly. Capped at `PURGE_BATCH` per run so a
+ * failure) resumes cleanly. One item's failure (a delete that throws, a
+ * store that is not configured for that user, a write that fails) is caught,
+ * counted in `failed`, and the loop moves on — the row keeps its
+ * `storage_key`, so the next run retries it, and it cannot jam any other
+ * user's purge for the day. Capped at `PURGE_BATCH` per run so a
  * misconfigured retention window cannot wipe the archive in one tick.
  */
 export async function purgeExpiredOriginals(

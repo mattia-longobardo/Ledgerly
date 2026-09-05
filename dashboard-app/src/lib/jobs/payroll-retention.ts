@@ -6,13 +6,24 @@
  * years after the PDF behind it is gone.
  *
  * `purgeExpiredOriginals` (`infrastructure/purge-expired-originals.ts`) is
- * itself the complete atomic unit for this job: it reads the cross-user
- * selection once under its own `withSystemContext`, then runs each item's
- * network delete and DB write inside that item's own short transaction,
- * resolving that item's document store from its owner's connection. This job
- * wraps the call in nothing but the advisory job lock — opening a transaction
- * of its own around it would be exactly the "a transaction spans the I/O"
- * defect Task 10 was fixed to remove, worse here because it is a batch.
+ * written as a per-item atomic unit: it reads the cross-user selection once
+ * under its own `withSystemContext`, then runs each item's network delete
+ * and DB write inside that item's own short transaction, resolving that
+ * item's document store from its owner's connection. That per-item isolation
+ * does not actually hold once this job calls it, though: `withJobLock`
+ * (`src/lib/repo/jobs.ts`) opens its own `db.transaction(...)` for the
+ * advisory lock and runs its callback inside it — so the entire batch
+ * (every item's network delete and DB write) executes nested inside that one
+ * outer transaction, held open for the whole run.
+ *
+ * This is a known, pre-existing characteristic of `withJobLock` itself, also
+ * present in `wallet-accounts-sync.ts`, `interest-accrual.ts`, and
+ * `sync-queue.ts` — not something Phase 4 introduced or fixed, and not
+ * something this job works around by construction. Safety instead rests on
+ * idempotency: `listPurgeableForAllUsers` never re-selects a row whose
+ * `storage_key` is already null, so re-running a partially-completed batch
+ * (whether from the outer transaction rolling back or a retried tick) is
+ * safe to repeat rather than relying on transaction isolation between items.
  *
  * A `failed` count above zero is alerted but does **not** fail the run: the
  * batch did what it could, the rows keep their keys, and the next tick
