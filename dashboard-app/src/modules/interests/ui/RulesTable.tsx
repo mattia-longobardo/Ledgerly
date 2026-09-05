@@ -39,9 +39,9 @@ export function RulesTable({ rows }: RulesTableProps) {
               <td className="py-2">
                 <Link
                   href={`/finance/interests/rules/${r.id}`}
-                  className="num text-fg underline-offset-2 hover:underline"
+                  className="text-fg underline-offset-2 hover:underline"
                 >
-                  {r.accountId}
+                  {r.accountName}
                 </Link>
               </td>
               <td>{asPercent(r.annualRate)}</td>

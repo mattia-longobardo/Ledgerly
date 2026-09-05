@@ -12,6 +12,14 @@ import { runForPrincipal } from "./run";
 export interface RuleRow {
   id: string;
   accountId: string;
+  /**
+   * Resolved once per load, in the loader, so the UI never has to render a
+   * raw account UUID (C3) — a user with more than one rule otherwise sees a
+   * list of indistinguishable ids. Falls back to a fixed placeholder when
+   * the account itself is gone (hard-deleted, not merely archived —
+   * `accountNamesFor` below asks for archived accounts too).
+   */
+  accountName: string;
   annualRate: string;
   taxRate: string;
   postingMode: string;
@@ -29,10 +37,13 @@ export interface RuleRow {
   inert: boolean;
 }
 
-function toRow(rule: InterestRule): RuleRow {
+const DELETED_ACCOUNT_PLACEHOLDER = "Deleted account";
+
+function toRow(rule: InterestRule, accountName: string): RuleRow {
   return {
     id: rule.id,
     accountId: rule.accountId,
+    accountName,
     annualRate: rule.annualRate,
     taxRate: rule.taxRate,
     postingMode: rule.postingMode,
@@ -42,8 +53,54 @@ function toRow(rule: InterestRule): RuleRow {
   };
 }
 
+type AccountNamesLookup = (userId: string, accountIds: readonly string[]) => Promise<Map<string, string>>;
+let accountNamesForTests: AccountNamesLookup | null = null;
+
+/**
+ * Test seam, mirroring `setInterestDepsFactoryForTests`/`setPrincipalForTests`
+ * above: a no-op outside `NODE_ENV=test`. `accountNamesFor` below opens its
+ * own real `withUserContext` against the live `db`, which the existing
+ * fake-deps harness in `load-interests.test.ts` has no way to intercept — a
+ * test that cares about resolved names opts in here; one that doesn't gets
+ * `accountNamesFor`'s own "no rows" fallback instead of an accidental live
+ * database call from a unit test.
+ */
+export function setAccountNamesForTests(factory: AccountNamesLookup | null): void {
+  if (process.env.NODE_ENV !== "test") return;
+  accountNamesForTests = factory;
+}
+
+/**
+ * The interests module has no accounts repository of its own (same reason
+ * `loadEligibleAccounts` below reaches into the accounts module directly),
+ * so this opens its own `withUserContext` — never nested inside
+ * `runForPrincipal`'s — to resolve a batch of account ids to names in one
+ * query. An id with no matching row (the account was hard-deleted, not
+ * merely archived — `includeArchived` already covers that case) is simply
+ * absent from the returned map; callers fall back to
+ * `DELETED_ACCOUNT_PLACEHOLDER`.
+ */
+async function accountNamesFor(userId: string, accountIds: readonly string[]): Promise<Map<string, string>> {
+  const wanted = new Set(accountIds);
+  if (wanted.size === 0) return new Map();
+  if (process.env.NODE_ENV === "test") {
+    return accountNamesForTests ? accountNamesForTests(userId, [...wanted]) : new Map();
+  }
+  const accounts = await withUserContext(db, { userId }, (tx) =>
+    accountDeps(tx).accounts.list(userId, { includeArchived: true }),
+  );
+  return new Map(accounts.filter((a) => wanted.has(a.id)).map((a) => [a.id, a.name]));
+}
+
 export async function loadInterestRules(): Promise<RuleRow[]> {
-  return runForPrincipal(async (deps, principal) => (await listInterestRules(deps)(principal)).map(toRow));
+  return runForPrincipal(async (deps, principal) => {
+    const rules = await listInterestRules(deps)(principal);
+    const names = await accountNamesFor(
+      principal.userId,
+      rules.map((r) => r.accountId),
+    );
+    return rules.map((r) => toRow(r, names.get(r.accountId) ?? DELETED_ACCOUNT_PLACEHOLDER));
+  });
 }
 
 export interface RuleDetailAccrual {
@@ -89,8 +146,9 @@ export async function loadInterestRuleDetail(
       },
     );
     if (!detail) return null;
+    const names = await accountNamesFor(principal.userId, [detail.rule.accountId]);
     return {
-      rule: toRow(detail.rule),
+      rule: toRow(detail.rule, names.get(detail.rule.accountId) ?? DELETED_ACCOUNT_PLACEHOLDER),
       accruals: detail.accruals.map((a) => ({ accrualDate: a.accrualDate, net: a.net })),
       reconciliationStatus: detail.reconciliation.status,
       projection: detail.projection.map((p) => ({ date: p.date, net: p.net })),
