@@ -14,6 +14,7 @@ import { monthKey } from "@/lib/time";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { LlmForm } from "../_components/SettingsForms";
 import { loadUsers } from "../_lib/load-settings";
+import { interestAccrualNotice } from "./interest-accrual-notice";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Administration" };
@@ -27,6 +28,7 @@ const JOBS: readonly JobName[] = [
   "wallet_refresh",
   "wallet_accounts_sync",
   "wallet_transactions_sync",
+  "interest_accrual",
   "trek_sync",
   "sync_queue",
 ];
@@ -38,6 +40,7 @@ const JOB_LABEL: Record<string, string> = {
   wallet_refresh: "Wallet refresh",
   wallet_accounts_sync: "Wallet accounts sync",
   wallet_transactions_sync: "Wallet transactions sync",
+  interest_accrual: "Interest accrual",
   trek_sync: "Trek leave sync",
   sync_queue: "Webhook sync queue",
 };
@@ -131,10 +134,14 @@ export default async function AdminSettingsPage() {
             <ul className="hairline-t">
               {JOBS.map((job, index) => {
                 const run = successes[index] ?? null;
+                const notice = job === "interest_accrual" ? interestAccrualNotice(run?.detail) : null;
                 return (
                   <li key={job} className="flex min-h-11 items-center gap-3 py-2 hairline-b">
-                    <span className="min-w-0 flex-1 truncate text-body text-fg">
-                      {JOB_LABEL[job] ?? job}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-body text-fg">{JOB_LABEL[job] ?? job}</span>
+                      {notice !== null && (
+                        <span className="block truncate text-caption text-warning">{notice}</span>
+                      )}
                     </span>
                     <StaleBadge capturedAt={run?.startedAt ?? null} stale={run === null} />
                   </li>
