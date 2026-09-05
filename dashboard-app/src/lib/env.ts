@@ -28,6 +28,18 @@ const schema = z.object({
 
   WALLET_API_URL: z.url().default("https://rest.budgetbakers.com/wallet/v1/api"),
 
+  /**
+   * Where payslip originals live (Ruling R4-1). `silo` reads the endpoint,
+   * bucket and credentials from the user's `payroll_silo` integration
+   * connection — no secret in the environment. `local` writes into
+   * `DOCUMENT_STORE_LOCAL_PATH` and is a development and test driver only
+   * (Ruling R4-16): the production container is read-only.
+   *
+   * Defaulted, not required: this phase adds no required environment variable.
+   */
+  DOCUMENT_STORE_DRIVER: z.enum(["silo", "local"]).default("silo"),
+  DOCUMENT_STORE_LOCAL_PATH: z.preprocess(blankToUndefined, z.string().optional()),
+
   PAPERLESS_URL: z.url(),
   PAPERLESS_TOKEN: z.string().min(1),
   PAPERLESS_PAYSLIP_TAG_ID: z.coerce.number().int().default(22),

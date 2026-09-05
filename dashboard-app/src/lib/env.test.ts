@@ -32,3 +32,14 @@ describe("resetEnvCache", () => {
     expect(env().CRON_SECRET).toBe("y".repeat(20));
   });
 });
+
+describe("DOCUMENT_STORE_DRIVER", () => {
+  it("defaults the document store driver to silo and leaves the local path unset", () => {
+    delete process.env.DOCUMENT_STORE_DRIVER;
+    delete process.env.DOCUMENT_STORE_LOCAL_PATH;
+    resetEnvCache();
+    const parsed = env();
+    expect(parsed.DOCUMENT_STORE_DRIVER).toBe("silo");
+    expect(parsed.DOCUMENT_STORE_LOCAL_PATH).toBeUndefined();
+  });
+});
