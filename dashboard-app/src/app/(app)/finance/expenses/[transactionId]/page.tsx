@@ -9,6 +9,13 @@ import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ transactionId: string }> }) {
+  // Mirrors the page body's own first call, in the same order: without this,
+  // an unauthenticated direct hit relies on `loadTransactionDetail`'s
+  // transitive `requirePrincipal()` (via `runForPrincipal`) to reject —
+  // which throws rather than redirects, so metadata generation would surface
+  // a bare framework error page an instant before the body a moment later
+  // would have redirected cleanly to `/signin`.
+  await requirePrincipalOrRedirect();
   const { transactionId } = await params;
   // Only a missing transaction renders a generic title — anything else (a
   // database failure, a permission edge, a bug in the use case) is a real
