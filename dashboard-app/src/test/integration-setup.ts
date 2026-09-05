@@ -26,8 +26,6 @@ Object.assign(process.env, {
   OIDC_CLIENT_ID: "client",
   OIDC_CLIENT_SECRET: "secret",
   AUTHORIZED_SUB: "sub-123",
-  PAPERLESS_URL: "https://paperless.example.test",
-  PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
   WALLET_API_URL: "https://wallet.example.test/wallet/v1/api",

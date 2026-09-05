@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { isUnauthorizedError, requireUser, unauthorizedResponse } from "@/lib/auth/require-user";
-import { ingestPayslipDocument } from "@/lib/jobs/payslip-ingest";
 import { runSweep } from "@/lib/jobs/sweep";
 import { runTrekSyncJob } from "@/lib/jobs/trek-sync-job";
 import { runWalletRefresh } from "@/lib/jobs/wallet-refresh";
@@ -10,7 +9,6 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.discriminatedUnion("job", [
   z.object({ job: z.literal("sweep") }),
   z.object({ job: z.literal("wallet_refresh") }),
-  z.object({ job: z.literal("payslip_ingest"), docId: z.number().int().positive() }),
   z.object({ job: z.literal("trek_sync") }),
 ]);
 
@@ -49,10 +47,8 @@ export async function POST(req: Request) {
     return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
   }
 
-  if (input.job === "payslip_ingest") {
-    const result = await ingestPayslipDocument({ docId: input.docId, trigger: "manual" });
-    return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
-  }
+  // The manual payslip-ingest retry lever moved to
+  // `POST /api/v1/payroll/imports/{id}/retry` (Task 15).
 
   const result = await runTrekSyncJob({ trigger: "manual" });
   return Response.json(result, { status: result.status === "failed" ? 500 : 200 });

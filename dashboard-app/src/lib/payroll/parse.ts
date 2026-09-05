@@ -26,7 +26,7 @@ export type LlmPass = (text: string) => Promise<LlmPassResult>;
 export interface ParsePayslipInput {
   readonly text: string;
   readonly textSource: TextSource;
-  /** Month key from Paperless metadata, when known; otherwise detected. */
+  /** Month key read off the document title, when known; otherwise detected. */
   readonly month?: string | null;
   readonly history?: readonly PayslipHistoryEntry[];
   /** Injected in tests so the suite never touches the network. */
@@ -57,7 +57,7 @@ export interface DetectThirteenthInput {
 }
 
 /**
- * The tredicesima normally arrives as its own Paperless document, so detection
+ * The tredicesima normally arrives as its own document, so detection
  * only has to label a whole document — it never splits one.
  *
  * Interpretation of PLAN §4's three signals: keyword and "net ≈ 2× median" are

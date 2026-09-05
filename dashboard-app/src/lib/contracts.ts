@@ -115,7 +115,6 @@ export interface SanityCheck {
 }
 
 export type JobName =
-  | "payslip_ingest"
   | "payroll_ingest"
   | "payroll_retention"
   | "sweep"
@@ -146,7 +145,7 @@ export interface JobResult {
 /** Thrown by clients when an upstream payload fails its Zod contract. */
 export class UpstreamError extends Error {
   constructor(
-    readonly service: "wallet" | "paperless" | "gotify" | "trek",
+    readonly service: "wallet" | "gotify" | "trek",
     message: string,
     readonly detail?: unknown,
     readonly retryable = false,

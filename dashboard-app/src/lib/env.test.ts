@@ -12,8 +12,6 @@ Object.assign(process.env, {
   OIDC_CLIENT_ID: "dashboard",
   OIDC_CLIENT_SECRET: "client-secret",
   AUTHORIZED_SUB: "00000000-0000-0000-0000-000000000001",
-  PAPERLESS_URL: "https://paperless.example",
-  PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
   APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
@@ -52,5 +50,12 @@ describe("MALWARE_SCANNER", () => {
     const parsed = env();
     expect(parsed.MALWARE_SCANNER).toBe("none");
     expect(parsed.CLAMD_PORT).toBe(3310);
+  });
+});
+
+describe("Paperless", () => {
+  it("no longer knows about Paperless", () => {
+    resetEnvCache();
+    expect(Object.keys(env())).not.toContain("PAPERLESS_URL");
   });
 });

@@ -43,8 +43,9 @@ export interface GridSpec {
 
 /**
  * The residuals grid. Paperless OCR flattens it (the August 2026 sample shows
- * 6 values under 12 headers), which is exactly why the engine refuses to guess
- * a column when the value count does not match the header count.
+ * 6 values under 12 headers) (historical: the sample predates the upload
+ * pipeline), which is exactly why the engine refuses to guess a column when
+ * the value count does not match the header count.
  */
 export const GRIDS: Readonly<Record<GridId, GridSpec>> = {
   residui: {

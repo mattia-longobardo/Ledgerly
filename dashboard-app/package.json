@@ -19,7 +19,6 @@
     "db:migrate": "tsx src/lib/db/migrate.ts",
     "migrate:teable": "tsx scripts/migrate-teable.ts",
     "migrate:teable:validate": "tsx scripts/validate-teable-migration.ts",
-    "migrate:paperless": "tsx scripts/migrate-paperless.ts",
     "migrate:paperless:validate": "tsx scripts/validate-paperless-migration.ts",
     "migrate:credentials": "tsx scripts/import-file-credentials.ts",
     "e2e": "playwright test",
