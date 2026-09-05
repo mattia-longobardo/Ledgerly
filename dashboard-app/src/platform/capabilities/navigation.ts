@@ -35,8 +35,22 @@ export function buildNavigation(c: Capabilities): NavItem[] {
     { href: "/", label: "Home", iconKey: "home" },
     { href: "/finance", label: "Finance", iconKey: "finance", children: finance },
   ];
-  // `/work` keeps its route until Phase 4 renames it; the label already reads Company.
-  if (c.features.payroll || c.features.timeoff) items.push({ href: "/work", label: "Company", iconKey: "company" });
+  // Spec §4's page map. Overview needs the payroll feature; Earnings is shown
+  // whenever Overview is (the page renders its own "no earnings yet" state, so
+  // hiding it would leave a user with nowhere to look); Time Off needs payroll
+  // *or* Trek; Payroll needs one of the two payroll write permissions.
+  const company: NavChild[] = [];
+  if (c.features.payroll) {
+    company.push({ href: "/company", label: "Overview" });
+    company.push({ href: "/company/earnings", label: "Earnings" });
+  }
+  if (c.features.payroll || c.features.timeoff) company.push({ href: "/company/time-off", label: "Time Off" });
+  if (c.permissions.has("payroll.upload") || c.permissions.has("payroll.review")) {
+    company.push({ href: "/company/payroll", label: "Payroll" });
+  }
+  if (company.length > 0) {
+    items.push({ href: "/company", label: "Company", iconKey: "company", children: company });
+  }
 
   const settings: NavChild[] = [
     { href: "/settings/personal", label: "Personal" },
