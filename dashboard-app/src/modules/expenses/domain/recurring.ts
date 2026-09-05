@@ -2,6 +2,9 @@ import { fromCents, toCents } from "@/lib/calc/money";
 
 export type Cadence = "weekly" | "biweekly" | "monthly" | "quarterly" | "annual";
 
+/** The sign of the group's amounts — part of the grouping key, so it is part of the persisted identity of a pattern too. */
+export type PatternSign = "+" | "-";
+
 export interface RecurringCandidate {
   payee: string;
   amount: string;
@@ -15,6 +18,8 @@ export interface DetectedPattern {
   amountLow: string;
   amountHigh: string;
   currency: string;
+  /** Same sign as every candidate in the group — see `PatternSign`. */
+  sign: PatternSign;
   lastSeenAt: Date;
   nextExpectedAt: Date;
   occurrenceCount: number;
@@ -103,6 +108,9 @@ export function detectRecurring(transactions: readonly RecurringCandidate[]): De
       amountLow: fromCents(absCents[0]!).toFixed(2),
       amountHigh: fromCents(absCents[absCents.length - 1]!).toFixed(2),
       currency: last.currency,
+      // Every member of a group shares one sign (it is part of the grouping
+      // key above), so the first entry's sign speaks for the whole group.
+      sign: group[0]!.cents < 0 ? "-" : "+",
       lastSeenAt: last.occurredAt,
       nextExpectedAt: new Date(last.occurredAt.getTime() + avgGapDays * DAY_MS),
       occurrenceCount: sorted.length,

@@ -1,5 +1,5 @@
 import type { AuditInput } from "@/platform/audit/record";
-import type { Cadence, DetectedPattern } from "../domain/recurring";
+import type { Cadence, DetectedPattern, PatternSign } from "../domain/recurring";
 import type { RecordSource, Transaction, TransactionCategory, TransactionLabel } from "../domain/transaction";
 
 export type NewTransaction = Omit<Transaction, "id" | "version" | "createdAt" | "updatedAt">;
@@ -59,6 +59,7 @@ export interface RecurringPatternRecord {
   amountLow: string;
   amountHigh: string;
   currency: string;
+  sign: PatternSign;
   lastSeenAt: Date;
   nextExpectedAt: Date | null;
   occurrenceCount: number;

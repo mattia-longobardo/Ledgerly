@@ -99,6 +99,7 @@ describe("loadRecurringPatterns", () => {
         amountLow: "-15.99",
         amountHigh: "-15.99",
         currency: "EUR",
+        sign: "-",
         lastSeenAt: new Date("2026-08-01T00:00:00Z"),
         nextExpectedAt: new Date("2026-09-01T00:00:00Z"),
         occurrenceCount: 4,

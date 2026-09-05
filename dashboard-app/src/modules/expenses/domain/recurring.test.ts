@@ -197,6 +197,9 @@ describe("detectRecurring", () => {
     expect(patterns).toHaveLength(2);
     expect(patterns.every((p) => p.occurrenceCount === 3 && p.cadence === "monthly")).toBe(true);
     expect(patterns.map((p) => p.amountLow).sort()).toEqual(["20.00", "20.00"]);
+    // A1: the two groups differ only by sign — the persisted uniqueness
+    // constraint keys on this field precisely so they never collide.
+    expect(patterns.map((p) => p.sign).sort()).toEqual(["+", "-"]);
   });
 
   it("keeps two currencies for the same payee separate, never merged", () => {
@@ -211,5 +214,7 @@ describe("detectRecurring", () => {
     expect(patterns).toHaveLength(2);
     expect(patterns.map((p) => p.currency).sort()).toEqual(["EUR", "USD"]);
     expect(patterns.every((p) => p.occurrenceCount === 3 && p.cadence === "monthly")).toBe(true);
+    // Both series are credits — currency alone tells them apart here, not sign.
+    expect(patterns.every((p) => p.sign === "+")).toBe(true);
   });
 });

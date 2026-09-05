@@ -102,6 +102,12 @@ export const recurringPatterns = pgTable(
     amountLow: money("amount_low").notNull(),
     amountHigh: money("amount_high").notNull(),
     currency: text("currency").notNull().default("EUR"),
+    // Signed alongside `currency`: the detector groups by payee + currency +
+    // amount sign (see `domain/recurring.ts`), and two groups sharing a payee
+    // can differ only by sign (recurring income vs. recurring expense) — the
+    // uniqueness constraint below must match that grouping key exactly, or a
+    // legitimate second series collides with the first (Ruling P3-C42).
+    sign: text("sign").notNull(),
     lastSeenAt: tz("last_seen_at").notNull(),
     nextExpectedAt: tz("next_expected_at"),
     occurrenceCount: integer("occurrence_count").notNull().default(0),
@@ -110,7 +116,8 @@ export const recurringPatterns = pgTable(
   },
   (t) => [
     check("recurring_patterns_cadence_ck", sql`${t.cadence} IN ('weekly','biweekly','monthly','quarterly','annual')`),
-    uniqueIndex("recurring_patterns_user_payee_uq").on(t.userId, t.payee),
+    check("recurring_patterns_sign_ck", sql`${t.sign} IN ('+','-')`),
+    uniqueIndex("recurring_patterns_user_payee_currency_sign_uq").on(t.userId, t.payee, t.currency, t.sign),
   ],
 );
 

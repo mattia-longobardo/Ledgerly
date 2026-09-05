@@ -104,6 +104,28 @@ describe("DrizzleTransactionsRepository", () => {
     });
   });
 
+  // A5: FK checks are not subject to RLS, so `transaction_label_links`'s FK
+  // to `transaction_labels` alone would accept another user's label id.
+  // `setLabels` must refuse the whole call rather than link it.
+  it("setLabels refuses another user's labelId and does not link it, even under a system context that bypasses RLS", async () => {
+    const { a, b } = await seedTwoUsers();
+    const db = await testDb();
+    await withSystemContext(db, async (tx) => {
+      const labels = new DrizzleLabelsRepository(tx);
+      const mine = assertCreated(await labels.create({ userId: a.userId, name: "Mine", color: null, source: "manual" }));
+      const theirs = assertCreated(await labels.create({ userId: b.userId, name: "Theirs", color: null, source: "manual" }));
+      const repo = new DrizzleTransactionsRepository(tx);
+      const created = await repo.create(newTx(a.userId, a.accountId));
+
+      await expect(repo.setLabels(a.userId, created.id, [theirs.id])).rejects.toThrow(/labelIds must belong to the caller/);
+      expect((await repo.labelsFor(a.userId, [created.id])).get(created.id)).toEqual([]);
+
+      // A valid mix of owned labels still succeeds after the refusal above.
+      await repo.setLabels(a.userId, created.id, [mine.id]);
+      expect((await repo.labelsFor(a.userId, [created.id])).get(created.id)).toEqual([mine.id]);
+    });
+  });
+
   it("filters by userId explicitly — even under a system context that bypasses RLS", async () => {
     const { a, b } = await seedTwoUsers();
     const db = await testDb();
@@ -262,8 +284,8 @@ describe("DrizzleRecurringRepository", () => {
     await withUserContext(db, { userId }, async (tx) => {
       const repo = new DrizzleRecurringRepository(tx);
       await repo.replaceAll(userId, [
-        { payee: "Zeta", cadence: "monthly", amountLow: "-10.00", amountHigh: "-10.00", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 },
-        { payee: "Alpha", cadence: "weekly", amountLow: "-5.00", amountHigh: "-5.00", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 },
+        { payee: "Zeta", cadence: "monthly", amountLow: "-10.00", amountHigh: "-10.00", currency: "EUR", sign: "-", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 },
+        { payee: "Alpha", cadence: "weekly", amountLow: "-5.00", amountHigh: "-5.00", currency: "EUR", sign: "-", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 },
       ]);
       expect((await repo.list(userId)).map((p) => p.payee)).toEqual(["Alpha", "Zeta"]);
     });
@@ -274,12 +296,45 @@ describe("DrizzleRecurringRepository", () => {
     const db = await testDb();
     await withSystemContext(db, async (tx) => {
       const repo = new DrizzleRecurringRepository(tx);
-      const pattern = { cadence: "monthly" as const, amountLow: "-10.00", amountHigh: "-10.00", currency: "EUR", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 };
+      const pattern = { cadence: "monthly" as const, amountLow: "-10.00", amountHigh: "-10.00", currency: "EUR", sign: "-" as const, lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 };
       await repo.replaceAll(a.userId, [{ ...pattern, payee: "A-Netflix" }]);
       await repo.replaceAll(b.userId, [{ ...pattern, payee: "B-Netflix" }]);
       await repo.replaceAll(a.userId, []);
       expect(await repo.list(a.userId)).toEqual([]);
       expect((await repo.list(b.userId)).map((p) => p.payee)).toEqual(["B-Netflix"]);
+    });
+  });
+
+  // A1 (CRITICAL, Ruling P3-C42): the old `(user_id, payee)` unique index
+  // collided on two groups the detector deliberately keeps separate — the
+  // same payee billing in two currencies, or the same payee as both
+  // recurring income and recurring expense. One multi-row INSERT meant the
+  // second row's 23505 aborted the whole `replaceAll`, which
+  // `wallet-provider-adapter.ts` runs inside the same transaction as the
+  // rest of a sync — so a duplicate payee across currency/sign permanently
+  // broke that user's every future sync. The widened
+  // `(user_id, payee, currency, sign)` index must let both rows land.
+  it("persists two same-payee patterns differing only in currency, and two differing only in sign", async () => {
+    const { userId } = await seed();
+    const db = await testDb();
+    await withUserContext(db, { userId }, async (tx) => {
+      const repo = new DrizzleRecurringRepository(tx);
+      const base = { cadence: "monthly" as const, amountLow: "-10.99", amountHigh: "-10.99", lastSeenAt: new Date(), nextExpectedAt: new Date(), occurrenceCount: 3 };
+      await repo.replaceAll(userId, [
+        { ...base, payee: "Spotify", currency: "EUR", sign: "-" },
+        { ...base, payee: "Spotify", currency: "USD", sign: "-", amountLow: "-5.99", amountHigh: "-5.99" },
+      ]);
+      const byCurrency = await repo.list(userId);
+      expect(byCurrency).toHaveLength(2);
+      expect(byCurrency.map((p) => p.currency).sort()).toEqual(["EUR", "USD"]);
+
+      await repo.replaceAll(userId, [
+        { ...base, payee: "Landlord", currency: "EUR", sign: "-" },
+        { ...base, payee: "Landlord", currency: "EUR", sign: "+", amountLow: "20.00", amountHigh: "20.00" },
+      ]);
+      const bySign = await repo.list(userId);
+      expect(bySign).toHaveLength(2);
+      expect(bySign.map((p) => p.sign).sort()).toEqual(["+", "-"]);
     });
   });
 });
