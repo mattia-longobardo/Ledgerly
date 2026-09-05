@@ -157,4 +157,63 @@ describe("payroll API", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ months: [], quarters: [], years: [] });
   });
+
+  it("retries an import stuck in scanning, driving it through scanImport again", async () => {
+    const { userId, organizationId } = await seedUser();
+    const principal = { userId, organizationId, roles: ["owner"] as RoleCode[], permissions: permissionsForRoles(["owner"]) };
+    // Freshly uploaded, never actually scanned yet (the cron job normally does
+    // that): status "scanning", scanStatus "pending" — exactly the state
+    // `/retry` should treat as "still waiting on the scanner" and re-drive
+    // through `scanImport`, which (the default noop scanner always answering
+    // "clean") should carry it through to "extracting".
+    const imported = await uploadPayslip(principal, { fileName: "a.pdf", mime: "application/pdf", bytes: pdf("retry-scan") });
+    expect(imported.status).toBe("scanning");
+    const res = await appFor(userId, organizationId).request(`/api/v1/payroll/imports/${imported.id}/retry`, {
+      method: "POST",
+      headers: { "x-requested-with": "test" },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { status: string; scanStatus: string };
+    expect(body.status).toBe("extracting");
+    expect(body.scanStatus).toBe("clean");
+  });
+
+  it("refuses a viewer's retry with 403 permission_denied", async () => {
+    const { userId, organizationId } = await seedUser();
+    const principal = { userId, organizationId, roles: ["owner"] as RoleCode[], permissions: permissionsForRoles(["owner"]) };
+    // A viewer holds `payroll.read` only (Ruling R4-17) — never `payroll.upload`
+    // — and retry is functionally "try uploading through the pipeline again".
+    // Without its own permission check, `/retry` would let a viewer trigger a
+    // real scanner call (and, for a stuck parse, a real LLM call) with no
+    // upload or review right anywhere else in the module.
+    const imported = await uploadPayslip(principal, { fileName: "a.pdf", mime: "application/pdf", bytes: pdf("retry-viewer") });
+    const res = await appFor(userId, organizationId, ["viewer"]).request(`/api/v1/payroll/imports/${imported.id}/retry`, {
+      method: "POST",
+      headers: { "x-requested-with": "test" },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("answers 409 conflict for a retry on a terminal import", async () => {
+    const { userId, organizationId } = await seedUser();
+    const principal = { userId, organizationId, roles: ["owner"] as RoleCode[], permissions: permissionsForRoles(["owner"]) };
+    const imported = await uploadPayslip(principal, { fileName: "a.pdf", mime: "application/pdf", bytes: pdf("retry-terminal") });
+    const app = appFor(userId, organizationId);
+    const rejected = await app.request(`/api/v1/payroll/imports/${imported.id}/reject`, {
+      method: "POST",
+      headers: { "x-requested-with": "test", "content-type": "application/json" },
+      body: JSON.stringify({ version: imported.version }),
+    });
+    expect(rejected.status).toBe(200);
+    // Terminal (`rejected`): neither "still waiting on the scanner" nor
+    // "clean-scanned but stuck parsing" — the branching that already avoids a
+    // wasteful `scanImport`/`parseImport` call for a terminal import, exercised
+    // here rather than just correct by inspection.
+    const res = await app.request(`/api/v1/payroll/imports/${imported.id}/retry`, {
+      method: "POST",
+      headers: { "x-requested-with": "test" },
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("conflict");
+  });
 });
