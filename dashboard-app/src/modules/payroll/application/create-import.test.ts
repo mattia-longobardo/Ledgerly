@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testPrincipal } from "@/test/principal";
-import type { UseCaseDeps } from "./ports";
+import type { PayrollImport, PayrollImportsRepository, UseCaseDeps } from "./ports";
 import {
   MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
@@ -40,6 +40,84 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
 const principal = testPrincipal({ userId: "00000000-0000-7000-8000-00000000000a" });
 
 const base = { fileName: "Busta Paga Agosto 2026.pdf", mime: "application/pdf", storageProvider: "local" as const };
+
+function makeExistingImport(overrides: Partial<PayrollImport> = {}): PayrollImport {
+  const now = new Date("2026-09-05T09:00:00Z");
+  return {
+    id: "winner-import-id",
+    userId: principal.userId,
+    status: "received",
+    fileName: "already-uploaded-by-the-other-request.pdf",
+    mime: "application/pdf",
+    sizeBytes: 10,
+    sha256: "f".repeat(64),
+    storageProvider: "local",
+    storageKey: "payroll/winner/2026/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.pdf",
+    pages: null,
+    textSource: null,
+    parserVersion: null,
+    extraction: null,
+    confidence: null,
+    scanStatus: "pending",
+    scanner: null,
+    scanSignature: null,
+    scannedAt: null,
+    error: null,
+    idempotencyKey: null,
+    replacesImportId: null,
+    retentionUntil: new Date("2036-01-01T00:00:00Z"),
+    purgedAt: null,
+    uploadedVia: "ui",
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+/**
+ * Simulates the race Ruling R4-3 describes: two concurrent uploads of the
+ * same bytes both pass `findBySha`'s not-found check before either commits.
+ * `findBySha` therefore answers `null` the first time (this request's own
+ * pre-check) and the winning row the second time (the loser's re-read inside
+ * `reserveImport`'s catch handler); `create` throws a Drizzle-shaped
+ * unique-violation error, exactly as `payroll_imports_user_sha_uq` would.
+ */
+class RaceyImportsRepository implements PayrollImportsRepository {
+  private findByShaCalls = 0;
+  constructor(private readonly winner: PayrollImport) {}
+
+  async list(): Promise<PayrollImport[]> {
+    return [];
+  }
+
+  async get(): Promise<PayrollImport | null> {
+    return null;
+  }
+
+  async findBySha(): Promise<PayrollImport | null> {
+    this.findByShaCalls += 1;
+    return this.findByShaCalls === 1 ? null : this.winner;
+  }
+
+  async create(): Promise<PayrollImport> {
+    throw Object.assign(new Error('Failed query: insert into "payroll_imports" ...'), {
+      cause: new Error('duplicate key value violates unique constraint "payroll_imports_user_sha_uq"'),
+    });
+  }
+
+  async patch(): Promise<PayrollImport | null> {
+    throw new Error("not used by this test");
+  }
+
+  async listByStatusForAllUsers(): Promise<PayrollImport[]> {
+    return [];
+  }
+
+  async listPurgeableForAllUsers(): Promise<PayrollImport[]> {
+    return [];
+  }
+}
 
 describe("validateUpload", () => {
   it("accepts a PDF under the size limit", () => {
@@ -114,6 +192,16 @@ describe("reserveImport", () => {
     await expect(reserveImport(deps)(principal, { ...base, bytes: pdf() })).rejects.toMatchObject({
       name: "DuplicateImportError",
       existingImportId: first.id,
+    });
+  });
+
+  it("answers a lost create-time race with DuplicateImportError instead of letting the raw unique-violation escape (Ruling R4-3)", async () => {
+    const deps = makeDeps();
+    const winner = makeExistingImport();
+    const racey = { ...deps, imports: new RaceyImportsRepository(winner) };
+    await expect(reserveImport(racey)(principal, { ...base, bytes: pdf() })).rejects.toMatchObject({
+      name: "DuplicateImportError",
+      existingImportId: winner.id,
     });
   });
 
