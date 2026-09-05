@@ -79,4 +79,32 @@ describe("createS3DocumentStore", () => {
       /document store PUT failed: 403/,
     );
   });
+
+  describe("key validation (Finding 2: the same contract local-document-store.ts enforces)", () => {
+    it("PUT rejects a key with a .. segment before ever building the request", async () => {
+      const { store, fetchImpl } = storeWith(async () => new Response(null, { status: 200 }));
+      await expect(store.put("payroll/../../etc/passwd", bytes, "application/pdf")).rejects.toThrow(
+        /invalid storage key/i,
+      );
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it("GET rejects a key containing a query-string separator, which would otherwise silently retarget the request", async () => {
+      const { store, fetchImpl } = storeWith(async () => new Response(bytes, { status: 200 }));
+      await expect(store.get("payroll/u1/2026/a.pdf?x=1")).rejects.toThrow(/invalid storage key/i);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it("DELETE rejects a key containing a fragment separator", async () => {
+      const { store, fetchImpl } = storeWith(async () => new Response(null, { status: 204 }));
+      await expect(store.delete("payroll/u1/2026/a.pdf#frag")).rejects.toThrow(/invalid storage key/i);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it("listPrefix rejects a prefix with a doubled slash", async () => {
+      const { store, fetchImpl } = storeWith(async () => new Response("", { status: 200 }));
+      await expect(store.listPrefix("payroll//u1/")).rejects.toThrow(/invalid storage key/i);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+  });
 });

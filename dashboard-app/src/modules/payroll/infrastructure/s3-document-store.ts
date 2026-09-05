@@ -1,4 +1,5 @@
 import type { DocumentStore } from "../application/ports";
+import { assertStorageKey } from "../domain/document";
 import { hashPayload, signRequest } from "./sigv4";
 
 export interface S3StoreConfig {
@@ -52,6 +53,10 @@ export function createS3DocumentStore(config: S3StoreConfig): DocumentStore {
   }
 
   function urlFor(key: string): URL {
+    // Same key contract `local-document-store.ts` enforces (Finding 2): a key
+    // containing `?`, `#`, or `..` would silently change which object a
+    // validly-signed request addresses once interpolated into this URL.
+    assertStorageKey(key);
     return new URL(`${origin}/${config.bucket}/${key}`);
   }
 
@@ -80,6 +85,7 @@ export function createS3DocumentStore(config: S3StoreConfig): DocumentStore {
     },
 
     async listPrefix(prefix) {
+      assertStorageKey(prefix.endsWith("/") ? prefix.slice(0, -1) : prefix);
       const keys: string[] = [];
       let token: string | null = null;
       // Bounded: a per-user prefix cannot legitimately hold more than a few

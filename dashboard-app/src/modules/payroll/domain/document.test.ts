@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_UPLOAD_BYTES, looksLikePdf, newStorageKey, sha256Hex } from "./document";
+import { MAX_UPLOAD_BYTES, assertStorageKey, looksLikePdf, newStorageKey, sha256Hex } from "./document";
 
 const pdf = (extra = "") => new TextEncoder().encode(`%PDF-1.7\n${extra}`);
 
@@ -56,5 +56,30 @@ describe("newStorageKey", () => {
 describe("MAX_UPLOAD_BYTES", () => {
   it("is the spec's 10 MB (§7.9), matching the database CHECK on size_bytes", () => {
     expect(MAX_UPLOAD_BYTES).toBe(10485760);
+  });
+});
+
+describe("assertStorageKey", () => {
+  it("accepts a key shaped like newStorageKey's output", () => {
+    expect(() =>
+      assertStorageKey("payroll/00000000-0000-7000-8000-000000000001/2026/abcdef0123456789.pdf"),
+    ).not.toThrow();
+  });
+
+  it("rejects a key containing a .. segment (path traversal)", () => {
+    expect(() => assertStorageKey("payroll/../../etc/passwd")).toThrow(/invalid storage key/i);
+  });
+
+  it("rejects a key containing a doubled slash", () => {
+    expect(() => assertStorageKey("payroll//u1/a.pdf")).toThrow(/invalid storage key/i);
+  });
+
+  it("rejects a key that would change the addressed object once interpolated into a URL (Finding 2)", () => {
+    expect(() => assertStorageKey("payroll/u1/a.pdf?x=1")).toThrow(/invalid storage key/i);
+    expect(() => assertStorageKey("payroll/u1/a.pdf#frag")).toThrow(/invalid storage key/i);
+  });
+
+  it("rejects an empty key", () => {
+    expect(() => assertStorageKey("")).toThrow(/invalid storage key/i);
   });
 });
