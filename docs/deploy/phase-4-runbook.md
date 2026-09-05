@@ -42,21 +42,35 @@ deployed yet, and Phase 4 stacks on both. Deploy in this order:
    writes, reads and deletes a probe object; a green result means the credential
    can actually store a payslip, not merely reach the bucket.
 3. Run the migration from inside the container, with the silo credentials in the
-   environment for this one run:
+   environment for this one run. The container is `read_only: true` with tmpfs
+   only on `/tmp` and `/app/.next/cache`, and the script's default `--out`
+   directory (`docs/migration/`, relative to the repo root) does not exist
+   inside the image — every database write for the run would already have
+   committed by the time a default-path write hit `EROFS`, so always pass
+   `--out /tmp/migration` explicitly:
    ```bash
    docker compose exec dashboard-app sh -lc '
      SILO_ENDPOINT=… SILO_BUCKET=… SILO_ACCESS_KEY_ID=… SILO_SECRET_ACCESS_KEY=… \
-     npm run migrate:paperless
+     npm run migrate:paperless -- --dry-run --out /tmp/migration
    '
    ```
-   Run it with `--dry-run` first and read the printed counts. `npm run
+   Read the printed counts, then drop `--dry-run` and re-run the same command
+   (still with `--out /tmp/migration`) to write for real. `npm run
    migrate:paperless` only exists on this wave-1 image — wave 2 deletes both the
    script and the npm alias, so this step cannot be repeated after wave 2.
+   Copy the report out of the container before it restarts and the tmpfs is
+   lost:
+   ```bash
+   docker compose cp dashboard-app:/tmp/migration ./docs/migration
+   ```
 4. Run the validation: `npm run migrate:paperless:validate`. It exits non-zero on
    any mismatch between a verified legacy `payslips` row and its migrated
-   `payroll_records` row, comparing decimal strings rather than numbers.
-5. Read `docs/migration/paperless-reconciliation.md`, which the run writes. It is
-   the record that survives wave 2, because wave 2 deletes the migration script.
+   `payroll_records` row, comparing decimal strings rather than numbers; it also
+   fails if it examines zero legacy payslips, and its success message states how
+   many it verified.
+5. Read `docs/migration/paperless-reconciliation.md` (copied out of the
+   container in step 3). It is the record that survives wave 2, because wave 2
+   deletes the migration script.
 6. Visit `/company/earnings` and confirm the twelve migrated months are there
    with the same figures the old Work page showed.
 

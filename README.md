@@ -77,9 +77,12 @@ npm run dev          # http://localhost:3000
 
 `npm run dev` and `npm run build && npm run start` both need the full
 environment `src/lib/env.ts` validates at boot (`DATABASE_URL`, `AUTH_*`,
-`OIDC_*`, `AUTHORIZED_SUB`, `PAPERLESS_*`, `CRON_SECRET`, `WEBHOOK_SECRET`,
-...) — see `.env.example` at the repo root for the full list and what each
-one is for.
+`OIDC_*`, `AUTHORIZED_SUB`, `CRON_SECRET`, `WEBHOOK_SECRET`, ...) — see
+`.env.example` at the repo root for the full list and what each one is for.
+Two more are validated but default sensibly rather than being required:
+`DOCUMENT_STORE_DRIVER` (`silo` or `local`, default `silo`) picks where
+uploaded payroll originals are stored, and `MALWARE_SCANNER` (`none` or
+`clamd`, default `none`) picks whether uploads are scanned before use.
 
 ### Testing
 
@@ -110,7 +113,6 @@ DATABASE_URL=postgresql://app_test:app_test@localhost:55432/dashboard_test \
 AUTH_URL=http://localhost:3000 AUTH_SECRET=$(openssl rand -base64 32) \
 OIDC_ISSUER=http://localhost:9999/application/o/dashboard/ \
 OIDC_CLIENT_ID=x OIDC_CLIENT_SECRET=x AUTHORIZED_SUB=x \
-PAPERLESS_URL=http://localhost:9998 PAPERLESS_TOKEN=x \
 CRON_SECRET=$(openssl rand -hex 16) WEBHOOK_SECRET=$(openssl rand -hex 16) \
   npm run build && npm run start &   # or `npm run dev` for a faster loop
 npm run e2e   # E2E_BASE_URL defaults to http://localhost:3000
