@@ -81,3 +81,26 @@ the image, and the container's filesystem is read-only apart from the `/tmp`
 tmpfs — so point it at `/tmp` and copy the files back out
 (`docker compose cp dashboard-app:/tmp/migration ./docs/migration`) before the
 container restarts and the tmpfs is lost.
+
+## Paperless → payroll document store
+
+`npm run migrate:paperless` pulls the original PDF of every **verified** payslip
+out of Paperless while the client and its token still exist, stores it in the
+payroll document store, and creates the matching `payroll_imports`,
+`payroll_records` and `payroll_components` rows. `npm run migrate:paperless:validate`
+then diffs every migrated record against its legacy `payslips` row — gross, net,
+taxes and both Cometa halves, compared as decimal strings — and exits non-zero on
+any mismatch.
+
+Both are one-shot and idempotent: a payslip whose bytes are already in the store
+is reused rather than duplicated, and a second run rewrites the same figures.
+
+**Order matters.** The migration must run on the image built at the commit that
+adds it, *before* the Paperless client and its environment variables are removed
+— see `docs/deploy/phase-4-runbook.md`, which prescribes the two waves. Rows in
+status `discovered`, `parsed`, `rejected` or `superseded` are deliberately left
+behind: they were never confirmed by a person, and the legacy `payslips` table
+stays as the frozen archive holding them.
+
+The run writes `docs/migration/paperless-reconciliation.md`, which is the record
+that outlives the script.
