@@ -116,6 +116,8 @@ export interface SanityCheck {
 
 export type JobName =
   | "payslip_ingest"
+  | "payroll_ingest"
+  | "payroll_retention"
   | "sweep"
   | "wallet_refresh"
   | "trek_sync"
