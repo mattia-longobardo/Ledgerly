@@ -1,20 +1,23 @@
 /**
  * Net worth = Σ of the per-account latest known values.
  *
- * Why this module exists at all: the headline figure used to be Teable's
- * `TOTAL` column, a per-row formula summing that row's account cells. The
- * monthly snapshot job appends rows carrying only Date + ING + Revolut, so an
- * app-written row's `TOTAL` silently omits every hand-tracked account — and
- * because a formula cell is never null, the "keep the newest non-null value per
- * column" rule in the Teable refresh adopted that truncated figure instantly.
- * Live evidence, 2026-09-01: the August row totalled 21 494,35 across six
- * accounts; the September row, written by the app, totalled 20 839,13 from ING
- * + Fideuram + Revolut alone. The hero was wrong, and "other accounts", derived
- * as `total − managed`, was garbage that could go negative.
+ * Why this module exists at all: the legacy headline figure used to be a
+ * per-row formula cell in the hand-maintained Allocation spreadsheet, summing
+ * that row's account columns. The old monthly snapshot job appended rows
+ * carrying only Date + ING + Revolut, so an app-written row's formula silently
+ * omitted every hand-tracked account — and because a formula cell is never
+ * null, the "keep the newest non-null value per column" rule in the old
+ * refresh adopted that truncated figure instantly. Live evidence, 2026-09-01:
+ * the August row totalled 21 494,35 across six accounts; the September row,
+ * written by the app, totalled 20 839,13 from ING + Fideuram + Revolut alone.
+ * The hero was wrong, and "other accounts", derived as `total − managed`, was
+ * garbage that could go negative.
  *
- * So the total is now built here, from the same per-account values the account
- * rows show. Everything in this file is pure: no I/O, no clock beyond an
- * injected `now`.
+ * So the total is built here instead, from the same per-account values the
+ * account rows show. Everything in this file is pure: no I/O, no clock beyond
+ * an injected `now`. It now backs only the one-off migration reconciliation
+ * script under `scripts/`, which recomputes this figure from
+ * `balance_snapshots` to check it against the accounts module's own net worth.
  */
 
 import { fromCents, toCents } from "./money";
@@ -157,7 +160,7 @@ export function sumSeries(contributors: readonly NetWorthContributor[]): MonthPo
 
 /**
  * Staleness of a sum. Contributors age at wildly different rates — Wallet is
- * refreshed daily, a Teable-sourced figure can be months old in substance even
+ * refreshed daily, a hand-typed figure can be months old in substance even
  * though the cache row is minutes old — so the total is judged against ONE
  * explicit budget (`NET_WORTH_STALENESS_MS`) applied to its oldest contributor.
  * Inheriting the strictest per-source budget instead would leave the hero

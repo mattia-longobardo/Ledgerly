@@ -16,6 +16,10 @@ secrets/
 # ---------------------------------------------------------------------------
 *.pdf
 .work/
+# Teable exports: real balances, written by scripts/migrate-teable.ts
+docs/migration/*.json
+# Reconciliation report: also embeds real net-worth figures, written by scripts/validate-teable-migration.ts
+docs/migration/teable-reconciliation.md
 
 # ---------------------------------------------------------------------------
 # Dipendenze
@@ -108,3 +112,6 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# superpowers SDD scratch (ledgers, briefs, review packages)
+.superpowers/

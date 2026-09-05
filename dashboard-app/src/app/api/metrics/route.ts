@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Prometheus text exposition. Scraped over the internal network only; carries
- * job freshness so Grafana can alert when the snapshot is older than 33 days.
+ * job freshness so Grafana can alert when a scheduled job stops succeeding.
  */
 export async function GET() {
   const lastSuccess = await db.execute<{ job: string; ts: string | null }>(sql`
@@ -25,11 +25,6 @@ export async function GET() {
     SELECT count(*)::text AS n FROM payslips WHERE status = 'parsed'
   `);
 
-  const snapshotAge = await db.execute<{ days: string | null }>(sql`
-    SELECT extract(epoch FROM now() - max(captured_at))::text AS days
-    FROM monthly_snapshots WHERE status = 'done'
-  `);
-
   const lines: string[] = [
     "# HELP job_last_success_timestamp Unix time of the last successful run.",
     "# TYPE job_last_success_timestamp gauge",
@@ -40,9 +35,6 @@ export async function GET() {
     "# HELP payslips_pending_verification Payslips parsed but awaiting the human gate.",
     "# TYPE payslips_pending_verification gauge",
     `payslips_pending_verification ${pending.rows[0]?.n ?? 0}`,
-    "# HELP monthly_snapshot_age_seconds Age of the newest completed monthly snapshot.",
-    "# TYPE monthly_snapshot_age_seconds gauge",
-    `monthly_snapshot_age_seconds ${snapshotAge.rows[0]?.days ?? -1}`,
     "",
   ];
 

@@ -29,6 +29,83 @@
       "when": 1788275053393,
       "tag": "0003_special_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788357656675,
+      "tag": "0004_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788374516392,
+      "tag": "0005_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788376452713,
+      "tag": "0006_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788398885246,
+      "tag": "0007_retire_teable",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788478686914,
+      "tag": "0008_provider_links_user_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788479810645,
+      "tag": "0009_platform_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788480737613,
+      "tag": "0010_integrations",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788529410257,
+      "tag": "0011_transactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788550245481,
+      "tag": "0012_interests",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788590526854,
+      "tag": "0013_expenses_ownership_fixes",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788592866677,
+      "tag": "0014_interest_posting_fixes",
+      "breakpoints": true
     }
   ]
 }

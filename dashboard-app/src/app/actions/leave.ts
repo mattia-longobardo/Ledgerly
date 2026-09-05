@@ -3,11 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/require-user";
-import { isWeekendBlocked, trekConfigured } from "@/lib/clients/trek";
-import { runTrekSync, type TrekSyncResult } from "@/lib/jobs/trek-sync";
+import { isWeekendBlocked } from "@/lib/clients/trek";
+import type { TrekCallOptions } from "@/lib/clients/trek";
+import { disabledTrekSync, runTrekSync, type TrekSyncResult } from "@/lib/jobs/trek-sync";
+import { openPrincipalConnection } from "@/modules/integrations/ui/principal-connection";
 import * as leave from "@/lib/repo/leave";
 import { yearOf } from "@/lib/time";
 import { errorMessage, fail, succeed, type ActionResult } from "./types";
+
+/** The signed-in user's Trek credential as call options, or null when Trek is not connected. */
+async function trekCall(): Promise<TrekCallOptions | null> {
+  const opened = await openPrincipalConnection("trek");
+  if (!opened) return null;
+  return { config: { baseUrl: opened.credentials.baseUrl!, token: opened.credentials.token! } };
+}
 
 const LEAVE_PATHS = ["/", "/work"] as const;
 
@@ -69,6 +78,7 @@ export async function setLeaveDay(
     return fail("That is not a valid leave day. Pick a date, then a full or half day.");
   }
   const { date, fraction, kind, note } = parsed.data;
+  const call = await trekCall();
 
   // Refused before anything is written: Trek's plan blocks weekends, so staging
   // one would create a row that can never reach Trek and would be pulled away
@@ -80,7 +90,7 @@ export async function setLeaveDay(
       queued: false,
       weekendBlocked: true,
       message: "Trek's leave plan blocks weekends, so Saturdays and Sundays can't be booked.",
-      sync: await noopSync(date),
+      sync: await noopSync(date, call),
     });
   }
 
@@ -90,7 +100,9 @@ export async function setLeaveDay(
     return fail(errorMessage(err));
   }
 
-  const sync = await runTrekSync({ year: yearOf(date), withStats: false });
+  const sync = call
+    ? await runTrekSync({ year: yearOf(date), withStats: false, call })
+    : disabledTrekSync(yearOf(date));
   revalidateLeave();
 
   return succeed({
@@ -131,7 +143,10 @@ export async function removeLeaveDay(
     return fail(errorMessage(err));
   }
 
-  const sync = await runTrekSync({ year: yearOf(date), withStats: false });
+  const call = await trekCall();
+  const sync = call
+    ? await runTrekSync({ year: yearOf(date), withStats: false, call })
+    : disabledTrekSync(yearOf(date));
   revalidateLeave();
 
   return succeed({
@@ -161,9 +176,13 @@ export async function syncLeaveNow(
   if (!parsed.success) return fail("That is not a valid year.");
 
   try {
-    const sync = await runTrekSync({
-      ...(parsed.data.year !== undefined ? { year: parsed.data.year } : {}),
-    });
+    const call = await trekCall();
+    const sync = call
+      ? await runTrekSync({
+          ...(parsed.data.year !== undefined ? { year: parsed.data.year } : {}),
+          call,
+        })
+      : disabledTrekSync(parsed.data.year ?? new Date().getFullYear());
     revalidateLeave();
     if (sync.status === "failed") {
       return fail(sync.errors[0] ?? "The leave sync failed. Trek did not answer.");
@@ -175,9 +194,10 @@ export async function syncLeaveNow(
 }
 
 /** A day refused locally never reaches Trek, so it reports an untouched pass. */
-async function noopSync(date: string): Promise<TrekSyncResult> {
+async function noopSync(date: string, call: TrekCallOptions | null): Promise<TrekSyncResult> {
+  if (!call) return disabledTrekSync(yearOf(date));
   return {
-    status: trekConfigured() ? "ok" : "disabled",
+    status: "ok",
     year: yearOf(date),
     pulled: 0,
     deleted: 0,

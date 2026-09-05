@@ -14,7 +14,7 @@ import { fromCents, toCents, type MoneyInput } from "./money";
  *   2026 Q2  accrued 828,21  paid 16/07/2026  net 825,21
  *
  * and 20,802 + 30,926 + 30,427 = 82,155 units × 27,121 = 2.228,13, the balance
- * Teable carries. Treating the accrual month as the deposit month would put
+ * on record. Treating the accrual month as the deposit month would put
  * money in the fund up to four months before it was actually invested, which
  * inflates the denominator of every return figure.
  */

@@ -7,6 +7,7 @@ import {
   verifyCronSecret,
   verifyWebhookSecret,
 } from "@/lib/auth/machine";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 
 const CRON_SECRET = "cron-secret-0123456789abcdef";
 const WEBHOOK_SECRET = "webhook-secret-0123456789abcdef";
@@ -21,12 +22,11 @@ Object.assign(process.env, {
   OIDC_CLIENT_ID: "dashboard",
   OIDC_CLIENT_SECRET: "client-secret",
   AUTHORIZED_SUB: "00000000-0000-0000-0000-000000000001",
-  TEABLE_URL: "https://teable.example",
-  TEABLE_TOKEN: "teable-token",
   PAPERLESS_URL: "https://paperless.example",
   PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET,
   WEBHOOK_SECRET,
+  APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
 });
 
 function request(headers: Record<string, string> = {}, url = "https://dashboard.example/api/jobs/snapshot"): Request {

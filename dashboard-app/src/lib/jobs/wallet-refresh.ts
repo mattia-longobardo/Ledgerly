@@ -28,6 +28,7 @@ import { REVOLUT_COMPONENT_KEYS } from "@/lib/clients/wallet-accounts";
 import type { JobResult } from "@/lib/contracts";
 import { recordSnapshots } from "@/lib/repo/balances";
 import { finishRun, startRun, withJobLock } from "@/lib/repo/jobs";
+import { openOwnerConnection } from "@/modules/integrations/infrastructure/owner-connection";
 
 export const JOB_NAME = "wallet_refresh" as const;
 
@@ -44,11 +45,11 @@ function toAmount(value: number): string {
   return value.toFixed(2);
 }
 
-async function refresh(now: Date): Promise<Record<string, unknown>> {
+async function refresh(now: Date, token: string): Promise<Record<string, unknown>> {
   // All-or-nothing by design (§5 phase 1): getBalances() throws rather than
   // return a partial read, so a renamed account can never become a half-written
   // cache the dashboard then displays as fact.
-  const balances = await getBalances();
+  const balances = await getBalances({ token });
   await recordSnapshots([
     { source: "wallet", accountKey: "ing", balance: toAmount(balances.ing), capturedAt: now },
     {
@@ -82,7 +83,19 @@ export async function runWalletRefresh(input: RunWalletRefreshInput = {}): Promi
   const run = await startRun({ jobName: JOB_NAME, trigger: input.trigger ?? "cron" });
 
   try {
-    const detail = await withJobLock(LOCK_KEY, () => refresh(now));
+    // No owner, no connection, an unusable connection and a missing credential
+    // are all the same answer: nothing to refresh. A configuration state, not
+    // a failure — recorded so the run log explains the silence, never alerted
+    // on.
+    const owner = await openOwnerConnection("wallet");
+    const token = owner?.credentials.token;
+    if (!token) {
+      const skipped = { reason: "wallet_not_connected" };
+      await finishRun(run.id, "already_done", { detail: skipped });
+      return { job: JOB_NAME, status: "already_done", detail: skipped };
+    }
+
+    const detail = await withJobLock(LOCK_KEY, () => refresh(now, token));
 
     // Lock not acquired: a concurrent invocation owns the refresh. A `curl
     // --retry` after a timeout lands here, and must not read as an error.

@@ -3,33 +3,37 @@
 import { usePathname, useRouter } from "next/navigation";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
-type ViewKey = "overview" | "funds" | "vacation";
+type ViewKey = "overview" | "accounts" | "funds";
 
 const HREF: Record<ViewKey, string> = {
   overview: "/finance",
+  accounts: "/finance/accounts",
   funds: "/finance/funds",
-  vacation: "/finance/vacation",
 };
 
 const OPTIONS = [
   { value: "overview" as const, label: "Overview" },
+  { value: "accounts" as const, label: "Accounts" },
   { value: "funds" as const, label: "Funds" },
-  { value: "vacation" as const, label: "Vacation fund" },
 ];
 
 /**
  * Sub-views are routes, not client state: each one is still a server component
  * reading Postgres. The segmented control only navigates — there is no nested
  * navigation anywhere in the app.
+ *
+ * The vacation fund keeps its own route but no tab of its own until Phase 6;
+ * it stays reachable from a link on the Funds page.
  */
 export function FinanceTabs() {
   const router = useRouter();
   const pathname = usePathname() ?? "/finance";
 
-  const current: ViewKey = pathname.startsWith("/finance/funds")
-    ? "funds"
-    : pathname.startsWith("/finance/vacation")
-      ? "vacation"
+  const current: ViewKey = pathname.startsWith("/finance/accounts")
+    ? "accounts"
+    : pathname.startsWith("/finance/funds") ||
+        pathname.startsWith("/finance/vacation")
+      ? "funds"
       : "overview";
 
   return (

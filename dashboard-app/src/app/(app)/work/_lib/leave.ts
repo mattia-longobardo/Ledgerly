@@ -1,4 +1,5 @@
-import { trekConfigured, type LeaveFraction, type LeaveKind } from "@/lib/clients/trek";
+import type { LeaveFraction, LeaveKind } from "@/lib/clients/trek";
+import { isProviderConnectedForPrincipal } from "@/modules/integrations/ui/principal-connection";
 import { leaveVariance, flaggedMonths, type LeaveMonthVariance } from "@/lib/calc/leave-variance";
 import { leaveTakenByMonth } from "@/lib/calc/payroll";
 import { plannedDaysByMonth } from "@/lib/jobs/trek-diff";
@@ -136,7 +137,7 @@ export async function loadLeaveCalendar(
 
   return {
     year,
-    configured: trekConfigured(),
+    configured: await isProviderConnectedForPrincipal("trek"),
     months,
     byDate,
     variance,

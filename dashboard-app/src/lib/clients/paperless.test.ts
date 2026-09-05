@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpstreamError } from "@/lib/contracts";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 import {
   clearPayslipTagIdCache,
   downloadOriginal,
@@ -16,13 +17,12 @@ process.env.OIDC_ISSUER = "https://auth.example.test/application/o/dashboard/";
 process.env.OIDC_CLIENT_ID = "client";
 process.env.OIDC_CLIENT_SECRET = "secret";
 process.env.AUTHORIZED_SUB = "sub-123";
-process.env.TEABLE_URL = "https://teable.example.test";
-process.env.TEABLE_TOKEN = "teable-token";
 process.env.PAPERLESS_URL = "https://paperless.example.test/";
 process.env.PAPERLESS_TOKEN = "paperless-token";
 process.env.PAPERLESS_PAYSLIP_TAG_ID = "22";
 process.env.CRON_SECRET = "c".repeat(20);
 process.env.WEBHOOK_SECRET = "w".repeat(20);
+process.env.APP_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
 
 const fetchMock = vi.fn();
 globalThis.fetch = fetchMock as unknown as typeof fetch;
