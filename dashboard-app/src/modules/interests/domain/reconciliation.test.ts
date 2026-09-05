@@ -82,4 +82,29 @@ describe("reconcileInterest", () => {
     const summary = reconcileInterest([], [], period);
     expect(summary).toMatchObject({ periodStart: "2026-09-01", periodEnd: "2026-10-01" });
   });
+
+  // Ruling P3-C39 (B2): a claimed-but-unconfirmed accrual must read as
+  // neither "posted" nor "unposted" — `indeterminate` takes priority over
+  // the ordinary amount-comparison routing, even when the totals would
+  // otherwise look perfectly matched.
+  it("reports indeterminate, not matched, when an accrual is claimed but unconfirmed — even if the totals otherwise agree", () => {
+    const summary = reconcileInterest(
+      [{ accrualDate: "2026-09-01", net: "0.63", postingIndeterminate: true }],
+      [{ occurredAt: new Date("2026-09-01"), net: "0.63" }],
+      period,
+    );
+    expect(summary.status).toBe("indeterminate");
+  });
+
+  it("indeterminate takes priority even when only one of several accruals in the period is affected", () => {
+    const summary = reconcileInterest(
+      [
+        { accrualDate: "2026-09-01", net: "0.63" },
+        { accrualDate: "2026-09-02", net: "0.50", postingIndeterminate: true },
+      ],
+      [],
+      period,
+    );
+    expect(summary.status).toBe("indeterminate");
+  });
 });

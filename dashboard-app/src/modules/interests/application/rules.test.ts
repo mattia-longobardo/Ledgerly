@@ -16,6 +16,7 @@ function harness() {
     accruals: new MemoryInterestAccrualsRepository(),
     entries: new MemoryInterestEntriesRepository(),
     balances: { latestBalanceAsOf: async () => "1000.00" },
+    accounts: { ownedByUser: async () => true },
     clock: { now: () => new Date("2026-09-05T00:00:00Z") },
     audit: async () => {},
   };
@@ -120,6 +121,23 @@ describe("createInterestRule, updateInterestRule, listInterestRules", () => {
         taxRate: "0.26",
         dayCount: 365,
         effectiveFrom: "2026-13-45",
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  // Ruling P3-C42 (B7): before this check, the only thing standing between
+  // a rule's accountId and an account belonging to someone else entirely was
+  // an incidental filter three layers away in the accrual job's own balance
+  // lookup.
+  it("rejects an accountId that does not belong to the acting user", async () => {
+    const deps = { ...harness(), accounts: { ownedByUser: async () => false } };
+    await expect(
+      createInterestRule(deps)(testPrincipal(), {
+        accountId: "someone-elses-account",
+        annualRate: "0.0225",
+        taxRate: "0.26",
+        dayCount: 365,
+        effectiveFrom: "2026-01-01",
       }),
     ).rejects.toThrow(InvalidInputError);
   });

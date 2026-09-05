@@ -2,6 +2,7 @@ import type { DbClient } from "@/lib/db/client";
 import { recordAudit } from "@/platform/audit/record";
 import type { UseCaseDeps } from "../application/ports";
 import { drizzleAccountBalanceLookup } from "./account-balance-lookup";
+import { drizzleAccountOwnershipCheck } from "./account-ownership-check";
 import { DrizzleInterestAccrualsRepository } from "./drizzle-interest-accruals-repository";
 import { DrizzleInterestEntriesRepository } from "./drizzle-interest-entries-repository";
 import { DrizzleInterestRulesRepository } from "./drizzle-interest-rules-repository";
@@ -19,6 +20,7 @@ export function interestDeps(tx: DbClient, requestId?: string | null): UseCaseDe
     accruals: new DrizzleInterestAccrualsRepository(tx),
     entries: new DrizzleInterestEntriesRepository(tx),
     balances: drizzleAccountBalanceLookup(tx),
+    accounts: drizzleAccountOwnershipCheck(tx),
     clock: { now: () => new Date() },
     audit: (e) => recordAudit(tx, { ...e, requestId: requestId ?? null }),
   };

@@ -90,6 +90,24 @@ describe("DrizzleInterestRulesRepository", () => {
       expect(await repo.get(a.userId, theirs.id)).toBeNull();
     });
   });
+
+  // Ruling P3-C42 (B7): `createInterestRule`'s own ownership check is
+  // application-level defense; this proves the database-level backstop the
+  // migration adds — `interest_rules_owner`'s `WITH CHECK` now also asserts
+  // `account_id` belongs to `user_id`, not just that `user_id` matches the
+  // caller. Genuine `withUserContext` (not `withSystemContext`, which
+  // bypasses the policy) is required for the policy itself to be in force.
+  it("the database rejects (WITH CHECK) a rule whose account belongs to a different user, even naming the caller's own userId", async () => {
+    const { a, b } = await seedTwoUsers();
+    const db = await testDb();
+    const err: unknown = await withUserContext(db, { userId: a.userId }, (tx) =>
+      new DrizzleInterestRulesRepository(tx).create(newRule(a.userId, b.accountId)),
+    ).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as { cause?: { message?: string } }).cause?.message).toMatch(
+      /row-level security policy for table "interest_rules"/,
+    );
+  });
 });
 
 describe("DrizzleInterestAccrualsRepository", () => {
@@ -156,6 +174,70 @@ describe("DrizzleInterestAccrualsRepository", () => {
       expect(untouched!.postedAt).toBeNull();
 
       await expect(accruals.markPosted(created.id, crypto.randomUUID(), new Date())).resolves.toBe(true);
+    });
+  });
+
+  // Ruling P3-C39 (B2): this is the actual defence the review demanded —
+  // proof that lives at the database, not in the job's in-process advisory
+  // lock. Two concurrent callers race the same conditional `UPDATE ...
+  // WHERE posted_at IS NULL`; Postgres serialises writes to the same row, so
+  // exactly one of these two promises can ever resolve `true`, with no lock
+  // of any kind involved in this test at all.
+  it("claimForPosting is what stops a double post — two concurrent claims on the same accrual, only one wins", async () => {
+    const { userId, accountId } = await seed();
+    const db = await testDb();
+    const { ruleId, accrualId } = await withUserContext(db, { userId }, async (tx) => {
+      const rules = new DrizzleInterestRulesRepository(tx);
+      const rule = await rules.create(newRule(userId, accountId));
+      const accruals = new DrizzleInterestAccrualsRepository(tx);
+      const created = await accruals.upsert({
+        ruleId: rule.id, accrualDate: "2026-09-01", balanceBasis: "1000.00",
+        gross: "0.061644", tax: "0.016027", net: "0.05", carryAfter: "-0.005617",
+        source: "computed", postedAt: null, entryId: null,
+      });
+      return { ruleId: rule.id, accrualId: created.id };
+    });
+
+    const results = await Promise.all([
+      withUserContext(db, { userId }, (tx) => new DrizzleInterestAccrualsRepository(tx).claimForPosting(accrualId, new Date("2026-09-01T12:00:00Z"))),
+      withUserContext(db, { userId }, (tx) => new DrizzleInterestAccrualsRepository(tx).claimForPosting(accrualId, new Date("2026-09-01T12:00:01Z"))),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+
+    await withUserContext(db, { userId }, async (tx) => {
+      const [row] = await new DrizzleInterestAccrualsRepository(tx).forRule(ruleId, "2026-09-01", "2026-09-01");
+      expect(row!.postedAt).not.toBeNull();
+    });
+  });
+
+  it("releaseClaim reverts postedAt to null, but refuses to touch a row whose entryId is already set", async () => {
+    const { userId, accountId } = await seed();
+    const db = await testDb();
+    await withUserContext(db, { userId }, async (tx) => {
+      const rules = new DrizzleInterestRulesRepository(tx);
+      const rule = await rules.create(newRule(userId, accountId));
+      const accruals = new DrizzleInterestAccrualsRepository(tx);
+      const created = await accruals.upsert({
+        ruleId: rule.id, accrualDate: "2026-09-01", balanceBasis: "1000.00",
+        gross: "0.061644", tax: "0.016027", net: "0.05", carryAfter: "-0.005617",
+        source: "computed", postedAt: null, entryId: null,
+      });
+
+      await expect(accruals.claimForPosting(created.id, new Date("2026-09-01T12:00:00Z"))).resolves.toBe(true);
+      // A read-only Wallet failure before any write — safe to release.
+      await accruals.releaseClaim(created.id);
+      const [released] = await accruals.forRule(rule.id, "2026-09-01", "2026-09-01");
+      expect(released!.postedAt).toBeNull();
+
+      // Re-claim, then confirm with an entryId — a subsequent releaseClaim
+      // must be a no-op: a confirmed post must never be un-posted.
+      await expect(accruals.claimForPosting(created.id, new Date("2026-09-01T13:00:00Z"))).resolves.toBe(true);
+      const entryId = crypto.randomUUID();
+      await accruals.markPosted(created.id, entryId, new Date("2026-09-01T13:00:00Z"));
+      await accruals.releaseClaim(created.id);
+      const [confirmed] = await accruals.forRule(rule.id, "2026-09-01", "2026-09-01");
+      expect(confirmed!.postedAt).not.toBeNull();
+      expect(confirmed!.entryId).toBe(entryId);
     });
   });
 
