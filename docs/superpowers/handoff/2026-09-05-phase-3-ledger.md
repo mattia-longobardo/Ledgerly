@@ -2,22 +2,31 @@
 Spec: docs/superpowers/specs/2026-09-02-finance-company-platform-design.md (read; binding authority)
 
 This is the Phase 3 execution record, in the shape Phase 2's ledger
-(`docs/superpowers/handoff/2026-09-04-phase-2-ledger.md`) established. Three
-parts:
+(`docs/superpowers/handoff/2026-09-04-phase-2-ledger.md`) established. This
+version corrects the one committed as `d644471`: that copy was written before
+the Phase 3 whole-branch review had reported, so it stopped at Task 22 and
+never recorded the review's three Critical defects, its thirteen Important
+findings, or the three-batch fix wave that closed all of them. The correction
+lands before anything is deployed, so this file is rewritten to be right
+rather than given a contradicting addendum. Four parts:
 
 1. **Rulings — planning** (`P3-1` … `P3-18`), taken while writing and
    repairing the plan, before any code was written. Source: the plan's own
    Rulings section, reproduced in `.superpowers/sdd/2026-09-05-phase-3-expenses-and-interests/task-23-brief.md`.
-2. **Rulings — execution** (`P3-C1` … `P3-C38`), taken by the controller
-   during the 22-task run. Source: the running ledger, quoted below.
+2. **Rulings — execution** (`P3-C1` … `P3-C48`), taken by the controller
+   during the 22-task run and the whole-branch review's fix wave. Source: the
+   running ledger, quoted below.
 3. **Deferred by design** — what Phase 3 deliberately left for later.
+4. **The running ledger, verbatim** — the full record, including the
+   whole-branch review's four area reports (`wb-1`..`wb-4`), the rulings made
+   on their findings, the three fix-wave batches, and their independent
+   re-reviews (`rr-a`/`rr-b`/`rr-c`), all **APPROVED**.
 
-The running ledger itself is copied verbatim at the end, per the Phase 0/1 and
-Phase 2 precedent. The pre-flight conflict scan is
+The pre-flight conflict scan is
 `.superpowers/sdd/2026-09-05-phase-3-expenses-and-interests/preflight-scan.md`;
-every per-task brief, report, review diff and fix diff lives in that same
-directory as `task-N-brief.md` / `task-N-report.md` / `task-N-review.diff` /
-`task-N-fixN.diff`.
+every per-task brief, report, review diff and fix diff, the whole-branch
+review's four diff packages, and the three re-review packages all live in
+that same directory.
 
 Baseline before Task 1 (commit `8b108a2`): typecheck clean, 706 unit / 70
 files, 49 itest / 20 files, build ok.
@@ -55,13 +64,16 @@ or contradicted by execution, that is called out.
 
 ---
 
-## Rulings — execution (P3-C1 … P3-C38)
+## Rulings — execution (P3-C1 … P3-C48)
 
-39 rulings under 38 numbers. **`P3-C38` was assigned twice** — once to Task 21's
+49 rulings under 48 numbers. **`P3-C38` was assigned twice** — once to Task 21's
 stale-brief-line finding and once to the Task-23-vs-whole-branch-review ordering
 decision. Both are recorded below as *(first use)* and *(second use)*; the
 numbers are left as the running ledger assigned them so that ledger citations
 still resolve, rather than renumbered here and made to disagree with the source.
+`P3-C39` … `P3-C48` were made after Task 23's original checkpoint, on the
+whole-branch review's findings — see the new "Whole-branch review and fix-wave
+rulings" section below the Interests rulings.
 
 Where the ledger recorded no explicit "cost if wrong", this table says
 **not recorded** rather than supplying one.
@@ -194,6 +206,179 @@ Where the ledger recorded no explicit "cost if wrong", this table says
   *Why:* the API provides the update path (Task 20's PATCH, tested), the spec's page map has only the list and detail routes, and a UI edit affordance would today be the natural home for a posting-mode toggle — which is deliberately absent while the adapter's flip-the-switch hazard is being removed. A rule-edit surface belongs to a later phase that can ship it together with a safe posting-mode control.
   *Cost if wrong:* editing a rule requires the API until then.
 
+### Whole-branch review and fix-wave rulings (P3-C39 … P3-C48)
+
+Made after Task 23's original checkpoint (`d644471`), on the findings of the
+whole-branch review dispatched over `67747cb..15bfa94` (41 commits, split
+`wb-1` persistence/RLS, `wb-2` expenses + sync engine, `wb-3` interests/the
+money path, `wb-4` API/UI/docs). That review found **three Critical defects**
+and **thirteen Important findings** — see "The whole-branch review's
+findings" below for the full list. These rulings decided how to fix them,
+before dispatching the three-batch fix wave.
+
+- **P3-C39 (posting claim) — adopt `wb-3`'s committed-claim fix, shaped so it
+  fails toward NOT paying.** `markPosting` does a conditional `UPDATE
+  interest_accruals SET posted_at = now() WHERE id = $1 AND posted_at IS NULL
+  RETURNING id` **before** the Wallet call; a confirmed success then writes
+  `entry_id`; a confirmed failure reverts `posted_at` to null. A crash in
+  between leaves `posted_at` set with `entry_id` null — an observable
+  in-flight state, which reconciliation and the UI must surface as
+  indeterminate, never as paid and never as nothing.
+  *Why:* under-paying is visible and recoverable; double-paying real money is
+  neither.
+  *Cost if wrong:* an interrupted post needs an operator to resolve one
+  clearly-flagged row instead of resolving nothing.
+- **P3-C40 (date grain) — post the bare `accrualDate`, not a timestamp, so
+  the write and the duplicate-check read use the same grain.**
+  *Why:* removes the timezone question entirely instead of documenting it.
+  *Cost if wrong:* Wallet stores a date where it previously got midnight
+  UTC — the same instant it was already resolving to.
+- **P3-C41 (marker) — the note marker gets a per-rule suffix, and the
+  duplicate check matches on the suffixed marker.**
+  *Why:* two rules on one account can then never adopt each other's record.
+  Safe to change freely — nothing has posted in production, Phase 3 is not
+  deployed.
+  *Cost if wrong:* not recorded.
+- **P3-C42 (recurring index) — the DETECTOR's grouping key is the truth;
+  widen the constraint to `(user_id, payee, currency, sign)` rather than
+  collapsing the detector's groups.**
+  *Why:* a EUR series and a USD series genuinely are two series and the UI
+  should show both; collapsing them would hide one.
+  *Cost if wrong:* `recurring_patterns` carries two columns it would not
+  otherwise need.
+- **P3-C43 (negative balance) — do not accrue at all on a negative balance;
+  record a visible skip with its reason, rather than writing net `0.00` and
+  carrying an unbounded negative remainder.**
+  *Why:* the prior behaviour silently consumed later real interest, and
+  "never invent financial data" cuts against writing a `0.00` row that
+  reconciles as matched while a debt accumulates behind it. A deliberate
+  divergence from `interest.py`, which handled this case badly; documented as
+  such.
+  *Cost if wrong:* a negative-balance day is absent rather than
+  present-as-zero — the more honest of the two.
+- **P3-C44 (inert rules) — keep `dayCount: "actual"` and `compounding:
+  "monthly"/"none"` accepted by the schema (spec §5.7 fidelity, P3-7), but
+  make the inertness visible: a per-rule skip reason in the job detail, a
+  skipped counter, and a UI signal on the rule.**
+  *Why:* rejecting them at the write boundary would contradict the schema
+  the spec asked for.
+  *Cost if wrong:* a forward-compat placeholder is visible as unsupported
+  rather than unavailable.
+- **P3-C45 (transfer pairing) — pairing must reconsider already-stored
+  unpaired legs, not only this run's incoming batch — bounded to a window
+  rather than a full-table scan.** *(Superseded in implementation — see
+  batch C1 below: the implementer substituted a lookup by the provider's own
+  counter-record id, judged better on its merits and approved by the
+  re-reviewer.)*
+  *Cost if wrong (as specified):* a bounded window still misses a
+  pathologically late leg, which is strictly better than today's guaranteed
+  miss beyond 7 days.
+- **P3-C46 (fix-wave batching) — three SEQUENTIAL dispatches, not parallel.**
+  *Why:* the standing rule against concurrent implementers holds, and two of
+  the three batches need their own migration, which would collide. Order: A
+  persistence (owns the next migration number), B the money path (owns the
+  one after), C sync + UI (no migration).
+  *Cost if wrong:* not recorded.
+- **P3-C47 (re-verification) — the fix wave invalidates Task 23's gate run
+  and its graphify regeneration; both re-run after the wave, and the
+  checkpoint gets its commit range corrected rather than an addendum, since
+  the correction lands before anything is deployed.**
+  *Why:* stated in the ruling itself.
+  *Cost if wrong:* not recorded. (This is the ruling this correction task
+  executes.)
+- **P3-C48 (parked, not fixed) — `interest-accrual-notice.ts` hardcodes the
+  provider's brand name outside `*-adapter.ts`.**
+  *Why:* it is a NEW INSTANCE of an existing violation
+  (`RulesTable.tsx`'s "Posts to Wallet" predates the fix wave), not a new
+  violation, so opening a fourth fix round for UI copy was judged not worth
+  it. Parked for whichever later phase reviews user-facing copy.
+  *Cost if wrong:* one more string to change when the provider abstraction
+  is tightened.
+
+### The whole-branch review's findings (for reference)
+
+**Three Critical defects**, none of which 22 individually-clean per-task
+reviews had caught, because a per-task reviewer cannot see across tasks:
+
+1. **`wb-1`** — `recurring_patterns_user_payee_uq` was `(user_id, payee)`
+   while `detectRecurring` groups on payee + currency + sign. Two groups
+   sharing a payee (a currency split, or an income/expense sign split) 23505
+   on `replaceAll`'s multi-row INSERT, which escapes `apply()` — and
+   `wallet-provider-adapter` runs that in the SAME transaction as
+   `syncProviderTransactions`, so the entire sync run rolls back. The
+   detector re-derives from `listAll()` every run, so it repeats forever:
+   expenses sync stops permanently for that user.
+2. **`wb-3`** — the posting duplicate-check queried a date grain it did not
+   write (a full timestamp written, a bare date read), which — after the
+   automatic backlog sweep had already been removed (P3-C37) — was the ONLY
+   thing between a mid-post restart and a second real posting, unverified
+   against a live token.
+3. **`wb-3`** — posting correctness rested on an advisory lock held open
+   across the Wallet network round trip (a call that can run for minutes).
+   A pooler kill, timeout, or failover releases the lock mid-POST; the
+   crontab retries on failure, so concurrent triggers were routine. Two
+   concurrent ticks could both post.
+
+**Thirteen Important findings**, closed in the same fix wave: four tables'
+RLS declared but unobserved by any real test (`wb-1`); a fake/real `list()`
+`from`/`to` divergence and an unvalidated wire format (`wb-1`); a fake/real
+`liveFor()` divergence with two providers on one account, pre-existing from
+Phase 2 (`wb-1`); label/category ownership enforced nowhere (`wb-1`);
+`DrizzleInterestRulesRepository.list()` with no `ORDER BY` (`wb-1`); transfer
+legs more than 7 days apart never pairing, double-counting spend (`wb-2`);
+`PostRecordInput.amount` typed `number` against every other money field being
+`string` (`wb-2`); `interest_entries.transaction_id` typed `uuid` while
+receiving Wallet's opaque provider id, so money could leave while the local
+row rolled back (`wb-3`); "already posted" concluded with no per-rule scoping,
+letting two rules on one account adopt each other's record (`wb-3`);
+`netCents` clamping to zero while `carryAfter` carries an unbounded negative
+remainder (`wb-3`); `dayCount`/`compounding` combinations accepted by the
+schema producing a permanently inert rule with no signal (`wb-3`); nothing
+validating a rule's account belongs to the rule's user (`wb-3`); and
+`interest_accrual` missing from the admin panel's Scheduled-jobs arrays that
+two shipped documents told operators to check (`wb-4`).
+
+### Fix wave — three sequential batches, all approved on first re-review
+
+- **Batch A — persistence** (commits `48709aa`, `1e32ff9`, `f00c132`;
+  migration `0013_expenses_ownership_fixes.sql`). Unit 873→882/93 files;
+  integration 103→113/30 files; tsc clean. Closed A1 (Critical 1, the
+  recurring-patterns index, proven with a real-Postgres test inserting two
+  same-payee groups differing only by currency and only by sign), A2 (RLS for
+  the four unobserved tables, proven by deliberately re-weakening the policy
+  on a scratch database and confirming the new test fails before restoring
+  it), A3–A7 (the remaining `wb-1` Important findings). Re-reviewed as
+  `rr-a` — **APPROVED**, with file:line evidence for every item.
+- **Batch B — the money path** (commits `da41da2`, `61c9c1c`, `0a0905b`,
+  `f3f3832`, `ce743b4`; migration `0014_interest_posting_fixes.sql`). Unit
+  882→897/93 files; integration 113→118/30 files; tsc clean. Closed both
+  remaining Criticals (the durable posting claim per P3-C39, and the
+  date-grain fix per P3-C40) plus B3–B9 (per-rule markers, negative-balance
+  skip, visible skip reasons and counters, account-ownership validation, and
+  a money-safety batch: decimal-string amounts, no silent response-shape
+  swallowing, a single cent-rounding point). The runbook now requires
+  verifying the posting round-trip against a live token before any rule is
+  first flipped to `post_to_provider`. Re-reviewed as `rr-b` — **APPROVED**;
+  the re-reviewer independently confirmed the claim commits before the
+  Wallet call regardless of the surrounding lock's transaction, and that
+  `releaseClaim` cannot revert a claim after the money has left.
+- **Batch C — sync + UI, no migration** (commits `aef890a`, `ab25461`,
+  `9497f59`, `60cda52`, `09b5739`). Unit 897→909/94 files; integration
+  118→119/31 files; tsc clean. C1 (transfer pairing) was **not** implemented
+  as briefed by P3-C45 — the substitution (lookup by Wallet's own
+  `transferCounterRecordId` rather than a bounded-window rescan) is judged
+  better and is proven with legs synced 10 days apart across two separate
+  runs. C2 added `interest_accrual` to the admin panel. C3–C7 closed the
+  remaining `wb-2`/`wb-4` findings, including both broken cut-over doc links.
+  Re-reviewed as `rr-c` — **APPROVED**; ruling P3-C48 (the one parked minor)
+  was recorded during this re-review.
+
+**Phase 3 fix wave: CLOSED. All three batches approved on the first
+re-review.** Final counts after the fix wave: **909 unit tests / 94 files**,
+**119 integration tests / 31 files**, `tsc --noEmit` clean, `npm run build`
+succeeds, `npm run e2e` 4/4, `npm run openapi:generate` produces no drift —
+all re-confirmed by this correction task on `09b5739` (see the checkpoint).
+
 ### Consequences of P3-C37 and P3-C29 that later work must not contradict
 
 Two behaviours changed late in the phase, after most of the plan text was
@@ -213,6 +398,18 @@ written. Any document that describes the old behaviour is wrong:
    against them (`paidCents === 0 && accruedCents > 0`). Verified in
    `src/modules/interests/domain/reconciliation.ts:78-80` at the exit gate.
 
+A third change landed later still, in the whole-branch review's fix wave, and
+any document written against Task 23's original checkpoint predates it too:
+
+3. **Posting correctness rests on a durable database claim, not the advisory
+   lock.** `claimForPosting` commits `UPDATE interest_accruals SET posted_at
+   = $2 WHERE id = $1 AND posted_at IS NULL RETURNING id` before the Wallet
+   call. The lock (`withJobLock`) is retained and documented as an
+   optimisation only. A crash between a successful post and the local write
+   leaves `postedAt` set with `entryId` null — an observable in-flight state,
+   never reported as paid and never silently retried. Rulings **P3-C39** and
+   **P3-C40**; proven in `rr-b`.
+
 ---
 
 ## Deferred by design
@@ -226,7 +423,10 @@ was decided and recorded while the phase ran.
 - **`monthly`/`none` compounding, and `dayCount: "actual"`** — accepted by the
   schema for spec §5.7 fidelity, never computed (P3-7). The accrual job skips
   such a rule and, since P3-C32, so does the projection. A rule created with
-  them produces no accrual and no forecast, by design.
+  them produces no accrual and no forecast, by design. Since the fix wave's
+  **P3-C44**, this inertness is also visible: a per-rule skip reason in the
+  job detail, a skipped counter, and a signal on the rule's own page — it is
+  no longer a silent no-op.
 - **Reconciliation persisted as `reconciliation_issues` rows** — reconciliation
   is computed on read only in Phase 3 (`reconcileInterest`), matching the spec's
   Funds section's later, more elaborate reconciliation-issue model rather than
@@ -249,6 +449,10 @@ was decided and recorded while the phase ran.
 - **`postRecords` amount round-trip verification, and the Wallet `/records` and
   `/categories` field names generally** — unverifiable without a live token
   (P3-10). Every guess fails loudly behind Zod rather than mis-mapping silently.
+  The fix wave's batch B turned the amount round-trip and the posting
+  date-grain match into a documented **precondition** in the runbook: verify
+  both against a live token before any rule is first switched to
+  `post_to_provider`.
 
 ---
 
@@ -256,12 +460,17 @@ was decided and recorded while the phase ran.
 
 Copied from
 `.superpowers/sdd/2026-09-05-phase-3-expenses-and-interests/progress.md`
-without edit, per the Phase 0/1 and Phase 2 precedent.
-It is a **snapshot taken when this checkpoint was committed**, while the Phase 3
-whole-branch review was still running; the live ledger at that path continues
-past this copy. Anything the review adds after this point belongs in a dated
-addendum to `docs/superpowers/handoff/2026-09-05-phase-3-checkpoint.md`, per
-ruling P3-C38 (second use).
+without edit, per the Phase 0/1 and Phase 2 precedent. The version committed
+as `d644471` copied only as far as the running ledger had reached at that
+moment — Tasks 1–22 plus the start of the whole-branch review, with only its
+`wb-4` package having reported. This correction replaces that partial copy
+with the **complete** record: all four whole-branch review packages
+(`wb-1`..`wb-4`), the rulings made on their findings (`P3-C39`..`P3-C48`,
+reproduced in full above), the three fix-wave batches, and their independent
+re-reviews (`rr-a`/`rr-b`/`rr-c`), ending where the source file itself ends —
+"Phase 3 fix wave: CLOSED. All three batches approved on the first
+re-review." Nothing follows that line in the source at the time of this
+correction, so there is no further addendum owed here.
 
 ---
 
@@ -481,3 +690,88 @@ Each reviewer carries the phase's own observed defect classes as its attention l
 - MINOR: RulesTable renders the raw accountId UUID as the row label; multiple rules are indistinguishable without opening each.
 - MINOR: generateMetadata on the transaction detail page does not use requirePrincipalOrRedirect, so an unauthenticated direct hit gets a framework error page where the body would redirect to /signin. No data leak.
 - Clean: no secret exposure, no cross-user leak (every new route scoped + adversarial itest), no OpenAPI collision, no provider-name leak, error mapping consistent across all three modules, empty states never fabricate a zero, no_data threaded correctly through all five layers.
+
+### wb-2 (expenses domain + sync engine) — Needs fixes
+- IMPORTANT: transfer pairing is batch-local. transferCandidates is built only from this run's `incoming`, and pairTransfers never reconsiders already-created transactions with transferGroupId IS NULL. Two legs whose recordDates are more than RECORDS_LOOKBACK_DAYS=7 apart (delayed clearing, or an account linked later) never pair: by the time leg B arrives, leg A has scrolled out of the lookback and is never refetched. Both stay type="transfer" with no shared group — the double-counted-spend shape pairing exists to prevent. Untested: the transfer test only exercises both legs in one run.
+- IMPORTANT: wallet.ts PostRecordInput.amount is typed `number` while every read-side money field in the same module is `string`, and the body ships via bare JSON.stringify with no 2dp formatting. The signature forces a Number() conversion at the one call site that writes real money externally. Cross-check with wb-3 (the call site is its quarter) before ruling on the fix shape.
+- MINOR: mapWalletRecord takes amount from a JSON float via toFixed(2); sync never re-patches amount on update, so a misround at creation is permanent. Mirrors the pre-Phase-3 getAccounts pattern.
+- MINOR: assertPageNotTruncated's 200/500 ceilings hard-fail a busy account's sync with no auto-recovery (cursor only advances on success). Self-documented trade-off; operational watch-item.
+- MINOR: transactionsUpdated increments even when update() returns "version_mismatch" or null. Stats only.
+- Clean: upsert-only verified branch by branch (the overlap cannot duplicate), in-run dedup correct in all three loops, two-phase fetch/apply enforced at type level, token never in a URL/error/audit, redactCredentials on every failure path.
+
+### wb-1 (persistence/RLS) — Needs fixes
+- CRITICAL 1: recurring_patterns_user_payee_uq is (user_id,payee) but detectRecurring groups on payee+currency+sign by design, emitting payee: last.payee per group. Two groups -> same payee -> 23505 on replaceAll's multi-row INSERT -> escapes apply(), which wallet-provider-adapter runs in ONE transaction with syncProviderTransactions -> the entire run rolls back, and the detector re-derives from listAll() every run, so it repeats forever. Expenses sync stops permanently. Also reachable via the sign split (recurring income + recurring expense, same payee). No test anywhere inserts two same-payee patterns.
+- IMPORTANT 2: transaction_categories, transaction_labels, transaction_label_links, recurring_patterns have RLS declared but nothing observes it. The four cross-user tests that exist run under withSystemContext, where app_is_system() short-circuits the policy. Deleting a CREATE POLICY leaves the suite green; the table then fails closed in production on first deploy.
+- IMPORTANT 3: list() from/to divergence — fake compares ISO strings lexically, Drizzle compares Dates; schema declares from as z.string() with no format validation. An offset timestamp drops a day's rows in the fake only; "banana" is an empty 200 in the fake and a 500 in production. Untested on both sides.
+- IMPORTANT 4: liveFor() — fake picks the first matching link then checks missingSince; Drizzle puts isNull(missingSince) in the WHERE. With two providers on one account (a state interest-accrual.itest.ts already anticipates), the fake returns null where production returns the live link, inverting delete-account and update-account guards. Pre-existing from Phase 2, made reachable by Phase 3's second provider.
+- IMPORTANT 5: label/category ownership enforced nowhere — setLabels checks the transaction's owner, not the labels'; the transaction_label_links policy joins transactions only; categoryId's FK is satisfied by any user's category. PATCH with another user's labelIds/categoryId succeeds. Integrity, not disclosure, today.
+- IMPORTANT 6: DrizzleInterestRulesRepository.list() has no ORDER BY while the fake returns insertion order; every other list in the phase orders explicitly. Rules reorder after an edit.
+- MINOR 7-11: fakes echo numeric strings without column-scale normalisation; fake update() lets an explicit undefined null a field (Drizzle strips it); the two EXISTS policies reference the outer column unqualified (a future same-named column silently rebinds them); an unresolvable cursor restarts at page 1 with a non-null nextCursor (infinite loop for a follower); fakes hand out references into their own store.
+- Clean: migrations 0011/0012 verified column-by-column against schema AND snapshots, zero drift; all 8 tables ENABLE+FORCE with policies; the savepoint fix is complete and its tests genuinely prove it; the accrual precision chain is lossless; the postedAt/entryId conflict-set omission is correct in both implementations and proven through a re-read.
+
+### wb-3 (interests / the money path) — Needs fixes
+- CRITICAL 1: the crash-window guard queries a grain it does not write. POST sends recordDate "T00:00:00Z"; findPostedRecord queries recordDate=eq.<bare date>. If Wallet casts that in its own timezone (Europe/Rome, like this stack), the day resolves to the previous 22:00Z and never matches. Since the sweep-removal ruling, this check is the ONLY thing between a mid-post restart and a second real posting — and no doc requires verifying it before flipping a rule to post_to_provider. Both existing tests assert against mocks this repo wrote.
+- CRITICAL 2: withJobLock takes pg_try_advisory_xact_lock then sits idle-in-transaction across the whole Wallet round trip (default retryPolicy: 5 attempts, 20s timeout, 2->32s backoff = minutes). idle_in_transaction_session_timeout / pooler kill / failover releases the lock while the POST is in flight. The crontab uses curl --retry 3, and the tick returns 500 if ANY daily job fails, so concurrent triggers are routine. Both runs see postedAt null, both findPostedRecord empty, both POST. No test exercises lock contention for this job at all; a lock-skipped rule is also invisible (outcome null, no skipped counter).
+- IMPORTANT 3: interest_entries.transaction_id is uuid; the adapter writes Wallet's opaque record id (z.string(); every other provider id in the codebase is text). A non-UUID id throws on entries.create, the transaction rolls back, and real money is at Wallet with NO local record. No test in the package writes a posted entry to Postgres.
+- IMPORTANT 4: "already posted" concluded from account+day+marker+amount. noteMarker defaults to "auto-interest" for every rule and nothing stops two rules per account. Two rules computing the same cent: B adopts A's record and never posts (ledger claims 2x what landed). Differing by more than a cent: B throws PostFailedError forever.
+- IMPORTANT 5: netCents clamps at 0 but carryAfter keeps the whole negative remainder unbounded. 60 days at -2000.00 builds a -5.47 carry that silently eats ~12 days of real interest after a top-up, reconciling as matched throughout. The file's own doc comment names this pathology as the reason to reject negative rates; a negative balance reaches it by another door.
+- IMPORTANT 6: dayCount "actual" and compounding "monthly"/"none" are accepted by the schema, the DB checks and the public API, and produce a permanently inert rule with no log line, no UI signal, and no skipped counter in the job detail.
+- IMPORTANT 7: nothing validates that a rule's account belongs to the rule's user. createInterestRule takes accountId: z.string().min(1); the interest_rules policy checks user_id only. Today a foreign account yields balance === null via an incidental join in the balance lookup, so it never accrues — the right outcome by accident. liveFor runs under role: system with RLS bypassed and no userId of its own.
+- MINOR: post-interest-entry.ts:34 rounds gross through Number().toFixed(2) — a second rounding point, against the regex-never-Number constraint; PostFailedError also wraps findPostedRecord/getCategories, so a pre-POST read failure pages the operator with "money may already be at Wallet"; lock-skipped rules uncounted; postRecordsResponseSchema.catch([]) silently drops Wallet linkage on a shape change.
+- Clean: the math is a faithful single-rounding port with a 365-day conservation invariant test; strict parsing refuses to invent money; NO sweep survives (grep-verified: re-arming needs a loop, not a constant); the note is built from stored accrual values, proven by a test that edits the rate; attempts:1 on the write; failure isolation real; no credential anywhere; markPosted's boolean + throw-before-audit landed correctly.
+
+## Rulings on the whole-branch findings (made before dispatching the fix wave)
+- Ruling P3-C39 (posting claim): adopt wb-3's committed-claim fix, but shaped so it fails toward NOT paying. `markPosting` does a conditional `UPDATE interest_accruals SET posted_at = now() WHERE id = $1 AND posted_at IS NULL RETURNING id` BEFORE the Wallet call; a confirmed success then writes entry_id; a confirmed failure reverts posted_at to null. A crash in between leaves posted_at set with entry_id null — an observable in-flight state reconciliation and the UI must surface as indeterminate, not as paid and not as nothing. Why: under-paying is visible and recoverable, double-paying real money is neither. Cost if wrong: an interrupted post needs an operator to resolve one clearly-flagged row instead of resolving nothing.
+- Ruling P3-C40 (date grain): post the bare `accrualDate` so the write and the duplicate-check read use the same grain, rather than writing a timestamp and querying a day. Why: it removes the timezone question entirely instead of documenting it. Cost if wrong: Wallet stores a date where it previously got midnight UTC — the same instant it was already resolving to.
+- Ruling P3-C41 (marker): the note marker gets a per-rule suffix and the duplicate check matches on the suffixed marker, so two rules on one account can never adopt each other's record. Safe to change freely: nothing has posted in production, Phase 3 is not deployed.
+- Ruling P3-C42 (recurring index): the DETECTOR's grouping key is the truth — widen the constraint to match it (payee + currency + sign), adding the columns if the table lacks them, not collapse the detector's groups. Why: a EUR series and a USD series genuinely are two series and the UI should show both; collapsing them would hide one. Cost if wrong: recurring_patterns carries two columns it would not otherwise need.
+- Ruling P3-C43 (negative balance): do not accrue at all on a negative balance — record a visible skip with its reason — rather than writing net 0.00 and carrying an unbounded negative remainder. Why: the current behaviour silently consumes later real interest, and "never invent financial data" cuts against writing a 0.00 row that reconciles as matched while a debt accumulates behind it. This is a deliberate divergence from interest.py, which handled this case badly; document it. Cost if wrong: a negative-balance day is absent rather than present-as-zero, which is the more honest of the two.
+- Ruling P3-C44 (inert rules): keep `dayCount: "actual"` and `compounding: "monthly"/"none"` accepted by the schema — spec §5.7 fidelity is deliberate (P3-7) — but make the inertness visible: a per-rule skip reason in the job detail, a skipped counter, and a UI signal on the rule. Rejecting them at the write boundary would contradict the schema the spec asked for. Cost if wrong: a forward-compat placeholder is visible as unsupported rather than unavailable.
+- Ruling P3-C45 (transfer pairing): pairing must reconsider already-stored unpaired legs, not only this run's incoming batch — bounded to a window rather than a full-table scan. Cost if wrong: a bounded window still misses a pathologically late leg, which is strictly better than today's guaranteed miss beyond 7 days.
+- Ruling P3-C46 (fix-wave batching): the wave is three SEQUENTIAL dispatches, not parallel — the standing rule against concurrent implementers holds, and two of the three need their own migration, which would collide. Order: A persistence (owns the next migration number), B money path (owns the one after), C sync + UI (no migration).
+- Ruling P3-C47 (re-verification): the fix wave invalidates Task 23's gate run and its graphify regeneration. Both re-run after the wave, and the checkpoint gets its commit range corrected rather than an addendum, since the correction lands before anything is deployed.
+
+### Fix wave batch A — DONE (48709aa, 1e32ff9, f00c132)
+Unit 873->882 / 93 files; integration 103->113 / 30 files; tsc clean.
+- A1 closed by widening recurring_patterns uniqueness to (user_id, payee, currency, sign) per P3-C42, adding a `sign` column in new migration 0013_expenses_ownership_fixes.sql, proven by a real-Postgres test inserting two same-payee groups differing only by currency and only by sign.
+- A2 closed with src/lib/db/expenses-rls.itest.ts, and — the part that matters — the gap was proven empirically: the label-links policy was weakened back to its pre-fix shape on a fully re-migrated scratch database, the new test was confirmed FAILING, then the policy was restored and confirmed green. That is the proof the four tables never had.
+- A3, A4, A5, A6, A7 (expenses side) closed with matching fake/real changes and tests on both sides.
+- A7's two interests-side sub-items were left to batch B per the brief's scope restriction, and reported as a deliberate scope decision rather than silently dropped. Carried into fix-b-brief.md as B9.
+- Noted: a pre-existing `next lint` breakage, unrelated to the phase.
+
+### Fix wave batch B — DONE (da41da2, 61c9c1c, 0a0905b, f3f3832, ce743b4; migration 0014_interest_posting_fixes.sql)
+Unit 882->897 / 93 files; integration 113->118 / 30 files; tsc clean.
+- B1: the POST and the duplicate check now use the same grain, and the runbook requires verifying the round-trip against a live token before a rule is first flipped to post_to_provider.
+- B2: correctness moved off the advisory lock and onto a durable database claim — claimForPosting does `UPDATE interest_accruals SET posted_at = $2 WHERE id = $1 AND posted_at IS NULL RETURNING id`, committed BEFORE the Wallet call, with releaseClaim reverting on a confirmed failure. Proven by a repository-level test racing two concurrent claims with NO lock in the code path: removing the WHERE guard makes both resolve true. withJobLock is retained and documented in both jobs.ts and interest-accrual.ts as an optimisation, not the correctness boundary. Honest limitation reported: the end-to-end concurrent-job test probably has the lock resolve the race before the claim is exercised twice, which is exactly why the lock-free repository test exists.
+- Crash between a successful POST and the local write now leaves postedAt set with entryId null — the deliberate observable in-flight state, never retried (shouldPost and claimForPosting both refuse) and never reported as paid (reconciliation says indeterminate, not matched).
+- B3: interest_entries.transaction_id widened to text, with the first test in the codebase that drives a successful post all the way through to Postgres.
+- B4-B9: per-rule note markers, negative-balance skip (P3-C43), visible skip reasons + counter, account-ownership validation in both the use case and the policy's WITH CHECK, and the B8 money-safety batch (decimal-string amounts, no silent response-shape swallowing, single cent-rounding point).
+- Two deviations reported rather than hidden: schema/interests.ts edited (required by B3's own instruction, limited to the one column), and RuleDetail's new ruleInert prop left unwired because src/app/** belongs to batch C. Carried into fix-c-brief.md as C7.
+
+### Fix wave batch C — DONE (aef890a, ab25461, 9497f59, 60cda52, 09b5739; no migration)
+Unit 897->909 / 94 files; integration 118->119 / 31 files; tsc clean.
+- C1 was NOT implemented as briefed: instead of P3-C45's bounded-window rescan of stored unpaired legs, it looks the counterpart up directly by Wallet's own transferCounterRecordId (claimed equal to the counterpart's externalId) via a single links.byExternal lookup — no date window, no scan, so no pathologically-late leg is missed either. Proven with legs synced 10 days apart in two separate runs, unit plus a new real-Postgres test. Ruling P3-C45 is superseded by the implementation; the re-reviewer is asked to judge the substitution on its merits, specifically whether the externalId equality is established or assumed and whether an absent/unsynced counterpart degrades rather than throws.
+- C2: interest_accrual added to the admin JOBS/JOB_LABEL arrays, and its row surfaces batch B's skip and in-flight counts via a new pure interest-accrual-notice.ts.
+- C3, C4, C6, C7 closed; C7 wires batch B's ruleInert through the page so an inert rule visibly says so.
+- C5: both broken cut-over links fixed; whole tree scanned, remaining hits are historical planning snapshots.
+- Also added: a runbook section for the assertPageNotTruncated ceiling failure mode and its manual recovery (behaviour untouched, as instructed).
+- Concern reported: a genuinely thrown Postgres error mid-transaction still poisons that SQL transaction regardless of JS-level try/catch — inherent, mitigated by writing every new path so it cannot throw under expected conditions.
+
+### Fix-wave re-review dispatched
+Three packages, one per batch, each paired with its own brief and report: rr-a.diff (190k), rr-b.diff (252k, the money path), rr-c.diff (59k).
+
+#### rr-a — APPROVED
+A1-A7 all closed with file:line evidence. A1's new constraint matches the detector's grouping key exactly (not merely differently), and its itest would genuinely 23505 against the old index. A2's four tests all run under withUserContext and assert on err.cause.message, so they can actually fail. A3/A4/A6 each changed both implementations with a test that would fail if only one had. A5 refused at all three layers, each proven by a refusal test. No migration/snapshot/journal drift; no savepoint hazard introduced; the one changed pre-existing test was strengthened, not weakened.
+
+#### rr-c — APPROVED
+C1-C7 all closed with file:line evidence. The C1 substitution is judged sound: mapWalletRecord sets externalTransferRef from transferCounterRecordId while externalId is the record's own id, so the equality the lookup relies on is the SAME invariant the pre-existing in-run pairKey already used — inherited, not invented. Absent/null/unsynced counterpart all `continue` rather than throw. The new tests split the legs across two runs 10 days apart (beyond the 7-day lookback) and assert the shared group, and would fail against the batch-local code. Group-id minting matches pairTransfers' own scheme, so a late-found leg joins the canonical group a same-run pair would have gotten. Nothing in the new path can throw a Postgres error under an expected condition (update() returns "version_mismatch" rather than throwing; transferGroupId carries no FK), so the transaction-poisoning concern stays theoretical.
+Ruling P3-C48 (parked, not fixed): interest-accrual-notice.ts hardcodes the provider's brand name outside *-adapter.ts. It is a NEW instance of an existing violation, not a new violation — RulesTable.tsx's "Posts to Wallet" predates the fix wave — so opening a fourth round for UI copy is not worth it. Parked for whichever later phase reviews user-facing copy. Cost if wrong: one more string to change when the provider abstraction is tightened.
+
+#### rr-b — APPROVED (the money path)
+B1-B9 all closed with file:line evidence. The two things that most needed proving both hold:
+- The claim genuinely commits before the provider call: claimForPosting runs via withUserContext on the module-level pool-backed db, not on the tx the outer withJobLock transaction holds open, and a Pool-backed Drizzle db.transaction() acquires its own client rather than nesting as a savepoint. So the UPDATE commits independently, the durability is real, not decorative.
+- releaseClaim cannot revert a claim after the money left: guarded twice, at the DB level by `WHERE entry_id IS NULL` and at the call level by never being called after an ambiguous post error, only after a provably-pre-write read failure.
+Also confirmed: accountId is immutable in InterestRulePatch, so update() cannot reopen B7's ownership hole; the WITH CHECK constrains account_id, not just user_id; PostRecordInput.amount is now a decimal string converted once at the wire boundary.
+No new problems. The reviewer named one nuance explicitly as not-a-bug: tryPost opens a second pool connection inside the still-open job-lock transaction — the pre-existing pattern in this file, and precisely what makes the claim durable.
+
+## Phase 3 fix wave: CLOSED. All three batches approved on the first re-review.
