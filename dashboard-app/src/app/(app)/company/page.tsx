@@ -23,6 +23,11 @@ export const metadata = { title: "Company" };
 export default async function CompanyPage() {
   const principal = await requirePrincipalOrRedirect();
   const caps = await resolveCapabilities(principal, realProbes);
+  // `/company/payroll/[importId]` is gated on `payroll.upload || payroll.review`
+  // (matching `/company/payroll` itself); the "Latest import" link below must
+  // agree, or a viewer with only `payroll.read` could follow it into the full
+  // review screen the rest of this route family denies them.
+  const mayReviewImport = caps.permissions.has("payroll.upload") || caps.permissions.has("payroll.review");
 
   if (!caps.features.payroll) {
     return (
@@ -100,7 +105,7 @@ export default async function CompanyPage() {
                 }
               />
             </div>
-          ) : (
+          ) : mayReviewImport ? (
             <Link
               href={`/company/payroll/${overview.latestImport.id}`}
               className="flex min-h-11 items-center justify-between gap-3 py-2 transition-colors hover:bg-surface-hover"
@@ -110,6 +115,13 @@ export default async function CompanyPage() {
                 {statusChip(overview.latestImport.status, overview.latestImport.scanStatus).label}
               </span>
             </Link>
+          ) : (
+            <div className="flex min-h-11 items-center justify-between gap-3 py-2">
+              <span className="text-body text-fg">{overview.latestImport.fileName}</span>
+              <span className="text-body-sm text-fg-muted">
+                {statusChip(overview.latestImport.status, overview.latestImport.scanStatus).label}
+              </span>
+            </div>
           )}
         </Panel>
       </PageGrid>
