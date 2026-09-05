@@ -7,6 +7,7 @@ const probes = {
   connectionStates: async (_userId: string) => ({
     wallet: "not_configured" as const,
     trek: "not_configured" as const,
+    payroll_silo: "not_configured" as const,
   }),
   payrollConfigured: () => true,
   hasAccounts: async (_userId: string) => false,
@@ -24,7 +25,10 @@ describe("buildNavigation", () => {
 
   it("shows Expenses and Interests once Wallet is connected", async () => {
     const connected = buildNavigation(
-      await resolveCapabilities(testPrincipal(), { ...probes, connectionStates: async () => ({ wallet: "connected", trek: "not_configured" }) }),
+      await resolveCapabilities(testPrincipal(), {
+        ...probes,
+        connectionStates: async () => ({ wallet: "connected", trek: "not_configured", payroll_silo: "not_configured" }),
+      }),
     );
     expect(connected.find((i) => i.href === "/finance")!.children?.map((c) => c.label)).toEqual([
       "Overview",

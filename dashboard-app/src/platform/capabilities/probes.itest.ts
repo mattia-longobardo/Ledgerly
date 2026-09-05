@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { accounts, integrationConnections, organizations, users } from "@/lib/db/schema";
+import { accounts, integrationConnections, organizations, payrollImports, payrollRecords, users } from "@/lib/db/schema";
 import { withSystemContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import { connectionProbes, dataProbes } from "./probes";
@@ -83,10 +83,64 @@ describe("connectionProbes", () => {
     );
 
     const probes = connectionProbes(db);
-    expect(await probes.connectionStates(a!.id)).toEqual({ wallet: "connected", trek: "not_configured" });
+    expect(await probes.connectionStates(a!.id)).toEqual({
+      wallet: "connected",
+      trek: "not_configured",
+      payroll_silo: "not_configured",
+    });
     expect(await probes.connectionStates(b!.id)).toEqual({
       wallet: "not_configured",
       trek: "not_configured",
+      payroll_silo: "not_configured",
     });
+  });
+});
+
+describe("dataProbes.hasPayrollRecords", () => {
+  beforeEach(resetDb);
+  afterAll(closeDb);
+
+  it("hasPayrollRecords is true only for the user who owns the record", async () => {
+    const db = await testDb();
+    const [org] = await db.insert(organizations).values({ name: "P" }).returning();
+    const [a] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
+    const [b] = await db.insert(users).values({ organizationId: org!.id, displayName: "B" }).returning();
+    await withSystemContext(db, async (tx) => {
+      const [imp] = await tx
+        .insert(payrollImports)
+        .values({
+          userId: a!.id, fileName: "b.pdf", sizeBytes: 10, sha256: "a".repeat(64),
+          storageProvider: "local", storageKey: "payroll/x/2026/k.pdf",
+          retentionUntil: new Date("2036-01-01T00:00:00Z"),
+        })
+        .returning();
+      await tx.insert(payrollRecords).values({
+        userId: a!.id, importId: imp!.id, periodStart: "2026-08-01", periodEnd: "2026-08-31", kind: "ordinary",
+      });
+    });
+    const probes = dataProbes(db);
+    expect(await probes.hasPayrollRecords(a!.id)).toBe(true);
+    expect(await probes.hasPayrollRecords(b!.id)).toBe(false);
+  });
+
+  it("hasPayrollRecords ignores a superseded record (Ruling R4-12)", async () => {
+    const db = await testDb();
+    const [org] = await db.insert(organizations).values({ name: "P" }).returning();
+    const [a] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
+    await withSystemContext(db, async (tx) => {
+      const [imp] = await tx
+        .insert(payrollImports)
+        .values({
+          userId: a!.id, fileName: "b.pdf", sizeBytes: 10, sha256: "c".repeat(64),
+          storageProvider: "local", storageKey: "payroll/x/2026/k2.pdf",
+          retentionUntil: new Date("2036-01-01T00:00:00Z"),
+        })
+        .returning();
+      await tx.insert(payrollRecords).values({
+        userId: a!.id, importId: imp!.id, periodStart: "2026-08-01", periodEnd: "2026-08-31",
+        kind: "ordinary", supersededAt: new Date(),
+      });
+    });
+    expect(await dataProbes(db).hasPayrollRecords(a!.id)).toBe(false);
   });
 });

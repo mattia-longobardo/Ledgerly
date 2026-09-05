@@ -9,6 +9,14 @@ export const PERMISSIONS = [
   "expenses.write",
   "interests.read",
   "interests.write",
+  // Spec §8.2 names upload, review and read_original. `payroll.read` is Ruling
+  // R4-17: spec §4 gates `/company/earnings` on data rather than on upload or
+  // review rights, and reusing `payroll.upload` for a read would deny Earnings
+  // to a viewer who may legitimately see figures but never a scanned original.
+  "payroll.read",
+  "payroll.upload",
+  "payroll.review",
+  "payroll.read_original",
   "admin.users",
   "admin.audit",
 ] as const;
@@ -22,8 +30,9 @@ const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
     "accounts.read", "accounts.write", "accounts.delete",
     "finance.manage", "integrations.manage", "jobs.run",
     "expenses.read", "expenses.write", "interests.read", "interests.write",
+    "payroll.read", "payroll.upload", "payroll.review", "payroll.read_original",
   ],
-  viewer: ["accounts.read", "expenses.read", "interests.read"],
+  viewer: ["accounts.read", "expenses.read", "interests.read", "payroll.read"],
 };
 
 export function permissionsForRoles(roles: readonly RoleCode[]): ReadonlySet<Permission> {
