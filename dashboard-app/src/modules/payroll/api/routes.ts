@@ -6,7 +6,7 @@ import { ApiError } from "@/platform/http/errors";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { withUserContext } from "@/platform/db/context";
 import { applyImport } from "../application/apply-import";
-import { validateUpload } from "../application/create-import";
+import { markUploaded, validateUpload } from "../application/create-import";
 import {
   ConflictError,
   DuplicateImportError,
@@ -400,13 +400,26 @@ export function registerPayrollRoutes(app: ApiApp, deps: ApiDeps): void {
       // waiting on (or stuck at) the scanner goes through `scanImport` again;
       // clean-scanned but parked at `needs_ocr` or stuck `extracting` goes
       // through `parseImport`.
+      //
+      // `received` is the fourth, dead-end case (Finding 3, B2 whole-branch
+      // review): a crash, deploy, or DB blip between `uploadPayslip`'s
+      // `store.put` succeeding and its `markUploaded` call leaves a row with
+      // real bytes at `storageKey` but a status the ingest job's
+      // `DUE_STATUSES` never selects. `markUploaded` is the same
+      // recovery step `uploadPayslip` itself would have taken; once the row
+      // is `scanning`, `scanImport` picks up immediately, same as the
+      // already-scanning case below.
       const found = await withPayroll(deps, principal.userId, requestId, (bag) => getImport(bag)(principal, id));
+      const needsRecovery = found.status === "received";
       const needsRescan = found.status === "scanning" || found.scanStatus === "unavailable";
       const needsReparse = found.scanStatus === "clean" && (found.status === "needs_ocr" || found.status === "extracting");
-      if (!needsRescan && !needsReparse) {
+      if (!needsRecovery && !needsRescan && !needsReparse) {
         throw new ConflictError("This import is not waiting on a retry.", "not_retryable");
       }
-      if (needsRescan) {
+      if (needsRecovery) {
+        await withPayroll(deps, principal.userId, requestId, (bag) => markUploaded(bag)(principal, id));
+        await scanImport(principal, id, { requestId });
+      } else if (needsRescan) {
         await scanImport(principal, id, { requestId });
       } else {
         await parseImport(principal, id, { requestId });
