@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { organizations, users } from "@/lib/db/schema";
+import { organizations, payrollImports, users } from "@/lib/db/schema";
 import { permissionsForRoles, type RoleCode } from "@/platform/auth/permissions";
 import { createApiApp } from "@/platform/http/app";
 import { closeDb, resetDb, testDb } from "@/test/db";
@@ -192,6 +193,35 @@ describe("payroll API", () => {
       headers: { "x-requested-with": "test" },
     });
     expect(res.status).toBe(403);
+  });
+
+  it("recovers a 'received' import stuck by a crash between store.put and markUploaded (Finding 3)", async () => {
+    const { userId, organizationId } = await seedUser();
+    const principal = { userId, organizationId, roles: ["owner"] as RoleCode[], permissions: permissionsForRoles(["owner"]) };
+    const imported = await uploadPayslip(principal, { fileName: "a.pdf", mime: "application/pdf", bytes: pdf("retry-received") });
+    expect(imported.status).toBe("scanning");
+    // Simulate the crash window: the bytes already landed in the store (the
+    // upload above proves that), but the row never got the final
+    // `markUploaded` write — exactly what a deploy or DB blip between the two
+    // would leave behind. `payroll_imports` has no RLS-bypassing helper for
+    // this from application code (by design), so the test forces the row
+    // back to `received` directly.
+    const testdb = await testDb();
+    await testdb.update(payrollImports).set({ status: "received" }).where(eq(payrollImports.id, imported.id));
+
+    const app = appFor(userId, organizationId);
+    const before = await app.request(`/api/v1/payroll/imports/${imported.id}/retry`, {
+      method: "POST",
+      headers: { "x-requested-with": "test" },
+    });
+    expect(before.status).toBe(200);
+    const body = (await before.json()) as { status: string; scanStatus: string };
+    // The default noop scanner always answers "clean", so recovery
+    // (`received` -> `scanning`) and the immediate re-drive through
+    // `scanImport` land the import at "extracting" in one retry call, same
+    // as the already-scanning case above — the row is no longer stuck.
+    expect(body.status).toBe("extracting");
+    expect(body.scanStatus).toBe("clean");
   });
 
   it("answers 409 conflict for a retry on a terminal import", async () => {
