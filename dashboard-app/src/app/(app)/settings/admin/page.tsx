@@ -23,7 +23,6 @@ const COLUMN = "flex flex-col gap-10";
 
 const JOBS: readonly JobName[] = [
   "monthly_close",
-  "payslip_ingest",
   "sweep",
   "wallet_refresh",
   "wallet_accounts_sync",
@@ -35,7 +34,6 @@ const JOBS: readonly JobName[] = [
 
 const JOB_LABEL: Record<string, string> = {
   monthly_close: "Monthly close",
-  payslip_ingest: "Payslip ingest",
   sweep: "Sweep",
   wallet_refresh: "Wallet refresh",
   wallet_accounts_sync: "Wallet accounts sync",

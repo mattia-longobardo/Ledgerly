@@ -50,10 +50,6 @@ const schema = z.object({
   CLAMD_HOST: z.preprocess(blankToUndefined, z.string().default("clamav")),
   CLAMD_PORT: z.coerce.number().int().positive().default(3310),
 
-  PAPERLESS_URL: z.url(),
-  PAPERLESS_TOKEN: z.string().min(1),
-  PAPERLESS_PAYSLIP_TAG_ID: z.coerce.number().int().default(22),
-
   CRON_SECRET: z.string().min(16),
   WEBHOOK_SECRET: z.string().min(16),
 

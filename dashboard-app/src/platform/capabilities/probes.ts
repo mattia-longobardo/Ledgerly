@@ -80,9 +80,9 @@ export function connectionProbes(client: DbClient): Pick<CapabilityProbes, "conn
  * server layout.
  */
 export const realProbes: CapabilityProbes = {
-  // Phase 4: the document store, not `PAPERLESS_URL`. Both driver cases are
-  // answerable without touching the database, which matters because this runs
-  // on every request.
+  // Phase 4: the document store's own config, not a database read. Both
+  // driver cases are answerable without touching the database, which matters
+  // because this runs on every request.
   payrollConfigured: () => documentStoreConfigured(),
   ...connectionProbes(db),
   ...dataProbes(db),

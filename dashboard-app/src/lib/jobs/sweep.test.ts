@@ -19,8 +19,6 @@ const store = vi.hoisted(() => {
     OIDC_CLIENT_ID: "client",
     OIDC_CLIENT_SECRET: "secret",
     AUTHORIZED_SUB: "sub-123",
-    PAPERLESS_URL: "https://paperless.example.test",
-    PAPERLESS_TOKEN: "paperless-token",
     CRON_SECRET: "c".repeat(20),
     WEBHOOK_SECRET: "w".repeat(20),
     // `vi.hoisted()`'s callback runs before any import binding in this file
@@ -65,57 +63,23 @@ vi.mock("@/lib/repo/jobs", () => ({
   ),
 }));
 
-vi.mock("@/lib/repo/payslips", () => ({ knownDocIds: vi.fn(async () => [] as number[]) }));
-
-vi.mock("@/lib/clients/paperless", () => ({ listPayslipDocuments: vi.fn(async () => []) }));
-
-vi.mock("@/lib/jobs/payslip-ingest", () => ({
-  ingestPayslipDocument: vi.fn(async () => ({ job: "payslip_ingest", status: "success" })),
-}));
-
 vi.mock("@/lib/jobs/heartbeat", () => ({ touchHeartbeat: vi.fn(async () => true) }));
 
-import { listPayslipDocuments } from "@/lib/clients/paperless";
 import { touchHeartbeat } from "@/lib/jobs/heartbeat";
-import { ingestPayslipDocument } from "@/lib/jobs/payslip-ingest";
-import { knownDocIds } from "@/lib/repo/payslips";
 import { runSweep } from "@/lib/jobs/sweep";
 
 beforeEach(() => {
   store.runs.length = 0;
   store.nextRunId = 1;
   vi.clearAllMocks();
-  vi.mocked(listPayslipDocuments).mockResolvedValue([]);
-  vi.mocked(knownDocIds).mockResolvedValue([]);
   vi.mocked(touchHeartbeat).mockResolvedValue(true);
 });
 
-describe("payslip polling fallback", () => {
-  it("ingests only documents that are not already known", async () => {
-    vi.mocked(listPayslipDocuments).mockResolvedValue([
-      { id: 11, title: "old", added: "2026-07-03T00:00:00Z", tags: [22] },
-      { id: 12, title: "new", added: "2026-08-03T00:00:00Z", tags: [22] },
-    ]);
-    vi.mocked(knownDocIds).mockResolvedValue([11]);
-
-    const result = await runSweep({ now: new Date("2026-08-15T09:07:00Z") });
-
-    expect(ingestPayslipDocument).toHaveBeenCalledTimes(1);
-    expect(ingestPayslipDocument).toHaveBeenCalledWith({ docId: 12, trigger: "sweep" });
-    expect(result.detail?.payslipPolling).toEqual({ seen: 2, ingested: { 12: "success" } });
-  });
-});
-
 describe("resilience", () => {
-  it("keeps going after a failing step, reports it, and still touches the heartbeat", async () => {
-    vi.mocked(listPayslipDocuments).mockRejectedValue(new Error("paperless 502"));
-
-    const result = await runSweep({ now: new Date("2026-08-15T09:07:00Z") });
-
-    expect(result.status).toBe("failed");
-    expect(result.error).toContain("payslip_polling: paperless 502");
-    expect(touchHeartbeat).toHaveBeenCalledWith(new Date("2026-08-15T09:07:00Z"));
-    expect(store.runs.find((r) => r.jobName === "sweep")?.status).toBe("failed");
+  it("touches the heartbeat and nothing else", async () => {
+    const result = await runSweep({ trigger: "cron", now: new Date("2026-09-05T10:00:00Z") });
+    expect(result.status).toBe("success");
+    expect(Object.keys(result.detail ?? {})).toEqual(["heartbeat"]);
   });
 
   it("records a clean sweep as a success run", async () => {

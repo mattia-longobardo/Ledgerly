@@ -1,18 +1,18 @@
 /**
  * Text acquisition + normalisation for the payslip pipeline.
  *
- * Two sources, in preference order:
- *   1. the PDF's embedded text layer (`pdf`) — keeps the vacation grid intact;
- *   2. Paperless-ngx OCR `content` (`ocr`) — flattens the grid, so
- *      column-association fields start at reduced confidence (PLAN §4).
+ * One source: the PDF's embedded text layer (`pdf`), which keeps the vacation
+ * grid intact. A payslip with no usable text layer parks the import in
+ * `needs_ocr` (Phase 4, Ruling R4-9) rather than being parsed from nothing;
+ * `TextSource` keeps its `"ocr"` member for the OCR adapter a later phase adds.
  */
 
 export type TextSource = "pdf" | "ocr";
 
 /**
  * Contract for the layout-aware primary source. Implementations return `null`
- * when the PDF carries no usable text layer, which makes the caller fall back
- * to the Paperless OCR `content`.
+ * when the PDF carries no usable text layer, which makes the caller park the
+ * import in `needs_ocr`.
  */
 export interface PdfTextExtractor {
   (buffer: Uint8Array): Promise<string | null>;
@@ -27,7 +27,7 @@ export interface PdfTextExtractor {
  * as a row break in the grid reader.
  *
  * Never throws — a missing or unreadable text layer is an expected outcome
- * that must degrade to the Paperless OCR fallback, not break ingestion. A
+ * that must park the import in `needs_ocr`, not break ingestion. A
  * scanned-image payslip legitimately has no text layer at all.
  */
 export const extractPdfText: PdfTextExtractor = async (buffer: Uint8Array) => {

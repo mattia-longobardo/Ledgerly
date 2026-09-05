@@ -1,6 +1,6 @@
 /**
- * Hourly catch-all — PLAN §5. Now just the payslip polling fallback, plus the
- * heartbeat the compose healthcheck watches.
+ * Hourly catch-all — PLAN §5. Now just the heartbeat the compose healthcheck
+ * watches.
  *
  * The snapshot catch-up (the old step a) and the legacy-spreadsheet steps (c,
  * the pending-write retry, and d, the read-cache refresh) went away with that
@@ -11,20 +11,18 @@
  *
  * Wallet used to be refreshed here too. It is not any more: Wallet syncs itself
  * at noon, so polling it hourly bought nothing, and it now has its own daily job
- * (`src/lib/jobs/wallet-refresh.ts`, cron 12:00 Europe/Rome). The heartbeat
- * stays here — the health endpoint's window is two hours, so a daily job
- * touching it would risk an autoheal restart loop.
+ * (`src/lib/jobs/wallet-refresh.ts`, cron 12:00 Europe/Rome). The payslip
+ * polling fallback is gone too (Task 22): `payroll_ingest` (Phase 4) owns
+ * document ingestion now. The heartbeat stays here — the health endpoint's
+ * window is two hours, so a daily job touching it would risk an autoheal
+ * restart loop.
  *
  * Ends by touching the heartbeat the compose healthcheck watches.
  */
 
-import { errorMessage } from "@/lib/clients/http";
-import { listPayslipDocuments } from "@/lib/clients/paperless";
 import type { JobResult } from "@/lib/contracts";
 import { touchHeartbeat } from "@/lib/jobs/heartbeat";
-import { ingestPayslipDocument } from "@/lib/jobs/payslip-ingest";
 import { finishRun, startRun } from "@/lib/repo/jobs";
-import { knownDocIds } from "@/lib/repo/payslips";
 
 export const JOB_NAME = "sweep" as const;
 
@@ -36,27 +34,6 @@ export interface RunSweepInput {
 interface StepReport {
   errors: string[];
   detail: Record<string, unknown>;
-}
-
-/** The webhook is a latency optimisation; this is the correctness path. */
-async function pollPayslips(report: StepReport): Promise<void> {
-  const documents = await listPayslipDocuments();
-  const known = new Set(await knownDocIds());
-  const fresh = documents.filter((d) => !known.has(d.id));
-  const results: Record<number, string> = {};
-  for (const doc of fresh) {
-    const result = await ingestPayslipDocument({ docId: doc.id, trigger: "sweep" });
-    results[doc.id] = result.status;
-  }
-  report.detail.payslipPolling = { seen: documents.length, ingested: results };
-}
-
-async function step(name: string, report: StepReport, fn: () => Promise<void>): Promise<void> {
-  try {
-    await fn();
-  } catch (err) {
-    report.errors.push(`${name}: ${errorMessage(err)}`);
-  }
 }
 
 /**
@@ -71,7 +48,12 @@ export async function runSweep(input: RunSweepInput = {}): Promise<JobResult> {
   const report: StepReport = { errors: [], detail: {} };
 
   try {
-    await step("payslip_polling", report, () => pollPayslips(report));
+    // Every step this job used to run has been replaced by a job of its own —
+    // the snapshot catch-up, the legacy-spreadsheet retry, the read-cache
+    // refresh, the wallet refresh, and now the payslip polling that
+    // `payroll_ingest` (Phase 4) took over. What remains is the heartbeat, and
+    // that is the point: `/api/health` reads it to answer "did the scheduler
+    // fire?", which no other job answers.
   } finally {
     // Touched even on a bad sweep: the heartbeat answers "did the scheduler
     // fire?", not "was every upstream reachable?".
