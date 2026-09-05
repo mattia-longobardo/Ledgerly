@@ -68,6 +68,15 @@ describe("canTransition", () => {
   it("lets a failed upload be reused rather than duplicated (Ruling R4-3)", () => {
     expect(canTransition("failed", "received")).toBe(true);
   });
+
+  it("lets the real parse outcome (needs_review) be reached directly, since applyParseConclusion never assigns the parsed status to a live import", () => {
+    expect(canTransition("extracting", "needs_review")).toBe(true);
+    expect(canTransition("needs_ocr", "needs_review")).toBe(true);
+  });
+
+  it("lets needs_ocr stay needs_ocr, so a retry that still finds no text layer re-parks instead of failing", () => {
+    expect(canTransition("needs_ocr", "needs_ocr")).toBe(true);
+  });
 });
 
 describe("textSourceColumn", () => {

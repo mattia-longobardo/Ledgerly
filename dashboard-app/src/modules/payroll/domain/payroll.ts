@@ -33,12 +33,22 @@ export function isEditable(status: PayrollImportStatus): boolean {
  * rejected the self-loop would turn a retry into a spurious failure.
  * `failed → received` is the reuse path for an upload whose bytes never landed
  * (Ruling R4-3).
+ *
+ * `extracting → needs_review` and `needs_ocr → needs_review` are here because
+ * `applyParseConclusion` (`application/ingest-import.ts`) writes a successful
+ * parse straight to `needs_review`, skipping the `parsed` status entirely —
+ * `parsed` is a real `PayrollImportStatus` value with its own row here, but no
+ * code path ever assigns it to a live import; it exists as a documented
+ * waypoint, not one the application actually uses. `needs_ocr → needs_ocr` is
+ * the same self-loop reasoning as `scanning → scanning`: an OCR retry that
+ * still finds no text layer must re-park, not be rejected as an invalid
+ * transition.
  */
 const TRANSITIONS: Record<PayrollImportStatus, readonly PayrollImportStatus[]> = {
   received: ["scanning", "rejected", "failed"],
   scanning: ["scanning", "extracting", "rejected", "failed"],
-  extracting: ["parsed", "needs_ocr", "rejected", "failed"],
-  needs_ocr: ["extracting", "rejected", "failed"],
+  extracting: ["needs_review", "parsed", "needs_ocr", "rejected", "failed"],
+  needs_ocr: ["needs_ocr", "needs_review", "extracting", "rejected", "failed"],
   parsed: ["needs_review", "rejected", "failed"],
   needs_review: ["needs_review", "verified", "rejected", "failed"],
   verified: ["needs_review", "verified", "applied", "rejected", "failed"],

@@ -11,6 +11,7 @@ import {
 } from "../infrastructure/memory-repositories";
 import { reserveImport, markUploaded } from "./create-import";
 import { applyParseConclusion, applyScanConclusion, beginParse, beginScan } from "./ingest-import";
+import { rejectImport } from "./review-import";
 
 const NOW = new Date("2026-09-05T10:00:00Z");
 const principal = testPrincipal({ userId: "00000000-0000-7000-8000-00000000000a" });
@@ -153,6 +154,23 @@ describe("applyScanConclusion", () => {
     expect((await deps.imports.get(principal.userId, uploaded.id))?.status).toBe("failed");
     expect((await deps.imports.get(principal.userId, uploaded.id))?.storageKey).toBeNull();
   });
+
+  it("does not resurrect an import a reviewer rejected mid-scan (Finding 2)", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    // The reviewer rejects while the job's network scan is still in flight —
+    // `rejectImport` permits rejection from any live status, "scanning"
+    // included.
+    const rejected = await rejectImport(deps)(principal, uploaded.id, uploaded.version);
+    expect(rejected.status).toBe("rejected");
+    // The scan that was already in flight finishes clean and the job now
+    // tries to record that verdict against a row that has moved on.
+    const result = await applyScanConclusion(deps)(principal, uploaded.id, { kind: "clean", scanner: "none" });
+    expect(result).toEqual({ outcome: "skipped", reason: "not_scanning" });
+    const after = await deps.imports.get(principal.userId, uploaded.id);
+    expect(after?.status).toBe("rejected");
+    expect(after?.scanStatus).not.toBe("clean");
+  });
 });
 
 describe("beginParse", () => {
@@ -245,6 +263,19 @@ describe("applyParseConclusion", () => {
     );
     expect(parsedAudit?.after).toEqual({ textSource: "pdf_text", parserVersion: "payroll-1.0.0", fieldsRead: 1 });
     expect(JSON.stringify(deps.audits)).not.toContain("1800");
+  });
+
+  it("does not resurrect an import a reviewer rejected mid-parse (Finding 2)", async () => {
+    const deps = makeDeps();
+    const uploaded = await anExtractingImport(deps);
+    const extracting = await deps.imports.get(principal.userId, uploaded.id);
+    const rejected = await rejectImport(deps)(principal, uploaded.id, extracting!.version);
+    expect(rejected.status).toBe("rejected");
+    const result = await applyParseConclusion(deps)(principal, uploaded.id, { kind: "parsed", extraction });
+    expect(result).toEqual({ outcome: "skipped", reason: "not_scanning" });
+    const after = await deps.imports.get(principal.userId, uploaded.id);
+    expect(after?.status).toBe("rejected");
+    expect(after?.extraction).toBeNull();
   });
 
   it("audits the rejection with the scanner and signature, never with the payslip bytes", async () => {

@@ -2,8 +2,8 @@ import type { Confidence, PayslipExtraction } from "@/lib/contracts";
 import type { PayslipHistoryEntry } from "@/lib/payroll/confidence";
 import { PARSER_VERSION, parsePayslip } from "@/lib/payroll/parse";
 import type { Principal } from "@/platform/auth/principal";
-import { textSourceColumn } from "../domain/payroll";
-import type { PayrollImport, UseCaseDeps } from "./ports";
+import { canTransition, textSourceColumn } from "../domain/payroll";
+import type { PayrollImport, PayrollImportStatus, UseCaseDeps } from "./ports";
 
 export type IngestOutcome =
   | { outcome: "parsed"; import: PayrollImport }
@@ -73,9 +73,32 @@ export type ScanConclusion =
  * retries; `clean` is the only one that opens the gate to the parser. An
  * import can therefore reach `extracting` in exactly one way, and
  * `readOriginal` (Task 13) leans on the same `scan_status = 'clean'` fact.
+ *
+ * `beginScan` confirms the import is `scanning` before the network scan
+ * runs, but that confirmation is stale by the time this function is called —
+ * the scan itself is real network I/O, during which a reviewer can reject
+ * the import out from under it (`rejectImport`, `review-import.ts`, permits
+ * rejection from any live status). So this re-reads the current row and
+ * checks `canTransition` before patching: a conclusion that no longer
+ * matches a valid transition from the *current* status (not the status
+ * `beginScan` saw) is dropped as `skipped`/`not_scanning` rather than
+ * silently overwriting whatever the reviewer just did.
  */
 export function applyScanConclusion(deps: UseCaseDeps) {
   return async (principal: Principal, importId: string, conclusion: ScanConclusion): Promise<IngestOutcome> => {
+    const current = await deps.imports.get(principal.userId, importId);
+    const nextStatus: PayrollImportStatus =
+      conclusion.kind === "bytes_missing"
+        ? "failed"
+        : conclusion.kind === "infected"
+          ? "rejected"
+          : conclusion.kind === "unavailable"
+            ? "scanning"
+            : "extracting";
+    if (!current || !canTransition(current.status, nextStatus)) {
+      return { outcome: "skipped", reason: "not_scanning" };
+    }
+
     const scannedAt = deps.clock.now();
 
     if (conclusion.kind === "bytes_missing") {
@@ -182,9 +205,23 @@ function confidenceMap(extraction: PayslipExtraction): Record<string, Confidence
  * R4-9) rather than ever reaching this function with an empty-string
  * extraction — the exact "invented financial data" failure that ruling
  * exists to avoid. No I/O of its own.
+ *
+ * Same staleness concern as `applyScanConclusion`: `beginParse` confirms
+ * readiness before the LLM call runs, and a reviewer can reject the import
+ * during that call. This re-reads the current row and checks
+ * `canTransition` before patching, dropping a conclusion that no longer
+ * applies as `skipped`/`not_scanning` instead of resurrecting a
+ * rejected/superseded import back into the reviewable pipeline.
  */
 export function applyParseConclusion(deps: UseCaseDeps) {
   return async (principal: Principal, importId: string, conclusion: ParseConclusion): Promise<IngestOutcome> => {
+    const current = await deps.imports.get(principal.userId, importId);
+    const nextStatus: PayrollImportStatus =
+      conclusion.kind === "bytes_missing" ? "failed" : conclusion.kind === "no_text_layer" ? "needs_ocr" : "needs_review";
+    if (!current || !canTransition(current.status, nextStatus)) {
+      return { outcome: "skipped", reason: "not_scanning" };
+    }
+
     if (conclusion.kind === "bytes_missing") {
       await deps.imports.patch(principal.userId, importId, { status: "failed", error: "bytes_missing", storageKey: null });
       return { outcome: "skipped", reason: "no_bytes" };
