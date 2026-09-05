@@ -30,6 +30,8 @@ const JOBS: readonly JobName[] = [
   "interest_accrual",
   "trek_sync",
   "sync_queue",
+  "payroll_ingest",
+  "payroll_retention",
 ];
 
 const JOB_LABEL: Record<string, string> = {
@@ -41,6 +43,8 @@ const JOB_LABEL: Record<string, string> = {
   interest_accrual: "Interest accrual",
   trek_sync: "Trek leave sync",
   sync_queue: "Webhook sync queue",
+  payroll_ingest: "Payroll ingest",
+  payroll_retention: "Payroll retention",
 };
 
 const STATUS_TONE: Record<string, string> = {
