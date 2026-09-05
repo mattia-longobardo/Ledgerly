@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { PayslipExtraction } from "@/lib/contracts";
 import { testPrincipal } from "@/test/principal";
-import type { MalwareScanner, UseCaseDeps } from "./ports";
+import type { UseCaseDeps } from "./ports";
 import {
   MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
@@ -9,36 +9,46 @@ import {
   MemoryPayrollMappingRulesRepository,
   MemoryPayrollRecordsRepository,
 } from "../infrastructure/memory-repositories";
-import { noopScanner } from "../infrastructure/noop-scanner";
 import { reserveImport, markUploaded } from "./create-import";
-import { parseStep, scanStep } from "./ingest-import";
+import { applyParseConclusion, applyScanConclusion, beginParse, beginScan } from "./ingest-import";
 
 const NOW = new Date("2026-09-05T10:00:00Z");
 const principal = testPrincipal({ userId: "00000000-0000-7000-8000-00000000000a" });
 const pdf = (extra = "") => new TextEncoder().encode(`%PDF-1.7\n${extra}`);
 
-function makeDeps(over: { scanner?: MalwareScanner; stored?: Uint8Array | null } = {}) {
-  const deleted: string[] = [];
-  const deps: UseCaseDeps & { deleted: string[]; audits: unknown[] } = {
+function makeDeps(): UseCaseDeps & { audits: unknown[] } {
+  const audits: unknown[] = [];
+  return {
     imports: new MemoryPayrollImportsRepository(),
     records: new MemoryPayrollRecordsRepository(),
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
     funds: new MemoryLegacyFundDeposits(),
+    // No I/O happens through the DB-only halves this suite exercises, so a
+    // document store and scanner that would fail if ever called are enough
+    // to prove the split: these functions never touch either.
     documents: {
       provider: "local",
-      put: async () => {},
-      get: async () => (over.stored === undefined ? pdf("body") : over.stored),
-      delete: async (k: string) => void deleted.push(k),
+      put: async () => {
+        throw new Error("beginScan/applyScanConclusion must never touch the document store");
+      },
+      get: async () => {
+        throw new Error("beginScan/applyScanConclusion must never touch the document store");
+      },
+      delete: async () => {
+        throw new Error("beginScan/applyScanConclusion must never touch the document store");
+      },
       listPrefix: async () => [],
     },
-    scanner: over.scanner ?? noopScanner,
+    scanner: {
+      scan: async () => {
+        throw new Error("beginScan/applyScanConclusion must never call the scanner directly");
+      },
+    },
     clock: { now: () => NOW },
-    audit: async (e) => void deps.audits.push(e),
-    deleted,
-    audits: [],
+    audit: async (e) => void audits.push(e),
+    audits,
   };
-  return deps;
 }
 
 async function anUploadedImport(deps: UseCaseDeps, fileName = "Busta Paga Agosto 2026.pdf") {
@@ -57,49 +67,11 @@ const extraction: PayslipExtraction = {
   checks: [],
 };
 
-describe("scanStep", () => {
-  it("records a clean verdict, the scanner's own name and when it answered", async () => {
+describe("beginScan", () => {
+  it("hands back the storage key for an import waiting to be scanned", async () => {
     const deps = makeDeps();
     const uploaded = await anUploadedImport(deps);
-    const result = await scanStep(deps)(principal, uploaded.id);
-    expect(result.outcome).toBe("scanner_unavailable" === result.outcome ? "scanner_unavailable" : "parsed");
-    const after = await deps.imports.get(principal.userId, uploaded.id);
-    expect(after?.scanStatus).toBe("clean");
-    expect(after?.scanner).toBe("none");
-    expect(after?.scannedAt).toEqual(NOW);
-    expect(after?.status).toBe("extracting");
-  });
-
-  it("an infected verdict deletes the bytes immediately and rejects the import terminally (Ruling R4-2)", async () => {
-    const deps = makeDeps({
-      scanner: { scan: async () => ({ verdict: "infected", scanner: "clamd", signature: "Eicar-Test-Signature" }) },
-    });
-    const uploaded = await anUploadedImport(deps);
-    const result = await scanStep(deps)(principal, uploaded.id);
-    expect(result.outcome).toBe("rejected_infected");
-    const after = await deps.imports.get(principal.userId, uploaded.id);
-    expect(after?.status).toBe("rejected");
-    expect(after?.scanStatus).toBe("infected");
-    expect(after?.scanSignature).toBe("Eicar-Test-Signature");
-    expect(after?.error).toBe("scan_infected");
-    expect(after?.storageKey).toBeNull();
-    expect(deps.deleted).toEqual([uploaded.storageKey]);
-    // Terminal: a retry re-rejects and reads nothing.
-    expect((await scanStep(deps)(principal, uploaded.id)).outcome).toBe("skipped");
-  });
-
-  it("an unavailable verdict keeps the bytes and leaves the import scanning for the next tick", async () => {
-    const deps = makeDeps({
-      scanner: { scan: async () => ({ verdict: "unavailable", scanner: "clamd", signature: null }) },
-    });
-    const uploaded = await anUploadedImport(deps);
-    expect((await scanStep(deps)(principal, uploaded.id)).outcome).toBe("scanner_unavailable");
-    const after = await deps.imports.get(principal.userId, uploaded.id);
-    expect(after?.status).toBe("scanning");
-    expect(after?.scanStatus).toBe("unavailable");
-    expect(after?.error).toBe("scan_unavailable");
-    expect(after?.storageKey).toBe(uploaded.storageKey);
-    expect(deps.deleted).toEqual([]);
+    expect(await beginScan(deps)(principal, uploaded.id)).toEqual({ ready: true, storageKey: uploaded.storageKey });
   });
 
   it("skips an import that is not scanning", async () => {
@@ -107,29 +79,132 @@ describe("scanStep", () => {
     const reserved = await reserveImport(deps)(principal, {
       fileName: "a.pdf", mime: "application/pdf", bytes: pdf(), storageProvider: "local",
     });
-    expect(await scanStep(deps)(principal, reserved.id)).toEqual({ outcome: "skipped", reason: "not_scanning" });
+    expect(await beginScan(deps)(principal, reserved.id)).toEqual({
+      ready: false,
+      outcome: { outcome: "skipped", reason: "not_scanning" },
+    });
   });
 
-  it("fails an import whose bytes are gone rather than declaring it clean", async () => {
-    const deps = makeDeps({ stored: null });
-    const uploaded = await anUploadedImport(deps);
-    expect(await scanStep(deps)(principal, uploaded.id)).toEqual({ outcome: "skipped", reason: "no_bytes" });
-    expect((await deps.imports.get(principal.userId, uploaded.id))?.status).toBe("failed");
+  it("skips an import that does not exist", async () => {
+    const deps = makeDeps();
+    expect(await beginScan(deps)(principal, "does-not-exist")).toEqual({
+      ready: false,
+      outcome: { outcome: "skipped", reason: "not_scanning" },
+    });
   });
 });
 
-describe("parseStep", () => {
+describe("applyScanConclusion", () => {
+  it("records a clean verdict, the scanner's own name and when it answered", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    const result = await applyScanConclusion(deps)(principal, uploaded.id, { kind: "clean", scanner: "none" });
+    expect(result.outcome).toBe("parsed");
+    const after = await deps.imports.get(principal.userId, uploaded.id);
+    expect(after?.scanStatus).toBe("clean");
+    expect(after?.scanner).toBe("none");
+    expect(after?.scannedAt).toEqual(NOW);
+    expect(after?.status).toBe("extracting");
+  });
+
+  it("an infected conclusion rejects the import terminally (Ruling R4-2)", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    const result = await applyScanConclusion(deps)(principal, uploaded.id, {
+      kind: "infected",
+      scanner: "clamd",
+      signature: "Eicar-Test-Signature",
+    });
+    expect(result.outcome).toBe("rejected_infected");
+    const after = await deps.imports.get(principal.userId, uploaded.id);
+    expect(after?.status).toBe("rejected");
+    expect(after?.scanStatus).toBe("infected");
+    expect(after?.scanSignature).toBe("Eicar-Test-Signature");
+    expect(after?.error).toBe("scan_infected");
+    expect(after?.storageKey).toBeNull();
+    // Terminal: a retry finds `beginScan` refusing, reading nothing new.
+    expect(await beginScan(deps)(principal, uploaded.id)).toEqual({
+      ready: false,
+      outcome: { outcome: "skipped", reason: "not_scanning" },
+    });
+  });
+
+  it("an unavailable conclusion leaves the import scanning and retryable for the next tick", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    const result = await applyScanConclusion(deps)(principal, uploaded.id, { kind: "unavailable", scanner: "clamd" });
+    expect(result.outcome).toBe("scanner_unavailable");
+    const after = await deps.imports.get(principal.userId, uploaded.id);
+    expect(after?.status).toBe("scanning");
+    expect(after?.scanStatus).toBe("unavailable");
+    expect(after?.error).toBe("scan_unavailable");
+    expect(after?.storageKey).toBe(uploaded.storageKey);
+    // Still ready to be picked up again.
+    expect(await beginScan(deps)(principal, uploaded.id)).toEqual({ ready: true, storageKey: uploaded.storageKey });
+  });
+
+  it("fails an import whose bytes were reported gone, rather than declaring it clean", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    expect(await applyScanConclusion(deps)(principal, uploaded.id, { kind: "bytes_missing" })).toEqual({
+      outcome: "skipped",
+      reason: "no_bytes",
+    });
+    expect((await deps.imports.get(principal.userId, uploaded.id))?.status).toBe("failed");
+    expect((await deps.imports.get(principal.userId, uploaded.id))?.storageKey).toBeNull();
+  });
+});
+
+describe("beginParse", () => {
   async function anExtractingImport(deps: UseCaseDeps, fileName?: string) {
     const uploaded = await anUploadedImport(deps, fileName);
-    await scanStep(deps)(principal, uploaded.id);
+    await applyScanConclusion(deps)(principal, uploaded.id, { kind: "clean", scanner: "none" });
     return uploaded;
   }
 
-  it("parses, stores the extraction and the per-field confidence, and lands in needs_review", async () => {
+  it("hands back the storage key and file name for an import ready to parse", async () => {
     const deps = makeDeps();
     const uploaded = await anExtractingImport(deps);
-    const parse = vi.fn(async () => extraction);
-    const result = await parseStep(deps, { extractText: async () => "Netto 1.800,00", parse })(principal, uploaded.id);
+    expect(await beginParse(deps)(principal, uploaded.id)).toEqual({
+      ready: true,
+      storageKey: uploaded.storageKey,
+      fileName: uploaded.fileName,
+    });
+  });
+
+  it("is ready for an import parked in needs_ocr (a retry after a prior needs_ocr parking)", async () => {
+    const deps = makeDeps();
+    const uploaded = await anExtractingImport(deps);
+    await applyParseConclusion(deps)(principal, uploaded.id, { kind: "no_text_layer" });
+    expect(await beginParse(deps)(principal, uploaded.id)).toEqual({
+      ready: true,
+      storageKey: uploaded.storageKey,
+      fileName: uploaded.fileName,
+    });
+  });
+
+  it("refuses an import that has not cleared the scanner (Ruling R4-2)", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    await applyScanConclusion(deps)(principal, uploaded.id, { kind: "unavailable", scanner: "clamd" });
+    expect(await beginParse(deps)(principal, uploaded.id)).toEqual({
+      ready: false,
+      outcome: { outcome: "skipped", reason: "not_scanning" },
+    });
+  });
+});
+
+describe("applyParseConclusion", () => {
+  async function anExtractingImport(deps: UseCaseDeps, fileName?: string) {
+    const uploaded = await anUploadedImport(deps, fileName);
+    await applyScanConclusion(deps)(principal, uploaded.id, { kind: "clean", scanner: "none" });
+    return uploaded;
+  }
+
+  it("stores the extraction and the per-field confidence, and lands in needs_review", async () => {
+    const deps = makeDeps();
+    const uploaded = await anExtractingImport(deps);
+    const result = await applyParseConclusion(deps)(principal, uploaded.id, { kind: "parsed", extraction });
     expect(result.outcome).toBe("parsed");
     const after = await deps.imports.get(principal.userId, uploaded.id);
     expect(after?.status).toBe("needs_review");
@@ -139,29 +214,11 @@ describe("parseStep", () => {
     expect(after?.confidence).toEqual({ net: "high" });
   });
 
-  it("hands the parser the month read off the document title, so OCR cannot latch onto a stray year", async () => {
-    const deps = makeDeps();
-    const uploaded = await anExtractingImport(deps, "Busta Paga Maggio 2026.pdf");
-    const parse = vi.fn(async () => extraction);
-    await parseStep(deps, { extractText: async () => "text", parse })(principal, uploaded.id);
-    expect(parse).toHaveBeenCalledWith(expect.objectContaining({ month: "2026-05-01", textSource: "pdf" }));
-  });
-
-  it("files a tredicesima in December of its year, whatever month the title names", async () => {
-    const deps = makeDeps();
-    const uploaded = await anExtractingImport(deps, "Tredicesima 2025.pdf");
-    const parse = vi.fn(async () => ({ ...extraction, month: "2025-12-01", isThirteenth: true }));
-    await parseStep(deps, { extractText: async () => "text", parse })(principal, uploaded.id);
-    expect(parse).toHaveBeenCalledWith(expect.objectContaining({ month: "2025-12-01" }));
-  });
-
   it("parks in needs_ocr with text_source none when the PDF carries no text layer (Rulings R4-9, R4-14)", async () => {
     const deps = makeDeps();
     const uploaded = await anExtractingImport(deps);
-    const parse = vi.fn(async () => extraction);
-    const result = await parseStep(deps, { extractText: async () => null, parse })(principal, uploaded.id);
+    const result = await applyParseConclusion(deps)(principal, uploaded.id, { kind: "no_text_layer" });
     expect(result.outcome).toBe("needs_ocr");
-    expect(parse).not.toHaveBeenCalled();
     const after = await deps.imports.get(principal.userId, uploaded.id);
     expect(after?.status).toBe("needs_ocr");
     expect(after?.textSource).toBe("none");
@@ -169,28 +226,42 @@ describe("parseStep", () => {
     expect(after?.error).toBe("no_text_layer");
   });
 
-  it("refuses to parse an import that has not cleared the scanner (Ruling R4-2)", async () => {
-    const deps = makeDeps({
-      scanner: { scan: async () => ({ verdict: "unavailable", scanner: "clamd", signature: null }) },
-    });
-    const uploaded = await anUploadedImport(deps);
-    await scanStep(deps)(principal, uploaded.id);
-    const parse = vi.fn(async () => extraction);
-    expect(await parseStep(deps, { extractText: async () => "text", parse })(principal, uploaded.id)).toEqual({
+  it("fails an import whose bytes were reported gone", async () => {
+    const deps = makeDeps();
+    const uploaded = await anExtractingImport(deps);
+    expect(await applyParseConclusion(deps)(principal, uploaded.id, { kind: "bytes_missing" })).toEqual({
       outcome: "skipped",
-      reason: "not_scanning",
+      reason: "no_bytes",
     });
-    expect(parse).not.toHaveBeenCalled();
+    expect((await deps.imports.get(principal.userId, uploaded.id))?.status).toBe("failed");
   });
 
   it("audits the parse with the field count, never with an amount", async () => {
     const deps = makeDeps();
     const uploaded = await anExtractingImport(deps);
-    await parseStep(deps, { extractText: async () => "text", parse: async () => extraction })(principal, uploaded.id);
+    await applyParseConclusion(deps)(principal, uploaded.id, { kind: "parsed", extraction });
     const parsedAudit = (deps.audits as Array<{ action: string; after?: unknown }>).find(
       (a) => a.action === "payroll.import_parsed",
     );
     expect(parsedAudit?.after).toEqual({ textSource: "pdf_text", parserVersion: "payroll-1.0.0", fieldsRead: 1 });
     expect(JSON.stringify(deps.audits)).not.toContain("1800");
+  });
+
+  it("audits the rejection with the scanner and signature, never with the payslip bytes", async () => {
+    const deps = makeDeps();
+    const uploaded = await anUploadedImport(deps);
+    await applyScanConclusion(deps)(principal, uploaded.id, {
+      kind: "infected",
+      scanner: "clamd",
+      signature: "Eicar-Test-Signature",
+    });
+    const rejectedAudit = (deps.audits as Array<{ action: string; after?: unknown }>).find(
+      (a) => a.action === "payroll.import_rejected",
+    );
+    expect(rejectedAudit?.after).toEqual({
+      reason: "scan_infected",
+      scanner: "clamd",
+      signature: "Eicar-Test-Signature",
+    });
   });
 });
