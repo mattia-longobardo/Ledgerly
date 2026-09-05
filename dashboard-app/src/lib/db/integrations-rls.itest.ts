@@ -10,7 +10,7 @@ describe("integration tables RLS", () => {
   it("seeds the provider catalogue and scopes connections and runs per user", async () => {
     const db = await testDb();
     const providers = await db.select().from(integrationProviders);
-    expect(providers.map((p) => p.code).sort()).toEqual(["trek", "wallet"]);
+    expect(providers.map((p) => p.code).sort()).toEqual(["payroll_silo", "trek", "wallet"]);
 
     const [org] = await db.insert(organizations).values({ name: "P" }).returning();
     const [a] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
