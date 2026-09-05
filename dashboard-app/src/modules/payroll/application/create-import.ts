@@ -148,6 +148,21 @@ export function markUploaded(deps: UseCaseDeps) {
  * the reason: after a failed write nothing may claim to know where the bytes
  * are, and the retention job must never try to delete an object that was never
  * created.
+ *
+ * Nulling `storageKey` here is exactly what can orphan real bytes outside
+ * every retention path (Finding 5, B2 whole-branch review): if `store.put`
+ * partially or fully wrote the object before failing, this row no longer
+ * points at it, and `purgeExpiredOriginals` only ever selects rows with a
+ * non-null `storage_key`. The one caller today, `uploadPayslip`
+ * (`infrastructure/upload.ts`), closes that gap itself with a best-effort
+ * `store.delete` *before* calling this — deliberately not done in here,
+ * because this function runs inside the caller's transaction and a document
+ * store delete must never run while one is open (Ruling R4-8's discipline).
+ * A future caller of `markUploadFailed` that skips that cleanup would
+ * reopen the gap; there is no sweep today that would catch it (a
+ * `DocumentStore.listPrefix`-based orphan sweep, comparing the store against
+ * every row's `storage_key`, would close it generally, but that is a larger
+ * mechanism than this batch adds).
  */
 export function markUploadFailed(deps: UseCaseDeps) {
   return async (principal: Principal, importId: string, error: string): Promise<void> => {
