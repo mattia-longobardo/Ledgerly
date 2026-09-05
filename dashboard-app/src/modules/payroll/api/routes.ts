@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
+import { assertPermission } from "@/platform/auth/principal";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
 import { parseExpectedVersion } from "@/platform/http/versioning";
@@ -378,6 +379,18 @@ export function registerPayrollRoutes(app: ApiApp, deps: ApiDeps): void {
     const principal = c.get("principal");
     const { id } = c.req.valid("param");
     const requestId = c.get("requestId");
+    // Retrying is functionally "try uploading through the pipeline again", so
+    // it is gated the same way the initial upload is (`payroll.upload`) — not
+    // merely `payroll.read`. `scanImport`/`parseImport` (infrastructure/
+    // ingest.ts) assert nothing themselves: they were built to be called only
+    // by the internal cron job under a synthetic system principal, and this
+    // route is the first place a real, arbitrary-role signed-in principal can
+    // reach them over HTTP. Without this check, a viewer (who holds
+    // `payroll.read` only) could trigger a real malware-scanner network call
+    // or a real LLM call and DB writes with no upload or review right
+    // anywhere else in the module — a genuine authorization bypass, not a
+    // cosmetic gap.
+    assertPermission(principal, "payroll.upload");
     try {
       // The manual lever the retired `POST /api/jobs/run` payslip-ingest branch
       // used to be. `scanImport`/`parseImport` (infrastructure/ingest.ts) are
