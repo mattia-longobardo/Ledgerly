@@ -144,9 +144,13 @@ export class MemoryProviderLinksRepository implements ProviderLinksRepository {
   }
 
   async liveFor(entityType: ProviderLinkEntityType, entityId: string): Promise<ProviderLink | null> {
-    const link = this.links.find((l) => l.entityType === entityType && l.entityId === entityId);
-    if (!link || link.missingSince !== null) return null;
-    return link;
+    // Filters on `missingSince === null` inside the `find` predicate itself,
+    // matching the Drizzle repository's `isNull(providerLinks.missingSince)`
+    // inside its WHERE clause: an entity can carry more than one link (e.g. a
+    // dead GoCardless link followed by a live Wallet one), and the two
+    // implementations must agree on the same live one, not "the first
+    // matching link, live or not."
+    return this.links.find((l) => l.entityType === entityType && l.entityId === entityId && l.missingSince === null) ?? null;
   }
 
   async upsertSeen(userId: string, link: Omit<ProviderLink, "missingSince">, seenAt: Date): Promise<void> {
