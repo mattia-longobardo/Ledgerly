@@ -39,16 +39,32 @@ async function aCleanImport(principal: Principal, fileName = "Busta Paga Agosto 
 }
 
 /**
- * Proves the split, the same way `ingest.itest.ts`'s `observingScanner` does
- * for `scanImport`: this store records, at the instant `get` is called,
- * whether the audit row transaction two writes already exists. Seeing "no,
- * not yet" here and the row present immediately after `readOriginal`
- * resolves is direct evidence that no transaction spans the document-store
- * round trip — the read commits, *then* the fetch runs, *then* the audit
- * write commits in its own, later transaction.
+ * A call-order sanity check, **not** a proof of transaction isolation.
+ *
+ * This records, at the instant `get` is called, whether the audit row
+ * `recordOriginalRead` writes already exists. That can only ever come back
+ * `false`, in both the correct code and a regressed one that merged
+ * everything into a single `withUserContext` block: `recordOriginalRead` is
+ * called with the readiness data as an argument, so in plain program order it
+ * always runs *after* `documents.get` returns, whether or not the two DB
+ * calls share a transaction. So this check has no power to distinguish "two
+ * short transactions with the fetch sandwiched between them" from "one
+ * transaction spanning the whole call" — it only confirms the audit write
+ * is not somehow issued before the bytes are fetched, which is a much weaker
+ * claim than transaction isolation.
+ *
+ * The actual transaction-boundary guarantee is not something a test like this
+ * can observe from outside; it comes from the orchestrator's code structure
+ * itself (`infrastructure/read-original.ts`): `beginReadOriginal`'s
+ * `withUserContext` call returns — and that transaction commits — before
+ * `documents.get` is ever reached, and `recordOriginalRead`'s
+ * `withUserContext` call opens a fresh transaction afterward. That is
+ * verifiable by inspection, not by a runtime probe; proving it at runtime
+ * would need something like a `pg_stat_activity` idle-in-transaction check,
+ * which is not worth the added flakiness here.
  */
-function observingStore(inner: DocumentStore, importId: string): { store: DocumentStore; sawAuditBeforeFetch: () => boolean | undefined } {
-  let sawAuditBeforeFetch: boolean | undefined;
+function orderObservingStore(inner: DocumentStore, importId: string): { store: DocumentStore; auditRowExistedAtFetchTime: () => boolean | undefined } {
+  let auditRowExistedAtFetchTime: boolean | undefined;
   const store: DocumentStore = {
     provider: inner.provider,
     put: inner.put.bind(inner),
@@ -62,11 +78,11 @@ function observingStore(inner: DocumentStore, importId: string): { store: Docume
           .from(auditEvents)
           .where(and(eq(auditEvents.entityId, importId), eq(auditEvents.action, "payroll.original_read"))),
       );
-      sawAuditBeforeFetch = rows.length > 0;
+      auditRowExistedAtFetchTime = rows.length > 0;
       return inner.get(key);
     },
   };
-  return { store, sawAuditBeforeFetch: () => sawAuditBeforeFetch };
+  return { store, auditRowExistedAtFetchTime: () => auditRowExistedAtFetchTime };
 }
 
 describe("readOriginal", () => {
@@ -91,14 +107,14 @@ describe("readOriginal", () => {
     expect(rows[0]?.after).toEqual({ sha256: uploaded.sha256, sizeBytes: uploaded.sizeBytes });
   });
 
-  it("commits transaction one and closes it before the document-store fetch runs, and only audits afterwards (no transaction spans the fetch)", async () => {
+  it("calls recordOriginalRead only after the document fetch returns (call-order sanity check — see orderObservingStore's doc comment for what this does and does not prove)", async () => {
     const principal = await seedPrincipal();
     const uploaded = await aCleanImport(principal);
     const resolution = await resolveDocumentStore(principal.userId);
-    const { store, sawAuditBeforeFetch } = observingStore(resolution!.store, uploaded.id);
+    const { store, auditRowExistedAtFetchTime } = orderObservingStore(resolution!.store, uploaded.id);
 
     await readOriginal(principal, uploaded.id, { documents: store });
-    expect(sawAuditBeforeFetch()).toBe(false);
+    expect(auditRowExistedAtFetchTime()).toBe(false);
 
     const db = await testDb();
     const rows = await withUserContext(db, { userId: principal.userId }, (tx) =>
