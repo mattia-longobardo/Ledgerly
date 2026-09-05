@@ -141,7 +141,10 @@ export function ReviewForm(props: ReviewFormProps) {
         setError(result.error);
         return;
       }
-      advance(props.pending, true);
+      // Server-computed, not `props.pending`: that snapshot is from this
+      // page's last render, and another reviewer could have resolved a
+      // different import in the meantime.
+      goTo(result.data.next, true);
     });
   }
 
