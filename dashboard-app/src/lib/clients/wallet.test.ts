@@ -300,9 +300,9 @@ describe("getRecords", () => {
 });
 
 describe("postRecords", () => {
-  it("POSTs the records array with a bearer header", async () => {
-    fetchMock.mockResolvedValueOnce(json({}));
-    await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+  it("POSTs the records array with a bearer header, formatting the decimal-string amount as a 2dp JSON number at the wire boundary", async () => {
+    fetchMock.mockResolvedValueOnce(json({ records: [] }));
+    await postRecords({ token: "t" }, [{ accountId: "a1", amount: "0.63", recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
     const [, init] = fetchMock.mock.calls[0]!;
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).headers).toMatchObject({ authorization: "Bearer t" });
@@ -311,21 +311,22 @@ describe("postRecords", () => {
     ]);
   });
 
-  it("returns [] rather than throwing when the response shape is unrecognised — a wrong guess here must not turn a successful post into a reported failure", async () => {
+  it("throws rather than silently returning [] when the response shape is unrecognised — a shape mismatch on a real post must not quietly lose the Wallet linkage", async () => {
     fetchMock.mockResolvedValueOnce(json({ unexpected: "shape" }));
-    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
-    expect(result).toEqual([]);
+    await expect(
+      postRecords({ token: "t" }, [{ accountId: "a1", amount: "0.63", recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]),
+    ).rejects.toThrow();
   });
 
   it("surfaces the created record's id when the response is a bare array", async () => {
     fetchMock.mockResolvedValueOnce(json([{ id: "created-1", accountId: "a1", amount: 0.63, currencyCode: "EUR", recordDate: "2026-09-01T00:00:00Z" }]));
-    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: "0.63", recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
     expect(result[0]!.id).toBe("created-1");
   });
 
   it("surfaces the created record's id when the response is wrapped in { records }", async () => {
     fetchMock.mockResolvedValueOnce(json({ records: [{ id: "created-2", accountId: "a1", amount: 0.63, currencyCode: "EUR", recordDate: "2026-09-01T00:00:00Z" }] }));
-    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
+    const result = await postRecords({ token: "t" }, [{ accountId: "a1", amount: "0.63", recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]);
     expect(result[0]!.id).toBe("created-2");
   });
 
@@ -333,10 +334,17 @@ describe("postRecords", () => {
     fetchMock.mockImplementation(async () => json({}, 500));
     await expect(
       postRecords({ token: "t", attempts: 1, sleep: async () => {} }, [
-        { accountId: "a1", amount: 0.63, recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" },
+        { accountId: "a1", amount: "0.63", recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" },
       ]),
     ).rejects.toThrow(UpstreamError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an amount string that is not a valid decimal, before ever sending it to Wallet", async () => {
+    await expect(
+      postRecords({ token: "t" }, [{ accountId: "a1", amount: "not-a-number", recordDate: "2026-09-01T00:00:00Z", note: "auto-interest" }]),
+    ).rejects.toThrow(/not a valid decimal/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
