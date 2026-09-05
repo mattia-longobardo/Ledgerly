@@ -3,7 +3,7 @@ import { NotFoundError } from "../application/errors";
 import { getImport, listImports } from "../application/list-imports";
 import type { PayrollImport } from "../application/ports";
 import type { QueueEntry } from "./queue";
-import { orderQueue } from "./queue";
+import { AWAITING_STATUSES, orderQueue, queueEntryFrom } from "./queue";
 import { runForPrincipal } from "./run";
 
 /** Flat and serialisable: this crosses the server/client boundary. */
@@ -44,25 +44,25 @@ export interface ReviewData {
 }
 
 /**
- * The Italian labels and the English hints the review screen shows beside each
- * field. The label is the payslip's own wording (data, spec §2.9); the hint is
- * UI chrome and is therefore English.
+ * The English labels and Italian hints the review screen shows beside each
+ * field — the shape the retired `/work/verify/[id]` page used (label: "Net",
+ * hint: "NETTO BUSTA"), restored here (Finding 5, whole-branch review) after
+ * this loader had inverted it: a label is UI copy and must be English (Global
+ * Constraint), while the hint carries the payslip's own wording so a reviewer
+ * can still cross-check the figure against the document in front of them.
  */
 const FIELD_META: Record<PayslipField, { label: string; hint: string; unit: "eur" | "hours" }> = {
-  gross: { label: "Totale competenze", hint: "Gross for the period", unit: "eur" },
-  net: { label: "Netto del mese", hint: "Net paid", unit: "eur" },
-  taxes: { label: "Totale trattenute", hint: "Total deductions", unit: "eur" },
-  fundContribEmployee: { label: "Contributo Cometa dipendente", hint: "Pension fund, employee share", unit: "eur" },
-  fundContribEmployer: { label: "Contributo Cometa azienda", hint: "Pension fund, employer share", unit: "eur" },
-  ferieBalance: { label: "Ferie residue", hint: "Vacation hours remaining", unit: "hours" },
-  rolBalance: { label: "ROL residue", hint: "Permit hours remaining", unit: "hours" },
-  permessiBalance: { label: "Permessi residui", hint: "Other permit hours remaining", unit: "hours" },
-  ferieTakenHours: { label: "Ferie godute", hint: "Vacation hours taken", unit: "hours" },
-  rolTakenHours: { label: "ROL godute", hint: "Permit hours taken", unit: "hours" },
+  gross: { label: "Gross", hint: "TOTALE LORDO", unit: "eur" },
+  net: { label: "Net", hint: "NETTO BUSTA", unit: "eur" },
+  taxes: { label: "Taxes", hint: "TOTALE TRATTENUTE", unit: "eur" },
+  fundContribEmployee: { label: "Pension fund, employee share", hint: "FONDO C/DIPE (Cometa)", unit: "eur" },
+  fundContribEmployer: { label: "Pension fund, employer share", hint: "FONDO C/AZIENDA (Cometa)", unit: "eur" },
+  ferieBalance: { label: "Vacation balance", hint: "FERIE RESIDUE, in hours", unit: "hours" },
+  rolBalance: { label: "Permit balance (ROL)", hint: "ROL RESIDUI, in hours", unit: "hours" },
+  permessiBalance: { label: "Other permit balance", hint: "PERMESSI RESIDUI, in hours", unit: "hours" },
+  ferieTakenHours: { label: "Vacation taken", hint: "FERIE GODUTE, hours used", unit: "hours" },
+  rolTakenHours: { label: "Permit taken (ROL)", hint: "ROL GODUTE, hours used", unit: "hours" },
 };
-
-/** The statuses a reviewer still has something to do about. */
-const AWAITING: readonly PayrollImport["status"][] = ["needs_review", "verified", "needs_ocr"];
 
 function toRow(item: PayrollImport): ImportRow {
   const fields = item.extraction?.fields;
@@ -113,14 +113,8 @@ export async function loadReview(importId: string): Promise<ReviewData | null> {
       };
     });
 
-    const queue = await listImports(deps)(principal, { statuses: AWAITING });
-    const pending: QueueEntry[] = orderQueue(
-      queue.map((item) => ({
-        id: item.id,
-        month: item.extraction?.month ?? item.createdAt.toISOString().slice(0, 10),
-        isThirteenth: item.extraction?.isThirteenth ?? false,
-      })),
-    );
+    const queue = await listImports(deps)(principal, { statuses: AWAITING_STATUSES });
+    const pending: QueueEntry[] = orderQueue(queue.map(queueEntryFrom));
 
     return {
       import: toRow(found),

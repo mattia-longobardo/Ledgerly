@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { orderQueue, placeInQueue, reviewHref, successorOf, type QueueEntry } from "./queue";
+import { AWAITING_STATUSES, orderQueue, placeInQueue, queueEntryFrom, reviewHref, successorOf, type QueueEntry } from "./queue";
 
 const entry = (id: string, month: string, isThirteenth = false): QueueEntry => ({ id, month, isThirteenth });
 
@@ -70,5 +70,27 @@ describe("successorOf", () => {
 describe("reviewHref", () => {
   it("points at the Company payroll review route, not the retired /work one", () => {
     expect(reviewHref("018f-abc")).toBe("/company/payroll/018f-abc");
+  });
+});
+
+describe("AWAITING_STATUSES", () => {
+  it("includes verified, so a confirmed-but-not-applied import stays part of the queue", () => {
+    expect(AWAITING_STATUSES).toEqual(["needs_review", "verified", "needs_ocr"]);
+  });
+});
+
+describe("queueEntryFrom", () => {
+  it("takes the month and isThirteenth off the extraction when there is one", () => {
+    const entry = queueEntryFrom({
+      id: "a",
+      createdAt: new Date("2026-01-15T00:00:00Z"),
+      extraction: { month: "2026-08-01", isThirteenth: true },
+    });
+    expect(entry).toEqual({ id: "a", month: "2026-08-01", isThirteenth: true });
+  });
+
+  it("falls back to the day the import was created when there is no extraction yet", () => {
+    const entry = queueEntryFrom({ id: "a", createdAt: new Date("2026-01-15T12:34:56Z"), extraction: null });
+    expect(entry).toEqual({ id: "a", month: "2026-01-15", isThirteenth: false });
   });
 });
