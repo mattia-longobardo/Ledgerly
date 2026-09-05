@@ -1,7 +1,7 @@
 import type { Permission } from "@/platform/auth/permissions";
 import type { Capabilities } from "@/platform/capabilities/resolve";
 
-export type CardKey = "total_balance" | "accounts_sync" | "funds" | "leave";
+export type CardKey = "total_balance" | "accounts_sync" | "funds" | "leave" | "payroll_imports";
 
 export interface HomeCard {
   key: CardKey;
@@ -38,7 +38,11 @@ export const HOME_CARDS: readonly HomeCard[] = [
   { key: "total_balance", title: "Total balance", href: "/finance/accounts", requires: {} },
   { key: "accounts_sync", title: "Accounts sync", href: "/settings/integrations", requires: { integration: "wallet" } },
   { key: "funds", title: "Funds", href: "/finance/funds", requires: {} },
-  { key: "leave", title: "Leave", href: "/work", requires: { feature: "timeoff" } },
+  { key: "leave", title: "Leave", href: "/company/time-off", requires: { feature: "timeoff" } },
+  // Spec §7.1 lists a payroll-import-status card. It is gated on the feature so
+  // it disappears with the section, and on `payroll.upload` so a viewer is told
+  // out loud rather than silently shown nothing (`cardState`, not `isCardVisible`).
+  { key: "payroll_imports", title: "Payroll imports", href: "/company/payroll", requires: { feature: "payroll", permission: "payroll.upload" } },
 ];
 
 /**

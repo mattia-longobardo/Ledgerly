@@ -84,12 +84,34 @@ describe("cardState", () => {
 });
 
 describe("HOME_CARDS and visibleCards", () => {
-  it("defines the four cards with their target sections", () => {
-    expect(HOME_CARDS.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave"]);
+  it("defines the five cards with their target sections", () => {
+    expect(HOME_CARDS.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave", "payroll_imports"]);
     expect(HOME_CARDS.find((c) => c.key === "total_balance")?.href).toBe("/finance/accounts");
     expect(HOME_CARDS.find((c) => c.key === "accounts_sync")?.href).toBe("/settings/integrations");
     expect(HOME_CARDS.find((c) => c.key === "funds")?.href).toBe("/finance/funds");
-    expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/work");
+    expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/company/time-off");
+  });
+
+  it("links Leave at the relocated Time Off route", () => {
+    expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/company/time-off");
+  });
+
+  it("shows the payroll import card only when the payroll feature is on", () => {
+    expect(visibleCards(caps({ features: { ...caps().features, payroll: true } })).map((c) => c.key)).toContain(
+      "payroll_imports",
+    );
+    expect(visibleCards(caps({ features: { ...caps().features, payroll: false } })).map((c) => c.key)).not.toContain(
+      "payroll_imports",
+    );
+  });
+
+  it("tells a viewer they lack permission rather than hiding the payroll card", () => {
+    const viewerCaps = caps({
+      features: { ...caps().features, payroll: true },
+      permissions: permissionsForRoles(["viewer"]),
+    });
+    const card = visibleCards(viewerCaps).find((c) => c.key === "payroll_imports")!;
+    expect(cardState(card, viewerCaps)).toEqual({ state: "permission_denied" });
   });
 
   it("hides accounts_sync until Wallet is connected and leave until timeoff is on", () => {
@@ -144,8 +166,9 @@ describe("Home composition", () => {
       integrations: { ...caps().integrations, wallet: "connected" },
     });
 
-    // None of the real HOME_CARDS declares a `permission` today, so a
-    // viewer — who only holds `accounts.read` — is denied none of them.
+    // `payroll_imports` is the one real card that declares a `permission`, but
+    // this viewer has the payroll feature off, so it never becomes visible —
+    // none of the cards actually shown here are denied.
     for (const card of visibleCards(viewer)) {
       expect(cardState(card, viewer)).toBeNull();
     }

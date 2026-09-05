@@ -11,7 +11,7 @@ export interface LeaveByMonthProps {
   ytdDays: number;
   year: number;
   /** First payslip still waiting on the human gate, so the empty state can link to it. */
-  firstPendingId: number | null;
+  firstPendingId: string | null;
   pendingCount: number;
 }
 
@@ -61,7 +61,7 @@ export function LeaveByMonth({
             action={
               firstPendingId === null ? undefined : (
                 <Link
-                  href={`/work/verify/${firstPendingId}`}
+                  href={`/company/payroll/${firstPendingId}`}
                   className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-body-sm font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
                 >
                   Verify a payslip
