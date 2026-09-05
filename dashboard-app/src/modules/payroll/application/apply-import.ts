@@ -84,7 +84,7 @@ export function applyImport(deps: UseCaseDeps) {
         periodEnd: period.periodEnd,
         gross: grossOf(components),
         net: netOf(components),
-        corrections: found.extraction.fields as unknown as PayrollRecord["corrections"],
+        corrections: found.extraction.fields,
       });
       if (!updated) throw new NotFoundError();
       record = updated;
@@ -109,7 +109,7 @@ export function applyImport(deps: UseCaseDeps) {
         net: netOf(components),
         verifiedAt: now,
         verifiedBy: principal.userId,
-        corrections: found.extraction.fields as unknown as PayrollRecord["corrections"],
+        corrections: found.extraction.fields,
       });
       if (supersededRecordId) {
         // The forward pointer needs the new record's id, which did not exist a
