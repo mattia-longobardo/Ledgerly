@@ -40,6 +40,16 @@ const schema = z.object({
   DOCUMENT_STORE_DRIVER: z.enum(["silo", "local"]).default("silo"),
   DOCUMENT_STORE_LOCAL_PATH: z.preprocess(blankToUndefined, z.string().optional()),
 
+  /**
+   * Spec §13.3: the boundary is always there; the scanner is a deployment
+   * choice. `none` (the default) records `scanner: "none"` on every import it
+   * clears, so "nothing scanned this" is a fact on the row rather than an
+   * assumption. `clamd` needs a reachable clamd on CLAMD_HOST:CLAMD_PORT.
+   */
+  MALWARE_SCANNER: z.enum(["none", "clamd"]).default("none"),
+  CLAMD_HOST: z.preprocess(blankToUndefined, z.string().default("clamav")),
+  CLAMD_PORT: z.coerce.number().int().positive().default(3310),
+
   PAPERLESS_URL: z.url(),
   PAPERLESS_TOKEN: z.string().min(1),
   PAPERLESS_PAYSLIP_TAG_ID: z.coerce.number().int().default(22),
