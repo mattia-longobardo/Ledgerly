@@ -1,8 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { funds, organizations, users } from "@/lib/db/schema";
+import { funds, organizations, payrollMappingRules, users } from "@/lib/db/schema";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewPayrollComponent, NewPayrollImport, NewPayrollRecord } from "../application/ports";
+import { DEFAULT_MAPPING_RULES } from "../domain/mapping";
 import { DrizzlePayrollComponentsRepository } from "./drizzle-payroll-components-repository";
 import { DrizzlePayrollImportsRepository } from "./drizzle-payroll-imports-repository";
 import { DrizzlePayrollMappingRulesRepository } from "./drizzle-payroll-mapping-rules-repository";
@@ -185,14 +186,32 @@ describe("Drizzle payroll repositories", () => {
     expect(second.map((c) => c.code)).toEqual(["gross"]);
   });
 
-  it("returns the seeded global mapping rules and no other user's rules", async () => {
-    const { db, a } = await seedUsers();
+  it("merges the code-level global catalogue with this user's own rules, and no other user's", async () => {
+    const { db, a, b } = await seedUsers();
+    // No migration seeds `payroll_mapping_rules` with the global catalogue; it
+    // lives in `DEFAULT_MAPPING_RULES` and `DrizzlePayrollMappingRulesRepository.
+    // listFor` merges it in, matching what `MemoryPayrollMappingRulesRepository`
+    // already does — so both backends honor the port's documented contract
+    // ("global rules and this user's own") identically.
+    await withUserContext(db, { userId: a }, (tx) =>
+      tx.insert(payrollMappingRules).values({
+        userId: a, matchCode: "gross", matchLabel: null, componentKind: "bonus",
+        target: { kind: "none" }, priority: 1,
+      }),
+    );
+    await withUserContext(db, { userId: b }, (tx) =>
+      tx.insert(payrollMappingRules).values({
+        userId: b, matchCode: "net", matchLabel: null, componentKind: "bonus",
+        target: { kind: "none" }, priority: 1,
+      }),
+    );
+
     const rules = await withUserContext(db, { userId: a }, (tx) => new DrizzlePayrollMappingRulesRepository(tx).listFor(a));
-    // No migration seeds rows into payroll_mapping_rules; the global
-    // catalogue lives in `DEFAULT_MAPPING_RULES` and is merged by the use case.
-    // This proves the query is well-formed and leaks nothing, not that rows exist.
-    expect(Array.isArray(rules)).toBe(true);
-    expect(rules.every((r) => r.userId === null || r.userId === a)).toBe(true);
+
+    const globalCodes = rules.filter((r) => r.userId === null).map((r) => r.matchCode);
+    expect(globalCodes).toEqual(DEFAULT_MAPPING_RULES.map((r) => r.matchCode));
+    expect(rules.some((r) => r.userId === a && r.matchCode === "gross" && r.componentKind === "bonus")).toBe(true);
+    expect(rules.some((r) => r.userId === b)).toBe(false);
   });
 
   it("the legacy fund bridge upserts one row per month and reports an unknown slug", async () => {
