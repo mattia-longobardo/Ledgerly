@@ -120,7 +120,21 @@ export interface PayrollImportsRepository {
   create(input: NewPayrollImport): Promise<PayrollImport>;
   /** Bumps `version` and `updated_at`. No optimistic-concurrency check: pipeline transitions are server-driven. */
   patch(userId: string, id: string, patch: PayrollImportPatch): Promise<PayrollImport | null>;
-  /** Cross-user, for the ingest and retention jobs. Runs under `withSystemContext` only. */
+  /**
+   * Cross-user, for the ingest and retention jobs. Runs under `withSystemContext` only.
+   *
+   * Ordered `updated_at asc, id asc` — not `created_at`, deliberately (Finding
+   * 8, B2 whole-branch review): `payroll-ingest.ts`'s job records a bare
+   * `error` patch (bumping `updated_at`, changing nothing else) when an
+   * import's processing throws, so a row that keeps failing (an LLM outage,
+   * a malformed PDF) sorts to the back of the next tick's selection instead
+   * of camping at the front of every tick forever on an unchanging
+   * `created_at`. This is a bounded mitigation, not a real backoff: it has
+   * no schedule and no cap on retry count (both would need a new column —
+   * out of scope for that batch), and it cannot stop a full batch's worth of
+   * simultaneously-failing rows from crowding out healthy ones tick after
+   * tick, only a handful of them from doing so indefinitely.
+   */
   listByStatusForAllUsers(statuses: readonly PayrollImportStatus[], limit: number): Promise<PayrollImport[]>;
   /** Cross-user; terminal statuses with a live object whose retention has run out (Ruling R4-5). */
   listPurgeableForAllUsers(before: Date, limit: number): Promise<PayrollImport[]>;

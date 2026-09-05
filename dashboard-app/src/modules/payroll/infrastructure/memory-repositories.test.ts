@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { NewPayrollComponent, NewPayrollImport, NewPayrollRecord } from "../application/ports";
 import {
   MemoryLegacyFundDeposits,
@@ -130,12 +130,35 @@ describe("MemoryPayrollImportsRepository", () => {
     expect((await repo.get(USER_A, created.id))?.status).toBe("received");
   });
 
-  it("listByStatusForAllUsers crosses users, oldest first, and honours the limit", async () => {
+  it("listByStatusForAllUsers crosses users, least-recently-updated first, and honours the limit", async () => {
     const repo = new MemoryPayrollImportsRepository();
     const a = await repo.create(newImport(USER_A, "a".repeat(64)));
     const b = await repo.create(newImport(USER_B, "b".repeat(64)));
     expect((await repo.listByStatusForAllUsers(["received"], 10)).map((i) => i.id)).toEqual([a.id, b.id]);
     expect((await repo.listByStatusForAllUsers(["received"], 1)).map((i) => i.id)).toEqual([a.id]);
+  });
+
+  it("sorts a row to the back once it is touched again, ahead of one that was never retried (Finding 8)", async () => {
+    // Fake timers give each step its own unambiguous instant — real wall
+    // time is coarse enough that create-then-patch can land in the same
+    // millisecond, which would make this assertion flaky rather than wrong.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const repo = new MemoryPayrollImportsRepository();
+      const a = await repo.create(newImport(USER_A, "a".repeat(64)));
+      vi.setSystemTime(new Date("2026-01-01T00:00:01.000Z"));
+      const b = await repo.create(newImport(USER_B, "b".repeat(64)));
+      vi.setSystemTime(new Date("2026-01-01T00:00:02.000Z"));
+      // `a` is the older row, but a bare `error` patch — exactly what
+      // `payroll-ingest.ts` does when an import's processing throws — bumps
+      // its `updated_at` without changing its status, so it no longer camps
+      // at the front of the queue on an unchanging `created_at`.
+      await repo.patch(USER_A, a.id, { error: "llm_unavailable" });
+      expect((await repo.listByStatusForAllUsers(["received"], 10)).map((i) => i.id)).toEqual([b.id, a.id]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("listPurgeableForAllUsers takes only terminal rows with a live key past their retention", async () => {

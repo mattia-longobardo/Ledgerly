@@ -110,7 +110,11 @@ export class DrizzlePayrollImportsRepository implements PayrollImportsRepository
       .select()
       .from(payrollImports)
       .where(inArray(payrollImports.status, [...statuses]))
-      .orderBy(asc(payrollImports.createdAt), asc(payrollImports.id))
+      // `updated_at`, not `created_at` — see the port's doc-comment
+      // (Finding 8): a row payroll-ingest.ts keeps failing gets its
+      // `updated_at` bumped without changing status, which sorts it to the
+      // back of the next tick's selection instead of the front of every one.
+      .orderBy(asc(payrollImports.updatedAt), asc(payrollImports.id))
       .limit(limit);
     return rows.map(toImport);
   }

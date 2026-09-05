@@ -129,10 +129,13 @@ export class MemoryPayrollImportsRepository implements PayrollImportsRepository 
   }
 
   async listByStatusForAllUsers(statuses: readonly PayrollImportStatus[], limit: number): Promise<PayrollImport[]> {
-    // Oldest first: a queue, so a stuck row is retried before a fresh one.
+    // Least-recently-updated first, matching the Drizzle repository (Finding
+    // 8) — a stuck row `payroll-ingest.ts` keeps failing gets an `error`-only
+    // patch that bumps `updated_at`, which sorts it to the back of the next
+    // selection instead of camping at the front on an unchanging `created_at`.
     return this.rows
       .filter((r) => statuses.includes(r.status))
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+      .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime() || a.id.localeCompare(b.id))
       .slice(0, limit)
       .map((r) => ({ ...r }));
   }

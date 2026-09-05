@@ -10,6 +10,7 @@ vi.mock("@/lib/clients/gotify", () => ({ alertJobFailure: vi.fn(async () => {}) 
 const scanImport = vi.fn();
 const parseImport = vi.fn();
 const listDue = vi.fn();
+const patchImport = vi.fn(async () => null);
 
 vi.mock("@/modules/payroll/infrastructure/ingest", () => ({
   scanImport: (...args: unknown[]) => scanImport(...args),
@@ -19,7 +20,7 @@ vi.mock("@/platform/db/context", () => ({
   withSystemContext: async (_db: unknown, fn: (tx: unknown) => Promise<unknown>) => fn({}),
 }));
 vi.mock("@/modules/payroll/infrastructure/deps", () => ({
-  payrollDeps: () => ({ imports: { listByStatusForAllUsers: listDue } }),
+  payrollDeps: () => ({ imports: { listByStatusForAllUsers: listDue, patch: patchImport } }),
 }));
 
 const { runPayrollIngestJob } = await import("./payroll-ingest");
@@ -33,6 +34,8 @@ beforeEach(() => {
   scanImport.mockReset();
   parseImport.mockReset();
   listDue.mockReset();
+  patchImport.mockReset();
+  patchImport.mockResolvedValue(null);
 });
 
 function due(id: string, userId = "u1", status = "scanning") {
@@ -97,6 +100,22 @@ describe("runPayrollIngestJob", () => {
     const result = await runPayrollIngestJob({ trigger: "cron", now: NOW });
     expect(result.status).toBe("success");
     expect(result.detail).toMatchObject({ considered: 2, failed: 1, parsed: 1 });
+  });
+
+  it("records a bare error patch on a failing import, so it sorts to the back of the next tick (Finding 8)", async () => {
+    listDue.mockResolvedValue([due("i1")]);
+    scanImport.mockRejectedValue(new Error("llm unavailable"));
+    await runPayrollIngestJob({ trigger: "cron", now: NOW });
+    expect(patchImport).toHaveBeenCalledWith("u1", "i1", { error: "llm unavailable" });
+  });
+
+  it("does not let a failed bookkeeping patch mask the original failure", async () => {
+    listDue.mockResolvedValue([due("i1")]);
+    scanImport.mockRejectedValue(new Error("llm unavailable"));
+    patchImport.mockRejectedValue(new Error("db also down"));
+    const result = await runPayrollIngestJob({ trigger: "cron", now: NOW });
+    expect(result.status).toBe("success");
+    expect(result.detail).toMatchObject({ failed: 1 });
   });
 
   it("records a failed run and alerts when the selection itself throws", async () => {
