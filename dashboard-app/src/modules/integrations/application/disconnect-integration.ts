@@ -13,9 +13,23 @@ import { ConnectionNotFoundError, UnknownProviderError } from "./errors";
  *
  * All of it is one transaction, deliberately: `onDisconnect` archives or
  * deletes accounts, and that must not be half-applied if destroying the
- * credential fails. `onDisconnect` is the one provider hook that does no
- * network I/O — it operates on local data the provider owned — so holding a
- * transaction across it is safe.
+ * credential fails.
+ *
+ * The real invariant, precisely: no provider's `onDisconnect` may do network
+ * I/O *while this transaction is open*. Most providers satisfy that trivially
+ * because they only ever touch local data they already own. `payroll_silo` is
+ * the one exception on paper — its `purge` branch (`silo-provider-adapter.ts`)
+ * lists and deletes objects in the document store over HTTP — but it is inert
+ * today: nothing currently populates `ctx.store`, a deliberately parked gap
+ * (PH4-C4). Unparking it must not mean simply filling in `ctx.store` here —
+ * the store has to be resolved and the purge performed by the *caller*,
+ * before `inUserContext` opens, mirroring Ruling R4-8's pattern for keeping
+ * that I/O out of the use-case transaction — the same pattern
+ * `document-store-resolver.ts`'s `resolveDocumentStore` already follows by
+ * being called before any `inUserContext`/`withUserContext` transaction
+ * opens, never from inside one. Whoever unparks PH4-C4 should not trust an
+ * older wording of this comment claiming no provider ever does network I/O
+ * here, and should not nest the purge inside this transaction.
  */
 export function disconnectIntegration(deps: IntegrationDeps) {
   return async (
