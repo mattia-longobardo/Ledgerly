@@ -32,6 +32,7 @@ describe("recordPostedEntry", () => {
       accruals: new MemoryInterestAccrualsRepository(),
       entries: new MemoryInterestEntriesRepository(),
       balances: { latestBalanceAsOf: async () => null },
+      accounts: { ownedByUser: async () => true },
       clock: { now: () => new Date("2026-09-05T09:00:00Z") },
       audit: async () => {},
     };
@@ -46,12 +47,32 @@ describe("recordPostedEntry", () => {
     expect(await deps.entries.listForRule("r1", "paid")).toHaveLength(1);
   });
 
+  // B8: `Number("0.615000").toFixed(2)` gives "0.61" (a bare float
+  // truncation), where the codebase's own cent-rounding rule (HALF_UP via
+  // toCents/fromCents) gives "0.62" — a second, disagreeing rounding point
+  // through a float on a field that is stored at 6-decimal precision.
+  it("rounds gross to cents via toCents/fromCents, not a bare Number().toFixed(2)", async () => {
+    const deps = {
+      rules: new MemoryInterestRulesRepository(),
+      accruals: new MemoryInterestAccrualsRepository(),
+      entries: new MemoryInterestEntriesRepository(),
+      balances: { latestBalanceAsOf: async () => null },
+      accounts: { ownedByUser: async () => true },
+      clock: { now: () => new Date("2026-09-05T09:00:00Z") },
+      audit: async () => {},
+    };
+    const stored = await deps.accruals.upsert({ ...accrual, gross: "0.615000" });
+    const entry = await recordPostedEntry(deps)(rule, stored, "auto-interest note");
+    expect(entry.gross).toBe("0.62");
+  });
+
   it("defaults transactionId to null when the caller does not have one", async () => {
     const deps = {
       rules: new MemoryInterestRulesRepository(),
       accruals: new MemoryInterestAccrualsRepository(),
       entries: new MemoryInterestEntriesRepository(),
       balances: { latestBalanceAsOf: async () => null },
+      accounts: { ownedByUser: async () => true },
       clock: { now: () => new Date("2026-09-05T09:00:00Z") },
       audit: async () => {},
     };
@@ -73,9 +94,12 @@ describe("recordPostedEntry", () => {
         latestCarry: async () => null,
         upsert: async (input) => ({ ...input, id: "ignored" }),
         markPosted: async () => false,
+        claimForPosting: async () => true,
+        releaseClaim: async () => {},
       },
       entries: new MemoryInterestEntriesRepository(),
       balances: { latestBalanceAsOf: async () => null },
+      accounts: { ownedByUser: async () => true },
       clock: { now: () => new Date("2026-09-05T09:00:00Z") },
       audit: async (e) => {
         auditCalls.push(e);

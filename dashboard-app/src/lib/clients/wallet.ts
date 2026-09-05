@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fromCents, toCents } from "@/lib/calc/money";
 import { UpstreamError } from "@/lib/contracts";
 import { env } from "@/lib/env";
 import { HttpError, requestJson, withRetry, type SleepFn } from "./http";
@@ -280,10 +281,37 @@ export async function getRecords(opts: GetRecordsOptions): Promise<WalletRecord[
 
 export interface PostRecordInput {
   accountId: string;
-  amount: number;
+  /**
+   * A plain decimal string ("0.46", "-12.34"), same shape as every read-side
+   * money field in this module (`WalletRecord.amount` is the one exception,
+   * mirroring whatever Wallet itself sends back). B8's carried review
+   * finding: this used to be typed `number`, which forced the one call site
+   * that writes real money (`wallet-interest-posting-adapter.ts`) to convert
+   * via a raw `Number()` — against the "regex, never `Number()`" rule every
+   * other money field in this codebase follows. The conversion now happens
+   * exactly once, at the wire boundary in `postRecords` below, via
+   * `toCents`/`fromCents` rather than a bare `Number()`.
+   */
+  amount: string;
   recordDate: string;
   note: string;
   categoryId?: string;
+}
+
+/**
+ * Converts a decimal amount string to the JSON number Wallet's API expects,
+ * at the one point this module ever serialises money onto the wire.
+ * `toCents`/`fromCents` round-trips through integer cents so the number that
+ * actually reaches `JSON.stringify` always carries exactly two decimal
+ * digits — never whatever digits a stray float remainder would otherwise
+ * print verbatim.
+ */
+function formatAmountForWire(amount: string): number {
+  const cents = toCents(amount);
+  if (cents === null) {
+    throw new Error(`postRecords: amount is not a valid decimal string: ${JSON.stringify(amount)}`);
+  }
+  return Number(fromCents(cents).toFixed(2));
 }
 
 /**
@@ -292,15 +320,21 @@ export interface PostRecordInput {
  * comment on `WalletCallOptions`). It plausibly comes back either wrapped
  * (`{ records: [...] }`, matching every read endpoint's own shape) or as a
  * bare array (a common REST convention for "here is what you just created").
- * Either is accepted; anything else — including the empty object this
- * endpoint may simply reply with — degrades to an empty list rather than
- * throwing: unlike a read, a wrong guess here must not turn a successful
- * money-moving POST into a reported failure. The cost of that leniency is
- * only that `transactionId` stays unset when the shape doesn't match.
+ *
+ * Ruling (B8, carried review finding): a shape that matches neither used to
+ * degrade to an empty list via `.catch([])`, on the theory that a wrong
+ * guess here must not turn a successful money-moving POST into a reported
+ * failure. In practice that let a real POST succeed while silently losing
+ * the Wallet record's id — `interest_entries.transactionId` ends up `null`
+ * forever, with no record anywhere of what actually happened. Failing loudly
+ * instead is the safer default: `postRecords` throwing here is caught by
+ * `postWalletInterestEntry` and reported as a `WalletPostAmbiguousError`
+ * (money may or may not be at Wallet), which leaves the accrual's posting
+ * claim in the observable in-flight state for an operator to reconcile —
+ * exactly the outcome a shape mismatch on a real post deserves, rather than
+ * a quiet, permanent loss of the linkage.
  */
-const postRecordsResponseSchema = z
-  .union([recordsSchema.transform((v) => v.records), z.array(recordSchema)])
-  .catch([]);
+const postRecordsResponseSchema = z.union([recordsSchema.transform((v) => v.records), z.array(recordSchema)]);
 
 /**
  * Used only by the optional interest-posting adapter (Task 19), behind a
@@ -312,12 +346,13 @@ const postRecordsResponseSchema = z
  */
 export async function postRecords(opts: WalletCallOptions, records: PostRecordInput[]): Promise<WalletRecord[]> {
   try {
+    const body = JSON.stringify(records.map((r) => ({ ...r, amount: formatAmountForWire(r.amount) })));
     return await withRetry(
       () =>
         requestJson("wallet", `${baseUrl()}/records`, postRecordsResponseSchema, {
           method: "POST",
           headers: { ...headers(opts), "content-type": "application/json" },
-          body: JSON.stringify(records),
+          body,
           signal: opts.signal,
         }),
       retryPolicy(opts),

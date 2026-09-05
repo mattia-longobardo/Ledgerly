@@ -1,3 +1,4 @@
+import { fromCents, toCents } from "@/lib/calc/money";
 import type { InterestAccrual, InterestEntry, InterestRule, UseCaseDeps } from "./ports";
 
 /** The rule's own switch, our own ledger as the idempotency source of truth, and the legacy script's "never post a zero" rule — all three, not just one. */
@@ -31,7 +32,14 @@ export function recordPostedEntry(deps: UseCaseDeps) {
       userId: rule.userId,
       accountId: rule.accountId,
       occurredAt: new Date(`${accrual.accrualDate}T00:00:00Z`),
-      gross: Number(accrual.gross).toFixed(2),
+      // `accrual.gross` is stored at 6-decimal precision; rounding it to the
+      // entry's 2-decimal column through a bare `Number().toFixed(2)` is a
+      // second rounding point through a float and can disagree with the
+      // codebase's own cent-rounding rule — `"0.615000"` becomes `"0.61"`
+      // via `Number()` where `toCents` (regex-parsed, HALF_UP) gives 62.
+      // Routed through `toCents`/`fromCents` instead, matching every other
+      // money rounding in this module (B8).
+      gross: fromCents(toCents(accrual.gross)!).toFixed(2),
       net: accrual.net,
       kind: "paid",
       // The Wallet record's own id, when the posting adapter could determine
