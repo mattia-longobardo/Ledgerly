@@ -195,6 +195,68 @@ describe("payroll API", () => {
     expect(res.status).toBe(403);
   });
 
+  /**
+   * Finding 6, whole-branch review: `upload` and `retry` (both `payroll.upload`)
+   * were the only two routes with a durability test proving a viewer is
+   * refused. `verify`/`reject`/`apply` (`payroll.review`) and `original`
+   * (`payroll.read_original`) turn a payslip into money and hand back scanned
+   * bytes respectively — exactly the routes that most need this proof, even
+   * though the checks themselves were already correct. `assertPermission`
+   * runs before any existence lookup in every one of these use cases, so a
+   * random, never-uploaded id is enough to reach the 403 without seeding a
+   * real import first.
+   */
+  it("refuses a viewer's verify with 403 permission_denied", async () => {
+    const { userId, organizationId } = await seedUser();
+    const res = await appFor(userId, organizationId, ["viewer"]).request(
+      "/api/v1/payroll/imports/00000000-0000-4000-8000-000000000001/verify",
+      {
+        method: "POST",
+        headers: { "x-requested-with": "test", "content-type": "application/json" },
+        body: JSON.stringify({ version: 1, month: "2026-08-01", isThirteenth: false, values: {} }),
+      },
+    );
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("permission_denied");
+  });
+
+  it("refuses a viewer's reject with 403 permission_denied", async () => {
+    const { userId, organizationId } = await seedUser();
+    const res = await appFor(userId, organizationId, ["viewer"]).request(
+      "/api/v1/payroll/imports/00000000-0000-4000-8000-000000000002/reject",
+      {
+        method: "POST",
+        headers: { "x-requested-with": "test", "content-type": "application/json" },
+        body: JSON.stringify({ version: 1 }),
+      },
+    );
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("permission_denied");
+  });
+
+  it("refuses a viewer's apply with 403 permission_denied", async () => {
+    const { userId, organizationId } = await seedUser();
+    const res = await appFor(userId, organizationId, ["viewer"]).request(
+      "/api/v1/payroll/imports/00000000-0000-4000-8000-000000000003/apply",
+      {
+        method: "POST",
+        headers: { "x-requested-with": "test" },
+      },
+    );
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("permission_denied");
+  });
+
+  it("refuses a viewer's request for the scanned original with 403 permission_denied", async () => {
+    const { userId, organizationId } = await seedUser();
+    const res = await appFor(userId, organizationId, ["viewer"]).request(
+      "/api/v1/payroll/imports/00000000-0000-4000-8000-000000000004/original",
+      { headers: { "x-requested-with": "test" } },
+    );
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("permission_denied");
+  });
+
   it("recovers a 'received' import stuck by a crash between store.put and markUploaded (Finding 3)", async () => {
     const { userId, organizationId } = await seedUser();
     const principal = { userId, organizationId, roles: ["owner"] as RoleCode[], permissions: permissionsForRoles(["owner"]) };
