@@ -5,6 +5,7 @@ export type ErrorCode =
   | "csrf_required"
   | "not_found"
   | "conflict"
+  | "duplicate"
   | "version_mismatch"
   | "precondition_required"
   | "idempotency_key_reused"
