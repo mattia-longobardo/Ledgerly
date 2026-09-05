@@ -3,6 +3,14 @@ import { fromCents, toCents } from "@/lib/calc/money";
 export interface AccrualPeriodPoint {
   accrualDate: string;
   net: string;
+  /**
+   * True when this accrual is claimed-but-unconfirmed: `postedAt` is set but
+   * `entryId` is still null (Ruling P3-C39, B2). A crash between a
+   * successful Wallet POST and the local confirm write lands exactly here —
+   * this is not "posted" (no local `interest_entries` row exists yet) and
+   * not "unposted" (money may already be at Wallet); it must read as neither.
+   */
+  postingIndeterminate?: boolean;
 }
 
 export interface PaidEntryPoint {
@@ -16,8 +24,16 @@ export interface PaidEntryPoint {
  * period yet) — there is no basis to compare against, which is a different
  * fact from "compared, and nothing was owed." Reporting `matched` for an
  * empty accrual list would be an affirmative claim made from zero evidence.
+ *
+ * `indeterminate` (Ruling P3-C39, B2) is likewise distinct from every other
+ * status: it means at least one accrual in the period is in the
+ * claimed-but-unconfirmed state a crash between a successful Wallet POST and
+ * the local confirm write leaves behind. It takes priority over the usual
+ * amount-comparison routing below — a period cannot be honestly reported as
+ * `matched`/`missing`/`delayed`/`anomalous` while it is unknown whether money
+ * already moved for one of its days.
  */
-export type ReconciliationStatus = "matched" | "missing" | "delayed" | "anomalous" | "no_data";
+export type ReconciliationStatus = "matched" | "missing" | "delayed" | "anomalous" | "no_data" | "indeterminate";
 
 export interface ReconciliationSummary {
   periodStart: string;
@@ -76,6 +92,7 @@ export function reconcileInterest(
 
   let status: ReconciliationStatus;
   if (accruals.length === 0) status = "no_data";
+  else if (accruals.some((a) => a.postingIndeterminate)) status = "indeterminate";
   else if (Math.abs(differenceCents) <= 1) status = "matched";
   else if (paidCents === 0 && accruedCents > 0) status = "missing";
   else if (paidCents < accruedCents) status = "delayed";

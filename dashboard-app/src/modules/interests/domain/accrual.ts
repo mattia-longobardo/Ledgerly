@@ -118,6 +118,19 @@ export interface DailyAccrualResult {
  * stray "-", or a tax rate typed as "1.26" instead of "0.26") is a far more
  * likely cause than an intentional negative-interest rule, so this rejects
  * up front instead of letting that run quietly.
+ *
+ * Deliberate divergence from the `interest.py` port (Ruling P3-C43): a
+ * negative *balance* still reaches this exact "clamp to zero, carry the
+ * whole negative remainder forward" behaviour if this function is called
+ * with one, matching the legacy script byte-for-byte. But the application
+ * layer (`run-interest-accrual.ts`) never actually calls it with one — a
+ * negative balance is skipped before this function is ever reached, so no
+ * accrual row (and no carry) is written for that day at all. `interest.py`
+ * handled this case badly (silently eating real interest for days after the
+ * balance recovers, via the same unbounded carry `dailyInterest` still
+ * produces for a bad rate); this port does not reproduce that failure mode,
+ * even though `dailyInterest` itself remains willing to, for any caller that
+ * ignores the sign of `balance` on its own.
  */
 export function dailyInterest(input: DailyAccrualInput): DailyAccrualResult {
   const balance = parseRequiredDecimal("balance", input.balance);

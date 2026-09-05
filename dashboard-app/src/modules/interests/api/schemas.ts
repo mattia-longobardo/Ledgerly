@@ -54,6 +54,13 @@ export const InterestEntrySchema = z
  * yet" result get serialized as `undefined` past this schema's enum check
  * (or fail response validation) instead of being carried through honestly —
  * exactly what global constraint #7 warns against.
+ *
+ * `indeterminate` is a sixth (Ruling P3-C39, B2): at least one accrual in
+ * the period is claimed-but-unconfirmed — `postedAt` set, `entryId` still
+ * null, the signature of a crash between a successful Wallet POST and the
+ * local confirm write. Same rationale as `no_data`: omitting it would fail
+ * response validation (or silently misreport) the exact period where an
+ * operator most needs an honest signal that money may already be at Wallet.
  */
 export const ReconciliationSummarySchema = z
   .object({
@@ -61,7 +68,7 @@ export const ReconciliationSummarySchema = z
     periodEnd: z.string(),
     accruedTotal: z.string(),
     paidTotal: z.string(),
-    status: z.enum(["matched", "missing", "delayed", "anomalous", "no_data"]),
+    status: z.enum(["matched", "missing", "delayed", "anomalous", "no_data", "indeterminate"]),
     differenceCents: z.number(),
   })
   .openapi("ReconciliationSummary");

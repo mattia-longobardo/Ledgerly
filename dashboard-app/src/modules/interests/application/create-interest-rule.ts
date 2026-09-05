@@ -58,6 +58,21 @@ export function createInterestRule(deps: UseCaseDeps) {
       throw new InvalidInputError(parsed.error.issues[0]?.message ?? "Invalid input", parsed.error.issues);
     }
     const value = parsed.data;
+    // Ruling P3-C42 (B7): the only thing that used to stand between
+    // `value.accountId` and an account belonging to someone else entirely
+    // was an incidental filter three layers away, in the accrual job's own
+    // balance lookup. `interest-accrual.ts` later resolves the *posting*
+    // Wallet credential from `rule.userId` and pairs it with
+    // `links.liveFor("account", rule.accountId)` under a system context that
+    // bypasses RLS — happily pairing this user's token with a foreign
+    // account's link if this check did not exist. Checked explicitly here,
+    // before the rule is ever persisted; `interest_rules_owner`'s `WITH
+    // CHECK` (migration 0014) enforces the same fact at the database layer
+    // as defense-in-depth against any future write path that bypasses this
+    // use case.
+    if (!(await deps.accounts.ownedByUser(principal.userId, value.accountId))) {
+      throw new InvalidInputError("Choose an account you own.");
+    }
     const rule = await deps.rules.create({
       userId: principal.userId,
       accountId: value.accountId,

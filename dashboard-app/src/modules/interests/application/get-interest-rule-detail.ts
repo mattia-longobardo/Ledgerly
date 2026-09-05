@@ -51,7 +51,15 @@ export function getInterestRuleDetail(deps: UseCaseDeps) {
 
     const paid = entries.filter((e) => e.kind === "paid").map((e) => ({ occurredAt: e.occurredAt, net: e.net }));
     const reconciliation = reconcileInterest(
-      accruals.map((a) => ({ accrualDate: a.accrualDate, net: a.net })),
+      accruals.map((a) => ({
+        accrualDate: a.accrualDate,
+        net: a.net,
+        // Ruling P3-C39 (B2): `postedAt` set but `entryId` still null is the
+        // observable signature of a crash between a successful Wallet POST
+        // and the local confirm write — surfaced here as `indeterminate`
+        // rather than silently reconciling as though nothing happened.
+        postingIndeterminate: a.postedAt !== null && a.entryId === null,
+      })),
       paid,
       { start: opts.periodStart, end: opts.periodEnd },
     );

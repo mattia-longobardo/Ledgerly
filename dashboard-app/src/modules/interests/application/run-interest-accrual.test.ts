@@ -12,6 +12,7 @@ function harness(balance: string | null = "1000.00") {
     accruals: new MemoryInterestAccrualsRepository(),
     entries: new MemoryInterestEntriesRepository(),
     balances: { latestBalanceAsOf: async () => balance },
+    accounts: { ownedByUser: async () => true },
     clock: { now: () => new Date("2026-09-05T00:00:00Z") },
     audit: async () => {},
   };
@@ -77,10 +78,52 @@ describe("runInterestAccrual", () => {
     expect(await deps.accruals.forRule("r1", "2026-09-05", "2026-09-05")).toHaveLength(1);
   });
 
-  it("skips a rule whose compounding is not simple_daily", async () => {
+  it("skips a rule whose compounding is not simple_daily, reporting why (Ruling P3-C44, B6)", async () => {
     const deps = harness();
     const result = await runInterestAccrual(deps)({ ...rule, compounding: "monthly" }, "2026-09-05");
-    expect(result.accrued).toBe(false);
+    expect(result).toEqual({ accrued: false, skipReason: "unsupported_compounding" });
+  });
+
+  it("skips a rule whose dayCount is actual, reporting why (Ruling P3-C44, B6)", async () => {
+    const deps = harness();
+    const result = await runInterestAccrual(deps)({ ...rule, dayCount: "actual" }, "2026-09-05");
+    expect(result).toEqual({ accrued: false, skipReason: "unsupported_day_count" });
+  });
+
+  it("reports no_balance as the skip reason when the account has none on file", async () => {
+    const deps = harness(null);
+    const result = await runInterestAccrual(deps)(rule, "2026-09-05");
+    expect(result).toEqual({ accrued: false, skipReason: "no_balance" });
+  });
+
+  // Ruling P3-C43 (B5): a negative balance must skip entirely — no accrual
+  // row, no carry written — rather than writing a fabricated `net: "0.00"`
+  // row and rolling the whole negative remainder forward, which is what
+  // `dailyInterest` alone would do (see its own doc comment) and what
+  // silently ate real interest for ~12 days after the balance recovered in
+  // the reviewer's failure scenario.
+  it("skips entirely on a negative balance, writing no accrual row and no carry", async () => {
+    const deps = harness("-2000.00");
+    const result = await runInterestAccrual(deps)(rule, "2026-09-05");
+    expect(result).toEqual({ accrued: false, skipReason: "negative_balance" });
+    expect(await deps.accruals.forRule("r1", "2026-09-05", "2026-09-05")).toHaveLength(0);
+    expect(await deps.accruals.latestCarry("r1")).toBeNull();
+  });
+
+  it("a positive-balance day right after a negative-balance skip restarts the carry at zero, not a poisoned negative one", async () => {
+    const deps = harness("-2000.00");
+    await runInterestAccrual(deps)(rule, "2026-09-04");
+    // Balance recovers the next day — the fake's fixed balance can't change
+    // mid-test, so this drives the two days through two harnesses that share
+    // the same accruals store instead.
+    const positiveDeps = { ...deps, balances: { latestBalanceAsOf: async () => "1000.00" } };
+    const result = await runInterestAccrual(positiveDeps)(rule, "2026-09-05");
+    expect(result.accrued).toBe(true);
+    const [row] = await deps.accruals.forRule("r1", "2026-09-05", "2026-09-05");
+    // With no trusted prior carry (the negative day wrote nothing), this is
+    // the plain single-day amount on a 1000.00 balance — not a value
+    // depressed by an inherited negative carry.
+    expect(row!.net).toBe("0.05");
   });
 
   // Re-running the accrual for an already-posted day must not undo the

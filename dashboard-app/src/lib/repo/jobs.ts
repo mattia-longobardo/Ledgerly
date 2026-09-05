@@ -60,7 +60,22 @@ export async function lastSuccess(jobName: JobName) {
 
 /**
  * Serialises a job against itself for the length of the transaction. curl
- * --retry after a timeout must not produce a second write.
+ * --retry after a timeout must not produce a second write — for a job whose
+ * own write is a single local transaction (e.g. `monthly-close.ts`) this
+ * lock is the whole story.
+ *
+ * For the interest accrual job specifically, this lock is *not* that
+ * guarantee (Ruling P3-C39, B2 review finding): `fn` there wraps a Wallet
+ * round trip that can run for minutes, held across a transaction whose
+ * session can die mid-flight (`idle_in_transaction_session_timeout`, a
+ * pooler kill, a failover) — releasing `pg_try_advisory_xact_lock` while the
+ * POST it was meant to guard is still in the air, with no way for the
+ * caller to learn about it. `interest-accrual.ts`'s `tryPost` does not rely
+ * on this lock for correctness; it claims the accrual as a committed
+ * database row (`InterestAccrualsRepository.claimForPosting`) *before* ever
+ * calling Wallet. This lock still helps there — it usually stops a second
+ * concurrent tick from wasting a Wallet round trip it would lose the claim
+ * race on anyway — but it is an optimisation, not the defence.
  */
 export async function withJobLock<T>(key: string, fn: () => Promise<T>): Promise<T | null> {
   return db.transaction(async (tx) => {

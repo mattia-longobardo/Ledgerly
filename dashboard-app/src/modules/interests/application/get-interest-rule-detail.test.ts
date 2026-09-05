@@ -14,6 +14,7 @@ function harness(balance: string | null = "1000.00") {
     accruals: new MemoryInterestAccrualsRepository(),
     entries: new MemoryInterestEntriesRepository(),
     balances: { latestBalanceAsOf: async () => balance },
+    accounts: { ownedByUser: async () => true },
     clock: { now: () => new Date("2026-09-05T00:00:00Z") },
     audit: async () => {},
   };
@@ -72,6 +73,39 @@ describe("getInterestRuleDetail", () => {
     });
     expect(detail.accruals).toHaveLength(0);
     expect(detail.reconciliation.status).toBe("no_data");
+  });
+
+  // Ruling P3-C39 (B2): a claim (postedAt set) without a confirm (entryId
+  // still null) must surface as indeterminate, not as whatever the totals
+  // would otherwise reconcile to.
+  it("surfaces indeterminate when an accrual is claimed but never confirmed", async () => {
+    const deps = harness();
+    const rule = await createInterestRule(deps)(testPrincipal(), {
+      accountId: "acc-1",
+      annualRate: "0.0225",
+      taxRate: "0.26",
+      dayCount: 365,
+      effectiveFrom: "2026-01-01",
+    });
+    const stored = await deps.accruals.upsert({
+      ruleId: rule.id,
+      accrualDate: "2026-09-01",
+      balanceBasis: "1000.00",
+      gross: "0.061644",
+      tax: "0.016027",
+      net: "0.05",
+      carryAfter: "-0.004617",
+      source: "computed",
+      postedAt: null,
+      entryId: null,
+    });
+    await deps.accruals.claimForPosting(stored.id, new Date("2026-09-01T12:00:00Z"));
+
+    const detail = await getInterestRuleDetail(deps)(testPrincipal(), rule.id, {
+      periodStart: "2026-09-01",
+      periodEnd: "2026-09-30",
+    });
+    expect(detail.reconciliation.status).toBe("indeterminate");
   });
 
   // The accrual repository's `forRule` already scopes to the period, but

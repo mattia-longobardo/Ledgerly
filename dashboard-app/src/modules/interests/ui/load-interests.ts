@@ -17,6 +17,16 @@ export interface RuleRow {
   postingMode: string;
   effectiveFrom: string;
   version: number;
+  /**
+   * Ruling P3-C44 (B6): true for a rule the accrual job will never compute
+   * anything for, by construction — `dayCount: "actual"` or `compounding:
+   * "monthly"|"none"`. Both remain valid, creatable rule shapes (spec §5.7
+   * fidelity, Ruling P3-7); this flag exists only so the rule detail view can
+   * say so, rather than leaving a rule that lists, shows an empty
+   * projection, and accrues nothing for a month with nothing anywhere
+   * stating it is inert.
+   */
+  inert: boolean;
 }
 
 function toRow(rule: InterestRule): RuleRow {
@@ -28,6 +38,7 @@ function toRow(rule: InterestRule): RuleRow {
     postingMode: rule.postingMode,
     effectiveFrom: rule.effectiveFrom,
     version: rule.version,
+    inert: rule.compounding !== "simple_daily" || rule.dayCount === "actual",
   };
 }
 
