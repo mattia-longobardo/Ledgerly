@@ -18,7 +18,7 @@ async function trekCall(): Promise<TrekCallOptions | null> {
   return { config: { baseUrl: opened.credentials.baseUrl!, token: opened.credentials.token! } };
 }
 
-const LEAVE_PATHS = ["/", "/work"] as const;
+const LEAVE_PATHS = ["/", "/company/time-off"] as const;
 
 function revalidateLeave(): void {
   for (const path of LEAVE_PATHS) revalidatePath(path);
