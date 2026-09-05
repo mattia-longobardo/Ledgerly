@@ -1,6 +1,16 @@
-# Checkpoint: Phase 4 complete, exit gate green (2026-09-05)
+# Checkpoint: Phase 4 complete, whole-branch fix wave closed (2026-09-05)
 
 Resume from here with any model. Read this file, then the spec, then the plan.
+
+This checkpoint supersedes the version committed as `e189714`. That version
+was written against Task 24's own commit, before the Phase 4 whole-branch
+review had reported — it recorded a verification run and a graph the
+review's fix wave then invalidated. This is a correction in place, not an
+addendum: the range, the verification numbers and the phase's content below
+are all re-stated as they stand now, after the fix wave closed — the same
+situation, and the same fix, Phase 3's own checkpoint needed after its
+whole-branch review (see `docs/superpowers/handoff/2026-09-05-phase-3-checkpoint.md`'s
+own opening section for the precedent).
 
 ## State, plainly, up front
 
@@ -24,47 +34,89 @@ Resume from here with any model. Read this file, then the spec, then the plan.
   confidence data that branch would need (`confidence` jsonb) is already
   persisted per field on every component, so Phase 8 can add the branch
   without a migration when `organization_policies` exists to configure it.
+- **`withJobLock` (`src/lib/repo/jobs.ts`) is an OPEN, escalated, platform-wide
+  defect — NOT fixed by this phase.** The whole-branch review found that
+  `withJobLock` IS `db.transaction` (`pg_try_advisory_xact_lock` is
+  transaction-scoped by design), so every job that calls it runs its *entire*
+  body — including network I/O — inside one open Postgres transaction. This
+  was confirmed to ALSO affect Phase 1's already-deployed jobs
+  (`wallet-accounts-sync.ts`, `interest-accrual.ts`, `sync-queue.ts`), not
+  just this phase's two new jobs. Phase 4's fix wave corrected only the three
+  false Phase-4-authored doc-comments that claimed the opposite; the
+  `withJobLock` primitive itself was deliberately **not** rewritten here and
+  remains open. See "What the whole-branch review found" below and "What
+  remains" for the full detail — do not read this as fixed.
 
 ## Range implemented
 
-- Branch: `main`, HEAD after this task's own commit (`docs(handoff): record
-  the Phase 4 checkpoint and execution ledger`, on top of `a45ac45`). **Not
-  pushed to `origin`** — same as every prior phase; `origin/main` remains far
-  behind.
-- Range: `548143d..a45ac45` — **33 commits**, covering the pre-flight plan
-  repair plus Tasks 1–23 (24 task briefs; Task 24 is this checkpoint/ledger
-  task and adds no application code). Several tasks carry one additional fix
-  commit from the controller's own review process (Task 1: 1 fix round: RLS
-  split + `version` column; Task 8: 1 fix round: real-Postgres proof of
-  `payroll_records_import_uq`; Task 9: 1 fix round: `DuplicateImportError` on
-  a lost create-time race; Task 10: 1 fix round: split `scanStep`/`parseStep`
-  into DB-only halves plus I/O orchestrators, Ruling PH4-C7; Task 11: 1 fix
-  round: merge global mapping rules at the repository layer; Task 13: 1 fix
-  round: soften an overclaiming test comment; Task 15: 1 fix round: close the
-  `/retry` authorization bypass; Task 16: 1 fix round: server-fresh queue
-  advance; Task 17: 1 fix round: exact-match `frame-ancestors`). No task
-  needed more than one fix round. Task 19 also carries a same-task follow-up
-  commit (`6633b2d`) fixing three dangling `/work` references its own mandated
-  grep found.
-- `git log --oneline main | head -30` shows one commit per task in order
-  (interleaved with the fix-round commits above), each carrying a real
-  `Co-Authored-By:` trailer — confirmed by direct inspection of several
-  commits (`a45ac45`, `e691078`, `46219c7`, `ad502b9`, `e24437e`), not merely
-  trusted from the log listing.
+- Branch: `main`, HEAD after this correction's own commit (`docs(handoff):
+  correct the Phase 4 checkpoint for the whole-branch review`, on top of
+  `165270a`). **Not pushed to `origin`** — same as every prior phase;
+  `origin/main` remains far behind.
+- Range: `548143d..165270a` — **56 commits**:
+  - `548143d..e189714` (34 commits) — the pre-flight plan repair plus Tasks
+    1–24, covering the 24 task briefs and their fix rounds (see the original
+    breakdown below), and Task 24's own now-superseded checkpoint/ledger
+    commit.
+  - The whole-branch review itself ran once, over `e189714..HEAD` conceptually
+    (its dispatch produced no commits of its own — it is a review, not a
+    code change), split four ways by area (`wb-1` persistence/RLS/infra,
+    `wb-2` business logic/jobs, `wb-3` API/UI, `wb-4` Paperless
+    retirement/docs), **each dispatched on the most capable model**.
+  - `5446ac1..165270a` (**22 commits**) — four sequential fix batches
+    closing the review's findings, mirroring Phase 3's own three-batch
+    precedent (one implementer at a time, never concurrent, on this
+    project's shared `main` branch): **A** (wb-1 — `5446ac1`, `514e51b`,
+    `31b56fd`, `683b802`, `14b8815`; 5 commits), **B** (wb-2 —
+    `957834c`, `7f72657`, `fbaab6d`, `1ea3959`, `f5259a1`, `dbfb948`,
+    `ced0589`, `ae5d526`; 8 commits), **C** (wb-3 — `882f991`, `8a49dae`,
+    `9e20ccf`, `ab512c8`, `5f427bc`, `bafb60b`; 6 commits), **D** (wb-4 —
+    `f44d976`, `1430fdf`, `165270a`; 3 commits). Sequential rather than
+    parallel for the same reason Phase 3's batches were: no worktree
+    isolation on this shared branch, and the standing rule against
+    concurrent implementers held throughout. Each batch was independently
+    re-reviewed against its own diff package and **approved on the first
+    re-review**, all four.
+  - Within the original `548143d..e189714` range: several tasks carried one
+    additional fix commit from the controller's own review process (Task 1:
+    1 fix round: RLS split + `version` column; Task 8: 1 fix round:
+    real-Postgres proof of `payroll_records_import_uq`; Task 9: 1 fix round:
+    `DuplicateImportError` on a lost create-time race; Task 10: 1 fix round:
+    split `scanStep`/`parseStep` into DB-only halves plus I/O orchestrators,
+    Ruling PH4-C7; Task 11: 1 fix round: merge global mapping rules at the
+    repository layer; Task 13: 1 fix round: soften an overclaiming test
+    comment; Task 15: 1 fix round: close the `/retry` authorization bypass;
+    Task 16: 1 fix round: server-fresh queue advance; Task 17: 1 fix round:
+    exact-match `frame-ancestors`). No task needed more than one fix round.
+    Task 19 also carried a same-task follow-up commit (`6633b2d`) fixing
+    three dangling `/work` references its own mandated grep found.
+- `git log --oneline e189714..HEAD` shows the 22 whole-branch-review fix
+  commits in order, each carrying a real `Co-Authored-By:` trailer —
+  confirmed by direct inspection of several commits (`165270a`, `f44d976`,
+  `882f991`, `957834c`, `5446ac1`), not merely trusted from the log listing.
 
-## Verification (this task's own run, fresh)
+## Verification, **re-run fresh by this correction task**
+
+The fix wave invalidated Task 24's original run, the same way Phase 3's fix
+wave invalidated its own Task 23 run (ruling P3-C47) — nothing below is
+inherited from Task 24's report:
 
 - `npx tsc --noEmit` — **clean, exit 0, no output.**
-- `npm test` — **1155 tests / 123 files, all passing.** Matches the ledger's
-  own last-recorded figure at Task 22's completion, confirming no regression
-  since. Includes `src/platform/http/openapi-drift.test.ts` (1 test) — the
-  OpenAPI drift check the exit criteria call for is inside this suite, not a
-  separate command.
-- `npm run test:db:up && npm run test:integration` — **180 tests / 39 files,
-  all passing**, against the throwaway `dashboard-postgres-test` container
-  only; no real database was touched. Matches Task 22's last-recorded figure.
-  Includes `src/lib/db/payroll-rls.itest.ts` (11 tests — 6 original plus the 5
-  the Task 1 fix round added), `src/modules/payroll/infrastructure/ingest.itest.ts`
+- `npm test` — **1183 tests / 123 files, all passing** (Task 24's original
+  figure: 1155/123; after fix batch A: 1170/123; after batch B: 1179/123;
+  after batch C: 1183/123; batch D touched only docs/scripts so left it
+  unchanged at 1183 — the figure below matches the ledger's own count for the
+  closed fix wave). Includes `src/platform/http/openapi-drift.test.ts` (1
+  test) and `src/middleware.test.ts` (4 tests, new in batch A's precursor
+  Task 17 fix round) — the OpenAPI drift check the exit criteria call for is
+  inside this suite, not a separate command.
+- `npm run test:db:up && npm run test:integration` — **186 tests / 39 files,
+  all passing** (Task 24's original figure: 180/39; after fix batch A: 181;
+  after batch B: 182; after batch C: 186/39; batch D again docs/scripts-only,
+  unchanged), against the throwaway `dashboard-postgres-test` container only;
+  no real database was touched at any point in this task. Includes
+  `src/lib/db/payroll-rls.itest.ts` (11 tests — 6 original plus the 5 the
+  Task 1 fix round added), `src/modules/payroll/infrastructure/ingest.itest.ts`
   (8), `read-original.itest.ts` (6), `purge-expired-originals.itest.ts` (6),
   and `src/modules/payroll/infrastructure/repositories.itest.ts` (10, proving
   all four of the plan's global uniqueness claims against real Postgres).
@@ -73,19 +125,20 @@ Resume from here with any model. Read this file, then the spec, then the plan.
   `/company/payroll/[importId]` and `/company/time-off`, and does **not**
   list `/work`, `/api/jobs/payslip-webhook` or `/api/paperless/preview/[id]` —
   confirmed by reading the full printed route table, not by grep alone.
-- `npm run e2e` — **4/4 passing** (`smoke.spec.ts` and `settings.spec.ts`,
-  each in the mobile and desktop Playwright projects). Run against a local
-  `next dev` started by hand on `http://localhost:3000`, pointed at the
-  throwaway `dashboard-postgres-test` database (migrated first via `npm run
-  db:migrate`) with a synthetic-but-valid environment (fake OIDC issuer/
-  client, generated `AUTH_SECRET`/`APP_ENCRYPTION_KEY`, since no real
-  Authentik or silo credential exists in this environment). `/api/health` was
-  confirmed to return `200` before running the suite. The Playwright config
-  still has no `webServer` block, so the server had to be started by hand per
-  `tests/e2e/README.md`; this was **not** run against the live production
-  container. The dev server was stopped and confirmed no longer listening on
-  port 3000 afterward; the test database container was torn down with `npm
-  run test:db:down`.
+- `npm run e2e` — **NOT re-run in this correction, deliberately.** Task 24
+  already ran it once (4/4 passing, `smoke.spec.ts`/`settings.spec.ts` in
+  both Playwright projects) against a hand-started `next dev` server. None of
+  the four fix batches touched auth, navigation shell, or the settings/smoke
+  surfaces those specs exercise — all four batches are scoped to payroll
+  internals, job-lock doc comments, and Company/Home pages the e2e suite
+  doesn't visit — so nothing in this correction's own diff review found a
+  reason to expect a different result, matching how Phase 3's own correction
+  handled its one other unchanged verification surface (`npm run
+  openapi:generate`, confirmed clean by diff inspection there rather than
+  re-run). This is a judgment call, not a hard proof; if a future session
+  finds reason to doubt e2e coverage of the fixed pages, it should be re-run
+  then. The test database container from the earlier steps was torn down
+  with `npm run test:db:down` after the integration run above.
 
 ### Grep checks (Step 2)
 
@@ -123,7 +176,27 @@ Resume from here with any model. Read this file, then the spec, then the plan.
   z.string().min(1)` — both of which *were* required before this phase and are
   gone now. No new required environment variable exists after Phase 4.
 
-## Graphify (Step 3 — the one task in this phase permitted to run it)
+## Graphify — NOT re-run for this correction
+
+This correction task deliberately did **not** run `graphify update .` again,
+unlike Phase 3's own correction (which did regenerate, because Phase 3's fix
+wave added two new migrations and touched files across three modules).
+Checked before deciding: `git diff --name-status e189714..HEAD --
+dashboard-app/src dashboard-app/docs` shows **zero new files** (no `A` status
+lines) across all 22 fix-batch commits — every change is a modification to a
+file the graph (below) already indexes; no new module, port, adapter, or page
+was introduced. The module *structure* graphify cares about (files, imports,
+symbols) is unchanged; only the bodies of existing functions changed. Re-
+running would cost an LLM-priced `graphify label` pass for zero structural
+gain, so it is deferred, matching this phase's own precedent (Ruling PH4-C3)
+of running it once at the very end rather than per change. If a future
+session's `graphify query` against this module returns stale-looking results,
+re-run it then — the figures below (3979 nodes / 11599 edges / 170
+communities) are Task 24's own last-known-good numbers, not re-verified by
+this task, and should be treated as approximate until the next real
+regeneration.
+
+## Graphify (Step 3 — the one task in this phase permitted to run it, as of Task 24)
 
 `graphify update .` run once from the repo root, per Ruling PH4-C3 (every
 implementer from Task 3 onward was told not to run it or stage
@@ -174,6 +247,203 @@ still-scanning import → `409`, the Scheduled-jobs panel lists `payroll_ingest`
 and `payroll_retention`, and — if clamd is enabled — the EICAR ordering check)
 are reproduced verbatim in the task brief and are not repeated here to avoid
 two documents drifting apart.
+
+## What the whole-branch review found, that 24 passing task reviews had not
+
+Each of the 24 tasks' own per-task reviews was individually clean, and Task
+24's original checkpoint was an accurate account of the tree it measured. But
+a per-task reviewer cannot see across tasks. The whole-branch review —
+dispatched over the full `548143d..e189714` range (34 commits) — split **four
+ways by area**, so each reviewer could carry the phase's own observed defect
+classes as its attention lens, **each dispatched on the most capable model**:
+
+- `wb-1` — persistence / RLS / infra
+- `wb-2` — business logic / jobs
+- `wb-3` — API / UI
+- `wb-4` — Paperless retirement / docs
+
+It found **2 Critical defects** and **22 Important findings** across the four
+areas (5 from `wb-1` including its Critical, 8 from `wb-2` including its
+Critical, 6 from `wb-3`, 5 from `wb-4`). Both Criticals, in full:
+
+**Critical 1 (`wb-1`, persistence/infra) — FIXED.**
+`documentStoreConfigured()` (`document-store-resolver.ts`) returned
+`e.DOCUMENT_STORE_DRIVER === "silo" || Boolean(e.DOCUMENT_STORE_LOCAL_PATH)`
+— but `DOCUMENT_STORE_DRIVER` **defaults** to `"silo"`, so in **any**
+deployment that has not explicitly configured it, this returned `true`
+unconditionally, with no `payroll_silo` connection required. `resolve.ts`'s
+`payroll` feature falls back to `payrollConfigured()` exactly when
+`states.payroll_silo === "not_configured"` — so a fresh, unconfigured
+deployment got `features.payroll = true`. Every page that gates on
+`!caps.features.payroll` to show the "Connect a payroll document store"
+setup state (`/company/payroll`, `/company/time-off`) never showed it —
+execution fell through to `loadImports()` → `resolveDocumentStore` returns
+`null` → an uncaught `DocumentStoreUnavailableError`. This broke the default,
+unconfigured deployment experience entirely — exactly the state the setup UI
+was built to handle gracefully. Root cause: `documentStoreConfigured()` and
+`resolveDocumentStore()` answered the same underlying question and nothing
+ever tested them against each other. **Fixed in fix batch A** (commit
+`5446ac1`): `documentStoreConfigured()` now genuinely delegates to the same
+resolution logic `resolveDocumentStore()` uses, re-verified with a
+`features.payroll === false` test wired to the real function, not a stub.
+
+**Critical 2 (`wb-2`, business logic/jobs) — OPEN, platform-wide, NOT
+fixed by this phase. Read this carefully; it must not be read as resolved.**
+`withJobLock` (`src/lib/repo/jobs.ts`) **IS** `db.transaction` —
+`pg_try_advisory_xact_lock` is transaction-scoped by design. Both
+`payroll-ingest.ts` and `payroll-retention.ts` call `withJobLock(key, () =>
+ingestOne(...))` / `withJobLock(key, () => purgeExpiredOriginals(...))`, so
+the **entire job body** — every `resolveDocumentStore`, `store.get/put/delete`,
+`scanner.scan` (clamd), and `parsePayslip`'s LLM HTTP call — runs while a
+Postgres transaction is open, holding one of the pool's 8 connections
+idle-in-transaction for the duration. Retention is worse: **one** transaction
+spans the entire 100-item batch (100 sequential network deletes plus 100
+nested `withUserContext` transactions). Three Phase-4-authored doc-comments
+explicitly claimed the opposite ("this job never opens a transaction around
+either call... exactly the defect Task 10 was fixed to remove"), and both
+jobs' unit tests stub `withJobLock` to bypass the transaction entirely — so
+nothing in this phase's own test suite could ever have caught this.
+**Confirmed NOT a Phase 4 invention**: `wallet-accounts-sync.ts`,
+`interest-accrual.ts`, and `sync-queue.ts` — all Phase 1, all already
+deployed to production — share the identical `withJobLock` pattern, meaning
+this most likely already affects those deployed jobs today. **What this
+phase's fix wave actually did (fix batch B, commit `957834c`): corrected only
+the three false Phase-4-authored doc-comments that claimed `withJobLock` kept
+I/O out of a transaction.** The `withJobLock` primitive itself was
+**deliberately not rewritten** inside Phase 4's own fix wave — this is a
+platform-wide issue spanning Phases 1 through 4, not something to fix
+unilaterally inside one phase's fix loop, and it was escalated directly to
+the user rather than improvised under a fix-round's time pressure. It remains
+an **open, escalated item** — see "What remains" below. No mitigation beyond
+the doc-comment correction has shipped.
+
+**The 22 Important findings**, grouped by area (full detail, including every
+finding's own reviewer reasoning, lives in `progress.md`'s `wb-1` through
+`wb-4` sections and the four fix-batch sections):
+
+*wb-1 (persistence/infra), 4 fixed in batch A:*
+- `S3DocumentStore` didn't validate keys the way `LocalDocumentStore` did
+  (defense-in-depth gap, not live given keys are always server-generated
+  today) — both adapters now share one key-validation function called on
+  every verb.
+- `sigv4.ts`'s `canonicalPath` double-encoded an already-percent-encoded
+  `URL.pathname` (unreachable today since `newStorageKey` emits only
+  unreserved characters, but a live trap for any future key shape) — fixed,
+  independently re-verified by hand-recomputing the full canonical-request →
+  signature chain for a path with a space.
+- The silo provider's `onDisconnect` does real network I/O, falsifying
+  `disconnect-integration.ts`'s own documented invariant that no provider
+  hook does (inert today only because Ruling PH4-C4 means nothing calls it
+  yet) — the doc comment corrected to state the real invariant.
+- The legacy fund-deposit bridge's conflict-update field list (`source`,
+  `payslipId`) was unmodelled by the Memory fake and untested on a second
+  write over an existing row (matches the retiring code's behavior exactly,
+  not a regression) — the fake's test now seeds a genuinely different prior
+  state rather than a self-matching write; see also the parked note below.
+
+*wb-2 (business logic/jobs), 7 fixed in batch B:*
+- The status-transition table (`canTransition`) was defined, tested, and
+  never enforced — a rejected import mid-scan could be silently resurrected
+  by `applyScanConclusion` patching it back to `extracting`/`clean` — now
+  enforced before applying a scan/parse conclusion.
+- `"received"` was a dead-end status with no recovery path if a crash landed
+  between a successful bytes upload and the DB commit — the retry route can
+  now recover a `received` import stuck by a partial upload.
+- Aggregate earnings buckets silently presented a partial sum as a total
+  (`addMoney(x, null) === x`, so one unparseable month's gross vanished from
+  a year total with no signal) — now flagged as a partial figure rather than
+  presented as a total.
+- A failed partial upload could orphan bytes in the store forever, outside
+  every retention path — a best-effort delete now runs before recording the
+  upload as failed.
+- `payroll_records.corrections` was written as the wrong shape via a double
+  `as unknown as` cast (dead today only because nothing read the column
+  back) — retyped to match what `applyImport` actually writes.
+- Money crossed floating point in three undocumented places (`review-import.ts`'s
+  `Number(raw)` on a reviewer's corrected value, `paperless-import.ts`,
+  `load-company.ts`'s `averageOf`) — harmless at real payslip magnitudes but
+  `DECIMAL_RE` had no bound on integer-part length — bounded to what
+  `numeric(16,2)` can hold.
+- The ingest job had no failure counter or backoff, so a permanently-failing
+  import head-of-line-blocked the entire hourly batch, re-triggering a paid
+  LLM call every tick forever — a repeatedly-failing import now sorts to the
+  back of the queue.
+
+*wb-3 (API/UI), 6 fixed in batch C:*
+- `/company/earnings` and `/company/earnings/[recordId]` had no
+  `features.payroll` gate unlike their three siblings — now gated, including
+  in `generateMetadata`.
+- `/company/payroll/[importId]` was gated only on `payroll.read` while its
+  own list page and nav require `payroll.upload`/`.review` — now gated on the
+  same permissions as `/company/payroll`.
+- Two incompatible queue definitions (`load-payroll.ts`'s `AWAITING` included
+  `"verified"`, `actions/payroll.ts`'s `nextInQueue` did not) silently
+  stranded a verified-but-not-yet-applied import — unified behind one shared
+  `AWAITING_STATUSES`/`queueEntryFrom` helper.
+- The `payroll_imports` Home card was declared and fully tested but never
+  rendered on the actual Home page — now wired up.
+- Italian UI copy outside `component.labelRaw` inverted the retired page's
+  own convention and named the thirteenth month three different ways across
+  three screens — restored to hint-only Italian and one consistent English
+  rendering.
+- No negative-permission test existed for the `payroll.review` or
+  `payroll.read_original` tiers — viewer-denial coverage added for both.
+
+*wb-4 (Paperless retirement/docs), 5 fixed in batch D:*
+- `settings/admin/page.tsx`'s `JOBS`/`JOB_LABEL` never gained
+  `payroll_ingest`/`payroll_retention` — both jobs ran but were invisible in
+  the only job-health UI — now shown in the admin jobs panel.
+- The runbook's migration command had no `--out`, defaulting to a path that
+  doesn't exist on the read-only production container (would crash with
+  `EROFS` after all DB writes already committed) — fixed, and cross-checked
+  against the deleted `migrate-paperless.ts` source (recoverable via `git
+  show f349f3b:...`) to confirm the real flag name.
+- Root `README.md` (outside the `src scripts` grep scope every retirement
+  check used) still documented `PAPERLESS_*` as a required boot variable —
+  corrected, retired references dropped.
+- The validation script's "OK" message couldn't distinguish "checked twelve
+  payslips" from "checked zero" — the wrong shape for an irreversible wave-2
+  gate — now reports a trustworthy count.
+- The validator never confirmed the migrated bytes actually reached the
+  document store (only compared money fields) — a silent `store.put` failure
+  would still validate green — closed alongside the other validator fix.
+
+All four batches were independently re-reviewed against their own diff
+package and **approved on the first re-review**.
+
+## Deferred and parked findings — none of these were fixed
+
+The whole-branch review also surfaced findings that were deliberately **not**
+fixed, and are carried forward here rather than allowed to disappear:
+
+- **The fund-deposit bridge's conflict-update field list note** (`wb-1`,
+  above): the underlying production behavior matches the retiring code
+  exactly, not a regression — only the *test coverage* for it was improved
+  in batch A; the divergence-class risk itself (what a second write preserves
+  on `source`/`payslipId`) is not eliminated, just now honestly tested.
+- **Three Minor/Low issues introduced by fix batch B's own fixes, parked, not
+  fixed** (self-clearing, non-blocking): an undeclared `partial` field is now
+  returned by `/payroll/earnings` but is not in the published OpenAPI schema;
+  `recordFailure` exposes raw job-internal error text to the client and
+  bumps `version` (can cause a spurious `409` for a reviewer mid-session);
+  `partial.contributions` will be noisy (true for most ordinary payslips)
+  once ever surfaced in the UI.
+- **One out-of-scope observation from fix batch C's re-review, parked:** two
+  other pending-count displays (`load-company.ts`'s Overview banner,
+  `time-off/page.tsx`'s banner) still use the old two-status filter that
+  predates the queue-definition fix above, so they can now disagree with the
+  corrected queue/Home-card count on the same underlying data. A cosmetic
+  display inconsistency, not a correctness or workflow-blocking issue — noted
+  for a future pass, not fixed here.
+- **Ruling PH4-C4's disconnect-with-purge gap** (unchanged from Task 24's
+  original checkpoint — the whole-branch review's `wb-1` result independently
+  re-confirmed it, listing the same `onDisconnect` network-I/O invariant
+  violation as one of its four Important findings): still a no-op in
+  practice, still requires the cross-provider `onDisconnect` fetch/apply
+  split described in "What remains" below.
+- **`withJobLock`'s transaction-scoping defect itself** (Critical 2 above):
+  not fixed, not parked in the small sense — escalated as a standing
+  platform-wide item. See "What remains."
 
 ## What this phase added
 
@@ -383,12 +653,20 @@ against the current tree; R4-13…R4-18 are new to this planning pass.
   guessing whether payroll figures should ever post with no human review —
   the spec deliberately leaves that to the organization, not to this phase.
 
-## Rulings — execution (PH4-C1 … PH4-C13)
+## Rulings — execution (PH4-C1 … PH4-C13, then PH4-C14 … PH4-C22 for the whole-branch review)
 
-Thirteen rulings made by the controller during the 24-task run, none of which
-the plan's own text anticipated — carried forward from
+Thirteen rulings (PH4-C1 … PH4-C13) made by the controller during the
+original 24-task run, none of which the plan's own text anticipated —
+carried forward from
 `.superpowers/sdd/2026-09-05-phase-4-payroll-and-company/progress.md` with the
-same weight as the planning rulings above.
+same weight as the planning rulings above, **unrenumbered by this
+correction**. The whole-branch review and its fix wave added further rulings
+— PH4-C14 (the fix-wave batching decision itself) is already recorded in
+`progress.md`; the ledger
+(`docs/superpowers/handoff/2026-09-05-phase-4-ledger.md`) now also carries
+PH4-C15 through PH4-C22, covering both Criticals, each area's Important
+findings, the re-verification, and the parked items — read them there rather
+than duplicated here.
 
 - **PH4-C1 — pre-flight fix, no code impact.** Task 3's own "Interfaces →
   Produces" block wrongly claimed `resolveDocumentStore`/
@@ -597,6 +875,23 @@ same weight as the planning rulings above.
 
 ## What remains
 
+- **`withJobLock` (`src/lib/repo/jobs.ts`) is an OPEN, platform-wide,
+  escalated defect — the single most important unresolved item in this
+  correction.** It wraps a scheduled job's entire body — including network
+  I/O — in one open Postgres transaction, and this is confirmed to affect not
+  only this phase's two new jobs (`payroll-ingest.ts`, `payroll-retention.ts`)
+  but Phase 1's already-**deployed** jobs (`wallet-accounts-sync.ts`,
+  `interest-accrual.ts`, `sync-queue.ts`) as well. This phase's fix wave
+  corrected only three false doc-comments claiming the opposite; the
+  primitive itself was deliberately not touched. Fixing it needs a
+  cross-cutting redesign of `withJobLock`/the job-running infrastructure
+  (splitting lock-acquisition from the job body's I/O, likely mirroring the
+  `fetch`/`apply` split `SyncHandler` and this phase's own document
+  orchestrators already use), affecting every registered job across every
+  phase — not a payroll-scoped fix, and not something any future phase should
+  attempt inside its own fix loop without dedicated scoping. **This must be
+  addressed as its own piece of platform work, tracked outside any single
+  phase's plan.**
 - **The manual walkthrough (Step 4 above) is genuinely owed**, exactly like
   Phase 2's and Phase 3's before it.
 - **The Paperless migration has not been run anywhere real.** Wave 1 and wave
@@ -604,7 +899,23 @@ same weight as the planning rulings above.
 - **Ruling PH4-C4's parked finding**: `payroll_silo` disconnect-with-purge is
   currently a no-op in practice. Fixing it correctly needs a cross-provider
   `onDisconnect` fetch/apply split affecting `wallet` and `trek` too — future
-  work, not scoped to any remaining Phase 4 or Phase 5 task by default.
+  work, not scoped to any remaining Phase 4 or Phase 5 task by default. The
+  whole-branch review's `wb-1` result independently re-confirmed the same
+  underlying `onDisconnect` network-I/O invariant violation.
+- **Three Minor/Low issues introduced by fix batch B, parked**: an undeclared
+  `partial` field on `/payroll/earnings` missing from the OpenAPI schema;
+  `recordFailure` exposing raw job-internal error text to the client (and a
+  spurious `409` risk from its `version` bump); `partial.contributions`'s
+  eventual noisiness once surfaced in the UI.
+- **One out-of-scope display-consistency observation from fix batch C's
+  re-review, parked**: `load-company.ts`'s Overview banner and
+  `time-off/page.tsx`'s banner still use the old two-status pending filter,
+  so they can disagree with the corrected queue/Home-card count on the same
+  data — cosmetic, not correctness- or workflow-blocking.
+- **The fund-deposit bridge's conflict-update field-list divergence-class
+  risk** (`wb-1`): only the test coverage was improved in batch A; the
+  underlying "what a second write preserves" question is unchanged from the
+  retiring code's own behavior.
 - **Every item in the plan's own "Deferred by design" list** — see the ledger
   document for the full section: OCR, auto-verify, `fund_contributions`
   proper, `timeoff_balances` consumption, the Time Off workspace redesign,
@@ -651,10 +962,11 @@ same weight as the planning rulings above.
 - Phase 4 task plan (all 24 tasks done):
   `docs/superpowers/plans/2026-09-05-phase-4-payroll-and-company.md`
 - Execution ledger with every ruling (planning `R4-1`–`R4-18`, execution
-  `PH4-C1`–`PH4-C13`) and every deferred minor:
+  `PH4-C1`–`PH4-C13` from the original run plus `PH4-C15`–`PH4-C22` from the
+  whole-branch review) and every deferred minor:
   `docs/superpowers/handoff/2026-09-05-phase-4-ledger.md`. The full pre-flight
-  scan, every task's brief/report/review/fix diff, and the running execution
-  ledger all live in
+  scan, every task's brief/report/review/fix diff, the whole-branch review
+  packages, and the running execution ledger all live in
   `.superpowers/sdd/2026-09-05-phase-4-payroll-and-company/`.
 - Deployment runbook (two waves): `docs/deploy/phase-4-runbook.md`
 - Architecture: `docs/architecture/overview.md`; API: `docs/api/README.md`,
@@ -662,9 +974,12 @@ same weight as the planning rulings above.
 
 ## Deployment status
 
-**Phase 4 is implemented, verified fresh by this task, and NOT deployed.
-Neither is Phase 2 or Phase 3.** Deploy strictly in this order, per
-`docs/deploy/phase-4-runbook.md`:
+**Phase 4 is implemented, re-verified after the whole-branch review's fix
+wave, and NOT deployed. Neither is Phase 2 or Phase 3.** Whoever deploys this
+should also read "What remains" above first — in particular, the
+`withJobLock` open item affects Phase 1 jobs already running in production,
+independent of whether Phase 4 itself is deployed. Deploy strictly in this
+order, per `docs/deploy/phase-4-runbook.md`:
 
 1. Phase 2's runbook, end to end, including its still-owed §9 manual browser
    walkthrough.
@@ -678,6 +993,9 @@ Neither is Phase 2 or Phase 3.** Deploy strictly in this order, per
 
 ## How to continue
 
+- **Decide how to handle the open `withJobLock` platform item** — it is not
+  scoped to any single phase, so it needs its own decision about when and how
+  to fix, independent of Phase 5 planning.
 - Decide whether to deploy — remembering the order above — and separately
   whether to push `main` to `origin`.
 - Whoever holds a real silo credential and a real payslip PDF should run the
