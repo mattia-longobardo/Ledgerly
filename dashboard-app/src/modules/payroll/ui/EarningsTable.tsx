@@ -6,7 +6,7 @@ import type { EarningsRow } from "./load-company";
 
 const KIND_LABEL: Record<string, string> = {
   ordinary: "",
-  thirteenth: "13th",
+  thirteenth: "13th month",
   fourteenth: "14th",
   bonus: "Bonus",
   settlement: "Settlement",
