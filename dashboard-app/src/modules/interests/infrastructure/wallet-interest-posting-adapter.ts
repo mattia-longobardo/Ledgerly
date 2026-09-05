@@ -17,6 +17,26 @@ export interface PostWalletInterestResult {
 }
 
 /**
+ * Ruling P3-C39 / B8: thrown *only* when the actual money-moving call
+ * (`postRecords`) itself fails. That failure is genuinely ambiguous — a 5xx
+ * or a dropped connection can mean "nothing happened" or "it landed and only
+ * the acknowledgement didn't" — so the caller (`tryPost` in
+ * `src/lib/jobs/interest-accrual.ts`) must not release this accrual's
+ * posting claim on this error, and must page loudly. Every other failure out
+ * of `postWalletInterestEntry` (a `findPostedRecord`/`getCategories` read, or
+ * the amount-mismatch guard below) happens strictly *before* any write is
+ * attempted — unambiguously safe to release the claim and retry later,
+ * exactly the distinction B8 draws between "a Wallet read failed" and "money
+ * may already be at Wallet".
+ */
+export class WalletPostAmbiguousError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "WalletPostAmbiguousError";
+  }
+}
+
+/**
  * Built from the accrual's own stored `net`/`balanceBasis` rather than the
  * rule's *current* `annualRate`/`taxRate`. The rule is mutable — a rate can
  * be edited any time after an accrual was computed under a different one —
@@ -32,9 +52,29 @@ export interface PostWalletInterestResult {
  * the note's own arithmetic reconciles and find that it doesn't; `net` is
  * the only figure that matches the amount actually posted, so it's the
  * only one shown.
+ *
+ * Ruling P3-C41 (B4): the note carries `scopedNoteMarker`, not the rule's raw
+ * `noteMarker` — see that function for why.
  */
 function buildNote(rule: InterestRule, accrual: InterestAccrual): string {
-  return `${rule.noteMarker} net ${accrual.net} on ${accrual.balanceBasis}`;
+  return `${scopedNoteMarker(rule)} net ${accrual.net} on ${accrual.balanceBasis}`;
+}
+
+/**
+ * Ruling P3-C41 (B4): `noteMarker` defaults to the same value
+ * (`"auto-interest"`) for every rule, and `findPostedRecord`'s query only
+ * knows "an account, a day, a substring of the note" — nothing stops two
+ * `post_to_provider` rules on the same account, posting the same day, from
+ * matching *each other's* Wallet record. Suffixing the marker with the
+ * rule's own id, and matching on that suffixed marker everywhere (both here,
+ * in the note actually written to Wallet, and in the crash-recovery query
+ * below), makes the marker unique per rule by construction — two rules can
+ * never collide, and the query's substring match becomes far more selective
+ * as a side effect. Safe to change freely: nothing has posted in production
+ * (Phase 3 is not deployed).
+ */
+function scopedNoteMarker(rule: InterestRule): string {
+  return `${rule.noteMarker}:${rule.id}`;
 }
 
 /** A found record is treated as "not this accrual's" unless its amount matches to the cent (a small float-noise allowance, not a real tolerance for a different amount). */
@@ -52,23 +92,21 @@ const AMOUNT_MATCH_EPSILON = 0.005;
  * Checks Wallet itself for an existing record before ever posting — the same
  * second line of defence `interest.py`'s own `already_posted_today` uses
  * (queried by `findPostedRecord`, matching its exact filter shape). Local
- * state (`accrual.postedAt`) is the primary idempotency guard, but a crash
- * between a previous run's successful `postRecords` call and its local
- * `markPosted` write leaves local state saying "not yet posted" even though
- * Wallet already has the record; asking Wallet directly closes that window
- * without ever sending the interest twice.
+ * state (`accrual.postedAt`, claimed via `InterestAccrualsRepository.claimForPosting`
+ * before this function is ever called — Ruling P3-C39) is the primary
+ * idempotency guard, but a crash between a previous run's successful
+ * `postRecords` call and its local confirm write leaves local state saying
+ * "claimed, not yet confirmed" even though Wallet already has the record;
+ * asking Wallet directly closes that window without ever sending the
+ * interest twice.
  *
- * That check is scoped by `noteMarker`, not by rule — the query only knows
- * "an account, a day, a substring of the note", and `noteMarker` defaults to
- * the same value (`auto-interest`) for every rule. Two `post_to_provider`
- * rules on the same account posting the same day, or a user's own record
- * whose note happens to contain the marker, would otherwise match a record
- * that is not this accrual's, and this accrual would get marked posted
- * against someone else's Wallet record — a silent under-post (this
- * accrual's interest is never actually sent) plus a false "posted" row. The
- * amount is checked before trusting a match for exactly this reason: it is
- * not proof of ownership, but a mismatch is proof of *non*-ownership, and
- * that is thrown as a loud failure rather than accepted.
+ * That check is scoped by the per-rule `scopedNoteMarker`, not the raw
+ * `noteMarker` (Ruling P3-C41, B4) — see that function's own doc for why a
+ * bare `rule.noteMarker` used to let two rules match each other's record.
+ * The amount is still checked before trusting a match: it is not proof of
+ * ownership, but a mismatch is proof of *non*-ownership, and that is thrown
+ * as a loud (but unambiguous — no write was ever attempted) failure rather
+ * than accepted.
  *
  * `postRecords` is called with `attempts: 1`: a write must not retry on the
  * same terms as a read. `withRetry`'s default policy retries on 409 and any
@@ -76,24 +114,40 @@ const AMOUNT_MATCH_EPSILON = 0.005;
  * a 5xx can just as easily mean "the write landed, only the acknowledgement
  * didn't" — resubmitting the identical body in either case is how the same
  * interest gets posted twice. A single failed attempt here is reported as a
- * failure and left for the next scheduled run (which will find the record
- * via `findPostedRecord` if it did in fact land) rather than silently retried
- * against a financial API.
+ * `WalletPostAmbiguousError` (Ruling P3-C39, B2) — left for an operator to
+ * reconcile, since the accrual's posting claim is deliberately *not*
+ * released for this failure — rather than silently retried against a
+ * financial API.
+ *
+ * The `recordDate` sent to `postRecords` — and the day queried by
+ * `findPostedRecord` — is the bare `accrual.accrualDate` ("YYYY-MM-DD"), not
+ * a midnight timestamp (Ruling P3-C40, B1): the write used to send
+ * `${accrualDate}T00:00:00Z` while the crash-recovery read queried
+ * `recordDate=eq.<day>`, and if Wallet's `recordDate` column is a timestamp
+ * behind a PostgREST-shaped filter, `eq.<day>` is cast in the *Wallet
+ * server's* timezone — which, if it is `Europe/Rome` like this whole stack,
+ * would resolve to `<day>T22:00:00Z` the prior evening and never equal a
+ * value stored as `<day>T00:00:00Z`. Posting the same bare-day grain the
+ * read already used removes the timezone question entirely rather than
+ * documenting it — but this has still never been verified against a live
+ * Wallet token; the runbook's cut-over section requires that verification
+ * before any rule is first flipped to `post_to_provider`.
  */
 export async function postWalletInterestEntry(input: PostWalletInterestInput): Promise<PostWalletInterestResult> {
   const note = buildNote(input.rule, input.accrual);
+  const marker = scopedNoteMarker(input.rule);
 
   const existing = await findPostedRecord({
     token: input.token,
     accountId: input.walletAccountId,
     recordDate: input.accrual.accrualDate,
-    noteContains: input.rule.noteMarker,
+    noteContains: marker,
   });
   if (existing) {
     const expectedAmount = Number(input.accrual.net);
     if (Math.abs(existing.amount - expectedAmount) > AMOUNT_MATCH_EPSILON) {
       throw new Error(
-        `Wallet already has a record dated ${input.accrual.accrualDate} on account ${input.walletAccountId} whose note contains "${input.rule.noteMarker}" (record ${existing.id}, amount ${existing.amount}), but that does not match this accrual's net (${expectedAmount}) — refusing to mark this accrual posted against what is very likely a different rule's or a user's own record`,
+        `Wallet already has a record dated ${input.accrual.accrualDate} on account ${input.walletAccountId} whose note contains "${marker}" (record ${existing.id}, amount ${existing.amount}), but that does not match this accrual's net (${expectedAmount}) — refusing to mark this accrual posted against what is very likely a different rule's or a user's own record`,
       );
     }
     return { note: existing.note ?? note, transactionId: existing.id };
@@ -103,14 +157,22 @@ export async function postWalletInterestEntry(input: PostWalletInterestInput): P
   const wanted = (input.rule.providerCategoryRef ?? "Interest, dividends").trim().toLowerCase();
   const category = categories.find((c) => c.name.trim().toLowerCase() === wanted);
 
-  const [created] = await postRecords({ token: input.token, attempts: 1 }, [
-    {
-      accountId: input.walletAccountId,
-      amount: Number(input.accrual.net),
-      recordDate: `${input.accrual.accrualDate}T00:00:00Z`,
-      note,
-      ...(category ? { categoryId: category.id } : {}),
-    },
-  ]);
+  let created;
+  try {
+    [created] = await postRecords({ token: input.token, attempts: 1 }, [
+      {
+        accountId: input.walletAccountId,
+        amount: input.accrual.net,
+        recordDate: input.accrual.accrualDate,
+        note,
+        ...(category ? { categoryId: category.id } : {}),
+      },
+    ]);
+  } catch (err) {
+    throw new WalletPostAmbiguousError(
+      `Wallet POST failed for accrual ${input.accrual.id} (rule ${input.rule.id}) — the write may or may not have landed at Wallet: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
+    );
+  }
   return { note, transactionId: created?.id ?? null };
 }
