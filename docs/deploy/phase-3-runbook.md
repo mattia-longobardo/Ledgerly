@@ -10,9 +10,10 @@
 
 ## 2. Deploy
 
-Phase 3 adds two migrations (`0011_transactions.sql`, `0012_interests.sql`)
-and no new environment variables. Build and deploy the image as usual; the
-entrypoint applies both migrations on boot.
+Phase 3 adds four migrations (`0011_transactions.sql`, `0012_interests.sql`,
+`0013_expenses_ownership_fixes.sql`, `0014_interest_posting_fixes.sql`) and
+no new environment variables. Build and deploy the image as usual; the
+entrypoint applies all four on boot.
 
 ## 3. Verify
 
@@ -37,12 +38,14 @@ entrypoint applies both migrations on boot.
 
 ## 4. Rollback
 
-Both migrations are additive — no existing table or column changes. Reverting
-the image to the pre-Phase-3 tag is sufficient; `transactions`,
-`transaction_categories`, `transaction_labels`, `recurring_patterns`,
-`interest_rules`, `interest_accruals` and `interest_entries` are simply
-unused by the older image, and nothing in this phase touches a table an
-earlier phase depends on.
+`0011`–`0013` are additive; `0014` changes `interest_entries.transaction_id`
+from `uuid` to `text` and replaces `interest_rules_owner`'s policy. Nothing
+in `0014` is destructive to data already written (a `uuid` string is always
+valid `text`), so reverting the image to the pre-Phase-3 tag remains
+sufficient — `transactions`, `transaction_categories`, `transaction_labels`,
+`recurring_patterns`, `interest_rules`, `interest_accruals` and
+`interest_entries` are simply unused by the older image, and nothing in this
+phase touches a table an earlier phase depends on.
 
 ## 5. Posting cut-over
 
@@ -53,3 +56,18 @@ automatic sweep that back-posts a day that failed while posting was already
 on, so a Wallet outage during that window needs an operator to notice the
 logged skip and act on it, not a later tick to recover it by itself. See
 [`docs/migration/wallet-manager-cutover.md`](../migration/wallet-manager-cutover.md).
+
+**Before flipping the first rule to `post_to_provider` against a live Wallet
+token, verify the posting round trip by hand**: create the rule in
+`analyze_only`, wait for it to accrue a nonzero `net` for a day, then flip it
+to `post_to_provider` and confirm — against the real Wallet account, not
+just this app's own tables — that (a) exactly one record lands with the
+expected amount, dated the accrual's own day, and (b) re-triggering the tick
+immediately afterward (`POST /api/jobs/tick`, or waiting for a retried cron
+tick) does **not** produce a second record. This exercises
+`findPostedRecord`'s `recordDate=eq.<day>` filter against Wallet's actual
+`recordDate` column and the actual `note=contains.<marker>` matching for
+real — this module's own code comments are explicit that this behaviour has
+never been confirmed against a live token, only against the retired
+standalone script's own use of the same filter shape. Do this once per Wallet
+account before its first rule ever posts for real, not once per rule.

@@ -1196,7 +1196,8 @@
               "missing",
               "delayed",
               "anomalous",
-              "no_data"
+              "no_data",
+              "indeterminate"
             ]
           },
           "differenceCents": {
