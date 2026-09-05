@@ -6,7 +6,7 @@ import {
   MemoryInterestRulesRepository,
 } from "../infrastructure/memory-repositories";
 import { setInterestDepsFactoryForTests, setPrincipalForTests } from "./run";
-import { loadInterestRuleDetail, loadInterestRules } from "./load-interests";
+import { loadInterestRuleDetail, loadInterestRules, setAccountNamesForTests } from "./load-interests";
 
 function harness(balance: string | null = "1000.00") {
   return {
@@ -86,6 +86,63 @@ describe("loadInterestRules", () => {
     setInterestDepsFactoryForTests(null);
     setPrincipalForTests(null);
   });
+
+  // C3: the rules list must not render a raw account UUID — the loader
+  // resolves a name per row.
+  it("resolves each row's account name via the account-names lookup", async () => {
+    const deps = harness();
+    await deps.rules.create({
+      userId: "00000000-0000-7000-8000-000000000001",
+      accountId: "acc-1",
+      annualRate: "0.0225",
+      taxRate: "0.26",
+      dayCount: 365,
+      compounding: "simple_daily",
+      effectiveFrom: "2026-01-01",
+      effectiveTo: null,
+      postingMode: "analyze_only",
+      providerCategoryRef: null,
+      noteMarker: "auto-interest",
+    });
+
+    setInterestDepsFactoryForTests(() => deps);
+    setPrincipalForTests(testPrincipal());
+    setAccountNamesForTests(async (_userId, accountIds) => new Map(accountIds.map((id) => [id, `Name for ${id}`])));
+    const rows = await loadInterestRules();
+    expect(rows[0]?.accountName).toBe("Name for acc-1");
+    setAccountNamesForTests(null);
+    setInterestDepsFactoryForTests(null);
+    setPrincipalForTests(null);
+  });
+
+  // C3: "falling back to something meaningful if the account is gone" — an
+  // id the lookup has no name for (the account was hard-deleted) must not
+  // surface as `undefined` or an empty string.
+  it("falls back to a placeholder when the account behind a rule no longer exists", async () => {
+    const deps = harness();
+    await deps.rules.create({
+      userId: "00000000-0000-7000-8000-000000000001",
+      accountId: "acc-gone",
+      annualRate: "0.0225",
+      taxRate: "0.26",
+      dayCount: 365,
+      compounding: "simple_daily",
+      effectiveFrom: "2026-01-01",
+      effectiveTo: null,
+      postingMode: "analyze_only",
+      providerCategoryRef: null,
+      noteMarker: "auto-interest",
+    });
+
+    setInterestDepsFactoryForTests(() => deps);
+    setPrincipalForTests(testPrincipal());
+    setAccountNamesForTests(async () => new Map());
+    const rows = await loadInterestRules();
+    expect(rows[0]?.accountName).toBe("Deleted account");
+    setAccountNamesForTests(null);
+    setInterestDepsFactoryForTests(null);
+    setPrincipalForTests(null);
+  });
 });
 
 describe("loadInterestRuleDetail", () => {
@@ -112,6 +169,32 @@ describe("loadInterestRuleDetail", () => {
     await expect(
       loadInterestRuleDetail("any-id", { periodStart: "2026-09-01", periodEnd: "2026-09-30" }),
     ).rejects.toThrow("boom");
+    setInterestDepsFactoryForTests(null);
+    setPrincipalForTests(null);
+  });
+
+  it("resolves the rule's own account name the same way the list does (C3)", async () => {
+    const deps = harness();
+    const rule = await deps.rules.create({
+      userId: "00000000-0000-7000-8000-000000000001",
+      accountId: "acc-1",
+      annualRate: "0.0225",
+      taxRate: "0.26",
+      dayCount: 365,
+      compounding: "simple_daily",
+      effectiveFrom: "2026-01-01",
+      effectiveTo: null,
+      postingMode: "analyze_only",
+      providerCategoryRef: null,
+      noteMarker: "auto-interest",
+    });
+
+    setInterestDepsFactoryForTests(() => deps);
+    setPrincipalForTests(testPrincipal());
+    setAccountNamesForTests(async (_userId, accountIds) => new Map(accountIds.map((id) => [id, "Everyday account"])));
+    const detail = await loadInterestRuleDetail(rule.id, { periodStart: "2026-09-01", periodEnd: "2026-09-30" });
+    expect(detail?.rule.accountName).toBe("Everyday account");
+    setAccountNamesForTests(null);
     setInterestDepsFactoryForTests(null);
     setPrincipalForTests(null);
   });

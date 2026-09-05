@@ -28,7 +28,7 @@ export default async function InterestRulePage({ params }: { params: Promise<{ i
   return (
     <>
       <PageHeader
-        title={`Interest rule — ${detail.rule.accountId}`}
+        title={`Interest rule — ${detail.rule.accountName}`}
         eyebrow={
           <Link href="/finance/interests" className="text-fg-muted transition-colors hover:text-fg">
             &larr; Interests
@@ -40,6 +40,7 @@ export default async function InterestRulePage({ params }: { params: Promise<{ i
           accruals={detail.accruals}
           reconciliationStatus={detail.reconciliationStatus}
           projection={detail.projection}
+          ruleInert={detail.rule.inert}
         />
       </div>
     </>
