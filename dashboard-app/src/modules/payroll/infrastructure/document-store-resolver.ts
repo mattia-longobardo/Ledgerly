@@ -77,5 +77,5 @@ export async function resolveDocumentStore(userId: string): Promise<DocumentStor
  */
 export function documentStoreConfigured(): boolean {
   const e = env();
-  return e.DOCUMENT_STORE_DRIVER === "silo" || Boolean(e.DOCUMENT_STORE_LOCAL_PATH);
+  return e.DOCUMENT_STORE_DRIVER === "local" && Boolean(e.DOCUMENT_STORE_LOCAL_PATH);
 }
