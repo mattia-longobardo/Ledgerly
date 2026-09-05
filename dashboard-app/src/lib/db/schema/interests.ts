@@ -70,7 +70,14 @@ export const interestEntries = pgTable(
     kind: text("kind").notNull(),
     // No FK: a transaction may not exist locally yet (a projected entry has
     // none at all), matching transactions.sync_run_id's existing precedent.
-    transactionId: uuid("transaction_id"),
+    // `text`, not `uuid` (B3 / Ruling in migration 0014): this holds a
+    // Wallet record's own opaque id (`recordSchema.id` is `z.string()` in
+    // `src/lib/clients/wallet.ts`, never asserted to be a UUID), matching
+    // every other provider id in this codebase (`provider_links.external_id`
+    // is `text`). The first post of a non-UUID-shaped Wallet id used to
+    // throw `invalid input syntax for type uuid`, rolling back the entry
+    // create with real money already sent and no local record of it at all.
+    transactionId: text("transaction_id"),
     ruleId: uuid("rule_id"),
     source: text("source").notNull().default("computed"),
     createdAt: tz("created_at").notNull().defaultNow(),
