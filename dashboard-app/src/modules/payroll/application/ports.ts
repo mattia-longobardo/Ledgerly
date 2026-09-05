@@ -141,7 +141,25 @@ export interface PayrollRecord {
   net: string | null;
   verifiedAt: Date | null;
   verifiedBy: string | null;
-  corrections: Record<string, { extracted: unknown; corrected: unknown }> | null;
+  /**
+   * What `applyImport` (`application/apply-import.ts`) actually writes here is
+   * the verified import's own `extraction.fields` — per-field
+   * `{value, confidence, rules, llm, note?}`, not an extracted-vs-corrected
+   * diff. The name suggests the latter (and `verifyImport`,
+   * `application/review-import.ts`, does compute a real extracted/corrected
+   * map internally), but that map is never persisted — only its field
+   * *names* reach the audit trail, and `applyImport` reads from
+   * `extraction.fields`, which has no notion of "corrected" independent of
+   * "current value" once verification has overwritten it. This type matches
+   * what is genuinely stored (Finding 6, B2 whole-branch review) rather than
+   * asserting a shape nothing writes, closing the double-cast that used to
+   * paper over the mismatch. No consumer reads this column today, which is
+   * why the mismatch was never a live bug — threading the real
+   * extracted-vs-corrected map from `verifyImport` through to here remains
+   * open follow-up work if a consumer ever needs the diff rather than the
+   * final per-field state.
+   */
+  corrections: PayslipExtraction["fields"] | null;
   supersededAt: Date | null;
   supersededByRecordId: string | null;
   version: number;
