@@ -1,7 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { resetEnvCache } from "@/lib/env";
+import { documentStoreConfigured } from "@/modules/payroll/infrastructure/document-store-resolver";
+import { TEST_ENCRYPTION_KEY } from "@/test/encryption-key";
 import { resolveCapabilities } from "./resolve";
 import type { IntegrationState } from "./resolve";
 import { testPrincipal } from "@/test/principal";
+
+// `documentStoreConfigured()` reads `env()`, which validates the whole schema —
+// this file runs isolated from other test files, so every required variable
+// has to be present here too.
+Object.assign(process.env, {
+  NODE_ENV: "test",
+  DATABASE_URL: "postgres://dashboard:pw@localhost:5432/dashboard",
+  AUTH_URL: "https://dashboard.example",
+  AUTH_SECRET: "0123456789abcdef0123456789abcdef",
+  OIDC_ISSUER: "https://auth.example/application/o/dashboard/",
+  OIDC_CLIENT_ID: "dashboard",
+  OIDC_CLIENT_SECRET: "client-secret",
+  AUTHORIZED_SUB: "00000000-0000-0000-0000-000000000001",
+  CRON_SECRET: "c".repeat(20),
+  WEBHOOK_SECRET: "w".repeat(20),
+  APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
+});
+const savedEnv = { ...process.env };
+afterEach(() => {
+  process.env = { ...savedEnv };
+  resetEnvCache();
+});
 
 const probes = (o: Partial<{ wallet: IntegrationState; trek: IntegrationState; payroll: boolean }>) => ({
   connectionStates: async (_userId: string) => ({
@@ -84,5 +109,26 @@ describe("resolveCapabilities", () => {
     });
     expect(errored.features.payroll).toBe(false);
     expect(errored.integrations.payroll).toBe("error");
+  });
+
+  it("does not grant the payroll feature on a fresh deployment with no store configured (Finding 1: DOCUMENT_STORE_DRIVER defaults to silo)", async () => {
+    delete process.env.DOCUMENT_STORE_DRIVER;
+    delete process.env.DOCUMENT_STORE_LOCAL_PATH;
+    resetEnvCache();
+    const caps = await resolveCapabilities(testPrincipal(), {
+      // The real probe, not a stub — this is the exact wiring `realProbes` uses
+      // in `probes.ts`, so it catches a regression in `documentStoreConfigured`
+      // itself, not just in how `resolve.ts` combines the probe's answer.
+      payrollConfigured: () => documentStoreConfigured(),
+      connectionStates: async () => ({
+        wallet: "disconnected" as const,
+        trek: "disconnected" as const,
+        payroll_silo: "not_configured" as const,
+      }),
+      hasAccounts: async () => true,
+      hasPayrollRecords: async () => false,
+    });
+    expect(caps.features.payroll).toBe(false);
+    expect(caps.integrations.payroll).toBe("not_configured");
   });
 });
