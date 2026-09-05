@@ -5,12 +5,27 @@
  * selection (which imports are due) is read once under `withSystemContext`
  * (RLS's `app_is_system()` bypass, needed because this crosses every user);
  * each import's actual work then runs through `scanImport`/`parseImport`
- * (`infrastructure/ingest.ts`) — two complete, transaction-safe atomic units
- * that resolve their own document store and scanner and manage their own
- * short transactions internally, with the network I/O sandwiched between two
- * of them (Ruling R4-8). This job never opens a `withUserContext` of its own
- * around either call: doing so would nest a transaction around I/O that must
- * not run inside one, exactly the defect Task 10 was fixed to remove.
+ * (`infrastructure/ingest.ts`), which internally manage their own short
+ * transactions around a confirm/record step, with the network I/O (store
+ * fetch, clamd, the parser's LLM call) sandwiched between them (Ruling R4-8)
+ * — *when called on their own*.
+ *
+ * Called from here, that discipline does not hold: `withJobLock`
+ * (`src/lib/repo/jobs.ts`) opens its own `db.transaction(...)` for the
+ * advisory lock and runs its callback — this whole per-import body,
+ * `scanImport`/`parseImport` and all their network I/O included — inside
+ * that open transaction. This is a known, pre-existing characteristic of
+ * `withJobLock` shared by every job that uses it (`wallet-accounts-sync.ts`,
+ * `interest-accrual.ts`, `sync-queue.ts` included), not something Phase 4
+ * introduced or fixed. Rewriting `withJobLock` to stop transaction-wrapping
+ * I/O is a platform-level decision tracked separately, not something this
+ * job can opt out of on its own.
+ *
+ * Practical safety therefore does not come from transaction isolation here.
+ * It comes from `scanImport`/`parseImport` being idempotent: re-running one
+ * (because the surrounding transaction rolled back, or the tick was retried)
+ * either re-confirms the same status transition or is a no-op, never a
+ * double-apply.
  *
  * One import's failure is caught and counted per import (Phase 2's "a loop
  * over many owners needs per-item error isolation" lesson) rather than
@@ -95,11 +110,13 @@ interface Counts {
 }
 
 /**
- * `scanImport` and `parseImport` are each a complete atomic unit: a short
- * transaction confirms readiness, the network I/O (store fetch, clamd, the
- * parser's LLM call) runs with no transaction open, and a second short
- * transaction records the outcome. This function only sequences the two
- * calls for one import — it opens no context of its own around either.
+ * `scanImport` and `parseImport` are each written as a complete atomic unit
+ * (a short transaction confirms readiness, then the network I/O, then a
+ * second short transaction records the outcome) — but see the module
+ * doc-comment above: called from this job, `withJobLock` holds one
+ * outer transaction open across all of it anyway. This function only
+ * sequences the two calls for one import — it opens no *additional* context
+ * of its own around either.
  */
 async function ingestOne(item: PayrollImport, counts: Counts): Promise<void> {
   const principal = systemPrincipalFor(item.userId);
