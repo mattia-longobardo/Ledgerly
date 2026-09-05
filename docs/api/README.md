@@ -206,7 +206,7 @@ Every rule defaults to `postingMode: "analyze_only"`; flipping it to
 `"post_to_provider"` is the only way this API ever writes to Wallet, and only
 for a rule whose account is still a live synced Wallet account with a
 connected integration — see
-[`docs/migration/wallet-manager-cutover.md`](../migration/wallet-manager-cutover.md)
+[`dashboard-app/docs/migration/wallet-manager-cutover.md`](../../dashboard-app/docs/migration/wallet-manager-cutover.md)
 for the operational procedure.
 
 ## Regenerating `openapi.json`

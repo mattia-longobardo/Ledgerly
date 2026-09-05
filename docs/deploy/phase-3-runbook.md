@@ -55,7 +55,7 @@ only ever posts the day the daily job is currently running for: there is no
 automatic sweep that back-posts a day that failed while posting was already
 on, so a Wallet outage during that window needs an operator to notice the
 logged skip and act on it, not a later tick to recover it by itself. See
-[`docs/migration/wallet-manager-cutover.md`](../migration/wallet-manager-cutover.md).
+[`dashboard-app/docs/migration/wallet-manager-cutover.md`](../../dashboard-app/docs/migration/wallet-manager-cutover.md).
 
 **Before flipping the first rule to `post_to_provider` against a live Wallet
 token, verify the posting round trip by hand**: create the rule in
@@ -71,3 +71,34 @@ real — this module's own code comments are explicit that this behaviour has
 never been confirmed against a live token, only against the retired
 standalone script's own use of the same filter shape. Do this once per Wallet
 account before its first rule ever posts for real, not once per rule.
+
+## 6. Known failure mode — Wallet sync page ceilings
+
+`assertPageNotTruncated` (`src/lib/clients/wallet.ts`) refuses to treat a
+Wallet `/categories` or `/records` page as complete once it comes back at
+exactly 200 categories or 500 records — Wallet's pagination has never been
+confirmed against a live token, so a full page is treated as a possibly-cut
+listing rather than guessed at. This is a deliberate trade-off, not a bug: it
+fails loudly (`UpstreamError`, surfaced as a `wallet_accounts_sync` or
+`wallet_transactions_sync` job failure in Settings › Administration) instead
+of silently under-reporting a busy account's transactions.
+
+There is no automatic recovery — the sync cursor (`sync_jobs.cursor` for that
+connection/kind) only advances on success, so the same window is retried,
+and fails, on every subsequent tick until an operator intervenes:
+
+1. Confirm the failure from `job_runs.error` — it names the endpoint, the
+   count and the limit.
+2. If this is a transactions sync and the account is simply busy (e.g. many
+   small transactions in one `RECORDS_LOOKBACK_DAYS` window), reduce what one
+   window has to cover for that account in Wallet itself where practical
+   (e.g. archive or merge duplicate categories for the 200-category
+   ceiling), then let the next tick retry.
+3. If the count cannot be reduced, advancing `sync_jobs.cursor` for that
+   `(connection_id, kind)` past the affected window by hand unblocks later
+   ticks, but accepts a permanent gap: transactions dated inside the skipped
+   window are never imported by a later run (the sync only ever reads
+   forward from its cursor). Treat this as a last resort and record which
+   window was skipped.
+4. Implementing real pagination against a live token is the actual fix, and
+   is out of scope for this phase.
