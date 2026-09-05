@@ -13,6 +13,8 @@ import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
 import type { Series } from "@/lib/contracts";
 import { loadOverview, type SourceFreshness } from "@/modules/accounts/ui/load-overview";
 import { cardState, visibleCards, type CardKey } from "@/modules/home/cards";
+import { loadImports, type ImportRow } from "@/modules/payroll/ui/load-payroll";
+import { AWAITING_STATUSES } from "@/modules/payroll/ui/queue";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
 import { resolveCapabilities } from "@/platform/capabilities/resolve";
@@ -87,10 +89,15 @@ export default async function HomePage() {
     return card ? cardState(card, caps) : null;
   };
 
-  const [overview, funds, ferie] = await Promise.all([
+  const [overview, funds, ferie, imports] = await Promise.all([
     isVisible("total_balance") || isVisible("accounts_sync") ? loadOverview() : null,
     isVisible("funds") ? loadFunds() : null,
     isVisible("leave") ? loadFerie() : null,
+    // Safe to call unconditionally behind `isVisible`: this card requires the
+    // `payroll` feature, which `resolveCapabilities` only turns on once a
+    // document store is actually connected — the same guarantee `/company`
+    // and `/company/payroll` rely on before calling into this module.
+    isVisible("payroll_imports") ? loadImports() : null,
   ]);
 
   return (
@@ -124,6 +131,13 @@ export default async function HomePage() {
             <PermissionDeniedPanel span={4} title="Funds" />
           ) : (
             <FundsCard funds={funds!} />
+          ))}
+
+        {isVisible("payroll_imports") &&
+          (denial("payroll_imports") ? (
+            <PermissionDeniedPanel span={4} title="Payroll imports" />
+          ) : (
+            <PayrollImportsCard imports={imports!} />
           ))}
       </PageGrid>
     </>
@@ -317,6 +331,40 @@ function FundsCard({ funds }: { funds: readonly FundView[] }) {
           <div className="mt-2">
             <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
           </div>
+        </>
+      )}
+    </Panel>
+  );
+}
+
+/**
+ * `payroll_imports`: how many payslips are still waiting for a decision, using
+ * the same `AWAITING_STATUSES` the review queue itself is built from (Ruling
+ * from Finding 3's fix) — so this count and the queue a reviewer opens by
+ * following it always agree on what "still waiting" means.
+ */
+function PayrollImportsCard({ imports }: { imports: readonly ImportRow[] }) {
+  const pending = imports.filter((row) => (AWAITING_STATUSES as readonly string[]).includes(row.status)).length;
+
+  return (
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Payroll imports"
+      action={
+        <Link href="/company/payroll" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          Go to Payroll
+        </Link>
+      }
+    >
+      {pending === 0 ? (
+        <p className="text-body-sm text-fg-muted">Nothing is waiting for review.</p>
+      ) : (
+        <>
+          <span className="num text-display-sm text-fg">{pending}</span>
+          <p className="mt-1 text-body-sm text-fg-muted">
+            {pending === 1 ? "payslip waiting for review" : "payslips waiting for review"}
+          </p>
         </>
       )}
     </Panel>
