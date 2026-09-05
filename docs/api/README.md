@@ -209,6 +209,36 @@ connected integration — see
 [`dashboard-app/docs/migration/wallet-manager-cutover.md`](../../dashboard-app/docs/migration/wallet-manager-cutover.md)
 for the operational procedure.
 
+## Payroll
+
+`GET /payroll/imports`, `POST /payroll/imports` (multipart, `file` part),
+`GET /payroll/imports/{id}`, `POST /payroll/imports/{id}/verify`,
+`POST /payroll/imports/{id}/reject`, `POST /payroll/imports/{id}/apply`,
+`POST /payroll/imports/{id}/retry`, `GET /payroll/imports/{id}/original`,
+`GET /payroll/records`, `GET /payroll/records/{id}`, `GET /payroll/earnings`.
+
+The upload is idempotent on the **sha256 of the bytes, per user**, enforced by a
+database constraint rather than an application check: uploading the same file
+twice answers `409 duplicate` with `details.existingImportId`, and can therefore
+never produce two payroll records. `Idempotency-Key` is honoured by a second
+constraint on `(user_id, idempotency_key)`; the platform idempotency middleware
+is deliberately not used here, because it hashes and stores the whole request
+body and the body is a 10 MB binary.
+
+`POST .../verify` and `POST .../reject` follow the same `If-Match`/`version`
+convention as `PATCH /accounts/{id}`. `POST .../apply` is idempotent and
+re-runnable but **not reversible**: the reverse of a wrong apply is uploading a
+corrected payslip, whose apply supersedes the previous record.
+
+`GET .../original` streams the stored PDF with `Cache-Control: no-store` and is
+recorded in `audit_events`. It answers `409 conflict` — never the bytes — for an
+import whose malware scan has not returned clean, and for one whose original the
+retention job has already purged.
+
+`GET /payroll/earnings` computes gross, net, taxes and contributions per month,
+quarter and year from `payroll_records` and `payroll_components`, excluding
+superseded records. A figure the payslip did not state is `null`, never `0`.
+
 ## Regenerating `openapi.json`
 
 The document is generated from the same `createRoute`/Zod schemas the route

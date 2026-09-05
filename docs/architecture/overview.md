@@ -1,9 +1,10 @@
-# Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3
+# Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4
 
 This describes what `dashboard-app` actually is after Phase 0 (platform
 foundations), Phase 1 (accounts, Teable retirement), Phase 2 (the
-integration framework, encrypted credentials, inbound webhooks), and Phase 3
-(Expenses and Interests). It follows the target shape from
+integration framework, encrypted credentials, inbound webhooks), Phase 3
+(Expenses and Interests), and Phase 4 (the payroll upload pipeline and
+Company). It follows the target shape from
 [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](../superpowers/specs/2026-09-02-finance-company-platform-design.md)
 §3; read that document for the rationale, this one for what is on disk today.
 
@@ -36,6 +37,12 @@ src/
     infrastructure/       Drizzle repositories, the Wallet interest-posting adapter
     api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
     ui/                     Interests list/rule-detail loaders and components
+  modules/payroll/
+    domain/             import status machine, pay periods, component mapping, earnings buckets — no IO
+    application/         create/ingest/review/apply an import, read records, serve and purge originals, ports.ts
+    infrastructure/       Drizzle repositories, the document store (S3 + local), the scanning boundary, the payroll_silo adapter
+    api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
+    ui/                     Company Overview, Earnings, Payroll upload/review loaders and components
   platform/
     auth/               Principal, permission catalogue, resolvePrincipal, require-principal
     capabilities/       resolveCapabilities, buildNavigation, the production probes
@@ -47,13 +54,22 @@ src/
                             credential encryption (crypto.ts), shared HMAC webhook verification
   lib/                  everything not yet migrated into a module: db client/schema/migrate,
                           env, jobs (sweep, trek-sync, wallet-refresh, monthly-close, wallet-accounts-sync,
-                          sync-queue), payroll parsing, calc (money/net-worth/cometa), clients (wallet, trek, paperless)
+                          sync-queue), payroll parsing, calc (money/net-worth/cometa), clients (wallet, trek)
   app/                   Next.js routes only — thin, call use cases and render ui/
 ```
 
-`accounts`, `expenses` and `interests` are full modules; everything
-payroll/trek/paperless-related still lives under `src/lib/*` and moves into
-its own module in a later phase (§11 Phase 4 and after). Transactions sync
+`accounts`, `expenses`, `interests` and `payroll` are full modules. Payslip
+documents never enter Postgres: the database holds metadata and a `storage_key`,
+and the bytes live in an S3-compatible document store reached through a
+`payroll_silo` integration connection (or, in development and tests, a local
+directory). A `MalwareScanner` boundary sits between "bytes stored" and "bytes
+readable or parseable", with a no-op default that records `scanner: "none"` on
+every import it clears. The parsing engine under `src/lib/payroll/` was not
+rewritten — the new module calls it with bytes read from the store. Two jobs
+join the tick registry: `payroll_ingest` (hourly) and `payroll_retention`
+(daily). Paperless, its client, its preview proxy and its webhook are gone; the
+legacy `payslips` and `fund_deposits` tables stay as a frozen archive until
+Phase 9. Transactions sync
 through the same `IntegrationProvider`/`SyncKind` framework as accounts
 (`transactions` on the Wallet provider, cursor-based and incremental — Task 8
 of the Phase 3 plan), and interest accrual is a new daily job
@@ -299,9 +315,11 @@ Per the spec's phased plan (§11), Phase 2 explicitly does not include:
   tables exist behind either link yet. Expenses and Interests are no longer
   in this list: Phase 3 gave both a full module (transactions/categories/
   labels, and interest rules/accruals/entries), reachable once Wallet is
-  connected.
-- The payroll/earnings/timeoff domain moving out of `src/lib/*` into its own
-  module (Phase 4).
+  connected. The payroll/earnings/timeoff domain moving out of `src/lib/*`
+  is no longer in this list either: Phase 4 gave it a full module
+  (`modules/payroll/`, see "Module layout" above) and retired Paperless, its
+  client, its preview proxy and its webhook outright — that removal already
+  happened, it is not future work.
 
 ## Known deviations
 

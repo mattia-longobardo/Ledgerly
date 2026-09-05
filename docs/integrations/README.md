@@ -1,12 +1,13 @@
 # The integration framework
 
 Everything the dashboard needs to connect to an external provider — Budget
-Makers Wallet and Trek today — lives behind one small contract, one
-encrypted credential store, and one sync engine. This is the guide to that
-framework: what it is, how a credential is protected, how a connection's
-lifecycle works, and how to add a new provider. For the wire-level API
-surface, see [`docs/api/README.md`](../api/README.md)'s **Integrations**
-section and [`openapi.json`](../api/openapi.json).
+Makers Wallet, Trek, and the `payroll_silo` document store today — lives
+behind one small contract, one encrypted credential store, and one sync
+engine. This is the guide to that framework: what it is, how a credential is
+protected, how a connection's lifecycle works, and how to add a new provider.
+For the wire-level API surface, see
+[`docs/api/README.md`](../api/README.md)'s **Integrations** section and
+[`openapi.json`](../api/openapi.json).
 
 ## 1. What an integration is
 
@@ -171,6 +172,28 @@ string verbatim so they can never describe a policy differently):
   provider owned is archived, history included."
 - **`purge`** — "Purge. The credential is deleted, the provider links are
   removed, and accounts nothing else references are deleted."
+
+### `payroll_silo`
+
+A connection, not a sync. The provider registers so its credentials get the same
+AES-256-GCM vault and the same connect/test/disconnect UI as Wallet and Trek,
+but its `syncs` is empty and it adds no `SyncKind`: a document store has nothing
+to pull on a schedule, and every read and write is driven by a user action or by
+the `payroll_ingest` job.
+
+`testConnection` does a real write-read-delete round trip against a probe object
+under `payroll/_probe/`, rather than a HEAD. A credential that can list but not
+write would pass any read-only check and then fail on the user's first real
+upload, after the connect form had said everything was fine.
+
+`onDisconnect` with policy `purge` deletes every object under that user's own
+`payroll/{userId}/` prefix and nothing else; `keep` and `archive` leave the bytes
+in place. Neither deletes a `payroll_imports` row: the provenance outlives the
+bytes, the same asymmetry the retention job holds.
+
+The credential fields are `endpoint`, `bucket`, `region`, `accessKeyId` and
+`secretAccessKey`. The last two are marked secret and are never echoed back by
+any response.
 
 ## 5. Sync runs
 
