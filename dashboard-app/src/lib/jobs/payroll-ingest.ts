@@ -99,6 +99,36 @@ async function due(): Promise<PayrollImport[]> {
   );
 }
 
+/**
+ * Finding 8's bounded, no-migration mitigation for a permanently-failing
+ * import monopolizing the head of every tick (an LLM outage, a malformed
+ * PDF): a bare `error` patch, which changes nothing but bumps `updated_at`,
+ * so `listByStatusForAllUsers`'s `updated_at asc` ordering (see that port's
+ * doc-comment) sorts this row to the back of the *next* tick's selection
+ * instead of camping at the front of every one on an unchanging
+ * `created_at`. Not a real backoff — no schedule, no retry cap, and it
+ * cannot stop a full batch's worth of simultaneously-failing rows from
+ * crowding out healthy ones tick after tick; only a schema change (a retry
+ * count or a next-attempt timestamp) would close that, and is out of scope
+ * for this batch.
+ *
+ * Best-effort and swallowed on its own failure: this bookkeeping write must
+ * never mask or replace the real failure already being counted and logged by
+ * the caller.
+ */
+async function recordFailure(item: PayrollImport, message: string): Promise<void> {
+  try {
+    await withSystemContext(db, (tx) =>
+      payrollDeps(tx, { documents: UNREACHABLE_STORE, scanner: noopScanner }).imports.patch(item.userId, item.id, {
+        error: message,
+      }),
+    );
+  } catch {
+    // If even this fails, the row simply keeps its old `updated_at` and
+    // camps at the front again next tick — exactly today's behaviour.
+  }
+}
+
 interface Counts {
   considered: number;
   scanned: number;
@@ -158,9 +188,11 @@ export async function runPayrollIngestJob(input: RunPayrollIngestInput): Promise
         await withJobLock(`${LOCK_KEY}:${item.id}`, () => ingestOne(item, counts));
       } catch (err) {
         counts.failed += 1;
+        const message = errorMessage(err);
         console.error(
-          JSON.stringify({ level: "error", event: "payroll_ingest_failed", importId: item.id, error: errorMessage(err) }),
+          JSON.stringify({ level: "error", event: "payroll_ingest_failed", importId: item.id, error: message }),
         );
+        await recordFailure(item, message);
       }
     }
     await finishRun(run.id, "success", { detail: { ...counts } });
