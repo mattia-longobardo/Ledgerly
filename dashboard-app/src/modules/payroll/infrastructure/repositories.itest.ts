@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { funds, organizations, payrollMappingRules, users } from "@/lib/db/schema";
+import { fundDeposits, funds, organizations, payrollMappingRules, payslips, users } from "@/lib/db/schema";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewPayrollComponent, NewPayrollImport, NewPayrollRecord } from "../application/ports";
@@ -236,5 +237,37 @@ describe("Drizzle payroll repositories", () => {
       drizzleLegacyFundDeposits(tx).upsertForRecord({ fundSlug: "cometa", month: "2026-08-01", employee: null, employer: null }),
     );
     expect(outcome).toBe("no_amount");
+  });
+
+  it("the legacy fund bridge's second write over a pre-existing row overwrites source and payslip_id (Finding 5)", async () => {
+    const { db, a } = await seedUsers();
+    await db.insert(funds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
+    // A row this bridge did not originally write — the legacy manual path
+    // (`source: "manual"`) with a real `payslip_id` — proves what a *second*
+    // write over a pre-existing row does to those two unmodelled fields, not
+    // just what a first insert sets them to.
+    const [legacySlip] = await db
+      .insert(payslips)
+      .values({ month: "2026-08-01", paperlessDocId: 1 })
+      .returning();
+    await db.insert(fundDeposits).values({
+      fundId: 1,
+      month: "2026-08-01",
+      amount: "10.00",
+      employeePart: "5.00",
+      employerPart: "5.00",
+      source: "manual",
+      payslipId: legacySlip!.id,
+    });
+
+    const outcome = await withUserContext(db, { userId: a }, (tx) =>
+      drizzleLegacyFundDeposits(tx).upsertForRecord({
+        fundSlug: "cometa", month: "2026-08-01", employee: "50.00", employer: "100.00",
+      }),
+    );
+    expect(outcome).toBe("written");
+
+    const [row] = await db.select().from(fundDeposits).where(eq(fundDeposits.fundId, 1));
+    expect(row).toMatchObject({ amount: "150.00", source: "payroll", payslipId: null });
   });
 });

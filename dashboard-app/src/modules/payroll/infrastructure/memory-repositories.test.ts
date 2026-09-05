@@ -286,7 +286,43 @@ describe("MemoryLegacyFundDeposits", () => {
     expect(await funds.upsertForRecord({ fundSlug: "cometa", month: "2026-08-01", employee: "50.00", employer: "100.00" })).toBe("written");
     expect(await funds.upsertForRecord({ fundSlug: "cometa", month: "2026-08-01", employee: "60.00", employer: "100.00" })).toBe("written");
     expect(funds.rows).toEqual([
-      { fundSlug: "cometa", month: "2026-08-01", amount: "160.00", employee: "60.00", employer: "100.00" },
+      {
+        fundSlug: "cometa",
+        month: "2026-08-01",
+        amount: "160.00",
+        employee: "60.00",
+        employer: "100.00",
+        source: "payroll",
+        payslipId: null,
+      },
+    ]);
+  });
+
+  it("overwrites source and payslipId on a second write over a pre-existing row (Finding 5), matching the Drizzle repository's conflict-update", async () => {
+    const funds = new MemoryLegacyFundDeposits(["cometa"]);
+    // Simulate a row this bridge did not originally write — the legacy manual
+    // path could have left a real `source`/`payslipId` behind before payroll
+    // ever touched this fund/month.
+    funds.rows.push({
+      fundSlug: "cometa",
+      month: "2026-08-01",
+      amount: "10.00",
+      employee: "5.00",
+      employer: "5.00",
+      source: "manual",
+      payslipId: 42,
+    });
+    expect(await funds.upsertForRecord({ fundSlug: "cometa", month: "2026-08-01", employee: "50.00", employer: "100.00" })).toBe("written");
+    expect(funds.rows).toEqual([
+      {
+        fundSlug: "cometa",
+        month: "2026-08-01",
+        amount: "150.00",
+        employee: "50.00",
+        employer: "100.00",
+        source: "payroll",
+        payslipId: null,
+      },
     ]);
   });
 
