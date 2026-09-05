@@ -166,8 +166,11 @@ export const payrollComponents = pgTable(
 
 /**
  * `user_id IS NULL` is a global rule, seeded by this migration and readable by
- * everybody. The RLS policy's USING clause admits those rows; its WITH CHECK
- * does not, so a user can never write one.
+ * everybody. Four per-command policies (not one USING/WITH CHECK pair) gate
+ * writes: SELECT admits NULL-owned rows for everybody, but INSERT/UPDATE/DELETE
+ * all require real ownership — WITH CHECK is never evaluated for DELETE, and a
+ * single USING/WITH CHECK pair would let any user delete a global rule or
+ * hijack one by re-owning it via UPDATE.
  */
 export const payrollMappingRules = pgTable(
   "payroll_mapping_rules",
@@ -179,6 +182,7 @@ export const payrollMappingRules = pgTable(
     componentKind: text("component_kind").notNull(),
     target: jsonb("target").notNull(),
     priority: integer("priority").notNull().default(100),
+    version: integer("version").notNull().default(1),
     createdAt: tz("created_at").notNull().defaultNow(),
     updatedAt: tz("updated_at").notNull().defaultNow(),
   },
