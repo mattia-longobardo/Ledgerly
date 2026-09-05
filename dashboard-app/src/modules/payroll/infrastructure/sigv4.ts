@@ -40,9 +40,24 @@ function uriEncode(value: string): string {
   return encodeURIComponent(value).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
-/** Every segment is encoded; the separators are not. S3 canonicalises paths exactly this way. */
+/**
+ * Every segment is encoded; the separators are not. S3 canonicalises paths
+ * exactly this way.
+ *
+ * `pathname` is already percent-encoded by the `URL` parser (a space becomes
+ * `%20`, a non-ASCII character becomes its percent-encoded UTF-8 bytes), so
+ * each segment is decoded back to its raw form first — otherwise `uriEncode`
+ * would encode the `%` from that first pass a second time (`%20` →
+ * `%2520`), producing a canonical path no S3-compatible backend would accept
+ * as matching the actual request path.
+ */
 function canonicalPath(pathname: string): string {
-  return pathname.split("/").map(uriEncode).join("/") || "/";
+  return (
+    pathname
+      .split("/")
+      .map((segment) => uriEncode(decodeURIComponent(segment)))
+      .join("/") || "/"
+  );
 }
 
 function canonicalQuery(url: URL): string {

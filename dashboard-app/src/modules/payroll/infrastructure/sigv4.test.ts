@@ -58,7 +58,7 @@ describe("signRequest", () => {
     expect(headers["authorization"]).toMatch(/Signature=[0-9a-f]{64}$/);
   });
 
-  it("percent-encodes the path segment by segment, leaving the slashes intact", () => {
+  it("percent-encodes the path segment by segment, leaving the slashes intact, and does not double-encode what URL already encoded (Finding 3)", () => {
     const headers = signRequest({
       method: "GET",
       url: new URL("https://silo.internal/bucket/payroll/u 1/a+b.pdf"),
@@ -66,10 +66,18 @@ describe("signRequest", () => {
       payloadHash: hashPayload(new Uint8Array()),
       ...VECTOR,
     });
-    // The signature is over the canonical request; the assertion that matters is
-    // that signing does not throw and produces a stable 64-hex signature for a
-    // path S3 would itself encode this way.
-    expect(headers["authorization"]).toMatch(/Signature=[0-9a-f]{64}$/);
+    // `URL` has already percent-encoded the space in `.pathname` as `%20`
+    // before `canonicalPath` ever sees it. Hand-computed independently (not
+    // via `signRequest`, same method as the get-vanilla vector above) from the
+    // *correctly* single-encoded canonical path
+    // `/bucket/payroll/u%201/a%2Bb.pdf` — a signer that instead re-encodes the
+    // already-encoded `%20` into `%2520` (the regression this test guards
+    // against) produces a different signature than this one.
+    expect(headers["authorization"]).toBe(
+      "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, " +
+        "SignedHeaders=host;x-amz-content-sha256;x-amz-date, " +
+        "Signature=719fc3ceac9374a1e2963287c5b9f067ee5c8361d24ec273f7d6d9fe2769e0f8",
+    );
   });
 
   it("produces a different signature for a different payload — the body is bound to the signature", () => {
