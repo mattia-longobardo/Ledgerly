@@ -30,7 +30,7 @@ export type CardState<T> =
   | { state: "permission_denied" };
 
 /**
- * The four sections Home can surface, in display order. Their gates are
+ * The five sections Home can surface, in display order. Their gates are
  * plain data — a page decides what to render by asking `visibleCards` and
  * `cardState`, never by hardcoding a feature or integration check per card.
  */
