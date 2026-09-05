@@ -69,7 +69,17 @@ describe("summariseEarnings", () => {
       gross: "5000.00", net: "3600.00", taxes: "1400.00", recordCount: 2,
     });
     expect(summary.years).toEqual([
-      { key: "2026", gross: "7500.00", net: "5400.00", taxes: "2110.00", contributions: "50.00", recordCount: 3 },
+      {
+        key: "2026",
+        gross: "7500.00",
+        net: "5400.00",
+        taxes: "2110.00",
+        contributions: "50.00",
+        recordCount: 3,
+        // r2 and r3 carry no contribution component at all, so the "50.00"
+        // above is really only r1's — the year total is a partial sum.
+        partial: { gross: false, net: false, taxes: false, contributions: true },
+      },
     ]);
   });
 
@@ -102,5 +112,27 @@ describe("summariseEarnings", () => {
       [component("r-other", "taxes", "tax", "999.00")],
     );
     expect(summary.months[0]!.taxes).toBeNull();
+  });
+
+  it("flags a year's gross as partial when one of twelve records has a null gross (Finding 4)", () => {
+    // Eleven ordinary months plus December's null-gross record (the parser
+    // could not read that one field) — the year total below is only the sum
+    // of the eleven that did report a value, not a confirmed whole-year
+    // figure, even though `recordCount` says 12.
+    const months = Array.from({ length: 11 }, (_, i) =>
+      record({ id: `r${i + 1}`, periodStart: `2026-${String(i + 1).padStart(2, "0")}-01` }),
+    );
+    const nullGrossDecember = record({ id: "r12", periodStart: "2026-12-01", gross: null });
+    const summary = summariseEarnings([...months, nullGrossDecember], []);
+
+    expect(summary.years).toHaveLength(1);
+    const year = summary.years[0]!;
+    expect(year.recordCount).toBe(12);
+    // The sum of the eleven non-null records — confidently correct as far as
+    // it goes, but not the whole year.
+    expect(year.gross).toBe("27500.00");
+    expect(year.partial.gross).toBe(true);
+    // Net was present on every record, so it carries no such caveat.
+    expect(year.partial.net).toBe(false);
   });
 });

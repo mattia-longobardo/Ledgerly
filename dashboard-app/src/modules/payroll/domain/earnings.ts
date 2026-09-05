@@ -1,6 +1,22 @@
 import type { PayrollComponent, PayrollRecord } from "../application/ports";
 import { addMoney } from "./money";
 
+/**
+ * One figure per bucket carries this. `true` means at least one of the
+ * records folded into this bucket had no value for that specific figure —
+ * `addMoney(x, null) === x`, so the number above is the sum of whichever
+ * records *did* report it, not a confirmed total for every record the
+ * bucket counts. A caller must not present the figure as complete without
+ * checking this (Finding 4, B2 whole-branch review): "never invent
+ * financial data" applies at the aggregate level, not only per record.
+ */
+export interface EarningsBucketPartial {
+  gross: boolean;
+  net: boolean;
+  taxes: boolean;
+  contributions: boolean;
+}
+
 export interface EarningsBucket {
   /** `2026-08`, `2026-Q3` or `2026`. */
   key: string;
@@ -9,6 +25,8 @@ export interface EarningsBucket {
   taxes: string | null;
   contributions: string | null;
   recordCount: number;
+  /** Per-figure caveat: true if any of the `recordCount` records had no value for that figure. */
+  partial: EarningsBucketPartial;
 }
 
 export interface EarningsSummary {
@@ -26,10 +44,18 @@ interface Accumulator {
   taxes: string | null;
   contributions: string | null;
   recordCount: number;
+  partial: EarningsBucketPartial;
 }
 
 function empty(): Accumulator {
-  return { gross: null, net: null, taxes: null, contributions: null, recordCount: 0 };
+  return {
+    gross: null,
+    net: null,
+    taxes: null,
+    contributions: null,
+    recordCount: 0,
+    partial: { gross: false, net: false, taxes: false, contributions: false },
+  };
 }
 
 function bucketsOf(map: Map<string, Accumulator>): EarningsBucket[] {
@@ -88,6 +114,12 @@ export function summariseEarnings(
         taxes: addMoney(acc.taxes, taxes),
         contributions: addMoney(acc.contributions, contributions),
         recordCount: acc.recordCount + 1,
+        partial: {
+          gross: acc.partial.gross || record.gross === null,
+          net: acc.partial.net || record.net === null,
+          taxes: acc.partial.taxes || taxes === null,
+          contributions: acc.partial.contributions || contributions === null,
+        },
       });
     }
   }

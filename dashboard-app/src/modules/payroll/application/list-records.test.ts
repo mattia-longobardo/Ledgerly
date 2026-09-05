@@ -102,7 +102,17 @@ describe("earningsSummary", () => {
     ]);
     const summary = await earningsSummary(deps)(principal);
     expect(summary.months).toEqual([
-      { key: "2026-08", gross: "2500.00", net: "1800.00", taxes: "700.00", contributions: null, recordCount: 1 },
+      {
+        key: "2026-08",
+        gross: "2500.00",
+        net: "1800.00",
+        taxes: "700.00",
+        contributions: null,
+        recordCount: 1,
+        // No contribution component on this record, so contributions is a
+        // caveat-flagged null rather than a confirmed zero (Finding 4).
+        partial: { gross: false, net: false, taxes: false, contributions: true },
+      },
     ]);
   });
 
