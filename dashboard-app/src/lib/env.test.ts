@@ -43,3 +43,14 @@ describe("DOCUMENT_STORE_DRIVER", () => {
     expect(parsed.DOCUMENT_STORE_LOCAL_PATH).toBeUndefined();
   });
 });
+
+describe("MALWARE_SCANNER", () => {
+  it("defaults the malware scanner to none, so the boundary is present and inert", () => {
+    delete process.env.MALWARE_SCANNER;
+    delete process.env.CLAMD_PORT;
+    resetEnvCache();
+    const parsed = env();
+    expect(parsed.MALWARE_SCANNER).toBe("none");
+    expect(parsed.CLAMD_PORT).toBe(3310);
+  });
+});
