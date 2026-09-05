@@ -64,6 +64,7 @@ CREATE TABLE "payroll_mapping_rules" (
 	"component_kind" text NOT NULL,
 	"target" jsonb NOT NULL,
 	"priority" integer DEFAULT 100 NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "payroll_mapping_rules_kind_ck" CHECK ("payroll_mapping_rules"."component_kind" IN ('earning','deduction','tax','employer_contribution','employee_contribution','reimbursement','allowance','bonus','leave_balance','leave_used','leave_accrued','info')),
@@ -144,9 +145,28 @@ ALTER TABLE payroll_mapping_rules ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE payroll_mapping_rules FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY payroll_mapping_rules_owner ON payroll_mapping_rules
-  USING (app_is_system() OR user_id IS NULL OR user_id = app_current_user_id())
+-- Four per-command policies, not one USING/WITH CHECK pair: WITH CHECK is
+-- never evaluated for DELETE, so a single pair whose USING admits
+-- user_id IS NULL rows would let any user delete a global mapping rule, and
+-- would let a user hijack one via UPDATE ... SET user_id = <self> (USING
+-- admits the NULL-owned target, WITH CHECK passes because the new row now
+-- names the actor). SELECT alone stays permissive of NULL-owned rows.
+CREATE POLICY payroll_mapping_rules_select ON payroll_mapping_rules
+  FOR SELECT
+  USING (app_is_system() OR user_id IS NULL OR user_id = app_current_user_id());
+--> statement-breakpoint
+CREATE POLICY payroll_mapping_rules_insert ON payroll_mapping_rules
+  FOR INSERT
   WITH CHECK (app_is_system() OR user_id = app_current_user_id());
+--> statement-breakpoint
+CREATE POLICY payroll_mapping_rules_update ON payroll_mapping_rules
+  FOR UPDATE
+  USING (app_is_system() OR user_id = app_current_user_id())
+  WITH CHECK (app_is_system() OR user_id = app_current_user_id());
+--> statement-breakpoint
+CREATE POLICY payroll_mapping_rules_delete ON payroll_mapping_rules
+  FOR DELETE
+  USING (app_is_system() OR user_id = app_current_user_id());
 --> statement-breakpoint
 INSERT INTO integration_providers (code, label, capabilities) VALUES
   ('payroll_silo', 'Payroll document store', '["documents"]'::jsonb)

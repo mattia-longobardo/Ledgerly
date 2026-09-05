@@ -5,6 +5,7 @@ import {
   organizations,
   payrollComponents,
   payrollImports,
+  payrollMappingRules,
   payrollRecords,
   users,
 } from "@/lib/db/schema";
@@ -28,6 +29,15 @@ async function rejectionCause(promise: Promise<unknown>): Promise<string | undef
   const err: unknown = await promise.catch((e) => e);
   expect(err).toBeInstanceOf(Error);
   return (err as { cause?: { message?: string } }).cause?.message;
+}
+
+function aMappingRule(userId: string | null, matchCode: string) {
+  return {
+    userId,
+    matchCode,
+    componentKind: "earning" as const,
+    target: { kind: "category" as const, ref: "salary" },
+  };
 }
 
 function anImport(userId: string, sha: string) {
@@ -150,5 +160,81 @@ describe("payroll RLS and uniqueness", () => {
     });
     const live = await withUserContext(db, { userId: a }, (tx) => tx.select().from(payrollRecords));
     expect(live.filter((r) => r.supersededAt === null).length).toBe(1);
+  });
+
+  it("a user can SELECT a NULL-owned global rule but not another user's private rule", async () => {
+    const { db, a, b } = await twoUsers();
+    const [globalRule, privateRule] = await withSystemContext(db, (tx) =>
+      tx
+        .insert(payrollMappingRules)
+        .values([aMappingRule(null, "GLOBAL"), aMappingRule(b, "PRIVATE")])
+        .returning(),
+    );
+    const asA = await withUserContext(db, { userId: a }, (tx) => tx.select().from(payrollMappingRules));
+    expect(asA.map((r) => r.id)).toEqual([globalRule!.id]);
+    const asB = await withUserContext(db, { userId: b }, (tx) => tx.select().from(payrollMappingRules));
+    expect(asB.map((r) => r.id).sort()).toEqual([globalRule!.id, privateRule!.id].sort());
+  });
+
+  it("a user cannot INSERT a mapping rule naming another user's userId", async () => {
+    const { db, a, b } = await twoUsers();
+    await expect(
+      withUserContext(db, { userId: a }, (tx) => tx.insert(payrollMappingRules).values(aMappingRule(b, "HIJACK-INSERT"))),
+    ).rejects.toThrow();
+  });
+
+  it("a user's UPDATE/DELETE targeting a NULL-owned global rule affects zero rows, including an attempted ownership hijack", async () => {
+    const { db, a } = await twoUsers();
+    const [globalRule] = await withSystemContext(db, (tx) =>
+      tx.insert(payrollMappingRules).values(aMappingRule(null, "GLOBAL2")).returning(),
+    );
+    // The hijack from Finding 1: USING must reject the NULL-owned target
+    // regardless of what the SET clause tries to reassign it to.
+    const updateResult = await withUserContext(db, { userId: a }, (tx) =>
+      tx
+        .update(payrollMappingRules)
+        .set({ userId: a, priority: 1 })
+        .where(eqId(payrollMappingRules.id, globalRule!.id)),
+    );
+    expect(updateResult.rowCount).toBe(0);
+    const deleteResult = await withUserContext(db, { userId: a }, (tx) =>
+      tx.delete(payrollMappingRules).where(eqId(payrollMappingRules.id, globalRule!.id)),
+    );
+    expect(deleteResult.rowCount).toBe(0);
+    const stillThereAndUnowned = await withSystemContext(db, (tx) => tx.select().from(payrollMappingRules));
+    expect(stillThereAndUnowned.map((r) => ({ id: r.id, userId: r.userId }))).toEqual([
+      { id: globalRule!.id, userId: null },
+    ]);
+  });
+
+  it("a user's UPDATE/DELETE targeting another user's private rule affects zero rows", async () => {
+    const { db, a, b } = await twoUsers();
+    const [privateRule] = await withSystemContext(db, (tx) =>
+      tx.insert(payrollMappingRules).values(aMappingRule(b, "PRIVATE2")).returning(),
+    );
+    const updateResult = await withUserContext(db, { userId: a }, (tx) =>
+      tx.update(payrollMappingRules).set({ priority: 1 }).where(eqId(payrollMappingRules.id, privateRule!.id)),
+    );
+    expect(updateResult.rowCount).toBe(0);
+    const deleteResult = await withUserContext(db, { userId: a }, (tx) =>
+      tx.delete(payrollMappingRules).where(eqId(payrollMappingRules.id, privateRule!.id)),
+    );
+    expect(deleteResult.rowCount).toBe(0);
+  });
+
+  it("system context can read, write, and delete any mapping rule regardless of owner", async () => {
+    const { db, b } = await twoUsers();
+    const [rule] = await withSystemContext(db, (tx) =>
+      tx.insert(payrollMappingRules).values(aMappingRule(b, "SYS")).returning(),
+    );
+    await withSystemContext(db, (tx) =>
+      tx.update(payrollMappingRules).set({ priority: 5 }).where(eqId(payrollMappingRules.id, rule!.id)),
+    );
+    const afterUpdate = await withSystemContext(db, (tx) => tx.select().from(payrollMappingRules));
+    expect(afterUpdate.find((r) => r.id === rule!.id)?.priority).toBe(5);
+    const deleteResult = await withSystemContext(db, (tx) =>
+      tx.delete(payrollMappingRules).where(eqId(payrollMappingRules.id, rule!.id)),
+    );
+    expect(deleteResult.rowCount).toBe(1);
   });
 });
