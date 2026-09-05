@@ -232,8 +232,11 @@ function LeaveCard({ ferie }: { ferie: Awaited<ReturnType<typeof loadFerie>> }) 
       spanMd={4}
       title="Leave"
       action={
-        <Link href="/work" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
-          Go to Work
+        <Link
+          href="/company/time-off"
+          className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover"
+        >
+          Go to Time Off
         </Link>
       }
       bodyClassName="axis-rule flex items-center gap-4 pb-6"
