@@ -60,14 +60,19 @@ function hasSessionCookie(request: NextRequest): boolean {
  * header would bake in the wrong value and silently break the OIDC redirect.
  */
 /**
- * The PDF preview is served same-origin and embedded in an <iframe> by the
- * verification screen. `frame-ancestors 'none'` on *that* response makes the
- * browser refuse to render it, so the preview silently stays blank with no
- * error server-side. It still must not be embeddable by third parties, hence
- * 'self' rather than dropping the directive.
+ * The payslip original is served same-origin and embedded in an <iframe> by the
+ * review screen. `frame-ancestors 'none'` on *that* response makes the browser
+ * refuse to render it, so the preview silently stays blank with no error
+ * server-side. It still must not be embeddable by third parties, hence 'self'
+ * rather than dropping the directive.
+ *
+ * The path moved with the route: `/api/paperless/preview/:id` became
+ * `/api/v1/payroll/imports/:id/original`, which is scan-gated and audited.
+ * Matching on the prefix rather than the whole path keeps it a prefix test, so
+ * the trailing `/original` segment is covered without a regex.
  */
 function frameAncestorsFor(pathname: string): string {
-  return pathname.startsWith("/api/paperless/preview/") ? "'self'" : "'none'";
+  return pathname.startsWith("/api/v1/payroll/imports/") ? "'self'" : "'none'";
 }
 
 function contentSecurityPolicy(pathname: string): string {
