@@ -5,3 +5,4 @@ export * from "./accounts";
 export * from "./integrations";
 export * from "./transactions";
 export * from "./interests";
+export * from "./payroll";
