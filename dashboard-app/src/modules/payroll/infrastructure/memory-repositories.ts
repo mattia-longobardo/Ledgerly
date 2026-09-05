@@ -305,7 +305,22 @@ export class MemoryPayrollMappingRulesRepository implements PayrollMappingRulesR
 }
 
 export class MemoryLegacyFundDeposits implements LegacyFundDeposits {
-  readonly rows: Array<{ fundSlug: string; month: string; amount: string; employee: string | null; employer: string | null }> = [];
+  // `source` and `payslipId` mirror the Drizzle repository's conflict-update
+  // set (`legacy-fund-deposits.ts`), not just its insert values: both are
+  // unconditionally overwritten to `"payroll"` / `null` on every write,
+  // including a second write over a pre-existing row (Finding 5) — a row this
+  // bridge ever touches was never written with a real `payslipId` or any
+  // other `source`, but the field exists so a shared-contract test can assert
+  // that a second write does not somehow leave a stale value behind.
+  readonly rows: Array<{
+    fundSlug: string;
+    month: string;
+    amount: string;
+    employee: string | null;
+    employer: string | null;
+    source: string;
+    payslipId: number | null;
+  }> = [];
 
   constructor(private readonly knownSlugs: readonly string[] = ["cometa"]) {}
 
@@ -314,7 +329,15 @@ export class MemoryLegacyFundDeposits implements LegacyFundDeposits {
     const amount = addMoney(input.employee, input.employer);
     if (amount === null) return "no_amount";
     const index = this.rows.findIndex((r) => r.fundSlug === input.fundSlug && r.month === input.month);
-    const row = { fundSlug: input.fundSlug, month: input.month, amount, employee: input.employee, employer: input.employer };
+    const row = {
+      fundSlug: input.fundSlug,
+      month: input.month,
+      amount,
+      employee: input.employee,
+      employer: input.employer,
+      source: "payroll",
+      payslipId: null,
+    };
     if (index === -1) this.rows.push(row);
     else this.rows[index] = row;
     return "written";

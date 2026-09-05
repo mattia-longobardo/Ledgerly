@@ -114,7 +114,15 @@ describe("applyImport", () => {
     const applied = await applyImport(deps)(principal, imp.id);
     expect(applied.fundDeposit).toBe("written");
     expect(deps.funds.rows).toEqual([
-      { fundSlug: "cometa", month: "2026-08-01", amount: "150.00", employee: "50.00", employer: "100.00" },
+      {
+        fundSlug: "cometa",
+        month: "2026-08-01",
+        amount: "150.00",
+        employee: "50.00",
+        employer: "100.00",
+        source: "payroll",
+        payslipId: null,
+      },
     ]);
   });
 
@@ -190,7 +198,15 @@ describe("applyImport", () => {
     });
     await applyImport(deps)(principal, replacement.id);
     expect(deps.funds.rows).toEqual([
-      { fundSlug: "cometa", month: "2026-08-01", amount: "160.00", employee: "60.00", employer: "100.00" },
+      {
+        fundSlug: "cometa",
+        month: "2026-08-01",
+        amount: "160.00",
+        employee: "60.00",
+        employer: "100.00",
+        source: "payroll",
+        payslipId: null,
+      },
     ]);
   });
 
