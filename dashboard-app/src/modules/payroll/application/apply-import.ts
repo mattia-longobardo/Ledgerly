@@ -1,25 +1,9 @@
 import type { Principal } from "@/platform/auth/principal";
 import { assertPermission } from "@/platform/auth/principal";
 import { componentsFromExtraction, grossOf, netOf } from "../domain/components";
-import { DEFAULT_MAPPING_RULES } from "../domain/mapping";
 import { monthOfPeriod, periodFor, recordKindOf } from "../domain/period";
-import type { MappingTarget, NewPayrollComponent, PayrollComponent, PayrollImport, PayrollMappingRule, PayrollRecord, UseCaseDeps } from "./ports";
+import type { MappingTarget, NewPayrollComponent, PayrollComponent, PayrollImport, PayrollRecord, UseCaseDeps } from "./ports";
 import { ConflictError, InvalidInputError, NotFoundError } from "./errors";
-
-/**
- * No migration seeds `payroll_mapping_rules` with the global catalogue (see
- * `repositories.itest.ts`): `PayrollMappingRulesRepository.listFor` only ever
- * returns what is actually in the table, i.e. a user's own rules. The global
- * catalogue lives in code (`DEFAULT_MAPPING_RULES`) and is merged in here, the
- * one use case that classifies components — `MemoryPayrollMappingRulesRepository`
- * merges the same catalogue itself, purely so its fake matches the real
- * repository's contract from the caller's point of view.
- */
-const GLOBAL_MAPPING_RULES: readonly PayrollMappingRule[] = DEFAULT_MAPPING_RULES.map((rule, i) => ({
-  ...rule,
-  id: `global-${String(i).padStart(3, "0")}`,
-  userId: null,
-}));
 
 export interface AppliedImport {
   import: PayrollImport;
@@ -81,8 +65,11 @@ export function applyImport(deps: UseCaseDeps) {
 
     const period = periodFor(month);
     const kind = recordKindOf(found.extraction.isThirteenth);
-    const userRules = await deps.mappingRules.listFor(principal.userId);
-    const rules = [...GLOBAL_MAPPING_RULES, ...userRules];
+    // `listFor` already returns the global catalogue plus this user's own
+    // rules (both backends honor that contract — see
+    // `DrizzlePayrollMappingRulesRepository.listFor`), so there is nothing to
+    // merge here.
+    const rules = await deps.mappingRules.listFor(principal.userId);
     const components = componentsFromExtraction(found.extraction, rules);
     const now = deps.clock.now();
 
