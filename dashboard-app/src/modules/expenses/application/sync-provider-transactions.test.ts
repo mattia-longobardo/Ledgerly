@@ -7,7 +7,7 @@ import {
   MemoryTransactionsRepository,
 } from "../infrastructure/memory-repositories";
 import { syncProviderTransactions } from "./sync-provider-transactions";
-import type { ProviderCategory, ProviderTransaction } from "./ports";
+import type { ProviderCategory, ProviderTransaction, TransactionsRepository } from "./ports";
 
 function harness() {
   const links = new MemoryProviderLinksRepository();
@@ -117,6 +117,139 @@ describe("syncProviderTransactions", () => {
     for (const t of afterSecond) {
       expect(t.version).toBe(versionsAfterFirst.get(t.id));
     }
+  });
+
+  it("pairs two transfer legs that arrive in separate runs more than the lookback window apart (C1 / ruling P3-C45)", async () => {
+    const { deps } = harness();
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-1", externalId: "wallet-acc-1", metadata: {} }, new Date());
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-2", externalId: "wallet-acc-2", metadata: {} }, new Date());
+
+    const legA = record({
+      externalId: "wr-a",
+      accountExternalId: "wallet-acc-1",
+      amount: "-50.00",
+      type: "transfer",
+      occurredAt: new Date("2026-08-20T08:00:00Z"),
+      categoryExternalId: null,
+      labelExternalIds: [],
+      externalTransferRef: "wr-b",
+    });
+    const legB = record({
+      externalId: "wr-b",
+      accountExternalId: "wallet-acc-2",
+      amount: "50.00",
+      type: "transfer",
+      // 10 days after leg A — more than `RECORDS_LOOKBACK_DAYS` (7) in
+      // wallet-provider-adapter.ts, so a real cursor re-fetch would never
+      // bring leg A back into the same batch as leg B ever again.
+      occurredAt: new Date("2026-08-30T08:00:00Z"),
+      categoryExternalId: null,
+      labelExternalIds: [],
+      externalTransferRef: "wr-a",
+    });
+
+    // Run 1: only leg A is in the provider's window this run. Nothing in
+    // this run's own batch to pair it with, so it must sync unpaired rather
+    // than error.
+    const run1Source = { provider: "wallet", fetchTransactions: async () => [legA], fetchCategories: async () => [] };
+    await syncProviderTransactions({ ...deps, source: run1Source })("user-1", null);
+    const afterRun1 = await deps.transactions.listAll("user-1");
+    expect(afterRun1).toHaveLength(1);
+    expect(afterRun1[0]!.transferGroupId).toBeNull();
+
+    // Run 2, a separate call to the handler (a separate sync run in
+    // production): leg A is NOT part of this run's `incoming` batch — proving
+    // the fix does not depend on leg A having been re-fetched — yet it must
+    // still end up paired with leg B.
+    const run2Source = { provider: "wallet", fetchTransactions: async () => [legB], fetchCategories: async () => [] };
+    const result2 = await syncProviderTransactions({ ...deps, source: run2Source })("user-1", null);
+
+    expect(result2.transactionsCreated).toBe(1); // leg B only; leg A already existed
+    const afterRun2 = await deps.transactions.listAll("user-1");
+    expect(afterRun2).toHaveLength(2);
+    const groupIds = new Set(afterRun2.map((t) => t.transferGroupId));
+    expect(groupIds.size).toBe(1);
+    expect([...groupIds][0]).not.toBeNull();
+  });
+
+  it("a lost version race while pairing a cross-run leg does not abort the rest of the sync", async () => {
+    const { deps } = harness();
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-1", externalId: "wallet-acc-1", metadata: {} }, new Date());
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-2", externalId: "wallet-acc-2", metadata: {} }, new Date());
+
+    const legA = record({
+      externalId: "wr-a",
+      accountExternalId: "wallet-acc-1",
+      amount: "-50.00",
+      type: "transfer",
+      categoryExternalId: null,
+      labelExternalIds: [],
+      externalTransferRef: "wr-b",
+    });
+    await syncProviderTransactions({ ...deps, source: { provider: "wallet", fetchTransactions: async () => [legA], fetchCategories: async () => [] } })("user-1", null);
+    const legAId = (await deps.transactions.listAll("user-1"))[0]!.id;
+
+    // Wraps the real fake, forcing exactly the update that would set leg A's
+    // `transferGroupId` to lose a version race — as if a user edited leg A
+    // at the worst possible moment. This whole handler runs inside one
+    // transaction in production; an uncaught throw here would roll back
+    // every other row this run already reconciled.
+    const racyTransactions: TransactionsRepository = {
+      list: deps.transactions.list.bind(deps.transactions),
+      get: deps.transactions.get.bind(deps.transactions),
+      create: deps.transactions.create.bind(deps.transactions),
+      setLabels: deps.transactions.setLabels.bind(deps.transactions),
+      labelsFor: deps.transactions.labelsFor.bind(deps.transactions),
+      listAll: deps.transactions.listAll.bind(deps.transactions),
+      update: async (userId, id, expectedVersion, patch) => {
+        if (id === legAId && patch.transferGroupId !== undefined) return "version_mismatch";
+        return deps.transactions.update(userId, id, expectedVersion, patch);
+      },
+    };
+
+    const legB = record({
+      externalId: "wr-b",
+      accountExternalId: "wallet-acc-2",
+      amount: "50.00",
+      type: "transfer",
+      categoryExternalId: null,
+      labelExternalIds: [],
+      externalTransferRef: "wr-a",
+    });
+    const legC = record({ externalId: "wr-c", accountExternalId: "wallet-acc-1", amount: "-5.00" });
+    const source = { provider: "wallet", fetchTransactions: async () => [legB, legC], fetchCategories: async () => [category] };
+
+    // Must not throw, and must still process every other record this run.
+    const result = await syncProviderTransactions({ ...deps, transactions: racyTransactions, source })("user-1", null);
+    expect(result.transactionsCreated).toBe(2); // legB + legC, despite the lost race on leg A's pairing update
+  });
+
+  it("does not count a lost version race as an update (C6)", async () => {
+    const { deps } = harness();
+    await deps.links.upsertSeen("user-1", { provider: "wallet", entityType: "account", entityId: "local-acc-1", externalId: "wallet-acc-1", metadata: {} }, new Date());
+    const source = { provider: "wallet", fetchTransactions: async () => [record()], fetchCategories: async () => [category] };
+    await syncProviderTransactions({ ...deps, source })("user-1", null);
+
+    // Force every update this run to report a lost version race, exactly
+    // like a concurrent user edit landing between this handler's read and
+    // its write.
+    const racyTransactions: TransactionsRepository = {
+      list: deps.transactions.list.bind(deps.transactions),
+      get: deps.transactions.get.bind(deps.transactions),
+      create: deps.transactions.create.bind(deps.transactions),
+      setLabels: deps.transactions.setLabels.bind(deps.transactions),
+      labelsFor: deps.transactions.labelsFor.bind(deps.transactions),
+      listAll: deps.transactions.listAll.bind(deps.transactions),
+      update: async () => "version_mismatch" as const,
+    };
+    const changed = record({ note: "edited during sync" });
+    const source2 = { provider: "wallet", fetchTransactions: async () => [changed], fetchCategories: async () => [category] };
+
+    const result = await syncProviderTransactions({ ...deps, transactions: racyTransactions, source: source2 })("user-1", null);
+
+    // The patch was attempted (note differs) but never landed — it must not
+    // be counted as an update.
+    expect(result.transactionsUpdated).toBe(0);
   });
 
   it("treats two incoming records sharing one externalId within the same batch as one transaction, not two", async () => {
