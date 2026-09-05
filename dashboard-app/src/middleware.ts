@@ -68,11 +68,14 @@ function hasSessionCookie(request: NextRequest): boolean {
  *
  * The path moved with the route: `/api/paperless/preview/:id` became
  * `/api/v1/payroll/imports/:id/original`, which is scan-gated and audited.
- * Matching on the prefix rather than the whole path keeps it a prefix test, so
- * the trailing `/original` segment is covered without a regex.
+ * Matched exactly against that one route — not a `/payroll/imports/` prefix —
+ * so the five JSON action endpoints under the same prefix (`/verify`,
+ * `/reject`, `/apply`, `/retry`, and the bare `GET /{id}`) never qualify for a
+ * frame-ancestors relaxation they have no reason to need; only the PDF-serving
+ * route is ever rendered inside an `<iframe>`.
  */
-function frameAncestorsFor(pathname: string): string {
-  return pathname.startsWith("/api/v1/payroll/imports/") ? "'self'" : "'none'";
+export function frameAncestorsFor(pathname: string): string {
+  return /^\/api\/v1\/payroll\/imports\/[^/]+\/original$/.test(pathname) ? "'self'" : "'none'";
 }
 
 function contentSecurityPolicy(pathname: string): string {
