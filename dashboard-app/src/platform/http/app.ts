@@ -6,6 +6,7 @@ import { registerAccountRoutes } from "@/modules/accounts/api/routes";
 import { registerIntegrationRoutes } from "@/modules/integrations/api/routes";
 import { registerExpenseRoutes } from "@/modules/expenses/api/routes";
 import { registerInterestRoutes } from "@/modules/interests/api/routes";
+import { registerPayrollRoutes } from "@/modules/payroll/api/routes";
 import { ApiError, toErrorBody } from "./errors";
 import { rateLimit } from "./rate-limit";
 
@@ -146,4 +147,5 @@ export function registerAllRoutes(app: ApiApp, deps: ApiDeps): void {
   registerIntegrationRoutes(app, deps);
   registerExpenseRoutes(app, deps);
   registerInterestRoutes(app, deps);
+  registerPayrollRoutes(app, deps);
 }
