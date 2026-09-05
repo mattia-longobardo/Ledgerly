@@ -91,6 +91,13 @@ export function mapLegacyPayslip(row: LegacyPayslip): MappedImport {
   for (const [column, field] of COLUMN_TO_FIELD) {
     const raw = row[column] as string | null;
     if (raw === null) continue;
+    // A third named place `number` crosses into this module (Finding 7, B2
+    // whole-branch review; see `componentsFromExtraction`'s doc-comment for
+    // the first). Safe here because `raw` is not user input: it is read back
+    // from the legacy `payslips` table's own `numeric(14, 2)`/`numeric(7, 2)`
+    // columns (`legacy.ts`'s `money`/`smallMoney`), so Postgres has already
+    // bounded its precision — this migration script cannot receive a value
+    // `Number` would silently mangle.
     const value = Number(raw);
     fields[field] = { value, confidence: "high", rules: value, llm: null, note: "migrated from Paperless" };
   }

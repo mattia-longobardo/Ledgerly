@@ -48,7 +48,17 @@ export interface RecordDetailData {
   originalAvailable: boolean;
 }
 
-/** `null`, never 0: an average of nothing is not zero (global constraint). */
+/**
+ * `null`, never 0: an average of nothing is not zero (global constraint).
+ *
+ * A fourth named place `number` crosses into this module (Finding 7, B2
+ * whole-branch review; see `componentsFromExtraction`'s doc-comment for the
+ * first). An average is display-only — it is never written back to a record
+ * or a component — and every input already came out of `payroll_records`'
+ * `numeric(16, 2)` columns via a prior read, so the same Postgres-bounded-
+ * precision reasoning applies as elsewhere: nothing here can receive a value
+ * `Number`/float division would silently mangle at payslip magnitudes.
+ */
 function averageOf(values: readonly (string | null)[]): number | null {
   const numbers = values.filter((v): v is string => v !== null).map(Number);
   if (numbers.length === 0) return null;
