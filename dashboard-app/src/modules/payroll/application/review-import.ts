@@ -6,8 +6,20 @@ import { periodFor } from "../domain/period";
 import type { PayrollImport, UseCaseDeps } from "./ports";
 import { ConflictError, InvalidInputError, NotFoundError, VersionMismatchError } from "./errors";
 
-/** Signed decimals only. Italian formatting (`1.800,00`) is rejected at the door, not silently reinterpreted. */
-const DECIMAL_RE = /^-?\d+(\.\d{1,6})?$/;
+/**
+ * Signed decimals only. Italian formatting (`1.800,00`) is rejected at the
+ * door, not silently reinterpreted.
+ *
+ * The integer part is capped at 14 digits to match `payroll_records.gross`/
+ * `.net` — `numeric(16, 2)`, so 16 significant digits total minus the 2 the
+ * scale reserves leaves 14 for the integer part (Finding 7, B2 whole-branch
+ * review). Uncapped, a very long numeric string would pass this check, get
+ * converted through `Number(raw)` below (a documented, deliberate float
+ * crossing for a reviewer-typed value that is always small in practice), and
+ * only then get silently truncated to the column's precision — this bound
+ * makes that case a rejected `422`, not a silent precision loss.
+ */
+const DECIMAL_RE = /^-?\d{1,14}(\.\d{1,6})?$/;
 
 export interface VerifyImportInput {
   version: number;
@@ -82,6 +94,13 @@ export function verifyImport(deps: UseCaseDeps) {
     for (const [key, raw] of Object.entries(input.values)) {
       const field = key as PayslipField;
       const previous = fields[field] ?? { value: null, confidence: "low" as const, rules: null, llm: null };
+      // A second, named place `number` crosses into this module (see
+      // `componentsFromExtraction`'s doc-comment for the first, and Finding
+      // 7, B2 whole-branch review). Safe here for the same reason as there:
+      // `DECIMAL_RE` above has already accepted `raw` as a bounded decimal
+      // string (14 integer digits max, matching `numeric(16, 2)`), so this
+      // conversion cannot silently lose precision — it can only fail loudly,
+      // and `DECIMAL_RE` is what makes that true rather than `Number` itself.
       const corrected = raw === null || raw === undefined ? null : Number(raw);
       if (previous.value !== corrected) {
         corrections[field] = { extracted: previous.value, corrected };

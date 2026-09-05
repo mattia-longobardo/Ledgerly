@@ -152,6 +152,26 @@ describe("verifyImport", () => {
     ).rejects.toMatchObject({ name: "InvalidInputError" });
   });
 
+  it("rejects an integer part longer than payroll_records.gross/net can hold (Finding 7)", async () => {
+    const deps = makeDeps();
+    const imp = await aReviewableImport(deps);
+    // numeric(16, 2): 16 significant digits, scale 2 — 14 integer digits is
+    // the most the column can ever store. A 15-digit integer part would
+    // otherwise pass straight through `Number(raw)` and only fail, silently
+    // losing precision, once Postgres tried to store more than the column
+    // allows.
+    await expect(
+      verifyImport(deps)(principal, imp.id, {
+        version: imp.version, month: "2026-08-01", isThirteenth: false, values: { net: "123456789012345.00" },
+      }),
+    ).rejects.toMatchObject({ name: "InvalidInputError" });
+    // Exactly 14 integer digits is still accepted.
+    const verified = await verifyImport(deps)(principal, imp.id, {
+      version: imp.version, month: "2026-08-01", isThirteenth: false, values: { net: "12345678901234.00" },
+    });
+    expect(verified.extraction?.fields.net?.value).toBe(12345678901234);
+  });
+
   it("refuses an import that never parsed — there is nothing to confirm", async () => {
     const deps = makeDeps();
     const imp = await aReviewableImport(deps);
