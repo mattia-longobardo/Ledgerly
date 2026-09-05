@@ -118,6 +118,31 @@ describe("MemoryProviderLinksRepository", () => {
     expect(secondPass).toEqual([]);
   });
 
+  // A4: `liveFor` used to return the first *matching* link regardless of
+  // whether it was live, which agrees with the Drizzle repository's
+  // `isNull(missingSince)`-in-WHERE behaviour only when an entity has at
+  // most one link. A dead link inserted before a live one is the real
+  // anticipated shape (`interest-accrual.itest.ts` exercises it) and must
+  // resolve to the live link here too.
+  it("liveFor returns the live link even when a dead link for the same entity was inserted first", async () => {
+    const repo = new MemoryProviderLinksRepository();
+    await repo.upsertSeen(
+      "u1",
+      { provider: "gocardless", entityType: "account", entityId: "acc-1", externalId: "gc-1", metadata: {} },
+      new Date("2026-01-01"),
+    );
+    await repo.markMissing("u1", "gocardless", "account", [], new Date("2026-02-01"));
+    await repo.upsertSeen(
+      "u1",
+      { provider: "wallet", entityType: "account", entityId: "acc-1", externalId: "wallet-1", metadata: {} },
+      new Date("2026-03-01"),
+    );
+
+    const live = await repo.liveFor("account", "acc-1");
+    expect(live?.provider).toBe("wallet");
+    expect(live?.missingSince).toBeNull();
+  });
+
   it("liveFor returns null once a link is missing, and upsertSeen clears missingSince", async () => {
     const repo = new MemoryProviderLinksRepository();
     await repo.upsertSeen(
