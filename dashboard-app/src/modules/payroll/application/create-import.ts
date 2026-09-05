@@ -90,19 +90,36 @@ export function reserveImport(deps: UseCaseDeps) {
       return reset;
     }
 
-    const created = await deps.imports.create({
-      userId: principal.userId,
-      fileName: input.fileName,
-      mime: input.mime,
-      sizeBytes: input.bytes.byteLength,
-      sha256,
-      storageProvider: input.storageProvider,
-      storageKey,
-      idempotencyKey: input.idempotencyKey ?? null,
-      replacesImportId: input.replacesImportId ?? null,
-      retentionUntil: retentionUntil(now, input.retentionYears ?? DEFAULT_RETENTION_YEARS),
-      uploadedVia: input.uploadedVia ?? "ui",
-    });
+    let created: PayrollImport;
+    try {
+      created = await deps.imports.create({
+        userId: principal.userId,
+        fileName: input.fileName,
+        mime: input.mime,
+        sizeBytes: input.bytes.byteLength,
+        sha256,
+        storageProvider: input.storageProvider,
+        storageKey,
+        idempotencyKey: input.idempotencyKey ?? null,
+        replacesImportId: input.replacesImportId ?? null,
+        retentionUntil: retentionUntil(now, input.retentionYears ?? DEFAULT_RETENTION_YEARS),
+        uploadedVia: input.uploadedVia ?? "ui",
+      });
+    } catch (err) {
+      // Ruling R4-3: a concurrent upload of the same bytes can win the race
+      // between this request's `findBySha` miss (above) and this `create` —
+      // the `payroll_imports_user_sha_uq` index then rejects this insert
+      // rather than letting two rows exist. The database-level race is
+      // already closed (no duplicate row can ever exist); what's left is to
+      // make the loser see the same `DuplicateImportError` the pre-check
+      // path throws, instead of a raw unique-violation escaping.
+      const cause = (err as { cause?: { message?: string } }).cause?.message;
+      if (cause?.includes("payroll_imports_user_sha_uq")) {
+        const winner = await deps.imports.findBySha(principal.userId, sha256);
+        if (winner) throw new DuplicateImportError(winner.id);
+      }
+      throw err;
+    }
     // The audit records the digest and the size, never a byte of the payslip
     // (global constraint: an audit row records the import id and a sha256).
     await deps.audit({
