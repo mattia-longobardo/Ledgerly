@@ -125,4 +125,23 @@ describe("rejectPayslipAction", () => {
     if (!result.ok) return;
     expect(result.data.next).toBe(stillPending.id);
   });
+
+  /**
+   * Finding 3, whole-branch review: `nextInQueue` used to query only
+   * `["needs_review", "needs_ocr"]`, missing `verified` — so a confirmed but
+   * not-yet-applied import was counted in the page's `pending` queue (via
+   * `load-payroll.ts`'s `AWAITING`) but invisible to auto-advance, and a
+   * reviewer's Reject would skip straight past it to a later-queued import or
+   * report the queue empty. Both call sites now share `AWAITING_STATUSES`
+   * from `ui/queue.ts`, so a `verified` import is a valid `next` candidate.
+   */
+  it("offers a verified-but-not-yet-applied import as `next`, not just needs_review/needs_ocr", async () => {
+    const current = await seed("needs_review", "2026-06-01");
+    const stillPending = await seed("verified", "2026-07-01");
+
+    const result = await rejectPayslipAction({ id: current.id, version: current.version });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.next).toBe(stillPending.id);
+  });
 });

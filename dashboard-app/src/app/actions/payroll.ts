@@ -16,7 +16,7 @@ import { listImports } from "@/modules/payroll/application/list-imports";
 import type { UseCaseDeps } from "@/modules/payroll/application/ports";
 import { rejectImport, verifyImport } from "@/modules/payroll/application/review-import";
 import { uploadPayslip } from "@/modules/payroll/infrastructure/upload";
-import { orderQueue, successorOf, type QueueEntry } from "@/modules/payroll/ui/queue";
+import { AWAITING_STATUSES, orderQueue, queueEntryFrom, successorOf, type QueueEntry } from "@/modules/payroll/ui/queue";
 import { runForPrincipal } from "@/modules/payroll/ui/run";
 import type { Principal } from "@/platform/auth/principal";
 import type { ActionResult } from "./types";
@@ -57,11 +57,8 @@ function revalidate(): void {
  * click).
  */
 async function nextInQueue(deps: UseCaseDeps, principal: Principal, current: QueueEntry): Promise<string | null> {
-  const remaining = await listImports(deps)(principal, { statuses: ["needs_review", "needs_ocr"] });
-  return successorOf(
-    orderQueue(remaining.map((i) => ({ id: i.id, month: i.extraction?.month ?? "", isThirteenth: i.extraction?.isThirteenth ?? false }))),
-    current,
-  );
+  const remaining = await listImports(deps)(principal, { statuses: AWAITING_STATUSES });
+  return successorOf(orderQueue(remaining.map(queueEntryFrom)), current);
 }
 
 export async function uploadPayslipAction(form: FormData): Promise<ActionResult<{ id: string }>> {
@@ -118,11 +115,7 @@ export async function applyPayslipAction(input: { id: string }): Promise<ActionR
       // Fresh, not the client's own `pending` snapshot: the applied import
       // just left "verified", and whatever else is still awaiting a decision
       // may itself have moved since this page was last rendered.
-      const next = await nextInQueue(deps, principal, {
-        id: applied.import.id,
-        month: applied.import.extraction?.month ?? "",
-        isThirteenth: applied.import.extraction?.isThirteenth ?? false,
-      });
+      const next = await nextInQueue(deps, principal, queueEntryFrom(applied.import));
       return { ok: true as const, data: { recordId: applied.record.id, next } };
     });
   } catch (err) {
@@ -135,11 +128,7 @@ export async function rejectPayslipAction(input: { id: string; version: number }
     return await runForPrincipal(async (deps, principal) => {
       const rejected = await rejectImport(deps)(principal, input.id, input.version);
       revalidate();
-      const next = await nextInQueue(deps, principal, {
-        id: rejected.id,
-        month: rejected.extraction?.month ?? "",
-        isThirteenth: rejected.extraction?.isThirteenth ?? false,
-      });
+      const next = await nextInQueue(deps, principal, queueEntryFrom(rejected));
       return { ok: true as const, data: { next } };
     });
   } catch (err) {

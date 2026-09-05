@@ -18,6 +18,40 @@ export interface QueueEntry {
 }
 
 /**
+ * The statuses a reviewer still has something to do about: parsed but
+ * unconfirmed, confirmed but not yet applied, or stuck needing OCR. The one
+ * and only definition of "the review queue" — `load-payroll.ts`'s `loadReview`
+ * (which feeds `QueueNav` and client-side Skip) and `app/actions/payroll.ts`'s
+ * `nextInQueue` (which drives Confirm/Apply/Reject's auto-advance) both import
+ * this rather than each declaring their own list, so the two can never
+ * silently drift apart again (Finding 3, whole-branch review) — a `verified`
+ * import used to be counted in the former but invisible to the latter.
+ */
+export const AWAITING_STATUSES = ["needs_review", "verified", "needs_ocr"] as const;
+
+/** The shape `queueEntryFrom` needs from a `PayrollImport` — no more. */
+export interface QueueSourceImport {
+  id: string;
+  createdAt: Date;
+  extraction: { month: string | null; isThirteenth: boolean } | null;
+}
+
+/**
+ * Builds a `QueueEntry` from a fetched import, with the one shared fallback
+ * for a row the parser has not dated yet: the day it entered the pipeline, so
+ * an unparsed import sorts by when it arrived rather than jumping to the
+ * front of every queue on an empty string (the two call sites used to answer
+ * this differently — Finding 3, whole-branch review).
+ */
+export function queueEntryFrom(item: QueueSourceImport): QueueEntry {
+  return {
+    id: item.id,
+    month: item.extraction?.month ?? item.createdAt.toISOString().slice(0, 10),
+    isThirteenth: item.extraction?.isThirteenth ?? false,
+  };
+}
+
+/**
  * Month ascending, then the ordinary payslip before that month's tredicesima.
  * `id` only breaks a tie the period unique index makes impossible today, so the
  * order is never left to insertion luck.
