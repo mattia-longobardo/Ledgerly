@@ -522,15 +522,15 @@ Apply R5-C2/C4/C6: validate inputs in use cases (including owner/currency accoun
 | POST | `/funds/{id}/reconcile` | `reconcileFund` | 200 `{ detected, resolved }` |
 | POST | `/funds/issues/{issueId}/acknowledge` | `acknowledgeIssue` | 200 |
 
-- [ ] **Step 1: Schemas.** `FundSchema`, `FundSummarySchema`, `FundDetailSchema`, `FundScheduleSchema`, `FundPlanSchema`, `FundContributionSchema`, `ReconciliationIssueSchema`, `CreateFundRequestSchema`, `UpdateFundRequestSchema`, `SetScheduleRequestSchema`, `SetPlanRequestSchema`, `AddContributionRequestSchema` (`amount: z.string().regex(/^-?\d{1,14}(\.\d{1,2})?$/)`), `ReconcileResultSchema`. DTO functions pick fields explicitly; `userId` never reaches the wire.
+- [x] **Step 1: Schemas.** `FundSchema`, `FundSummarySchema`, `FundDetailSchema`, `FundScheduleSchema`, `FundPlanSchema`, `FundContributionSchema`, `ReconciliationIssueSchema`, `CreateFundRequestSchema`, `UpdateFundRequestSchema`, `SetScheduleRequestSchema`, `SetPlanRequestSchema`, `AddContributionRequestSchema` (`amount: z.string().regex(/^-?\d{1,14}(\.\d{1,2})?$/)`), `ReconcileResultSchema`. DTO functions pick fields explicitly; `userId` never reaches the wire.
 
-- [ ] **Step 2: Routes** mirroring `src/modules/interests/api/routes.ts` (`errorResponse`, `commonErrorResponses`, `toApiError` mapping `NotFoundError`→404, `VersionMismatchError`→409, `InvalidInputError`→422). Register the two idempotency middlewares with `app.on("POST", …)` before the `app.openapi(...)` calls, exactly as `src/modules/accounts/api/routes.ts:351-352`.
+- [x] **Step 2: Routes** mirroring `src/modules/interests/api/routes.ts` (`errorResponse`, `commonErrorResponses`, `toApiError` mapping `NotFoundError`→404, `VersionMismatchError`→409, `InvalidInputError`→422). Register the two idempotency middlewares with `app.on("POST", …)` before the `app.openapi(...)` calls, exactly as `src/modules/accounts/api/routes.ts:351-352`.
 
-- [ ] **Step 3: `routes.itest.ts`** copying the harness of `src/modules/accounts/api/routes.itest.ts`: create → get → add contribution with `Idempotency-Key` (replaying the same key returns the same body and creates no second row) → reverse → PATCH with a stale version → 409 → a viewer gets 403 on POST → reconcile on a clean fund returns `{ detected: [], resolved: 0 }`.
+- [x] **Step 3: `routes.itest.ts`** copying the harness of `src/modules/accounts/api/routes.itest.ts`: create → get → add contribution with `Idempotency-Key` (replaying the same key returns the same body and creates no second row) → reverse → PATCH with a stale version → 409 → a viewer gets 403 on POST → reconcile on a clean fund returns `{ detected: [], resolved: 0 }`.
 
-- [ ] **Step 4:** `npm run openapi:generate`; add the "Funds" section to `docs/api/README.md`.
-- [ ] **Verify:** `npm run typecheck && npm test && npm run test:integration -- funds`.
-- [ ] **Commit:** `git add src/modules/funds/api src/platform/http/app.ts docs/api && git commit -m "feat(funds): REST API"`
+- [x] **Step 4:** `npm run openapi:generate`; add the "Funds" section to `docs/api/README.md`.
+- [x] **Verify:** `npm run typecheck && npm test && npm run test:integration -- funds`.
+- [x] **Commit:** `git add src/modules/funds/api src/platform/http/app.ts docs/api && git commit -m "feat(funds): REST API"`
 
 ---
 
