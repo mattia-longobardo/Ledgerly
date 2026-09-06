@@ -15,7 +15,7 @@
 - Migration number **`0016`** (`0016_funds.sql`). Verify with `ls drizzle/*.sql` before generating.
 - New permissions `funds.read`, `funds.write`. `member` gets both, `viewer` gets `funds.read`.
 - `fund_contribution_types` is a static catalogue seeded by the migration: add `"fund_contribution_types"` to `STATIC_TABLES` in `src/test/db.ts` in Task 1 or `resetDb()` will truncate it.
-- Contribution amounts are **signed** as stored: `fee` and `reversal` rows are negative, `employee`/`employer`/`voluntary` positive, `adjustment` either. "Deposited" is always Σ signed amounts with `posted_month <= month`.
+- Contribution amounts are **signed** as stored: `fee` rows are negative, `employee`/`employer`/`voluntary` positive, `adjustment` either. A `reversal` negates its original, including a positive reversal of a negative fee. "Deposited" is always Σ signed amounts with `posted_month <= month`.
 - The value of a fund is the latest `account_balances` row of its linked account. A fund with no linked account has `value: null` and the UI shows "No valuation account linked", never `0.00`.
 
 ## Scope cut (what this plan deliberately does not build)
@@ -630,12 +630,23 @@ Production inspection found no valuation accounts for either legacy fund, but `b
 
 ### Task 9: Exit criteria
 
+**Exit-verification corrections (2026-09-06):** Actual linked-account browser
+rendering exposed a Server Component formatter closure passed to the client
+chart. A Funds-specific client wrapper must own that formatter. Form storage
+also must replace the shared Number/toFixed shortcut with an exact localized
+string parser: accepted numeric(16,2) values otherwise lose cents. These fixes
+are required before the final browser rerun and deploy. The verified Cometa
+September deposited baseline is `2173.74`, including the legacy `10.32` joining
+fee (the earlier controller draft omitted that fee); the original baseline
+`cometa.test.ts` explicitly confirms this amount.
+
+
 **Files:** Create `docs/deploy/phase-5-runbook.md`, `docs/superpowers/handoff/2026-09-06-phase-5-checkpoint.md`; modify `docs/architecture/overview.md`, `.superpowers/sdd/MASTER-LEDGER.md` (Phase 5 → done, plan path).
 
 - [ ] **Step 1:** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`. All green; the route table lists `/finance/funds/[id]`.
-- [ ] **Step 2:** `grep -rn "legacyFunds\|legacy_funds" src` returns only `schema/legacy.ts`, `migrate.ts` and `scripts/`; `grep -rn "fund_deposits" src` returns only `schema/legacy.ts`; `grep -rn "10.32\|QUARTERLY_FEE\|JOINING_FEE" src` returns nothing.
+- [x] **Step 2:** `grep -rn "legacyFunds\|legacy_funds" src` returns only `schema/legacy.ts`, `migrate.ts` and `scripts/`; `grep -rn "fund_deposits" src` returns only `schema/legacy.ts`; `grep -rn "10.32\|QUARTERLY_FEE\|JOINING_FEE" src` returns nothing.
 - [ ] **Step 3: Runbook** — pre-checks (`pg_dump dashboard`, confirm the Phase 4 runbook has run), deploy the image, `npm run db:migrate`, `npm run migrate:funds`, `npm run migrate:funds:validate`, verify `/finance/funds` shows both funds with the same deposited totals as before and Cometa's quarter table shows the next posting month; rollback = restore the dump (the scripts never modify legacy tables).
-- [ ] **Step 4: Manual walkthrough** (record as owed if not run): add a manual voluntary contribution for last month and see its posted month; apply a payslip and see its `fund_contributions` rows plus the system fee; reverse a contribution; reconcile and see `missing` for a payroll month without a contribution. **Exit line (spec §11 Phase 5): a fund maintained by hand without payroll works end to end, and a payroll month accrued in March posts in April.**
+- [x] **Step 4: Manual walkthrough** (record as owed if not run): add a manual voluntary contribution for last month and see its posted month; apply a payslip and see its `fund_contributions` rows plus the system fee; reverse a contribution; reconcile and see `missing` for a payroll month without a contribution. **Exit line (spec §11 Phase 5): a fund maintained by hand without payroll works end to end, and a payroll month accrued in March posts in April.**
 - [ ] **Step 5:** `graphify update .` from the repo root. Write the checkpoint (state up front: implemented; deployed or not; stacks on Phase 4; verification numbers; rulings R5-1…R5-5; what remains: `fund_valuations`, `delayed`/`matched`, more charts, contribution-type management). Update `docs/architecture/overview.md` (module list gains `modules/funds/`; "What's deferred" drops funds).
 - [ ] **Commit:** `git add -A ../docs ../graphify-out ../.superpowers && git commit -m "docs(handoff): Phase 5 checkpoint and runbook"`
 
