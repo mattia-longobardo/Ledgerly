@@ -286,6 +286,14 @@ Task 1 implemented; not deployed. Tasks 2–9 remain pending, following the one-
 
 ---
 
+## Execution rulings (full-phase run)
+
+The user authorized completing Tasks 2–9 and redeploying in this execution, overriding one-task-per-run. Follow the detailed ledger in `.superpowers/sdd/2026-09-06-phase-5-funds/progress.md`.
+
+- R5-C1: `ContributionLike` includes `accrualPeriodEnd`. Posting follows spec §7.4 (quarter end +1). The old display used +2; migration validation must explicitly prove both timelines, reporting this intentional timing change rather than claiming exact monthly display parity.
+- R5-C2: opening capital becomes an auditable adjustment contribution, using the earliest legacy setting. Creating a first manual plan also records its opening capital; later planning changes do not silently rewrite contributions. Fixed monthly amount is planning, not proof of payment.
+- R5-C3: reversals negate original amounts, including positive reversals of negative fees. Rows linked to payroll remain payroll provenance when migrated with `source=migration`.
+
 ### Task 2: Domain — schedule, totals, reconciliation
 
 **Files:** Create `src/modules/funds/domain/schedule.ts` (+`.test.ts`), `totals.ts` (+`.test.ts`), `reconcile.ts` (+`.test.ts`).
@@ -299,18 +307,18 @@ export function accrualPeriodFor(month: string, rule: ScheduleRule): AccrualPeri
 export function postedMonthFor(month: string, rule: ScheduleRule): string;
 export function effectiveRule<T extends { effectiveFrom: string }>(rules: readonly T[], month: string): T | null; // latest effectiveFrom <= month, else null
 // totals.ts
-export interface ContributionLike { id: string; typeCode: string; amount: string; postedMonth: string; accrualPeriodStart: string; source: string; payrollRecordId: string | null }
+export interface ContributionLike { id: string; typeCode: string; amount: string; postedMonth: string; accrualPeriodStart: string; accrualPeriodEnd: string; payrollAccrualMonth?: string; source: string; payrollRecordId: string | null }
 export function depositedThrough(rows: readonly ContributionLike[], month: string): string; // Σ amount where postedMonth <= month; "0.00" if none
 export function absoluteReturn(value: string | null, deposited: string): string | null;    // value − deposited; null when value is null
 export interface QuarterRow { quarter: string; accrualMonths: string[]; postedMonth: string; gross: string; fees: string; net: string; posted: boolean }
-export function quarterlyRows(rows: readonly ContributionLike[], today: string): QuarterRow[]; // grouped by accrualPeriodStart; posted = postedMonth <= today; ascending
+export function quarterlyRows(rows: readonly ContributionLike[], today: string): QuarterRow[]; // grouped by exact accrual span + postedMonth; posted = postedMonth <= today; ascending
 // reconcile.ts
 export type IssueKind = "missing" | "duplicate" | "anomalous";
 export interface DetectedIssue { kind: IssueKind; entityType: "fund_month" | "fund_contribution"; entityId: string; severity: "warning" | "error"; detail: Record<string, unknown> }
 export function detectIssues(input: { fundId: string; payrollMonths: readonly string[]; rows: readonly ContributionLike[]; medianWindow?: number; tolerance?: number }): DetectedIssue[];
 ```
 
-- [ ] **Step 1: Tests first** — `schedule.test.ts`:
+- [x] **Step 1: Tests first** — `schedule.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -352,9 +360,9 @@ describe("quarterly posting rule (spec §7.4, R5-2)", () => {
 - `anomalous`: six months of `"250.00"` then one `"900.00"` → `anomalous` on that row with `detail: { amount: "900.00", median: "250.00", tolerance: 0.3 }`; a seventh month of `"260.00"` → no issue. Fee and reversal rows are excluded from the band.
 - No payroll months and no rows → `[]`.
 
-- [ ] **Step 2: Run** `npm test -- modules/funds/domain` → fails (modules missing).
+- [x] **Step 2: Run** `npm test -- modules/funds/domain` → fails (modules missing).
 
-- [ ] **Step 3: Implement.** Use `addMonths` from `@/lib/time`. Money arithmetic in integer cents via `BigInt` — copy the `cents()`/formatting helper from `src/modules/payroll/domain/money.ts` into `totals.ts` (do not import the `Number`-based `toCents`). Core of `schedule.ts`:
+- [x] **Step 3: Implement.** Use `addMonths` from `@/lib/time`. Money arithmetic in integer cents via `BigInt` — copy the `cents()`/formatting helper from `src/modules/payroll/domain/money.ts` into `totals.ts` (do not import the `Number`-based `toCents`). Core of `schedule.ts`:
 
 ```ts
 const MONTHS: Record<ScheduleRule["frequency"], number> = { monthly: 1, quarterly: 3, annual: 12 };
@@ -374,10 +382,14 @@ export function effectiveRule<T extends { effectiveFrom: string }>(rules: readon
 }
 ```
 
-`detectIssues`: per `typeCode`, median (in cents) of the last `medianWindow` (default 6) positive payroll-sourced rows before the row under test; `anomalous` when `|amount − median| > tolerance × median` (default `0.3`); `missing` for each payroll month with no `payroll`-sourced row whose `accrualPeriodStart <= month <= accrualPeriodEnd`; `duplicate` for a second row with the same `(typeCode, payrollRecordId)`. Deterministic order: missing (by month), duplicate (by id), anomalous (by id).
+`detectIssues`: per `typeCode`, median (in cents) of the last `medianWindow` (default 6) positive payroll-provenance rows before the row under test; `anomalous` when `|amount − median| > tolerance × median` (default `0.3`); `missing` for each payroll month with no payroll-provenance row whose enriched `payrollAccrualMonth` exactly matches the month, falling back to `accrualPeriodStart <= month <= accrualPeriodEnd` only when enrichment is unavailable; `duplicate` for a second row with the same `(typeCode, payrollRecordId)`. A payroll-linked migration row has payroll provenance; system fees and reversals do not. Deterministic order: missing (by month), duplicate (by id), anomalous (by id).
 
-- [ ] **Verify:** `npm test -- modules/funds/domain` green; `npm run typecheck`.
-- [ ] **Commit:** `git add src/modules/funds/domain && git commit -m "feat(funds): domain — posting schedule, totals, reconciliation"`
+- [x] **Verify:** `npm test -- modules/funds/domain` green; `npm run typecheck`.
+- [x] **Commit:** `git add src/modules/funds/domain && git commit -m "feat(funds): domain — posting schedule, totals, reconciliation"`
+
+### Deviation — Task 2
+
+`ContributionLike` gains optional `payrollAccrualMonth`. A quarterly contribution's stored accrual span identifies its posting period, not the single payslip that produced it; treating that span as evidence for every payroll month hides missing payslips. Reconciliation therefore uses exact equality when callers enrich a linked contribution from its payroll record, uses that month to order anomaly history, and retains the span check only as a compatibility fallback for unenriched migration rows. `quarterlyRows` groups by the complete stored period span plus posting month so annual periods expose all accrued months and delayed postings do not merge.
 
 ---
 
@@ -404,6 +416,7 @@ export interface ReconciliationIssue { id: string; userId: string; domain: strin
 export interface FundsRepository {
   list(userId: string, opts?: { includeArchived?: boolean }): Promise<Fund[]>;            // name asc
   get(userId: string, id: string): Promise<Fund | null>;
+  lock(userId: string, id: string): Promise<Fund | null>; // SELECT FOR UPDATE; serialize financial writes in caller transaction
   getBySlug(userId: string, slug: string): Promise<Fund | null>;
   create(input: NewFund): Promise<Fund>;
   update(userId: string, id: string, expectedVersion: number, patch: FundPatch): Promise<Fund | null>; // null = not found; throws VersionMismatchError
@@ -427,9 +440,10 @@ export interface ValuationSource {
   latest(userId: string, accountId: string): Promise<{ asOf: string; balance: string } | null>;
   monthly(userId: string, accountId: string): Promise<{ month: string; balance: string }[]>; // "YYYY-MM-01", last balance of each month, asc
 }
-export interface PayrollMonthsSource { liveMonths(userId: string): Promise<string[]> } // period_start of live ordinary payroll_records as "YYYY-MM-01", asc
+export interface PayrollMonthsSource { liveMonths(userId: string): Promise<string[]>; liveRecords(userId: string): Promise<{ id: string; month: string }[]> } // period_start of live ordinary payroll_records as "YYYY-MM-01", asc
+export interface AccountLinkSource { get(userId: string, accountId: string): Promise<{ currency: string } | null> }
 export interface Clock { now(): Date }
-export interface UseCaseDeps { funds: FundsRepository; schedules: SchedulesRepository; plans: PlansRepository; contributions: ContributionsRepository; issues: IssuesRepository; valuations: ValuationSource; payrollMonths: PayrollMonthsSource; clock: Clock; audit: (e: AuditInput) => Promise<void> }
+export interface UseCaseDeps { accountLinks: AccountLinkSource; funds: FundsRepository; schedules: SchedulesRepository; plans: PlansRepository; contributions: ContributionsRepository; issues: IssuesRepository; valuations: ValuationSource; payrollMonths: PayrollMonthsSource; clock: Clock; audit: (e: AuditInput) => Promise<void> }
 ```
 `AuditInput` comes from `@/platform/audit/record`. `errors.ts`: `NotFoundError`, `VersionMismatchError`, `InvalidInputError(message, issues?)` — copy `src/modules/interests/application/errors.ts`.
 
@@ -447,6 +461,10 @@ export interface UseCaseDeps { funds: FundsRepository; schedules: SchedulesRepos
 - [ ] **Commit:** `git add src/modules/funds && git commit -m "feat(funds): ports, repositories, valuation and payroll sources"`
 
 ---
+
+### Deviation — Task 3
+
+Add `FundsRepository.lock(userId,id)` and an owner-scoped `AccountLinkSource` to deps. Parent row locks serialize reversals, opening contributions, schedule updates and payroll fees within the existing transaction. Account linking must reject another user's account and a currency mismatch before persisting the fund. Cover lock ownership and account lookup in repository tests. Use `FOR NO KEY UPDATE` if ordinary FK writes require compatible key-share locks; document the choice.
 
 ### Task 4: Use cases
 
@@ -577,6 +595,10 @@ export interface FundContributionSink {
 - [ ] **Commit:** `git add scripts package.json && git commit -m "feat(funds): legacy funds migration and validator"`
 
 ---
+
+### Deviation — Task 8
+
+Production inspection found no valuation accounts for either legacy fund, but `balance_snapshots` holds both actual histories. If no name match exists, create one manual account of the appropriate kind for the fund and import its legacy monthly snapshot history using the exact `monthlyHistoryQuery` ordering (Europe/Rome month, prefer non-`latest` rows, then captured_at DESC and id DESC; retain selected original dates/values, no synthetic balances), then link it. If multiple name matches exist, fail with a clear ambiguity report. Keep unrelated accounts untouched. Add idempotence and value-parity fixtures. Bundle both scripts into the standalone Docker image and document `node /app/migrate-funds.mjs` and `node /app/validate-funds-migration.mjs`; production has no tsx scripts available.
 
 ### Task 9: Exit criteria
 
