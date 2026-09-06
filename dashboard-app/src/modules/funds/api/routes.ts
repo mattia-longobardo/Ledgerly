@@ -2,7 +2,6 @@ import { createRoute } from "@hono/zod-openapi";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
-import { idempotency } from "@/platform/http/idempotency";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { withUserContext } from "@/platform/db/context";
 import { acknowledgeIssue } from "../application/acknowledge-issue";
@@ -25,6 +24,7 @@ import { setPlan } from "../application/set-plan";
 import { setSchedule } from "../application/set-schedule";
 import { updateFund } from "../application/update-fund";
 import { fundDeps } from "../infrastructure/deps";
+import { requireFundIdempotencyKey, runFundFinancialWrite } from "./financial-write";
 import {
   AddContributionRequestSchema,
   ContributionIdParamSchema,
@@ -294,8 +294,10 @@ const acknowledgeIssueRoute = createRoute({
 });
 
 export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
-  app.on("POST", "/funds/:id/contributions", idempotency({ db: deps.db, now: deps.now }));
-  app.on("POST", "/funds/:id/contributions/:cid/reverse", idempotency({ db: deps.db, now: deps.now }));
+  app.on("POST", ["/funds/:id/contributions", "/funds/:id/contributions/:cid/reverse"], async (c, next) => {
+    requireFundIdempotencyKey(c.req.header("idempotency-key"));
+    await next();
+  });
 
   app.openapi(listRoute, async (c) => {
     const principal = c.get("principal");
@@ -392,10 +394,13 @@ export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
   app.openapi(addContributionRoute, async (c) => {
     const principal = c.get("principal");
     try {
-      const contribution = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
-        addContribution(fundDeps(tx, c.get("requestId")))(principal, c.req.valid("param").id, c.req.valid("json")),
-      );
-      return c.json(contributionDto(contribution), 201);
+      const result = await runFundFinancialWrite(deps, principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, async (tx) => contributionDto(
+        await addContribution(fundDeps(tx, c.get("requestId")))(principal, c.req.valid("param").id, c.req.valid("json")),
+      ));
+      // Existing replay records may also contain an error from the former middleware.
+      return c.json(result.body, result.status as 201);
     } catch (error) {
       throw toApiError(error);
     }
@@ -405,10 +410,12 @@ export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
     const principal = c.get("principal");
     const { id, cid } = c.req.valid("param");
     try {
-      const contribution = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
-        reverseContribution(fundDeps(tx, c.get("requestId")))(principal, id, cid, c.req.valid("json").note),
-      );
-      return c.json(contributionDto(contribution), 201);
+      const result = await runFundFinancialWrite(deps, principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, async (tx) => contributionDto(
+        await reverseContribution(fundDeps(tx, c.get("requestId")))(principal, id, cid, c.req.valid("json").note),
+      ));
+      return c.json(result.body, result.status as 201);
     } catch (error) {
       throw toApiError(error);
     }
