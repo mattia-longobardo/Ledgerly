@@ -142,6 +142,12 @@ export interface Clock {
   now(): Date;
 }
 
+/** Human-readable labels for a sourced allocation's `sourceLabel`; null when the source can't be found. */
+export interface SourceLabels {
+  accountName(userId: string, id: string): Promise<string | null>;
+  fundName(userId: string, id: string): Promise<string | null>;
+}
+
 export interface UseCaseDeps {
   budgets: BudgetsRepository;
   versions: AmountVersionsRepository;
@@ -154,4 +160,5 @@ export interface UseCaseDeps {
   ownership: OwnershipCheck;
   clock: Clock;
   audit: (e: AuditInput) => Promise<void>;
+  labels?: SourceLabels;
 }
