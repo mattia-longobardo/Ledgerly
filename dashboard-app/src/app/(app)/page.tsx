@@ -12,6 +12,7 @@ import { deltaOverRange } from "@/lib/calc/series";
 import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
 import type { Series } from "@/lib/contracts";
 import { loadOverview, type SourceFreshness } from "@/modules/accounts/ui/load-overview";
+import { activeBudgetsCard, loadBudgets } from "@/modules/budgets/ui/load-budgets";
 import { cardState, shouldLoadCardData, visibleCards, type CardKey } from "@/modules/home/cards";
 import type { FundSummary } from "@/modules/funds/application/summary";
 import { CurrencyValue } from "@/modules/funds/ui/CurrencyValue";
@@ -78,9 +79,10 @@ export default async function HomePage() {
     return card ? cardState(card, caps) : null;
   };
 
-  const [overview, funds, ferie, imports] = await Promise.all([
+  const [overview, funds, budgets, ferie, imports] = await Promise.all([
     isVisible("total_balance") || isVisible("accounts_sync") ? loadOverview() : null,
     shouldLoad("funds") ? loadFundsSummary() : null,
+    shouldLoad("budgets") ? loadBudgets() : null,
     isVisible("leave") ? loadFerie() : null,
     // Safe to call unconditionally behind `isVisible`: this card requires the
     // `payroll` feature, which `resolveCapabilities` only turns on once a
@@ -120,6 +122,13 @@ export default async function HomePage() {
             <PermissionDeniedPanel span={4} title="Funds" />
           ) : (
             <FundsCard funds={funds!} />
+          ))}
+
+        {isVisible("budgets") &&
+          (denial("budgets") ? (
+            <PermissionDeniedPanel span={4} title="Budgets" />
+          ) : (
+            <BudgetsCard summaries={budgets!} />
           ))}
 
         {isVisible("payroll_imports") &&
@@ -329,6 +338,44 @@ function FundsCard({ funds }: { funds: readonly FundSummary[] }) {
           )}
           {total.unvalued > 0 && <p className="mt-1 text-caption text-fg-muted">{total.unvalued} fund{total.unvalued === 1 ? "" : "s"} without a valuation</p>}
           {asOf && <div className="mt-2"><StaleBadge capturedAt={asOf} /></div>}
+        </>
+      )}
+    </Panel>
+  );
+}
+
+/**
+ * `budgets`: the count of active budgets and their combined remaining, via
+ * the same pure `activeBudgetsCard` helper the Home card's own unit test
+ * exercises directly (a `.test.tsx` never runs, so this component is a thin
+ * wrapper — the logic worth testing lives in that helper, not here).
+ */
+function BudgetsCard({ summaries }: { summaries: Awaited<ReturnType<typeof loadBudgets>> }) {
+  const { count, remaining } = activeBudgetsCard(summaries);
+
+  return (
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Budgets"
+      action={
+        <Link href="/finance/budgets" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          View all
+        </Link>
+      }
+    >
+      {count === 0 ? (
+        <p className="text-body-sm text-fg-muted">No active budgets.</p>
+      ) : (
+        <>
+          {remaining === null ? (
+            <p className="text-body-sm text-fg-muted">Budgets span multiple currencies.</p>
+          ) : (
+            <MoneyValue value={remaining} size="display-sm" />
+          )}
+          <p className="mt-1 text-caption text-fg-muted">
+            {count} active budget{count === 1 ? "" : "s"}
+          </p>
         </>
       )}
     </Panel>

@@ -84,11 +84,19 @@ describe("cardState", () => {
 });
 
 describe("HOME_CARDS and visibleCards", () => {
-  it("defines the five cards with their target sections", () => {
-    expect(HOME_CARDS.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave", "payroll_imports"]);
+  it("defines the six cards with their target sections", () => {
+    expect(HOME_CARDS.map((c) => c.key)).toEqual([
+      "total_balance",
+      "accounts_sync",
+      "funds",
+      "budgets",
+      "leave",
+      "payroll_imports",
+    ]);
     expect(HOME_CARDS.find((c) => c.key === "total_balance")?.href).toBe("/finance/accounts");
     expect(HOME_CARDS.find((c) => c.key === "accounts_sync")?.href).toBe("/settings/integrations");
     expect(HOME_CARDS.find((c) => c.key === "funds")?.href).toBe("/finance/funds");
+    expect(HOME_CARDS.find((c) => c.key === "budgets")?.href).toBe("/finance/budgets");
     expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/company/time-off");
   });
 
@@ -116,7 +124,7 @@ describe("HOME_CARDS and visibleCards", () => {
 
   it("hides accounts_sync until Wallet is connected and leave until timeoff is on", () => {
     const bare = visibleCards(caps());
-    expect(bare.map((c) => c.key)).toEqual(["total_balance", "funds"]);
+    expect(bare.map((c) => c.key)).toEqual(["total_balance", "funds", "budgets"]);
 
     const full = visibleCards(
       caps({
@@ -124,7 +132,7 @@ describe("HOME_CARDS and visibleCards", () => {
         integrations: { ...caps().integrations, wallet: "connected" },
       }),
     );
-    expect(full.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave"]);
+    expect(full.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "budgets", "leave"]);
   });
 
   it("keeps every card visible for a viewer: permission gating is cardState's job, not visibleCards'", () => {
@@ -133,7 +141,7 @@ describe("HOME_CARDS and visibleCards", () => {
       features: { ...caps().features, timeoff: true },
       integrations: { ...caps().integrations, wallet: "connected" },
     });
-    expect(visibleCards(viewer)).toHaveLength(4);
+    expect(visibleCards(viewer)).toHaveLength(5);
   });
 });
 
@@ -149,6 +157,14 @@ describe("Home composition", () => {
 
     expect(cardState(fundCard, withoutFundRead)).toEqual({ state: "permission_denied" });
     expect(shouldLoadCardData(fundCard, withoutFundRead)).toBe(false);
+  });
+
+  it("does not request budgets data when budgets.read is denied", () => {
+    const withoutBudgetsRead = caps({ permissions: new Set(["accounts.read"]) });
+    const budgetsCard = HOME_CARDS.find((card) => card.key === "budgets")!;
+
+    expect(cardState(budgetsCard, withoutBudgetsRead)).toEqual({ state: "permission_denied" });
+    expect(shouldLoadCardData(budgetsCard, withoutBudgetsRead)).toBe(false);
   });
 
   it("accounts_sync is absent when Wallet is not configured", () => {
