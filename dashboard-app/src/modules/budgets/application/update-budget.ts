@@ -5,6 +5,14 @@ import { InvalidInputError, NotFoundError } from "./errors";
 import type { Budget, BudgetPatch, UseCaseDeps } from "./ports";
 import { BUDGET_STATUSES, dateSchema, nonNegativeMoneySchema, parseInput, PERIOD_KINDS } from "./validation";
 
+/**
+ * `archivedAt` is deliberately absent here: it is set only by this use
+ * case's own `status === "archived"` branch below, never by the caller —
+ * `BudgetPatch` (the repository's write surface) still carries it, but the
+ * externally-parsed input must not, or a caller could desync `status`
+ * (still `"active"`) from a caller-supplied `archivedAt`. `.strict()`
+ * rejects a patch that tries to set it directly.
+ */
 const patchSchema = z.object({
   name: z.string().trim().min(1, "Invalid budget name.").optional(),
   description: z.string().nullable().optional(),
@@ -14,7 +22,6 @@ const patchSchema = z.object({
   goalAmount: nonNegativeMoneySchema.nullable().optional(),
   labels: z.array(z.string()).optional(),
   status: z.enum(BUDGET_STATUSES).optional(),
-  archivedAt: z.date().nullable().optional(),
 }).strict();
 
 export function updateBudget(deps: UseCaseDeps) {

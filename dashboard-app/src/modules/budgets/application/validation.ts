@@ -38,3 +38,8 @@ export function moneyCents(value: string): bigint {
   const [, sign, integer, fraction = ""] = match;
   return BigInt(`${sign}${integer}${(fraction + "00").slice(0, 2)}`);
 }
+
+/** `asOf = min(endDate ?? today, today)` — a closed budget's figures stop moving at its end date. */
+export function asOfFor(endDate: string | null, today: string): string {
+  return endDate !== null && endDate < today ? endDate : today;
+}

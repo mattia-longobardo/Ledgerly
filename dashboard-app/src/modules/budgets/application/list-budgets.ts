@@ -3,16 +3,12 @@ import type { Principal } from "@/platform/auth/principal";
 import { assertPermission } from "@/platform/auth/principal";
 import { figures, type BudgetFigures } from "../domain/figures";
 import type { Budget, UseCaseDeps } from "./ports";
+import { asOfFor } from "./validation";
 
 export interface BudgetSummary {
   budget: Budget;
   figures: BudgetFigures;
   asOf: string;
-}
-
-/** `asOf = min(endDate ?? today, today)` — a closed budget's figures stop moving at its end date. */
-function asOfFor(endDate: string | null, today: string): string {
-  return endDate !== null && endDate < today ? endDate : today;
 }
 
 export function listBudgets(deps: UseCaseDeps) {
