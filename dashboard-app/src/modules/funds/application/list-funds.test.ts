@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { testPrincipal } from "@/test/principal";
 import { listFunds } from "./list-funds";
+import { InvalidInputError } from "./errors";
 import { fundHarness, seedFund } from "./test-support";
 
 describe("listFunds", () => {
@@ -18,5 +19,11 @@ describe("listFunds", () => {
     const result = await listFunds(h.deps)(testPrincipal());
     expect(result.find((row) => row.fund.id === unlinked.id)).toMatchObject({ value: null, valueAsOf: null, absReturn: null });
     expect(result.find((row) => row.fund.id === linked.id)).toMatchObject({ value: "125.00", deposited: "100.00", absReturn: "25.00" });
+  });
+
+  it("rejects a non-boolean includeArchived option at runtime", async () => {
+    const h = fundHarness();
+    await expect(listFunds(h.deps)(testPrincipal(), { includeArchived: "false" } as never))
+      .rejects.toThrow(InvalidInputError);
   });
 });

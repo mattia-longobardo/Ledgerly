@@ -8,7 +8,7 @@ import { moneyCents, monthSchema, nonNegativeMoneySchema, parseInput } from "./v
 const schema = z.object({
   frequency: z.enum(["monthly", "quarterly", "annual"]),
   periodAnchorMonth: z.number().int().min(1).max(12),
-  postingLagMonths: z.number().int().min(0).max(120),
+  postingLagMonths: z.number().int().min(0).max(12),
   feePerPosting: nonNegativeMoneySchema,
   effectiveFrom: monthSchema,
 }).strict();

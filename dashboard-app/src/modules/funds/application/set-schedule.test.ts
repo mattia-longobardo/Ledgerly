@@ -27,4 +27,14 @@ describe("setSchedule", () => {
       await expect(setSchedule(h.deps)(testPrincipal(), fund.id, { ...input, ...patch } as never)).rejects.toThrow(/invalid/i);
     }
   });
+
+  it("accepts lag 12 and rejects lag 13 without a second mutation or audit", async () => {
+    const h = fundHarness();
+    const fund = await seedFund(h.deps);
+    await setSchedule(h.deps)(testPrincipal(), fund.id, { ...input, postingLagMonths: 12 });
+    await expect(setSchedule(h.deps)(testPrincipal(), fund.id, { ...input, postingLagMonths: 13 }))
+      .rejects.toThrow(/invalid/i);
+    expect(await h.deps.schedules.listForFund(fund.id)).toHaveLength(1);
+    expect(h.audits).toHaveLength(1);
+  });
 });
