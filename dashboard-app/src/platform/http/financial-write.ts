@@ -31,8 +31,21 @@ export function requireIdempotencyKey(key: string | undefined): string {
  * is released automatically when the transaction ends (commit or rollback),
  * so a failed write never wedges the key.
  *
- * `namespace` scopes the advisory lock id so two modules can't collide on
- * the same numeric lock space by coincidence (e.g. `"funds"`, `"budgets"`).
+ * `namespace` scopes both the advisory lock id and the persisted cache row,
+ * so two modules can't collide on the same numeric lock space by
+ * coincidence (e.g. `"funds"`, `"budgets"`), and — just as importantly —
+ * can't collide on the same `idempotency_keys` row when a caller happens to
+ * reuse the same literal `Idempotency-Key` value across two different
+ * endpoints. `idempotencyKeys`' primary key is `(principalId, key)` with no
+ * namespace column (no migration for one in this phase), so the row is
+ * scoped by storing `${namespace}:${key}` as `key` instead of the raw
+ * value — internal only: the caller-facing `Idempotency-Key` header value
+ * is never itself prefixed, only how the row is addressed here.
+ *
+ * A client retrying with a key issued before this change (funds' rows,
+ * predating the `budgets` namespace and this prefix) will not match the old
+ * unprefixed row and will re-execute rather than replay — a one-time,
+ * short-lived (24h TTL) gap at the deploy boundary, not an ongoing risk.
  */
 export async function runFinancialWrite<T extends object>(
   deps: { db: DbClient; now(): Date },
@@ -43,6 +56,7 @@ export async function runFinancialWrite<T extends object>(
   status = 201,
 ): Promise<{ body: T; status: number }> {
   const key = requireIdempotencyKey(request.key);
+  const storedKey = `${namespace}:${key}`;
   const requestHash = createHash("sha256").update(`${request.method} ${request.path}\n${request.body}`).digest("hex");
   const lockId = createHash("sha256").update(JSON.stringify([namespace, principalId, key])).digest().readBigInt64BE();
 
@@ -52,7 +66,7 @@ export async function runFinancialWrite<T extends object>(
     // recheck its hash, rather than proceeding from a stale cache miss.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockId.toString()}::bigint)`);
     const [existing] = await tx.select().from(idempotencyKeys)
-      .where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, key)))
+      .where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, storedKey)))
       .limit(1);
     if (existing && existing.expiresAt > deps.now()) {
       if (existing.requestHash !== requestHash) {
@@ -71,7 +85,7 @@ export async function runFinancialWrite<T extends object>(
       responseBody: body,
       expiresAt: new Date(deps.now().getTime() + TTL_MS),
     };
-    await tx.insert(idempotencyKeys).values({ principalId, key, ...outcome })
+    await tx.insert(idempotencyKeys).values({ principalId, key: storedKey, ...outcome })
       .onConflictDoUpdate({ target: [idempotencyKeys.principalId, idempotencyKeys.key], set: outcome });
     return { body, status };
   });

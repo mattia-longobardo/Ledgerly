@@ -128,7 +128,9 @@ describe("runFinancialWrite", () => {
     expect(calls).toBe(1);
 
     const rows = await withUserContext(db, { userId: principalId }, (tx) =>
-      tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, "retry-key"))),
+      // The persisted row is keyed internally as `${namespace}:${key}` — see
+      // `runFinancialWrite`'s comment — never the raw `Idempotency-Key` value.
+      tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, "test-ns:retry-key"))),
     );
     expect(rows).toHaveLength(0);
 
@@ -141,8 +143,50 @@ describe("runFinancialWrite", () => {
     expect(result).toEqual({ body: { ok: true }, status: 201 });
 
     const rowsAfter = await withUserContext(db, { userId: principalId }, (tx) =>
-      tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, "retry-key"))),
+      // The persisted row is keyed internally as `${namespace}:${key}` — see
+      // `runFinancialWrite`'s comment — never the raw `Idempotency-Key` value.
+      tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, "test-ns:retry-key"))),
     );
     expect(rowsAfter).toHaveLength(1);
+  });
+
+  /**
+   * The persisted cache row is keyed only by `(principalId, key)` — the
+   * `idempotencyKeys` table has no namespace column, and round 2's
+   * serialization proof only covers the advisory *lock*, which does carry
+   * the namespace. Two different namespaces sharing a principalId and the
+   * same literal `Idempotency-Key` value must not share that row: each
+   * namespace's own commit must be findable (and replayable) only by a
+   * later call in that same namespace, never by the other one.
+   */
+  it("scopes the persisted cache row by namespace — two namespaces sharing principalId and key each replay their own body, not the other's", async () => {
+    const db = await testDb();
+    const principalId = randomUUID();
+    let aCalls = 0;
+    let bCalls = 0;
+    const writeA = async () => { aCalls += 1; return { echoed: "a" }; };
+    const writeB = async () => { bCalls += 1; return { echoed: "b" }; };
+    const requestA = request("shared-key", JSON.stringify({ tag: "a" }));
+    const requestB = request("shared-key", JSON.stringify({ tag: "b" }));
+
+    const firstA = await runFinancialWrite({ db, now }, "namespace-a", principalId, requestA, writeA);
+    // Without namespace scoping on the row, this sees namespace-a's row
+    // under the same (principalId, key) with a different request hash (a
+    // different body) and throws `idempotency_key_reused` — a false
+    // positive, since namespace-b never touched this key before.
+    const firstB = await runFinancialWrite({ db, now }, "namespace-b", principalId, requestB, writeB);
+
+    expect(aCalls).toBe(1);
+    expect(bCalls).toBe(1);
+    expect(firstA).toEqual({ body: { echoed: "a" }, status: 201 });
+    expect(firstB).toEqual({ body: { echoed: "b" }, status: 201 });
+
+    const replayA = await runFinancialWrite({ db, now }, "namespace-a", principalId, requestA, writeA);
+    const replayB = await runFinancialWrite({ db, now }, "namespace-b", principalId, requestB, writeB);
+
+    expect(aCalls).toBe(1);
+    expect(bCalls).toBe(1);
+    expect(replayA).toEqual(firstA);
+    expect(replayB).toEqual(firstB);
   });
 });
