@@ -33,6 +33,7 @@ export function updateBudget(deps: UseCaseDeps) {
     if (!before) throw new NotFoundError();
     const effectivePatch: BudgetPatch = { ...value };
     if (value.status === "archived") effectivePatch.archivedAt = deps.clock.now();
+    if (value.status === "active") effectivePatch.archivedAt = null;
     const after = await deps.budgets.update(principal.userId, id, expectedVersion, effectivePatch);
     if (!after) throw new NotFoundError();
     await deps.audit({ actorUserId: principal.userId, action: "budgets.budget_updated", entityType: "budget", entityId: id, before, after });

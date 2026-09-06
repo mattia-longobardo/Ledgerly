@@ -39,6 +39,17 @@ describe("updateBudget", () => {
     expect(events).toEqual([expect.objectContaining({ kind: "budget_updated" })]);
   });
 
+  it("clears archivedAt when un-archiving — status and archivedAt must never desync from either direction", async () => {
+    const h = budgetHarness();
+    const budget = await seedBudget(h.deps);
+    const archived = await updateBudget(h.deps)(testPrincipal(), budget.id, budget.version, { status: "archived" });
+    expect(archived.archivedAt).not.toBeNull();
+
+    const reactivated = await updateBudget(h.deps)(testPrincipal(), archived.id, archived.version, { status: "active" });
+    expect(reactivated.status).toBe("active");
+    expect(reactivated.archivedAt).toBeNull();
+  });
+
   it("rejects a caller-supplied archivedAt with no status change — it must never desync from status", async () => {
     const h = budgetHarness();
     const budget = await seedBudget(h.deps);

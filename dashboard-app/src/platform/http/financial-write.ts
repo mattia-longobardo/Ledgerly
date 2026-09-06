@@ -3,25 +3,48 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { idempotencyKeys } from "@/lib/db/schema";
 import { withUserContext } from "@/platform/db/context";
-import { ApiError } from "@/platform/http/errors";
+import { ApiError } from "./errors";
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 
-export function requireFundIdempotencyKey(key: string | undefined): string {
+export function requireIdempotencyKey(key: string | undefined): string {
   if (!key) throw new ApiError(428, "validation_failed", "Idempotency-Key header is required");
   return key;
 }
 
-/** The Funds mutation, audit event and durable replay share one transaction. */
-export async function runFundFinancialWrite<T extends object>(
+/**
+ * A POST that creates a financial record must not create two rows for one
+ * `Idempotency-Key`. The plain `idempotency()` middleware (`./idempotency.ts`)
+ * cannot guarantee that: it reads the replay cache, runs the handler, and
+ * writes the cache back in three separate transactions, so two concurrent
+ * requests with the same key (or a client retry racing a crash between the
+ * handler's commit and the cache write) can both pass the "not yet cached"
+ * check and both insert. `onConflictDoUpdate` on the cache row then hides
+ * the duplicate instead of preventing it.
+ *
+ * This helper closes that window: the mutation, its audit/event rows, and
+ * the idempotency row all commit in **one** transaction, serialized per
+ * `(namespace, principalId, key)` by a transaction-scoped
+ * `pg_advisory_xact_lock` taken **before** the cache read — a concurrent
+ * waiter is guaranteed to see the winner's commit and recheck the request
+ * hash against it, rather than proceeding from a stale cache miss. The lock
+ * is released automatically when the transaction ends (commit or rollback),
+ * so a failed write never wedges the key.
+ *
+ * `namespace` scopes the advisory lock id so two modules can't collide on
+ * the same numeric lock space by coincidence (e.g. `"funds"`, `"budgets"`).
+ */
+export async function runFinancialWrite<T extends object>(
   deps: { db: DbClient; now(): Date },
+  namespace: string,
   principalId: string,
   request: { key: string | undefined; method: string; path: string; body: string },
   write: (tx: DbClient) => Promise<T>,
+  status = 201,
 ): Promise<{ body: T; status: number }> {
-  const key = requireFundIdempotencyKey(request.key);
+  const key = requireIdempotencyKey(request.key);
   const requestHash = createHash("sha256").update(`${request.method} ${request.path}\n${request.body}`).digest("hex");
-  const lockId = createHash("sha256").update(JSON.stringify(["funds", principalId, key])).digest().readBigInt64BE();
+  const lockId = createHash("sha256").update(JSON.stringify([namespace, principalId, key])).digest().readBigInt64BE();
 
   return withUserContext(deps.db, { userId: principalId }, async (tx) => {
     // Transaction-scoped PostgreSQL serialization also works across processes.
@@ -38,17 +61,18 @@ export async function runFundFinancialWrite<T extends object>(
       if (existing.statusCode !== null) return { body: existing.responseBody as T, status: existing.statusCode };
     }
 
-    // Errors escape the transaction, rolling back both money and replay state.
-    // New 4xx/5xx outcomes are not cached; only committed successes consume a key.
+    // Errors escape the transaction, rolling back both the write and replay
+    // state. New 4xx/5xx outcomes are not cached; only committed successes
+    // consume a key.
     const body = await write(tx);
     const outcome = {
       requestHash,
-      statusCode: 201,
+      statusCode: status,
       responseBody: body,
       expiresAt: new Date(deps.now().getTime() + TTL_MS),
     };
     await tx.insert(idempotencyKeys).values({ principalId, key, ...outcome })
       .onConflictDoUpdate({ target: [idempotencyKeys.principalId, idempotencyKeys.key], set: outcome });
-    return { body, status: 201 };
+    return { body, status };
   });
 }
