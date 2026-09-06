@@ -12,6 +12,16 @@ const FIELD = "min-h-11 w-full rounded-md border border-border bg-surface px-3 t
 const FIELD_NARROW = `${FIELD} num max-w-48`;
 const LABEL = "text-caption tracking-wide text-fg-muted uppercase";
 
+/**
+ * Every display in this module (`MoneyValue`/`formatEur`) renders EUR only,
+ * so a free-text currency field here would let a budget be created in a
+ * currency the app then confidently mislabels as EUR — "never invent
+ * financial data" forbids that. Real multi-currency display is out of this
+ * phase's scope (recorded for the phase handoff), so the create form locks
+ * to EUR rather than accepting a code the formatter can't honour.
+ */
+const BUDGET_CURRENCY = "EUR";
+
 function label(value: string): string {
   return value.replace(/^./, (letter) => letter.toUpperCase());
 }
@@ -29,7 +39,6 @@ export function BudgetForm({
   const editing = budget !== undefined;
   const [name, setName] = useState(budget?.name ?? "");
   const [description, setDescription] = useState(budget?.description ?? "");
-  const [currency, setCurrency] = useState(budget?.currency ?? "EUR");
   const [periodKind, setPeriodKind] = useState(budget?.periodKind ?? "monthly");
   const [startDate, setStartDate] = useState(budget?.startDate ?? new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(budget?.endDate ?? "");
@@ -56,7 +65,7 @@ export function BudgetForm({
         data.set("version", String(budget.version));
         data.set("status", status);
       } else {
-        data.set("currency", currency.toUpperCase());
+        data.set("currency", BUDGET_CURRENCY);
         data.set("initialAmount", initialAmount);
       }
       const result = budget ? await updateBudgetAction(data) : await createBudgetAction(data);
@@ -72,10 +81,7 @@ export function BudgetForm({
   const step: SheetFormStep = {
     id: "details",
     title: "Details",
-    valid:
-      name.trim() !== "" &&
-      startDate.trim() !== "" &&
-      (editing || (currency.trim().length === 3 && initialAmount.trim() !== "")),
+    valid: name.trim() !== "" && startDate.trim() !== "" && (editing || initialAmount.trim() !== ""),
     content: (
       <div className="flex flex-col gap-4">
         {error && <ErrorInline message={error} />}
@@ -108,10 +114,10 @@ export function BudgetForm({
           </label>
         </div>
         {!editing && (
-          <label className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5">
             <span className={LABEL}>Currency</span>
-            <input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} maxLength={3} className={`${FIELD} num uppercase max-w-24`} />
-          </label>
+            <span className="num text-body text-fg-muted">{BUDGET_CURRENCY} — the only currency this app displays</span>
+          </div>
         )}
         {!editing && (
           <label className="flex flex-col gap-1.5">
