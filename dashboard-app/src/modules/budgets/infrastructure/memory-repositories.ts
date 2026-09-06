@@ -16,6 +16,7 @@ import type {
   UsagesRepository,
 } from "../application/ports";
 import type { ScopeLike } from "../domain/scopes";
+import { normalizeScale } from "./decimal";
 
 /**
  * Production ids default to `uuidv7()`, which is time-ordered. This fake
@@ -36,22 +37,6 @@ function monotonicId(): string {
 /** Strips explicit `undefined` values so a spread merge can't null out a field the caller never meant to touch — Drizzle's `mapUpdateSet` already drops them before the `SET` clause is built (carried from batch A's expenses-side fix, B9). */
 function definedEntries<T extends object>(patch: T): Partial<T> {
   return Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) as Partial<T>;
-}
-
-/**
- * Mirrors the `numeric(16, 2)` scale money columns carry in Postgres — same
- * rationale as the expenses module's `normalizeMoney`: the real repository
- * always reads back a two-decimal string, so a fake that echoed the raw input
- * verbatim would let a string-comparing test pass here and fail there. A
- * plain regex, never `Number()`.
- */
-const DECIMAL_RE = /^(-?)(\d+)(?:\.(\d+))?$/;
-function normalizeScale(value: string, scale: number): string {
-  const m = DECIMAL_RE.exec(value.trim());
-  if (!m) return value;
-  const [, sign, intPart, fracPart = ""] = m;
-  const frac = (fracPart + "0".repeat(scale)).slice(0, scale);
-  return scale > 0 ? `${sign}${intPart}.${frac}` : `${sign}${intPart}`;
 }
 
 export class MemoryBudgetsRepository implements BudgetsRepository {
