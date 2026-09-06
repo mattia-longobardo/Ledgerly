@@ -51,6 +51,24 @@ RUN ./node_modules/.bin/esbuild scripts/import-file-credentials.ts \
       --external:cloudflare:sockets \
       --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
       --outfile=import-file-credentials.mjs
+RUN ./node_modules/.bin/esbuild scripts/migrate-funds.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --target=node22 \
+      --external:pg-native \
+      --external:cloudflare:sockets \
+      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
+      --outfile=migrate-funds.mjs
+RUN ./node_modules/.bin/esbuild scripts/validate-funds-migration.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --target=node22 \
+      --external:pg-native \
+      --external:cloudflare:sockets \
+      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
+      --outfile=validate-funds-migration.mjs
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache wget
@@ -66,6 +84,8 @@ COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
 COPY --from=builder --chown=1000:1000 /app/migrate-teable.mjs ./migrate-teable.mjs
 COPY --from=builder --chown=1000:1000 /app/validate-teable.mjs ./validate-teable.mjs
 COPY --from=builder --chown=1000:1000 /app/import-file-credentials.mjs ./import-file-credentials.mjs
+COPY --from=builder --chown=1000:1000 /app/migrate-funds.mjs ./migrate-funds.mjs
+COPY --from=builder --chown=1000:1000 /app/validate-funds-migration.mjs ./validate-funds-migration.mjs
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh && mkdir -p /app/.next/cache && chown -R 1000:1000 /app/.next
