@@ -1,4 +1,6 @@
 import { listAccounts } from "@/modules/accounts/application/list-accounts";
+import { z } from "zod";
+import { assertPermission } from "@/platform/auth/principal";
 import { runForPrincipal as runForAccountPrincipal } from "@/modules/accounts/ui/run";
 import { getFundDetail, type FundDetail } from "../application/get-fund-detail";
 import { listFunds } from "../application/list-funds";
@@ -54,12 +56,23 @@ export async function loadFundsSummary(): Promise<FundSummary[]> {
 }
 
 export async function loadFundDetail(id: string): Promise<FundDetail | null> {
+  if (!z.string().uuid().safeParse(id).success) return null;
   return runForPrincipal((deps, principal) =>
     getFundDetail(deps)(principal, id).catch((error: unknown) => {
       if (error instanceof NotFoundError) return null;
       throw error;
     }),
   );
+}
+
+/** Compatibility for old bookmarks; never pass a slug to the UUID query. */
+export async function loadFundIdBySlug(slug: string): Promise<string | null> {
+  if (!/^[a-z0-9-]{2,40}$/.test(slug)) return null;
+  return runForPrincipal(async (deps, principal) => {
+    assertPermission(principal, "funds.read");
+    const fund = await deps.funds.getBySlug(principal.userId, slug);
+    return fund?.id ?? null;
+  });
 }
 
 /** Runs after a funds load has completed, in the accounts module's own user context. */

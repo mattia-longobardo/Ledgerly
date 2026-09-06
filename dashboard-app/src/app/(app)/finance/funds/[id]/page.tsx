@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
@@ -7,13 +8,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { StatGrid, StatTile } from "@/components/ui/StatTile";
 import { monthKey } from "@/lib/time";
-import type { Series } from "@/lib/contracts";
 import { ContributionsTable } from "@/modules/funds/ui/ContributionsTable";
 import { ContributionForm } from "@/modules/funds/ui/ContributionForm";
 import { CurrencyValue, formatSignedCurrency } from "@/modules/funds/ui/CurrencyValue";
 import { FundFormTrigger } from "@/modules/funds/ui/FundForm";
-import { FundValueChart } from "@/modules/funds/ui/FundValueChart";
-import { loadFundAccounts, loadFundDetail } from "@/modules/funds/ui/load-funds";
+import { FundValueChart, type FundChartSeries } from "@/modules/funds/ui/FundValueChart";
+import { loadFundAccounts, loadFundDetail, loadFundIdBySlug } from "@/modules/funds/ui/load-funds";
 import { PlanForm } from "@/modules/funds/ui/PlanForm";
 import { MonthlyTable, QuarterTable } from "@/modules/funds/ui/QuarterTable";
 import { AcknowledgeButton, ReconcileButton } from "@/modules/funds/ui/ReconciliationActions";
@@ -34,14 +34,19 @@ export default async function FundDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const principal = await requirePrincipalOrRedirect();
   if (!principal.permissions.has("funds.read")) return <><PageHeader title="Funds" /><div className="max-w-xl pt-6"><EmptyState title="Fund unavailable" description="You do not have permission to view funds." /></div></>;
+  if (!z.string().uuid().safeParse(id).success) {
+    const fundId = await loadFundIdBySlug(id);
+    if (!fundId) notFound();
+    redirect(`/finance/funds/${fundId}`);
+  }
   const detail = await loadFundDetail(id);
   if (!detail) notFound();
   const canWrite = principal.permissions.has("funds.write");
   const accounts = canWrite ? await loadFundAccounts() : [];
   const currentMonth = monthKey(new Date());
-  const series: Series[] = [
-    { key: "value", label: "Value", points: detail.valueSeries.map((point) => ({ month: point.month, value: Number(point.value) })) },
-    { key: "deposited", label: "Deposited", points: detail.valueSeries.map((point) => ({ month: point.month, value: Number(point.deposited) })) },
+  const series: FundChartSeries[] = [
+    { key: "value", label: "Value", points: detail.valueSeries.map((point) => ({ month: point.month, value: point.value })) },
+    { key: "deposited", label: "Deposited", points: detail.valueSeries.map((point) => ({ month: point.month, value: point.deposited })) },
   ];
   const grouped = detail.schedule?.frequency === "quarterly" || detail.schedule?.frequency === "annual";
 

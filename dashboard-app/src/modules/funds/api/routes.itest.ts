@@ -1,7 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
   fundContributions,
+  funds,
+  idempotencyKeys,
   organizations,
   reconciliationIssues,
   users,
@@ -59,6 +61,130 @@ describe("funds routes", () => {
     expect(response.status).toBe(201);
     return response.json() as Promise<Record<string, unknown>>;
   }
+
+  async function overlappingRequests(
+    db: Awaited<ReturnType<typeof testDb>>,
+    userId: string,
+    fundId: string,
+    requests: (() => Promise<Response>)[],
+  ): Promise<Response[]> {
+    let unlock!: () => void;
+    let locked!: () => void;
+    const gate = new Promise<void>((resolve) => { unlock = resolve; });
+    const ready = new Promise<void>((resolve) => { locked = resolve; });
+    const blocker = withUserContext(db, { userId }, async (tx) => {
+      await tx.select().from(funds).where(eq(funds.id, fundId)).for("no key update");
+      locked();
+      await gate;
+    });
+    await ready;
+    const pending = requests.map((request) => request());
+    try {
+      // Both HTTP requests must have reached a database lock before we release
+      // the parent. With atomic replay one waits on the key and one on the fund.
+      // With the old middleware both pass the cache read and wait on the fund.
+      const deadline = Date.now() + 5_000;
+      let waiting = 0;
+      while (Date.now() < deadline) {
+        const result = await db.execute<{ waiting: number }>(sql`
+          SELECT count(*)::integer AS waiting FROM pg_stat_activity
+          WHERE datname = current_database() AND pid <> pg_backend_pid()
+            AND wait_event_type = 'Lock'`);
+        waiting = result.rows[0]!.waiting;
+        if (waiting >= requests.length) break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(waiting).toBe(requests.length);
+    } finally {
+      unlock();
+      await blocker;
+      await Promise.allSettled(pending);
+    }
+    return Promise.all(pending);
+  }
+
+  it("atomically replays overlapping identical contributions and reversals", async () => {
+    const { app, db, userA } = await seed();
+    const fund = await createFund(app, userA.id);
+    const fundId = fund.id as string;
+    const post = (path: string, key: string, body: string) => () => Promise.resolve(app.request(path, {
+      method: "POST", headers: headers(userA.id, { "idempotency-key": key }), body,
+    }));
+    const add = post(`/api/v1/funds/${fundId}/contributions`, "overlap-add",
+      JSON.stringify({ typeCode: "employee", accrualMonth: "2026-01-01", amount: "100.00" }));
+    const responses = await overlappingRequests(db, userA.id, fundId, [add, add]);
+    expect(responses.map((response) => response.status)).toEqual([201, 201]);
+    const [first, replay] = await Promise.all(responses.map((response) => response.json()));
+    expect(replay).toEqual(first);
+    const rows = await withUserContext(db, { userId: userA.id }, (tx) => tx.select().from(fundContributions));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount).toBe("100.00");
+
+    const reverse = post(`/api/v1/funds/${fundId}/contributions/${first.id}/reverse`, "overlap-reverse", JSON.stringify({ note: "Undo" }));
+    const reversals = await overlappingRequests(db, userA.id, fundId, [reverse, reverse]);
+    expect(reversals.map((response) => response.status)).toEqual([201, 201]);
+    const [reversed, reversedReplay] = await Promise.all(reversals.map((response) => response.json()));
+    expect(reversedReplay).toEqual(reversed);
+    expect(reversed.amount).toBe("-100.00");
+    const laterReplay = await reverse();
+    expect(laterReplay.status).toBe(201);
+    expect(await laterReplay.json()).toEqual(reversed);
+    const all = await withUserContext(db, { userId: userA.id }, (tx) => tx.select().from(fundContributions));
+    expect(all).toHaveLength(2);
+  });
+
+  it("rechecks the request hash after a concurrent key reservation", async () => {
+    const { app, db, userA } = await seed();
+    const fund = await createFund(app, userA.id);
+    const fundId = fund.id as string;
+    const requests = ["100.00", "200.00"].map((amount) => () => Promise.resolve(app.request(`/api/v1/funds/${fundId}/contributions`, {
+      method: "POST", headers: headers(userA.id, { "idempotency-key": "different-body" }),
+      body: JSON.stringify({ typeCode: "employee", accrualMonth: "2026-01-01", amount }),
+    })));
+    const responses = await overlappingRequests(db, userA.id, fundId, requests);
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 422]);
+    const conflict = responses.find((response) => response.status === 422)!;
+    expect((await conflict.json()).error.code).toBe("idempotency_key_reused");
+    const winnerIndex = responses.findIndex((response) => response.status === 201);
+    const body = await responses[winnerIndex]!.json();
+    const replay = await requests[winnerIndex]!();
+    expect(replay.status).toBe(201);
+    expect(await replay.json()).toEqual(body);
+    const rows = await withUserContext(db, { userId: userA.id }, (tx) => tx.select().from(fundContributions));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount).toBe(body.amount);
+  });
+
+  it.each(["idempotency_keys", "audit_events"] as const)("rolls back financial writes and successful replay records when %s fails", async (table) => {
+    const { app, db, userA } = await seed();
+    const fund = await createFund(app, userA.id);
+    await db.execute(sql`CREATE FUNCTION funds_test_reject_write() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Injected Funds transaction failure'; END; $$`);
+    try {
+      await db.execute(sql.raw(`CREATE TRIGGER funds_test_reject_write BEFORE INSERT ON ${table}
+        FOR EACH ROW EXECUTE FUNCTION funds_test_reject_write()`));
+      const request = () => app.request(`/api/v1/funds/${fund.id}/contributions`, {
+        method: "POST", headers: headers(userA.id, { "idempotency-key": "rollback" }),
+        body: JSON.stringify({ typeCode: "employee", accrualMonth: "2026-01-01", amount: "100.00" }),
+      });
+      const failed = await request();
+      expect(failed.status).toBe(500);
+      const state = await withUserContext(db, { userId: userA.id }, async (tx) => ({
+        contributions: await tx.select().from(fundContributions),
+        replay: await tx.select().from(idempotencyKeys),
+      }));
+      expect(state).toEqual({ contributions: [], replay: [] });
+      await db.execute(sql.raw(`DROP TRIGGER funds_test_reject_write ON ${table}`));
+      const retry = await request();
+      expect(retry.status).toBe(201);
+      const replay = await request();
+      expect(replay.status).toBe(201);
+      expect(await replay.json()).toEqual(await retry.json());
+    } finally {
+      await db.execute(sql.raw(`DROP TRIGGER IF EXISTS funds_test_reject_write ON ${table}`));
+      await db.execute(sql`DROP FUNCTION funds_test_reject_write()`);
+    }
+  });
 
   it("serves all fund operations with explicit DTOs and optimistic concurrency", async () => {
     const { app, db, userA, userB } = await seed();
@@ -289,6 +415,27 @@ describe("funds routes", () => {
     });
     expect(reverse.status).toBe(428);
     expect((await reverse.json()).error.code).toBe("validation_failed");
+
+    const malformed = await app.request(`/api/v1/funds/${fund.id}/contributions`, {
+      method: "POST", headers: headers(userA.id), body: "not-json",
+    });
+    expect(malformed.status).toBe(428);
+  });
+
+  it("does not consume an idempotency key for an uncommitted validation error", async () => {
+    const { app, db, userA } = await seed();
+    const fund = await createFund(app, userA.id);
+    const request = (amount: string) => app.request(`/api/v1/funds/${fund.id}/contributions`, {
+      method: "POST", headers: headers(userA.id, { "idempotency-key": "correctable" }),
+      body: JSON.stringify({ typeCode: "employee", accrualMonth: "2026-01-01", amount }),
+    });
+    const invalid = await request("-100.00");
+    expect(invalid.status).toBe(422);
+    expect((await invalid.json()).error.code).toBe("validation_failed");
+    const cached = await withUserContext(db, { userId: userA.id }, (tx) => tx.select().from(idempotencyKeys));
+    expect(cached).toHaveLength(0);
+    const corrected = await request("100.00");
+    expect(corrected.status).toBe(201);
   });
 
   it("rejects malformed UUIDs, ambiguous booleans, non-month dates, and schedule lags outside 0..12", async () => {

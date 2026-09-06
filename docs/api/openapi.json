@@ -1715,7 +1715,7 @@
           "value": {
             "type": "string",
             "nullable": true,
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "valueAsOf": {
             "type": "string",
@@ -1723,12 +1723,12 @@
           },
           "deposited": {
             "type": "string",
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "absReturn": {
             "type": "string",
             "nullable": true,
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "lastContributionMonth": {
             "type": "string",
@@ -2143,15 +2143,15 @@
           },
           "gross": {
             "type": "string",
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "fees": {
             "type": "string",
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "net": {
             "type": "string",
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "posted": {
             "type": "boolean"
@@ -2175,11 +2175,11 @@
           },
           "value": {
             "type": "string",
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           },
           "deposited": {
             "type": "string",
-            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+            "pattern": "^-?\\d+(\\.\\d{1,2})?$"
           }
         },
         "required": [

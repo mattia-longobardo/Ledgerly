@@ -15,6 +15,8 @@ function isRealDate(value: string): boolean {
 const DateSchema = z.string().refine(isRealDate, "Invalid calendar date");
 const MonthSchema = DateSchema.refine((value) => value.endsWith("-01"), "Use the first day of a real month");
 const MoneySchema = z.string().regex(money);
+// Computed totals can exceed numeric(16,2), even when every stored row fits.
+export const AggregateMoneySchema = z.string().regex(/^-?\d+(\.\d{1,2})?$/);
 
 export const FundKindSchema = z.enum(["pension", "investment", "savings", "other"]).openapi("FundKind");
 export const FundStatusSchema = z.enum(["active", "archived"]).openapi("FundStatus");
@@ -38,10 +40,10 @@ export const FundSchema = z.object({
 
 export const FundSummarySchema = z.object({
   fund: FundSchema,
-  value: MoneySchema.nullable(),
+  value: AggregateMoneySchema.nullable(),
   valueAsOf: DateSchema.nullable(),
-  deposited: MoneySchema,
-  absReturn: MoneySchema.nullable(),
+  deposited: AggregateMoneySchema,
+  absReturn: AggregateMoneySchema.nullable(),
   lastContributionMonth: MonthSchema.nullable(),
   openIssues: z.number().int().nonnegative(),
 }).openapi("FundSummary");
@@ -105,16 +107,16 @@ export const FundQuarterSchema = z.object({
   quarter: z.string(),
   accrualMonths: z.array(MonthSchema),
   postedMonth: MonthSchema,
-  gross: MoneySchema,
-  fees: MoneySchema,
-  net: MoneySchema,
+  gross: AggregateMoneySchema,
+  fees: AggregateMoneySchema,
+  net: AggregateMoneySchema,
   posted: z.boolean(),
 }).openapi("FundQuarter");
 
 export const FundValuePointSchema = z.object({
   month: MonthSchema,
-  value: MoneySchema,
-  deposited: MoneySchema,
+  value: AggregateMoneySchema,
+  deposited: AggregateMoneySchema,
 }).openapi("FundValuePoint");
 
 export const FundDetailSchema = FundSummarySchema.extend({
