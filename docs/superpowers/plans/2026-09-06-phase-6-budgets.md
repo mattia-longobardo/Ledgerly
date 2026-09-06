@@ -367,7 +367,7 @@ refreshUsages(deps)(principal, budgetId: string): Promise<{ inserted: number; up
 
 **Files:** `scripts/migrate-vacation-budget.ts`, `scripts/validate-vacation-budget-migration.ts`; `package.json` scripts `migrate:vacation`, `migrate:vacation:validate`.
 
-- [ ] **Step 1: Migration script** (idempotent, `withSystemContext`, owner resolution as in `scripts/migrate-funds.ts`):
+- [x] **Step 1: Migration script** (idempotent, `withSystemContext`, owner resolution as in `scripts/migrate-funds.ts`):
   1. Exit 0 with "nothing to migrate" when `vacation_ledger` and `vacation_accrual_rate` are both empty.
   2. Upsert the budget `name = "Holidays"`, `period_kind = "none"`, `start_date` = earliest of the `initial` entry month and the first rate `effective_from`, `labels = ["migrated"]`, `description = "Migrated from the Vacation fund"`. Idempotency key: an existing budget with name Holidays and `labels @> '["migrated"]'`.
   3. The `initial` ledger row → amount version (`initial_amount = amount`, `effective_from = month ?? occurred_at::date`, reason `migrated`); no initial row → version `0.00` at `start_date`.
@@ -375,9 +375,9 @@ refreshUsages(deps)(principal, budgetId: string): Promise<{ inserted: number; up
   5. `withdrawal` rows → manual usages (`amount = |amount|`, `occurredAt = occurred_at::date`, note). `adjustment` rows → `once` allocations (signed amount, note `migrated adjustment`).
   6. R6-4: for each month from `start_date` to today compare `allocatedThrough(migrated monthly allocations, lastDay)` with Σ ledger `accrual` rows through that month; on a difference insert a `once` allocation for the difference on that month with note `migration adjustment`, and continue.
   7. Print counts.
-- [ ] **Step 2: Validator:** for every month, `figures(...).remaining` on the new budget must equal the legacy balance through that month (re-implement inline: initial + accruals + adjustments − withdrawals, in cents) — zero tolerance; months examined > 0; exit 1 on mismatch.
-- [ ] **Verify:** on the test database with a fixture (initial 500, two rates, three accruals, one withdrawal, one adjustment) both scripts run; a second migration run writes nothing; the validator prints `OK (N months examined)`.
-- [ ] **Commit:** `git add scripts package.json && git commit -m "feat(budgets): migrate the Vacation fund into the Holidays budget"`
+- [x] **Step 2: Validator:** for every month, `figures(...).remaining` on the new budget must equal the legacy balance through that month (re-implement inline: initial + accruals + adjustments − withdrawals, in cents) — zero tolerance; months examined > 0; exit 1 on mismatch.
+- [x] **Verify:** on the test database with a fixture (initial 500, two rates, three accruals, one withdrawal, one adjustment) both scripts run; a second migration run writes nothing; the validator prints `OK (N months examined)`.
+- [x] **Commit:** `git add scripts package.json && git commit -m "feat(budgets): migrate the Vacation fund into the Holidays budget"`
 
 ---
 
