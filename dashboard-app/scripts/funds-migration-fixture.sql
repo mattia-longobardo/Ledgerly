@@ -105,6 +105,10 @@ INSERT INTO balance_snapshots (source, account_key, balance, captured_at, raw) V
   ('teable', 'cometa', '111.00', '2026-01-01T00:00:00Z', '{"kind":"history"}'),
   ('teable', 'cometa', '999.00', '2026-01-31T20:00:00Z', '{"kind":"latest"}'),
   ('teable', 'cometa', '221.00', '2026-02-01T00:00:00Z', '{"kind":"history"}'),
-  ('teable', 'cometa', '222.00', '2026-02-01T00:00:00Z', '{"kind":"history"}');
+  ('teable', 'cometa', '222.00', '2026-02-01T00:00:00Z', '{"kind":"history"}'),
+  -- Same values/dates under a foreign real key: negative fixtures prove that
+  -- provenance cannot redirect Cometa validation to this indistinguishable history.
+  ('teable', 'foreign-fund', '111.00', '2026-01-01T00:00:00Z', '{"kind":"history"}'),
+  ('teable', 'foreign-fund', '222.00', '2026-02-01T00:00:00Z', '{"kind":"history"}');
 
 COMMIT;
