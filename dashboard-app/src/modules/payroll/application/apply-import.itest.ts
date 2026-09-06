@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { PayslipExtraction } from "@/lib/contracts";
-import { funds, organizations, payrollRecords, users } from "@/lib/db/schema";
+import { legacyFunds, organizations, payrollRecords, users } from "@/lib/db/schema";
 import { permissionsForRoles } from "@/platform/auth/permissions";
 import type { Principal } from "@/platform/auth/principal";
 import { withUserContext } from "@/platform/db/context";
@@ -35,7 +35,7 @@ async function seed() {
   const db = await testDb();
   const [org] = await db.insert(organizations).values({ name: "P" }).returning();
   const [user] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
-  await db.insert(funds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" }).onConflictDoNothing();
+  await db.insert(legacyFunds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" }).onConflictDoNothing();
   const roles = ["owner"] as const;
   const principal: Principal = {
     userId: user!.id,

@@ -20,21 +20,21 @@ await migrate(db, { migrationsFolder: "./drizzle" });
  * Update-then-insert rather than a single `ON CONFLICT DO UPDATE`: Postgres
  * checks NOT NULL on the proposed row before conflict resolution, so during
  * the Phase 1 two-wave deploy (migrations 0004–0006 applied, 0007 not yet)
- * the legacy `funds.teable_column NOT NULL` still exists and a plain upsert
+ * the original `funds.teable_column NOT NULL` still existed and a plain upsert
  * fails on rows that are only being updated. Existing rows are updated
  * without touching that column; only genuinely missing rows are inserted.
  */
 await db.execute(sql`
-  UPDATE funds AS f
+  UPDATE legacy_funds AS f
   SET slug = seed.slug, name = seed.name
   FROM (VALUES (1, 'fideuram', 'Fideuram'), (2, 'cometa', 'Fondo Cometa')) AS seed(id, slug, name)
   WHERE f.id = seed.id
 `);
 await db.execute(sql`
-  INSERT INTO funds (id, slug, name)
+  INSERT INTO legacy_funds (id, slug, name)
   SELECT seed.id, seed.slug, seed.name
   FROM (VALUES (1, 'fideuram', 'Fideuram'), (2, 'cometa', 'Fondo Cometa')) AS seed(id, slug, name)
-  WHERE NOT EXISTS (SELECT 1 FROM funds f WHERE f.id = seed.id)
+  WHERE NOT EXISTS (SELECT 1 FROM legacy_funds f WHERE f.id = seed.id)
 `);
 
 /**

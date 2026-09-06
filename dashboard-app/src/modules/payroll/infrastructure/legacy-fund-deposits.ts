@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
-import { fundDeposits, funds } from "@/lib/db/schema";
+import { fundDeposits, legacyFunds } from "@/lib/db/schema";
 import type { LegacyFundDepositInput, LegacyFundDeposits } from "../application/ports";
 import { addMoney } from "../domain/money";
 
@@ -25,7 +25,7 @@ import { addMoney } from "../domain/money";
 export function drizzleLegacyFundDeposits(tx: DbClient): LegacyFundDeposits {
   return {
     async upsertForRecord(input: LegacyFundDepositInput) {
-      const [fund] = await tx.select().from(funds).where(eq(funds.slug, input.fundSlug)).limit(1);
+      const [fund] = await tx.select().from(legacyFunds).where(eq(legacyFunds.slug, input.fundSlug)).limit(1);
       if (!fund) return "no_fund";
       const amount = addMoney(input.employee, input.employer);
       // Both halves absent means the payslip did not state a contribution.

@@ -20,7 +20,7 @@ const money = (name: string) => numeric(name, { precision: 14, scale: 2 });
 const smallMoney = (name: string) => numeric(name, { precision: 7, scale: 2 });
 const tz = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
-export const funds = pgTable("funds", {
+export const legacyFunds = pgTable("legacy_funds", {
   id: smallint("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
@@ -32,7 +32,7 @@ export const fundSettings = pgTable(
     id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
     fundId: smallint("fund_id")
       .notNull()
-      .references(() => funds.id),
+      .references(() => legacyFunds.id),
     effectiveFrom: date("effective_from").notNull(),
     initialCapital: money("initial_capital").notNull().default("0"),
     depositMode: text("deposit_mode").notNull(),
@@ -95,7 +95,7 @@ export const fundDeposits = pgTable(
     id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
     fundId: smallint("fund_id")
       .notNull()
-      .references(() => funds.id),
+      .references(() => legacyFunds.id),
     month: date("month").notNull(),
     amount: money("amount").notNull(),
     employeePart: money("employee_part"),
@@ -236,7 +236,7 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: tz("updated_at").notNull().defaultNow(),
 });
 
-export type Fund = typeof funds.$inferSelect;
+export type LegacyFund = typeof legacyFunds.$inferSelect;
 export type FundSetting = typeof fundSettings.$inferSelect;
 export type FundDeposit = typeof fundDeposits.$inferSelect;
 export type VacationEntry = typeof vacationLedger.$inferSelect;

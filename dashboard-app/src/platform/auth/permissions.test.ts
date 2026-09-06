@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { PERMISSIONS, permissionsForRoles } from "./permissions";
 
+describe("funds permissions", () => {
+  it("allows members to maintain funds and viewers only to read them", () => {
+    expect([...permissionsForRoles(["member"])]).toEqual(expect.arrayContaining(["funds.read", "funds.write"]));
+    expect([...permissionsForRoles(["viewer"])]).toContain("funds.read");
+    expect([...permissionsForRoles(["viewer"])]).not.toContain("funds.write");
+    expect([...permissionsForRoles(["owner"])]).toEqual(expect.arrayContaining(["funds.read", "funds.write"]));
+    expect([...permissionsForRoles(["admin"])]).toEqual(expect.arrayContaining(["funds.read", "funds.write"]));
+  });
+});
+
 describe("payroll permissions", () => {
   it("declares all four codes the payroll module asserts", () => {
     for (const code of ["payroll.read", "payroll.upload", "payroll.review", "payroll.read_original"] as const) {
