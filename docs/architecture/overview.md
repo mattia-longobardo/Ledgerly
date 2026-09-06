@@ -1,10 +1,10 @@
-# Architecture overview — Phases 0–5
+# Architecture overview — Phases 0–6
 
 This describes what `dashboard-app` actually is after Phase 0 (platform
 foundations), Phase 1 (accounts, Teable retirement), Phase 2 (the
 integration framework, encrypted credentials, inbound webhooks), Phase 3
 (Expenses and Interests), Phase 4 (the payroll upload pipeline and
-Company), and Phase 5 (Funds). It follows the target shape from
+Company), Phase 5 (Funds), and Phase 6 (Budgets). It follows the target shape from
 [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](../superpowers/specs/2026-09-02-finance-company-platform-design.md)
 §3; read that document for the rationale, this one for what is on disk today.
 
@@ -49,6 +49,12 @@ src/
     infrastructure/       Drizzle repositories, linked-account valuations, payroll contribution sink
     api/                   Hono routes and explicit Zod DTOs
     ui/                     Funds list/detail, contribution and planning forms
+  modules/budgets/
+    domain/             figures (initial/allocated/used/remaining, availability), scope matching — no IO
+    application/         budget/version/allocation/scope/usage CRUD, refresh-usages, ports.ts
+    infrastructure/       Drizzle repositories, a transactions scope source, a source (fund/account) balance source
+    api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
+    ui/                     Budgets list/detail loaders and components
   platform/
     auth/               Principal, permission catalogue, resolvePrincipal, require-principal
     capabilities/       resolveCapabilities, buildNavigation, the production probes
@@ -64,7 +70,8 @@ src/
   app/                   Next.js routes only — thin, call use cases and render ui/
 ```
 
-`accounts`, `expenses`, `interests`, `payroll` and `funds` are full modules. Payslip
+`accounts`, `expenses`, `interests`, `payroll`, `funds` and `budgets` are full
+modules. Payslip
 documents never enter Postgres: the database holds metadata and a `storage_key`,
 and the bytes live in an S3-compatible document store reached through a
 `payroll_silo` integration connection (or, in development and tests, a local
@@ -111,6 +118,52 @@ reports the intentional shift from the old Cometa display timing to actual
 posting. Legacy fund tables remain migration archives. Dedicated
 `fund_valuations`, delayed/matched reconciliation, additional charts and
 contribution-type management remain deferred.
+
+## Budgets
+
+A budget (`budgets` table) has a versioned initial amount
+(`budget_amount_versions`, one row per change of the starting figure, the row
+effective at a date being the latest `effective_from <= date`) and any number
+of **virtual allocations** (`budget_allocations`): planning-only figures that
+never move real money and that no use case in this module ever writes to
+`accounts`, `account_balances`, `funds` or `fund_contributions`. An allocation
+can be sourced from a real account or fund (`source_kind = 'account' |
+'fund'`) purely so its *availability* can be computed against that source's
+real balance, or from nothing (`source_kind = 'none'`, R6-1) for a plan with
+no backing account — the Holidays migration's monthly accrual allocation is
+`none`-sourced. An allocation is `once` or `monthly` (R6-2); a `monthly`
+allocation contributes its amount once per calendar month from
+`effective_from` through `min(effective_to, asOf)` rather than a job
+inserting a row every month.
+
+Usage is derived, not entered directly: `budget_scopes` (an account, category,
+label or fund) decide which of the user's `type = 'expense'` transactions
+count, and `refreshUsages` (R6-3) recomputes the scope-matched rows in
+`budget_usages` on every read of a budget's detail and via an explicit
+refresh action — inserting new matches, deleting stale ones, and leaving
+`matched_by = 'manual'` rows (a user's own manually entered usages) alone. A
+transfer or income transaction never counts, and the usage amount is always
+the absolute value of the transaction amount. `figures()` (`src/modules/budgets/domain/figures.ts`)
+computes `remaining = initial + allocated − used` and a goal-progress ratio,
+purely from these three inputs and never from anything cached; availability
+in a source is `source's latest balance − Σ allocations against that source`,
+computed on read from `account_balances` (or a fund's linked account) and
+never written anywhere — the phase's exit line (spec §11): virtual
+allocations are kept separate from real balances, and availability is
+recalculated rather than stored.
+
+The legacy Vacation fund (`vacation_ledger`, `vacation_accrual_rate`) is
+migrated into a budget named "Holidays": each accrual rate becomes a
+`monthly`, unsourced allocation; each withdrawal becomes a manual usage; each
+adjustment becomes a `once` allocation; and where the ledger's own recorded
+accrual rows differ from what the rate would produce for a month (R6-4), the
+difference is inserted as a `once` reconciliation allocation so the balance
+series matches the legacy figures to the cent for every historical month. The
+migration is idempotent, keyed on `budget_events` rows rather than on
+user-editable fields like a budget's name or an allocation's note — see
+`docs/deploy/phase-6-runbook.md` for the operational detail this idempotency
+scheme exists to survive. Legacy vacation tables remain migration archives
+until Phase 9, same as the legacy fund tables.
 
 ## The use-case rule
 
@@ -217,14 +270,27 @@ order: request id → authenticate (session cookie today; see
   browser never attaches by itself. Only the header's presence is checked: a
   cross-site form cannot set one without a CORS preflight this app answers for
   nobody.
-- **Idempotency**: `src/platform/http/idempotency.ts`. Required (`428` if
-  missing) on `POST /accounts` and `POST /accounts/{id}/balances` via
-  `Idempotency-Key`. Keyed on `(principalId, key)`, stores a sha256 of
-  `METHOD path\nbody`, replays the stored response on an exact repeat, and
-  returns `422 idempotency_key_reused` if the same key is reused with a
-  different request. TTL 24h (`idempotency_keys` table, migration `0005`). A
-  `5xx` is never stored — caching a transient failure would hand it straight
-  back to the retry that was meant to escape it.
+- **Idempotency**: `src/platform/http/idempotency.ts` for a plain
+  read-cache-then-write case (`POST /accounts`, `POST /accounts/{id}/balances`);
+  `src/platform/http/financial-write.ts`'s `runFinancialWrite` for a write
+  that must be atomic with its own idempotency-cache row under concurrency
+  (`POST /funds/{id}/contributions`, `POST /funds/{id}/contributions/{cid}/reverse`,
+  `POST /budgets/{id}/usages`) — it takes a `pg_advisory_xact_lock` keyed on
+  `(namespace, principalId, key)` before reading the cache, so two concurrent
+  requests with the same key serialize rather than racing past the
+  read-then-write gap the plain middleware has. Required (`428` if missing)
+  via `Idempotency-Key` on every route above. Keyed on `(principalId, key)`
+  for the plain middleware; for `runFinancialWrite` the persisted row's key is
+  `${namespace}:${key}` — namespaced per module so two modules sharing a
+  principal and a literal key value do not collide on the same cache row
+  (Phase 6 Task 5 fixed a real cross-module collision here when Budgets
+  started sharing the helper with Funds; see the Phase 6 checkpoint for the
+  one-time deploy-boundary consequence for already-issued Funds keys). Both
+  paths store a sha256 of `METHOD path\nbody`, replay the stored response on
+  an exact repeat, and return `422 idempotency_key_reused` if the same key is
+  reused with a different request. TTL 24h (`idempotency_keys` table,
+  migration `0005`). A `5xx` is never stored — caching a transient failure
+  would hand it straight back to the retry that was meant to escape it.
 - **Versioning (optimistic concurrency)**: `src/platform/http/versioning.ts`.
   Every mutable entity carries `version`; `PATCH` reads it from `If-Match`
   (falls back to body `version`), `428 precondition_required` if neither is
@@ -248,8 +314,10 @@ order: request id → authenticate (session cookie today; see
 
 Permissions (`src/platform/auth/permissions.ts`) are a fixed catalogue —
 `accounts.read`, `accounts.write`, `accounts.delete`, `finance.manage`,
-`integrations.manage`, `jobs.run`, `admin.users`, `admin.audit` — granted per
-role (`owner`, `admin`, `member`, `viewer`). `assertPermission(principal,
+`integrations.manage`, `jobs.run`, `admin.users`, `admin.audit`,
+`budgets.read`, `budgets.write` (Phase 6; `member` gets both, `viewer` gets
+read only) — granted per role (`owner`, `admin`, `member`, `viewer`).
+`assertPermission(principal,
 permission)` throws `PermissionDeniedError`, caught by `app.onError` and
 turned into `403 permission_denied`.
 
@@ -343,17 +411,24 @@ Per the spec's phased plan (§11), Phase 2 explicitly does not include:
   (`src/platform/jobs/register-all.ts`) still dispatch `wallet_accounts_sync`
   and `trek_sync` for the connection owner only; there is no per-user
   dispatch of the tiers themselves yet.
-- Budgets and Management beyond the placeholder navigation entries
-  `buildNavigation` already renders (Budgets unconditionally, Management for
-  principals holding `finance.manage`) — no domain module, use cases, or
-  tables exist behind either link yet. Expenses and Interests are no longer
-  in this list: Phase 3 gave both a full module (transactions/categories/
-  labels, and interest rules/accruals/entries), reachable once Wallet is
-  connected. The payroll/earnings/timeoff domain moving out of `src/lib/*`
-  is no longer in this list either: Phase 4 gave it a full module
-  (`modules/payroll/`, see "Module layout" above) and retired Paperless, its
-  client, its preview proxy and its webhook outright — that removal already
-  happened, it is not future work.
+- Management beyond the placeholder navigation entry `buildNavigation`
+  already renders (for principals holding `finance.manage`) — no domain
+  module, use cases, or tables exist behind it yet. Expenses and Interests
+  are no longer in this list: Phase 3 gave both a full module
+  (transactions/categories/labels, and interest rules/accruals/entries),
+  reachable once Wallet is connected. The payroll/earnings/timeoff domain
+  moving out of `src/lib/*` is no longer in this list either: Phase 4 gave it
+  a full module (`modules/payroll/`, see "Module layout" above) and retired
+  Paperless, its client, its preview proxy and its webhook outright — that
+  removal already happened, it is not future work. **Budgets is no longer in
+  this list either:** Phase 6 gave it a full module (`modules/budgets/`, see
+  "Module layout" and "Budgets" above), a Home card, and migrated the legacy
+  Vacation fund into a "Holidays" budget; `/finance/vacation` is now a
+  one-phase bookmark redirect to `/finance/budgets`, not a page. Threshold
+  alerts and the `budget.threshold.exceeded` webhook are explicitly deferred
+  to Phase 9 (it builds the outbound delivery path and adds the emit point);
+  per-period rollover and budget sharing across users are also out of scope
+  for this phase (see the Phase 6 plan's "Scope cut").
 
 ## Known deviations
 
