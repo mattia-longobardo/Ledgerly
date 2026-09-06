@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, lte, or } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { fundContributions, type FundContributionRow } from "@/lib/db/schema";
 import type { ContributionsRepository, FundContribution, NewFundContribution } from "../application/ports";
@@ -42,11 +42,63 @@ export class DrizzleContributionsRepository implements ContributionsRepository {
   }
 
   async deleteByPayrollRecord(fundId: string, payrollRecordId: string): Promise<number> {
-    const rows = await this.db
+    return (await this.deleteByPayrollRecords(fundId, [payrollRecordId])).deleted;
+  }
+
+  async deleteByPayrollRecords(fundId: string, payrollRecordIds: readonly string[]): Promise<{ deleted: number; postedMonths: string[] }> {
+    if (payrollRecordIds.length === 0) return { deleted: 0, postedMonths: [] };
+    const originals = await this.db
+      .select({ id: fundContributions.id, postedMonth: fundContributions.postedMonth })
+      .from(fundContributions)
+      .where(and(eq(fundContributions.fundId, fundId), inArray(fundContributions.payrollRecordId, [...payrollRecordIds])));
+    if (originals.length === 0) return { deleted: 0, postedMonths: [] };
+    const originalIds = originals.map((row) => row.id);
+    const reversals = await this.db
       .delete(fundContributions)
-      .where(and(eq(fundContributions.fundId, fundId), eq(fundContributions.payrollRecordId, payrollRecordId)))
+      .where(and(eq(fundContributions.fundId, fundId), inArray(fundContributions.reversesId, originalIds)))
       .returning({ id: fundContributions.id });
-    return rows.length;
+    const deleted = await this.db
+      .delete(fundContributions)
+      .where(and(eq(fundContributions.fundId, fundId), inArray(fundContributions.id, originalIds)))
+      .returning({ id: fundContributions.id });
+    return {
+      deleted: reversals.length + deleted.length,
+      postedMonths: [...new Set(originals.map((row) => row.postedMonth))].sort(),
+    };
+  }
+
+  async deleteOrphanSystemFee(fundId: string, postedMonth: string): Promise<number> {
+    const [eligible] = await this.db
+      .select({ id: fundContributions.id })
+      .from(fundContributions)
+      .where(and(
+        eq(fundContributions.fundId, fundId),
+        eq(fundContributions.postedMonth, postedMonth),
+        inArray(fundContributions.typeCode, ["employee", "employer"]),
+        or(isNotNull(fundContributions.payrollRecordId), eq(fundContributions.source, "migration")),
+      ))
+      .limit(1);
+    if (eligible) return 0;
+    const fees = await this.db
+      .select({ id: fundContributions.id })
+      .from(fundContributions)
+      .where(and(
+        eq(fundContributions.fundId, fundId),
+        eq(fundContributions.postedMonth, postedMonth),
+        eq(fundContributions.typeCode, "fee"),
+        eq(fundContributions.source, "system"),
+      ));
+    if (fees.length === 0) return 0;
+    const feeIds = fees.map((row) => row.id);
+    const reversals = await this.db
+      .delete(fundContributions)
+      .where(and(eq(fundContributions.fundId, fundId), inArray(fundContributions.reversesId, feeIds)))
+      .returning({ id: fundContributions.id });
+    const deleted = await this.db
+      .delete(fundContributions)
+      .where(and(eq(fundContributions.fundId, fundId), inArray(fundContributions.id, feeIds)))
+      .returning({ id: fundContributions.id });
+    return reversals.length + deleted.length;
   }
 
   async hasSystemFee(fundId: string, postedMonth: string): Promise<boolean> {

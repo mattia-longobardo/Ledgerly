@@ -2,7 +2,7 @@ import type { Principal } from "@/platform/auth/principal";
 import { assertPermission } from "@/platform/auth/principal";
 import { componentsFromExtraction, grossOf, netOf } from "../domain/components";
 import { monthOfPeriod, periodFor, recordKindOf } from "../domain/period";
-import type { MappingTarget, NewPayrollComponent, PayrollComponent, PayrollImport, PayrollRecord, UseCaseDeps } from "./ports";
+import type { PayrollComponent, PayrollImport, PayrollRecord, UseCaseDeps } from "./ports";
 import { ConflictError, InvalidInputError, NotFoundError } from "./errors";
 
 export interface AppliedImport {
@@ -11,31 +11,15 @@ export interface AppliedImport {
   components: PayrollComponent[];
   /** The record this apply superseded, or null when the period was free. */
   supersededRecordId: string | null;
-  fundDeposit: "written" | "no_fund" | "no_amount";
-}
-
-function fundHalves(components: readonly NewPayrollComponent[]): {
-  fundSlug: string | null;
-  employee: string | null;
-  employer: string | null;
-} {
-  let fundSlug: string | null = null;
-  let employee: string | null = null;
-  let employer: string | null = null;
-  for (const component of components) {
-    const target = component.mappedTo as MappingTarget | null;
-    if (!target || target.kind !== "fund_contribution") continue;
-    fundSlug = target.fundSlug;
-    if (target.part === "employee") employee = component.amount;
-    else employer = component.amount;
-  }
-  return { fundSlug, employee, employer };
+  fundContributions: {
+    written: number;
+    skipped: { fundSlug: string; reason: "no_fund" | "no_amount" }[];
+  };
 }
 
 /**
  * Turns a verified import into the money: one `payroll_record`, its
- * `payroll_components`, and the legacy `fund_deposits` row that keeps the Funds
- * page working until Phase 5 (Ruling R4-6).
+ * `payroll_components`, and the mapped `fund_contributions` rows.
  *
  * Every write here is Postgres-only, so this is the one use case in the module
  * that runs start to finish inside the caller's single transaction — which is
@@ -121,10 +105,22 @@ export function applyImport(deps: UseCaseDeps) {
 
     const written = await deps.components.replaceForRecord(record.id, components);
 
-    const { fundSlug, employee, employer } = fundHalves(components);
-    const fundDeposit = fundSlug
-      ? await deps.funds.upsertForRecord({ fundSlug, month: monthOfPeriod(period.periodStart), employee, employer })
-      : ("no_amount" as const);
+    const accrualMonth = monthOfPeriod(period.periodStart);
+    const fundContributions = await deps.funds.writeForRecord({
+      userId: principal.userId,
+      payrollRecordId: record.id,
+      supersededRecordId,
+      rows: components.flatMap((component) => {
+        const target = component.mappedTo;
+        return target?.kind === "fund_contribution" ? [{
+          fundSlug: target.fundSlug,
+          part: target.part,
+          accrualMonth,
+          amount: component.amount,
+          currency: component.currency,
+        }] : [];
+      }),
+    });
 
     const updatedImport = await deps.imports.patch(principal.userId, importId, { status: "applied", error: null });
     if (!updatedImport) throw new NotFoundError();
@@ -142,10 +138,10 @@ export function applyImport(deps: UseCaseDeps) {
         kind,
         componentCount: written.length,
         supersededRecordId,
-        fundDeposit,
+        fundContributions,
       },
     });
 
-    return { import: updatedImport, record, components: written, supersededRecordId, fundDeposit };
+    return { import: updatedImport, record, components: written, supersededRecordId, fundContributions };
   };
 }

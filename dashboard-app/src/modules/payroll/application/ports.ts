@@ -261,21 +261,24 @@ export interface PayrollMappingRulesRepository {
   listFor(userId: string): Promise<PayrollMappingRule[]>;
 }
 
-export interface LegacyFundDepositInput {
+export interface FundContributionWrite {
   fundSlug: string;
-  month: string;
-  employee: string | null;
-  employer: string | null;
+  part: "employee" | "employer";
+  accrualMonth: string;
+  amount: string | null;
+  currency: string;
 }
 
-/**
- * The Phase-5 bridge (Ruling R4-6). `fund_deposits` is a legacy, non-RLS table
- * whose `payslip_id` is a bigint FK to `payslips.id`, so an applied
- * `payroll_record` (a uuid) is written with `payslipId: null` and the
- * provenance kept on `payroll_records` instead.
- */
-export interface LegacyFundDeposits {
-  upsertForRecord(input: LegacyFundDepositInput): Promise<"written" | "no_fund" | "no_amount">;
+export interface FundContributionSink {
+  writeForRecord(input: {
+    userId: string;
+    payrollRecordId: string;
+    supersededRecordId: string | null;
+    rows: readonly FundContributionWrite[];
+  }): Promise<{
+    written: number;
+    skipped: { fundSlug: string; reason: "no_fund" | "no_amount" }[];
+  }>;
 }
 
 export interface Clock {
@@ -287,7 +290,7 @@ export interface UseCaseDeps {
   records: PayrollRecordsRepository;
   components: PayrollComponentsRepository;
   mappingRules: PayrollMappingRulesRepository;
-  funds: LegacyFundDeposits;
+  funds: FundContributionSink;
   /** Resolved before the transaction opens (Ruling R4-8). */
   documents: DocumentStore;
   /** Resolved before the transaction opens (Ruling R4-8). */

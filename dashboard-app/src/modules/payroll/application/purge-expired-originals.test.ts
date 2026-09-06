@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PayrollImportStatus, UseCaseDeps } from "./ports";
+import { MemoryFundContributionSink } from "@/modules/funds/infrastructure/memory-contribution-sink";
 import {
-  MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
   MemoryPayrollImportsRepository,
   MemoryPayrollMappingRulesRepository,
@@ -20,7 +20,7 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
     records: new MemoryPayrollRecordsRepository(),
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
-    funds: new MemoryLegacyFundDeposits(),
+    funds: new MemoryFundContributionSink(),
     // `purgeOne` never deletes bytes itself — the orchestrator does that,
     // strictly before calling this function. A store that throws if touched
     // is what proves the split.

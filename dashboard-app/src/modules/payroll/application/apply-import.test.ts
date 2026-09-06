@@ -3,12 +3,17 @@ import type { PayslipExtraction } from "@/lib/contracts";
 import { testPrincipal } from "@/test/principal";
 import type { UseCaseDeps } from "./ports";
 import {
-  MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
   MemoryPayrollImportsRepository,
   MemoryPayrollMappingRulesRepository,
   MemoryPayrollRecordsRepository,
 } from "../infrastructure/memory-repositories";
+import {
+  MemoryContributionsRepository,
+  MemoryFundsRepository,
+  MemorySchedulesRepository,
+} from "@/modules/funds/infrastructure/memory-repositories";
+import { memoryPayrollContributionSink } from "@/modules/funds/infrastructure/memory-contribution-sink";
 import { noopScanner } from "../infrastructure/noop-scanner";
 import { applyImport } from "./apply-import";
 
@@ -31,19 +36,42 @@ const extraction: PayslipExtraction = {
   checks: [],
 };
 
-function makeDeps() {
-  const funds = new MemoryLegacyFundDeposits(["cometa"]);
+async function makeDeps() {
+  const fundRepository = new MemoryFundsRepository();
+  const scheduleRepository = new MemorySchedulesRepository();
+  const contributions = new MemoryContributionsRepository();
+  const fund = await fundRepository.create({
+    userId: principal.userId,
+    slug: "cometa",
+    name: "Cometa",
+    kind: "pension",
+    currency: "EUR",
+    accountId: null,
+  });
+  const funds = memoryPayrollContributionSink({
+    funds: fundRepository,
+    schedules: scheduleRepository,
+    contributions,
+  });
   const audits: Array<{ action: string; after?: unknown }> = [];
-  const deps: UseCaseDeps & { funds: MemoryLegacyFundDeposits; audits: typeof audits } = {
+  const mappingRules = new MemoryPayrollMappingRulesRepository();
+  const deps: UseCaseDeps & {
+    mappingRules: MemoryPayrollMappingRulesRepository;
+    contributions: MemoryContributionsRepository;
+    fundId: string;
+    audits: typeof audits;
+  } = {
     imports: new MemoryPayrollImportsRepository(),
     records: new MemoryPayrollRecordsRepository(),
     components: new MemoryPayrollComponentsRepository(),
-    mappingRules: new MemoryPayrollMappingRulesRepository(),
+    mappingRules,
     funds,
     documents: { provider: "local", put: async () => {}, get: async () => null, delete: async () => {}, listPrefix: async () => [] },
     scanner: noopScanner,
     clock: { now: () => NOW },
     audit: async (e) => void audits.push(e as { action: string; after?: unknown }),
+    contributions,
+    fundId: fund.id,
     audits,
   };
   return deps;
@@ -75,13 +103,13 @@ async function aVerifiedImport(deps: UseCaseDeps, over: Partial<PayslipExtractio
 
 describe("applyImport", () => {
   it("refuses a principal without payroll.review", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     await expect(applyImport(deps)(testPrincipal({ roles: ["viewer"] }), imp.id)).rejects.toThrow(/permission/i);
   });
 
   it("creates one record for the period with the headline figures off the components", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     const applied = await applyImport(deps)(principal, imp.id);
     expect(applied.record.periodStart).toBe("2026-08-01");
@@ -96,7 +124,7 @@ describe("applyImport", () => {
   });
 
   it("writes one classified component per field the payslip stated", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     const applied = await applyImport(deps)(principal, imp.id);
     expect(applied.components.map((c) => c.code)).toEqual([
@@ -108,36 +136,57 @@ describe("applyImport", () => {
     expect(applied.components.find((c) => c.code === "ferieBalance")?.quantity).toBe("88.250000");
   });
 
-  it("bridges the Cometa contributions into the legacy fund deposits (Ruling R4-6)", async () => {
-    const deps = makeDeps();
+  it("writes every mapped Cometa part through the fund contribution sink", async () => {
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     const applied = await applyImport(deps)(principal, imp.id);
-    expect(applied.fundDeposit).toBe("written");
-    expect(deps.funds.rows).toEqual([
-      {
-        fundSlug: "cometa",
-        month: "2026-08-01",
-        amount: "150.00",
-        employee: "50.00",
-        employer: "100.00",
+    expect(applied.fundContributions).toEqual({ written: 2, skipped: [] });
+    expect(await deps.contributions.listForFund(deps.fundId)).toEqual([
+      expect.objectContaining({
+        typeCode: "employee",
+        amount: "50.00",
+        payrollRecordId: applied.record.id,
         source: "payroll",
-        payslipId: null,
-      },
+      }),
+      expect.objectContaining({
+        typeCode: "employer",
+        amount: "100.00",
+        payrollRecordId: applied.record.id,
+        source: "payroll",
+      }),
     ]);
   });
 
-  it("writes no fund deposit when the payslip stated no contribution — never a 0.00 row", async () => {
-    const deps = makeDeps();
+  it("collects every repeated mapped part so the sink can aggregate it", async () => {
+    const deps = await makeDeps();
+    deps.mappingRules.addUserRule(principal.userId, {
+      matchCode: "taxes",
+      matchLabel: null,
+      componentKind: "employee_contribution",
+      target: { kind: "fund_contribution", fundSlug: "cometa", part: "employee" },
+      priority: 1,
+    });
+    const imp = await aVerifiedImport(deps);
+    const applied = await applyImport(deps)(principal, imp.id);
+    expect(applied.fundContributions).toEqual({ written: 2, skipped: [] });
+    expect((await deps.contributions.listForFund(deps.fundId)).map((row) => [row.typeCode, row.amount])).toEqual([
+      ["employee", "750.00"],
+      ["employer", "100.00"],
+    ]);
+  });
+
+  it("writes no fund contribution when the payslip stated none — never a 0.00 row", async () => {
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps, {
       fields: { net: { value: 1800, confidence: "high", rules: 1800, llm: null } },
     });
     const applied = await applyImport(deps)(principal, imp.id);
-    expect(applied.fundDeposit).toBe("no_amount");
-    expect(deps.funds.rows).toEqual([]);
+    expect(applied.fundContributions).toEqual({ written: 0, skipped: [] });
+    expect(await deps.contributions.listForFund(deps.fundId)).toEqual([]);
   });
 
   it("files a tredicesima as its own record kind, so it never collides with December's ordinary payslip", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const ordinary = await aVerifiedImport(deps, { month: "2025-12-01" });
     await applyImport(deps)(principal, ordinary.id);
     const thirteenth = await aVerifiedImport(deps, { month: "2025-12-01", isThirteenth: true });
@@ -147,7 +196,7 @@ describe("applyImport", () => {
   });
 
   it("is re-runnable: applying twice recomputes the same record and replaces its components", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     const first = await applyImport(deps)(principal, imp.id);
     await deps.imports.patch(principal.userId, imp.id, {
@@ -159,10 +208,11 @@ describe("applyImport", () => {
     expect(second.record.net).toBe("1850.00");
     expect(second.record.version).toBe(first.record.version + 1);
     expect((await deps.records.list(principal.userId)).length).toBe(1);
+    expect((await deps.contributions.listForFund(deps.fundId)).filter((row) => row.payrollRecordId === first.record.id)).toHaveLength(2);
   });
 
   it("supersedes the live record for the period when a replacement is applied (Ruling R4-4)", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const original = await aVerifiedImport(deps);
     const first = await applyImport(deps)(principal, original.id);
     const replacement = await aVerifiedImport(deps);
@@ -181,7 +231,7 @@ describe("applyImport", () => {
   });
 
   it("keeps the superseded record's components as evidence (Ruling R4-4)", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const original = await aVerifiedImport(deps);
     const first = await applyImport(deps)(principal, original.id);
     const replacement = await aVerifiedImport(deps);
@@ -189,42 +239,35 @@ describe("applyImport", () => {
     expect((await deps.components.listForRecord(first.record.id)).length).toBeGreaterThan(0);
   });
 
-  it("re-upserts the month's fund deposit from the replacement, so the Funds page follows the correction", async () => {
-    const deps = makeDeps();
+  it("replaces the superseded record's fund contributions with the correction", async () => {
+    const deps = await makeDeps();
     const original = await aVerifiedImport(deps);
     await applyImport(deps)(principal, original.id);
     const replacement = await aVerifiedImport(deps, {
       fields: { ...extraction.fields, fundContribEmployee: { value: 60, confidence: "high", rules: 60, llm: null } },
     });
-    await applyImport(deps)(principal, replacement.id);
-    expect(deps.funds.rows).toEqual([
-      {
-        fundSlug: "cometa",
-        month: "2026-08-01",
-        amount: "160.00",
-        employee: "60.00",
-        employer: "100.00",
-        source: "payroll",
-        payslipId: null,
-      },
+    const applied = await applyImport(deps)(principal, replacement.id);
+    expect(await deps.contributions.listForFund(deps.fundId)).toEqual([
+      expect.objectContaining({ payrollRecordId: applied.record.id, typeCode: "employee", amount: "60.00" }),
+      expect.objectContaining({ payrollRecordId: applied.record.id, typeCode: "employer", amount: "100.00" }),
     ]);
   });
 
   it("refuses an import that is not verified", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     await deps.imports.patch(principal.userId, imp.id, { status: "needs_review" });
     await expect(applyImport(deps)(principal, imp.id)).rejects.toMatchObject({ name: "ConflictError", reason: "not_verified" });
   });
 
   it("refuses an extraction with no month — a record must know its own period", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps, { month: null });
     await expect(applyImport(deps)(principal, imp.id)).rejects.toMatchObject({ name: "InvalidInputError" });
   });
 
   it("audits the apply with ids and counts, never with amounts", async () => {
-    const deps = makeDeps();
+    const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
     const applied = await applyImport(deps)(principal, imp.id);
     const audit = deps.audits.find((a) => a.action === "payroll.import_applied");
@@ -234,7 +277,7 @@ describe("applyImport", () => {
       kind: "ordinary",
       componentCount: 6,
       supersededRecordId: null,
-      fundDeposit: "written",
+      fundContributions: { written: 2, skipped: [] },
     });
     expect(JSON.stringify(deps.audits)).not.toContain("1800.00");
   });

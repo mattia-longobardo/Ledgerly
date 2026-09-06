@@ -107,6 +107,9 @@ export interface ContributionsRepository {
   get(fundId: string, id: string): Promise<FundContribution | null>;
   create(input: NewFundContribution): Promise<FundContribution>;
   deleteByPayrollRecord(fundId: string, payrollRecordId: string): Promise<number>;
+  deleteByPayrollRecords(fundId: string, payrollRecordIds: readonly string[]): Promise<{ deleted: number; postedMonths: string[] }>;
+  /** Removes an ineligible system fee and any reversal that references it. */
+  deleteOrphanSystemFee(fundId: string, postedMonth: string): Promise<number>;
   hasSystemFee(fundId: string, postedMonth: string): Promise<boolean>;
 }
 

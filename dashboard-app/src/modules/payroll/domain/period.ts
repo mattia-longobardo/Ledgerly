@@ -82,7 +82,7 @@ export function recordKindOf(isThirteenth: boolean): PayrollRecordKind {
   return isThirteenth ? "thirteenth" : "ordinary";
 }
 
-/** The month key a period belongs to — what the legacy `fund_deposits` bridge keys on. */
+/** The accrual-month key used by payroll-linked downstream records. */
 export function monthOfPeriod(periodStart: string): string {
   const m = DATE_RE.exec(periodStart);
   if (!m) throw new Error(`invalid period start: ${periodStart}`);

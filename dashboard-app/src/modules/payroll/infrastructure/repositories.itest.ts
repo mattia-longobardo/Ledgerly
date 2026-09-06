@@ -1,6 +1,5 @@
-import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { fundDeposits, legacyFunds, organizations, payrollMappingRules, payslips, users } from "@/lib/db/schema";
+import { organizations, payrollMappingRules, users } from "@/lib/db/schema";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewPayrollComponent, NewPayrollImport, NewPayrollRecord } from "../application/ports";
@@ -9,7 +8,6 @@ import { DrizzlePayrollComponentsRepository } from "./drizzle-payroll-components
 import { DrizzlePayrollImportsRepository } from "./drizzle-payroll-imports-repository";
 import { DrizzlePayrollMappingRulesRepository } from "./drizzle-payroll-mapping-rules-repository";
 import { DrizzlePayrollRecordsRepository } from "./drizzle-payroll-records-repository";
-import { drizzleLegacyFundDeposits } from "./legacy-fund-deposits";
 
 const RETENTION = new Date("2036-01-01T00:00:00Z");
 
@@ -215,59 +213,4 @@ describe("Drizzle payroll repositories", () => {
     expect(rules.some((r) => r.userId === b)).toBe(false);
   });
 
-  it("the legacy fund bridge upserts one row per month and reports an unknown slug", async () => {
-    const { db, a } = await seedUsers();
-    const outcome = await withUserContext(db, { userId: a }, (tx) =>
-      drizzleLegacyFundDeposits(tx).upsertForRecord({
-        fundSlug: "definitely-not-a-fund", month: "2026-08-01", employee: "50.00", employer: "100.00",
-      }),
-    );
-    expect(outcome).toBe("no_fund");
-  });
-
-  it("the legacy fund bridge writes nothing when the payslip carried neither half", async () => {
-    const { db, a } = await seedUsers();
-    // `legacyFunds` is seeded by the application's bootstrap script
-    // (`src/lib/db/migrate.ts`), not by anything in `drizzle/` — the migrations
-    // folder `testDb()` runs — so the test DB starts with no fund rows at all.
-    // Seed the one row this guard path needs, deliberately not the "written"
-    // path Task 11's apply integration test owns.
-    await db.insert(legacyFunds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
-    const outcome = await withUserContext(db, { userId: a }, (tx) =>
-      drizzleLegacyFundDeposits(tx).upsertForRecord({ fundSlug: "cometa", month: "2026-08-01", employee: null, employer: null }),
-    );
-    expect(outcome).toBe("no_amount");
-  });
-
-  it("the legacy fund bridge's second write over a pre-existing row overwrites source and payslip_id (Finding 5)", async () => {
-    const { db, a } = await seedUsers();
-    await db.insert(legacyFunds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
-    // A row this bridge did not originally write — the legacy manual path
-    // (`source: "manual"`) with a real `payslip_id` — proves what a *second*
-    // write over a pre-existing row does to those two unmodelled fields, not
-    // just what a first insert sets them to.
-    const [legacySlip] = await db
-      .insert(payslips)
-      .values({ month: "2026-08-01", paperlessDocId: 1 })
-      .returning();
-    await db.insert(fundDeposits).values({
-      fundId: 1,
-      month: "2026-08-01",
-      amount: "10.00",
-      employeePart: "5.00",
-      employerPart: "5.00",
-      source: "manual",
-      payslipId: legacySlip!.id,
-    });
-
-    const outcome = await withUserContext(db, { userId: a }, (tx) =>
-      drizzleLegacyFundDeposits(tx).upsertForRecord({
-        fundSlug: "cometa", month: "2026-08-01", employee: "50.00", employer: "100.00",
-      }),
-    );
-    expect(outcome).toBe("written");
-
-    const [row] = await db.select().from(fundDeposits).where(eq(fundDeposits.fundId, 1));
-    expect(row).toMatchObject({ amount: "150.00", source: "payroll", payslipId: null });
-  });
 });
