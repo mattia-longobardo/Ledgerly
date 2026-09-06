@@ -218,7 +218,7 @@ export function scopeMatches(scopes: readonly ScopeLike[], tx: TransactionLike):
 export function usageAmount(tx: TransactionLike): string | null; // |amount| for expenses, null otherwise
 ```
 
-- [ ] **Step 1: Tests first** — `figures.test.ts`:
+- [x] **Step 1: Tests first** — `figures.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -258,8 +258,8 @@ describe("allocations are planning values (spec §5.6, R6-2)", () => {
 
 `scopes.test.ts`: an account scope matches by `accountId`; a category scope by `categoryId`; a label scope when `labelIds` contains the ref; a `fund` scope never matches; `usageAmount({ type: "expense", amount: "-12.50" })` → `"12.50"`; income and transfer → `null`.
 
-- [ ] **Step 2:** `npm test -- modules/budgets/domain` → fails. **Step 3:** implement with `BigInt` cents (copy the helper from `src/modules/funds/domain/totals.ts`). `goalProgress` = remaining ÷ goal as a plain number rounded to 4 decimals (display only, never stored), `null` when `goalAmount` is null or zero.
-- [ ] **Verify / Commit:** `npm test -- modules/budgets/domain && npm run typecheck`; `git add src/modules/budgets/domain && git commit -m "feat(budgets): domain figures and scope matching"`
+- [x] **Step 2:** `npm test -- modules/budgets/domain` → fails. **Step 3:** implement with `BigInt` cents (copy the helper from `src/modules/funds/domain/totals.ts`). `goalProgress` = remaining ÷ goal as a plain number rounded to 4 decimals (display only, never stored), `null` when `goalAmount` is null or zero.
+- [x] **Verify / Commit:** `npm test -- modules/budgets/domain && npm run typecheck`; `git add src/modules/budgets/domain && git commit -m "feat(budgets): domain figures and scope matching"`
 
 ---
 
