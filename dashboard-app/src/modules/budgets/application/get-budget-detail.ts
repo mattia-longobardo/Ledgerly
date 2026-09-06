@@ -6,6 +6,7 @@ import { NotFoundError } from "./errors";
 import type { BudgetSummary } from "./list-budgets";
 import type { Allocation, AmountVersion, BudgetEvent, Scope, Usage, UseCaseDeps } from "./ports";
 import { refreshUsages } from "./refresh-usages";
+import { asOfFor } from "./validation";
 
 export interface AllocationView extends Allocation {
   sourceLabel: string | null;
@@ -19,10 +20,6 @@ export interface BudgetDetail extends BudgetSummary {
   usages: Usage[];
   events: BudgetEvent[];
   series: { month: string; remaining: string }[];
-}
-
-function asOfFor(endDate: string | null, today: string): string {
-  return endDate !== null && endDate < today ? endDate : today;
 }
 
 /** Last calendar day of a "YYYY-MM-01" month key, as "YYYY-MM-DD". */
