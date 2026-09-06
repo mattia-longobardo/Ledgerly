@@ -92,14 +92,25 @@ function drizzleRepositories(tx: DbClient): Repositories {
 
 async function runWithRepositories(
   backend: "memory" | "drizzle",
-  test: (repos: Repositories, fixture: { userId: string; payrollRecordIds: string[] }) => Promise<void>,
+  test: (repos: Repositories, fixture: {
+    userId: string;
+    payrollRecordIds: string[];
+    withSavepoint<T>(run: (repos: Repositories) => Promise<T>): Promise<T>;
+  }) => Promise<void>,
 ): Promise<void> {
   const userId = await seedUser(`${backend} user`);
   const db = await testDb();
   await withSystemContext(db, async (tx) => {
     const payrollRecordIds = await seedPayrollRecords(tx, userId);
-    await test(backend === "memory" ? memoryRepositories() : drizzleRepositories(tx), { userId, payrollRecordIds });
+    const repos = backend === "memory" ? memoryRepositories() : drizzleRepositories(tx);
+    const withSavepoint = <T>(run: (inner: Repositories) => Promise<T>): Promise<T> =>
+      backend === "memory" ? run(repos) : tx.transaction((nested) => run(drizzleRepositories(nested)));
+    await test(repos, { userId, payrollRecordIds, withSavepoint });
   });
+}
+
+function constraintMessage(error: unknown): string {
+  return (error as { cause?: { message?: string } }).cause?.message ?? (error as Error).message;
 }
 
 const BACKENDS = [{ backend: "memory" as const }, { backend: "drizzle" as const }];
@@ -109,7 +120,7 @@ describe.each(BACKENDS)("$backend funds repository contract", ({ backend }) => {
   afterAll(closeDb);
 
   it("orders lists, filters archives, locks by owner, and enforces optimistic versions", async () => {
-    await runWithRepositories(backend, async ({ funds }, { userId }) => {
+    await runWithRepositories(backend, async ({ funds }, { userId, withSavepoint }) => {
       const zulu = await funds.create({ userId, slug: "zulu", name: "Zulu", kind: "pension", currency: "EUR", accountId: null });
       const alpha = await funds.create({ userId, slug: "alpha", name: "Alpha", kind: "savings", currency: "EUR", accountId: null });
       const archived = await funds.update(userId, zulu.id, 1, { status: "archived", archivedAt: new Date("2026-01-01T00:00:00Z") });
@@ -119,6 +130,10 @@ describe.each(BACKENDS)("$backend funds repository contract", ({ backend }) => {
       expect(await funds.lock(userId, alpha.id)).toMatchObject({ id: alpha.id });
       expect(await funds.lock(crypto.randomUUID(), alpha.id)).toBeNull();
       await expect(funds.update(userId, alpha.id, 2, { name: "Stale" })).rejects.toBeInstanceOf(VersionMismatchError);
+      const duplicateError = await withSavepoint(({ funds: isolated }) =>
+        isolated.create({ userId, slug: "alpha", name: "Duplicate", kind: "other", currency: "EUR", accountId: null }),
+      ).catch((error: unknown) => error);
+      expect(constraintMessage(duplicateError)).toContain("funds_user_slug_uq");
     });
   });
 });
@@ -150,7 +165,7 @@ describe.each(BACKENDS)("$backend contributions repository contract", ({ backend
   afterAll(closeDb);
 
   it("orders, filters posted months, deletes payroll rows, and detects system fees", async () => {
-    await runWithRepositories(backend, async ({ funds, contributions }, { userId, payrollRecordIds }) => {
+    await runWithRepositories(backend, async ({ funds, contributions }, { userId, payrollRecordIds, withSavepoint }) => {
       const fund = await funds.create({ userId, slug: "pension", name: "Pension", kind: "pension", currency: "EUR", accountId: null });
       const input = (over: Partial<Parameters<ContributionsRepository["create"]>[0]> = {}) => ({
         fundId: fund.id, typeCode: "employee" as const, accrualPeriodStart: "2026-01-01", accrualPeriodEnd: "2026-01-31",
@@ -166,6 +181,12 @@ describe.each(BACKENDS)("$backend contributions repository contract", ({ backend
       expect((await contributions.listForFund(fund.id)).map((row) => row.id)).toEqual([feb.id, employer.id, fee.id, march.id]);
       await expect(contributions.hasSystemFee(fund.id, "2026-02-01")).resolves.toBe(true);
       await expect(contributions.hasSystemFee(fund.id, "2026-04-01")).resolves.toBe(false);
+      const duplicatePayrollError = await withSavepoint(({ contributions: isolated }) => isolated.create(input())).catch((error: unknown) => error);
+      expect(constraintMessage(duplicatePayrollError)).toContain("fund_contributions_payroll_uq");
+      const duplicateFeeError = await withSavepoint(({ contributions: isolated }) => isolated.create(input({
+        typeCode: "fee", accrualPeriodStart: "2026-01-15", source: "system", payrollRecordId: null, amount: "3",
+      }))).catch((error: unknown) => error);
+      expect(constraintMessage(duplicateFeeError)).toContain("fund_contributions_system_fee_uq");
       await expect(contributions.deleteByPayrollRecord(fund.id, payrollRecordIds[0]!)).resolves.toBe(2);
     });
   });
@@ -182,10 +203,12 @@ describe.each(BACKENDS)("$backend issues repository contract", ({ backend }) => 
       await issues.setStatus(userId, kept.id, "acknowledged", userId, new Date("2026-01-02T00:00:00Z"));
       const refreshed = await issues.upsertOpen({ ...issue, severity: "error", detail: { refreshed: true } });
       expect(refreshed).toMatchObject({ id: kept.id, status: "acknowledged", severity: "error", detail: { refreshed: true } });
-      await issues.upsertOpen({ ...issue, entityId: "fund-1:2026-02-01" });
+      const terminal = await issues.upsertOpen({ ...issue, entityId: "fund-1:2026-02-01" });
       await issues.upsertOpen({ ...issue, entityId: "other:2026-02-01" });
       await expect(issues.resolveMissing(userId, "funds", "fund-1:", [{ entityType: kept.entityType, entityId: kept.entityId, kind: kept.kind }], userId, new Date("2026-03-01T00:00:00Z"))).resolves.toBe(1);
       expect((await issues.listOpen(userId, "funds")).map((row) => row.entityId)).toEqual(["fund-1:2026-01-01", "other:2026-02-01"]);
+      await expect(issues.setStatus(userId, terminal.id, "acknowledged", userId, new Date("2026-03-02T00:00:00Z"))).resolves.toBeNull();
+      await expect(issues.resolveMissing(userId, "funds", "fund-1:", [{ entityType: kept.entityType, entityId: kept.entityId, kind: kept.kind }], userId, new Date("2026-03-03T00:00:00Z"))).resolves.toBe(0);
     });
   });
 });
