@@ -109,6 +109,8 @@ Required (`428 validation_failed` if missing — a `428`, not `422`, on the
 
 - `POST /accounts`
 - `POST /accounts/{id}/balances`
+- `POST /funds/{id}/contributions`
+- `POST /funds/{id}/contributions/{cid}/reverse`
 
 Send any client-generated unique string (a UUID is fine). The server hashes
 `METHOD path\nbody` and stores it against `(principalId, key)` for 24 hours:
@@ -208,6 +210,28 @@ for a rule whose account is still a live synced Wallet account with a
 connected integration — see
 [`dashboard-app/docs/migration/wallet-manager-cutover.md`](../../dashboard-app/docs/migration/wallet-manager-cutover.md)
 for the operational procedure.
+
+## Funds
+
+`GET /funds` lists active funds and their current valuation, deposited total,
+absolute return and open-issue count; pass `includeArchived=true` to include
+archived funds. `POST /funds` creates one, and `GET /funds/{id}` returns its
+effective plan and schedule together with their history, contributions,
+quarterly totals, value series and reconciliation issues. Monetary values stay
+decimal strings throughout the API.
+
+`PATCH /funds/{id}` follows the shared `If-Match` / body `version` convention.
+Schedules and plans are effective-dated records created with
+`POST /funds/{id}/schedules` and `POST /funds/{id}/plans`; schedule posting lag
+is limited to 0–12 months. `GET /funds/{id}/contributions` accepts inclusive
+`from` and `to` month keys in `YYYY-MM-01` form and returns
+`{ "items": [...], "nextCursor": null }`.
+
+Contribution creation and reversal use the two idempotent endpoints listed
+above. Reversals create a compensating contribution and leave the original
+record intact. `POST /funds/{id}/reconcile` refreshes the issue set, and
+`POST /funds/issues/{issueId}/acknowledge` acknowledges an open issue. Fund
+responses never expose ownership or resolver user IDs.
 
 ## Payroll
 

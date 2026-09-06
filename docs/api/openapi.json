@@ -1691,6 +1691,792 @@
           "contributions",
           "recordCount"
         ]
+      },
+      "FundListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FundSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "FundSummary": {
+        "type": "object",
+        "properties": {
+          "fund": {
+            "$ref": "#/components/schemas/Fund"
+          },
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "valueAsOf": {
+            "type": "string",
+            "nullable": true
+          },
+          "deposited": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "absReturn": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "lastContributionMonth": {
+            "type": "string",
+            "nullable": true
+          },
+          "openIssues": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "fund",
+          "value",
+          "valueAsOf",
+          "deposited",
+          "absReturn",
+          "lastContributionMonth",
+          "openIssues"
+        ]
+      },
+      "Fund": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FundKind"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FundStatus"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "kind",
+          "currency",
+          "accountId",
+          "status",
+          "archivedAt",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "FundKind": {
+        "type": "string",
+        "enum": [
+          "pension",
+          "investment",
+          "savings",
+          "other"
+        ]
+      },
+      "FundStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "archived"
+        ]
+      },
+      "CreateFundRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]{2,40}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FundKind"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "accountId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "FundDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FundSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "plan": {
+                "$ref": "#/components/schemas/FundPlan"
+              },
+              "schedule": {
+                "$ref": "#/components/schemas/FundSchedule"
+              },
+              "plans": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FundPlan"
+                }
+              },
+              "schedules": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FundSchedule"
+                }
+              },
+              "contributions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FundContribution"
+                }
+              },
+              "quarters": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FundQuarter"
+                }
+              },
+              "valueSeries": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FundValuePoint"
+                }
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ReconciliationIssue"
+                }
+              }
+            },
+            "required": [
+              "plan",
+              "schedule",
+              "plans",
+              "schedules",
+              "contributions",
+              "quarters",
+              "valueSeries",
+              "issues"
+            ]
+          }
+        ]
+      },
+      "FundPlan": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fundId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "initialCapital": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "fixedMonthlyAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fundId",
+          "effectiveFrom",
+          "initialCapital",
+          "fixedMonthlyAmount",
+          "note",
+          "createdAt"
+        ]
+      },
+      "FundSchedule": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fundId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "quarterly",
+              "annual"
+            ]
+          },
+          "periodAnchorMonth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "postingLagMonths": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          },
+          "feePerPosting": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fundId",
+          "frequency",
+          "periodAnchorMonth",
+          "postingLagMonths",
+          "feePerPosting",
+          "effectiveFrom",
+          "createdAt"
+        ]
+      },
+      "FundContribution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fundId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeCode": {
+            "$ref": "#/components/schemas/FundContributionType"
+          },
+          "accrualPeriodStart": {
+            "type": "string"
+          },
+          "accrualPeriodEnd": {
+            "type": "string"
+          },
+          "postedMonth": {
+            "type": "string"
+          },
+          "valueDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FundContributionSource"
+          },
+          "payrollRecordId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "reversesId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "reconciliationStatus": {
+            "$ref": "#/components/schemas/FundReconciliationStatus"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fundId",
+          "typeCode",
+          "accrualPeriodStart",
+          "accrualPeriodEnd",
+          "postedMonth",
+          "valueDate",
+          "amount",
+          "currency",
+          "source",
+          "payrollRecordId",
+          "note",
+          "reversesId",
+          "reconciliationStatus",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "FundContributionType": {
+        "type": "string",
+        "enum": [
+          "employee",
+          "employer",
+          "voluntary",
+          "adjustment",
+          "reversal",
+          "fee"
+        ]
+      },
+      "FundContributionSource": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "payroll",
+          "system",
+          "migration"
+        ]
+      },
+      "FundReconciliationStatus": {
+        "type": "string",
+        "enum": [
+          "expected",
+          "received",
+          "matched",
+          "missing",
+          "delayed",
+          "duplicate",
+          "anomalous"
+        ]
+      },
+      "FundQuarter": {
+        "type": "object",
+        "properties": {
+          "quarter": {
+            "type": "string"
+          },
+          "accrualMonths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "postedMonth": {
+            "type": "string"
+          },
+          "gross": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "fees": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "net": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "posted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "quarter",
+          "accrualMonths",
+          "postedMonth",
+          "gross",
+          "fees",
+          "net",
+          "posted"
+        ]
+      },
+      "FundValuePoint": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "deposited": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          }
+        },
+        "required": [
+          "month",
+          "value",
+          "deposited"
+        ]
+      },
+      "ReconciliationIssue": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ]
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "acknowledged",
+              "resolved"
+            ]
+          },
+          "resolvedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "entityType",
+          "entityId",
+          "kind",
+          "severity",
+          "detail",
+          "status",
+          "resolvedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateFundRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FundKind"
+          },
+          "accountId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FundStatus"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetScheduleRequest": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "quarterly",
+              "annual"
+            ]
+          },
+          "periodAnchorMonth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "postingLagMonths": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          },
+          "feePerPosting": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "frequency",
+          "periodAnchorMonth",
+          "postingLagMonths",
+          "feePerPosting",
+          "effectiveFrom"
+        ],
+        "additionalProperties": false
+      },
+      "SetPlanRequest": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "initialCapital": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "fixedMonthlyAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "effectiveFrom",
+          "initialCapital",
+          "fixedMonthlyAmount",
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "FundContributionsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FundContribution"
+            }
+          },
+          "nextCursor": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "AddContributionRequest": {
+        "type": "object",
+        "properties": {
+          "typeCode": {
+            "type": "string",
+            "enum": [
+              "employee",
+              "employer",
+              "voluntary",
+              "adjustment",
+              "fee"
+            ]
+          },
+          "accrualMonth": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^-?\\d{1,14}(\\.\\d{1,2})?$"
+          },
+          "valueDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "postedMonth": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "typeCode",
+          "accrualMonth",
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "ReverseContributionRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReconcileFundResult": {
+        "type": "object",
+        "properties": {
+          "detected": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DetectedFundIssue"
+            }
+          },
+          "resolved": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "detected",
+          "resolved"
+        ]
+      },
+      "DetectedFundIssue": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "duplicate",
+              "anomalous"
+            ]
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "fund_month",
+              "fund_contribution"
+            ]
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "warning",
+              "error"
+            ]
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "entityType",
+          "entityId",
+          "severity",
+          "detail"
+        ]
       }
     },
     "parameters": {}
@@ -6230,6 +7016,1237 @@
           },
           "428": {
             "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds": {
+      "get": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "includeArchived",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's funds and current summaries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFundRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created fund.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fund"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{id}": {
+      "get": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fund detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "description": "Send the current version in `If-Match` or `body.version`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFundRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated fund.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fund"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{id}/schedules": {
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetScheduleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The effective-dated contribution schedule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{id}/plans": {
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The effective-dated fund plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundPlan"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{id}/contributions": {
+      "get": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contributions whose posted month is within the inclusive range.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundContributionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "description": "Requires an `Idempotency-Key` header.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddContributionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created contribution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundContribution"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{id}/contributions/{cid}/reverse": {
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "description": "Requires an `Idempotency-Key` header.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseContributionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The compensating contribution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundContribution"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/{id}/reconcile": {
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detected and resolved reconciliation issues.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileFundResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funds/issues/{issueId}/acknowledge": {
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "issueId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The acknowledged reconciliation issue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationIssue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
             "content": {
               "application/json": {
                 "schema": {
