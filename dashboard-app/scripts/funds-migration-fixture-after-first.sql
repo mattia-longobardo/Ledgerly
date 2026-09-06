@@ -36,6 +36,17 @@ BEGIN
     WHERE id = cometa_account_id AND user_id = owner_id AND name = 'Fondo Cometa'
       AND type = 'pension_fund' AND currency = 'EUR' AND origin = 'manual'
   ) THEN RAISE EXCEPTION 'Cometa account attributes are wrong'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM audit_events
+    WHERE action = 'funds.migration.snapshot_account_created'
+      AND entity_type = 'account' AND entity_id = cometa_account_id::text
+      AND after->>'snapshotAccountKey' = 'cometa'
+  ) OR EXISTS (
+    SELECT 1 FROM audit_events
+    WHERE action = 'funds.migration.snapshot_account_created'
+      AND entity_type = 'account'
+      AND entity_id = '10000000-0000-7000-8000-000000000020'
+  ) THEN RAISE EXCEPTION 'Snapshot-account provenance is wrong'; END IF;
 
   IF (SELECT count(*) FROM fund_plans WHERE fund_id IN (fideuram_id, cometa_id)) <> 4 THEN
     RAISE EXCEPTION 'Expected four migrated plans';
@@ -123,5 +134,10 @@ WHERE fund_id = (
 ) AND effective_from = '2026-01-01';
 UPDATE accounts SET notes = 'owner edit', version = version + 1
 WHERE id = '10000000-0000-7000-8000-000000000020';
+UPDATE accounts SET notes = 'owner edit on snapshot-derived account', version = version + 1
+WHERE id = (
+  SELECT account_id FROM funds
+  WHERE user_id = '10000000-0000-7000-8000-000000000002' AND slug = 'cometa'
+);
 
 COMMIT;

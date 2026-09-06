@@ -17,7 +17,7 @@ END $$;
 BEGIN;
 SELECT set_config('app.user_id', '', true), set_config('app.role', 'system', true);
 
-TRUNCATE TABLE organizations, legacy_funds, balance_snapshots RESTART IDENTITY CASCADE;
+TRUNCATE TABLE organizations, legacy_funds, balance_snapshots, audit_events RESTART IDENTITY CASCADE;
 
 INSERT INTO roles (code, label) VALUES ('owner', 'Owner') ON CONFLICT (code) DO NOTHING;
 INSERT INTO organizations (id, name)
@@ -97,15 +97,14 @@ INSERT INTO account_balances (
   '2026-01-15', '42.00', 'manual', '2026-01-15T12:00:00Z'
 );
 
--- The non-latest row wins January even though the stale latest row is newer.
--- The later id wins the February captured_at tie.
+-- Fideuram deliberately has no matching snapshot key: its already-valued,
+-- exactly named account is a complete and valid migration path on its own.
+-- For snapshot-derived Cometa, the non-latest row wins January even though
+-- the stale latest row is newer, and the later id wins February's timestamp tie.
 INSERT INTO balance_snapshots (source, account_key, balance, captured_at, raw) VALUES
-  ('teable', 'fideuram', '1100.00', '2026-01-01T00:00:00Z', '{"kind":"history"}'),
-  ('teable', 'fideuram', '999.00', '2026-01-31T20:00:00Z', '{"kind":"latest"}'),
-  ('teable', 'fideuram', '1190.00', '2026-02-01T00:00:00Z', '{"kind":"history"}'),
-  ('teable', 'fideuram', '1200.00', '2026-02-01T00:00:00Z', '{"kind":"history"}'),
   ('teable', 'cometa', '111.00', '2026-01-01T00:00:00Z', '{"kind":"history"}'),
   ('teable', 'cometa', '999.00', '2026-01-31T20:00:00Z', '{"kind":"latest"}'),
+  ('teable', 'cometa', '221.00', '2026-02-01T00:00:00Z', '{"kind":"history"}'),
   ('teable', 'cometa', '222.00', '2026-02-01T00:00:00Z', '{"kind":"history"}');
 
 COMMIT;

@@ -6,6 +6,7 @@ import * as schema from "@/lib/db/schema";
 import {
   accountBalances,
   accounts,
+  auditEvents,
   balanceSnapshots,
   fundContributionSchedules,
   fundContributions,
@@ -91,6 +92,7 @@ interface AccountHistoryRow {
 }
 
 const DECIMAL_RE = /^(-?)(\d+)(?:\.(\d+))?$/;
+const SNAPSHOT_ACCOUNT_ACTION = "funds.migration.snapshot_account_created";
 
 function cents(value: string): bigint {
   const match = DECIMAL_RE.exec(value.trim());
@@ -156,16 +158,8 @@ async function resolveOwner(tx: DbClient): Promise<{ id: string; currency: strin
 async function canonicalSnapshots(
   tx: DbClient,
   legacy: LegacyFundInput,
+  recordedAccountKey: string,
 ): Promise<CanonicalSnapshot[]> {
-  const keys = await tx
-    .selectDistinct({ accountKey: balanceSnapshots.accountKey })
-    .from(balanceSnapshots)
-    .where(sql`lower(${balanceSnapshots.accountKey}) IN (lower(${legacy.slug}), lower(${legacy.name}))`);
-  if (keys.length !== 1) {
-    throw new ValidationError(
-      `${legacy.slug}: expected one balance_snapshots account key, found ${keys.length}`,
-    );
-  }
   const result = await tx.execute<CanonicalSnapshot>(sql`
     SELECT DISTINCT ON (account_key, month)
       account_key AS "accountKey",
@@ -173,7 +167,7 @@ async function canonicalSnapshots(
       balance,
       captured_at AS "capturedAt"
     FROM balance_snapshots
-    WHERE account_key = ${keys[0]!.accountKey}
+    WHERE account_key = ${recordedAccountKey}
     ORDER BY account_key, month,
              (COALESCE(raw->>'kind', '') = 'latest') ASC,
              captured_at DESC, id DESC
@@ -187,7 +181,7 @@ async function validateValuation(
   owner: { id: string; currency: string },
   legacy: LegacyFundInput,
   accountId: string | null,
-): Promise<number> {
+): Promise<{ kind: "existing-account" | "snapshot-derived"; months: number }> {
   if (!accountId) throw new ValidationError(`${legacy.slug}: migrated fund has no account_id`);
   const [account] = await tx
     .select({ id: accounts.id, userId: accounts.userId, currency: accounts.currency })
@@ -210,7 +204,28 @@ async function validateValuation(
     .orderBy(asc(accountBalances.asOf), asc(accountBalances.capturedAt), asc(accountBalances.id));
   if (history.length === 0) throw new ValidationError(`${legacy.slug}: valuation account has no latest balance`);
 
-  const canonical = await canonicalSnapshots(tx, legacy);
+  const provenance = await tx
+    .select({ after: auditEvents.after })
+    .from(auditEvents)
+    .where(and(
+      eq(auditEvents.action, SNAPSHOT_ACCOUNT_ACTION),
+      eq(auditEvents.entityType, "account"),
+      eq(auditEvents.entityId, accountId),
+    ))
+    .limit(2);
+  if (provenance.length === 0) return { kind: "existing-account", months: 0 };
+  if (provenance.length !== 1) {
+    throw new ValidationError(`${legacy.slug}: expected one snapshot-account provenance event, found ${provenance.length}`);
+  }
+  const after = provenance[0]!.after;
+  const recordedAccountKey = after && typeof after === "object" && "snapshotAccountKey" in after
+    ? (after as { snapshotAccountKey?: unknown }).snapshotAccountKey
+    : null;
+  if (typeof recordedAccountKey !== "string" || recordedAccountKey.length === 0) {
+    throw new ValidationError(`${legacy.slug}: snapshot-account provenance has no account key`);
+  }
+
+  const canonical = await canonicalSnapshots(tx, legacy, recordedAccountKey);
   for (const expected of canonical) {
     const capturedAt = expected.capturedAt instanceof Date
       ? expected.capturedAt
@@ -229,7 +244,7 @@ async function validateValuation(
       );
     }
   }
-  return canonical.length;
+  return { kind: "snapshot-derived", months: canonical.length };
 }
 
 function expectSinglePart(
@@ -275,7 +290,7 @@ async function validateFund(
   if (matches.length !== 1) throw new ValidationError(`${legacy.slug}: expected one migrated fund, found ${matches.length}`);
   const fund = matches[0]!;
   if (fund.currency !== owner.currency) throw new ValidationError(`${legacy.slug}: fund currency mismatch`);
-  const valuationMonths = await validateValuation(tx, owner, legacy, fund.accountId);
+  const valuation = await validateValuation(tx, owner, legacy, fund.accountId);
 
   if (deposits.length === 0) throw new ValidationError(`${legacy.slug}: examined 0 legacy deposits`);
   const earliestSetting = [...settings].sort((a, b) =>
@@ -492,7 +507,8 @@ async function validateFund(
     }
   }
   console.log(
-    `CHECK ${legacy.slug}: ${deposits.length} legacy deposits, ${valuationMonths} canonical valuations, `
+    `CHECK ${legacy.slug}: ${deposits.length} legacy deposits, valuation ${valuation.kind}`
+    + `${valuation.kind === "snapshot-derived" ? ` (${valuation.months} canonical months)` : ""}, `
     + `${rows.filter((row) => row.source === "migration" || row.source === "system").length} migrated/system financial rows`,
   );
   return { examined: months.length, timingDifferences };
