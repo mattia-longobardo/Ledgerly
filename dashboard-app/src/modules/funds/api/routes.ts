@@ -2,6 +2,7 @@ import { createRoute } from "@hono/zod-openapi";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
+import { requireIdempotencyKey, runFinancialWrite } from "@/platform/http/financial-write";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { withUserContext } from "@/platform/db/context";
 import { acknowledgeIssue } from "../application/acknowledge-issue";
@@ -24,7 +25,6 @@ import { setPlan } from "../application/set-plan";
 import { setSchedule } from "../application/set-schedule";
 import { updateFund } from "../application/update-fund";
 import { fundDeps } from "../infrastructure/deps";
-import { requireFundIdempotencyKey, runFundFinancialWrite } from "./financial-write";
 import {
   AddContributionRequestSchema,
   ContributionIdParamSchema,
@@ -295,7 +295,7 @@ const acknowledgeIssueRoute = createRoute({
 
 export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
   app.on("POST", ["/funds/:id/contributions", "/funds/:id/contributions/:cid/reverse"], async (c, next) => {
-    requireFundIdempotencyKey(c.req.header("idempotency-key"));
+    requireIdempotencyKey(c.req.header("idempotency-key"));
     await next();
   });
 
@@ -394,7 +394,7 @@ export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
   app.openapi(addContributionRoute, async (c) => {
     const principal = c.get("principal");
     try {
-      const result = await runFundFinancialWrite(deps, principal.userId, {
+      const result = await runFinancialWrite(deps, "funds", principal.userId, {
         key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
       }, async (tx) => contributionDto(
         await addContribution(fundDeps(tx, c.get("requestId")))(principal, c.req.valid("param").id, c.req.valid("json")),
@@ -410,7 +410,7 @@ export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
     const principal = c.get("principal");
     const { id, cid } = c.req.valid("param");
     try {
-      const result = await runFundFinancialWrite(deps, principal.userId, {
+      const result = await runFinancialWrite(deps, "funds", principal.userId, {
         key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
       }, async (tx) => contributionDto(
         await reverseContribution(fundDeps(tx, c.get("requestId")))(principal, id, cid, c.req.valid("json").note),

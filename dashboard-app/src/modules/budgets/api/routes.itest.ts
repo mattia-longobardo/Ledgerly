@@ -48,6 +48,31 @@ describe("budgets routes", () => {
     return { app: createApiApp(deps), db, userId: user!.id, accountId: account!.id };
   }
 
+  async function createBudget(
+    app: ReturnType<typeof createApiApp>,
+    userId: string,
+    overrides: Record<string, unknown> = {},
+  ): Promise<{ id: string; version: number } & Record<string, unknown>> {
+    const res = await app.request("/api/v1/budgets", {
+      method: "POST",
+      headers: headers(userId),
+      body: JSON.stringify({
+        name: "Budget",
+        description: null,
+        currency: "EUR",
+        periodKind: "monthly",
+        startDate: "2026-01-01",
+        endDate: null,
+        goalAmount: null,
+        labels: [],
+        initialAmount: "1000.00",
+        ...overrides,
+      }),
+    });
+    expect(res.status).toBe(201);
+    return res.json() as Promise<{ id: string; version: number } & Record<string, unknown>>;
+  }
+
   it("walks create, allocation, scopes, refresh and idempotent manual usage, then enforces write permission and optimistic concurrency", async () => {
     const { app, db, userId, accountId } = await seed();
 
@@ -234,6 +259,114 @@ describe("budgets routes", () => {
     });
     expect(smuggleRes.status).toBe(422);
     expect((await smuggleRes.json()).error.code).toBe("validation_failed");
+
+    // Un-archiving must clear `archivedAt`, not just flip `status` — the same
+    // desync closed above, from the other direction.
+    const reactivateRes = await app.request(`/api/v1/budgets/${budget.id}`, {
+      method: "PATCH",
+      headers: headers(userId),
+      body: JSON.stringify({ status: "active", version: archived.version }),
+    });
+    expect(reactivateRes.status).toBe(200);
+    const reactivated = (await reactivateRes.json()) as { status: string; archivedAt: string | null };
+    expect(reactivated.status).toBe("active");
+    expect(reactivated.archivedAt).toBeNull();
+  });
+
+  it("lists the caller's budgets with figures, and filters archived ones by default", async () => {
+    const { app, userId } = await seed();
+    const active = await createBudget(app, userId, { name: "Active one", initialAmount: "200.00" });
+    const toArchive = await createBudget(app, userId, { name: "Will archive" });
+    const archiveRes = await app.request(`/api/v1/budgets/${toArchive.id}`, {
+      method: "PATCH",
+      headers: headers(userId),
+      body: JSON.stringify({ status: "archived", version: toArchive.version }),
+    });
+    expect(archiveRes.status).toBe(200);
+
+    const defaultList = await app.request("/api/v1/budgets", { headers: headers(userId) });
+    expect(defaultList.status).toBe(200);
+    const defaultBody = (await defaultList.json()) as { items: Record<string, unknown>[] };
+    expect(defaultBody.items.map((item) => (item.budget as Record<string, unknown>).id)).toEqual([active.id]);
+    expect(defaultBody.items[0]).toMatchObject({ budget: { id: active.id }, figures: { initial: "200.00" } });
+
+    const fullList = await app.request("/api/v1/budgets?includeArchived=true", { headers: headers(userId) });
+    expect(fullList.status).toBe(200);
+    const fullBody = (await fullList.json()) as { items: Record<string, unknown>[] };
+    expect(fullBody.items.map((item) => (item.budget as Record<string, unknown>).id).sort()).toEqual([active.id, toArchive.id].sort());
+  });
+
+  it("records a new initial-amount version that takes effect on its own effectiveFrom date", async () => {
+    const { app, userId } = await seed();
+    const budget = await createBudget(app, userId, { initialAmount: "1000.00" });
+
+    const versionRes = await app.request(`/api/v1/budgets/${budget.id}/amount-versions`, {
+      method: "POST",
+      headers: headers(userId),
+      body: JSON.stringify({ initialAmount: "1500.00", effectiveFrom: "2026-06-01", reason: "Raise" }),
+    });
+    expect(versionRes.status).toBe(201);
+    const version = (await versionRes.json()) as Record<string, unknown>;
+    expect(version).toMatchObject({ budgetId: budget.id, initialAmount: "1500.00", effectiveFrom: "2026-06-01", reason: "Raise" });
+    expect(version).not.toHaveProperty("actorUserId");
+
+    // Today (the real system clock, well after 2026-06-01) is past the new
+    // version's effectiveFrom, so it — not the original 1000.00 — is now the
+    // figure `getBudgetDetail` reports.
+    const detailRes = await app.request(`/api/v1/budgets/${budget.id}`, { headers: headers(userId) });
+    const detail = (await detailRes.json()) as { figures: { initial: string }; versions: unknown[] };
+    expect(detail.figures.initial).toBe("1500.00");
+    expect(detail.versions).toHaveLength(2);
+  });
+
+  it("ends an allocation via PATCH, proving the {id, aid} params reach endAllocation in the right order", async () => {
+    const { app, userId } = await seed();
+    // A second budget makes the `{id, aid}` → `endAllocation(principal,
+    // budgetId, allocationId, ...)` argument order testable: `endAllocation`
+    // scopes its lookup with `deps.allocations.get(budgetId, allocationId)`,
+    // so addressing the real allocation through the *wrong* budget's id
+    // must 404. If the route ever passed `id`/`aid` to `endAllocation` in
+    // the wrong order, this would either always 404 (an allocation id is
+    // never a valid budget id) or, worse, silently succeed against the
+    // wrong row — either way this test would catch it.
+    const other = await createBudget(app, userId, { name: "Unrelated" });
+    const budget = await createBudget(app, userId);
+    const allocationRes = await app.request(`/api/v1/budgets/${budget.id}/allocations`, {
+      method: "POST",
+      headers: headers(userId),
+      body: JSON.stringify({
+        sourceKind: "none", sourceId: null, amount: "40.00", recurrence: "once",
+        effectiveFrom: "2026-01-01", effectiveTo: null, note: null,
+      }),
+    });
+    expect(allocationRes.status).toBe(201);
+    const allocation = (await allocationRes.json()) as { id: string; version: number };
+
+    const wrongBudgetRes = await app.request(`/api/v1/budgets/${other.id}/allocations/${allocation.id}`, {
+      method: "PATCH",
+      headers: headers(userId),
+      body: JSON.stringify({ version: allocation.version, effectiveTo: "2026-03-31" }),
+    });
+    expect(wrongBudgetRes.status).toBe(404);
+
+    const endRes = await app.request(`/api/v1/budgets/${budget.id}/allocations/${allocation.id}`, {
+      method: "PATCH",
+      headers: headers(userId),
+      body: JSON.stringify({ version: allocation.version, effectiveTo: "2026-03-31" }),
+    });
+    expect(endRes.status).toBe(200);
+    const ended = (await endRes.json()) as Record<string, unknown>;
+    expect(ended).toMatchObject({ id: allocation.id, budgetId: budget.id, effectiveTo: "2026-03-31", version: allocation.version + 1 });
+
+    // A stale version on the same allocation still 409s, same convention as
+    // the budget-level PATCH.
+    const staleEndRes = await app.request(`/api/v1/budgets/${budget.id}/allocations/${allocation.id}`, {
+      method: "PATCH",
+      headers: headers(userId),
+      body: JSON.stringify({ version: allocation.version, effectiveTo: "2026-04-30" }),
+    });
+    expect(staleEndRes.status).toBe(409);
+    expect((await staleEndRes.json()).error.code).toBe("version_mismatch");
   });
 
   it("refuses a cookie-authenticated POST that omits X-Requested-With", async () => {

@@ -2,7 +2,7 @@ import { createRoute } from "@hono/zod-openapi";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
-import { idempotency } from "@/platform/http/idempotency";
+import { requireIdempotencyKey, runFinancialWrite } from "@/platform/http/financial-write";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { withUserContext } from "@/platform/db/context";
 import { addAllocation } from "../application/add-allocation";
@@ -277,7 +277,14 @@ const refreshRoute = createRoute({
 });
 
 export function registerBudgetRoutes(app: ApiApp, deps: ApiDeps): void {
-  app.on("POST", "/budgets/:id/usages", idempotency({ db: deps.db, now: deps.now }));
+  // Fails fast on a missing header before OpenAPI body validation runs; the
+  // actual replay/serialization guarantee comes from `runFinancialWrite`
+  // inside the route handler below (one locked transaction), not from this
+  // middleware.
+  app.on("POST", "/budgets/:id/usages", async (c, next) => {
+    requireIdempotencyKey(c.req.header("idempotency-key"));
+    await next();
+  });
 
   app.openapi(listRoute, async (c) => {
     const principal = c.get("principal");
@@ -394,12 +401,15 @@ export function registerBudgetRoutes(app: ApiApp, deps: ApiDeps): void {
   app.openapi(addManualUsageRoute, async (c) => {
     const principal = c.get("principal");
     const { id } = c.req.valid("param");
-    const body = c.req.valid("json");
     try {
-      const usage = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
-        addManualUsage(budgetDeps(tx, c.get("requestId")))(principal, id, body),
-      );
-      return c.json(usageDto(usage), 201);
+      // The insert, its audit and `budget_events` rows, and the idempotency
+      // row all commit in the one transaction `runFinancialWrite` opens —
+      // see that helper's comment for why the plain `idempotency()`
+      // middleware can't give this route the guarantee it needs.
+      const result = await runFinancialWrite(deps, "budgets", principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, (tx) => addManualUsage(budgetDeps(tx, c.get("requestId")))(principal, id, c.req.valid("json")).then(usageDto));
+      return c.json(result.body, result.status as 201);
     } catch (err) {
       throw toApiError(err);
     }
