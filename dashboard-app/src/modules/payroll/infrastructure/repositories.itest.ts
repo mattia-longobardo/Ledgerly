@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { fundDeposits, funds, organizations, payrollMappingRules, payslips, users } from "@/lib/db/schema";
+import { fundDeposits, legacyFunds, organizations, payrollMappingRules, payslips, users } from "@/lib/db/schema";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewPayrollComponent, NewPayrollImport, NewPayrollRecord } from "../application/ports";
@@ -227,12 +227,12 @@ describe("Drizzle payroll repositories", () => {
 
   it("the legacy fund bridge writes nothing when the payslip carried neither half", async () => {
     const { db, a } = await seedUsers();
-    // `funds` is seeded by the application's bootstrap script
+    // `legacyFunds` is seeded by the application's bootstrap script
     // (`src/lib/db/migrate.ts`), not by anything in `drizzle/` — the migrations
     // folder `testDb()` runs — so the test DB starts with no fund rows at all.
     // Seed the one row this guard path needs, deliberately not the "written"
     // path Task 11's apply integration test owns.
-    await db.insert(funds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
+    await db.insert(legacyFunds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
     const outcome = await withUserContext(db, { userId: a }, (tx) =>
       drizzleLegacyFundDeposits(tx).upsertForRecord({ fundSlug: "cometa", month: "2026-08-01", employee: null, employer: null }),
     );
@@ -241,7 +241,7 @@ describe("Drizzle payroll repositories", () => {
 
   it("the legacy fund bridge's second write over a pre-existing row overwrites source and payslip_id (Finding 5)", async () => {
     const { db, a } = await seedUsers();
-    await db.insert(funds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
+    await db.insert(legacyFunds).values({ id: 1, slug: "cometa", name: "Fondo Cometa" });
     // A row this bridge did not originally write — the legacy manual path
     // (`source: "manual"`) with a real `payslip_id` — proves what a *second*
     // write over a pre-existing row does to those two unmodelled fields, not

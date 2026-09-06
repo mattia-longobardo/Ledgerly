@@ -22,12 +22,11 @@ export async function testDb(): Promise<NodePgDatabase<typeof schema>> {
 }
 
 /**
- * Tables the migrations own outright. They hold no test data, no row a test
- * creates points at them, and clearing them would discard a catalogue only a
- * migration knows how to write — so a test needing it back would have to keep a
- * second copy of the migration's seed in sync by hand.
+ * Static catalogues owned by migrations. Test rows can reference them, but
+ * clearing the catalogues would discard seeds that only migrations write,
+ * forcing each test to keep a second copy of those seeds in sync by hand.
  */
-const STATIC_TABLES = ["integration_providers"];
+const STATIC_TABLES = ["integration_providers", "fund_contribution_types"];
 
 /** Clear everything except drizzle's own bookkeeping and the static catalogues. */
 export async function resetDb(): Promise<void> {

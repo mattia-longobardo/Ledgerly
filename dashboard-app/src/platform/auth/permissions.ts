@@ -2,6 +2,8 @@ export const PERMISSIONS = [
   "accounts.read",
   "accounts.write",
   "accounts.delete",
+  "funds.read",
+  "funds.write",
   "finance.manage",
   "integrations.manage",
   "jobs.run",
@@ -27,12 +29,12 @@ const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
   owner: PERMISSIONS,
   admin: PERMISSIONS,
   member: [
-    "accounts.read", "accounts.write", "accounts.delete",
+    "accounts.read", "accounts.write", "accounts.delete", "funds.read", "funds.write",
     "finance.manage", "integrations.manage", "jobs.run",
     "expenses.read", "expenses.write", "interests.read", "interests.write",
     "payroll.read", "payroll.upload", "payroll.review", "payroll.read_original",
   ],
-  viewer: ["accounts.read", "expenses.read", "interests.read", "payroll.read"],
+  viewer: ["accounts.read", "funds.read", "expenses.read", "interests.read", "payroll.read"],
 };
 
 export function permissionsForRoles(roles: readonly RoleCode[]): ReadonlySet<Permission> {

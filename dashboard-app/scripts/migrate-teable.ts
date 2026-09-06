@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "@/lib/db/schema";
 import type { DbClient } from "@/lib/db/client";
-import { balanceSnapshots, funds, userRoles, users } from "@/lib/db/schema";
+import { balanceSnapshots, legacyFunds, userRoles, users } from "@/lib/db/schema";
 import { romeDate } from "@/lib/time";
 import { DrizzleAccountsRepository } from "@/modules/accounts/infrastructure/drizzle-accounts-repository";
 import {
@@ -172,7 +172,7 @@ const db = drizzle(pool, { schema });
 try {
   const legacy = await withSystemContext(db, async (tx) => ({
     owner: await resolveOwner(tx),
-    funds: await tx.select({ slug: funds.slug, name: funds.name }).from(funds).orderBy(asc(funds.id)),
+    funds: await tx.select({ slug: legacyFunds.slug, name: legacyFunds.name }).from(legacyFunds).orderBy(asc(legacyFunds.id)),
     // Ascending so "the last row of a day wins" is decided on the capture order
     // the table itself recorded.
     walletSnapshots: await tx

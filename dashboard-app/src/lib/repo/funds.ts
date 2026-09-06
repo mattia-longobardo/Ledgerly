@@ -1,13 +1,13 @@
 import { and, asc, desc, eq, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { fundDeposits, fundSettings, funds } from "@/lib/db/schema";
+import { fundDeposits, fundSettings, legacyFunds } from "@/lib/db/schema";
 
 export async function listFunds() {
-  return db.select().from(funds).orderBy(asc(funds.id));
+  return db.select().from(legacyFunds).orderBy(asc(legacyFunds.id));
 }
 
 export async function fundBySlug(slug: string) {
-  const [row] = await db.select().from(funds).where(eq(funds.slug, slug)).limit(1);
+  const [row] = await db.select().from(legacyFunds).where(eq(legacyFunds.slug, slug)).limit(1);
   return row ?? null;
 }
 

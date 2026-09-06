@@ -9,13 +9,13 @@ import {
   type FundDepositRow,
 } from "@/lib/calc/funds";
 import { classify } from "@/lib/calc/staleness";
-import type { Fund, FundSetting } from "@/lib/db/schema";
+import type { LegacyFund, FundSetting } from "@/lib/db/schema";
 import { latestBalances, monthlyHistory } from "@/lib/repo/balances";
 import { allDeposits, allSettings, listFunds } from "@/lib/repo/funds";
 import { monthKey } from "@/lib/time";
 
 export interface FundView {
-  fund: Fund;
+  fund: LegacyFund;
   settings: FundSetting[];
   /**
    * The deposits the return figures are built on. Cometa's raw monthly accruals
