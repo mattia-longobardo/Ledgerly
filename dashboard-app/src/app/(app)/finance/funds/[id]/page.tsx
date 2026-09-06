@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TimeSeriesChart } from "@/components/chart/TimeSeriesChart";
 import { PageGrid, Panel } from "@/components/layout/PageGrid";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
@@ -11,8 +10,9 @@ import { monthKey } from "@/lib/time";
 import type { Series } from "@/lib/contracts";
 import { ContributionsTable } from "@/modules/funds/ui/ContributionsTable";
 import { ContributionForm } from "@/modules/funds/ui/ContributionForm";
-import { CurrencyValue, formatCurrency, formatSignedCurrency } from "@/modules/funds/ui/CurrencyValue";
+import { CurrencyValue, formatSignedCurrency } from "@/modules/funds/ui/CurrencyValue";
 import { FundFormTrigger } from "@/modules/funds/ui/FundForm";
+import { FundValueChart } from "@/modules/funds/ui/FundValueChart";
 import { loadFundAccounts, loadFundDetail } from "@/modules/funds/ui/load-funds";
 import { PlanForm } from "@/modules/funds/ui/PlanForm";
 import { MonthlyTable, QuarterTable } from "@/modules/funds/ui/QuarterTable";
@@ -54,7 +54,7 @@ export default async function FundDetailPage({ params }: { params: Promise<{ id:
         <StatTile label="Return" value={<span>{detail.absReturn === null ? "—" : formatSignedCurrency(detail.absReturn, detail.fund.currency)}</span>} delta={detail.absReturn === null ? undefined : <DeltaBadge value={detail.absReturn} formattedValue={formatSignedCurrency(detail.absReturn, detail.fund.currency)} context="return since inception" />} />
       </StatGrid></Panel>
 
-      {detail.fund.accountId === null ? <Panel span={7} title="Value history"><EmptyState title="No valuation account linked" description="Link a valuation account to see its value." action={canWrite ? <FundFormTrigger accounts={accounts} fund={detail.fund} label="Link account" /> : undefined} /></Panel> : <Panel span={7} title="Value and deposited"><TimeSeriesChart series={series} label={`${detail.fund.name}: value and deposited by month`} height={320} area={false} formatValue={(value) => formatCurrency(value, detail.fund.currency)} /></Panel>}
+      {detail.fund.accountId === null ? <Panel span={7} title="Value history"><EmptyState title="No valuation account linked" description="Link a valuation account to see its value." action={canWrite ? <FundFormTrigger accounts={accounts} fund={detail.fund} label="Link account" /> : undefined} /></Panel> : <Panel span={7} title="Value and deposited"><FundValueChart series={series} label={`${detail.fund.name}: value and deposited by month`} currency={detail.fund.currency} /></Panel>}
 
       <Panel span={5} title={grouped ? "Posting periods" : "Monthly postings"}>
         {grouped ? <QuarterTable rows={detail.quarters} currency={detail.fund.currency} frequency={detail.schedule!.frequency as "quarterly" | "annual"} /> : <MonthlyTable rows={detail.contributions} currency={detail.fund.currency} />}

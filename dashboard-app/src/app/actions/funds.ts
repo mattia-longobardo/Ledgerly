@@ -12,15 +12,15 @@ import { setPlan, type SetPlanInput } from "@/modules/funds/application/set-plan
 import { setSchedule, type SetScheduleInput } from "@/modules/funds/application/set-schedule";
 import { updateFund } from "@/modules/funds/application/update-fund";
 import { runForPrincipal } from "@/modules/funds/ui/deps";
+import { parseFundMoney } from "@/modules/funds/ui/parse-fund-money";
 import { PermissionDeniedError } from "@/platform/auth/principal";
-import { errorMessage, fail, parseMoney, succeed, text, toNumericString, type ActionResult } from "./types";
+import { errorMessage, fail, succeed, text, type ActionResult } from "./types";
 
 function required(data: FormData, key: string): string { return text(data.get(key)) ?? ""; }
 function month(data: FormData, key: string): string { const value = required(data, key); return value.length === 7 ? `${value}-01` : value; }
 function optionalMonth(data: FormData, key: string): string | undefined { const value = text(data.get(key)); return value ? (value.length === 7 ? `${value}-01` : value) : undefined; }
 function parsedMoney(data: FormData, key: string): string | null {
-  const value = parseMoney(data.get(key));
-  return value === null ? null : toNumericString(value);
+  return parseFundMoney(data.get(key));
 }
 function mapError(error: unknown): string {
   if (error instanceof PermissionDeniedError) return "You do not have permission to change funds.";
