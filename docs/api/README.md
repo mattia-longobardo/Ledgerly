@@ -111,6 +111,7 @@ Required (`428 validation_failed` if missing — a `428`, not `422`, on the
 - `POST /accounts/{id}/balances`
 - `POST /funds/{id}/contributions`
 - `POST /funds/{id}/contributions/{cid}/reverse`
+- `POST /budgets/{id}/usages`
 
 Send any client-generated unique string (a UUID is fine). The server hashes
 `METHOD path\nbody` and stores it against `(principalId, key)` for 24 hours:
@@ -269,6 +270,48 @@ retention job has already purged.
 `GET /payroll/earnings` computes gross, net, taxes and contributions per month,
 quarter and year from `payroll_records` and `payroll_components`, excluding
 superseded records. A figure the payslip did not state is `null`, never `0`.
+
+## Budgets
+
+`GET /budgets` lists the caller's budgets with their current figures
+(`initial`, `allocated`, `used`, `remaining`, `goalProgress`); pass
+`includeArchived=true` to include archived budgets. `POST /budgets` creates
+one together with its first amount version. `GET /budgets/{id}` returns full
+detail: amount-version history, allocations (each with its `sourceLabel` and
+`availableInSource` when sourced from a fund or account), scopes, usages,
+recent events, and a month-by-month `remaining` series — and, as a side
+effect, refreshes scope-matched usages first, so the detail a caller reads is
+always current.
+
+`PATCH /budgets/{id}` follows the shared `If-Match` / body `version`
+convention. Archiving is `PATCH { "status": "archived" }` — the server sets
+`archivedAt` itself; a caller cannot set `archivedAt` directly, and `version`
+never reaches the underlying patch (it is consumed for the concurrency check
+and stripped before the patch is applied).
+
+`POST /budgets/{id}/amount-versions` records a new initial-amount version
+effective from a given date, preserving history rather than overwriting it.
+Allocations are virtual: `POST /budgets/{id}/allocations` never moves money,
+it only affects the budget's computed figures; `sourceKind` is `fund`,
+`account`, or `none`, and a sourced allocation must reference a fund or
+account the caller owns. `PATCH /budgets/{id}/allocations/{aid}` ends an
+allocation by setting `effectiveTo` (body `{ "version": ..., "effectiveTo":
+"YYYY-MM-DD" }`, same `If-Match`/`version` convention).
+
+`PUT /budgets/{id}/scopes` replaces the full scope set for a budget in one
+call (an `account`, `category`, `label`, or `fund` scope; a `fund` scope
+never matches a transaction, since transactions aren't posted against
+funds) and triggers a refresh of scope-matched usages. `POST
+/budgets/{id}/usages` records a manual usage row and requires an
+`Idempotency-Key`, since it is a financial record; `DELETE
+/budgets/{id}/usages/{uid}` removes one (`204`) — only a manual row, never a
+scope-matched one. `POST /budgets/{id}/refresh` recomputes scope-matched
+usages against the transaction ledger on demand and reports `{ inserted,
+updated, deleted }`.
+
+Money stays a decimal string throughout, including `remaining` (which can be
+negative). Budget, allocation, usage and event responses never expose
+ownership fields.
 
 ## Regenerating `openapi.json`
 

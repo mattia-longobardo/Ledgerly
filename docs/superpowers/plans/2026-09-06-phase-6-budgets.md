@@ -345,8 +345,8 @@ refreshUsages(deps)(principal, budgetId: string): Promise<{ inserted: number; up
 | DELETE | `/budgets/{id}/usages/{uid}` | `deleteManualUsage` | 204 |
 | POST | `/budgets/{id}/refresh` | `refreshUsages` | 200 |
 
-- [ ] Schemas (`BudgetSchema`, `BudgetFiguresSchema`, `BudgetSummarySchema`, `BudgetDetailSchema`, `AllocationSchema`, `ScopeSchema`, `UsageSchema`, `BudgetEventSchema`, request schemas with `amount: z.string().regex(/^-?\d{1,14}(\.\d{1,2})?$/)`), routes mirroring `src/modules/interests/api/routes.ts`, `toApiError`, `routes.itest.ts` (create → allocation → scopes → refresh → manual usage with `Idempotency-Key` replay creates one row → viewer 403 → stale PATCH 409), `npm run openapi:generate`, README section.
-- [ ] **Verify / Commit:** `npm run typecheck && npm test && npm run test:integration -- budgets`; `git add src/modules/budgets/api src/platform/http/app.ts docs/api && git commit -m "feat(budgets): REST API"`
+- [x] Schemas (`BudgetSchema`, `BudgetFiguresSchema`, `BudgetSummarySchema`, `BudgetDetailSchema`, `AllocationSchema`, `ScopeSchema`, `UsageSchema`, `BudgetEventSchema`, request schemas with `amount: z.string().regex(/^-?\d{1,14}(\.\d{1,2})?$/)`), routes mirroring `src/modules/interests/api/routes.ts`, `toApiError`, `routes.itest.ts` (create → allocation → scopes → refresh → manual usage with `Idempotency-Key` replay creates one row → viewer 403 → stale PATCH 409), `npm run openapi:generate`, README section.
+- [x] **Verify / Commit:** `npm run typecheck && npm test && npm run test:integration -- budgets`; `git add src/modules/budgets/api src/platform/http/app.ts docs/api && git commit -m "feat(budgets): REST API"`
 
 ---
 
