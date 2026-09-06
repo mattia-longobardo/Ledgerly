@@ -7,3 +7,4 @@ export * from "./transactions";
 export * from "./interests";
 export * from "./payroll";
 export * from "./funds";
+export * from "./budgets";

@@ -11,6 +11,16 @@ describe("funds permissions", () => {
   });
 });
 
+describe("budgets permissions", () => {
+  it("allows members to maintain budgets and viewers only to read them", () => {
+    expect([...permissionsForRoles(["member"])]).toEqual(expect.arrayContaining(["budgets.read", "budgets.write"]));
+    expect([...permissionsForRoles(["viewer"])]).toContain("budgets.read");
+    expect([...permissionsForRoles(["viewer"])]).not.toContain("budgets.write");
+    expect([...permissionsForRoles(["owner"])]).toEqual(expect.arrayContaining(["budgets.read", "budgets.write"]));
+    expect([...permissionsForRoles(["admin"])]).toEqual(expect.arrayContaining(["budgets.read", "budgets.write"]));
+  });
+});
+
 describe("payroll permissions", () => {
   it("declares all four codes the payroll module asserts", () => {
     for (const code of ["payroll.read", "payroll.upload", "payroll.review", "payroll.read_original"] as const) {
