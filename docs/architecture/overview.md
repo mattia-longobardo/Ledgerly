@@ -98,7 +98,11 @@ null. Reconciliation considers live ordinary payroll months mapped to that
 specific fund and enriches linked contributions with their exact payroll
 month. Issues are owner-scoped and qualified by fund; acknowledging one does
 not acknowledge another module's issue. Financial mutations serialize on the
-parent fund within the caller's transaction.
+parent fund within the caller's transaction. Contribution and reversal REST
+operations serialize each principal/idempotency-key pair and commit the financial
+mutation with its replay response in one transaction. Exact decimal strings are
+preserved through form input, aggregate response contracts and monetary text;
+chart coordinates use numeric values for plotting.
 
 Legacy migration imports opening capital, contributions, schedules and plans.
 When a valuation account is missing, it imports the existing canonical monthly
