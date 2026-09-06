@@ -6,6 +6,7 @@ import {
   fundContributions,
   funds,
   organizations,
+  payrollMappingRules,
   payrollRecords,
   users,
 } from "@/lib/db/schema";
@@ -98,6 +99,38 @@ async function aVerifiedImport(
       scanner: "none",
       extraction: selectedExtraction,
     }))!;
+  });
+}
+
+async function reverseSystemFee(
+  db: Awaited<ReturnType<typeof testDb>>,
+  principal: Principal,
+): Promise<{ feeId: string; reversalId: string }> {
+  return withUserContext(db, { userId: principal.userId }, async (tx) => {
+    const fee = (await tx.select().from(fundContributions)).find((row) => row.typeCode === "fee")!;
+    const [reversal] = await tx.insert(fundContributions).values({
+      fundId: fee.fundId,
+      typeCode: "reversal",
+      accrualPeriodStart: fee.accrualPeriodStart,
+      accrualPeriodEnd: fee.accrualPeriodEnd,
+      postedMonth: fee.postedMonth,
+      amount: "3.00",
+      currency: fee.currency,
+      source: "manual",
+      payrollRecordId: null,
+      note: "fee waived",
+      reversesId: fee.id,
+      reconciliationStatus: "received",
+    }).returning();
+    await tx.insert(auditEvents).values({
+      actorUserId: principal.userId,
+      action: "funds.contribution_reversed",
+      entityType: "fund_contribution",
+      entityId: reversal!.id,
+      before: fee,
+      after: reversal,
+    });
+    return { feeId: fee.id, reversalId: reversal!.id };
   });
 }
 
@@ -205,6 +238,48 @@ describe("applyImport against real Postgres", () => {
     });
   });
 
+  it("unchanged re-apply preserves a reversed system fee and its audit evidence", async () => {
+    const { db, principal } = await seed();
+    const imp = await aVerifiedImport(db, principal);
+    await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, imp.id),
+    );
+    const ids = await reverseSystemFee(db, principal);
+    await withUserContext(db, { userId: principal.userId }, async (tx) => {
+      await payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }).imports.patch(principal.userId, imp.id, { status: "verified" });
+    });
+
+    await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, imp.id),
+    );
+    await withUserContext(db, { userId: principal.userId }, async (tx) => {
+      const rows = await tx.select().from(fundContributions);
+      expect(rows.find((row) => row.typeCode === "fee")?.id).toBe(ids.feeId);
+      expect(rows.find((row) => row.typeCode === "reversal")?.id).toBe(ids.reversalId);
+      expect((await tx.select().from(auditEvents)).some((row) => row.entityId === ids.reversalId)).toBe(true);
+    });
+  });
+
+  it("same-posting supersession preserves a reversed system fee and its audit evidence", async () => {
+    const { db, principal } = await seed();
+    const original = await aVerifiedImport(db, principal);
+    await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, original.id),
+    );
+    const ids = await reverseSystemFee(db, principal);
+    const replacement = await aVerifiedImport(db, principal);
+    const applied = await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, replacement.id),
+    );
+    await withUserContext(db, { userId: principal.userId }, async (tx) => {
+      const rows = await tx.select().from(fundContributions);
+      expect(rows.find((row) => row.typeCode === "fee")?.id).toBe(ids.feeId);
+      expect(rows.find((row) => row.typeCode === "reversal")?.id).toBe(ids.reversalId);
+      expect(rows.filter((row) => row.typeCode === "employee" || row.typeCode === "employer").every((row) => row.payrollRecordId === applied.record.id)).toBe(true);
+      expect((await tx.select().from(auditEvents)).some((row) => row.entityId === ids.reversalId)).toBe(true);
+    });
+  });
+
   it("supersession removes the old fund posting when the replacement removes the mapping", async () => {
     const { db, principal } = await seed();
     const original = await aVerifiedImport(db, principal);
@@ -221,6 +296,53 @@ describe("applyImport against real Postgres", () => {
     expect(second.supersededRecordId).toBe(first.record.id);
     await withUserContext(db, { userId: principal.userId }, async (tx) => {
       expect(await tx.select().from(fundContributions)).toEqual([]);
+    });
+  });
+
+  it("supersession moves changed mappings to the new fund and clears the former fund", async () => {
+    const { db, principal } = await seed();
+    const original = await aVerifiedImport(db, principal);
+    await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, original.id),
+    );
+    const otherFund = await withUserContext(db, { userId: principal.userId }, async (tx) => {
+      const [created] = await tx.insert(funds).values({
+        userId: principal.userId,
+        slug: "other",
+        name: "Other fund",
+        kind: "pension",
+        currency: "EUR",
+      }).returning();
+      await tx.insert(payrollMappingRules).values([
+        {
+          userId: principal.userId,
+          matchCode: "fundContribEmployee",
+          componentKind: "employee_contribution",
+          target: { kind: "fund_contribution", fundSlug: "other", part: "employee" },
+          priority: 1,
+        },
+        {
+          userId: principal.userId,
+          matchCode: "fundContribEmployer",
+          componentKind: "employer_contribution",
+          target: { kind: "fund_contribution", fundSlug: "other", part: "employer" },
+          priority: 1,
+        },
+      ]);
+      return created!;
+    });
+    const replacement = await aVerifiedImport(db, principal);
+    const applied = await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, replacement.id),
+    );
+
+    await withUserContext(db, { userId: principal.userId }, async (tx) => {
+      const rows = await tx.select().from(fundContributions);
+      expect(rows.filter((row) => row.fundId !== otherFund.id)).toEqual([]);
+      expect(rows.filter((row) => row.fundId === otherFund.id)).toEqual([
+        expect.objectContaining({ typeCode: "employee", amount: "50.00", payrollRecordId: applied.record.id }),
+        expect.objectContaining({ typeCode: "employer", amount: "100.00", payrollRecordId: applied.record.id }),
+      ]);
     });
   });
 

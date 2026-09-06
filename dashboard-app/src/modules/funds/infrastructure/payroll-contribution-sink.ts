@@ -159,12 +159,6 @@ export function createPayrollContributionSink(
           affectedPostings.set(fund.id, new Set(removed.postedMonths));
         }
       }
-      for (const [fundId, postedMonths] of affectedPostings) {
-        for (const postedMonth of postedMonths) {
-          await repositories.contributions.deleteOrphanSystemFee(fundId, postedMonth);
-        }
-      }
-
       for (const row of prepared) {
         await repositories.contributions.create({
           fundId: row.fundId,
@@ -181,6 +175,12 @@ export function createPayrollContributionSink(
           reversesId: null,
           reconciliationStatus: "received",
         });
+      }
+
+      for (const [fundId, postedMonths] of affectedPostings) {
+        for (const postedMonth of postedMonths) {
+          await repositories.contributions.deleteOrphanSystemFee(fundId, postedMonth);
+        }
       }
 
       for (const fee of fees.values()) {

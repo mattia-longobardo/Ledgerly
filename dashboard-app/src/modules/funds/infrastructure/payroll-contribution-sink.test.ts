@@ -270,6 +270,76 @@ describe("memoryPayrollContributionSink", () => {
     expect(await contributions.listForFund(fund.id)).toEqual([]);
   });
 
+  it("unchanged re-apply preserves a manually reversed posting fee", async () => {
+    const { fund, contributions, sink } = await setup();
+    const input = {
+      userId: USER_ID,
+      payrollRecordId: "current",
+      supersededRecordId: null,
+      rows: [{ fundSlug: "cometa", part: "employee" as const, accrualMonth: "2026-02-01", amount: "100.00", currency: "EUR" }],
+    };
+    await sink.writeForRecord(input);
+    const fee = (await contributions.listForFund(fund.id)).find((row) => row.typeCode === "fee")!;
+    const reversal = await contributions.create({
+      fundId: fund.id,
+      typeCode: "reversal",
+      accrualPeriodStart: fee.accrualPeriodStart,
+      accrualPeriodEnd: fee.accrualPeriodEnd,
+      postedMonth: fee.postedMonth,
+      valueDate: null,
+      amount: "3.00",
+      currency: "EUR",
+      source: "manual",
+      payrollRecordId: null,
+      note: "fee waived",
+      reversesId: fee.id,
+      reconciliationStatus: "received",
+    });
+
+    await sink.writeForRecord(input);
+    const rows = await contributions.listForFund(fund.id);
+    expect(rows.find((row) => row.typeCode === "fee")?.id).toBe(fee.id);
+    expect(rows.find((row) => row.typeCode === "reversal")?.id).toBe(reversal.id);
+    expect(rows.reduce((total, row) => total + BigInt(row.amount.replace(".", "")), 0n)).toBe(10000n);
+  });
+
+  it("same-posting supersession preserves a manually reversed posting fee", async () => {
+    const { fund, contributions, sink } = await setup();
+    await sink.writeForRecord({
+      userId: USER_ID,
+      payrollRecordId: "old",
+      supersededRecordId: null,
+      rows: [{ fundSlug: "cometa", part: "employee", accrualMonth: "2026-02-01", amount: "100.00", currency: "EUR" }],
+    });
+    const fee = (await contributions.listForFund(fund.id)).find((row) => row.typeCode === "fee")!;
+    const reversal = await contributions.create({
+      fundId: fund.id,
+      typeCode: "reversal",
+      accrualPeriodStart: fee.accrualPeriodStart,
+      accrualPeriodEnd: fee.accrualPeriodEnd,
+      postedMonth: fee.postedMonth,
+      valueDate: null,
+      amount: "3.00",
+      currency: "EUR",
+      source: "manual",
+      payrollRecordId: null,
+      note: "fee waived",
+      reversesId: fee.id,
+      reconciliationStatus: "received",
+    });
+
+    await sink.writeForRecord({
+      userId: USER_ID,
+      payrollRecordId: "new",
+      supersededRecordId: "old",
+      rows: [{ fundSlug: "cometa", part: "employee", accrualMonth: "2026-03-01", amount: "110.00", currency: "EUR" }],
+    });
+    const rows = await contributions.listForFund(fund.id);
+    expect(rows.find((row) => row.typeCode === "fee")?.id).toBe(fee.id);
+    expect(rows.find((row) => row.typeCode === "reversal")?.id).toBe(reversal.id);
+    expect(rows.find((row) => row.typeCode === "employee")).toMatchObject({ payrollRecordId: "new", amount: "110.00" });
+  });
+
   it("supersession clears removed and changed mappings across all owner funds", async () => {
     const { fund: cometa, funds, schedules, contributions, sink } = await setup();
     const other = await funds.create({
