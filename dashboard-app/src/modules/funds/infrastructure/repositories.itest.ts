@@ -3,6 +3,7 @@ import {
   accountBalances,
   accounts,
   organizations,
+  payrollComponents,
   payrollImports,
   payrollRecords,
   users,
@@ -298,6 +299,33 @@ describe("Drizzle owner-scoped sources", () => {
         periodEnd: "2026-04-30",
         kind: "bonus",
       }).returning();
+      await tx.insert(payrollComponents).values([
+        {
+          recordId: liveId!, code: "fundContribEmployee", labelRaw: "Employee contribution",
+          kind: "employee_contribution", amount: "100.00", currency: "EUR",
+          mappedTo: { kind: "fund_contribution", fundSlug: "cometa", part: "employee" },
+        },
+        {
+          recordId: liveId!, code: "fundContribEmployer", labelRaw: "Employer contribution",
+          kind: "employer_contribution", amount: "150.00", currency: "EUR",
+          mappedTo: { kind: "fund_contribution", fundSlug: "cometa", part: "employer" },
+        },
+        {
+          recordId: bonus!.id, code: "fundContribBonus", labelRaw: "Bonus contribution",
+          kind: "employee_contribution", amount: "25.00", currency: "EUR",
+          mappedTo: { kind: "fund_contribution", fundSlug: "cometa", part: "employee" },
+        },
+        {
+          recordId: superseded!.id, code: "fundContribSuperseded", labelRaw: "Superseded contribution",
+          kind: "employee_contribution", amount: "25.00", currency: "EUR",
+          mappedTo: { kind: "fund_contribution", fundSlug: "cometa", part: "employee" },
+        },
+        {
+          recordId: otherId!, code: "fundContribOther", labelRaw: "Other user's contribution",
+          kind: "employee_contribution", amount: "25.00", currency: "EUR",
+          mappedTo: { kind: "fund_contribution", fundSlug: "cometa", part: "employee" },
+        },
+      ]);
       const source = drizzlePayrollMonthsSource(tx);
       const live = await source.liveRecords(userId);
       expect(live).toHaveLength(3);
@@ -306,6 +334,12 @@ describe("Drizzle owner-scoped sources", () => {
       expect(live.map((row) => row.id)).not.toContain(superseded!.id);
       expect(live.map((row) => row.id)).not.toContain(bonus!.id);
       await expect(source.liveMonths(userId)).resolves.toEqual(["2026-01-01", "2026-02-01", "2026-03-01"]);
+      const allKinds = await source.liveRecords(userId, true);
+      expect(allKinds).toEqual(expect.arrayContaining([{ id: bonus!.id, month: "2026-04-01" }]));
+      expect(allKinds.map((row) => row.id)).not.toContain(otherId);
+      expect(allKinds.map((row) => row.id)).not.toContain(superseded!.id);
+      await expect(source.expectedMonths(userId, "cometa")).resolves.toEqual(["2026-01-01"]);
+      await expect(source.expectedMonths(userId, "manual")).resolves.toEqual([]);
     });
   });
 });
