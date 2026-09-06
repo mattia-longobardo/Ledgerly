@@ -1,34 +1,34 @@
 # Graph Report - personal-dashboard  (2026-09-06)
 
 ## Corpus Check
-- 645 files · ~662,821 words
+- 715 files · ~695,812 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4115 nodes · 11817 edges · 174 communities (165 shown, 9 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 104 edges (avg confidence: 0.68)
+- 4523 nodes · 13115 edges · 184 communities (175 shown, 9 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 121 edges (avg confidence: 0.66)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `62941948`
+- Built from commit: `0dc939e8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- (app)/page.tsx
-- LeaveCalendar.tsx
-- [slug]/page.tsx
+- format.ts
+- cn
+- load-company.ts
 - admin/page.tsx
-- sweep.ts
+- require-user.ts
 - trek.ts
 - accounts/api/routes.ts
 - Finance & Company Platform — Design and Phased Plan
 - accounts/[id]/page.tsx
 - parse.ts
-- wallet-refresh.ts
+- funds/api/routes.ts
 - compilerOptions
-- PageGrid.tsx
-- cn
+- preview/page.tsx
+- ErrorInline.tsx
 - actions/accounts.ts
 - rules.ts
 - ingest-import.ts
@@ -41,35 +41,35 @@
 - Phase 2 — The integration framework
 - load-interests.ts
 - IntegrationConnection
-- assertPermission
+- actions/payroll.ts
 - confidence.ts
 - actions/integrations.ts
-- trek-diff.ts
+- repo/leave.ts
 - llm.ts
 - Phase 1 — Accounts and Teable retirement
-- cards.test.ts
-- withUserContext
-- vacation/page.tsx
+- permissionsForRoles
+- funds/application/ports.ts
+- auth/principal.ts
 - validate-teable-migration.ts
 - http.ts
 - networth.ts
-- accounts/application/ports.ts
+- account.ts
 - trek.test.ts
-- expenses/api/schemas.ts
+- payroll-contribution-sink.ts
 - 5. Data model
 - trek-sync.test.ts
 - create-interest-rule.ts
 - toCents
 - Finance Dashboard — Brand System
 - teamsystem.ts
-- env.ts
+- db/index.ts
 - _lib/leave.ts
 - payroll/api/routes.ts
 - render-brand-icons.py
 - schema/index.ts
 - teable-import.ts
 - wallet-provider-adapter.ts
-- test/principal.ts
+- load-payroll.test.ts
 - AGENTS.md
 - machine.ts
 - integrations/api/routes.ts
@@ -78,17 +78,17 @@
 - CLAUDE.md
 - scripts
 - August 2026 OCR Fixture (Paperless-ngx text)
-- apply-import.ts
+- contracts.ts
 - End-to-end tests
 - Transaction
 - transaction.ts
 - PayrollImport
 - run-sync.ts
 - dashboard-app service
-- require-user.ts
+- [[...route]]/route.ts
 - 7. Domain designs (what each section computes)
 - August 2026 PDF-Text Fixture (clean layout)
-- jobs/registry.ts
+- test/principal.ts
 - SyncRun
 - env
 - interests/api/routes.ts
@@ -100,105 +100,115 @@
 - Real Payslip Fixture: 13a Mensilita 2025 (doc 13)
 - Code 300 - ASSENZA X FERIE A.C.(hh)
 - Compose healthchecks and autoheal labels
-- DbClient
+- funds/[id]/page.tsx
 - package.json
-- permissionsForRoles
+- migrate-funds.ts
 - next.config.ts
-- TimeSeriesChart.tsx
-- app.ts
+- vacation/page.tsx
+- http/errors.ts
 - entrypoint.sh
 - list-accounts.ts
 - Checkpoint: Phase 0 + Phase 1 complete (2026-09-03)
 - Code 9837 - IMPONIBILE 5% L.199/25
 - require-principal.ts
 - SDD ledger — plan: docs/superpowers/plans/2026-09-02-phase-0-1-foundations-and-accounts.md
-- contracts.ts
+- interest-accrual.ts
 - { GET, POST }
 - ADDIZIONALE COMUNALE
 - payroll/application/ports.ts
 - TransactionCategory
 - File Structure
-- SyncKind
+- handle-webhook.test.ts
 - PayrollRecord
-- repo/leave.ts
+- load-funds.ts
 - integrations/types.ts
 - expenses/api/routes.ts
 - expenses/application/ports.ts
 - Teable migration
-- InterestRule
-- interests/infrastructure/memory-repositories.ts
+- interests/application/ports.ts
+- schema/accounts.ts
 - expenses.ts
 - Phase 1 deployment runbook — accounts and Teable retirement
 - text.ts
 - Finance Dashboard API
 - Phase 2 deployment runbook — integration framework and encrypted credentials
-- Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4
+- Architecture overview — Phases 0–5
 - Finance Dashboard
-- interests/application/ports.ts
-- document-store-resolver.ts
+- env.ts
+- create-import.ts
 - actions/leave.ts
-- expenses/infrastructure/memory-repositories.ts
-- File structure
+- TransactionLabel
+- Execution rulings (full-phase run)
 - The integration framework
 - Checkpoint: Phase 2 complete (2026-09-04)
 - Progress
-- succeed
-- load-company.ts
-- payroll/infrastructure/repositories.itest.ts
+- personal/page.tsx
+- company/page.tsx
+- funds/infrastructure/repositories.itest.ts
 - File structure
 - File structure
 - get-interest-rule-detail.ts
 - Phase 3 deployment runbook — Expenses and Interests
-- webhook.itest.ts
+- crypto.ts
 - File structure
-- 10. Migration strategy
+- load-transactions.ts
 - Rulings — execution (P3-C1 … P3-C38)
 - gotify.ts
 - llm-config.ts
-- expenses-rls.itest.ts
-- withSystemContext
-- legacy.ts
+- FundContribution
+- DbClient
+- validate-funds-migration.ts
 - File structure
 - Checkpoint: Phase 3 complete (2026-09-05)
-- DrizzleInterestAccrualsRepository
-- accounts/ui/run.ts
+- Fund
+- accounts/application/ports.ts
 - app/layout.tsx
-- text
+- actions/funds.ts
 - Phase 4: Payroll upload pipeline and Company
 - 3. Target architecture
-- ingest.ts
+- payroll-ingest.ts
 - Phase 4 deployment runbook — Payroll upload pipeline and Company
-- sigv4.ts
-- actions/leave.test.ts
-- list-integrations.ts
-- actions/interests.ts
+- s3-document-store.ts
+- jobs/registry.ts
+- (app)/page.tsx
+- romeDate
 - SDD ledger — plan: docs/superpowers/plans/2026-09-05-phase-4-payroll-and-company.md
 - RulesTable.tsx
 - Phases 5–9: shared conventions for Codex
 - paperless-reconciliation.md
+- reconcile-fund.ts
+- PayrollComponent
+- time-off/page.tsx
+- Phase 5 deployment runbook — Funds
+- sync-provider-accounts.ts
+- silo-provider-adapter.ts
+- _lib/leave.test.ts
+- accounts/infrastructure/deps.ts
+- 8. Security design
+- 2026-09-06-phase-5-ledger.md
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 98 edges
-2. `withUserContext()` - 77 edges
-3. `assertPermission()` - 74 edges
-4. `testDb()` - 72 edges
-5. `DbClient` - 67 edges
-6. `Principal` - 64 edges
-7. `toCents()` - 61 edges
-8. `fromCents()` - 52 edges
-9. `users` - 49 edges
-10. `withSystemContext()` - 48 edges
+1. `assertPermission()` - 96 edges
+2. `cn()` - 95 edges
+3. `withUserContext()` - 87 edges
+4. `DbClient` - 84 edges
+5. `testDb()` - 77 edges
+6. `Principal` - 76 edges
+7. `withSystemContext()` - 54 edges
+8. `testPrincipal()` - 54 edges
+9. `users` - 53 edges
+10. `requirePrincipalOrRedirect()` - 51 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Code 8054 - CONTRIBUTO DIPENDENTE (negative)` --semantically_similar_to--> `Code 7101 - FONDO C/DIPE (employee pension-fund share)`  [INFERRED] [semantically similar]
   dashboard-app/src/lib/payroll/__fixtures__/real/d13.txt → dashboard-app/src/lib/payroll/__fixtures__/real/ago2026.txt
-- `alerts()` --indirect_call--> `httpRequest()`  [INFERRED]
-  dashboard-app/src/lib/jobs/wallet-refresh.test.ts → dashboard-app/src/lib/clients/http.ts
 - `Code 4 - GIORNI NON LAVORATI` --semantically_similar_to--> `Code 19 - ORE NON LAVORATE`  [INFERRED] [semantically similar]
   dashboard-app/src/lib/payroll/__fixtures__/real/d14.txt → dashboard-app/src/lib/payroll/__fixtures__/real/ago2026.txt
 - `Code 7101 - FONDO C/DIPE (employee pension-fund share)` --semantically_similar_to--> `Code 7053 - QUOTA ISCR.FONDO DIPEND.`  [INFERRED] [semantically similar]
   dashboard-app/src/lib/payroll/__fixtures__/real/ago2026.txt → dashboard-app/src/lib/payroll/__fixtures__/real/d12.txt
 - `Code 8992 - TRATTAMENTO INT. DL 3/20` --semantically_similar_to--> `Code 9424 - ULTERIORE DETRAZIONE MESE`  [INFERRED] [semantically similar]
+  dashboard-app/src/lib/payroll/__fixtures__/real/d10.txt → dashboard-app/src/lib/payroll/__fixtures__/real/ago2026.txt
+- `Code 9824 - SOMMA ART.1 C.4 L.207/24` --semantically_similar_to--> `Code 9837 - IMPONIBILE 5% L.199/25`  [INFERRED] [semantically similar]
   dashboard-app/src/lib/payroll/__fixtures__/real/d10.txt → dashboard-app/src/lib/payroll/__fixtures__/real/ago2026.txt
 
 ## Import Cycles
@@ -209,87 +219,87 @@
 - **Leave-Hours Accounting Pattern (offsetting pair + residual grid)** — dashboard_app_src_lib_payroll___fixtures___real_ago2026_300_assenza_x_ferie_ac, dashboard_app_src_lib_payroll___fixtures___real_ago2026_301_ferie_ac, dashboard_app_src_lib_payroll___fixtures___real_d15_308_assenza_x_perm_ac, dashboard_app_src_lib_payroll___fixtures___real_d15_309_permessi_ac, dashboard_app_src_lib_payroll___fixtures___august_2026_pdf_leave_residuals_grid, dashboard_app_src_lib_payroll___fixtures___august_2026_ocr_flattened_residuals_defect [EXTRACTED 1.00]
 - **TFR / Complementary Pension Contribution Block** — dashboard_app_src_lib_payroll___fixtures___real_ago2026_7101_fondo_c_dipe, dashboard_app_src_lib_payroll___fixtures___real_ago2026_9109_fondo_c_azienda, dashboard_app_src_lib_payroll___fixtures___real_ago2026_8003_contribuzione_tfr, dashboard_app_src_lib_payroll___fixtures___real_ago2026_7897_esonero_ctr_tfr_prev_c, dashboard_app_src_lib_payroll___fixtures___real_ago2026_9110_comunicazione_dipendente, dashboard_app_src_lib_payroll___fixtures___teamsystem_august_2026_tfr_mese [EXTRACTED 1.00]
 
-## Communities (174 total, 9 thin omitted)
+## Communities (184 total, 9 thin omitted)
 
-### Community 0 - "(app)/page.tsx"
-Cohesion: 0.05
-Nodes (55): byYear(), FundTable(), MonthlyGainPanel(), Pct(), tone(), DEFAULT_STATE, OverviewClientProps, PRESET (+47 more)
-
-### Community 1 - "LeaveCalendar.tsx"
+### Community 0 - "format.ts"
 Cohesion: 0.07
-Nodes (40): LeaveByMonth(), FRACTION_OPTIONS, KIND_OPTIONS, LeaveCalendar(), varianceSentence(), dynamic, metadata, ReviewPayslipPage() (+32 more)
+Nodes (47): DEFAULT_STATE, OverviewAccount, OverviewClient(), OverviewClientProps, OverviewSource, PRESET, RANGE_KEYS, readUrl() (+39 more)
 
-### Community 2 - "[slug]/page.tsx"
-Cohesion: 0.09
-Nodes (24): FundSettingsForm(), FundSettingsFormProps, dynamic, dynamic, IntegrationPage(), ErrorInline(), ErrorInlineProps, Toast() (+16 more)
+### Community 1 - "cn"
+Cohesion: 0.06
+Nodes (52): FRACTION_OPTIONS, KIND_OPTIONS, apply(), ORDER, readStored(), ThemeMode, ThemeToggle(), ThemeToggleProps (+44 more)
+
+### Community 2 - "load-company.ts"
+Cohesion: 0.11
+Nodes (23): earningsSummary(), getRecord(), listRecords(), principal, Accumulator, bucketsOf(), CONTRIBUTION_KINDS, EarningsBucket (+15 more)
 
 ### Community 3 - "admin/page.tsx"
-Cohesion: 0.08
-Nodes (25): InterestAccrualDetail, interestAccrualNotice(), AdminSettingsPage(), dynamic, JOB_LABEL, JOBS, metadata, RUN_TIME (+17 more)
+Cohesion: 0.17
+Nodes (14): InterestAccrualDetail, interestAccrualNotice(), AdminSettingsPage(), dynamic, JOB_LABEL, JOBS, metadata, RUN_TIME (+6 more)
 
-### Community 4 - "sweep.ts"
-Cohesion: 0.22
-Nodes (14): dynamic, GET(), HEARTBEAT_MAX_AGE_MS, heartbeatAgeMs(), heartbeatPath(), isHeartbeatStale(), readHeartbeat(), touchHeartbeat() (+6 more)
+### Community 4 - "require-user.ts"
+Cohesion: 0.12
+Nodes (24): dynamic, GET(), bodySchema, dynamic, POST(), dynamic, POST(), AuthedUser (+16 more)
 
 ### Community 5 - "trek.ts"
 Cohesion: 0.09
-Nodes (41): UpstreamService, applyDesiredState(), ApplyDesiredStateInput, asRecord(), callTool(), CLIENT_INFO, describe(), ensureSession() (+33 more)
+Nodes (43): applyDesiredState(), ApplyDesiredStateInput, asRecord(), callTool(), CLIENT_INFO, describe(), ensureSession(), entryListSchema (+35 more)
 
 ### Community 6 - "accounts/api/routes.ts"
-Cohesion: 0.06
-Nodes (55): accountDto(), balancePointDto(), commonErrorResponses, createAccountRoute, createGroupRoute, decodeCursor(), deleteAccountRoute, deleteGroupRoute (+47 more)
+Cohesion: 0.05
+Nodes (56): accountDto(), balancePointDto(), commonErrorResponses, createAccountRoute, createGroupRoute, decodeCursor(), deleteAccountRoute, deleteGroupRoute (+48 more)
 
 ### Community 7 - "Finance & Company Platform — Design and Phased Plan"
 Cohesion: 0.12
-Nodes (16): 0. How to read this document, 12. Intentional breaking changes, 13. Questions worth answering (none block Phase 0–1), 1.1 What exists, 1.2 What to keep, change, retire, 1. Repository assessment, 2. Assumptions (stated instead of asked), 4. Navigation and page map (+8 more)
+Nodes (16): 0. How to read this document, 10.1 Teable → PostgreSQL, 10.2 Paperless → payroll silo, 10.3 Single user → users table, 10.4 Deployment, 10. Migration strategy, 12. Intentional breaking changes, 13. Questions worth answering (none block Phase 0–1) (+8 more)
 
 ### Community 8 - "accounts/[id]/page.tsx"
-Cohesion: 0.08
-Nodes (39): AccountDetailActions(), AccountDetailActionsProps, BalanceHistoryRow, BalanceHistoryTable(), BalanceHistoryTableProps, BalancesPageResponse, AccountDetailPage(), dynamic (+31 more)
+Cohesion: 0.06
+Nodes (48): AccountDetailActions(), AccountDetailActionsProps, BalanceHistoryRow, BalanceHistoryTable(), BalanceHistoryTableProps, BalancesPageResponse, AccountDetailPage(), dynamic (+40 more)
 
 ### Community 9 - "parse.ts"
-Cohesion: 0.10
-Nodes (23): ORDINARY_MONTH_MARKERS, THIRTEENTH_KEYWORDS, median(), PayslipHistoryEntry, LlmOptions, allLowFields(), detectThirteenth(), DetectThirteenthInput (+15 more)
+Cohesion: 0.09
+Nodes (27): ORDINARY_MONTH_MARKERS, THIRTEENTH_KEYWORDS, median(), PayslipHistoryEntry, LlmOptions, LlmPassResult, allLowFields(), detectThirteenth() (+19 more)
 
-### Community 10 - "wallet-refresh.ts"
-Cohesion: 0.15
-Nodes (16): getBalances(), SourceKind, JOB_NAME, LOCK_KEY, refresh(), RunWalletRefreshInput, alerts(), BALANCES (+8 more)
+### Community 10 - "funds/api/routes.ts"
+Cohesion: 0.05
+Nodes (56): acknowledgeIssueRoute, addContributionRoute, commonErrorResponses, contributionDto(), createRoute_, detailDto(), fundDto(), getRoute (+48 more)
 
 ### Community 11 - "compilerOptions"
 Cohesion: 0.07
 Nodes (29): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+21 more)
 
-### Community 12 - "PageGrid.tsx"
-Cohesion: 0.09
-Nodes (15): LG_SPAN, LG_START, MD_SPAN, PageGrid(), Panel(), PanelProps, Span, Skeleton() (+7 more)
+### Community 12 - "preview/page.tsx"
+Cohesion: 0.07
+Nodes (24): FRESH, FUND, MONTHS, NOW, OLD, PREVIEW_NAV, SAMPLE_SERIES, SHORT_SERIES (+16 more)
 
-### Community 13 - "cn"
-Cohesion: 0.04
-Nodes (71): FinanceTabs(), HREF, OPTIONS, ViewKey, ViewState, WithdrawalFlowProps, FRESH, FUND (+63 more)
+### Community 13 - "ErrorInline.tsx"
+Cohesion: 0.07
+Nodes (34): dynamic, IntegrationsPage(), metadata, dynamic, IntegrationPage(), describeCurrentSession(), dynamic, metadata (+26 more)
 
 ### Community 14 - "actions/accounts.ts"
-Cohesion: 0.17
-Nodes (30): createAccountAction(), createGroupAction(), deleteAccountAction(), deleteGroupAction(), flag(), mapError(), recordBalanceAction(), renameGroupAction() (+22 more)
+Cohesion: 0.21
+Nodes (28): createAccountAction(), createGroupAction(), deleteAccountAction(), deleteGroupAction(), flag(), mapError(), recordBalanceAction(), renameGroupAction() (+20 more)
 
 ### Community 15 - "rules.ts"
-Cohesion: 0.12
-Nodes (27): Anchor, AUX_ANCHORS, AUX_FIELDS, COMPOSITE_FIELDS, FIELD_ANCHORS, GRID_HEADER_SYNONYMS, GridId, GRIDS (+19 more)
+Cohesion: 0.10
+Nodes (34): PayslipField, Anchor, AUX_ANCHORS, AUX_FIELDS, AuxField, COMPOSITE_FIELDS, FIELD_ANCHORS, GRID_HEADER_SYNONYMS (+26 more)
 
 ### Community 16 - "ingest-import.ts"
-Cohesion: 0.12
-Nodes (23): applyParseConclusion(), applyScanConclusion(), beginScan(), confidenceMap(), IngestOutcome, ParseConclusion, ParseReadiness, ScanConclusion (+15 more)
+Cohesion: 0.11
+Nodes (25): applyParseConclusion(), applyScanConclusion(), beginParse(), beginScan(), confidenceMap(), IngestOutcome, ParseConclusion, ParseReadiness (+17 more)
 
 ### Community 17 - "AccountGroup"
-Cohesion: 0.21
-Nodes (3): GroupsRepository, AccountGroup, MemoryGroupsRepository
+Cohesion: 0.17
+Nodes (5): GroupsRepository, AccountGroup, DrizzleGroupsRepository, toGroup(), MemoryGroupsRepository
 
 ### Community 18 - "wallet.ts"
 Cohesion: 0.07
 Nodes (49): requestJson(), SleepFn, withRetry(), REVOLUT_COMPONENT_KEYS, WALLET_ACCOUNTS, WALLET_EXPECTED_CURRENCY, WalletAccountConfig, accountSchema (+41 more)
 
 ### Community 19 - "time.ts"
-Cohesion: 0.10
-Nodes (44): OverviewClient(), readUrl(), toSearch(), toSeries(), TotalBalanceCards(), annualTotals, averageNet(), AverageOptions (+36 more)
+Cohesion: 0.11
+Nodes (39): TotalBalanceCards(), annualTotals, averageNet(), AverageOptions, averageTaxes(), inYear(), isThirteenthCandidate(), isVerified() (+31 more)
 
 ### Community 20 - "dependencies"
 Cohesion: 0.07
@@ -308,28 +318,28 @@ Cohesion: 0.07
 Nodes (27): File Structure, Global Constraints, Phase 2 — Deferred minors first, Phase 2: Integration framework, encrypted credentials and the Settings split, Phase 2 — The integration framework, Rulings, Self-review against the Phase 2 scope, Task 10: The sync engine (+19 more)
 
 ### Community 24 - "load-interests.ts"
-Cohesion: 0.17
-Nodes (16): listInterestRules(), accountNamesFor(), AccountNamesLookup, loadInterestRuleDetail(), loadInterestRules(), RuleDetailAccrual, RuleDetailData, RuleDetailProjectionPoint (+8 more)
+Cohesion: 0.15
+Nodes (19): dynamic, InterestRulePage(), metadata, monthStart(), accountNamesFor(), AccountNamesLookup, loadInterestRuleDetail(), loadInterestRules() (+11 more)
 
 ### Community 25 - "IntegrationConnection"
-Cohesion: 0.08
-Nodes (17): ConnectIntegrationInput, ConnectionPatch, ConnectionsRepository, ConnectionStatePatch, NewConnection, WebhookDeliveriesRepository, WebhookDelivery, DrizzleConnectionsRepository (+9 more)
+Cohesion: 0.09
+Nodes (10): ConnectionsRepository, ConnectionStatePatch, NewConnection, DrizzleConnectionsRepository, toConnection(), MemoryConnectionsRepository, Stored, SealedCredential (+2 more)
 
-### Community 26 - "assertPermission"
+### Community 26 - "actions/payroll.ts"
 Cohesion: 0.08
-Nodes (47): applyPayslipAction(), nextInQueue(), rejectPayslipAction(), revalidate(), toActionError(), uploadPayslipAction(), VerifyActionInput, verifyPayslipAction() (+39 more)
+Nodes (43): applyPayslipAction(), nextInQueue(), rejectPayslipAction(), revalidate(), toActionError(), uploadPayslipAction(), VerifyActionInput, verifyPayslipAction() (+35 more)
 
 ### Community 27 - "confidence.ts"
-Cohesion: 0.11
-Nodes (31): FieldExtraction, PayslipField, AuxField, GRID_DEPENDENT_FIELDS, BALANCE_TOLERANCE, checkNetAgainstMedian(), checkNettoBalance(), checkResidualContinuity() (+23 more)
+Cohesion: 0.15
+Nodes (19): GRID_DEPENDENT_FIELDS, BALANCE_TOLERANCE, checkNetAgainstMedian(), checkNettoBalance(), checkResidualContinuity(), combineField(), crossValidate(), demote() (+11 more)
 
 ### Community 28 - "actions/integrations.ts"
-Cohesion: 0.15
-Nodes (19): connectIntegration(), disconnectIntegration(), ConnectionNotFoundError, ConnectionVersionMismatchError, CredentialValidationError, UnknownProviderError, makeDeps(), principal (+11 more)
-
-### Community 29 - "trek-diff.ts"
 Cohesion: 0.11
-Nodes (21): Editing, LeaveDayDetail, payroll, payslips, principal, repo, trekState, vacation (+13 more)
+Nodes (32): connectIntegrationAction(), credentialsFrom(), disconnectIntegrationAction(), mapError(), revalidateIntegrations(), syncIntegrationAction(), testIntegrationAction(), connectIntegration() (+24 more)
+
+### Community 29 - "repo/leave.ts"
+Cohesion: 0.10
+Nodes (34): Editing, LeaveDayDetail, LeaveFraction, LeaveKind, DesiredDay, TogglePlanStep, TrekEntry, differs() (+26 more)
 
 ### Community 30 - "llm.ts"
 Cohesion: 0.14
@@ -339,105 +349,105 @@ Nodes (17): buildTool(), chatCompletionsUrl(), coerceMonth(), coerceNumber(), DE
 Cohesion: 0.07
 Nodes (27): File structure (what will exist after Phase 1), Global Constraints, Phase 0 — Foundations, Phase 0 + Phase 1: Foundations and Accounts Implementation Plan, Phase 1 — Accounts and Teable retirement, Self-review against the spec, Task 10: Capability resolver and capability-driven navigation, Task 11: Accounts schema with RLS (+19 more)
 
-### Community 32 - "cards.test.ts"
-Cohesion: 0.18
-Nodes (14): CardKey, cardState, HOME_CARDS, HomeCard, isCardVisible(), caps(), EXPENSES_CARD, WRITE_GATED_CARD (+6 more)
+### Community 32 - "permissionsForRoles"
+Cohesion: 0.07
+Nodes (34): AdminUserView, ProfileView, SessionView, funds, seed(), appFor(), createFund(), headers() (+26 more)
 
-### Community 33 - "withUserContext"
+### Community 33 - "funds/application/ports.ts"
+Cohesion: 0.04
+Nodes (29): AccountLinkSource, Clock, ContributionSource, ContributionsRepository, FundPlan, FundSchedule, FundStatus, IssuesRepository (+21 more)
+
+### Community 34 - "auth/principal.ts"
 Cohesion: 0.12
-Nodes (25): fixture(), integrationConnections, legacyFunds, asGroupUser(), asLinkUser(), asUser(), seedUsers(), seedUser() (+17 more)
-
-### Community 34 - "vacation/page.tsx"
-Cohesion: 0.13
-Nodes (25): FundsPage(), cellTone(), FundDetailPage(), DATE_LINE, dynamic, ENTRY_LABEL, metadata, VacationFundPage() (+17 more)
+Nodes (21): createManualAccount(), createManualAccountSchema, deleteAccount(), DeletionBlockedError, InvalidInputError, NotFoundError, VersionMismatchError, createGroupSchema (+13 more)
 
 ### Community 35 - "validate-teable-migration.ts"
-Cohesion: 0.12
-Nodes (16): APP_MANAGED_KEYS, argv, BlankMonthRow, centsByMonth(), db, differenceLabel(), HAND_TRACKED_KEYS, LEGACY_KEYS (+8 more)
+Cohesion: 0.09
+Nodes (23): APP_MANAGED_KEYS, argv, BlankMonthRow, centsByMonth(), db, differenceLabel(), HAND_TRACKED_KEYS, LEGACY_KEYS (+15 more)
 
 ### Community 36 - "http.ts"
-Cohesion: 0.12
-Nodes (16): backoffDelay(), HttpError, httpRequest(), HttpRequestInit, isRetryable(), isRetryableStatus(), parseRetryAfter(), readBody() (+8 more)
+Cohesion: 0.09
+Nodes (23): backoffDelay(), HttpError, httpRequest(), HttpRequestInit, isRetryable(), isRetryableStatus(), parseRetryAfter(), readBody() (+15 more)
 
 ### Community 37 - "networth.ts"
-Cohesion: 0.13
-Nodes (21): contributingKeys(), missingKeys(), netWorth, NetWorthContributor, NetWorthOptions, observe(), Observed, oldestCapture() (+13 more)
+Cohesion: 0.22
+Nodes (12): contributingKeys(), missingKeys(), netWorth, NetWorthContributor, NetWorthOptions, observe(), Observed, oldestCapture() (+4 more)
 
-### Community 38 - "accounts/application/ports.ts"
-Cohesion: 0.04
-Nodes (37): createManualAccount(), createManualAccountSchema, deleteAccount(), UseCaseDeps, DeletionBlockedError, InvalidInputError, NotFoundError, VersionMismatchError (+29 more)
+### Community 38 - "account.ts"
+Cohesion: 0.08
+Nodes (10): AccountPatch, AccountsRepository, Account, AccountType, BalanceSource, deletionDecision, base, DrizzleAccountsRepository (+2 more)
 
 ### Community 39 - "trek.test.ts"
 Cohesion: 0.17
 Nodes (14): resetTrekAuthCache(), callsTo(), CONFIG, entriesPayload(), fetchMock, LIVE_STATS, Rpc, rpcOf() (+6 more)
 
-### Community 40 - "expenses/api/schemas.ts"
-Cohesion: 0.11
-Nodes (17): CadenceSchema, CategoryKindSchema, CategoryListResponseSchema, dateTimeString, LabelListResponseSchema, ListTransactionsQuerySchema, RecordSourceSchema, RecurringPatternListResponseSchema (+9 more)
+### Community 40 - "payroll-contribution-sink.ts"
+Cohesion: 0.09
+Nodes (40): addContribution(), AddContributionInput, schema, createFund(), CreateFundInput, schema, InvalidInputError, NotFoundError (+32 more)
 
 ### Community 41 - "5. Data model"
 Cohesion: 0.18
 Nodes (11): 5.10 Indexes (access-pattern driven), 5.1 Identity and access, 5.2 Integrations, 5.3 Accounts, 5.4 Transactions (Expenses), 5.5 Funds, 5.6 Budgets, 5.7 Interests (+3 more)
 
 ### Community 42 - "trek-sync.test.ts"
-Cohesion: 0.17
-Nodes (8): ApplyDesiredStateResult, CALL, CONFIG, jobs, repo, state, STATS, trek
+Cohesion: 0.08
+Nodes (18): LeaveDaySaved, auth, cache, DAY, repo, store, sync, trek (+10 more)
 
 ### Community 43 - "create-interest-rule.ts"
-Cohesion: 0.22
-Nodes (9): createInterestRuleSchema, InvalidInputError, NotFoundError, VersionMismatchError, DATE_RE, isValidDateOnly(), RATE_RE, updateInterestRule() (+1 more)
+Cohesion: 0.19
+Nodes (12): CreateInterestRuleInput, createInterestRuleSchema, InvalidInputError, NotFoundError, VersionMismatchError, Compounding, DayCount, PostingMode (+4 more)
 
 ### Community 44 - "toCents"
-Cohesion: 0.07
-Nodes (67): legacySeriesFromSnapshots(), FundView, loadFund(), loadFunds(), EMPTY, initialCapitalOf(), loadPortfolioGain(), PortfolioGain (+59 more)
+Cohesion: 0.15
+Nodes (22): centsFromDecimal(), fromCents(), roundEur(), toCents(), combinedGain, fundGain(), FundSeries, GainRow (+14 more)
 
 ### Community 45 - "Finance Dashboard — Brand System"
-Cohesion: 0.25
+Cohesion: 0.14
 Nodes (8): 1. Strategy, 2. The mark, 3. Assets, 4. Colour, 5. Typography, 6. Voice, 7. Applications, Finance Dashboard — Brand System
 
 ### Community 46 - "teamsystem.ts"
 Cohesion: 0.23
 Nodes (15): parseItalianNumber(), bodyRow(), EMPTY, extractTeamSystem(), findGrid(), isNumericOnly(), numbersOf(), plausibleHours() (+7 more)
 
-### Community 47 - "env.ts"
-Cohesion: 0.16
-Nodes (11): resetEnvCache(), schema, JOB_NAME, RunRow, store, documentStoreConfigured(), savedEnv, saved (+3 more)
+### Community 47 - "db/index.ts"
+Cohesion: 0.09
+Nodes (55): dynamic, alertJobFailure(), errorMessage(), JobResult, db, runInterestAccrualJob(), closeOwner(), closePreviousMonth() (+47 more)
 
 ### Community 48 - "_lib/leave.ts"
 Cohesion: 0.12
-Nodes (28): LeaveByMonthProps, LeaveCalendarProps, LeaveCalendarView, LeaveMonthView, loadLeaveCalendar(), monthsOf(), DEFAULT_HOURS_PER_DAY, extractedField() (+20 more)
+Nodes (28): LeaveByMonthProps, LeaveCalendarProps, LeaveCalendarView, LeaveMonthView, loadLeaveCalendar(), monthsOf(), extractedField(), extractionOf() (+20 more)
 
 ### Community 49 - "payroll/api/routes.ts"
-Cohesion: 0.07
-Nodes (39): applyRoute, commonErrorResponses, componentDto(), earningsRoute, getImportRoute, getRecordRoute, IdParamSchema, IfMatchHeaderSchema (+31 more)
+Cohesion: 0.06
+Nodes (38): applyRoute, commonErrorResponses, componentDto(), earningsRoute, getImportRoute, getRecordRoute, IdParamSchema, IfMatchHeaderSchema (+30 more)
 
 ### Community 50 - "render-brand-icons.py"
 Cohesion: 0.33
 Nodes (3): Rasterise the Finance Dashboard mark to PNG. No rasteriser is installed on this…, radius=0 renders a full-bleed square (maskable); otherwise a rounded square., render()
 
 ### Community 51 - "schema/index.ts"
-Cohesion: 0.14
-Nodes (18): AdminUserView, ProfileView, SessionView, accounts, auditEvents, organizations, roles, userIdentities (+10 more)
+Cohesion: 0.08
+Nodes (44): seedTwoUsers(), fixture(), twoUsers(), accounts, auditEvents, organizations, roles, userIdentities (+36 more)
 
 ### Community 52 - "teable-import.ts"
 Cohesion: 0.10
-Nodes (22): argv, db, dryRun, ExportFile, fromIndex, pool, unknown, centsToString() (+14 more)
+Nodes (23): argv, db, dryRun, ExportFile, fromIndex, pool, unknown, legacyFunds (+15 more)
 
 ### Community 53 - "wallet-provider-adapter.ts"
-Cohesion: 0.15
-Nodes (16): WalletAccount, accountType(), mapWalletAccount(), prefetchedWalletSource(), TYPE_BY_ACCOUNT_TYPE, updatedAt(), WALLET_PROVIDER, walletAccountsSource() (+8 more)
+Cohesion: 0.17
+Nodes (13): WalletAccount, accountType(), mapWalletAccount(), prefetchedWalletSource(), TYPE_BY_ACCOUNT_TYPE, updatedAt(), WALLET_PROVIDER, walletAccountsSource() (+5 more)
 
-### Community 54 - "test/principal.ts"
-Cohesion: 0.06
-Nodes (27): extraction(), principal, seed(), extraction, NOW, principal, base, NOW (+19 more)
+### Community 54 - "load-payroll.test.ts"
+Cohesion: 0.07
+Nodes (21): extraction(), principal, seed(), MemoryFundContributionSink, memoryPayrollContributionSink(), createPayrollContributionSink(), setup(), TrackingFundsRepository (+13 more)
 
 ### Community 56 - "machine.ts"
-Cohesion: 0.13
-Nodes (20): dynamic, POST(), dynamic, POST(), dynamic, POST(), Bucket, buckets (+12 more)
+Cohesion: 0.15
+Nodes (18): dynamic, POST(), dynamic, POST(), Bucket, buckets, constantTimeEqual(), CRON_SECRET_HEADER (+10 more)
 
 ### Community 57 - "integrations/api/routes.ts"
 Cohesion: 0.07
-Nodes (38): CappedRead, commonErrorResponses, conflict, connectionDto(), connectRoute, disconnectRoute, listRoute, notFound (+30 more)
+Nodes (41): CappedRead, commonErrorResponses, conflict, connectionDto(), connectRoute, disconnectRoute, listRoute, notFound (+33 more)
 
 ### Community 58 - "Mod. Cedolino TS Layout"
 Cohesion: 0.22
@@ -448,44 +458,44 @@ Cohesion: 0.23
 Nodes (11): config, contentSecurityPolicy(), frameAncestorsFor(), hasSessionCookie(), isPublic(), middleware(), PUBLIC_PATHS, PUBLIC_PREFIXES (+3 more)
 
 ### Community 61 - "scripts"
-Cohesion: 0.10
-Nodes (20): scripts, build, db:generate, db:migrate, dev, e2e, lint, migrate:credentials (+12 more)
+Cohesion: 0.09
+Nodes (22): scripts, build, db:generate, db:migrate, dev, e2e, lint, migrate:credentials (+14 more)
 
 ### Community 62 - "August 2026 OCR Fixture (Paperless-ngx text)"
 Cohesion: 0.29
 Nodes (7): OCR Digit/Letter Confusion, August 2026 OCR Fixture (Paperless-ngx text), Flattened Residuals Grid OCR Defect, Leave Residuals Grid (FERIE / PERMESSI / ROL / FLESS. / B. ORE), Garbage OCR Fixture (skewed scan), All-Low-Confidence Degradation (Failure Handling), OCR Letter-Spacing Artifact (S -> 'S ')
 
-### Community 63 - "apply-import.ts"
-Cohesion: 0.13
-Nodes (23): PayslipExtraction, applyImport(), fundHalves(), amountOf(), componentsFromExtraction(), grossOf(), HOUR_FIELDS, LABELS (+15 more)
+### Community 63 - "contracts.ts"
+Cohesion: 0.10
+Nodes (29): ACCOUNT_KEYS, FieldExtraction, JobStatus, PayslipExtraction, CrossValidateResult, applyImport(), extraction, NOW (+21 more)
 
 ### Community 64 - "End-to-end tests"
 Cohesion: 0.50
 Nodes (3): End-to-end tests, Planned flows (not yet written), `smoke.spec.ts` (implemented)
 
 ### Community 65 - "Transaction"
-Cohesion: 0.11
-Nodes (10): ListTransactionsOptions, ListTransactionsPage, NewTransaction, TransactionPatch, TransactionsRepository, Transaction, DrizzleTransactionsRepository, toTransaction() (+2 more)
+Cohesion: 0.12
+Nodes (7): ListTransactionsPage, TransactionsRepository, Transaction, DrizzleTransactionsRepository, toTransaction(), definedEntries(), MemoryTransactionsRepository
 
 ### Community 66 - "transaction.ts"
-Cohesion: 0.13
-Nodes (19): WalletCategory, WalletRecord, TransactionsSource, syncProviderTransactions(), SyncProviderTransactionsDeps, SyncProviderTransactionsResult, CategoryKind, pairTransfers() (+11 more)
+Cohesion: 0.09
+Nodes (25): WalletCategory, WalletRecord, ProviderCategory, ProviderTransaction, TransactionsSource, syncProviderTransactions(), SyncProviderTransactionsDeps, SyncProviderTransactionsResult (+17 more)
 
 ### Community 67 - "PayrollImport"
-Cohesion: 0.10
-Nodes (7): RaceyImportsRepository, PayrollImport, PayrollImportsRepository, DrizzlePayrollImportsRepository, toImport(), definedEntries(), MemoryPayrollImportsRepository
+Cohesion: 0.09
+Nodes (11): RaceyImportsRepository, ListImportsOptions, NewPayrollImport, PayrollImport, PayrollImportPatch, PayrollImportsRepository, DrizzlePayrollImportsRepository, toImport() (+3 more)
 
 ### Community 68 - "run-sync.ts"
-Cohesion: 0.11
-Nodes (24): IntegrationDeps, drainSyncQueue(), enqueueSync(), ConnectionNotUsableError, SyncDisabledError, SyncNotSupportedError, handleWebhook(), WebhookOutcome (+16 more)
+Cohesion: 0.12
+Nodes (23): IntegrationDeps, drainSyncQueue(), enqueueSync(), ConnectionNotUsableError, SyncDisabledError, SyncNotSupportedError, handleWebhook(), WebhookOutcome (+15 more)
 
 ### Community 69 - "dashboard-app service"
 Cohesion: 0.38
 Nodes (7): dashboard-app service, dashboard-cron supercronic sidecar service, External networks proxy_public and db_internal, projects compose stack, read_only rootfs, cap_drop ALL, tmpfs and limits, Read-only secret file mounts (wallet-token, trek-token), Traefik router with X-Forwarded-Proto https middleware
 
-### Community 70 - "require-user.ts"
-Cohesion: 0.09
-Nodes (21): bodySchema, dynamic, POST(), app, DELETE, dynamic, GET, PATCH (+13 more)
+### Community 70 - "[[...route]]/route.ts"
+Cohesion: 0.14
+Nodes (14): app, DELETE, dynamic, GET, PATCH, POST, PUT, first() (+6 more)
 
 ### Community 71 - "7. Domain designs (what each section computes)"
 Cohesion: 0.20
@@ -495,12 +505,12 @@ Nodes (10): 7.1 Home, 7.2 Finance Overview, 7.3 Accounts, 7.4 Funds, 7.5 Budgets
 Cohesion: 0.28
 Nodes (9): Code 001 - RETRIBUZIONE ORDINARIA, August 2026 PDF-Text Fixture (clean layout), TOTALE RITENUTE, Code 2 - LAVORO ORDIN.(mens.), Code 1101 - IRPEF A CREDITO -MOD.730-, Code 9208 - CREDITO COMPENSATO, Real Payslip Fixture: Luglio 2026 (doc 104, 730 refund), ARROTONDAMENTO (+1 more)
 
-### Community 73 - "jobs/registry.ts"
-Cohesion: 0.22
-Nodes (11): dynamic, POST(), TIERS, JobDefinition, JobRunInput, jobs, JobTier, listJobs() (+3 more)
+### Community 73 - "test/principal.ts"
+Cohesion: 0.19
+Nodes (11): buildOpenApiDocument(), newAccount(), UseCaseDeps, fundHarness(), seedFund(), setFundDepsFactoryForTests(), setPrincipalForTests(), PermissionDeniedError (+3 more)
 
 ### Community 74 - "SyncRun"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (8): NewSyncRun, SyncRunsRepository, Prepared, DrizzleSyncRunsRepository, toRun(), MemorySyncRunsRepository, SyncRun, SyncRunStatus
 
 ### Community 75 - "env"
@@ -509,7 +519,7 @@ Nodes (23): runtime, asNumber(), asString(), authentikProvider(), buildConfig(),
 
 ### Community 76 - "interests/api/routes.ts"
 Cohesion: 0.09
-Nodes (27): accrualDto(), commonErrorResponses, createRoute_, entryDto(), getRoute, IdParamSchema, IfMatchHeaderSchema, listRoute (+19 more)
+Nodes (28): accrualDto(), commonErrorResponses, createRoute_, entryDto(), getRoute, IdParamSchema, IfMatchHeaderSchema, listRoute (+20 more)
 
 ### Community 77 - "Real Payslip Fixture: Agosto 2026"
 Cohesion: 0.25
@@ -539,29 +549,29 @@ Nodes (7): Code 900 - TREDICESIMA MENSILITA, December 2026 Tredicesima Fixture (
 Cohesion: 0.24
 Nodes (10): Code 300 - ASSENZA X FERIE A.C.(hh), Code 301 - FERIE A.C.(hh), Code 9424 - ULTERIORE DETRAZIONE MESE, Real Payslip Fixture: Aprile 2026 (doc 101), Real Payslip Fixture: Gennaio 2026 (doc 11), Code 308 - ASSENZA X PERM. A.C.(hh), Code 309 - PERMESSI A.C.(hh), Real Payslip Fixture: Febbraio 2026 (doc 15) (+2 more)
 
-### Community 85 - "DbClient"
+### Community 85 - "funds/[id]/page.tsx"
 Cohesion: 0.08
-Nodes (17): bootstrapOwner(), DbClient, isUniqueViolation(), db, pool, AccountBalanceRow, AccountGroupRow, accountGroups (+9 more)
+Nodes (42): asDate(), dynamic, FundDetailPage(), issueDetail(), issueLabel(), asDate(), dynamic, FundsPage() (+34 more)
 
 ### Community 86 - "package.json"
 Cohesion: 0.40
 Nodes (4): name, private, type, version
 
-### Community 87 - "permissionsForRoles"
-Cohesion: 0.15
-Nodes (13): seed(), appFor(), seed(), appFor(), seedUser(), seedPrincipal(), seedPrincipal(), seedPrincipal() (+5 more)
+### Community 87 - "migrate-funds.ts"
+Cohesion: 0.09
+Nodes (27): backfillSnapshotAccountProvenance(), CanonicalSnapshot, canonicalSnapshots(), Counts, eligibleSnapshotKeys(), main(), migrate(), MigrationInputError (+19 more)
 
-### Community 89 - "TimeSeriesChart.tsx"
-Cohesion: 0.24
-Nodes (13): ChartTokens, compactValue(), HoverState, monthKey(), monthTick(), monthTicks(), monthToSeconds(), readTokens() (+5 more)
+### Community 89 - "vacation/page.tsx"
+Cohesion: 0.17
+Nodes (20): DATE_LINE, dynamic, ENTRY_LABEL, metadata, VacationFundPage(), requireUserOrRedirect(), MoneyInput, sumCents() (+12 more)
 
-### Community 90 - "app.ts"
-Cohesion: 0.12
-Nodes (17): buildOpenApiDocument(), ApiDeps, ApiEnv, AuthMethod, createApiApp(), isPublic(), PUBLIC_PREFIXES, registerAllRoutes() (+9 more)
+### Community 90 - "http/errors.ts"
+Cohesion: 0.18
+Nodes (10): idempotencyKeys, rateLimitWindows, requireFundIdempotencyKey(), runFundFinancialWrite(), ApiError, ErrorBody, ErrorCode, toErrorBody() (+2 more)
 
 ### Community 92 - "list-accounts.ts"
-Cohesion: 0.17
-Nodes (23): OverviewAccount, OverviewSource, dynamic, FinanceOverviewPage(), metadata, MonthPoint, AccountDetail, getAccountDetail() (+15 more)
+Cohesion: 0.22
+Nodes (19): FinanceOverviewPage(), MonthPoint, AccountDetail, getAccountDetail(), AccountListItem, DEFAULT_TREND_MONTHS, isStale(), listAccounts() (+11 more)
 
 ### Community 93 - "Checkpoint: Phase 0 + Phase 1 complete (2026-09-03)"
 Cohesion: 0.25
@@ -573,67 +583,67 @@ Nodes (4): Code 9837 - IMPONIBILE 5% L.199/25, Code 9838 - IMPOSTA SOST. 5% L.19
 
 ### Community 95 - "require-principal.ts"
 Cohesion: 0.05
-Nodes (61): dynamic, EarningsPage(), metadata, dynamic, EarningsRecordPage(), generateMetadata(), CompanyPage(), dynamic (+53 more)
+Nodes (56): dynamic, EarningsPage(), metadata, dynamic, EarningsRecordPage(), generateMetadata(), dynamic, metadata (+48 more)
 
 ### Community 96 - "SDD ledger — plan: docs/superpowers/plans/2026-09-02-phase-0-1-foundations-and-accounts.md"
 Cohesion: 0.50
 Nodes (3): Pre-flight scan (2026-09-02), Progress, SDD ledger — plan: docs/superpowers/plans/2026-09-02-phase-0-1-foundations-and-accounts.md
 
-### Community 97 - "contracts.ts"
-Cohesion: 0.08
-Nodes (67): dynamic, alertJobFailure(), errorMessage(), ACCOUNT_KEYS, JobResult, JobStatus, db, AccrueRuleResult (+59 more)
+### Community 97 - "interest-accrual.ts"
+Cohesion: 0.18
+Nodes (15): accrueRule(), AccrueRuleResult, activeRules(), JOB_NAME, LOCK_KEY, PostFailedError, RunInterestAccrualJobInput, tryPost() (+7 more)
 
 ### Community 107 - "payroll/application/ports.ts"
-Cohesion: 0.07
-Nodes (31): Confidence, AppliedImport, RecordDetail, Clock, LegacyFundDepositInput, LegacyFundDeposits, ListImportsOptions, MappingTarget (+23 more)
+Cohesion: 0.12
+Nodes (17): Clock, FundContributionWrite, MappingTarget, PayrollComponentKind, PayrollMappingRule, PayrollMappingRulesRepository, ScanStatus, ScanVerdict (+9 more)
 
 ### Community 109 - "TransactionCategory"
-Cohesion: 0.15
-Nodes (7): TransactionDetail, ListTransactionsResult, TransactionListItem, CategoriesRepository, TransactionCategory, DrizzleCategoriesRepository, toCategory()
+Cohesion: 0.18
+Nodes (7): TransactionDetail, TransactionListItem, CategoriesRepository, TransactionCategory, DrizzleCategoriesRepository, toCategory(), MemoryCategoriesRepository
 
 ### Community 110 - "File Structure"
 Cohesion: 0.07
 Nodes (28): File Structure, Global Constraints, Phase 3: Expenses and Interests, Rulings, Self-review against the Phase 3 scope, Task 10: Expenses REST API, Task 11: Expenses pages — list and detail, replacing the setup state, Task 12: Recurring-pattern persistence wired into the transactions sync (+20 more)
 
-### Community 111 - "SyncKind"
-Cohesion: 0.23
-Nodes (6): SyncJob, SyncJobsRepository, toJob(), MemorySyncJobsRepository, SyncKind, SyncSchedule
+### Community 111 - "handle-webhook.test.ts"
+Cohesion: 0.13
+Nodes (14): makeDeps(), principal, provider(), ConnectionPatch, SyncJob, SyncJobsRepository, WebhookDeliveriesRepository, WebhookDelivery (+6 more)
 
 ### Community 112 - "PayrollRecord"
-Cohesion: 0.12
-Nodes (9): ListRecordsOptions, NewPayrollRecord, PayrollRecord, PayrollRecordKind, PayrollRecordsRepository, DrizzlePayrollRecordsRepository, toRecord(), MemoryPayrollRecordsRepository (+1 more)
+Cohesion: 0.11
+Nodes (10): ListRecordsOptions, NewPayrollRecord, PayrollRecord, PayrollRecordKind, PayrollRecordsRepository, DrizzlePayrollRecordsRepository, toRecord(), MemoryPayrollRecordsRepository (+2 more)
 
-### Community 113 - "repo/leave.ts"
-Cohesion: 0.21
-Nodes (16): planPush(), syncPass(), clearPending(), dayAt(), daysInRange(), daysInYear(), deleteDates(), fractionString() (+8 more)
+### Community 113 - "load-funds.ts"
+Cohesion: 0.16
+Nodes (19): FundsCard(), FundDetail, getFundDetail(), FundSummary, summarizeFund(), absoluteReturn(), calendarQuarter(), cents() (+11 more)
 
 ### Community 114 - "integrations/types.ts"
-Cohesion: 0.05
-Nodes (38): fakeProvider(), makeDeps(), principal, provider(), FileCredentials, ImportResult, makeDeps(), principal (+30 more)
+Cohesion: 0.08
+Nodes (25): fakeProvider(), makeDeps(), principal, stub(), configOf(), credentialSchema, leaveSync, testConnection() (+17 more)
 
 ### Community 115 - "expenses/api/routes.ts"
-Cohesion: 0.11
-Nodes (28): categoriesRoute, categoryDto(), commonErrorResponses, getRoute, IdParamSchema, IfMatchHeaderSchema, labelDto(), labelsRoute (+20 more)
+Cohesion: 0.07
+Nodes (34): categoriesRoute, categoryDto(), commonErrorResponses, getRoute, IdParamSchema, IfMatchHeaderSchema, labelDto(), labelsRoute (+26 more)
 
 ### Community 116 - "expenses/application/ports.ts"
-Cohesion: 0.14
-Nodes (13): detectRecurringPatterns(), Clock, RecurringPatternRecord, RecurringPatternsRepository, UseCaseDeps, Cadence, CADENCE_DAY_BANDS, cadenceFor() (+5 more)
+Cohesion: 0.10
+Nodes (20): detectRecurringPatterns(), Clock, NewCategory, NewLabel, NewTransaction, RecurringPatternRecord, RecurringPatternsRepository, TransactionPatch (+12 more)
 
 ### Community 117 - "Teable migration"
-Cohesion: 0.15
+Cohesion: 0.29
 Nodes (7): Files in this directory, `npm run migrate:teable`, `npm run migrate:teable:validate`, Order of operations, Paperless → payroll document store, Running against the deployed container, Teable migration
 
-### Community 118 - "InterestRule"
-Cohesion: 0.14
-Nodes (8): InterestRule, InterestRulePatch, InterestRulesRepository, DrizzleInterestRulesRepository, toRule(), definedEntries(), MemoryInterestRulesRepository, PostWalletInterestInput
+### Community 118 - "interests/application/ports.ts"
+Cohesion: 0.05
+Nodes (31): AccountBalanceLookup, AccountOwnershipCheck, Clock, InterestAccrual, InterestAccrualsRepository, InterestEntriesRepository, InterestEntry, InterestRule (+23 more)
 
-### Community 119 - "interests/infrastructure/memory-repositories.ts"
-Cohesion: 0.12
-Nodes (10): InterestAccrual, InterestEntriesRepository, NewInterestAccrual, NewInterestEntry, rule, toAccrual(), MemoryInterestAccrualsRepository, MemoryInterestEntriesRepository (+2 more)
+### Community 119 - "schema/accounts.ts"
+Cohesion: 0.10
+Nodes (13): AccountBalanceRow, accountBalances, AccountGroupRow, accountGroups, AccountRow, ProviderLinkRow, providerLinks, InterestAccrualRow (+5 more)
 
 ### Community 120 - "expenses.ts"
-Cohesion: 0.15
-Nodes (13): dynamic, generateMetadata(), loadTransactionDetail, requirePrincipalOrRedirect, TransactionDetailPage(), NotFoundError, VersionMismatchError, updateTransaction() (+5 more)
+Cohesion: 0.14
+Nodes (12): mapError(), updateTransactionAction(), InvalidInputError, NotFoundError, VersionMismatchError, getTransaction(), updateTransaction(), UpdateTransactionInput (+4 more)
 
 ### Community 121 - "Phase 1 deployment runbook — accounts and Teable retirement"
 Cohesion: 0.18
@@ -644,40 +654,40 @@ Cohesion: 0.24
 Nodes (11): detectPeriodMonth(), fixture(), GARBAGE_TEXT, OCR_TEXT, PDF_TEXT, extractPdfText(), fixNumericOcr(), normalizeText() (+3 more)
 
 ### Community 123 - "Finance Dashboard API"
-Cohesion: 0.13
-Nodes (15): Authentication, Breaking changes in Phase 2, Endpoints (Phase 1 + Phase 2), Error envelope, Expenses, Finance Dashboard API, `Idempotency-Key`, Integrations (+7 more)
+Cohesion: 0.12
+Nodes (16): Authentication, Breaking changes in Phase 2, Endpoints (Phase 1 + Phase 2), Error envelope, Expenses, Finance Dashboard API, Funds, `Idempotency-Key` (+8 more)
 
 ### Community 124 - "Phase 2 deployment runbook — integration framework and encrypted credentials"
 Cohesion: 0.18
 Nodes (10): 1. Pre-checks, 2. Generate the encryption key, 3. Deploy the new image with the token files still mounted, 4. Import the file-mounted credentials, 5. Verify in the UI, 6. Remove the token files, 7. Verify the tick, 8. Rollback (+2 more)
 
-### Community 125 - "Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4"
-Cohesion: 0.20
-Nodes (10): API conventions, Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4, Capability-driven navigation and Home, Integration framework, Job tiers, Known deviations, Module layout, RLS context and the `system` role (+2 more)
+### Community 125 - "Architecture overview — Phases 0–5"
+Cohesion: 0.18
+Nodes (11): API conventions, Architecture overview — Phases 0–5, Capability-driven navigation and Home, Funds and payroll posting, Integration framework, Job tiers, Known deviations, Module layout (+3 more)
 
 ### Community 126 - "Finance Dashboard"
 Cohesion: 0.29
 Nodes (7): Developing, Documentation, Finance Dashboard, Running it, Stack, Status: Phase 0 + Phase 1 complete, Testing
 
-### Community 127 - "interests/application/ports.ts"
-Cohesion: 0.11
-Nodes (21): accrueRule(), tryPost(), CreateInterestRuleInput, AccountBalanceLookup, AccountOwnershipCheck, Clock, Compounding, DayCount (+13 more)
+### Community 127 - "env.ts"
+Cohesion: 0.17
+Nodes (10): resetEnvCache(), schema, JOB_NAME, RunRow, store, documentStoreConfigured(), savedEnv, saved (+2 more)
 
-### Community 128 - "document-store-resolver.ts"
-Cohesion: 0.07
-Nodes (39): appSettings, DEFAULT_RETENTION_YEARS, reserveImport(), ReserveImportInput, retentionUntil(), UploadCandidate, validateUpload(), DocumentStore (+31 more)
+### Community 128 - "create-import.ts"
+Cohesion: 0.12
+Nodes (20): reserveImport(), ReserveImportInput, retentionUntil(), base, NOW, principal, UploadCandidate, validateUpload() (+12 more)
 
 ### Community 129 - "actions/leave.ts"
 Cohesion: 0.16
-Nodes (25): daySchema, describe(), LEAVE_PATHS, LeaveDaySaved, noopSync(), removeLeaveDay(), removeSchema, revalidateLeave() (+17 more)
+Nodes (23): createInterestRuleAction(), mapError(), daySchema, describe(), LEAVE_PATHS, noopSync(), removeLeaveDay(), removeSchema (+15 more)
 
-### Community 130 - "expenses/infrastructure/memory-repositories.ts"
-Cohesion: 0.11
-Nodes (12): InvalidInputError, LabelsRepository, NewCategory, NewLabel, category, TransactionLabel, toLabel(), MemoryCategoriesRepository (+4 more)
+### Community 130 - "TransactionLabel"
+Cohesion: 0.24
+Nodes (5): LabelsRepository, TransactionLabel, DrizzleLabelsRepository, toLabel(), MemoryLabelsRepository
 
-### Community 132 - "File structure"
-Cohesion: 0.12
-Nodes (16): Deviation, File structure, Phase 5: Funds expansion, Rulings, Scope cut (what this plan deliberately does not build), Self-review against the spec, Task 1: Migration 0016 — funds tables, RLS, type catalogue, legacy rename, Task 2: Domain — schedule, totals, reconciliation (+8 more)
+### Community 132 - "Execution rulings (full-phase run)"
+Cohesion: 0.08
+Nodes (24): Deviation, Deviation — Task 2, Deviation — Task 3, Deviation — Task 4, Deviation — Task 6, Deviation — Task 7, Deviation — Task 8, Execution record — 2026-09-06 (+16 more)
 
 ### Community 133 - "The integration framework"
 Cohesion: 0.18
@@ -691,17 +701,17 @@ Nodes (7): Checkpoint: Phase 2 complete (2026-09-04), Decisions already taken (s
 Cohesion: 0.33
 Nodes (5): Deferred-minor cleanup wave (batch before Task 19), Pre-flight rulings (2026-09-04), Pre-flight scan, Progress, SDD ledger — plan: docs/superpowers/plans/2026-09-04-phase-2-integrations.md
 
-### Community 136 - "succeed"
+### Community 136 - "personal/page.tsx"
 Cohesion: 0.11
-Nodes (39): depositSchema, recordManualDeposit(), revalidateFund(), saveFundSettings(), settingsSchema, slugOf(), clearLlmApiKey(), completeFirstRun() (+31 more)
+Nodes (31): ActionFailure, ActionResult, ActionSuccess, parseMoney(), toNumericString(), initialSchema, rateSchema, recordWithdrawal() (+23 more)
 
-### Community 137 - "load-company.ts"
-Cohesion: 0.12
-Nodes (24): earningsSummary(), getRecord(), listRecords(), Accumulator, bucketsOf(), CONTRIBUTION_KINDS, EarningsBucket, EarningsBucketPartial (+16 more)
+### Community 137 - "company/page.tsx"
+Cohesion: 0.11
+Nodes (22): CompanyPage(), dynamic, metadata, StatEmphasis, StatGrid(), StatGridProps, StatTile(), StatTileProps (+14 more)
 
-### Community 138 - "payroll/infrastructure/repositories.itest.ts"
-Cohesion: 0.05
-Nodes (29): main(), normalise(), twoUsers(), FundContributionRow, fundContributions, fundContributionSchedules, fundContributionTypes, FundPlanRow (+21 more)
+### Community 138 - "funds/infrastructure/repositories.itest.ts"
+Cohesion: 0.06
+Nodes (34): main(), normalise(), FundContributionRow, fundContributions, fundContributionSchedules, fundContributionTypes, FundPlanRow, fundPlans (+26 more)
 
 ### Community 141 - "File structure"
 Cohesion: 0.12
@@ -712,24 +722,24 @@ Cohesion: 0.13
 Nodes (14): File structure, Phase 6: Budgets, Rulings, Scope cut, Self-review against the spec, Task 1: Migration 0017 — budget tables and RLS, Task 2: Domain — figures and scopes, Task 3: Ports, repositories, sources (+6 more)
 
 ### Community 143 - "get-interest-rule-detail.ts"
-Cohesion: 0.16
-Nodes (14): dayAfter(), getInterestRuleDetail(), InterestRuleDetail, startOfDay(), InterestEntry, ProjectionPoint, AccrualPeriodPoint, PaidEntryPoint (+6 more)
+Cohesion: 0.20
+Nodes (12): dayAfter(), getInterestRuleDetail(), InterestRuleDetail, startOfDay(), ProjectionPoint, AccrualPeriodPoint, PaidEntryPoint, reconcileInterest() (+4 more)
 
 ### Community 144 - "Phase 3 deployment runbook — Expenses and Interests"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (12): Before you start: read the container's current configuration, Retiring the standalone `wallet-manager` interest container, Rollback, Steps, What a crash leaves behind, and why this procedure avoids relying on it, 1. Pre-checks, 2. Deploy, 3. Verify (+4 more)
 
-### Community 145 - "webhook.itest.ts"
-Cohesion: 0.06
-Nodes (31): main(), readTrimmed(), bytea, IntegrationConnectionRow, IntegrationProviderRow, integrationProviders, SyncJobRow, syncJobs (+23 more)
+### Community 145 - "crypto.ts"
+Cohesion: 0.22
+Nodes (8): createCredentialCipher(), credentialCipher, CredentialCryptoError, parseEncryptionKeys(), resetCredentialCipher(), BASE_ENV, K1, K2
 
 ### Community 146 - "File structure"
 Cohesion: 0.14
 Nodes (13): File structure, Phase 7: Time Off workspace, Rulings, Scope cut, Self-review against the spec, Task 1: Migration 0018 — time-off tables and RLS, Task 2: Domain — units, event status, variance, Task 3: Ports, repositories, Trek store (+5 more)
 
-### Community 147 - "10. Migration strategy"
-Cohesion: 0.40
-Nodes (5): 10.1 Teable → PostgreSQL, 10.2 Paperless → payroll silo, 10.3 Single user → users table, 10.4 Deployment, 10. Migration strategy
+### Community 147 - "load-transactions.ts"
+Cohesion: 0.15
+Nodes (17): dynamic, generateMetadata(), loadTransactionDetail, requirePrincipalOrRedirect, TransactionDetailPage(), listTransactions(), ListTransactionsResult, ListTransactionsOptions (+9 more)
 
 ### Community 150 - "Rulings — execution (P3-C1 … P3-C38)"
 Cohesion: 0.06
@@ -740,20 +750,20 @@ Cohesion: 0.10
 Nodes (20): alertPayslipPending(), alertSuccessAfterRetry(), appUrl(), GotifyMessage, JobFailureAlert, notify(), PayslipPendingAlert, RetrySuccessAlert (+12 more)
 
 ### Community 152 - "llm-config.ts"
-Cohesion: 0.13
-Nodes (18): asString(), BaseUrlCheck, checkBaseUrl(), ConfigSource, isPrivateHost(), Layers, llmConfigStatus, llmOptionsFromConfig() (+10 more)
-
-### Community 153 - "expenses-rls.itest.ts"
-Cohesion: 0.17
-Nodes (10): seedTwoUsers(), RecurringPatternRow, recurringPatterns, transactionCategories, TransactionCategoryRow, transactionLabelLinks, TransactionLabelRow, transactionLabels (+2 more)
-
-### Community 154 - "withSystemContext"
 Cohesion: 0.10
-Nodes (22): accountBalances, InterestAccrualRow, interestAccruals, interestEntries, InterestEntryRow, InterestRuleRow, interestRules, createRule() (+14 more)
+Nodes (29): clearLlmApiKey(), completeFirstRun(), hoursSchema, llmSchema, setHoursPerDay(), setLlmSettings(), HoursPerDayForm(), KEY_STATUS (+21 more)
 
-### Community 155 - "legacy.ts"
-Cohesion: 0.10
-Nodes (10): BalanceSnapshot, balanceSnapshots, FundDeposit, fundDeposits, fundSettings, JobRun, jobRuns, LeaveDay (+2 more)
+### Community 153 - "FundContribution"
+Cohesion: 0.16
+Nodes (4): FundContribution, DrizzleContributionsRepository, toContribution(), MemoryContributionsRepository
+
+### Community 154 - "DbClient"
+Cohesion: 0.05
+Nodes (37): main(), readTrimmed(), bootstrapOwner(), DbClient, isUniqueViolation(), db, pool, bytea (+29 more)
+
+### Community 155 - "validate-funds-migration.ts"
+Cohesion: 0.16
+Nodes (23): AccountHistoryRow, CanonicalSnapshot, canonicalSnapshots(), cents(), eligibleSnapshotKeys(), expectSinglePart(), failSource(), independentPeriod() (+15 more)
 
 ### Community 156 - "File structure"
 Cohesion: 0.14
@@ -763,17 +773,21 @@ Nodes (13): File structure, Phase 8: Security and Administration, Rulings, Scope
 Cohesion: 0.15
 Nodes (12): Behaviours the plan text and the original checkpoint predate, Checkpoint: Phase 3 complete, whole-branch fix wave closed (2026-09-05), Deployment status, Documents, How to continue, Key design decisions from the fix wave, Not run: the manual walkthrough with a real Wallet token, One parked minor (+4 more)
 
-### Community 159 - "accounts/ui/run.ts"
-Cohesion: 0.16
-Nodes (8): ProviderLink, ProviderLinkEntityType, accountDeps(), toLink(), MemoryProviderLinksRepository, StoredProviderLink, setAccountDepsFactoryForTests(), setPrincipalForTests()
+### Community 158 - "Fund"
+Cohesion: 0.12
+Nodes (10): VersionMismatchError, Fund, FundPatch, FundsRepository, NewFund, DrizzleFundsRepository, toFund(), definedEntries() (+2 more)
+
+### Community 159 - "accounts/application/ports.ts"
+Cohesion: 0.09
+Nodes (14): NOW, AccountsSource, NewAccount, ProviderAccount, ProviderLink, ProviderLinkEntityType, ProviderLinksRepository, DrizzleProviderLinksRepository (+6 more)
 
 ### Community 160 - "app/layout.tsx"
 Cohesion: 0.27
 Nodes (6): metadata, viewport, THEME_STORAGE_KEY, ThemeScript(), plexMono, plexSans
 
-### Community 161 - "text"
-Cohesion: 0.32
-Nodes (12): mapError(), updateTransactionAction(), connectIntegrationAction(), credentialsFrom(), disconnectIntegrationAction(), mapError(), revalidateIntegrations(), syncIntegrationAction() (+4 more)
+### Community 161 - "actions/funds.ts"
+Cohesion: 0.18
+Nodes (25): acknowledgeIssueAction(), addContributionAction(), createFundAction(), mapError(), month(), optionalMonth(), parsedMoney(), reconcileFundAction() (+17 more)
 
 ### Community 162 - "Phase 4: Payroll upload pipeline and Company"
 Cohesion: 0.06
@@ -783,29 +797,29 @@ Nodes (30): File Structure, Global Constraints, Phase 4: Payroll upload pipeline
 Cohesion: 0.40
 Nodes (5): 3.1 Shape, 3.2 API surface, 3.3 Capabilities and dynamic composition, 3.4 Background work, 3. Target architecture
 
-### Community 164 - "ingest.ts"
-Cohesion: 0.10
-Nodes (35): withPayroll(), markUploaded(), markUploadFailed(), beginParse(), IngestPorts, MalwareScanner, ScanResult, PURGE_BATCH (+27 more)
+### Community 164 - "payroll-ingest.ts"
+Cohesion: 0.06
+Nodes (62): Counts, due(), DUE_STATUSES, INGEST_BATCH, ingestOne(), JOB_NAME, LOCK_KEY, recordFailure() (+54 more)
 
 ### Community 165 - "Phase 4 deployment runbook — Payroll upload pipeline and Company"
 Cohesion: 0.22
 Nodes (8): 1. Pre-checks, 2. Wave 1 — deploy the migration image, 3. Wave 2 — deploy the removal image, 4. Verify, 5. Scanning, 6. Retention, 7. Rollback, Phase 4 deployment runbook — Payroll upload pipeline and Company
 
-### Community 166 - "sigv4.ts"
-Cohesion: 0.29
-Nodes (10): amzDate(), canonicalPath(), canonicalQuery(), hmac(), sha256Hex(), signRequest(), SigV4Input, VECTOR (+2 more)
+### Community 166 - "s3-document-store.ts"
+Cohesion: 0.18
+Nodes (16): createS3DocumentStore(), S3StoreConfig, bytes, config, storeWith(), amzDate(), canonicalPath(), canonicalQuery() (+8 more)
 
-### Community 167 - "actions/leave.test.ts"
+### Community 167 - "jobs/registry.ts"
 Cohesion: 0.22
-Nodes (7): auth, cache, DAY, repo, store, sync, trek
+Nodes (11): dynamic, POST(), TIERS, JobDefinition, JobRunInput, jobs, JobTier, listJobs() (+3 more)
 
-### Community 168 - "list-integrations.ts"
-Cohesion: 0.39
-Nodes (7): IntegrationsPage(), IntegrationSummary, listIntegrations(), loadIntegration(), loadIntegrations(), CredentialField, IntegrationCapability
+### Community 168 - "(app)/page.tsx"
+Cohesion: 0.10
+Nodes (28): AppLayout(), dynamic, HomePage(), metadata, activeChild(), AppShell(), AppShellProps, IconProps (+20 more)
 
-### Community 169 - "actions/interests.ts"
-Cohesion: 0.43
-Nodes (6): createInterestRuleAction(), mapError(), createInterestRule(), EligibleAccount, RuleForm(), RuleFormProps
+### Community 169 - "romeDate"
+Cohesion: 0.27
+Nodes (10): asDate(), classify(), isStale(), snapshotGrace, StalenessInfo, StalenessSource, NOW, DISPLAY_STALENESS_MS (+2 more)
 
 ### Community 170 - "SDD ledger — plan: docs/superpowers/plans/2026-09-05-phase-4-payroll-and-company.md"
 Cohesion: 0.25
@@ -819,25 +833,61 @@ Nodes (5): RuleRow, asPercent(), POSTING_LABEL, RulesTable(), RulesTableProps
 Cohesion: 0.40
 Nodes (4): How to execute a plan with Codex, Phases 5–9: shared conventions for Codex, Repository facts (verified 2026-09-06 on `main` at `6294194`), Task template used by every plan
 
+### Community 174 - "reconcile-fund.ts"
+Cohesion: 0.25
+Nodes (13): qualified(), reconcileFund(), anomalyMonth(), cents(), coversPayrollMonth(), decimalFraction(), DetectedIssue, detectIssues() (+5 more)
+
+### Community 175 - "PayrollComponent"
+Cohesion: 0.18
+Nodes (8): AppliedImport, RecordDetail, NewPayrollComponent, PayrollComponent, PayrollComponentsRepository, DrizzlePayrollComponentsRepository, toComponent(), MemoryPayrollComponentsRepository
+
+### Community 176 - "time-off/page.tsx"
+Cohesion: 0.20
+Nodes (15): LeaveByMonth(), LeaveCalendar(), varianceSentence(), dynamic, metadata, TimeOffPage(), LeaveCard(), Gallery() (+7 more)
+
+### Community 177 - "Phase 5 deployment runbook — Funds"
+Cohesion: 0.17
+Nodes (10): Cutover, Phase 5 deployment runbook — Funds, Rehearsal and value checks, Rollback, Verified starting point, Behavior, Decisions and remaining scope, Migration and operations (+2 more)
+
+### Community 178 - "sync-provider-accounts.ts"
+Cohesion: 0.25
+Nodes (8): NewBalance, balanceRow(), nextStatus(), patch(), sameName(), syncProviderAccounts(), SyncProviderAccountsDeps, SyncProviderAccountsResult
+
+### Community 179 - "silo-provider-adapter.ts"
+Cohesion: 0.25
+Nodes (7): SILO_PROVIDER, siloCredentialSchema, SiloDisconnectContext, siloProvider, storeFor(), creds, testConnection()
+
+### Community 180 - "_lib/leave.test.ts"
+Cohesion: 0.22
+Nodes (6): payroll, payslips, principal, repo, trekState, vacation
+
+### Community 181 - "accounts/infrastructure/deps.ts"
+Cohesion: 0.15
+Nodes (9): UseCaseDeps, Clock, accountDeps(), setAccountDepsFactoryForTests(), setPrincipalForTests(), onDisconnect(), onDisconnect(), DisconnectFixture (+1 more)
+
+### Community 182 - "8. Security design"
+Cohesion: 0.40
+Nodes (5): 8.1 Authentication and MFA, 8.2 Authorization, 8.3 Web security, 8.4 Data protection, 8. Security design
+
 ## Knowledge Gaps
-- **1157 isolated node(s):** `entrypoint.sh script`, `securityHeaders`, `nextConfig`, `name`, `version` (+1152 more)
+- **1221 isolated node(s):** `entrypoint.sh script`, `securityHeaders`, `nextConfig`, `name`, `version` (+1216 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `withUserContext()` connect `withUserContext` to `accounts/api/routes.ts`, `payroll/infrastructure/repositories.itest.ts`, `actions/accounts.ts`, `webhook.itest.ts`, `load-interests.ts`, `expenses-rls.itest.ts`, `assertPermission`, `withSystemContext`, `accounts/ui/run.ts`, `validate-teable-migration.ts`, `ingest.ts`, `payroll/api/routes.ts`, `schema/index.ts`, `interests/api/routes.ts`, `DbClient`, `app.ts`, `require-principal.ts`, `contracts.ts`, `expenses/api/routes.ts`, `interests/application/ports.ts`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
-- **Why does `MonthPoint` connect `list-accounts.ts` to `(app)/page.tsx`, `contracts.ts`, `vacation/page.tsx`, `validate-teable-migration.ts`, `networth.ts`, `accounts/api/routes.ts`, `load-company.ts`, `toCents`, `cn`, `time.ts`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `Principal` connect `assertPermission` to `document-store-resolver.ts`, `load-company.ts`, `actions/accounts.ts`, `get-interest-rule-detail.ts`, `ingest-import.ts`, `webhook.itest.ts`, `load-interests.ts`, `actions/integrations.ts`, `accounts/ui/run.ts`, `cards.test.ts`, `withUserContext`, `validate-teable-migration.ts`, `ingest.ts`, `accounts/application/ports.ts`, `list-integrations.ts`, `create-interest-rule.ts`, `schema/index.ts`, `test/principal.ts`, `apply-import.ts`, `run-sync.ts`, `permissionsForRoles`, `app.ts`, `list-accounts.ts`, `require-principal.ts`, `contracts.ts`, `TransactionCategory`, `integrations/types.ts`, `expenses/api/routes.ts`, `expenses/application/ports.ts`, `expenses.ts`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `withUserContext()` connect `schema/index.ts` to `accounts/api/routes.ts`, `funds/api/routes.ts`, `actions/accounts.ts`, `load-transactions.ts`, `load-interests.ts`, `DbClient`, `actions/payroll.ts`, `permissionsForRoles`, `actions/funds.ts`, `validate-teable-migration.ts`, `payroll-ingest.ts`, `db/index.ts`, `payroll/api/routes.ts`, `accounts/infrastructure/deps.ts`, `test/principal.ts`, `interests/api/routes.ts`, `http/errors.ts`, `require-principal.ts`, `interest-accrual.ts`, `expenses/api/routes.ts`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `assertPermission()` connect `auth/principal.ts` to `create-import.ts`, `actions/leave.ts`, `load-company.ts`, `admin/page.tsx`, `accounts/api/routes.ts`, `accounts/[id]/page.tsx`, `actions/accounts.ts`, `get-interest-rule-detail.ts`, `load-transactions.ts`, `actions/payroll.ts`, `actions/integrations.ts`, `permissionsForRoles`, `actions/funds.ts`, `payroll-ingest.ts`, `payroll-contribution-sink.ts`, `create-interest-rule.ts`, `reconcile-fund.ts`, `payroll/api/routes.ts`, `integrations/api/routes.ts`, `contracts.ts`, `run-sync.ts`, `interests/api/routes.ts`, `funds/[id]/page.tsx`, `list-accounts.ts`, `load-funds.ts`, `expenses/api/routes.ts`, `expenses.ts`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+- **Why does `Principal` connect `auth/principal.ts` to `create-import.ts`, `load-company.ts`, `get-interest-rule-detail.ts`, `ingest-import.ts`, `load-transactions.ts`, `load-interests.ts`, `actions/payroll.ts`, `actions/integrations.ts`, `permissionsForRoles`, `validate-teable-migration.ts`, `payroll-ingest.ts`, `payroll-contribution-sink.ts`, `(app)/page.tsx`, `create-interest-rule.ts`, `reconcile-fund.ts`, `db/index.ts`, `schema/index.ts`, `accounts/infrastructure/deps.ts`, `integrations/api/routes.ts`, `contracts.ts`, `run-sync.ts`, `test/principal.ts`, `http/errors.ts`, `list-accounts.ts`, `require-principal.ts`, `load-funds.ts`, `expenses.ts`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **What connects `entrypoint.sh script`, `securityHeaders`, `nextConfig` to the rest of the system?**
-  _1157 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `(app)/page.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.05432595573440644 - nodes in this community are weakly interconnected._
-- **Should `LeaveCalendar.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.07346938775510205 - nodes in this community are weakly interconnected._
-- **Should `[slug]/page.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.09059233449477352 - nodes in this community are weakly interconnected._
+  _1221 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `format.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.06599326599326599 - nodes in this community are weakly interconnected._
+- **Should `cn` be split into smaller, more focused modules?**
+  _Cohesion score 0.05789235639981909 - nodes in this community are weakly interconnected._
+- **Should `load-company.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.1140819964349376 - nodes in this community are weakly interconnected._

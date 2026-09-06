@@ -228,7 +228,14 @@ is limited to 0–12 months. `GET /funds/{id}/contributions` accepts inclusive
 `{ "items": [...], "nextCursor": null }`.
 
 Contribution creation and reversal use the two idempotent endpoints listed
-above. Reversals create a compensating contribution and leave the original
+above. Each principal/key pair is serialized, and the committed `201` response
+is stored in the same transaction as the financial mutation. Concurrent
+identical requests replay that result; a different body with the same live key
+returns `422`. An uncached error is re-evaluated on retry. Computed totals and
+returns may exceed the numeric(16,2) limit of an individual stored contribution;
+they remain exact decimal strings in the response contract.
+
+Reversals create a compensating contribution and leave the original
 record intact. `POST /funds/{id}/reconcile` refreshes the issue set, and
 `POST /funds/issues/{issueId}/acknowledge` acknowledges an open issue. Fund
 responses never expose ownership or resolver user IDs.

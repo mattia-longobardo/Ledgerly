@@ -1,7 +1,7 @@
 # Phase 5 implementation decisions
 
-This durable record preserves the implementation rulings and their tradeoffs.
-See the checkpoint for verification and deployment state.
+This durable record preserves every implementation ruling and its tradeoff.
+See the checkpoint for final verification and deployment state.
 
 Ruling R5-C1: ContributionLike includes accrualPeriodEnd; actual posting +1 stays authoritative (spec §7.4). Preserve legacy visible +2 only as explicit validator comparison. Cost: intentionally changed historical monthly display timing, reported clearly.
 
@@ -17,12 +17,16 @@ Ruling R5-C5 refinement: retain the legacy monthlyHistoryQuery winner, not every
 
 Ruling R5-C6: quarterly spans alone cannot distinguish absent January/February payslips. Enrich contributions with optional payrollAccrualMonth via PayrollMonthsSource.liveRecords before detectIssues; exact month wins over span fallback. Cost: one extra source query, no schema column; false missing matches avoided.
 
-Ruling R5-C7: expected payroll months must be fund-specific via mapped components (EXISTS), ordinary live payroll only. liveRecords gains includeExtraordinary=false; reconciliation requests true to enrich all linked contributions exactly. Prevents unrelated Cometa payroll from generating missing issues on Fideuram and extraordinary quarter spans masking absent ordinary months. Production mappings verified read-only. Task4 owns dependency correction and tests.
+Ruling R5-C7: expected payroll months must be fund-specific via mapped components (EXISTS), ordinary live payroll only. liveRecords gains includeExtraordinary=false; reconciliation requests true to enrich all linked contributions exactly. Prevents unrelated Cometa payroll from generating missing issues on Fideuram and extraordinary quarter spans masking absent ordinary months. Production mappings verified read-only. Task4 owns dependency correction and tests. Cost: expected months follow explicit fund mappings; unmapped payroll does not imply a missing fund payment.
 
-R5-C8: applyImport supports existing-record re-apply after verification; sink must replace contributions linked to current payrollRecordId as well as supersededRecordId, across owner funds. Otherwise unique violation/removed mapping stale rows. Remove original/reversal pair together preserving audit events, ordered fund locks. Task7 plan deviation recorded before implementation. Consider obsolete posting system fees when a mapping is removed; document policy/test.
+R5-C8: applyImport supports existing-record re-apply after verification; sink must replace contributions linked to current payrollRecordId as well as supersededRecordId, across owner funds. Otherwise unique violation/removed mapping stale rows. Remove original/reversal pair together preserving audit events, ordered fund locks. Task7 plan deviation recorded before implementation. Consider obsolete posting system fees when a mapping is removed; document policy/test. Cost: contribution identities change on reapply, while audit history and valid fee waivers are preserved.
 
 Ruling R5-C9: Funds form input must use an exact localized decimal-string parser instead of the plan-mandated shared Number/toFixed shortcut, because accepted numeric(16,2) values demonstrably lose cents. Keep the fix Funds-scoped; malformed grouping/exponents/excess precision are refused. Cost: stricter form input validation, no shared-module behavior changes.
 
 Ruling R5-C10: the chart formatter belongs in a Funds client wrapper receiving serializable currency/series props. A server closure cannot cross Next.js RSC boundaries. Cost: one small client wrapper; preserves currency formatting and existing chart component.
 
 Ruling R5-C11: distinguish snapshot-created valuation accounts with durable funds-migration audit provenance (including exact snapshot key), so the validator checks full canonical history only for that path and accepts an existing valued account without legacy snapshots. Editable account notes alone are insufficient. Pre-fix rehearsal accounts can backfill provenance once from exact machine notes and an existing key; subsequent reruns write zero. Cost: one audit event per created/backfilled valuation account, preserving history checks after notes edits.
+
+Ruling R5-C12: replace the plan-mandated shared idempotency middleware on Funds financial writes with principal/key serialization and atomic replay-cache/business commit. The inherited helper has a confirmed race and crash gap. Cost: a Funds-scoped transactional runner and concurrency/rollback regressions, without unrelated route rewrites.
+
+Ruling R5-C13: monetary text must format exact decimal strings across numeric(16,2) and larger computed aggregates; only actual number chart coordinates may be approximate. Separate aggregate response schema from single-row storage bounds. Preserve owner-scoped legacy slug redirects and normal invalid-ID not-found handling. Cost: bounded formatter/API-contract/compatibility changes and tests.
