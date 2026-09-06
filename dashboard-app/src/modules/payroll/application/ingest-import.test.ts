@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { PayslipExtraction } from "@/lib/contracts";
 import { testPrincipal } from "@/test/principal";
 import type { UseCaseDeps } from "./ports";
+import { MemoryFundContributionSink } from "@/modules/funds/infrastructure/memory-contribution-sink";
 import {
-  MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
   MemoryPayrollImportsRepository,
   MemoryPayrollMappingRulesRepository,
@@ -24,7 +24,7 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
     records: new MemoryPayrollRecordsRepository(),
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
-    funds: new MemoryLegacyFundDeposits(),
+    funds: new MemoryFundContributionSink(),
     // No I/O happens through the DB-only halves this suite exercises, so a
     // document store and scanner that would fail if ever called are enough
     // to prove the split: these functions never touch either.

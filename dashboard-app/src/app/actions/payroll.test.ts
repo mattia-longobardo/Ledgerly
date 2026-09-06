@@ -10,8 +10,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PayslipExtraction } from "@/lib/contracts";
 import type { UseCaseDeps } from "@/modules/payroll/application/ports";
+import { MemoryFundContributionSink } from "@/modules/funds/infrastructure/memory-contribution-sink";
 import {
-  MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
   MemoryPayrollImportsRepository,
   MemoryPayrollMappingRulesRepository,
@@ -47,7 +47,7 @@ function makeDeps(): UseCaseDeps {
     records: new MemoryPayrollRecordsRepository(),
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
-    funds: new MemoryLegacyFundDeposits(),
+    funds: new MemoryFundContributionSink(),
     documents: { provider: "local", put: async () => {}, get: async () => null, delete: async () => {}, listPrefix: async () => [] },
     scanner: noopScanner,
     clock: { now: () => new Date("2026-09-05T10:00:00Z") },

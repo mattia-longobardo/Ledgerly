@@ -191,6 +191,46 @@ describe.each(BACKENDS)("$backend contributions repository contract", ({ backend
       await expect(contributions.deleteByPayrollRecord(fund.id, payrollRecordIds[0]!)).resolves.toBe(2);
     });
   });
+
+  it("deletes reversal dependents safely and prunes only truly orphaned system fees", async () => {
+    await runWithRepositories(backend, async ({ funds, contributions }, { userId, payrollRecordIds }) => {
+      const fund = await funds.create({ userId, slug: "safe-delete", name: "Safe delete", kind: "pension", currency: "EUR", accountId: null });
+      const create = (over: Partial<Parameters<ContributionsRepository["create"]>[0]> = {}) => contributions.create({
+        fundId: fund.id,
+        typeCode: "employee",
+        accrualPeriodStart: "2026-01-01",
+        accrualPeriodEnd: "2026-03-01",
+        postedMonth: "2026-04-01",
+        valueDate: null,
+        amount: "100.00",
+        currency: "EUR",
+        source: "payroll",
+        payrollRecordId: payrollRecordIds[0]!,
+        note: null,
+        reversesId: null,
+        reconciliationStatus: "received",
+        ...over,
+      });
+      const original = await create({ source: "migration" });
+      await create({ typeCode: "reversal", amount: "-100.00", source: "manual", payrollRecordId: null, reversesId: original.id });
+      const fee = await create({ typeCode: "fee", amount: "-3.00", source: "system", payrollRecordId: null });
+      await create({ typeCode: "reversal", amount: "3.00", source: "manual", payrollRecordId: null, reversesId: fee.id });
+      await expect(contributions.deleteByPayrollRecords(fund.id, [payrollRecordIds[0]!])).resolves.toEqual({
+        deleted: 2,
+        postedMonths: ["2026-04-01"],
+      });
+      await expect(contributions.deleteOrphanSystemFee(fund.id, "2026-04-01")).resolves.toBe(2);
+      expect(await contributions.listForFund(fund.id)).toEqual([]);
+
+      await create({ source: "migration", payrollRecordId: null, postedMonth: "2026-07-01" });
+      await create({ typeCode: "fee", amount: "-3.00", source: "system", payrollRecordId: null, postedMonth: "2026-07-01" });
+      await expect(contributions.deleteOrphanSystemFee(fund.id, "2026-07-01")).resolves.toBe(0);
+
+      await create({ source: "manual", payrollRecordId: null, postedMonth: "2026-10-01" });
+      await create({ typeCode: "fee", amount: "-3.00", source: "system", payrollRecordId: null, postedMonth: "2026-10-01" });
+      await expect(contributions.deleteOrphanSystemFee(fund.id, "2026-10-01")).resolves.toBe(1);
+    });
+  });
 });
 
 describe.each(BACKENDS)("$backend issues repository contract", ({ backend }) => {

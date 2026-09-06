@@ -1,11 +1,11 @@
 import type { DbClient } from "@/lib/db/client";
 import { recordAudit } from "@/platform/audit/record";
+import { payrollContributionSink } from "@/modules/funds/infrastructure/payroll-contribution-sink";
 import type { DocumentStore, MalwareScanner, UseCaseDeps } from "../application/ports";
 import { DrizzlePayrollComponentsRepository } from "./drizzle-payroll-components-repository";
 import { DrizzlePayrollImportsRepository } from "./drizzle-payroll-imports-repository";
 import { DrizzlePayrollMappingRulesRepository } from "./drizzle-payroll-mapping-rules-repository";
 import { DrizzlePayrollRecordsRepository } from "./drizzle-payroll-records-repository";
-import { drizzleLegacyFundDeposits } from "./legacy-fund-deposits";
 
 export interface PayrollDepsOptions {
   /** Resolved by the caller *before* the transaction opened (Ruling R4-8). */
@@ -32,7 +32,7 @@ export function payrollDeps(tx: DbClient, opts: PayrollDepsOptions): UseCaseDeps
     records: new DrizzlePayrollRecordsRepository(tx),
     components: new DrizzlePayrollComponentsRepository(tx),
     mappingRules: new DrizzlePayrollMappingRulesRepository(tx),
-    funds: drizzleLegacyFundDeposits(tx),
+    funds: payrollContributionSink(tx),
     documents: opts.documents,
     scanner: opts.scanner,
     clock: { now: () => new Date() },

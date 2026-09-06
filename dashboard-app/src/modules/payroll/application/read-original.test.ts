@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { testPrincipal } from "@/test/principal";
 import type { PayrollImportPatch, UseCaseDeps } from "./ports";
+import { MemoryFundContributionSink } from "@/modules/funds/infrastructure/memory-contribution-sink";
 import {
-  MemoryLegacyFundDeposits,
   MemoryPayrollComponentsRepository,
   MemoryPayrollImportsRepository,
   MemoryPayrollMappingRulesRepository,
@@ -20,7 +20,7 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
     records: new MemoryPayrollRecordsRepository(),
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
-    funds: new MemoryLegacyFundDeposits(),
+    funds: new MemoryFundContributionSink(),
     // No I/O happens through either DB-only half this suite exercises — a
     // document store that throws if ever called is what proves the split:
     // `beginReadOriginal`/`recordOriginalRead` never touch it. The actual

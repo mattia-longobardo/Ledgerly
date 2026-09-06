@@ -84,6 +84,47 @@ describe("MemoryContributionsRepository", () => {
     await repo.create(contribution({ typeCode: "fee", source: "system", payrollRecordId: null }));
     await expect(repo.create(contribution({ typeCode: "fee", source: "system", payrollRecordId: null }))).rejects.toThrow(/unique/i);
   });
+
+  it("deletes payroll originals before their reversals and removes an orphan fee pair", async () => {
+    const repo = new MemoryContributionsRepository();
+    const original = await repo.create(contribution());
+    await repo.create(contribution({
+      typeCode: "reversal",
+      source: "manual",
+      payrollRecordId: null,
+      amount: "-250.00",
+      reversesId: original.id,
+    }));
+    const fee = await repo.create(contribution({
+      typeCode: "fee",
+      source: "system",
+      payrollRecordId: null,
+      amount: "-3.00",
+    }));
+    await repo.create(contribution({
+      typeCode: "reversal",
+      source: "manual",
+      payrollRecordId: null,
+      amount: "3.00",
+      reversesId: fee.id,
+    }));
+
+    await expect(repo.deleteByPayrollRecords("fund-1", ["pay-1"])).resolves.toEqual({
+      deleted: 2,
+      postedMonths: ["2026-02-01"],
+    });
+    await expect(repo.deleteOrphanSystemFee("fund-1", "2026-02-01")).resolves.toBe(2);
+    expect(await repo.listForFund("fund-1")).toEqual([]);
+  });
+
+  it("retains a posting fee for an unlinked migration contribution but not for a manual row", async () => {
+    for (const source of ["migration", "manual"] as const) {
+      const repo = new MemoryContributionsRepository();
+      await repo.create(contribution({ source, payrollRecordId: null }));
+      await repo.create(contribution({ typeCode: "fee", source: "system", payrollRecordId: null, amount: "-3.00" }));
+      await expect(repo.deleteOrphanSystemFee("fund-1", "2026-02-01")).resolves.toBe(source === "migration" ? 0 : 1);
+    }
+  });
 });
 
 describe("MemoryIssuesRepository", () => {

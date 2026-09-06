@@ -587,20 +587,22 @@ export interface FundContributionSink {
 ```
 `UseCaseDeps.funds: FundContributionSink`. `ApplyImportResult.fundDeposit` becomes `fundContributions: { written: number; skipped: … }`.
 
-- [ ] **Step 1: Sink test.** Given fund `cometa` with a quarterly schedule (lag 1, fee `3.00`) and a record for `2026-02-01` with employee `100.00` and employer `150.00`: writes two `payroll` rows with `postedMonth = "2026-04-01"`, `accrualPeriodStart = "2026-01-01"`, `accrualPeriodEnd = "2026-03-01"`, and one system `fee` row `-3.00` for `2026-04-01`; a second record in the same quarter writes no second fee; an unknown slug → `skipped: [{ fundSlug, reason: "no_fund" }]`; a `null` amount → `no_amount`; `supersededRecordId` set → that record's rows are gone afterwards; a zero `feePerPosting` writes no fee row.
+- [x] **Step 1: Sink test.** Given fund `cometa` with a quarterly schedule (lag 1, fee `3.00`) and a record for `2026-02-01` with employee `100.00` and employer `150.00`: writes two `payroll` rows with `postedMonth = "2026-04-01"`, `accrualPeriodStart = "2026-01-01"`, `accrualPeriodEnd = "2026-03-01"`, and one system `fee` row `-3.00` for `2026-04-01`; a second record in the same quarter writes no second fee; an unknown slug → `skipped: [{ fundSlug, reason: "no_fund" }]`; a `null` amount → `no_amount`; `supersededRecordId` set → that record's rows are gone afterwards; a zero `feePerPosting` writes no fee row.
 
-- [ ] **Step 2: Implement** `payrollContributionSink(tx: DbClient): FundContributionSink` over `DrizzleFundsRepository`, `DrizzleSchedulesRepository`, `DrizzleContributionsRepository` bound to the caller's `tx` (no I/O, same transaction as the payroll record). The memory sink takes the memory repositories. Wire `funds: payrollContributionSink(tx)` in `src/modules/payroll/infrastructure/deps.ts`.
+- [x] **Step 2: Implement** `payrollContributionSink(tx: DbClient): FundContributionSink` over `DrizzleFundsRepository`, `DrizzleSchedulesRepository`, `DrizzleContributionsRepository` bound to the caller's `tx` (no I/O, same transaction as the payroll record). The memory sink takes the memory repositories. Wire `funds: payrollContributionSink(tx)` in `src/modules/payroll/infrastructure/deps.ts`.
 
-- [ ] **Step 3: `apply-import.ts`.** Replace `fundHalves`/`upsertForRecord` with: collect every component whose `mappedTo.kind === "fund_contribution"` into `FundContributionWrite[]` (`accrualMonth = monthOfPeriod(period.periodStart)`, `amount = component.amount`), then one `writeForRecord` call with `supersededRecordId`. Update `apply-import.test.ts`; in `ingest.itest.ts` the assertions on `fund_deposits` rows become assertions on `fund_contributions` rows.
+- [x] **Step 3: `apply-import.ts`.** Replace `fundHalves`/`upsertForRecord` with: collect every component whose `mappedTo.kind === "fund_contribution"` into `FundContributionWrite[]` (`accrualMonth = monthOfPeriod(period.periodStart)`, `amount = component.amount`), then one `writeForRecord` call with `supersededRecordId`. Update `apply-import.test.ts`; in `ingest.itest.ts` the assertions on `fund_deposits` rows become assertions on `fund_contributions` rows.
 
-- [ ] **Verify:** `npm run typecheck && npm test && npm run test:integration -- payroll`. Then `grep -rn "fund_deposits\|fundDeposits" src` returns only `src/lib/db/schema/legacy.ts`.
-- [ ] **Commit:** `git add -A src && git commit -m "feat(payroll): apply writes fund_contributions through the funds sink (R4-6 closed)"`
+- [x] **Verify:** `npm run typecheck && npm test && npm run test:integration -- payroll`. Then `grep -rn "fund_deposits\|fundDeposits" src` returns only `src/lib/db/schema/legacy.ts`.
+- [x] **Commit:** `git add -A src && git commit -m "feat(payroll): apply writes fund_contributions through the funds sink (R4-6 closed)"`
 
 ---
 
 ### Deviation — Task 7
 
 R5-C8: payroll application also supports re-applying the same verified import. Replace contributions linked to the current `payrollRecordId` as well as a distinct `supersededRecordId`, across all of the owner's funds, before writing the newly mapped parts. Otherwise re-apply violates uniqueness or leaves removed mappings behind. A replaced contribution can have a manual reversal: remove the old original/reversal pair together without violating `reverses_id`, while preserving its existing audit events. Lock affected funds in a consistent order. Test re-apply, removed/changed fund mapping, and replacement after reversal on real Postgres as well as memory.
+
+System-fee replacement policy: a `source = 'system'` fee belongs to an actual posting, so it is retained exactly once while any employee/employer contribution with `payroll_record_id` remains for that fund and posted month, or while a `source = 'migration'` employee/employer row remains even without a payroll link (Task 8 permits that when no live ordinary record matches). Re-apply or supersession removes the fee when it removes the posting's final eligible contribution. Manual rows do not make a payroll fee eligible. When an orphan fee has a manual reversal, cleanup removes the net-zero fee/reversal pair in dependency order while preserving their audit events. This prevents a negative fee from surviving without an actual payroll posting while preserving shared and unlinked-migration postings.
 
 ### Task 8: Migration script and validator
 

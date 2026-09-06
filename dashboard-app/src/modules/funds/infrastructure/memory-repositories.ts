@@ -170,9 +170,39 @@ export class MemoryContributionsRepository implements ContributionsRepository {
   }
 
   async deleteByPayrollRecord(fundId: string, payrollRecordId: string): Promise<number> {
-    const before = this.rows.length;
-    this.rows = this.rows.filter((row) => row.fundId !== fundId || row.payrollRecordId !== payrollRecordId);
-    return before - this.rows.length;
+    return (await this.deleteByPayrollRecords(fundId, [payrollRecordId])).deleted;
+  }
+
+  async deleteByPayrollRecords(fundId: string, payrollRecordIds: readonly string[]): Promise<{ deleted: number; postedMonths: string[] }> {
+    const wanted = new Set(payrollRecordIds);
+    const originals = this.rows.filter((row) => row.fundId === fundId && row.payrollRecordId !== null && wanted.has(row.payrollRecordId));
+    const originalIds = new Set(originals.map((row) => row.id));
+    const dependentIds = new Set(this.rows
+      .filter((row) => row.fundId === fundId && row.reversesId !== null && originalIds.has(row.reversesId))
+      .map((row) => row.id));
+    this.rows = this.rows.filter((row) => !dependentIds.has(row.id) && !originalIds.has(row.id));
+    return {
+      deleted: originals.length + dependentIds.size,
+      postedMonths: [...new Set(originals.map((row) => row.postedMonth))].sort(),
+    };
+  }
+
+  async deleteOrphanSystemFee(fundId: string, postedMonth: string): Promise<number> {
+    const eligible = this.rows.some((row) =>
+      row.fundId === fundId
+      && row.postedMonth === postedMonth
+      && (row.typeCode === "employee" || row.typeCode === "employer")
+      && (row.payrollRecordId !== null || row.source === "migration"),
+    );
+    if (eligible) return 0;
+    const feeIds = new Set(this.rows
+      .filter((row) => row.fundId === fundId && row.postedMonth === postedMonth && row.typeCode === "fee" && row.source === "system")
+      .map((row) => row.id));
+    const reversalIds = new Set(this.rows
+      .filter((row) => row.fundId === fundId && row.reversesId !== null && feeIds.has(row.reversesId))
+      .map((row) => row.id));
+    this.rows = this.rows.filter((row) => !reversalIds.has(row.id) && !feeIds.has(row.id));
+    return feeIds.size + reversalIds.size;
   }
 
   async hasSystemFee(fundId: string, postedMonth: string): Promise<boolean> {
