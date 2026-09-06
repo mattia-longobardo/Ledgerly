@@ -40,7 +40,7 @@ export function ContributionsTable({ rows, fundId, canWrite }: { rows: readonly 
     {error && <ErrorInline message={error} />}
     <div className="overflow-x-auto">
       <table className="w-full min-w-[46rem] border-collapse text-body-sm">
-        <thead><tr className="hairline-b text-left text-caption tracking-wide text-fg-muted uppercase"><th className="py-2 pr-3 font-normal">Accrual</th><th className="px-3 py-2 font-normal">Posting</th><th className="px-3 py-2 font-normal">Type</th><th className="px-3 py-2 font-normal">Source</th><th className="px-3 py-2 text-right font-normal">Amount</th><th className="py-2 pl-3 text-right font-normal"><span className="sr-only">Actions</span></th></tr></thead>
+        <thead><tr className="hairline-b text-left text-caption tracking-wide text-fg-muted uppercase"><th className="py-2 pr-3 font-normal">Accrual</th><th className="px-3 py-2 font-normal">Posting</th><th className="px-3 py-2 font-normal">Type</th><th className="px-3 py-2 font-normal">Source</th><th className="px-3 py-2 text-right font-normal">Amount</th><th className="relative py-2 pl-3 text-right font-normal"><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{[...rows].sort((a, b) => b.postedMonth.localeCompare(a.postedMonth) || b.createdAt.getTime() - a.createdAt.getTime()).map((row) => {
           const canReverse = canWrite && row.typeCode !== "reversal" && !reversed.has(row.id);
           return <tr key={row.id} className="hairline-b">
