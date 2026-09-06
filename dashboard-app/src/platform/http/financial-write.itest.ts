@@ -1,0 +1,148 @@
+import { randomUUID } from "node:crypto";
+import { and, eq, sql } from "drizzle-orm";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { idempotencyKeys } from "@/lib/db/schema";
+import { withUserContext } from "@/platform/db/context";
+import { closeDb, resetDb, testDb } from "@/test/db";
+import { runFinancialWrite } from "./financial-write";
+
+/**
+ * Exercises `runFinancialWrite` directly — the shared platform helper both
+ * `funds` and `budgets` now sit on top of — rather than through either
+ * module's routes, so the property holds independently of any one module's
+ * DTOs or use cases.
+ */
+describe("runFinancialWrite", () => {
+  beforeEach(resetDb);
+  afterAll(closeDb);
+
+  const now = () => new Date("2026-09-06T10:00:00.000Z");
+  const request = (key: string, body = "{}") => ({ key, method: "POST", path: "/x", body });
+
+  /**
+   * A gate the test controls: `write` signals `started` the moment it runs
+   * (proving it got past the advisory lock and the cache check), then blocks
+   * on `gate` until the test releases it. This plays the same role funds'
+   * `overlappingRequests` gives an externally-held row lock on a fund — a
+   * way to guarantee two calls are genuinely in flight at once — but
+   * without depending on any module's table.
+   */
+  function gatedWrite<T>(result: T) {
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => { started = resolve; });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+    const write = async () => {
+      calls += 1;
+      started();
+      await gate;
+      return result;
+    };
+    return { write, release, started: startedPromise, callCount: () => calls };
+  }
+
+  /** Polls until `atLeast` other backends are blocked waiting on a lock, or fails. */
+  async function waitForLockWaiters(db: Awaited<ReturnType<typeof testDb>>, atLeast: number): Promise<void> {
+    const deadline = Date.now() + 5_000;
+    let waiting = 0;
+    while (Date.now() < deadline) {
+      const result = await db.execute<{ waiting: number }>(sql`
+        SELECT count(*)::integer AS waiting FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock'`);
+      waiting = result.rows[0]!.waiting;
+      if (waiting >= atLeast) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(waiting).toBeGreaterThanOrEqual(atLeast);
+  }
+
+  it("serializes two overlapping calls sharing (namespace, principalId, key): write runs once, the second replays the first's result", async () => {
+    const db = await testDb();
+    const principalId = randomUUID();
+    const first = gatedWrite({ echoed: "first" });
+
+    const firstPromise = runFinancialWrite({ db, now }, "test-ns", principalId, request("shared-key"), first.write);
+    await first.started;
+
+    // The second call must reach `pg_advisory_xact_lock` and block there —
+    // the first call's transaction is still open (paused inside `write`), so
+    // this can only be true if the two calls actually contend for the same
+    // lock, not merely run one after the other by scheduling luck.
+    const secondCalls = { n: 0 };
+    const second = async () => { secondCalls.n += 1; return { echoed: "second" }; };
+    const secondPromise = runFinancialWrite({ db, now }, "test-ns", principalId, request("shared-key"), second);
+    await waitForLockWaiters(db, 1);
+
+    first.release();
+    const [firstResult, secondResult] = await Promise.all([firstPromise, secondPromise]);
+
+    expect(first.callCount()).toBe(1);
+    expect(secondCalls.n).toBe(0);
+    expect(firstResult).toEqual({ body: { echoed: "first" }, status: 201 });
+    expect(secondResult).toEqual(firstResult);
+  });
+
+  it("does not serialize or collide across namespaces sharing the same principalId and key", async () => {
+    const db = await testDb();
+    const principalId = randomUUID();
+    const a = gatedWrite({ echoed: "a" });
+    const b = gatedWrite({ echoed: "b" });
+
+    const aPromise = runFinancialWrite({ db, now }, "namespace-a", principalId, request("same-key"), a.write);
+    await a.started;
+
+    // If the lock id (or the cache row) were shared across namespaces, `b`
+    // would either block behind `a`'s still-open transaction or replay `a`'s
+    // eventual result instead of running its own `write` — so a bounded wait
+    // for `b.started` is itself the isolation proof: it must resolve while
+    // `a` is deliberately still held open.
+    const bPromise = runFinancialWrite({ db, now }, "namespace-b", principalId, request("same-key"), b.write);
+    const bStartedInTime = await Promise.race([
+      b.started.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2_000)),
+    ]);
+    expect(bStartedInTime).toBe(true);
+
+    a.release();
+    b.release();
+    const [aResult, bResult] = await Promise.all([aPromise, bPromise]);
+
+    expect(a.callCount()).toBe(1);
+    expect(b.callCount()).toBe(1);
+    expect(aResult).toEqual({ body: { echoed: "a" }, status: 201 });
+    expect(bResult).toEqual({ body: { echoed: "b" }, status: 201 });
+  });
+
+  it("does not persist an idempotency row when the write body throws — a retry re-executes rather than replaying the failure", async () => {
+    const db = await testDb();
+    const principalId = randomUUID();
+    let calls = 0;
+    const failingWrite = async () => {
+      calls += 1;
+      throw new Error("boom");
+    };
+
+    await expect(runFinancialWrite({ db, now }, "test-ns", principalId, request("retry-key"), failingWrite)).rejects.toThrow("boom");
+    expect(calls).toBe(1);
+
+    const rows = await withUserContext(db, { userId: principalId }, (tx) =>
+      tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, "retry-key"))),
+    );
+    expect(rows).toHaveLength(0);
+
+    const succeedingWrite = async () => {
+      calls += 1;
+      return { ok: true };
+    };
+    const result = await runFinancialWrite({ db, now }, "test-ns", principalId, request("retry-key"), succeedingWrite);
+    expect(calls).toBe(2);
+    expect(result).toEqual({ body: { ok: true }, status: 201 });
+
+    const rowsAfter = await withUserContext(db, { userId: principalId }, (tx) =>
+      tx.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, "retry-key"))),
+    );
+    expect(rowsAfter).toHaveLength(1);
+  });
+});
