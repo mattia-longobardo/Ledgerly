@@ -170,7 +170,25 @@ in the real migration's counts:**
    <file>`) before proceeding. This dump is the entire rollback plan below —
    do not proceed past this step without confirming it.
 
-6. **Apply the schema migration and the vacation migration, in order, against
+6. **Confirm the image you are about to exec into actually carries this
+   commit's bundled scripts — before running anything against production.**
+   Step 3 built a fresh image, but nothing stops an operator from reaching
+   this point with a stale or cached one (a skipped step 3, a build that
+   silently reused a cache layer from before this phase, a compose file
+   pointing at an older tag). Check both bundled scripts exist in the image
+   that `docker compose` would actually run:
+
+   ```bash
+   docker compose run --rm --no-deps dashboard-app ls -la /app/migrate-vacation-budget.mjs /app/validate-vacation-budget-migration.mjs
+   ```
+
+   Both files must be listed. **If either is missing, stop — do not proceed
+   to the next step.** Rebuild (step 3) and redeploy the image before
+   touching the database; do not attempt the migration against an image that
+   lacks it. Nothing has been backed up or migrated yet at this point, so
+   there is nothing to unwind.
+
+7. **Apply the schema migration and the vacation migration, in order, against
    the real production database, stopping on any failure:**
 
    ```bash
@@ -189,11 +207,11 @@ in the real migration's counts:**
    existing unlabelled-by-events Holidays budget, see "The vacation migration
    aborts rather than double-migrating" above before doing anything else.
 
-7. **Start the app:** `docker compose up -d --no-deps dashboard-app`. Wait
+8. **Start the app:** `docker compose up -d --no-deps dashboard-app`. Wait
    for its health check. Restart `dashboard-cron` only if it was stopped in
    step 4.
 
-8. **Verify in the running application.** Sign in and open
+9. **Verify in the running application.** Sign in and open
    `/finance/budgets`. Confirm a budget named "Holidays" is listed and that
    its remaining figure equals the old Vacation fund's balance as of today
    (cross-check against the last balance the legacy Personal Settings page
@@ -206,7 +224,7 @@ in the real migration's counts:**
 ## Rollback
 
 Keep the app stopped if migration or validation fails at any point in step
-6. Restore the pre-deploy backup from step 5 into the production database
+7. Restore the pre-deploy backup from step 5 into the production database
 using its administrative role, then start `dashboard-app` again from the
 **previous** image (retag it back to `dashboard:latest` if step 3 already
 overwrote that tag locally) without rebuilding. A schema-only rollback is not
