@@ -541,18 +541,32 @@ Apply R5-C2/C4/C6: validate inputs in use cases (including owner/currency accoun
 - Modify: `src/app/(app)/page.tsx` (Home funds card), `src/modules/home/cards.ts` (funds card `requires: { permission: "funds.read" }`).
 - Delete: `src/app/(app)/finance/funds/[slug]/**`, `src/app/(app)/finance/_lib/funds.ts`, `src/lib/repo/funds.ts`, `src/lib/calc/funds.ts` + test, `src/lib/calc/cometa.ts` + test, `src/app/(app)/finance/_lib/gain.ts` if unreferenced afterwards.
 
-- [ ] **Step 1: Loaders.** `run.ts` copied from `src/modules/interests/ui/run.ts` with `fundDeps`. `load-funds.ts`: `loadFundsSummary(): Promise<FundSummary[]>`, `loadFundDetail(id: string): Promise<FundDetail | null>` (maps `NotFoundError` to null) via `runForPrincipal`; pure helper `totalFundValue(summaries: readonly FundSummary[]): { value: string | null; unvalued: number }` (null when every fund is unvalued) with a unit test — this replaces `totalFundValue` in `src/app/(app)/page.tsx`.
+- [x] **Step 1: Loaders.** `run.ts` copied from `src/modules/interests/ui/run.ts` with `fundDeps`. `load-funds.ts`: `loadFundsSummary(): Promise<FundSummary[]>`, `loadFundDetail(id: string): Promise<FundDetail | null>` (maps `NotFoundError` to null) via `runForPrincipal`; pure helper `totalFundValue(summaries: readonly FundSummary[]): { value: string | null; unvalued: number }` (null when every fund is unvalued) with a unit test — this replaces `totalFundValue` in `src/app/(app)/page.tsx`.
 
-- [ ] **Step 2: Pages.** List: one `AccountRow`-style row per fund — name, kind, value with `StaleBadge` from `valueAsOf`, deposited, return with `DeltaBadge`, open-issues count; "New fund" opens `FundForm` in a `Sheet`. Detail: `PageHeader` with the fund name; `StatGrid` value / deposited / return; `TimeSeriesChart` of `valueSeries` (series value and deposited); `QuarterTable` when the effective schedule is quarterly or annual, else a monthly table; `ContributionsTable` (each `payroll` row links to `/company/earnings/${payrollRecordId}`; a "Reverse" button on rows that are not reversals and not yet reversed); panels for plan and schedule with their forms; the issues list with an Acknowledge button. Empty states: no funds → `EmptyState` with the create action; no linked account → "Link a valuation account to see its value" pointing at `FundForm`. `FundForm`'s account select lists the principal's accounts through `listAccounts` from `@/modules/accounts/application/list-accounts` (same use-case rule; open its own `runForPrincipal` from the accounts module in the loader, sequentially, never nested).
+- [x] **Step 2: Pages.** List: one `AccountRow`-style row per fund — name, kind, value with `StaleBadge` from `valueAsOf`, deposited, return with `DeltaBadge`, open-issues count; "New fund" opens `FundForm` in a `Sheet`. Detail: `PageHeader` with the fund name; `StatGrid` value / deposited / return; `TimeSeriesChart` of `valueSeries` (series value and deposited); `QuarterTable` when the effective schedule is quarterly or annual, else a monthly table; `ContributionsTable` (each `payroll` row links to `/company/earnings/${payrollRecordId}`; a "Reverse" button on rows that are not reversals and not yet reversed); panels for plan and schedule with their forms; the issues list with an Acknowledge button. Empty states: no funds → `EmptyState` with the create action; no linked account → "Link a valuation account to see its value" pointing at `FundForm`. `FundForm`'s account select lists the principal's accounts through `listAccounts` from `@/modules/accounts/application/list-accounts` (same use-case rule; open its own `runForPrincipal` from the accounts module in the loader, sequentially, never nested).
 
-- [ ] **Step 3: Actions** in `src/app/actions/funds.ts` (shape of `src/app/actions/expenses.ts`): `createFundAction`, `updateFundAction`, `setScheduleAction`, `setPlanAction`, `addContributionAction`, `reverseContributionAction`, `reconcileFundAction`, `acknowledgeIssueAction`. Parse money with `parseMoney`/`toNumericString`. `revalidatePath("/finance/funds")` and the detail path.
+- [x] **Step 3: Actions** in `src/app/actions/funds.ts` (shape of `src/app/actions/expenses.ts`): `createFundAction`, `updateFundAction`, `setScheduleAction`, `setPlanAction`, `addContributionAction`, `reverseContributionAction`, `reconcileFundAction`, `acknowledgeIssueAction`. Parse money with `parseMoney`/`toNumericString`. `revalidatePath("/finance/funds")` and the detail path.
 
-- [ ] **Step 4: Home.** Replace the `loadFunds`/`FundView` import in `src/app/(app)/page.tsx` with `loadFundsSummary` + `totalFundValue`; the card keeps linking to `/finance/funds`.
+- [x] **Step 4: Home.** Replace the `loadFunds`/`FundView` import in `src/app/(app)/page.tsx` with `loadFundsSummary` + `totalFundValue`; the card keeps linking to `/finance/funds`.
 
-- [ ] **Step 5: Delete the legacy files** listed above. Then `grep -rn "lib/repo/funds\|calc/funds\|calc/cometa\|_lib/funds\|funds/\[slug\]" src scripts` must return nothing.
+- [x] **Step 5: Delete the legacy files** listed above. Then `grep -rn "lib/repo/funds\|calc/funds\|calc/cometa\|_lib/funds\|funds/\[slug\]" src scripts` must return nothing.
 
-- [ ] **Verify:** `npm run typecheck && npm test && npm run build` (the route table lists `/finance/funds` and `/finance/funds/[id]`, not `[slug]`).
-- [ ] **Commit:** `git add -A src && git commit -m "feat(funds): module UI, Home card, retire the legacy funds pages"`
+- [x] **Verify:** `npm run typecheck && npm test && npm run build` (the route table lists `/finance/funds` and `/finance/funds/[id]`, not `[slug]`).
+- [x] **Commit:** `git add -A src && git commit -m "feat(funds): module UI, Home card, retire the legacy funds pages"`
+
+### Deviation — Task 6
+
+The specified `totalFundValue` result has no currency field, while the reviewed
+Task 6 contract forbids adding or converting unlike currencies. Keep the
+specified `{ value, unvalued }` shape: return `value: null` when valued funds
+span more than one currency, count only genuinely missing valuations in
+`unvalued`, and derive the one display currency separately in the UI. Add a
+tested Home-card load predicate so a denied `funds.read` card is rendered
+without invoking the funds loader. Add a small funds-specific currency value
+component because the shared `MoneyValue` deliberately formats EUR only. The
+legacy gain loader's only consumer, `MonthlyGainPanel`, becomes orphaned when
+the funds list is rewritten, so remove that component with the loader rather
+than leave a dangling type import.
 
 ---
 
@@ -583,6 +597,10 @@ export interface FundContributionSink {
 - [ ] **Commit:** `git add -A src && git commit -m "feat(payroll): apply writes fund_contributions through the funds sink (R4-6 closed)"`
 
 ---
+
+### Deviation — Task 7
+
+R5-C8: payroll application also supports re-applying the same verified import. Replace contributions linked to the current `payrollRecordId` as well as a distinct `supersededRecordId`, across all of the owner's funds, before writing the newly mapped parts. Otherwise re-apply violates uniqueness or leaves removed mappings behind. A replaced contribution can have a manual reversal: remove the old original/reversal pair together without violating `reverses_id`, while preserving its existing audit events. Lock affected funds in a consistent order. Test re-apply, removed/changed fund mapping, and replacement after reversal on real Postgres as well as memory.
 
 ### Task 8: Migration script and validator
 

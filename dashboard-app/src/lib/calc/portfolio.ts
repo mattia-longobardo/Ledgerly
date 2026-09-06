@@ -1,7 +1,15 @@
 import type { MonthPoint } from "@/lib/contracts";
 import { monthKeyOf } from "@/lib/time";
-import { monthlyReturn } from "./funds";
 import { fromCents, toCents, type MoneyInput } from "./money";
+
+function monthlyReturn(input: { valueM: MoneyInput; valuePrev: MoneyInput; depositsInM?: MoneyInput }): { pct: number | null } {
+  const value = toCents(input.valueM);
+  const previous = toCents(input.valuePrev);
+  if (value === null || previous === null) return { pct: null };
+  const deposits = toCents(input.depositsInM) ?? 0;
+  const denominator = previous + deposits;
+  return { pct: denominator === 0 ? null : ((value - previous - deposits) / denominator) * 100 };
+}
 
 export interface FundSeries {
   key: string;

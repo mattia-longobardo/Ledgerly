@@ -3,6 +3,8 @@ import { cn } from "./cn";
 
 export interface DeltaBadgeProps {
   value: Money;
+  /** Currency-aware callers may provide the already formatted signed amount. */
+  formattedValue?: string;
   percent?: number | null;
   /** Spoken context, e.g. "vs last month". Not rendered. */
   context?: string;
@@ -30,9 +32,9 @@ function toneOf(value: Money): Tone {
 }
 
 /** The +/− glyph carries the sign, so colour is never the only signal. */
-export function DeltaBadge({ value, percent, context, className }: DeltaBadgeProps) {
+export function DeltaBadge({ value, formattedValue, percent, context, className }: DeltaBadgeProps) {
   const tone = toneOf(value);
-  const amount = formatDelta(value);
+  const amount = formattedValue ?? formatDelta(value);
   const pct = percent === undefined || percent === null ? null : formatPercent(percent, { signed: true });
 
   return (

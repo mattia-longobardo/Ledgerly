@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { permissionsForRoles } from "@/platform/auth/permissions";
 import type { Capabilities } from "@/platform/capabilities/resolve";
-import { cardState, HOME_CARDS, isCardVisible, visibleCards, type HomeCard } from "./cards";
+import { cardState, HOME_CARDS, isCardVisible, shouldLoadCardData, visibleCards, type HomeCard } from "./cards";
 
 function caps(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
@@ -143,6 +143,14 @@ describe("HOME_CARDS and visibleCards", () => {
  * feature/integration one — is the reason a card's content is withheld.
  */
 describe("Home composition", () => {
+  it("does not request funds data when funds.read is denied", () => {
+    const withoutFundRead = caps({ permissions: new Set(["accounts.read"]) });
+    const fundCard = HOME_CARDS.find((card) => card.key === "funds")!;
+
+    expect(cardState(fundCard, withoutFundRead)).toEqual({ state: "permission_denied" });
+    expect(shouldLoadCardData(fundCard, withoutFundRead)).toBe(false);
+  });
+
   it("accounts_sync is absent when Wallet is not configured", () => {
     const notConfigured = visibleCards(caps({ integrations: { ...caps().integrations, wallet: "not_configured" } }));
     expect(notConfigured.some((c) => c.key === "accounts_sync")).toBe(false);
