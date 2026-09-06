@@ -1,11 +1,13 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { fileURLToPath } from "node:url";
 import type { DbClient } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import {
   budgetAllocations,
   budgetAmountVersions,
+  budgetEvents,
   budgetUsages,
   budgets,
   userRoles,
@@ -27,15 +29,32 @@ import { withSystemContext } from "@/platform/db/context";
  * The legacy tables are frozen inputs. This script never updates or deletes
  * them, and conflict handling never overwrites an existing new-model row.
  *
+ * Idempotency for every row this script writes on a legacy row's behalf
+ * (rate allocations, withdrawal usages, adjustment allocations, R6-4
+ * reconciliation allocations) is keyed on a `budget_events` row, never on
+ * `note` text: `AllocationsRepository.update` lets a user edit an
+ * allocation's `note` (spec-supported), so a note-keyed re-run would
+ * silently double-write real money the moment someone tidies a migrated
+ * note. `budget_events` has no update endpoint, so it is safe to key on.
+ * Notes on the written rows are purely descriptive.
+ *
  * R6-4: `vacation_ledger` `accrual` rows are the recorded, historical result
  * of the accrual rates; they are not copied. Instead each rate becomes a
  * `monthly` allocation (R6-2), and for every month from `start_date` through
- * today, the running total that `allocatedThrough` derives from those rate
+ * the **last month with a legacy `accrual` row** (not "today" — see below),
+ * the running total that `allocatedThrough` derives from those rate
  * allocations is compared with the running total of the ledger's own
  * `accrual` rows. Any incremental gap is inserted as a `once` "migration
  * adjustment" allocation dated on that month, so the budget's `remaining`
- * matches the legacy balance to the cent at every historical month, not just
- * today.
+ * matches the legacy balance to the cent at every historical month up to
+ * cutover.
+ *
+ * The reconciliation horizon is anchored to the last legacy `accrual`
+ * month, not to `asOf`/today: past cutover the migrated budget is expected
+ * to keep accruing via the real monthly allocation while the frozen ledger
+ * does not, so comparing beyond that month is meaningless — and anchoring
+ * to frozen data (rather than the wall clock) is what keeps a re-run
+ * idempotent a month, or a year, after the first run.
  */
 
 class MigrationInputError extends Error {}
@@ -106,7 +125,26 @@ async function resolveOwner(tx: DbClient): Promise<{ id: string; currency: strin
   return rows[0]!;
 }
 
-async function migrate(tx: DbClient): Promise<Counts | null> {
+/** Idempotency check for a row migrated 1:1 from a legacy row (never keyed on user-editable `note`). */
+async function migratedEventExists(tx: DbClient, budgetId: string, table: string, legacyId: string): Promise<boolean> {
+  const rows = await tx
+    .select({ id: budgetEvents.id })
+    .from(budgetEvents)
+    .where(and(
+      eq(budgetEvents.budgetId, budgetId),
+      eq(budgetEvents.kind, "migrated"),
+      sql`${budgetEvents.detail} ->> 'table' = ${table}`,
+      sql`${budgetEvents.detail} ->> 'legacyId' = ${legacyId}`,
+    ))
+    .limit(1);
+  return rows.length > 0;
+}
+
+async function recordMigratedEvent(tx: DbClient, budgetId: string, table: string, legacyId: string): Promise<void> {
+  await tx.insert(budgetEvents).values({ budgetId, kind: "migrated", detail: { table, legacyId } });
+}
+
+export async function migrate(tx: DbClient, asOf: string): Promise<Counts | null> {
   const ledgerRows = await tx.select().from(vacationLedger).orderBy(asc(vacationLedger.id));
   const rateRows = await tx.select().from(vacationAccrualRate).orderBy(asc(vacationAccrualRate.effectiveFrom));
   if (ledgerRows.length === 0 && rateRows.length === 0) return null;
@@ -114,7 +152,13 @@ async function migrate(tx: DbClient): Promise<Counts | null> {
   const counts = { ...ZERO_COUNTS };
   const owner = await resolveOwner(tx);
 
-  const initialRow = ledgerRows.find((row) => row.entryType === "initial") ?? null;
+  const initialRows = ledgerRows.filter((row) => row.entryType === "initial");
+  if (initialRows.length > 1) {
+    throw new MigrationInputError(
+      `Multiple 'initial' vacation_ledger rows found (${initialRows.length}); refusing to guess which is authoritative`,
+    );
+  }
+  const initialRow = initialRows[0] ?? null;
   const accrualRows = ledgerRows.filter((row) => row.entryType === "accrual");
   const withdrawalRows = ledgerRows.filter((row) => row.entryType === "withdrawal");
   const adjustmentRows = ledgerRows.filter((row) => row.entryType === "adjustment");
@@ -166,7 +210,8 @@ async function migrate(tx: DbClient): Promise<Counts | null> {
     counts.budgets += 1;
   }
 
-  // Step 3: the initial amount version.
+  // Step 3: the initial amount version. Versions are append-only (no update endpoint),
+  // so the table's own (budget_id, effective_from) unique index is a safe idempotency key.
   const versionEffectiveFrom = initialRow ? dateOf(initialRow) : startDate;
   const versionAmount = initialRow ? initialRow.amount : "0.00";
   const insertedVersion = await tx
@@ -193,105 +238,92 @@ async function migrate(tx: DbClient): Promise<Counts | null> {
     sourceId: null,
   }));
   for (const rate of rateAllocations) {
-    const existing = await tx
-      .select({ id: budgetAllocations.id })
-      .from(budgetAllocations)
-      .where(and(
-        eq(budgetAllocations.budgetId, budget.id),
-        eq(budgetAllocations.recurrence, "monthly"),
-        eq(budgetAllocations.effectiveFrom, rate.effectiveFrom),
-        eq(budgetAllocations.note, "migrated accrual rate"),
-      ))
-      .limit(1);
-    if (existing.length === 0) {
-      const inserted = await tx
-        .insert(budgetAllocations)
-        .values({
-          budgetId: budget.id,
-          sourceKind: "none",
-          sourceId: null,
-          amount: rate.amount,
-          recurrence: "monthly",
-          effectiveFrom: rate.effectiveFrom,
-          effectiveTo: rate.effectiveTo,
-          note: "migrated accrual rate",
-        })
-        .returning({ id: budgetAllocations.id });
-      counts.rateAllocations += inserted.length;
-    }
+    const legacyId = rate.effectiveFrom;
+    if (await migratedEventExists(tx, budget.id, "vacation_accrual_rate", legacyId)) continue;
+    await tx.insert(budgetAllocations).values({
+      budgetId: budget.id,
+      sourceKind: "none",
+      sourceId: null,
+      amount: rate.amount,
+      recurrence: "monthly",
+      effectiveFrom: rate.effectiveFrom,
+      effectiveTo: rate.effectiveTo,
+      note: "migrated accrual rate",
+    });
+    await recordMigratedEvent(tx, budget.id, "vacation_accrual_rate", legacyId);
+    counts.rateAllocations += 1;
   }
 
   // Step 5a: `withdrawal` rows become manual usages. `amount = |amount|` because usages are
   // always positive spend (figures.usedThrough subtracts them); the legacy ledger amount is
-  // signed. The ledger id is folded into the note because budget_usages has no natural
-  // unique key for manual rows (unlike scope-matched rows, which key on transaction_id).
+  // signed. `note` is the legacy row's own note, carried through as-is.
   for (const withdrawal of withdrawalRows) {
+    const legacyId = String(withdrawal.id);
+    if (await migratedEventExists(tx, budget.id, "vacation_ledger", legacyId)) continue;
     const occurredAt = dateOf(withdrawal);
     const amount = formatCents(absCents(cents(withdrawal.amount)));
-    const note = withdrawal.note
-      ? `${withdrawal.note} (migrated from vacation_ledger#${withdrawal.id})`
-      : `migrated from vacation_ledger#${withdrawal.id}`;
-    const existing = await tx
-      .select({ id: budgetUsages.id })
-      .from(budgetUsages)
-      .where(and(eq(budgetUsages.budgetId, budget.id), eq(budgetUsages.matchedBy, "manual"), eq(budgetUsages.note, note)))
-      .limit(1);
-    if (existing.length === 0) {
-      const inserted = await tx
-        .insert(budgetUsages)
-        .values({
-          budgetId: budget.id,
-          transactionId: null,
-          amount,
-          occurredAt,
-          matchedBy: "manual",
-          note,
-        })
-        .returning({ id: budgetUsages.id });
-      counts.withdrawalUsages += inserted.length;
-    }
+    await tx.insert(budgetUsages).values({
+      budgetId: budget.id,
+      transactionId: null,
+      amount,
+      occurredAt,
+      matchedBy: "manual",
+      note: withdrawal.note,
+    });
+    await recordMigratedEvent(tx, budget.id, "vacation_ledger", legacyId);
+    counts.withdrawalUsages += 1;
   }
 
   // Step 5b: `adjustment` rows become `once` allocations with the signed amount.
   for (const adjustment of adjustmentRows) {
+    const legacyId = String(adjustment.id);
+    if (await migratedEventExists(tx, budget.id, "vacation_ledger", legacyId)) continue;
     const effectiveFrom = dateOf(adjustment);
-    const note = `migrated adjustment (vacation_ledger#${adjustment.id})`;
-    const existing = await tx
-      .select({ id: budgetAllocations.id })
-      .from(budgetAllocations)
-      .where(and(eq(budgetAllocations.budgetId, budget.id), eq(budgetAllocations.note, note)))
-      .limit(1);
-    if (existing.length === 0) {
-      const inserted = await tx
-        .insert(budgetAllocations)
-        .values({
-          budgetId: budget.id,
-          sourceKind: "none",
-          sourceId: null,
-          amount: adjustment.amount,
-          recurrence: "once",
-          effectiveFrom,
-          effectiveTo: null,
-          note,
-        })
-        .returning({ id: budgetAllocations.id });
-      counts.adjustmentAllocations += inserted.length;
-    }
+    await tx.insert(budgetAllocations).values({
+      budgetId: budget.id,
+      sourceKind: "none",
+      sourceId: null,
+      amount: adjustment.amount,
+      recurrence: "once",
+      effectiveFrom,
+      effectiveTo: null,
+      note: "migrated adjustment",
+    });
+    await recordMigratedEvent(tx, budget.id, "vacation_ledger", legacyId);
+    counts.adjustmentAllocations += 1;
   }
 
   // Step 6 (R6-4): reconcile the rate-derived monthly total against the ledger's actual
   // accrual total, month by month, inserting only the incremental gap so re-running never
-  // duplicates a correction already on record.
-  const existingReconciliations = await tx
-    .select({ effectiveFrom: budgetAllocations.effectiveFrom, amount: budgetAllocations.amount })
-    .from(budgetAllocations)
-    .where(and(eq(budgetAllocations.budgetId, budget.id), eq(budgetAllocations.note, "migration adjustment")));
-  const existingReconciliationByMonth = new Map(
-    existingReconciliations.map((row) => [row.effectiveFrom, cents(row.amount)]),
-  );
+  // duplicates a correction already on record. Idempotency is a `budget_events` row per
+  // month (kind "migration_reconciliation"), never the allocation's note; the seeded
+  // running total sums by month (rather than overwriting) in case more than one event
+  // were ever recorded for the same month.
+  const reconciliationEvents = await tx
+    .select({ detail: budgetEvents.detail })
+    .from(budgetEvents)
+    .where(and(eq(budgetEvents.budgetId, budget.id), eq(budgetEvents.kind, "migration_reconciliation")));
+  const existingReconciliationByMonth = new Map<string, bigint>();
+  for (const row of reconciliationEvents) {
+    const detail = row.detail as { month?: unknown; amountCents?: unknown };
+    if (typeof detail.month !== "string" || typeof detail.amountCents !== "string") {
+      throw new MigrationInputError("Malformed migration_reconciliation event detail");
+    }
+    existingReconciliationByMonth.set(
+      detail.month,
+      (existingReconciliationByMonth.get(detail.month) ?? 0n) + BigInt(detail.amountCents),
+    );
+  }
 
-  const today = romeDate();
-  const months = monthRange(monthKeyOf(startDate), monthKeyOf(today));
+  // The horizon is the last month with a legacy `accrual` row (clamped to asOf as a
+  // defensive bound), not `asOf` itself — see the file-level comment on why.
+  const accrualMonths = accrualRows.map((row) => monthKeyOf(dateOf(row)));
+  const lastAccrualMonth = accrualMonths.length > 0
+    ? accrualMonths.reduce((max, m) => (m > max ? m : max))
+    : monthKeyOf(asOf);
+  const horizon = lastAccrualMonth < monthKeyOf(asOf) ? lastAccrualMonth : monthKeyOf(asOf);
+
+  const months = monthRange(monthKeyOf(startDate), horizon);
   let runningReconciliation = 0n;
   for (const month of months) {
     const lastDay = lastDayOfMonth(month);
@@ -308,20 +340,22 @@ async function migrate(tx: DbClient): Promise<Counts | null> {
     }
     const incremental = targetReconciliation - runningReconciliation;
     if (incremental !== 0n) {
-      const inserted = await tx
-        .insert(budgetAllocations)
-        .values({
-          budgetId: budget.id,
-          sourceKind: "none",
-          sourceId: null,
-          amount: formatCents(incremental),
-          recurrence: "once",
-          effectiveFrom: month,
-          effectiveTo: null,
-          note: "migration adjustment",
-        })
-        .returning({ id: budgetAllocations.id });
-      counts.reconciliationAllocations += inserted.length;
+      await tx.insert(budgetAllocations).values({
+        budgetId: budget.id,
+        sourceKind: "none",
+        sourceId: null,
+        amount: formatCents(incremental),
+        recurrence: "once",
+        effectiveFrom: month,
+        effectiveTo: null,
+        note: "migration adjustment",
+      });
+      await tx.insert(budgetEvents).values({
+        budgetId: budget.id,
+        kind: "migration_reconciliation",
+        detail: { month, amountCents: incremental.toString() },
+      });
+      counts.reconciliationAllocations += 1;
       runningReconciliation += incremental;
     }
   }
@@ -339,7 +373,7 @@ async function main(): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl, max: 2 });
   try {
     const db = drizzle(pool, { schema });
-    const counts = await withSystemContext(db, migrate);
+    const counts = await withSystemContext(db, (tx) => migrate(tx, romeDate()));
     if (counts === null) {
       console.log("nothing to migrate");
       return;
@@ -354,4 +388,4 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) void main();

@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { fileURLToPath } from "node:url";
 import type { DbClient } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import {
@@ -30,6 +31,24 @@ import { withSystemContext } from "@/platform/db/context";
  * under test) from the budgets domain — never a vacation-specific
  * calculator — so a bug shared between the migration and the domain cannot
  * hide from this check.
+ *
+ * Known limitation (left for the exit-task runbook, not fixed here): the
+ * `cents`/`lastDayOfMonth`/`dateOf` helpers below are intentionally
+ * copy-paste identical to the migration's own, so a date-attribution bug
+ * shared between the two files would be invisible to this validator.
+ *
+ * The month loop only checks `figures().remaining` against the legacy
+ * balance through the last month the ledger has an `accrual` row (see
+ * `horizon` below) — the same horizon the migration uses for its R6-4
+ * reconciliation, and for the same reason: past that month the migrated
+ * budget is expected to diverge from the frozen ledger by design (it keeps
+ * accruing; the ledger does not), so comparing further would be
+ * meaningless. It separately asserts a structural, horizon-independent
+ * property: exactly one `monthly` allocation per `vacation_accrual_rate`
+ * row, with the rate's own amount and dates — because R6-4's reconciliation
+ * is computed from those very allocations, an error in one would otherwise
+ * be silently absorbed by a compensating "migration adjustment" and the
+ * balance check alone would still print OK.
  */
 
 class ValidationError extends Error {}
@@ -61,6 +80,11 @@ function lastDayOfMonth(monthStart: string): string {
   return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 }
 
+function subtractOneDay(date: string): string {
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+}
+
 /** `month` when present (initial/accrual rows), else the Rome civil date of `occurred_at`. */
 function dateOf(entry: { month: string | null; occurredAt: Date }): string {
   return entry.month ?? romeDate(entry.occurredAt);
@@ -90,7 +114,45 @@ async function findMigratedBudget(tx: DbClient, owner: Owner) {
   return rows[0]!;
 }
 
-async function validate(tx: DbClient): Promise<{ examined: number }> {
+/**
+ * Important 4: structural, horizon-independent check that R6-4's
+ * reconciliation cannot mask. Exactly one `monthly` allocation per rate row,
+ * with the rate's own amount (string equality) and dates.
+ */
+function checkRateAllocations(
+  rateRows: readonly { effectiveFrom: string; monthlyAmount: string }[],
+  allocationRows: readonly { amount: string; recurrence: string; effectiveFrom: string; effectiveTo: string | null }[],
+): void {
+  const monthlyAllocations = allocationRows.filter((row) => row.recurrence === "monthly");
+  if (monthlyAllocations.length !== rateRows.length) {
+    throw new ValidationError(
+      `Expected ${rateRows.length} monthly allocation(s) (one per accrual rate), found ${monthlyAllocations.length}`,
+    );
+  }
+  for (let i = 0; i < rateRows.length; i++) {
+    const rate = rateRows[i]!;
+    const expectedEffectiveTo = i < rateRows.length - 1 ? subtractOneDay(rateRows[i + 1]!.effectiveFrom) : null;
+    const matches = monthlyAllocations.filter((row) => row.effectiveFrom === rate.effectiveFrom);
+    if (matches.length !== 1) {
+      throw new ValidationError(
+        `Expected exactly one monthly allocation effective ${rate.effectiveFrom}, found ${matches.length}`,
+      );
+    }
+    const allocation = matches[0]!;
+    if (allocation.amount !== rate.monthlyAmount) {
+      throw new ValidationError(
+        `Rate ${rate.effectiveFrom}: allocation amount ${allocation.amount} does not equal rate monthly_amount ${rate.monthlyAmount}`,
+      );
+    }
+    if (allocation.effectiveTo !== expectedEffectiveTo) {
+      throw new ValidationError(
+        `Rate ${rate.effectiveFrom}: allocation effective_to ${String(allocation.effectiveTo)} does not equal expected ${String(expectedEffectiveTo)}`,
+      );
+    }
+  }
+}
+
+export async function validate(tx: DbClient, asOf: string): Promise<{ examined: number }> {
   const owner = await resolveOwner(tx);
   const ledgerRows = await tx.select().from(vacationLedger).orderBy(asc(vacationLedger.id));
   const rateRows = await tx.select().from(vacationAccrualRate).orderBy(asc(vacationAccrualRate.effectiveFrom));
@@ -105,6 +167,8 @@ async function validate(tx: DbClient): Promise<{ examined: number }> {
   const allocationRows = await tx.select().from(budgetAllocations).where(eq(budgetAllocations.budgetId, budget.id));
   const usageRows = await tx.select().from(budgetUsages).where(eq(budgetUsages.budgetId, budget.id));
   if (versionRows.length === 0) throw new ValidationError("Migrated budget has no amount version");
+
+  checkRateAllocations(rateRows, allocationRows);
 
   const versions: AmountVersionLike[] = versionRows.map((row) => ({
     initialAmount: row.initialAmount,
@@ -121,14 +185,24 @@ async function validate(tx: DbClient): Promise<{ examined: number }> {
   }));
   const usages: UsageLike[] = usageRows.map((row) => ({ amount: row.amount, occurredAt: row.occurredAt }));
 
-  const initialRow = ledgerRows.find((row) => row.entryType === "initial") ?? null;
+  const initialRows = ledgerRows.filter((row) => row.entryType === "initial");
+  if (initialRows.length > 1) {
+    throw new ValidationError(`Multiple 'initial' vacation_ledger rows found (${initialRows.length})`);
+  }
+  const initialRow = initialRows[0] ?? null;
   const accrualRows = ledgerRows.filter((row) => row.entryType === "accrual");
   const withdrawalRows = ledgerRows.filter((row) => row.entryType === "withdrawal");
   const adjustmentRows = ledgerRows.filter((row) => row.entryType === "adjustment");
   const legacyInitialCents = initialRow ? cents(initialRow.amount) : 0n;
 
-  const today = romeDate();
-  const months = monthRange(monthKeyOf(budget.startDate), monthKeyOf(today));
+  // Same horizon rule as the migration's R6-4 step, derived independently from
+  // the ledger's own accrual rows — see the file-level comment.
+  const accrualMonths = accrualRows.map((row) => monthKeyOf(dateOf(row)));
+  const lastAccrualMonth = accrualMonths.length > 0
+    ? accrualMonths.reduce((max, m) => (m > max ? m : max))
+    : monthKeyOf(asOf);
+  const horizon = lastAccrualMonth < monthKeyOf(asOf) ? lastAccrualMonth : monthKeyOf(asOf);
+  const months = monthRange(monthKeyOf(budget.startDate), horizon);
   if (months.length === 0) throw new ValidationError("Examined 0 months");
 
   for (const month of months) {
@@ -174,7 +248,7 @@ async function main(): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl, max: 2 });
   try {
     const db = drizzle(pool, { schema });
-    const result = await withSystemContext(db, validate);
+    const result = await withSystemContext(db, (tx) => validate(tx, romeDate()));
     if (result.examined <= 0) throw new ValidationError("Examined 0 months");
     console.log(`OK (${result.examined} months examined)`);
   } catch (error) {
@@ -185,4 +259,4 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) void main();
