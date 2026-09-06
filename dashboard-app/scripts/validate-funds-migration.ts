@@ -176,6 +176,14 @@ async function canonicalSnapshots(
   return result.rows;
 }
 
+async function eligibleSnapshotKeys(tx: DbClient, legacy: LegacyFundInput): Promise<string[]> {
+  const keys = await tx
+    .selectDistinct({ accountKey: balanceSnapshots.accountKey })
+    .from(balanceSnapshots)
+    .where(sql`lower(${balanceSnapshots.accountKey}) IN (lower(${legacy.slug}), lower(${legacy.name}))`);
+  return keys.map((row) => row.accountKey).sort((a, b) => a.localeCompare(b));
+}
+
 async function validateValuation(
   tx: DbClient,
   owner: { id: string; currency: string },
@@ -223,6 +231,17 @@ async function validateValuation(
     : null;
   if (typeof recordedAccountKey !== "string" || recordedAccountKey.length === 0) {
     throw new ValidationError(`${legacy.slug}: snapshot-account provenance has no account key`);
+  }
+  const candidates = await eligibleSnapshotKeys(tx, legacy);
+  if (candidates.length !== 1) {
+    throw new ValidationError(
+      `${legacy.slug}: snapshot-derived account requires one eligible legacy key, found ${candidates.length}${candidates.length > 0 ? ` (${candidates.join(", ")})` : ""}`,
+    );
+  }
+  if (candidates[0] !== recordedAccountKey) {
+    throw new ValidationError(
+      `${legacy.slug}: snapshot provenance key ${recordedAccountKey} does not match independently resolved key ${candidates[0]}`,
+    );
   }
 
   const canonical = await canonicalSnapshots(tx, legacy, recordedAccountKey);
