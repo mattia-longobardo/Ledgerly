@@ -218,7 +218,7 @@ export class MemoryIssuesRepository implements IssuesRepository {
   }
 
   async setStatus(userId: string, id: string, status: "acknowledged" | "resolved", by: string, at: Date): Promise<ReconciliationIssue | null> {
-    const index = this.rows.findIndex((row) => row.userId === userId && row.id === id);
+    const index = this.rows.findIndex((row) => row.userId === userId && row.id === id && row.status !== "resolved");
     if (index === -1) return null;
     const row = this.rows[index]!;
     const updated: ReconciliationIssue = {

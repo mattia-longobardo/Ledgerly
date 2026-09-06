@@ -106,4 +106,13 @@ describe("MemoryIssuesRepository", () => {
     expect(count).toBe(1);
     expect((await repo.listOpen("user-1", "funds")).map((row) => row.id)).not.toContain(resolved.id);
   });
+
+  it("treats resolved issues as terminal", async () => {
+    const repo = new MemoryIssuesRepository();
+    const created = await repo.upsertOpen(issue);
+    const resolvedAt = new Date("2026-03-01T00:00:00Z");
+    await expect(repo.setStatus("user-1", created.id, "resolved", "reviewer", resolvedAt)).resolves.toMatchObject({ status: "resolved" });
+    await expect(repo.setStatus("user-1", created.id, "acknowledged", "reviewer", new Date("2026-03-02T00:00:00Z"))).resolves.toBeNull();
+    await expect(repo.resolveMissing("user-1", "funds", "fund-1:", [], "reviewer", new Date("2026-03-03T00:00:00Z"))).resolves.toBe(0);
+  });
 });
