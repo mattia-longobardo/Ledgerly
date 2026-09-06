@@ -18,7 +18,7 @@ describe("updateFund", () => {
   it("rejects invalid runtime patches and mismatched linked account currencies", async () => {
     const h = fundHarness();
     const fund = await seedFund(h.deps);
-    await expect(updateFund(h.deps)(testPrincipal(), fund.id, 0, { kind: "bad" as never })).rejects.toThrow(/invalid/i);
+    await expect(updateFund(h.deps)(testPrincipal(), fund.id, fund.version, { kind: "bad" as never })).rejects.toThrow(/invalid/i);
     h.accountLinks.set(`${testPrincipal().userId}:usd`, { currency: "USD" });
     await expect(updateFund(h.deps)(testPrincipal(), fund.id, fund.version, { accountId: "usd" })).rejects.toThrow(/currency/i);
   });
