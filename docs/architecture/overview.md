@@ -1,10 +1,10 @@
-# Architecture overview — Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4
+# Architecture overview — Phases 0–5
 
 This describes what `dashboard-app` actually is after Phase 0 (platform
 foundations), Phase 1 (accounts, Teable retirement), Phase 2 (the
 integration framework, encrypted credentials, inbound webhooks), Phase 3
-(Expenses and Interests), and Phase 4 (the payroll upload pipeline and
-Company). It follows the target shape from
+(Expenses and Interests), Phase 4 (the payroll upload pipeline and
+Company), and Phase 5 (Funds). It follows the target shape from
 [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](../superpowers/specs/2026-09-02-finance-company-platform-design.md)
 §3; read that document for the rationale, this one for what is on disk today.
 
@@ -43,6 +43,12 @@ src/
     infrastructure/       Drizzle repositories, the document store (S3 + local), the scanning boundary, the payroll_silo adapter
     api/                   Hono routes (routes.ts) + Zod schemas (schemas.ts)
     ui/                     Company Overview, Earnings, Payroll upload/review loaders and components
+  modules/funds/
+    domain/             effective schedules, accrual/posting periods, deposited totals, reconciliation — no IO
+    application/         fund CRUD, plans/schedules, contributions/reversals, reconciliation, ports.ts
+    infrastructure/       Drizzle repositories, linked-account valuations, payroll contribution sink
+    api/                   Hono routes and explicit Zod DTOs
+    ui/                     Funds list/detail, contribution and planning forms
   platform/
     auth/               Principal, permission catalogue, resolvePrincipal, require-principal
     capabilities/       resolveCapabilities, buildNavigation, the production probes
@@ -54,11 +60,11 @@ src/
                             credential encryption (crypto.ts), shared HMAC webhook verification
   lib/                  everything not yet migrated into a module: db client/schema/migrate,
                           env, jobs (sweep, trek-sync, wallet-refresh, monthly-close, wallet-accounts-sync,
-                          sync-queue), payroll parsing, calc (money/net-worth/cometa), clients (wallet, trek)
+                          sync-queue), payroll parsing, calc (money/net-worth), clients (wallet, trek)
   app/                   Next.js routes only — thin, call use cases and render ui/
 ```
 
-`accounts`, `expenses`, `interests` and `payroll` are full modules. Payslip
+`accounts`, `expenses`, `interests`, `payroll` and `funds` are full modules. Payslip
 documents never enter Postgres: the database holds metadata and a `storage_key`,
 and the bytes live in an S3-compatible document store reached through a
 `payroll_silo` integration connection (or, in development and tests, a local
@@ -77,6 +83,30 @@ of the Phase 3 plan), and interest accrual is a new daily job
 iterating every user with an active rule rather than a single owner.
 `src/modules/home/cards.ts` is the first cross-module composition point: it
 reads `Capabilities` and the accounts overview to decide what Home shows.
+
+## Funds and payroll posting
+
+Fund money comes from signed contribution rows. Plans describe future intent;
+the first plan's opening capital becomes an auditable adjustment, while later
+plan edits do not rewrite actual deposits. Effective schedules determine the
+accrual period and posting month. A quarterly March accrual with a one-month
+lag posts in April. Fees are negative contributions; a reversal references and
+negates its original row, including a positive reversal of a fee.
+
+Fund values come from an owner-scoped linked account. Missing valuations stay
+null. Reconciliation considers live ordinary payroll months mapped to that
+specific fund and enriches linked contributions with their exact payroll
+month. Issues are owner-scoped and qualified by fund; acknowledging one does
+not acknowledge another module's issue. Financial mutations serialize on the
+parent fund within the caller's transaction.
+
+Legacy migration imports opening capital, contributions, schedules and plans.
+When a valuation account is missing, it imports the existing canonical monthly
+snapshots into a manual account. It preserves the old monthly selection and
+reports the intentional shift from the old Cometa display timing to actual
+posting. Legacy fund tables remain migration archives. Dedicated
+`fund_valuations`, delayed/matched reconciliation, additional charts and
+contribution-type management remain deferred.
 
 ## The use-case rule
 
