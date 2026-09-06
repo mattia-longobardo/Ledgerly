@@ -1,6 +1,5 @@
 import type { MonthPoint } from "@/lib/contracts";
 import { monthKeyOf, monthRange, romeDate } from "@/lib/time";
-import { effectiveSetting } from "./funds";
 import { fromCents, sumCents, toCents, type MoneyInput } from "./money";
 
 export interface LedgerEntry {
@@ -26,7 +25,10 @@ export function fundBalance(ledger: readonly LedgerEntry[]): number {
 }
 
 export function effectiveRate(rates: readonly AccrualRateRow[], month: string): number | null {
-  const row = effectiveSetting(rates, month);
+  const key = monthKeyOf(month);
+  const row = [...rates]
+    .filter((rate) => monthKeyOf(rate.effectiveFrom) <= key)
+    .sort((a, b) => monthKeyOf(b.effectiveFrom).localeCompare(monthKeyOf(a.effectiveFrom)))[0] ?? null;
   return row === null ? null : fromCents(toCents(row.monthlyAmount));
 }
 

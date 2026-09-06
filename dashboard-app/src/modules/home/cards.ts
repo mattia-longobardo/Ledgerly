@@ -37,7 +37,7 @@ export type CardState<T> =
 export const HOME_CARDS: readonly HomeCard[] = [
   { key: "total_balance", title: "Total balance", href: "/finance/accounts", requires: {} },
   { key: "accounts_sync", title: "Accounts sync", href: "/settings/integrations", requires: { integration: "wallet" } },
-  { key: "funds", title: "Funds", href: "/finance/funds", requires: {} },
+  { key: "funds", title: "Funds", href: "/finance/funds", requires: { permission: "funds.read" } },
   { key: "leave", title: "Leave", href: "/company/time-off", requires: { feature: "timeoff" } },
   // Spec §7.1 lists a payroll-import-status card. It is gated on the feature so
   // it disappears with the section, and on `payroll.upload` so a viewer is told
@@ -71,4 +71,9 @@ export function cardState(card: HomeCard, caps: Capabilities): { state: "permiss
   const { permission } = card.requires;
   if (permission && !caps.permissions.has(permission)) return { state: "permission_denied" };
   return null;
+}
+
+/** Whether it is safe and useful for Home to invoke this card's loader. */
+export function shouldLoadCardData(card: HomeCard, caps: Capabilities): boolean {
+  return isCardVisible(card, caps) && cardState(card, caps) === null;
 }

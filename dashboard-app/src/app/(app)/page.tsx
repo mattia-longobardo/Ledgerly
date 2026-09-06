@@ -12,13 +12,15 @@ import { deltaOverRange } from "@/lib/calc/series";
 import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
 import type { Series } from "@/lib/contracts";
 import { loadOverview, type SourceFreshness } from "@/modules/accounts/ui/load-overview";
-import { cardState, visibleCards, type CardKey } from "@/modules/home/cards";
+import { cardState, shouldLoadCardData, visibleCards, type CardKey } from "@/modules/home/cards";
+import type { FundSummary } from "@/modules/funds/application/summary";
+import { CurrencyValue } from "@/modules/funds/ui/CurrencyValue";
+import { fundValueCurrency, loadFundsSummary, totalFundValue } from "@/modules/funds/ui/load-funds";
 import { loadImports, type ImportRow } from "@/modules/payroll/ui/load-payroll";
 import { AWAITING_STATUSES } from "@/modules/payroll/ui/queue";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
 import { resolveCapabilities } from "@/platform/capabilities/resolve";
-import { loadFunds, type FundView } from "./finance/_lib/funds";
 import { loadFerie } from "./_lib/vacation";
 
 export const dynamic = "force-dynamic";
@@ -62,28 +64,15 @@ function PermissionDeniedPanel({ span, title }: { span: 4 | 6 | 8 | 12; title: s
   );
 }
 
-/** Σ of the funds' latest known values — null only when every fund is unvalued, never a zero. */
-function totalFundValue(funds: readonly FundView[]): {
-  value: number | null;
-  capturedAt: Date | null;
-  stale: boolean;
-} {
-  let value: number | null = null;
-  let capturedAt: Date | null = null;
-  let stale = false;
-  for (const f of funds) {
-    if (f.value !== null) value = (value ?? 0) + f.value;
-    if (f.capturedAt && (!capturedAt || f.capturedAt < capturedAt)) capturedAt = f.capturedAt;
-    if (f.stale) stale = true;
-  }
-  return { value, capturedAt, stale };
-}
-
 export default async function HomePage() {
   const principal = await requirePrincipalOrRedirect();
   const caps = await resolveCapabilities(principal, realProbes);
   const visible = visibleCards(caps);
   const isVisible = (key: CardKey) => visible.some((c) => c.key === key);
+  const shouldLoad = (key: CardKey) => {
+    const card = visible.find((candidate) => candidate.key === key);
+    return card !== undefined && shouldLoadCardData(card, caps);
+  };
   const denial = (key: CardKey) => {
     const card = visible.find((c) => c.key === key);
     return card ? cardState(card, caps) : null;
@@ -91,7 +80,7 @@ export default async function HomePage() {
 
   const [overview, funds, ferie, imports] = await Promise.all([
     isVisible("total_balance") || isVisible("accounts_sync") ? loadOverview() : null,
-    isVisible("funds") ? loadFunds() : null,
+    shouldLoad("funds") ? loadFundsSummary() : null,
     isVisible("leave") ? loadFerie() : null,
     // Safe to call unconditionally behind `isVisible`: this card requires the
     // `payroll` feature, which `resolveCapabilities` only turns on once a
@@ -309,8 +298,12 @@ function AccountsSyncCard({ sources }: { sources: readonly SourceFreshness[] }) 
 }
 
 /** `funds`: the total of the same per-fund figures the Funds page shows individually. */
-function FundsCard({ funds }: { funds: readonly FundView[] }) {
+function FundsCard({ funds }: { funds: readonly FundSummary[] }) {
   const total = totalFundValue(funds);
+  const currency = fundValueCurrency(funds);
+  const valuedCurrencies = new Set(funds.filter((fund) => fund.value !== null).map((fund) => fund.fund.currency));
+  const valueDates = funds.flatMap((fund) => fund.valueAsOf ? [new Date(`${fund.valueAsOf}T12:00:00Z`)] : []);
+  const asOf = valueDates.length === 0 ? null : new Date(Math.min(...valueDates.map((date) => date.getTime())));
 
   return (
     <Panel
@@ -327,10 +320,15 @@ function FundsCard({ funds }: { funds: readonly FundView[] }) {
         <p className="text-body-sm text-fg-muted">No funds registered.</p>
       ) : (
         <>
-          <MoneyValue value={total.value} size="display-sm" cents="muted" />
-          <div className="mt-2">
-            <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
-          </div>
+          {total.value !== null && currency !== null ? (
+            <CurrencyValue value={total.value} currency={currency} size="display-sm" />
+          ) : (
+            <p className="text-body-sm text-fg-muted">
+              {valuedCurrencies.size > 1 ? "Values span multiple currencies." : "No fund valuations yet."}
+            </p>
+          )}
+          {total.unvalued > 0 && <p className="mt-1 text-caption text-fg-muted">{total.unvalued} fund{total.unvalued === 1 ? "" : "s"} without a valuation</p>}
+          {asOf && <div className="mt-2"><StaleBadge capturedAt={asOf} /></div>}
         </>
       )}
     </Panel>

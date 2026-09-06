@@ -1,117 +1,82 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
-import { requireUser } from "@/lib/auth/require-user";
-import * as fundsRepo from "@/lib/repo/funds";
-import { monthKey, monthKeyOf } from "@/lib/time";
-import {
-  fail,
-  parseMoney,
-  succeed,
-  toNumericString,
-  type ActionResult,
-} from "./types";
+import { acknowledgeIssue } from "@/modules/funds/application/acknowledge-issue";
+import { addContribution, type AddContributionInput } from "@/modules/funds/application/add-contribution";
+import { createFund, type CreateFundInput } from "@/modules/funds/application/create-fund";
+import { InvalidInputError, NotFoundError, VersionMismatchError } from "@/modules/funds/application/errors";
+import type { Fund, FundContribution, FundPlan, FundSchedule, ReconciliationIssue } from "@/modules/funds/application/ports";
+import { reconcileFund } from "@/modules/funds/application/reconcile-fund";
+import { reverseContribution } from "@/modules/funds/application/reverse-contribution";
+import { setPlan, type SetPlanInput } from "@/modules/funds/application/set-plan";
+import { setSchedule, type SetScheduleInput } from "@/modules/funds/application/set-schedule";
+import { updateFund } from "@/modules/funds/application/update-fund";
+import { runForPrincipal } from "@/modules/funds/ui/deps";
+import { PermissionDeniedError } from "@/platform/auth/principal";
+import { errorMessage, fail, parseMoney, succeed, text, toNumericString, type ActionResult } from "./types";
 
-const monthPattern = /^\d{4}-\d{2}(-\d{2})?$/;
-
-function revalidateFund(slug: string | null): void {
-  revalidatePath("/");
-  revalidatePath("/finance");
-  revalidatePath("/finance/funds");
-  if (slug !== null) revalidatePath(`/finance/funds/${slug}`);
-  revalidatePath("/settings");
+function required(data: FormData, key: string): string { return text(data.get(key)) ?? ""; }
+function month(data: FormData, key: string): string { const value = required(data, key); return value.length === 7 ? `${value}-01` : value; }
+function optionalMonth(data: FormData, key: string): string | undefined { const value = text(data.get(key)); return value ? (value.length === 7 ? `${value}-01` : value) : undefined; }
+function parsedMoney(data: FormData, key: string): string | null {
+  const value = parseMoney(data.get(key));
+  return value === null ? null : toNumericString(value);
+}
+function mapError(error: unknown): string {
+  if (error instanceof PermissionDeniedError) return "You do not have permission to change funds.";
+  if (error instanceof VersionMismatchError) return "This fund changed in the meantime. Reload and try again.";
+  if (error instanceof InvalidInputError || error instanceof NotFoundError) return error.message;
+  return errorMessage(error);
+}
+function revalidateFunds(id?: string): void {
+  revalidatePath("/"); revalidatePath("/finance/funds");
+  if (id) revalidatePath(`/finance/funds/${id}`);
 }
 
-async function slugOf(fundId: number): Promise<string | null> {
-  const all = await fundsRepo.listFunds();
-  return all.find((f) => f.id === fundId)?.slug ?? null;
+export async function createFundAction(data: FormData): Promise<ActionResult<Fund>> {
+  const input: CreateFundInput = { slug: required(data, "slug"), name: required(data, "name"), kind: required(data, "kind") as CreateFundInput["kind"], currency: required(data, "currency"), accountId: text(data.get("accountId")) };
+  try { const result = await runForPrincipal((deps, principal) => createFund(deps)(principal, input)); revalidateFunds(result.id); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
 }
-
-const settingsSchema = z.object({
-  fundId: z.coerce.number().int(),
-  effectiveFrom: z.string().regex(monthPattern).nullish(),
-  initialCapital: z.union([z.string(), z.number()]).nullish(),
-  depositMode: z.enum(["fixed", "payroll"]),
-  fixedMonthlyAmount: z.union([z.string(), z.number()]).nullish(),
-});
-
-/**
- * A mode switch ("link to payroll") is a NEW effective-dated row, never an
- * edit of the old one — that is what keeps the deposit history explainable
- * after the switch.
- */
-export async function saveFundSettings(
-  input: z.input<typeof settingsSchema>,
-): Promise<ActionResult<null>> {
-  await requireUser();
-
-  const parsed = settingsSchema.safeParse(input);
-  if (!parsed.success) return fail("Those fund settings are not valid.");
-  const { fundId, depositMode } = parsed.data;
-
-  const slug = await slugOf(fundId);
-  if (slug === null) return fail("Unknown fund.");
-
-  const initial = parseMoney(parsed.data.initialCapital ?? 0) ?? 0;
-  if (initial < 0) return fail("Initial capital cannot be negative.");
-
-  let fixed: string | null = null;
-  if (depositMode === "fixed") {
-    const amount = parseMoney(parsed.data.fixedMonthlyAmount);
-    if (amount === null || amount < 0) {
-      return fail("A fixed monthly amount is required in fixed mode.");
-    }
-    fixed = toNumericString(amount);
-  }
-
-  const effectiveFrom = parsed.data.effectiveFrom
-    ? monthKeyOf(parsed.data.effectiveFrom)
-    : monthKey(new Date());
-
-  await fundsRepo.addSetting({
-    fundId,
-    effectiveFrom,
-    initialCapital: toNumericString(initial),
-    depositMode,
-    fixedMonthlyAmount: fixed,
-  });
-
-  revalidateFund(slug);
-  return succeed(null);
+export async function updateFundAction(data: FormData): Promise<ActionResult<Fund>> {
+  const id = required(data, "id");
+  const patch = { name: required(data, "name"), kind: required(data, "kind") as Fund["kind"], accountId: text(data.get("accountId")), status: required(data, "status") as Fund["status"] };
+  try { const result = await runForPrincipal((deps, principal) => updateFund(deps)(principal, id, Number(required(data, "version")), patch)); revalidateFunds(id); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
 }
-
-const depositSchema = z.object({
-  fundId: z.coerce.number().int(),
-  month: z.string().regex(monthPattern),
-  amount: z.union([z.string(), z.number()]),
-});
-
-/**
- * A manual top-up. Both deposit modes write `fund_deposits`, so totals never
- * branch on mode; `source` only records where the row came from.
- */
-export async function recordManualDeposit(
-  input: z.input<typeof depositSchema>,
-): Promise<ActionResult<null>> {
-  await requireUser();
-
-  const parsed = depositSchema.safeParse(input);
-  if (!parsed.success) return fail("That deposit is not valid.");
-
-  const amount = parseMoney(parsed.data.amount);
-  if (amount === null) return fail("Enter a deposit amount.");
-
-  const slug = await slugOf(parsed.data.fundId);
-  if (slug === null) return fail("Unknown fund.");
-
-  await fundsRepo.upsertDeposit({
-    fundId: parsed.data.fundId,
-    month: monthKeyOf(parsed.data.month),
-    amount: toNumericString(amount),
-    source: "manual",
-  });
-
-  revalidateFund(slug);
-  return succeed(null);
+export async function setScheduleAction(data: FormData): Promise<ActionResult<FundSchedule>> {
+  const fundId = required(data, "fundId"); const fee = parsedMoney(data, "feePerPosting");
+  if (fee === null) return fail("Enter a valid posting fee.");
+  const input: SetScheduleInput = { frequency: required(data, "frequency") as SetScheduleInput["frequency"], periodAnchorMonth: Number(required(data, "periodAnchorMonth")), postingLagMonths: Number(required(data, "postingLagMonths")), feePerPosting: fee, effectiveFrom: month(data, "effectiveFrom") };
+  try { const result = await runForPrincipal((deps, principal) => setSchedule(deps)(principal, fundId, input)); revalidateFunds(fundId); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
+}
+export async function setPlanAction(data: FormData): Promise<ActionResult<FundPlan>> {
+  const fundId = required(data, "fundId"); const initialCapital = parsedMoney(data, "initialCapital"); const fixedRaw = text(data.get("fixedMonthlyAmount")); const fixedMonthlyAmount = fixedRaw === null ? null : parsedMoney(data, "fixedMonthlyAmount");
+  if (initialCapital === null || (fixedRaw !== null && fixedMonthlyAmount === null)) return fail("Enter valid plan amounts.");
+  const input: SetPlanInput = { effectiveFrom: month(data, "effectiveFrom"), initialCapital, fixedMonthlyAmount, note: text(data.get("note")) };
+  try { const result = await runForPrincipal((deps, principal) => setPlan(deps)(principal, fundId, input)); revalidateFunds(fundId); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
+}
+export async function addContributionAction(data: FormData): Promise<ActionResult<FundContribution>> {
+  const fundId = required(data, "fundId"); const amount = parsedMoney(data, "amount");
+  if (amount === null) return fail("Enter a valid contribution amount.");
+  const input: AddContributionInput = { typeCode: required(data, "typeCode") as AddContributionInput["typeCode"], accrualMonth: month(data, "accrualMonth"), amount, valueDate: text(data.get("valueDate")), note: text(data.get("note")), postedMonth: optionalMonth(data, "postedMonth") };
+  try { const result = await runForPrincipal((deps, principal) => addContribution(deps)(principal, fundId, input)); revalidateFunds(fundId); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
+}
+export async function reverseContributionAction(data: FormData): Promise<ActionResult<FundContribution>> {
+  const fundId = required(data, "fundId");
+  try { const result = await runForPrincipal((deps, principal) => reverseContribution(deps)(principal, fundId, required(data, "contributionId"), text(data.get("note")))); revalidateFunds(fundId); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
+}
+export async function reconcileFundAction(data: FormData): Promise<ActionResult<{ detected: unknown[]; resolved: number }>> {
+  const fundId = required(data, "fundId");
+  try { const result = await runForPrincipal((deps, principal) => reconcileFund(deps)(principal, fundId)); revalidateFunds(fundId); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
+}
+export async function acknowledgeIssueAction(data: FormData): Promise<ActionResult<ReconciliationIssue>> {
+  const fundId = required(data, "fundId");
+  try { const result = await runForPrincipal((deps, principal) => acknowledgeIssue(deps)(principal, required(data, "issueId"))); revalidateFunds(fundId); return succeed(result); }
+  catch (error) { return fail(mapError(error)); }
 }
