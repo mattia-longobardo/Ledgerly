@@ -47,8 +47,6 @@ export default async function BudgetsPage() {
             <div className="hairline-t">
               {summaries.map((summary) => {
                 const { budget, figures } = summary;
-                const goal = budget.goalAmount !== null ? Number(budget.goalAmount) : null;
-                const remainingNum = Number(figures.remaining);
                 return (
                   <Link
                     key={budget.id}
@@ -68,10 +66,10 @@ export default async function BudgetsPage() {
                       <span className="text-body-sm text-fg">{budget.status === "active" ? "Active" : "Archived"}</span>
                     </span>
                     <span>
-                      {goal !== null && goal !== 0 ? (
-                        <ProgressRing value={remainingNum} max={goal} label={`${budget.name} goal progress`} size={56} thickness={5} />
-                      ) : (
+                      {figures.goalProgress === null ? (
                         <span className="text-caption text-fg-muted">No goal set</span>
+                      ) : (
+                        <ProgressRing value={figures.goalProgress} max={1} label={`${budget.name} goal progress`} size={56} thickness={5} />
                       )}
                     </span>
                     <span className="text-right text-body-sm font-medium text-accent">Open →</span>
