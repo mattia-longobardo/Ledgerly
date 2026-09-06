@@ -124,7 +124,8 @@ export interface ValuationSource {
 
 export interface PayrollMonthsSource {
   liveMonths(userId: string): Promise<string[]>;
-  liveRecords(userId: string): Promise<{ id: string; month: string }[]>;
+  liveRecords(userId: string, includeExtraordinary?: boolean): Promise<{ id: string; month: string }[]>;
+  expectedMonths(userId: string, fundSlug: string): Promise<string[]>;
 }
 
 export interface AccountLinkSource {

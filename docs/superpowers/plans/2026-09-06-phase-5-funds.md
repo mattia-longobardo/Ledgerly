@@ -487,14 +487,20 @@ reconcileFund(deps)(principal, fundId: string): Promise<{ detected: DetectedIssu
 acknowledgeIssue(deps)(principal, issueId: string): Promise<ReconciliationIssue>                          // funds.write
 ```
 
-- [ ] **Step 1: Tests first.** One `describe` per use case. Minimum cases: a `viewer` principal gets `PermissionDeniedError` on every write; `getFundDetail` returns `value: null` for a fund without `accountId`, and each `valueSeries` entry carries `deposited = depositedThrough(rows, month)`; `addContribution` computes `postedMonth` from the effective schedule (`2026-02-01` accrual, quarterly lag 1 → `2026-04-01`) and rejects a positive `fee`; `reverseContribution` flips the sign and links `reversesId`; `reconcileFund` resolves an issue that disappeared after a contribution was added; every mutation records an audit row with `action` `funds.fund_created` / `funds.fund_updated` / `funds.schedule_set` / `funds.plan_set` / `funds.contribution_added` / `funds.contribution_reversed` / `funds.reconciled` / `funds.issue_acknowledged`.
+- [x] **Step 1: Tests first.** One `describe` per use case. Minimum cases: a `viewer` principal gets `PermissionDeniedError` on every write; `getFundDetail` returns `value: null` for a fund without `accountId`, and each `valueSeries` entry carries `deposited = depositedThrough(rows, month)`; `addContribution` computes `postedMonth` from the effective schedule (`2026-02-01` accrual, quarterly lag 1 → `2026-04-01`) and rejects a positive `fee`; `reverseContribution` flips the sign and links `reversesId`; `reconcileFund` resolves an issue that disappeared after a contribution was added; every mutation records an audit row with `action` `funds.fund_created` / `funds.fund_updated` / `funds.schedule_set` / `funds.plan_set` / `funds.contribution_added` / `funds.contribution_reversed` / `funds.reconciled` / `funds.issue_acknowledged`.
 
-- [ ] **Step 2: Implement** each use case in the curried shape of `src/modules/interests/application/create-interest-rule.ts`. `getFundDetail.valueSeries`: months = union of `valuations.monthly()` months and contribution `postedMonth`s, sorted; `value` carried forward from the last known balance inside the series only (months before the first balance are omitted, never zero). `listFunds` calls `valuations.latest` per fund with an `accountId`.
+- [x] **Step 2: Implement** each use case in the curried shape of `src/modules/interests/application/create-interest-rule.ts`. `getFundDetail.valueSeries`: months = union of `valuations.monthly()` months and contribution `postedMonth`s, sorted; `value` carried forward from the last known balance inside the series only (months before the first balance are omitted, never zero). `listFunds` calls `valuations.latest` per fund with an `accountId`.
 
-- [ ] **Verify:** `npm test -- modules/funds/application`; `npm run typecheck`.
-- [ ] **Commit:** `git add src/modules/funds/application && git commit -m "feat(funds): use cases"`
+- [x] **Verify:** `npm test -- modules/funds/application`; `npm run typecheck`.
+- [x] **Commit:** `git add src/modules/funds/application && git commit -m "feat(funds): use cases"`
 
 ---
+
+### Deviation — Task 4
+
+R5-C7: reconciliation expectations are fund-specific. Extend `PayrollMonthsSource` with `expectedMonths(userId, fundSlug)`, selecting live ordinary payroll records with a component mapped to that fund; unrelated payroll must not generate missing contributions for manual funds. Extend `liveRecords(userId, includeExtraordinary = false)` and request all live records for exact contribution-month enrichment, so extraordinary quarterly rows cannot mask missing ordinary months. Preserve the ordinary default and test both cases.
+
+Apply R5-C2/C4/C6: validate inputs in use cases (including owner/currency account links, actual month/date anchors, signed decimal bounds and schedule fees), not only routes. Lock the owner-scoped fund before plan/schedule/contribution/reversal/reconciliation mutations. The first plan writes its nonzero opening capital as an `adjustment` contribution dated `effectiveFrom` and records that link in the audit; later plans remain planning changes. Enrich reconciliation rows from `payrollMonths.liveRecords`; qualify persisted contribution issue ids with `${fundId}:` so list/resolve-by-prefix works for every issue type. Preserve acknowledged issues. Test positive fee reversal, repeated reversal rejection, opening capital once, invalid/foreign account and currency mismatch, viewer denial and audit behavior.
 
 ### Task 5: REST API
 
