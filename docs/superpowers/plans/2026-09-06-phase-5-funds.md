@@ -307,7 +307,7 @@ export function accrualPeriodFor(month: string, rule: ScheduleRule): AccrualPeri
 export function postedMonthFor(month: string, rule: ScheduleRule): string;
 export function effectiveRule<T extends { effectiveFrom: string }>(rules: readonly T[], month: string): T | null; // latest effectiveFrom <= month, else null
 // totals.ts
-export interface ContributionLike { id: string; typeCode: string; amount: string; postedMonth: string; accrualPeriodStart: string; accrualPeriodEnd: string; payrollAccrualMonth?: string; source: string; payrollRecordId: string | null }
+export interface ContributionLike { id: string; typeCode: string; amount: string; postedMonth: string; accrualPeriodStart: string; accrualPeriodEnd: string; payrollAccrualMonth?: string; source: string; payrollRecordId: string | null; reversesId?: string | null }
 export function depositedThrough(rows: readonly ContributionLike[], month: string): string; // Σ amount where postedMonth <= month; "0.00" if none
 export function absoluteReturn(value: string | null, deposited: string): string | null;    // value − deposited; null when value is null
 export interface QuarterRow { quarter: string; accrualMonths: string[]; postedMonth: string; gross: string; fees: string; net: string; posted: boolean }

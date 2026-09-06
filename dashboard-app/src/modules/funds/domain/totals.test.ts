@@ -110,4 +110,31 @@ describe("quarterlyRows", () => {
       ["2026-05-01", "50.00"],
     ]);
   });
+
+  it("classifies reversals with the contribution bucket they cancel", () => {
+    const rows = [
+      contribution({ id: "employee", amount: "100.00" }),
+      contribution({
+        id: "employee-reversal",
+        typeCode: "reversal",
+        amount: "-100.00",
+        payrollRecordId: null,
+        reversesId: "employee",
+      }),
+      contribution({ id: "fee", typeCode: "fee", amount: "-3.00", payrollRecordId: null }),
+      contribution({
+        id: "fee-reversal",
+        typeCode: "reversal",
+        amount: "3.00",
+        payrollRecordId: null,
+        reversesId: "fee",
+      }),
+    ];
+
+    expect(quarterlyRows(rows, "2026-04-01")[0]).toMatchObject({
+      gross: "0.00",
+      fees: "0.00",
+      net: "0.00",
+    });
+  });
 });

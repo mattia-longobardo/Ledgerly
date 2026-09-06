@@ -11,6 +11,7 @@ export interface ContributionLike {
   payrollAccrualMonth?: string;
   source: string;
   payrollRecordId: string | null;
+  reversesId?: string | null;
 }
 
 export interface QuarterRow {
@@ -68,6 +69,7 @@ function calendarQuarter(month: string): string {
 
 export function quarterlyRows(rows: readonly ContributionLike[], today: string): QuarterRow[] {
   const periods = new Map<string, PeriodTotals>();
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
 
   for (const row of rows) {
     const key = `${row.accrualPeriodStart}\u0000${row.accrualPeriodEnd}\u0000${row.postedMonth}`;
@@ -80,7 +82,10 @@ export function quarterlyRows(rows: readonly ContributionLike[], today: string):
       net: 0n,
     };
     const amount = cents(row.amount);
-    if (row.typeCode === "fee") period.fees += amount;
+    const reversed = row.reversesId ? rowsById.get(row.reversesId) : undefined;
+    const belongsToFees = row.typeCode === "fee"
+      || (row.typeCode === "reversal" && reversed?.typeCode === "fee");
+    if (belongsToFees) period.fees += amount;
     else period.gross += amount;
     period.net += amount;
     periods.set(key, period);
