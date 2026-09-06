@@ -9,13 +9,20 @@
 -- Fixture per the task brief's Verify block: initial 500, two accrual rates,
 -- three accrual rows, one withdrawal and one adjustment.
 
+-- BEGIN wraps the guard itself: if the guard raises, the transaction is left
+-- aborted, so every statement below it — including the TRUNCATE — is
+-- rejected by Postgres even when psql is run without -v ON_ERROR_STOP=1 and
+-- keeps feeding it statements. Guarding outside BEGIN does not protect
+-- anything: psql would report the raised exception and carry on to TRUNCATE
+-- against whatever database is connected.
+BEGIN;
+
 DO $$ BEGIN
   IF current_database() <> 'dashboard_test' THEN
     RAISE EXCEPTION 'fixture may run only against dashboard_test';
   END IF;
 END $$;
 
-BEGIN;
 SELECT set_config('app.user_id', '', true), set_config('app.role', 'system', true);
 
 TRUNCATE TABLE organizations, vacation_ledger, vacation_accrual_rate, budgets RESTART IDENTITY CASCADE;
