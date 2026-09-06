@@ -447,18 +447,18 @@ export interface UseCaseDeps { accountLinks: AccountLinkSource; funds: FundsRepo
 ```
 `AuditInput` comes from `@/platform/audit/record`. `errors.ts`: `NotFoundError`, `VersionMismatchError`, `InvalidInputError(message, issues?)` — copy `src/modules/interests/application/errors.ts`.
 
-- [ ] **Step 1: Memory repositories + unit test.** Mirror `src/modules/interests/infrastructure/memory-repositories.ts` (`monotonicId`, `definedEntries`, `normalizeScale(…, 2)` on every money field). `memory-repositories.test.ts`: `list` ordering, `update` bumps `version` and throws `VersionMismatchError` on a stale version, `deleteByPayrollRecord` returns the count, `hasSystemFee`, `upsertOpen` keeps `acknowledged`, `resolveMissing` resolves only issues not in `keep`.
+- [x] **Step 1: Memory repositories + unit test.** Mirror `src/modules/interests/infrastructure/memory-repositories.ts` (`monotonicId`, `definedEntries`, `normalizeScale(…, 2)` on every money field). `memory-repositories.test.ts`: `list` ordering, `update` bumps `version` and throws `VersionMismatchError` on a stale version, `deleteByPayrollRecord` returns the count, `hasSystemFee`, `upsertOpen` keeps `acknowledged`, `resolveMissing` resolves only issues not in `keep`.
 
-- [ ] **Step 2: Drizzle repositories.** Mirror `src/modules/interests/infrastructure/drizzle-interest-rules-repository.ts`: every query carries the `user_id`/`fund_id` predicate in addition to RLS. `update` does `UPDATE … WHERE id = ? AND user_id = ? AND version = ?`; when zero rows change, re-read to distinguish not-found (`null`) from `VersionMismatchError`. `upsertOpen` uses `onConflictDoUpdate` targeting the columns of `reconciliation_issues_live_uq` with `targetWhere: sql\`status <> 'resolved'\`` and `set: { detail, severity, updatedAt }` (status untouched).
+- [x] **Step 2: Drizzle repositories.** Mirror `src/modules/interests/infrastructure/drizzle-interest-rules-repository.ts`: every query carries the `user_id`/`fund_id` predicate in addition to RLS. `update` does `UPDATE … WHERE id = ? AND user_id = ? AND version = ?`; when zero rows change, re-read to distinguish not-found (`null`) from `VersionMismatchError`. `upsertOpen` uses `onConflictDoUpdate` targeting the columns of `reconciliation_issues_live_uq` with `targetWhere: sql\`status <> 'resolved'\`` and `set: { detail, severity, updatedAt }` (status untouched).
 
-- [ ] **Step 3: Sources.** `account-valuation-source.ts`: copy the query shape of `src/modules/interests/infrastructure/account-balance-lookup.ts`; `monthly()` is `SELECT DISTINCT ON (date_trunc('month', as_of)) date_trunc('month', as_of) AS month, balance FROM account_balances WHERE account_id = ? ORDER BY 1, as_of DESC` joined to `accounts.user_id = ?`. `payroll-months-source.ts`: `SELECT period_start FROM payroll_records WHERE user_id = ? AND kind = 'ordinary' AND superseded_at IS NULL ORDER BY period_start`, mapped through `monthKeyOf`.
+- [x] **Step 3: Sources.** `account-valuation-source.ts`: copy the query shape of `src/modules/interests/infrastructure/account-balance-lookup.ts`; `monthly()` is `SELECT DISTINCT ON (date_trunc('month', as_of)) date_trunc('month', as_of) AS month, balance FROM account_balances WHERE account_id = ? ORDER BY 1, as_of DESC` joined to `accounts.user_id = ?`. `payroll-months-source.ts`: `SELECT period_start FROM payroll_records WHERE user_id = ? AND kind = 'ordinary' AND superseded_at IS NULL ORDER BY period_start`, mapped through `monthKeyOf`.
 
-- [ ] **Step 4: `deps.ts`** — `fundDeps(tx: DbClient, requestId?: string | null): UseCaseDeps`, exactly like `interestDeps`.
+- [x] **Step 4: `deps.ts`** — `fundDeps(tx: DbClient, requestId?: string | null): UseCaseDeps`, exactly like `interestDeps`.
 
-- [ ] **Step 5: `repositories.itest.ts`** — for each repository run the **same** assertions against the memory and the Drizzle implementations (`describe.each`): ordering of `list`/`listForFund`, `from`/`to` filter on `postedMonth`, `update` version behaviour, `deleteByPayrollRecord` count, `hasSystemFee`, `upsertOpen`/`resolveMissing`. One Drizzle-only case: user B cannot `get` user A's fund by id.
+- [x] **Step 5: `repositories.itest.ts`** — for each repository run the **same** assertions against the memory and the Drizzle implementations (`describe.each`): ordering of `list`/`listForFund`, `from`/`to` filter on `postedMonth`, `update` version behaviour, `deleteByPayrollRecord` count, `hasSystemFee`, `upsertOpen`/`resolveMissing`. One Drizzle-only case: user B cannot `get` user A's fund by id.
 
-- [ ] **Verify:** `npm run typecheck && npm test -- modules/funds && npm run test:integration -- modules/funds`.
-- [ ] **Commit:** `git add src/modules/funds && git commit -m "feat(funds): ports, repositories, valuation and payroll sources"`
+- [x] **Verify:** `npm run typecheck && npm test -- modules/funds && npm run test:integration -- modules/funds`.
+- [x] **Commit:** `git add src/modules/funds && git commit -m "feat(funds): ports, repositories, valuation and payroll sources"`
 
 ---
 
