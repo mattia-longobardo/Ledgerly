@@ -1,7 +1,7 @@
 import type { Permission } from "@/platform/auth/permissions";
 import type { Capabilities } from "@/platform/capabilities/resolve";
 
-export type CardKey = "total_balance" | "accounts_sync" | "funds" | "leave" | "payroll_imports";
+export type CardKey = "total_balance" | "accounts_sync" | "funds" | "budgets" | "leave" | "payroll_imports";
 
 export interface HomeCard {
   key: CardKey;
@@ -30,7 +30,7 @@ export type CardState<T> =
   | { state: "permission_denied" };
 
 /**
- * The five sections Home can surface, in display order. Their gates are
+ * The sections Home can surface, in display order. Their gates are
  * plain data — a page decides what to render by asking `visibleCards` and
  * `cardState`, never by hardcoding a feature or integration check per card.
  */
@@ -38,6 +38,7 @@ export const HOME_CARDS: readonly HomeCard[] = [
   { key: "total_balance", title: "Total balance", href: "/finance/accounts", requires: {} },
   { key: "accounts_sync", title: "Accounts sync", href: "/settings/integrations", requires: { integration: "wallet" } },
   { key: "funds", title: "Funds", href: "/finance/funds", requires: { permission: "funds.read" } },
+  { key: "budgets", title: "Budgets", href: "/finance/budgets", requires: { permission: "budgets.read" } },
   { key: "leave", title: "Leave", href: "/company/time-off", requires: { feature: "timeoff" } },
   // Spec §7.1 lists a payroll-import-status card. It is gated on the feature so
   // it disappears with the section, and on `payroll.upload` so a viewer is told

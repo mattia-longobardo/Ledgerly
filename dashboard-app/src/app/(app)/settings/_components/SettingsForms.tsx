@@ -4,9 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ErrorInline } from "@/components/ui/ErrorInline";
 import { Toast } from "@/components/ui/Toast";
-import { setAccrualRate, setInitialValue } from "@/app/actions/vacation";
 import { clearLlmApiKey, setHoursPerDay, setLlmSettings } from "@/app/actions/settings";
-import { formatEur } from "@/lib/format";
 
 const FIELD =
   "num min-h-11 w-full min-w-0 rounded-md border border-border bg-surface px-3 text-body text-fg";
@@ -30,138 +28,6 @@ function Spinner() {
       aria-hidden
       className="size-4 animate-spin rounded-full border-2 border-accent-contrast/40 border-t-accent-contrast"
     />
-  );
-}
-
-export interface VacationSetupFormProps {
-  monthlyAmount: string;
-  effectiveFrom: string;
-  hasInitialValue: boolean;
-  currentMonth: string;
-  balance: number;
-}
-
-/**
- * §9 item 10: the monthly amount and the opening value are configured here at
- * first run — there is deliberately no preset to inherit.
- */
-export function VacationSetupForm(props: VacationSetupFormProps) {
-  const router = useRouter();
-  const [amount, setAmount] = useState(props.monthlyAmount);
-  const [from, setFrom] = useState(props.effectiveFrom);
-  const [initial, setInitial] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function saveRate() {
-    setError(null);
-    startTransition(async () => {
-      const result = await setAccrualRate({ monthlyAmount: amount, effectiveFrom: from });
-      if (result.ok) {
-        setToast("Accrual rule saved");
-        router.refresh();
-      } else {
-        setError(result.error);
-      }
-    });
-  }
-
-  function saveInitial() {
-    setError(null);
-    startTransition(async () => {
-      const result = await setInitialValue({ amount: initial, month: from });
-      if (result.ok) {
-        setInitial("");
-        setToast("Opening value saved");
-        router.refresh();
-      } else {
-        setError(result.error);
-      }
-    });
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {error !== null && <ErrorInline message={error} />}
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          saveRate();
-        }}
-        className="flex flex-col gap-3"
-      >
-        <label className="flex flex-col gap-1.5">
-          <span className={LABEL}>Monthly amount</span>
-          <input
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="120,00"
-            className={FIELD_NARROW}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className={LABEL}>Effective from</span>
-          <input
-            type="month"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-            className={FIELD_NARROW}
-          />
-          <span className="text-body-sm text-fg-muted">
-            Changing the amount only affects months from here on; past accruals stay as they were.
-          </span>
-        </label>
-        <button type="submit" disabled={pending} className={PRIMARY}>
-          {pending && <Spinner />}
-          Save accrual rule
-        </button>
-      </form>
-
-      {props.hasInitialValue ? (
-        <p className="num text-body-sm text-fg-muted hairline-t pt-4">
-          Opening value already set. Current balance {formatEur(props.balance)}.
-        </p>
-      ) : (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            saveInitial();
-          }}
-          className="flex flex-col gap-3 hairline-t pt-4"
-        >
-          <label className="flex flex-col gap-1.5">
-            <span className={LABEL}>Opening value</span>
-            <input
-              value={initial}
-              onChange={(event) => setInitial(event.target.value)}
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0,00"
-              className={FIELD_NARROW}
-            />
-            <span className="text-body-sm text-fg-muted">
-              What is already set aside today. This can only be entered once.
-            </span>
-          </label>
-          <button type="submit" disabled={pending || initial.trim() === ""} className={SECONDARY}>
-            Set opening value
-          </button>
-        </form>
-      )}
-
-      <Toast
-        open={toast !== null}
-        message={toast ?? ""}
-        duration={4000}
-        onOpenChange={(open) => {
-          if (!open) setToast(null);
-        }}
-      />
-    </div>
   );
 }
 
