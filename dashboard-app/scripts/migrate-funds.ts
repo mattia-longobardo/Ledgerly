@@ -6,6 +6,7 @@ import * as schema from "@/lib/db/schema";
 import {
   accountBalances,
   accounts,
+  auditEvents,
   balanceSnapshots,
   fundContributionSchedules,
   fundContributions,
@@ -42,6 +43,7 @@ interface Counts {
   fundLinks: number;
   accounts: number;
   accountBalances: number;
+  auditEvents: number;
   plans: number;
   schedules: number;
   contributions: number;
@@ -59,12 +61,15 @@ const ZERO_COUNTS: Counts = {
   fundLinks: 0,
   accounts: 0,
   accountBalances: 0,
+  auditEvents: 0,
   plans: 0,
   schedules: 0,
   contributions: 0,
 };
 
 const DECIMAL_RE = /^(-?)(\d+)(?:\.(\d+))?$/;
+const SNAPSHOT_ACCOUNT_ACTION = "funds.migration.snapshot_account_created";
+const LEGACY_SNAPSHOT_NOTE_PREFIX = "created by funds migration from balance_snapshots:";
 
 function moneyCents(value: string): bigint {
   const match = DECIMAL_RE.exec(value.trim());
@@ -131,9 +136,10 @@ async function validatedLinkedAccount(
   owner: { id: string; currency: string },
   accountId: string,
   slug: string,
+  counts: Counts,
 ): Promise<void> {
   const [row] = await tx
-    .select({ id: accounts.id, userId: accounts.userId, currency: accounts.currency })
+    .select({ id: accounts.id, userId: accounts.userId, currency: accounts.currency, notes: accounts.notes })
     .from(accounts)
     .where(eq(accounts.id, accountId))
     .limit(1);
@@ -148,6 +154,60 @@ async function validatedLinkedAccount(
     .where(eq(accountBalances.accountId, accountId))
     .limit(1);
   if (!latest) throw new MigrationInputError(`Fund ${slug}'s existing linked account has no valuation history`);
+  await backfillSnapshotAccountProvenance(tx, row.id, row.notes, counts);
+}
+
+async function recordSnapshotAccountProvenance(
+  tx: DbClient,
+  accountId: string,
+  snapshotAccountKey: string,
+  counts: Counts,
+): Promise<void> {
+  const existing = await tx
+    .select({ id: auditEvents.id })
+    .from(auditEvents)
+    .where(and(
+      eq(auditEvents.action, SNAPSHOT_ACCOUNT_ACTION),
+      eq(auditEvents.entityType, "account"),
+      eq(auditEvents.entityId, accountId),
+    ))
+    .limit(1);
+  if (existing.length > 0) return;
+  const inserted = await tx.insert(auditEvents).values({
+    actorUserId: null,
+    action: SNAPSHOT_ACCOUNT_ACTION,
+    entityType: "account",
+    entityId: accountId,
+    before: null,
+    after: { snapshotAccountKey },
+    requestId: "migrate-funds",
+    ip: null,
+  }).returning({ id: auditEvents.id });
+  counts.auditEvents += inserted.length;
+}
+
+async function backfillSnapshotAccountProvenance(
+  tx: DbClient,
+  accountId: string,
+  notes: string | null,
+  counts: Counts,
+): Promise<void> {
+  if (!notes?.startsWith(LEGACY_SNAPSHOT_NOTE_PREFIX)) return;
+  const snapshotAccountKey = notes.slice(LEGACY_SNAPSHOT_NOTE_PREFIX.length);
+  if (!snapshotAccountKey) {
+    throw new MigrationInputError(`Account ${accountId} has an invalid legacy funds-migration provenance note`);
+  }
+  const [snapshot] = await tx
+    .select({ id: balanceSnapshots.id })
+    .from(balanceSnapshots)
+    .where(eq(balanceSnapshots.accountKey, snapshotAccountKey))
+    .limit(1);
+  if (!snapshot) {
+    throw new MigrationInputError(
+      `Account ${accountId} claims snapshot key ${snapshotAccountKey}, but that frozen history is missing`,
+    );
+  }
+  await recordSnapshotAccountProvenance(tx, accountId, snapshotAccountKey, counts);
 }
 
 async function resolveOrCreateAccount(
@@ -157,7 +217,7 @@ async function resolveOrCreateAccount(
   counts: Counts,
 ): Promise<string> {
   const matches = await tx
-    .select({ id: accounts.id, currency: accounts.currency })
+    .select({ id: accounts.id, currency: accounts.currency, notes: accounts.notes })
     .from(accounts)
     .where(and(eq(accounts.userId, owner.id), sql`lower(${accounts.name}) = lower(${legacy.name})`))
     .limit(2);
@@ -181,6 +241,7 @@ async function resolveOrCreateAccount(
     if (!balance) {
       throw new MigrationInputError(`Existing account ${legacy.name} has no valuation history; refusing to fabricate one`);
     }
+    await backfillSnapshotAccountProvenance(tx, match.id, match.notes, counts);
     return match.id;
   }
 
@@ -197,12 +258,13 @@ async function resolveOrCreateAccount(
       provider: null,
       status: "active",
       includeInNetWorth: true,
-      notes: `created by funds migration from balance_snapshots:${snapshots[0]!.accountKey}`,
+      notes: `${LEGACY_SNAPSHOT_NOTE_PREFIX}${snapshots[0]!.accountKey}`,
       sortOrder: 0,
     })
     .returning({ id: accounts.id });
   if (!created) throw new Error(`Failed to create valuation account for ${legacy.slug}`);
   counts.accounts += 1;
+  await recordSnapshotAccountProvenance(tx, created.id, snapshots[0]!.accountKey, counts);
 
   for (const snapshot of snapshots) {
     const capturedAt = snapshot.capturedAt instanceof Date
@@ -275,7 +337,7 @@ async function migrate(tx: DbClient): Promise<Counts> {
     }
 
     if (fund.accountId) {
-      await validatedLinkedAccount(tx, owner, fund.accountId, legacy.slug);
+      await validatedLinkedAccount(tx, owner, fund.accountId, legacy.slug, counts);
     } else {
       const accountId = await resolveOrCreateAccount(tx, owner, legacy, counts);
       const linked = await tx
