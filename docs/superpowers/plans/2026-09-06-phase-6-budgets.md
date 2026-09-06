@@ -383,12 +383,22 @@ refreshUsages(deps)(principal, budgetId: string): Promise<{ inserted: number; up
 
 ### Task 8: Exit criteria
 
-- [ ] `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`.
-- [ ] `grep -rn "vacation_ledger\|vacationLedger\|vacation_accrual_rate\|vacationAccrualRate" src` → only `schema/legacy.ts`.
-- [ ] Runbook `docs/deploy/phase-6-runbook.md`: dump, deploy, `npm run db:migrate`, `npm run migrate:vacation`, `npm run migrate:vacation:validate`, verify `/finance/budgets` shows Holidays with the old balance as remaining; rollback = restore the dump.
-- [ ] Manual walkthrough (record if owed): create a budget with initial 1000, allocate 200 monthly from a real account, confirm that account's balance on `/finance/accounts` is **unchanged** and the allocation row shows available-in-source = balance − 200; add a category scope and see a real expense appear as usage; add a manual usage; end the allocation. **Exit line (spec §11 Phase 6): virtual allocations are separated from real balances, and availability is recalculated.**
-- [ ] `graphify update .` (repo root); checkpoint `docs/superpowers/handoff/2026-09-06-phase-6-checkpoint.md`; `docs/architecture/overview.md`; `.superpowers/sdd/MASTER-LEDGER.md`.
-- [ ] `git add -A ../docs ../graphify-out ../.superpowers && git commit -m "docs(handoff): Phase 6 checkpoint and runbook"`
+- [x] `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`.
+- [x] `grep -rn "vacation_ledger\|vacationLedger\|vacation_accrual_rate\|vacationAccrualRate" src` → only `schema/legacy.ts`.
+- [x] Runbook `docs/deploy/phase-6-runbook.md`: dump, deploy, `npm run db:migrate`, `npm run migrate:vacation`, `npm run migrate:vacation:validate`, verify `/finance/budgets` shows Holidays with the old balance as remaining; rollback = restore the dump.
+- [x] Manual walkthrough (record if owed): create a budget with initial 1000, allocate 200 monthly from a real account, confirm that account's balance on `/finance/accounts` is **unchanged** and the allocation row shows available-in-source = balance − 200; add a category scope and see a real expense appear as usage; add a manual usage; end the allocation. **Exit line (spec §11 Phase 6): virtual allocations are separated from real balances, and availability is recalculated.** — no browser was available in this environment; proved instead through the real REST API and a real Postgres instance (see the Phase 6 checkpoint for the exact steps and results). A true browser pass against `/finance/budgets` and `/finance/accounts` remains owed.
+- [x] `graphify update .` (repo root); checkpoint `docs/superpowers/handoff/2026-09-06-phase-6-checkpoint.md`; `docs/architecture/overview.md`; `.superpowers/sdd/MASTER-LEDGER.md`.
+- [x] `git add -A ../docs ../graphify-out ../.superpowers && git commit -m "docs(handoff): Phase 6 checkpoint and runbook"`
+
+### Deviation
+
+The exit task also extended `dashboard-app/Dockerfile` to bundle
+`scripts/migrate-vacation-budget.ts` and
+`scripts/validate-vacation-budget-migration.ts` into the production image
+(mirroring the existing funds-migration esbuild steps), since the runbook's
+cutover commands otherwise had no way to run against the deployed image. Not
+originally listed in this task's file list; recorded here per the shared
+conventions' rule to fix the plan text rather than silently adapt.
 
 ---
 
