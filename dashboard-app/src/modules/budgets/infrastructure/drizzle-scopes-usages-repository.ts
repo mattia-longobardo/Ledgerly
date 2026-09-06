@@ -1,8 +1,9 @@
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { budgetScopes, budgetUsages, type BudgetScopeRow, type BudgetUsageRow } from "@/lib/db/schema";
 import type { Scope, ScopesRepository, Usage, UsagesRepository } from "../application/ports";
 import type { ScopeLike } from "../domain/scopes";
+import { normalizeScale } from "./decimal";
 
 function toScope(row: BudgetScopeRow): Scope {
   return { ...row, kind: row.kind as Scope["kind"] };
@@ -10,16 +11,6 @@ function toScope(row: BudgetScopeRow): Scope {
 
 function toUsage(row: BudgetUsageRow): Usage {
   return { ...row, matchedBy: row.matchedBy as Usage["matchedBy"] };
-}
-
-/** Mirrors `normalizeScale` in the memory repository: comparisons against a stored `numeric(16,2)` must not treat "10" and "10.00" as a spurious change. */
-const DECIMAL_RE = /^(-?)(\d+)(?:\.(\d+))?$/;
-function normalizeScale(value: string, scale: number): string {
-  const m = DECIMAL_RE.exec(value.trim());
-  if (!m) return value;
-  const [, sign, intPart, fracPart = ""] = m;
-  const frac = (fracPart + "0".repeat(scale)).slice(0, scale);
-  return scale > 0 ? `${sign}${intPart}.${frac}` : `${sign}${intPart}`;
 }
 
 /** budget_scopes has no `user_id` column; it is protected by an EXISTS-to-parent RLS policy, so every method here still carries an explicit `budget_id` predicate. */
@@ -98,14 +89,14 @@ export class DrizzleUsagesRepository implements UsagesRepository {
     const wantedTxIds = new Set(rows.map((row) => row.transactionId));
 
     const toInsert: { transactionId: string; amount: string; occurredAt: string }[] = [];
-    const toUpdate: { id: string; amount: string; occurredAt: string }[] = [];
+    const toUpdate: { transactionId: string; amount: string; occurredAt: string }[] = [];
     for (const row of rows) {
       const amount = normalizeScale(row.amount, 2);
       const existingRow = existingByTx.get(row.transactionId);
       if (!existingRow) {
         toInsert.push({ transactionId: row.transactionId, amount, occurredAt: row.occurredAt });
       } else if (existingRow.amount !== amount || existingRow.occurredAt !== row.occurredAt) {
-        toUpdate.push({ id: existingRow.id, amount, occurredAt: row.occurredAt });
+        toUpdate.push({ transactionId: row.transactionId, amount, occurredAt: row.occurredAt });
       }
     }
     const toDeleteIds = existing.filter((row) => row.transactionId !== null && !wantedTxIds.has(row.transactionId)).map((row) => row.id);
@@ -122,11 +113,27 @@ export class DrizzleUsagesRepository implements UsagesRepository {
         })),
       );
     }
-    for (const row of toUpdate) {
-      await this.db
-        .update(budgetUsages)
-        .set({ amount: row.amount, occurredAt: row.occurredAt })
-        .where(and(eq(budgetUsages.budgetId, budgetId), eq(budgetUsages.id, row.id)));
+    if (toUpdate.length > 0) {
+      // A single batched UPDATE rather than one per row: FROM (VALUES ...)
+      // joined back by transaction_id. Each VALUES column is cast explicitly
+      // (uuid, numeric(16,2), date) so Postgres does not infer `text` and
+      // then fail to match/assign against the real column types.
+      // `matched_by = 'scope'` is a redundant safety predicate — every row in
+      // `toUpdate` was already resolved from a `matched_by = 'scope'` select
+      // above — so a manual row can never be reached even by a future bug in
+      // the diff above.
+      const values = sql.join(
+        toUpdate.map((row) => sql`(${row.transactionId}::uuid, ${row.amount}::numeric(16,2), ${row.occurredAt}::date)`),
+        sql`, `,
+      );
+      await this.db.execute(sql`
+        UPDATE budget_usages
+        SET amount = v.amount, occurred_at = v.occurred_at
+        FROM (VALUES ${values}) AS v(transaction_id, amount, occurred_at)
+        WHERE budget_usages.budget_id = ${budgetId}
+          AND budget_usages.transaction_id = v.transaction_id
+          AND budget_usages.matched_by = 'scope'
+      `);
     }
     if (toDeleteIds.length > 0) {
       await this.db.delete(budgetUsages).where(and(eq(budgetUsages.budgetId, budgetId), inArray(budgetUsages.id, toDeleteIds)));

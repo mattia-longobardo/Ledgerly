@@ -215,39 +215,48 @@ describe.each(BACKENDS)("$backend usages repository contract", ({ backend }) => 
   });
 
   describe("replaceScopeMatched", () => {
-    it("inserts new transactions, updates changed amounts, deletes absent rows, and never touches manual rows", async () => {
+    it("inserts new transactions, batch-updates two changed amounts in one call, deletes absent rows, and never touches manual rows", async () => {
       // budget_usages.transaction_id carries a real FK to transactions, so
       // this needs actual rows there rather than arbitrary strings.
       const userId = await seedUser(`${backend} scope-matched user`);
       const db = await testDb();
       await withSystemContext(db, async (tx) => {
         const [account] = await tx.insert(accounts).values({ userId, name: "Checking", type: "checking", origin: "manual" }).returning();
-        const [txChanged] = await tx.insert(transactions).values({ userId, accountId: account!.id, occurredAt: new Date("2026-01-06T12:00:00Z"), amount: "-10.00", type: "expense" }).returning();
-        const [txStale] = await tx.insert(transactions).values({ userId, accountId: account!.id, occurredAt: new Date("2026-01-05T12:00:00Z"), amount: "-10.00", type: "expense" }).returning();
-        const [txNew] = await tx.insert(transactions).values({ userId, accountId: account!.id, occurredAt: new Date("2026-01-07T12:00:00Z"), amount: "-20.00", type: "expense" }).returning();
+        const expense = (occurredAt: string, amount: string) =>
+          tx.insert(transactions).values({ userId, accountId: account!.id, occurredAt: new Date(`${occurredAt}T12:00:00Z`), amount, type: "expense" }).returning();
+        const [txChangedA] = await expense("2026-01-06", "-10.00");
+        const [txChangedB] = await expense("2026-01-08", "-20.00");
+        const [txStale] = await expense("2026-01-05", "-10.00");
+        const [txNew] = await expense("2026-01-07", "-30.00");
 
         const { budgets, usages } = backend === "memory" ? memoryRepositories() : drizzleRepositories(tx);
         const budget = await budgets.create(newBudget(userId, "Groceries"));
         await usages.create({ budgetId: budget.id, transactionId: null, amount: "999", occurredAt: "2026-01-01", matchedBy: "manual", note: "manual entry" });
-        const changed = await usages.create({ budgetId: budget.id, transactionId: txChanged!.id, amount: "10.00", occurredAt: "2026-01-06", matchedBy: "scope", note: null });
+        const changedA = await usages.create({ budgetId: budget.id, transactionId: txChangedA!.id, amount: "10.00", occurredAt: "2026-01-06", matchedBy: "scope", note: null });
+        const changedB = await usages.create({ budgetId: budget.id, transactionId: txChangedB!.id, amount: "20.00", occurredAt: "2026-01-08", matchedBy: "scope", note: null });
         await usages.create({ budgetId: budget.id, transactionId: txStale!.id, amount: "10.00", occurredAt: "2026-01-05", matchedBy: "scope", note: null });
 
+        // A single call changes two existing rows' amounts at once — this is
+        // what distinguishes a real batch from a loop that happens to work.
         const result = await usages.replaceScopeMatched(budget.id, [
-          { transactionId: txChanged!.id, amount: "15.00", occurredAt: "2026-01-06" },
-          { transactionId: txNew!.id, amount: "20.00", occurredAt: "2026-01-07" },
+          { transactionId: txChangedA!.id, amount: "15.00", occurredAt: "2026-01-06" },
+          { transactionId: txChangedB!.id, amount: "25.00", occurredAt: "2026-01-08" },
+          { transactionId: txNew!.id, amount: "30.00", occurredAt: "2026-01-07" },
         ]);
-        expect(result).toEqual({ inserted: 1, updated: 1, deleted: 1 });
+        expect(result).toEqual({ inserted: 1, updated: 2, deleted: 1 });
 
         const rows = await usages.listForBudget(budget.id);
-        expect(rows.map((row) => row.transactionId).sort()).toEqual([null, txChanged!.id, txNew!.id].sort());
+        expect(rows.map((row) => row.transactionId).sort()).toEqual([null, txChangedA!.id, txChangedB!.id, txNew!.id].sort());
         expect(rows.find((row) => row.note === "manual entry")).toMatchObject({ amount: "999.00" });
-        expect(rows.find((row) => row.transactionId === txChanged!.id)).toMatchObject({ id: changed.id, amount: "15.00" });
+        expect(rows.find((row) => row.transactionId === txChangedA!.id)).toMatchObject({ id: changedA.id, amount: "15.00" });
+        expect(rows.find((row) => row.transactionId === txChangedB!.id)).toMatchObject({ id: changedB.id, amount: "25.00" });
         expect(rows.find((row) => row.transactionId === txStale!.id)).toBeUndefined();
 
         // A second call with the exact same set is a no-op.
         const noop = await usages.replaceScopeMatched(budget.id, [
-          { transactionId: txChanged!.id, amount: "15.00", occurredAt: "2026-01-06" },
-          { transactionId: txNew!.id, amount: "20.00", occurredAt: "2026-01-07" },
+          { transactionId: txChangedA!.id, amount: "15.00", occurredAt: "2026-01-06" },
+          { transactionId: txChangedB!.id, amount: "25.00", occurredAt: "2026-01-08" },
+          { transactionId: txNew!.id, amount: "30.00", occurredAt: "2026-01-07" },
         ]);
         expect(noop).toEqual({ inserted: 0, updated: 0, deleted: 0 });
       });
