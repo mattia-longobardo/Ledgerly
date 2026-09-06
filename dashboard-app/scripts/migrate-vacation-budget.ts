@@ -38,6 +38,21 @@ import { withSystemContext } from "@/platform/db/context";
  * note. `budget_events` has no update endpoint, so it is safe to key on.
  * Notes on the written rows are purely descriptive.
  *
+ * The *budget itself* is resolved the same way: `BudgetPatch` lets a user
+ * rename it or edit its labels, so `name = "Holidays" AND labels @>
+ * '["migrated"]'` is not a safe idempotency key on its own — the brief
+ * mandates it as the migration's identifying shape, but re-running must not
+ * trust it blindly. `findExistingMigratedBudget` resolves the budget from
+ * `budget_events` first (every budget this script creates gets a "root"
+ * migrated event at creation, so this always finds it once one exists,
+ * regardless of what a user later does to the budget's name or labels).
+ * The name+labels lookup is used only to discover a database that has
+ * *never* been migrated; if it instead matches a budget with no migration
+ * events, the script aborts rather than guessing whether that budget is an
+ * unrelated user budget or the output of the original (pre-`budget_events`)
+ * version of this script — silently treating it as "ours" would double
+ * every legacy row into it.
+ *
  * R6-4: `vacation_ledger` `accrual` rows are the recorded, historical result
  * of the accrual rates; they are not copied. Instead each rate becomes a
  * `monthly` allocation (R6-2), and for every month from `start_date` through
@@ -144,6 +159,51 @@ async function recordMigratedEvent(tx: DbClient, budgetId: string, table: string
   await tx.insert(budgetEvents).values({ budgetId, kind: "migrated", detail: { table, legacyId } });
 }
 
+/**
+ * Resolves the budget this migration owns without trusting `name`/`labels`,
+ * which a user can edit. Primary path: any budget owned by `ownerId` that
+ * has at least one `kind: "migrated"` event pointing at it (every budget
+ * this script creates gets one immediately, at creation — see the "root"
+ * event below — so this is reliable regardless of later renames/relabels).
+ * Falls back to name+labels only to discover a database that has never been
+ * migrated; a name+labels match with no migration events aborts rather than
+ * guessing.
+ */
+async function findExistingMigratedBudget(tx: DbClient, ownerId: string) {
+  const eventRows = await tx
+    .select({ budget: budgets })
+    .from(budgetEvents)
+    .innerJoin(budgets, eq(budgets.id, budgetEvents.budgetId))
+    .where(and(eq(budgets.userId, ownerId), eq(budgetEvents.kind, "migrated")));
+  const byId = new Map(eventRows.map((row) => [row.budget.id, row.budget]));
+  if (byId.size > 1) {
+    throw new MigrationInputError(`Migration events point at ${byId.size} different budgets; refusing to guess`);
+  }
+  if (byId.size === 1) return [...byId.values()][0]!;
+
+  const nameMatches = await tx
+    .select()
+    .from(budgets)
+    .where(and(
+      eq(budgets.userId, ownerId),
+      eq(budgets.name, "Holidays"),
+      sql`${budgets.labels} @> '["migrated"]'::jsonb`,
+    ))
+    .limit(2);
+  if (nameMatches.length > 1) {
+    throw new MigrationInputError(`Ambiguous Holidays budget: found ${nameMatches.length}`);
+  }
+  if (nameMatches.length === 1) {
+    throw new MigrationInputError(
+      `Found a budget named "Holidays" with labels containing "migrated" (id ${nameMatches[0]!.id}), but no migration `
+      + "events point at it. This is either a user-created budget that happens to match, or the output of the "
+      + "original (pre-budget_events) version of this migration. Refusing to guess: back up, confirm which, and "
+      + "either rename/relabel the budget or attach the missing 'migrated' budget_events rows before re-running.",
+    );
+  }
+  return null;
+}
+
 export async function migrate(tx: DbClient, asOf: string): Promise<Counts | null> {
   const ledgerRows = await tx.select().from(vacationLedger).orderBy(asc(vacationLedger.id));
   const rateRows = await tx.select().from(vacationAccrualRate).orderBy(asc(vacationAccrualRate.effectiveFrom));
@@ -178,20 +238,10 @@ export async function migrate(tx: DbClient, asOf: string): Promise<Counts | null
     startDate = dateOf(earliest);
   }
 
-  // Step 2: upsert the "Holidays" budget. Idempotency key: name "Holidays" + labels containing "migrated".
-  const existingBudgets = await tx
-    .select()
-    .from(budgets)
-    .where(and(
-      eq(budgets.userId, owner.id),
-      eq(budgets.name, "Holidays"),
-      sql`${budgets.labels} @> '["migrated"]'::jsonb`,
-    ))
-    .limit(2);
-  if (existingBudgets.length > 1) {
-    throw new MigrationInputError(`Ambiguous Holidays budget: found ${existingBudgets.length}`);
-  }
-  let budget = existingBudgets[0] ?? null;
+  // Step 2: upsert the "Holidays" budget. Discovery is name "Holidays" + labels
+  // containing "migrated" only for a never-migrated database; re-runs resolve the
+  // budget from budget_events instead — see findExistingMigratedBudget.
+  let budget = await findExistingMigratedBudget(tx, owner.id);
   if (!budget) {
     const [created] = await tx
       .insert(budgets)
@@ -208,6 +258,11 @@ export async function migrate(tx: DbClient, asOf: string): Promise<Counts | null
     if (!created) throw new Error("Failed to create Holidays budget");
     budget = created;
     counts.budgets += 1;
+    // Every budget this script creates gets this event immediately, even when
+    // the legacy data has no rate/withdrawal/adjustment rows to migrate (e.g.
+    // an initial-only ledger) — otherwise a re-run would find zero "migrated"
+    // events for this budget and, per findExistingMigratedBudget, abort.
+    await recordMigratedEvent(tx, budget.id, "vacation_budget", "root");
   }
 
   // Step 3: the initial amount version. Versions are append-only (no update endpoint),
@@ -315,13 +370,23 @@ export async function migrate(tx: DbClient, asOf: string): Promise<Counts | null
     );
   }
 
-  // The horizon is the last month with a legacy `accrual` row (clamped to asOf as a
-  // defensive bound), not `asOf` itself — see the file-level comment on why.
+  // The horizon is the last month with a legacy `accrual` row, not `asOf` itself —
+  // see the file-level comment on why. A future-dated accrual row (relative to
+  // asOf) is a data integrity problem, not something to silently clamp away: a
+  // clamp would put the horizon back on the wall clock, narrowly reopening the
+  // wall-clock idempotency bug this horizon exists to close.
   const accrualMonths = accrualRows.map((row) => monthKeyOf(dateOf(row)));
-  const lastAccrualMonth = accrualMonths.length > 0
-    ? accrualMonths.reduce((max, m) => (m > max ? m : max))
-    : monthKeyOf(asOf);
-  const horizon = lastAccrualMonth < monthKeyOf(asOf) ? lastAccrualMonth : monthKeyOf(asOf);
+  let horizon: string;
+  if (accrualMonths.length > 0) {
+    horizon = accrualMonths.reduce((max, m) => (m > max ? m : max));
+    if (horizon > monthKeyOf(asOf)) {
+      throw new MigrationInputError(
+        `A vacation_ledger 'accrual' row is dated in month ${horizon}, after asOf ${asOf}; refusing to guess the reconciliation horizon`,
+      );
+    }
+  } else {
+    horizon = monthKeyOf(asOf);
+  }
 
   const months = monthRange(monthKeyOf(startDate), horizon);
   let runningReconciliation = 0n;
@@ -388,4 +453,20 @@ async function main(): Promise<void> {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) void main();
+// A module import (e.g. this test's own itest importing `migrate`) never has
+// this file as argv[1], so it silently skips main() — that is intentional.
+// But if argv[1] plausibly *is* this script (same basename) and still
+// doesn't match import.meta.url exactly, that is a path-resolution surprise,
+// not an import: `npm run migrate:vacation` would otherwise exit 0 having
+// printed nothing, silently skipping the migration it was invoked to run.
+const invokedAsScript = process.argv[1] === fileURLToPath(import.meta.url);
+const invokedPathLooksLikeThisScript = /migrate-vacation-budget\.(ts|js|mjs)$/.test(process.argv[1] ?? "");
+if (invokedAsScript) {
+  void main();
+} else if (invokedPathLooksLikeThisScript) {
+  console.error(
+    `migrate-vacation-budget.ts: argv[1] (${process.argv[1]}) looks like this script but does not match `
+    + `import.meta.url (${fileURLToPath(import.meta.url)}) exactly; refusing to guess and not running the migration.`,
+  );
+  process.exitCode = 1;
+}
