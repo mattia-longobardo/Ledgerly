@@ -156,9 +156,53 @@ FAILURE branch was not. One correction and two refinements:
 
 **Routes** (tag `Time off`): `GET /timeoff/types`, `GET /timeoff/workspace?year=&date=`, `GET /timeoff/events?from=&to=`, `PUT /timeoff/events/{date}`, `DELETE /timeoff/events/{date}` (204), `GET /timeoff/balances?year=`. No `PATCH /timeoff/types/{id}`.
 
-- [ ] **Step 1: API** + `routes.itest.ts` (types seeded on first call; PUT weekday 200; PUT Saturday 422; DELETE 204; viewer PUT 403) + `npm run openapi:generate` + a short README section.
-- [ ] **Step 2: Bare page** `/company/time-off?year=&day=`: a server component that calls `loadWorkspace`, renders (a) one line per type: `label — remaining: X days (Y h) as of DATE` or `—`; (b) twelve `<table>`s (or the existing `MonthGrid` if it imports without changes), each day a link to `?day=`; days in `byDate` marked with the type code and `½` for half days, `*` when `pendingOp !== "none"`; (c) when `day` is set, a native `<form>` with type `<select>`, fraction radio, note, Save / Remove buttons bound to the actions; (d) a "Sync now" button when `trekConnected`; (e) the upcoming list as `<ul>`. No client component beyond what a `<form action>` needs.
-- [ ] **Step 3: Actions** `setTimeoffEventAction`, `removeTimeoffEventAction`, `syncTimeoffNowAction` (the old `syncLeaveNow` over `runTrekSync` with the principal's `userId`), `revalidatePath("/company/time-off")`.
-- [ ] **Step 4: Consumers.** `loadTimeoffSummary()` → `{ remainingDays, upcoming, pendingCount }` for the Home `leave` card and `load-company.ts`. Remove every `// TODO(timeoff)` stub from Task 1.
-- [ ] **Step 5: Phase gate.** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`; `grep -rn "leave_days\|leaveDays\|payslips\b\|balance_snapshots\|vacation_ledger\|legacy\.ts" src scripts` → nothing; `ls scripts/migrate-* scripts/validate-*` → nothing.
-- [ ] **Commit:** `git add -A && git commit -m "feat(timeoff): API, bare Time Off page, consumers; Phase 7 gate green"`
+- [x] **Step 1: API** + `routes.itest.ts` (types seeded on first call; PUT weekday 200; PUT Saturday 422; DELETE 204; viewer PUT 403) + `npm run openapi:generate` + a short README section.
+- [x] **Step 2: Bare page** `/company/time-off?year=&day=`: a server component that calls `loadWorkspace`, renders (a) one line per type: `label — remaining: X days (Y h) as of DATE` or `—`; (b) twelve `<table>`s (or the existing `MonthGrid` if it imports without changes), each day a link to `?day=`; days in `byDate` marked with the type code and `½` for half days, `*` when `pendingOp !== "none"`; (c) when `day` is set, a native `<form>` with type `<select>`, fraction radio, note, Save / Remove buttons bound to the actions; (d) a "Sync now" button when `trekConnected`; (e) the upcoming list as `<ul>`. No client component beyond what a `<form action>` needs.
+- [x] **Step 3: Actions** `setTimeoffEventAction`, `removeTimeoffEventAction`, `syncTimeoffNowAction` (the old `syncLeaveNow` over `runTrekSync` with the principal's `userId`), `revalidatePath("/company/time-off")`.
+- [x] **Step 4: Consumers.** `loadTimeoffSummary()` → `{ remainingDays, upcoming, pendingCount }` for the Home `leave` card and `load-company.ts`. Remove every `// TODO(timeoff)` stub from Task 1.
+- [x] **Step 5: Phase gate.** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`; `grep -rn "leave_days\|leaveDays\|payslips\b\|balance_snapshots\|vacation_ledger\|legacy\.ts" src scripts` → nothing; `ls scripts/migrate-* scripts/validate-*` → nothing.
+- [x] **Commit:** `git add -A && git commit -m "feat(timeoff): API, bare Time Off page, consumers; Phase 7 gate green"`
+
+### Deviation (Task 4, executed 2026-09-07)
+
+Six points where the tree or a framework constraint forced something the step text did not name:
+
+1. **Two application files were added that the Files list does not name:**
+   `application/list-events.ts` and `application/list-balances.ts`. The routes
+   `GET /timeoff/events?from=&to=` and `GET /timeoff/balances?year=` have no use case
+   behind them — Task 3 built only `ensureDefaultTypes`, `getWorkspace`, `setEvent` and
+   `removeEvent` — and calling `deps.events.inRange` / `deps.balances.listForYear`
+   straight from the route would put the `timeoff.read` check and the range validation on
+   the wrong side of the API boundary, which no other module does.
+2. **`src/modules/payroll/ui/load-company.ts` needed no change.** It never carried leave
+   balances: `CompanyOverview` is imports, earnings buckets and salary windows only, and
+   `/company/page.tsx` says in its own doc-comment that time off "joins this panel in
+   Phase 7". Wiring `loadTimeoffSummary` into it would be new UI, which the reduced
+   conventions cap. `loadTimeoffSummary` ships as specified and is consumed by the Home
+   `leave` card; the Company panel is left for the redesign.
+3. **There were no `// TODO(timeoff)` stubs to remove.** `grep -rn "TODO(timeoff)" src`
+   was already empty at the start of this task — Task 1 left `/company/time-off/page.tsx`
+   and the Home `leave` card broken rather than stubbed, exactly as its Step 4 allowed,
+   and both are rewritten here.
+4. **`MonthGrid` was not reused.** It is a `"use client"` component whose day cells are
+   `<button onClick>`, not links, so it cannot render a plain `?day=` link without
+   changes. The page therefore uses the twelve plain `<table>`s the step offers as the
+   alternative.
+5. **The Home `leave` card lost its `ProgressRing`.** The ring needs a maximum to fill
+   against, and the retired `loadFerie` invented one (`remaining + takenYtd`). This module
+   records what a payslip states as REMAINING, not an entitlement, so there is no honest
+   denominator; the card shows the figure, the next booked day and the pending-sync count,
+   and `—` when no payslip balance is on file.
+6. **The Step 5 grep cannot reach zero for `leave_days`, `balance_snapshots`,
+   `vacation_ledger` and `legacy.ts`, and should not.** Every remaining hit is a comment or
+   a string literal, never a reference to live code:
+   `src/lib/db/migrations.itest.ts` names all four in `DROPPED_LEGACY_TABLES` — that list IS
+   the proof migration 0018 dropped them, and deleting it to satisfy a grep would remove the
+   only assertion that they are gone; the rest are doc-comments Task 1 deliberately rewrote
+   to describe those tables as retired (`lib/contracts.ts`, `lib/calc/networth.ts`,
+   `lib/calc/portfolio.ts`, `lib/time.ts`, `accounts/infrastructure/teable-import.ts`,
+   `lib/db/schema/timeoff.ts`, `lib/db/schema/platform.ts`,
+   `payroll/infrastructure/paperless-import.ts`). `grep -rn "repo/payslips\|schema/legacy"`
+   over `src scripts` returns one comment and no import; `src/lib/db/schema/legacy.ts` does
+   not exist; `ls scripts/migrate-* scripts/validate-*` is empty.
+

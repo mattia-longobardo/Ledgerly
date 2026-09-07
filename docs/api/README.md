@@ -322,6 +322,44 @@ Money stays a decimal string throughout, including `remaining` (which can be
 negative). Budget, allocation, usage and event responses never expose
 ownership fields.
 
+## Time off
+
+`GET /timeoff/types` lists the caller's time off types and, on the first call
+that touches the module, seeds the three defaults (`vacation`, `permits`,
+`comp`) with the `hoursPerDay` the app setting carries. There is no route to
+edit a type in this phase.
+
+`GET /timeoff/workspace?year=&date=` returns one year in a single read: the
+types, the latest balance per type (`remainingHours`, `remainingDays`,
+`usedYtdHours`, `asOf`, `source`), every booked day of the year keyed by date
+in `byDate`, the day named by `date` in `selected`, the next ten days ahead in
+`upcoming`, `plannedDaysYtd`, how many days are still waiting for the Trek sync
+in `pendingCount`, whether Trek is connected, and Trek's own last-cached
+figures. `year` defaults to the current one.
+
+`GET /timeoff/events?from=&to=` lists the booked days in a closed range,
+`date asc`. `GET /timeoff/balances?year=` returns every balance row whose
+`asOf` falls in that year, oldest first — one row per applied payslip, never
+summed (a payslip's used figure is already year-to-date).
+
+`PUT /timeoff/events/{date}` books or changes one day (`fraction` is `"1.00"`
+or `"0.50"`, `typeCode` one of the five codes, `note` optional). `DELETE
+/timeoff/events/{date}` removes one (`204`). Neither carries an
+`Idempotency-Key`: a day is addressed by its own date, so the write is
+idempotent by construction, and a booked day is not a financial record.
+Saturdays and Sundays are refused with `422 validation_failed` — Trek's own
+plan blocks them, so a round trip could only ever come back refused.
+
+Both writes are **staged, never sent**: the day is saved locally with
+`pendingOp` set, and the Trek sync is the only thing that talks to the
+provider. A day Trek holds is kept as a tombstone (`pendingOp: "delete"`)
+until the next pass carries the removal upstream; a day Trek has never held is
+deleted outright.
+
+Every quantity — fractions, hours, days, balances — is a two-decimal string,
+and `null` means "no figure on file", rendered as "—" by the UI. It is never
+`"0.00"`. Type, event and balance responses expose no ownership fields.
+
 ## Regenerating `openapi.json`
 
 The document is generated from the same `createRoute`/Zod schemas the route

@@ -3204,6 +3204,449 @@
           "updated",
           "deleted"
         ]
+      },
+      "TimeoffTypeListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeoffType"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TimeoffType": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "$ref": "#/components/schemas/TimeoffCode"
+          },
+          "label": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "hours",
+              "days"
+            ]
+          },
+          "hoursPerDay": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "label",
+          "unit",
+          "hoursPerDay",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TimeoffCode": {
+        "type": "string",
+        "enum": [
+          "vacation",
+          "comp",
+          "permits",
+          "sick",
+          "other"
+        ]
+      },
+      "TimeoffWorkspace": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "number"
+          },
+          "today": {
+            "type": "string"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeoffType"
+            }
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeoffBalanceView"
+            }
+          },
+          "byDate": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TimeoffWorkspaceDay"
+            }
+          },
+          "selected": {
+            "$ref": "#/components/schemas/TimeoffDayDetail"
+          },
+          "upcoming": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeoffEvent"
+            }
+          },
+          "plannedDaysYtd": {
+            "type": "string"
+          },
+          "pendingCount": {
+            "type": "number"
+          },
+          "trekConnected": {
+            "type": "boolean"
+          },
+          "cachedStats": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "stats": {
+                "$ref": "#/components/schemas/TrekYearStats"
+              },
+              "fetchedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "stats",
+              "fetchedAt"
+            ]
+          }
+        },
+        "required": [
+          "year",
+          "today",
+          "types",
+          "balances",
+          "byDate",
+          "selected",
+          "upcoming",
+          "plannedDaysYtd",
+          "pendingCount",
+          "trekConnected",
+          "cachedStats"
+        ]
+      },
+      "TimeoffBalanceView": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/TimeoffType"
+          },
+          "asOf": {
+            "type": "string",
+            "nullable": true
+          },
+          "remainingHours": {
+            "type": "string",
+            "nullable": true
+          },
+          "remainingDays": {
+            "type": "string",
+            "nullable": true
+          },
+          "usedYtdHours": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "payroll",
+              "manual",
+              null
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "asOf",
+          "remainingHours",
+          "remainingDays",
+          "usedYtdHours",
+          "source"
+        ]
+      },
+      "TimeoffWorkspaceDay": {
+        "type": "object",
+        "properties": {
+          "fraction": {
+            "type": "string"
+          },
+          "typeCode": {
+            "$ref": "#/components/schemas/TimeoffCode"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "pendingOp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fraction",
+          "typeCode",
+          "note",
+          "status",
+          "pendingOp"
+        ]
+      },
+      "TimeoffDayDetail": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "event": {
+            "$ref": "#/components/schemas/TimeoffEvent"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "planned",
+              "taken",
+              "cancelled",
+              null
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "event",
+          "status"
+        ]
+      },
+      "TimeoffEvent": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string"
+          },
+          "fraction": {
+            "type": "string"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "pendingOp": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "syncedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "trekEntryId": {
+            "type": "number",
+            "nullable": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "fraction",
+          "typeCode",
+          "status",
+          "origin",
+          "pendingOp",
+          "note",
+          "syncedAt",
+          "trekEntryId",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TrekYearStats": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "number"
+          },
+          "personName": {
+            "type": "string"
+          },
+          "vacationDays": {
+            "type": "number"
+          },
+          "carriedOver": {
+            "type": "number"
+          },
+          "totalAvailable": {
+            "type": "number"
+          },
+          "used": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          },
+          "compUsed": {
+            "type": "number"
+          },
+          "windowStart": {
+            "type": "string"
+          },
+          "windowEnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "year",
+          "personName",
+          "vacationDays",
+          "carriedOver",
+          "totalAvailable",
+          "used",
+          "remaining",
+          "compUsed",
+          "windowStart",
+          "windowEnd"
+        ]
+      },
+      "TimeoffEventListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeoffEvent"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TimeoffFraction": {
+        "type": "string",
+        "enum": [
+          "1.00",
+          "0.50"
+        ]
+      },
+      "TimeoffBalanceListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeoffBalance"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TimeoffBalance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "accrued": {
+            "type": "string",
+            "nullable": true
+          },
+          "used": {
+            "type": "string",
+            "nullable": true
+          },
+          "remaining": {
+            "type": "string",
+            "nullable": true
+          },
+          "pending": {
+            "type": "string",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "hours",
+              "days"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "payroll",
+              "manual"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "typeId",
+          "asOf",
+          "accrued",
+          "used",
+          "remaining",
+          "pending",
+          "unit",
+          "source",
+          "createdAt"
+        ]
       }
     },
     "parameters": {}
@@ -10210,6 +10653,602 @@
           },
           "428": {
             "description": "The version precondition, or the `Idempotency-Key` header, is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timeoff/types": {
+      "get": {
+        "tags": [
+          "Time off"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's time off types, seeded on first call.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeoffTypeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timeoff/workspace": {
+      "get": {
+        "tags": [
+          "Time off"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 2000,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "year",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "date",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One year of time off: types, balances, every booked day, and the Trek state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeoffWorkspace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timeoff/events": {
+      "get": {
+        "tags": [
+          "Time off"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booked days in the range, `date asc`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeoffEventListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timeoff/events/{date}": {
+      "put": {
+        "tags": [
+          "Time off"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "date",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fraction": {
+                    "$ref": "#/components/schemas/TimeoffFraction"
+                  },
+                  "typeCode": {
+                    "$ref": "#/components/schemas/TimeoffCode"
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "fraction",
+                  "typeCode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The staged day.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeoffEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Time off"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "date",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed, or staged for removal upstream."
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timeoff/balances": {
+      "get": {
+        "tags": [
+          "Time off"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 2000,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "year",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every balance row whose `asOf` falls in the year, oldest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeoffBalanceListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
             "content": {
               "application/json": {
                 "schema": {
