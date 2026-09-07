@@ -33,7 +33,9 @@ export function refreshUsages(deps: UseCaseDeps) {
     const to = budget.endDate ?? romeDate(deps.clock.now());
     const [scopes, expenses] = await Promise.all([
       deps.scopes.listForBudget(budgetId),
-      deps.transactions.listExpenses(principal.userId, { from, to }),
+      // `currency` filters: a transaction in another currency must not be
+      // counted into this budget's `used` at face value.
+      deps.transactions.listExpenses(principal.userId, { from, to, currency: budget.currency }),
     ]);
 
     const rows = expenses

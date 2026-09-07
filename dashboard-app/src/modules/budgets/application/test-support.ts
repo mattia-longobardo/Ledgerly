@@ -22,7 +22,9 @@ export function budgetHarness() {
   const balances = new Map<string, string>();
   const accountNames = new Map<string, string>();
   const fundNames = new Map<string, string>();
-  let expenses: TransactionLike[] = [];
+  /** `currency` defaults to EUR, matching the column default the real rows carry. */
+  let expenses: (TransactionLike & { currency?: string })[] = [];
+  const listExpensesCalls: { from: string; to: string; currency: string }[] = [];
 
   const budgets = new MemoryBudgetsRepository();
   const allocations = new MemoryAllocationsRepository(budgets);
@@ -35,8 +37,12 @@ export function budgetHarness() {
     usages: new MemoryUsagesRepository(),
     events: new MemoryEventsRepository(),
     transactions: {
-      listExpenses: async (_userId, opts) =>
-        expenses.filter((tx) => tx.occurredAt >= opts.from && tx.occurredAt <= opts.to),
+      listExpenses: async (_userId, opts) => {
+        listExpensesCalls.push({ ...opts });
+        return expenses
+          .filter((tx) => tx.occurredAt >= opts.from && tx.occurredAt <= opts.to && (tx.currency ?? "EUR") === opts.currency)
+          .map(({ currency: _currency, ...tx }) => tx);
+      },
     },
     balances: {
       latestBalance: async (_userId, source) => balances.get(`${source.kind}:${source.id}`) ?? null,
@@ -63,7 +69,8 @@ export function budgetHarness() {
     balances,
     accountNames,
     fundNames,
-    setExpenses: (rows: TransactionLike[]) => {
+    listExpensesCalls,
+    setExpenses: (rows: (TransactionLike & { currency?: string })[]) => {
       expenses = rows;
     },
   };

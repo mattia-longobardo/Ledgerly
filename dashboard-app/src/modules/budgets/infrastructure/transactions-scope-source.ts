@@ -25,6 +25,10 @@ type ExpenseRow = Record<string, unknown> & {
  * Comparing UTC instants instead would drop the first one or two hours of
  * `from` (Rome is UTC+1/+2, so 00:30 Rome on `from` is 23:30Z the day before)
  * and wrongly pull in the same slice of the day after `to`.
+ *
+ * `currency` is a filter, not a display detail: `transactions.currency` is
+ * unconstrained and provider sync copies whatever the provider sends, so a
+ * foreign-currency expense must never reach a budget's `used` at face value.
  */
 export function drizzleTransactionsScopeSource(db: DbClient): TransactionsScopeSource {
   return {
@@ -41,6 +45,7 @@ export function drizzleTransactionsScopeSource(db: DbClient): TransactionsScopeS
         LEFT JOIN transaction_label_links l ON l.transaction_id = t.id
         WHERE t.user_id = ${userId}
           AND t.type = 'expense'
+          AND t.currency = ${opts.currency}
           AND (t.occurred_at AT TIME ZONE 'Europe/Rome')::date >= ${opts.from}::date
           AND (t.occurred_at AT TIME ZONE 'Europe/Rome')::date <= ${opts.to}::date
         GROUP BY t.id
