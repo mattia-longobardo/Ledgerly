@@ -230,4 +230,42 @@ describe("runFinancialWrite", () => {
     expect(otherCalls).toBe(1);
     expect(otherResult).toEqual({ body: { echoed: "budgets" }, status: 201 });
   });
+
+  /**
+   * Migrated from the deleted `idempotency.itest.ts` (the superseded,
+   * non-atomic middleware): a stored row is only a valid replay target while
+   * `expiresAt > now()`. Once the TTL lapses, the same key must start a
+   * fresh window — re-executing the write, replaying that new result on a
+   * subsequent identical call, and still rejecting a reused key against a
+   * different body within that new window.
+   */
+  it("starts a fresh 24h window after a key's stored response has expired", async () => {
+    const db = await testDb();
+    const principalId = randomUUID();
+    let time = new Date("2026-09-02T10:00:00.000Z");
+    const clock = () => time;
+    let calls = 0;
+    const write = async () => { calls += 1; return { n: calls }; };
+
+    const first = await runFinancialWrite({ db, now: clock }, "test-ns", principalId, request("expiring-key", JSON.stringify({ v: 1 })), write);
+    expect(first).toEqual({ body: { n: 1 }, status: 201 });
+    expect(calls).toBe(1);
+
+    time = new Date(time.getTime() + 25 * 60 * 60 * 1000);
+
+    const reqV2 = request("expiring-key", JSON.stringify({ v: 2 }));
+    const afterExpiry = await runFinancialWrite({ db, now: clock }, "test-ns", principalId, reqV2, write);
+    expect(afterExpiry).toEqual({ body: { n: 2 }, status: 201 });
+    expect(calls).toBe(2);
+
+    const replay = await runFinancialWrite({ db, now: clock }, "test-ns", principalId, reqV2, write);
+    expect(replay).toEqual({ body: { n: 2 }, status: 201 });
+    expect(calls).toBe(2);
+
+    const differentBody = request("expiring-key", JSON.stringify({ v: 3 }));
+    await expect(
+      runFinancialWrite({ db, now: clock }, "test-ns", principalId, differentBody, write),
+    ).rejects.toThrow("Idempotency-Key was already used with a different request");
+    expect(calls).toBe(2);
+  });
 });
