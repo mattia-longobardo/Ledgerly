@@ -332,6 +332,40 @@ describe("Drizzle transactions-scope-source", () => {
       expect(cleared.labelIds).toEqual([]);
     });
   });
+
+  it("includes an expense in the first Rome hours of `from`, whose UTC instant falls on the previous day", async () => {
+    const userId = await seedUser("Rome boundary");
+    const db = await testDb();
+    await withSystemContext(db, async (tx) => {
+      const [account] = await tx.insert(accounts).values({ userId, name: "Checking", type: "checking", origin: "manual" }).returning();
+      // 00:30 Rome on 2026-02-01 — the budget's own start date — is 23:30Z on 2026-01-31.
+      const [earlyRome] = await tx.insert(transactions).values({
+        userId, accountId: account!.id, occurredAt: new Date("2026-01-31T23:30:00Z"), amount: "-9.99",
+        type: "expense", state: "cleared",
+      }).returning();
+      // 23:30 Rome on 2026-02-28 is 22:30Z the same day; the last civil day must be included whole.
+      const [lateRome] = await tx.insert(transactions).values({
+        userId, accountId: account!.id, occurredAt: new Date("2026-02-28T22:30:00Z"), amount: "-1.00",
+        type: "expense", state: "cleared",
+      }).returning();
+      // 23:30 Rome on 2026-01-31 is 22:30Z — genuinely before the range.
+      await tx.insert(transactions).values({
+        userId, accountId: account!.id, occurredAt: new Date("2026-01-31T22:30:00Z"), amount: "-2.00",
+        type: "expense", state: "cleared",
+      });
+      // 00:30 Rome on 2026-03-01 is 23:30Z on 2026-02-28 — genuinely after the range.
+      await tx.insert(transactions).values({
+        userId, accountId: account!.id, occurredAt: new Date("2026-02-28T23:30:00Z"), amount: "-3.00",
+        type: "expense", state: "cleared",
+      });
+
+      const source = drizzleTransactionsScopeSource(tx);
+      const rows = await source.listExpenses(userId, { from: "2026-02-01", to: "2026-02-28" });
+      expect(rows.map((row) => row.id).sort()).toEqual([earlyRome!.id, lateRome!.id].sort());
+      expect(rows.find((row) => row.id === earlyRome!.id)!.occurredAt).toBe("2026-02-01");
+      expect(rows.find((row) => row.id === lateRome!.id)!.occurredAt).toBe("2026-02-28");
+    });
+  });
 });
 
 describe("Drizzle source-balance-source", () => {

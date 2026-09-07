@@ -57,17 +57,6 @@ export function monthStartInstant(key: string): Date {
   return new Date(`${monthKeyOf(key)}T00:00:00Z`);
 }
 
-/**
- * Same rationale as `monthStartInstant`, but for an arbitrary `"YYYY-MM-DD"`
- * date rather than one pinned to a month start: UTC midnight of that date
- * lands at 01:00 or 02:00 Rome on the same civil day, so it is always a safe
- * lower bound for "on or after this Rome civil date" and — one day later —
- * a safe exclusive upper bound for "before this Rome civil date".
- */
-export function dayStartInstant(isoDate: string): Date {
-  return new Date(`${isoDate}T00:00:00Z`);
-}
-
 export function daysBetween(a: string, b: string): number {
   const ms = Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`);
   return Math.round(ms / 86_400_000);
