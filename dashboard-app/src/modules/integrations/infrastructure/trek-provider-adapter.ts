@@ -9,7 +9,9 @@
 import { z } from "zod";
 import { errorMessage } from "@/lib/clients/http";
 import { getEntries } from "@/lib/clients/trek";
-import { runTrekSync, type TrekSyncResult } from "@/lib/jobs/trek-sync";
+import { db } from "@/lib/db";
+import { drizzleTimeoffStore } from "@/modules/timeoff/infrastructure/trek-store";
+import { runTrekSync, type TrekSyncResult } from "@/modules/timeoff/infrastructure/trek-sync";
 import type {
   DisconnectContext,
   IntegrationProvider,
@@ -63,6 +65,12 @@ const leaveSync: SyncHandler<TrekSyncResult> = {
     runTrekSync({
       now: ctx.clock.now(),
       call: { config: configOf(ctx.credentials) },
+      // The connection's owner, not the caller: an hourly pass runs with no
+      // principal, and every database step inside the sync is scoped to this.
+      userId: ctx.connection.userId,
+      // `db`, not `ctx.db`: `fetch` runs with nothing open, and the store's job
+      // is precisely to open one short context per database step of its own.
+      store: drizzleTimeoffStore(db),
     }),
 
   async apply(_ctx: SyncApplyContext, result: TrekSyncResult): Promise<Record<string, number>> {
@@ -77,10 +85,10 @@ const leaveSync: SyncHandler<TrekSyncResult> = {
 };
 
 /**
- * Leave days are the user's own record of their year, not the provider's:
- * `leave_days` is written by the dashboard as much as by the sync. No policy
- * deletes them, so all three are a no-op beyond the audit line. The timeoff
- * module (Phase 7) revisits this when the data model becomes `timeoff_events`.
+ * Time off is the user's own record of their year, not the provider's:
+ * `timeoff_events` is written by the dashboard as much as by the sync. No
+ * policy deletes them, so this is a no-op beyond the audit line — a
+ * disconnected Trek leaves the calendar exactly as the owner left it.
  */
 async function onDisconnect(ctx: DisconnectContext): Promise<void> {
   await ctx.audit({
@@ -88,7 +96,7 @@ async function onDisconnect(ctx: DisconnectContext): Promise<void> {
     action: "integration.disconnect_applied",
     entityType: "integration_connection",
     entityId: ctx.connection.id,
-    after: { provider: TREK_PROVIDER, policy: ctx.policy, leaveDaysKept: true },
+    after: { provider: TREK_PROVIDER, policy: ctx.policy, timeoffEventsKept: true },
   });
 }
 

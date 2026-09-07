@@ -26,9 +26,11 @@ import {
   type TrekYearStats,
 } from "@/lib/clients/trek";
 import { withJobLock } from "@/lib/repo/jobs";
-import * as leave from "@/lib/repo/leave";
 import { setCachedTrekStats } from "@/lib/repo/trek-state";
-import { planPull, planPush } from "./trek-diff";
+import { seedDefaultTypes } from "../application/ensure-default-types";
+import type { TimeoffStore } from "../application/ports";
+import { hoursPerDayString } from "./deps";
+import { planPull, planPush, storedFraction, trekEvents, trekKindOf, typeCodeOf } from "./trek-diff";
 
 /**
  * Same key the `trek_sync` job runs under — the cron pass and a dashboard edit
@@ -77,6 +79,14 @@ export interface RunTrekSyncInput {
   withStats?: boolean;
   /** The credential, resolved by the caller from the integration vault. */
   call: TrekCallOptions;
+  /** The owner of the calendar being synced. Every database step is scoped to them. */
+  userId: string;
+  /**
+   * Opens one short RLS context per database step. The network calls below
+   * happen BETWEEN those steps and never inside one — the shared conventions'
+   * rule, and the reason this function takes a store rather than a `tx`.
+   */
+  store: TimeoffStore;
 }
 
 function empty(status: TrekSyncStatus, year: number): TrekSyncResult {
@@ -130,6 +140,7 @@ export function disabledTrekSync(year: number): TrekSyncResult {
 async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSyncResult> {
   const now = input.now ?? new Date();
   const opts = input.call;
+  const { userId, store } = input;
 
   const result: TrekSyncResult = {
     status: "ok",
@@ -144,23 +155,36 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
   };
 
   try {
-    // ── 1. PUSH ──────────────────────────────────────────────────────────────
+    // ── 1. READ (database) ───────────────────────────────────────────────────
     // Only rows for this year: a pending edit in another year belongs to that
     // year's pass, and Trek's toggle is scoped by the entries read for a year.
-    const pending = (await leave.pendingDays()).filter((r) => r.date.startsWith(`${year}-`));
+    const hoursPerDay = await hoursPerDayString();
+    const { pending, typeIds } = await store.withEvents(userId, async (events, types) => {
+      const seeded = await seedDefaultTypes(types, userId, hoursPerDay);
+      return {
+        pending: (await events.pending(userId)).filter((r) => r.date.startsWith(`${year}-`)),
+        typeIds: new Map(seeded.map((type) => [type.code, type.id])),
+      };
+    });
     const stillPending = new Set<string>();
 
-    if (pending.length > 0) {
-      const push = planPush(pending);
-      const applied = await applyDesiredState(
-        { year, desired: push.desired, removals: push.removals },
-        opts,
-      );
+    // Dates that no longer have anything to send: Trek accepted the toggle, or
+    // never needed one. Cleared together below so a pushed edit does not stay
+    // flagged and get re-sent on every later pass.
+    //
+    // A staged `permits` upsert starts here rather than at Trek: R7-2 keeps it
+    // out of the push, so nothing upstream will ever settle it, and leaving it
+    // flagged would mean a `*` in the UI forever.
+    const settled: string[] = pending
+      .filter((row) => row.pendingOp === "upsert" && trekKindOf(row.typeCode) === null)
+      .map((row) => row.date);
 
-      // Dates that no longer have anything to send: Trek accepted the toggle,
-      // or never needed one. Cleared together below so a pushed edit does not
-      // stay flagged and get re-sent on every later pass.
-      const settled: string[] = [];
+    if (pending.length > 0) {
+      // ── 2. PUSH (network — no transaction open) ────────────────────────────
+      const push = planPush(pending);
+      const applied = (push.desired.length > 0 || push.removals.length > 0)
+        ? await applyDesiredState({ year, desired: push.desired, removals: push.removals }, opts)
+        : { results: [], unchanged: [], alreadyAbsent: [] };
 
       for (const r of applied.results) {
         if (r.outcome === "applied") {
@@ -184,29 +208,55 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
       // has, needed no request — equally settled. `planPull` then treats every
       // one of these like any other clean row.
       settled.push(...applied.unchanged, ...applied.alreadyAbsent);
-      if (settled.length > 0) await leave.clearPending(settled, now);
+    }
 
-      if (result.weekendBlocked.length > 0) {
-        await leave.deleteDates(result.weekendBlocked);
-      }
+    // ── 3. SETTLE (database) ─────────────────────────────────────────────────
+    if (settled.length > 0 || result.weekendBlocked.length > 0) {
+      await store.withEvents(userId, async (events) => {
+        if (settled.length > 0) await events.clearPending(userId, settled, now);
+        if (result.weekendBlocked.length > 0) {
+          await events.deleteDates(userId, result.weekendBlocked);
+        }
+      });
     }
 
     result.stillPending = [...stillPending];
 
-    // ── 2. PULL ──────────────────────────────────────────────────────────────
+    // ── 4. PULL (network — no transaction open) ──────────────────────────────
     const remote = await getEntries(year, opts);
-    const local = await leave.daysInYear(year);
-    const pull = planPull(local, remote, stillPending);
 
-    await leave.upsertFromTrek(pull.upserts, now);
-    await leave.deleteDates(pull.deletes);
+    // ── 5. WRITE (database) ──────────────────────────────────────────────────
+    const pull = await store.withEvents(userId, async (events) => {
+      // `trekEvents` is what keeps a permits day alive: Trek is authoritative
+      // for the existence of days it can hold, and only for those.
+      const local = trekEvents(await events.inRange(userId, `${year}-01-01`, `${year}-12-31`));
+      const plan = planPull(local, remote, stillPending);
+      await events.upsertFromProvider(
+        userId,
+        plan.upserts.flatMap((u) => {
+          const typeId = typeIds.get(typeCodeOf(u.kind));
+          // Unreachable with the seeded catalogue; skipping rather than
+          // throwing keeps one unmapped kind from failing the whole pass.
+          return typeId === undefined ? [] : [{
+            date: u.date,
+            fraction: storedFraction(u.fraction),
+            typeId,
+            trekEntryId: u.trekEntryId,
+            note: u.note,
+          }];
+        }),
+        now,
+      );
+      await events.deleteDates(userId, plan.deletes);
+      return plan;
+    });
     result.pulled = pull.upserts.length;
     result.deleted = pull.deletes.length;
 
-    // ── 3. STATS (deliberate, once) ──────────────────────────────────────────
+    // ── 6. STATS (deliberate, once — network) ────────────────────────────────
     if (input.withStats !== false) {
       result.stats = await getStats(year, opts);
-      // Cached so the Work page can show Trek's figures without re-triggering
+      // Cached so the workspace can show Trek's figures without re-triggering
       // this endpoint's carry-over write on every render.
       if (result.stats !== null) await setCachedTrekStats(year, result.stats, now);
     }

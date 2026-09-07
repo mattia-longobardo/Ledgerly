@@ -1,4 +1,6 @@
-import type { TimeoffCode, TimeoffType, TypesRepository } from "./ports";
+import type { Principal } from "@/platform/auth/principal";
+import { assertPermission } from "@/platform/auth/principal";
+import type { TimeoffCode, TimeoffType, TypesRepository, UseCaseDeps } from "./ports";
 
 /**
  * R7-1: the three types every user gets, created lazily the first time
@@ -43,4 +45,16 @@ export async function seedDefaultTypes(
     });
   }
   return types.list(userId);
+}
+
+/**
+ * R7-1 as a use case: every other use case in this module opens with it, so a
+ * user who has never touched Time Off still gets a workspace with three types
+ * instead of an empty page.
+ */
+export function ensureDefaultTypes(deps: UseCaseDeps) {
+  return async (principal: Principal): Promise<TimeoffType[]> => {
+    assertPermission(principal, "timeoff.read");
+    return seedDefaultTypes(deps.types, principal.userId, await deps.settings.hoursPerDay());
+  };
 }
