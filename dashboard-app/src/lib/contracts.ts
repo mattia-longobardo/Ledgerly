@@ -5,12 +5,11 @@
  */
 
 /**
- * Every account key the legacy `balance_snapshots` cache can hold — Wallet's
- * accounts plus the five accounts the owner used to type in by hand. Kept as
- * a typed set (not a bare string) because `src/lib/clients/wallet-accounts.ts`
- * and `src/lib/repo/balances.ts` still read and write it: `balance_snapshots`
- * remains the source for the Funds page and stays a read-only archive of the
- * pre-accounts-module history until Phase 9.
+ * Every account key the retired `balance_snapshots` cache used to hold —
+ * Wallet's accounts plus the five accounts the owner used to type in by hand.
+ * The table itself was dropped in `0018` (R7-5'); the union survives because
+ * `src/lib/clients/wallet-accounts.ts` still names Wallet's own accounts with
+ * it.
  */
 export const ACCOUNT_KEYS = [
   "ing",
@@ -48,14 +47,13 @@ export interface Series {
  * budget and nothing else — it says when the owner should stop trusting a
  * number, not when a job should go and fetch a new one.
  *
- * `wallet`: refreshed once a day at 12:00 Europe/Rome (Wallet itself syncs at
- * noon, so polling harder buys nothing). 26 h rather than 24 h so a late cron,
- * the DST hour and the `curl --retry` tail cannot flip the badge on a run that
- * actually succeeded.
- * `legacy`: the Funds page's Fideuram/Fondo Cometa balances, hand-typed into
- * `balance_snapshots` by the retired snapshot job. Nothing refreshes them any
- * more, so this budget only says how old a hand-typed figure is allowed to
- * look before the badge flags it — it does not gate a job.
+ * `wallet`: Wallet syncs its own upstream banks once a day at noon
+ * Europe/Rome, so a figure read from it is a day old at worst. 26 h rather
+ * than 24 h so a late sync, the DST hour and a retry tail cannot flip the
+ * badge on a read that actually succeeded.
+ * `legacy`: a hand-typed figure with nothing behind it to refresh it. This
+ * budget only says how old such a figure is allowed to look before the badge
+ * flags it — it does not gate a job.
  * `history`: chart data, refreshed at most daily.
  */
 export const DISPLAY_STALENESS_MS = {
@@ -64,12 +62,7 @@ export const DISPLAY_STALENESS_MS = {
   history: 24 * 60 * 60 * 1000,
 } as const;
 
-/**
- * The budget `src/lib/calc/networth.ts` judges a summed total against. Used
- * only by the migration reconciliation script now, which recomputes the
- * legacy net-worth figure straight from `balance_snapshots` for comparison
- * against the accounts module's own series.
- */
+/** The budget `src/lib/calc/networth.ts` judges a summed total against. */
 export const NET_WORTH_STALENESS_MS = DISPLAY_STALENESS_MS.wallet;
 
 export type Confidence = "high" | "medium" | "low";
@@ -118,7 +111,6 @@ export type JobName =
   | "payroll_ingest"
   | "payroll_retention"
   | "sweep"
-  | "wallet_refresh"
   | "trek_sync"
   | "monthly_close"
   | "wallet_accounts_sync"

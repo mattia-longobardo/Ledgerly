@@ -1,4 +1,3 @@
-export * from "./legacy";
 export * from "./identity";
 export * from "./platform";
 export * from "./accounts";
@@ -8,3 +7,4 @@ export * from "./interests";
 export * from "./payroll";
 export * from "./funds";
 export * from "./budgets";
+export * from "./timeoff";

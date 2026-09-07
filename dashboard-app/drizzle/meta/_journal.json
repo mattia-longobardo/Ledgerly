@@ -127,6 +127,13 @@
       "when": 1788711096066,
       "tag": "0017_budgets",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788810925220,
+      "tag": "0018_timeoff_and_drop_legacy",
+      "breakpoints": true
     }
   ]
 }

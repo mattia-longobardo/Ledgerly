@@ -2,13 +2,11 @@ import { z } from "zod";
 import { isUnauthorizedError, requireUser, unauthorizedResponse } from "@/lib/auth/require-user";
 import { runSweep } from "@/lib/jobs/sweep";
 import { runTrekSyncJob } from "@/lib/jobs/trek-sync-job";
-import { runWalletRefresh } from "@/lib/jobs/wallet-refresh";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.discriminatedUnion("job", [
   z.object({ job: z.literal("sweep") }),
-  z.object({ job: z.literal("wallet_refresh") }),
   z.object({ job: z.literal("trek_sync") }),
 ]);
 
@@ -39,11 +37,6 @@ export async function POST(req: Request) {
 
   if (input.job === "sweep") {
     const result = await runSweep({ trigger: "manual" });
-    return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
-  }
-
-  if (input.job === "wallet_refresh") {
-    const result = await runWalletRefresh({ trigger: "manual" });
     return Response.json(result, { status: result.status === "failed" ? 500 : 200 });
   }
 

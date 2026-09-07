@@ -20,11 +20,11 @@ describe("job registry", () => {
         throw new Error("boom");
       },
     });
-    registerJob({ name: "wallet_refresh", tier: "daily", run: async () => ({ job: "wallet_refresh", status: "success" }) });
+    registerJob({ name: "wallet_accounts_sync", tier: "daily", run: async () => ({ job: "wallet_accounts_sync", status: "success" }) });
     const results = await runTier("hourly", { trigger: "cron", now: new Date() });
     expect(order).toEqual(["sweep"]);
     expect(results.map((r) => r.status)).toEqual(["success", "failed"]);
-    expect(listJobs("daily").map((j) => j.name)).toEqual(["wallet_refresh"]);
+    expect(listJobs("daily").map((j) => j.name)).toEqual(["wallet_accounts_sync"]);
   });
   it("rejects a duplicate name", () => {
     registerJob({ name: "sweep", tier: "hourly", run: async () => ({ job: "sweep", status: "success" }) });

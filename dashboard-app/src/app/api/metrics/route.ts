@@ -21,8 +21,16 @@ export async function GET() {
     FROM job_runs GROUP BY job_name, status
   `);
 
+  /**
+   * The legacy `payslips` table this gauge used to count was dropped in
+   * `0018` (R7-5'). `payroll_imports` carries the review queue now, so the
+   * gauge counts the same statuses the queue itself is built from
+   * (`AWAITING_STATUSES` in `src/modules/payroll/ui/queue.ts`) — the number a
+   * reviewer sees when they follow the alert.
+   */
   const pending = await db.execute<{ n: string }>(sql`
-    SELECT count(*)::text AS n FROM payslips WHERE status = 'parsed'
+    SELECT count(*)::text AS n FROM payroll_imports
+    WHERE status IN ('needs_review','verified','needs_ocr')
   `);
 
   const lines: string[] = [
@@ -32,7 +40,7 @@ export async function GET() {
     "# HELP job_runs_total Job invocations by terminal status.",
     "# TYPE job_runs_total counter",
     ...totals.rows.map((r) => `job_runs_total{job="${r.job}",status="${r.status}"} ${r.n}`),
-    "# HELP payslips_pending_verification Payslips parsed but awaiting the human gate.",
+    "# HELP payslips_pending_verification Payslip imports awaiting the human gate.",
     "# TYPE payslips_pending_verification gauge",
     `payslips_pending_verification ${pending.rows[0]?.n ?? 0}`,
     "",

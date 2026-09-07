@@ -4,9 +4,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SettingsSection } from "@/components/ui/SettingsSection";
 import { db } from "@/lib/db";
-import { SETTING_KEYS, getSetting } from "@/lib/repo/settings";
+import { DEFAULT_HOURS_PER_DAY, SETTING_KEYS, getSetting } from "@/lib/repo/settings";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
-import { DEFAULT_HOURS_PER_DAY } from "../../_lib/vacation";
 import { HoursPerDayForm } from "../_components/SettingsForms";
 import { loadProfile } from "../_lib/load-settings";
 
