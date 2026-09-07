@@ -6,12 +6,25 @@ import type { UseCaseDeps } from "./ports";
 /**
  * Removes one day.
  *
- * Two outcomes, and the difference matters. A row the owner created here that
- * Trek has never seen (`origin 'manual'`, no `provider_links` entry) has no
- * upstream counterpart, so it is simply deleted. Anything Trek knows about is
- * kept as a tombstone with `pendingOp = 'delete'` — that row is the only
- * record that a removal still has to be carried upstream, and `clearPending`
- * deletes it once the push lands.
+ * Two outcomes, and the difference matters. The question the choice turns on is
+ * "does Trek hold an entry for this date right now", and the only thing that
+ * answers it is the `provider_links` row — NOT `origin`, which records where
+ * the day came from historically and stays `'trek'` for ever afterwards. A day
+ * Trek once owned and no longer does (the owner retyped it to `permits` and the
+ * sync removed the entry upstream) has nothing left to push, and treating it as
+ * if it did would stage a delete for something already gone.
+ *
+ * So: no link, no upstream counterpart, delete outright. A linked day is kept
+ * as a tombstone with `pendingOp = 'delete'` — that row is the only record that
+ * a removal still has to be carried upstream, and `clearPending` deletes it once
+ * the push lands.
+ *
+ * Known narrow window, unchanged by this rule and older than it: the link is
+ * written by the PULL half of a sync pass, so a day whose push landed and whose
+ * pull then failed has no link for an entry Trek does hold. Removing it in that
+ * gap deletes it here and leaves it there until the owner books it again. Closing
+ * it means writing the link at push time, which needs the entry id Trek only
+ * reports on the read — Phase 9 territory, with `withJobLock`.
  */
 export function removeEvent(deps: UseCaseDeps) {
   return async (principal: Principal, date: string): Promise<void> => {
@@ -20,8 +33,8 @@ export function removeEvent(deps: UseCaseDeps) {
     const existing = await deps.events.at(principal.userId, date);
     if (!existing) throw new NotFoundError();
 
-    const neverSynced = existing.trekEntryId === null && existing.origin === "manual";
-    if (neverSynced) await deps.events.deleteDates(principal.userId, [date]);
+    const heldByTrek = existing.trekEntryId !== null;
+    if (!heldByTrek) await deps.events.deleteDates(principal.userId, [date]);
     else await deps.events.stageDelete(principal.userId, date, now);
 
     await deps.audit({
@@ -35,7 +48,7 @@ export function removeEvent(deps: UseCaseDeps) {
         typeCode: existing.typeCode,
         origin: existing.origin,
       },
-      after: { deleted: neverSynced, pendingOp: neverSynced ? null : "delete" },
+      after: { deleted: !heldByTrek, pendingOp: heldByTrek ? "delete" : null },
     });
   };
 }

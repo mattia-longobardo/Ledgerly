@@ -98,6 +98,37 @@ Five points where the plan text and the tree did not line up:
 4. **`TimeoffWorkspace.selected` is populated whenever `selectedDate` is given**, with `event: null` and `status: null` for a free day — not `null`, as the original Task 4's prose said. The prose contradicts its own `DayDetail` type (which declares both fields nullable), and Task 4's bare page needs a detail object to hang the booking form on for a day that has no event yet.
 5. **`BalanceView.source` is `"payroll" | "manual" | null`, not `"payroll" | null`.** `timeoff_balances.source` admits `manual`; flattening a hand-entered figure to "no source" would misreport it.
 
+### Deviation (Tasks 2-3, fix round 1, 2026-09-07)
+
+Three Important findings from the task review of `e27c380..67c412c`, and two signature consequences:
+
+1. **`EventsRepository` gains `unlinkProvider(userId, dates)`.** A day Trek owned, retyped to
+   `permits`, needs its Trek entry REMOVED upstream (otherwise the next pull reads the surviving
+   entry as new and writes the conversion back) and its `provider_links` row dropped once Trek
+   confirms — while the event itself stays. No existing port method expresses "the day is no
+   longer Trek's"; `deleteDates` would take the day with it. `planPush` now emits a removal for
+   such a row, and `trek-diff.ts` exports `conversionRemovals` / `localOnlyUpserts` so `syncPass`
+   can tell a converted day from one Trek has never held.
+2. **`removeEvent` keys off the Trek link, not `origin`.** The original text said "a never-synced
+   manual row is hard-deleted"; after a conversion the row is neither manual nor unsynced, yet
+   Trek holds nothing for it, and staging a delete would push a removal for an entry already
+   gone. The predicate is now `trekEntryId === null`, which is the question that was always being
+   asked. A narrow pre-existing window is documented at the function: the link is written by the
+   pull half, so a push-landed / pull-failed day has no link for an entry Trek does hold.
+3. **`BalanceView.usedYtdHours` reads the LATEST balance row, not the year's sum.** The payslip's
+   GOD. column is cumulative — `src/lib/payroll/teamsystem.ts` only accepts the leave grid when
+   `A.P. + MAT. - GOD. = RES.` balances, which holds only for a year-to-date GOD. and a running
+   RES. Summing July's 4,00 onto August's 12,01 reported 16,01 against a true 12,01. The parser's
+   row-300 fallback is per-period and therefore disagrees with the grid; that asymmetry is
+   recorded in the comment and left to the parser to fix, not papered over in the view.
+   `BalancesRepository.listForYear` keeps its place in the port (the deferred `variance.ts` needs
+   it) and is now covered by the itest.
+4. **`DrizzleTypesRepository.create` uses `ON CONFLICT DO NOTHING` plus a re-read.**
+   `seedDefaultTypes` is check-then-insert and two concurrent first touches of the same user (the
+   hourly sync's seed and a workspace load; a payroll apply and a page render) made the loser die
+   on `timeoff_types_user_code_uq`, taking its whole transaction with it. Covered by a
+   `Promise.all` case in `use-cases.itest.ts`.
+
 ---
 
 ### Task 4: API, bare page, consumers, phase gate

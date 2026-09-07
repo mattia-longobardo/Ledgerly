@@ -75,17 +75,23 @@ export function getWorkspace(deps: UseCaseDeps) {
       `${input.year}-01-01`,
       `${input.year}-12-31`,
     );
+    // The LATEST row per type answers both figures, and `used` must not be
+    // summed across the year.
+    //
+    // The payslip's GOD. column is cumulative, not per-period: the primary
+    // parse path takes it from the TeamSystem leave grid, and that grid is only
+    // accepted when `A.P. + MAT. - GOD. = RES.` balances
+    // (`src/lib/payroll/teamsystem.ts` `readTriple`/`readQuad`) — an identity
+    // that holds only if GOD. is the year-to-date total taken and RES. the
+    // running residual. Adding July's 4,00 to August's 12,01 would report
+    // 16,01 hours against a true 12,01.
+    //
+    // Known asymmetry, deliberately not papered over here: the parser's row-300
+    // FALLBACK (used only when the grid does not balance) reads a per-period
+    // figure, so a year assembled from fallback payslips understates the total
+    // as much as summing would overstate it. The fix belongs in the parser, not
+    // in this view — see the fix report for Phase 7 Tasks 2-3.
     const latest = await deps.balances.latestPerType(principal.userId);
-    const yearBalances = await deps.balances.listForYear(principal.userId, input.year);
-
-    const usedYtd = new Map<string, string | null>();
-    for (const balance of yearBalances) {
-      // `used` is what one payslip reported for its own period; the year's rows
-      // add up to the year to date. A type with no figure anywhere stays null
-      // rather than becoming "0.00" (R7-4).
-      const running = usedYtd.get(balance.typeId) ?? null;
-      usedYtd.set(balance.typeId, addQuantity(running, balance.used));
-    }
 
     const balances: BalanceView[] = types.map((type) => {
       const row = latest.get(type.id);
@@ -94,7 +100,7 @@ export function getWorkspace(deps: UseCaseDeps) {
         asOf: row?.asOf ?? null,
         remainingHours: row?.remaining ?? null,
         remainingDays: row?.remaining == null ? null : toDays(row.remaining, type.hoursPerDay),
-        usedYtdHours: usedYtd.get(type.id) ?? null,
+        usedYtdHours: row?.used ?? null,
         source: row ? row.source : null,
       };
     });

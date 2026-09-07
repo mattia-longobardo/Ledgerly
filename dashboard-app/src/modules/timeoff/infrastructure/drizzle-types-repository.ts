@@ -49,8 +49,32 @@ export class DrizzleTypesRepository implements TypesRepository {
     return row ? toType(row) : null;
   }
 
+  /**
+   * Idempotent against a CONCURRENT first touch, not just a sequential one.
+   *
+   * `seedDefaultTypes` is check-then-insert, and two callers can reach it for
+   * the same user at the same moment — the hourly Trek sync's seed and a
+   * workspace load, or a payroll apply and a page render. Plain `INSERT` there
+   * means the loser dies on `timeoff_types_user_code_uq` and takes its whole
+   * transaction (an apply, a sync pass) with it. `ON CONFLICT DO NOTHING`
+   * makes the loser a no-op instead; it blocks until the winner commits, so
+   * the read below — a fresh statement snapshot under READ COMMITTED — always
+   * sees the row that won.
+   */
   async create(input: Omit<TimeoffType, "id" | "createdAt" | "updatedAt">): Promise<TimeoffType> {
-    const [row] = await this.db.insert(timeoffTypes).values(input).returning();
-    return toType(row!);
+    const [row] = await this.db
+      .insert(timeoffTypes)
+      .values(input)
+      .onConflictDoNothing({ target: [timeoffTypes.userId, timeoffTypes.code] })
+      .returning();
+    if (row) return toType(row);
+    const existing = await this.getByCode(input.userId, input.code);
+    if (!existing) {
+      // Not reachable through the unique index: the insert can only have been
+      // a no-op because a row is there. Anything else is a bug worth hearing
+      // about rather than a null the caller has to guess at.
+      throw new Error(`timeoff type "${input.code}" neither inserted nor found`);
+    }
+    return existing;
   }
 }

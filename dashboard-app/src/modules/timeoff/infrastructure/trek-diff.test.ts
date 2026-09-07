@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { TrekEntry } from "@/lib/clients/trek";
 import type { TimeoffEvent } from "../application/ports";
-import { planPull, planPush, storedFraction, trekEvents, trekFraction, trekKindOf, typeCodeOf } from "./trek-diff";
+import {
+  conversionRemovals,
+  localOnlyUpserts,
+  planPull,
+  planPush,
+  storedFraction,
+  trekEvents,
+  trekFraction,
+  trekKindOf,
+  typeCodeOf,
+} from "./trek-diff";
 
 const EPOCH = new Date("2026-01-01T00:00:00Z");
 
@@ -181,6 +191,28 @@ describe("R7-2 — the Trek code mapping", () => {
   it("still removes a day Trek holds, whatever the local type says now", () => {
     const plan = planPush([local({ date: "2026-03-02", typeCode: "permits", pendingOp: "delete" })]);
     expect(plan.removals).toEqual(["2026-03-02"]);
+  });
+
+  it("pushes a REMOVAL for a Trek day converted to permits, not nothing", () => {
+    // Without this the entry survives upstream, `trekEvents` hides the local
+    // day from the pull, and Trek's leftover entry reads as new — writing the
+    // conversion straight back to `vacation` on the next pass.
+    const plan = planPush([
+      local({ date: "2026-03-02", typeCode: "permits", pendingOp: "upsert", trekEntryId: 4242 }),
+    ]);
+    expect(plan.desired).toEqual([]);
+    expect(plan.removals).toEqual(["2026-03-02"]);
+  });
+
+  it("separates a converted day from one Trek has never held", () => {
+    const rows = [
+      local({ date: "2026-03-02", typeCode: "permits", pendingOp: "upsert", trekEntryId: 4242 }),
+      local({ date: "2026-03-03", typeCode: "permits", pendingOp: "upsert", trekEntryId: null }),
+      local({ date: "2026-03-04", pendingOp: "upsert" }),
+      local({ date: "2026-03-05", typeCode: "permits", pendingOp: "none", trekEntryId: null }),
+    ];
+    expect(conversionRemovals(rows)).toEqual(["2026-03-02"]);
+    expect(localOnlyUpserts(rows)).toEqual(["2026-03-03"]);
   });
 
   it("keeps permits out of the set a pull is diffed against, so Trek cannot delete it", () => {

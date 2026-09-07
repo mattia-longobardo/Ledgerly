@@ -54,16 +54,19 @@ function asOwner<T>(db: Db, fn: (deps: ReturnType<typeof timeoffDeps>, tx: Db) =
 }
 
 /** One applied payroll record, so the balance sink has something to hang a row on. */
+let sha = 0;
 async function aPayrollRecord(db: Db, periodEnd: string): Promise<string> {
+  sha += 1;
   return withUserContext(db, { userId: principal.userId }, async (tx) => {
     const [imported] = await tx.insert(payrollImports).values({
       userId: principal.userId,
       status: "applied",
       fileName: "Busta Paga.pdf",
       sizeBytes: 100,
-      sha256: "a".repeat(64),
+      // `payroll_imports_user_sha_uq`: a second seeded payslip needs its own digest.
+      sha256: String(sha).padStart(64, "0"),
       storageProvider: "local",
-      storageKey: "payroll/x.pdf",
+      storageKey: `payroll/${sha}.pdf`,
       retentionUntil: new Date("2036-01-01T00:00:00Z"),
     }).returning();
     const [record] = await tx.insert(payrollRecords).values({
@@ -107,6 +110,34 @@ describe("timeoff use cases against real Postgres", () => {
       const first = await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
       const second = await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
       expect(second.map((t) => t.id)).toEqual(first.map((t) => t.id));
+    });
+
+    it("survives two concurrent first touches of the same user", async () => {
+      // The real race: the hourly Trek sync seeds inside `store.withEvents`
+      // while a workspace load seeds in its own context. Check-then-insert
+      // without ON CONFLICT kills the loser on `timeoff_types_user_code_uq`
+      // and takes its whole transaction — an apply, or a sync pass — with it.
+      const db = await seed();
+      const [first, second] = await Promise.all([
+        asOwner(db, (deps) => ensureDefaultTypes(deps)(principal)),
+        asOwner(db, (deps) => ensureDefaultTypes(deps)(principal)),
+      ]);
+      expect(first.map((t) => t.code)).toEqual(["vacation", "permits", "comp"]);
+      expect(second.map((t) => t.id)).toEqual(first.map((t) => t.id));
+    });
+
+    it("returns the winning row when its own insert was a no-op", async () => {
+      const db = await seed();
+      await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
+      const again = await asOwner(db, (deps) => deps.types.create({
+        userId: principal.userId,
+        code: "vacation",
+        label: "Ferie (duplicate attempt)",
+        unit: "hours",
+        hoursPerDay: "8.00",
+      }));
+      // No throw, and the row that comes back is the one already there.
+      expect(again.label).toBe("Ferie");
     });
 
     it("refuses a principal without timeoff.read", async () => {
@@ -162,6 +193,51 @@ describe("timeoff use cases against real Postgres", () => {
       });
       // A code this user has no type for is skipped, never invented.
       expect(workspace.balances.find((b) => b.type.code === "comp")?.remainingHours).toBeNull();
+    });
+
+    it("takes used from the LATEST payslip, never the sum of the year's", async () => {
+      // The payslip's GOD. column is cumulative (see the comment in
+      // `get-workspace.ts`): July reported 4,00 hours taken and August 12,01,
+      // and the true year-to-date figure in August is 12,01 — not 16,01.
+      const db = await seed();
+      for (const [periodEnd, used, remaining] of [
+        ["2026-07-31", "4.000000", "96.00"],
+        ["2026-08-31", "12.010000", "88.00"],
+      ] as const) {
+        const recordId = await aPayrollRecord(db, periodEnd);
+        await withUserContext(db, { userId: principal.userId }, (tx) =>
+          payrollTimeoffBalanceSink(tx).writeForRecord({
+            userId: principal.userId,
+            payrollRecordId: recordId,
+            supersededRecordId: null,
+            asOf: periodEnd,
+            rows: [
+              { timeoffCode: "vacation", kind: "balance", quantity: remaining, unit: "hours" },
+              { timeoffCode: "vacation", kind: "used", quantity: used, unit: "hours" },
+            ],
+          }),
+        );
+      }
+
+      const workspace = await asOwner(db, (deps) =>
+        getWorkspace(deps)(principal, { year: 2026, trekConnected: false, cachedStats: null }));
+      const vacation = workspace.balances.find((b) => b.type.code === "vacation")!;
+      expect(vacation).toMatchObject({
+        asOf: "2026-08-31",
+        remainingHours: "88.00",
+        usedYtdHours: "12.01",
+      });
+
+      // Both rows are still there — the view picks one, it does not delete the
+      // other, and `listForYear` is what a rebuilt variance table will read.
+      const year = await asOwner(db, (deps) =>
+        deps.balances.listForYear(principal.userId, 2026));
+      expect(year.map((row) => [row.asOf, row.used])).toEqual([
+        ["2026-07-31", "4.00"],
+        ["2026-08-31", "12.01"],
+      ]);
+      expect(await asOwner(db, (deps) => deps.balances.listForYear(principal.userId, 2025)))
+        .toEqual([]);
     });
   });
 
@@ -261,6 +337,28 @@ describe("timeoff use cases against real Postgres", () => {
       const links = await withUserContext(db, { userId: principal.userId }, (tx) =>
         tx.select().from(providerLinks));
       expect(links).toEqual([]);
+    });
+
+    it("unlinkProvider drops the Trek link but keeps the day, so a conversion sticks", async () => {
+      // What `syncPass` does once Trek confirms the removal for a day the owner
+      // retyped to `permits`: the day is still theirs, it is simply no longer
+      // Trek's — and the stale link would otherwise make the next
+      // `removeEvent` stage a delete for an entry that is already gone.
+      const db = await seed();
+      await aTrekDay(db, MONDAY, 4242);
+      const dropped = await asOwner(db, (deps) =>
+        deps.events.unlinkProvider(principal.userId, [MONDAY]));
+      expect(dropped).toBe(1);
+
+      const after = await asOwner(db, (deps) => deps.events.at(principal.userId, MONDAY));
+      expect(after).toMatchObject({ date: MONDAY, trekEntryId: null });
+      const links = await withUserContext(db, { userId: principal.userId }, (tx) =>
+        tx.select().from(providerLinks));
+      expect(links).toEqual([]);
+
+      // And now a removal is a hard delete, not a second pointless push.
+      await asOwner(db, (deps) => removeEvent(deps)(principal, MONDAY));
+      expect(await asOwner(db, (deps) => deps.events.at(principal.userId, MONDAY))).toBeNull();
     });
 
     it("reports a day that is not there rather than pretending it removed one", async () => {

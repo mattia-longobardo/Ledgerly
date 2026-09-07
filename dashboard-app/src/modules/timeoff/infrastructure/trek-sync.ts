@@ -36,7 +36,15 @@ import { setCachedTrekStats } from "@/lib/repo/trek-state";
 import { seedDefaultTypes } from "../application/ensure-default-types";
 import type { TimeoffStore } from "../application/ports";
 import { hoursPerDayString } from "./deps";
-import { planPull, planPush, storedFraction, trekEvents, trekKindOf, typeCodeOf } from "./trek-diff";
+import {
+  conversionRemovals,
+  localOnlyUpserts,
+  planPull,
+  planPush,
+  storedFraction,
+  trekEvents,
+  typeCodeOf,
+} from "./trek-diff";
 
 /**
  * Same key the `trek_sync` job runs under — the cron pass and a dashboard edit
@@ -178,12 +186,14 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
     // never needed one. Cleared together below so a pushed edit does not stay
     // flagged and get re-sent on every later pass.
     //
-    // A staged `permits` upsert starts here rather than at Trek: R7-2 keeps it
-    // out of the push, so nothing upstream will ever settle it, and leaving it
-    // flagged would mean a `*` in the UI forever.
-    const settled: string[] = pending
-      .filter((row) => row.pendingOp === "upsert" && trekKindOf(row.typeCode) === null)
-      .map((row) => row.date);
+    // A staged upsert for a type Trek cannot hold AND has never had an entry
+    // for starts here rather than at Trek: R7-2 keeps it out of the push, so
+    // nothing upstream will ever settle it, and leaving it flagged would mean
+    // a `*` in the UI forever. A CONVERTED day is the opposite case — Trek
+    // still has its entry, `planPush` sends a removal for it, and it settles
+    // through `applied` like any other push.
+    const settled: string[] = localOnlyUpserts(pending);
+    const conversions = new Set(conversionRemovals(pending));
 
     if (pending.length > 0) {
       // ── 2. PUSH (network — no transaction open) ────────────────────────────
@@ -217,9 +227,16 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
     }
 
     // ── 3. SETTLE (database) ─────────────────────────────────────────────────
+    // A settled conversion loses its `provider_links` row: Trek no longer has
+    // an entry for that date, so a link claiming otherwise would make
+    // `removeEvent` stage a delete for something already gone.
+    const settledConversions = settled.filter((date) => conversions.has(date));
     if (settled.length > 0 || result.weekendBlocked.length > 0) {
       await store.withEvents(userId, async (events) => {
         if (settled.length > 0) await events.clearPending(userId, settled, now);
+        if (settledConversions.length > 0) {
+          await events.unlinkProvider(userId, settledConversions);
+        }
         if (result.weekendBlocked.length > 0) {
           await events.deleteDates(userId, result.weekendBlocked);
         }

@@ -79,6 +79,15 @@ export interface EventsRepository {
   upsertFromProvider(userId: string, rows: readonly ProviderEventWrite[], now: Date): Promise<number>;
   /** Hard delete, links included. */
   deleteDates(userId: string, dates: readonly string[]): Promise<number>;
+  /**
+   * Drops the `provider_links` row for these dates, keeping the events.
+   *
+   * The one case that needs it: a day Trek owned, retyped to a type Trek
+   * cannot hold, whose entry the sync has just removed upstream. The day stays
+   * — it is the owner's — but it is no longer Trek's, and a stale link would
+   * make `removeEvent` stage a delete for an entry that is already gone.
+   */
+  unlinkProvider(userId: string, dates: readonly string[]): Promise<number>;
   /** `pendingOp 'upsert'`; a row that came from Trek keeps `origin 'trek'`. */
   stageUpsert(
     userId: string,
