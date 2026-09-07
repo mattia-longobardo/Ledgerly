@@ -154,7 +154,7 @@ function Section({
 function Gallery() {
   const [range, setRange] = useState<RangeKey>("12M");
   const [custom, setCustom] = useState<MonthRange | null>(null);
-  const [view, setView] = useState<"overview" | "funds" | "vacation">(
+  const [view, setView] = useState<"overview" | "funds" | "budgets">(
     "overview",
   );
   const [months, setMonths] = useState<"3" | "6" | "12">("6");
@@ -173,7 +173,7 @@ function Gallery() {
           value={amount}
           onChange={setAmount}
           max={2400}
-          hint="Available in the vacation fund: 2.400,00 €"
+          hint="Available in the Holidays budget: 2.400,00 €"
         />
       ),
     },
@@ -231,7 +231,7 @@ function Gallery() {
             options={[
               { value: "overview", label: "Overview" },
               { value: "funds", label: "Funds" },
-              { value: "vacation", label: "Vacation fund" },
+              { value: "budgets", label: "Budgets" },
             ]}
             value={view}
             onChange={setView}

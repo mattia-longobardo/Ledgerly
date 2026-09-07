@@ -24,6 +24,23 @@ const patchSchema = z.object({
   status: z.enum(BUDGET_STATUSES).optional(),
 }).strict();
 
+/**
+ * The patch validates `startDate` and `endDate` independently, so a patch
+ * touching only one of them can still invert the pair against the stored
+ * value — `PATCH { endDate: "2020-01-01" }` on a 2026 budget — and that
+ * reached the database as a `budgets_dates_ck` violation, surfacing as a 500
+ * where every other bad input is a 422. This runs the *resolved* pair (patch
+ * value, else stored value) through the same cross-field `.superRefine` shape
+ * `add-allocation` uses for `effectiveFrom`/`effectiveTo`.
+ */
+const resolvedDatesSchema = z
+  .object({ startDate: dateSchema, endDate: dateSchema.nullable() })
+  .superRefine((value, ctx) => {
+    if (value.endDate !== null && value.endDate < value.startDate) {
+      ctx.addIssue({ code: "custom", message: "Invalid: endDate can't be before startDate." });
+    }
+  });
+
 export function updateBudget(deps: UseCaseDeps) {
   return async (principal: Principal, id: string, expectedVersion: number, patch: BudgetPatch): Promise<Budget> => {
     assertPermission(principal, "budgets.write");
@@ -31,6 +48,10 @@ export function updateBudget(deps: UseCaseDeps) {
     const value = parseInput(patchSchema, patch);
     const before = await deps.budgets.get(principal.userId, id);
     if (!before) throw new NotFoundError();
+    parseInput(resolvedDatesSchema, {
+      startDate: value.startDate ?? before.startDate,
+      endDate: value.endDate === undefined ? before.endDate : value.endDate,
+    });
     const effectivePatch: BudgetPatch = { ...value };
     if (value.status === "archived") effectivePatch.archivedAt = deps.clock.now();
     if (value.status === "active") effectivePatch.archivedAt = null;

@@ -1,6 +1,17 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDb, resetDb, testDb } from "@/test/db";
-import { accounts, budgetAllocations, budgetUsages, budgets, organizations, transactions, users } from "@/lib/db/schema";
+import {
+  accounts,
+  budgetAllocations,
+  budgetAmountVersions,
+  budgetEvents,
+  budgetScopes,
+  budgetUsages,
+  budgets,
+  organizations,
+  transactions,
+  users,
+} from "@/lib/db/schema";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
 
 async function fixture() {
@@ -57,6 +68,53 @@ describe("budgets RLS and constraints", () => {
     expect(await withSystemContext(db, (tx) => tx.select().from(budgetAllocations))).toHaveLength(1);
     await rejectsWith(withUserContext(db, { userId: b.id }, (tx) =>
       tx.insert(budgetAllocations).values(allocation)), "row-level security");
+  });
+
+  /**
+   * The other three children of `budgets`. Each carries no `user_id` of its
+   * own and is isolated purely by its table's `EXISTS`-to-parent policy, so
+   * every one of them needs the same four-way proof the allocations case
+   * gives: the owner sees the row, another user does not, no context sees
+   * nothing, system sees it, and another user cannot insert against a budget
+   * they do not own.
+   */
+  it("isolates amount versions through their parent and rejects another owner's inserts", async () => {
+    const { db, a, b, budget } = await fixture();
+    const version = { budgetId: budget.id, initialAmount: "100.00", effectiveFrom: "2026-01-01" };
+    const [row] = await withUserContext(db, { userId: a.id }, (tx) =>
+      tx.insert(budgetAmountVersions).values(version).returning());
+    expect(await withUserContext(db, { userId: a.id }, (tx) => tx.select().from(budgetAmountVersions))).toEqual([row]);
+    expect(await withUserContext(db, { userId: b.id }, (tx) => tx.select().from(budgetAmountVersions))).toEqual([]);
+    expect(await db.select().from(budgetAmountVersions)).toEqual([]);
+    expect(await withSystemContext(db, (tx) => tx.select().from(budgetAmountVersions))).toHaveLength(1);
+    await rejectsWith(withUserContext(db, { userId: b.id }, (tx) =>
+      tx.insert(budgetAmountVersions).values(version)), "row-level security");
+  });
+
+  it("isolates scopes through their parent and rejects another owner's inserts", async () => {
+    const { db, a, b, budget } = await fixture();
+    const scope = { budgetId: budget.id, kind: "category", refId: crypto.randomUUID() };
+    const [row] = await withUserContext(db, { userId: a.id }, (tx) =>
+      tx.insert(budgetScopes).values(scope).returning());
+    expect(await withUserContext(db, { userId: a.id }, (tx) => tx.select().from(budgetScopes))).toEqual([row]);
+    expect(await withUserContext(db, { userId: b.id }, (tx) => tx.select().from(budgetScopes))).toEqual([]);
+    expect(await db.select().from(budgetScopes)).toEqual([]);
+    expect(await withSystemContext(db, (tx) => tx.select().from(budgetScopes))).toHaveLength(1);
+    await rejectsWith(withUserContext(db, { userId: b.id }, (tx) =>
+      tx.insert(budgetScopes).values({ ...scope, refId: crypto.randomUUID() })), "row-level security");
+  });
+
+  it("isolates events through their parent and rejects another owner's inserts", async () => {
+    const { db, a, b, budget } = await fixture();
+    const event = { budgetId: budget.id, kind: "budget_created", detail: {}, actorUserId: a.id };
+    const [row] = await withUserContext(db, { userId: a.id }, (tx) =>
+      tx.insert(budgetEvents).values(event).returning());
+    expect(await withUserContext(db, { userId: a.id }, (tx) => tx.select().from(budgetEvents))).toEqual([row]);
+    expect(await withUserContext(db, { userId: b.id }, (tx) => tx.select().from(budgetEvents))).toEqual([]);
+    expect(await db.select().from(budgetEvents)).toEqual([]);
+    expect(await withSystemContext(db, (tx) => tx.select().from(budgetEvents))).toHaveLength(1);
+    await rejectsWith(withUserContext(db, { userId: b.id }, (tx) =>
+      tx.insert(budgetEvents).values({ ...event, actorUserId: b.id })), "row-level security");
   });
 
   it("rejects a second scope-matched usage for the same transaction", async () => {

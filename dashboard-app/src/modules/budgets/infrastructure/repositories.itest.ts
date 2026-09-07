@@ -196,6 +196,32 @@ describe.each(BACKENDS)("$backend scopes repository contract", ({ backend }) => 
       expect(listed.every((row) => row.budgetId === budget.id)).toBe(true);
     });
   });
+
+  it("collapses a repeated {kind, refId} to one row, first occurrence winning", async () => {
+    await runWithRepositories(backend, async ({ budgets, scopes }, { userId }) => {
+      const budget = await budgets.create(newBudget(userId, "Groceries"));
+      const accountId = crypto.randomUUID();
+      const categoryId = crypto.randomUUID();
+      // `budget_scopes_uq` is unique on (budgetId, kind, refId), so without
+      // this the Drizzle repository raised a unique violation (a 500) while
+      // the memory one silently kept both — the two disagreed on the same
+      // input.
+      const replaced = await scopes.replace(budget.id, [
+        { kind: "account", refId: accountId },
+        { kind: "category", refId: categoryId },
+        { kind: "account", refId: accountId },
+      ]);
+      expect(replaced.map((row) => `${row.kind}:${row.refId}`)).toEqual([`account:${accountId}`, `category:${categoryId}`]);
+      expect(await scopes.listForBudget(budget.id)).toHaveLength(2);
+
+      // Same `refId` under a different kind is a different scope, not a repeat.
+      const distinct = await scopes.replace(budget.id, [
+        { kind: "account", refId: accountId },
+        { kind: "category", refId: accountId },
+      ]);
+      expect(distinct).toHaveLength(2);
+    });
+  });
 });
 
 describe.each(BACKENDS)("$backend usages repository contract", ({ backend }) => {

@@ -114,17 +114,26 @@ Required (`428 validation_failed` if missing — a `428`, not `422`, on the
 - `POST /budgets/{id}/usages`
 
 Send any client-generated unique string (a UUID is fine). The server hashes
-`METHOD path\nbody` and stores it against `(principalId, key)` for 24 hours:
+`METHOD path\nbody` and stores it against `(principalId, "<namespace>:<key>")`
+for 24 hours, where `<namespace>` is the owning module (`accounts`, `funds`,
+`budgets`). The namespace is internal: the `Idempotency-Key` you send is never
+itself prefixed, it only scopes how the row is addressed, so the same literal
+key value used against two different modules is two independent keys.
 
 - Same key, same request → the original response is replayed verbatim
   (including the original status code), no re-execution.
 - Same key, different request → `422 idempotency_key_reused`.
-- New key → executes normally and gets cached.
-- A `5xx` is **not** cached: a retry with the same key runs the handler again
-  rather than replaying a transient failure for 24 hours.
+- New key → executes normally, and is cached only if it succeeds.
+- A failure is **not** cached, `4xx` or `5xx` alike: the write and its
+  idempotency row commit in one transaction, so an error rolls both back and a
+  retry with the same key runs the handler again rather than replaying the
+  failure for 24 hours.
 
 This makes retried creates safe under a flaky connection: retry with the same
-key and you get the account you already created back, not a duplicate.
+key and you get the account you already created back, not a duplicate. The
+write, its audit and event rows, and the idempotency row all commit together,
+serialized per `(namespace, principalId, key)`, so two concurrent retries
+carrying one key cannot both execute.
 
 ## Optimistic concurrency (`If-Match` / `version`)
 

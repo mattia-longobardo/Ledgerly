@@ -28,11 +28,21 @@ export class DrizzleScopesRepository implements ScopesRepository {
 
   async replace(budgetId: string, scopes: readonly ScopeLike[]): Promise<Scope[]> {
     await this.db.delete(budgetScopes).where(eq(budgetScopes.budgetId, budgetId));
-    if (scopes.length === 0) return [];
-    const rows = await this.db
-      .insert(budgetScopes)
-      .values(scopes.map((scope) => ({ budgetId, kind: scope.kind, refId: scope.refId })))
-      .returning();
+    // `budget_scopes_uq` is unique on (budgetId, kind, refId): a repeated pair
+    // is the same scope asked for twice, so it is dropped rather than sent to
+    // the index as a violation. First occurrence wins, matching
+    // `MemoryScopesRepository`.
+    const seen = new Set<string>();
+    const values = scopes
+      .filter((scope) => {
+        const key = `${scope.kind}:${scope.refId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((scope) => ({ budgetId, kind: scope.kind, refId: scope.refId }));
+    if (values.length === 0) return [];
+    const rows = await this.db.insert(budgetScopes).values(values).returning();
     return rows.map(toScope);
   }
 }

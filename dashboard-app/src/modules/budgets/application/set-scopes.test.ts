@@ -6,6 +6,18 @@ import { setScopes } from "./set-scopes";
 import { budgetHarness, seedBudget } from "./test-support";
 
 describe("setScopes", () => {
+  it("collapses a repeated {kind, refId} before it reaches the repository", async () => {
+    const h = budgetHarness();
+    const budget = await seedBudget(h.deps);
+    const scopes = await setScopes(h.deps)(testPrincipal(), budget.id, [
+      { kind: "category", refId: "cat-1" },
+      { kind: "label", refId: "label-1" },
+      { kind: "category", refId: "cat-1" },
+    ]);
+    expect(scopes.map((s) => `${s.kind}:${s.refId}`)).toEqual(["category:cat-1", "label:label-1"]);
+    expect(await h.deps.scopes.listForBudget(budget.id)).toHaveLength(2);
+  });
+
   it("denies viewers", async () => {
     const h = budgetHarness();
     const budget = await seedBudget(h.deps);
