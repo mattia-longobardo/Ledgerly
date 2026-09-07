@@ -55,6 +55,25 @@ describe("endAllocation", () => {
     ).rejects.toThrow(VersionMismatchError);
   });
 
+  it("rejects a one-off allocation: `effectiveTo` would change no figure, so reporting success would be a lie", async () => {
+    const h = budgetHarness();
+    const budget = await seedBudget(h.deps);
+    const allocation = await addAllocation(h.deps)(testPrincipal(), budget.id, {
+      sourceKind: "none",
+      amount: "50.00",
+      recurrence: "once",
+      effectiveFrom: "2026-01-01",
+    });
+    await expect(
+      endAllocation(h.deps)(testPrincipal(), budget.id, allocation.id, allocation.version, "2026-03-31"),
+    ).rejects.toThrow(InvalidInputError);
+
+    // Nothing was written: no effectiveTo, no audit row, no event.
+    expect((await h.deps.allocations.get(budget.id, allocation.id))?.effectiveTo).toBeNull();
+    expect(h.audits.map((a) => a.action)).toEqual(["budgets.allocation_added"]);
+    expect((await h.deps.events.listForBudget(budget.id)).map((e) => e.kind)).toEqual(["allocation_added"]);
+  });
+
   it("sets effectiveTo and audits and logs the event", async () => {
     const h = budgetHarness();
     const budget = await seedBudget(h.deps);
