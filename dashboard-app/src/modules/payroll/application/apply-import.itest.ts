@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { PayslipExtraction } from "@/lib/contracts";
 import {
@@ -8,6 +9,8 @@ import {
   organizations,
   payrollMappingRules,
   payrollRecords,
+  timeoffBalances,
+  timeoffTypes,
   users,
 } from "@/lib/db/schema";
 import { permissionsForRoles } from "@/platform/auth/permissions";
@@ -153,6 +156,59 @@ describe("applyImport against real Postgres", () => {
     const rows = await withUserContext(db, { userId: principal.userId }, (tx) => tx.select().from(payrollRecords));
     expect(rows.length).toBe(2);
     expect(rows.filter((r) => r.supersededAt === null).map((r) => r.id)).toEqual([second.record.id]);
+  });
+
+  it("writes one timeoff_balances row per stated code, replacing it on a re-apply (R7-4)", async () => {
+    const { db, principal } = await seed();
+    const withLeave: PayslipExtraction = {
+      ...extraction,
+      fields: {
+        ...extraction.fields,
+        ferieBalance: { value: 88.25, confidence: "medium", rules: 88.25, llm: null },
+        ferieTakenHours: { value: 16, confidence: "medium", rules: 16, llm: null },
+      },
+    };
+    const imp = await aVerifiedImport(db, principal, withLeave);
+    const applied = await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, imp.id),
+    );
+
+    expect(applied.timeoffBalances).toEqual({ written: 1, skipped: [] });
+    const read = () => withUserContext(db, { userId: principal.userId }, (tx) =>
+      tx
+        .select({
+          code: timeoffTypes.code,
+          asOf: timeoffBalances.asOf,
+          remaining: timeoffBalances.remaining,
+          used: timeoffBalances.used,
+          unit: timeoffBalances.unit,
+          source: timeoffBalances.source,
+          payrollRecordId: timeoffBalances.payrollRecordId,
+        })
+        .from(timeoffBalances)
+        .innerJoin(timeoffTypes, eq(timeoffTypes.id, timeoffBalances.typeId)),
+    );
+    expect(await read()).toEqual([{
+      code: "vacation",
+      asOf: "2026-08-31",
+      remaining: "88.25",
+      used: "16.00",
+      unit: "hours",
+      source: "payroll",
+      payrollRecordId: applied.record.id,
+    }]);
+
+    // The same import re-applied without the leave figures must not leave the
+    // old row behind: the sink replaces the record's rows wholesale.
+    await withUserContext(db, { userId: principal.userId }, (tx) =>
+      payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner })
+        .imports.patch(principal.userId, imp.id, { status: "verified", extraction }),
+    );
+    const reapplied = await withUserContext(db, { userId: principal.userId }, (tx) =>
+      applyImport(payrollDeps(tx, { documents: NOOP_STORE, scanner: noopScanner }))(principal, imp.id),
+    );
+    expect(reapplied.timeoffBalances).toEqual({ written: 0, skipped: [] });
+    expect(await read()).toEqual([]);
   });
 
   it("writes payroll contributions and one posting fee for the mapped fund", async () => {

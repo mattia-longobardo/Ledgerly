@@ -23,6 +23,7 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
     funds: new MemoryFundContributionSink(),
+    timeoff: { writeForRecord: async () => ({ written: 0, skipped: [] }) },
     documents: {
       provider: "local",
       put: async () => {},
