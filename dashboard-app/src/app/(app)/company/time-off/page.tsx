@@ -1,97 +1,329 @@
-import { PageGrid, Panel } from "@/components/layout/PageGrid";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { StaleBadge } from "@/components/ui/StaleBadge";
-import { StatGrid, StatTile } from "@/components/ui/StatTile";
-import { leaveTakenYtd } from "@/lib/calc/payroll";
-import { formatDays, formatNumber, hoursToDays } from "@/lib/format";
-import { verifiedPayslips } from "@/lib/repo/payslips";
-import { loadImports } from "@/modules/payroll/ui/load-payroll";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import {
+  removeTimeoffEventAction,
+  setTimeoffEventAction,
+  syncTimeoffNowAction,
+} from "@/app/actions/timeoff";
+import type { TimeoffWorkspace, WorkspaceDay } from "@/modules/timeoff/application/get-workspace";
+import { loadWorkspace } from "@/modules/timeoff/ui/load-workspace";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
-import { realProbes } from "@/platform/capabilities/probes";
-import { resolveCapabilities } from "@/platform/capabilities/resolve";
-import { loadFerie } from "../../_lib/vacation";
-import { LeaveByMonth } from "../_components/LeaveByMonth";
-import { LeaveCalendar } from "../_components/LeaveCalendar";
-import { loadLeaveCalendar } from "../_lib/leave";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Time Off" };
 
 /**
- * Ruling R4-11: the leave half of the retired `/work` page, relocated to the
- * route spec §4 gives it. Not the Phase 7 workspace — no in-place detail panel,
- * no balances by type, no URL-driven day selection. Those arrive with
- * `timeoff_types`/`timeoff_balances`/`timeoff_events`.
+ * The bare Time Off page (reduced Phase 7).
  *
- * `loadFerie` and `verifiedPayslips` still read the legacy `payslips` table,
- * unchanged: Phase 7 replaces that source, and moving the read in this phase
- * would mean deriving balances from `payroll_components` with no
- * `timeoff_balances` table to put them in.
+ * Deliberately unstyled and component-free: native `<form>` elements bound to
+ * server actions, plain `<table>`s, no client component at all. The redesign
+ * replaces this file wholesale — the point of it is that the owner can book,
+ * change and remove a day by hand before that lands, not that it looks like
+ * anything.
+ *
+ * A missing balance renders as "—", never as `0.00`: nothing has written a
+ * figure for that type, and inventing a zero would report a balance the
+ * payslips never stated.
  */
-export default async function TimeOffPage() {
-  const principal = await requirePrincipalOrRedirect();
-  const caps = await resolveCapabilities(principal, realProbes);
-  const year = new Date().getFullYear();
-  // Spec §4 makes this page reachable with **Trek alone** — payroll off, no
-  // document store connected. `loadImports` goes through `runForPrincipal`,
-  // which throws `DocumentStoreUnavailableError` when there is no store, so it
-  // is asked for only when the payroll feature is actually on. Without this
-  // guard a Trek-only user gets a stack trace instead of their calendar.
-  const [verified, ferie, calendar, imports] = await Promise.all([
-    verifiedPayslips(),
-    loadFerie(year),
-    loadLeaveCalendar(year),
-    caps.features.payroll ? loadImports() : Promise.resolve([]),
-  ]);
 
-  const remaining = ferie.remaining;
-  // Days ACTUALLY used, straight off the `ferie_taken` / `rol_taken` columns of
-  // the verified payslips — payroll's own number, never a figure typed here.
-  // The leave calendar below carries the other half, what was PLANNED, and the
-  // two are reconciled per month rather than merged.
-  const taken = leaveTakenYtd(verified, year, ferie.hoursPerDay);
-  const pending = imports.filter((i) => i.status === "needs_review" || i.status === "needs_ocr");
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+interface PageSearchParams {
+  year?: string;
+  day?: string;
+  error?: string;
+}
+
+function parseYear(raw: string | undefined, fallback: number): number {
+  const year = Number(raw);
+  return Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : fallback;
+}
+
+function parseDay(raw: string | undefined): string | null {
+  return raw !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+}
+
+function isoOf(year: number, monthIndex: number, day: number): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Monday-first, computed in UTC so it agrees with the ISO date strings. */
+function monthMeta(year: number, monthIndex: number): { length: number; offset: number } {
+  return {
+    length: new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate(),
+    offset: (new Date(Date.UTC(year, monthIndex, 1)).getUTCDay() + 6) % 7,
+  };
+}
+
+/** The marker a booked day carries: its type code, `½` for a half day, `*` while a sync is owed. */
+function markerFor(day: WorkspaceDay): string {
+  return `${day.typeCode}${day.fraction === "0.50" ? " ½" : ""}${day.pendingOp !== "none" ? " *" : ""}`;
+}
+
+/** Where a failed action sends the owner back to, with the message in the URL. */
+function backTo(formData: FormData, error: string): string {
+  const year = String(formData.get("year") ?? "");
+  const day = String(formData.get("date") ?? "");
+  const params = new URLSearchParams();
+  if (year !== "") params.set("year", year);
+  if (day !== "") params.set("day", day);
+  params.set("error", error);
+  return `/company/time-off?${params.toString()}`;
+}
+
+export default async function TimeOffPage({
+  searchParams,
+}: {
+  searchParams: Promise<PageSearchParams>;
+}) {
+  await requirePrincipalOrRedirect();
+  const params = await searchParams;
+  const year = parseYear(params.year, new Date().getFullYear());
+  const selectedDate = parseDay(params.day);
+  const workspace = await loadWorkspace({ year, selectedDate });
+
+  /**
+   * Thin wrappers around the exported actions: a `<form action>` handler must
+   * resolve to `void`, and a failure has to reach the owner rather than being
+   * swallowed — so it comes back as `?error=` on this same page.
+   */
+  async function saveDay(formData: FormData): Promise<void> {
+    "use server";
+    const result = await setTimeoffEventAction(formData);
+    if (!result.ok) redirect(backTo(formData, result.error));
+  }
+
+  async function removeDay(formData: FormData): Promise<void> {
+    "use server";
+    const result = await removeTimeoffEventAction(formData);
+    if (!result.ok) redirect(backTo(formData, result.error));
+  }
+
+  async function syncNow(formData: FormData): Promise<void> {
+    "use server";
+    const result = await syncTimeoffNowAction(formData);
+    if (!result.ok) redirect(backTo(formData, result.error));
+  }
+
+  return (
+    <main>
+      <h1>Time Off {workspace.year}</h1>
+
+      <p>
+        <Link href={`/company/time-off?year=${workspace.year - 1}`}>← {workspace.year - 1}</Link>{" "}
+        <Link href={`/company/time-off?year=${workspace.year + 1}`}>{workspace.year + 1} →</Link>
+      </p>
+
+      {params.error !== undefined && <p role="alert">{params.error}</p>}
+
+      <Balances workspace={workspace} />
+
+      <h2>Trek</h2>
+      {workspace.trekConnected ? (
+        <form action={syncNow}>
+          <input type="hidden" name="year" value={workspace.year} />
+          <button type="submit">Sync now</button>
+        </form>
+      ) : (
+        <p>
+          Trek is not connected. <Link href="/settings/integrations">Connect it</Link> to sync days
+          both ways.
+        </p>
+      )}
+      <p>
+        Planned so far this year: {workspace.plannedDaysYtd} days · waiting for the sync:{" "}
+        {workspace.pendingCount}
+        {workspace.cachedStats !== null && (
+          <>
+            {" "}
+            · Trek says {workspace.cachedStats.stats.remaining} days remaining (as of{" "}
+            {workspace.cachedStats.fetchedAt.slice(0, 10)})
+          </>
+        )}
+      </p>
+
+      {workspace.selected !== null && (
+        <DayForm workspace={workspace} save={saveDay} remove={removeDay} />
+      )}
+
+      <h2>Upcoming</h2>
+      {workspace.upcoming.length === 0 ? (
+        <p>Nothing booked ahead.</p>
+      ) : (
+        <ul>
+          {workspace.upcoming.map((event) => (
+            <li key={event.id}>
+              <Link href={`/company/time-off?year=${workspace.year}&day=${event.date}`}>
+                {event.date}
+              </Link>{" "}
+              — {event.typeCode}
+              {event.fraction === "0.50" ? " ½" : ""}
+              {event.pendingOp !== "none" ? " *" : ""}
+              {event.note !== null ? ` — ${event.note}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2>Calendar</h2>
+      <p>½ = half day · * = waiting for the Trek sync</p>
+      {MONTHS.map((name, monthIndex) => (
+        <MonthTable key={name} workspace={workspace} monthIndex={monthIndex} name={name} />
+      ))}
+    </main>
+  );
+}
+
+/** One line per type. "—" whenever a figure is absent — never `0.00`. */
+function Balances({ workspace }: { workspace: TimeoffWorkspace }) {
+  return (
+    <>
+      <h2>Balances</h2>
+      <ul>
+        {workspace.balances.map((balance) => (
+          <li key={balance.type.id}>
+            {balance.type.label} —{" "}
+            {balance.remainingDays === null || balance.remainingHours === null || balance.asOf === null
+              ? "remaining: —"
+              : `remaining: ${balance.remainingDays} days (${balance.remainingHours} h) as of ${balance.asOf}`}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function MonthTable({
+  workspace,
+  monthIndex,
+  name,
+}: {
+  workspace: TimeoffWorkspace;
+  monthIndex: number;
+  name: string;
+}) {
+  const { length, offset } = monthMeta(workspace.year, monthIndex);
+  const cells: (number | null)[] = [
+    ...Array.from({ length: offset }, () => null),
+    ...Array.from({ length }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+
+  return (
+    <table>
+      <caption>
+        {name} {workspace.year}
+      </caption>
+      <thead>
+        <tr>
+          {WEEKDAYS.map((weekday) => (
+            <th key={weekday} scope="col">
+              {weekday}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {weeks.map((week, w) => (
+          <tr key={w}>
+            {week.map((day, d) => {
+              if (day === null) return <td key={d} />;
+              const date = isoOf(workspace.year, monthIndex, day);
+              const booked = workspace.byDate[date];
+              return (
+                <td key={d}>
+                  <Link href={`/company/time-off?year=${workspace.year}&day=${date}`}>{day}</Link>
+                  {booked !== undefined && ` ${markerFor(booked)}`}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function DayForm({
+  workspace,
+  save,
+  remove,
+}: {
+  workspace: TimeoffWorkspace;
+  save: (formData: FormData) => Promise<void>;
+  remove: (formData: FormData) => Promise<void>;
+}) {
+  const selected = workspace.selected!;
+  const event = selected.event;
 
   return (
     <>
-      <PageHeader title="Time Off" eyebrow={`${year}`} />
-      <PageGrid className="pt-5">
-        <Panel span={12} ariaLabel="Leave at a glance">
-          <StatGrid columns={2}>
-            <StatTile
-              label={`Days taken ${year}`}
-              value={formatDays(taken.totalDays)}
-              sub={<span className="num">{`Ferie ${formatDays(taken.ferieDays)} · ROL ${formatDays(taken.rolDays)}`}</span>}
-            />
-            <StatTile
-              emphasis="primary"
-              label="Days remaining"
-              value={remaining.combinedDays === null ? "-" : formatDays(remaining.combinedDays)}
-              sub={
-                <span className="num">
-                  {`Ferie ${formatDays(hoursToDays(remaining.ferieHours, ferie.hoursPerDay))} · ROL ${formatDays(hoursToDays(remaining.rolHours, ferie.hoursPerDay))}`}
-                </span>
-              }
-            />
-          </StatGrid>
-          <p className="num pt-2 text-caption text-fg-muted">
-            Residuals from the latest verified payslip
-            {remaining.permessiHours !== null && ` · permessi ${formatNumber(remaining.permessiHours)} h (not in the headline)`}
-            {" · "}
-            <StaleBadge capturedAt={ferie.latest?.verifiedAt ?? null} stale={ferie.latest === null} />
-          </p>
-        </Panel>
+      <h2>{selected.date}</h2>
+      {event !== null && (
+        <p>
+          {selected.status} · {event.origin}
+          {event.pendingOp !== "none" ? ` · waiting for the sync (${event.pendingOp})` : ""}
+        </p>
+      )}
 
-        <LeaveCalendar view={calendar} />
+      <form action={save}>
+        <input type="hidden" name="date" value={selected.date} />
+        <input type="hidden" name="year" value={workspace.year} />
 
-        <LeaveByMonth
-          months={ferie.takenByMonth}
-          ytdDays={taken.totalDays}
-          year={year}
-          firstPendingId={pending[0]?.id ?? null}
-          pendingCount={pending.length}
-        />
-      </PageGrid>
+        <p>
+          <label htmlFor="typeCode">Type</label>{" "}
+          <select id="typeCode" name="typeCode" defaultValue={event?.typeCode ?? "vacation"}>
+            {workspace.types.map((type) => (
+              <option key={type.id} value={type.code}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </p>
+
+        <fieldset>
+          <legend>Length</legend>
+          <label>
+            <input
+              type="radio"
+              name="fraction"
+              value="1.00"
+              defaultChecked={event?.fraction !== "0.50"}
+            />{" "}
+            Full day
+          </label>{" "}
+          <label>
+            <input
+              type="radio"
+              name="fraction"
+              value="0.50"
+              defaultChecked={event?.fraction === "0.50"}
+            />{" "}
+            Half day
+          </label>
+        </fieldset>
+
+        <p>
+          <label htmlFor="note">Note</label>{" "}
+          <input id="note" name="note" type="text" maxLength={200} defaultValue={event?.note ?? ""} />
+        </p>
+
+        <button type="submit">Save</button>
+      </form>
+
+      {event !== null && (
+        <form action={remove}>
+          <input type="hidden" name="date" value={selected.date} />
+          <input type="hidden" name="year" value={workspace.year} />
+          <button type="submit">Remove</button>
+        </form>
+      )}
     </>
   );
 }

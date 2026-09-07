@@ -6,10 +6,9 @@ import { AccountList, AccountRow } from "@/components/ui/AccountRow";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
-import { ProgressRing } from "@/components/ui/ProgressRing";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { deltaOverRange } from "@/lib/calc/series";
-import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
+import { formatDateLine } from "@/lib/format";
 import type { Series } from "@/lib/contracts";
 import { loadOverview, type SourceFreshness } from "@/modules/accounts/ui/load-overview";
 import { activeBudgetsCard, loadBudgets } from "@/modules/budgets/ui/load-budgets";
@@ -18,11 +17,11 @@ import type { FundSummary } from "@/modules/funds/application/summary";
 import { CurrencyValue } from "@/modules/funds/ui/CurrencyValue";
 import { fundValueCurrency, loadFundsSummary, totalFundValue } from "@/modules/funds/ui/load-funds";
 import { loadImports, type ImportRow } from "@/modules/payroll/ui/load-payroll";
+import { loadTimeoffSummary, type TimeoffSummary } from "@/modules/timeoff/ui/load-workspace";
 import { AWAITING_STATUSES } from "@/modules/payroll/ui/queue";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
 import { resolveCapabilities } from "@/platform/capabilities/resolve";
-import { loadFerie } from "./_lib/vacation";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };
@@ -79,11 +78,11 @@ export default async function HomePage() {
     return card ? cardState(card, caps) : null;
   };
 
-  const [overview, funds, budgets, ferie, imports] = await Promise.all([
+  const [overview, funds, budgets, timeoff, imports] = await Promise.all([
     isVisible("total_balance") || isVisible("accounts_sync") ? loadOverview() : null,
     shouldLoad("funds") ? loadFundsSummary() : null,
     shouldLoad("budgets") ? loadBudgets() : null,
-    isVisible("leave") ? loadFerie() : null,
+    isVisible("leave") ? loadTimeoffSummary() : null,
     // Safe to call unconditionally behind `isVisible`: this card requires the
     // `payroll` feature, which `resolveCapabilities` only turns on once a
     // document store is actually connected — the same guarantee `/company`
@@ -107,7 +106,7 @@ export default async function HomePage() {
           (denial("leave") ? (
             <PermissionDeniedPanel span={4} title="Leave" />
           ) : (
-            <LeaveCard ferie={ferie!} />
+            <LeaveCard summary={timeoff!} />
           ))}
 
         {isVisible("accounts_sync") &&
@@ -233,10 +232,18 @@ function TotalBalanceCards({ overview }: { overview: Awaited<ReturnType<typeof l
   );
 }
 
-/** `leave`: unchanged from before this task — payslip-authoritative residuals, shown in days. */
-function LeaveCard({ ferie }: { ferie: Awaited<ReturnType<typeof loadFerie>> }) {
-  const remainingDays = ferie.remaining.combinedDays;
-  const ringMax = (remainingDays ?? 0) + ferie.takenDaysYtd;
+/**
+ * `leave`: the remaining balance across every time off type, from the same
+ * workspace read `/company/time-off` renders — so the card and the page can
+ * never disagree.
+ *
+ * "—" when no payslip has ever written a balance. There is no ring any more:
+ * a ring needs a total allowance to fill against, and this module records what
+ * a payslip states as REMAINING, not an entitlement — the old ring's maximum
+ * was remaining + taken, which is an invented denominator.
+ */
+function LeaveCard({ summary }: { summary: TimeoffSummary }) {
+  const next = summary.upcoming[0] ?? null;
 
   return (
     <Panel
@@ -251,27 +258,25 @@ function LeaveCard({ ferie }: { ferie: Awaited<ReturnType<typeof loadFerie>> }) 
           Go to Time Off
         </Link>
       }
-      bodyClassName="axis-rule flex items-center gap-4 pb-6"
     >
-      <ProgressRing
-        value={remainingDays ?? 0}
-        max={ringMax > 0 ? ringMax : 1}
-        label="Leave remaining this year"
-      >
-        <span className="text-caption">{formatNumber(remainingDays)}</span>
-      </ProgressRing>
-      <div className="min-w-0">
-        <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
-        <div className="num text-display-sm text-fg">
-          {remainingDays === null ? "-" : formatDays(remainingDays)}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="num text-caption text-fg-muted">
-            {formatNumber(ferie.takenDaysYtd)} d taken in {ferie.year}
-          </span>
-          <StaleBadge capturedAt={ferie.latest?.verifiedAt ?? null} stale={ferie.latest === null} />
-        </div>
+      <div className="num text-display-sm text-fg">
+        {summary.remainingDays === null ? "—" : `${summary.remainingDays} d`}
       </div>
+      <p className="mt-1 text-caption text-fg-muted">
+        {summary.remainingDays === null
+          ? "No payslip balance on file yet."
+          : "remaining across every type"}
+      </p>
+      {next !== null && (
+        <p className="num mt-2 text-body-sm text-fg-muted">
+          Next: {next.date} · {next.typeCode}
+        </p>
+      )}
+      {summary.pendingCount > 0 && (
+        <p className="mt-1 text-caption text-fg-muted">
+          {summary.pendingCount} day{summary.pendingCount === 1 ? "" : "s"} waiting for the Trek sync
+        </p>
+      )}
     </Panel>
   );
 }
