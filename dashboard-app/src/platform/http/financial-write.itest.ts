@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { idempotencyKeys } from "@/lib/db/schema";
@@ -188,5 +188,46 @@ describe("runFinancialWrite", () => {
     expect(bCalls).toBe(1);
     expect(replayA).toEqual(firstA);
     expect(replayB).toEqual(firstB);
+  });
+
+  /**
+   * The deploy-boundary shim in `runFinancialWrite`. `funds` was live before
+   * the `<namespace>:` prefix existed, so its rows in `idempotency_keys` carry
+   * the bare key. A client retrying a contribution across the deploy must
+   * replay that row, not re-execute the write and create a second
+   * contribution. DELETE THIS CASE with the shim, 24h after the cutover.
+   */
+  it("replays a pre-cutover funds row stored under the bare key instead of re-executing the write", async () => {
+    const db = await testDb();
+    const principalId = randomUUID();
+    const legacy = request("legacy-key");
+    // Exactly what the former `idempotency()` middleware persisted: bare key,
+    // and the same `${method} ${path}\n${body}` hash this helper computes.
+    const requestHash = createHash("sha256").update(`${legacy.method} ${legacy.path}\n${legacy.body}`).digest("hex");
+    await withUserContext(db, { userId: principalId }, (tx) =>
+      tx.insert(idempotencyKeys).values({
+        principalId,
+        key: "legacy-key",
+        requestHash,
+        statusCode: 201,
+        responseBody: { echoed: "pre-cutover" },
+        expiresAt: new Date(now().getTime() + 60_000),
+      }),
+    );
+
+    let calls = 0;
+    const write = async () => { calls += 1; return { echoed: "re-executed" }; };
+    const result = await runFinancialWrite({ db, now }, "funds", principalId, legacy, write);
+
+    expect(calls).toBe(0);
+    expect(result).toEqual({ body: { echoed: "pre-cutover" }, status: 201 });
+
+    // The shim is scoped to `funds` alone: no other namespace inherits a bare
+    // key it never wrote, so this stays a one-module, one-deploy exception.
+    let otherCalls = 0;
+    const otherWrite = async () => { otherCalls += 1; return { echoed: "budgets" }; };
+    const otherResult = await runFinancialWrite({ db, now }, "budgets", principalId, legacy, otherWrite);
+    expect(otherCalls).toBe(1);
+    expect(otherResult).toEqual({ body: { echoed: "budgets" }, status: 201 });
   });
 });
