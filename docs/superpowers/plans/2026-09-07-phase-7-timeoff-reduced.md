@@ -129,6 +129,25 @@ Three Important findings from the task review of `e27c380..67c412c`, and two sig
    on `timeoff_types_user_code_uq`, taking its whole transaction with it. Covered by a
    `Promise.all` case in `use-cases.itest.ts`.
 
+### Deviation (Tasks 2-3, fix round 2, 2026-09-07)
+
+The re-review found fix round 1's Important 2 half-done: the confirmed-removal path was right, the
+FAILURE branch was not. One correction and two refinements:
+
+1. **`planPull`'s remote loop now honours `stillPending`.** The guard existed only in the loop over
+   `local`, and `trekEvents()` deliberately keeps a converted `permits` day out of `local` — so a
+   conversion whose removal Trek REFUSED came back through the remote loop as a day this dashboard
+   had never heard of, was adopted, and wrote the staged edit back to `vacation` in the same pass
+   that failed to deliver it. The guard belongs in both loops; it also covers any future
+   kind-filtered row whose push fails. The file's first principle ("an unlanded push is never
+   papered over by the pull") now actually holds.
+2. **`unlinkProvider` takes `now` and clears `syncedAt`.** A settled conversion is no longer a
+   mirror of anything upstream, so a timestamp saying when it last agreed with Trek is a claim
+   about an entry that no longer exists.
+3. **`conversionRemovals` / `localOnlyUpserts` collapse into `unpushableUpserts(local)`**
+   returning `{ converted, localOnly }`, so `planPush`'s predicate is written once instead of
+   three times.
+
 ---
 
 ### Task 4: API, bare page, consumers, phase gate

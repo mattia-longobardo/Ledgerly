@@ -347,11 +347,13 @@ describe("timeoff use cases against real Postgres", () => {
       const db = await seed();
       await aTrekDay(db, MONDAY, 4242);
       const dropped = await asOwner(db, (deps) =>
-        deps.events.unlinkProvider(principal.userId, [MONDAY]));
+        deps.events.unlinkProvider(principal.userId, [MONDAY], new Date("2026-03-01T00:00:00Z")));
       expect(dropped).toBe(1);
 
       const after = await asOwner(db, (deps) => deps.events.at(principal.userId, MONDAY));
-      expect(after).toMatchObject({ date: MONDAY, trekEntryId: null });
+      // `syncedAt` goes with the link: there is nothing upstream left for it to
+      // be the sync time of.
+      expect(after).toMatchObject({ date: MONDAY, trekEntryId: null, syncedAt: null });
       const links = await withUserContext(db, { userId: principal.userId }, (tx) =>
         tx.select().from(providerLinks));
       expect(links).toEqual([]);

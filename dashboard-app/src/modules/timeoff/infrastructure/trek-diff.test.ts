@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { TrekEntry } from "@/lib/clients/trek";
 import type { TimeoffEvent } from "../application/ports";
 import {
-  conversionRemovals,
-  localOnlyUpserts,
   planPull,
   planPush,
   storedFraction,
@@ -11,6 +9,7 @@ import {
   trekFraction,
   trekKindOf,
   typeCodeOf,
+  unpushableUpserts,
 } from "./trek-diff";
 
 const EPOCH = new Date("2026-01-01T00:00:00Z");
@@ -120,6 +119,27 @@ describe("planPull", () => {
     expect(plan.skipped).toEqual(["2026-03-02"]);
   });
 
+  it("skips a remote entry on a stillPending date the local set no longer carries", () => {
+    // The conversion case: the day was retyped to `permits`, so `trekEvents()`
+    // keeps it out of `local` entirely, and its removal push failed. Trek's
+    // surviving entry must NOT be adopted as a day this dashboard has never
+    // heard of — that would write the conversion straight back.
+    const plan = planPull([], [remote({ date: "2026-03-02", id: 4242 })], new Set(["2026-03-02"]));
+    expect(plan.upserts).toEqual([]);
+    expect(plan.deletes).toEqual([]);
+    expect(plan.skipped).toEqual(["2026-03-02"]);
+  });
+
+  it("still adopts a genuinely new remote day while another date is stillPending", () => {
+    const plan = planPull(
+      [],
+      [remote({ date: "2026-03-02", id: 4242 }), remote({ date: "2026-03-03", id: 7 })],
+      new Set(["2026-03-02"]),
+    );
+    expect(plan.upserts.map((u) => u.date)).toEqual(["2026-03-03"]);
+    expect(plan.skipped).toEqual(["2026-03-02"]);
+  });
+
   it("takes Trek's answer once the push HAS landed — the write-through settles", () => {
     // Same row, but the push succeeded, so `stillPending` is empty and Trek's
     // post-write state is adopted verbatim.
@@ -211,8 +231,10 @@ describe("R7-2 — the Trek code mapping", () => {
       local({ date: "2026-03-04", pendingOp: "upsert" }),
       local({ date: "2026-03-05", typeCode: "permits", pendingOp: "none", trekEntryId: null }),
     ];
-    expect(conversionRemovals(rows)).toEqual(["2026-03-02"]);
-    expect(localOnlyUpserts(rows)).toEqual(["2026-03-03"]);
+    expect(unpushableUpserts(rows)).toEqual({
+      converted: ["2026-03-02"],
+      localOnly: ["2026-03-03"],
+    });
   });
 
   it("keeps permits out of the set a pull is diffed against, so Trek cannot delete it", () => {
