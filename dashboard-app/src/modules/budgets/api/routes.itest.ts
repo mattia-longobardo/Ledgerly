@@ -39,6 +39,10 @@ describe("budgets routes", () => {
     const db = await testDb();
     const [organization] = await db.insert(organizations).values({ name: "Budgets household" }).returning();
     const [user] = await db.insert(users).values({ organizationId: organization!.id, displayName: "A" }).returning();
+    // A second real user in the same organization: `deleteManualUsage` and
+    // `endAllocation` take no `userId` at the repository layer, so their
+    // cross-user safety rests entirely on RLS and needs a live proof.
+    const [other] = await db.insert(users).values({ organizationId: organization!.id, displayName: "B" }).returning();
     const [account] = await withUserContext(db, { userId: user!.id }, (tx) =>
       tx.insert(accounts).values({ userId: user!.id, name: "Checking", type: "checking", origin: "manual" }).returning(),
     );
@@ -59,7 +63,7 @@ describe("budgets routes", () => {
       now: () => new Date("2026-09-06T10:00:00.000Z"),
       rateLimitEnabled: false,
     };
-    return { app: createApiApp(deps), db, userId: user!.id, accountId: account!.id };
+    return { app: createApiApp(deps), db, userId: user!.id, otherUserId: other!.id, accountId: account!.id };
   }
 
   async function createBudget(
@@ -459,5 +463,62 @@ describe("budgets routes", () => {
     });
     expect(res.status).toBe(428);
     expect((await res.json()).error.code).toBe("validation_failed");
+  });
+
+  /**
+   * `deleteManualUsage` and `endAllocation` are the two budgets use cases
+   * whose repository methods take no `userId` (`application/ports.ts`) — they
+   * are scoped by `budgetId` alone and rest entirely on RLS's
+   * `EXISTS`-to-parent policy for cross-user safety. Nothing else in the
+   * suite drives a second real user at another user's budget, so a regression
+   * that widened those policies would pass every other test.
+   */
+  it("refuses a second user's delete-usage and end-allocation against another user's budget", async () => {
+    const { app, db, userId, otherUserId } = await seed();
+    const budget = await createBudget(app, userId);
+
+    const allocationRes = await app.request(`/api/v1/budgets/${budget.id}/allocations`, {
+      method: "POST",
+      headers: headers(userId),
+      body: JSON.stringify({
+        sourceKind: "none", sourceId: null, amount: "40.00", recurrence: "monthly",
+        effectiveFrom: "2026-01-01", effectiveTo: null, note: null,
+      }),
+    });
+    expect(allocationRes.status).toBe(201);
+    const allocation = (await allocationRes.json()) as { id: string; version: number };
+
+    const usageRes = await app.request(`/api/v1/budgets/${budget.id}/usages`, {
+      method: "POST",
+      headers: headers(userId, "owner", { "idempotency-key": "cross-user-usage" }),
+      body: JSON.stringify({ amount: "12.00", occurredAt: "2026-02-01", note: "mine" }),
+    });
+    expect(usageRes.status).toBe(201);
+    const usage = (await usageRes.json()) as { id: string };
+
+    const stolenDelete = await app.request(`/api/v1/budgets/${budget.id}/usages/${usage.id}`, {
+      method: "DELETE",
+      headers: headers(otherUserId),
+    });
+    expect(stolenDelete.status).toBe(404);
+
+    const stolenEnd = await app.request(`/api/v1/budgets/${budget.id}/allocations/${allocation.id}`, {
+      method: "PATCH",
+      headers: headers(otherUserId),
+      body: JSON.stringify({ version: allocation.version, effectiveTo: "2026-03-31" }),
+    });
+    expect(stolenEnd.status).toBe(404);
+
+    // Neither row moved: a 404 that had already written would be worse than
+    // a 200, so assert the state, not only the status code.
+    const rows = await withUserContext(db, { userId }, (tx) =>
+      tx.select().from(budgetUsages).where(eq(budgetUsages.budgetId, budget.id)),
+    );
+    expect(rows.map((row) => row.id)).toEqual([usage.id]);
+
+    const detail = (await (await app.request(`/api/v1/budgets/${budget.id}`, { headers: headers(userId) })).json()) as {
+      allocations: { id: string; effectiveTo: string | null }[];
+    };
+    expect(detail.allocations.find((row) => row.id === allocation.id)?.effectiveTo).toBeNull();
   });
 });

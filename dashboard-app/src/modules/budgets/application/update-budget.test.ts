@@ -6,6 +6,25 @@ import { budgetHarness, seedBudget } from "./test-support";
 import { updateBudget } from "./update-budget";
 
 describe("updateBudget", () => {
+  it("rejects a patch that inverts the stored date pair — a `budgets_dates_ck` violation would surface as a 500", async () => {
+    const h = budgetHarness();
+    const budget = await seedBudget(h.deps, { startDate: "2026-01-01", endDate: "2026-12-31" });
+
+    // Only `endDate` is in the patch; `startDate` comes from the stored row.
+    await expect(
+      updateBudget(h.deps)(testPrincipal(), budget.id, budget.version, { endDate: "2020-01-01" }),
+    ).rejects.toThrow(InvalidInputError);
+
+    // And the mirror case: only `startDate` is in the patch.
+    await expect(
+      updateBudget(h.deps)(testPrincipal(), budget.id, budget.version, { startDate: "2027-06-01" }),
+    ).rejects.toThrow(InvalidInputError);
+
+    // Clearing `endDate` leaves nothing to invert, so it stays valid.
+    const cleared = await updateBudget(h.deps)(testPrincipal(), budget.id, budget.version, { endDate: null });
+    expect(cleared.endDate).toBeNull();
+  });
+
   it("denies viewers", async () => {
     const h = budgetHarness();
     const budget = await seedBudget(h.deps);

@@ -164,6 +164,17 @@ export class MemoryAllocationsRepository implements AllocationsRepository {
   }
 }
 
+/** First occurrence of each `(kind, refId)` wins, preserving caller order. */
+function dedupeScopes(scopes: readonly ScopeLike[]): ScopeLike[] {
+  const seen = new Set<string>();
+  return scopes.filter((scope) => {
+    const key = `${scope.kind}:${scope.refId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export class MemoryScopesRepository implements ScopesRepository {
   private rows: Scope[] = [];
 
@@ -175,7 +186,10 @@ export class MemoryScopesRepository implements ScopesRepository {
   }
 
   async replace(budgetId: string, scopes: readonly ScopeLike[]): Promise<Scope[]> {
-    const created: Scope[] = scopes.map((scope) => ({ ...scope, id: monotonicId(), budgetId }));
+    // `budget_scopes_uq` is unique on (budgetId, kind, refId): a repeat is the
+    // same scope asked for twice, not a second row. Dropping it here keeps
+    // this repository's result identical to the Drizzle one's.
+    const created: Scope[] = dedupeScopes(scopes).map((scope) => ({ ...scope, id: monotonicId(), budgetId }));
     this.rows = [...this.rows.filter((row) => row.budgetId !== budgetId), ...created];
     return created.map((row) => ({ ...row }));
   }
