@@ -3,7 +3,7 @@ import type { MonthPoint } from "@/lib/contracts";
 import { UpstreamError } from "@/lib/contracts";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
-import { idempotency } from "@/platform/http/idempotency";
+import { runFinancialWrite } from "@/platform/http/financial-write";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { assertPermission } from "@/platform/auth/principal";
 import { withUserContext } from "@/platform/db/context";
@@ -348,9 +348,6 @@ const netWorthRoute = createRoute({
 });
 
 export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
-  app.on("POST", "/accounts", idempotency({ db: deps.db, now: deps.now }));
-  app.on("POST", "/accounts/:id/balances", idempotency({ db: deps.db, now: deps.now }));
-
   app.openapi(listAccountsRoute, async (c) => {
     const principal = c.get("principal");
     const query = c.req.valid("query");
@@ -381,10 +378,15 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
     const principal = c.get("principal");
     const body = c.req.valid("json");
     try {
-      const account = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
-        createManualAccount(accountDeps(tx, c.get("requestId")))(principal, body),
-      );
-      return c.json(accountDto(account), 201);
+      // The insert, its audit row and the idempotency row all commit in the
+      // one transaction `runFinancialWrite` opens, serialized per
+      // (namespace, principal, key) — see that helper's comment for why the
+      // plain `idempotency()` middleware's three separate transactions let
+      // two concurrent retries with one key both get past the cache check.
+      const result = await runFinancialWrite(deps, "accounts", principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, async (tx) => accountDto(await createManualAccount(accountDeps(tx, c.get("requestId")))(principal, body)));
+      return c.json(result.body, result.status as 201);
     } catch (err) {
       throw toApiError(err);
     }
@@ -450,13 +452,18 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     try {
-      const recorded = await withUserContext(deps.db, { userId: principal.userId }, async (tx) => {
+      // This route writes a money figure into `account_balances`, so it needs
+      // the same one-transaction guarantee as any other financial write: two
+      // concurrent retries carrying one key must not both insert a row.
+      const result = await runFinancialWrite(deps, "accounts", principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, async (tx) => {
         const useCaseDeps = accountDeps(tx, c.get("requestId"));
         await recordManualBalance(useCaseDeps)(principal, id, body);
         const history = await useCaseDeps.accounts.history(principal.userId, [id], body.asOf);
-        return history.find((p) => p.asOf === body.asOf && p.source === "manual") ?? history[history.length - 1]!;
+        return balancePointDto(history.find((p) => p.asOf === body.asOf && p.source === "manual") ?? history[history.length - 1]!);
       });
-      return c.json(balancePointDto(recorded), 201);
+      return c.json(result.body, result.status as 201);
     } catch (err) {
       throw toApiError(err);
     }
