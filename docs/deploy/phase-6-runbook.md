@@ -10,8 +10,10 @@ virtual (spec §11 exit line).
 This runbook assumes the Phase 5 runbook has already run against this
 database — Phase 5's checkpoint records it deployed on 2026-09-06 at commit
 `0dc939e`, image `sha256:4c490096cc1118506b55a02d9e75bdec9288dbf02268112890caaa5bc867fec5`.
-Phase 6 has **not** been deployed as of this document; this runbook is
-prepared for that future cutover, not a record of one that already happened.
+Phase 6 **was deployed on 2026-09-07** using this sequence. See "Deployment
+record — 2026-09-07" at the end of this document for what actually happened,
+including two deviations from the assumptions above. The sequence below stays
+written as instructions so it can be replayed on another environment.
 
 The build for this phase adds `scripts/migrate-vacation-budget.ts` and
 `scripts/validate-vacation-budget-migration.ts` to the Dockerfile's esbuild
@@ -250,3 +252,87 @@ intact by the migration (frozen, read-only, dropped only in Phase 9) and are
 not a substitute for the full database backup — they cannot reconstruct any
 budgets-side writes (allocations, scopes, manual usages, events) a user makes
 after cutover.
+
+## Deployment record — 2026-09-07
+
+Cut over at 14:51–14:57 UTC by an agent session, following the sequence above.
+Deployed commit `33bee89` (the Phase 6 branch head including the whole-branch
+review's fix wave). New image `dashboard:latest` = `b5dcfc0c2202`.
+
+**Result: success.** Downtime was under six minutes, and the app and cron are
+healthy on the new image.
+
+### Two deviations from this runbook's assumptions
+
+1. **The Phase 5 image no longer existed, so the documented rollback was not
+   executable as written.** `dashboard-app` was running
+   `sha256:4c490096cc11…` (the image this runbook names), but that image had
+   been removed from the local daemon, and `dashboard:latest` had since been
+   overwritten by an unrelated build. "Retag the previous image back to
+   `dashboard:latest`" would therefore have failed at the worst possible
+   moment. Before touching production, the Phase 5 image was **rebuilt from
+   commit `91ebb9c`** (exported with `git archive` into a scratch directory,
+   so the working tree was untouched) and tagged **`dashboard:phase5-rollback`
+   = `160cb8459419`**. That tag is now the image half of the rollback plan;
+   keep it until Phase 7 supersedes it. The lesson for later phases: verify
+   the previous image still exists locally *before* the cutover, not during a
+   rollback.
+
+2. **`dashboard-cron` was running.** This runbook, written from the Phase 5
+   checkpoint, said it had not started ticking. It had. It was stopped
+   alongside `dashboard-app` in step 4 and restarted after step 8; it came
+   back healthy and its hourly tier ran normally (`sweep`, `trek_sync`,
+   `sync_queue`, `payroll_ingest` all reporting success or `already_done`).
+
+### What ran, and what it produced
+
+- **Step 1 verification:** typecheck clean, 157 unit test files, 46
+  integration test files, `npm run build` green, no OpenAPI drift.
+- **Step 2 rehearsal:** a custom-format production dump was restored into
+  `dashboard_rehearsal` on `dashboard-postgres-test` (a separate database, not
+  `dashboard_test`). Migration 0017 applied, then the vacation migration
+  printed `{"budgets":1,"versions":1,"rateAllocations":1,"withdrawalUsages":0,`
+  `"adjustmentAllocations":0,"reconciliationAllocations":1,"writes":4}` and the
+  validator printed `OK (1 months examined)`. A second run printed all zeros —
+  the idempotency proof.
+- **Step 5 backup:** `~/backups/personal-dashboard/2026-09-07-phase6/pre-phase6-final.dump`,
+  mode 0600, 324 TOC entries, verified listable with `pg_restore --list` before
+  proceeding. This is the data half of the rollback plan.
+- **Step 7 against production:** schema migration applied ("migrations applied
+  and fund registry seeded"); the vacation migration printed the **same four
+  counts as the rehearsal**; the validator printed
+  `CHECK Holidays: 1 legacy ledger rows, 1 accrual rate(s), 2 migrated allocation(s), 0 migrated usage(s)`
+  then `OK (1 months examined)`.
+- **Step 9 verification:** `/api/health` returns 200; `/finance/budgets`,
+  `/finance/vacation` and `/finance/funds` all return 307 to the sign-in page,
+  i.e. the routes are served (a missing route would 404). No error lines in the
+  application log after cutover.
+
+### The migrated data
+
+Production's legacy fund was a single `initial` row of 820.00 dated
+2026-09-01 and a single accrual rate of 250.00/month effective from the same
+date — no accrual rows, no withdrawals, no adjustments. The migration produced
+the Holidays budget (EUR, `period_kind` none, `start_date` 2026-09-01, labels
+`["migrated"]`), an amount version of 820.00, a 250.00 monthly allocation, and
+a −250.00 `once` "migration adjustment".
+
+**That negative allocation is correct, not a bug** — it is exactly the
+"rates present but no accrual rows" shape this runbook warns about above.
+Remaining today is `820.00 + 250.00 − 250.00 = 820.00`, matching the legacy
+balance to the cent. From October onward the monthly allocation keeps
+accruing while the frozen ledger does not, which is the intended go-forward
+behaviour.
+
+`accounts` (10 rows) and `funds` (2 rows) were untouched, as the phase's exit
+criterion requires.
+
+### Still owed
+
+- **A signed-in browser walkthrough.** Everything past the sign-in redirect is
+  unverified: the agent session had no browser and no credentials. Open
+  `/finance/budgets`, confirm Holidays shows 820,00 € remaining, confirm
+  `/finance/vacation` lands on the budgets page, and confirm the Funds and Home
+  pages still render.
+- **Delete the deploy-boundary shim after 2026-09-08 15:00 UTC** (24h after
+  cutover), per the post-cutover cleanup section above.
