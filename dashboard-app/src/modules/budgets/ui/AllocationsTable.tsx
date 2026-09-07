@@ -23,6 +23,13 @@ function EndAllocationAction({ budgetId, allocation, today }: { budgetId: string
     return <span className="text-caption text-fg-muted">Ended {allocation.effectiveTo}</span>;
   }
 
+  // A `once` allocation contributes its full amount regardless of
+  // `effectiveTo` (see `allocatedThrough`), so ending one would change
+  // nothing while claiming it had. `endAllocation` rejects it too.
+  if (allocation.recurrence === "once") {
+    return <span className="text-caption text-fg-muted">—</span>;
+  }
+
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-11 items-center rounded-md border border-border bg-surface px-3 text-body-sm font-medium text-fg">
