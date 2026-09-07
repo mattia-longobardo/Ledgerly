@@ -281,6 +281,30 @@ export interface FundContributionSink {
   }>;
 }
 
+export interface TimeoffBalanceWrite {
+  /** The `timeoff_types.code` the mapping rule named. */
+  timeoffCode: string;
+  kind: "balance" | "used";
+  quantity: string | null;
+  unit: "hours" | "days";
+}
+
+/**
+ * Writes the payroll-derived side of `timeoff_balances` (R7-4). The mirror of
+ * `FundContributionSink`: the payroll module states what the payslip said and
+ * knows nothing about how the timeoff module stores it.
+ */
+export interface TimeoffBalanceSink {
+  writeForRecord(input: {
+    userId: string;
+    payrollRecordId: string;
+    supersededRecordId: string | null;
+    /** The record's `period_end` — a balance is "as of" the end of its period. */
+    asOf: string;
+    rows: readonly TimeoffBalanceWrite[];
+  }): Promise<{ written: number; skipped: string[] }>;
+}
+
 export interface Clock {
   now(): Date;
 }
@@ -291,6 +315,7 @@ export interface UseCaseDeps {
   components: PayrollComponentsRepository;
   mappingRules: PayrollMappingRulesRepository;
   funds: FundContributionSink;
+  timeoff: TimeoffBalanceSink;
   /** Resolved before the transaction opens (Ruling R4-8). */
   documents: DocumentStore;
   /** Resolved before the transaction opens (Ruling R4-8). */

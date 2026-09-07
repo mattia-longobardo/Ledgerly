@@ -15,7 +15,24 @@ import {
 } from "@/modules/funds/infrastructure/memory-repositories";
 import { memoryPayrollContributionSink } from "@/modules/funds/infrastructure/memory-contribution-sink";
 import { noopScanner } from "../infrastructure/noop-scanner";
+import type { TimeoffBalanceSink } from "./ports";
 import { applyImport } from "./apply-import";
+
+/**
+ * A recording stand-in for the timeoff module's sink. The real one is Drizzle
+ * only (Phase 7 keeps no memory repositories), so what this suite can assert
+ * is the CONTRACT the apply step honours: which rows it hands over, and that
+ * the result and the audit line carry the counts back.
+ */
+class StubTimeoffBalanceSink implements TimeoffBalanceSink {
+  readonly calls: Parameters<TimeoffBalanceSink["writeForRecord"]>[0][] = [];
+  result: { written: number; skipped: string[] } = { written: 0, skipped: [] };
+
+  async writeForRecord(input: Parameters<TimeoffBalanceSink["writeForRecord"]>[0]) {
+    this.calls.push(input);
+    return this.result;
+  }
+}
 
 const NOW = new Date("2026-09-05T10:00:00Z");
 const principal = testPrincipal({ userId: "00000000-0000-7000-8000-00000000000a" });
@@ -55,9 +72,11 @@ async function makeDeps() {
   });
   const audits: Array<{ action: string; after?: unknown }> = [];
   const mappingRules = new MemoryPayrollMappingRulesRepository();
+  const timeoff = new StubTimeoffBalanceSink();
   const deps: UseCaseDeps & {
     mappingRules: MemoryPayrollMappingRulesRepository;
     contributions: MemoryContributionsRepository;
+    timeoff: StubTimeoffBalanceSink;
     fundId: string;
     audits: typeof audits;
   } = {
@@ -66,6 +85,7 @@ async function makeDeps() {
     components: new MemoryPayrollComponentsRepository(),
     mappingRules,
     funds,
+    timeoff,
     documents: { provider: "local", put: async () => {}, get: async () => null, delete: async () => {}, listPrefix: async () => [] },
     scanner: noopScanner,
     clock: { now: () => NOW },
@@ -266,6 +286,42 @@ describe("applyImport", () => {
     await expect(applyImport(deps)(principal, imp.id)).rejects.toMatchObject({ name: "InvalidInputError" });
   });
 
+  it("hands the payslip's leave figures to the timeoff sink, as of the period end", async () => {
+    const deps = await makeDeps();
+    const imp = await aVerifiedImport(deps, {
+      fields: { ...extraction.fields, ferieTakenHours: { value: 16, confidence: "high", rules: 16, llm: null } },
+    });
+    const applied = await applyImport(deps)(principal, imp.id);
+
+    expect(deps.timeoff.calls).toEqual([{
+      userId: principal.userId,
+      payrollRecordId: applied.record.id,
+      supersededRecordId: null,
+      asOf: "2026-08-31",
+      rows: [
+        { timeoffCode: "vacation", kind: "balance", quantity: "88.250000", unit: "hours" },
+        { timeoffCode: "vacation", kind: "used", quantity: "16.000000", unit: "hours" },
+      ],
+    }]);
+  });
+
+  it("reports the sink's counts on the result", async () => {
+    const deps = await makeDeps();
+    deps.timeoff.result = { written: 1, skipped: ["sabbatical"] };
+    const imp = await aVerifiedImport(deps);
+    const applied = await applyImport(deps)(principal, imp.id);
+    expect(applied.timeoffBalances).toEqual({ written: 1, skipped: ["sabbatical"] });
+  });
+
+  it("passes the superseded record on so its balances are replaced too", async () => {
+    const deps = await makeDeps();
+    const original = await aVerifiedImport(deps);
+    const first = await applyImport(deps)(principal, original.id);
+    const replacement = await aVerifiedImport(deps);
+    await applyImport(deps)(principal, replacement.id);
+    expect(deps.timeoff.calls.at(-1)?.supersededRecordId).toBe(first.record.id);
+  });
+
   it("audits the apply with ids and counts, never with amounts", async () => {
     const deps = await makeDeps();
     const imp = await aVerifiedImport(deps);
@@ -278,6 +334,7 @@ describe("applyImport", () => {
       componentCount: 6,
       supersededRecordId: null,
       fundContributions: { written: 2, skipped: [] },
+      timeoffBalances: { written: 0, skipped: [] },
     });
     expect(JSON.stringify(deps.audits)).not.toContain("1800.00");
   });

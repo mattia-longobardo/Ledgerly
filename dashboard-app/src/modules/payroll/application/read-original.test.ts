@@ -21,6 +21,7 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
     funds: new MemoryFundContributionSink(),
+    timeoff: { writeForRecord: async () => ({ written: 0, skipped: [] }) },
     // No I/O happens through either DB-only half this suite exercises — a
     // document store that throws if ever called is what proves the split:
     // `beginReadOriginal`/`recordOriginalRead` never touch it. The actual

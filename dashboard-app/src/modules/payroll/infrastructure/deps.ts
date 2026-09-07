@@ -1,6 +1,7 @@
 import type { DbClient } from "@/lib/db/client";
 import { recordAudit } from "@/platform/audit/record";
 import { payrollContributionSink } from "@/modules/funds/infrastructure/payroll-contribution-sink";
+import { payrollTimeoffBalanceSink } from "@/modules/timeoff/infrastructure/payroll-balance-sink";
 import type { DocumentStore, MalwareScanner, UseCaseDeps } from "../application/ports";
 import { DrizzlePayrollComponentsRepository } from "./drizzle-payroll-components-repository";
 import { DrizzlePayrollImportsRepository } from "./drizzle-payroll-imports-repository";
@@ -33,6 +34,7 @@ export function payrollDeps(tx: DbClient, opts: PayrollDepsOptions): UseCaseDeps
     components: new DrizzlePayrollComponentsRepository(tx),
     mappingRules: new DrizzlePayrollMappingRulesRepository(tx),
     funds: payrollContributionSink(tx),
+    timeoff: payrollTimeoffBalanceSink(tx),
     documents: opts.documents,
     scanner: opts.scanner,
     clock: { now: () => new Date() },

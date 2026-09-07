@@ -21,6 +21,7 @@ function makeDeps(): UseCaseDeps & { audits: unknown[] } {
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
     funds: new MemoryFundContributionSink(),
+    timeoff: { writeForRecord: async () => ({ written: 0, skipped: [] }) },
     // `purgeOne` never deletes bytes itself — the orchestrator does that,
     // strictly before calling this function. A store that throws if touched
     // is what proves the split.

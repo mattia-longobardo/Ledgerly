@@ -15,6 +15,12 @@ export interface AppliedImport {
     written: number;
     skipped: { fundSlug: string; reason: "no_fund" | "no_amount" }[];
   };
+  /** R7-4: one `timeoff_balances` row per (type, record), written by the sink. */
+  timeoffBalances: {
+    written: number;
+    /** Codes the payslip named that this user has no type for. */
+    skipped: string[];
+  };
 }
 
 /**
@@ -122,6 +128,27 @@ export function applyImport(deps: UseCaseDeps) {
       }),
     });
 
+    // R7-4. After the fund sink and inside the same transaction, so a record
+    // and the balances derived from it are never separately visible.
+    const timeoffBalances = await deps.timeoff.writeForRecord({
+      userId: principal.userId,
+      payrollRecordId: record.id,
+      supersededRecordId,
+      asOf: period.periodEnd,
+      rows: components.flatMap((component) => {
+        const target = component.mappedTo;
+        if (target?.kind !== "timeoff_balance" && target?.kind !== "timeoff_used") return [];
+        return [{
+          timeoffCode: target.timeoffCode,
+          kind: target.kind === "timeoff_balance" ? "balance" as const : "used" as const,
+          // A leave figure is a quantity; `amount` is the fallback for a
+          // payslip that states it in the money column.
+          quantity: component.quantity ?? component.amount,
+          unit: component.unit === "days" ? "days" as const : "hours" as const,
+        }];
+      }),
+    });
+
     const updatedImport = await deps.imports.patch(principal.userId, importId, { status: "applied", error: null });
     if (!updatedImport) throw new NotFoundError();
 
@@ -139,9 +166,17 @@ export function applyImport(deps: UseCaseDeps) {
         componentCount: written.length,
         supersededRecordId,
         fundContributions,
+        timeoffBalances,
       },
     });
 
-    return { import: updatedImport, record, components: written, supersededRecordId, fundContributions };
+    return {
+      import: updatedImport,
+      record,
+      components: written,
+      supersededRecordId,
+      fundContributions,
+      timeoffBalances,
+    };
   };
 }

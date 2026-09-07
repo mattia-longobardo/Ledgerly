@@ -48,6 +48,7 @@ function makeDeps(): UseCaseDeps {
     components: new MemoryPayrollComponentsRepository(),
     mappingRules: new MemoryPayrollMappingRulesRepository(),
     funds: new MemoryFundContributionSink(),
+    timeoff: { writeForRecord: async () => ({ written: 0, skipped: [] }) },
     documents: { provider: "local", put: async () => {}, get: async () => null, delete: async () => {}, listPrefix: async () => [] },
     scanner: noopScanner,
     clock: { now: () => new Date("2026-09-05T10:00:00Z") },
