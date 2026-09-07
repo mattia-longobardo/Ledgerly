@@ -380,12 +380,12 @@ describe("R7-2 — days Trek cannot hold", () => {
     expect(input.removals).toEqual([MONDAY_CONVERTED]);
     // The day itself stays — it is the owner's; only its link to Trek goes.
     expect(repo.clearPending).toHaveBeenCalledWith(USER_ID, [MONDAY_CONVERTED], expect.any(Date));
-    expect(repo.unlinkProvider).toHaveBeenCalledWith(USER_ID, [MONDAY_CONVERTED]);
+    expect(repo.unlinkProvider).toHaveBeenCalledWith(USER_ID, [MONDAY_CONVERTED], expect.any(Date));
     expect(repo.deleteDates).toHaveBeenCalledWith(USER_ID, []);
     expect(result.status).toBe("ok");
   });
 
-  it("keeps the Trek link while the conversion's removal has NOT landed", async () => {
+  it("does not let the same pass's pull undo a conversion whose removal FAILED", async () => {
     const converted = local({
       date: MONDAY_CONVERTED,
       typeCode: "permits",
@@ -402,9 +402,23 @@ describe("R7-2 — days Trek cannot hold", () => {
         ],
       });
     });
+    // The refusal means Trek STILL HAS the entry, and says so on the pull. This
+    // is the whole trap: `trekEvents()` keeps the retyped day out of the local
+    // set, so without a `stillPending` guard in `planPull`'s remote loop that
+    // surviving entry reads as a brand-new upstream day, and
+    // `upsertFromProvider` writes `permits` back to `vacation`, re-links the
+    // entry and clears the flag — destroying the edit in the pass that failed
+    // to deliver it.
+    trek.getEntries.mockImplementation(async () => {
+      networkStep("pull");
+      return [remote({ date: MONDAY_CONVERTED, id: 4242 })];
+    });
 
     const result = await run();
 
+    expect(repo.upsertFromProvider).toHaveBeenCalledWith(USER_ID, [], expect.any(Date));
+    expect(repo.deleteDates).toHaveBeenCalledWith(USER_ID, []);
+    // The staged row survives untouched, link and all, for the next pass.
     expect(repo.clearPending).not.toHaveBeenCalled();
     expect(repo.unlinkProvider).not.toHaveBeenCalled();
     expect(result.status).toBe("partial");

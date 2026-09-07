@@ -37,13 +37,12 @@ import { seedDefaultTypes } from "../application/ensure-default-types";
 import type { TimeoffStore } from "../application/ports";
 import { hoursPerDayString } from "./deps";
 import {
-  conversionRemovals,
-  localOnlyUpserts,
   planPull,
   planPush,
   storedFraction,
   trekEvents,
   typeCodeOf,
+  unpushableUpserts,
 } from "./trek-diff";
 
 /**
@@ -192,8 +191,9 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
     // a `*` in the UI forever. A CONVERTED day is the opposite case — Trek
     // still has its entry, `planPush` sends a removal for it, and it settles
     // through `applied` like any other push.
-    const settled: string[] = localOnlyUpserts(pending);
-    const conversions = new Set(conversionRemovals(pending));
+    const unpushable = unpushableUpserts(pending);
+    const settled: string[] = [...unpushable.localOnly];
+    const conversions = new Set(unpushable.converted);
 
     if (pending.length > 0) {
       // ── 2. PUSH (network — no transaction open) ────────────────────────────
@@ -235,7 +235,7 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
       await store.withEvents(userId, async (events) => {
         if (settled.length > 0) await events.clearPending(userId, settled, now);
         if (settledConversions.length > 0) {
-          await events.unlinkProvider(userId, settledConversions);
+          await events.unlinkProvider(userId, settledConversions, now);
         }
         if (result.weekendBlocked.length > 0) {
           await events.deleteDates(userId, result.weekendBlocked);

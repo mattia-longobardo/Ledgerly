@@ -179,12 +179,16 @@ export class DrizzleEventsRepository implements EventsRepository {
     return rows.length;
   }
 
-  async unlinkProvider(userId: string, dates: readonly string[]): Promise<number> {
+  async unlinkProvider(userId: string, dates: readonly string[], now: Date): Promise<number> {
     if (dates.length === 0) return 0;
+    // `syncedAt` is cleared with the link: the row is no longer a mirror of
+    // anything upstream, so a timestamp saying when it last agreed with Trek
+    // would be a claim about an entry that no longer exists.
     const rows = await this.db
-      .select({ id: timeoffEvents.id })
-      .from(timeoffEvents)
-      .where(and(eq(timeoffEvents.userId, userId), inArray(timeoffEvents.date, [...dates])));
+      .update(timeoffEvents)
+      .set({ syncedAt: null, updatedAt: now })
+      .where(and(eq(timeoffEvents.userId, userId), inArray(timeoffEvents.date, [...dates])))
+      .returning({ id: timeoffEvents.id });
     return this.unlink(userId, rows.map((r) => r.id));
   }
 

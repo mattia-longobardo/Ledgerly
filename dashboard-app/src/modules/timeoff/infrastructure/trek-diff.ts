@@ -131,28 +131,28 @@ export function planPush(local: readonly TimeoffEvent[]): PushPlan {
 }
 
 /**
- * A staged upsert for a type Trek cannot hold, on a date Trek still has an
- * entry for. `planPush` turns each of these into a removal and `syncPass`
- * drops its `provider_links` row once Trek confirms — the day itself stays,
- * as the owner asked, now owned by nobody but this dashboard.
+ * A staged upsert whose type Trek cannot hold. `planPush` reads the same
+ * predicate, so it lives here once rather than in three places that can drift:
+ *
+ *  - **`converted`** — Trek still has an entry for that date. `planPush` sends a
+ *    removal and `syncPass` drops the `provider_links` row once Trek confirms;
+ *    the day itself stays, as the owner asked, now owned by nobody but this
+ *    dashboard.
+ *  - **`localOnly`** — no entry upstream, nothing to say. Settled locally, or it
+ *    stays flagged for ever and shows as pending in a UI that can do nothing
+ *    about it.
  */
-export function conversionRemovals(local: readonly TimeoffEvent[]): string[] {
-  return local
-    .filter((row) =>
-      row.pendingOp === "upsert" && trekKindOf(row.typeCode) === null && row.trekEntryId !== null)
-    .map((row) => row.date);
-}
-
-/**
- * A staged upsert Trek will never hear about at all — no kind it understands,
- * and no entry of its own upstream. Settled locally, or it stays flagged for
- * ever and shows as pending in a UI that can do nothing about it.
- */
-export function localOnlyUpserts(local: readonly TimeoffEvent[]): string[] {
-  return local
-    .filter((row) =>
-      row.pendingOp === "upsert" && trekKindOf(row.typeCode) === null && row.trekEntryId === null)
-    .map((row) => row.date);
+export function unpushableUpserts(local: readonly TimeoffEvent[]): {
+  converted: string[];
+  localOnly: string[];
+} {
+  const converted: string[] = [];
+  const localOnly: string[] = [];
+  for (const row of local) {
+    if (row.pendingOp !== "upsert" || trekKindOf(row.typeCode) !== null) continue;
+    (row.trekEntryId !== null ? converted : localOnly).push(row.date);
+  }
+  return { converted, localOnly };
 }
 
 export interface PullUpsert {
@@ -243,6 +243,18 @@ export function planPull(
 
   for (const r of remote) {
     if (seen.has(r.date)) continue;
+    if (stillPending.has(r.date)) {
+      // A date whose push did NOT land, and which the loop above never saw
+      // because it is not in `local`. That is exactly a CONVERSION whose
+      // removal Trek refused: `trekEvents()` keeps the retyped day out of
+      // `local`, so without this guard Trek's surviving entry looks like a day
+      // this dashboard has never heard of, gets adopted, and writes the
+      // conversion back to `vacation` — destroying the staged edit in the same
+      // pass that failed to deliver it. The rule is the file's first principle:
+      // an unlanded push is never papered over by the pull.
+      skipped.push(r.date);
+      continue;
+    }
     upserts.push({
       date: r.date,
       fraction: r.fraction,
