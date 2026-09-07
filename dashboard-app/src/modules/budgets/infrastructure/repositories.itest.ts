@@ -318,7 +318,7 @@ describe("Drizzle transactions-scope-source", () => {
       ]);
 
       const source = drizzleTransactionsScopeSource(tx);
-      const rows = await source.listExpenses(userId, { from: "2026-09-01", to: "2026-09-05" });
+      const rows = await source.listExpenses(userId, { from: "2026-09-01", to: "2026-09-05", currency: "EUR" });
       expect(rows.map((row) => row.id).sort()).toEqual([pendingExpense!.id, clearedExpense!.id].sort());
 
       const pending = rows.find((row) => row.id === pendingExpense!.id)!;
@@ -360,10 +360,33 @@ describe("Drizzle transactions-scope-source", () => {
       });
 
       const source = drizzleTransactionsScopeSource(tx);
-      const rows = await source.listExpenses(userId, { from: "2026-02-01", to: "2026-02-28" });
+      const rows = await source.listExpenses(userId, { from: "2026-02-01", to: "2026-02-28", currency: "EUR" });
       expect(rows.map((row) => row.id).sort()).toEqual([earlyRome!.id, lateRome!.id].sort());
       expect(rows.find((row) => row.id === earlyRome!.id)!.occurredAt).toBe("2026-02-01");
       expect(rows.find((row) => row.id === lateRome!.id)!.occurredAt).toBe("2026-02-28");
+    });
+  });
+
+  it("returns only transactions in the requested currency", async () => {
+    const userId = await seedUser("Currency");
+    const db = await testDb();
+    await withSystemContext(db, async (tx) => {
+      const [account] = await tx.insert(accounts).values({ userId, name: "Checking", type: "checking", origin: "manual" }).returning();
+      const [eur] = await tx.insert(transactions).values({
+        userId, accountId: account!.id, occurredAt: new Date("2026-09-02T10:00:00Z"), amount: "-42.50",
+        type: "expense", state: "cleared", currency: "EUR",
+      }).returning();
+      // `transactions.currency` is unconstrained and provider sync copies what
+      // the provider sends. Counted into a EUR budget at face value, this row
+      // would silently mix currencies into `used`.
+      const [usd] = await tx.insert(transactions).values({
+        userId, accountId: account!.id, occurredAt: new Date("2026-09-02T10:00:00Z"), amount: "-99.00",
+        type: "expense", state: "cleared", currency: "USD",
+      }).returning();
+
+      const source = drizzleTransactionsScopeSource(tx);
+      expect((await source.listExpenses(userId, { from: "2026-09-01", to: "2026-09-05", currency: "EUR" })).map((row) => row.id)).toEqual([eur!.id]);
+      expect((await source.listExpenses(userId, { from: "2026-09-01", to: "2026-09-05", currency: "USD" })).map((row) => row.id)).toEqual([usd!.id]);
     });
   });
 });

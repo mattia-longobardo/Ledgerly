@@ -124,8 +124,18 @@ export interface EventsRepository {
 }
 
 export interface TransactionsScopeSource {
-  /** type = 'expense', any state; occurredAt as "YYYY-MM-DD" in Europe/Rome; labelIds joined. */
-  listExpenses(userId: string, opts: { from: string; to: string }): Promise<TransactionLike[]>;
+  /**
+   * type = 'expense', any state; occurredAt as "YYYY-MM-DD" in Europe/Rome;
+   * labelIds joined.
+   *
+   * `currency` is required and filters: `transactions.currency` is not
+   * constrained to EUR and provider sync copies whatever the provider sends,
+   * so without it a USD expense matching an account scope would be
+   * materialised into a EUR budget at face value and `used` would silently mix
+   * currencies. Filtering here rather than in `scopeMatches` keeps the domain
+   * function pure — it never needs to know a budget's currency.
+   */
+  listExpenses(userId: string, opts: { from: string; to: string; currency: string }): Promise<TransactionLike[]>;
 }
 
 export interface SourceBalanceSource {

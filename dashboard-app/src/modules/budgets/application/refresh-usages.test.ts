@@ -5,6 +5,23 @@ import { refreshUsages } from "./refresh-usages";
 import { budgetHarness, seedBudget } from "./test-support";
 
 describe("refreshUsages", () => {
+  it("asks the scope source only for the budget's own currency, and never counts another currency's expense", async () => {
+    const h = budgetHarness();
+    const budget = await seedBudget(h.deps, { startDate: "2026-01-01", currency: "EUR" });
+    await h.deps.scopes.replace(budget.id, [{ kind: "category", refId: "cat-1" }]);
+    h.setExpenses([
+      { id: "tx-eur", accountId: "account-1", categoryId: "cat-1", labelIds: [], type: "expense", amount: "-20.00", occurredAt: "2026-02-01", currency: "EUR" },
+      // Matches the same scope, but counting it into a EUR budget at face
+      // value would silently mix currencies into `used`.
+      { id: "tx-usd", accountId: "account-1", categoryId: "cat-1", labelIds: [], type: "expense", amount: "-99.00", occurredAt: "2026-02-02", currency: "USD" },
+    ]);
+
+    const result = await refreshUsages(h.deps)(testPrincipal(), budget.id);
+    expect(result).toEqual({ inserted: 1, updated: 0, deleted: 0 });
+    expect((await h.deps.usages.listForBudget(budget.id)).map((u) => u.transactionId)).toEqual(["tx-eur"]);
+    expect(h.listExpensesCalls).toEqual([{ from: "2026-01-01", to: "2026-09-06", currency: "EUR" }]);
+  });
+
   it("allows a viewer — it is a read-side refresh", async () => {
     const h = budgetHarness();
     const budget = await seedBudget(h.deps);
