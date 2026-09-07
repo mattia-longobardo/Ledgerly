@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
-import { dayStartInstant, romeDate } from "@/lib/time";
+import { romeDate } from "@/lib/time";
 import type { TransactionsScopeSource } from "../application/ports";
 
 type ExpenseRow = Record<string, unknown> & {
@@ -19,14 +19,16 @@ type ExpenseRow = Record<string, unknown> & {
 /**
  * A budget scope must see every expense transaction regardless of `state`
  * (pending, cleared, or reconciled) — only `type = 'expense'` is filtered.
- * The date bounds are Rome-midnight instants (`dayStartInstant`), exclusive
- * on the upper end so `to` itself is fully included as a Rome civil day.
+ *
+ * The bounds are compared on the Europe/Rome civil date, the same date this
+ * source renders back out as `occurredAt`, so the two can never disagree.
+ * Comparing UTC instants instead would drop the first one or two hours of
+ * `from` (Rome is UTC+1/+2, so 00:30 Rome on `from` is 23:30Z the day before)
+ * and wrongly pull in the same slice of the day after `to`.
  */
 export function drizzleTransactionsScopeSource(db: DbClient): TransactionsScopeSource {
   return {
     async listExpenses(userId, opts) {
-      const from = dayStartInstant(opts.from);
-      const toExclusive = new Date(dayStartInstant(opts.to).getTime() + 24 * 60 * 60 * 1000);
       const result = await db.execute<ExpenseRow>(sql`
         SELECT
           t.id,
@@ -39,8 +41,8 @@ export function drizzleTransactionsScopeSource(db: DbClient): TransactionsScopeS
         LEFT JOIN transaction_label_links l ON l.transaction_id = t.id
         WHERE t.user_id = ${userId}
           AND t.type = 'expense'
-          AND t.occurred_at >= ${from}
-          AND t.occurred_at < ${toExclusive}
+          AND (t.occurred_at AT TIME ZONE 'Europe/Rome')::date >= ${opts.from}::date
+          AND (t.occurred_at AT TIME ZONE 'Europe/Rome')::date <= ${opts.to}::date
         GROUP BY t.id
         ORDER BY t.occurred_at, t.id
       `);
