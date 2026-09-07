@@ -7,6 +7,13 @@ import { ApiError } from "./errors";
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * The one namespace whose `idempotency_keys` rows predate the `<namespace>:`
+ * prefix, because it was deployed before this helper existed. Temporary — see
+ * the fallback lookup in `runFinancialWrite`.
+ */
+const FALLBACK_NAMESPACE = "funds";
+
 export function requireIdempotencyKey(key: string | undefined): string {
   if (!key) throw new ApiError(428, "validation_failed", "Idempotency-Key header is required");
   return key;
@@ -42,10 +49,10 @@ export function requireIdempotencyKey(key: string | undefined): string {
  * value — internal only: the caller-facing `Idempotency-Key` header value
  * is never itself prefixed, only how the row is addressed here.
  *
- * A client retrying with a key issued before this change (funds' rows,
- * predating the `budgets` namespace and this prefix) will not match the old
- * unprefixed row and will re-execute rather than replay — a one-time,
- * short-lived (24h TTL) gap at the deploy boundary, not an ongoing risk.
+ * Rows written before this change carry the bare key, so a `funds` client
+ * retrying across the deploy boundary would miss the prefixed lookup and
+ * re-execute — a duplicate contribution, i.e. real money. `FALLBACK_NAMESPACE`
+ * closes that with a one-time shim: see the comment on it below.
  */
 export async function runFinancialWrite<T extends object>(
   deps: { db: DbClient; now(): Date },
@@ -65,9 +72,21 @@ export async function runFinancialWrite<T extends object>(
     // Take it before the cache read: a waiter must see the prior commit and
     // recheck its hash, rather than proceeding from a stale cache miss.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockId.toString()}::bigint)`);
-    const [existing] = await tx.select().from(idempotencyKeys)
+    let [existing] = await tx.select().from(idempotencyKeys)
       .where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, storedKey)))
       .limit(1);
+    if (!existing && namespace === FALLBACK_NAMESPACE) {
+      // Deploy-boundary shim — DELETE 24h AFTER THE PHASE 6 CUTOVER.
+      // `funds` was already live writing bare-key rows before the namespace
+      // prefix existed. Without this, a client retrying a contribution across
+      // the deploy misses the prefixed row and the write runs a second time:
+      // a duplicate contribution, i.e. real money. The rows expire 24h after
+      // they are written, so once no bare-key row can still be live this
+      // branch is dead code and must go, along with `FALLBACK_NAMESPACE`.
+      [existing] = await tx.select().from(idempotencyKeys)
+        .where(and(eq(idempotencyKeys.principalId, principalId), eq(idempotencyKeys.key, key)))
+        .limit(1);
+    }
     if (existing && existing.expiresAt > deps.now()) {
       if (existing.requestHash !== requestHash) {
         throw new ApiError(422, "idempotency_key_reused", "Idempotency-Key was already used with a different request");

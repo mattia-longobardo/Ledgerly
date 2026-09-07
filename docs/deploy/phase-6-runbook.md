@@ -29,17 +29,27 @@ Task 5 of this phase moved `financial-write.ts` from
 share it, and in doing so scoped the persisted idempotency row by module: the
 stored key is now `${namespace}:${key}` (e.g. `funds:abc-123`), where before
 it was the bare client-supplied key. Live `idempotency_keys` rows written by
-the currently deployed Funds module carry the old, unprefixed keys. **A
-client that retries a Funds contribution/reversal request with a key it
-obtained before this deploy will not find a match under the new namespaced
-lookup, and the retry will re-execute rather than replay.** Rows expire after
-24 hours (the table's TTL), so this is a one-time, short window at the
-deploy boundary — not an ongoing risk — but it is real: a contribution retry
-issued in roughly the 24 hours before cutover, replayed after cutover, can
-create a duplicate contribution rather than being recognized as a repeat.
-There is no code mitigation for this migration boundary; it is stated here so
-the operator can watch for duplicate contributions in the hours after
-deploying and knows why one could appear.
+the currently deployed Funds module carry the old, unprefixed keys, which the
+namespaced lookup would miss — so a Funds contribution/reversal retried across
+the deploy would re-execute rather than replay, creating a duplicate
+contribution.
+
+**This is mitigated in code.** `runFinancialWrite`
+(`src/platform/http/financial-write.ts`) carries a deploy-boundary shim: when
+the namespaced lookup misses **and** the namespace is `funds`, it falls back to
+the bare key and treats a live row found there as a replay, exactly as the
+former middleware would have. The fallback is scoped to `funds` alone — no
+other namespace inherits a bare key it never wrote — and it is covered by
+"replays a pre-cutover funds row stored under the bare key instead of
+re-executing the write" in `src/platform/http/financial-write.itest.ts`.
+
+**Post-cutover cleanup (owner: whoever runs this deploy).** Rows expire 24
+hours after they are written, so once 24 hours have passed since cutover no
+bare-key row can still be live and the shim is dead code. Delete
+`FALLBACK_NAMESPACE` and the fallback lookup in `runFinancialWrite`, plus the
+integration test named above, and commit. Until then, still watch for
+duplicate contributions in the hours after deploying: the shim closes the
+lookup gap, but it is the first exercise of that path in production.
 
 **The vacation migration aborts rather than double-migrating — this is the
 guard working, not a failure.** `migrate-vacation-budget.ts` resolves the
