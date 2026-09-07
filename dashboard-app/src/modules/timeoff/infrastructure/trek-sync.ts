@@ -3,10 +3,16 @@
  * `trek-diff.ts`; read the policy comment at the top of that file first.
  *
  * Exposed as a plain async function rather than a registered job on purpose:
- * `JobName` lives in `contracts.ts`, which is owned by another workstream this
- * phase. `runTrekSync()` takes no ambient state and returns a plain result, so
- * wiring it to cron later is an import and a union entry — no refactor. The
- * "Sync now" server action calls exactly this function today.
+ * the calendar's owner and a `TimeoffStore` are arguments, not ambient state,
+ * so every caller reaches the same function — the hourly `trek_sync` job
+ * through the integration engine, and the workspace's "Sync now" (Task 4).
+ *
+ * ⚠ NO DATABASE HANDLE, and no `tx`. A pass alternates database steps with
+ * Trek calls, and the shared conventions forbid network I/O inside an RLS
+ * context. `store.withEvents()` opens one short context per database step and
+ * closes it before the next network call; the numbered sections in `syncPass`
+ * are that alternation, and `trek-sync.test.ts` fails the pass if a Trek call
+ * ever happens with one open.
  *
  * ⚠ THE LOCK LIVES HERE, not in the job wrapper. A pass is a
  * read → diff → toggle over one year, and Trek's toggle is its own inverse: two
