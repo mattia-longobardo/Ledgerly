@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { runTrekSync } from "@/modules/timeoff/infrastructure/trek-sync";
 import { unusedDb } from "@/test/integration-deps";
 import type { IntegrationConnection } from "@/platform/integrations/types";
 import { trekProvider } from "./trek-provider-adapter";
@@ -10,7 +11,11 @@ vi.mock("@/lib/clients/trek", () => ({
   }),
 }));
 
-vi.mock("@/lib/jobs/trek-sync", () => ({
+vi.mock("@/modules/timeoff/infrastructure/trek-store", () => ({
+  drizzleTimeoffStore: vi.fn(() => ({ withEvents: async () => { throw new Error("unused"); } })),
+}));
+
+vi.mock("@/modules/timeoff/infrastructure/trek-sync", () => ({
   runTrekSync: vi.fn(async () => ({
     status: "ok",
     year: 2026,
@@ -100,6 +105,11 @@ describe("trek provider adapter", () => {
       pass,
     );
     expect(stats).toEqual({ pulled: 3, deleted: 0, pushed: 1 });
+    // The pass is scoped to the CONNECTION's owner and given a store of its
+    // own: an hourly run has no principal, and `fetch` has nothing open, so
+    // the sync must be the thing that opens each short database context.
+    expect(vi.mocked(runTrekSync).mock.calls[0]?.[0]).toMatchObject({ userId: "u1" });
+    expect(vi.mocked(runTrekSync).mock.calls[0]?.[0].store).toBeDefined();
   });
 
   it("fails the run when the pass was partial, so the last-sync stamp cannot stay green", async () => {
@@ -131,7 +141,7 @@ describe("trek provider adapter", () => {
     ).rejects.toThrow(/Trek refused 2026-09-10/);
   });
 
-  it("leaves leave data alone on every disconnect policy", async () => {
+  it("leaves the owner's timeoff events alone on every disconnect policy", async () => {
     const audits: string[] = [];
     await trekProvider.onDisconnect({
       connection: { ...connectionFixture(), disconnectPolicy: "purge" },

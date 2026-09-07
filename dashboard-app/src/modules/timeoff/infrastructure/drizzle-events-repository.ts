@@ -37,8 +37,8 @@ function toEvent(row: TimeoffEventRow, typeCode: string, externalId: string | nu
 }
 
 /**
- * Postgres-backed events — the replacement for `src/lib/repo/leave.ts`, with
- * the same operations made user-scoped.
+ * Postgres-backed events — the replacement for the legacy leave-days store
+ * deleted in Task 1, with the same operations made user-scoped.
  *
  * Two things are worth stating because neither is visible from a call site:
  *

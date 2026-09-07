@@ -36,7 +36,52 @@
  */
 
 import type { LeaveFraction, LeaveKind, TrekEntry, DesiredDay } from "@/lib/clients/trek";
-import type { LeaveDayRow } from "@/lib/repo/leave";
+import type { TimeoffCode, TimeoffEvent } from "../application/ports";
+
+/**
+ * R7-2, in both directions. Trek models exactly two kinds; `permits` is a type
+ * this dashboard has and Trek does not, so a permits day is invisible to the
+ * whole conversation below — it is never offered as a desired day, and it is
+ * never in the local set a pull is diffed against. (`trekEvents` is what keeps
+ * the second half true: without it Trek's "I do not have this day" would
+ * delete a permits day the owner booked here.)
+ */
+const TREK_KIND_BY_CODE: Readonly<Record<string, LeaveKind>> = {
+  vacation: "vacation",
+  comp: "comp",
+};
+
+const CODE_BY_TREK_KIND: Readonly<Record<LeaveKind, TimeoffCode>> = {
+  vacation: "vacation",
+  comp: "comp",
+};
+
+/** The Trek kind a type maps to, or null when Trek cannot hold this type at all. */
+export function trekKindOf(typeCode: string): LeaveKind | null {
+  return TREK_KIND_BY_CODE[typeCode] ?? null;
+}
+
+export function typeCodeOf(kind: LeaveKind): TimeoffCode {
+  return CODE_BY_TREK_KIND[kind];
+}
+
+/** The events Trek can hold — everything a pull is allowed to reason about. */
+export function trekEvents(events: readonly TimeoffEvent[]): TimeoffEvent[] {
+  return events.filter((event) => trekKindOf(event.typeCode) !== null);
+}
+
+/**
+ * `numeric(3,2)` → Trek's numeric fraction, and back. This is the one boundary
+ * where a stored quantity becomes a number, and it is safe because the CHECK
+ * admits exactly two values.
+ */
+export function trekFraction(fraction: string): LeaveFraction {
+  return fraction === "0.50" || fraction === "0.5" ? 0.5 : 1;
+}
+
+export function storedFraction(fraction: LeaveFraction): string {
+  return fraction === 0.5 ? "0.50" : "1.00";
+}
 
 export interface PushPlan {
   /** Days to create or change upstream. */
@@ -45,14 +90,22 @@ export interface PushPlan {
   removals: string[];
 }
 
-/** Turns the locally-staged rows into the client's desired-state request. */
-export function planPush(local: readonly LeaveDayRow[]): PushPlan {
+/**
+ * Turns the locally-staged rows into the client's desired-state request.
+ *
+ * A staged `permits` upsert produces nothing: R7-2 says those days are never
+ * pushed. A staged DELETE is not filtered by kind, because a day that Trek
+ * does hold must be removed there whatever the local type says about it now.
+ */
+export function planPush(local: readonly TimeoffEvent[]): PushPlan {
   const desired: DesiredDay[] = [];
   const removals: string[] = [];
 
   for (const row of local) {
     if (row.pendingOp === "upsert") {
-      desired.push({ date: row.date, fraction: row.fraction, kind: row.kind });
+      const kind = trekKindOf(row.typeCode);
+      if (kind === null) continue;
+      desired.push({ date: row.date, fraction: trekFraction(row.fraction), kind });
     } else if (row.pendingOp === "delete") {
       removals.push(row.date);
     }
@@ -80,10 +133,10 @@ export interface PullPlan {
   unchanged: string[];
 }
 
-function differs(local: LeaveDayRow, remote: TrekEntry): boolean {
+function differs(local: TimeoffEvent, remote: TrekEntry): boolean {
   return (
-    local.fraction !== remote.fraction ||
-    local.kind !== remote.kind ||
+    local.fraction !== storedFraction(remote.fraction) ||
+    local.typeCode !== typeCodeOf(remote.kind) ||
     local.trekEntryId !== remote.id ||
     (local.note ?? "") !== remote.note
   );
@@ -97,7 +150,7 @@ function differs(local: LeaveDayRow, remote: TrekEntry): boolean {
  * lost to a failed upstream write.
  */
 export function planPull(
-  local: readonly LeaveDayRow[],
+  local: readonly TimeoffEvent[],
   remote: readonly TrekEntry[],
   stillPending: ReadonlySet<string> = new Set(),
 ): PullPlan {
@@ -159,25 +212,4 @@ export function planPull(
   }
 
   return { upserts, deletes, skipped, unchanged };
-}
-
-/**
- * Planned leave per month, in DAYS, summing fractions — a half day counts 0.5.
- *
- * This is the "previsto" side of the owner's requirement 4 and the only place
- * that converts the calendar into a monthly figure comparable with a payslip.
- */
-export function plannedDaysByMonth(
-  days: readonly { date: string; fraction: LeaveFraction }[],
-): { month: string; days: number }[] {
-  const perMonth = new Map<string, number>();
-  for (const d of days) {
-    const month = `${d.date.slice(0, 7)}-01`;
-    perMonth.set(month, (perMonth.get(month) ?? 0) + d.fraction);
-  }
-  return [...perMonth.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    // Fractions are halves, so the sum is exact; toFixed guards the float sum
-    // from producing 2.9999999999999996 for six halves.
-    .map(([month, days]) => ({ month, days: Number(days.toFixed(2)) }));
 }

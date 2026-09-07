@@ -1,17 +1,26 @@
 import { describe, expect, it } from "vitest";
 import type { TrekEntry } from "@/lib/clients/trek";
-import type { LeaveDayRow } from "@/lib/repo/leave";
-import { planPull, planPush, plannedDaysByMonth } from "./trek-diff";
+import type { TimeoffEvent } from "../application/ports";
+import { planPull, planPush, storedFraction, trekEvents, trekFraction, trekKindOf, typeCodeOf } from "./trek-diff";
 
-function local(over: Partial<LeaveDayRow> & { date: string }): LeaveDayRow {
+const EPOCH = new Date("2026-01-01T00:00:00Z");
+
+function local(over: Partial<TimeoffEvent> & { date: string }): TimeoffEvent {
   return {
-    fraction: 1,
-    kind: "vacation",
-    trekEntryId: 1,
+    id: `event-${over.date}`,
+    userId: "user-1",
+    typeId: "type-vacation",
+    typeCode: "vacation",
+    fraction: "1.00",
+    status: "planned",
     origin: "trek",
     note: null,
     pendingOp: "none",
     syncedAt: null,
+    trekEntryId: 1,
+    version: 1,
+    createdAt: EPOCH,
+    updatedAt: EPOCH,
     ...over,
   };
 }
@@ -23,7 +32,7 @@ function remote(over: Partial<TrekEntry> & { date: string }): TrekEntry {
 describe("planPush", () => {
   it("sends staged upserts as desired days and staged deletes as removals", () => {
     const plan = planPush([
-      local({ date: "2026-03-02", pendingOp: "upsert", fraction: 0.5, kind: "comp" }),
+      local({ date: "2026-03-02", pendingOp: "upsert", fraction: "0.50", typeCode: "comp" }),
       local({ date: "2026-03-03", pendingOp: "delete" }),
       local({ date: "2026-03-04", pendingOp: "none" }),
     ]);
@@ -53,7 +62,7 @@ describe("planPull", () => {
 
   it("rewrites a day whose fraction changed in Trek (full → half)", () => {
     const plan = planPull(
-      [local({ date: "2026-03-02", fraction: 1 })],
+      [local({ date: "2026-03-02", fraction: "1.00" })],
       [remote({ date: "2026-03-02", fraction: 0.5 })],
     );
     expect(plan.upserts[0]?.fraction).toBe(0.5);
@@ -61,7 +70,7 @@ describe("planPull", () => {
 
   it("rewrites a day whose kind changed in Trek", () => {
     const plan = planPull(
-      [local({ date: "2026-03-02", kind: "vacation" })],
+      [local({ date: "2026-03-02", typeCode: "vacation" })],
       [remote({ date: "2026-03-02", kind: "comp" })],
     );
     expect(plan.upserts[0]?.kind).toBe("comp");
@@ -92,7 +101,7 @@ describe("planPull", () => {
     // The dashboard wants a half day; Trek still says a full one because the
     // toggle never landed. Pulling Trek's version here would discard the edit.
     const plan = planPull(
-      [local({ date: "2026-03-02", fraction: 0.5, pendingOp: "upsert" })],
+      [local({ date: "2026-03-02", fraction: "0.50", pendingOp: "upsert" })],
       [remote({ date: "2026-03-02", fraction: 1 })],
       new Set(["2026-03-02"]),
     );
@@ -105,7 +114,7 @@ describe("planPull", () => {
     // Same row, but the push succeeded, so `stillPending` is empty and Trek's
     // post-write state is adopted verbatim.
     const plan = planPull(
-      [local({ date: "2026-03-02", fraction: 0.5, pendingOp: "upsert", trekEntryId: null })],
+      [local({ date: "2026-03-02", fraction: "0.50", pendingOp: "upsert", trekEntryId: null })],
       [remote({ date: "2026-03-02", fraction: 0.5, id: 42 })],
     );
     expect(plan.upserts).toEqual([
@@ -133,7 +142,7 @@ describe("planPull", () => {
     const plan = planPull(
       [
         local({ date: "2026-03-02" }), // agrees
-        local({ date: "2026-03-03", fraction: 1 }), // changed upstream
+        local({ date: "2026-03-03", fraction: "1.00" }), // changed upstream
         local({ date: "2026-03-04" }), // gone upstream
       ],
       [
@@ -148,38 +157,47 @@ describe("planPull", () => {
   });
 });
 
-describe("plannedDaysByMonth", () => {
-  it("counts a half day as 0.5", () => {
-    expect(
-      plannedDaysByMonth([
-        { date: "2026-03-02", fraction: 1 },
-        { date: "2026-03-03", fraction: 0.5 },
-      ]),
-    ).toEqual([{ month: "2026-03-01", days: 1.5 }]);
+describe("R7-2 — the Trek code mapping", () => {
+  it("maps the two kinds Trek models, both ways", () => {
+    expect(trekKindOf("vacation")).toBe("vacation");
+    expect(trekKindOf("comp")).toBe("comp");
+    expect(typeCodeOf("vacation")).toBe("vacation");
+    expect(typeCodeOf("comp")).toBe("comp");
   });
 
-  it("groups by month, ascending", () => {
-    expect(
-      plannedDaysByMonth([
-        { date: "2026-04-01", fraction: 1 },
-        { date: "2026-03-02", fraction: 1 },
-        { date: "2026-03-03", fraction: 1 },
-      ]),
-    ).toEqual([
-      { month: "2026-03-01", days: 2 },
-      { month: "2026-04-01", days: 1 },
+  it("has no Trek kind for a type Trek cannot hold", () => {
+    expect(trekKindOf("permits")).toBeNull();
+    expect(trekKindOf("sick")).toBeNull();
+  });
+
+  it("never offers a permits day as a desired day", () => {
+    const plan = planPush([
+      local({ date: "2026-03-02", typeCode: "permits", pendingOp: "upsert", trekEntryId: null }),
+      local({ date: "2026-03-03", pendingOp: "upsert" }),
     ]);
+    expect(plan.desired.map((d) => d.date)).toEqual(["2026-03-03"]);
   });
 
-  it("keeps a run of halves exact rather than 2.9999999999999996", () => {
-    const days = Array.from({ length: 6 }, (_, i) => ({
-      date: `2026-03-0${i + 1}`,
-      fraction: 0.5 as const,
-    }));
-    expect(plannedDaysByMonth(days)).toEqual([{ month: "2026-03-01", days: 3 }]);
+  it("still removes a day Trek holds, whatever the local type says now", () => {
+    const plan = planPush([local({ date: "2026-03-02", typeCode: "permits", pendingOp: "delete" })]);
+    expect(plan.removals).toEqual(["2026-03-02"]);
   });
 
-  it("returns nothing for an empty calendar", () => {
-    expect(plannedDaysByMonth([])).toEqual([]);
+  it("keeps permits out of the set a pull is diffed against, so Trek cannot delete it", () => {
+    const kept = trekEvents([
+      local({ date: "2026-03-02", typeCode: "permits", trekEntryId: null }),
+      local({ date: "2026-03-03" }),
+    ]);
+    expect(kept.map((e) => e.date)).toEqual(["2026-03-03"]);
+    expect(planPull(kept, []).deletes).toEqual(["2026-03-03"]);
+  });
+});
+
+describe("fraction at the Trek boundary", () => {
+  it("crosses in both directions without floating point", () => {
+    expect(trekFraction("0.50")).toBe(0.5);
+    expect(trekFraction("1.00")).toBe(1);
+    expect(storedFraction(0.5)).toBe("0.50");
+    expect(storedFraction(1)).toBe("1.00");
   });
 });
