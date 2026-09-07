@@ -11,6 +11,20 @@ describe("budgets routes", () => {
   beforeEach(resetDb);
   afterAll(closeDb);
 
+  /**
+   * Every path in `value` whose leaf key is an ownership field, so a failure
+   * names where the leak is rather than just that there is one.
+   */
+  function ownershipKeysIn(value: unknown, path = "$"): string[] {
+    if (Array.isArray(value)) return value.flatMap((item, i) => ownershipKeysIn(item, `${path}[${i}]`));
+    if (value === null || typeof value !== "object") return [];
+    return Object.entries(value as Record<string, unknown>).flatMap(([key, nested]) =>
+      key === "userId" || key === "actorUserId"
+        ? [`${path}.${key}`]
+        : ownershipKeysIn(nested, `${path}.${key}`),
+    );
+  }
+
   function headers(userId: string, role: RoleCode = "owner", extra: Record<string, string> = {}) {
     return {
       "content-type": "application/json",
@@ -185,6 +199,16 @@ describe("budgets routes", () => {
     expect(detail).toMatchObject({ budget: { id: budgetId }, figures: { initial: "1000.00" } });
     expect((detail.budget as Record<string, unknown>)).not.toHaveProperty("userId");
 
+    // `docs/api/README.md` states budget, allocation, usage and event
+    // responses never expose ownership fields. `events[].detail` is an open
+    // record holding whole domain snapshots (`create-budget` stores
+    // `{ budget }`, carrying `userId`), so asserting on the DTO's own keys
+    // alone would miss it — walk the whole response instead.
+    const events = detail.events as { kind: string; detail: unknown }[];
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.some((event) => event.kind === "budget_created")).toBe(true);
+    expect(ownershipKeysIn(detail)).toEqual([]);
+
     const viewerWrite = await app.request("/api/v1/budgets", {
       method: "POST",
       headers: headers(userId, "viewer"),
@@ -335,12 +359,32 @@ describe("budgets routes", () => {
       method: "POST",
       headers: headers(userId),
       body: JSON.stringify({
-        sourceKind: "none", sourceId: null, amount: "40.00", recurrence: "once",
+        sourceKind: "none", sourceId: null, amount: "40.00", recurrence: "monthly",
         effectiveFrom: "2026-01-01", effectiveTo: null, note: null,
       }),
     });
     expect(allocationRes.status).toBe(201);
     const allocation = (await allocationRes.json()) as { id: string; version: number };
+
+    // A `once` allocation contributes its amount regardless of `effectiveTo`
+    // (see `allocatedThrough`), so ending one would change no figure. The use
+    // case rejects it and the route must surface that as a 422, not a
+    // success the UI would render as "Ended …".
+    const onceRes = await app.request(`/api/v1/budgets/${budget.id}/allocations`, {
+      method: "POST",
+      headers: headers(userId),
+      body: JSON.stringify({
+        sourceKind: "none", sourceId: null, amount: "10.00", recurrence: "once",
+        effectiveFrom: "2026-01-01", effectiveTo: null, note: null,
+      }),
+    });
+    const once = (await onceRes.json()) as { id: string; version: number };
+    const endOnceRes = await app.request(`/api/v1/budgets/${budget.id}/allocations/${once.id}`, {
+      method: "PATCH",
+      headers: headers(userId),
+      body: JSON.stringify({ version: once.version, effectiveTo: "2026-03-31" }),
+    });
+    expect(endOnceRes.status).toBe(422);
 
     const wrongBudgetRes = await app.request(`/api/v1/budgets/${other.id}/allocations/${allocation.id}`, {
       method: "PATCH",

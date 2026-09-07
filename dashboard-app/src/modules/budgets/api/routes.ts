@@ -149,9 +149,35 @@ function versionDto(version: AmountVersion) {
   };
 }
 
-/** Drops `actorUserId` — same rationale as `allocationDto`. */
+/**
+ * Recursively removes the ownership keys from an event `detail`. The use cases
+ * store whole domain snapshots in there — `create-budget` stores
+ * `{ budget }`, carrying `userId`; `add-allocation` stores `actorUserId` —
+ * so passing `detail` through verbatim would emit those in the very response
+ * where every sibling DTO strips them. Recursive rather than mapper-based
+ * because `detail` is an open `Record<string, unknown>`: a future event kind
+ * nesting a new shape stays covered without anyone remembering to add a
+ * mapper for it.
+ */
+function stripOwnership(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripOwnership);
+  if (value === null || typeof value !== "object" || value instanceof Date) return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== "userId" && key !== "actorUserId")
+      .map(([key, nested]) => [key, stripOwnership(nested)]),
+  );
+}
+
+/** Drops `actorUserId` — same rationale as `allocationDto` — and strips the same fields out of `detail`. */
 function eventDto(event: BudgetEvent) {
-  return { id: event.id, budgetId: event.budgetId, kind: event.kind, detail: event.detail, createdAt: event.createdAt.toISOString() };
+  return {
+    id: event.id,
+    budgetId: event.budgetId,
+    kind: event.kind,
+    detail: stripOwnership(event.detail) as Record<string, unknown>,
+    createdAt: event.createdAt.toISOString(),
+  };
 }
 
 function detailDto(detail: BudgetDetail) {
