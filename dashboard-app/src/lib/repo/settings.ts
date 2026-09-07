@@ -27,3 +27,17 @@ export const SETTING_KEYS = {
   llmBaseUrl: "llm_base_url",
   llmModel: "llm_model",
 } as const;
+
+/**
+ * Hours in a working day, used to convert the hour-denominated figures a
+ * payslip states into days. Moved here from `src/app/(app)/_lib/vacation.ts`
+ * when Phase 7 deleted that file (R7-5'): the timeoff module needs it and no
+ * page owns it.
+ */
+export const DEFAULT_HOURS_PER_DAY = 8;
+
+export async function hoursPerDay(): Promise<number> {
+  const raw = await getSetting<unknown>(SETTING_KEYS.hoursPerDay, DEFAULT_HOURS_PER_DAY);
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOURS_PER_DAY;
+}

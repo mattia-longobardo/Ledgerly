@@ -9,13 +9,12 @@
  * (`src/lib/jobs/monthly-close.ts`) replaced the snapshot; it runs on the
  * monthly tier and needs no hourly babysitting.
  *
- * Wallet used to be refreshed here too. It is not any more: Wallet syncs itself
- * at noon, so polling it hourly bought nothing, and it now has its own daily job
- * (`src/lib/jobs/wallet-refresh.ts`, cron 12:00 Europe/Rome). The payslip
- * polling fallback is gone too (Task 22): `payroll_ingest` (Phase 4) owns
- * document ingestion now. The heartbeat stays here — the health endpoint's
- * window is two hours, so a daily job touching it would risk an autoheal
- * restart loop.
+ * Wallet used to be refreshed here too, then by a daily `wallet_refresh` job;
+ * both are gone — the accounts module's own `wallet_accounts_sync` and
+ * `wallet_transactions_sync` jobs read Wallet now. The payslip polling
+ * fallback is gone too (Task 22): `payroll_ingest` (Phase 4) owns document
+ * ingestion. The heartbeat stays here — the health endpoint's window is two
+ * hours, so a daily job touching it would risk an autoheal restart loop.
  *
  * Ends by touching the heartbeat the compose healthcheck watches.
  */

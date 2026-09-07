@@ -21,6 +21,31 @@ describe("budgets permissions", () => {
   });
 });
 
+describe("timeoff permissions", () => {
+  it("declares both codes the timeoff module asserts", () => {
+    for (const code of ["timeoff.read", "timeoff.write"] as const) {
+      expect(PERMISSIONS).toContain(code);
+    }
+  });
+
+  it("gives a member read and write and a viewer only the read", () => {
+    const member = permissionsForRoles(["member"]);
+    expect(member.has("timeoff.read")).toBe(true);
+    expect(member.has("timeoff.write")).toBe(true);
+    const viewer = permissionsForRoles(["viewer"]);
+    expect(viewer.has("timeoff.read")).toBe(true);
+    expect(viewer.has("timeoff.write")).toBe(false);
+  });
+
+  it("gives owner and admin both codes", () => {
+    for (const role of ["owner", "admin"] as const) {
+      expect([...permissionsForRoles([role])]).toEqual(
+        expect.arrayContaining(["timeoff.read", "timeoff.write"]),
+      );
+    }
+  });
+});
+
 describe("payroll permissions", () => {
   it("declares all four codes the payroll module asserts", () => {
     for (const code of ["payroll.read", "payroll.upload", "payroll.review", "payroll.read_original"] as const) {

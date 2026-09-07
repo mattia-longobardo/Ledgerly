@@ -17,13 +17,6 @@
     "test:all": "npm run test && npm run test:integration",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/lib/db/migrate.ts",
-    "migrate:teable": "tsx scripts/migrate-teable.ts",
-    "migrate:teable:validate": "tsx scripts/validate-teable-migration.ts",
-    "migrate:paperless:validate": "tsx scripts/validate-paperless-migration.ts",
-    "migrate:funds": "tsx scripts/migrate-funds.ts",
-    "migrate:funds:validate": "tsx scripts/validate-funds-migration.ts",
-    "migrate:vacation": "tsx scripts/migrate-vacation-budget.ts",
-    "migrate:vacation:validate": "tsx scripts/validate-vacation-budget-migration.ts",
     "migrate:credentials": "tsx scripts/import-file-credentials.ts",
     "e2e": "playwright test",
     "openapi:generate": "tsx scripts/openapi.ts"

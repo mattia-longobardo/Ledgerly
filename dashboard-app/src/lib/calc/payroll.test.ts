@@ -3,12 +3,9 @@ import {
   annualTotals,
   averageNet,
   averageTaxes,
-  ferieRemaining,
   isThirteenthCandidate,
   netPerMonthSeries,
   ral,
-  leaveTakenByMonth,
-  leaveTakenYtd,
   type PayslipLike,
 } from "./payroll";
 
@@ -141,61 +138,6 @@ describe("ral", () => {
   });
 });
 
-describe("ferieRemaining", () => {
-  const latest = ordinary("2026-07-01", {
-    ferieBalance: "62.50",
-    ferieUnit: "hours",
-    rolBalance: "17.50",
-    rolUnit: "hours",
-    permessiBalance: "8.00",
-    permessiUnit: "hours",
-  });
-
-  it("combines ferie + ROL and converts hours to days", () => {
-    const r = ferieRemaining(latest);
-    expect(r.ferieHours).toBe(62.5);
-    expect(r.rolHours).toBe(17.5);
-    expect(r.combinedHours).toBe(80);
-    expect(r.combinedDays).toBe(10);
-  });
-
-  it("honours a non-default hours-per-day setting", () => {
-    expect(ferieRemaining(latest, 7.5).combinedDays).toBeCloseTo(80 / 7.5, 12);
-  });
-
-  it("keeps permessi out of the headline", () => {
-    const r = ferieRemaining(latest);
-    expect(r.permessiHours).toBe(8);
-    expect(r.combinedHours).toBe(80);
-    expect(r.combinedDays).toBe(10);
-  });
-
-  it("converts a payslip that states balances in days", () => {
-    const inDays = ordinary("2026-07-01", {
-      ferieBalance: "5.00",
-      ferieUnit: "days",
-      rolBalance: "1.00",
-      rolUnit: "days",
-    });
-    expect(ferieRemaining(inDays).combinedHours).toBe(48);
-    expect(ferieRemaining(inDays).combinedDays).toBe(6);
-  });
-
-  it("returns nulls with no payslip and tolerates partial balances", () => {
-    expect(ferieRemaining(null)).toEqual({
-      ferieHours: null,
-      rolHours: null,
-      combinedHours: null,
-      combinedDays: null,
-      permessiHours: null,
-    });
-    const partial = ferieRemaining(ordinary("2026-07-01", { ferieBalance: "8.00" }));
-    expect(partial.rolHours).toBeNull();
-    expect(partial.combinedHours).toBe(8);
-    expect(partial.combinedDays).toBe(1);
-  });
-});
-
 describe("netPerMonthSeries", () => {
   const rows = [
     ordinary("2026-05-01", { net: "2000.00" }),
@@ -247,56 +189,5 @@ describe("isThirteenthCandidate", () => {
     expect(isThirteenthCandidate({ month: "2025-12-01", net: "2000.00", medianNet: null })).toBe(
       false,
     );
-  });
-});
-
-describe("leave actually used, per month", () => {
-  const v = (month: string, ferieTaken: number, rolTaken: number) => ({
-    month, isThirteenth: false, status: "verified", supersededBy: null,
-    ferieTaken, rolTaken,
-  });
-
-  it("attributes usage to the month BEFORE the payslip", () => {
-    // Owner's rule: "agosto ha luglio". The August payslip's FERIE GOD. of
-    // 12,01 h is July's usage.
-    const rows = leaveTakenByMonth([v("2026-08-01", 12.01, 0)]);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.month).toBe("2026-07-01");
-    expect(rows[0]!.ferieHours).toBe(12.01);
-  });
-
-  it("converts to days at the configured ratio", () => {
-    const rows = leaveTakenByMonth([v("2026-08-01", 16, 8)], 8);
-    expect(rows[0]!.ferieDays).toBe(2);
-    expect(rows[0]!.rolDays).toBe(1);
-    expect(rows[0]!.totalDays).toBe(3);
-  });
-
-  it("ignores a tredicesima, which repeats December's grid", () => {
-    const thirteenth = { ...v("2025-12-01", 26.66, 17.34), isThirteenth: true };
-    expect(leaveTakenByMonth([thirteenth])).toEqual([]);
-  });
-
-  it("ignores rows that are not verified", () => {
-    const pending = { ...v("2026-08-01", 12.01, 0), status: "parsed" };
-    expect(leaveTakenByMonth([pending])).toEqual([]);
-  });
-
-  it("sums a year to date, in days", () => {
-    const ytd = leaveTakenYtd(
-      [v("2026-03-01", 8, 0), v("2026-04-01", 16, 8), v("2027-01-01", 80, 0)],
-      2026,
-      8,
-    );
-    // March payslip -> February 2026 (1 d); April -> March 2026 (2 d); and the
-    // January 2027 payslip reports December 2026 (10 d), so it counts for 2026.
-    expect(ytd.ferieDays).toBe(13);
-    expect(ytd.rolDays).toBe(1);
-    expect(ytd.totalDays).toBe(14);
-  });
-
-  it("returns nothing when no payslip carries usage figures", () => {
-    const noData = { month: "2026-08-01", isThirteenth: false, status: "verified" };
-    expect(leaveTakenByMonth([noData])).toEqual([]);
   });
 });
