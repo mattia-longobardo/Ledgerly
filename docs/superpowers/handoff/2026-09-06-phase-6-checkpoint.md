@@ -1,13 +1,20 @@
 # Phase 6 checkpoint — Budgets
 
-**Implemented and reviewed. Not deployed.** Phase 6 stacks on the deployed
-Phase 5 (Funds) build (`0dc939e`, image
-`sha256:4c490096cc1118506b55a02d9e75bdec9288dbf02268112890caaa5bc867fec5`) but
-has not itself been cut over to production. This checkpoint records the exit
-verification gates, what the manual walkthrough proved and how, and what is
-still owed before a real deploy: the cutover sequence in
-[`docs/deploy/phase-6-runbook.md`](../../deploy/phase-6-runbook.md), and a
-true browser walkthrough against a rehearsal copy of production data.
+**Implemented, reviewed and DEPLOYED to production on 2026-09-07.** Phase 6
+stacked on the deployed Phase 5 (Funds) build (`0dc939e`). The cutover ran the
+sequence in [`docs/deploy/phase-6-runbook.md`](../../deploy/phase-6-runbook.md)
+end to end; that runbook now carries a "Deployment record — 2026-09-07"
+section with the exact counts, image ids and the two deviations found during
+the cutover. This checkpoint records the exit verification gates and what the
+pre-deploy walkthrough proved and how.
+
+**Still owed after the deploy:** a true browser walkthrough as a signed-in
+user against the live application (`/finance/budgets`, `/finance/vacation`,
+`/finance/accounts`). The cutover verified the routes are served and the
+migrated data is correct in the database, but everything past the sign-in
+redirect remains unperformed. The deploy-boundary idempotency shim must also
+be deleted after 2026-09-08 15:00 UTC — see the runbook's post-cutover
+cleanup.
 
 ## Behavior
 
