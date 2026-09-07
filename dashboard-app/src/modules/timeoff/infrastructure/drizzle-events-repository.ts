@@ -179,14 +179,28 @@ export class DrizzleEventsRepository implements EventsRepository {
     return rows.length;
   }
 
-  private async unlink(userId: string, eventIds: readonly string[]) {
-    if (eventIds.length === 0) return;
-    await this.db.delete(providerLinks).where(and(
-      eq(providerLinks.userId, userId),
-      eq(providerLinks.provider, PROVIDER),
-      eq(providerLinks.entityType, ENTITY_TYPE),
-      inArray(providerLinks.entityId, [...eventIds]),
-    ));
+  async unlinkProvider(userId: string, dates: readonly string[]): Promise<number> {
+    if (dates.length === 0) return 0;
+    const rows = await this.db
+      .select({ id: timeoffEvents.id })
+      .from(timeoffEvents)
+      .where(and(eq(timeoffEvents.userId, userId), inArray(timeoffEvents.date, [...dates])));
+    return this.unlink(userId, rows.map((r) => r.id));
+  }
+
+  /** Returns how many links were actually dropped, not how many were asked for. */
+  private async unlink(userId: string, eventIds: readonly string[]): Promise<number> {
+    if (eventIds.length === 0) return 0;
+    const dropped = await this.db
+      .delete(providerLinks)
+      .where(and(
+        eq(providerLinks.userId, userId),
+        eq(providerLinks.provider, PROVIDER),
+        eq(providerLinks.entityType, ENTITY_TYPE),
+        inArray(providerLinks.entityId, [...eventIds]),
+      ))
+      .returning({ id: providerLinks.id });
+    return dropped.length;
   }
 
   async stageUpsert(

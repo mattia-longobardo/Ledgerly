@@ -93,9 +93,22 @@ export interface PushPlan {
 /**
  * Turns the locally-staged rows into the client's desired-state request.
  *
- * A staged `permits` upsert produces nothing: R7-2 says those days are never
- * pushed. A staged DELETE is not filtered by kind, because a day that Trek
- * does hold must be removed there whatever the local type says about it now.
+ * R7-2 says a day whose type Trek cannot hold is never OFFERED to Trek, and a
+ * staged upsert for one produces no desired day. What it does produce depends
+ * on whether Trek already has that date:
+ *
+ *  - **Never synced** (`trekEntryId === null`) — a permits day booked here from
+ *    scratch. Nothing upstream to say; the row produces nothing at all and
+ *    `syncPass` settles it locally.
+ *  - **CONVERTED** (`trekEntryId !== null`) — a day Trek owns that the owner has
+ *    just retyped to `permits`. Its entry upstream must GO. Leaving it there is
+ *    not a cosmetic leak: `trekEvents()` keeps the converted day out of the set
+ *    the pull is diffed against, so Trek's surviving entry reads as new upstream
+ *    on the very next pass and is written back over the owner's change. The
+ *    removal is the only thing that makes the conversion stick.
+ *
+ * A staged DELETE is never filtered by kind, for the same reason: a day that
+ * Trek does hold must be removed there whatever the local type says about it.
  */
 export function planPush(local: readonly TimeoffEvent[]): PushPlan {
   const desired: DesiredDay[] = [];
@@ -104,7 +117,10 @@ export function planPush(local: readonly TimeoffEvent[]): PushPlan {
   for (const row of local) {
     if (row.pendingOp === "upsert") {
       const kind = trekKindOf(row.typeCode);
-      if (kind === null) continue;
+      if (kind === null) {
+        if (row.trekEntryId !== null) removals.push(row.date);
+        continue;
+      }
       desired.push({ date: row.date, fraction: trekFraction(row.fraction), kind });
     } else if (row.pendingOp === "delete") {
       removals.push(row.date);
@@ -112,6 +128,31 @@ export function planPush(local: readonly TimeoffEvent[]): PushPlan {
   }
 
   return { desired, removals };
+}
+
+/**
+ * A staged upsert for a type Trek cannot hold, on a date Trek still has an
+ * entry for. `planPush` turns each of these into a removal and `syncPass`
+ * drops its `provider_links` row once Trek confirms — the day itself stays,
+ * as the owner asked, now owned by nobody but this dashboard.
+ */
+export function conversionRemovals(local: readonly TimeoffEvent[]): string[] {
+  return local
+    .filter((row) =>
+      row.pendingOp === "upsert" && trekKindOf(row.typeCode) === null && row.trekEntryId !== null)
+    .map((row) => row.date);
+}
+
+/**
+ * A staged upsert Trek will never hear about at all — no kind it understands,
+ * and no entry of its own upstream. Settled locally, or it stays flagged for
+ * ever and shows as pending in a UI that can do nothing about it.
+ */
+export function localOnlyUpserts(local: readonly TimeoffEvent[]): string[] {
+  return local
+    .filter((row) =>
+      row.pendingOp === "upsert" && trekKindOf(row.typeCode) === null && row.trekEntryId === null)
+    .map((row) => row.date);
 }
 
 export interface PullUpsert {

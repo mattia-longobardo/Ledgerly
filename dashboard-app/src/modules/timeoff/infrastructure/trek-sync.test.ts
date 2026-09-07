@@ -22,6 +22,7 @@ const repo = vi.hoisted(() => ({
   upsertFromProvider: vi.fn(),
   deleteDates: vi.fn(),
   clearPending: vi.fn(),
+  unlinkProvider: vi.fn(),
 }));
 
 const state = vi.hoisted(() => ({ setCachedTrekStats: vi.fn() }));
@@ -61,6 +62,8 @@ const USER_ID = "00000000-0000-7000-8000-00000000000a";
 const CONFIG = { baseUrl: "https://trek.example", token: "trek_test" };
 const CALL = { config: CONFIG, sleep: async () => {} };
 const EPOCH = new Date("2026-01-01T00:00:00Z");
+const MONDAY = "2026-03-02";
+const MONDAY_CONVERTED = "2026-03-09";
 
 const TYPE_IDS: Record<string, string> = {
   vacation: "type-vacation",
@@ -112,6 +115,7 @@ const store: TimeoffStore = {
         upsertFromProvider: (...args: unknown[]) => repo.upsertFromProvider(...args),
         deleteDates: (...args: unknown[]) => repo.deleteDates(...args),
         clearPending: (...args: unknown[]) => repo.clearPending(...args),
+        unlinkProvider: (...args: unknown[]) => repo.unlinkProvider(...args),
         at: async () => null,
         stageUpsert: async () => {
           throw new Error("not used");
@@ -341,6 +345,81 @@ describe("R7-2 — days Trek cannot hold", () => {
     expect(repo.clearPending).toHaveBeenCalledWith(USER_ID, ["2026-03-02"], expect.any(Date));
     expect(result.pushed).toBe(0);
     expect(result.status).toBe("ok");
+  });
+
+  it("removes the Trek entry when a Trek day is converted to permits", async () => {
+    // The transition the first cut got wrong: `planPush` skipped the row and
+    // `syncPass` settled it locally, so Trek kept its entry, the pull saw it as
+    // new upstream and wrote the day back to `vacation`.
+    const converted = local({
+      date: MONDAY_CONVERTED,
+      typeCode: "permits",
+      pendingOp: "upsert",
+      trekEntryId: 4242,
+    });
+    repo.pending.mockResolvedValue([converted]);
+    repo.inRange.mockResolvedValue([converted]);
+    trek.applyDesiredState.mockImplementation(async () => {
+      networkStep("push");
+      return applied({
+        results: [{ date: MONDAY_CONVERTED, op: "delete", outcome: "applied", action: "removed" }],
+      });
+    });
+    // Trek has honoured the removal, so the year comes back without it.
+    trek.getEntries.mockImplementation(async () => {
+      networkStep("pull");
+      return [];
+    });
+
+    const result = await run();
+
+    const [input] = trek.applyDesiredState.mock.calls[0] as [
+      { desired: unknown[]; removals: string[] },
+    ];
+    expect(input.desired).toEqual([]);
+    expect(input.removals).toEqual([MONDAY_CONVERTED]);
+    // The day itself stays — it is the owner's; only its link to Trek goes.
+    expect(repo.clearPending).toHaveBeenCalledWith(USER_ID, [MONDAY_CONVERTED], expect.any(Date));
+    expect(repo.unlinkProvider).toHaveBeenCalledWith(USER_ID, [MONDAY_CONVERTED]);
+    expect(repo.deleteDates).toHaveBeenCalledWith(USER_ID, []);
+    expect(result.status).toBe("ok");
+  });
+
+  it("keeps the Trek link while the conversion's removal has NOT landed", async () => {
+    const converted = local({
+      date: MONDAY_CONVERTED,
+      typeCode: "permits",
+      pendingOp: "upsert",
+      trekEntryId: 4242,
+    });
+    repo.pending.mockResolvedValue([converted]);
+    repo.inRange.mockResolvedValue([converted]);
+    trek.applyDesiredState.mockImplementation(async () => {
+      networkStep("push");
+      return applied({
+        results: [
+          { date: MONDAY_CONVERTED, op: "delete", outcome: "failed", action: null, error: "boom" },
+        ],
+      });
+    });
+
+    const result = await run();
+
+    expect(repo.clearPending).not.toHaveBeenCalled();
+    expect(repo.unlinkProvider).not.toHaveBeenCalled();
+    expect(result.status).toBe("partial");
+    expect(result.stillPending).toEqual([MONDAY_CONVERTED]);
+  });
+
+  it("never unlinks a permits day Trek has never held", async () => {
+    repo.pending.mockResolvedValue([
+      local({ date: MONDAY, typeCode: "permits", pendingOp: "upsert", trekEntryId: null }),
+    ]);
+
+    await run();
+
+    expect(repo.clearPending).toHaveBeenCalledWith(USER_ID, [MONDAY], expect.any(Date));
+    expect(repo.unlinkProvider).not.toHaveBeenCalled();
   });
 
   it("keeps a permits day when Trek reports an empty year", async () => {
