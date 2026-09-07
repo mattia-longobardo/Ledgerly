@@ -21,9 +21,9 @@ export function requireIdempotencyKey(key: string | undefined): string {
 
 /**
  * A POST that creates a financial record must not create two rows for one
- * `Idempotency-Key`. The plain `idempotency()` middleware (`./idempotency.ts`)
- * cannot guarantee that: it reads the replay cache, runs the handler, and
- * writes the cache back in three separate transactions, so two concurrent
+ * `Idempotency-Key`. The plain `idempotency()` middleware this replaced
+ * (deleted — it read the replay cache, ran the handler, and wrote the cache
+ * back in three separate transactions) could not guarantee that: two concurrent
  * requests with the same key (or a client retry racing a crash between the
  * handler's commit and the cache write) can both pass the "not yet cached"
  * check and both insert. `onConflictDoUpdate` on the cache row then hides
