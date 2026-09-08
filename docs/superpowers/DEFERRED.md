@@ -32,3 +32,48 @@ Each was found by a task or a review, judged not worth stopping the phase for, a
 - **`BalanceView` ignores `TimeoffBalance.unit`** (`get-workspace.ts`) — every balance source writes hours today, so the conversion is unconditional and correct; it becomes a silent misreport the day a source writes a figure already in days.
 - **Expenses writes are at `/expenses/…` while reads stay at `/transaction-categories`/`/transaction-labels`** — the reads shipped first and renaming a published path is a breaking change nothing asked for, so both surfaces exist. Worth unifying behind `/expenses/*` at the next `/api/v2`. Recorded in `docs/api/README.md`.
 - **`transaction_categories`, `transaction_labels` and `sync_jobs` have no `version` column**, so their `PATCH` routes are last-writer-wins with no `If-Match`, no `428` and no `409` (Ruling P9-4). Adding the columns needs a migration the reduced Phase 9 forbade. Low risk with one user; not with two.
+
+## Minors from the Phases 7–9 review ledgers
+
+Everything the task and review ledgers of the reduced run recorded as
+"minor (deferred)" and did not close (Ruling P9-9). Those ledgers live in a
+git-ignored workspace and go when it does, so this is the durable copy. One line
+each: what it is, why it was left, where it came from.
+
+### Phase 7 (time off)
+
+- **`src/lib/calc/networth.ts` is orphaned** — its last consumer was one of the migration scripts Task 1 deleted, so nothing imports it. Left in place because deleting it was outside that task's brief. Phase 7 review, Task 1.
+- **`/api/metrics` hardcodes the review-queue statuses** — the pending-imports gauge inlines `('needs_review','verified','needs_ocr')` in SQL instead of deriving them from `AWAITING_STATUSES` (`src/modules/payroll/ui/queue.ts`), so the two drift the day a status is added. Left because the value is interpolated into raw SQL rather than used as a TypeScript filter. Phase 7 review, Task 1.
+- **`rls-matrix.itest.ts` registers `afterAll(closeDb)` once per `describe`** (five times) where one file-level `afterAll` would do. Harmless, so not worth re-running the suite for at the time. Phase 7 review, Task 1.
+- **Dead setting key `ferieTakenByMonth`** (`src/lib/repo/settings.ts:20`) — written by nothing since the legacy leave tables went, and read by nothing. Phase 7 review, Task 1.
+- **`DROP TABLE … CASCADE` in migration `0018`** is drizzle-kit's generated default; the drop order alone already satisfies the dependencies, so the `CASCADE` is wider than the migration needs. Not edited, because the migration is applied. Phase 7 review, Task 1.
+- **`units.ts:18` truncates hundredths instead of rounding them** — normalising `88.256` yields `88.25`, not `88.26`. Left because every source in play today feeds it two-decimal values. Phase 7 review, Tasks 2–3.
+- **`addHours` duplicates `addQuantity`** (`src/modules/timeoff/domain/events.ts:50-55`) — two spellings of one operation. Phase 7 review, Tasks 2–3.
+- **`latestPerType` is not year-scoped** while the rest of `getWorkspace` is. It matches the port signature, so narrowing it is a port change rather than a one-liner. Phase 7 review, Tasks 2–3.
+- **`plannedByMonth` has no ascending-month ordering test** — the dropped `plannedDaysByMonth` tests covered that, and no consumer depends on the order today. Phase 7 review, Tasks 2–3.
+- **`clearPending` stamps `syncedAt` on a settled conversion that is no longer synced**, and `conversionRemovals`/`localOnlyUpserts` each re-derive `planPush`'s predicate instead of sharing it. Offered as optional in a fix round and declined. Phase 7 review, Tasks 2–3.
+- **`mapError`'s fallback puts a raw `Error.message` into `?error=`** — the text is attacker-influenced, though it is escaped on render, so this is information exposure and not XSS. Phase 7 review, Task 4.
+- **Wire schemas type `fraction`, `typeCode`, `status`, `origin` and `pendingOp` as plain strings** while the matching enum schemas already exist, so the published contract is looser than the domain. Phase 7 review, Task 4.
+- **`DayForm` defaults the type to the literal `"vacation"`** rather than to `types[0]`, so a user whose seeded types omit vacation gets a wrong default. Phase 7 review, Task 4.
+- **`GET /timeoff/events` accepts an unbounded `from`/`to` range** — one caller and one user, so no cap was added. Phase 7 review, Task 4.
+- **The year is resolved three different ways** (`toISOString`, `getFullYear`, `getUTCFullYear`) across the time-off code, and the three disagree either side of midnight in a non-UTC zone. Phase 7 whole-branch review.
+- **`plannedDaysYtd`'s comment claims comparability with the per-type used figures**, which are computed on a different basis. Phase 7 whole-branch review.
+
+### Phase 8 (personal access tokens)
+
+- **A `pat_`-prefixed credential that fails `TOKEN_PATTERN` falls through to the cookie path** instead of being refused as the malformed token it plainly is. Phase 8 review.
+- **A date-only `expiresAt` means 00:00Z on the API and 23:59:59.999Z in the server action** — the same input, a day apart, depending on which surface took it. Phase 8 review.
+- **Creating a token without JavaScript mints one nobody sees** — the one-time secret comes back through `useActionState` (Ruling P8-1) with no permalink fallback, so a no-JS submit succeeds silently. Phase 8 review.
+- **The `last_used_at` throttle is per-observation, not enforced under concurrency** — two simultaneous requests can both decide to write. Cosmetic, on a timestamp nothing reads transactionally. Phase 8 review.
+- **Unauthenticated Bearer requests reach a database transaction before rate limiting** — the token lookup happens first, so a flood of invalid tokens costs one query each. Phase 8 review.
+
+The sixth Phase 8 minor — no route declaring `bearer` in its `security` array — was closed in Phase 9 Task 3 by Ruling P9-3 and is not carried here.
+
+### Phase 9 (hardening and management)
+
+- **Housekeeping ages `job_runs` on `COALESCE(finished_at, started_at)`**, so a row still queued or running 90 days later is purged as though it had finished. Documented as a Deviation when it shipped. Phase 9 review, Tasks 1–3.
+- **A rate-limited inbound delivery still writes a `webhook_deliveries` row** — deliberate, because a refusal storm should be visible to an operator, and bounded by the cap itself; it does mean the refusal path writes. Phase 9 review, Tasks 1–3.
+- **`updateMappingRuleAction` defaults `version` to `0`** instead of refusing a missing precondition, so a form that omits it reports a version mismatch rather than the real error. Phase 9 review, Tasks 1–3.
+- **`update-mapping-rule`'s doc says a global rule id answers `404`** where the uuid path schema answers `422` first. Phase 9 review, Tasks 1–3.
+- **`runMappingRulesForPrincipal` has no test seam** — it is reachable only through the job, so its branches are proven indirectly. Phase 9 review, Tasks 1–3.
+- **`acknowledgeIssue` still passes ownership fields into its audit `before`/`after`** — `resolveIssue` was brought onto the Phase 6 `stripOwnership` convention in the closing fix wave and its Phase 5 counterpart was left as it was, so the two now disagree. Phase 9 whole-branch review.

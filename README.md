@@ -91,11 +91,13 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-`npm run dev` and `npm run build && npm run start` both need the full
+`npm run dev` and `npm run build && npx next start` both need the full
 environment `src/lib/env.ts` validates at boot (`DATABASE_URL`, `AUTH_*`,
 `OIDC_*`, `AUTHORIZED_SUB`, `APP_ENCRYPTION_KEY`, `CRON_SECRET`,
 `WEBHOOK_SECRET`) — [`docs/deploy/README.md`](docs/deploy/README.md) has the
-full matrix with defaults and what each one is for.
+full matrix with defaults and what each one is for. `npx next start`, not
+`npm run start`: that script is `node server.js`, the standalone entry point
+the Docker image builds, and it does not exist in a source checkout.
 
 ### Testing
 

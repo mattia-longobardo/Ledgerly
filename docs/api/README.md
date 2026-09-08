@@ -223,7 +223,7 @@ provider that is not connected has no `sync_jobs` rows to toggle and answers
 
 Inbound webhooks carry two guards (Phase 9), both keyed on the connection the
 signature resolved to: the same signed body delivered twice to the same
-connection within 24 hours is answered `202` with `queued: 0` and enqueues
+connection **within 10 minutes** is answered `202` with `queued: 0` and enqueues
 nothing — an idempotent acknowledgement, so a provider retrying a delivery whose
 response it never saw does not turn one event into two syncs — and a connection
 sending more than 60 deliveries a minute gets `429 rate_limited`. The replay key
@@ -231,6 +231,14 @@ is `(connection_id, payload_hash)` and deliberately not `(provider,
 payload_hash)`: a payload need carry nothing user-specific, so two people
 connected to the same provider routinely send byte-identical bodies, and a
 provider-wide key would drop the second one's sync behind a 202.
+
+Ten minutes, not the 24 hours this first shipped with (Ruling P9-7), and the
+window is measured from the delivery that actually queued work — never from a
+replay of it. A provider body need carry no event identity at all (Wallet sends
+`{"event":"accounts.changed"}`, and the hash is over the raw body), so every
+delivery of the day can hash identically; a day-long window that each replay
+pushed forward meant such a provider's sync was queued once and never again.
+Retries happen in seconds, so 10 minutes covers the case the guard exists for.
 
 ### Breaking changes in Phase 2
 
@@ -615,7 +623,7 @@ breaking change nothing asked for.
 | `PATCH` | `/payroll/mapping-rules/{id}` | **ver**; user rules only |
 | `DELETE` | `/payroll/mapping-rules/{id}` | `204`; user rules only |
 
-### Funds — `funds.read` / `funds.write`; issues `finance.manage`
+### Funds — `funds.read` / `funds.write`; cross-domain issues `finance.manage`
 
 | Method | Path | Notes |
 |---|---|---|
@@ -629,7 +637,7 @@ breaking change nothing asked for.
 | `POST` | `/funds/{id}/contributions` | **idem** |
 | `POST` | `/funds/{id}/contributions/{cid}/reverse` | **idem**; writes a compensating row, never edits the original |
 | `POST` | `/funds/{id}/reconcile` | detects and resolves reconciliation issues |
-| `POST` | `/funds/issues/{issueId}/acknowledge` | "seen" |
+| `POST` | `/funds/issues/{issueId}/acknowledge` | `funds.write`; "seen", on a fund issue this caller owns |
 | `GET` | `/reconciliation/issues` | `finance.manage`; `?domain=&status=&severity=&cursor=&limit=` across domains |
 | `POST` | `/reconciliation/issues/{issueId}/resolve` | `finance.manage`; "dealt with"; `404` if already resolved |
 

@@ -101,7 +101,7 @@ tmpfs-backed test database that does not survive its container.
 |---|---|
 | R9-1 session-level advisory lock | **kept** |
 | R9-5 housekeeping retention, 5,000-row cap | **kept** — `payroll_retention` keeps reading `app_settings` for its window, because the policies R8-7 would have given it are deferred |
-| R9-6 inbound replay protection and per-connection rate limit | **kept**, with the key corrected (see P9-5) |
+| R9-6 inbound replay protection and per-connection rate limit | **kept**, with the key corrected (P9-5) and the window narrowed from 24 h to 10 minutes and made non-renewing (P9-7) |
 | R9-2, R9-3, R9-4 outbound webhooks | **deferred** — nothing consumes them |
 | R9-7 drop the legacy tables | **absorbed** into Phase 7 as R7-5' |
 
@@ -134,6 +134,10 @@ tmpfs-backed test database that does not survive its container.
 - **P9-3** — Task 3 sweeps every `createRoute` `security` array onto one shared both-schemes constant. *Phase 8 left the published contract false for ~60 routes and the smoke drives them with Bearer.*
 - **P9-4** — `PATCH` on tables with no `version` column does not require `If-Match`. *Adding the columns needs a migration the reduced plan forbids.* Recorded in `docs/api/README.md` and `DEFERRED.md`.
 - **P9-5** — the webhook replay key is `(connection_id, payload_hash)`, not `(provider, payload_hash)`. *A provider payload need carry nothing user-specific, so two connections of one provider routinely hash identically; provider-wide, the second owner's delivery is answered "duplicate" and its sync is dropped behind a 202 — work lost silently.*
+- **P9-6** — the Task 4 review and the Phase 9 whole-branch review were one combined review over `bd2078a..70d4284`. *Task 4 is docs plus e2e; a second seat over the same diff duplicates.* See **Review record**.
+- **P9-7** — the replay window is 10 minutes, and `findAccepted` ignores the row a duplicate records, so the window cannot renew itself. *Provider retries happen in seconds, and a Wallet body carries no event identity, so a 24 h self-renewing window meant one sync ever.*
+- **P9-8** — the pre-existing `hasReferences` defect is fixed in this run, in its own commit. *Critical-severity data loss reachable through a documented endpoint, a small self-contained fix, and the owner is about to repopulate by hand right after deploying `0018`.*
+- **P9-9** — `DEFERRED.md` absorbs every ledger "minor (deferred)" line not already fixed. *The run's own convention says the deferred list is a file; the ledgers are git-ignored and go with the workspace.*
 
 ## What the owner must do by hand after deploying `0018`
 
@@ -154,34 +158,50 @@ down migration; the pre-deploy `pg_dump` is the only way back
 
 ## The standing remainder
 
-Two things, and only two:
-
-- **[`docs/superpowers/DEFERRED.md`](../DEFERRED.md)** — the scope the reduced
-  plans dropped on purpose, plus the follow-ups the phases found and did not
-  stop for, one line each with the original plan and task that specifies it.
-  This is the list to reopen with the UI redesign.
+- **[`docs/superpowers/DEFERRED.md`](../DEFERRED.md), now complete against the
+  review ledgers** — the scope the reduced plans dropped on purpose, the
+  follow-ups the phases found and did not stop for, and (Ruling P9-9) every
+  "minor (deferred)" line the Phase 7, 8 and 9 ledgers recorded and did not
+  close, one line each with the plan, task or review it came from. The ledgers
+  live in a git-ignored workspace, so that file is now their durable copy and
+  the workspace can be deleted. This is the list to reopen with the UI redesign.
 - **The `onDisconnect` network-I/O invariant** (Phase 4 PH4-C4) — an adapter's
   `onDisconnect` runs inside the disconnect transaction, so one that made a
   network call there would hold it open across the call. No adapter does today;
   nothing stops one. It is listed in `DEFERRED.md` as well, and it is the one
   item that is a latent defect rather than postponed scope.
 
-One further gap was found while writing these docs and is recorded at the code
-rather than fixed here:
-`DrizzleAccountsRepository.hasReferences` still answers `false`
-unconditionally, which decides hard-delete-vs-archive for an account. Interest
-rules cascade-delete with the account and budget allocations and scopes are
-left dangling. Fixing it is a behaviour change with its own tests, not a
-documentation edit.
+One further gap was found while writing these docs:
+`DrizzleAccountsRepository.hasReferences` answered `false` unconditionally,
+which decides hard-delete-vs-archive for an account, so deleting a manual
+account cascade-deleted its interest rules and accruals and left budget
+allocations and scopes dangling. It is **fixed** (Ruling P9-8) — see the closing
+fix wave below.
 
 ## Review record
 
 | Phase | Reviews |
 |---|---|
 | 7 | A task review after Task 1, another after Tasks 2–3 (two fix rounds — the `permits` conversion path and `planPull`'s `stillPending` guard), a task review of Task 4, and a whole-branch review with its own fix wave. |
-| 8 | One combined task + whole-branch review over `532025f..bd2078a` (Ruling P8-4), with a security-focused lens. |
-| 9 | A task review after Tasks 1–3, with one fix round that produced Ruling P9-5. A task review of this documentation task follows it. |
-| 8–9 whole branch | **Pending** — it runs after this task, over the whole Phases 8–9 diff. Nothing in this checkpoint should be read as "reviewed end to end" until it has. |
+| 8 | Reviewed whole on 2026-09-08: one combined task + whole-branch review over `532025f..bd2078a` (Ruling P8-4), with a security-focused lens. No Critical and no Important; ready to merge. Its six minors are in `DEFERRED.md`. |
+| 9 | A task review after Tasks 1–3, with one fix round that produced Ruling P9-5. Then, on 2026-09-08, a combined task + whole-branch review over `bd2078a..70d4284` (Ruling P9-6), verdict **"ready with fixes"**: no new Critical, and four Important — the replay window (24 h and self-renewing), the `memory-repositories` claim in the overview, the checkpoint's "two things, and only two", and this table's own "Pending" row. All four are closed by the fix wave below. |
+
+### The closing fix wave
+
+The Phase 9 whole-branch review's four Important findings and its minors were
+closed in `fix(platform): bound the inbound replay window; make the closing docs
+true; stale comments`, which is also what made this checkpoint's remainder and
+review record true rather than provisional.
+
+The one Critical-severity finding was **pre-existing**, outside the Phases 7–9
+diff, and graded "fix before deploy, in its own commit":
+`DrizzleAccountsRepository.hasReferences` returned `false` unconditionally. It
+is fixed in `fix(accounts): hasReferences counts interest rules, accruals,
+budget allocations and scopes` (Ruling P9-8) — an `EXISTS` over
+`interest_rules`, `interest_entries`, `budget_allocations`
+(`source_kind = 'account'`) and `budget_scopes` (`kind = 'account'`), so
+`deletionDecision` archives a referenced manual account instead of
+hard-deleting it.
 
 `graphify update .` was run from the repository root as part of this task and
 the regenerated `graphify-out/` is committed alongside this checkpoint.

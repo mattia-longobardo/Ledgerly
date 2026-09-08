@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { SealedCredential, CredentialCipher } from "@/platform/integrations/crypto";
+import { DUPLICATE_EVENT } from "../application/handle-webhook";
 import type {
   IntegrationConnection,
   ProviderCode,
@@ -232,6 +233,10 @@ export class MemoryWebhookDeliveriesRepository implements WebhookDeliveriesRepos
           r.connectionId === connectionId &&
           r.payloadHash === payloadHash &&
           r.status === "accepted" &&
+          // Same exclusion as the Drizzle repository: a duplicate's own row is
+          // recorded `accepted` under the reserved `duplicate` event and must
+          // never anchor the replay window (Ruling P9-7).
+          r.event !== DUPLICATE_EVENT &&
           r.receivedAt.getTime() >= since.getTime(),
       )
       .sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime())[0];
