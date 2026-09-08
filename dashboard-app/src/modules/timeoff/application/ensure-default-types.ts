@@ -22,8 +22,15 @@ export const DEFAULT_TIMEOFF_TYPES: readonly {
 ];
 
 /**
- * Creates whichever default types this user is missing and returns the full
- * list. Idempotent: a second call creates nothing.
+ * Creates whichever default types this user is missing, refreshes
+ * `hoursPerDay` on the ones that already exist but were seeded with a
+ * different value, and returns the full list. Idempotent: a second call with
+ * the same setting value creates and updates nothing.
+ *
+ * The refresh matters because `hoursPerDay` is copied onto each type at seed
+ * time and `get-workspace.ts` converts with the type's own column, not a live
+ * read of the setting — so without it, changing `hours_per_day` in Settings
+ * would silently stop affecting Time Off for every type already seeded.
  *
  * Lives beside the use case rather than inside it because the payroll balance
  * sink needs exactly this and must not depend on a `Principal` — an apply runs
@@ -35,7 +42,13 @@ export async function seedDefaultTypes(
   hoursPerDay: string,
 ): Promise<TimeoffType[]> {
   for (const wanted of DEFAULT_TIMEOFF_TYPES) {
-    if (await types.getByCode(userId, wanted.code)) continue;
+    const existing = await types.getByCode(userId, wanted.code);
+    if (existing) {
+      if (existing.hoursPerDay !== hoursPerDay) {
+        await types.updateHoursPerDay(userId, existing.id, hoursPerDay);
+      }
+      continue;
+    }
     await types.create({
       userId,
       code: wanted.code,

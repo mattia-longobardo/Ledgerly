@@ -49,6 +49,14 @@ export interface TypesRepository {
   list(userId: string): Promise<TimeoffType[]>;
   getByCode(userId: string, code: TimeoffCode): Promise<TimeoffType | null>;
   create(input: Omit<TimeoffType, "id" | "createdAt" | "updatedAt">): Promise<TimeoffType>;
+  /**
+   * Refreshes the divisor a type was seeded with. `seedDefaultTypes` calls
+   * this when the `hours_per_day` app setting has moved on from what a
+   * default type was created with, so a later change to the setting keeps
+   * reaching `get-workspace.ts`'s day conversion instead of being stuck at
+   * whatever value was current the first time this user touched Time Off.
+   */
+  updateHoursPerDay(userId: string, id: string, hoursPerDay: string): Promise<void>;
 }
 
 export interface BalancesRepository {
@@ -110,6 +118,17 @@ export interface EventsRepository {
     now: Date,
     trekIds?: ReadonlyMap<string, number>,
   ): Promise<number>;
+  /**
+   * Clears `pendingOp` to `'none'` WITHOUT stamping `syncedAt`.
+   *
+   * The one case that needs it: a staged upsert whose type Trek cannot hold
+   * (`permits`) and which Trek has never held an entry for
+   * (`unpushableUpserts().localOnly`). `syncPass` settles it locally rather
+   * than pushing it, but `clearPending`'s `syncedAt = now` would then claim a
+   * sync that never happened with a provider that has never heard of this
+   * day.
+   */
+  settleLocalOnly(userId: string, dates: readonly string[], now: Date): Promise<number>;
 }
 
 /** Opens one short RLS context per call. Trek network calls happen outside it. */

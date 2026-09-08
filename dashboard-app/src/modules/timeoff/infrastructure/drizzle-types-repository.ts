@@ -77,4 +77,11 @@ export class DrizzleTypesRepository implements TypesRepository {
     }
     return existing;
   }
+
+  async updateHoursPerDay(userId: string, id: string, hoursPerDay: string): Promise<void> {
+    await this.db
+      .update(timeoffTypes)
+      .set({ hoursPerDay, updatedAt: new Date() })
+      .where(and(eq(timeoffTypes.userId, userId), eq(timeoffTypes.id, id)));
+  }
 }

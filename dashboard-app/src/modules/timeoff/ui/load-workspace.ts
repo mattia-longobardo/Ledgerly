@@ -39,10 +39,10 @@ export interface TimeoffSummary {
    * — `null` when no type has one, which a card renders as "—". Never
    * `"0.00"`: an absent payslip is not a zero balance.
    *
-   * Read it with `remainingLabels`, never on its own. A payslip states
+   * Read it with `remainingByType`, never on its own. A payslip states
    * `vacation` and `permits` but typically never `comp`, so this figure covers
    * some of the types, not all of them, and a caller that labels it "across
-   * every type" reports a partial sum as a total. `remainingLabels` names
+   * every type" reports a partial sum as a total. `remainingByType` names
    * exactly the types behind it so the label can say what was actually added.
    */
   remainingDays: string | null;
