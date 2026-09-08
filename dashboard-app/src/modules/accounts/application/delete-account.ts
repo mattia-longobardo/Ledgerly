@@ -19,7 +19,7 @@ export function deleteAccount(deps: UseCaseDeps) {
 
     const decision = deletionDecision(account, {
       hasLiveProviderLink: (await deps.links.liveFor("account", id)) !== null,
-      hasReferences: await deps.accounts.hasReferences(id),
+      hasReferences: await deps.accounts.hasReferences(principal.userId, id),
     });
 
     if (decision === "blocked_linked" && !opts?.confirmSynced) throw new DeletionBlockedError();

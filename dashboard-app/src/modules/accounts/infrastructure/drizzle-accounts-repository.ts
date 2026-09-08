@@ -204,17 +204,52 @@ export class DrizzleAccountsRepository implements AccountsRepository {
       });
   }
 
-  async hasReferences(_accountId: string): Promise<boolean> {
-    // KNOWN GAP, unchanged since this was written and no longer true of the
-    // schema: `interest_rules.account_id` and `interest_entries.account_id`
-    // reference accounts with `ON DELETE CASCADE`, and `budget_allocations`
-    // (`source_kind = 'account'`) and `budget_scopes` (`kind = 'account'`)
-    // carry a bare `uuid`. Answering `false` therefore lets a hard delete
-    // cascade a user's interest rules away and leave budget rows pointing at
-    // nothing, instead of archiving the account. Fixing it means a real query
-    // over those four tables and a change to `deletionDecision`'s outcome for
-    // an account a budget references — behaviour, not a comment, so it is
-    // recorded here rather than done in a documentation pass.
-    return false;
+  /**
+   * Whether anything still points at this account (Ruling P9-8). This is what
+   * `deletionDecision` reads to choose archive over hard delete, and it
+   * answered `false` unconditionally until now, which made that choice a
+   * formality: `interest_rules.account_id` and `interest_entries.account_id`
+   * reference accounts `ON DELETE CASCADE`, so deleting a manual account took
+   * a user's interest rules (and, through `interest_accruals.rule_id`, their
+   * accruals) with it, while `budget_allocations.source_id` and
+   * `budget_scopes.ref_id` are bare `uuid` columns with no FK at all and were
+   * simply left pointing at nothing.
+   *
+   * One round trip, four `EXISTS`, short-circuited left to right by `OR`.
+   *
+   * `user_id` is predicated explicitly rather than left to RLS. The interest
+   * tables carry their own `user_id`; `budget_allocations` and `budget_scopes`
+   * do not, so they are reached through `budgets.user_id` — which is also the
+   * only thing that stops one user's budget rows from making another user's
+   * account look referenced, since a `source_id` is just a uuid and nothing in
+   * those two tables says whose it is.
+   */
+  async hasReferences(userId: string, accountId: string): Promise<boolean> {
+    const res = await this.db.execute<{ referenced: boolean }>(sql`
+      SELECT (
+        EXISTS (
+          SELECT 1 FROM interest_rules
+          WHERE user_id = ${userId} AND account_id = ${accountId}
+        )
+        OR EXISTS (
+          SELECT 1 FROM interest_entries
+          WHERE user_id = ${userId} AND account_id = ${accountId}
+        )
+        OR EXISTS (
+          SELECT 1 FROM budget_allocations a
+          JOIN budgets b ON b.id = a.budget_id
+          WHERE b.user_id = ${userId}
+            AND a.source_kind = 'account'
+            AND a.source_id = ${accountId}
+        )
+        OR EXISTS (
+          SELECT 1 FROM budget_scopes s
+          JOIN budgets b ON b.id = s.budget_id
+          WHERE b.user_id = ${userId}
+            AND s.kind = 'account'
+            AND s.ref_id = ${accountId}
+        )
+      ) AS referenced`);
+    return res.rows[0]?.referenced === true;
   }
 }

@@ -113,8 +113,24 @@ export class MemoryAccountsRepository implements AccountsRepository {
     }
   }
 
-  async hasReferences(_accountId: string): Promise<boolean> {
-    return false;
+  /**
+   * The Drizzle repository answers this from four tables no memory double
+   * models (`interest_rules`, `interest_entries`, `budget_allocations`,
+   * `budget_scopes`), so the double keeps the *answer* instead: a test says
+   * "this account is referenced" with `addReference` and gets the same
+   * archive-not-delete branch out of `deletionDecision`.
+   *
+   * Keyed `(userId, accountId)` like the real query, so a reference recorded
+   * for one owner cannot make another owner's account look referenced.
+   */
+  private readonly references = new Set<string>();
+
+  addReference(userId: string, accountId: string): void {
+    this.references.add(`${userId}:${accountId}`);
+  }
+
+  async hasReferences(userId: string, accountId: string): Promise<boolean> {
+    return this.references.has(`${userId}:${accountId}`);
   }
 }
 

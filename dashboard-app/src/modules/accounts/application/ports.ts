@@ -34,12 +34,15 @@ export interface AccountsRepository {
   recordBalances(rows: NewBalance[]): Promise<void>; // upsert on (accountId, asOf, source)
   /**
    * Whether anything outside this module still points at the account, which
-   * decides hard delete vs archive. The Drizzle implementation still answers
-   * `false` unconditionally — see the comment on it: budgets and interest
-   * rules do reference accounts now, so this is a known gap, not a statement
-   * about the schema.
+   * decides hard delete vs archive (Ruling P9-8): an interest rule or entry on
+   * it, a budget allocation sourced from it, or a budget scoped to it.
+   *
+   * `userId` is a parameter and not left to the ambient RLS context because two
+   * of those four tables — `budget_allocations` and `budget_scopes` — hold a
+   * bare `uuid` with no owner column of their own, so the owner has to come
+   * from the caller and be joined through `budgets`.
    */
-  hasReferences(accountId: string): Promise<boolean>;
+  hasReferences(userId: string, accountId: string): Promise<boolean>;
 }
 
 export type ProviderLinkEntityType = "account" | "transaction" | "category" | "label";
