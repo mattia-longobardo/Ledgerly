@@ -10,22 +10,16 @@
  * fetch, clamd, the parser's LLM call) sandwiched between them (Ruling R4-8)
  * — *when called on their own*.
  *
- * Called from here, that discipline does not hold: `withJobLock`
- * (`src/lib/repo/jobs.ts`) opens its own `db.transaction(...)` for the
- * advisory lock and runs its callback — this whole per-import body,
- * `scanImport`/`parseImport` and all their network I/O included — inside
- * that open transaction. This is a known, pre-existing characteristic of
- * `withJobLock` shared by every job that uses it (`wallet-accounts-sync.ts`,
- * `interest-accrual.ts`, `sync-queue.ts` included), not something Phase 4
- * introduced or fixed. Rewriting `withJobLock` to stop transaction-wrapping
- * I/O is a platform-level decision tracked separately, not something this
- * job can opt out of on its own.
+ * That discipline holds when called from here too. `withJobLock`
+ * (`src/lib/repo/jobs.ts`, Ruling R9-1) takes a *session*-level advisory lock
+ * on a client of its own and runs its callback with no transaction open, so
+ * `scanImport`/`parseImport` keep their own short transactions and their
+ * network I/O (store fetch, clamd, the parser's LLM call) stays outside any
+ * transaction.
  *
- * Practical safety therefore does not come from transaction isolation here.
- * It comes from `scanImport`/`parseImport` being idempotent: re-running one
- * (because the surrounding transaction rolled back, or the tick was retried)
- * either re-confirms the same status transition or is a no-op, never a
- * double-apply.
+ * Safety across a retried tick still rests on idempotency rather than on
+ * isolation: re-running `scanImport`/`parseImport` for one import either
+ * re-confirms the same status transition or is a no-op, never a double-apply.
  *
  * One import's failure is caught and counted per import (Phase 2's "a loop
  * over many owners needs per-item error isolation" lesson) rather than
@@ -142,10 +136,9 @@ interface Counts {
 /**
  * `scanImport` and `parseImport` are each written as a complete atomic unit
  * (a short transaction confirms readiness, then the network I/O, then a
- * second short transaction records the outcome) — but see the module
- * doc-comment above: called from this job, `withJobLock` holds one
- * outer transaction open across all of it anyway. This function only
- * sequences the two calls for one import — it opens no *additional* context
+ * second short transaction records the outcome), and `withJobLock` leaves
+ * that intact — it holds a session-level lock, not a transaction. This
+ * function only sequences the two calls for one import; it opens no context
  * of its own around either.
  */
 async function ingestOne(item: PayrollImport, counts: Counts): Promise<void> {

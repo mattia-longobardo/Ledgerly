@@ -84,17 +84,19 @@ async function activeRules(asOf: string): Promise<InterestRule[]> {
  * matters under concurrency: **`accruals.claimForPosting` is what stops a
  * second post, not the lock below.**
  *
- * `withJobLock` (in `runInterestAccrualJob`) still wraps this whole function
- * in an advisory-lock transaction held for the entire call, Wallet round
- * trip included — the same shape `wallet-accounts-sync.ts` documents and
- * relies on. That lock is now purely an optimisation: it usually stops a
- * second concurrent tick from wasting a Wallet round trip it would lose
- * anyway. It is *not* the correctness boundary, because it cannot be one —
- * `pg_try_advisory_xact_lock` lives on the lock-holding transaction's own
- * session, and that session can die mid-flight (`idle_in_transaction_session_timeout`,
- * a pooler kill, a failover) while the Wallet POST it was guarding is still
- * in the air, releasing the lock with no way for the JS promise to learn
- * about it. `claimForPosting` is a committed row, immune to that: it is
+ * `withJobLock` (in `runInterestAccrualJob`) wraps this whole function in a
+ * *session*-level advisory lock held for the entire call, Wallet round trip
+ * included, with **no transaction open** on the lock-holding client (Ruling
+ * R9-1) — which is why every short transaction below is genuinely short. Since
+ * that fix the lock is a real serialisation guarantee in addition to the
+ * claim: a second concurrent tick gets `null` and does no Wallet round trip at
+ * all, and the lock is not silently released by an
+ * `idle_in_transaction_session_timeout` while a POST is in the air, because no
+ * transaction is idle.
+ *
+ * It is still not the *only* correctness boundary, and must not become one: no
+ * advisory lock survives the process crashing between the Wallet POST and the
+ * confirm write. `claimForPosting` is a committed row, immune to that: it is
  * asked and answered in its own short transaction *before* any Wallet round
  * trip starts, so even a session death right after committing the claim
  * leaves the claim in place for whoever asks next.

@@ -37,9 +37,9 @@ docs/architecture/overview.md, docs/api/README.md, docs/deploy/README.md, docs/s
 
 **Files:** Modify `src/lib/db/index.ts` (export `pool`), `src/lib/repo/jobs.ts`; create `src/lib/repo/jobs.itest.ts`; update the doc comments in `src/lib/jobs/interest-accrual.ts`, `payroll-ingest.ts`, `payroll-retention.ts`, `sync-queue.ts`, `wallet-accounts-sync.ts`.
 
-- [ ] **Step 1: `jobs.itest.ts`:** (1) `withJobLock("k", fn)` returns `fn`'s value and a concurrent second call with the same key returns `null` while `fn` awaits a deferred promise; (2) while `fn` runs, `SELECT pg_try_advisory_lock(hashtext('k'))` on another client is `false`, afterwards `true` (then unlock); (3) `fn` may call `withUserContext(db, …)` inside and may throw — lock released, error propagates; (4) different keys do not block.
-- [ ] **Step 2: Implement** with the code block in the original Phase 9 Task 1 Step 2 (checkout one `pg` client, `pg_try_advisory_lock`, run `fn` with no transaction on that client, `pg_advisory_unlock` in `finally`, release). Rewrite the doc comment; update the five job comments (drop the "runs inside one transaction" language; `claimForPosting` in interest-accrual stays).
-- [ ] **Verify:** `npm run typecheck && npm test && npm run test:integration -- jobs`. **Commit:** `git add -A src && git commit -m "fix(jobs): session-level advisory lock so job bodies run outside a transaction (R9-1)"`
+- [x] **Step 1: `jobs.itest.ts`:** (1) `withJobLock("k", fn)` returns `fn`'s value and a concurrent second call with the same key returns `null` while `fn` awaits a deferred promise; (2) while `fn` runs, `SELECT pg_try_advisory_lock(hashtext('k'))` on another client is `false`, afterwards `true` (then unlock); (3) `fn` may call `withUserContext(db, …)` inside and may throw — lock released, error propagates; (4) different keys do not block.
+- [x] **Step 2: Implement** with the code block in the original Phase 9 Task 1 Step 2 (checkout one `pg` client, `pg_try_advisory_lock`, run `fn` with no transaction on that client, `pg_advisory_unlock` in `finally`, release). Rewrite the doc comment; update the five job comments (drop the "runs inside one transaction" language; `claimForPosting` in interest-accrual stays).
+- [x] **Verify:** `npm run typecheck && npm test && npm run test:integration -- jobs`. **Commit:** `git add -A src && git commit -m "fix(jobs): session-level advisory lock so job bodies run outside a transaction (R9-1)"`
 
 ---
 

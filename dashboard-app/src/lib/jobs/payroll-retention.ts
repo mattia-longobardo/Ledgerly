@@ -10,20 +10,14 @@
  * under its own `withSystemContext`, then runs each item's network delete
  * and DB write inside that item's own short transaction, resolving that
  * item's document store from its owner's connection. That per-item isolation
- * does not actually hold once this job calls it, though: `withJobLock`
- * (`src/lib/repo/jobs.ts`) opens its own `db.transaction(...)` for the
- * advisory lock and runs its callback inside it — so the entire batch
- * (every item's network delete and DB write) executes nested inside that one
- * outer transaction, held open for the whole run.
+ * holds when this job calls it: `withJobLock` (`src/lib/repo/jobs.ts`, Ruling
+ * R9-1) takes a session-level advisory lock on a client of its own and runs
+ * its callback with no transaction open, so each item keeps its own short
+ * transaction and the store delete stays outside one.
  *
- * This is a known, pre-existing characteristic of `withJobLock` itself, also
- * present in `wallet-accounts-sync.ts`, `interest-accrual.ts`, and
- * `sync-queue.ts` — not something Phase 4 introduced or fixed, and not
- * something this job works around by construction. Safety instead rests on
- * idempotency: `listPurgeableForAllUsers` never re-selects a row whose
- * `storage_key` is already null, so re-running a partially-completed batch
- * (whether from the outer transaction rolling back or a retried tick) is
- * safe to repeat rather than relying on transaction isolation between items.
+ * Safety across a retried tick rests on idempotency:
+ * `listPurgeableForAllUsers` never re-selects a row whose `storage_key` is
+ * already null, so re-running a partially-completed batch is safe to repeat.
  *
  * A `failed` count above zero is alerted but does **not** fail the run: the
  * batch did what it could, the rows keep their keys, and the next tick

@@ -10,10 +10,10 @@
  * `withJobLock` holds its advisory lock for the whole call below, including
  * the Wallet round trip inside `runSyncForUser` — that lock is what keeps two
  * instances of this job from running at once, and it is not released early.
- * What changed from the Phase 1 shape is the pool connections, not the lock:
- * `runSyncForUser`'s `fetch` phase makes its Wallet call with no transaction
- * open, and its `apply` phase opens its own afterwards, so this job holds one
- * pool connection during the round trip instead of two.
+ * Since Ruling R9-1 the lock is session-level and no transaction is open on
+ * the client that owns it, so `runSyncForUser`'s `fetch` phase makes its
+ * Wallet call outside any transaction and its `apply` phase opens its own
+ * short one afterwards, exactly as written.
  */
 
 import { alertJobFailure } from "@/lib/clients/gotify";
