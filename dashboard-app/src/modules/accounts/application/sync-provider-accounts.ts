@@ -69,13 +69,12 @@ function balanceRow(accountId: string, incoming: ProviderAccount, capturedAt: Da
 export function syncProviderAccounts(deps: SyncProviderAccountsDeps) {
   /**
    * `prefetched` exists so the caller can do the provider round trip *before*
-   * opening the database transaction. For the Wallet job, `syncOwner` still
-   * runs inside `withJobLock`'s own transaction and advisory lock for its
-   * whole duration — prefetching does not lift the round trip out from under
-   * either of those. What it does buy is one held pool connection during the
-   * round trip instead of two: the job's own transaction stays open the whole
-   * time regardless, but a second one is no longer opened *around* the
-   * provider call as well, and only opens afterwards, briefly, for the write.
+   * opening the database transaction. For the Wallet job, `syncOwner` runs
+   * inside `withJobLock`'s advisory lock for its whole duration, but since
+   * Ruling R9-1 that lock is session-level with no transaction open on the
+   * client holding it — so with `prefetched` the round trip happens outside
+   * any transaction, and the only transaction opened is the short one
+   * afterwards for the write.
    */
   return async (
     userId: string,

@@ -33,21 +33,13 @@ export interface PurgeExpiredOriginalsOptions {
  * short `withSystemContext` transaction reads the batch, then each item's
  * actual work — the network delete and the DB write that follows it — is
  * written as its own short transaction, opened and closed per item, never
- * shared with the batch read or with any other item, *when this function is
- * called on its own*.
+ * shared with the batch read or with any other item.
  *
- * It is not called on its own: `payroll-retention.ts` (the job) wraps this
- * whole function in `withJobLock`, which opens its own `db.transaction(...)`
- * for the advisory lock and runs this function's entire body — the batch
- * read and every item's network delete and DB write — inside that one open
- * outer transaction for the length of the run. So, contrary to what the
- * per-item transactions here might suggest in isolation, a transaction *does*
- * span more than one item's work whenever this runs as the scheduled job;
- * up to a hundred sequential network deletes do sit inside one held-open
- * connection. This is a known, pre-existing characteristic of `withJobLock`
- * itself (shared with `wallet-accounts-sync.ts`, `interest-accrual.ts`, and
- * `sync-queue.ts`), not something Phase 4 introduced or fixed, and out of
- * this function's control.
+ * That holds when `payroll-retention.ts` (the job) calls it too: `withJobLock`
+ * takes a *session*-level advisory lock on a client of its own and runs this
+ * function with no transaction open on it (Ruling R9-1), so the per-item
+ * transactions below really are per-item and the sequential network deletes
+ * do not sit inside a held-open transaction.
  *
  * What actually makes an interrupted or retried run safe is idempotency, not
  * transaction isolation: `listPurgeableForAllUsers` never selects a row

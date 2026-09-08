@@ -92,10 +92,11 @@ export class DrizzleInterestAccrualsRepository implements InterestAccrualsReposi
    * Ruling P3-C39 (B2): the `WHERE posted_at IS NULL` makes this a single
    * atomic compare-and-set at the database — two concurrent callers racing
    * this same row can never both see it return `true`, regardless of what
-   * the in-process advisory lock in `withJobLock` does or how long either
-   * caller's Wallet round trip takes. This is what actually stops a second
-   * post; the lock is only ever an optimisation to skip the wasted work of a
-   * Wallet round trip that would lose the race anyway.
+   * the advisory lock in `withJobLock` does or how long either caller's
+   * Wallet round trip takes. Since Ruling R9-1 that lock does serialise two
+   * concurrent ticks in one deployment, but this compare-and-set is the
+   * guarantee that survives a process crash between the POST and the confirm
+   * write, so it stays the defence.
    */
   async claimForPosting(id: string, claimedAt: Date): Promise<boolean> {
     const rows = await this.db
