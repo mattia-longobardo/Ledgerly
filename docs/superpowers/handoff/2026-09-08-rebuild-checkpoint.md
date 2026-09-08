@@ -46,13 +46,21 @@ Run on the tree this commit records, from `dashboard-app/`:
 npm run typecheck                          → clean
 npm test                                   → 156 files, 1354 tests, all passing
 npm run test:db:up                         → dashboard-postgres-test healthy
-npm run test:integration                   → 50 files, 373 tests, all passing
+npm run test:integration                   → 50 files, 379 tests, all passing
 npm run build                              → next build succeeds
 npm run openapi:generate                   → docs/api/openapi.json written
 git diff --exit-code docs/api/openapi.json → no drift
 npm run e2e (no E2E_TOKEN)                 → 4 passed, 1 skipped
 npm run e2e (with E2E_TOKEN)               → 5 passed
 ```
+
+Re-run in full on the final tree, after the closing fix wave. The integration
+count moved from 373 to 379: six new cases — the replay-window itest, four
+`hasReferences` repository cases (one per table it queries, plus the
+cross-user one), and the archive-not-delete route case — against one deleted
+case that pinned the old `hasReferences` answer. The two `npm run e2e` lines
+are from the run recorded below and were not repeated; the fix wave touches no
+route surface the smoke drives, and `openapi.json` did not move.
 
 **The e2e leg was executed, not documented away** (Ruling P9-2). The
 application was built and started locally (`npx next start -p 3000`) against
