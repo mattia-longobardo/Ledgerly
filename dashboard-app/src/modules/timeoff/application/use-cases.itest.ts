@@ -249,6 +249,20 @@ describe("timeoff use cases against real Postgres", () => {
       )).rejects.toMatchObject({ name: "InvalidInputError" });
     });
 
+    /**
+     * The wire schema refuses this too, but `setEvent` is also the server
+     * action's entry point, and there the check has to be here: `2026-02-31`
+     * clears `^\d{4}-\d{2}-\d{2}$`, rolls over to 3 March in `Date` (so the
+     * weekend guard reasons about the wrong day), and reaches Postgres as a
+     * cast error — a client mistake surfacing as a 500.
+     */
+    it("refuses a well-shaped date that is not a real calendar day", async () => {
+      const db = await seed();
+      await expect(asOwner(db, (deps) =>
+        setEvent(deps)(principal, { date: "2026-02-31", fraction: "1.00", typeCode: "vacation" }),
+      )).rejects.toMatchObject({ name: "InvalidInputError" });
+    });
+
     it("stages an upsert on a day Trek owns, keeping its origin and its entry id", async () => {
       const db = await seed();
       await aTrekDay(db, MONDAY, 4242);

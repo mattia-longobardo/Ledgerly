@@ -174,12 +174,18 @@ Six points where the tree or a framework constraint forced something the step te
    `removeEvent` — and calling `deps.events.inRange` / `deps.balances.listForYear`
    straight from the route would put the `timeoff.read` check and the range validation on
    the wrong side of the API boundary, which no other module does.
-2. **`src/modules/payroll/ui/load-company.ts` needed no change.** It never carried leave
-   balances: `CompanyOverview` is imports, earnings buckets and salary windows only, and
-   `/company/page.tsx` says in its own doc-comment that time off "joins this panel in
-   Phase 7". Wiring `loadTimeoffSummary` into it would be new UI, which the reduced
-   conventions cap. `loadTimeoffSummary` ships as specified and is consumed by the Home
-   `leave` card; the Company panel is left for the redesign.
+2. **`src/modules/payroll/ui/load-company.ts` is still not modified; the Company PAGE
+   consumes `loadTimeoffSummary` directly** (revised in fix round 1, at the controller's
+   ruling on Important 5). `load-company.ts` never carried leave balances —
+   `CompanyOverview` is imports, earnings buckets and salary windows — and it cannot
+   acquire them: `loadCompanyOverview`'s body runs inside payroll's `runForPrincipal`,
+   i.e. inside an open RLS transaction, and `loadTimeoffSummary` opens one of its own.
+   Nesting them is what the shared conventions forbid, so folding the call in there would
+   be a defect, not a wiring. `src/app/(app)/company/page.tsx` therefore awaits both
+   loaders side by side (exactly as the Home page does) and renders a bare "Time off"
+   panel: one line per type that has a balance, `—` when none does, plus the
+   pending-sync count when it is above zero. The stale "Time-off balances and upcoming
+   leave join this panel in Phase 7" promise in that file's doc-comment is deleted.
 3. **There were no `// TODO(timeoff)` stubs to remove.** `grep -rn "TODO(timeoff)" src`
    was already empty at the start of this task — Task 1 left `/company/time-off/page.tsx`
    and the Home `leave` card broken rather than stubbed, exactly as its Step 4 allowed,
@@ -205,4 +211,45 @@ Six points where the tree or a framework constraint forced something the step te
    `payroll/infrastructure/paperless-import.ts`). `grep -rn "repo/payslips\|schema/legacy"`
    over `src scripts` returns one comment and no import; `src/lib/db/schema/legacy.ts` does
    not exist; `ls scripts/migrate-* scripts/validate-*` is empty.
+
+### Deviation (Task 4, fix round 1, 2026-09-08)
+
+Five Important findings from the task review of `0f564bf`, and the signature consequences
+they carry:
+
+1. **`isRealDate` moves into `src/lib/calc/leave-day.ts`, beside `isWeekendBlocked`.**
+   A bare `^\d{4}-\d{2}-\d{2}$` accepts `2026-02-31`; `new Date()` then rolls it over to
+   3 March — so the weekend guard reasoned about the wrong day — and Postgres refused the
+   cast, turning a client input mistake into `500 internal` on `PUT`/`DELETE
+   /timeoff/events/{date}` and `GET /timeoff/events`. Same implementation as the
+   `isRealDate` copies in the budgets and funds API schemas, but declared once here
+   because the wire schema, the page's `parseDay`, both write actions and `setEvent`
+   itself all need it. The API schema keeps `.regex(...)` **and** `.refine(isRealDate)`:
+   a bare refine erases `pattern` from the generated OpenAPI.
+2. **`syncTimeoffNowAction` asserts `timeoff.write`.** `openPrincipalConnection` only
+   authenticates, and `runTrekSync` takes a `userId` and a store rather than a
+   `Principal`, so it asserts nothing — a viewer holding `timeoff.read` alone could push
+   staged rows and pull/delete local events. The action now resolves the caller
+   (`requirePrincipal`, dynamically imported for the same vitest reason
+   `principal-connection.ts` documents) and asserts before the network call.
+3. **`getCachedTrekStats` / `setCachedTrekStats` are keyed by user.**
+   `app_settings` has no `user_id` and no RLS, so `trek_year_stats:<year>` was one global
+   row showing one person's allowance, used and remaining to the next. The key is now
+   `trek_year_stats:<userId>:<year>`; both functions take `userId` first, `trek-sync.ts`
+   writes the scoped key, and nothing reads the unscoped one — a stale global row is
+   simply invisible. `loadWorkspace` reads the cache INSIDE `runForPrincipal`'s callback
+   (where the principal is), which is safe for the reason `hoursPerDayString` already
+   relies on: `app_settings` carries no RLS.
+4. **`TimeoffSummary` gains `remainingByType: { label; days }[]`** — a signature change
+   against the brief's `{ remainingDays, upcoming, pendingCount }`. `remainingDays` is the
+   sum of the types that HAVE a balance, and a payslip states `vacation` and `permits` but
+   typically never `comp`, so the Home card's "remaining across every type" labelled a
+   partial sum as a total. The card now reads "remaining (Ferie, ROL / permessi)", the
+   Company panel lists the pairs, and `—` still stands when every type is null.
+5. **Deviation 2 above is revised** — see it for the Company page wiring and why
+   `load-company.ts` cannot be the place it happens.
+
+Minor, also taken: `mapError`'s fallback in `src/app/actions/timeoff.ts` is now a generic
+"Something went wrong." rather than a raw `Error.message`, because these strings are
+rendered back through `?error=` in the URL and end up in the address bar and history.
 

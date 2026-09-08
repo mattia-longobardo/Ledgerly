@@ -5,6 +5,7 @@ import {
   setTimeoffEventAction,
   syncTimeoffNowAction,
 } from "@/app/actions/timeoff";
+import { isRealDate } from "@/lib/calc/leave-day";
 import type { TimeoffWorkspace, WorkspaceDay } from "@/modules/timeoff/application/get-workspace";
 import { loadWorkspace } from "@/modules/timeoff/ui/load-workspace";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
@@ -44,8 +45,14 @@ function parseYear(raw: string | undefined, fallback: number): number {
   return Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : fallback;
 }
 
+/**
+ * A REAL calendar day, not merely a well-shaped one: `?day=2026-02-31` clears
+ * the pattern and would reach the use case as a date Postgres cannot cast.
+ * An unusable `?day=` is treated as no selection at all, so the page still
+ * renders instead of erroring on a mistyped URL.
+ */
 function parseDay(raw: string | undefined): string | null {
-  return raw !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+  return raw !== undefined && isRealDate(raw) ? raw : null;
 }
 
 function isoOf(year: number, monthIndex: number, day: number): string {

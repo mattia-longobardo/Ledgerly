@@ -237,6 +237,10 @@ function TotalBalanceCards({ overview }: { overview: Awaited<ReturnType<typeof l
  * workspace read `/company/time-off` renders — so the card and the page can
  * never disagree.
  *
+ * The caption NAMES the types behind the figure rather than claiming a total:
+ * a payslip states `vacation` and `permits` but typically never `comp`, so
+ * "across every type" would report a partial sum as a whole one.
+ *
  * "—" when no payslip has ever written a balance. There is no ring any more:
  * a ring needs a total allowance to fill against, and this module records what
  * a payslip states as REMAINING, not an entitlement — the old ring's maximum
@@ -265,7 +269,7 @@ function LeaveCard({ summary }: { summary: TimeoffSummary }) {
       <p className="mt-1 text-caption text-fg-muted">
         {summary.remainingDays === null
           ? "No payslip balance on file yet."
-          : "remaining across every type"}
+          : `remaining (${summary.remainingByType.map((t) => t.label).join(", ")})`}
       </p>
       {next !== null && (
         <p className="num mt-2 text-body-sm text-fg-muted">

@@ -216,7 +216,7 @@ export function registerTimeoffRoutes(app: ApiApp, deps: ApiDeps): void {
       principal.userId,
       async (d) => (await d.connections.getByProvider(principal.userId, "trek"))?.status === "connected",
     );
-    const cachedStats = await getCachedTrekStats(year);
+    const cachedStats = await getCachedTrekStats(principal.userId, year);
     try {
       const workspace = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
         getWorkspace(timeoffDeps(tx, c.get("requestId")))(principal, {

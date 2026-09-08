@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
 import { StatGrid, StatTile } from "@/components/ui/StatTile";
 import { loadCompanyOverview } from "@/modules/payroll/ui/load-company";
+import { loadTimeoffSummary } from "@/modules/timeoff/ui/load-workspace";
 import { statusChip } from "@/modules/payroll/ui/status";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
@@ -15,10 +16,14 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Company" };
 
 /**
- * Spec §7.8: earnings, the latest import status and the alerts that go with it.
- * Time-off balances and upcoming leave join this panel in Phase 7 — this phase
- * relocates the leave calendar to `/company/time-off` without redesigning it
- * (Ruling R4-11).
+ * Spec §7.8: earnings, the latest import status and the alerts that go with
+ * it, plus the time off balances the payslips themselves state.
+ *
+ * The time off line is read here rather than folded into `loadCompanyOverview`:
+ * that function's body runs inside `runForPrincipal`, i.e. inside an open RLS
+ * transaction, and `loadTimeoffSummary` opens one of its own — nesting them is
+ * exactly what the shared conventions forbid. The Home page reads the two
+ * loaders side by side for the same reason.
  */
 export default async function CompanyPage() {
   const principal = await requirePrincipalOrRedirect();
@@ -51,7 +56,7 @@ export default async function CompanyPage() {
     );
   }
 
-  const overview = await loadCompanyOverview();
+  const [overview, timeoff] = await Promise.all([loadCompanyOverview(), loadTimeoffSummary()]);
   const year = new Date().getFullYear();
 
   return (
@@ -75,6 +80,30 @@ export default async function CompanyPage() {
             </Link>
           </Panel>
         )}
+
+        {/* Bare, pending the redesign: one line per type that HAS a balance,
+            "—" when none does. Never a zero — a type no payslip has ever
+            stated a residual for has no figure, not a figure of nought. */}
+        <Panel span={12} title="Time off">
+          <p className="num text-body-sm text-fg">
+            {timeoff.remainingByType.length === 0
+              ? "Remaining: —"
+              : timeoff.remainingByType
+                  .map((type) => `${type.label}: ${type.days} days`)
+                  .join(" · ")}
+          </p>
+          {timeoff.pendingCount > 0 && (
+            <p className="mt-1 text-caption text-fg-muted">
+              {timeoff.pendingCount} day{timeoff.pendingCount === 1 ? "" : "s"} waiting for the Trek
+              sync
+            </p>
+          )}
+          <p className="mt-1 text-caption text-fg-muted">
+            <Link href="/company/time-off" className="text-accent transition-colors hover:text-accent-hover">
+              Go to Time Off
+            </Link>
+          </p>
+        </Panel>
 
         <Panel span={12} ariaLabel="Earnings at a glance">
           <StatGrid columns={4}>

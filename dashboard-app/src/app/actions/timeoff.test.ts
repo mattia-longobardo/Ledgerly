@@ -16,9 +16,11 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { permissionsForRoles, type RoleCode } from "@/platform/auth/permissions";
 import type { TrekSyncResult } from "@/modules/timeoff/infrastructure/trek-sync";
 
 const store = vi.hoisted(() => ({ connected: true }));
+const auth = vi.hoisted(() => ({ roles: ["owner"] as string[] }));
 const sync = vi.hoisted(() => ({
   runTrekSync: vi.fn(),
   disabledTrekSync: vi.fn((year: number) => ({
@@ -35,6 +37,16 @@ const sync = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// The action resolves the caller itself — `openPrincipalConnection` only
+// authenticates, so the permission check needs a principal of its own.
+vi.mock("@/platform/auth/require-principal", () => ({
+  requirePrincipal: vi.fn(async () => ({
+    userId: "00000000-0000-7000-8000-00000000000a",
+    organizationId: "00000000-0000-7000-8000-0000000000aa",
+    roles: auth.roles,
+    permissions: permissionsForRoles(auth.roles as RoleCode[]),
+  })),
+}));
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("@/modules/timeoff/infrastructure/trek-sync", () => sync);
 vi.mock("@/modules/timeoff/infrastructure/trek-store", () => ({
@@ -79,6 +91,7 @@ describe("syncTimeoffNowAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     store.connected = true;
+    auth.roles = ["owner"];
     sync.runTrekSync.mockResolvedValue(result());
   });
 
@@ -122,6 +135,23 @@ describe("syncTimeoffNowAction", () => {
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     expect(out.data.status).toBe("disabled");
+    expect(sync.runTrekSync).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A sync is a WRITE: it pushes staged rows upstream and deletes local events
+   * Trek no longer has. `runTrekSync` takes a `userId` and a store, never a
+   * `Principal`, so it asserts nothing — the check has to live in the action,
+   * and without it a viewer holding `timeoff.read` alone could drive all of it.
+   */
+  it("refuses a viewer, who holds timeoff.read and nothing else", async () => {
+    auth.roles = ["viewer"];
+
+    const out = await syncTimeoffNowAction(form());
+
+    expect(out.ok).toBe(false);
+    if (out.ok) return;
+    expect(out.error).toMatch(/permission/i);
     expect(sync.runTrekSync).not.toHaveBeenCalled();
   });
 
