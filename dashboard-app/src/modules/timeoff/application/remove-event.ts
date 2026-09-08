@@ -1,6 +1,7 @@
+import { isRealDate } from "@/lib/calc/leave-day";
 import type { Principal } from "@/platform/auth/principal";
 import { assertPermission } from "@/platform/auth/principal";
-import { NotFoundError } from "./errors";
+import { InvalidInputError, NotFoundError } from "./errors";
 import type { UseCaseDeps } from "./ports";
 
 /**
@@ -29,6 +30,10 @@ import type { UseCaseDeps } from "./ports";
 export function removeEvent(deps: UseCaseDeps) {
   return async (principal: Principal, date: string): Promise<void> => {
     assertPermission(principal, "timeoff.write");
+    // Same guard as `setEvent`: a well-shaped but non-existent day
+    // (`2026-02-31`) rolls over in `Date` and reaches Postgres as a cast
+    // error — a client mistake surfacing as a 500 instead of a clean 4xx.
+    if (!isRealDate(date)) throw new InvalidInputError("A day must be a real YYYY-MM-DD date.");
     const now = deps.clock.now();
     const existing = await deps.events.at(principal.userId, date);
     if (!existing) throw new NotFoundError();

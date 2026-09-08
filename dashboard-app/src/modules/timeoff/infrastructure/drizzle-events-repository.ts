@@ -289,4 +289,19 @@ export class DrizzleEventsRepository implements EventsRepository {
 
     return removed.length + settled.length;
   }
+
+  /**
+   * `clearPending` without the `syncedAt = now` stamp — see the port doc for
+   * why: these rows were never sent to Trek, so there is nothing to record a
+   * sync time for.
+   */
+  async settleLocalOnly(userId: string, dates: readonly string[], now: Date): Promise<number> {
+    if (dates.length === 0) return 0;
+    const rows = await this.db
+      .update(timeoffEvents)
+      .set({ pendingOp: "none", updatedAt: now })
+      .where(and(eq(timeoffEvents.userId, userId), inArray(timeoffEvents.date, [...dates])))
+      .returning({ id: timeoffEvents.id });
+    return rows.length;
+  }
 }

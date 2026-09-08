@@ -22,6 +22,7 @@ const repo = vi.hoisted(() => ({
   upsertFromProvider: vi.fn(),
   deleteDates: vi.fn(),
   clearPending: vi.fn(),
+  settleLocalOnly: vi.fn(),
   unlinkProvider: vi.fn(),
 }));
 
@@ -115,6 +116,7 @@ const store: TimeoffStore = {
         upsertFromProvider: (...args: unknown[]) => repo.upsertFromProvider(...args),
         deleteDates: (...args: unknown[]) => repo.deleteDates(...args),
         clearPending: (...args: unknown[]) => repo.clearPending(...args),
+        settleLocalOnly: (...args: unknown[]) => repo.settleLocalOnly(...args),
         unlinkProvider: (...args: unknown[]) => repo.unlinkProvider(...args),
         at: async () => null,
         stageUpsert: async () => {
@@ -133,9 +135,15 @@ const store: TimeoffStore = {
           createdAt: EPOCH,
           updatedAt: EPOCH,
         })),
-        getByCode: async (_id: string, code: string) => ({ id: TYPE_IDS[code]!, code }),
+        // `hoursPerDay` matches the mocked `8.00` setting so `seedDefaultTypes`
+        // never sees a divisor drift and calls `updateHoursPerDay` — this
+        // double only proves ORDER, not that use case's refresh path.
+        getByCode: async (_id: string, code: string) => ({ id: TYPE_IDS[code]!, code, hoursPerDay: "8.00" }),
         create: async () => {
           throw new Error("types are already seeded in this double");
+        },
+        updateHoursPerDay: async () => {
+          throw new Error("hoursPerDay is not expected to drift in this double");
         },
       } as unknown as TypesRepository;
       return await fn(events, types);
@@ -342,7 +350,10 @@ describe("R7-2 — days Trek cannot hold", () => {
     const result = await run();
 
     expect(trek.applyDesiredState).not.toHaveBeenCalled();
-    expect(repo.clearPending).toHaveBeenCalledWith(USER_ID, ["2026-03-02"], expect.any(Date));
+    // Settled through `settleLocalOnly`, not `clearPending`: this day never
+    // reached Trek, so nothing may stamp `syncedAt` for it.
+    expect(repo.settleLocalOnly).toHaveBeenCalledWith(USER_ID, ["2026-03-02"], expect.any(Date));
+    expect(repo.clearPending).not.toHaveBeenCalled();
     expect(result.pushed).toBe(0);
     expect(result.status).toBe("ok");
   });
@@ -432,7 +443,10 @@ describe("R7-2 — days Trek cannot hold", () => {
 
     await run();
 
-    expect(repo.clearPending).toHaveBeenCalledWith(USER_ID, [MONDAY], expect.any(Date));
+    // Settled locally without a `syncedAt` stamp — this day never had a Trek
+    // entry to unlink or a push to record a sync time for.
+    expect(repo.settleLocalOnly).toHaveBeenCalledWith(USER_ID, [MONDAY], expect.any(Date));
+    expect(repo.clearPending).not.toHaveBeenCalled();
     expect(repo.unlinkProvider).not.toHaveBeenCalled();
   });
 

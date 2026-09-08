@@ -18,6 +18,7 @@ import {
   timeoffEvents,
   users,
 } from "@/lib/db/schema";
+import { SETTING_KEYS, setSetting } from "@/lib/repo/settings";
 import { withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import { testPrincipal } from "@/test/principal";
@@ -110,6 +111,51 @@ describe("timeoff use cases against real Postgres", () => {
       const first = await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
       const second = await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
       expect(second.map((t) => t.id)).toEqual(first.map((t) => t.id));
+    });
+
+    /**
+     * The bug this closes: `hours_per_day` used to be copied onto each type
+     * once, at seed time, and never touched again. `get-workspace.ts` converts
+     * with the TYPE's column, not a live read of the setting, so changing
+     * `hours_per_day` in Settings after the first touch silently stopped
+     * affecting Time Off — the page used to read `hoursPerDay()` live, before
+     * this phase moved the divisor onto the row.
+     */
+    it("refreshes hours_per_day on the seeded types when the setting changes, so remainingDays converts with it", async () => {
+      const db = await seed();
+      const first = await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
+      expect(new Set(first.map((t) => t.hoursPerDay))).toEqual(new Set(["8.00"]));
+      const ids = first.map((t) => t.id);
+
+      const recordId = await aPayrollRecord(db, "2026-08-31");
+      await withUserContext(db, { userId: principal.userId }, (tx) =>
+        payrollTimeoffBalanceSink(tx).writeForRecord({
+          userId: principal.userId,
+          payrollRecordId: recordId,
+          supersededRecordId: null,
+          asOf: "2026-08-31",
+          rows: [
+            { timeoffCode: "vacation", kind: "balance", quantity: "88.000000", unit: "hours" },
+          ],
+        }),
+      );
+
+      // The owner changes the `hours_per_day` app setting, the same way
+      // `src/lib/repo/settings.ts`'s `setSetting` writes it — an upsert on
+      // `app_settings`, which carries no RLS.
+      await setSetting(SETTING_KEYS.hoursPerDay, 6);
+
+      const second = await asOwner(db, (deps) => ensureDefaultTypes(deps)(principal));
+      // Same rows, refreshed in place — not re-created.
+      expect(second.map((t) => t.id)).toEqual(ids);
+      expect(new Set(second.map((t) => t.hoursPerDay))).toEqual(new Set(["6.00"]));
+
+      const workspace = await asOwner(db, (deps) =>
+        getWorkspace(deps)(principal, { year: 2026, trekConnected: false, cachedStats: null }));
+      const vacation = workspace.balances.find((b) => b.type.code === "vacation")!;
+      // 88.00 hours / 6.00 hours-per-day = 14.67 days (was 11.00 at 8.00/day).
+      expect(vacation.remainingHours).toBe("88.00");
+      expect(vacation.remainingDays).toBe("14.67");
     });
 
     it("survives two concurrent first touches of the same user", async () => {
@@ -311,6 +357,18 @@ describe("timeoff use cases against real Postgres", () => {
   });
 
   describe("removeEvent", () => {
+    /**
+     * The same guard `setEvent` has, and for the same reason: `2026-02-31`
+     * clears `^\d{4}-\d{2}-\d{2}$`, rolls over to 3 March in `Date`, and
+     * reaches Postgres as a cast error — a client mistake surfacing as a 500
+     * instead of a clean `InvalidInputError`.
+     */
+    it("refuses a well-shaped date that is not a real calendar day", async () => {
+      const db = await seed();
+      await expect(asOwner(db, (deps) => removeEvent(deps)(principal, "2026-02-31")))
+        .rejects.toMatchObject({ name: "InvalidInputError" });
+    });
+
     it("hard-deletes a manual day Trek has never seen", async () => {
       const db = await seed();
       await asOwner(db, (deps) =>

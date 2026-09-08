@@ -192,7 +192,11 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
     // still has its entry, `planPush` sends a removal for it, and it settles
     // through `applied` like any other push.
     const unpushable = unpushableUpserts(pending);
-    const settled: string[] = [...unpushable.localOnly];
+    // `localOnly` is settled separately, through `settleLocalOnly` below: it
+    // never reached Trek, so `clearPending`'s `syncedAt = now` would stamp a
+    // sync time for a provider that has never held these dates.
+    const localOnly = unpushable.localOnly;
+    const settled: string[] = [];
     const conversions = new Set(unpushable.converted);
 
     if (pending.length > 0) {
@@ -231,9 +235,10 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
     // an entry for that date, so a link claiming otherwise would make
     // `removeEvent` stage a delete for something already gone.
     const settledConversions = settled.filter((date) => conversions.has(date));
-    if (settled.length > 0 || result.weekendBlocked.length > 0) {
+    if (settled.length > 0 || localOnly.length > 0 || result.weekendBlocked.length > 0) {
       await store.withEvents(userId, async (events) => {
         if (settled.length > 0) await events.clearPending(userId, settled, now);
+        if (localOnly.length > 0) await events.settleLocalOnly(userId, localOnly, now);
         if (settledConversions.length > 0) {
           await events.unlinkProvider(userId, settledConversions, now);
         }
