@@ -124,8 +124,17 @@ export interface WebhookDelivery {
 export interface WebhookDeliveriesRepository {
   record(input: WebhookDelivery): Promise<void>;
   /**
-   * The earliest accepted inbound delivery of this exact body to THIS
-   * connection since `since`, or null when this body is new for it.
+   * The earliest inbound delivery of this exact body that THIS connection
+   * actually accepted *and queued work for* since `since`, or null when this
+   * body is new for it.
+   *
+   * Rows recorded for a duplicate are excluded (Ruling P9-7): they too are
+   * `status: "accepted"` — the delivery was answered 202 — but they carry the
+   * reserved `duplicate` event, and letting one anchor the window would make
+   * the window self-renewing. Every replay would then push the deadline
+   * forward by its own arrival time, and a provider whose bodies carry no
+   * event identity (`{"event":"accounts.changed"}`, hashed on the raw body)
+   * would have its sync queued exactly once, ever.
    *
    * Keyed by `(connection_id, payload_hash)` and not by `(provider,
    * payload_hash)` (Ruling P9-5): a provider payload need carry nothing

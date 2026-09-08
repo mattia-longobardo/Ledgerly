@@ -84,7 +84,8 @@ export const WebhookResponseSchema = z.object({
   runIds: z.array(z.string()),
   /**
    * How many syncs this delivery queued. Zero on a replay of a body already
-   * accepted in the last 24 h, which is answered 202 all the same (R9-6).
+   * accepted in the last 10 minutes, which is answered 202 all the same
+   * (Rulings R9-6, P9-7).
    */
   queued: z.number().int(),
 });

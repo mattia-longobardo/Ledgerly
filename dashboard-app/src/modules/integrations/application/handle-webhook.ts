@@ -22,14 +22,40 @@ export interface WebhookOutcome {
 
 /**
  * Per-connection inbound cap (Ruling R9-6). Generous next to any real provider
- * — Wallet and Trek send single-digit deliveries a minute — and low enough that
- * a misbehaving or hostile sender cannot keep the candidate scan, the AES-GCM
- * decrypt and the HMAC per candidate running flat out.
+ * — Wallet and Trek send single-digit deliveries a minute.
+ *
+ * It bounds a *signed* sender only. `consumeWindow` runs after the signature
+ * has resolved a connection, so an unsigned caller never reaches it and this
+ * cap can do nothing about the candidate scan, the AES-GCM decrypt or the HMAC
+ * per candidate that such a caller costs. Those are bounded by the 1 MB body
+ * cap and the flat `404` in `src/modules/integrations/api/routes.ts`, which
+ * says the same thing from the other side. What this cap buys is that somebody
+ * who *does* hold a valid secret cannot keep one connection's enqueue path
+ * running flat out.
  */
 export const INBOUND_LIMIT_PER_MINUTE = 60;
 
-/** How far back a repeat of the same signed body still counts as a replay (Ruling R9-6). */
-export const REPLAY_WINDOW_MS = 24 * 60 * 60 * 1000;
+/**
+ * How far back a repeat of the same signed body still counts as a replay
+ * (Ruling R9-6, narrowed by Ruling P9-7).
+ *
+ * Ten minutes, not the 24 h this first shipped with. The window exists for one
+ * thing: a provider retrying a delivery whose response it never saw, which
+ * happens in seconds. A day-long window is a different, worse promise, because
+ * a provider body need carry no event identity at all — Wallet sends
+ * `{"event":"accounts.changed"}`, hashed on the raw body alone — so every
+ * delivery of the day hashes identically and only the first one syncs.
+ */
+export const REPLAY_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * The `event` a duplicate's own `webhook_deliveries` row carries, and the one
+ * value `findAccepted` refuses to treat as the original. Reserved: no adapter
+ * may emit it as a sync-request event name (they are all dotted, like
+ * `accounts.changed`), because a delivery recorded under it can never anchor a
+ * replay window.
+ */
+export const DUPLICATE_EVENT = "duplicate";
 
 /**
  * Spec §3.4: an inbound webhook validates its signature and **enqueues** the
@@ -54,12 +80,18 @@ export const REPLAY_WINDOW_MS = 24 * 60 * 60 * 1000;
  *
  * Two guards sit between the signature and the enqueue (Ruling R9-6): a
  * per-connection cap of 60 deliveries a minute, and replay protection — the
- * same `(connection_id, payload_hash)` seen in the last 24 h is acknowledged
- * with the same 202 and queues nothing (Ruling P9-5). The replay guard is what
- * makes a provider's own retry after a timed-out response safe: without it, an
- * answer lost on the wire turns one event into two syncs. Both guards are keyed
- * per connection, so one person's traffic can neither throttle nor swallow
- * another's.
+ * same `(connection_id, payload_hash)` accepted in the last 10 minutes is
+ * acknowledged with the same 202 and queues nothing (Rulings P9-5, P9-7). The
+ * replay guard is what makes a provider's own retry after a timed-out response
+ * safe: without it, an answer lost on the wire turns one event into two syncs.
+ * Both guards are keyed per connection, so one person's traffic can neither
+ * throttle nor swallow another's.
+ *
+ * The window is anchored on the delivery that actually *queued* something, and
+ * never on a duplicate: a duplicate's own row is recorded under the reserved
+ * `duplicate` event and `findAccepted` skips it (Ruling P9-7). Otherwise each
+ * duplicate would push the window forward by its own arrival time, and a
+ * provider whose bodies carry no event identity would sync exactly once, ever.
  */
 export function handleWebhook(deps: IntegrationDeps) {
   return async (input: {
@@ -147,12 +179,15 @@ export function handleWebhook(deps: IntegrationDeps) {
       if (earlier) {
         // Recorded, not silent: a retry storm is something an operator should
         // be able to see, and the 60/min cap above bounds how many rows it can
-        // add. Recorded as `accepted` so a third copy still resolves as a
-        // replay of the first.
+        // add. `status: "accepted"` because the delivery WAS answered 202 (and
+        // the column's CHECK has no third value for it), but under the
+        // reserved `duplicate` event, which `findAccepted` skips: a duplicate
+        // must never become the anchor a later copy is measured against, or
+        // the window would renew itself forever (Ruling P9-7).
         await d.deliveries.record({
           connectionId: matched.id,
           provider: code,
-          event: "duplicate",
+          event: DUPLICATE_EVENT,
           payloadHash,
           status: "accepted",
           error: null,

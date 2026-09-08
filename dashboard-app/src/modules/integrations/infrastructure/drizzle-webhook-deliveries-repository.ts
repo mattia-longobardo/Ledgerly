@@ -1,6 +1,7 @@
-import { and, asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte, ne } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { webhookDeliveries } from "@/lib/db/schema";
+import { DUPLICATE_EVENT } from "../application/handle-webhook";
 import type { WebhookDeliveriesRepository, WebhookDelivery } from "../application/ports";
 
 export class DrizzleWebhookDeliveriesRepository implements WebhookDeliveriesRepository {
@@ -33,6 +34,10 @@ export class DrizzleWebhookDeliveriesRepository implements WebhookDeliveriesRepo
           eq(webhookDeliveries.direction, "inbound"),
           eq(webhookDeliveries.payloadHash, payloadHash),
           eq(webhookDeliveries.status, "accepted"),
+          // A duplicate's own row is `accepted` too (it was answered 202), so
+          // without this the newest replay would anchor the window and push it
+          // forward forever — Ruling P9-7.
+          ne(webhookDeliveries.event, DUPLICATE_EVENT),
           gte(webhookDeliveries.receivedAt, since),
         ),
       )

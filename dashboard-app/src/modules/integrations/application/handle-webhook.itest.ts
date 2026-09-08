@@ -146,6 +146,59 @@ describe("handleWebhook (inbound hardening)", () => {
     expect(deliveries).toHaveLength(1);
   });
 
+  /**
+   * The window is 10 minutes and it does NOT renew itself (Ruling P9-7).
+   *
+   * Both halves matter, and the second is the one that bit: a duplicate's own
+   * `webhook_deliveries` row is written `status: "accepted"` too, so while
+   * `findAccepted` still matched it, every replay moved the anchor forward by
+   * its own arrival time. A provider whose bodies carry no event identity —
+   * Wallet's `{"event":"accounts.changed"}` is exactly that, and the hash is
+   * over the raw body alone — therefore hashed the same forever and had its
+   * sync queued once, ever.
+   *
+   * Read the clock offsets as: accept, replay inside the window, then a
+   * delivery past it. The third one is only six minutes after the duplicate,
+   * so it can only be accepted if the duplicate anchored nothing.
+   */
+  it("expires the replay window after 10 minutes, and a duplicate does not renew it (P9-7)", async () => {
+    const { db, deps } = await seed();
+    const deliver = () => handleWebhook(deps)({ provider: "wallet", rawBody: BODY, headers: signed(BODY) });
+    const atMinute = (m: number) => vi.setSystemTime(new Date(NOW.getTime() + m * 60_000));
+
+    const first = await deliver();
+    expect(first.status).toBe("accepted");
+    expect(first.runIds).toHaveLength(1);
+
+    // Inside the window: still a duplicate, and it records the row that used to
+    // do the damage.
+    atMinute(5);
+    expect((await deliver()).status).toBe("duplicate");
+
+    // Past the window measured from the ACCEPTED delivery at minute 0 — not
+    // from the duplicate at minute 5, which is what the old lookup would have
+    // measured from and answered `duplicate` for.
+    atMinute(11);
+    const afterWindow = await deliver();
+    expect(afterWindow.status).toBe("accepted");
+    expect(afterWindow.runIds).toHaveLength(1);
+
+    // And the fresh acceptance opens a fresh window of its own, so the guard is
+    // still doing its job: five minutes on is a replay of minute 11.
+    atMinute(16);
+    expect((await deliver()).status).toBe("duplicate");
+
+    // Eleven minutes past minute 11, and the cycle repeats rather than the
+    // deadline creeping forward with every replay.
+    atMinute(22);
+    expect((await deliver()).status).toBe("accepted");
+
+    // Three accepted deliveries, three queued runs — the count the 24 h
+    // self-renewing window capped at one.
+    const runs = await withSystemContext(db, (tx) => tx.select().from(syncRuns));
+    expect(runs).toHaveLength(3);
+  });
+
   it("keys the replay window on the connection, not the provider (P9-5)", async () => {
     const { db, deps, organizationId, connectionId } = await seed();
     const otherConnectionId = await connectUser(db, organizationId, "B", OTHER_SECRET);

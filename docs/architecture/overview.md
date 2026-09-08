@@ -67,11 +67,13 @@ Provider names live only in adapters.
 knows what a Wallet account payload looks like; everything upstream speaks the
 provider-neutral `ProviderAccount`, `ProviderCode` and `SyncKind`.
 
-From Phase 7 on, the modules keep **no memory repositories**: use cases are
-proven in `*.itest.ts` against a real Postgres (`src/test/db.ts`), and
-`*.test.ts` covers pure domain functions only. `accounts` still carries
-`src/modules/accounts/infrastructure/memory-repositories.ts` from before that
-rule.
+From Phase 7 on, **new** modules keep no memory repositories: their use cases
+are proven in `*.itest.ts` against a real Postgres (`src/test/db.ts`), and
+`*.test.ts` covers pure domain functions only. That is what `timeoff`,
+`security` and `home` do. The seven modules that predate the rule still carry an
+`infrastructure/memory-repositories.ts` — `accounts`, `budgets`, `expenses`,
+`funds`, `integrations`, `interests` and `payroll` — and keep it; the rule is
+about what gets written next, not a migration anyone has done.
 
 ## RLS context and the `system` role
 
@@ -221,11 +223,18 @@ connection-owner context at a time.
 Two guards sit in front of that (Ruling R9-6):
 
 - **Replay.** A delivery whose `(connection, payload_hash)` was already
-  accepted in the last 24 hours is answered with the earlier result and
-  `queued: 0`, without enqueuing again. The key is the **connection**, not the
-  provider (Ruling P9-5): a provider payload need carry nothing user-specific,
-  so two connections of the same provider routinely produce the same hash, and
-  a provider-wide key would silently drop the second owner's sync.
+  accepted in the last 10 minutes is answered
+  `{ accepted: true, runIds: [], queued: 0 }` — not the earlier delivery's
+  result; nothing of the first answer is replayed — without enqueuing again.
+  The key is the **connection**, not the provider (Ruling P9-5): a provider
+  payload need carry nothing user-specific, so two connections of the same
+  provider routinely produce the same hash, and a provider-wide key would
+  silently drop the second owner's sync. The window is 10 minutes rather than
+  the 24 hours this first shipped with, and it is anchored on the delivery that
+  queued work rather than on a replay of it (Ruling P9-7): a duplicate's own
+  `webhook_deliveries` row is `accepted` too, so while the lookup matched it,
+  every retry pushed the deadline forward — and a provider whose bodies carry
+  no event identity would have synced exactly once, ever.
 - **Rate.** 60 deliveries per connection per minute, through the same
   `consumeWindow` and `rate_limit_windows` table the API limiter uses, keyed by
   connection id instead of user id (Ruling P9-1). Over the limit is

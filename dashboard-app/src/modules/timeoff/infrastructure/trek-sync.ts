@@ -121,12 +121,15 @@ function empty(status: TrekSyncStatus, year: number): TrekSyncResult {
  * advisory lock; see the ⚠ note at the top of the file for why it is held here
  * and not in the job wrapper.
  *
- * `pg_try_advisory_xact_lock` does not wait: a losing caller returns `skipped`
- * immediately, which is what makes it safe to hold this lock on the request
- * path of a dashboard Save. The WINNER, though, keeps a transaction — and so
- * one of the pool's eight connections — open for the whole Trek conversation.
- * That was already true of the hourly pass; it is now also true of a Save, so a
- * slow Trek costs a connection for as long as it is slow.
+ * `withJobLock` does not wait: it takes the lock with `pg_try_advisory_lock`,
+ * so a losing caller returns `skipped` immediately, which is what makes it safe
+ * to hold this lock on the request path of a dashboard Save. The WINNER holds a
+ * *session*-level lock with no transaction open on that client (Ruling R9-1),
+ * so the pass is free to open its own short RLS contexts between Trek calls and
+ * nothing sits idle-in-transaction. It does still hold one of the pool's eight
+ * connections for the whole Trek conversation — the client exists only to own
+ * the lock — so a slow Trek costs a connection for as long as it is slow. That
+ * was already true of the hourly pass; it is now also true of a Save.
  */
 export async function runTrekSync(input: RunTrekSyncInput): Promise<TrekSyncResult> {
   const year = input.year ?? (input.now ?? new Date()).getFullYear();

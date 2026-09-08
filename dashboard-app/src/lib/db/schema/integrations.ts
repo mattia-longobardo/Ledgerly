@@ -118,8 +118,10 @@ export const syncRuns = pgTable(
  * deferred (see `docs/superpowers/DEFERRED.md`), and `direction` is kept so
  * that work reuses this table instead of adding a near-twin. The inbound rows
  * are also the replay window — `handleWebhook` answers a `(connection,
- * payload_hash)` it has already accepted in the last 24 h without enqueuing
- * again (Rulings R9-6, P9-5) — and `housekeeping` purges them after 90 days.
+ * payload_hash)` it has already accepted in the last 10 minutes without
+ * enqueuing again (Rulings R9-6, P9-5, P9-7) — and `housekeeping` purges them
+ * after 90 days. A row written for a duplicate carries the reserved
+ * `duplicate` event so it cannot anchor a window of its own.
  */
 export const webhookDeliveries = pgTable(
   "webhook_deliveries",
