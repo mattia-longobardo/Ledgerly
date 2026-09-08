@@ -273,10 +273,9 @@ describe("wallet provider adapter onDisconnect", () => {
   it("purge archives instead of deleting when the account still has references", async () => {
     const fixture = await disconnectFixture();
     const referenced = await fixture.accounts.create(walletAccount({ userId: "purge-2" }));
-    const original = fixture.accounts.hasReferences.bind(fixture.accounts);
-    vi.spyOn(fixture.accounts, "hasReferences").mockImplementation(async (id) =>
-      id === referenced.id ? true : original(id),
-    );
+    // The memory double models references directly now, so this no longer has
+    // to spy on the port to say "something points at this one".
+    fixture.accounts.addReference("purge-2", referenced.id);
 
     await walletProvider.onDisconnect(disconnectCtx("purge", "purge-2", fixture));
 

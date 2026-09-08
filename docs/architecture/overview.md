@@ -305,11 +305,14 @@ Places where what is on disk knowingly departs from the target shape:
   that predate them stay at `/transaction-categories` and
   `/transaction-labels`. Renaming a shipped read path is a breaking change
   nothing asked for.
-- **`hasReferences` always answers `false`.**
-  `src/modules/accounts/infrastructure/drizzle-accounts-repository.ts` decides
-  hard-delete-vs-archive from it, and interest rules and budget allocations do
-  reference accounts now. Recorded at the call site.
 - **The `onDisconnect` network-I/O invariant is unenforced** (Phase 4 PH4-C4):
   an adapter's `onDisconnect` runs inside the disconnect transaction, so one
   that made a network call there would hold the transaction open across it. No
   adapter does; nothing stops one.
+
+`AccountsRepository.hasReferences` was listed here until it was fixed (Ruling
+P9-8): it answered `false` unconditionally, so `deletionDecision` hard-deleted a
+manual account that had interest rules or budget rows pointing at it. It is now
+an `EXISTS` over `interest_rules`, `interest_entries`, `budget_allocations`
+(`source_kind = 'account'`) and `budget_scopes` (`kind = 'account'`), and such
+an account is archived.

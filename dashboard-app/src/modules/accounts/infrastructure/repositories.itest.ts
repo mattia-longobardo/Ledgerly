@@ -1,5 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { organizations, users } from "@/lib/db/schema";
+import {
+  budgetAllocations,
+  budgetScopes,
+  budgets,
+  interestEntries,
+  interestRules,
+  organizations,
+  users,
+} from "@/lib/db/schema";
 import { withUserContext } from "@/platform/db/context";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import type { NewAccount } from "../application/ports";
@@ -247,12 +255,103 @@ describe("DrizzleAccountsRepository", () => {
     expect(latest.get(account.id)).toMatchObject({ balance: "11.00", source: "provider" });
   });
 
-  // Pins the current answer, not a desirable one — see the known gap recorded
-  // on `DrizzleAccountsRepository.hasReferences`.
-  it("still reports no references for any account", async () => {
-    const { a } = await seedUsers();
-    const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
-    expect(await asUser(a, (repo) => repo.hasReferences(account.id))).toBe(false);
+  /**
+   * Ruling P9-8. Each of the four tables on its own, because `hasReferences`
+   * short-circuits: one `EXISTS` that never ran would go unnoticed behind a
+   * test that references an account four ways at once.
+   */
+  describe("hasReferences", () => {
+    it("reports nothing for a fresh account", async () => {
+      const { a } = await seedUsers();
+      const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
+      expect(await asUser(a, (repo) => repo.hasReferences(a, account.id))).toBe(false);
+    });
+
+    it("sees an interest rule", async () => {
+      const { a } = await seedUsers();
+      const db = await testDb();
+      const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
+      await withUserContext(db, { userId: a }, (tx) =>
+        tx.insert(interestRules).values({
+          userId: a,
+          accountId: account.id,
+          annualRate: "0.022500",
+          effectiveFrom: "2026-01-01",
+        }),
+      );
+      expect(await asUser(a, (repo) => repo.hasReferences(a, account.id))).toBe(true);
+    });
+
+    it("sees an interest entry", async () => {
+      const { a } = await seedUsers();
+      const db = await testDb();
+      const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
+      await withUserContext(db, { userId: a }, (tx) =>
+        tx.insert(interestEntries).values({
+          userId: a,
+          accountId: account.id,
+          occurredAt: new Date("2026-03-31T00:00:00Z"),
+          gross: "1.00",
+          net: "0.74",
+          kind: "paid",
+        }),
+      );
+      expect(await asUser(a, (repo) => repo.hasReferences(a, account.id))).toBe(true);
+    });
+
+    it("sees a budget allocation sourced from the account, and a budget scoped to it", async () => {
+      const { a } = await seedUsers();
+      const db = await testDb();
+      const sourced = await asUser(a, (repo) => repo.create(manualAccount(a)));
+      const scoped = await asUser(a, (repo) => repo.create(manualAccount(a, { name: "Scoped" })));
+
+      await withUserContext(db, { userId: a }, async (tx) => {
+        const [budget] = await tx
+          .insert(budgets)
+          .values({ userId: a, name: "Holidays", startDate: "2026-01-01" })
+          .returning();
+        await tx.insert(budgetAllocations).values({
+          budgetId: budget!.id,
+          sourceKind: "account",
+          sourceId: sourced.id,
+          amount: "200.00",
+          effectiveFrom: "2026-01-01",
+        });
+        await tx.insert(budgetScopes).values({ budgetId: budget!.id, kind: "account", refId: scoped.id });
+      });
+
+      expect(await asUser(a, (repo) => repo.hasReferences(a, sourced.id))).toBe(true);
+      expect(await asUser(a, (repo) => repo.hasReferences(a, scoped.id))).toBe(true);
+    });
+
+    /**
+     * `budget_allocations.source_id` and `budget_scopes.ref_id` are bare uuids
+     * with no owner column, so the owner has to come from the join to
+     * `budgets`. Without it, B's budget would make A's account undeletable —
+     * and, since `hasReferences` is what picks archive over hard delete, would
+     * do it silently.
+     */
+    it("does not let another user's budget reference the account", async () => {
+      const { a, b } = await seedUsers();
+      const db = await testDb();
+      const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
+
+      await withUserContext(db, { userId: b }, async (tx) => {
+        const [budget] = await tx
+          .insert(budgets)
+          .values({ userId: b, name: "Theirs", startDate: "2026-01-01" })
+          .returning();
+        await tx.insert(budgetAllocations).values({
+          budgetId: budget!.id,
+          sourceKind: "account",
+          sourceId: account.id,
+          amount: "50.00",
+          effectiveFrom: "2026-01-01",
+        });
+      });
+
+      expect(await asUser(a, (repo) => repo.hasReferences(a, account.id))).toBe(false);
+    });
   });
 });
 

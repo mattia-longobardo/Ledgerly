@@ -187,7 +187,10 @@ async function onDisconnect(ctx: DisconnectContext): Promise<void> {
     // once synced.
     const decision = deletionDecision(
       { ...account, origin: "manual" },
-      { hasLiveProviderLink: false, hasReferences: await deps.accounts.hasReferences(account.id) },
+      {
+        hasLiveProviderLink: false,
+        hasReferences: await deps.accounts.hasReferences(ctx.connection.userId, account.id),
+      },
     );
     if (decision === "hard_delete") {
       await deps.accounts.delete(ctx.connection.userId, account.id);
