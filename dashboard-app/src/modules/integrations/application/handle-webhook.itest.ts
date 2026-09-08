@@ -28,6 +28,8 @@ import { connectIntegration } from "./connect-integration";
 import { INBOUND_LIMIT_PER_MINUTE, handleWebhook } from "./handle-webhook";
 
 const SECRET = "hook-secret";
+/** A second connection's secret. Different key, same body, therefore the same payload hash. */
+const OTHER_SECRET = "other-hook-secret";
 const BODY = '{"event":"accounts.changed"}';
 
 /**
@@ -59,8 +61,8 @@ function fakeProvider(): IntegrationProvider {
   };
 }
 
-function signed(body: string): Headers {
-  return new Headers({ "x-signature": `sha256=${createHmac("sha256", SECRET).update(body, "utf8").digest("hex")}` });
+function signed(body: string, secret = SECRET): Headers {
+  return new Headers({ "x-signature": `sha256=${createHmac("sha256", secret).update(body, "utf8").digest("hex")}` });
 }
 
 describe("handleWebhook (inbound hardening)", () => {
@@ -82,27 +84,34 @@ describe("handleWebhook (inbound hardening)", () => {
     await closeDb();
   });
 
-  async function seed() {
-    const db = await testDb();
-    const [org] = await db.insert(organizations).values({ name: "Acme" }).returning();
-    const [user] = await db.insert(users).values({ organizationId: org!.id, displayName: "A" }).returning();
+  type Db = Awaited<ReturnType<typeof testDb>>;
+
+  /** One organization, one wallet connection per user, each with its own webhook secret. */
+  async function connectUser(db: Db, organizationId: string, name: string, secret: string): Promise<string> {
+    const [user] = await db.insert(users).values({ organizationId, displayName: name }).returning();
     const principal: Principal = {
       userId: user!.id,
-      organizationId: org!.id,
+      organizationId,
       roles: ["owner"],
       permissions: permissionsForRoles(["owner"]),
     };
-    const deps = integrationDeps(db);
-    await connectIntegration(deps)(principal, {
+    await connectIntegration(integrationDeps(db))(principal, {
       provider: "wallet",
-      credentials: { token: "good", webhookSecret: SECRET },
+      credentials: { token: "good", webhookSecret: secret },
     });
     // `integration_connections` is FORCE RLS: on the bare pool this read
     // returns zero rows rather than an error.
     const [connection] = await withSystemContext(db, (tx) =>
       tx.select().from(integrationConnections).where(eq(integrationConnections.userId, user!.id)),
     );
-    return { db, deps, connectionId: connection!.id };
+    return connection!.id;
+  }
+
+  async function seed() {
+    const db = await testDb();
+    const [org] = await db.insert(organizations).values({ name: "Acme" }).returning();
+    const connectionId = await connectUser(db, org!.id, "A", SECRET);
+    return { db, deps: integrationDeps(db), organizationId: org!.id, connectionId };
   }
 
   it("acknowledges a replayed body with the same 202 and queues nothing", async () => {
@@ -135,6 +144,44 @@ describe("handleWebhook (inbound hardening)", () => {
       tx.select().from(webhookDeliveries).where(eq(webhookDeliveries.event, "duplicate")),
     );
     expect(deliveries).toHaveLength(1);
+  });
+
+  it("keys the replay window on the connection, not the provider (P9-5)", async () => {
+    const { db, deps, organizationId, connectionId } = await seed();
+    const otherConnectionId = await connectUser(db, organizationId, "B", OTHER_SECRET);
+
+    // Byte-identical body, two connections of the same provider: the payload
+    // carries nothing user-specific, so the hashes are equal by construction.
+    const first = await handleWebhook(deps)({ provider: "wallet", rawBody: BODY, headers: signed(BODY) });
+    expect(first.status).toBe("accepted");
+    expect(first.connectionId).toBe(connectionId);
+    expect(first.runIds).toHaveLength(1);
+
+    const second = await handleWebhook(deps)({
+      provider: "wallet",
+      rawBody: BODY,
+      headers: signed(BODY, OTHER_SECRET),
+    });
+    // The second connection's work must NOT be swallowed as a replay of the
+    // first — a provider-wide key would answer "duplicate" and drop this sync
+    // behind a 202, losing it silently.
+    expect(second.status).toBe("accepted");
+    expect(second.connectionId).toBe(otherConnectionId);
+    expect(second.runIds).toHaveLength(1);
+
+    const runs = await withSystemContext(db, (tx) => tx.select().from(syncRuns));
+    expect(runs).toHaveLength(2);
+    expect(new Set(runs.map((r) => r.connectionId))).toEqual(new Set([connectionId, otherConnectionId]));
+
+    // The same connection twice is still a replay.
+    const replay = await handleWebhook(deps)({
+      provider: "wallet",
+      rawBody: BODY,
+      headers: signed(BODY, OTHER_SECRET),
+    });
+    expect(replay.status).toBe("duplicate");
+    expect(replay.runIds).toEqual([]);
+    expect(await withSystemContext(db, (tx) => tx.select().from(syncRuns))).toHaveLength(2);
   });
 
   it("refuses the 61st delivery of a minute for that connection", async () => {

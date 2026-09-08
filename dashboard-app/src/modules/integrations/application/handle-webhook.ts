@@ -54,10 +54,12 @@ export const REPLAY_WINDOW_MS = 24 * 60 * 60 * 1000;
  *
  * Two guards sit between the signature and the enqueue (Ruling R9-6): a
  * per-connection cap of 60 deliveries a minute, and replay protection — the
- * same `(provider, payload_hash)` seen in the last 24 h is acknowledged with
- * the same 202 and queues nothing. The replay guard is what makes a provider's
- * own retry after a timed-out response safe: without it, an answer lost on the
- * wire turns one event into two syncs.
+ * same `(connection_id, payload_hash)` seen in the last 24 h is acknowledged
+ * with the same 202 and queues nothing (Ruling P9-5). The replay guard is what
+ * makes a provider's own retry after a timed-out response safe: without it, an
+ * answer lost on the wire turns one event into two syncs. Both guards are keyed
+ * per connection, so one person's traffic can neither throttle nor swallow
+ * another's.
  */
 export function handleWebhook(deps: IntegrationDeps) {
   return async (input: {
@@ -133,8 +135,12 @@ export function handleWebhook(deps: IntegrationDeps) {
         return { status: "rate_limited", accepted: false, connectionId: matched.id, runIds: [] };
       }
 
+      // Keyed on the matched CONNECTION, not the provider (Ruling P9-5): a
+      // payload need carry nothing user-specific, so two people connected to
+      // the same provider routinely send byte-identical bodies, and a
+      // provider-wide key would drop the second one's sync behind a 202.
       const earlier = await d.deliveries.findAccepted(
-        code,
+        matched.id,
         payloadHash,
         new Date(receivedAt.getTime() - REPLAY_WINDOW_MS),
       );

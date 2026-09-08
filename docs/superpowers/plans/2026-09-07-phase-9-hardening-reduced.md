@@ -53,11 +53,13 @@ docs/architecture/overview.md, docs/api/README.md, docs/deploy/README.md, docs/s
 
 ### Deviation (Task 2)
 
-Three additions the brief implies but does not name:
+Three additions the brief implies but does not name, one reading it leaves open, and one correction from the task review:
 
 1. **`WebhookOutcome` gained a `status`** (`accepted` | `duplicate` | `rate_limited` | `rejected`) and the route response gained `queued`. The brief asks for "a second 202 with `queued: 0`", and the shipped response was `{ accepted, runIds }` with no such field; the route also had no way to tell "refused" from "throttled". `accepted` is kept, so every existing caller and test still reads the same field. `docs/api/openapi.json` is regenerated and committed with this task rather than with Task 3, because otherwise `openapi-drift.test.ts` would fail on the Task 2 commit.
 2. **The limiter reaches `handleWebhook` as a port** (`IntegrationDeps.consumeWindow`), wired to `consumeWindow(client, …)` in `integrationDeps`, rather than as a direct call on `deps.db`. The module's unit tests run on `unusedDb` (an intentionally unconnected client), so a direct call would have made every existing `handle-webhook.test.ts` case hit the network.
 3. **Neither guard throws.** Both run inside `inSystemContext`'s transaction, and throwing would roll back the very `rate_limit_windows` and `webhook_deliveries` rows that make the guard work — the limiter would never trip. They return a status and the route maps it (429 for `rate_limited`).
+4. **`job_runs`/`sync_runs` are aged by `COALESCE(finished_at, started_at)`.** The plan says "90 d" and names no column. Finishing is what makes a run's history uninteresting, and the fallback collects a run that died without ever finishing (a killed process leaves its row `running` for good) once it is older than the window, instead of leaving it in the table permanently. This is the executor's reading, not a controller ruling.
+5. **The replay key is `(connection_id, payload_hash)`, not `(provider, payload_hash)` — Ruling P9-5** (fix round 1, after task review). The plan and the original R9-6 both say `(provider, payload_hash)`, and that is wrong: a provider payload need carry nothing user-specific (`{"event":"accounts.changed"}` is a real Wallet body), so two connections of the same provider belonging to two people routinely produce the same hash. Provider-wide, the second person's delivery is answered `duplicate` with `queued: 0` and its sync is dropped behind a 202 — work lost silently. `WebhookDeliveriesRepository.findAccepted` now takes the matched connection id and the Drizzle predicate is `connection_id = $1`. Covered by `handle-webhook.itest.ts` → "keys the replay window on the connection, not the provider (P9-5)".
 
 ---
 

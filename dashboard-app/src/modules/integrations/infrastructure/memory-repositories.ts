@@ -222,14 +222,14 @@ export class MemoryWebhookDeliveriesRepository implements WebhookDeliveriesRepos
   }
 
   async findAccepted(
-    provider: string,
+    connectionId: string,
     payloadHash: string,
     since: Date,
   ): Promise<{ connectionId: string | null; receivedAt: Date } | null> {
     const match = this.rows
       .filter(
         (r) =>
-          r.provider === provider &&
+          r.connectionId === connectionId &&
           r.payloadHash === payloadHash &&
           r.status === "accepted" &&
           r.receivedAt.getTime() >= since.getTime(),
