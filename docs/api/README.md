@@ -214,11 +214,16 @@ is left alone, so switching it back on resumes rather than re-imports. A
 provider that is not connected has no `sync_jobs` rows to toggle and answers
 `422 validation_failed`.
 
-Inbound webhooks carry two guards (Phase 9): the same signed body seen twice
-within 24 hours is answered `202` with `queued: 0` and enqueues nothing — an
-idempotent acknowledgement, so a provider retrying a delivery whose response it
-never saw does not turn one event into two syncs — and a connection sending more
-than 60 deliveries a minute gets `429 rate_limited`.
+Inbound webhooks carry two guards (Phase 9), both keyed on the connection the
+signature resolved to: the same signed body delivered twice to the same
+connection within 24 hours is answered `202` with `queued: 0` and enqueues
+nothing — an idempotent acknowledgement, so a provider retrying a delivery whose
+response it never saw does not turn one event into two syncs — and a connection
+sending more than 60 deliveries a minute gets `429 rate_limited`. The replay key
+is `(connection_id, payload_hash)` and deliberately not `(provider,
+payload_hash)`: a payload need carry nothing user-specific, so two people
+connected to the same provider routinely send byte-identical bodies, and a
+provider-wide key would drop the second one's sync behind a 202.
 
 ### Breaking changes in Phase 2
 

@@ -124,15 +124,20 @@ export interface WebhookDelivery {
 export interface WebhookDeliveriesRepository {
   record(input: WebhookDelivery): Promise<void>;
   /**
-   * The earliest accepted inbound delivery of this exact body since `since`, or
-   * null when this body is new (Ruling R9-6). Keyed by `(provider,
-   * payload_hash)` rather than by connection: the hash is over the raw signed
-   * body, so two connections cannot produce the same one by accident, and a
-   * provider retrying a delivery it never got an answer for must be told
-   * "already have it" whichever way it resolves.
+   * The earliest accepted inbound delivery of this exact body to THIS
+   * connection since `since`, or null when this body is new for it.
+   *
+   * Keyed by `(connection_id, payload_hash)` and not by `(provider,
+   * payload_hash)` (Ruling P9-5): a provider payload need carry nothing
+   * user-specific — `{"event":"accounts.changed"}` is a real example — so two
+   * connections of the same provider, belonging to two people, routinely
+   * produce the same hash. A provider-wide key would answer the second one
+   * `duplicate` and drop its sync behind a 202, losing work silently. The
+   * signature already told us which connection this delivery is for; the replay
+   * question is only ever "have I already accepted this body for *that* one".
    */
   findAccepted(
-    provider: ProviderCode,
+    connectionId: string,
     payloadHash: string,
     since: Date,
   ): Promise<{ connectionId: string | null; receivedAt: Date } | null>;
