@@ -4,12 +4,32 @@ import type { IntegrationDeps } from "./deps";
 import { enqueueSync } from "./enqueue-sync";
 import { SyncDisabledError } from "./errors";
 
+/**
+ * Why this delivery ended the way it did. `duplicate` and `accepted` are both
+ * 202s — a provider retrying a delivery it never got an answer for must not be
+ * told "error" (Ruling R9-6) — but only `accepted` queued anything.
+ */
+export type WebhookOutcomeStatus = "accepted" | "duplicate" | "rate_limited" | "rejected";
+
 export interface WebhookOutcome {
+  status: WebhookOutcomeStatus;
+  /** 202-worthy: a fresh delivery, or an idempotent replay of one. */
   accepted: boolean;
   connectionId: string | null;
-  /** The `sync_runs` rows this delivery queued. Empty on a rejection. */
+  /** The `sync_runs` rows this delivery queued. Empty on a rejection or a replay. */
   runIds: string[];
 }
+
+/**
+ * Per-connection inbound cap (Ruling R9-6). Generous next to any real provider
+ * — Wallet and Trek send single-digit deliveries a minute — and low enough that
+ * a misbehaving or hostile sender cannot keep the candidate scan, the AES-GCM
+ * decrypt and the HMAC per candidate running flat out.
+ */
+export const INBOUND_LIMIT_PER_MINUTE = 60;
+
+/** How far back a repeat of the same signed body still counts as a replay (Ruling R9-6). */
+export const REPLAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Spec §3.4: an inbound webhook validates its signature and **enqueues** the
@@ -31,6 +51,13 @@ export interface WebhookOutcome {
  * Nothing in the payload is trusted beyond the event name, and the payload is
  * decoded only AFTER the signature verifies, so an unsigned body never reaches
  * `JSON.parse`.
+ *
+ * Two guards sit between the signature and the enqueue (Ruling R9-6): a
+ * per-connection cap of 60 deliveries a minute, and replay protection — the
+ * same `(provider, payload_hash)` seen in the last 24 h is acknowledged with
+ * the same 202 and queues nothing. The replay guard is what makes a provider's
+ * own retry after a timed-out response safe: without it, an answer lost on the
+ * wire turns one event into two syncs.
  */
 export function handleWebhook(deps: IntegrationDeps) {
   return async (input: {
@@ -38,7 +65,7 @@ export function handleWebhook(deps: IntegrationDeps) {
     rawBody: string;
     headers: Headers;
   }): Promise<WebhookOutcome> => {
-    const rejected: WebhookOutcome = { accepted: false, connectionId: null, runIds: [] };
+    const rejected: WebhookOutcome = { status: "rejected", accepted: false, connectionId: null, runIds: [] };
     const provider = deps.registry.get(input.provider);
     if (!provider?.webhook) return rejected;
 
@@ -83,6 +110,51 @@ export function handleWebhook(deps: IntegrationDeps) {
         return rejected;
       }
 
+      // Rate limit and replay check in that order, and both AFTER the signature
+      // has resolved a connection: neither may be an oracle telling an
+      // unauthenticated caller whether a body was ever accepted, or which
+      // connection would receive it.
+      //
+      // Neither branch throws. Everything here runs inside the system context's
+      // transaction, and throwing would roll back the very counter row and
+      // delivery row that are the point — the limiter would never trip. The
+      // route turns the returned status into the response code.
+      const window = await d.consumeWindow(matched.id, INBOUND_LIMIT_PER_MINUTE, receivedAt);
+      if (window.exceeded) {
+        await d.deliveries.record({
+          connectionId: matched.id,
+          provider: code,
+          event: "rate_limited",
+          payloadHash,
+          status: "rejected",
+          error: `More than ${INBOUND_LIMIT_PER_MINUTE} deliveries in one minute`,
+          receivedAt,
+        });
+        return { status: "rate_limited", accepted: false, connectionId: matched.id, runIds: [] };
+      }
+
+      const earlier = await d.deliveries.findAccepted(
+        code,
+        payloadHash,
+        new Date(receivedAt.getTime() - REPLAY_WINDOW_MS),
+      );
+      if (earlier) {
+        // Recorded, not silent: a retry storm is something an operator should
+        // be able to see, and the 60/min cap above bounds how many rows it can
+        // add. Recorded as `accepted` so a third copy still resolves as a
+        // replay of the first.
+        await d.deliveries.record({
+          connectionId: matched.id,
+          provider: code,
+          event: "duplicate",
+          payloadHash,
+          status: "accepted",
+          error: null,
+          receivedAt,
+        });
+        return { status: "duplicate", accepted: true, connectionId: matched.id, runIds: [] };
+      }
+
       // A body that verified but is not JSON is a REAL problem — somebody
       // holding the right secret is sending something this adapter cannot
       // read — so it is recorded with its reason and refused, not quietly
@@ -100,7 +172,7 @@ export function handleWebhook(deps: IntegrationDeps) {
           error: `Signed body was not JSON: ${err instanceof Error ? err.message : String(err)}`,
           receivedAt,
         });
-        return { accepted: false, connectionId: matched.id, runIds: [] };
+        return { status: "rejected", accepted: false, connectionId: matched.id, runIds: [] };
       }
 
       const requests = webhook.toSyncRequests(payload);
@@ -127,7 +199,7 @@ export function handleWebhook(deps: IntegrationDeps) {
           error: `Could not queue sync: ${err.message}`,
           receivedAt,
         });
-        return { accepted: false, connectionId: matched.id, runIds: [] };
+        return { status: "rejected", accepted: false, connectionId: matched.id, runIds: [] };
       }
 
       await d.deliveries.record({
@@ -139,7 +211,7 @@ export function handleWebhook(deps: IntegrationDeps) {
         error: null,
         receivedAt,
       });
-      return { accepted: true, connectionId: matched.id, runIds };
+      return { status: "accepted", accepted: true, connectionId: matched.id, runIds };
     });
   };
 }

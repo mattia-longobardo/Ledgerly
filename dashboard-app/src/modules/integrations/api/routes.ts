@@ -243,10 +243,10 @@ const syncRunsRoute = createRoute({
 /**
  * A rejected webhook request already costs a transaction, a scan of every
  * connected candidate for the provider, one AES-GCM decrypt and one HMAC per
- * candidate, and an INSERT into `webhook_deliveries` — and this route has no
- * rate limiter (deliberately deferred to Phase 9; see `app.ts`). Without a
- * cap, an anonymous caller could grow that table and burn write throughput
- * without bound just by posting large bodies. 1 MB comfortably covers any
+ * candidate, and an INSERT into `webhook_deliveries`. The per-connection limit
+ * `handleWebhook` applies (R9-6) only starts once a signature has resolved a
+ * connection, so it cannot cap an anonymous caller who never signs anything;
+ * this body cap is what bounds that caller. 1 MB comfortably covers any
  * real provider payload today (spec §6's examples are all small JSON
  * objects), and an oversized body is rejected before it is hashed or a
  * transaction is opened — it never reaches `handleWebhook` at all, and no
@@ -319,6 +319,7 @@ const webhookRoute = createRoute({
       content: { "application/json": { schema: WebhookResponseSchema } },
     },
     404: errorResponse("The signature did not verify against any connection, or the provider does not exist."),
+    429: errorResponse("More than 60 deliveries in one minute for the receiving connection."),
   },
 });
 
@@ -459,9 +460,16 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
       rawBody,
       headers: c.req.raw.headers,
     });
+    // Only a caller that has already proved it holds a connection's secret
+    // learns it is being throttled; every other refusal is the flat 404 below.
+    if (outcome.status === "rate_limited") {
+      throw new ApiError(429, "rate_limited", "Too many deliveries; try again in a minute");
+    }
     // One answer for "no such provider", "bad signature" and "signed but
     // unreadable": a machine endpoint must not confirm what exists.
     if (!outcome.accepted) throw new ApiError(404, "not_found", "No such webhook endpoint");
-    return c.json({ accepted: true, runIds: outcome.runIds }, 202);
+    // A replay is answered exactly like the delivery it repeats, with
+    // `queued: 0` to say nothing new was scheduled (R9-6).
+    return c.json({ accepted: true, runIds: outcome.runIds, queued: outcome.runIds.length }, 202);
   });
 }

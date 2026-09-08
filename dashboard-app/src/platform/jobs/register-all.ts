@@ -8,6 +8,7 @@ import { runMonthlyClose } from "@/lib/jobs/monthly-close";
 import { runInterestAccrualJob } from "@/lib/jobs/interest-accrual";
 import { runPayrollIngestJob } from "@/lib/jobs/payroll-ingest";
 import { runPayrollRetentionJob } from "@/lib/jobs/payroll-retention";
+import { runHousekeepingJob } from "@/lib/jobs/housekeeping";
 
 let done = false;
 
@@ -28,4 +29,7 @@ export function ensureJobsRegistered(): void {
   // Daily (Ruling R4-5): capped at 100 objects a run, so a misconfigured
   // retention window gives a human a day to notice.
   registerJob({ name: "payroll_retention", tier: "daily", run: (i) => runPayrollRetentionJob({ trigger: i.trigger, now: i.now }) });
+  // Daily (Ruling R9-5): the retention windows are measured in months, so a
+  // day's granularity is ample, and each table is capped at 5,000 rows a run.
+  registerJob({ name: "housekeeping", tier: "daily", run: (i) => runHousekeepingJob({ trigger: i.trigger, now: i.now }) });
 }

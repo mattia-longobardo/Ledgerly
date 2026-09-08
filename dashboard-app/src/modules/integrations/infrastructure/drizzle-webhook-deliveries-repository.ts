@@ -1,5 +1,7 @@
+import { and, asc, eq, gte } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { webhookDeliveries } from "@/lib/db/schema";
+import type { ProviderCode } from "@/platform/integrations/types";
 import type { WebhookDeliveriesRepository, WebhookDelivery } from "../application/ports";
 
 export class DrizzleWebhookDeliveriesRepository implements WebhookDeliveriesRepository {
@@ -16,5 +18,27 @@ export class DrizzleWebhookDeliveriesRepository implements WebhookDeliveriesRepo
       error: input.error,
       receivedAt: input.receivedAt,
     });
+  }
+
+  async findAccepted(
+    provider: ProviderCode,
+    payloadHash: string,
+    since: Date,
+  ): Promise<{ connectionId: string | null; receivedAt: Date } | null> {
+    const [row] = await this.db
+      .select({ connectionId: webhookDeliveries.connectionId, receivedAt: webhookDeliveries.receivedAt })
+      .from(webhookDeliveries)
+      .where(
+        and(
+          eq(webhookDeliveries.provider, provider),
+          eq(webhookDeliveries.direction, "inbound"),
+          eq(webhookDeliveries.payloadHash, payloadHash),
+          eq(webhookDeliveries.status, "accepted"),
+          gte(webhookDeliveries.receivedAt, since),
+        ),
+      )
+      .orderBy(asc(webhookDeliveries.receivedAt))
+      .limit(1);
+    return row ?? null;
   }
 }

@@ -5869,11 +5869,15 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "queued": {
+                      "type": "integer"
                     }
                   },
                   "required": [
                     "accepted",
-                    "runIds"
+                    "runIds",
+                    "queued"
                   ]
                 }
               }
@@ -5881,6 +5885,16 @@
           },
           "404": {
             "description": "The signature did not verify against any connection, or the provider does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 60 deliveries in one minute for the receiving connection.",
             "content": {
               "application/json": {
                 "schema": {

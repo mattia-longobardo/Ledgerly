@@ -213,6 +213,23 @@ export class MemoryWebhookDeliveriesRepository implements WebhookDeliveriesRepos
   async record(input: WebhookDelivery): Promise<void> {
     this.rows.push(input);
   }
+
+  async findAccepted(
+    provider: string,
+    payloadHash: string,
+    since: Date,
+  ): Promise<{ connectionId: string | null; receivedAt: Date } | null> {
+    const match = this.rows
+      .filter(
+        (r) =>
+          r.provider === provider &&
+          r.payloadHash === payloadHash &&
+          r.status === "accepted" &&
+          r.receivedAt.getTime() >= since.getTime(),
+      )
+      .sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime())[0];
+    return match ? { connectionId: match.connectionId, receivedAt: match.receivedAt } : null;
+  }
 }
 
 /**

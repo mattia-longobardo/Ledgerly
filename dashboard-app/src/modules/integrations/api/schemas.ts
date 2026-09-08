@@ -82,4 +82,9 @@ export const DisconnectResponseSchema = z.object({ policy: z.enum(["keep", "arch
 export const WebhookResponseSchema = z.object({
   accepted: z.boolean(),
   runIds: z.array(z.string()),
+  /**
+   * How many syncs this delivery queued. Zero on a replay of a body already
+   * accepted in the last 24 h, which is answered 202 all the same (R9-6).
+   */
+  queued: z.number().int(),
 });

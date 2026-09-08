@@ -108,6 +108,7 @@ export interface SanityCheck {
 }
 
 export type JobName =
+  | "housekeeping"
   | "payroll_ingest"
   | "payroll_retention"
   | "sweep"

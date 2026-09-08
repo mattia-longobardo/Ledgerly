@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { closeDb, resetDb, testDb } from "@/test/db";
 import { auditEvents, organizations, users, webhookDeliveries } from "@/lib/db/schema";
@@ -58,6 +58,9 @@ describe("webhook route", () => {
     process.env.APP_ENCRYPTION_KEY = KEY;
     registerProvider(fakeProvider());
   });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   afterAll(async () => {
     process.env.APP_ENCRYPTION_KEY = ITEST_ENCRYPTION_KEY;
     resetCredentialCipher();
@@ -113,6 +116,7 @@ describe("webhook route", () => {
     const okBody = await ok.json();
     expect(okBody.accepted).toBe(true);
     expect(okBody.runIds).toHaveLength(1);
+    expect(okBody.queued).toBe(1);
 
     const unsigned = await app.request("/api/v1/webhooks/wallet", {
       method: "POST",
@@ -283,5 +287,76 @@ describe("webhook route", () => {
 
     const deliveries = await withSystemContext(db, (tx) => tx.select().from(webhookDeliveries));
     expect(deliveries).toHaveLength(0);
+  });
+
+  /**
+   * `handleWebhook`'s clock is the real one (`integrationDeps` builds it), so
+   * the one-minute window is pinned rather than raced: 61 in-process requests
+   * take milliseconds, but a run starting at :59.9 would spill into a fresh
+   * window and never trip the limit.
+   */
+  function pinClock(at = "2026-09-04T09:00:30.000Z"): Date {
+    const now = new Date(at);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    return now;
+  }
+
+  it("answers a replayed delivery 202 with queued: 0 and queues nothing more (R9-6)", async () => {
+    pinClock();
+    const { app, userA } = await seed();
+    await app.request("/api/v1/integrations/wallet/connect", {
+      method: "POST",
+      headers: headers(userA.id),
+      body: JSON.stringify({ credentials: { token: "good", webhookSecret: "hook-secret" } }),
+    });
+
+    const body = '{"event":"accounts.changed"}';
+    const signature = `sha256=${createHmac("sha256", "hook-secret").update(body, "utf8").digest("hex")}`;
+    const post = () =>
+      app.request("/api/v1/webhooks/wallet", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-signature": signature },
+        body,
+      });
+
+    const first = await post();
+    expect(first.status).toBe(202);
+    expect((await first.json()).queued).toBe(1);
+
+    const replay = await post();
+    // The same answer, not an error: a provider retrying a delivery whose
+    // response it never saw must not be told something went wrong.
+    expect(replay.status).toBe(202);
+    const replayBody = await replay.json();
+    expect(replayBody).toMatchObject({ accepted: true, runIds: [], queued: 0 });
+
+    const runs = await app.request("/api/v1/integrations/wallet/sync-runs", { headers: headers(userA.id) });
+    expect((await runs.json()).items).toHaveLength(1);
+  });
+
+  it("refuses the 61st delivery of a minute with 429 rate_limited (R9-6)", async () => {
+    pinClock();
+    const { app, userA } = await seed();
+    await app.request("/api/v1/integrations/wallet/connect", {
+      method: "POST",
+      headers: headers(userA.id),
+      body: JSON.stringify({ credentials: { token: "good", webhookSecret: "hook-secret" } }),
+    });
+
+    const body = '{"event":"accounts.changed"}';
+    const signature = `sha256=${createHmac("sha256", "hook-secret").update(body, "utf8").digest("hex")}`;
+    const post = () =>
+      app.request("/api/v1/webhooks/wallet", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-signature": signature },
+        body,
+      });
+
+    for (let i = 0; i < 60; i += 1) expect((await post()).status).toBe(202);
+
+    const over = await post();
+    expect(over.status).toBe(429);
+    expect((await over.json()).error.code).toBe("rate_limited");
   });
 });
