@@ -1,6 +1,10 @@
 # Deferred
 
-Scope the reduced Phases 7–9 plans dropped on purpose, one line per item: what it is, why it went, and which original plan and task describes it in full. This is the list to reopen with the UI redesign — nothing here is lost, only postponed.
+Scope the reduced Phases 7–9 plans dropped on purpose, plus the follow-ups the phases found and did not stop for. One line per item: what it is, why it went, and which original plan and task describes it in full. This is the list to reopen with the UI redesign — nothing here is lost, only postponed.
+
+The `2026-09-06-*` plans referenced below were superseded by their reduced replacements and are no longer in the working tree; read one with `git show <rev>:docs/superpowers/plans/<file>`, or `git log --diff-filter=D -- docs/superpowers/plans/` to find the commit that removed it.
+
+## Scope dropped on purpose
 
 - **Time Off workspace UI** (spec §7.8: two-pane layout, URL-driven day detail, variance table, upcoming list, Home card body) — the redesign replaces every component it would use, so Phase 7 ships a bare page instead. Original `2026-09-06-phase-7-time-off.md`, Task 6.
 - **`src/modules/timeoff/domain/variance.ts`** (planned vs used per month, from `src/lib/calc/leave-variance.ts`) — its only consumer was the variance table above. `leave-variance.ts` was deleted with its consumers in Phase 7 Task 1; rebuild it on `timeoff_balances.used` when the UI needs it. Original `2026-09-06-phase-7-time-off.md`, Task 2.
@@ -15,4 +19,16 @@ Scope the reduced Phases 7–9 plans dropped on purpose, one line per item: what
 - **Outbound webhooks** (`webhook_endpoints`, the outbox in `webhook_deliveries`, the `webhook_delivery` job, HMAC signing, the four events and the endpoint-management UI) — nothing consumes them today, and building a delivery pipeline with no subscriber is carrying a retry schedule and a signing scheme for nobody. Rulings R9-2, R9-3, R9-4. Original `2026-09-06-phase-9-management-hardening.md`, Task 2.
 - **Management pages** `/finance/management/{categories,labels,mapping-rules,issues,sync-jobs,contribution-types}` — the API and the server actions exist (Phase 9 Task 3), so the redesign only has to render forms; the pages themselves would be built out of components the redesign replaces. Original `2026-09-06-phase-9-management-hardening.md`, Tasks 3 and 4 (UI parts).
 - **Final e2e suite beyond a smoke test** (`budgets`, `funds`, `payroll-upload`, `webhooks`, `home` specs) — the API-level smoke run covers the deployment question these were meant to answer; the browser specs are worth writing against the redesigned UI, not this one. Original `2026-09-06-phase-9-management-hardening.md`, Task 7.
+
+## Follow-ups found while building
+
+Each was found by a task or a review, judged not worth stopping the phase for, and left with the reasoning at the code that carries it.
+
 - **`onDisconnect` network-I/O invariant** (Phase 4 PH4-C4: a provider adapter's `onDisconnect` runs inside the disconnect transaction, so an adapter that made a network call there would hold one open across it) — still not fixed, as in the original plan. No adapter does network I/O there today; the invariant is unenforced rather than violated. Original `2026-09-06-phase-9-management-hardening.md`, header.
+- **The TeamSystem parser's two payslip paths disagree on `ferieTakenHours`** — the leave grid reports it cumulative year-to-date, the row-300 fallback per period, so `usedYtdHours` means different things depending on which path read the payslip. Documented at the consumer (`get-workspace.ts`); the real fix belongs in `src/lib/payroll/teamsystem.ts`, not in the view.
+- **A push-landed / pull-failed Trek day has no `provider_links` row** — the link is written by the pull half of a sync pass, so in that narrow window this dashboard holds no link for an entry Trek does hold, and removing the day deletes it here while leaving it there. Closing it means writing the link at push time, which needs the entry id Trek only reports on the read. Documented at `removeEvent`.
+- **A removal staged after Trek is disconnected never settles** — `provider_links` rows are kept on disconnect, so a day staged `pendingOp: "delete"` waits for a sync pass that will not come. Either purge time-off links on disconnect, or treat a disconnected provider as "no link" when deciding hard-delete vs stage.
+- **An orphaned unscoped `trek_year_stats:<year>` row is left in `app_settings`** — Ruling T4-1 made the Trek stats cache user-scoped (`trek_year_stats:<userId>:<year>`), and the reduced phase ships no data migration, so the pre-existing global row is written by nothing and read by nothing. Delete it by hand, or with the next migration that touches `app_settings`.
+- **`BalanceView` ignores `TimeoffBalance.unit`** (`get-workspace.ts`) — every balance source writes hours today, so the conversion is unconditional and correct; it becomes a silent misreport the day a source writes a figure already in days.
+- **Expenses writes are at `/expenses/…` while reads stay at `/transaction-categories`/`/transaction-labels`** — the reads shipped first and renaming a published path is a breaking change nothing asked for, so both surfaces exist. Worth unifying behind `/expenses/*` at the next `/api/v2`. Recorded in `docs/api/README.md`.
+- **`transaction_categories`, `transaction_labels` and `sync_jobs` have no `version` column**, so their `PATCH` routes are last-writer-wins with no `If-Match`, no `428` and no `409` (Ruling P9-4). Adding the columns needs a migration the reduced Phase 9 forbade. Low risk with one user; not with two.

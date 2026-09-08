@@ -49,9 +49,11 @@ export interface AdminUserView {
 }
 
 /**
- * Read-only, by design: Phase 2 shows who exists, Phase 8 adds invitations,
- * role changes and suspension. The permission check comes first so a member
- * who guesses the URL never reaches a query.
+ * Read-only, by design: this shows who exists. Invitations, role changes and
+ * suspension are deferred with the rest of the user-lifecycle work (see
+ * `docs/superpowers/DEFERRED.md`) — there is one user, and `AUTHORIZED_SUB`
+ * is still the allowlist. The permission check comes first so a member who
+ * guesses the URL never reaches a query.
  */
 export async function loadUsers(db: DbClient, principal: Principal): Promise<AdminUserView[]> {
   assertPermission(principal, "admin.users");
@@ -95,9 +97,10 @@ export interface SessionView {
 
 /**
  * The one session this app can describe today. Auth.js still issues JWT
- * sessions, so there is no `sessions` table to list or revoke from — that
- * arrives with database sessions in Phase 8. Reporting the request's own
- * device is honest and useful; inventing a list would not be.
+ * sessions, so there is no `sessions` table to list or revoke from — the
+ * database session registry is deferred (Ruling R8-1, see
+ * `docs/superpowers/DEFERRED.md`). Reporting the request's own device is
+ * honest and useful; inventing a list would not be.
  */
 export function describeCurrentSession(headers: Headers): SessionView {
   const forwarded = headers.get("x-forwarded-for");

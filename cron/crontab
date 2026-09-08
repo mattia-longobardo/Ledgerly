@@ -1,6 +1,6 @@
 # Monthly tier — 23:59 on the 1st, TZ=Europe/Rome on the container
 59 23 1 * * curl -fsS --retry 3 --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=monthly"
-# Hourly tier — sweep then Trek sync, sequentially
+# Hourly tier — sweep, Trek sync, Wallet transactions, sync queue, payroll ingest
 7 * * * *  curl -fsS --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=hourly"
-# Daily tier — Wallet accounts sync, interest accrual, payroll retention
+# Daily tier — Wallet accounts sync, interest accrual, payroll retention, housekeeping
 0 12 * * * curl -fsS --retry 3 --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=daily"

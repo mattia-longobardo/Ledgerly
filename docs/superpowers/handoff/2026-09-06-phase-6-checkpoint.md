@@ -2,10 +2,12 @@
 
 **Implemented, reviewed and DEPLOYED to production on 2026-09-07.** Phase 6
 stacked on the deployed Phase 5 (Funds) build (`0dc939e`). The cutover ran the
-sequence in [`docs/deploy/phase-6-runbook.md`](../../deploy/phase-6-runbook.md)
-end to end; that runbook now carries a "Deployment record — 2026-09-07"
-section with the exact counts, image ids and the two deviations found during
-the cutover. This checkpoint records the exit verification gates and what the
+sequence in `docs/deploy/phase-6-runbook.md` end to end, and that runbook
+carried a "Deployment record — 2026-09-07" section with the exact counts,
+image ids and the two deviations found during the cutover. The per-phase
+runbooks were deleted at the close of Phase 9 and live in git history; the
+standing release procedure is now
+[`docs/deploy/README.md`](../../deploy/README.md). This checkpoint records the exit verification gates and what the
 pre-deploy walkthrough proved and how.
 
 **Still owed after the deploy:** a true browser walkthrough as a signed-in

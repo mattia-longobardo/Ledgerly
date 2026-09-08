@@ -25,7 +25,7 @@ import type { UseCaseDeps } from "./ports";
  * pull then failed has no link for an entry Trek does hold. Removing it in that
  * gap deletes it here and leaves it there until the owner books it again. Closing
  * it means writing the link at push time, which needs the entry id Trek only
- * reports on the read — Phase 9 territory, with `withJobLock`.
+ * reports on the read. Deferred, and listed in `docs/superpowers/DEFERRED.md`.
  */
 export function removeEvent(deps: UseCaseDeps) {
   return async (principal: Principal, date: string): Promise<void> => {

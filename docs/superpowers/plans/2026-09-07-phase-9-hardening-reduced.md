@@ -89,9 +89,70 @@ Where the code the plan names differs from what is on `main`, and what was done 
 
 **Files:** `tests/e2e/api-client.ts`, `tests/e2e/smoke-api.spec.ts`, `tests/e2e/README.md` (rewrite), `playwright.config.ts` (env `E2E_TOKEN`); `docs/architecture/overview.md` (rewrite), `docs/api/README.md` (guide: session vs PAT auth, idempotency, versioning, pagination, errors, one example per module), `docs/deploy/README.md` (build the image, `db:migrate`, job tiers, env matrix, backup), `docs/superpowers/DEFERRED.md` (final review), `docs/superpowers/handoff/<date>-rebuild-checkpoint.md`, repo `README.md` if it references retired pieces, `.superpowers/sdd/MASTER-LEDGER.md`.
 
-- [ ] **Step 1: Smoke e2e.** `api-client.ts` adds `Authorization: Bearer ${E2E_TOKEN}` and a fresh `Idempotency-Key`; `smoke-api.spec.ts` (skipped with a clear message without the variable): `GET /accounts` 200; create a manual account; create a budget and an allocation from it and assert `GET /accounts/{id}` balance unchanged; create a fund and a manual contribution; `GET /timeoff/workspace`; `PUT /timeoff/events/{weekday}` then `DELETE`. README: how to mint a token on Settings › Security, the note that login/MFA cannot be automated without Authentik.
-- [ ] **Step 2: Docs.** Architecture overview: module list (accounts, integrations, expenses, interests, payroll, funds, budgets, timeoff, security), platform pieces (session lock, housekeeping, inbound hardening), and a "Deferred" section that **links to `DEFERRED.md`** rather than repeating it. Every `src/` path cited must exist: `for p in $(grep -oh 'src/[^ \`)]*' ../docs/architecture/overview.md | sort -u); do test -e $p || echo MISSING $p; done` prints nothing. Deploy README replaces every `phase-N-runbook.md` (delete those files; the procedure is now the same for every release: build, `db:migrate`, restart, check the admin jobs panel).
-- [ ] **Step 3: Stale comments.** `grep -rn "Phase [0-9]" src --include=*.ts --include=*.tsx | grep -iv "ruling\|R[0-9]-\|P[0-9]-C"` — fix every "arrives in Phase N" that is now built or deferred.
-- [ ] **Step 4: Final gate.** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json && npm run e2e` (without `E2E_TOKEN`: green with skips; with it against a hand-started `next dev`: green).
-- [ ] **Step 5: Checkpoint** (one file for the whole reduced run): implemented / deployed / not deployed; rulings kept, dropped and replaced (R7-5', R9-7 absorbed); the manual repopulation the owner must do after deploying `0018` (re-upload payslips, re-enter time off, re-create the Holidays budget if it was migrated data); the standing remainder = `DEFERRED.md` + the `onDisconnect` invariant; the note that `main` should be pushed to `origin` — owner's decision, stated, not taken. `graphify update .` once. MASTER-LEDGER: all phases done (7–9 reduced).
-- [ ] **Commit:** `git add -A && git commit -m "docs(handoff): rebuild complete — Phases 7–9 reduced; closing docs, smoke e2e, DEFERRED list"`
+- [x] **Step 1: Smoke e2e.** `api-client.ts` adds `Authorization: Bearer ${E2E_TOKEN}` and a fresh `Idempotency-Key`; `smoke-api.spec.ts` (skipped with a clear message without the variable): `GET /accounts` 200; create a manual account; create a budget and an allocation from it and assert `GET /accounts/{id}` balance unchanged; create a fund and a manual contribution; `GET /timeoff/workspace`; `PUT /timeoff/events/{weekday}` then `DELETE`. README: how to mint a token on Settings › Security, the note that login/MFA cannot be automated without Authentik.
+- [x] **Step 2: Docs.** Architecture overview: module list (accounts, integrations, expenses, interests, payroll, funds, budgets, timeoff, security), platform pieces (session lock, housekeeping, inbound hardening), and a "Deferred" section that **links to `DEFERRED.md`** rather than repeating it. Every `src/` path cited must exist: `for p in $(grep -oh 'src/[^ \`)]*' ../docs/architecture/overview.md | sort -u); do test -e $p || echo MISSING $p; done` prints nothing. Deploy README replaces every `phase-N-runbook.md` (delete those files; the procedure is now the same for every release: build, `db:migrate`, restart, check the admin jobs panel).
+- [x] **Step 3: Stale comments.** `grep -rn "Phase [0-9]" src --include=*.ts --include=*.tsx | grep -iv "ruling\|R[0-9]-\|P[0-9]-C"` — fix every "arrives in Phase N" that is now built or deferred.
+- [x] **Step 4: Final gate.** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json && npm run e2e` (without `E2E_TOKEN`: green with skips; with it against a hand-started `next dev`: green).
+- [x] **Step 5: Checkpoint** (one file for the whole reduced run): implemented / deployed / not deployed; rulings kept, dropped and replaced (R7-5', R9-7 absorbed); the manual repopulation the owner must do after deploying `0018` (re-upload payslips, re-enter time off, re-create the Holidays budget if it was migrated data); the standing remainder = `DEFERRED.md` + the `onDisconnect` invariant; the note that `main` should be pushed to `origin` — owner's decision, stated, not taken. `graphify update .` once. MASTER-LEDGER: all phases done (7–9 reduced).
+- [x] **Commit:** `git add -A && git commit -m "docs(handoff): rebuild complete — Phases 7–9 reduced; closing docs, smoke e2e, DEFERRED list"`
+
+
+### Deviation (Task 4)
+
+Ten points where the tree, a tool or an honest reading forced something the
+step text does not name.
+
+1. **The endpoint table in `docs/api/README.md` was completed, not patched.** It
+   was headed "Endpoints (Phase 1 + Phase 2)" and only ever covered accounts and
+   integrations plus the Phase 9 additions — pre-existing debt the controller
+   said to close while rewriting the guide. It is now all 82 operations, grouped
+   by module with the permission on each heading, generated against
+   `docs/api/openapi.json` so it cannot be a guess.
+2. **`docs/migration/README.md` was rewritten, though the brief does not list
+   it.** Every script it documented (`migrate:teable`, `migrate:paperless:validate`,
+   the funds and vacation migrations) was deleted in `0018`'s commit, and the
+   tables they read are dropped. It is now explicitly a historical record, which
+   is the only thing it can honestly be.
+3. **`cron/crontab`'s tier comments were corrected**, also outside the brief's
+   file list: they named two hourly jobs and three daily ones, and the tiers now
+   hold five and four. `docs/deploy/README.md` publishes the same table, so
+   leaving them would have shipped a documented contradiction.
+4. **`DEFERRED.md` gained a pointer into git history.** The
+   `2026-09-06-phase-{7,8,9}-*.md` plans it cites as the full specification of
+   each deferred item were deleted from the tree in `cc92cbc`, when the reduced
+   plans replaced them. Every deferred line still names its original plan, so
+   the file's header now says how to read one (`git show`,
+   `git log --diff-filter=D`) rather than leaving a dangling reference.
+5. **A ninth and tenth item, in place of a wrong one.** An earlier draft of this
+   block claimed `docs/migration/paperless-reconciliation.md` had been left
+   untracked on purpose; it was already committed in `cc92cbc`, and
+   `docs/migration/README.md` says so. Recorded rather than quietly deleted,
+   because the report and the plan should not disagree about what happened.
+6. **`npm run e2e` ran against `npx next start`, not `npm run start`.** The
+   package script is `node server.js`, which only resolves inside the image
+   (`output: standalone` puts the server under `.next/standalone`). Next prints
+   a warning that `next start` "does not work with output: standalone"; it does
+   serve, `/api/health` answers `{"status":"ok","db":"up"}` and all five specs
+   pass, so the warning is noted rather than worked around.
+7. **The e2e specs are not covered by `npm run typecheck`.** `tsconfig.json`
+   excludes `tests/e2e`. Rather than change the project's compiler scope in a
+   documentation task, the four spec files were type-checked once with an
+   equivalent standalone `tsc --noEmit --strict` invocation (clean).
+8. **`smoke-api.spec.ts` runs under the `desktop` project only.** Playwright's
+   two device projects would otherwise run it twice, writing two of every row
+   for a spec that never opens a page. `playwright.config.ts` gives `mobile` a
+   `testIgnore` for it.
+9. **`accrualMonth` is `YYYY-MM-01`, not `YYYY-MM`.** The first token run failed
+   with `422` on the fund contribution: `MonthSchema` is a full date refined to
+   end in `-01`. Found by running the gate, which is the point of running it.
+10. **A live defect was found and recorded, not fixed.**
+    `DrizzleAccountsRepository.hasReferences` answers `false` unconditionally,
+    and its comment said "nothing points at an account yet: budgets (Phase 2)
+    and interest rules (Phase 3) are the consumers that will make this
+    meaningful". Both exist now: `interest_rules.account_id` and
+    `interest_entries.account_id` cascade-delete with the account, and
+    `budget_allocations`/`budget_scopes` carry a bare uuid. A hard delete
+    therefore destroys interest rules and orphans budget rows where it should
+    archive. Fixing it changes `deletionDecision`'s outcome and needs its own
+    tests, so the stale-comment step corrected the comment to state the gap and
+    the checkpoint carries it forward.

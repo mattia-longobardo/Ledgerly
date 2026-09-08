@@ -247,7 +247,9 @@ describe("DrizzleAccountsRepository", () => {
     expect(latest.get(account.id)).toMatchObject({ balance: "11.00", source: "provider" });
   });
 
-  it("reports no references in Phase 1", async () => {
+  // Pins the current answer, not a desirable one — see the known gap recorded
+  // on `DrizzleAccountsRepository.hasReferences`.
+  it("still reports no references for any account", async () => {
     const { a } = await seedUsers();
     const account = await asUser(a, (repo) => repo.create(manualAccount(a)));
     expect(await asUser(a, (repo) => repo.hasReferences(account.id))).toBe(false);

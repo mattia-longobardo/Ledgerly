@@ -34,7 +34,7 @@ The image was built before stopping the old app. A final custom-format backup
 was then taken and its archive verified: 170441 bytes, mode 0600, at
 `/home/mattia/backups/personal-dashboard/2026-09-06-phase5/pre-phase5-final.dump`.
 The rollback image remains `dashboard:pre-phase5-20260906`.
-See [the runbook](../../deploy/phase-5-runbook.md) for backup and restore steps.
+See the Phase 5 runbook for backup and restore steps — it was deleted with the other per-phase runbooks at the close of Phase 9 and is in git history; the standing procedure is now [`docs/deploy/README.md`](../../deploy/README.md).
 
 Bundled schema migration, fund migration and independent validation passed.
 Production imported two funds, two accounts, eighteen valuations, two plans,
