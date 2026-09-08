@@ -79,6 +79,8 @@ export interface SyncJobsRepository {
   find(connectionId: string, kind: SyncKind): Promise<SyncJob | null>;
   listForConnection(connectionId: string): Promise<SyncJob[]>;
   setCursor(id: string, cursor: unknown): Promise<void>;
+  /** Switches one kind off without disconnecting the provider (Ruling P2-C4). Null when the row is gone. */
+  setEnabled(id: string, enabled: boolean): Promise<SyncJob | null>;
 }
 
 export interface NewSyncRun {

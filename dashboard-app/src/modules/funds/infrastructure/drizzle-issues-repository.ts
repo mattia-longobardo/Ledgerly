@@ -1,7 +1,7 @@
-import { and, asc, eq, inArray, like, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, ne, sql } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { reconciliationIssues, type ReconciliationIssueRow } from "@/lib/db/schema";
-import type { IssuesRepository, ReconciliationIssue } from "../application/ports";
+import type { IssuesRepository, ListIssuesOptions, ListIssuesPage, ReconciliationIssue } from "../application/ports";
 
 function toIssue(row: ReconciliationIssueRow): ReconciliationIssue {
   return {
@@ -16,6 +16,46 @@ type NewIssue = Pick<ReconciliationIssue, "userId" | "domain" | "entityType" | "
 
 export class DrizzleIssuesRepository implements IssuesRepository {
   constructor(private readonly db: DbClient) {}
+
+  async list(userId: string, opts: ListIssuesOptions): Promise<ListIssuesPage> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+    const conditions = [eq(reconciliationIssues.userId, userId)];
+    if (opts.domain) conditions.push(eq(reconciliationIssues.domain, opts.domain));
+    if (opts.status) conditions.push(eq(reconciliationIssues.status, opts.status));
+    if (opts.severity) conditions.push(eq(reconciliationIssues.severity, opts.severity));
+    if (opts.cursor) {
+      // Keyset, not offset: the same shape `DrizzleTransactionsRepository.list`
+      // uses, so a page cannot repeat or skip a row when one is resolved
+      // between requests. An unknown cursor falls through to the first page
+      // rather than erroring — it can only come from a row that has since gone.
+      const [anchor] = await this.db
+        .select({ createdAt: reconciliationIssues.createdAt, id: reconciliationIssues.id })
+        .from(reconciliationIssues)
+        .where(and(eq(reconciliationIssues.userId, userId), eq(reconciliationIssues.id, opts.cursor)))
+        .limit(1);
+      if (anchor) {
+        conditions.push(sql`(${reconciliationIssues.createdAt}, ${reconciliationIssues.id}) < (${anchor.createdAt}, ${anchor.id})`);
+      }
+    }
+    const rows = await this.db
+      .select()
+      .from(reconciliationIssues)
+      .where(and(...conditions))
+      .orderBy(desc(reconciliationIssues.createdAt), desc(reconciliationIssues.id))
+      .limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const items = (hasMore ? rows.slice(0, limit) : rows).map(toIssue);
+    return { items, nextCursor: hasMore ? items[items.length - 1]!.id : null };
+  }
+
+  async get(userId: string, id: string): Promise<ReconciliationIssue | null> {
+    const [row] = await this.db
+      .select()
+      .from(reconciliationIssues)
+      .where(and(eq(reconciliationIssues.userId, userId), eq(reconciliationIssues.id, id)))
+      .limit(1);
+    return row ? toIssue(row) : null;
+  }
 
   async listOpen(userId: string, domain: string, entityIdPrefix?: string): Promise<ReconciliationIssue[]> {
     const predicates = [eq(reconciliationIssues.userId, userId), eq(reconciliationIssues.domain, domain), ne(reconciliationIssues.status, "resolved")];

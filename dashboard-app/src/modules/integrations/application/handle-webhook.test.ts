@@ -223,8 +223,9 @@ describe("handleWebhook", () => {
   });
 
   it("rejects with a reason, and records the delivery, when the matched sync is switched off", async () => {
-    // Stands in for a `sync_jobs` row with `enabled: false` — nothing in this
-    // codebase can set that yet, so it is faked directly at the port.
+    // Stands in for a `sync_jobs` row with `enabled: false`. `setSyncJobEnabled`
+    // can now write that, but faking it at the port keeps this test about the
+    // webhook path and not about how the flag got there.
     const disabledJobs: SyncJobsRepository = {
       ensure: async (input): Promise<SyncJob> => ({ id: "job-1", ...input, enabled: false, cursor: null }),
       find: async (connectionId, kind): Promise<SyncJob | null> => ({
@@ -237,6 +238,7 @@ describe("handleWebhook", () => {
       }),
       listForConnection: async () => [],
       setCursor: async () => {},
+      setEnabled: async () => null,
     };
     const deps = makeDeps({ jobs: disabledJobs });
     await connectIntegration(deps)(principal, {
@@ -275,6 +277,7 @@ describe("handleWebhook", () => {
       },
       listForConnection: async () => [],
       setCursor: async () => {},
+      setEnabled: async () => null,
     };
     const deps = makeDeps({ jobs: brokenJobs });
     await connectIntegration(deps)(principal, {

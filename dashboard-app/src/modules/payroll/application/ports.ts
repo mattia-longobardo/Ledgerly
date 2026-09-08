@@ -256,9 +256,43 @@ export interface PayrollMappingRule {
   priority: number;
 }
 
+/**
+ * A rule as the management API sees it: the domain rule plus the row facts the
+ * editor needs. `version` is null and `global` true for the seeded catalogue,
+ * which lives in code (`DEFAULT_MAPPING_RULES`) and has no database row — so it
+ * can be read and shadowed by a user rule, but never edited or deleted.
+ */
+export interface ManagedMappingRule extends PayrollMappingRule {
+  version: number | null;
+  global: boolean;
+}
+
+export type NewMappingRule = Omit<PayrollMappingRule, "id" | "userId"> & { userId: string };
+
+export interface MappingRulePatch {
+  matchCode?: string | null;
+  matchLabel?: string | null;
+  componentKind?: PayrollComponentKind;
+  target?: MappingTarget;
+  priority?: number;
+}
+
 export interface PayrollMappingRulesRepository {
   /** Global rules and this user's own, `priority asc, id asc` — the order `classifyComponent` resolves in. */
   listFor(userId: string): Promise<PayrollMappingRule[]>;
+  /** The same set in the same order, carrying `version`/`global` for the editor. */
+  listManaged(userId: string): Promise<ManagedMappingRule[]>;
+  /** A user's own rule by id. Null for an unknown id and for a global one — a global has no row to fetch. */
+  get(userId: string, id: string): Promise<ManagedMappingRule | null>;
+  create(input: NewMappingRule): Promise<ManagedMappingRule>;
+  update(
+    userId: string,
+    id: string,
+    expectedVersion: number,
+    patch: MappingRulePatch,
+  ): Promise<ManagedMappingRule | "version_mismatch" | null>;
+  /** False when the caller owns no such rule. */
+  remove(userId: string, id: string): Promise<boolean>;
 }
 
 export interface FundContributionWrite {

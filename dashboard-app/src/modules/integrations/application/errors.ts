@@ -61,3 +61,21 @@ export class SyncDisabledError extends Error {
     this.name = "SyncDisabledError";
   }
 }
+
+/**
+ * A request the module refuses on its own terms — today, toggling a sync job on
+ * a provider that is not connected. Named after the other modules'
+ * `InvalidInputError` (and mapped to the same `422 validation_failed`) rather
+ * than reusing `ConnectionNotUsableError`: that one answers 409 and means "this
+ * connection cannot run a sync right now", which is about the run. This is
+ * about the request being wrong to make at all.
+ */
+export class InvalidInputError extends Error {
+  constructor(
+    message: string,
+    readonly issues?: unknown,
+  ) {
+    super(message);
+    this.name = "InvalidInputError";
+  }
+}

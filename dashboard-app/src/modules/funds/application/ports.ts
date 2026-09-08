@@ -113,7 +113,30 @@ export interface ContributionsRepository {
   hasSystemFee(fundId: string, postedMonth: string): Promise<boolean>;
 }
 
+/**
+ * Filters for the cross-domain issue list. `domain` is a filter rather than a
+ * required argument because `reconciliation_issues` is not the funds module's
+ * private table — `funds`, and whatever writes issues next, all land in it, and
+ * the management list has to be able to show the lot.
+ */
+export interface ListIssuesOptions {
+  domain?: string;
+  status?: ReconciliationIssue["status"];
+  severity?: ReconciliationIssue["severity"];
+  cursor?: string | null;
+  limit?: number;
+}
+
+export interface ListIssuesPage {
+  items: ReconciliationIssue[];
+  nextCursor: string | null;
+}
+
 export interface IssuesRepository {
+  /** Newest first (`created_at desc, id desc`), keyset-paged on the last item's id. */
+  list(userId: string, opts: ListIssuesOptions): Promise<ListIssuesPage>;
+  /** One issue of the caller's, whatever its status — `listOpen` cannot see a resolved one. */
+  get(userId: string, id: string): Promise<ReconciliationIssue | null>;
   listOpen(userId: string, domain: string, entityIdPrefix?: string): Promise<ReconciliationIssue[]>;
   upsertOpen(input: Pick<ReconciliationIssue, "userId" | "domain" | "entityType" | "entityId" | "kind" | "severity" | "detail">): Promise<ReconciliationIssue>;
   resolveMissing(userId: string, domain: string, entityIdPrefix: string, keep: readonly { entityType: string; entityId: string; kind: string }[], by: string | null, at: Date): Promise<number>;

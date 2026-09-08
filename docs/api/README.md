@@ -35,6 +35,16 @@ Machine-to-machine job triggers (`POST /api/jobs/tick?tier=...`) are a
 separate, non-`/api/v1` endpoint authenticated by `X-Cron-Secret`, not part of
 this document.
 
+Every authenticated route in `openapi.json` now advertises **both** schemes
+(`security: [{ session: [] }, { bearer: [] }]`, the shared
+`AUTHENTICATED_SECURITY` constant in
+`src/platform/http/security-schemes.ts`). Before Phase 9 the routes declared
+the cookie alone, which told a token holder their token would not work and left
+clients generated from the document unable to send one — a documentation bug,
+not a behavioural one: `authenticate` has accepted both since Phase 8. The one
+exception is `/security/tokens*`, which stays session-only on purpose so a
+leaked token cannot mint its own successor.
+
 ## `X-Requested-With` on writes
 
 Every `POST`/`PUT`/`PATCH`/`DELETE` authenticated by the session cookie must
@@ -155,6 +165,17 @@ If neither is present: `428 precondition_required`. If the version doesn't match
 the current one: `409 version_mismatch` — someone else changed it first;
 re-`GET`, look at the fresh `version`, and retry.
 
+**Not every table has one.** `transaction_categories`, `transaction_labels`,
+`sync_jobs` and `reconciliation_issues` carry no `version` column, so the
+management routes added in Phase 9 for them
+(`PATCH /expenses/categories/{id}`, `PATCH /expenses/labels/{id}`,
+`PATCH /integrations/{provider}/sync-jobs/{kind}`,
+`POST /reconciliation/issues/{id}/resolve`) take no `If-Match` and answer no
+`428`. They are last-writer-wins patches over a handful of fields, and each
+write records what it changed in `audit_events`.
+`PATCH /payroll/mapping-rules/{id}` does carry a version and follows the rule
+above.
+
 ## Versioning
 
 The whole surface is namespaced `/api/v1` — a breaking change gets `/api/v2`
@@ -185,6 +206,20 @@ so the endpoint never confirms what does or doesn't exist. A successful
 call answers `202` and queues the work; it does not run the sync inline
 (see `docs/integrations/README.md` §6).
 
+`PATCH /integrations/{provider}/sync-jobs/{kind}` (Phase 9,
+`integrations.manage`) takes `{"enabled": true|false}` and switches one sync
+kind on or off without disconnecting the provider. A disabled kind is skipped by
+the scheduler and refuses an inbound webhook delivery for that kind; its cursor
+is left alone, so switching it back on resumes rather than re-imports. A
+provider that is not connected has no `sync_jobs` rows to toggle and answers
+`422 validation_failed`.
+
+Inbound webhooks carry two guards (Phase 9): the same signed body seen twice
+within 24 hours is answered `202` with `queued: 0` and enqueues nothing — an
+idempotent acknowledgement, so a provider retrying a delivery whose response it
+never saw does not turn one event into two syncs — and a connection sending more
+than 60 deliveries a minute gets `429 rate_limited`.
+
 ### Breaking changes in Phase 2
 
 `POST /api/v1/integrations/wallet/sync` **keeps its path**, but:
@@ -210,6 +245,24 @@ are read-only from the Wallet sync's point of view — the sync creates and
 updates them; a user can only recategorise, label and annotate what already
 exists. `PATCH /transactions/{id}` follows the same `If-Match`/`version`
 convention as `PATCH /accounts/{id}`.
+
+Categories and labels themselves are managed under `/expenses/…` (Phase 9):
+`POST /expenses/categories`, `PATCH /expenses/categories/{id}`,
+`POST /expenses/labels`, `PATCH /expenses/labels/{id}`, all gated on
+`finance.manage`. The read routes keep their older `/transaction-categories`
+and `/transaction-labels` paths.
+
+Two rules are worth knowing before you call them:
+
+- **Archiving is not deleting.** `PATCH /expenses/categories/{id}` with
+  `{"archived": true}` sets `archived_at`; the row stays, and every transaction
+  that points at it keeps pointing at it. `{"archived": false}` brings it back.
+  There is no delete — it would orphan history.
+- **A provider-mirrored category cannot be renamed here.** A category the
+  Wallet sync mirrors has a `provider_links` row, and the sync rewrites its name
+  from the provider on every pass; accepting a rename would look like it worked
+  and be silently undone. It answers `422 validation_failed`. Its `color` and
+  `parentId` are local-only and stay editable.
 
 ## Interests
 
@@ -257,6 +310,16 @@ record intact. `POST /funds/{id}/reconcile` refreshes the issue set, and
 `POST /funds/issues/{issueId}/acknowledge` acknowledges an open issue. Fund
 responses never expose ownership or resolver user IDs.
 
+`GET /reconciliation/issues` (Phase 9) is the cross-domain list: every issue the
+caller owns, whatever wrote it, newest first, with `domain`, `status` and
+`severity` filters and the usual `cursor`/`limit` pagination.
+`POST /reconciliation/issues/{issueId}/resolve` closes one for good — the
+counterpart of `acknowledge` ("seen, still true"). Resolving takes the row out
+of the partial unique index that keeps one live issue per (entity, kind), so if
+the condition recurs a *fresh* issue is opened rather than the old one being
+quietly reused; resolving an already-resolved issue is `404`. Both are gated on
+`finance.manage`, not `funds.read`, because they span domains.
+
 ## Payroll
 
 `GET /payroll/imports`, `POST /payroll/imports` (multipart, `file` part),
@@ -286,6 +349,25 @@ retention job has already purged.
 `GET /payroll/earnings` computes gross, net, taxes and contributions per month,
 quarter and year from `payroll_records` and `payroll_components`, excluding
 superseded records. A figure the payslip did not state is `null`, never `0`.
+
+`GET /payroll/mapping-rules`, `POST /payroll/mapping-rules`,
+`PATCH /payroll/mapping-rules/{id}` and `DELETE /payroll/mapping-rules/{id}`
+(Phase 9, `payroll.review`) manage the rules that classify a payslip component
+into a kind and a target. The `GET` returns the seeded global catalogue merged
+with the caller's own rules in the order the classifier resolves them
+(`priority asc, id asc`), each carrying `global` and `version`.
+
+- A **global** rule has `global: true`, `version: null` and an id like
+  `global-000`: it lives in code (`DEFAULT_MAPPING_RULES`), has no database row,
+  and cannot be edited or deleted. Override one by adding your own rule at a
+  lower `priority`.
+- `priority` defaults to `100 + n`, where *n* is how many rules you already
+  have, so a new rule lands after the globals and after your earlier ones. Pass
+  it explicitly (below 100) to shadow a global.
+- `matchLabel` is a regular expression and is compiled when the rule is saved;
+  an invalid pattern is `422 validation_failed` rather than a rule that
+  silently never matches. `matchCode` is compared literally against the
+  parser's own field codes. A rule needs at least one of the two.
 
 ## Budgets
 
@@ -430,9 +512,9 @@ Run this after adding or changing a route, before committing.
 
 ## Endpoints (Phase 1 + Phase 2)
 
-All under `/api/v1`. Every route requires a session *except* the inbound
-webhook, which authenticates itself by HMAC instead (see **Integrations**
-below). Every session route also requires a permission, enforced inside the
+All under `/api/v1`. Every route accepts a session cookie or a personal access
+token *except* the inbound webhook, which authenticates itself by HMAC instead
+(see **Integrations** below), and `/security/tokens*`, which is session-only. Every session route also requires a permission, enforced inside the
 use case it calls (reads need `accounts.read`, writes need
 `accounts.write`, deletes need `accounts.delete`, every integrations route
 needs `integrations.manage`) — see `src/platform/auth/permissions.ts` for
@@ -458,7 +540,18 @@ the full grant per role:
 | `POST` | `/integrations/{provider}/sync` | see **Breaking changes in Phase 2** below |
 | `POST` | `/integrations/{provider}/disconnect` | destroys the credential and applies a disconnect policy |
 | `GET` | `/integrations/{provider}/sync-runs` | `?limit=` (1–10, default 10) — most recent first |
+| `PATCH` | `/integrations/{provider}/sync-jobs/{kind}` | `{"enabled":…}`; `422` when the provider is not connected |
 | `POST` | `/webhooks/{provider}` | **not** session-authenticated — see **Integrations** below |
+| `POST` | `/expenses/categories` | `finance.manage` |
+| `PATCH` | `/expenses/categories/{id}` | no `If-Match` (no `version` column); a provider-mirrored category refuses a rename |
+| `POST` | `/expenses/labels` | `finance.manage` |
+| `PATCH` | `/expenses/labels/{id}` | no `If-Match` |
+| `GET` | `/payroll/mapping-rules` | `payroll.review`; globals merged with the caller's own, classifier order |
+| `POST` | `/payroll/mapping-rules` | `priority` defaults to `100 + n` |
+| `PATCH` | `/payroll/mapping-rules/{id}` | requires `If-Match` or body `version`; user rules only |
+| `DELETE` | `/payroll/mapping-rules/{id}` | `204`; user rules only |
+| `GET` | `/reconciliation/issues` | `finance.manage`; `?domain=&status=&severity=&cursor=&limit=` |
+| `POST` | `/reconciliation/issues/{issueId}/resolve` | `finance.manage`; `404` if already resolved |
 | `POST` | `/security/tokens` | session-only; the `201` body carries `token` once |
 | `GET` | `/security/tokens` | session-only; never the token or its hash |
 | `DELETE` | `/security/tokens/{id}` | session-only; `204` |

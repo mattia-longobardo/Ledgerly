@@ -12,6 +12,9 @@ import type {
   PayrollImportStatus,
   PayrollImportsRepository,
   PayrollMappingRule,
+  ManagedMappingRule,
+  MappingRulePatch,
+  NewMappingRule,
   PayrollMappingRulesRepository,
   PayrollRecord,
   PayrollRecordKind,
@@ -285,7 +288,7 @@ export class MemoryPayrollComponentsRepository implements PayrollComponentsRepos
 }
 
 export class MemoryPayrollMappingRulesRepository implements PayrollMappingRulesRepository {
-  private userRules: PayrollMappingRule[] = [];
+  private userRules: (PayrollMappingRule & { version: number })[] = [];
   private readonly globals: PayrollMappingRule[] = DEFAULT_MAPPING_RULES.map((r, i) => ({
     ...r,
     id: `global-${String(i).padStart(3, "0")}`,
@@ -294,12 +297,55 @@ export class MemoryPayrollMappingRulesRepository implements PayrollMappingRulesR
 
   /** Test-only seam: production user rules come from the database. */
   addUserRule(userId: string, rule: Omit<PayrollMappingRule, "id" | "userId">): void {
-    this.userRules.push({ ...rule, id: `user-${String(this.userRules.length).padStart(3, "0")}`, userId });
+    this.userRules.push({
+      ...rule,
+      id: `user-${String(this.userRules.length).padStart(3, "0")}`,
+      userId,
+      version: 1,
+    });
   }
 
   async listFor(userId: string): Promise<PayrollMappingRule[]> {
     return [...this.globals, ...this.userRules.filter((r) => r.userId === userId)]
       .sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id))
       .map((r) => ({ ...r }));
+  }
+
+  async listManaged(userId: string): Promise<ManagedMappingRule[]> {
+    const globals = this.globals.map((r) => ({ ...r, version: null, global: true }));
+    const own = this.userRules
+      .filter((r) => r.userId === userId)
+      .map((r) => ({ ...r, global: false }));
+    return [...globals, ...own].sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
+  }
+
+  async get(userId: string, id: string): Promise<ManagedMappingRule | null> {
+    const row = this.userRules.find((r) => r.userId === userId && r.id === id);
+    return row ? { ...row, global: false } : null;
+  }
+
+  async create(input: NewMappingRule): Promise<ManagedMappingRule> {
+    const row = { ...input, id: monotonicId(), version: 1 };
+    this.userRules.push(row);
+    return { ...row, global: false };
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    expectedVersion: number,
+    patch: MappingRulePatch,
+  ): Promise<ManagedMappingRule | "version_mismatch" | null> {
+    const row = this.userRules.find((r) => r.userId === userId && r.id === id);
+    if (!row) return null;
+    if (row.version !== expectedVersion) return "version_mismatch";
+    Object.assign(row, definedEntries(patch), { version: row.version + 1 });
+    return { ...row, global: false };
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    const before = this.userRules.length;
+    this.userRules = this.userRules.filter((r) => !(r.userId === userId && r.id === id));
+    return this.userRules.length < before;
   }
 }

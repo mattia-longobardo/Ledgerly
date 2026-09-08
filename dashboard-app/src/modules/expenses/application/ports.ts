@@ -34,21 +34,45 @@ export interface TransactionsRepository {
 
 export type NewCategory = Omit<TransactionCategory, "id" | "createdAt" | "updatedAt">;
 
+/**
+ * `transaction_categories` carries no `version` column, so an update is a plain
+ * last-writer-wins patch rather than an optimistic one. Every field here is
+ * optional and `undefined` means "leave alone"; `null` on a nullable field
+ * means "clear it".
+ */
+export interface CategoryPatch {
+  name?: string;
+  color?: string | null;
+  parentId?: string | null;
+  archivedAt?: Date | null;
+}
+
 export interface CategoriesRepository {
   list(userId: string, opts?: { includeArchived?: boolean }): Promise<TransactionCategory[]>;
   get(userId: string, id: string): Promise<TransactionCategory | null>;
   findByName(userId: string, name: string): Promise<TransactionCategory | null>;
   /** `(userId, name)` is unique — a caller creating a name that already exists gets "duplicate_name" back, never a thrown constraint error. */
   create(input: NewCategory): Promise<TransactionCategory | "duplicate_name">;
+  /** Null when no such row belongs to the caller; `"duplicate_name"` when the rename collides. */
+  update(userId: string, id: string, patch: CategoryPatch): Promise<TransactionCategory | "duplicate_name" | null>;
 }
 
 export type NewLabel = Omit<TransactionLabel, "id" | "createdAt" | "updatedAt">;
 
+/** Same shape and same reasoning as `CategoryPatch`: `transaction_labels` has no `version` either. */
+export interface LabelPatch {
+  name?: string;
+  color?: string | null;
+}
+
 export interface LabelsRepository {
   list(userId: string): Promise<TransactionLabel[]>;
+  get(userId: string, id: string): Promise<TransactionLabel | null>;
   findByName(userId: string, name: string): Promise<TransactionLabel | null>;
   /** `(userId, name)` is unique — a caller creating a name that already exists gets "duplicate_name" back, never a thrown constraint error. */
   create(input: NewLabel): Promise<TransactionLabel | "duplicate_name">;
+  /** Null when no such row belongs to the caller; `"duplicate_name"` when the rename collides. */
+  update(userId: string, id: string, patch: LabelPatch): Promise<TransactionLabel | "duplicate_name" | null>;
 }
 
 export interface RecurringPatternRecord {

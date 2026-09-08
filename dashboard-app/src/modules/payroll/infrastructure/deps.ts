@@ -2,6 +2,7 @@ import type { DbClient } from "@/lib/db/client";
 import { recordAudit } from "@/platform/audit/record";
 import { payrollContributionSink } from "@/modules/funds/infrastructure/payroll-contribution-sink";
 import { payrollTimeoffBalanceSink } from "@/modules/timeoff/infrastructure/payroll-balance-sink";
+import type { MappingRuleDeps } from "../application/mapping-rule-deps";
 import type { DocumentStore, MalwareScanner, UseCaseDeps } from "../application/ports";
 import { DrizzlePayrollComponentsRepository } from "./drizzle-payroll-components-repository";
 import { DrizzlePayrollImportsRepository } from "./drizzle-payroll-imports-repository";
@@ -39,5 +40,19 @@ export function payrollDeps(tx: DbClient, opts: PayrollDepsOptions): UseCaseDeps
     scanner: opts.scanner,
     clock: { now: () => new Date() },
     audit: (e) => recordAudit(tx, { ...e, requestId: opts.requestId ?? null }),
+  };
+}
+
+/**
+ * The narrow bag the mapping-rule editor runs on — see `MappingRuleDeps` for
+ * why it is not `payrollDeps`: those use cases need no document store, and
+ * resolving one is decryption plus network I/O that would have to happen
+ * before the transaction opens.
+ */
+export function payrollMappingRuleDeps(tx: DbClient, requestId?: string | null): MappingRuleDeps {
+  return {
+    mappingRules: new DrizzlePayrollMappingRulesRepository(tx),
+    clock: { now: () => new Date() },
+    audit: (e) => recordAudit(tx, { ...e, requestId: requestId ?? null }),
   };
 }

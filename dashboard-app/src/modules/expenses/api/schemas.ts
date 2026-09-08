@@ -107,3 +107,35 @@ export const RecurringPatternListResponseSchema = z
 // one `OpenAPIHono` instance, so a second module-local declaration tagged
 // with the same OpenAPI component name would collide with it at
 // `npm run openapi:generate` time — see the corrected Ruling P3-11.
+
+/**
+ * The management write schemas (Phase 9). `TransactionCategorySchema` above is
+ * the shared response shape; `parentId` is deliberately absent from it and is
+ * write-only here, because nothing reads a hierarchy yet.
+ */
+export const CreateCategoryRequestSchema = z
+  .object({
+    name: z.string().min(1).max(120),
+    kind: CategoryKindSchema.optional(),
+    groupName: z.string().max(120).nullable().optional(),
+    color: z.string().max(32).nullable().optional(),
+    parentId: z.string().uuid().nullable().optional(),
+  })
+  .openapi("CreateCategoryRequest");
+
+export const UpdateCategoryRequestSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    color: z.string().max(32).nullable().optional(),
+    parentId: z.string().uuid().nullable().optional(),
+    archived: z.boolean().optional(),
+  })
+  .openapi("UpdateCategoryRequest");
+
+export const CreateLabelRequestSchema = z
+  .object({ name: z.string().min(1).max(120), color: z.string().max(32).nullable().optional() })
+  .openapi("CreateLabelRequest");
+
+export const UpdateLabelRequestSchema = z
+  .object({ name: z.string().min(1).max(120).optional(), color: z.string().max(32).nullable().optional() })
+  .openapi("UpdateLabelRequest");

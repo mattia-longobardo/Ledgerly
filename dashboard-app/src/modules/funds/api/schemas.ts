@@ -196,6 +196,22 @@ export const ReconcileResultSchema = z.object({
 export const FundIdParamSchema = z.object({ id: z.string().uuid() });
 export const ContributionIdParamSchema = z.object({ id: z.string().uuid(), cid: z.string().uuid() });
 export const IssueIdParamSchema = z.object({ issueId: z.string().uuid() });
+
+/**
+ * The cross-domain issue list (Phase 9). Path `/reconciliation/issues` rather
+ * than `/funds/issues`: the table spans domains, and `domain` is a filter here.
+ */
+export const ListIssuesQuerySchema = z.object({
+  domain: z.string().min(1).max(64).optional(),
+  status: z.enum(["open", "acknowledged", "resolved"]).optional(),
+  severity: z.enum(["info", "warning", "error"]).optional(),
+  cursor: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+export const IssueListResponseSchema = z
+  .object({ items: z.array(ReconciliationIssueSchema), nextCursor: z.string().nullable() })
+  .openapi("ReconciliationIssueListResponse");
 export const IfMatchHeaderSchema = z.object({ "if-match": z.string().optional() });
 export const ListFundsQuerySchema = z.object({ includeArchived: z.enum(["true", "false"]).optional() }).strict();
 export const ListContributionsQuerySchema = z.object({ from: MonthSchema.optional(), to: MonthSchema.optional() }).strict();
