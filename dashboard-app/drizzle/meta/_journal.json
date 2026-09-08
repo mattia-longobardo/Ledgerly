@@ -134,6 +134,13 @@
       "when": 1788810925220,
       "tag": "0018_timeoff_and_drop_legacy",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788873107586,
+      "tag": "0019_personal_access_tokens",
+      "breakpoints": true
     }
   ]
 }

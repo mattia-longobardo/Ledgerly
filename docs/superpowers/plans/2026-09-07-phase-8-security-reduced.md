@@ -37,10 +37,10 @@ src/app/(app)/settings/security/page.tsx (add a bare Tokens section), src/app/ac
 
 **Files:** Create `drizzle/0019_personal_access_tokens.sql`, `src/lib/db/schema/security.ts`, `src/platform/auth/pat.ts` (+`.test.ts`). Modify `schema/index.ts`, `src/lib/db/rls-matrix.itest.ts` (add the table).
 
-- [ ] **Step 1: Schema** — `personalAccessTokens` verbatim from the original Phase 8 Task 1 (id, user_id, name, prefix, token_hash unique, scopes jsonb, expires_at, last_used_at, revoked_at, created_at). Nothing else from that file.
-- [ ] **Step 2: Generate** → `0019_personal_access_tokens.sql`; append ENABLE/FORCE + owner policy on `user_id`. Add the table to `rls-matrix.itest.ts`.
-- [ ] **Step 3: `pat.ts`** with the original Task 4 signatures: `generateToken(): { token, prefix, hash }`, `hashToken(token)`, `parseToken(header)`, `authenticateToken(db, token, now): Promise<{ principal, tokenId } | null>` — hash lookup under `withSystemContext`, not revoked/expired, user active, `permissions = userPermissions ∩ scopes`, `last_used_at` written at most once per minute. Constant-time compare via `crypto.timingSafeEqual` on the hash. `pat.test.ts`: format, hash determinism, `parseToken` variants (`bearer` lowercase, missing, wrong prefix).
-- [ ] **Verify:** `npm run typecheck && npm test && npm run test:integration -- rls-matrix`. **Commit:** `git add -A drizzle src && git commit -m "feat(security): migration 0019 — personal access tokens; token primitive (R8-5)"`
+- [x] **Step 1: Schema** — `personalAccessTokens` verbatim from the original Phase 8 Task 1 (id, user_id, name, prefix, token_hash unique, scopes jsonb, expires_at, last_used_at, revoked_at, created_at). Nothing else from that file.
+- [x] **Step 2: Generate** → `0019_personal_access_tokens.sql`; append ENABLE/FORCE + owner policy on `user_id`. Add the table to `rls-matrix.itest.ts`.
+- [x] **Step 3: `pat.ts`** with the original Task 4 signatures: `generateToken(): { token, prefix, hash }`, `hashToken(token)`, `parseToken(header)`, `authenticateToken(db, token, now): Promise<{ principal, tokenId } | null>` — hash lookup under `withSystemContext`, not revoked/expired, user active, `permissions = userPermissions ∩ scopes`, `last_used_at` written at most once per minute. Constant-time compare via `crypto.timingSafeEqual` on the hash. `pat.test.ts`: format, hash determinism, `parseToken` variants (`bearer` lowercase, missing, wrong prefix).
+- [x] **Verify:** `npm run typecheck && npm test && npm run test:integration -- rls-matrix`. **Commit:** `git add -A drizzle src && git commit -m "feat(security): migration 0019 — personal access tokens; token primitive (R8-5)"`
 
 ---
 
