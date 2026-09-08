@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { isRealDate } from "@/lib/calc/leave-day";
 
 /**
  * Wire shapes for the Time off module.
@@ -145,7 +146,17 @@ export const TimeoffWorkspaceSchema = z
   .openapi("TimeoffWorkspace");
 
 const YEAR = z.coerce.number().int().min(2000).max(2100);
-const ISO_DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-DD date.");
+/**
+ * Both checks, in this order: the `regex` is what the OpenAPI document shows a
+ * consumer (a bare `.refine` erases `pattern` from the emitted schema), and
+ * `isRealDate` is what keeps `2026-02-31` — which the pattern happily accepts —
+ * out of `new Date()` and out of Postgres, where it lands as a cast error and a
+ * `500` for what is a client input mistake.
+ */
+const ISO_DATE = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-DD date.")
+  .refine(isRealDate, "Expected a real calendar date.");
 
 export const TimeoffWorkspaceQuerySchema = z.object({
   year: YEAR.optional(),

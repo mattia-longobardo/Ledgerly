@@ -1,4 +1,4 @@
-import { isWeekendBlocked } from "@/lib/calc/leave-day";
+import { isRealDate, isWeekendBlocked } from "@/lib/calc/leave-day";
 import type { Principal } from "@/platform/auth/principal";
 import { assertPermission } from "@/platform/auth/principal";
 import { seedDefaultTypes } from "./ensure-default-types";
@@ -12,8 +12,6 @@ export interface SetEventInput {
   note?: string | null;
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 /**
  * Books or changes one day.
  *
@@ -25,7 +23,12 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function setEvent(deps: UseCaseDeps) {
   return async (principal: Principal, input: SetEventInput): Promise<TimeoffEvent> => {
     assertPermission(principal, "timeoff.write");
-    if (!ISO_DATE.test(input.date)) throw new InvalidInputError("A day must be a YYYY-MM-DD date.");
+    // A real calendar day, not merely a well-shaped string: `2026-02-31`
+    // clears the pattern, makes `isWeekendBlocked` reason about 3 March, and
+    // reaches Postgres as a cast error — a 500 for what is a client mistake.
+    // This is the server-action entry point as well as the API's, so the check
+    // belongs here and not only in the wire schema.
+    if (!isRealDate(input.date)) throw new InvalidInputError("A day must be a real YYYY-MM-DD date.");
     // Trek's own plan refuses weekends, so refusing them here saves a round
     // trip that could only ever come back `weekend_blocked`.
     if (isWeekendBlocked(input.date)) {

@@ -281,7 +281,7 @@ async function syncPass(input: RunTrekSyncInput, year: number): Promise<TrekSync
       result.stats = await getStats(year, opts);
       // Cached so the workspace can show Trek's figures without re-triggering
       // this endpoint's carry-over write on every render.
-      if (result.stats !== null) await setCachedTrekStats(year, result.stats, now);
+      if (result.stats !== null) await setCachedTrekStats(userId, year, result.stats, now);
     }
 
     if (result.errors.length > 0) result.status = "partial";

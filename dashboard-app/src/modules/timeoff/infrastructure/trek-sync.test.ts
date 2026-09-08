@@ -559,7 +559,9 @@ describe("stats", () => {
     const result = await run();
 
     expect(trek.getStats).toHaveBeenCalledTimes(1);
-    expect(state.setCachedTrekStats).toHaveBeenCalledWith(2026, STATS, expect.any(Date));
+    // Keyed by the calendar's owner: `app_settings` has no `user_id`, so an
+    // unscoped key would show one person's allowance to the next.
+    expect(state.setCachedTrekStats).toHaveBeenCalledWith(USER_ID, 2026, STATS, expect.any(Date));
     expect(result.stats).toEqual(STATS);
   });
 

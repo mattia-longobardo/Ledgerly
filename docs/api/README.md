@@ -348,7 +348,9 @@ or `"0.50"`, `typeCode` one of the five codes, `note` optional). `DELETE
 `Idempotency-Key`: a day is addressed by its own date, so the write is
 idempotent by construction, and a booked day is not a financial record.
 Saturdays and Sundays are refused with `422 validation_failed` — Trek's own
-plan blocks them, so a round trip could only ever come back refused.
+plan blocks them, so a round trip could only ever come back refused. So is a
+date that is well shaped but not a real calendar day (`2026-02-31`), on every
+route that takes one.
 
 Both writes are **staged, never sent**: the day is saved locally with
 `pendingOp` set, and the Trek sync is the only thing that talks to the

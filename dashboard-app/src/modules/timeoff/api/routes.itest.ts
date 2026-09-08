@@ -104,6 +104,34 @@ describe("time off API", () => {
     expect(body.error.message).toMatch(/Saturday/);
   });
 
+  it("refuses a date that is well shaped but not a real day, with 422 rather than 500", async () => {
+    const { userId, organizationId } = await seedUser();
+    const app = appFor(userId, organizationId);
+
+    // 2026-02-31 clears `^\d{4}-\d{2}-\d{2}$`. Before the wire schema checked
+    // the calendar, `new Date("2026-02-31T00:00:00Z")` rolled over to 3 March —
+    // so the weekend guard reasoned about the wrong day — and Postgres then
+    // refused the cast, surfacing a client input mistake as `500 internal`.
+    const put = await app.request("/api/v1/timeoff/events/2026-02-31", {
+      method: "PUT",
+      headers: WRITE_HEADERS,
+      body: JSON.stringify({ fraction: "1.00", typeCode: "vacation" }),
+    });
+    expect(put.status).toBe(422);
+    expect(((await put.json()) as { error: { code: string } }).error.code).toBe("validation_failed");
+
+    const del = await app.request("/api/v1/timeoff/events/2026-02-31", {
+      method: "DELETE",
+      headers: { "x-requested-with": "test" },
+    });
+    expect(del.status).toBe(422);
+
+    const range = await app.request("/api/v1/timeoff/events?from=2026-02-31&to=2026-03-31", {
+      headers: { "x-requested-with": "test" },
+    });
+    expect(range.status).toBe(422);
+  });
+
   it("removes a day with 204, and answers 404 for one that was never booked", async () => {
     const { userId, organizationId } = await seedUser();
     const app = appFor(userId, organizationId);

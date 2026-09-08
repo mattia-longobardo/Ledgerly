@@ -36,3 +36,23 @@ export function isWeekendBlocked(isoDate: string): boolean {
   const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
   return day === 0 || day === 6;
 }
+
+/**
+ * True only for a real calendar day written `YYYY-MM-DD`.
+ *
+ * The regex alone is not enough, and the gap is not theoretical: `2026-02-31`
+ * matches it, `new Date("2026-02-31T00:00:00Z")` rolls over to 3 March (so
+ * `isWeekendBlocked` answers about the WRONG day, or `NaN`), and Postgres then
+ * refuses the cast — a client input mistake surfacing as `500 internal`. Same
+ * implementation as `isRealDate` in the budgets and funds API schemas; it
+ * lives here because the timeoff API, the page and the use case all need it
+ * and this file is the one they can all reach.
+ */
+export function isRealDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return date.getUTCFullYear() === Number(match[1])
+    && date.getUTCMonth() + 1 === Number(match[2])
+    && date.getUTCDate() === Number(match[3]);
+}
