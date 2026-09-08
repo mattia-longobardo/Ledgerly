@@ -1,4 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
@@ -6,6 +7,8 @@ import { requireIdempotencyKey, runFinancialWrite } from "@/platform/http/financ
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { withUserContext } from "@/platform/db/context";
 import { acknowledgeIssue } from "../application/acknowledge-issue";
+import { listIssues } from "../application/list-issues";
+import { resolveIssue } from "../application/resolve-issue";
 import { addContribution } from "../application/add-contribution";
 import { createFund } from "../application/create-fund";
 import { InvalidInputError, NotFoundError, VersionMismatchError } from "../application/errors";
@@ -43,6 +46,8 @@ import {
   ListFundsQuerySchema,
   ReconcileResultSchema,
   ReconciliationIssueSchema,
+  IssueListResponseSchema,
+  ListIssuesQuerySchema,
   ReverseContributionRequestSchema,
   SetPlanRequestSchema,
   SetScheduleRequestSchema,
@@ -191,7 +196,7 @@ const listRoute = createRoute({
   method: "get",
   path: "/funds",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListFundsQuerySchema },
   responses: { 200: { description: "The caller's funds and current summaries.", content: { "application/json": { schema: FundListResponseSchema } } }, ...commonErrorResponses },
 });
@@ -200,7 +205,7 @@ const createRoute_ = createRoute({
   method: "post",
   path: "/funds",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { body: { content: { "application/json": { schema: CreateFundRequestSchema } } } },
   responses: { 201: { description: "The created fund.", content: { "application/json": { schema: FundSchema } } }, ...commonErrorResponses },
 });
@@ -209,7 +214,7 @@ const getRoute = createRoute({
   method: "get",
   path: "/funds/{id}",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: FundIdParamSchema },
   responses: { 200: { description: "Fund detail.", content: { "application/json": { schema: FundDetailSchema } } }, ...commonErrorResponses },
 });
@@ -218,7 +223,7 @@ const patchRoute = createRoute({
   method: "patch",
   path: "/funds/{id}",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Send the current version in `If-Match` or `body.version`.",
   request: {
     params: FundIdParamSchema,
@@ -232,7 +237,7 @@ const setScheduleRoute = createRoute({
   method: "post",
   path: "/funds/{id}/schedules",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: FundIdParamSchema, body: { content: { "application/json": { schema: SetScheduleRequestSchema } } } },
   responses: { 201: { description: "The effective-dated contribution schedule.", content: { "application/json": { schema: FundScheduleSchema } } }, ...commonErrorResponses },
 });
@@ -241,7 +246,7 @@ const setPlanRoute = createRoute({
   method: "post",
   path: "/funds/{id}/plans",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: FundIdParamSchema, body: { content: { "application/json": { schema: SetPlanRequestSchema } } } },
   responses: { 201: { description: "The effective-dated fund plan.", content: { "application/json": { schema: FundPlanSchema } } }, ...commonErrorResponses },
 });
@@ -250,7 +255,7 @@ const listContributionsRoute = createRoute({
   method: "get",
   path: "/funds/{id}/contributions",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: FundIdParamSchema, query: ListContributionsQuerySchema },
   responses: { 200: { description: "Contributions whose posted month is within the inclusive range.", content: { "application/json": { schema: FundContributionsResponseSchema } } }, ...commonErrorResponses },
 });
@@ -259,7 +264,7 @@ const addContributionRoute = createRoute({
   method: "post",
   path: "/funds/{id}/contributions",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header.",
   request: { params: FundIdParamSchema, body: { content: { "application/json": { schema: AddContributionRequestSchema } } } },
   responses: { 201: { description: "The created contribution.", content: { "application/json": { schema: FundContributionSchema } } }, ...commonErrorResponses },
@@ -269,7 +274,7 @@ const reverseContributionRoute = createRoute({
   method: "post",
   path: "/funds/{id}/contributions/{cid}/reverse",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header.",
   request: { params: ContributionIdParamSchema, body: { content: { "application/json": { schema: ReverseContributionRequestSchema } } } },
   responses: { 201: { description: "The compensating contribution.", content: { "application/json": { schema: FundContributionSchema } } }, ...commonErrorResponses },
@@ -279,7 +284,7 @@ const reconcileRoute = createRoute({
   method: "post",
   path: "/funds/{id}/reconcile",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: FundIdParamSchema },
   responses: { 200: { description: "Detected and resolved reconciliation issues.", content: { "application/json": { schema: ReconcileResultSchema } } }, ...commonErrorResponses },
 });
@@ -288,9 +293,43 @@ const acknowledgeIssueRoute = createRoute({
   method: "post",
   path: "/funds/issues/{issueId}/acknowledge",
   tags: ["Funds"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IssueIdParamSchema },
   responses: { 200: { description: "The acknowledged reconciliation issue.", content: { "application/json": { schema: ReconciliationIssueSchema } } }, ...commonErrorResponses },
+});
+
+/**
+ * The management issue list (Phase 9), and the "dealt with" counterpart of
+ * `/funds/issues/{issueId}/acknowledge`.
+ *
+ * Under `/reconciliation/…` rather than `/funds/…` because the table is
+ * cross-domain — `domain` is a query filter, not part of the path — and gated
+ * on `finance.manage` rather than `funds.read` for the same reason. No
+ * `If-Match`: resolving is idempotent by construction (a resolved issue answers
+ * 404 to a second resolve) and `reconciliation_issues` has no `version` column.
+ */
+const listIssuesRoute = createRoute({
+  method: "get",
+  path: "/reconciliation/issues",
+  tags: ["Funds"],
+  security: AUTHENTICATED_SECURITY,
+  request: { query: ListIssuesQuerySchema },
+  responses: {
+    200: { description: "Reconciliation issues, newest first.", content: { "application/json": { schema: IssueListResponseSchema } } },
+    ...commonErrorResponses,
+  },
+});
+
+const resolveIssueRoute = createRoute({
+  method: "post",
+  path: "/reconciliation/issues/{issueId}/resolve",
+  tags: ["Funds"],
+  security: AUTHENTICATED_SECURITY,
+  request: { params: IssueIdParamSchema },
+  responses: {
+    200: { description: "The resolved reconciliation issue.", content: { "application/json": { schema: ReconciliationIssueSchema } } },
+    ...commonErrorResponses,
+  },
 });
 
 export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
@@ -447,6 +486,31 @@ export function registerFundRoutes(app: ApiApp, deps: ApiDeps): void {
     try {
       const issue = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
         acknowledgeIssue(fundDeps(tx, c.get("requestId")))(principal, c.req.valid("param").issueId),
+      );
+      return c.json(issueDto(issue), 200);
+    } catch (error) {
+      throw toApiError(error);
+    }
+  });
+
+  app.openapi(listIssuesRoute, async (c) => {
+    const principal = c.get("principal");
+    const query = c.req.valid("query");
+    try {
+      const page = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        listIssues(fundDeps(tx, c.get("requestId")))(principal, query),
+      );
+      return c.json({ items: page.items.map(issueDto), nextCursor: page.nextCursor }, 200);
+    } catch (error) {
+      throw toApiError(error);
+    }
+  });
+
+  app.openapi(resolveIssueRoute, async (c) => {
+    const principal = c.get("principal");
+    try {
+      const issue = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        resolveIssue(fundDeps(tx, c.get("requestId")))(principal, c.req.valid("param").issueId),
       );
       return c.json(issueDto(issue), 200);
     } catch (error) {

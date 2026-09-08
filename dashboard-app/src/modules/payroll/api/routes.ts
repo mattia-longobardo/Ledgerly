@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import { assertPermission } from "@/platform/auth/principal";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
@@ -18,7 +19,12 @@ import { getImport, listImports } from "../application/list-imports";
 import { earningsSummary, getRecord, listRecords } from "../application/list-records";
 import type { PayrollComponent, PayrollImport, PayrollRecord } from "../application/ports";
 import { rejectImport, verifyImport } from "../application/review-import";
-import { payrollDeps } from "../infrastructure/deps";
+import { createMappingRule } from "../application/create-mapping-rule";
+import { deleteMappingRule } from "../application/delete-mapping-rule";
+import { listMappingRules } from "../application/list-mapping-rules";
+import { updateMappingRule } from "../application/update-mapping-rule";
+import type { ManagedMappingRule } from "../application/ports";
+import { payrollDeps, payrollMappingRuleDeps } from "../infrastructure/deps";
 import { resolveDocumentStore } from "../infrastructure/document-store-resolver";
 // `scanImport`/`parseImport` and `readOriginal` are the current, complete
 // atomic units (Tasks 10, 13 as landed after this brief was written) — each
@@ -40,6 +46,10 @@ import {
   RejectImportRequestSchema,
   UploadRequestSchema,
   VerifyImportRequestSchema,
+  CreateMappingRuleRequestSchema,
+  MappingRuleListResponseSchema,
+  MappingRuleSchema,
+  UpdateMappingRuleRequestSchema,
 } from "./schemas";
 
 const IdParamSchema = z.object({ id: z.string().uuid() });
@@ -153,7 +163,7 @@ const listImportsRoute = createRoute({
   method: "get",
   path: "/payroll/imports",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListImportsQuerySchema },
   responses: { 200: { content: { "application/json": { schema: PayrollImportListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -162,7 +172,7 @@ const uploadRoute = createRoute({
   method: "post",
   path: "/payroll/imports",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: {
     headers: z.object({ "idempotency-key": z.string().optional() }),
     body: { content: { "multipart/form-data": { schema: UploadRequestSchema } } },
@@ -174,7 +184,7 @@ const getImportRoute = createRoute({
   method: "get",
   path: "/payroll/imports/{id}",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema },
   responses: { 200: { content: { "application/json": { schema: PayrollImportDetailSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -183,7 +193,7 @@ const verifyRoute = createRoute({
   method: "post",
   path: "/payroll/imports/{id}/verify",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema, headers: IfMatchHeaderSchema, body: { content: { "application/json": { schema: VerifyImportRequestSchema } } } },
   responses: { 200: { content: { "application/json": { schema: PayrollImportDetailSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -192,7 +202,7 @@ const rejectRoute = createRoute({
   method: "post",
   path: "/payroll/imports/{id}/reject",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema, headers: IfMatchHeaderSchema, body: { content: { "application/json": { schema: RejectImportRequestSchema } } } },
   responses: { 200: { content: { "application/json": { schema: PayrollImportSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -201,7 +211,7 @@ const applyRoute = createRoute({
   method: "post",
   path: "/payroll/imports/{id}/apply",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema },
   responses: { 200: { content: { "application/json": { schema: PayrollRecordDetailSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -210,7 +220,7 @@ const retryRoute = createRoute({
   method: "post",
   path: "/payroll/imports/{id}/retry",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema },
   responses: { 200: { content: { "application/json": { schema: PayrollImportSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -219,7 +229,7 @@ const originalRoute = createRoute({
   method: "get",
   path: "/payroll/imports/{id}/original",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema },
   responses: {
     200: { content: { "application/pdf": { schema: z.string().openapi({ type: "string", format: "binary" }) } }, description: "The original payslip" },
@@ -231,7 +241,7 @@ const listRecordsRoute = createRoute({
   method: "get",
   path: "/payroll/records",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListRecordsQuerySchema },
   responses: { 200: { content: { "application/json": { schema: PayrollRecordListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -240,7 +250,7 @@ const getRecordRoute = createRoute({
   method: "get",
   path: "/payroll/records/{id}",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema },
   responses: { 200: { content: { "application/json": { schema: PayrollRecordDetailSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -249,7 +259,7 @@ const earningsRoute = createRoute({
   method: "get",
   path: "/payroll/earnings",
   tags: ["Payroll"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListRecordsQuerySchema },
   responses: { 200: { content: { "application/json": { schema: EarningsSummarySchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -278,6 +288,78 @@ async function withPayroll<T>(
   }
   const opts = { documents: resolution.store, scanner: resolveScanner(), requestId };
   return withUserContext(deps.db, { userId }, (tx) => fn(payrollDeps(tx, opts)));
+}
+
+/**
+ * The classification-rule editor (Phase 9). `GET` returns the global catalogue
+ * and the caller's own rules merged in the order `classifyComponent` resolves
+ * them; `POST`/`PATCH`/`DELETE` reach user rules only — a global has no row, so
+ * its id 404s here on purpose (override one by adding a rule at a lower
+ * priority).
+ *
+ * These take `payrollMappingRuleDeps`, not `withPayroll`: they touch no
+ * document, and `withPayroll` refuses the request when no document store is
+ * configured.
+ */
+const listMappingRulesRoute = createRoute({
+  method: "get",
+  path: "/payroll/mapping-rules",
+  tags: ["Payroll"],
+  security: AUTHENTICATED_SECURITY,
+  responses: {
+    200: { content: { "application/json": { schema: MappingRuleListResponseSchema } }, description: "OK" },
+    ...commonErrorResponses,
+  },
+});
+
+const createMappingRuleRoute = createRoute({
+  method: "post",
+  path: "/payroll/mapping-rules",
+  tags: ["Payroll"],
+  security: AUTHENTICATED_SECURITY,
+  request: { body: { content: { "application/json": { schema: CreateMappingRuleRequestSchema } } } },
+  responses: {
+    201: { content: { "application/json": { schema: MappingRuleSchema } }, description: "Created" },
+    ...commonErrorResponses,
+  },
+});
+
+const updateMappingRuleRoute = createRoute({
+  method: "patch",
+  path: "/payroll/mapping-rules/{id}",
+  tags: ["Payroll"],
+  security: AUTHENTICATED_SECURITY,
+  request: {
+    params: IdParamSchema,
+    headers: IfMatchHeaderSchema,
+    body: { content: { "application/json": { schema: UpdateMappingRuleRequestSchema } } },
+  },
+  responses: {
+    200: { content: { "application/json": { schema: MappingRuleSchema } }, description: "OK" },
+    ...commonErrorResponses,
+  },
+});
+
+const deleteMappingRuleRoute = createRoute({
+  method: "delete",
+  path: "/payroll/mapping-rules/{id}",
+  tags: ["Payroll"],
+  security: AUTHENTICATED_SECURITY,
+  request: { params: IdParamSchema },
+  responses: { 204: { description: "Deleted" }, ...commonErrorResponses },
+});
+
+function mappingRuleDto(rule: ManagedMappingRule) {
+  return {
+    id: rule.id,
+    matchCode: rule.matchCode,
+    matchLabel: rule.matchLabel,
+    componentKind: rule.componentKind,
+    target: rule.target,
+    priority: rule.priority,
+    version: rule.version,
+    global: rule.global,
+  };
 }
 
 export function registerPayrollRoutes(app: ApiApp, deps: ApiDeps): void {
@@ -478,5 +560,58 @@ export function registerPayrollRoutes(app: ApiApp, deps: ApiDeps): void {
       earningsSummary(bag)(principal, query),
     );
     return c.json(summary, 200);
+  });
+
+  app.openapi(listMappingRulesRoute, async (c) => {
+    const principal = c.get("principal");
+    try {
+      const items = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        listMappingRules(payrollMappingRuleDeps(tx, c.get("requestId")))(principal),
+      );
+      return c.json({ items: items.map(mappingRuleDto) }, 200);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  app.openapi(createMappingRuleRoute, async (c) => {
+    const principal = c.get("principal");
+    const body = c.req.valid("json");
+    try {
+      const created = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        createMappingRule(payrollMappingRuleDeps(tx, c.get("requestId")))(principal, body),
+      );
+      return c.json(mappingRuleDto(created), 201);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  app.openapi(updateMappingRuleRoute, async (c) => {
+    const principal = c.get("principal");
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
+    const expectedVersion = parseExpectedVersion({ ifMatch: c.req.header("if-match") ?? null, body });
+    try {
+      const updated = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        updateMappingRule(payrollMappingRuleDeps(tx, c.get("requestId")))(principal, id, expectedVersion, body),
+      );
+      return c.json(mappingRuleDto(updated), 200);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  app.openapi(deleteMappingRuleRoute, async (c) => {
+    const principal = c.get("principal");
+    const { id } = c.req.valid("param");
+    try {
+      await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        deleteMappingRule(payrollMappingRuleDeps(tx, c.get("requestId")))(principal, id),
+      );
+      return c.body(null, 204);
+    } catch (err) {
+      throw toApiError(err);
+    }
   });
 }

@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { transactionLabels, type TransactionLabelRow } from "@/lib/db/schema";
-import type { LabelsRepository, NewLabel } from "../application/ports";
+import type { LabelPatch, LabelsRepository, NewLabel } from "../application/ports";
 import type { TransactionLabel } from "../domain/transaction";
 
 function toLabel(row: TransactionLabelRow): TransactionLabel {
@@ -35,6 +35,15 @@ export class DrizzleLabelsRepository implements LabelsRepository {
     return rows.map(toLabel);
   }
 
+  async get(userId: string, id: string): Promise<TransactionLabel | null> {
+    const [row] = await this.db
+      .select()
+      .from(transactionLabels)
+      .where(and(eq(transactionLabels.userId, userId), eq(transactionLabels.id, id)))
+      .limit(1);
+    return row ? toLabel(row) : null;
+  }
+
   async findByName(userId: string, name: string): Promise<TransactionLabel | null> {
     const [row] = await this.db
       .select()
@@ -54,6 +63,23 @@ export class DrizzleLabelsRepository implements LabelsRepository {
       return await this.db.transaction(async (tx) => {
         const [row] = await tx.insert(transactionLabels).values(input).returning();
         return toLabel(row!);
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) return "duplicate_name";
+      throw err;
+    }
+  }
+
+  async update(userId: string, id: string, patch: LabelPatch): Promise<TransactionLabel | "duplicate_name" | null> {
+    try {
+      // Savepoint: see `create` above.
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(transactionLabels)
+          .set({ ...patch, updatedAt: new Date() })
+          .where(and(eq(transactionLabels.userId, userId), eq(transactionLabels.id, id)))
+          .returning();
+        return row ? toLabel(row) : null;
       });
     } catch (err) {
       if (isUniqueViolation(err)) return "duplicate_name";

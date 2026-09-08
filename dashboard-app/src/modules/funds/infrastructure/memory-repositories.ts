@@ -8,6 +8,8 @@ import type {
   FundSchedule,
   FundsRepository,
   IssuesRepository,
+  ListIssuesOptions,
+  ListIssuesPage,
   NewFund,
   NewFundContribution,
   PlansRepository,
@@ -214,6 +216,28 @@ type NewIssue = Pick<ReconciliationIssue, "userId" | "domain" | "entityType" | "
 
 export class MemoryIssuesRepository implements IssuesRepository {
   private rows: ReconciliationIssue[] = [];
+
+  async list(userId: string, opts: ListIssuesOptions): Promise<ListIssuesPage> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+    const ordered = this.rows
+      .filter(
+        (row) =>
+          row.userId === userId &&
+          (!opts.domain || row.domain === opts.domain) &&
+          (!opts.status || row.status === opts.status) &&
+          (!opts.severity || row.severity === opts.severity),
+      )
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id));
+    const start = opts.cursor ? ordered.findIndex((row) => row.id === opts.cursor) + 1 : 0;
+    const page = ordered.slice(start, start + limit);
+    const hasMore = ordered.length > start + limit;
+    return { items: page.map(cloneIssue), nextCursor: hasMore ? page[page.length - 1]!.id : null };
+  }
+
+  async get(userId: string, id: string): Promise<ReconciliationIssue | null> {
+    const row = this.rows.find((r) => r.userId === userId && r.id === id);
+    return row ? cloneIssue(row) : null;
+  }
 
   async listOpen(userId: string, domain: string, entityIdPrefix?: string): Promise<ReconciliationIssue[]> {
     return this.rows

@@ -157,3 +157,75 @@ export const ListRecordsQuerySchema = z.object({
 // `ErrorResponseSchema` is NOT declared here: it is imported from
 // `@/modules/accounts/api/schemas` in routes.ts, the app's one existing
 // `.openapi("ErrorResponse")` registration (Ruling P3-15).
+
+/** The classification-rule editor (Phase 9). Mirrors `MappingTarget` in `application/ports.ts`. */
+export const MappingTargetSchema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("earnings") }),
+    z.object({
+      kind: z.literal("fund_contribution"),
+      fundSlug: z.string().min(1).max(64),
+      part: z.enum(["employee", "employer"]),
+    }),
+    z.object({ kind: z.literal("timeoff_balance"), timeoffCode: z.string().min(1).max(64) }),
+    z.object({ kind: z.literal("timeoff_used"), timeoffCode: z.string().min(1).max(64) }),
+    z.object({ kind: z.literal("none") }),
+  ])
+  .openapi("MappingTarget");
+
+export const ComponentKindSchema = z
+  .enum([
+    "earning",
+    "deduction",
+    "tax",
+    "employer_contribution",
+    "employee_contribution",
+    "reimbursement",
+    "allowance",
+    "bonus",
+    "leave_balance",
+    "leave_used",
+    "leave_accrued",
+    "info",
+  ])
+  .openapi("PayrollComponentKind");
+
+export const MappingRuleSchema = z
+  .object({
+    id: z.string(),
+    matchCode: z.string().nullable(),
+    matchLabel: z.string().nullable(),
+    componentKind: ComponentKindSchema,
+    target: MappingTargetSchema,
+    priority: z.number().int(),
+    /** Null for a global rule: the seeded catalogue lives in code and has no row to version. */
+    version: z.number().int().nullable(),
+    /** True for the seeded catalogue — readable, never editable or deletable. */
+    global: z.boolean(),
+  })
+  .openapi("PayrollMappingRule");
+
+export const MappingRuleListResponseSchema = z
+  .object({ items: z.array(MappingRuleSchema) })
+  .openapi("PayrollMappingRuleListResponse");
+
+export const CreateMappingRuleRequestSchema = z
+  .object({
+    matchCode: z.string().min(1).max(120).nullable().optional(),
+    matchLabel: z.string().min(1).max(200).nullable().optional(),
+    componentKind: ComponentKindSchema,
+    target: MappingTargetSchema,
+    priority: z.number().int().min(0).max(10_000).optional(),
+  })
+  .openapi("CreateMappingRuleRequest");
+
+export const UpdateMappingRuleRequestSchema = z
+  .object({
+    matchCode: z.string().min(1).max(120).nullable().optional(),
+    matchLabel: z.string().min(1).max(200).nullable().optional(),
+    componentKind: ComponentKindSchema.optional(),
+    target: MappingTargetSchema.optional(),
+    priority: z.number().int().min(0).max(10_000).optional(),
+    version: z.number().int().optional(),
+  })
+  .openapi("UpdateMappingRuleRequest");

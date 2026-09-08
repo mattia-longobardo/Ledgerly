@@ -88,3 +88,22 @@ export const WebhookResponseSchema = z.object({
    */
   queued: z.number().int(),
 });
+
+/** The per-kind sync toggle (Phase 9). */
+export const SyncJobParamSchema = z.object({
+  provider: z.string().min(1).openapi({ param: { name: "provider", in: "path" }, example: "wallet" }),
+  kind: z.string().min(1).openapi({ param: { name: "kind", in: "path" }, example: "accounts" }),
+});
+
+export const SetSyncJobEnabledRequestSchema = z
+  .object({ enabled: z.boolean() })
+  .openapi("SetSyncJobEnabledRequest");
+
+export const SyncJobSchema = z
+  .object({
+    id: z.string(),
+    kind: z.string(),
+    schedule: z.enum(["hourly", "daily", "monthly"]),
+    enabled: z.boolean(),
+  })
+  .openapi("SyncJob");

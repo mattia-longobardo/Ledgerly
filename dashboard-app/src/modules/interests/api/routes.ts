@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
 import { parseExpectedVersion } from "@/platform/http/versioning";
@@ -118,7 +119,7 @@ const listRoute = createRoute({
   method: "get",
   path: "/interest-rules",
   tags: ["Interests"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: { 200: { content: { "application/json": { schema: InterestRuleListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
 
@@ -126,7 +127,7 @@ const createRoute_ = createRoute({
   method: "post",
   path: "/interest-rules",
   tags: ["Interests"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { body: { content: { "application/json": { schema: CreateInterestRuleRequestSchema } } } },
   responses: { 200: { content: { "application/json": { schema: InterestRuleSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -135,7 +136,7 @@ const getRoute = createRoute({
   method: "get",
   path: "/interest-rules/{id}",
   tags: ["Interests"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema, query: GetRuleDetailQuerySchema },
   responses: { 200: { content: { "application/json": { schema: InterestRuleDetailSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -144,7 +145,7 @@ const patchRoute = createRoute({
   method: "patch",
   path: "/interest-rules/{id}",
   tags: ["Interests"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema, headers: IfMatchHeaderSchema, body: { content: { "application/json": { schema: UpdateInterestRuleRequestSchema } } } },
   responses: { 200: { content: { "application/json": { schema: InterestRuleSchema } }, description: "OK" }, ...commonErrorResponses },
 });

@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
 import { parseExpectedVersion } from "@/platform/http/versioning";
@@ -10,6 +11,10 @@ import { listLabels } from "../application/list-labels";
 import { listRecurringPatterns } from "../application/list-recurring-patterns";
 import { listTransactions } from "../application/list-transactions";
 import { updateTransaction } from "../application/update-transaction";
+import { createCategory } from "../application/create-category";
+import { updateCategory } from "../application/update-category";
+import { createLabel } from "../application/create-label";
+import { updateLabel } from "../application/update-label";
 import { InvalidInputError, NotFoundError, VersionMismatchError } from "../application/errors";
 import { expenseDeps } from "../infrastructure/deps";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
@@ -18,9 +23,15 @@ import {
   LabelListResponseSchema,
   ListTransactionsQuerySchema,
   RecurringPatternListResponseSchema,
+  TransactionCategorySchema,
+  TransactionLabelSchema,
   TransactionListItemSchema,
   TransactionListResponseSchema,
   UpdateTransactionRequestSchema,
+  CreateCategoryRequestSchema,
+  UpdateCategoryRequestSchema,
+  CreateLabelRequestSchema,
+  UpdateLabelRequestSchema,
 } from "./schemas";
 
 const IdParamSchema = z.object({ id: z.string().uuid() });
@@ -112,7 +123,7 @@ const listRoute = createRoute({
   method: "get",
   path: "/transactions",
   tags: ["Expenses"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListTransactionsQuerySchema },
   responses: { 200: { content: { "application/json": { schema: TransactionListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
@@ -121,7 +132,7 @@ const getRoute = createRoute({
   method: "get",
   path: "/transactions/{id}",
   tags: ["Expenses"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: IdParamSchema },
   responses: {
     200: { content: { "application/json": { schema: TransactionListItemSchema } }, description: "OK" },
@@ -133,7 +144,7 @@ const patchRoute = createRoute({
   method: "patch",
   path: "/transactions/{id}",
   tags: ["Expenses"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: {
     params: IdParamSchema,
     headers: IfMatchHeaderSchema,
@@ -149,7 +160,7 @@ const categoriesRoute = createRoute({
   method: "get",
   path: "/transaction-categories",
   tags: ["Expenses"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: { 200: { content: { "application/json": { schema: CategoryListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
 
@@ -157,7 +168,7 @@ const labelsRoute = createRoute({
   method: "get",
   path: "/transaction-labels",
   tags: ["Expenses"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: { 200: { content: { "application/json": { schema: LabelListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
 });
 
@@ -165,8 +176,74 @@ const recurringRoute = createRoute({
   method: "get",
   path: "/transactions/recurring-patterns",
   tags: ["Expenses"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: { 200: { content: { "application/json": { schema: RecurringPatternListResponseSchema } }, description: "OK" }, ...commonErrorResponses },
+});
+
+/**
+ * Management writes (Phase 9). The read routes above are `/transaction-categories`
+ * and `/transaction-labels`, which predate these; the write surface is grouped
+ * under `/expenses/…` as the phase plan names it, and the two are not merged
+ * here because renaming a shipped read path is a breaking change with no
+ * consumer asking for it.
+ *
+ * No `If-Match` and no `version` in the body: neither `transaction_categories`
+ * nor `transaction_labels` has a `version` column, and Phase 9 ships no
+ * migration. These are last-writer-wins patches, and the audit row records what
+ * each write changed.
+ */
+const createCategoryRoute = createRoute({
+  method: "post",
+  path: "/expenses/categories",
+  tags: ["Expenses"],
+  security: AUTHENTICATED_SECURITY,
+  request: { body: { content: { "application/json": { schema: CreateCategoryRequestSchema } } } },
+  responses: {
+    201: { content: { "application/json": { schema: TransactionCategorySchema } }, description: "Created" },
+    ...commonErrorResponses,
+  },
+});
+
+const updateCategoryRoute = createRoute({
+  method: "patch",
+  path: "/expenses/categories/{id}",
+  tags: ["Expenses"],
+  security: AUTHENTICATED_SECURITY,
+  request: {
+    params: IdParamSchema,
+    body: { content: { "application/json": { schema: UpdateCategoryRequestSchema } } },
+  },
+  responses: {
+    200: { content: { "application/json": { schema: TransactionCategorySchema } }, description: "OK" },
+    ...commonErrorResponses,
+  },
+});
+
+const createLabelRoute = createRoute({
+  method: "post",
+  path: "/expenses/labels",
+  tags: ["Expenses"],
+  security: AUTHENTICATED_SECURITY,
+  request: { body: { content: { "application/json": { schema: CreateLabelRequestSchema } } } },
+  responses: {
+    201: { content: { "application/json": { schema: TransactionLabelSchema } }, description: "Created" },
+    ...commonErrorResponses,
+  },
+});
+
+const updateLabelRoute = createRoute({
+  method: "patch",
+  path: "/expenses/labels/{id}",
+  tags: ["Expenses"],
+  security: AUTHENTICATED_SECURITY,
+  request: {
+    params: IdParamSchema,
+    body: { content: { "application/json": { schema: UpdateLabelRequestSchema } } },
+  },
+  responses: {
+    200: { content: { "application/json": { schema: TransactionLabelSchema } }, description: "OK" },
+    ...commonErrorResponses,
+  },
 });
 
 export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
@@ -271,5 +348,59 @@ export function registerExpenseRoutes(app: ApiApp, deps: ApiDeps): void {
     const principal = c.get("principal");
     const items = await withUserContext(deps.db, { userId: principal.userId }, (tx) => listLabels(expenseDeps(tx, c.get("requestId")))(principal));
     return c.json({ items: items.map(labelDto) }, 200);
+  });
+
+  app.openapi(createCategoryRoute, async (c) => {
+    const principal = c.get("principal");
+    const body = c.req.valid("json");
+    try {
+      const created = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        createCategory(expenseDeps(tx, c.get("requestId")))(principal, body),
+      );
+      return c.json(categoryDto(created), 201);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  app.openapi(updateCategoryRoute, async (c) => {
+    const principal = c.get("principal");
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
+    try {
+      const updated = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        updateCategory(expenseDeps(tx, c.get("requestId")))(principal, id, body),
+      );
+      return c.json(categoryDto(updated), 200);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  app.openapi(createLabelRoute, async (c) => {
+    const principal = c.get("principal");
+    const body = c.req.valid("json");
+    try {
+      const created = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        createLabel(expenseDeps(tx, c.get("requestId")))(principal, body),
+      );
+      return c.json(labelDto(created), 201);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  app.openapi(updateLabelRoute, async (c) => {
+    const principal = c.get("principal");
+    const { id } = c.req.valid("param");
+    const body = c.req.valid("json");
+    try {
+      const updated = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
+        updateLabel(expenseDeps(tx, c.get("requestId")))(principal, id, body),
+      );
+      return c.json(labelDto(updated), 200);
+    } catch (err) {
+      throw toApiError(err);
+    }
   });
 }

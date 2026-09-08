@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import type { Principal } from "@/platform/auth/principal";
 import { withUserContext } from "@/platform/db/context";
 import type { UseCaseDeps } from "../application/ports";
-import { payrollDeps } from "../infrastructure/deps";
+import type { MappingRuleDeps } from "../application/mapping-rule-deps";
+import { payrollDeps, payrollMappingRuleDeps } from "../infrastructure/deps";
 import { resolveDocumentStore } from "../infrastructure/document-store-resolver";
 import { resolveScanner } from "../infrastructure/scanner-resolver";
 
@@ -55,4 +56,18 @@ export async function runForPrincipal<T>(
   if (!resolution) throw new DocumentStoreUnavailableError();
   const opts = { documents: resolution.store, scanner: resolveScanner() };
   return withUserContext(db, { userId: principal.userId }, (tx) => fn(payrollDeps(tx, opts), principal));
+}
+
+/**
+ * The mapping-rule editor's runner. Separate from `runForPrincipal` above
+ * because that one resolves a document store first and throws
+ * `DocumentStoreUnavailableError` when there is none — editing a
+ * classification rule must not depend on payslip storage being configured.
+ */
+export async function runMappingRulesForPrincipal<T>(
+  fn: (deps: MappingRuleDeps, principal: Principal) => Promise<T>,
+): Promise<T> {
+  const { requirePrincipal } = await import("@/platform/auth/require-principal");
+  const principal = await requirePrincipal();
+  return withUserContext(db, { userId: principal.userId }, (tx) => fn(payrollMappingRuleDeps(tx), principal));
 }

@@ -1,4 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import { getCachedTrekStats } from "@/lib/repo/trek-state";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import { integrationDeps } from "@/modules/integrations/infrastructure/deps";
@@ -143,7 +144,7 @@ const listTypesRoute = createRoute({
   method: "get",
   path: "/timeoff/types",
   tags: ["Time off"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: { 200: { description: "The caller's time off types, seeded on first call.", content: { "application/json": { schema: TimeoffTypeListResponseSchema } } }, ...commonErrorResponses },
 });
 
@@ -151,7 +152,7 @@ const workspaceRoute = createRoute({
   method: "get",
   path: "/timeoff/workspace",
   tags: ["Time off"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: TimeoffWorkspaceQuerySchema },
   responses: { 200: { description: "One year of time off: types, balances, every booked day, and the Trek state.", content: { "application/json": { schema: TimeoffWorkspaceSchema } } }, ...commonErrorResponses },
 });
@@ -160,7 +161,7 @@ const listEventsRoute = createRoute({
   method: "get",
   path: "/timeoff/events",
   tags: ["Time off"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: TimeoffEventsQuerySchema },
   responses: { 200: { description: "Booked days in the range, `date asc`.", content: { "application/json": { schema: TimeoffEventListResponseSchema } } }, ...commonErrorResponses },
 });
@@ -174,7 +175,7 @@ const setEventRoute = createRoute({
   method: "put",
   path: "/timeoff/events/{date}",
   tags: ["Time off"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: TimeoffDateParamSchema, body: { content: { "application/json": { schema: SetTimeoffEventRequestSchema } } } },
   responses: { 200: { description: "The staged day.", content: { "application/json": { schema: TimeoffEventSchema } } }, ...commonErrorResponses },
 });
@@ -183,7 +184,7 @@ const removeEventRoute = createRoute({
   method: "delete",
   path: "/timeoff/events/{date}",
   tags: ["Time off"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: TimeoffDateParamSchema },
   responses: { 204: { description: "Removed, or staged for removal upstream." }, ...commonErrorResponses },
 });
@@ -192,7 +193,7 @@ const listBalancesRoute = createRoute({
   method: "get",
   path: "/timeoff/balances",
   tags: ["Time off"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: TimeoffBalancesQuerySchema },
   responses: { 200: { description: "Every balance row whose `asOf` falls in the year, oldest first.", content: { "application/json": { schema: TimeoffBalanceListResponseSchema } } }, ...commonErrorResponses },
 });

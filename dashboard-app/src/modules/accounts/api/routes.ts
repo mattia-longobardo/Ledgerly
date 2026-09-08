@@ -1,4 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import type { MonthPoint } from "@/lib/contracts";
 import { UpstreamError } from "@/lib/contracts";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
@@ -166,7 +167,7 @@ const listAccountsRoute = createRoute({
   method: "get",
   path: "/accounts",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListAccountsQuerySchema },
   responses: {
     200: {
@@ -181,7 +182,7 @@ const createAccountRoute = createRoute({
   method: "post",
   path: "/accounts",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header.",
   request: { body: { content: { "application/json": { schema: CreateAccountRequestSchema } } } },
   responses: {
@@ -196,7 +197,7 @@ const getAccountRoute = createRoute({
   method: "get",
   path: "/accounts/{id}",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: AccountIdParamSchema, query: AccountDetailQuerySchema },
   responses: {
     200: { description: "Account detail.", content: { "application/json": { schema: AccountDetailSchema } } },
@@ -209,7 +210,7 @@ const updateAccountRoute = createRoute({
   method: "patch",
   path: "/accounts/{id}",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Send the current version in the `If-Match` header (or `version` in the body).",
   request: {
     params: AccountIdParamSchema,
@@ -229,7 +230,7 @@ const deleteAccountRoute = createRoute({
   method: "delete",
   path: "/accounts/{id}",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: {
     params: AccountIdParamSchema,
     query: DeleteAccountQuerySchema,
@@ -249,7 +250,7 @@ const recordBalanceRoute = createRoute({
   method: "post",
   path: "/accounts/{id}/balances",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header. Manual accounts only.",
   request: {
     params: AccountIdParamSchema,
@@ -268,7 +269,7 @@ const listBalancesRoute = createRoute({
   method: "get",
   path: "/accounts/{id}/balances",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Newest first. `cursor` is the base64url of the previous page's last `asOf`.",
   request: { params: AccountIdParamSchema, query: BalancesQuerySchema },
   responses: {
@@ -282,7 +283,7 @@ const listGroupsRoute = createRoute({
   method: "get",
   path: "/account-groups",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: {
     200: { description: "The caller's account groups.", content: { "application/json": { schema: AccountGroupListResponseSchema } } },
     ...commonErrorResponses,
@@ -293,7 +294,7 @@ const createGroupRoute = createRoute({
   method: "post",
   path: "/account-groups",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { body: { content: { "application/json": { schema: CreateGroupRequestSchema } } } },
   responses: {
     201: { description: "The created group.", content: { "application/json": { schema: AccountGroupSchema } } },
@@ -306,7 +307,7 @@ const renameGroupRoute = createRoute({
   method: "patch",
   path: "/account-groups/{id}",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: {
     params: GroupIdParamSchema,
     body: { content: { "application/json": { schema: RenameGroupRequestSchema } } },
@@ -323,7 +324,7 @@ const deleteGroupRoute = createRoute({
   method: "delete",
   path: "/account-groups/{id}",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: GroupIdParamSchema },
   responses: {
     200: {
@@ -339,7 +340,7 @@ const netWorthRoute = createRoute({
   method: "get",
   path: "/net-worth",
   tags: ["Net worth"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: NetWorthQuerySchema },
   responses: {
     200: { description: "Net worth over time.", content: { "application/json": { schema: NetWorthSeriesSchema } } },

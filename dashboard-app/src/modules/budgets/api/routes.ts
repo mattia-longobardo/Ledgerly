@@ -1,4 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
@@ -196,7 +197,7 @@ const listRoute = createRoute({
   method: "get",
   path: "/budgets",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListBudgetsQuerySchema },
   responses: { 200: { description: "The caller's budgets and current figures.", content: { "application/json": { schema: BudgetListResponseSchema } } }, ...commonErrorResponses },
 });
@@ -205,7 +206,7 @@ const createBudgetRoute = createRoute({
   method: "post",
   path: "/budgets",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { body: { content: { "application/json": { schema: CreateBudgetRequestSchema } } } },
   responses: { 201: { description: "The created budget.", content: { "application/json": { schema: BudgetSchema } } }, ...commonErrorResponses },
 });
@@ -214,7 +215,7 @@ const getDetailRoute = createRoute({
   method: "get",
   path: "/budgets/{id}",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: BudgetIdParamSchema },
   responses: { 200: { description: "Budget detail with figures, allocations, scopes, usages, events and a monthly remaining series.", content: { "application/json": { schema: BudgetDetailSchema } } }, ...commonErrorResponses },
 });
@@ -223,7 +224,7 @@ const updateBudgetRoute = createRoute({
   method: "patch",
   path: "/budgets/{id}",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Send the current version in `If-Match` or `body.version`. Archive with `{ \"status\": \"archived\" }` — the server sets `archivedAt`.",
   request: {
     params: BudgetIdParamSchema,
@@ -237,7 +238,7 @@ const setInitialAmountRoute = createRoute({
   method: "post",
   path: "/budgets/{id}/amount-versions",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: BudgetIdParamSchema, body: { content: { "application/json": { schema: SetInitialAmountRequestSchema } } } },
   responses: { 201: { description: "The new amount version.", content: { "application/json": { schema: AmountVersionSchema } } }, ...commonErrorResponses },
 });
@@ -246,7 +247,7 @@ const addAllocationRoute = createRoute({
   method: "post",
   path: "/budgets/{id}/allocations",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: BudgetIdParamSchema, body: { content: { "application/json": { schema: AddAllocationRequestSchema } } } },
   responses: { 201: { description: "The created allocation.", content: { "application/json": { schema: AllocationSchema } } }, ...commonErrorResponses },
 });
@@ -255,7 +256,7 @@ const endAllocationRoute = createRoute({
   method: "patch",
   path: "/budgets/{id}/allocations/{aid}",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Send the current version in `If-Match` or `body.version`.",
   request: {
     params: AllocationIdParamSchema,
@@ -269,7 +270,7 @@ const setScopesRoute = createRoute({
   method: "put",
   path: "/budgets/{id}/scopes",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: BudgetIdParamSchema, body: { content: { "application/json": { schema: SetScopesRequestSchema } } } },
   responses: { 200: { description: "The replaced scope set.", content: { "application/json": { schema: ScopesResponseSchema } } }, ...commonErrorResponses },
 });
@@ -278,7 +279,7 @@ const addManualUsageRoute = createRoute({
   method: "post",
   path: "/budgets/{id}/usages",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header — this creates a financial record.",
   request: { params: BudgetIdParamSchema, body: { content: { "application/json": { schema: AddManualUsageRequestSchema } } } },
   responses: { 201: { description: "The created manual usage row.", content: { "application/json": { schema: UsageSchema } } }, ...commonErrorResponses },
@@ -288,7 +289,7 @@ const deleteManualUsageRoute = createRoute({
   method: "delete",
   path: "/budgets/{id}/usages/{uid}",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: UsageIdParamSchema },
   responses: { 204: { description: "Deleted." }, ...commonErrorResponses },
 });
@@ -297,7 +298,7 @@ const refreshRoute = createRoute({
   method: "post",
   path: "/budgets/{id}/refresh",
   tags: ["Budgets"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: BudgetIdParamSchema },
   responses: { 200: { description: "Scope-matched usages recomputed from the transaction ledger.", content: { "application/json": { schema: RefreshUsagesResultSchema } } }, ...commonErrorResponses },
 });

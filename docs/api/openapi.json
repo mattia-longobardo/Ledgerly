@@ -621,6 +621,45 @@
           "latest"
         ]
       },
+      "SyncJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "daily",
+              "monthly"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "schedule",
+          "enabled"
+        ]
+      },
+      "SetSyncJobEnabledRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
       "TransactionListResponse": {
         "type": "object",
         "properties": {
@@ -938,6 +977,93 @@
           "color",
           "source"
         ]
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CategoryKind"
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 120
+          },
+          "color": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "color": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateLabelRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "color": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateLabelRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "color": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 32
+          }
+        }
       },
       "InterestRuleListResponse": {
         "type": "object",
@@ -1696,6 +1822,225 @@
           "contributions",
           "recordCount"
         ]
+      },
+      "PayrollMappingRuleListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayrollMappingRule"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PayrollMappingRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "matchCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "componentKind": {
+            "$ref": "#/components/schemas/PayrollComponentKind"
+          },
+          "target": {
+            "$ref": "#/components/schemas/MappingTarget"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "version": {
+            "type": "integer",
+            "nullable": true
+          },
+          "global": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "matchCode",
+          "matchLabel",
+          "componentKind",
+          "target",
+          "priority",
+          "version",
+          "global"
+        ]
+      },
+      "MappingTarget": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "earnings"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "fund_contribution"
+                ]
+              },
+              "fundSlug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "part": {
+                "type": "string",
+                "enum": [
+                  "employee",
+                  "employer"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "fundSlug",
+              "part"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "timeoff_balance"
+                ]
+              },
+              "timeoffCode": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "kind",
+              "timeoffCode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "timeoff_used"
+                ]
+              },
+              "timeoffCode": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "kind",
+              "timeoffCode"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "none"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        ]
+      },
+      "CreateMappingRuleRequest": {
+        "type": "object",
+        "properties": {
+          "matchCode": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "matchLabel": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "componentKind": {
+            "$ref": "#/components/schemas/PayrollComponentKind"
+          },
+          "target": {
+            "$ref": "#/components/schemas/MappingTarget"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "componentKind",
+          "target"
+        ]
+      },
+      "UpdateMappingRuleRequest": {
+        "type": "object",
+        "properties": {
+          "matchCode": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "matchLabel": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "componentKind": {
+            "$ref": "#/components/schemas/PayrollComponentKind"
+          },
+          "target": {
+            "$ref": "#/components/schemas/MappingTarget"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
       },
       "FundListResponse": {
         "type": "object",
@@ -2481,6 +2826,25 @@
           "entityId",
           "severity",
           "detail"
+        ]
+      },
+      "ReconciliationIssueListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationIssue"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ]
       },
       "BudgetListResponse": {
@@ -3807,6 +4171,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -3882,6 +4249,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Requires an `Idempotency-Key` header.",
@@ -3966,6 +4336,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -4048,6 +4421,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Send the current version in the `If-Match` header (or `version` in the body).",
@@ -4161,6 +4537,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -4258,6 +4637,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Requires an `Idempotency-Key` header. Manual accounts only.",
@@ -4361,6 +4743,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Newest first. `cursor` is the base64url of the previous page's last `asOf`.",
@@ -4472,6 +4857,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -4524,6 +4912,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "requestBody": {
@@ -4597,6 +4988,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -4689,6 +5083,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -4764,6 +5161,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -4829,6 +5229,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -5009,6 +5412,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Stores the credential and tests it. A failed test is still a 200: the connection lands in `error` with the provider's own message. The credential is never echoed back.",
@@ -5239,6 +5645,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -5347,6 +5756,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Idempotent per running job: a second call while a run is in flight returns that run. `kind` defaults to the provider's first declared sync when omitted — for Wallet that is `accounts`, not `transactions`; pass `kind` explicitly to target another one.",
@@ -5549,6 +5961,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Destroys the credential and applies the disconnect policy. `policy` overrides the stored one for this call only.",
@@ -5668,6 +6083,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -5826,6 +6244,94 @@
         }
       }
     },
+    "/api/v1/integrations/{provider}/sync-jobs/{kind}": {
+      "patch": {
+        "tags": [
+          "Integrations"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "wallet"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "accounts"
+            },
+            "required": true,
+            "name": "kind",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSyncJobEnabledRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The sync job as it now stands.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/webhooks/{provider}": {
       "post": {
         "tags": [
@@ -5914,6 +6420,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -6079,6 +6588,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -6173,6 +6685,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -6276,6 +6791,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -6422,6 +6940,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -6516,6 +7037,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -6602,6 +7126,452 @@
         }
       }
     },
+    "/api/v1/expenses/categories": {
+      "post": {
+        "tags": [
+          "Expenses"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expenses/categories/{id}": {
+      "patch": {
+        "tags": [
+          "Expenses"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expenses/labels": {
+      "post": {
+        "tags": [
+          "Expenses"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLabelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionLabel"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expenses/labels/{id}": {
+      "patch": {
+        "tags": [
+          "Expenses"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLabelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionLabel"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interest-rules": {
       "get": {
         "tags": [
@@ -6610,6 +7580,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -6702,6 +7675,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "requestBody": {
@@ -6847,6 +7823,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -6976,6 +7955,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7129,6 +8111,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7241,6 +8226,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7354,6 +8342,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7459,6 +8450,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7604,6 +8598,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7731,6 +8728,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7836,6 +8836,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -7941,6 +8944,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8047,6 +9053,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8159,6 +9168,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8264,6 +9276,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8368,6 +9383,431 @@
         }
       }
     },
+    "/api/v1/payroll/mapping-rules": {
+      "get": {
+        "tags": [
+          "Payroll"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollMappingRuleListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The action does not apply in this state (`conflict`), the payslip is already imported (`duplicate`), or the version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payroll"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMappingRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollMappingRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The action does not apply in this state (`conflict`), the payslip is already imported (`duplicate`), or the version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/mapping-rules/{id}": {
+      "patch": {
+        "tags": [
+          "Payroll"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "if-match",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMappingRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayrollMappingRule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The action does not apply in this state (`conflict`), the payslip is already imported (`duplicate`), or the version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Payroll"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write sent without `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The action does not apply in this state (`conflict`), the payslip is already imported (`duplicate`), or the version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (`validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "The version precondition is missing (`precondition_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/funds": {
       "get": {
         "tags": [
@@ -8376,6 +9816,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8482,6 +9925,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "requestBody": {
@@ -8585,6 +10031,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8688,6 +10137,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Send the current version in `If-Match` or `body.version`.",
@@ -8811,6 +10263,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -8925,6 +10380,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -9039,6 +10497,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -9158,6 +10619,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Requires an `Idempotency-Key` header.",
@@ -9273,6 +10737,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Requires an `Idempotency-Key` header.",
@@ -9397,6 +10864,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -9502,6 +10972,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -9599,6 +11072,268 @@
         }
       }
     },
+    "/api/v1/reconciliation/issues": {
+      "get": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "required": false,
+            "name": "domain",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "acknowledged",
+                "resolved"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warning",
+                "error"
+              ]
+            },
+            "required": false,
+            "name": "severity",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation issues, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationIssueListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reconciliation/issues/{issueId}/resolve": {
+      "post": {
+        "tags": [
+          "Funds"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "issueId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The resolved reconciliation issue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationIssue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthorized`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission (`permission_denied`), or a cookie-authenticated write omitted `X-Requested-With` (`csrf_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The fund, contribution, or issue does not exist for this caller (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The fund version is stale (`version_mismatch`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is invalid (`validation_failed`, `idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required version or `Idempotency-Key` is missing (`precondition_required`, `validation_failed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-minute rate limit (`rate_limited`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/budgets": {
       "get": {
         "tags": [
@@ -9607,6 +11342,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -9713,6 +11451,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "requestBody": {
@@ -9816,6 +11557,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -9919,6 +11663,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Send the current version in `If-Match` or `body.version`. Archive with `{ \"status\": \"archived\" }` — the server sets `archivedAt`.",
@@ -10042,6 +11789,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -10156,6 +11906,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -10270,6 +12023,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Send the current version in `If-Match` or `body.version`.",
@@ -10402,6 +12158,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -10516,6 +12275,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "description": "Requires an `Idempotency-Key` header — this creates a financial record.",
@@ -10631,6 +12393,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -10738,6 +12503,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -10843,6 +12611,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "responses": {
@@ -10927,6 +12698,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -11032,6 +12806,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -11136,6 +12913,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -11255,6 +13035,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [
@@ -11343,6 +13126,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "bearer": []
           }
         ],
         "parameters": [

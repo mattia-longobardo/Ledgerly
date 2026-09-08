@@ -141,6 +141,13 @@ export class MemorySyncJobsRepository implements SyncJobsRepository {
     const index = this.rows.findIndex((r) => r.id === id);
     if (index !== -1) this.rows[index] = { ...this.rows[index]!, cursor };
   }
+
+  async setEnabled(id: string, enabled: boolean): Promise<SyncJob | null> {
+    const index = this.rows.findIndex((r) => r.id === id);
+    if (index === -1) return null;
+    this.rows[index] = { ...this.rows[index]!, enabled };
+    return this.rows[index]!;
+  }
 }
 
 export class MemorySyncRunsRepository implements SyncRunsRepository {
