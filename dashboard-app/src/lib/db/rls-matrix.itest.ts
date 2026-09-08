@@ -22,6 +22,7 @@
  * they were ported here from the per-domain `*-rls.itest.ts` files this
  * matrix replaced.
  */
+import { createHash } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { closeDb, resetDb, testDb } from "@/test/db";
@@ -52,6 +53,7 @@ import {
   payrollImports,
   payrollMappingRules,
   payrollRecords,
+  personalAccessTokens,
   providerLinks,
   rateLimitWindows,
   reconciliationIssues,
@@ -179,6 +181,21 @@ async function aTimeoffType(tx: DbClient, userId: string): Promise<string> {
     .values({ userId, code: "vacation", label: "Ferie" })
     .returning();
   return row!.id;
+}
+
+/**
+ * `token_hash` is uniquely indexed, so every insert in the matrix needs its
+ * own; the seed and the foreign write below would otherwise collide on the
+ * unique index and look like an RLS refusal that never happened.
+ */
+function aToken(userId: string, discriminator: string) {
+  return {
+    userId,
+    name: `cli-${discriminator}`,
+    prefix: `pat${discriminator}`.slice(0, 8),
+    tokenHash: createHash("sha256").update(`${userId}:${discriminator}`).digest("hex"),
+    scopes: ["accounts.read"],
+  };
 }
 
 const contribution = (fundId: string) => ({
@@ -699,6 +716,17 @@ const CASES: Case[] = [
     read: (tx) => tx.select().from(timeoffEvents),
     foreign: (tx, ids) =>
       tx.insert(timeoffEvents).values({ userId: ids.userId!, typeId: ids.typeId!, date: "2026-01-06" }),
+  },
+
+  // ---- personal access tokens (0019) -------------------------------------
+  {
+    table: "personal_access_tokens",
+    seed: async (tx, userId) => {
+      await tx.insert(personalAccessTokens).values(aToken(userId, "seed"));
+      return { userId };
+    },
+    read: (tx) => tx.select().from(personalAccessTokens),
+    foreign: (tx, ids) => tx.insert(personalAccessTokens).values(aToken(ids.userId!, "foreign")),
   },
 
   // ---- platform ----------------------------------------------------------
