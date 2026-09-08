@@ -21,27 +21,9 @@ RUN ./node_modules/.bin/esbuild src/lib/db/migrate.ts \
       --external:cloudflare:sockets \
       --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
       --outfile=migrate.mjs
-# The Teable import and its reconciliation are one-off, hand-run migrations:
-# they ship with the image so the runbook can exec them against the live
-# database, and they are never part of the entrypoint.
-RUN ./node_modules/.bin/esbuild scripts/migrate-teable.ts \
-      --bundle \
-      --platform=node \
-      --format=esm \
-      --target=node22 \
-      --external:pg-native \
-      --external:cloudflare:sockets \
-      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
-      --outfile=migrate-teable.mjs
-RUN ./node_modules/.bin/esbuild scripts/validate-teable-migration.ts \
-      --bundle \
-      --platform=node \
-      --format=esm \
-      --target=node22 \
-      --external:pg-native \
-      --external:cloudflare:sockets \
-      --banner:js="import{createRequire as __nodeRequire}from'node:module';const require=__nodeRequire(import.meta.url);" \
-      --outfile=validate-teable.mjs
+# The file-credentials importer is a one-off, hand-run migration: it ships
+# with the image so the runbook can exec it against the live database, and
+# it is never part of the entrypoint.
 RUN ./node_modules/.bin/esbuild scripts/import-file-credentials.ts \
       --bundle \
       --platform=node \
@@ -63,8 +45,6 @@ COPY --from=builder --chown=1000:1000 /app/.next/standalone ./
 COPY --from=builder --chown=1000:1000 /app/.next/static ./.next/static
 COPY --from=builder --chown=1000:1000 /app/public ./public
 COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
-COPY --from=builder --chown=1000:1000 /app/migrate-teable.mjs ./migrate-teable.mjs
-COPY --from=builder --chown=1000:1000 /app/validate-teable.mjs ./validate-teable.mjs
 COPY --from=builder --chown=1000:1000 /app/import-file-credentials.mjs ./import-file-credentials.mjs
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh /app/entrypoint.sh

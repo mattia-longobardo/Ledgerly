@@ -4,6 +4,8 @@ import type { Transaction, TransactionCategory, TransactionLabel } from "../doma
 import { InvalidInputError } from "../application/errors";
 import type {
   CategoriesRepository,
+  CategoryPatch,
+  LabelPatch,
   ListTransactionsOptions,
   ListTransactionsPage,
   NewCategory,
@@ -222,6 +224,16 @@ export class MemoryCategoriesRepository implements CategoriesRepository {
     this.rows.push(row);
     return row;
   }
+
+  async update(userId: string, id: string, patch: CategoryPatch): Promise<TransactionCategory | "duplicate_name" | null> {
+    const row = this.rows.find((c) => c.userId === userId && c.id === id);
+    if (!row) return null;
+    if (patch.name !== undefined && this.rows.some((c) => c.userId === userId && c.id !== id && c.name === patch.name)) {
+      return "duplicate_name";
+    }
+    Object.assign(row, definedEntries(patch), { updatedAt: new Date() });
+    return row;
+  }
 }
 
 export class MemoryLabelsRepository implements LabelsRepository {
@@ -229,6 +241,10 @@ export class MemoryLabelsRepository implements LabelsRepository {
 
   async list(userId: string): Promise<TransactionLabel[]> {
     return this.rows.filter((l) => l.userId === userId).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async get(userId: string, id: string): Promise<TransactionLabel | null> {
+    return this.rows.find((l) => l.userId === userId && l.id === id) ?? null;
   }
 
   async findByName(userId: string, name: string): Promise<TransactionLabel | null> {
@@ -240,6 +256,16 @@ export class MemoryLabelsRepository implements LabelsRepository {
     const now = new Date();
     const row: TransactionLabel = { ...input, id: monotonicId(), createdAt: now, updatedAt: now };
     this.rows.push(row);
+    return row;
+  }
+
+  async update(userId: string, id: string, patch: LabelPatch): Promise<TransactionLabel | "duplicate_name" | null> {
+    const row = this.rows.find((l) => l.userId === userId && l.id === id);
+    if (!row) return null;
+    if (patch.name !== undefined && this.rows.some((l) => l.userId === userId && l.id !== id && l.name === patch.name)) {
+      return "duplicate_name";
+    }
+    Object.assign(row, definedEntries(patch), { updatedAt: new Date() });
     return row;
   }
 }

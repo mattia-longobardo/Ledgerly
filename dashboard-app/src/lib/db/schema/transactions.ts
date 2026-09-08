@@ -16,9 +16,9 @@ export const transactionCategories = pgTable(
     groupName: text("group_name"),
     kind: text("kind").notNull().default("expense"),
     color: text("color"),
-    // Not FK-constrained: a self-reference would need a circular Drizzle type,
-    // and no Phase 3 use case reads a category hierarchy. Enforced at the
-    // application layer once a later phase manages one.
+    // Not FK-constrained: a self-reference would need a circular Drizzle type.
+    // `createCategory`/`updateCategory` set it, nothing reads the hierarchy
+    // yet, and the parent's existence is checked at the application layer.
     parentId: uuid("parent_id"),
     source: text("source").notNull().default("manual"),
     archivedAt: tz("archived_at"),

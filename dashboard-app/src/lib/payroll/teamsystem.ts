@@ -3,8 +3,9 @@ import { splitLines } from "@/lib/payroll/text";
 
 /**
  * Extractor for the employer's actual "Mod. Cedolino TS" layout, verified
- * against a real payslip (Paperless doc 142, August 2026) and against the
- * owner's own reading of it.
+ * against a real payslip (Paperless doc 142, August 2026) (historical: the
+ * sample predates the upload pipeline) and against the owner's own reading of
+ * it.
  *
  * It exists alongside the generic anchor engine because the real PDF is a form:
  * the labels are emitted in one block and the values in another, so

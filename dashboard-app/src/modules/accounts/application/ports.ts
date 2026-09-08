@@ -32,7 +32,17 @@ export interface AccountsRepository {
   /** The newest balance strictly before `beforeAsOf`, per account: the seed a windowed series carries forward from. Keyed by accountId. */
   latestBalancesBefore(userId: string, accountIds: string[], beforeAsOf: string): Promise<Map<string, BalancePoint>>;
   recordBalances(rows: NewBalance[]): Promise<void>; // upsert on (accountId, asOf, source)
-  hasReferences(accountId: string): Promise<boolean>; // false in Phase 1; budgets and interest rules will consult it
+  /**
+   * Whether anything outside this module still points at the account, which
+   * decides hard delete vs archive (Ruling P9-8): an interest rule or entry on
+   * it, a budget allocation sourced from it, or a budget scoped to it.
+   *
+   * `userId` is a parameter and not left to the ambient RLS context because two
+   * of those four tables — `budget_allocations` and `budget_scopes` — hold a
+   * bare `uuid` with no owner column of their own, so the owner has to come
+   * from the caller and be joined through `budgets`.
+   */
+  hasReferences(userId: string, accountId: string): Promise<boolean>;
 }
 
 export type ProviderLinkEntityType = "account" | "transaction" | "category" | "label";

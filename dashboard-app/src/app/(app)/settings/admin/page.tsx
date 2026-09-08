@@ -23,26 +23,28 @@ const COLUMN = "flex flex-col gap-10";
 
 const JOBS: readonly JobName[] = [
   "monthly_close",
-  "payslip_ingest",
   "sweep",
-  "wallet_refresh",
   "wallet_accounts_sync",
   "wallet_transactions_sync",
   "interest_accrual",
   "trek_sync",
   "sync_queue",
+  "payroll_ingest",
+  "payroll_retention",
+  "housekeeping",
 ];
 
 const JOB_LABEL: Record<string, string> = {
   monthly_close: "Monthly close",
-  payslip_ingest: "Payslip ingest",
   sweep: "Sweep",
-  wallet_refresh: "Wallet refresh",
   wallet_accounts_sync: "Wallet accounts sync",
   wallet_transactions_sync: "Wallet transactions sync",
   interest_accrual: "Interest accrual",
   trek_sync: "Trek leave sync",
   sync_queue: "Webhook sync queue",
+  payroll_ingest: "Payroll ingest",
+  payroll_retention: "Payroll retention",
+  housekeeping: "Housekeeping",
 };
 
 const STATUS_TONE: Record<string, string> = {

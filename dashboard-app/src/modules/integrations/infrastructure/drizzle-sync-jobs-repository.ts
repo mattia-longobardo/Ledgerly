@@ -59,4 +59,13 @@ export class DrizzleSyncJobsRepository implements SyncJobsRepository {
       .set({ cursor: cursor ?? null, updatedAt: new Date() })
       .where(eq(syncJobs.id, id));
   }
+
+  async setEnabled(id: string, enabled: boolean): Promise<SyncJob | null> {
+    const [row] = await this.db
+      .update(syncJobs)
+      .set({ enabled, updatedAt: new Date() })
+      .where(eq(syncJobs.id, id))
+      .returning();
+    return row ? toJob(row) : null;
+  }
 }

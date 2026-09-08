@@ -9,26 +9,46 @@ own.
 
 ## Authentication
 
-Today: **session cookie only.** Sign in through the app (`/signin` →
-Authentik OIDC), then the browser's `__Host-authjs.session-token` cookie
-authenticates every `/api/v1/*` request — there is no separate API key flow
-yet. `security: [{ session: [] }]` on every route in `openapi.json` documents
-this (`securitySchemes.session` is `apiKey / cookie /
-__Host-authjs.session-token`).
+Two credentials, checked in this order (`src/platform/http/authenticate.ts`):
 
-Every request without a valid session gets `401 unauthorized`
+1. **`Authorization: Bearer pat_…`** — a personal access token. See
+   **Security** below.
+2. **The session cookie.** Sign in through the app (`/signin` → Authentik
+   OIDC); the browser's `__Host-authjs.session-token` cookie then
+   authenticates every `/api/v1/*` request. `securitySchemes.session` is
+   `apiKey / cookie / __Host-authjs.session-token`.
+
+A request that carries an `Authorization: Bearer pat_…` header is decided by
+that token alone — there is **no fallback to the cookie** when it fails.
+Falling back would mean a revoked or expired token kept working for anyone who
+happened to be signed in, which is precisely when a revocation has to be
+visible. A `Bearer` credential of some other shape is not ours and is ignored,
+so the cookie decides.
+
+Every request without a valid credential gets `401 unauthorized`
 (`src/platform/http/app.ts`'s auth middleware, ahead of rate limiting and the
-route handlers). Scripts and jobs that need to call the API from outside a
-browser have to carry that cookie explicitly (see
-`docs/deploy/phase-1-runbook.md` step 6 for the exact `curl` invocation).
+route handlers). Scripts and jobs calling the API from outside a browser
+should use a token. Carrying the cookie explicitly still works, and needs the
+CSRF header on any write:
 
-**Personal access tokens are deferred to Phase 8.** They will add
-`Authorization: Bearer <token>` with scopes, without changing anything
-described here.
+```bash
+curl "https://$DASHBOARD_HOST/api/v1/accounts" \
+  -H "Cookie: __Host-authjs.session-token=<cookie>"
+```
 
 Machine-to-machine job triggers (`POST /api/jobs/tick?tier=...`) are a
 separate, non-`/api/v1` endpoint authenticated by `X-Cron-Secret`, not part of
 this document.
+
+Every authenticated route in `openapi.json` now advertises **both** schemes
+(`security: [{ session: [] }, { bearer: [] }]`, the shared
+`AUTHENTICATED_SECURITY` constant in
+`src/platform/http/security-schemes.ts`). Before Phase 9 the routes declared
+the cookie alone, which told a token holder their token would not work and left
+clients generated from the document unable to send one — a documentation bug,
+not a behavioural one: `authenticate` has accepted both since Phase 8. The one
+exception is `/security/tokens*`, which stays session-only on purpose so a
+leaked token cannot mint its own successor.
 
 ## `X-Requested-With` on writes
 
@@ -48,8 +68,10 @@ curl -X POST "https://$DASHBOARD_HOST/api/v1/integrations/wallet/sync" \
   -H "X-Requested-With: curl"
 ```
 
-Personal access tokens (Phase 8) will be exempt: a token is never attached to
-a request automatically, so there is nothing to forge.
+**Token-authenticated writes are exempt.** A browser never attaches an
+`Authorization` header on its own, so a cross-site form cannot forge one and
+there is nothing for the header to defend against. The check keys on how the
+request authenticated, not on the path.
 
 ## Error envelope
 
@@ -89,18 +111,19 @@ reporting a problem.
 
 ## Pagination
 
-Cursor-based on the one paginated endpoint today,
-`GET /accounts/{id}/balances`:
+Cursor-based, on the three endpoints whose result set is unbounded:
+`GET /accounts/{id}/balances`, `GET /transactions` and
+`GET /reconciliation/issues`.
 
 - `limit` — clamped to `[1, 200]`, defaults to 50.
-- `cursor` — the base64url encoding of the previous page's last item's
-  `asOf`; omit it for the first page.
+- `cursor` — an opaque base64url encoding of the previous page's last item's
+  sort key; omit it for the first page. Do not construct one by hand.
 - Response: `{ "items": [...], "nextCursor": "..." }` — `nextCursor` is
-  present only when there's another page.
+  present only when there is another page, and consecutive pages are disjoint.
 
-Other list endpoints (`GET /accounts`, `GET /account-groups`) are not
-paginated — they return everything the caller owns, which is small by
-construction (one person's accounts and groups).
+Every other list endpoint returns everything the caller owns, which is small by
+construction for a single user: accounts, groups, funds, budgets, interest
+rules, time-off types and events for a year, the payroll review queue.
 
 ## `Idempotency-Key`
 
@@ -109,25 +132,38 @@ Required (`428 validation_failed` if missing — a `428`, not `422`, on the
 
 - `POST /accounts`
 - `POST /accounts/{id}/balances`
+- `POST /funds/{id}/contributions`
+- `POST /funds/{id}/contributions/{cid}/reverse`
+- `POST /budgets/{id}/usages`
 
 Send any client-generated unique string (a UUID is fine). The server hashes
-`METHOD path\nbody` and stores it against `(principalId, key)` for 24 hours:
+`METHOD path\nbody` and stores it against `(principalId, "<namespace>:<key>")`
+for 24 hours, where `<namespace>` is the owning module (`accounts`, `funds`,
+`budgets`). The namespace is internal: the `Idempotency-Key` you send is never
+itself prefixed, it only scopes how the row is addressed, so the same literal
+key value used against two different modules is two independent keys.
 
 - Same key, same request → the original response is replayed verbatim
   (including the original status code), no re-execution.
 - Same key, different request → `422 idempotency_key_reused`.
-- New key → executes normally and gets cached.
-- A `5xx` is **not** cached: a retry with the same key runs the handler again
-  rather than replaying a transient failure for 24 hours.
+- New key → executes normally, and is cached only if it succeeds.
+- A failure is **not** cached, `4xx` or `5xx` alike: the write and its
+  idempotency row commit in one transaction, so an error rolls both back and a
+  retry with the same key runs the handler again rather than replaying the
+  failure for 24 hours.
 
 This makes retried creates safe under a flaky connection: retry with the same
-key and you get the account you already created back, not a duplicate.
+key and you get the account you already created back, not a duplicate. The
+write, its audit and event rows, and the idempotency row all commit together,
+serialized per `(namespace, principalId, key)`, so two concurrent retries
+carrying one key cannot both execute.
 
 ## Optimistic concurrency (`If-Match` / `version`)
 
-Every mutable entity — accounts, groups — carries an integer `version`.
-`PATCH /accounts/{id}` (and the group rename/delete routes) require you to
-say which version you're updating:
+Most mutable entities — accounts, groups, transactions, interest rules, funds,
+budgets, budget allocations, payroll mapping rules — carry an integer
+`version`, and their `PATCH` requires you to say which version you are
+updating:
 
 - `If-Match: "3"` header (quotes optional, stripped if present), **or**
 - `"version": 3` in the request body.
@@ -135,6 +171,17 @@ say which version you're updating:
 If neither is present: `428 precondition_required`. If the version doesn't match
 the current one: `409 version_mismatch` — someone else changed it first;
 re-`GET`, look at the fresh `version`, and retry.
+
+**Not every table has one.** `transaction_categories`, `transaction_labels`,
+`sync_jobs` and `reconciliation_issues` carry no `version` column, so the
+management routes added in Phase 9 for them
+(`PATCH /expenses/categories/{id}`, `PATCH /expenses/labels/{id}`,
+`PATCH /integrations/{provider}/sync-jobs/{kind}`,
+`POST /reconciliation/issues/{id}/resolve`) take no `If-Match` and answer no
+`428`. They are last-writer-wins patches over a handful of fields, and each
+write records what it changed in `audit_events`.
+`PATCH /payroll/mapping-rules/{id}` does carry a version and follows the rule
+above.
 
 ## Versioning
 
@@ -166,6 +213,33 @@ so the endpoint never confirms what does or doesn't exist. A successful
 call answers `202` and queues the work; it does not run the sync inline
 (see `docs/integrations/README.md` §6).
 
+`PATCH /integrations/{provider}/sync-jobs/{kind}` (Phase 9,
+`integrations.manage`) takes `{"enabled": true|false}` and switches one sync
+kind on or off without disconnecting the provider. A disabled kind is skipped by
+the scheduler and refuses an inbound webhook delivery for that kind; its cursor
+is left alone, so switching it back on resumes rather than re-imports. A
+provider that is not connected has no `sync_jobs` rows to toggle and answers
+`422 validation_failed`.
+
+Inbound webhooks carry two guards (Phase 9), both keyed on the connection the
+signature resolved to: the same signed body delivered twice to the same
+connection **within 10 minutes** is answered `202` with `queued: 0` and enqueues
+nothing — an idempotent acknowledgement, so a provider retrying a delivery whose
+response it never saw does not turn one event into two syncs — and a connection
+sending more than 60 deliveries a minute gets `429 rate_limited`. The replay key
+is `(connection_id, payload_hash)` and deliberately not `(provider,
+payload_hash)`: a payload need carry nothing user-specific, so two people
+connected to the same provider routinely send byte-identical bodies, and a
+provider-wide key would drop the second one's sync behind a 202.
+
+Ten minutes, not the 24 hours this first shipped with (Ruling P9-7), and the
+window is measured from the delivery that actually queued work — never from a
+replay of it. A provider body need carry no event identity at all (Wallet sends
+`{"event":"accounts.changed"}`, and the hash is over the raw body), so every
+delivery of the day can hash identically; a day-long window that each replay
+pushed forward meant such a provider's sync was queued once and never again.
+Retries happen in seconds, so 10 minutes covers the case the guard exists for.
+
 ### Breaking changes in Phase 2
 
 `POST /api/v1/integrations/wallet/sync` **keeps its path**, but:
@@ -192,6 +266,24 @@ updates them; a user can only recategorise, label and annotate what already
 exists. `PATCH /transactions/{id}` follows the same `If-Match`/`version`
 convention as `PATCH /accounts/{id}`.
 
+Categories and labels themselves are managed under `/expenses/…` (Phase 9):
+`POST /expenses/categories`, `PATCH /expenses/categories/{id}`,
+`POST /expenses/labels`, `PATCH /expenses/labels/{id}`, all gated on
+`finance.manage`. The read routes keep their older `/transaction-categories`
+and `/transaction-labels` paths.
+
+Two rules are worth knowing before you call them:
+
+- **Archiving is not deleting.** `PATCH /expenses/categories/{id}` with
+  `{"archived": true}` sets `archived_at`; the row stays, and every transaction
+  that points at it keeps pointing at it. `{"archived": false}` brings it back.
+  There is no delete — it would orphan history.
+- **A provider-mirrored category cannot be renamed here.** A category the
+  Wallet sync mirrors has a `provider_links` row, and the sync rewrites its name
+  from the provider on every pass; accepting a rename would look like it worked
+  and be silently undone. It answers `422 validation_failed`. Its `color` and
+  `parentId` are local-only and stay editable.
+
 ## Interests
 
 `GET /interest-rules`, `POST /interest-rules`, `GET /interest-rules/{id}`
@@ -209,6 +301,219 @@ connected integration — see
 [`dashboard-app/docs/migration/wallet-manager-cutover.md`](../../dashboard-app/docs/migration/wallet-manager-cutover.md)
 for the operational procedure.
 
+## Funds
+
+`GET /funds` lists active funds and their current valuation, deposited total,
+absolute return and open-issue count; pass `includeArchived=true` to include
+archived funds. `POST /funds` creates one, and `GET /funds/{id}` returns its
+effective plan and schedule together with their history, contributions,
+quarterly totals, value series and reconciliation issues. Monetary values stay
+decimal strings throughout the API.
+
+`PATCH /funds/{id}` follows the shared `If-Match` / body `version` convention.
+Schedules and plans are effective-dated records created with
+`POST /funds/{id}/schedules` and `POST /funds/{id}/plans`; schedule posting lag
+is limited to 0–12 months. `GET /funds/{id}/contributions` accepts inclusive
+`from` and `to` month keys in `YYYY-MM-01` form and returns
+`{ "items": [...], "nextCursor": null }`.
+
+Contribution creation and reversal use the two idempotent endpoints listed
+above. Each principal/key pair is serialized, and the committed `201` response
+is stored in the same transaction as the financial mutation. Concurrent
+identical requests replay that result; a different body with the same live key
+returns `422`. An uncached error is re-evaluated on retry. Computed totals and
+returns may exceed the numeric(16,2) limit of an individual stored contribution;
+they remain exact decimal strings in the response contract.
+
+Reversals create a compensating contribution and leave the original
+record intact. `POST /funds/{id}/reconcile` refreshes the issue set, and
+`POST /funds/issues/{issueId}/acknowledge` acknowledges an open issue. Fund
+responses never expose ownership or resolver user IDs.
+
+`GET /reconciliation/issues` (Phase 9) is the cross-domain list: every issue the
+caller owns, whatever wrote it, newest first, with `domain`, `status` and
+`severity` filters and the usual `cursor`/`limit` pagination.
+`POST /reconciliation/issues/{issueId}/resolve` closes one for good — the
+counterpart of `acknowledge` ("seen, still true"). Resolving takes the row out
+of the partial unique index that keeps one live issue per (entity, kind), so if
+the condition recurs a *fresh* issue is opened rather than the old one being
+quietly reused; resolving an already-resolved issue is `404`. Both are gated on
+`finance.manage`, not `funds.read`, because they span domains.
+
+## Payroll
+
+`GET /payroll/imports`, `POST /payroll/imports` (multipart, `file` part),
+`GET /payroll/imports/{id}`, `POST /payroll/imports/{id}/verify`,
+`POST /payroll/imports/{id}/reject`, `POST /payroll/imports/{id}/apply`,
+`POST /payroll/imports/{id}/retry`, `GET /payroll/imports/{id}/original`,
+`GET /payroll/records`, `GET /payroll/records/{id}`, `GET /payroll/earnings`.
+
+The upload is idempotent on the **sha256 of the bytes, per user**, enforced by a
+database constraint rather than an application check: uploading the same file
+twice answers `409 duplicate` with `details.existingImportId`, and can therefore
+never produce two payroll records. `Idempotency-Key` is honoured by a second
+constraint on `(user_id, idempotency_key)`; the platform idempotency middleware
+is deliberately not used here, because it hashes and stores the whole request
+body and the body is a 10 MB binary.
+
+`POST .../verify` and `POST .../reject` follow the same `If-Match`/`version`
+convention as `PATCH /accounts/{id}`. `POST .../apply` is idempotent and
+re-runnable but **not reversible**: the reverse of a wrong apply is uploading a
+corrected payslip, whose apply supersedes the previous record.
+
+`GET .../original` streams the stored PDF with `Cache-Control: no-store` and is
+recorded in `audit_events`. It answers `409 conflict` — never the bytes — for an
+import whose malware scan has not returned clean, and for one whose original the
+retention job has already purged.
+
+`GET /payroll/earnings` computes gross, net, taxes and contributions per month,
+quarter and year from `payroll_records` and `payroll_components`, excluding
+superseded records. A figure the payslip did not state is `null`, never `0`.
+
+`GET /payroll/mapping-rules`, `POST /payroll/mapping-rules`,
+`PATCH /payroll/mapping-rules/{id}` and `DELETE /payroll/mapping-rules/{id}`
+(Phase 9, `payroll.review`) manage the rules that classify a payslip component
+into a kind and a target. The `GET` returns the seeded global catalogue merged
+with the caller's own rules in the order the classifier resolves them
+(`priority asc, id asc`), each carrying `global` and `version`.
+
+- A **global** rule has `global: true`, `version: null` and an id like
+  `global-000`: it lives in code (`DEFAULT_MAPPING_RULES`), has no database row,
+  and cannot be edited or deleted. Override one by adding your own rule at a
+  lower `priority`.
+- `priority` defaults to `100 + n`, where *n* is how many rules you already
+  have, so a new rule lands after the globals and after your earlier ones. Pass
+  it explicitly (below 100) to shadow a global.
+- `matchLabel` is a regular expression and is compiled when the rule is saved;
+  an invalid pattern is `422 validation_failed` rather than a rule that
+  silently never matches. `matchCode` is compared literally against the
+  parser's own field codes. A rule needs at least one of the two.
+
+## Budgets
+
+`GET /budgets` lists the caller's budgets with their current figures
+(`initial`, `allocated`, `used`, `remaining`, `goalProgress`); pass
+`includeArchived=true` to include archived budgets. `POST /budgets` creates
+one together with its first amount version. `GET /budgets/{id}` returns full
+detail: amount-version history, allocations (each with its `sourceLabel` and
+`availableInSource` when sourced from a fund or account), scopes, usages,
+recent events, and a month-by-month `remaining` series — and, as a side
+effect, refreshes scope-matched usages first, so the detail a caller reads is
+always current.
+
+`PATCH /budgets/{id}` follows the shared `If-Match` / body `version`
+convention. Archiving is `PATCH { "status": "archived" }` — the server sets
+`archivedAt` itself; a caller cannot set `archivedAt` directly, and `version`
+never reaches the underlying patch (it is consumed for the concurrency check
+and stripped before the patch is applied).
+
+`POST /budgets/{id}/amount-versions` records a new initial-amount version
+effective from a given date, preserving history rather than overwriting it.
+Allocations are virtual: `POST /budgets/{id}/allocations` never moves money,
+it only affects the budget's computed figures; `sourceKind` is `fund`,
+`account`, or `none`, and a sourced allocation must reference a fund or
+account the caller owns. `PATCH /budgets/{id}/allocations/{aid}` ends an
+allocation by setting `effectiveTo` (body `{ "version": ..., "effectiveTo":
+"YYYY-MM-DD" }`, same `If-Match`/`version` convention).
+
+`PUT /budgets/{id}/scopes` replaces the full scope set for a budget in one
+call (an `account`, `category`, `label`, or `fund` scope; a `fund` scope
+never matches a transaction, since transactions aren't posted against
+funds) and triggers a refresh of scope-matched usages. `POST
+/budgets/{id}/usages` records a manual usage row and requires an
+`Idempotency-Key`, since it is a financial record; `DELETE
+/budgets/{id}/usages/{uid}` removes one (`204`) — only a manual row, never a
+scope-matched one. `POST /budgets/{id}/refresh` recomputes scope-matched
+usages against the transaction ledger on demand and reports `{ inserted,
+updated, deleted }`.
+
+Money stays a decimal string throughout, including `remaining` (which can be
+negative). Budget, allocation, usage and event responses never expose
+ownership fields.
+
+## Time off
+
+`GET /timeoff/types` lists the caller's time off types and, on the first call
+that touches the module, seeds the three defaults (`vacation`, `permits`,
+`comp`) with the `hoursPerDay` the app setting carries. There is no route to
+edit a type in this phase.
+
+`GET /timeoff/workspace?year=&date=` returns one year in a single read: the
+types, the latest balance per type (`remainingHours`, `remainingDays`,
+`usedYtdHours`, `asOf`, `source`), every booked day of the year keyed by date
+in `byDate`, the day named by `date` in `selected`, the next ten days ahead in
+`upcoming`, `plannedDaysYtd`, how many days are still waiting for the Trek sync
+in `pendingCount`, whether Trek is connected, and Trek's own last-cached
+figures. `year` defaults to the current one.
+
+`GET /timeoff/events?from=&to=` lists the booked days in a closed range,
+`date asc`. `GET /timeoff/balances?year=` returns every balance row whose
+`asOf` falls in that year, oldest first — one row per applied payslip, never
+summed (a payslip's used figure is already year-to-date).
+
+`PUT /timeoff/events/{date}` books or changes one day (`fraction` is `"1.00"`
+or `"0.50"`, `typeCode` one of the five codes, `note` optional). `DELETE
+/timeoff/events/{date}` removes one (`204`). Neither carries an
+`Idempotency-Key`: a day is addressed by its own date, so the write is
+idempotent by construction, and a booked day is not a financial record.
+Saturdays and Sundays are refused with `422 validation_failed` — Trek's own
+plan blocks them, so a round trip could only ever come back refused. So is a
+date that is well shaped but not a real calendar day (`2026-02-31`), on every
+route that takes one.
+
+Both writes are **staged, never sent**: the day is saved locally with
+`pendingOp` set, and the Trek sync is the only thing that talks to the
+provider. A day Trek holds is kept as a tombstone (`pendingOp: "delete"`)
+until the next pass carries the removal upstream; a day Trek has never held is
+deleted outright.
+
+Every quantity — fractions, hours, days, balances — is a two-decimal string,
+and `null` means "no figure on file", rendered as "—" by the UI. It is never
+`"0.00"`. Type, event and balance responses expose no ownership fields.
+
+## Security
+
+`POST /security/tokens` creates a personal access token, `GET /security/tokens`
+lists the caller's own, `DELETE /security/tokens/{id}` revokes one (`204`).
+There is no permission code on any of the three: a token can only ever grant
+what its owner already holds, so managing your own is not a privilege on top
+of being an active user.
+
+**These three routes are session-only.** A request authenticated by a token
+gets `403 permission_denied` whatever its scopes say — a token that could mint
+or revoke tokens would turn one leak into a permanent, self-renewing foothold
+that survives revoking the token it came from.
+
+### The token
+
+`pat_<8 character prefix>.<43 character secret>`. The database keeps the
+prefix and `sha256(<whole token>)`; the plain token exists only in the `201`
+body of the request that created it and is never retrievable again — `GET
+/security/tokens` has no `token` field, and neither has the audit row
+(`security.token_created` records the name, prefix, scopes and expiry).
+
+```bash
+curl "https://$DASHBOARD_HOST/api/v1/accounts" \
+  -H "Authorization: Bearer $DASHBOARD_TOKEN"
+```
+
+### Scopes
+
+`scopes` is a list of permission codes and must be a **subset of the caller's
+current permissions** at creation (`422 validation_failed` otherwise). At
+every use the token's scopes are re-intersected with the owner's permissions
+*as they are then*, so demoting a user immediately shrinks every token they
+hold; nothing has to be re-issued or swept. A call outside the resulting set
+is `403 permission_denied` exactly as it would be for a session.
+
+### Lifetime
+
+`expiresAt` is optional; omit it or send `null` for a token that does not
+expire. A token stops authenticating the moment it is revoked, the moment it
+expires, or the moment its owner stops being `active` — all three answer `401
+unauthorized`. `lastUsedAt` is stamped at most once a minute per token, so a
+busy client does not turn every read into a write.
+
 ## Regenerating `openapi.json`
 
 The document is generated from the same `createRoute`/Zod schemas the route
@@ -225,37 +530,152 @@ npm test                   # openapi-drift.test.ts should now pass
 
 Run this after adding or changing a route, before committing.
 
-## Endpoints (Phase 1 + Phase 2)
+## Endpoints
 
-All under `/api/v1`. Every route requires a session *except* the inbound
-webhook, which authenticates itself by HMAC instead (see **Integrations**
-below). Every session route also requires a permission, enforced inside the
-use case it calls (reads need `accounts.read`, writes need
-`accounts.write`, deletes need `accounts.delete`, every integrations route
-needs `integrations.manage`) — see `src/platform/auth/permissions.ts` for
-the full grant per role:
+All 82 operations, under `/api/v1`. Every route accepts a session cookie **or**
+a personal access token, *except* the inbound webhook — which authenticates
+itself by HMAC (see **Integrations**) — and `/security/tokens*`, which is
+session-only.
+
+Every route also requires a permission, enforced inside the use case it calls,
+not at the edge. The catalogue is `src/platform/auth/permissions.ts`; a token
+grants the intersection of its scopes with its owner's current permissions.
+The permission for each group is in its heading below.
+
+Conventions used in the table: **idem** = an `Idempotency-Key` header is
+required; **ver** = `If-Match` (or a body `version`) is required.
+
+### Accounts — `accounts.read` / `accounts.write` / `accounts.delete`
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/accounts` | `?months=&includeArchived=` — each item includes latest balance + monthly trend |
-| `POST` | `/accounts` | requires `Idempotency-Key` |
-| `GET` | `/accounts/{id}` | `?months=` — includes history, trend, and the provider link if synced |
-| `PATCH` | `/accounts/{id}` | requires `If-Match` or body `version` |
-| `DELETE` | `/accounts/{id}` | `?confirmSynced=true` to force-archive a synced account instead of erroring |
-| `POST` | `/accounts/{id}/balances` | requires `Idempotency-Key`; manual accounts only |
+| `GET` | `/accounts` | `?months=&includeArchived=` — each item carries the latest balance and a monthly trend |
+| `POST` | `/accounts` | **idem** |
+| `GET` | `/accounts/{id}` | `?months=` — history, trend, and the provider link if synced |
+| `PATCH` | `/accounts/{id}` | **ver** |
+| `DELETE` | `/accounts/{id}` | `?confirmSynced=true` to archive a synced account instead of erroring |
+| `POST` | `/accounts/{id}/balances` | **idem**; manual accounts only |
 | `GET` | `/accounts/{id}/balances` | cursor-paginated, newest first |
 | `GET` | `/account-groups` | |
 | `POST` | `/account-groups` | |
 | `PATCH` | `/account-groups/{id}` | |
 | `DELETE` | `/account-groups/{id}` | accounts in the group become ungrouped, not deleted |
 | `GET` | `/net-worth` | `?months=` — total and per-account monthly series |
+
+### Integrations — `integrations.manage`
+
+| Method | Path | Notes |
+|---|---|---|
 | `GET` | `/integrations` | every registered provider, with its connection when there is one |
-| `POST` | `/integrations/{provider}/connect` | stores and tests a credential; a failed test is still `200` |
+| `POST` | `/integrations/{provider}/connect` | stores and tests a credential; a failed test is still `200`, with the connection in `error` |
 | `POST` | `/integrations/{provider}/test` | re-tests the stored credential |
-| `POST` | `/integrations/{provider}/sync` | see **Breaking changes in Phase 2** below |
+| `POST` | `/integrations/{provider}/sync` | idempotent per running job; `kind` defaults to the provider's first declared sync |
 | `POST` | `/integrations/{provider}/disconnect` | destroys the credential and applies a disconnect policy |
-| `GET` | `/integrations/{provider}/sync-runs` | `?limit=` (1–10, default 10) — most recent first |
-| `POST` | `/webhooks/{provider}` | **not** session-authenticated — see **Integrations** below |
+| `GET` | `/integrations/{provider}/sync-runs` | `?limit=` (1–10, default 10), most recent first |
+| `PATCH` | `/integrations/{provider}/sync-jobs/{kind}` | `{"enabled":…}`; `422` when the provider is not connected; no **ver** (`sync_jobs` has no `version`) |
+| `POST` | `/webhooks/{provider}` | **public**, HMAC-verified — see **Integrations** above |
+
+### Expenses — `expenses.read` / `expenses.write`; management writes `finance.manage`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/transactions` | filters and cursor pagination |
+| `GET` | `/transactions/{id}` | |
+| `PATCH` | `/transactions/{id}` | **ver** |
+| `GET` | `/transactions/recurring-patterns` | detected recurring series |
+| `GET` | `/transaction-categories` | |
+| `GET` | `/transaction-labels` | |
+| `POST` | `/expenses/categories` | `finance.manage` |
+| `PATCH` | `/expenses/categories/{id}` | `finance.manage`; no **ver**; a provider-mirrored category refuses a rename |
+| `POST` | `/expenses/labels` | `finance.manage` |
+| `PATCH` | `/expenses/labels/{id}` | `finance.manage`; no **ver** |
+
+The read paths are `/transaction-*` and the write paths `/expenses/*`. That is
+not a typo: the reads shipped first, and renaming a published read path is a
+breaking change nothing asked for.
+
+### Interests — `interests.read` / `interests.write`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/interest-rules` | |
+| `POST` | `/interest-rules` | |
+| `GET` | `/interest-rules/{id}` | rule detail with accruals and posted entries |
+| `PATCH` | `/interest-rules/{id}` | **ver** |
+
+### Payroll — `payroll.read` / `payroll.upload` / `payroll.review` / `payroll.read_original`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/payroll/imports` | the review queue |
+| `POST` | `/payroll/imports` | `payroll.upload`; multipart |
+| `GET` | `/payroll/imports/{id}` | |
+| `POST` | `/payroll/imports/{id}/retry` | `payroll.review`; re-runs ingest |
+| `POST` | `/payroll/imports/{id}/verify` | `payroll.review` |
+| `POST` | `/payroll/imports/{id}/apply` | `payroll.review`; writes payroll records, fund contributions and time-off balances |
+| `POST` | `/payroll/imports/{id}/reject` | `payroll.review` |
+| `GET` | `/payroll/imports/{id}/original` | `payroll.read_original`; streams the stored document |
+| `GET` | `/payroll/records` | |
+| `GET` | `/payroll/records/{id}` | |
+| `GET` | `/payroll/earnings` | the Earnings series |
+| `GET` | `/payroll/mapping-rules` | `payroll.review`; globals merged with the caller's own, in classifier order |
+| `POST` | `/payroll/mapping-rules` | `priority` defaults to `100 + n` |
+| `PATCH` | `/payroll/mapping-rules/{id}` | **ver**; user rules only |
+| `DELETE` | `/payroll/mapping-rules/{id}` | `204`; user rules only |
+
+### Funds — `funds.read` / `funds.write`; cross-domain issues `finance.manage`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/funds` | |
+| `POST` | `/funds` | |
+| `GET` | `/funds/{id}` | detail with schedules, plans, months and issues |
+| `PATCH` | `/funds/{id}` | **ver** |
+| `POST` | `/funds/{id}/schedules` | effective-dated contribution schedule |
+| `POST` | `/funds/{id}/plans` | effective-dated plan |
+| `GET` | `/funds/{id}/contributions` | by posted-month range |
+| `POST` | `/funds/{id}/contributions` | **idem** |
+| `POST` | `/funds/{id}/contributions/{cid}/reverse` | **idem**; writes a compensating row, never edits the original |
+| `POST` | `/funds/{id}/reconcile` | detects and resolves reconciliation issues |
+| `POST` | `/funds/issues/{issueId}/acknowledge` | `funds.write`; "seen", on a fund issue this caller owns |
+| `GET` | `/reconciliation/issues` | `finance.manage`; `?domain=&status=&severity=&cursor=&limit=` across domains |
+| `POST` | `/reconciliation/issues/{issueId}/resolve` | `finance.manage`; "dealt with"; `404` if already resolved |
+
+### Budgets — `budgets.read` / `budgets.write`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/budgets` | `?includeArchived=` |
+| `POST` | `/budgets` | creates the budget and its first amount version |
+| `GET` | `/budgets/{id}` | full detail; refreshes scope-matched usages as a side effect |
+| `PATCH` | `/budgets/{id}` | **ver**; archive with `{"status":"archived"}` |
+| `POST` | `/budgets/{id}/amount-versions` | a new initial amount, effective from a date |
+| `POST` | `/budgets/{id}/allocations` | virtual — never moves money |
+| `PATCH` | `/budgets/{id}/allocations/{aid}` | **ver**; ends an allocation with `effectiveTo` |
+| `PUT` | `/budgets/{id}/scopes` | replaces the whole scope set |
+| `POST` | `/budgets/{id}/usages` | **idem**; a manual usage row |
+| `DELETE` | `/budgets/{id}/usages/{uid}` | `204`; manual rows only |
+| `POST` | `/budgets/{id}/refresh` | recomputes scope-matched usage; `{ inserted, updated, deleted }` |
+
+### Time off — `timeoff.read` / `timeoff.write`
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/timeoff/types` | seeds the defaults on the first call |
+| `GET` | `/timeoff/workspace` | `?year=&date=` — one year in a single read |
+| `GET` | `/timeoff/events` | `?from=&to=` |
+| `PUT` | `/timeoff/events/{date}` | upsert; no **idem** (the date is the key); weekends `422` |
+| `DELETE` | `/timeoff/events/{date}` | `204` |
+| `GET` | `/timeoff/balances` | `?year=` |
+
+### Security — no permission code, session-only
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/security/tokens` | the `201` body carries `token` once |
+| `GET` | `/security/tokens` | never the token or its hash |
+| `DELETE` | `/security/tokens/{id}` | `204` |
+
 
 See [`openapi.json`](./openapi.json) for the full request/response schemas,
 or serve it with any Swagger UI / Redoc instance pointed at

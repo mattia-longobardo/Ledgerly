@@ -9,6 +9,9 @@
  * `TEST_DATABASE_URL` is deliberately NOT set here: the vitest config already
  * supplies it, and `src/test/db.ts` refuses to run without it.
  */
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { resetEnvCache } from "@/lib/env";
 
 const KEY = `itest:${Buffer.alloc(32, 11).toString("base64")}`;
@@ -23,11 +26,11 @@ Object.assign(process.env, {
   OIDC_CLIENT_ID: "client",
   OIDC_CLIENT_SECRET: "secret",
   AUTHORIZED_SUB: "sub-123",
-  PAPERLESS_URL: "https://paperless.example.test",
-  PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
   WALLET_API_URL: "https://wallet.example.test/wallet/v1/api",
+  DOCUMENT_STORE_DRIVER: "local",
+  DOCUMENT_STORE_LOCAL_PATH: mkdtempSync(join(tmpdir(), "payroll-itest-")),
   // Every itest that seals a credential without building its own cipher opens
   // it again under this key. A test that wants its own key sets
   // `process.env.APP_ENCRYPTION_KEY` and calls `resetCredentialCipher()`.

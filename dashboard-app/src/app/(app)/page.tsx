@@ -6,18 +6,22 @@ import { AccountList, AccountRow } from "@/components/ui/AccountRow";
 import { DeltaBadge } from "@/components/ui/DeltaBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyValue } from "@/components/ui/MoneyValue";
-import { ProgressRing } from "@/components/ui/ProgressRing";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { deltaOverRange } from "@/lib/calc/series";
-import { formatDateLine, formatDays, formatNumber } from "@/lib/format";
+import { formatDateLine } from "@/lib/format";
 import type { Series } from "@/lib/contracts";
 import { loadOverview, type SourceFreshness } from "@/modules/accounts/ui/load-overview";
-import { cardState, visibleCards, type CardKey } from "@/modules/home/cards";
+import { activeBudgetsCard, loadBudgets } from "@/modules/budgets/ui/load-budgets";
+import { cardState, shouldLoadCardData, visibleCards, type CardKey } from "@/modules/home/cards";
+import type { FundSummary } from "@/modules/funds/application/summary";
+import { CurrencyValue } from "@/modules/funds/ui/CurrencyValue";
+import { fundValueCurrency, loadFundsSummary, totalFundValue } from "@/modules/funds/ui/load-funds";
+import { loadImports, type ImportRow } from "@/modules/payroll/ui/load-payroll";
+import { loadTimeoffSummary, type TimeoffSummary } from "@/modules/timeoff/ui/load-workspace";
+import { AWAITING_STATUSES } from "@/modules/payroll/ui/queue";
 import { requirePrincipalOrRedirect } from "@/platform/auth/require-principal";
 import { realProbes } from "@/platform/capabilities/probes";
 import { resolveCapabilities } from "@/platform/capabilities/resolve";
-import { loadFunds, type FundView } from "./finance/_lib/funds";
-import { loadFerie } from "./_lib/vacation";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };
@@ -60,37 +64,30 @@ function PermissionDeniedPanel({ span, title }: { span: 4 | 6 | 8 | 12; title: s
   );
 }
 
-/** Σ of the funds' latest known values — null only when every fund is unvalued, never a zero. */
-function totalFundValue(funds: readonly FundView[]): {
-  value: number | null;
-  capturedAt: Date | null;
-  stale: boolean;
-} {
-  let value: number | null = null;
-  let capturedAt: Date | null = null;
-  let stale = false;
-  for (const f of funds) {
-    if (f.value !== null) value = (value ?? 0) + f.value;
-    if (f.capturedAt && (!capturedAt || f.capturedAt < capturedAt)) capturedAt = f.capturedAt;
-    if (f.stale) stale = true;
-  }
-  return { value, capturedAt, stale };
-}
-
 export default async function HomePage() {
   const principal = await requirePrincipalOrRedirect();
   const caps = await resolveCapabilities(principal, realProbes);
   const visible = visibleCards(caps);
   const isVisible = (key: CardKey) => visible.some((c) => c.key === key);
+  const shouldLoad = (key: CardKey) => {
+    const card = visible.find((candidate) => candidate.key === key);
+    return card !== undefined && shouldLoadCardData(card, caps);
+  };
   const denial = (key: CardKey) => {
     const card = visible.find((c) => c.key === key);
     return card ? cardState(card, caps) : null;
   };
 
-  const [overview, funds, ferie] = await Promise.all([
+  const [overview, funds, budgets, timeoff, imports] = await Promise.all([
     isVisible("total_balance") || isVisible("accounts_sync") ? loadOverview() : null,
-    isVisible("funds") ? loadFunds() : null,
-    isVisible("leave") ? loadFerie() : null,
+    shouldLoad("funds") ? loadFundsSummary() : null,
+    shouldLoad("budgets") ? loadBudgets() : null,
+    isVisible("leave") ? loadTimeoffSummary() : null,
+    // Safe to call unconditionally behind `isVisible`: this card requires the
+    // `payroll` feature, which `resolveCapabilities` only turns on once a
+    // document store is actually connected — the same guarantee `/company`
+    // and `/company/payroll` rely on before calling into this module.
+    isVisible("payroll_imports") ? loadImports() : null,
   ]);
 
   return (
@@ -109,7 +106,7 @@ export default async function HomePage() {
           (denial("leave") ? (
             <PermissionDeniedPanel span={4} title="Leave" />
           ) : (
-            <LeaveCard ferie={ferie!} />
+            <LeaveCard summary={timeoff!} />
           ))}
 
         {isVisible("accounts_sync") &&
@@ -124,6 +121,20 @@ export default async function HomePage() {
             <PermissionDeniedPanel span={4} title="Funds" />
           ) : (
             <FundsCard funds={funds!} />
+          ))}
+
+        {isVisible("budgets") &&
+          (denial("budgets") ? (
+            <PermissionDeniedPanel span={4} title="Budgets" />
+          ) : (
+            <BudgetsCard summaries={budgets!} />
+          ))}
+
+        {isVisible("payroll_imports") &&
+          (denial("payroll_imports") ? (
+            <PermissionDeniedPanel span={4} title="Payroll imports" />
+          ) : (
+            <PayrollImportsCard imports={imports!} />
           ))}
       </PageGrid>
     </>
@@ -221,10 +232,22 @@ function TotalBalanceCards({ overview }: { overview: Awaited<ReturnType<typeof l
   );
 }
 
-/** `leave`: unchanged from before this task — payslip-authoritative residuals, shown in days. */
-function LeaveCard({ ferie }: { ferie: Awaited<ReturnType<typeof loadFerie>> }) {
-  const remainingDays = ferie.remaining.combinedDays;
-  const ringMax = (remainingDays ?? 0) + ferie.takenDaysYtd;
+/**
+ * `leave`: the remaining balance across every time off type, from the same
+ * workspace read `/company/time-off` renders — so the card and the page can
+ * never disagree.
+ *
+ * The caption NAMES the types behind the figure rather than claiming a total:
+ * a payslip states `vacation` and `permits` but typically never `comp`, so
+ * "across every type" would report a partial sum as a whole one.
+ *
+ * "—" when no payslip has ever written a balance. There is no ring any more:
+ * a ring needs a total allowance to fill against, and this module records what
+ * a payslip states as REMAINING, not an entitlement — the old ring's maximum
+ * was remaining + taken, which is an invented denominator.
+ */
+function LeaveCard({ summary }: { summary: TimeoffSummary }) {
+  const next = summary.upcoming[0] ?? null;
 
   return (
     <Panel
@@ -232,31 +255,32 @@ function LeaveCard({ ferie }: { ferie: Awaited<ReturnType<typeof loadFerie>> }) 
       spanMd={4}
       title="Leave"
       action={
-        <Link href="/work" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
-          Go to Work
+        <Link
+          href="/company/time-off"
+          className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover"
+        >
+          Go to Time Off
         </Link>
       }
-      bodyClassName="axis-rule flex items-center gap-4 pb-6"
     >
-      <ProgressRing
-        value={remainingDays ?? 0}
-        max={ringMax > 0 ? ringMax : 1}
-        label="Leave remaining this year"
-      >
-        <span className="text-caption">{formatNumber(remainingDays)}</span>
-      </ProgressRing>
-      <div className="min-w-0">
-        <div className="text-caption tracking-wide text-fg-muted uppercase">Ferie + ROL</div>
-        <div className="num text-display-sm text-fg">
-          {remainingDays === null ? "-" : formatDays(remainingDays)}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="num text-caption text-fg-muted">
-            {formatNumber(ferie.takenDaysYtd)} d taken in {ferie.year}
-          </span>
-          <StaleBadge capturedAt={ferie.latest?.verifiedAt ?? null} stale={ferie.latest === null} />
-        </div>
+      <div className="num text-display-sm text-fg">
+        {summary.remainingDays === null ? "—" : `${summary.remainingDays} d`}
       </div>
+      <p className="mt-1 text-caption text-fg-muted">
+        {summary.remainingDays === null
+          ? "No payslip balance on file yet."
+          : `remaining (${summary.remainingByType.map((t) => t.label).join(", ")})`}
+      </p>
+      {next !== null && (
+        <p className="num mt-2 text-body-sm text-fg-muted">
+          Next: {next.date} · {next.typeCode}
+        </p>
+      )}
+      {summary.pendingCount > 0 && (
+        <p className="mt-1 text-caption text-fg-muted">
+          {summary.pendingCount} day{summary.pendingCount === 1 ? "" : "s"} waiting for the Trek sync
+        </p>
+      )}
     </Panel>
   );
 }
@@ -292,8 +316,12 @@ function AccountsSyncCard({ sources }: { sources: readonly SourceFreshness[] }) 
 }
 
 /** `funds`: the total of the same per-fund figures the Funds page shows individually. */
-function FundsCard({ funds }: { funds: readonly FundView[] }) {
+function FundsCard({ funds }: { funds: readonly FundSummary[] }) {
   const total = totalFundValue(funds);
+  const currency = fundValueCurrency(funds);
+  const valuedCurrencies = new Set(funds.filter((fund) => fund.value !== null).map((fund) => fund.fund.currency));
+  const valueDates = funds.flatMap((fund) => fund.valueAsOf ? [new Date(`${fund.valueAsOf}T12:00:00Z`)] : []);
+  const asOf = valueDates.length === 0 ? null : new Date(Math.min(...valueDates.map((date) => date.getTime())));
 
   return (
     <Panel
@@ -310,10 +338,87 @@ function FundsCard({ funds }: { funds: readonly FundView[] }) {
         <p className="text-body-sm text-fg-muted">No funds registered.</p>
       ) : (
         <>
-          <MoneyValue value={total.value} size="display-sm" cents="muted" />
-          <div className="mt-2">
-            <StaleBadge capturedAt={total.capturedAt} stale={total.stale} />
-          </div>
+          {total.value !== null && currency !== null ? (
+            <CurrencyValue value={total.value} currency={currency} size="display-sm" />
+          ) : (
+            <p className="text-body-sm text-fg-muted">
+              {valuedCurrencies.size > 1 ? "Values span multiple currencies." : "No fund valuations yet."}
+            </p>
+          )}
+          {total.unvalued > 0 && <p className="mt-1 text-caption text-fg-muted">{total.unvalued} fund{total.unvalued === 1 ? "" : "s"} without a valuation</p>}
+          {asOf && <div className="mt-2"><StaleBadge capturedAt={asOf} /></div>}
+        </>
+      )}
+    </Panel>
+  );
+}
+
+/**
+ * `budgets`: the count of active budgets and their combined remaining, via
+ * the same pure `activeBudgetsCard` helper the Home card's own unit test
+ * exercises directly (a `.test.tsx` never runs, so this component is a thin
+ * wrapper — the logic worth testing lives in that helper, not here).
+ */
+function BudgetsCard({ summaries }: { summaries: Awaited<ReturnType<typeof loadBudgets>> }) {
+  const { count, remaining } = activeBudgetsCard(summaries);
+
+  return (
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Budgets"
+      action={
+        <Link href="/finance/budgets" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          View all
+        </Link>
+      }
+    >
+      {count === 0 ? (
+        <p className="text-body-sm text-fg-muted">No active budgets.</p>
+      ) : (
+        <>
+          {remaining === null ? (
+            <p className="text-body-sm text-fg-muted">Budgets span multiple currencies.</p>
+          ) : (
+            <MoneyValue value={remaining} size="display-sm" />
+          )}
+          <p className="mt-1 text-caption text-fg-muted">
+            {count} active budget{count === 1 ? "" : "s"}
+          </p>
+        </>
+      )}
+    </Panel>
+  );
+}
+
+/**
+ * `payroll_imports`: how many payslips are still waiting for a decision, using
+ * the same `AWAITING_STATUSES` the review queue itself is built from (Ruling
+ * from Finding 3's fix) — so this count and the queue a reviewer opens by
+ * following it always agree on what "still waiting" means.
+ */
+function PayrollImportsCard({ imports }: { imports: readonly ImportRow[] }) {
+  const pending = imports.filter((row) => (AWAITING_STATUSES as readonly string[]).includes(row.status)).length;
+
+  return (
+    <Panel
+      span={4}
+      spanMd={4}
+      title="Payroll imports"
+      action={
+        <Link href="/company/payroll" className="text-body-sm font-medium text-accent transition-colors hover:text-accent-hover">
+          Go to Payroll
+        </Link>
+      }
+    >
+      {pending === 0 ? (
+        <p className="text-body-sm text-fg-muted">Nothing is waiting for review.</p>
+      ) : (
+        <>
+          <span className="num text-display-sm text-fg">{pending}</span>
+          <p className="mt-1 text-body-sm text-fg-muted">
+            {pending === 1 ? "payslip waiting for review" : "payslips waiting for review"}
+          </p>
         </>
       )}
     </Panel>

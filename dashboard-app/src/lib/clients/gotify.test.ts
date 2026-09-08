@@ -9,8 +9,6 @@ const BASE_ENV: Record<string, string> = {
   OIDC_CLIENT_ID: "client",
   OIDC_CLIENT_SECRET: "secret",
   AUTHORIZED_SUB: "sub-123",
-  PAPERLESS_URL: "https://paperless.example.test",
-  PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
   APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,

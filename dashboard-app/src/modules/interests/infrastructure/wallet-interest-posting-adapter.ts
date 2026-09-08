@@ -70,8 +70,10 @@ function buildNote(rule: InterestRule, accrual: InterestAccrual): string {
  * in the note actually written to Wallet, and in the crash-recovery query
  * below), makes the marker unique per rule by construction — two rules can
  * never collide, and the query's substring match becomes far more selective
- * as a side effect. Safe to change freely: nothing has posted in production
- * (Phase 3 is not deployed).
+ * as a side effect. This was safe to change freely when it was written —
+ * nothing had posted in production yet. Interests has been deployed since;
+ * changing the marker shape now orphans any marker already written to Wallet,
+ * so a change needs a migration of the notes, not just an edit here.
  */
 function scopedNoteMarker(rule: InterestRule): string {
   return `${rule.noteMarker}:${rule.id}`;

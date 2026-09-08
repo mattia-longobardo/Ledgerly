@@ -28,9 +28,27 @@ const schema = z.object({
 
   WALLET_API_URL: z.url().default("https://rest.budgetbakers.com/wallet/v1/api"),
 
-  PAPERLESS_URL: z.url(),
-  PAPERLESS_TOKEN: z.string().min(1),
-  PAPERLESS_PAYSLIP_TAG_ID: z.coerce.number().int().default(22),
+  /**
+   * Where payslip originals live (Ruling R4-1). `silo` reads the endpoint,
+   * bucket and credentials from the user's `payroll_silo` integration
+   * connection — no secret in the environment. `local` writes into
+   * `DOCUMENT_STORE_LOCAL_PATH` and is a development and test driver only
+   * (Ruling R4-16): the production container is read-only.
+   *
+   * Defaulted, not required: this phase adds no required environment variable.
+   */
+  DOCUMENT_STORE_DRIVER: z.enum(["silo", "local"]).default("silo"),
+  DOCUMENT_STORE_LOCAL_PATH: z.preprocess(blankToUndefined, z.string().optional()),
+
+  /**
+   * Spec §13.3: the boundary is always there; the scanner is a deployment
+   * choice. `none` (the default) records `scanner: "none"` on every import it
+   * clears, so "nothing scanned this" is a fact on the row rather than an
+   * assumption. `clamd` needs a reachable clamd on CLAMD_HOST:CLAMD_PORT.
+   */
+  MALWARE_SCANNER: z.enum(["none", "clamd"]).default("none"),
+  CLAMD_HOST: z.preprocess(blankToUndefined, z.string().default("clamav")),
+  CLAMD_PORT: z.coerce.number().int().positive().default(3310),
 
   CRON_SECRET: z.string().min(16),
   WEBHOOK_SECRET: z.string().min(16),

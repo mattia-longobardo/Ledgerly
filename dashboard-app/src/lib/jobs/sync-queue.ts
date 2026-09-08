@@ -20,7 +20,9 @@ export interface RunSyncQueueInput {
  * state, and a run that failed has already recorded why on its own row — the
  * Integrations page shows it, and alerting here would duplicate that hourly.
  * The advisory lock is belt and braces: `runs.claim` already makes a double
- * execution impossible, so a second tick would simply find nothing.
+ * execution impossible, so a second tick would simply find nothing. It is
+ * session-level (Ruling R9-1), so each drained run keeps its own short
+ * transactions and the provider I/O between them runs outside one.
  *
  * `ensureProvidersRegistered()` runs first because a queued row can name any
  * registered provider's kind: draining against an empty registry would resolve

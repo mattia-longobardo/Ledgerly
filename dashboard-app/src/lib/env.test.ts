@@ -12,8 +12,6 @@ Object.assign(process.env, {
   OIDC_CLIENT_ID: "dashboard",
   OIDC_CLIENT_SECRET: "client-secret",
   AUTHORIZED_SUB: "00000000-0000-0000-0000-000000000001",
-  PAPERLESS_URL: "https://paperless.example",
-  PAPERLESS_TOKEN: "paperless-token",
   CRON_SECRET: "c".repeat(20),
   WEBHOOK_SECRET: "w".repeat(20),
   APP_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
@@ -30,5 +28,34 @@ describe("resetEnvCache", () => {
     process.env.CRON_SECRET = "y".repeat(20);
     resetEnvCache();
     expect(env().CRON_SECRET).toBe("y".repeat(20));
+  });
+});
+
+describe("DOCUMENT_STORE_DRIVER", () => {
+  it("defaults the document store driver to silo and leaves the local path unset", () => {
+    delete process.env.DOCUMENT_STORE_DRIVER;
+    delete process.env.DOCUMENT_STORE_LOCAL_PATH;
+    resetEnvCache();
+    const parsed = env();
+    expect(parsed.DOCUMENT_STORE_DRIVER).toBe("silo");
+    expect(parsed.DOCUMENT_STORE_LOCAL_PATH).toBeUndefined();
+  });
+});
+
+describe("MALWARE_SCANNER", () => {
+  it("defaults the malware scanner to none, so the boundary is present and inert", () => {
+    delete process.env.MALWARE_SCANNER;
+    delete process.env.CLAMD_PORT;
+    resetEnvCache();
+    const parsed = env();
+    expect(parsed.MALWARE_SCANNER).toBe("none");
+    expect(parsed.CLAMD_PORT).toBe(3310);
+  });
+});
+
+describe("Paperless", () => {
+  it("no longer knows about Paperless", () => {
+    resetEnvCache();
+    expect(Object.keys(env())).not.toContain("PAPERLESS_URL");
   });
 });

@@ -79,6 +79,8 @@ export interface SyncJobsRepository {
   find(connectionId: string, kind: SyncKind): Promise<SyncJob | null>;
   listForConnection(connectionId: string): Promise<SyncJob[]>;
   setCursor(id: string, cursor: unknown): Promise<void>;
+  /** Switches one kind off without disconnecting the provider (Ruling P2-C4). Null when the row is gone. */
+  setEnabled(id: string, enabled: boolean): Promise<SyncJob | null>;
 }
 
 export interface NewSyncRun {
@@ -121,4 +123,31 @@ export interface WebhookDelivery {
 
 export interface WebhookDeliveriesRepository {
   record(input: WebhookDelivery): Promise<void>;
+  /**
+   * The earliest inbound delivery of this exact body that THIS connection
+   * actually accepted *and queued work for* since `since`, or null when this
+   * body is new for it.
+   *
+   * Rows recorded for a duplicate are excluded (Ruling P9-7): they too are
+   * `status: "accepted"` — the delivery was answered 202 — but they carry the
+   * reserved `duplicate` event, and letting one anchor the window would make
+   * the window self-renewing. Every replay would then push the deadline
+   * forward by its own arrival time, and a provider whose bodies carry no
+   * event identity (`{"event":"accounts.changed"}`, hashed on the raw body)
+   * would have its sync queued exactly once, ever.
+   *
+   * Keyed by `(connection_id, payload_hash)` and not by `(provider,
+   * payload_hash)` (Ruling P9-5): a provider payload need carry nothing
+   * user-specific — `{"event":"accounts.changed"}` is a real example — so two
+   * connections of the same provider, belonging to two people, routinely
+   * produce the same hash. A provider-wide key would answer the second one
+   * `duplicate` and drop its sync behind a 202, losing work silently. The
+   * signature already told us which connection this delivery is for; the replay
+   * question is only ever "have I already accepted this body for *that* one".
+   */
+  findAccepted(
+    connectionId: string,
+    payloadHash: string,
+    since: Date,
+  ): Promise<{ connectionId: string | null; receivedAt: Date } | null>;
 }

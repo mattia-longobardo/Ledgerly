@@ -18,7 +18,7 @@ export async function setHoursPerDay(input: unknown): Promise<ActionResult<null>
 
   await setSetting(SETTING_KEYS.hoursPerDay, parsed.data);
   revalidatePath("/");
-  revalidatePath("/work");
+  revalidatePath("/company/time-off");
   revalidatePath("/settings");
   return succeed(null);
 }

@@ -1,6 +1,8 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDb, resetDb, testDb } from "@/test/db";
-import { organizations, users } from "@/lib/db/schema";
+import { budgetAllocations, budgets, interestRules, organizations, users } from "@/lib/db/schema";
+import { withUserContext } from "@/platform/db/context";
 import { createApiApp, type ApiDeps } from "@/platform/http/app";
 import { permissionsForRoles, type RoleCode } from "@/platform/auth/permissions";
 import type { Principal } from "@/platform/auth/principal";
@@ -159,6 +161,77 @@ describe("accounts routes", () => {
     const delBody = await del.json();
     expect(DeleteAccountResponseSchema.parse(delBody)).toBeTruthy();
     expect(delBody.outcome).toBe("deleted");
+  });
+
+  /**
+   * Ruling P9-8. `hasReferences` answered `false` unconditionally, so this
+   * endpoint hard-deleted a referenced manual account: the interest rule went
+   * with it through `ON DELETE CASCADE` (and the accruals under the rule with
+   * that), and the budget allocation was left pointing at an account that no
+   * longer existed. The unreferenced case above still hard-deletes, which is
+   * the half that had to keep working.
+   */
+  it("archives rather than deletes a manual account something still references", async () => {
+    const { app, userA } = await seed();
+    const db = await testDb();
+    const h = headers(userA.id);
+
+    // Account creation is one of the idempotent writes, so each POST carries
+    // its own key.
+    async function makeAccount(name: string): Promise<string> {
+      const res = await app.request("/api/v1/accounts", {
+        method: "POST",
+        headers: headers(userA.id, { "idempotency-key": name }),
+        body: JSON.stringify({ name, type: "checking" }),
+      });
+      expect(res.status).toBe(201);
+      return (await res.json()).id as string;
+    }
+
+    const withRule = await makeAccount("Has an interest rule");
+    const withAllocation = await makeAccount("Funds a budget");
+
+    const [ruleId, allocationId] = await withUserContext(db, { userId: userA.id }, async (tx) => {
+      const [rule] = await tx
+        .insert(interestRules)
+        .values({ userId: userA.id, accountId: withRule, annualRate: "0.022500", effectiveFrom: "2026-01-01" })
+        .returning();
+      const [budget] = await tx
+        .insert(budgets)
+        .values({ userId: userA.id, name: "Holidays", startDate: "2026-01-01" })
+        .returning();
+      const [allocation] = await tx
+        .insert(budgetAllocations)
+        .values({
+          budgetId: budget!.id,
+          sourceKind: "account",
+          sourceId: withAllocation,
+          amount: "200.00",
+          effectiveFrom: "2026-01-01",
+        })
+        .returning();
+      return [rule!.id, allocation!.id];
+    });
+
+    for (const id of [withRule, withAllocation]) {
+      const del = await app.request(`/api/v1/accounts/${id}`, { method: "DELETE", headers: h });
+      expect(del.status).toBe(200);
+      expect((await del.json()).outcome).toBe("archived");
+
+      // Still readable — archived, not gone. The detail route wraps the row.
+      const after = await app.request(`/api/v1/accounts/${id}`, { headers: h });
+      expect(after.status).toBe(200);
+      expect((await after.json()).account.status).toBe("archived");
+    }
+
+    // The rows the hard delete would have taken with it, or orphaned.
+    const survivors = await withUserContext(db, { userId: userA.id }, async (tx) => ({
+      rules: await tx.select().from(interestRules).where(eq(interestRules.id, ruleId)),
+      allocations: await tx.select().from(budgetAllocations).where(eq(budgetAllocations.id, allocationId)),
+    }));
+    expect(survivors.rules).toHaveLength(1);
+    expect(survivors.allocations).toHaveLength(1);
+    expect(survivors.allocations[0]!.sourceId).toBe(withAllocation);
   });
 
   it("account detail returns 404 for an id the caller does not own or that does not exist", async () => {

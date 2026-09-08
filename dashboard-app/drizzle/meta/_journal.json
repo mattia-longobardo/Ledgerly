@@ -106,6 +106,41 @@
       "when": 1788592866677,
       "tag": "0014_interest_posting_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1788603809877,
+      "tag": "0015_payroll",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788700738490,
+      "tag": "0016_funds",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788711096066,
+      "tag": "0017_budgets",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788810925220,
+      "tag": "0018_timeoff_and_drop_legacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788873107586,
+      "tag": "0019_personal_access_tokens",
+      "breakpoints": true
     }
   ]
 }

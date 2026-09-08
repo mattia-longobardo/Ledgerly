@@ -1,9 +1,10 @@
 import { createRoute } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import type { MonthPoint } from "@/lib/contracts";
 import { UpstreamError } from "@/lib/contracts";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
-import { idempotency } from "@/platform/http/idempotency";
+import { runFinancialWrite } from "@/platform/http/financial-write";
 import { parseExpectedVersion } from "@/platform/http/versioning";
 import { assertPermission } from "@/platform/auth/principal";
 import { withUserContext } from "@/platform/db/context";
@@ -166,7 +167,7 @@ const listAccountsRoute = createRoute({
   method: "get",
   path: "/accounts",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: ListAccountsQuerySchema },
   responses: {
     200: {
@@ -181,7 +182,7 @@ const createAccountRoute = createRoute({
   method: "post",
   path: "/accounts",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header.",
   request: { body: { content: { "application/json": { schema: CreateAccountRequestSchema } } } },
   responses: {
@@ -196,7 +197,7 @@ const getAccountRoute = createRoute({
   method: "get",
   path: "/accounts/{id}",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: AccountIdParamSchema, query: AccountDetailQuerySchema },
   responses: {
     200: { description: "Account detail.", content: { "application/json": { schema: AccountDetailSchema } } },
@@ -209,7 +210,7 @@ const updateAccountRoute = createRoute({
   method: "patch",
   path: "/accounts/{id}",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Send the current version in the `If-Match` header (or `version` in the body).",
   request: {
     params: AccountIdParamSchema,
@@ -229,7 +230,7 @@ const deleteAccountRoute = createRoute({
   method: "delete",
   path: "/accounts/{id}",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: {
     params: AccountIdParamSchema,
     query: DeleteAccountQuerySchema,
@@ -249,7 +250,7 @@ const recordBalanceRoute = createRoute({
   method: "post",
   path: "/accounts/{id}/balances",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Requires an `Idempotency-Key` header. Manual accounts only.",
   request: {
     params: AccountIdParamSchema,
@@ -268,7 +269,7 @@ const listBalancesRoute = createRoute({
   method: "get",
   path: "/accounts/{id}/balances",
   tags: ["Accounts"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Newest first. `cursor` is the base64url of the previous page's last `asOf`.",
   request: { params: AccountIdParamSchema, query: BalancesQuerySchema },
   responses: {
@@ -282,7 +283,7 @@ const listGroupsRoute = createRoute({
   method: "get",
   path: "/account-groups",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: {
     200: { description: "The caller's account groups.", content: { "application/json": { schema: AccountGroupListResponseSchema } } },
     ...commonErrorResponses,
@@ -293,7 +294,7 @@ const createGroupRoute = createRoute({
   method: "post",
   path: "/account-groups",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { body: { content: { "application/json": { schema: CreateGroupRequestSchema } } } },
   responses: {
     201: { description: "The created group.", content: { "application/json": { schema: AccountGroupSchema } } },
@@ -306,7 +307,7 @@ const renameGroupRoute = createRoute({
   method: "patch",
   path: "/account-groups/{id}",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: {
     params: GroupIdParamSchema,
     body: { content: { "application/json": { schema: RenameGroupRequestSchema } } },
@@ -323,7 +324,7 @@ const deleteGroupRoute = createRoute({
   method: "delete",
   path: "/account-groups/{id}",
   tags: ["Account groups"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: GroupIdParamSchema },
   responses: {
     200: {
@@ -339,7 +340,7 @@ const netWorthRoute = createRoute({
   method: "get",
   path: "/net-worth",
   tags: ["Net worth"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { query: NetWorthQuerySchema },
   responses: {
     200: { description: "Net worth over time.", content: { "application/json": { schema: NetWorthSeriesSchema } } },
@@ -348,9 +349,6 @@ const netWorthRoute = createRoute({
 });
 
 export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
-  app.on("POST", "/accounts", idempotency({ db: deps.db, now: deps.now }));
-  app.on("POST", "/accounts/:id/balances", idempotency({ db: deps.db, now: deps.now }));
-
   app.openapi(listAccountsRoute, async (c) => {
     const principal = c.get("principal");
     const query = c.req.valid("query");
@@ -381,10 +379,15 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
     const principal = c.get("principal");
     const body = c.req.valid("json");
     try {
-      const account = await withUserContext(deps.db, { userId: principal.userId }, (tx) =>
-        createManualAccount(accountDeps(tx, c.get("requestId")))(principal, body),
-      );
-      return c.json(accountDto(account), 201);
+      // The insert, its audit row and the idempotency row all commit in the
+      // one transaction `runFinancialWrite` opens, serialized per
+      // (namespace, principal, key) — see that helper's comment for why the
+      // plain `idempotency()` middleware's three separate transactions let
+      // two concurrent retries with one key both get past the cache check.
+      const result = await runFinancialWrite(deps, "accounts", principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, async (tx) => accountDto(await createManualAccount(accountDeps(tx, c.get("requestId")))(principal, body)));
+      return c.json(result.body, result.status as 201);
     } catch (err) {
       throw toApiError(err);
     }
@@ -450,13 +453,18 @@ export function registerAccountRoutes(app: ApiApp, deps: ApiDeps): void {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     try {
-      const recorded = await withUserContext(deps.db, { userId: principal.userId }, async (tx) => {
+      // This route writes a money figure into `account_balances`, so it needs
+      // the same one-transaction guarantee as any other financial write: two
+      // concurrent retries carrying one key must not both insert a row.
+      const result = await runFinancialWrite(deps, "accounts", principal.userId, {
+        key: c.req.header("idempotency-key"), method: c.req.method, path: c.req.path, body: await c.req.text(),
+      }, async (tx) => {
         const useCaseDeps = accountDeps(tx, c.get("requestId"));
         await recordManualBalance(useCaseDeps)(principal, id, body);
         const history = await useCaseDeps.accounts.history(principal.userId, [id], body.asOf);
-        return history.find((p) => p.asOf === body.asOf && p.source === "manual") ?? history[history.length - 1]!;
+        return balancePointDto(history.find((p) => p.asOf === body.asOf && p.source === "manual") ?? history[history.length - 1]!);
       });
-      return c.json(balancePointDto(recorded), 201);
+      return c.json(result.body, result.status as 201);
     } catch (err) {
       throw toApiError(err);
     }

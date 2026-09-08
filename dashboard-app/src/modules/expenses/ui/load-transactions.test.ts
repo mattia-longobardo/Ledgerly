@@ -5,6 +5,7 @@ import {
   MemoryRecurringPatternsRepository,
   MemoryTransactionsRepository,
 } from "../infrastructure/memory-repositories";
+import { MemoryProviderLinksRepository } from "@/modules/accounts/infrastructure/memory-repositories";
 import { testPrincipal } from "@/test/principal";
 import { setExpenseDepsFactoryForTests, setPrincipalForTests } from "./run";
 import { loadRecurringPatterns, loadTransactionDetail, loadTransactionsPage } from "./load-transactions";
@@ -16,6 +17,9 @@ describe("loadTransactionsPage", () => {
       categories: new MemoryCategoriesRepository(),
       labels: new MemoryLabelsRepository(),
       recurring: new MemoryRecurringPatternsRepository(),
+      // Unused by the loader, but `expenseDeps` carries it (for
+      // `updateCategory`), so the fake has to have the same shape.
+      links: new MemoryProviderLinksRepository(),
       clock: { now: () => new Date("2026-09-05T00:00:00Z") },
       audit: async () => {},
     };
@@ -70,6 +74,9 @@ describe("loadTransactionDetail", () => {
       categories: new MemoryCategoriesRepository(),
       labels: new MemoryLabelsRepository(),
       recurring: new MemoryRecurringPatternsRepository(),
+      // Unused by the loader, but `expenseDeps` carries it (for
+      // `updateCategory`), so the fake has to have the same shape.
+      links: new MemoryProviderLinksRepository(),
       clock: { now: () => new Date("2026-09-05T00:00:00Z") },
       audit: async () => {},
     };
@@ -89,6 +96,9 @@ describe("loadRecurringPatterns", () => {
       categories: new MemoryCategoriesRepository(),
       labels: new MemoryLabelsRepository(),
       recurring: new MemoryRecurringPatternsRepository(),
+      // Unused by the loader, but `expenseDeps` carries it (for
+      // `updateCategory`), so the fake has to have the same shape.
+      links: new MemoryProviderLinksRepository(),
       clock: { now: () => new Date("2026-09-05T00:00:00Z") },
       audit: async () => {},
     };

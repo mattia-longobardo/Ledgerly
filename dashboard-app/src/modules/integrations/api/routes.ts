@@ -1,4 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
+import { AUTHENTICATED_SECURITY } from "@/platform/http/security-schemes";
 import { UpstreamError } from "@/lib/contracts";
 import type { ApiApp, ApiDeps } from "@/platform/http/app";
 import { ApiError } from "@/platform/http/errors";
@@ -15,6 +16,7 @@ import {
   ConnectionNotUsableError,
   ConnectionVersionMismatchError,
   CredentialValidationError,
+  InvalidInputError,
   SyncDisabledError,
   SyncNotSupportedError,
   UnknownProviderError,
@@ -22,6 +24,7 @@ import {
 import { handleWebhook } from "@/modules/integrations/application/handle-webhook";
 import { listIntegrations, type IntegrationSummary } from "@/modules/integrations/application/list-integrations";
 import { runSync } from "@/modules/integrations/application/run-sync";
+import { setSyncJobEnabled } from "@/modules/integrations/application/set-sync-job-enabled";
 import { testIntegrationConnection } from "@/modules/integrations/application/test-integration-connection";
 import { integrationDeps } from "@/modules/integrations/infrastructure/deps";
 import { ErrorResponseSchema } from "@/modules/accounts/api/schemas";
@@ -38,6 +41,9 @@ import {
   SyncRunsQuerySchema,
   TestResultSchema,
   WebhookResponseSchema,
+  SetSyncJobEnabledRequestSchema,
+  SyncJobParamSchema,
+  SyncJobSchema,
 } from "./schemas";
 
 /**
@@ -53,6 +59,7 @@ function toApiError(err: unknown): ApiError {
   if (err instanceof ConnectionNotUsableError) return new ApiError(409, "conflict", err.message);
   if (err instanceof SyncDisabledError) return new ApiError(409, "conflict", err.message);
   if (err instanceof SyncNotSupportedError) return new ApiError(422, "validation_failed", err.message);
+  if (err instanceof InvalidInputError) return new ApiError(422, "validation_failed", err.message, err.issues);
   if (err instanceof CredentialValidationError) {
     return new ApiError(422, "validation_failed", err.message, err.issues);
   }
@@ -142,7 +149,7 @@ const listRoute = createRoute({
   method: "get",
   path: "/integrations",
   tags: ["Integrations"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   responses: {
     200: {
       description: "Every registered provider, with its connection when there is one.",
@@ -156,7 +163,7 @@ const connectRoute = createRoute({
   method: "post",
   path: "/integrations/{provider}/connect",
   tags: ["Integrations"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description:
     "Stores the credential and tests it. A failed test is still a 200: the connection lands in `error` with the provider's own message. The credential is never echoed back.",
   request: {
@@ -177,7 +184,7 @@ const testRoute = createRoute({
   method: "post",
   path: "/integrations/{provider}/test",
   tags: ["Integrations"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: ProviderParamSchema },
   responses: {
     200: { description: "Whether the stored credential still works.", content: { "application/json": { schema: TestResultSchema } } },
@@ -192,7 +199,7 @@ const syncRoute = createRoute({
   method: "post",
   path: "/integrations/{provider}/sync",
   tags: ["Integrations"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description:
     "Idempotent per running job: a second call while a run is in flight returns that run. `kind` defaults to the provider's first declared sync when omitted — for Wallet that is `accounts`, not `transactions`; pass `kind` explicitly to target another one.",
   request: {
@@ -213,7 +220,7 @@ const disconnectRoute = createRoute({
   method: "post",
   path: "/integrations/{provider}/disconnect",
   tags: ["Integrations"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   description: "Destroys the credential and applies the disconnect policy. `policy` overrides the stored one for this call only.",
   request: {
     params: ProviderParamSchema,
@@ -231,7 +238,7 @@ const syncRunsRoute = createRoute({
   method: "get",
   path: "/integrations/{provider}/sync-runs",
   tags: ["Integrations"],
-  security: [{ session: [] }],
+  security: AUTHENTICATED_SECURITY,
   request: { params: ProviderParamSchema, query: SyncRunsQuerySchema },
   responses: {
     200: { description: "Most recent runs first.", content: { "application/json": { schema: SyncRunsPageSchema } } },
@@ -243,10 +250,10 @@ const syncRunsRoute = createRoute({
 /**
  * A rejected webhook request already costs a transaction, a scan of every
  * connected candidate for the provider, one AES-GCM decrypt and one HMAC per
- * candidate, and an INSERT into `webhook_deliveries` — and this route has no
- * rate limiter (deliberately deferred to Phase 9; see `app.ts`). Without a
- * cap, an anonymous caller could grow that table and burn write throughput
- * without bound just by posting large bodies. 1 MB comfortably covers any
+ * candidate, and an INSERT into `webhook_deliveries`. The per-connection limit
+ * `handleWebhook` applies (R9-6) only starts once a signature has resolved a
+ * connection, so it cannot cap an anonymous caller who never signs anything;
+ * this body cap is what bounds that caller. 1 MB comfortably covers any
  * real provider payload today (spec §6's examples are all small JSON
  * objects), and an oversized body is rejected before it is hashed or a
  * transaction is opened — it never reaches `handleWebhook` at all, and no
@@ -294,6 +301,27 @@ async function readBodyCapped(body: ReadableStream<Uint8Array> | null, maxBytes:
   return { ok: true, text: Buffer.concat(chunks).toString("utf8") };
 }
 
+/**
+ * The per-kind sync toggle (Phase 9). `PATCH` and not `POST` because it edits
+ * an existing `sync_jobs` row; no `If-Match`, because `sync_jobs` carries no
+ * `version` column and the write is a single boolean that is idempotent either
+ * way. A provider that is not connected has no rows to toggle and answers 422.
+ */
+const setSyncJobEnabledRoute = createRoute({
+  method: "patch",
+  path: "/integrations/{provider}/sync-jobs/{kind}",
+  tags: ["Integrations"],
+  security: AUTHENTICATED_SECURITY,
+  request: {
+    params: SyncJobParamSchema,
+    body: { content: { "application/json": { schema: SetSyncJobEnabledRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The sync job as it now stands.", content: { "application/json": { schema: SyncJobSchema } } },
+    ...commonErrorResponses,
+  },
+});
+
 const webhookRoute = createRoute({
   method: "post",
   path: "/webhooks/{provider}",
@@ -319,6 +347,7 @@ const webhookRoute = createRoute({
       content: { "application/json": { schema: WebhookResponseSchema } },
     },
     404: errorResponse("The signature did not verify against any connection, or the provider does not exist."),
+    429: errorResponse("More than 60 deliveries in one minute for the receiving connection."),
   },
 });
 
@@ -433,6 +462,23 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
     }
   });
 
+  app.openapi(setSyncJobEnabledRoute, async (c) => {
+    const principal = c.get("principal");
+    const { provider, kind } = c.req.valid("param");
+    const { enabled } = c.req.valid("json");
+    try {
+      const job = await setSyncJobEnabled(integrationDeps(deps.db, c.get("requestId")))(
+        principal,
+        provider,
+        kind,
+        enabled,
+      );
+      return c.json({ id: job.id, kind: job.kind, schedule: job.schedule, enabled: job.enabled }, 200);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
   app.openapi(webhookRoute, async (c) => {
     const providerCode = c.req.param("provider")!;
     // Cheap check first, before reading anything: a caller that is honest
@@ -459,9 +505,16 @@ export function registerIntegrationRoutes(app: ApiApp, deps: ApiDeps): void {
       rawBody,
       headers: c.req.raw.headers,
     });
+    // Only a caller that has already proved it holds a connection's secret
+    // learns it is being throttled; every other refusal is the flat 404 below.
+    if (outcome.status === "rate_limited") {
+      throw new ApiError(429, "rate_limited", "Too many deliveries; try again in a minute");
+    }
     // One answer for "no such provider", "bad signature" and "signed but
     // unreadable": a machine endpoint must not confirm what exists.
     if (!outcome.accepted) throw new ApiError(404, "not_found", "No such webhook endpoint");
-    return c.json({ accepted: true, runIds: outcome.runIds }, 202);
+    // A replay is answered exactly like the delivery it repeats, with
+    // `queued: 0` to say nothing new was scheduled (R9-6).
+    return c.json({ accepted: true, runIds: outcome.runIds, queued: outcome.runIds.length }, 202);
   });
 }

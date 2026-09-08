@@ -22,8 +22,11 @@ const OPTIONS = [
  * reading Postgres. The segmented control only navigates — there is no nested
  * navigation anywhere in the app.
  *
- * The vacation fund keeps its own route but no tab of its own until Phase 6;
- * it stays reachable from a link on the Funds page.
+ * Budgets and Interests have their own routes and their own left-nav entries
+ * but no tab of their own here, the same way this control never grew one for
+ * Expenses — `/finance/vacation` is a server-side redirect to `/finance/budgets`
+ * now (Phase 6), so it never reaches this client component at all and needs
+ * no branch of its own.
  */
 export function FinanceTabs() {
   const router = useRouter();
@@ -31,8 +34,7 @@ export function FinanceTabs() {
 
   const current: ViewKey = pathname.startsWith("/finance/accounts")
     ? "accounts"
-    : pathname.startsWith("/finance/funds") ||
-        pathname.startsWith("/finance/vacation")
+    : pathname.startsWith("/finance/funds")
       ? "funds"
       : "overview";
 

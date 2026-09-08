@@ -41,6 +41,8 @@ const EMPTY_REGISTRY: ProviderRegistry = { get: () => null, list: () => [] };
  * something the test has to fake.
  */
 export function testIntegrationDeps(over: Partial<IntegrationDeps> = {}): IntegrationDeps {
+  /** The in-memory stand-in for `rate_limit_windows`, keyed `<key>@<window start>`. */
+  const windows = new Map<string, number>();
   const deps: IntegrationDeps = {
     connections: over.connections ?? new MemoryConnectionsRepository(),
     jobs: over.jobs ?? new MemorySyncJobsRepository(),
@@ -51,6 +53,14 @@ export function testIntegrationDeps(over: Partial<IntegrationDeps> = {}): Integr
     db: over.db ?? unusedDb,
     clock: over.clock ?? { now: () => new Date("2026-09-04T09:00:00Z") },
     audit: over.audit ?? (async () => {}),
+    consumeWindow:
+      over.consumeWindow ??
+      (async (key, limit, now) => {
+        const slot = `${key}@${Math.floor(now.getTime() / 60_000)}`;
+        const count = (windows.get(slot) ?? 0) + 1;
+        windows.set(slot, count);
+        return { count, limit, remaining: Math.max(0, limit - count), exceeded: count > limit };
+      }),
     inUserContext: over.inUserContext ?? ((_userId, fn) => fn(deps)),
     inSystemContext: over.inSystemContext ?? ((fn) => fn(deps)),
   };

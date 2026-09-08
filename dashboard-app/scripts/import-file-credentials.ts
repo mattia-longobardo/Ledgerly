@@ -5,6 +5,7 @@ import * as schema from "@/lib/db/schema";
 import type { DbClient } from "@/lib/db/client";
 import { ownerUserId } from "@/platform/auth/owner";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
+import { consumeWindow } from "@/platform/http/rate-limit";
 import { permissionsForRoles } from "@/platform/auth/permissions";
 import { createCredentialCipher } from "@/platform/integrations/crypto";
 import { providerRegistry } from "@/platform/integrations/registry";
@@ -86,6 +87,7 @@ async function main(): Promise<void> {
       db: client,
       clock: { now: () => new Date() },
       audit: (e) => recordAudit(client, e),
+      consumeWindow: (key, limit, now) => consumeWindow(client, key, limit, now),
       inUserContext: (userId, fn) => withUserContext(db, { userId }, (tx) => fn(buildDeps(tx))),
       inSystemContext: (fn) => withSystemContext(db, (tx) => fn(buildDeps(tx))),
     });

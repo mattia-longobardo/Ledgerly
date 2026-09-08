@@ -17,8 +17,6 @@
     "test:all": "npm run test && npm run test:integration",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/lib/db/migrate.ts",
-    "migrate:teable": "tsx scripts/migrate-teable.ts",
-    "migrate:teable:validate": "tsx scripts/validate-teable-migration.ts",
     "migrate:credentials": "tsx scripts/import-file-credentials.ts",
     "e2e": "playwright test",
     "openapi:generate": "tsx scripts/openapi.ts"

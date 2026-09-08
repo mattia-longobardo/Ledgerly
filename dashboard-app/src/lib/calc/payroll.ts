@@ -1,5 +1,4 @@
 import type { MonthPoint } from "@/lib/contracts";
-import { hoursToDays } from "@/lib/format";
 import { addMonths, monthKey, monthKeyOf, yearOf } from "@/lib/time";
 import { fromCents, sumCents, toCents, type MoneyInput } from "./money";
 import { rangeToMonths, type RangeOptions, type RangeSpec } from "./series";
@@ -15,16 +14,6 @@ export interface PayslipLike {
   taxes?: MoneyInput;
   fundContribEmployee?: MoneyInput;
   fundContribEmployer?: MoneyInput;
-  ferieBalance?: MoneyInput;
-  ferieUnit?: string | null;
-  rolBalance?: MoneyInput;
-  rolUnit?: string | null;
-  /** `FERIE GOD.` — hours used, reported one month in arrears (see below). */
-  ferieTaken?: MoneyInput;
-  /** `ROL. GOD.` — hours used, reported one month in arrears. */
-  rolTaken?: MoneyInput;
-  permessiBalance?: MoneyInput;
-  permessiUnit?: string | null;
   verifiedAt?: Date | string | null;
 }
 
@@ -39,15 +28,6 @@ export interface Ral {
   ytdGross: number;
   projected: number | null;
   isProjected: boolean;
-}
-
-export interface FerieRemaining {
-  ferieHours: number | null;
-  rolHours: number | null;
-  combinedHours: number | null;
-  combinedDays: number | null;
-  /** Secondary figure — deliberately outside the headline. */
-  permessiHours: number | null;
 }
 
 export interface AverageOptions {
@@ -160,43 +140,6 @@ export function ral(
   };
 }
 
-function toHours(value: MoneyInput, unit: string | null | undefined, hoursPerDay: number): number | null {
-  const cents = toCents(value);
-  if (cents === null) return null;
-  const raw = cents / 100;
-  return unit === "days" ? raw * hoursPerDay : raw;
-}
-
-/**
- * Payslip-authoritative residuals. Ferie + ROL make the headline; permessi is
- * returned alongside but must never be folded into it.
- */
-export function ferieRemaining(
-  payslip: PayslipLike | null | undefined,
-  hoursPerDay = 8,
-): FerieRemaining {
-  const empty: FerieRemaining = {
-    ferieHours: null,
-    rolHours: null,
-    combinedHours: null,
-    combinedDays: null,
-    permessiHours: null,
-  };
-  if (!payslip) return empty;
-  const ferieHours = toHours(payslip.ferieBalance, payslip.ferieUnit, hoursPerDay);
-  const rolHours = toHours(payslip.rolBalance, payslip.rolUnit, hoursPerDay);
-  const permessiHours = toHours(payslip.permessiBalance, payslip.permessiUnit, hoursPerDay);
-  const combinedHours =
-    ferieHours === null && rolHours === null ? null : (ferieHours ?? 0) + (rolHours ?? 0);
-  return {
-    ferieHours,
-    rolHours,
-    combinedHours,
-    combinedDays: hoursToDays(combinedHours, hoursPerDay),
-    permessiHours,
-  };
-}
-
 export function netPerMonthSeries(
   payslips: readonly PayslipLike[],
   range: RangeSpec,
@@ -251,79 +194,3 @@ export function isThirteenthCandidate(input: {
   return isDecember && ratio >= DECEMBER_NET_RATIO;
 }
 
-export interface LeaveTakenMonth {
-  /** The month the leave was actually used, not the payslip's own month. */
-  month: string;
-  ferieHours: number;
-  rolHours: number;
-  totalHours: number;
-  ferieDays: number;
-  rolDays: number;
-  totalDays: number;
-}
-
-/**
- * Leave actually used, per month.
- *
- * Attributed to the month BEFORE the payslip's own, on the owner's rule:
- * "FERIE GOD ... sono quelle usate il mese prima del cedolino, quindi agosto
- * ha luglio". The source is the grid's `FERIE GOD.` column, confirmed by the
- * owner at 12,01 h on the August 2026 payslip.
- *
- * Known inconsistency, left for the human verification screen rather than
- * papered over: on the July payslip the column reads 4,01 h, which under this
- * rule means June — yet June's residual rises by the full monthly accrual,
- * i.e. nothing was taken. The August figure does reconcile (12,01 against
- * July's own usage of 12,00), so the rule holds there. Values reaching a
- * statistic can be corrected on the verification screen.
- */
-export function leaveTakenByMonth(
-  payslips: PayslipLike[],
-  hoursPerDay = 8,
-): LeaveTakenMonth[] {
-  const perMonth = new Map<string, { ferie: number; rol: number }>();
-
-  for (const p of payslips) {
-    if (!isVerified(p) || p.isThirteenth) continue;
-    const ferie = toCents(p.ferieTaken ?? null);
-    const rol = toCents(p.rolTaken ?? null);
-    if (ferie === null && rol === null) continue;
-
-    const used = addMonths(p.month, -1);
-    const acc = perMonth.get(used) ?? { ferie: 0, rol: 0 };
-    acc.ferie += fromCents(ferie ?? 0);
-    acc.rol += fromCents(rol ?? 0);
-    perMonth.set(used, acc);
-  }
-
-  const div = hoursPerDay > 0 ? hoursPerDay : 8;
-  return [...perMonth.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([month, v]) => ({
-      month,
-      ferieHours: v.ferie,
-      rolHours: v.rol,
-      totalHours: Number((v.ferie + v.rol).toFixed(2)),
-      ferieDays: Number((v.ferie / div).toFixed(2)),
-      rolDays: Number((v.rol / div).toFixed(2)),
-      totalDays: Number(((v.ferie + v.rol) / div).toFixed(2)),
-    }));
-}
-
-/** Year-to-date leave used, in days — the "days taken YTD" tile on Work. */
-export function leaveTakenYtd(
-  payslips: PayslipLike[],
-  year: number,
-  hoursPerDay = 8,
-): { ferieDays: number; rolDays: number; totalDays: number } {
-  const rows = leaveTakenByMonth(payslips, hoursPerDay).filter(
-    (r) => yearOf(r.month) === year,
-  );
-  const sum = (pick: (r: LeaveTakenMonth) => number) =>
-    Number(rows.reduce((a, r) => a + pick(r), 0).toFixed(2));
-  return {
-    ferieDays: sum((r) => r.ferieDays),
-    rolDays: sum((r) => r.rolDays),
-    totalDays: sum((r) => r.totalDays),
-  };
-}

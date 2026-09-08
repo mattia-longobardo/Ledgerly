@@ -14,6 +14,8 @@ export interface TimeSeriesChartProps {
   /** 8 % fill under the first series. */
   area?: boolean;
   formatValue?: (value: number | null) => string;
+  /** Exact point text when the numeric plotting coordinate loses precision. */
+  formatPoint?: (seriesKey: string, month: string, value: number | null) => string;
   emptyMessage?: string;
   className?: string;
 }
@@ -129,6 +131,7 @@ export function TimeSeriesChart({
   height = 200,
   area = true,
   formatValue = (v) => formatEur(v),
+  formatPoint,
   emptyMessage = "Not enough history yet",
   className,
 }: TimeSeriesChartProps) {
@@ -323,9 +326,12 @@ export function TimeSeriesChart({
   }, [model, height, area, enoughHistory, themeTick]);
 
   const hoveredMonth = hover === null ? null : model.months[hover.idx];
+  const pointText = (key: string, month: string, value: number | null) =>
+    formatPoint ? formatPoint(key, month, value) : formatValue(value);
 
   if (!enoughHistory) {
-    const only = series[0]?.points.find((p) => p.value !== null)?.value ?? null;
+    const first = series[0];
+    const only = first?.points.find((p) => p.value !== null);
     return (
       <div
         className={cn(
@@ -334,7 +340,7 @@ export function TimeSeriesChart({
         )}
         style={{ minHeight: height }}
       >
-        <span className="num text-display-sm text-fg">{formatValue(only)}</span>
+        <span className="num text-display-sm text-fg">{first && only ? pointText(first.key, only.month, only.value) : formatValue(null)}</span>
         <span className="text-body-sm text-fg-muted">{emptyMessage}</span>
       </div>
     );
@@ -358,7 +364,7 @@ export function TimeSeriesChart({
             <div key={s.key} className="flex items-baseline justify-between gap-3">
               <span className="text-caption text-fg-muted">{s.label}</span>
               <span className="num text-body-sm text-fg">
-                {formatValue(model.cols[i]?.[hover.idx] ?? null)}
+                {pointText(s.key, hoveredMonth, model.cols[i]?.[hover.idx] ?? null)}
               </span>
             </div>
           ))}
@@ -383,7 +389,7 @@ export function TimeSeriesChart({
             <tr key={month}>
               <th scope="row">{formatMonth(monthKey(month))}</th>
               {series.map((s, i) => (
-                <td key={s.key}>{formatValue(model.cols[i]?.[row] ?? null)}</td>
+                <td key={s.key}>{pointText(s.key, month, model.cols[i]?.[row] ?? null)}</td>
               ))}
             </tr>
           ))}

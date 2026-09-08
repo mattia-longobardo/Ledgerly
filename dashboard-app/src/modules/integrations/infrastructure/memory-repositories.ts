@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { SealedCredential, CredentialCipher } from "@/platform/integrations/crypto";
+import { DUPLICATE_EVENT } from "../application/handle-webhook";
 import type {
   IntegrationConnection,
   ProviderCode,
@@ -141,6 +142,13 @@ export class MemorySyncJobsRepository implements SyncJobsRepository {
     const index = this.rows.findIndex((r) => r.id === id);
     if (index !== -1) this.rows[index] = { ...this.rows[index]!, cursor };
   }
+
+  async setEnabled(id: string, enabled: boolean): Promise<SyncJob | null> {
+    const index = this.rows.findIndex((r) => r.id === id);
+    if (index === -1) return null;
+    this.rows[index] = { ...this.rows[index]!, enabled };
+    return this.rows[index]!;
+  }
 }
 
 export class MemorySyncRunsRepository implements SyncRunsRepository {
@@ -212,6 +220,27 @@ export class MemoryWebhookDeliveriesRepository implements WebhookDeliveriesRepos
 
   async record(input: WebhookDelivery): Promise<void> {
     this.rows.push(input);
+  }
+
+  async findAccepted(
+    connectionId: string,
+    payloadHash: string,
+    since: Date,
+  ): Promise<{ connectionId: string | null; receivedAt: Date } | null> {
+    const match = this.rows
+      .filter(
+        (r) =>
+          r.connectionId === connectionId &&
+          r.payloadHash === payloadHash &&
+          r.status === "accepted" &&
+          // Same exclusion as the Drizzle repository: a duplicate's own row is
+          // recorded `accepted` under the reserved `duplicate` event and must
+          // never anchor the replay window (Ruling P9-7).
+          r.event !== DUPLICATE_EVENT &&
+          r.receivedAt.getTime() >= since.getTime(),
+      )
+      .sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime())[0];
+    return match ? { connectionId: match.connectionId, receivedAt: match.receivedAt } : null;
   }
 }
 

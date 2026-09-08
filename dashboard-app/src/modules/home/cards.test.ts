@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { permissionsForRoles } from "@/platform/auth/permissions";
 import type { Capabilities } from "@/platform/capabilities/resolve";
-import { cardState, HOME_CARDS, isCardVisible, visibleCards, type HomeCard } from "./cards";
+import { cardState, HOME_CARDS, isCardVisible, shouldLoadCardData, visibleCards, type HomeCard } from "./cards";
 
 function caps(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
@@ -84,17 +84,47 @@ describe("cardState", () => {
 });
 
 describe("HOME_CARDS and visibleCards", () => {
-  it("defines the four cards with their target sections", () => {
-    expect(HOME_CARDS.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave"]);
+  it("defines the six cards with their target sections", () => {
+    expect(HOME_CARDS.map((c) => c.key)).toEqual([
+      "total_balance",
+      "accounts_sync",
+      "funds",
+      "budgets",
+      "leave",
+      "payroll_imports",
+    ]);
     expect(HOME_CARDS.find((c) => c.key === "total_balance")?.href).toBe("/finance/accounts");
     expect(HOME_CARDS.find((c) => c.key === "accounts_sync")?.href).toBe("/settings/integrations");
     expect(HOME_CARDS.find((c) => c.key === "funds")?.href).toBe("/finance/funds");
-    expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/work");
+    expect(HOME_CARDS.find((c) => c.key === "budgets")?.href).toBe("/finance/budgets");
+    expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/company/time-off");
+  });
+
+  it("links Leave at the relocated Time Off route", () => {
+    expect(HOME_CARDS.find((c) => c.key === "leave")?.href).toBe("/company/time-off");
+  });
+
+  it("shows the payroll import card only when the payroll feature is on", () => {
+    expect(visibleCards(caps({ features: { ...caps().features, payroll: true } })).map((c) => c.key)).toContain(
+      "payroll_imports",
+    );
+    expect(visibleCards(caps({ features: { ...caps().features, payroll: false } })).map((c) => c.key)).not.toContain(
+      "payroll_imports",
+    );
+  });
+
+  it("tells a viewer they lack permission rather than hiding the payroll card", () => {
+    const viewerCaps = caps({
+      features: { ...caps().features, payroll: true },
+      permissions: permissionsForRoles(["viewer"]),
+    });
+    const card = visibleCards(viewerCaps).find((c) => c.key === "payroll_imports")!;
+    expect(cardState(card, viewerCaps)).toEqual({ state: "permission_denied" });
   });
 
   it("hides accounts_sync until Wallet is connected and leave until timeoff is on", () => {
     const bare = visibleCards(caps());
-    expect(bare.map((c) => c.key)).toEqual(["total_balance", "funds"]);
+    expect(bare.map((c) => c.key)).toEqual(["total_balance", "funds", "budgets"]);
 
     const full = visibleCards(
       caps({
@@ -102,7 +132,7 @@ describe("HOME_CARDS and visibleCards", () => {
         integrations: { ...caps().integrations, wallet: "connected" },
       }),
     );
-    expect(full.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "leave"]);
+    expect(full.map((c) => c.key)).toEqual(["total_balance", "accounts_sync", "funds", "budgets", "leave"]);
   });
 
   it("keeps every card visible for a viewer: permission gating is cardState's job, not visibleCards'", () => {
@@ -111,7 +141,7 @@ describe("HOME_CARDS and visibleCards", () => {
       features: { ...caps().features, timeoff: true },
       integrations: { ...caps().integrations, wallet: "connected" },
     });
-    expect(visibleCards(viewer)).toHaveLength(4);
+    expect(visibleCards(viewer)).toHaveLength(5);
   });
 });
 
@@ -121,6 +151,22 @@ describe("HOME_CARDS and visibleCards", () => {
  * feature/integration one — is the reason a card's content is withheld.
  */
 describe("Home composition", () => {
+  it("does not request funds data when funds.read is denied", () => {
+    const withoutFundRead = caps({ permissions: new Set(["accounts.read"]) });
+    const fundCard = HOME_CARDS.find((card) => card.key === "funds")!;
+
+    expect(cardState(fundCard, withoutFundRead)).toEqual({ state: "permission_denied" });
+    expect(shouldLoadCardData(fundCard, withoutFundRead)).toBe(false);
+  });
+
+  it("does not request budgets data when budgets.read is denied", () => {
+    const withoutBudgetsRead = caps({ permissions: new Set(["accounts.read"]) });
+    const budgetsCard = HOME_CARDS.find((card) => card.key === "budgets")!;
+
+    expect(cardState(budgetsCard, withoutBudgetsRead)).toEqual({ state: "permission_denied" });
+    expect(shouldLoadCardData(budgetsCard, withoutBudgetsRead)).toBe(false);
+  });
+
   it("accounts_sync is absent when Wallet is not configured", () => {
     const notConfigured = visibleCards(caps({ integrations: { ...caps().integrations, wallet: "not_configured" } }));
     expect(notConfigured.some((c) => c.key === "accounts_sync")).toBe(false);
@@ -144,8 +190,9 @@ describe("Home composition", () => {
       integrations: { ...caps().integrations, wallet: "connected" },
     });
 
-    // None of the real HOME_CARDS declares a `permission` today, so a
-    // viewer — who only holds `accounts.read` — is denied none of them.
+    // `payroll_imports` is the one real card that declares a `permission`, but
+    // this viewer has the payroll feature off, so it never becomes visible —
+    // none of the cards actually shown here are denied.
     for (const card of visibleCards(viewer)) {
       expect(cardState(card, viewer)).toBeNull();
     }

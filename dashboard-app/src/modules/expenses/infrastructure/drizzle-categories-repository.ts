@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "@/lib/db/client";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { transactionCategories, type TransactionCategoryRow } from "@/lib/db/schema";
-import type { CategoriesRepository, NewCategory } from "../application/ports";
+import type { CategoriesRepository, CategoryPatch, NewCategory } from "../application/ports";
 import type { TransactionCategory } from "../domain/transaction";
 
 function toCategory(row: TransactionCategoryRow): TransactionCategory {
@@ -69,6 +69,25 @@ export class DrizzleCategoriesRepository implements CategoriesRepository {
       return await this.db.transaction(async (tx) => {
         const [row] = await tx.insert(transactionCategories).values(input).returning();
         return toCategory(row!);
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) return "duplicate_name";
+      throw err;
+    }
+  }
+
+  async update(userId: string, id: string, patch: CategoryPatch): Promise<TransactionCategory | "duplicate_name" | null> {
+    try {
+      // The savepoint is here for the same reason it is in `create`: a caught
+      // unique violation must roll back this statement only, not the caller's
+      // whole `withUserContext` transaction.
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(transactionCategories)
+          .set({ ...patch, updatedAt: new Date() })
+          .where(and(eq(transactionCategories.userId, userId), eq(transactionCategories.id, id)))
+          .returning();
+        return row ? toCategory(row) : null;
       });
     } catch (err) {
       if (isUniqueViolation(err)) return "duplicate_name";

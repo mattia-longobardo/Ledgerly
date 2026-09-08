@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { permissionsForRoles } from "./permissions";
+import { PERMISSIONS, permissionsForRoles } from "./permissions";
 import { assertPermission, PermissionDeniedError, type Principal } from "./principal";
 
 const base = (roles: Principal["roles"]): Principal => ({
@@ -16,7 +16,7 @@ describe("permissions", () => {
     expect(p.permissions.has("accounts.write")).toBe(false);
   });
   it("owner has every permission", () => {
-    expect(base(["owner"]).permissions.size).toBe(12);
+    expect(base(["owner"]).permissions.size).toBe(PERMISSIONS.length);
   });
   it("assertPermission throws a typed error", () => {
     expect(() => assertPermission(base(["viewer"]), "admin.users")).toThrow(PermissionDeniedError);
