@@ -47,9 +47,17 @@ docs/architecture/overview.md, docs/api/README.md, docs/deploy/README.md, docs/s
 
 **Files:** `src/lib/jobs/housekeeping.ts` (+`.itest.ts`), `src/lib/contracts.ts` (`JobName` + `housekeeping`), `src/platform/jobs/register-all.ts` (daily), `src/app/(app)/settings/admin/page.tsx` (`JOBS`/`JOB_LABEL`), `src/platform/http/rate-limit.ts` (extract `consumeWindow(db, key, limit, now)`), `src/modules/integrations/application/handle-webhook.ts` (+`.itest.ts`).
 
-- [ ] **Step 1: Housekeeping** purges `audit_events` > 730 d, `security_events` (skip — table does not exist in the reduced Phase 8), `job_runs`/`sync_runs` > 90 d, `webhook_deliveries` > 90 d, expired `idempotency_keys`, `rate_limit_windows` > 1 d; 5,000 rows per table per run; `job_runs.detail` records per-table counts. Itest: old vs recent rows per table; seed 5,100 old audit rows → 100 remain; detail counts present.
-- [ ] **Step 2: Inbound.** `handle-webhook.ts`: same `(provider, payload_hash)` in the last 24 h → return the earlier `202` result without enqueuing; per-connection `consumeWindow(...)` at 60/min → `429 rate_limited`. Itest: duplicate → second 202 with `queued: 0`; 61st in a minute → 429.
-- [ ] **Verify:** `npm run typecheck && npm test && npm run test:integration -- housekeeping handle-webhook`. **Commit:** `git add -A src && git commit -m "feat(platform): housekeeping retention job; inbound webhook replay protection and rate limit (R9-5, R9-6)"`
+- [x] **Step 1: Housekeeping** purges `audit_events` > 730 d, `security_events` (skip — table does not exist in the reduced Phase 8), `job_runs`/`sync_runs` > 90 d, `webhook_deliveries` > 90 d, expired `idempotency_keys`, `rate_limit_windows` > 1 d; 5,000 rows per table per run; `job_runs.detail` records per-table counts. Itest: old vs recent rows per table; seed 5,100 old audit rows → 100 remain; detail counts present.
+- [x] **Step 2: Inbound.** `handle-webhook.ts`: same `(provider, payload_hash)` in the last 24 h → return the earlier `202` result without enqueuing; per-connection `consumeWindow(...)` at 60/min → `429 rate_limited`. Itest: duplicate → second 202 with `queued: 0`; 61st in a minute → 429.
+- [x] **Verify:** `npm run typecheck && npm test && npm run test:integration -- housekeeping handle-webhook`. **Commit:** `git add -A src && git commit -m "feat(platform): housekeeping retention job; inbound webhook replay protection and rate limit (R9-5, R9-6)"`
+
+### Deviation (Task 2)
+
+Three additions the brief implies but does not name:
+
+1. **`WebhookOutcome` gained a `status`** (`accepted` | `duplicate` | `rate_limited` | `rejected`) and the route response gained `queued`. The brief asks for "a second 202 with `queued: 0`", and the shipped response was `{ accepted, runIds }` with no such field; the route also had no way to tell "refused" from "throttled". `accepted` is kept, so every existing caller and test still reads the same field. `docs/api/openapi.json` is regenerated and committed with this task rather than with Task 3, because otherwise `openapi-drift.test.ts` would fail on the Task 2 commit.
+2. **The limiter reaches `handleWebhook` as a port** (`IntegrationDeps.consumeWindow`), wired to `consumeWindow(client, …)` in `integrationDeps`, rather than as a direct call on `deps.db`. The module's unit tests run on `unusedDb` (an intentionally unconnected client), so a direct call would have made every existing `handle-webhook.test.ts` case hit the network.
+3. **Neither guard throws.** Both run inside `inSystemContext`'s transaction, and throwing would roll back the very `rate_limit_windows` and `webhook_deliveries` rows that make the guard work — the limiter would never trip. They return a status and the route maps it (429 for `rate_limited`).
 
 ---
 

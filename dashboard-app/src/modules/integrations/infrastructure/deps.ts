@@ -1,6 +1,7 @@
 import type { DbClient } from "@/lib/db/client";
 import { recordAudit } from "@/platform/audit/record";
 import { withSystemContext, withUserContext } from "@/platform/db/context";
+import { consumeWindow } from "@/platform/http/rate-limit";
 import { credentialCipher } from "@/platform/integrations/crypto";
 import { providerRegistry } from "@/platform/integrations/registry";
 import type { IntegrationDeps } from "../application/deps";
@@ -38,6 +39,10 @@ export function integrationDeps(
     db: client,
     clock: { now: () => new Date() },
     audit: (e) => recordAudit(client, { ...e, requestId: requestId ?? null }),
+    // On `client`, so the webhook path's call lands inside the system context
+    // it is already holding — `rate_limit_windows` is FORCE RLS and rejects an
+    // insert made on the bare pool.
+    consumeWindow: (key, limit, now) => consumeWindow(client, key, limit, now),
     // Always on `root`: nesting a transaction inside `bound` would take a
     // second pool connection while the first is still held, which is how a
     // pool of eight deadlocks under load.

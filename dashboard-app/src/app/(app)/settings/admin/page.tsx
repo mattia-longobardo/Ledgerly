@@ -31,6 +31,7 @@ const JOBS: readonly JobName[] = [
   "sync_queue",
   "payroll_ingest",
   "payroll_retention",
+  "housekeeping",
 ];
 
 const JOB_LABEL: Record<string, string> = {
@@ -43,6 +44,7 @@ const JOB_LABEL: Record<string, string> = {
   sync_queue: "Webhook sync queue",
   payroll_ingest: "Payroll ingest",
   payroll_retention: "Payroll retention",
+  housekeeping: "Housekeeping",
 };
 
 const STATUS_TONE: Record<string, string> = {

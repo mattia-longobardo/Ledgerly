@@ -5,6 +5,49 @@ import type { Principal } from "@/platform/auth/principal";
 import { withUserContext } from "@/platform/db/context";
 import { ApiError } from "./errors";
 
+export interface WindowConsumption {
+  /** Hits recorded in this window, including this one. */
+  count: number;
+  limit: number;
+  remaining: number;
+  /** `count` has gone past `limit` — the caller answers 429. */
+  exceeded: boolean;
+}
+
+/**
+ * Counts one hit against the fixed one-minute window `now` falls in, and says
+ * whether that put the caller over `limit`.
+ *
+ * `key` is a uuid because `rate_limit_windows.principal_id` is: for an
+ * authenticated request it is the user id, and for an inbound webhook — which
+ * has no principal at all — it is the receiving `integration_connections.id`
+ * (Ruling P9-1). The two id spaces are uuidv7 and never collide, so one table
+ * serves both without a discriminator column.
+ *
+ * `db` must ALREADY carry a context: `rate_limit_windows` has FORCE ROW LEVEL
+ * SECURITY since migration 0009, and its policy admits the row only when
+ * `principal_id = app_current_user_id()` or `app_is_system()`. On the bare pool
+ * the WITH CHECK clause rejects every insert. The two callers differ on which
+ * context that is — `rateLimit` below opens a user context for the principal,
+ * `handleWebhook` is already inside a system context — which is exactly why
+ * this function opens neither.
+ */
+export async function consumeWindow(
+  db: DbClient,
+  key: string,
+  limit: number,
+  now: Date,
+): Promise<WindowConsumption> {
+  const start = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
+  const res = await db.execute<{ count: number }>(sql`
+    INSERT INTO rate_limit_windows (principal_id, window_start, count)
+    VALUES (${key}, ${start}, 1)
+    ON CONFLICT (principal_id, window_start) DO UPDATE SET count = rate_limit_windows.count + 1
+    RETURNING count`);
+  const count = Number(res.rows[0]?.count ?? 0);
+  return { count, limit, remaining: Math.max(0, limit - count), exceeded: count > limit };
+}
+
 /**
  * Generic over the caller's env, constrained to what this middleware actually
  * reads (`principal`), rather than fixed to `{ Variables: { principal:
@@ -25,22 +68,13 @@ export function rateLimit<E extends { Variables: { principal: Principal } } = { 
 ): MiddlewareHandler<E> {
   const limit = deps.limit ?? 300;
   return async (c, next) => {
-    const start = new Date(Math.floor(deps.now().getTime() / 60_000) * 60_000);
     const principalId = c.get("principal").userId;
-    // `rate_limit_windows` carries FORCE ROW LEVEL SECURITY since migration
-    // 0009, so the upsert has to run where `app.user_id` is set — on the bare
-    // pool the WITH CHECK clause rejects every insert.
-    const count = await withUserContext(deps.db, { userId: principalId }, async (tx) => {
-      const res = await tx.execute<{ count: number }>(sql`
-        INSERT INTO rate_limit_windows (principal_id, window_start, count)
-        VALUES (${principalId}, ${start}, 1)
-        ON CONFLICT (principal_id, window_start) DO UPDATE SET count = rate_limit_windows.count + 1
-        RETURNING count`);
-      return Number(res.rows[0]?.count ?? 0);
-    });
-    c.header("RateLimit-Limit", String(limit));
-    c.header("RateLimit-Remaining", String(Math.max(0, limit - count)));
-    if (count > limit) throw new ApiError(429, "rate_limited", "Too many requests; try again in a minute");
+    const window = await withUserContext(deps.db, { userId: principalId }, (tx) =>
+      consumeWindow(tx, principalId, limit, deps.now()),
+    );
+    c.header("RateLimit-Limit", String(window.limit));
+    c.header("RateLimit-Remaining", String(window.remaining));
+    if (window.exceeded) throw new ApiError(429, "rate_limited", "Too many requests; try again in a minute");
     await next();
   };
 }

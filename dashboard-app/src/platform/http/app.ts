@@ -101,9 +101,11 @@ export function createApiApp(deps: ApiDeps): ApiApp {
 
   if (deps.rateLimitEnabled !== false) {
     // The limiter counts per principal, and a webhook has none — calling it on
-    // a public path would throw on `c.get("principal").userId`. Rate limiting
-    // the webhook endpoint is a Phase 9 concern and needs a different key
-    // (the connection, or the source address), not this one.
+    // a public path would throw on `c.get("principal").userId`. The webhook
+    // endpoint is limited further in, by `handleWebhook`, once the signature
+    // has told it which connection to count against (Rulings R9-6, P9-1); it
+    // shares this middleware's `consumeWindow` and its `rate_limit_windows`
+    // table, keyed by connection id instead of user id.
     // `rateLimit<ApiEnv>`, not a cast on the result: `rateLimit` is generic in
     // the caller's env (constrained to what it actually reads), so this asks
     // it for a handler typed against `ApiEnv` directly rather than silencing a

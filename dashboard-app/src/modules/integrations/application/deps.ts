@@ -3,6 +3,7 @@ import type { AuditInput } from "@/platform/audit/record";
 import type { Clock } from "@/platform/clock";
 import type { CredentialCipher } from "@/platform/integrations/crypto";
 import type { ProviderRegistry } from "@/platform/integrations/types";
+import type { WindowConsumption } from "@/platform/http/rate-limit";
 import type {
   ConnectionsRepository,
   SyncJobsRepository,
@@ -31,6 +32,14 @@ export interface IntegrationDeps {
   db: DbClient;
   clock: Clock;
   audit(e: AuditInput): Promise<void>;
+  /**
+   * One hit against a fixed one-minute window, on the client this bag is bound
+   * to (Ruling R9-6/P9-1). A port rather than a direct `consumeWindow(deps.db,
+   * …)` call for the same reason every repository is one: the unit tests run on
+   * an unconnected client, and a limiter that could only be exercised against
+   * real Postgres would go untested at the use-case level.
+   */
+  consumeWindow(key: string, limit: number, now: Date): Promise<WindowConsumption>;
   /**
    * Opens a transaction carrying `userId`, and rebuilds this bag inside it, so
    * RLS applies to every statement the callback makes.

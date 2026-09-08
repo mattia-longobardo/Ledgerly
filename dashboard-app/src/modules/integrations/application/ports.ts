@@ -121,4 +121,17 @@ export interface WebhookDelivery {
 
 export interface WebhookDeliveriesRepository {
   record(input: WebhookDelivery): Promise<void>;
+  /**
+   * The earliest accepted inbound delivery of this exact body since `since`, or
+   * null when this body is new (Ruling R9-6). Keyed by `(provider,
+   * payload_hash)` rather than by connection: the hash is over the raw signed
+   * body, so two connections cannot produce the same one by accident, and a
+   * provider retrying a delivery it never got an answer for must be told
+   * "already have it" whichever way it resolves.
+   */
+  findAccepted(
+    provider: ProviderCode,
+    payloadHash: string,
+    since: Date,
+  ): Promise<{ connectionId: string | null; receivedAt: Date } | null>;
 }
