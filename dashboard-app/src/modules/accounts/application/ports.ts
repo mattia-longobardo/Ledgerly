@@ -32,7 +32,14 @@ export interface AccountsRepository {
   /** The newest balance strictly before `beforeAsOf`, per account: the seed a windowed series carries forward from. Keyed by accountId. */
   latestBalancesBefore(userId: string, accountIds: string[], beforeAsOf: string): Promise<Map<string, BalancePoint>>;
   recordBalances(rows: NewBalance[]): Promise<void>; // upsert on (accountId, asOf, source)
-  hasReferences(accountId: string): Promise<boolean>; // false in Phase 1; budgets and interest rules will consult it
+  /**
+   * Whether anything outside this module still points at the account, which
+   * decides hard delete vs archive. The Drizzle implementation still answers
+   * `false` unconditionally — see the comment on it: budgets and interest
+   * rules do reference accounts now, so this is a known gap, not a statement
+   * about the schema.
+   */
+  hasReferences(accountId: string): Promise<boolean>;
 }
 
 export type ProviderLinkEntityType = "account" | "transaction" | "category" | "label";

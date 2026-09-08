@@ -11,7 +11,7 @@ import type {
   ProviderLinksRepository,
 } from "../application/ports";
 
-/** In-memory stand-in for the Drizzle-backed repository, used by unit tests and Phase 1 wiring before Task 14 lands persistence. */
+/** In-memory stand-in for the Drizzle-backed repository, used by this module's unit tests. */
 export class MemoryAccountsRepository implements AccountsRepository {
   private accounts: Account[] = [];
   private balances: BalancePoint[] = [];

@@ -7,15 +7,16 @@ type RuleShape = Omit<PayrollMappingRule, "id" | "userId">;
  * (`PAYSLIP_FIELDS` in `src/lib/contracts.ts`) rather than on payslip label
  * text, because the codes are stable and the Italian labels are not.
  *
- * Ruling R4-10: every target listed here is recorded on the component, but only
- * `fund_contribution` has a consumer in Phase 4. `timeoff_balance` and
- * `timeoff_used` wait for Phase 7's `timeoff_balances` table; the rows exist
- * from day one so that phase needs no backfill.
+ * Ruling R4-10: every target listed here is recorded on the component and every
+ * one of them now has a consumer — `fund_contribution` through the funds sink,
+ * `timeoff_balance` and `timeoff_used` through
+ * `src/modules/timeoff/infrastructure/payroll-balance-sink.ts`, which writes a
+ * `timeoff_balances` row per (type, record) when an import is applied.
  *
  * `permessiBalance` deliberately has no rule: the parser can read it, but the
  * Work page's own comment already records that permessi are excluded from the
  * headline, and inventing a `timeoff_code` for it here would put a number in
- * Phase 7's balances that nobody has agreed on.
+ * the time-off balances that nobody has agreed on.
  */
 export const DEFAULT_MAPPING_RULES: readonly RuleShape[] = [
   { matchCode: "gross", matchLabel: null, componentKind: "earning", target: { kind: "earnings" }, priority: 100 },

@@ -114,8 +114,12 @@ export const syncRuns = pgTable(
 );
 
 /**
- * One row per webhook seen. `direction` is present from the start so Phase 9's
- * outbound deliveries reuse this table instead of adding a near-twin.
+ * One row per webhook seen. Every row is `inbound` today: outbound delivery is
+ * deferred (see `docs/superpowers/DEFERRED.md`), and `direction` is kept so
+ * that work reuses this table instead of adding a near-twin. The inbound rows
+ * are also the replay window — `handleWebhook` answers a `(connection,
+ * payload_hash)` it has already accepted in the last 24 h without enqueuing
+ * again (Rulings R9-6, P9-5) — and `housekeeping` purges them after 90 days.
  */
 export const webhookDeliveries = pgTable(
   "webhook_deliveries",

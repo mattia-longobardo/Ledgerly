@@ -205,8 +205,16 @@ export class DrizzleAccountsRepository implements AccountsRepository {
   }
 
   async hasReferences(_accountId: string): Promise<boolean> {
-    // Nothing points at an account yet: budgets (Phase 2) and interest rules
-    // (Phase 3) are the consumers that will make this answer meaningful.
+    // KNOWN GAP, unchanged since this was written and no longer true of the
+    // schema: `interest_rules.account_id` and `interest_entries.account_id`
+    // reference accounts with `ON DELETE CASCADE`, and `budget_allocations`
+    // (`source_kind = 'account'`) and `budget_scopes` (`kind = 'account'`)
+    // carry a bare `uuid`. Answering `false` therefore lets a hard delete
+    // cascade a user's interest rules away and leave budget rows pointing at
+    // nothing, instead of archiving the account. Fixing it means a real query
+    // over those four tables and a change to `deletionDecision`'s outcome for
+    // an account a budget references — behaviour, not a comment, so it is
+    // recorded here rather than done in a documentation pass.
     return false;
   }
 }
