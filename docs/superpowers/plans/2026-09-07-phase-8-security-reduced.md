@@ -50,10 +50,49 @@ src/app/(app)/settings/security/page.tsx (add a bare Tokens section), src/app/ac
 
 **Routes** (tag `Security`): `POST /security/tokens` (201; body carries `token` once), `GET /security/tokens`, `DELETE /security/tokens/{id}` (204). No permission code: any active user manages their own tokens.
 
-- [ ] **Step 1: `authenticate`.** `parseToken(req.headers.get("authorization"))` first → `authenticateToken` → `{ principal, method: "token" }`; otherwise the existing cookie path. The global `X-Requested-With` check already keys on `authMethod` — confirm token requests are exempt; if it keys on something else, extend it in this step.
-- [ ] **Step 2: Use cases** `createToken(deps)(principal, { name, scopes, expiresAt? })` → `{ token, record }` (scopes ⊆ `principal.permissions` else `InvalidInputError`; audit `security.token_created` with **no** token in the payload), `listTokens` (never the hash), `revokeToken`. `use-cases.itest.ts` against the real DB.
-- [ ] **Step 3: Routes + `routes.itest.ts`:** token with `["accounts.read"]` → `GET /accounts` with Bearer and **no** `X-Requested-With` → 200; `POST /accounts` with it → 403; revoked → 401; expired → 401; the audit row for creation has no `token` key. `npm run openapi:generate`; README "Security" section documenting the Bearer scheme.
-- [ ] **Step 4: Bare UI.** On the existing security page add a `Tokens` heading, a native `<form>` (name, scope checkboxes limited to the principal's permissions, optional expiry date) bound to `createTokenAction`, the one-time token printed in a `<code>` block on the redirect back (pass it through `searchParams` once, or render it from the action result — whichever the existing `ActionResult` pattern already supports), and a `<table>` of tokens with a Revoke button each.
-- [ ] **Step 5: `DEFERRED.md`** gets the six items above.
-- [ ] **Step 6: Phase gate.** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`.
-- [ ] **Commit:** `git add -A && git commit -m "feat(security): Bearer authentication with scoped personal access tokens; Phase 8 (reduced) gate green"`
+- [x] **Step 1: `authenticate`.** `parseToken(req.headers.get("authorization"))` first → `authenticateToken` → `{ principal, method: "token" }`; otherwise the existing cookie path. The global `X-Requested-With` check already keys on `authMethod` — confirm token requests are exempt; if it keys on something else, extend it in this step.
+- [x] **Step 2: Use cases** `createToken(deps)(principal, { name, scopes, expiresAt? })` → `{ token, record }` (scopes ⊆ `principal.permissions` else `InvalidInputError`; audit `security.token_created` with **no** token in the payload), `listTokens` (never the hash), `revokeToken`. `use-cases.itest.ts` against the real DB.
+- [x] **Step 3: Routes + `routes.itest.ts`:** token with `["accounts.read"]` → `GET /accounts` with Bearer and **no** `X-Requested-With` → 200; `POST /accounts` with it → 403; revoked → 401; expired → 401; the audit row for creation has no `token` key. `npm run openapi:generate`; README "Security" section documenting the Bearer scheme.
+- [x] **Step 4: Bare UI.** On the existing security page add a `Tokens` heading, a native `<form>` (name, scope checkboxes limited to the principal's permissions, optional expiry date) bound to `createTokenAction`, the one-time token printed in a `<code>` block on the redirect back (pass it through `searchParams` once, or render it from the action result — whichever the existing `ActionResult` pattern already supports), and a `<table>` of tokens with a Revoke button each.
+- [x] **Step 5: `DEFERRED.md`** gets the six items above.
+- [x] **Step 6: Phase gate.** `npm run typecheck && npm test && npm run test:db:up && npm run test:integration && npm run build && npm run openapi:generate && git diff --exit-code docs/api/openapi.json`.
+- [x] **Commit:** `git add -A && git commit -m "feat(security): Bearer authentication with scoped personal access tokens; Phase 8 (reduced) gate green"`
+
+### Deviation (Task 2)
+
+Three files exist that the plan's file structure does not name. Nothing named
+in it changed shape.
+
+1. **`src/platform/http/authenticate.ts`.** The plan puts the Bearer branch
+   inline in `src/app/api/v1/[[...route]]/route.ts`. Left there it cannot be
+   tested: `getUserOrNull` reaches for Auth.js and `next/headers`, neither of
+   which resolves in the integration environment, so `routes.itest.ts` would
+   have had to stub `authenticate` — and would then have proved a copy of the
+   branch order rather than the shipped one. `createAuthenticate({ db,
+   sessionSubject, provider, now })` is that same function with only the
+   session lookup injected; `route.ts` wires it to `getUserOrNull` and
+   `PROVIDER_ID`, and the itest drives the real thing.
+
+2. **`src/modules/security/ui/TokensForm.tsx`** (client). Ruling P8-1 forbids
+   the one-time token in `searchParams`, so it has to come back in the
+   action's return value and be rendered from there; `useActionState` is the
+   smallest thing that holds a server action's result across the re-render.
+   `ActionResult<T>` needed **no** change — `ActionResult<CreatedToken>`
+   carries `{ token, record }` as it stands. The only signature consequence is
+   that `createTokenAction` takes `useActionState`'s `(previous, formData)`
+   rather than `(formData)`; `revokeTokenAction` keeps the plain shape and its
+   form works without JavaScript.
+
+3. **`securityDeps(tx, requestId?, now?)`** takes the clock as a third
+   parameter (default `() => new Date()`). `createToken` compares `expiresAt`
+   against "now", and with a hard-wired `new Date()` the API would have judged
+   an expiry against a different clock from the one the rate limiter and the
+   idempotency store read — and an integration test could not have driven it
+   at all. The routes pass `ApiDeps.now`; server actions take the default.
+
+**Not done, deliberately:** the `bearer` scheme is registered in
+`components.securitySchemes` but no route's `security` array lists it. Every
+route except `/security/tokens` accepts a token, so being exact would mean
+adding `{ bearer: [] }` to ~60 `createRoute` calls across eight modules the
+task does not name. The README's **Authentication** and **Security** sections
+carry the fact instead. Worth a sweep when routes are next touched wholesale.

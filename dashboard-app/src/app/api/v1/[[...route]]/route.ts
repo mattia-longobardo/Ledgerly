@@ -2,8 +2,8 @@ import { handle } from "hono/vercel";
 import { db } from "@/lib/db";
 import { PROVIDER_ID } from "@/auth";
 import { getUserOrNull } from "@/lib/auth/require-user";
-import { resolvePrincipal } from "@/platform/auth/principal";
 import { createApiApp } from "@/platform/http/app";
+import { createAuthenticate } from "@/platform/http/authenticate";
 import { ensureProvidersRegistered } from "@/platform/integrations/register-all";
 
 export const dynamic = "force-dynamic";
@@ -12,14 +12,15 @@ ensureProvidersRegistered();
 
 const app = createApiApp({
   db,
-  async authenticate() {
-    const user = await getUserOrNull();
-    if (!user) return null;
-    const principal = await resolvePrincipal(db, { provider: PROVIDER_ID, subject: user.id });
-    // The session cookie is the only way in today; Phase 8's tokens will report
-    // "token" here and so skip the CSRF header requirement.
-    return principal ? { principal, method: "session" as const } : null;
-  },
+  // The Bearer branch runs first and, when a token is present, decides the
+  // request on its own; the cookie path below is unchanged. See
+  // `createAuthenticate` for why there is no fallback between them.
+  authenticate: createAuthenticate({
+    db,
+    sessionSubject: async () => (await getUserOrNull())?.id ?? null,
+    provider: PROVIDER_ID,
+    now: () => new Date(),
+  }),
   now: () => new Date(),
 });
 

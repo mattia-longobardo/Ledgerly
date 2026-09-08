@@ -9,22 +9,27 @@ own.
 
 ## Authentication
 
-Today: **session cookie only.** Sign in through the app (`/signin` →
-Authentik OIDC), then the browser's `__Host-authjs.session-token` cookie
-authenticates every `/api/v1/*` request — there is no separate API key flow
-yet. `security: [{ session: [] }]` on every route in `openapi.json` documents
-this (`securitySchemes.session` is `apiKey / cookie /
-__Host-authjs.session-token`).
+Two credentials, checked in this order (`src/platform/http/authenticate.ts`):
 
-Every request without a valid session gets `401 unauthorized`
+1. **`Authorization: Bearer pat_…`** — a personal access token. See
+   **Security** below.
+2. **The session cookie.** Sign in through the app (`/signin` → Authentik
+   OIDC); the browser's `__Host-authjs.session-token` cookie then
+   authenticates every `/api/v1/*` request. `securitySchemes.session` is
+   `apiKey / cookie / __Host-authjs.session-token`.
+
+A request that carries an `Authorization: Bearer pat_…` header is decided by
+that token alone — there is **no fallback to the cookie** when it fails.
+Falling back would mean a revoked or expired token kept working for anyone who
+happened to be signed in, which is precisely when a revocation has to be
+visible. A `Bearer` credential of some other shape is not ours and is ignored,
+so the cookie decides.
+
+Every request without a valid credential gets `401 unauthorized`
 (`src/platform/http/app.ts`'s auth middleware, ahead of rate limiting and the
-route handlers). Scripts and jobs that need to call the API from outside a
-browser have to carry that cookie explicitly (see
+route handlers). Scripts and jobs calling the API from outside a browser
+should use a token; carrying the cookie explicitly still works (see
 `docs/deploy/phase-1-runbook.md` step 6 for the exact `curl` invocation).
-
-**Personal access tokens are deferred to Phase 8.** They will add
-`Authorization: Bearer <token>` with scopes, without changing anything
-described here.
 
 Machine-to-machine job triggers (`POST /api/jobs/tick?tier=...`) are a
 separate, non-`/api/v1` endpoint authenticated by `X-Cron-Secret`, not part of
@@ -48,8 +53,10 @@ curl -X POST "https://$DASHBOARD_HOST/api/v1/integrations/wallet/sync" \
   -H "X-Requested-With: curl"
 ```
 
-Personal access tokens (Phase 8) will be exempt: a token is never attached to
-a request automatically, so there is nothing to forge.
+**Token-authenticated writes are exempt.** A browser never attaches an
+`Authorization` header on its own, so a cross-site form cannot forge one and
+there is nothing for the header to defend against. The check keys on how the
+request authenticated, not on the path.
 
 ## Error envelope
 
@@ -362,6 +369,49 @@ Every quantity — fractions, hours, days, balances — is a two-decimal string,
 and `null` means "no figure on file", rendered as "—" by the UI. It is never
 `"0.00"`. Type, event and balance responses expose no ownership fields.
 
+## Security
+
+`POST /security/tokens` creates a personal access token, `GET /security/tokens`
+lists the caller's own, `DELETE /security/tokens/{id}` revokes one (`204`).
+There is no permission code on any of the three: a token can only ever grant
+what its owner already holds, so managing your own is not a privilege on top
+of being an active user.
+
+**These three routes are session-only.** A request authenticated by a token
+gets `403 permission_denied` whatever its scopes say — a token that could mint
+or revoke tokens would turn one leak into a permanent, self-renewing foothold
+that survives revoking the token it came from.
+
+### The token
+
+`pat_<8 character prefix>.<43 character secret>`. The database keeps the
+prefix and `sha256(<whole token>)`; the plain token exists only in the `201`
+body of the request that created it and is never retrievable again — `GET
+/security/tokens` has no `token` field, and neither has the audit row
+(`security.token_created` records the name, prefix, scopes and expiry).
+
+```bash
+curl "https://$DASHBOARD_HOST/api/v1/accounts" \
+  -H "Authorization: Bearer $DASHBOARD_TOKEN"
+```
+
+### Scopes
+
+`scopes` is a list of permission codes and must be a **subset of the caller's
+current permissions** at creation (`422 validation_failed` otherwise). At
+every use the token's scopes are re-intersected with the owner's permissions
+*as they are then*, so demoting a user immediately shrinks every token they
+hold; nothing has to be re-issued or swept. A call outside the resulting set
+is `403 permission_denied` exactly as it would be for a session.
+
+### Lifetime
+
+`expiresAt` is optional; omit it or send `null` for a token that does not
+expire. A token stops authenticating the moment it is revoked, the moment it
+expires, or the moment its owner stops being `active` — all three answer `401
+unauthorized`. `lastUsedAt` is stamped at most once a minute per token, so a
+busy client does not turn every read into a write.
+
 ## Regenerating `openapi.json`
 
 The document is generated from the same `createRoute`/Zod schemas the route
@@ -409,6 +459,9 @@ the full grant per role:
 | `POST` | `/integrations/{provider}/disconnect` | destroys the credential and applies a disconnect policy |
 | `GET` | `/integrations/{provider}/sync-runs` | `?limit=` (1–10, default 10) — most recent first |
 | `POST` | `/webhooks/{provider}` | **not** session-authenticated — see **Integrations** below |
+| `POST` | `/security/tokens` | session-only; the `201` body carries `token` once |
+| `GET` | `/security/tokens` | session-only; never the token or its hash |
+| `DELETE` | `/security/tokens/{id}` | session-only; `204` |
 
 See [`openapi.json`](./openapi.json) for the full request/response schemas,
 or serve it with any Swagger UI / Redoc instance pointed at

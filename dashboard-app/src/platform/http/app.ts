@@ -10,14 +10,15 @@ import { registerPayrollRoutes } from "@/modules/payroll/api/routes";
 import { registerFundRoutes } from "@/modules/funds/api/routes";
 import { registerBudgetRoutes } from "@/modules/budgets/api/routes";
 import { registerTimeoffRoutes } from "@/modules/timeoff/api/routes";
+import { registerSecurityRoutes } from "@/modules/security/api/routes";
 import { ApiError, toErrorBody } from "./errors";
 import { rateLimit } from "./rate-limit";
 
 /**
  * How the caller proved who they are. Cookie-authenticated requests are the
  * ones a third-party page can make on the user's behalf, so only those need the
- * CSRF header below; a token, once it exists (Phase 8), is never sent
- * automatically by a browser and so is exempt.
+ * CSRF header below; a personal access token is never sent automatically by a
+ * browser and so is exempt (proved in `src/modules/security/api/routes.itest.ts`).
  */
 export type AuthMethod = "session" | "token";
 
@@ -132,6 +133,19 @@ export function createApiApp(deps: ApiDeps): ApiApp {
     name: "__Host-authjs.session-token",
   });
 
+  /**
+   * Phase 8: `Authorization: Bearer pat_<8>.<43>`. A token authenticates any
+   * route the session cookie does — with the permissions its scopes still
+   * intersect — except `/security/tokens`, which is session-only so that a
+   * leaked token cannot mint its own successor (Ruling P8-2).
+   */
+  app.openAPIRegistry.registerComponent("securitySchemes", "bearer", {
+    type: "http",
+    scheme: "bearer",
+    description:
+      "A personal access token, created at Settings → Security. Scopes are re-intersected with the owner's current permissions on every request.",
+  });
+
   app.doc("/openapi.json", {
     openapi: "3.1.0",
     info: { title: "Finance Dashboard API", version: "1.0.0" },
@@ -154,4 +168,5 @@ export function registerAllRoutes(app: ApiApp, deps: ApiDeps): void {
   registerFundRoutes(app, deps);
   registerBudgetRoutes(app, deps);
   registerTimeoffRoutes(app, deps);
+  registerSecurityRoutes(app, deps);
 }
