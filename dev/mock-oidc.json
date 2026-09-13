@@ -1,0 +1,35 @@
+{
+  "interactiveLogin": true,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "subject",
+          "match": "admin@example.test",
+          "claims": {
+            "sub": "${subject}",
+            "email": "${subject}",
+            "email_verified": true,
+            "name": "Admin User",
+            "preferred_username": "admin",
+            "groups": ["finance-admins"]
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": ".*",
+          "claims": {
+            "sub": "${subject}",
+            "email": "${subject}",
+            "email_verified": true,
+            "name": "${subject}",
+            "groups": ["finance-users"]
+          }
+        }
+      ]
+    }
+  ]
+}

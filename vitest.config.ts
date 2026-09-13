@@ -26,6 +26,22 @@ export default defineConfig({
           setupFiles: ["./test/setup-dom.ts"],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          environment: "node",
+          include: ["src/**/*.itest.ts"],
+          fileParallelism: false,
+          testTimeout: 30_000,
+          hookTimeout: 60_000,
+          globalSetup: ["./test/integration-setup.ts"],
+          env: {
+            DATABASE_URL:
+              process.env.TEST_DATABASE_URL ?? "postgres://finance:finance@127.0.0.1:55432/finance_test",
+          },
+        },
+      },
     ],
   },
 });
