@@ -26,7 +26,7 @@ function fromRow(row: Row): Preferences {
 
 export async function getPreferences(ctx: Pick<Ctx, "userId">): Promise<Preferences> {
   const [row] = await getDb().select().from(userPreferences).where(userScoped(ctx).owns(userPreferences));
-  return row ? fromRow(row) : DEFAULT_PREFERENCES;
+  return row ? fromRow(row) : { ...DEFAULT_PREFERENCES };
 }
 
 export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown): Promise<Preferences> {

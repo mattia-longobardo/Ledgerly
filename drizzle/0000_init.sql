@@ -24,7 +24,8 @@ CREATE TABLE "invitations" (
 	"accepted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "invitations_token_hash_unique" UNIQUE("token_hash")
+	CONSTRAINT "invitations_token_hash_unique" UNIQUE("token_hash"),
+	CONSTRAINT "invitations_role_ck" CHECK ("invitations"."role" in ('admin', 'user'))
 );
 --> statement-breakpoint
 CREATE TABLE "rate_limits" (
@@ -90,7 +91,13 @@ CREATE TABLE "user_preferences" (
 	CONSTRAINT "user_preferences_user_id_unique" UNIQUE("user_id"),
 	CONSTRAINT "user_preferences_week_start_ck" CHECK ("user_preferences"."week_start" in (0, 1)),
 	CONSTRAINT "user_preferences_minutes_ck" CHECK ("user_preferences"."minutes_per_day" between 60 and 720),
-	CONSTRAINT "user_preferences_patron_ck" CHECK (("user_preferences"."patron_month" is null) = ("user_preferences"."patron_day" is null))
+	CONSTRAINT "user_preferences_patron_ck" CHECK (("user_preferences"."patron_month" is null) = ("user_preferences"."patron_day" is null)),
+	CONSTRAINT "user_preferences_locale_ck" CHECK ("user_preferences"."locale" in ('en', 'it')),
+	CONSTRAINT "user_preferences_number_format_ck" CHECK ("user_preferences"."number_format" in ('it-IT', 'en-US', 'fr-FR')),
+	CONSTRAINT "user_preferences_theme_ck" CHECK ("user_preferences"."theme" in ('system', 'light', 'dark')),
+	CONSTRAINT "user_preferences_default_range_ck" CHECK ("user_preferences"."default_range" in ('this_month', 'last_30_days', 'year_to_date')),
+	CONSTRAINT "user_preferences_patron_month_ck" CHECK ("user_preferences"."patron_month" is null or "user_preferences"."patron_month" between 1 and 12),
+	CONSTRAINT "user_preferences_patron_day_ck" CHECK ("user_preferences"."patron_day" is null or "user_preferences"."patron_day" between 1 and 31)
 );
 --> statement-breakpoint
 ALTER TABLE "auth_accounts" ADD CONSTRAINT "auth_accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

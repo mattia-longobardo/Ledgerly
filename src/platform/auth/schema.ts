@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 // Column sets follow Better Auth 1.7 (core + admin plugin + database rate limit).
 // Better Auth validates export keys and column property names at startup, not SQL types.
@@ -125,5 +125,8 @@ export const invitations = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("invitations_email_idx").on(table.email)],
+  (table) => [
+    index("invitations_email_idx").on(table.email),
+    check("invitations_role_ck", sql`${table.role} in ('admin', 'user')`),
+  ],
 );
