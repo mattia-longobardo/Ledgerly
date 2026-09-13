@@ -36,7 +36,7 @@ describe("preferences service", () => {
     const bob = await createTestUser();
     await updatePreferences({ userId: alice.id }, { ...DEFAULT_PREFERENCES, locale: "it" });
     await updatePreferences({ userId: bob.id }, { ...DEFAULT_PREFERENCES, theme: "dark" });
-    expect((await getPreferences({ userId: alice.id })).theme).toBe("light");
-    expect((await getPreferences({ userId: bob.id })).locale).toBe("en");
+    expect(await getPreferences({ userId: alice.id })).toEqual({ ...DEFAULT_PREFERENCES, locale: "it" });
+    expect(await getPreferences({ userId: bob.id })).toEqual({ ...DEFAULT_PREFERENCES, theme: "dark" });
   });
 });

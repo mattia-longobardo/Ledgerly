@@ -1,5 +1,5 @@
 {
-  "id": "c41f14b4-66b1-4894-b136-93bdae8384c1",
+  "id": "60c6ddd2-dde1-4518-a676-5bd8f080dae1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -234,7 +234,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "invitations_role_ck": {
+          "name": "invitations_role_ck",
+          "value": "\"invitations\".\"role\" in ('admin', 'user')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.rate_limits": {
@@ -682,6 +687,30 @@
         "user_preferences_patron_ck": {
           "name": "user_preferences_patron_ck",
           "value": "(\"user_preferences\".\"patron_month\" is null) = (\"user_preferences\".\"patron_day\" is null)"
+        },
+        "user_preferences_locale_ck": {
+          "name": "user_preferences_locale_ck",
+          "value": "\"user_preferences\".\"locale\" in ('en', 'it')"
+        },
+        "user_preferences_number_format_ck": {
+          "name": "user_preferences_number_format_ck",
+          "value": "\"user_preferences\".\"number_format\" in ('it-IT', 'en-US', 'fr-FR')"
+        },
+        "user_preferences_theme_ck": {
+          "name": "user_preferences_theme_ck",
+          "value": "\"user_preferences\".\"theme\" in ('system', 'light', 'dark')"
+        },
+        "user_preferences_default_range_ck": {
+          "name": "user_preferences_default_range_ck",
+          "value": "\"user_preferences\".\"default_range\" in ('this_month', 'last_30_days', 'year_to_date')"
+        },
+        "user_preferences_patron_month_ck": {
+          "name": "user_preferences_patron_month_ck",
+          "value": "\"user_preferences\".\"patron_month\" is null or \"user_preferences\".\"patron_month\" between 1 and 12"
+        },
+        "user_preferences_patron_day_ck": {
+          "name": "user_preferences_patron_day_ck",
+          "value": "\"user_preferences\".\"patron_day\" is null or \"user_preferences\".\"patron_day\" between 1 and 31"
         }
       },
       "isRLSEnabled": false
