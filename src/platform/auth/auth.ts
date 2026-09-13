@@ -2,18 +2,30 @@ import "server-only";
 import { hash, verify } from "@node-rs/argon2";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin, genericOAuth } from "better-auth/plugins";
 import { count, eq } from "drizzle-orm";
 import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
+import { authLogger } from "./logger";
+import { accessControl, roles } from "./permissions";
 import { OIDC_PROVIDER_ID } from "./provider";
 import { roleFromIdToken } from "./roles";
 import { users } from "./schema";
 
+export const MIN_PASSWORD_LENGTH = 12;
+
 // OWASP argon2id parameters; @node-rs/argon2 uses argon2id by default.
 const ARGON2 = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
+
+/** Endpoints that would accept a bare ID token instead of the redirect flow (PKCE, state, nonce). */
+const ID_TOKEN_PATHS = new Set(["/sign-in/social", "/link-social"]);
+
+const DISCOVERY_TIMEOUT_MS = 5_000;
+const RETRY_BASE_MS = 5_000;
+const RETRY_MAX_MS = 5 * 60_000;
 
 export async function applyOidcRole(account: {
   providerId: string;
@@ -30,6 +42,33 @@ async function noUsersYet(): Promise<boolean> {
   return (row?.n ?? 0) === 0;
 }
 
+type OidcPlugin = ReturnType<typeof genericOAuth>;
+
+/**
+ * genericOAuth fetches the discovery document once, while Better Auth initializes, and 1.7.4
+ * gives that fetch no timeout or signal. Past the deadline the provider is left out, exactly as on
+ * a failed fetch, and getAuth() retries later; the abandoned fetch settles on its own.
+ */
+function withDiscoveryDeadline(plugin: OidcPlugin): OidcPlugin {
+  return {
+    ...plugin,
+    init: async (ctx) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const deadline = new Promise<Awaited<ReturnType<OidcPlugin["init"]>>>((resolve) => {
+        timer = setTimeout(() => {
+          ctx.logger.error(`Discovery for "${OIDC_PROVIDER_ID}" timed out after ${DISCOVERY_TIMEOUT_MS} ms`);
+          resolve({ context: { socialProviders: ctx.socialProviders } });
+        }, DISCOVERY_TIMEOUT_MS);
+      });
+      try {
+        return await Promise.race([plugin.init(ctx), deadline]);
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+  };
+}
+
 export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
   const env = readEnv();
   return betterAuth({
@@ -38,6 +77,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.BETTER_AUTH_URL],
     database: drizzleAdapter(getDb(), { provider: "pg", schema: tables }),
+    logger: authLogger,
     user: {
       modelName: "users",
       // Sign-up is closed: users come from Authentik, from an accepted invitation or from the
@@ -49,7 +89,13 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       },
     },
     session: { modelName: "sessions", expiresIn: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
-    account: { modelName: "authAccounts" },
+    account: {
+      modelName: "authAccounts",
+      // An SSO identity signs in only as the user it is already linked to: a matching email is not
+      // proof of ownership (an Authentik user could otherwise set another user's address).
+      accountLinking: { disableImplicitLinking: true },
+      encryptOAuthTokens: true,
+    },
     verification: { modelName: "verifications" },
     advanced: {
       // Postgres generates every id (`DEFAULT uuidv7()`, spec §4.3); Better Auth inserts none.
@@ -59,7 +105,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
     emailAndPassword: {
       enabled: true,
       disableSignUp: true,
-      minPasswordLength: 12,
+      minPasswordLength: MIN_PASSWORD_LENGTH,
       autoSignIn: true,
       revokeSessionsOnPasswordReset: true,
       password: {
@@ -78,6 +124,16 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
         "/request-password-reset": { window: 60 * 15, max: 3 },
       },
     },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ID_TOKEN_PATHS.has(ctx.path) && ctx.body?.idToken) {
+          throw new APIError("FORBIDDEN", {
+            code: "ID_TOKEN_SIGN_IN_DISABLED",
+            message: "Sign in through the identity provider's login page.",
+          });
+        }
+      }),
+    },
     databaseHooks: {
       user: {
         create: {
@@ -90,28 +146,30 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       },
     },
     plugins: [
-      admin({ defaultRole: "user", adminRoles: ["admin"] }),
-      genericOAuth({
-        config: [
-          {
-            providerId: OIDC_PROVIDER_ID,
-            name: "Authentik",
-            clientId: env.OIDC_CLIENT_ID,
-            clientSecret: env.OIDC_CLIENT_SECRET,
-            discoveryUrl: env.OIDC_DISCOVERY_URL,
-            scopes: ["openid", "profile", "email"],
-            pkce: true,
-            requireIdTokenVerification: true,
-            overrideUserInfo: true,
-            mapProfileToUser: (profile) => ({
-              name:
-                (profile.name as string | undefined) ??
-                (profile.preferred_username as string | undefined) ??
-                (profile.email as string),
-            }),
-          },
-        ],
-      }),
+      admin({ defaultRole: "user", adminRoles: ["admin"], ac: accessControl, roles }),
+      withDiscoveryDeadline(
+        genericOAuth({
+          config: [
+            {
+              providerId: OIDC_PROVIDER_ID,
+              name: "Authentik",
+              clientId: env.OIDC_CLIENT_ID,
+              clientSecret: env.OIDC_CLIENT_SECRET,
+              discoveryUrl: env.OIDC_DISCOVERY_URL,
+              scopes: ["openid", "profile", "email"],
+              pkce: true,
+              requireIdTokenVerification: true,
+              overrideUserInfo: true,
+              mapProfileToUser: (profile) => ({
+                name:
+                  (profile.name as string | undefined) ??
+                  (profile.preferred_username as string | undefined) ??
+                  (profile.email as string),
+              }),
+            },
+          ],
+        }),
+      ),
       ...(withNextCookies ? [nextCookies()] : []),
     ],
   });
@@ -119,10 +177,37 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
 
 export type Auth = ReturnType<typeof createAuth>;
 
-const cache = globalThis as unknown as { financeAuth?: Auth };
+interface CachedAuth {
+  auth: Auth;
+  /** Consecutive instances that came up without the SSO provider. */
+  failures: number;
+  /** Set when this instance lacks the SSO provider: the first call after it builds a new one. */
+  retryAt: number | null;
+}
 
-/** The app-wide instance. `nextCookies()` lets Server Actions set the session cookie. */
+const cache = globalThis as unknown as { financeAuth?: CachedAuth };
+
+/**
+ * The app-wide instance. `nextCookies()` lets Server Actions set the session cookie. An instance
+ * whose identity-provider discovery failed still serves password sign-in, and is replaced after a
+ * backoff (5 s, doubling, at most 5 min) so SSO recovers without a restart.
+ */
 export function getAuth(): Auth {
-  cache.financeAuth ??= createAuth({ withNextCookies: true });
-  return cache.financeAuth;
+  const cached = cache.financeAuth;
+  if (cached && (cached.retryAt === null || Date.now() < cached.retryAt)) return cached.auth;
+  const entry: CachedAuth = {
+    auth: createAuth({ withNextCookies: true }),
+    failures: cached?.failures ?? 0,
+    retryAt: null,
+  };
+  cache.financeAuth = entry;
+  const degraded = () => {
+    entry.failures += 1;
+    entry.retryAt = Date.now() + Math.min(RETRY_BASE_MS * 2 ** (entry.failures - 1), RETRY_MAX_MS);
+  };
+  entry.auth.$context.then((ctx) => {
+    if (ctx.socialProviders.some((provider) => provider.id === OIDC_PROVIDER_ID)) entry.failures = 0;
+    else degraded();
+  }, degraded);
+  return entry.auth;
 }
