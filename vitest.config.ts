@@ -39,6 +39,12 @@ export default defineConfig({
           env: {
             DATABASE_URL:
               process.env.TEST_DATABASE_URL ?? "postgres://finance:finance@127.0.0.1:55432/finance_test",
+            BETTER_AUTH_URL: "http://127.0.0.1:3000",
+            BETTER_AUTH_SECRET: "integration-secret-integration-secret-32",
+            OIDC_DISCOVERY_URL: "http://127.0.0.1:58090/default/.well-known/openid-configuration",
+            OIDC_CLIENT_ID: "finance",
+            OIDC_CLIENT_SECRET: "finance-dev",
+            OIDC_ADMIN_GROUP: "finance-admins",
           },
         },
       },

@@ -20,7 +20,8 @@
     "dev:services": "docker compose -f compose.dev.yml up -d --wait",
     "dev:services:down": "docker compose -f compose.dev.yml down",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=.env --conditions=react-server --import tsx scripts/migrate.ts"
+    "db:migrate": "node --env-file-if-exists=.env --conditions=react-server --import tsx scripts/migrate.ts",
+    "user:create-admin": "node --env-file-if-exists=.env --conditions=react-server --import tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1131.0",
