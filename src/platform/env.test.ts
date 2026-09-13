@@ -8,6 +8,9 @@ const valid = {
   OIDC_DISCOVERY_URL: "https://auth.example.test/application/o/finance/.well-known/openid-configuration",
   OIDC_CLIENT_ID: "finance",
   OIDC_CLIENT_SECRET: "client-secret",
+  SMTP_HOST: "127.0.0.1",
+  SMTP_PORT: "51025",
+  MAIL_FROM: "Finance Dashboard <finance@example.test>",
 };
 
 const production = (overrides: Record<string, string>) =>
