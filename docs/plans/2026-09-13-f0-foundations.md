@@ -25,12 +25,13 @@ Every task implicitly includes these.
 - **Ids:** `uuid().primaryKey().default(sql\`uuidv7()\`)` (Postgres 18).
 - **User scoping:** every user-owned table has `user_id uuid not null references users(id) on delete cascade`; every service function takes `(ctx: Ctx, input)`; queries use `userScoped(ctx)` (Task 8).
 - **No network I/O inside a database transaction** (mail, S3, HTTP, LLM happen outside; results are applied in a short transaction).
+- **LLM fallback is OpenAI only** (spec D18): no LLM code belongs in F0; never add another provider's SDK or configuration.
 - **Deterministic `ORDER BY`** on every list query.
 - **Copy:** every user-facing string is a next-intl message in `messages/en.json` **and** `messages/it.json` (English is the source); a unit test (Task 13) fails if the two files' keys differ.
 - **Production `docker-compose.yml` is NOT added in F0** (spec §3): only `compose.dev.yml`. `projects/stack.sh` would otherwise start the dev build in place of production.
 - **Dev services** run from `compose.dev.yml` (project name `finance-dev`) on ports that do not clash with the homelab: Postgres `55432`, MinIO `59000`/`59001`, Mailpit SMTP `51025` / UI `58025`, mock OIDC `58090`. No named Docker volumes (homelab rule): disposable `tmpfs` only.
 - **Commits:** small, conventional (`feat(scope): …`, `test: …`, `chore: …`), each ending with the two lines:
-  `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>` and `Claude-Session: https://claude.ai/code/session_01KMFxjjdWNcjRxWDKTLNKoU`.
+  `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>` and `Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg`.
 
 ## File structure (created in F0)
 
