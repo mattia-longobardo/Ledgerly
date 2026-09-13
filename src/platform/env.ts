@@ -6,6 +6,12 @@ const blankAsUndefined = (value: unknown) => (value === "" ? undefined : value);
 
 export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
+  BETTER_AUTH_URL: z.url(),
+  BETTER_AUTH_SECRET: z.string().min(32),
+  OIDC_DISCOVERY_URL: z.url(),
+  OIDC_CLIENT_ID: z.string().min(1),
+  OIDC_CLIENT_SECRET: z.string().min(1),
+  OIDC_ADMIN_GROUP: z.string().min(1).default("finance-admins"),
 });
 
 export type Env = z.infer<typeof envSchema>;
