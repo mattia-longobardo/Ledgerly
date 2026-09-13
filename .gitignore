@@ -1,0 +1,25 @@
+# Support material: local only, deleted at the end of development (spec §13)
+/Fondo Cometa/
+/Payroll/
+/UI Recreation and branding decisions/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+
+# Tooling
+graphify-out/
+.DS_Store
