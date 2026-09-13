@@ -32,6 +32,7 @@ Every task implicitly includes these.
 - **Dev services** run from `compose.dev.yml` (project name `finance-dev`) on ports that do not clash with the homelab: Postgres `55432`, MinIO `59000`/`59001`, Mailpit SMTP `51025` / UI `58025`, mock OIDC `58090`. No named Docker volumes (homelab rule): disposable `tmpfs` only.
 - **Commits:** small, conventional (`feat(scope): …`, `test: …`, `chore: …`), each ending with the two lines:
   `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>` and `Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg`.
+  Every task's commit step uses `git commit -F - <<'EOF' … EOF` with those two lines after a blank line. Before each commit (from Task 1 on) run `npm run format`, then `npm run lint`, `npm run typecheck` and `npm run format:check`; all must exit 0.
 
 ## File structure (created in F0)
 
@@ -40,26 +41,35 @@ Every task implicitly includes these.
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx, globals.css
-│   │   ├── (auth)/sign-in/page.tsx, (auth)/invite/[token]/page.tsx,
-│   │   │   (auth)/reset-password/page.tsx, (auth)/forgot-password/page.tsx, (auth)/actions.ts
+│   │   ├── (auth)/layout.tsx, (auth)/auth-card.tsx, (auth)/actions.ts (accept invitation)
+│   │   │   (auth)/sign-in/{page,sign-in-form,errors}, (auth)/forgot-password/{page,forgot-form},
+│   │   │   (auth)/reset-password/{page,reset-form}, (auth)/invite/[token]/{page,invite-form}
 │   │   ├── (app)/layout.tsx, (app)/navigation.ts, (app)/page.tsx (Overview, empty state)
-│   │   ├── (app)/settings/…            Profile, Security
-│   │   ├── (app)/components/page.tsx   design-system page (Admin only)
+│   │   ├── (app)/settings/             layout, page, settings-tabs, profile/{page,preferences-form,name-form},
+│   │   │                               security/{page,password-form,sessions-list}
+│   │   ├── (app)/components/           page.tsx, gallery.tsx — design-system page (Admin only)
 │   │   └── api/auth/[...all]/route.ts, api/jobs/tick/route.ts, api/health/route.ts, api/metrics/route.ts
 │   ├── proxy.ts                        anonymous → /sign-in, CSP header
-│   ├── modules/users/                  schema, rules, service, actions (preferences, invitations)
+│   ├── global.d.ts                     next-intl typed messages
+│   ├── architecture.test.ts            module-boundary test
+│   ├── modules/users/                  schema.ts, rules.ts, service.ts, actions.ts (theme, preferences, name, sessions)
 │   ├── platform/
-│   │   ├── money.ts, dates.ts, holidays.ts, format.ts, crypto.ts, env.ts, context.ts, mail.ts, storage.ts
+│   │   ├── money.ts, dates.ts, holidays.ts, format.ts, crypto.ts, env.ts, context.ts, mail.ts,
+│   │   │   storage.ts, storage-keys.ts, theme.ts
 │   │   ├── db/                         client.ts, tables.ts, scope.ts, migrate.ts
-│   │   ├── auth/                       schema.ts, roles.ts, auth.ts, session.ts, client.ts
-│   │   ├── jobs/                       schema.ts, registry.ts, lock.ts, tick.ts, heartbeat.ts, housekeeping.ts
+│   │   ├── auth/                       schema.ts, roles.ts, provider.ts, csp.ts, auth.ts, session.ts, client.ts,
+│   │   │                               invitations.ts, emails.ts
+│   │   ├── jobs/                       schema.ts, registry.ts, lock.ts, tick.ts, heartbeat.ts, housekeeping.ts, secret.ts
 │   │   └── i18n/request.ts, i18n/locales.ts
-│   └── ui/                             cn.ts, primitives, overlays, table, states, shell/
+│   └── ui/                             cn.ts, tone.ts, button, input, field, badge, card, kpi-tile, progress-bar,
+│                                       avatar, skeleton, kbd, modal, toast, segmented, menu, popover, tab-links,
+│                                       table, states, section, shell/
 ├── messages/en.json, messages/it.json
 ├── drizzle/                            generated migrations
-├── scripts/migrate.ts, scripts/seed-dev.ts, scripts/seed-e2e.ts
-├── test/setup-dom.ts, test/server-only.ts, test/integration-setup.ts, test/db.ts
-├── tests/e2e/                          Playwright specs + global setup
+├── scripts/migrate.ts, scripts/create-admin.ts, scripts/seed-dev.ts, scripts/seed-e2e.ts
+├── test/setup-dom.ts, test/server-only.ts, test/integration-setup.ts, test/db.ts, test/truncate.ts,
+│   test/users.ts, test/mailpit.ts
+├── tests/e2e/                          Playwright specs, env, serve.sh, global setup, helpers
 ├── dev/postgres-init.sql, dev/mock-oidc.json
 ├── cron/Dockerfile, cron/crontab
 ├── Dockerfile, entrypoint.sh, .dockerignore, compose.dev.yml
@@ -125,7 +135,7 @@ Every task implicitly includes these.
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --project 'unit-*'",
     "test:watch": "vitest --project 'unit-*'"
   },
@@ -304,10 +314,14 @@ drizzle
 package-lock.json
 test-results
 playwright-report
+docs
+.superpowers
 Fondo Cometa
 Payroll
 UI Recreation and branding decisions
 ```
+
+(`typecheck` runs `next typegen` first: `LayoutProps`, `PageProps` and the typed-route declarations exist only after Next has generated `.next/types`, so a bare `tsc --noEmit` fails on a fresh checkout. `docs` and `.superpowers` are prose and controller notes; Prettier would re-pad their tables.)
 
 - [ ] **Step 4: Write the Vitest config and test setup**
 
@@ -438,7 +452,7 @@ npm run lint && npm run typecheck && npm test && npm run build
   material: read-only, never committed, deleted at the end of development.
 - Layout: `src/app` routes, `src/modules/<name>` domain modules, `src/platform` shared services, `src/ui` design system.
 - Money is `bigint` cents, unknown is `null`, dates go through `src/platform/dates.ts`, services take `(ctx, input)`.
-- Before committing: `npm run lint && npm run typecheck && npm test`.
+- Before committing: `npm run format && npm run lint && npm run typecheck && npm run format:check && npm test`.
 ```
 
 Append to `.gitignore`:
@@ -449,15 +463,20 @@ Append to `.gitignore`:
 
 - [ ] **Step 7: Verify the scaffold end to end**
 
-Run: `npm run lint && npm run typecheck && npm test && npm run build`
-Expected: ESLint prints no errors; `tsc` exits 0; Vitest reports `No test files found, exiting with code 0`; `next build` ends with `Route (app)` listing `/` and creates `.next/standalone/server.js`.
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check && npm test && npm run build`
+Expected: Prettier rewrites what it needs to; ESLint prints no errors; `next typegen` generates the route types and `tsc` exits 0; `format:check` reports `All matched files use Prettier code style!`; Vitest reports `No test files found, exiting with code 0`; `next build` ends with `Route (app)` listing `/` and creates `.next/standalone/server.js`.
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add package.json package-lock.json tsconfig.json next.config.ts postcss.config.mjs eslint.config.mjs \
   .prettierrc.json .prettierignore vitest.config.ts test src .env.example README.md CLAUDE.md .gitignore
-git commit -m "chore: scaffold Next.js 16 app with TypeScript, Tailwind, ESLint and Vitest"
+git commit -F - <<'EOF'
+chore: scaffold Next.js 16 app with TypeScript, Tailwind, ESLint and Vitest
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -612,9 +631,17 @@ Expected: PASS (all cases).
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/money.ts src/platform/money.test.ts
-git commit -m "feat(platform): money in integer cents with half-up parsing"
+git commit -F - <<'EOF'
+feat(platform): money in integer cents with half-up parsing
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -799,9 +826,17 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/dates.ts src/platform/dates.test.ts
-git commit -m "feat(platform): civil dates and month keys in the user's timezone"
+git commit -F - <<'EOF'
+feat(platform): civil dates and month keys in the user's timezone
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -994,9 +1029,17 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/holidays.ts src/platform/holidays.test.ts
-git commit -m "feat(platform): Italian public holidays with Easter and patron saint"
+git commit -F - <<'EOF'
+feat(platform): Italian public holidays with Easter and patron saint
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -1174,9 +1217,17 @@ Expected: PASS. If `fr-FR` fails only on spacing, check that `plain()` is applie
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/format.ts src/platform/format.test.ts
-git commit -m "feat(platform): money, percent and date formatting per user preference"
+git commit -F - <<'EOF'
+feat(platform): money, percent and date formatting per user preference
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -1352,9 +1403,17 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/crypto.ts src/platform/crypto.test.ts
-git commit -m "feat(platform): AES-256-GCM credential sealing with a rotatable key ring"
+git commit -F - <<'EOF'
+feat(platform): AES-256-GCM credential sealing with a rotatable key ring
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -1362,7 +1421,7 @@ git commit -m "feat(platform): AES-256-GCM credential sealing with a rotatable k
 ### Task 7: Dev services, environment, database client, migrations and the integration harness
 
 **Files:**
-- Create: `compose.dev.yml`, `dev/postgres-init.sql`, `dev/mock-oidc.json`, `src/platform/env.ts`, `src/platform/db/client.ts`, `src/platform/db/tables.ts`, `src/platform/db/migrate.ts`, `scripts/migrate.ts`, `drizzle.config.ts`, `test/integration-setup.ts`, `test/db.ts`
+- Create: `compose.dev.yml`, `dev/postgres-init.sql`, `dev/mock-oidc.json`, `src/platform/env.ts`, `src/platform/db/client.ts`, `src/platform/db/tables.ts`, `src/platform/db/migrate.ts`, `scripts/migrate.ts`, `drizzle.config.ts`, `test/integration-setup.ts`, `test/truncate.ts`, `test/db.ts`
 - Modify: `vitest.config.ts` (add the `integration` project), `package.json` (scripts), `.env.example`
 - Test: `src/platform/db/client.itest.ts`
 
@@ -1373,7 +1432,8 @@ git commit -m "feat(platform): AES-256-GCM credential sealing with a rotatable k
   - `getPool(): Pool`, `getDb(): Db`, `type Db`, `type Tx` (`src/platform/db/client.ts`).
   - `src/platform/db/tables.ts` — the barrel that re-exports every `schema.ts`; later tasks add one `export * from` line each.
   - `runMigrations(pool: Pool, migrationsFolder: string): Promise<void>` (blocking advisory lock).
-  - `resetDatabase(): Promise<void>` and `closeDatabase(): Promise<void>` test helpers (`test/db.ts`).
+  - `truncateAllTables(db: Pool | ClientBase): Promise<void>` (`test/truncate.ts`; it imports nothing from `src/`, so Playwright's global setup can load it too — Task 21).
+  - `resetDatabase(): Promise<void>` and `closeDatabase(): Promise<void>` test helpers (`test/db.ts`; they import the app's `server-only` client, so only Vitest loads them).
   - npm scripts: `dev:services`, `dev:services:down`, `db:generate`, `db:migrate`, `test:integration`.
 
 - [ ] **Step 1: Write the dev services**
@@ -1650,24 +1710,36 @@ export default async function setup(): Promise<void> {
 ```
 
 ```ts
-// test/db.ts — helpers for *.itest.ts files.
-import { getPool } from "@/platform/db/client";
+// test/truncate.ts — imports nothing from src/, so both Vitest and Playwright's global setup can load it.
+import type { ClientBase, Pool } from "pg";
 
-/** Empties every application table, keeping the migrations journal. Call in `beforeEach`. */
-export async function resetDatabase(): Promise<void> {
-  const { rows } = await getPool().query<{ tablename: string }>(
+/** Empties every table of the public schema; drizzle's journal lives in the `drizzle` schema and stays. */
+export async function truncateAllTables(db: Pool | ClientBase): Promise<void> {
+  const { rows } = await db.query<{ tablename: string }>(
     "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename",
   );
   if (rows.length === 0) return;
   const names = rows.map((row) => `"${row.tablename}"`).join(", ");
-  await getPool().query(`TRUNCATE ${names} RESTART IDENTITY CASCADE`);
+  await db.query(`TRUNCATE ${names} RESTART IDENTITY CASCADE`);
+}
+```
+
+```ts
+// test/db.ts — helpers for *.itest.ts files (Vitest only: the client imports `server-only`).
+import { getPool } from "@/platform/db/client";
+import { truncateAllTables } from "./truncate";
+
+/** Empties every application table, keeping the migrations journal. Call in `beforeEach`. */
+export async function resetDatabase(): Promise<void> {
+  await truncateAllTables(getPool());
 }
 
 /** Closes the shared pool. Call in `afterAll`. */
 export async function closeDatabase(): Promise<void> {
   await getPool().end();
-  (globalThis as unknown as { financePool?: unknown; financeDb?: unknown }).financePool = undefined;
-  (globalThis as unknown as { financePool?: unknown; financeDb?: unknown }).financeDb = undefined;
+  const cache = globalThis as unknown as { financePool?: unknown; financeDb?: unknown };
+  cache.financePool = undefined;
+  cache.financeDb = undefined;
 }
 ```
 
@@ -1683,7 +1755,9 @@ Scripts in `package.json`:
 
 (`--conditions=react-server` makes `server-only` resolve to its empty build in scripts.)
 
-- [ ] **Step 6: Write the failing integration test**
+- [ ] **Step 6: Write the integration test**
+
+The client already exists, so this test passes on its first run; it proves the harness and Postgres 18.
 
 ```ts
 // src/platform/db/client.itest.ts
@@ -1719,10 +1793,18 @@ Append to `.env.example`:
 # (Postgres 55432, MinIO 59000, Mailpit 51025/58025, mock OIDC 58090)
 ```
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add compose.dev.yml dev src/platform/env.ts src/platform/db drizzle.config.ts scripts/migrate.ts \
-  test/integration-setup.ts test/db.ts vitest.config.ts package.json .env.example
-git commit -m "feat(platform): dev services, validated env, Drizzle client, migrations and integration harness"
+  test/integration-setup.ts test/truncate.ts test/db.ts vitest.config.ts package.json .env.example
+git commit -F - <<'EOF'
+feat(platform): dev services, validated env, Drizzle client, migrations and integration harness
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -1741,7 +1823,8 @@ git commit -m "feat(platform): dev services, validated env, Drizzle client, migr
   - `type Role = "admin" | "user"`, `interface Ctx { userId: string; role: Role; locale: UiLocale; timeZone: string; numberFormat: NumberFormat }` (`src/platform/context.ts`).
   - `userScoped(ctx: Pick<Ctx, "userId">): { owns(table): SQL; stamp<V>(values: V): V & { userId: string } }`.
   - Better Auth tables with Drizzle export keys `users`, `sessions`, `authAccounts` (SQL `auth_accounts`), `verifications`, `rateLimits` (SQL `rate_limits`), plus `invitations` (`src/platform/auth/schema.ts`).
-  - `userPreferences` table; `interface Preferences { timeZone; locale; numberFormat; weekStart: 0 | 1; theme: "system" | "light" | "dark"; defaultRange: "this_month" | "last_30_days" | "year_to_date"; monthlySummary: boolean; minutesPerDay: number; patronSaint: { month: number; day: number } | null }`; `DEFAULT_PREFERENCES`; `preferencesInputSchema` (zod).
+  - `userPreferences` table (uuidv7 `id`, unique `user_id`, `created_at`, `updated_at`); `interface Preferences { timeZone; locale; numberFormat; weekStart: 0 | 1; theme: "system" | "light" | "dark"; defaultRange: "this_month" | "last_30_days" | "year_to_date"; monthlySummary: boolean; minutesPerDay: number; patronSaint: { month: number; day: number } | null }`; `DEFAULT_PREFERENCES` (theme `"light"`: spec §8.1 "light theme by default"); `preferencesInputSchema` (zod).
+  - Every table has `id`, `created_at`, `updated_at` (spec §6) except `rate_limits`, whose shape Better Auth owns.
   - `getPreferences(ctx: Pick<Ctx, "userId">): Promise<Preferences>`, `updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown): Promise<Preferences>`.
   - Test helper `createTestUser(email?: string): Promise<{ id: string; email: string }>` (`test/users.ts`).
 
@@ -1876,6 +1959,10 @@ export const verifications = pgTable(
   (table) => [index("verifications_identifier_idx").on(table.identifier)],
 );
 
+/**
+ * The one table without `created_at`/`updated_at` (spec §6 exception): Better Auth owns its shape
+ * and its rows are ephemeral counters, overwritten on every request.
+ */
 export const rateLimits = pgTable("rate_limits", {
   id: uuid("id").primaryKey().default(sql`uuidv7()`),
   key: text("key").notNull().unique(),
@@ -1895,6 +1982,10 @@ export const invitations = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (table) => [index("invitations_email_idx").on(table.email)],
 );
@@ -1951,13 +2042,15 @@ Expected: FAIL — `Failed to resolve import "./rules"`.
 // src/modules/users/schema.ts
 import { sql } from "drizzle-orm";
 import { boolean, check, integer, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { users } from "@/platform/auth/schema";
+import { users } from "../../platform/auth/schema";
 
 export const userPreferences = pgTable(
   "user_preferences",
   {
+    id: uuid("id").primaryKey().default(sql`uuidv7()`),
     userId: uuid("user_id")
-      .primaryKey()
+      .notNull()
+      .unique()
       .references(() => users.id, { onDelete: "cascade" }),
     timeZone: text("time_zone").notNull(),
     locale: text("locale", { enum: ["en", "it"] }).notNull(),
@@ -1969,6 +2062,7 @@ export const userPreferences = pgTable(
     minutesPerDay: integer("minutes_per_day").notNull(),
     patronMonth: smallint("patron_month"),
     patronDay: smallint("patron_day"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
@@ -1984,6 +2078,8 @@ export const userPreferences = pgTable(
   ],
 );
 ```
+
+Every `schema.ts` imports other schema files by **relative** path (`../../platform/auth/schema`), never through the `@/` alias: drizzle-kit loads schema files with its own loader, which does not read tsconfig `paths`. The preferences row has its own uuidv7 `id` and the usual `created_at`/`updated_at` (spec §6); `user_id` is unique, one row per user.
 
 ```ts
 // src/modules/users/rules.ts
@@ -2025,7 +2121,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   locale: "en",
   numberFormat: "it-IT",
   weekStart: 1,
-  theme: "system",
+  theme: "light",
   defaultRange: "this_month",
   monthlySummary: false,
   minutesPerDay: 480,
@@ -2049,7 +2145,7 @@ export * from "@/modules/users/schema";
 ```
 
 Run: `npm run db:generate -- --name init`
-Expected: `drizzle/0000_init.sql` containing `CREATE TABLE "users"`, `"sessions"`, `"auth_accounts"`, `"verifications"`, `"rate_limits"`, `"invitations"`, `"user_preferences"`, each id with `DEFAULT uuidv7()`. Read the SQL once by hand before committing.
+Expected: `drizzle/0000_init.sql` containing `CREATE TABLE "users"`, `"sessions"`, `"auth_accounts"`, `"verifications"`, `"rate_limits"`, `"invitations"`, `"user_preferences"`, each `"id" uuid PRIMARY KEY DEFAULT uuidv7()`; every table except `rate_limits` has `created_at` and `updated_at`; `user_preferences` has `"user_id" uuid NOT NULL` with a unique constraint. Read the SQL once by hand before committing.
 
 - [ ] **Step 8: Write the users test helper, the failing service test and the architecture test**
 
@@ -2109,7 +2205,7 @@ describe("preferences service", () => {
     const bob = await createTestUser();
     await updatePreferences({ userId: alice.id }, { ...DEFAULT_PREFERENCES, locale: "it" });
     await updatePreferences({ userId: bob.id }, { ...DEFAULT_PREFERENCES, theme: "dark" });
-    expect((await getPreferences({ userId: alice.id })).theme).toBe("system");
+    expect((await getPreferences({ userId: alice.id })).theme).toBe("light");
     expect((await getPreferences({ userId: bob.id })).locale).toBe("en");
   });
 });
@@ -2215,10 +2311,18 @@ Expected: PASS — unit (rules, architecture, platform) and integration (client,
 
 - [ ] **Step 12: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/context.ts src/platform/db src/platform/auth/schema.ts src/modules/users \
   src/architecture.test.ts test/users.ts drizzle
-git commit -m "feat(users): auth tables, Ctx, user scoping and per-user preferences"
+git commit -F - <<'EOF'
+feat(users): auth tables, Ctx, user scoping and per-user preferences
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -2226,14 +2330,15 @@ git commit -m "feat(users): auth tables, Ctx, user scoping and per-user preferen
 ### Task 9: Better Auth — password and Authentik sign-in, roles, gates and the proxy
 
 **Files:**
-- Create: `src/platform/auth/roles.ts`, `src/platform/auth/auth.ts`, `src/platform/auth/session.ts`, `src/platform/auth/client.ts`, `src/platform/auth/csp.ts`, `src/app/api/auth/[...all]/route.ts`, `src/proxy.ts`, `scripts/create-admin.ts`
+- Create: `src/platform/auth/roles.ts`, `src/platform/auth/provider.ts`, `src/platform/auth/auth.ts`, `src/platform/auth/session.ts`, `src/platform/auth/client.ts`, `src/platform/auth/csp.ts`, `src/app/api/auth/[...all]/route.ts`, `src/proxy.ts`, `scripts/create-admin.ts`
 - Modify: `src/platform/env.ts`, `vitest.config.ts` (integration env), `.env.example`, `package.json` (script `user:create-admin`)
 - Test: `src/platform/auth/roles.test.ts`, `src/platform/auth/csp.test.ts`, `src/platform/auth/session.test.ts`, `src/platform/auth/auth.itest.ts`
 
 **Interfaces:**
 - Consumes: `getDb`, tables (Tasks 7–8); `Ctx`, `Role` (Task 8); `getPreferences` (Task 8).
 - Produces:
-  - `OIDC_PROVIDER_ID = "authentik"`; `createAuth(options: { withNextCookies: boolean }): Auth`; `getAuth(): Auth`; `type Auth`; `applyOidcRole(account: { providerId: string; userId: string; idToken?: string | null }): Promise<void>`.
+  - `OIDC_PROVIDER_ID = "authentik"` and `identityProviderUrl(): URL | null` (`src/platform/auth/provider.ts`, no `server-only`: the proxy, Server Components and client components import it; the only place that names the provider or parses `OIDC_DISCOVERY_URL` outside `readEnv`).
+  - `createAuth(options: { withNextCookies: boolean }): Auth`; `getAuth(): Auth`; `type Auth`; `applyOidcRole(account: { providerId: string; userId: string; idToken?: string | null }): Promise<void>` (`src/platform/auth/auth.ts`). Ids are generated by Postgres (`uuidv7()`), not by Better Auth.
   - `roleFromIdToken(idToken: string, adminGroup: string): Role | null` — `"admin"` when the groups claim contains the admin group, otherwise `null` (SSO never demotes).
   - `ctxFrom(user: { id: string; role?: string | null }, prefs: Preferences): Ctx`; `getOptionalCtx(): Promise<Ctx | null>`; `requireSession(): Promise<Ctx>` (redirects to `/sign-in`); `requireAdmin(): Promise<Ctx>` (404 for non-admins).
   - `contentSecurityPolicy(options: { authOrigin: string | null; dev: boolean }): string`.
@@ -2317,7 +2422,7 @@ describe("contentSecurityPolicy", () => {
 
   it("adds unsafe-eval only in development (Next dev needs it)", () => {
     expect(contentSecurityPolicy({ authOrigin: null, dev: true })).toContain("'unsafe-eval'");
-    expect(contentSecurityPolicy({ authOrigin: null, dev: false })).toContain("form-action 'self';");
+    expect(contentSecurityPolicy({ authOrigin: null, dev: false })).toMatch(/form-action 'self'$/);
   });
 });
 ```
@@ -2387,7 +2492,23 @@ export function contentSecurityPolicy({ authOrigin, dev }: { authOrigin: string 
 }
 ```
 
-(`frame-ancestors 'self'` lets the app embed its own document originals in the payslip review; third parties still cannot frame it.)
+(`frame-ancestors 'self'` lets the app embed its own document originals in the payslip review; third parties still cannot frame it. `form-action` is the last directive, so it carries no trailing `;`.)
+
+```ts
+// src/platform/auth/provider.ts — no `server-only`: the proxy and client components import it too.
+
+/** Better Auth provider id of the Authentik login; also the last segment of its callback URL. */
+export const OIDC_PROVIDER_ID = "authentik";
+
+/** The identity provider's discovery URL, or null when unset or malformed (the build has no env). */
+export function identityProviderUrl(): URL | null {
+  try {
+    return new URL(process.env.OIDC_DISCOVERY_URL ?? "");
+  } catch {
+    return null;
+  }
+}
+```
 
 ```ts
 // src/platform/auth/auth.ts
@@ -2401,10 +2522,9 @@ import { count, eq } from "drizzle-orm";
 import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
+import { OIDC_PROVIDER_ID } from "./provider";
 import { roleFromIdToken } from "./roles";
 import { users } from "./schema";
-
-export const OIDC_PROVIDER_ID = "authentik";
 
 // OWASP argon2id parameters; @node-rs/argon2 uses argon2id by default.
 const ARGON2 = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -2442,7 +2562,8 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
     account: { modelName: "authAccounts" },
     verification: { modelName: "verifications" },
     advanced: {
-      database: { generateId: "uuid" },
+      // Postgres generates every id (`DEFAULT uuidv7()`, spec §4.3); Better Auth inserts none.
+      database: { generateId: false },
       ipAddress: { ipAddressHeaders: ["x-forwarded-for"] },
     },
     emailAndPassword: {
@@ -2517,7 +2638,7 @@ export function getAuth(): Auth {
 }
 ```
 
-If startup throws `Drizzle schema mismatch — Missing tables …` or a `modelName` type error, the reported names are authoritative: rename the Drizzle **export keys** to what Better Auth asks for (keep the SQL table names `auth_accounts` and `rate_limits`), then re-run the test. If `rateLimit.modelName` is rejected by the type checker, remove it and rename the export `rateLimits` → the key Better Auth reports.
+If startup throws `Drizzle schema mismatch — Missing tables …` or a `modelName` type error, the reported names are authoritative: rename the Drizzle **export keys** to what Better Auth asks for (keep the SQL table names `auth_accounts` and `rate_limits`), then re-run the test. If `rateLimit.modelName` is rejected by the type checker, remove it and rename the export `rateLimits` → the key Better Auth reports. With `generateId: false` Better Auth leaves the id to the database default; if an insert fails because Better Auth sends a null or empty `id`, stop and escalate to the controller — do not switch to `"uuid"` (that inserts app-generated UUIDv4 values).
 
 ```ts
 // src/platform/auth/session.ts
@@ -2591,16 +2712,9 @@ export async function POST(request: Request) {
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 import { contentSecurityPolicy } from "@/platform/auth/csp";
+import { identityProviderUrl } from "@/platform/auth/provider";
 
 const PUBLIC_PREFIXES = ["/sign-in", "/forgot-password", "/reset-password", "/invite"];
-
-function authOrigin(): string | null {
-  try {
-    return new URL(process.env.OIDC_DISCOVERY_URL ?? "").origin;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Convenience only — never the security boundary: every page and action calls
@@ -2615,7 +2729,10 @@ export function proxy(request: NextRequest) {
       : NextResponse.redirect(new URL("/sign-in", request.url));
   response.headers.set(
     "Content-Security-Policy",
-    contentSecurityPolicy({ authOrigin: authOrigin(), dev: process.env.NODE_ENV !== "production" }),
+    contentSecurityPolicy({
+      authOrigin: identityProviderUrl()?.origin ?? null,
+      dev: process.env.NODE_ENV !== "production",
+    }),
   );
   return response;
 }
@@ -2664,11 +2781,14 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { getDb } from "@/platform/db/client";
-import { applyOidcRole, createAuth, OIDC_PROVIDER_ID } from "./auth";
+import { applyOidcRole, createAuth } from "./auth";
+import { OIDC_PROVIDER_ID } from "./provider";
 import { authAccounts, users } from "./schema";
 
 const auth = () => createAuth({ withNextCookies: false });
 const PASSWORD = "correct-horse-battery";
+/** RFC 9562 UUIDv7: the version nibble is 7 and the variant bits are 10xx. */
+const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 async function idToken(groups: string[]) {
   return new SignJWT({ groups })
@@ -2689,6 +2809,13 @@ describe("Better Auth configuration", () => {
       { email: "b@example.test", role: "user" },
     ]);
     expect(first.user.id).not.toBe(second.user.id);
+  });
+
+  it("lets Postgres generate UUIDv7 ids for users and their accounts", async () => {
+    const { user } = await auth().api.createUser({ body: { email: "a@example.test", password: PASSWORD, name: "A" } });
+    expect(user.id).toMatch(UUID_V7);
+    const [account] = await getDb().select({ id: authAccounts.id }).from(authAccounts);
+    expect(account.id).toMatch(UUID_V7);
   });
 
   it("stores the password as argon2id", async () => {
@@ -2732,19 +2859,27 @@ describe("Better Auth configuration", () => {
 - [ ] **Step 7: Run it**
 
 Run: `npm run test:integration -- src/platform/auth/auth.itest.ts`
-Expected: PASS (5 tests). The OIDC login itself (browser redirect) is covered end to end in Task 21.
+Expected: PASS (6 tests). The OIDC login itself (browser redirect) is covered end to end in Task 21.
 
 - [ ] **Step 8: Build to confirm the route and the proxy compile**
 
 Run: `npm run typecheck && npm run lint && npm run build`
-Expected: the build lists `ƒ /api/auth/[...all]` and `ƒ Proxy (Middleware)`.
+Expected: the build lists `ƒ /api/auth/[...all]` and `ƒ Proxy (Middleware)`. `/sign-in` does not exist until Task 17; if `typecheck` rejects `redirect("/sign-in")` in `session.ts` under typed routes, write `redirect("/sign-in" as Route)` with `import type { Route } from "next";` (the same cast `navigation.ts` uses in Task 16) — never disable `typedRoutes`.
 
 - [ ] **Step 9: Commit**
+
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
 
 ```bash
 git add src/platform/auth src/platform/env.ts src/app/api/auth src/proxy.ts scripts/create-admin.ts \
   vitest.config.ts .env.example package.json
-git commit -m "feat(auth): Better Auth with argon2 passwords, Authentik OIDC, admin role and closed sign-up"
+git commit -F - <<'EOF'
+feat(auth): Better Auth with argon2 passwords, Authentik OIDC, admin role and closed sign-up
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -2765,7 +2900,7 @@ git commit -m "feat(auth): Better Auth with argon2 passwords, Authentik OIDC, ad
   - `findInvitation(token: string, now?: Date): Promise<{ id: string; email: string; role: Role } | null>`.
   - `acceptInvitation(auth: Auth, input: { token: string; name: string; password: string }, now?: Date): Promise<{ userId: string; email: string }>` — throws `InvitationError` (`"invalid" | "email_taken" | "weak_password"`).
   - `sendInvitationEmail(input: { email: string; token: string }): Promise<void>` — link `${BETTER_AUTH_URL}/invite/<token>`.
-  - Test helpers `clearMailbox()`, `waitForMail(to: string): Promise<{ Subject: string; Text: string }>`.
+  - Test helpers `clearMailbox()`, `waitForMail(to: string): Promise<{ Subject: string; Text: string }>` (`test/mailpit.ts`; it imports nothing, so the Playwright suite of Task 21 reuses it).
 
 - [ ] **Step 1: Extend the environment**
 
@@ -2980,6 +3115,7 @@ Expected: PASS.
 
 ```ts
 // test/mailpit.ts — reads the dev SMTP catcher (compose.dev.yml) through its REST API.
+// Imports nothing, so Playwright's e2e code (Task 21) reuses it as well as Vitest.
 const MAILPIT = process.env.MAILPIT_URL ?? "http://127.0.0.1:58025";
 
 export async function clearMailbox(): Promise<void> {
@@ -3105,9 +3241,17 @@ Expected: PASS, including 4 invitation tests and 1 password-reset test.
 
 - [ ] **Step 7: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/mail.ts src/platform/auth src/platform/env.ts test/mailpit.ts vitest.config.ts .env.example
-git commit -m "feat(auth): SMTP mail, invitations with hashed one-time tokens, password reset emails"
+git commit -F - <<'EOF'
+feat(auth): SMTP mail, invitations with hashed one-time tokens, password reset emails
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -3262,10 +3406,18 @@ Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/storage.ts src/platform/storage-keys.ts src/platform/storage-keys.test.ts \
   src/platform/storage.itest.ts src/platform/env.ts vitest.config.ts .env.example
-git commit -m "feat(platform): S3 document storage with validated keys"
+git commit -F - <<'EOF'
+feat(platform): S3 document storage with validated keys
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -3286,7 +3438,8 @@ git commit -m "feat(platform): S3 document storage with validated keys"
   - `runTier(tier: Tier, jobs?: readonly JobDefinition[]): Promise<Array<{ job: string; status: "success" | "failed" | "skipped" }>>`.
   - `touchHeartbeat(): Promise<void>`, `heartbeatAgeMs(): Promise<number | null>`, `HEARTBEAT_MAX_AGE_MS`.
   - `secretMatches(provided: string | null, expected: string): boolean` (constant time).
-  - `jobRuns` table.
+  - `jobRuns` table (uuidv7 `id`, `created_at`, `updated_at`).
+  - `GET /api/health`; `POST /api/jobs/tick?tier=`; `GET /api/metrics` with `job_last_success_timestamp{job}` (seconds) and `job_runs_total{job,status}` (spec §10.4; `documents_awaiting_review` arrives in F5).
 
 - [ ] **Step 1: Extend the environment**
 
@@ -3347,12 +3500,17 @@ export const jobRuns = pgTable(
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     detail: jsonb("detail").$type<Record<string, unknown>>(),
     error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (table) => [index("job_runs_job_started_idx").on(table.job, table.startedAt.desc())],
 );
 ```
 
-Add `export * from "@/platform/jobs/schema";` to `src/platform/db/tables.ts`, then run `npm run db:generate -- --name job_runs` and read the generated SQL.
+Add `export * from "@/platform/jobs/schema";` to `src/platform/db/tables.ts`, then run `npm run db:generate -- --name job_runs` and read the generated SQL: `drizzle/0001_job_runs.sql` creates `"job_runs"` with `"id" uuid PRIMARY KEY DEFAULT uuidv7()`, `created_at` and `updated_at` (spec §6).
 
 ```ts
 // src/platform/jobs/lock.ts
@@ -3447,6 +3605,8 @@ export const JOBS: readonly JobDefinition[] = [housekeepingJob];
 ```
 
 Note the import cycle `registry.ts ↔ housekeeping.ts` is type-only on the housekeeping side (`import type`), so it is safe.
+
+F0 has only the server-level housekeeping job, so the registry stays a plain list with `run()`; spec §10.1's per-user iteration with `run(ctx)`, per-user error isolation and redacted errors in `job_runs` arrive with the first per-user job (F3).
 
 ```ts
 // src/platform/jobs/tick.ts
@@ -3559,21 +3719,24 @@ export const dynamic = "force-dynamic";
 
 /** Prometheus text format for the homelab's Prometheus/Grafana (spec §10.4). */
 export async function GET() {
-  const lastSuccess = await getDb().execute<{ job: string; ts: number }>(
+  // `pg` returns bigint columns as strings; the value is printed as is.
+  const lastSuccess = await getDb().execute<{ job: string; ts: string }>(
     sql`SELECT job, extract(epoch FROM max(finished_at))::bigint AS ts FROM job_runs WHERE status = 'success' GROUP BY job ORDER BY job`,
   );
   const totals = await getDb().execute<{ job: string; status: string; n: number }>(
     sql`SELECT job, status, count(*)::int AS n FROM job_runs GROUP BY job, status ORDER BY job, status`,
   );
   const lines = [
-    "# TYPE job_last_success_timestamp_seconds gauge",
-    ...lastSuccess.rows.map((r) => `job_last_success_timestamp_seconds{job="${r.job}"} ${r.ts}`),
+    "# TYPE job_last_success_timestamp gauge",
+    ...lastSuccess.rows.map((r) => `job_last_success_timestamp{job="${r.job}"} ${r.ts}`),
     "# TYPE job_runs_total counter",
     ...totals.rows.map((r) => `job_runs_total{job="${r.job}",status="${r.status}"} ${r.n}`),
   ];
   return new Response(`${lines.join("\n")}\n`, { headers: { "Content-Type": "text/plain; version=0.0.4" } });
 }
 ```
+
+The metric names are the spec's (§10.4): `job_last_success_timestamp` (Unix seconds) and `job_runs_total`. The third metric, `documents_awaiting_review`, is added in F5, when the documents table exists.
 
 - [ ] **Step 5: Write the integration test**
 
@@ -3646,10 +3809,18 @@ Expected: PASS.
 
 - [ ] **Step 7: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/platform/jobs src/app/api/jobs src/app/api/health src/app/api/metrics src/platform/env.ts \
   src/platform/db/tables.ts drizzle vitest.config.ts .env.example
-git commit -m "feat(jobs): tiered job runner with advisory locks, run log, housekeeping, health and metrics"
+git commit -F - <<'EOF'
+feat(jobs): tiered job runner with advisory locks, run log, housekeeping, health and metrics
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -3665,7 +3836,9 @@ git commit -m "feat(jobs): tiered job runner with advisory locks, run log, house
 - Consumes: `UiLocale` (Task 5); `invitationEmail`, `passwordResetEmail` call sites (Task 10).
 - Produces:
   - Tailwind utilities for every design token: colours `bg`, `card`, `side`, `border`, `border2`, `fg`, `muted`, `faint`, `accent`, `primary`, `primary-fg`, `soft`, `pos`, `neg`, `warn`, `pos-bg`, `neg-bg`, `warn-bg`, `hover`, `sel`, `track`, `skel` (e.g. `bg-card`, `text-muted`, `border-border2`); `shadow-overlay`; radii `rounded-ctl` (6px), `rounded-card` (10px), `rounded-modal` (12px); font sizes `text-micro` 10, `text-xs` 11, `text-sm` 12, `text-base` 13, `text-md` 14, `text-lg` 15, `text-xl` 17, `text-2xl` 20, `text-kpi` 22, `text-title` 24, `text-hero-sm` 28, `text-hero` 32, `text-display` 36; animations `animate-in`, `animate-shimmer`.
-  - `THEME_COOKIE`, `type ThemePreference`, `parseTheme(value)`, `initialThemeAttribute(value): "light" | "dark"`, `THEME_SCRIPT`.
+  - `THEME_COOKIE`, `type ThemePreference`, `parseTheme(value)` (unknown or missing → `"light"`, spec §8.1), `initialThemeAttribute(value): "light" | "dark"`, `THEME_SCRIPT`.
+  - Inter through `next/font/local` (spec §8.1), exposed as the CSS variable `--font-inter` behind Tailwind's `font-sans`.
+  - Message key `common.product` ("Finance Dashboard"), used for the page title, the sidebar brand (Task 16) and the auth card (Task 17).
   - `LOCALES`, `DEFAULT_LOCALE`, `LOCALE_COOKIE`.
   - Message catalogues `messages/{en,it}.json`; typed keys via `src/global.d.ts`.
   - `invitationEmail(url, locale?)`, `passwordResetEmail(url, locale?)` now read from the catalogues.
@@ -3675,20 +3848,22 @@ git commit -m "feat(jobs): tiered job runner with advisory locks, run log, house
 ```ts
 // src/platform/theme.test.ts
 import { describe, expect, it } from "vitest";
-import { initialThemeAttribute, parseTheme, THEME_SCRIPT } from "./theme";
+import { initialThemeAttribute, parseTheme, THEME_COOKIE, THEME_SCRIPT } from "./theme";
 
 describe("theme", () => {
-  it("parses the cookie, defaulting to system", () => {
+  it("parses the cookie, defaulting to light (spec §8.1)", () => {
     expect(parseTheme("dark")).toBe("dark");
-    expect(parseTheme("light")).toBe("light");
-    expect(parseTheme("neon")).toBe("system");
-    expect(parseTheme(undefined)).toBe("system");
+    expect(parseTheme("system")).toBe("system");
+    expect(parseTheme("neon")).toBe("light");
+    expect(parseTheme(undefined)).toBe("light");
   });
 
   it("renders light for system; the inline script resolves it before paint", () => {
     expect(initialThemeAttribute("dark")).toBe("dark");
     expect(initialThemeAttribute("system")).toBe("light");
+    expect(initialThemeAttribute(undefined)).toBe("light");
     expect(THEME_SCRIPT).toContain("prefers-color-scheme: dark");
+    expect(THEME_SCRIPT).toContain(`${THEME_COOKIE}=`);
   });
 });
 ```
@@ -3758,8 +3933,9 @@ Expected: FAIL (missing modules and catalogues).
 export const THEME_COOKIE = "theme";
 export type ThemePreference = "system" | "light" | "dark";
 
+/** Light is the default theme (spec §8.1); System and Dark are explicit choices. */
 export function parseTheme(value: string | undefined): ThemePreference {
-  return value === "light" || value === "dark" ? value : "system";
+  return value === "system" || value === "dark" ? value : "light";
 }
 
 /** Server-rendered attribute. "system" renders light and THEME_SCRIPT corrects it before first paint. */
@@ -3767,7 +3943,7 @@ export function initialThemeAttribute(value: string | undefined): "light" | "dar
   return parseTheme(value) === "dark" ? "dark" : "light";
 }
 
-export const THEME_SCRIPT = `(()=>{try{const m=document.cookie.match(/(?:^|; )theme=(light|dark|system)/);const p=m?m[1]:"system";document.documentElement.dataset.theme=p==="system"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):p}catch{}})()`;
+export const THEME_SCRIPT = `(()=>{try{const m=document.cookie.match(/(?:^|; )${THEME_COOKIE}=(light|dark|system)/);const p=m?m[1]:"light";document.documentElement.dataset.theme=p==="system"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):p}catch{}})()`;
 ```
 
 ```ts
@@ -3822,11 +3998,10 @@ export default createNextIntlPlugin("./src/platform/i18n/request.ts")(nextConfig
 ```json
 {
   "common": {
+    "product": "Finance Dashboard",
     "save": "Save",
-    "cancel": "Cancel",
     "close": "Close",
     "retry": "Try again",
-    "saved": "Saved",
     "or": "or"
   },
   "emails": {
@@ -3847,11 +4022,10 @@ export default createNextIntlPlugin("./src/platform/i18n/request.ts")(nextConfig
 ```json
 {
   "common": {
+    "product": "Finance Dashboard",
     "save": "Salva",
-    "cancel": "Annulla",
     "close": "Chiudi",
     "retry": "Riprova",
-    "saved": "Salvato",
     "or": "oppure"
   },
   "emails": {
@@ -3867,7 +4041,7 @@ export default createNextIntlPlugin("./src/platform/i18n/request.ts")(nextConfig
 }
 ```
 
-Every later task that adds UI copy adds the same keys to both files; the parity test keeps them aligned.
+Every later task that adds UI copy adds the same keys to both files; the parity test keeps them aligned. Each key has a user: `product` (page title here, sidebar in Task 16, auth card in Task 17), `close` (toasts, Task 16), `or` (sign-in, Task 17), `save` (settings, Task 18), `retry` (the error state on the Components page, Task 19). A task never adds a key nothing renders.
 
 Rewrite `src/platform/auth/emails.ts`:
 
@@ -3986,7 +4160,7 @@ export function passwordResetEmail(url: string, locale: UiLocale = "en") {
 }
 
 @theme {
-  --font-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-micro: 10px;
@@ -4059,21 +4233,48 @@ body {
 
 ```tsx
 // src/app/layout.tsx
-import "@fontsource-variable/inter";
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { initialThemeAttribute, THEME_COOKIE, THEME_SCRIPT } from "@/platform/theme";
 import "./globals.css";
 
-export const metadata: Metadata = { title: "Finance Dashboard" };
+// Inter, self-hosted (spec §8.1): the variable-weight latin and latin-ext files shipped by
+// @fontsource-variable/inter, by path relative to this file.
+const inter = localFont({
+  src: [
+    {
+      path: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "../../node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common");
+  return { title: t("product") };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();
   const theme = (await cookies()).get(THEME_COOKIE)?.value;
   return (
-    <html lang={locale} data-theme={initialThemeAttribute(theme)} suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-theme={initialThemeAttribute(theme)}
+      className={inter.variable}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
@@ -4087,18 +4288,30 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 }
 ```
 
+`@fontsource-variable/inter@5.3.0` ships its files as `files/inter-<subset>-<axis>-<style>.woff2`; the two used here are `inter-latin-wght-normal.woff2` and `inter-latin-ext-wght-normal.woff2` (variable `wght` axis, upright). Do not import the package's CSS. If the build rejects a `node_modules` path in `next/font/local`, copy those two woff2 files into `src/app/fonts/`, point `path` at `./fonts/<name>.woff2`, and remove `@fontsource-variable/inter` from `package.json` (with `npm uninstall`).
+
 - [ ] **Step 6: Run tests and build**
 
 Run: `npm test && npm run typecheck && npm run build`
-Expected: PASS; the build succeeds with the next-intl plugin.
+Expected: PASS; the build succeeds with the next-intl plugin, and `.next/static/media/` contains the two Inter woff2 files.
 
 - [ ] **Step 7: Commit**
+
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
 
 ```bash
 git add src/app/globals.css src/app/layout.tsx src/platform/theme.ts src/platform/theme.test.ts \
   src/platform/i18n src/global.d.ts messages next.config.ts src/platform/auth/emails.ts src/platform/auth/emails.test.ts
-git commit -m "feat(ui): design tokens, theme without flash, Inter, English and Italian catalogues"
+git commit -F - <<'EOF'
+feat(ui): design tokens, theme without flash, Inter, English and Italian catalogues
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
+
+If the vendored-font fallback of Step 5 was applied, add `src/app/fonts package.json package-lock.json` to the `git add` line.
 
 ---
 
@@ -4120,6 +4333,7 @@ git commit -m "feat(ui): design tokens, theme without flash, Inter, English and 
   - `Card` (`padded?`), `CardHeader` (`title`, `actions?`)
   - `KpiTile` (`label`, `value`, `valueTone?`, `delta?`, `deltaTone?`, `note?`)
   - `ProgressBar` (`value: number` 0..1, `tone?`, `height?: 4 | 6 | 8`, `label: string`), `Avatar` (`name`, `size?: 22 | 24 | 28 | 40`), `initials(name)`, `Skeleton`, `Kbd`
+  - Every export here, in every variant, is rendered on the Components page (Task 19, spec §8.3).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -4578,9 +4792,17 @@ Expected: PASS.
 
 - [ ] **Step 4: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/ui
-git commit -m "feat(ui): primitives — buttons, inputs, fields, badges, cards, KPI tile, progress, avatar"
+git commit -F - <<'EOF'
+feat(ui): primitives — buttons, inputs, fields, badges, cards, KPI tile, progress, avatar
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -4599,9 +4821,10 @@ git commit -m "feat(ui): primitives — buttons, inputs, fields, badges, cards, 
   - `Segmented<T extends string>` (`label`, `value`, `onChange(value)`, `options: { value: T; label: string }[]`) — never empty
   - `ActionMenu` (`label`, `items: { label: string; onSelect(): void; danger?: boolean }[]`)
   - `Popover` (`trigger: ReactNode`, `triggerLabel`, `children`)
-  - `TabLinks` (`tabs: { href: string; label: string; active: boolean }[]`)
+  - `TabLinks` (`tabs: { href: Route; label: string; active: boolean }[]`, `Route` from `next`)
   - `Table`, `THead`, `Th` (`align?`, `sort?: { direction: "asc" | "desc" | null; onSort(): void }`), `TBody`, `Tr` (`selected?`, `onClick?`), `Td` (`align?`, `muted?`), `GroupRow`, `TotalRow`
   - `EmptyState` (`title`, `description`, `actions?`, `icon?`), `ErrorState` (`title`, `description`, `onRetry?`, `retryLabel?`), `LoadingState` (skeleton page)
+  - Every export here is rendered on the Components page (Task 19, spec §8.3), including `TabLinks`, `GroupRow`, `TotalRow` and `LoadingState`, which no F0 product page uses yet.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -4963,9 +5186,9 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
   return <table className={cn("w-full border-collapse text-base", className)} {...props} />;
 }
 
-export function THead({ children, sticky = false }: { children: ReactNode; sticky?: boolean }) {
+export function THead({ children }: { children: ReactNode }) {
   return (
-    <thead className={cn(sticky && "sticky top-0 z-10 bg-card")}>
+    <thead>
       <tr className="border-b border-border">{children}</tr>
     </thead>
   );
@@ -5146,9 +5369,17 @@ Expected: PASS. If the menu test cannot find `menuitem` in jsdom, keep the asser
 
 - [ ] **Step 4: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/ui
-git commit -m "feat(ui): modal, toast, segmented control, menus, table and empty/error/loading states"
+git commit -F - <<'EOF'
+feat(ui): modal, toast, segmented control, menus, table and empty/error/loading states
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -5156,19 +5387,19 @@ git commit -m "feat(ui): modal, toast, segmented control, menus, table and empty
 ### Task 16: App shell — sidebar, topbar, mobile navigation, command palette, theme toggle
 
 **Files:**
-- Create: `src/ui/shell/nav-types.ts`, `src/ui/shell/icons.ts`, `src/ui/shell/active.ts`, `src/ui/shell/commands.ts`, `src/ui/shell/shell-context.tsx`, `src/ui/shell/brand.tsx`, `src/ui/shell/sidebar.tsx`, `src/ui/shell/topbar.tsx`, `src/ui/shell/mobile-nav.tsx`, `src/ui/shell/command-palette.tsx`, `src/ui/shell/theme-toggle.tsx`, `src/ui/shell/page.tsx`, `src/app/(app)/navigation.ts`, `src/app/(app)/layout.tsx`, `src/app/(app)/actions.ts`
+- Create: `src/ui/shell/nav-types.ts`, `src/ui/shell/icons.ts`, `src/ui/shell/active.ts`, `src/ui/shell/commands.ts`, `src/ui/shell/shell-context.tsx`, `src/ui/shell/brand.tsx`, `src/ui/shell/sidebar.tsx`, `src/ui/shell/topbar.tsx`, `src/ui/shell/mobile-nav.tsx`, `src/ui/shell/command-palette.tsx`, `src/ui/shell/theme-toggle.tsx`, `src/ui/shell/page.tsx`, `src/app/(app)/navigation.ts`, `src/app/(app)/layout.tsx`, `src/modules/users/actions.ts`
 - Modify: `messages/en.json`, `messages/it.json`
 - Test: `src/ui/shell/shell.test.tsx`, `src/app/(app)/navigation.test.ts`
 
 **Interfaces:**
-- Consumes: `requireSession`, `getAuth` (Task 9); `getPreferences`, `updatePreferences` (Task 8); `THEME_COOKIE`, `ThemePreference` (Task 13); `Button`, `IconButton`, `Kbd`, `Avatar`, `Modal`, `Toaster`, `cn` (Tasks 14–15); `authClient` (Task 9).
+- Consumes: `requireSession`, `getAuth`, `OIDC_PROVIDER_ID` (Task 9); `getPreferences`, `updatePreferences` (Task 8); `THEME_COOKIE`, `ThemePreference`, `common.product` (Task 13); `Button`, `IconButton`, `Kbd`, `Avatar`, `Toaster`, `cn` (Tasks 14–15); `authClient` (Task 9).
 - Produces:
   - `type IconName`, `interface NavLink { id: string; href: Route; label: string; icon: IconName; group: "finance" | "work" | "system" | "footer"; mobile: boolean }`.
   - `NAV_ITEMS` and `navFor(role: Role): NavItem[]` (`src/app/(app)/navigation.ts`) — the single source for sidebar, mobile tabs and palette. F0 items: Overview (`/`), Settings (`/settings/profile`, footer), Components (`/components`, system, admin only). Each later phase appends its items.
   - `isActive(pathname: string, href: string): boolean`; `filterCommands(links: NavLink[], query: string): NavLink[]`.
   - `ShellProvider`, `useShell()` → `{ collapsed, toggleSidebar, paletteOpen, setPaletteOpen, labels }`; shortcuts ⌘K / Ctrl+K (palette), ⌘\ / Ctrl+\ (sidebar); `SIDEBAR_COOKIE = "sidebar"`.
   - `Page` (`title: string`, `parent?: { href: Route; label: string }`, `actions?: ReactNode`, `children`) — every `(app)` page renders its content through it.
-  - Server action `saveTheme(theme: ThemePreference): Promise<void>`.
+  - `src/modules/users/actions.ts` — the users module's Server Actions file (spec §3: validate → service → revalidate); this task adds `saveTheme(theme: ThemePreference): Promise<void>`, Task 18 adds the settings actions.
 
 - [ ] **Step 1: Add the shell messages**
 
@@ -5189,7 +5420,13 @@ Add to `messages/en.json`:
     "toggleTheme": "Toggle theme",
     "signOut": "Sign out",
     "via": { "authentik": "via Authentik", "password": "via password" },
-    "palette": { "placeholder": "Jump to a page…", "pages": "Pages", "empty": "No matches" }
+    "palette": {
+      "placeholder": "Jump to a page…",
+      "pages": "Pages",
+      "empty": "No matches",
+      "shortcut": "⌘K",
+      "escape": "esc"
+    }
   }
 ```
 
@@ -5210,7 +5447,13 @@ and to `messages/it.json`:
     "toggleTheme": "Cambia tema",
     "signOut": "Esci",
     "via": { "authentik": "tramite Authentik", "password": "tramite password" },
-    "palette": { "placeholder": "Vai a una pagina…", "pages": "Pagine", "empty": "Nessun risultato" }
+    "palette": {
+      "placeholder": "Vai a una pagina…",
+      "pages": "Pagine",
+      "empty": "Nessun risultato",
+      "shortcut": "⌘K",
+      "escape": "esc"
+    }
   }
 ```
 
@@ -5251,6 +5494,7 @@ const LINKS: NavLink[] = [
 ];
 
 const LABELS = {
+  product: "Finance Dashboard",
   primary: "Primary",
   groups: { finance: "Finance", work: "Work", system: "System" },
   toggleSidebar: "Toggle sidebar",
@@ -5258,7 +5502,7 @@ const LABELS = {
   toggleTheme: "Toggle theme",
   signOut: "Sign out",
   more: "More",
-  palette: { placeholder: "Jump to a page…", pages: "Pages", empty: "No matches" },
+  palette: { placeholder: "Jump to a page…", pages: "Pages", empty: "No matches", shortcut: "⌘K", escape: "esc" },
 };
 
 function renderShell() {
@@ -5367,6 +5611,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 export const SIDEBAR_COOKIE = "sidebar";
 
 export interface ShellLabels {
+  product: string;
   primary: string;
   groups: { finance: string; work: string; system: string };
   toggleSidebar: string;
@@ -5374,7 +5619,7 @@ export interface ShellLabels {
   toggleTheme: string;
   signOut: string;
   more: string;
-  palette: { placeholder: string; pages: string; empty: string };
+  palette: { placeholder: string; pages: string; empty: string; shortcut: string; escape: string };
 }
 
 interface ShellState {
@@ -5405,12 +5650,12 @@ export function ShellProvider({
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  // The cookie is written outside the state updater: updaters must stay pure (Strict Mode runs them twice).
   const toggleSidebar = useCallback(() => {
-    setCollapsed((current) => {
-      document.cookie = `${SIDEBAR_COOKIE}=${current ? "expanded" : "collapsed"}; path=/; max-age=31536000; samesite=lax`;
-      return !current;
-    });
-  }, []);
+    const next = !collapsed;
+    document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
+    setCollapsed(next);
+  }, [collapsed]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -5459,6 +5704,7 @@ export function BrandMark({ size = 24 }: { size?: 24 | 28 }) {
 "use client";
 
 import { LogOut } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/platform/auth/client";
@@ -5500,7 +5746,8 @@ export function Sidebar({ links, user }: { links: NavLink[]; user: { name: strin
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/sign-in");
+    // `/sign-in` is created in Task 17; typed routes accept it only through the cast until then.
+    router.push("/sign-in" as Route);
   }
 
   return (
@@ -5514,7 +5761,7 @@ export function Sidebar({ links, user }: { links: NavLink[]; user: { name: strin
     >
       <div className="mb-2 flex h-8 items-center gap-2.5 px-2">
         <BrandMark />
-        <span className={cn("font-semibold whitespace-nowrap", label)}>Finance Dashboard</span>
+        <span className={cn("font-semibold whitespace-nowrap", label)}>{labels.product}</span>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto">
         {GROUPS.map((group) => {
@@ -5633,7 +5880,7 @@ export function Topbar({
       >
         <Search aria-hidden className="size-3.5" />
         <span className="flex-1 text-left">{labels.search}</span>
-        <Kbd>⌘K</Kbd>
+        <Kbd>{labels.palette.shortcut}</Kbd>
       </button>
       <IconButton label={labels.search} bordered size={32} onClick={() => setPaletteOpen(true)} className="md:hidden">
         <Search aria-hidden className="size-4" />
@@ -5650,9 +5897,9 @@ export function Topbar({
 // src/ui/shell/page.tsx
 import type { Route } from "next";
 import type { ReactNode } from "react";
-import { Topbar } from "./topbar";
+import { saveTheme } from "@/modules/users/actions";
 import { ThemeToggle } from "./theme-toggle";
-import { saveTheme } from "@/app/(app)/actions";
+import { Topbar } from "./topbar";
 
 /** Every signed-in page: the topbar (breadcrumb + actions) and the 1440 px content column. */
 export function Page({
@@ -5675,7 +5922,7 @@ export function Page({
 }
 ```
 
-(`src/ui/shell/page.tsx` importing an `app` Server Action is the one allowed dependency from `src/ui` to `src/app`: the shell is app chrome. No other `src/ui` file imports from `src/app`.)
+(`src/ui/shell/page.tsx` importing the users module's `saveTheme` Server Action is the one allowed dependency from `src/ui` to a module: the shell is app chrome. No other `src/ui` file imports from `src/modules` or `src/app`.)
 
 ```tsx
 // src/ui/shell/command-palette.tsx
@@ -5733,7 +5980,7 @@ export function CommandPalette({ links }: { links: NavLink[] }) {
               }}
               className="flex-1 bg-transparent text-md outline-none placeholder:text-faint"
             />
-            <Kbd>esc</Kbd>
+            <Kbd>{labels.palette.escape}</Kbd>
           </div>
           <div className="p-1.5">
             <div className="px-2 pt-1 pb-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase">{labels.palette.pages}</div>
@@ -5859,13 +6106,13 @@ export function navFor(role: Role): NavItem[] {
 ```
 
 ```ts
-// src/app/(app)/actions.ts
+// src/modules/users/actions.ts — the users module's Server Actions (spec §3). Task 18 adds the settings actions.
 "use server";
 
 import { cookies } from "next/headers";
-import { getPreferences, updatePreferences } from "@/modules/users/service";
 import { requireSession } from "@/platform/auth/session";
 import { parseTheme, THEME_COOKIE, type ThemePreference } from "@/platform/theme";
+import { getPreferences, updatePreferences } from "./service";
 
 export async function saveTheme(theme: ThemePreference): Promise<void> {
   const ctx = await requireSession();
@@ -5880,6 +6127,7 @@ export async function saveTheme(theme: ThemePreference): Promise<void> {
 import { cookies, headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { getAuth } from "@/platform/auth/auth";
+import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { requireSession } from "@/platform/auth/session";
 import { CommandPalette } from "@/ui/shell/command-palette";
 import { MobileNav } from "@/ui/shell/mobile-nav";
@@ -5893,7 +6141,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
   const session = await getAuth().api.getSession({ headers: await headers() });
   const accounts = await getAuth().api.listUserAccounts({ headers: await headers() });
-  const viaSso = accounts.some((account) => account.providerId === "authentik");
+  const viaSso = accounts.some((account) => account.providerId === OIDC_PROVIDER_ID);
   const t = await getTranslations();
 
   const links: NavLink[] = navFor(ctx.role).map(({ id, href, icon, group, mobile, labelKey }) => ({
@@ -5905,6 +6153,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     label: t(`nav.${labelKey}`),
   }));
   const labels = {
+    product: t("common.product"),
     primary: t("nav.primary"),
     groups: { finance: t("nav.groups.finance"), work: t("nav.groups.work"), system: t("nav.groups.system") },
     toggleSidebar: t("shell.toggleSidebar"),
@@ -5916,6 +6165,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       placeholder: t("shell.palette.placeholder"),
       pages: t("shell.palette.pages"),
       empty: t("shell.palette.empty"),
+      shortcut: t("shell.palette.shortcut"),
+      escape: t("shell.palette.escape"),
     },
   };
   const collapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "collapsed";
@@ -5946,9 +6197,17 @@ Expected: PASS. (`src/app/page.tsx` from Task 1 still exists and conflicts with 
 
 - [ ] **Step 6: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
-git add src/ui/shell "src/app/(app)" messages
-git commit -m "feat(ui): app shell — sidebar, topbar, mobile tabs, command palette, theme toggle"
+git add src/ui/shell "src/app/(app)" src/modules/users/actions.ts messages
+git commit -F - <<'EOF'
+feat(ui): app shell — sidebar, topbar, mobile tabs, command palette, theme toggle
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -5961,8 +6220,8 @@ git commit -m "feat(ui): app shell — sidebar, topbar, mobile tabs, command pal
 - Test: `src/app/(auth)/sign-in/errors.test.ts`, `src/app/(auth)/sign-in/sign-in-form.test.tsx`
 
 **Interfaces:**
-- Consumes: `authClient` (Task 9); `getOptionalCtx` (Task 9); `getAuth` (Task 9); `findInvitation`, `acceptInvitation`, `InvitationError` (Task 10); `Button`, `Input`, `Field` (Task 14); `BrandMark` (Task 16).
-- Produces: public routes `/sign-in`, `/forgot-password`, `/reset-password`, `/invite/[token]`; `signInErrorKey(code: string | undefined): SignInErrorKey`; server action `acceptInviteAction(token: string, input: { name: string; password: string; confirm: string }): Promise<{ error: "invalid" | "email_taken" | "weak_password" | "mismatch" } | undefined>` (redirects to `/` on success).
+- Consumes: `authClient` (Task 9); `getOptionalCtx` (Task 9); `getAuth` (Task 9); `OIDC_PROVIDER_ID`, `identityProviderUrl` (Task 9, `src/platform/auth/provider.ts`); `findInvitation`, `acceptInvitation`, `InvitationError` (Task 10); `common.product`, `common.or` (Task 13); `Button`, `Input`, `Field` (Task 14); `BrandMark` (Task 16).
+- Produces: public routes `/sign-in`, `/forgot-password`, `/reset-password`, `/invite/[token]`; `signInErrorKey(code: string | undefined): SignInErrorKey | null` (`null` when there is no code); server action `acceptInviteAction(token: string, input: { name: string; password: string; confirm: string }): Promise<{ error: "invalid" | "email_taken" | "weak_password" | "mismatch" } | undefined>` (redirects to `/` on success).
 
 - [ ] **Step 1: Add the messages**
 
@@ -5970,7 +6229,6 @@ git commit -m "feat(ui): app shell — sidebar, topbar, mobile tabs, command pal
 
 ```json
   "auth": {
-    "product": "Finance Dashboard",
     "version": "v0.1.0",
     "signIn": {
       "title": "Sign in",
@@ -6001,8 +6259,7 @@ git commit -m "feat(ui): app shell — sidebar, topbar, mobile tabs, command pal
       "submit": "Set password",
       "hint": "At least 12 characters.",
       "mismatch": "The two passwords do not match.",
-      "invalid": "This reset link is invalid or has expired.",
-      "done": "Password changed. Sign in with the new one."
+      "invalid": "This reset link is invalid or has expired."
     },
     "invite": {
       "title": "Join Finance Dashboard",
@@ -6020,7 +6277,6 @@ git commit -m "feat(ui): app shell — sidebar, topbar, mobile tabs, command pal
 
 ```json
   "auth": {
-    "product": "Finance Dashboard",
     "version": "v0.1.0",
     "signIn": {
       "title": "Accedi",
@@ -6051,8 +6307,7 @@ git commit -m "feat(ui): app shell — sidebar, topbar, mobile tabs, command pal
       "submit": "Imposta la password",
       "hint": "Almeno 12 caratteri.",
       "mismatch": "Le due password non coincidono.",
-      "invalid": "Questo link non è valido o è scaduto.",
-      "done": "Password cambiata. Accedi con quella nuova."
+      "invalid": "Questo link non è valido o è scaduto."
     },
     "invite": {
       "title": "Unisciti a Finance Dashboard",
@@ -6159,21 +6414,18 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
 // src/app/(auth)/auth-card.tsx
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { identityProviderUrl } from "@/platform/auth/provider";
 import { BrandMark } from "@/ui/shell/brand";
 
 export async function AuthCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   const t = await getTranslations("auth");
-  let host = "";
-  try {
-    host = new URL(process.env.OIDC_DISCOVERY_URL ?? "").host;
-  } catch {
-    host = "";
-  }
+  const common = await getTranslations("common");
+  const host = identityProviderUrl()?.host ?? "";
   return (
     <div className="flex w-[360px] max-w-full animate-in flex-col gap-5 rounded-modal border border-border bg-card p-8">
       <div className="flex items-center gap-2.5">
         <BrandMark size={28} />
-        <span className="text-lg font-semibold">{t("product")}</span>
+        <span className="text-lg font-semibold">{common("product")}</span>
       </div>
       <div>
         <h1 className="text-title leading-tight font-semibold tracking-[-0.02em]">{title}</h1>
@@ -6220,6 +6472,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import { authClient } from "@/platform/auth/client";
+import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
@@ -6261,7 +6514,9 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
         size="lg"
         className="w-full"
         icon={<KeyRound aria-hidden className="size-4" />}
-        onClick={() => authClient.signIn.social({ provider: "authentik", callbackURL: "/", errorCallbackURL: "/sign-in?error=oidc" })}
+        onClick={() =>
+          authClient.signIn.social({ provider: OIDC_PROVIDER_ID, callbackURL: "/", errorCallbackURL: "/sign-in?error=oidc" })
+        }
       >
         {t("signIn.authentik")}
       </Button>
@@ -6470,6 +6725,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { authClient } from "@/platform/auth/client";
+import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
@@ -6517,7 +6773,7 @@ export function InviteForm({ token }: { token: string }) {
           {t("invite.submit")}
         </Button>
       </form>
-      <Button onClick={() => authClient.signIn.social({ provider: "authentik", callbackURL: "/" })} className="w-full">
+      <Button onClick={() => authClient.signIn.social({ provider: OIDC_PROVIDER_ID, callbackURL: "/" })} className="w-full">
         {t("invite.authentik")}
       </Button>
     </div>
@@ -6532,9 +6788,17 @@ Expected: PASS; the build lists `/sign-in`, `/forgot-password`, `/reset-password
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add "src/app/(auth)" messages
-git commit -m "feat(auth): sign-in, forgot/reset password and invitation pages"
+git commit -F - <<'EOF'
+feat(auth): sign-in, forgot/reset password and invitation pages
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -6542,13 +6806,13 @@ git commit -m "feat(auth): sign-in, forgot/reset password and invitation pages"
 ### Task 18: Settings — Profile and Security
 
 **Files:**
-- Create: `src/ui/section.tsx`, `src/app/(app)/settings/layout.tsx`, `src/app/(app)/settings/page.tsx`, `src/app/(app)/settings/settings-tabs.tsx`, `src/app/(app)/settings/profile/page.tsx`, `src/app/(app)/settings/profile/preferences-form.tsx`, `src/app/(app)/settings/profile/name-form.tsx`, `src/app/(app)/settings/profile/actions.ts`, `src/app/(app)/settings/security/page.tsx`, `src/app/(app)/settings/security/password-form.tsx`, `src/app/(app)/settings/security/sessions-list.tsx`, `src/app/(app)/settings/security/actions.ts`
-- Modify: `src/modules/users/rules.ts` (`describeUserAgent`), `messages/en.json`, `messages/it.json`
-- Test: `src/modules/users/rules.test.ts` (extend), `src/app/(app)/settings/profile/preferences-form.test.tsx`
+- Create: `src/ui/section.tsx`, `src/app/(app)/settings/layout.tsx`, `src/app/(app)/settings/page.tsx`, `src/app/(app)/settings/settings-tabs.tsx`, `src/app/(app)/settings/profile/page.tsx`, `src/app/(app)/settings/profile/preferences-form.tsx`, `src/app/(app)/settings/profile/name-form.tsx`, `src/app/(app)/settings/security/page.tsx`, `src/app/(app)/settings/security/password-form.tsx`, `src/app/(app)/settings/security/sessions-list.tsx`
+- Modify: `src/modules/users/actions.ts` (the settings Server Actions), `src/modules/users/service.ts` (`findSessionToken`), `src/modules/users/rules.ts` (`describeUserAgent`), `messages/en.json`, `messages/it.json`
+- Test: `src/modules/users/rules.test.ts` (extend), `src/modules/users/service.itest.ts` (extend), `src/app/(app)/settings/profile/preferences-form.test.tsx`
 
 **Interfaces:**
-- Consumes: `requireSession`, `getAuth`, `authClient` (Task 9); `getPreferences`, `updatePreferences`, `Preferences` (Task 8); `LOCALE_COOKIE` (Task 13); `THEME_COOKIE` (Task 13); UI (Tasks 14–16).
-- Produces: routes `/settings` (→ `/settings/profile`), `/settings/profile`, `/settings/security`; `SettingsSection` (`title`, `description`, `children`); `describeUserAgent(ua: string | null): { browser: string | null; os: string | null }`; server actions `savePreferencesAction(input: Preferences)`, `updateNameAction(name: string)`, `revokeSessionAction(token: string)`, `revokeOtherSessionsAction()`.
+- Consumes: `requireSession`, `getAuth`, `authClient`, `OIDC_PROVIDER_ID` (Task 9); `sessions` table (Task 8); `getPreferences`, `updatePreferences`, `Preferences`, `userScoped` (Task 8); `saveTheme` in `src/modules/users/actions.ts` (Task 16); `LOCALE_COOKIE` (Task 13); `THEME_COOKIE` (Task 13); UI (Tasks 14–16).
+- Produces: routes `/settings` (→ `/settings/profile`), `/settings/profile`, `/settings/security`; `SettingsSection` (`title`, `description`, `children`); `describeUserAgent(ua: string | null): { browser: string | null; os: string | null }`; `findSessionToken(ctx: Pick<Ctx, "userId">, sessionId: string): Promise<string | null>` (`src/modules/users/service.ts`); Server Actions in `src/modules/users/actions.ts` (spec §3) next to `saveTheme`: `savePreferencesAction(input: Preferences)`, `updateNameAction(name: string)` (refused on the server while an Authentik account is linked, spec §5.1), `revokeSessionAction(sessionId: string)`, `revokeOtherSessionsAction()`. The browser receives session **ids** only; tokens never leave the server. The password change stays a client call to Better Auth (`authClient.changePassword`), not a Server Action.
 
 - [ ] **Step 1: Add the messages**
 
@@ -6573,6 +6837,7 @@ git commit -m "feat(auth): sign-in, forgot/reset password and invitation pages"
       "language": "Language",
       "languages": { "en": "English", "it": "Italiano" },
       "numberFormat": "Number format",
+      "numberFormats": { "it-IT": "1.234,56 € (it-IT)", "en-US": "€1,234.56 (en-US)", "fr-FR": "1 234,56 € (fr-FR)" },
       "weekStart": "Week starts on",
       "weekStarts": { "monday": "Monday", "sunday": "Sunday" },
       "theme": "Theme",
@@ -6629,6 +6894,7 @@ git commit -m "feat(auth): sign-in, forgot/reset password and invitation pages"
       "language": "Lingua",
       "languages": { "en": "English", "it": "Italiano" },
       "numberFormat": "Formato dei numeri",
+      "numberFormats": { "it-IT": "1.234,56 € (it-IT)", "en-US": "€1,234.56 (en-US)", "fr-FR": "1 234,56 € (fr-FR)" },
       "weekStart": "La settimana inizia di",
       "weekStarts": { "monday": "Lunedì", "sunday": "Domenica" },
       "theme": "Tema",
@@ -6666,11 +6932,15 @@ git commit -m "feat(auth): sign-in, forgot/reset password and invitation pages"
 
 - [ ] **Step 2: Write the failing tests**
 
-Append to `src/modules/users/rules.test.ts`:
+In `src/modules/users/rules.test.ts`, extend the existing top import (one import per module, never a second one below the tests) to:
 
 ```ts
-import { describeUserAgent } from "./rules";
+import { DEFAULT_PREFERENCES, describeUserAgent, preferencesInputSchema } from "./rules";
+```
 
+and append:
+
+```ts
 describe("describeUserAgent", () => {
   it.each([
     [
@@ -6701,7 +6971,7 @@ import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
 import { PreferencesForm } from "./preferences-form";
 
 const save = vi.fn();
-vi.mock("./actions", () => ({ savePreferencesAction: (...a: unknown[]) => save(...a) }));
+vi.mock("@/modules/users/actions", () => ({ savePreferencesAction: (...a: unknown[]) => save(...a) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 describe("PreferencesForm", () => {
@@ -6720,9 +6990,32 @@ describe("PreferencesForm", () => {
 });
 ```
 
-Run: `npx vitest run src/modules/users "src/app/(app)/settings"` — Expected: FAIL.
+Add to `src/modules/users/service.itest.ts` — merge these imports into its existing import block (the `./service` line replaces the existing one):
 
-- [ ] **Step 3: Write `describeUserAgent`**
+```ts
+import { sessions } from "@/platform/auth/schema";
+import { getDb } from "@/platform/db/client";
+import { findSessionToken, getPreferences, updatePreferences } from "./service";
+```
+
+and this test inside `describe("preferences service", …)`, after the last one:
+
+```ts
+  it("finds a session token only for the session's owner", async () => {
+    const alice = await createTestUser();
+    const bob = await createTestUser();
+    const [session] = await getDb()
+      .insert(sessions)
+      .values({ userId: alice.id, token: "alice-session-token", expiresAt: new Date(Date.now() + 60_000) })
+      .returning({ id: sessions.id });
+    expect(await findSessionToken({ userId: alice.id }, session.id)).toBe("alice-session-token");
+    expect(await findSessionToken({ userId: bob.id }, session.id)).toBeNull();
+  });
+```
+
+Run: `npx vitest run src/modules/users "src/app/(app)/settings" && npm run test:integration -- src/modules/users/service.itest.ts` — Expected: FAIL (`describeUserAgent`, `findSessionToken` and the form do not exist yet).
+
+- [ ] **Step 3: Write `describeUserAgent` and `findSessionToken`**
 
 Append to `src/modules/users/rules.ts`:
 
@@ -6751,6 +7044,25 @@ export function describeUserAgent(ua: string | null): { browser: string | null; 
           ? "Safari"
           : null;
   return { browser, os };
+}
+```
+
+Add to `src/modules/users/service.ts` (merge the imports into its import block):
+
+```ts
+import { and, eq } from "drizzle-orm";
+import { sessions } from "@/platform/auth/schema";
+
+/**
+ * The token of one of the user's own sessions, or null. The Security page sends only session ids
+ * to the browser; the revoke action resolves the token here, by id AND owner.
+ */
+export async function findSessionToken(ctx: Pick<Ctx, "userId">, sessionId: string): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ token: sessions.token })
+    .from(sessions)
+    .where(and(eq(sessions.id, sessionId), userScoped(ctx).owns(sessions)));
+  return row?.token ?? null;
 }
 ```
 
@@ -6822,21 +7134,31 @@ export default function SettingsIndex() {
 }
 ```
 
+Replace `src/modules/users/actions.ts` (Task 16) with the complete file — `saveTheme` unchanged, the settings actions added:
+
 ```ts
-// src/app/(app)/settings/profile/actions.ts
+// src/modules/users/actions.ts — the users module's Server Actions (spec §3): validate → service → revalidate.
 "use server";
 
-import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import { updatePreferences } from "@/modules/users/service";
-import type { Preferences } from "@/modules/users/rules";
 import { getAuth } from "@/platform/auth/auth";
+import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { requireSession } from "@/platform/auth/session";
 import { LOCALE_COOKIE } from "@/platform/i18n/locales";
-import { THEME_COOKIE } from "@/platform/theme";
+import { parseTheme, THEME_COOKIE, type ThemePreference } from "@/platform/theme";
+import type { Preferences } from "./rules";
+import { findSessionToken, getPreferences, updatePreferences } from "./service";
 
 const YEAR = 60 * 60 * 24 * 365;
+
+export async function saveTheme(theme: ThemePreference): Promise<void> {
+  const ctx = await requireSession();
+  const next = parseTheme(theme);
+  await updatePreferences(ctx, { ...(await getPreferences(ctx)), theme: next });
+  (await cookies()).set(THEME_COOKIE, next, { path: "/", maxAge: YEAR, sameSite: "lax" });
+}
 
 export async function savePreferencesAction(input: Preferences): Promise<void> {
   const ctx = await requireSession();
@@ -6847,12 +7169,36 @@ export async function savePreferencesAction(input: Preferences): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+/** With Authentik linked, name and email are managed by the provider (spec §5.1): refused here, not only in the UI. */
 export async function updateNameAction(name: string): Promise<void> {
   await requireSession();
-  await getAuth().api.updateUser({ body: { name: z.string().trim().min(1).max(120).parse(name) }, headers: await headers() });
+  const requestHeaders = await headers();
+  const accounts = await getAuth().api.listUserAccounts({ headers: requestHeaders });
+  if (accounts.some((account) => account.providerId === OIDC_PROVIDER_ID)) {
+    throw new Error("The name is managed by Authentik while SSO is linked");
+  }
+  const parsed = z.string().trim().min(1).max(120).parse(name);
+  await getAuth().api.updateUser({ body: { name: parsed }, headers: requestHeaders });
   revalidatePath("/", "layout");
 }
+
+/** Takes a session id from the browser; the token is looked up server-side, by id AND the caller's user id. */
+export async function revokeSessionAction(sessionId: string): Promise<void> {
+  const ctx = await requireSession();
+  const token = await findSessionToken(ctx, z.uuid().parse(sessionId));
+  if (!token) return;
+  await getAuth().api.revokeSession({ body: { token }, headers: await headers() });
+  revalidatePath("/settings/security");
+}
+
+export async function revokeOtherSessionsAction(): Promise<void> {
+  await requireSession();
+  await getAuth().api.revokeOtherSessions({ headers: await headers() });
+  revalidatePath("/settings/security");
+}
 ```
+
+(The Save button is hidden while SSO is linked, so the refusal in `updateNameAction` is reached only by a forged request; it throws instead of returning a form error. A session id that is not the caller's resolves to no token, so nothing is revoked.)
 
 ```tsx
 // src/app/(app)/settings/profile/preferences-form.tsx
@@ -6861,12 +7207,12 @@ export async function updateNameAction(name: string): Promise<void> {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
+import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@/modules/users/rules";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
 import { notify } from "@/ui/toast";
-import { savePreferencesAction } from "./actions";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -6903,9 +7249,9 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
       </Field>
       <Field label={t("numberFormat")} htmlFor="numberFormat">
         <Select id="numberFormat" value={prefs.numberFormat} onChange={(e) => set("numberFormat", e.target.value as Preferences["numberFormat"])}>
-          <option value="it-IT">1.234,56 € (it-IT)</option>
-          <option value="en-US">€1,234.56 (en-US)</option>
-          <option value="fr-FR">1 234,56 € (fr-FR)</option>
+          <option value="it-IT">{t("numberFormats.it-IT")}</option>
+          <option value="en-US">{t("numberFormats.en-US")}</option>
+          <option value="fr-FR">{t("numberFormats.fr-FR")}</option>
         </Select>
       </Field>
       <Field label={t("weekStart")} htmlFor="weekStart">
@@ -6982,11 +7328,11 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useTransition } from "react";
+import { updateNameAction } from "@/modules/users/actions";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
-import { updateNameAction } from "./actions";
 
 export function NameForm({ name, email, sso }: { name: string; email: string; sso: boolean }) {
   const t = useTranslations("settings.account");
@@ -7028,6 +7374,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { getPreferences } from "@/modules/users/service";
 import { getAuth } from "@/platform/auth/auth";
+import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { requireSession } from "@/platform/auth/session";
 import { SettingsSection } from "@/ui/section";
 import { NameForm } from "./name-form";
@@ -7045,7 +7392,7 @@ export default async function ProfilePage() {
         <NameForm
           name={session?.user.name ?? ""}
           email={session?.user.email ?? ""}
-          sso={accounts.some((a) => a.providerId === "authentik")}
+          sso={accounts.some((a) => a.providerId === OIDC_PROVIDER_ID)}
         />
       </SettingsSection>
       <SettingsSection title={t("preferences.title")} description={t("preferences.description")}>
@@ -7053,28 +7400,6 @@ export default async function ProfilePage() {
       </SettingsSection>
     </div>
   );
-}
-```
-
-```ts
-// src/app/(app)/settings/security/actions.ts
-"use server";
-
-import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
-import { getAuth } from "@/platform/auth/auth";
-import { requireSession } from "@/platform/auth/session";
-
-export async function revokeSessionAction(token: string): Promise<void> {
-  await requireSession();
-  await getAuth().api.revokeSession({ body: { token }, headers: await headers() });
-  revalidatePath("/settings/security");
-}
-
-export async function revokeOtherSessionsAction(): Promise<void> {
-  await requireSession();
-  await getAuth().api.revokeOtherSessions({ headers: await headers() });
-  revalidatePath("/settings/security");
 }
 ```
 
@@ -7140,11 +7465,12 @@ export function PasswordForm() {
 
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
+import { revokeOtherSessionsAction, revokeSessionAction } from "@/modules/users/actions";
 import { Button } from "@/ui/button";
-import { revokeOtherSessionsAction, revokeSessionAction } from "./actions";
 
+/** What the browser gets per session: an id, never the bearer token. */
 export interface SessionRow {
-  token: string;
+  id: string;
   device: string;
   detail: string;
   current: boolean;
@@ -7156,7 +7482,7 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
   return (
     <div className="flex flex-col">
       {sessions.map((session) => (
-        <div key={session.token} className="grid grid-cols-[1fr_auto] items-center gap-6 border-b border-border py-2 last:border-0">
+        <div key={session.id} className="grid grid-cols-[1fr_auto] items-center gap-6 border-b border-border py-2 last:border-0">
           <div>
             <div className="font-medium">{session.device}</div>
             <div className="text-sm text-muted">
@@ -7165,7 +7491,7 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
             </div>
           </div>
           {!session.current && (
-            <Button size="xs" variant="danger" disabled={pending} onClick={() => startTransition(() => revokeSessionAction(session.token))}>
+            <Button size="xs" variant="danger" disabled={pending} onClick={() => startTransition(() => revokeSessionAction(session.id))}>
               {t("signOut")}
             </Button>
           )}
@@ -7212,10 +7538,10 @@ export default async function SecurityPage() {
       const { browser, os } = describeUserAgent(session.userAgent ?? null);
       const date = formatDate(civilDateIn(session.createdAt, ctx.timeZone), "long", ctx.locale);
       return {
-        token: session.token,
+        id: session.id,
         device: browser && os ? `${browser} · ${os}` : t("sessions.unknownDevice"),
         detail: [session.ipAddress, t("sessions.since", { date })].filter(Boolean).join(" · "),
-        current: session.token === current?.session.token,
+        current: session.id === current?.session.id,
       };
     });
 
@@ -7234,14 +7560,22 @@ export default async function SecurityPage() {
 
 - [ ] **Step 5: Run the tests and build**
 
-Run: `npm test && npm run typecheck && npm run build`
-Expected: PASS; the build lists `/settings`, `/settings/profile`, `/settings/security`.
+Run: `npm test && npm run test:integration && npm run typecheck && npm run build`
+Expected: PASS, including the session-token ownership test; the build lists `/settings`, `/settings/profile`, `/settings/security`. `grep -rn "token" "src/app/(app)/settings/security"` shows no session token reaching `sessions-list.tsx` or its props.
 
 - [ ] **Step 6: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add src/ui/section.tsx "src/app/(app)/settings" src/modules/users messages
-git commit -m "feat(settings): profile with preferences and name, security with password and sessions"
+git commit -F - <<'EOF'
+feat(settings): profile with preferences and name, security with password and sessions
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -7255,7 +7589,7 @@ git commit -m "feat(settings): profile with preferences and name, security with 
 - Test: `src/app/(app)/components/gallery.test.tsx`
 
 **Interfaces:**
-- Consumes: `requireSession`, `requireAdmin` (Task 9); every `src/ui` component (Tasks 14–16); `formatMoney` (Task 5).
+- Consumes: `requireSession`, `requireAdmin` (Task 9); every `src/ui` component (Tasks 14–15, including `CardHeader`, `Field`, `Avatar`, `Kbd`, `TabLinks`, `GroupRow`, `TotalRow`, `LoadingState`) and `Page` (Task 16); `common.retry` (Task 13); `formatMoney` (Task 5).
 - Produces: `/` (Overview empty state until F1) and `/components` (Admin only; 404 for users).
 
 - [ ] **Step 1: Add the messages**
@@ -7281,6 +7615,7 @@ git commit -m "feat(settings): profile with preferences and name, security with 
     "badges": "Badges and tags",
     "table": "Table",
     "stats": "KPI, progress and skeleton",
+    "identity": "Avatars and shortcuts",
     "overlays": "Overlays",
     "states": "Page states",
     "sample": {
@@ -7291,6 +7626,12 @@ git commit -m "feat(settings): profile with preferences and name, security with 
       "disabled": "Disabled",
       "placeholder": "Search merchant…",
       "invalid": "Invalid value",
+      "fieldLabel": "Monthly limit",
+      "fieldHint": "Close to the account's balance",
+      "fieldError": "Required",
+      "cardTitle": "Recent expenses",
+      "tabActive": "Profile",
+      "tabOther": "Security",
       "month": "Month",
       "year": "Year",
       "openModal": "Open modal",
@@ -7331,6 +7672,7 @@ git commit -m "feat(settings): profile with preferences and name, security with 
     "badges": "Badge ed etichette",
     "table": "Tabella",
     "stats": "KPI, avanzamento e scheletro",
+    "identity": "Avatar e scorciatoie",
     "overlays": "Sovrapposizioni",
     "states": "Stati della pagina",
     "sample": {
@@ -7341,6 +7683,12 @@ git commit -m "feat(settings): profile with preferences and name, security with 
       "disabled": "Disattivato",
       "placeholder": "Cerca esercente…",
       "invalid": "Valore non valido",
+      "fieldLabel": "Limite mensile",
+      "fieldHint": "Vicino al saldo del conto",
+      "fieldError": "Obbligatorio",
+      "cardTitle": "Spese recenti",
+      "tabActive": "Profilo",
+      "tabOther": "Sicurezza",
       "month": "Mese",
       "year": "Anno",
       "openModal": "Apri finestra",
@@ -7377,9 +7725,34 @@ describe("Gallery", () => {
         <Gallery />
       </NextIntlClientProvider>,
     );
-    for (const title of ["Colour tokens", "Type scale", "Buttons", "Inputs", "Badges and tags", "Table", "Overlays", "Page states"]) {
+    for (const title of [
+      "Colour tokens",
+      "Type scale",
+      "Buttons",
+      "Inputs",
+      "Segmented control and tabs",
+      "Badges and tags",
+      "Table",
+      "KPI, progress and skeleton",
+      "Avatars and shortcuts",
+      "Overlays",
+      "Page states",
+    ]) {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }
+  });
+
+  it("shows the components no product page uses yet", () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+        <Gallery />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Recent expenses" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByLabelText("Monthly limit")).toBeInTheDocument();
+    expect(screen.getByText("Required")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });
 ```
@@ -7438,13 +7811,17 @@ export default async function ComponentsPage() {
 // src/app/(app)/components/gallery.tsx
 "use client";
 
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { formatMoney } from "@/platform/format";
+import { Avatar } from "@/ui/avatar";
 import { Badge, Tag } from "@/ui/badge";
 import { Button, IconButton, LinkButton } from "@/ui/button";
-import { Card } from "@/ui/card";
+import { Card, CardHeader } from "@/ui/card";
+import { Field } from "@/ui/field";
 import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
+import { Kbd } from "@/ui/kbd";
 import { KpiTile } from "@/ui/kpi-tile";
 import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
@@ -7452,8 +7829,9 @@ import { Popover } from "@/ui/popover";
 import { ProgressBar } from "@/ui/progress-bar";
 import { Segmented } from "@/ui/segmented";
 import { Skeleton } from "@/ui/skeleton";
-import { EmptyState, ErrorState } from "@/ui/states";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { EmptyState, ErrorState, LoadingState } from "@/ui/states";
+import { TabLinks } from "@/ui/tab-links";
+import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 
 const TOKENS = ["bg", "card", "hover", "sel", "fg", "muted", "border", "primary", "pos", "neg", "warn", "soft"] as const;
@@ -7479,6 +7857,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function Gallery() {
   const t = useTranslations("gallery");
+  const common = useTranslations("common");
   const [period, setPeriod] = useState<"month" | "year">("month");
   const [modalOpen, setModalOpen] = useState(false);
   const [sort, setSort] = useState<"asc" | "desc">("desc");
@@ -7519,10 +7898,15 @@ export function Gallery() {
       <Section title={t("inputs")}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input placeholder={t("sample.placeholder")} aria-label={t("sample.placeholder")} />
-          <Input invalid defaultValue={t("sample.invalid")} aria-label={t("sample.invalid")} />
           <InputGroup suffix="€">
             <Input numeric defaultValue="1.234,56" aria-label="EUR" />
           </InputGroup>
+          <Field label={t("sample.fieldLabel")} htmlFor="gallery-warning" hint={t("sample.fieldHint")}>
+            <Input id="gallery-warning" numeric warning defaultValue="4.900,00" />
+          </Field>
+          <Field label={t("sample.invalid")} htmlFor="gallery-invalid" error={t("sample.fieldError")}>
+            <Input id="gallery-invalid" invalid defaultValue="12,3,4" />
+          </Field>
           <Select aria-label={t("sample.month")} defaultValue="month">
             <option value="month">{t("sample.month")}</option>
             <option value="year">{t("sample.year")}</option>
@@ -7540,6 +7924,12 @@ export function Gallery() {
             { value: "year", label: t("sample.year") },
           ]}
         />
+        <TabLinks
+          tabs={[
+            { href: "/settings/profile" as Route, label: t("sample.tabActive"), active: true },
+            { href: "/settings/security" as Route, label: t("sample.tabOther"), active: false },
+          ]}
+        />
       </Section>
       <Section title={t("badges")}>
         <div className="flex flex-wrap gap-2">
@@ -7553,6 +7943,7 @@ export function Gallery() {
       </Section>
       <Section title={t("table")}>
         <Card padded={false} className="overflow-hidden">
+          <CardHeader title={t("sample.cardTitle")} actions={<LinkButton>{t("sample.edit")}</LinkButton>} />
           <Table>
             <THead>
               <Th sort={{ direction: sort, onSort: () => setSort(sort === "asc" ? "desc" : "asc") }}>Date</Th>
@@ -7560,6 +7951,7 @@ export function Gallery() {
               <Th align="right">Amount</Th>
             </THead>
             <TBody>
+              <GroupRow colSpan={3} label="September 2026" summary={formatMoney(202888n, "it-IT", { signed: true })} />
               <Tr>
                 <Td muted>10 Sep</Td>
                 <Td>Esselunga</Td>
@@ -7570,6 +7962,11 @@ export function Gallery() {
                 <Td>Reply S.p.A.</Td>
                 <Td align="right" className="text-pos">{formatMoney(209300n, "it-IT", { signed: true })}</Td>
               </Tr>
+              <TotalRow>
+                <Td>Total</Td>
+                <Td />
+                <Td align="right">{formatMoney(202888n, "it-IT", { signed: true })}</Td>
+              </TotalRow>
             </TBody>
           </Table>
         </Card>
@@ -7583,6 +7980,16 @@ export function Gallery() {
             <ProgressBar value={1} tone="neg" label="112 %" />
             <Skeleton className="h-3 w-3/4" />
           </div>
+        </div>
+      </Section>
+      <Section title={t("identity")}>
+        <div className="flex flex-wrap items-center gap-3">
+          <Avatar name="Mattia Longobardo" size={22} />
+          <Avatar name="Mattia Longobardo" size={24} />
+          <Avatar name="Giulia Rossi" size={28} />
+          <Avatar name="Giulia Rossi" size={40} />
+          <Kbd>⌘K</Kbd>
+          <Kbd>esc</Kbd>
         </div>
       </Section>
       <Section title={t("overlays")}>
@@ -7608,14 +8015,20 @@ export function Gallery() {
       </Section>
       <Section title={t("states")}>
         <EmptyState title={t("sample.emptyTitle")} description={t("sample.emptyDescription")} />
-        <ErrorState title={t("sample.errorTitle")} description={t("sample.errorDescription")} />
+        <ErrorState
+          title={t("sample.errorTitle")}
+          description={t("sample.errorDescription")}
+          onRetry={() => notify(common("retry"))}
+          retryLabel={common("retry")}
+        />
+        <LoadingState />
       </Section>
     </div>
   );
 }
 ```
 
-The sample figures and the badge words ("On track", "Esselunga", "Cash") are demo data rendered by an Admin-only developer page, not product copy; they intentionally stay literal.
+The sample figures, names and badge words ("On track", "Esselunga", "Cash", "September 2026", the avatar names, the `Kbd` glyphs) are demo data rendered by an Admin-only developer page, not product copy; they intentionally stay literal. The page is the design-system catalogue (spec §8.3): every export of `src/ui` appears in it — including `CardHeader`, `Field` (hint and error), `Input` (warning and invalid), `TabLinks`, `GroupRow`, `TotalRow`, `Avatar` (every size), `Kbd` and `LoadingState` — and a component added to `src/ui` later is added here in the same task.
 
 - [ ] **Step 4: Run tests and build**
 
@@ -7624,9 +8037,17 @@ Expected: PASS; `/` is served by `(app)/page.tsx`, `/components` exists.
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add "src/app/(app)/page.tsx" "src/app/(app)/components" messages
-git commit -m "feat(ui): Overview empty state and the Admin-only Components page"
+git commit -F - <<'EOF'
+feat(ui): Overview empty state and the Admin-only Components page
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -7638,12 +8059,13 @@ git commit -m "feat(ui): Overview empty state and the Admin-only Components page
 
 **Interfaces:**
 - Consumes: `scripts/migrate.ts` (Task 7), the standalone build (Task 1), `/api/health` (Task 12), `/api/jobs/tick` (Task 12).
-- Produces: image `finance-dashboard` (runs migrations, then `node server.js` on port 3000, non-root, works with a read-only root filesystem) and image `finance-dashboard-cron` (supercronic calling the three tiers). No production compose file (spec §3).
+- Produces: image `finance-dashboard` (runs migrations, then `node server.js` on port 3000, non-root, works with a read-only root filesystem) and image `finance-dashboard-cron` (supercronic calling the three tiers on the Europe/Rome clock). No production compose file (spec §3).
 
 - [ ] **Step 1: Write the app image**
 
+This block is the `Dockerfile`; its parser directive must stay on line 1 (a directive after any other line is a plain comment).
+
 ```dockerfile
-# Dockerfile
 # syntax=docker/dockerfile:1
 
 FROM node:22-alpine AS deps
@@ -7698,8 +8120,6 @@ node_modules
 coverage
 test-results
 playwright-report
-tests
-test
 docs
 dev
 cron
@@ -7711,6 +8131,8 @@ Payroll
 UI Recreation and branding decisions
 ```
 
+`test/` and `tests/` stay in the build context: `next build` type-checks the whole tsconfig program, and `src/**/*.itest.ts`, the jest-dom matcher types (`test/setup-dom.ts`), `playwright.config.ts` and `scripts/seed-e2e.ts` import from them. They never reach the runner stage, which copies only the standalone output.
+
 - [ ] **Step 2: Write the cron image**
 
 ```dockerfile
@@ -7720,6 +8142,8 @@ FROM alpine:3.21
 # supercronic publishes no pullable image; the release binary is vendored with a pinned checksum.
 ARG SUPERCRONIC_VERSION=v0.2.33
 ARG SUPERCRONIC_SHA256=feefa310da569c81b99e1027b86b27b51e6ee9ab647747b49099645120cfc671
+# The schedule is Europe/Rome (spec §10.2); supercronic reads TZ, tzdata provides the zone.
+ENV TZ=Europe/Rome
 RUN apk add --no-cache curl ca-certificates tzdata \
  && curl -fsSLo /usr/local/bin/supercronic \
       "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
@@ -7732,7 +8156,7 @@ ENTRYPOINT ["/usr/local/bin/supercronic", "-passthrough-logs", "/etc/crontab"]
 ```
 
 ```
-# cron/crontab — times are Europe/Rome (TZ on the container). Spec §10.2.
+# cron/crontab — times are Europe/Rome (ENV TZ in cron/Dockerfile). Spec §10.2.
 7 * * * *  curl -fsS --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=hourly"
 0 12 * * * curl -fsS --retry 3 --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=daily"
 5 0 1 * *  curl -fsS --retry 3 --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=monthly"
@@ -7769,9 +8193,17 @@ Expected: health `{"status":"ok","db":"up","heartbeat":"absent"}`; `/` answers `
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add Dockerfile entrypoint.sh .dockerignore cron
-git commit -m "chore(docker): hardened app image with boot migrations and the supercronic sidecar image"
+git commit -F - <<'EOF'
+chore(docker): hardened app image with boot migrations and the supercronic sidecar image
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -7783,7 +8215,7 @@ git commit -m "chore(docker): hardened app image with boot migrations and the su
 - Modify: `package.json` (script `e2e`), `.gitignore` (`tests/e2e/.state/`)
 
 **Interfaces:**
-- Consumes: everything above; `createAuth`, `createInvitation` (Tasks 9–10); `ensureBucket` (Task 11); Mailpit helper pattern (Task 10).
+- Consumes: everything above; `createAuth`, `createInvitation` (Tasks 9–10); `ensureBucket` (Task 11); `truncateAllTables` from `test/truncate.ts` (Task 7) and `clearMailbox`, `waitForMail` from `test/mailpit.ts` (Task 10). Both files import nothing from `src/`, so Playwright loads them directly; never import `test/db.ts` from Playwright code — it pulls in the app's `server-only` database client, which throws outside React Server Components.
 - Produces: `npm run e2e` — builds, starts the standalone server on `127.0.0.1:3100` against `finance_e2e`, seeds users, runs the desktop (1440×900) and mobile (400×860) projects.
 
 - [ ] **Step 1: Write the shared environment, server script and config**
@@ -7792,7 +8224,6 @@ git commit -m "chore(docker): hardened app image with boot migrations and the su
 // tests/e2e/env.ts — one environment for the e2e server, the seed and the specs.
 export const E2E_PORT = 3100;
 export const BASE_URL = `http://127.0.0.1:${E2E_PORT}`;
-export const MAILPIT = "http://127.0.0.1:58025";
 
 export const USERS = {
   owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
@@ -7889,16 +8320,19 @@ process.exit(0);
 ```ts
 // tests/e2e/global-setup.ts
 import { execFileSync } from "node:child_process";
-import { Client } from "pg";
-import { E2E_ENV, MAILPIT } from "./env";
+import { Pool } from "pg";
+import { clearMailbox } from "../../test/mailpit";
+import { truncateAllTables } from "../../test/truncate";
+import { E2E_ENV } from "./env";
 
 export default async function globalSetup(): Promise<void> {
-  const client = new Client({ connectionString: E2E_ENV.DATABASE_URL });
-  await client.connect();
-  const { rows } = await client.query<{ tablename: string }>("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
-  if (rows.length > 0) await client.query(`TRUNCATE ${rows.map((r) => `"${r.tablename}"`).join(", ")} CASCADE`);
-  await client.end();
-  await fetch(`${MAILPIT}/api/v1/messages`, { method: "DELETE" });
+  const pool = new Pool({ connectionString: E2E_ENV.DATABASE_URL, max: 1 });
+  try {
+    await truncateAllTables(pool);
+  } finally {
+    await pool.end();
+  }
+  await clearMailbox();
   execFileSync("node", ["--conditions=react-server", "--import", "tsx", "scripts/seed-e2e.ts"], {
     stdio: "inherit",
     env: { ...process.env, ...E2E_ENV },
@@ -7909,7 +8343,6 @@ export default async function globalSetup(): Promise<void> {
 ```ts
 // tests/e2e/helpers.ts
 import { expect, type Page } from "@playwright/test";
-import { MAILPIT } from "./env";
 
 export async function signInWithPassword(page: Page, email: string, password: string) {
   await page.goto("/sign-in");
@@ -7927,20 +8360,9 @@ export async function signInWithOidc(page: Page, subject: string) {
   await page.locator('input[type="submit"], button[type="submit"]').first().click();
   await expect(page).toHaveURL("/");
 }
-
-export async function latestMailTo(to: string): Promise<string> {
-  for (let attempt = 0; attempt < 25; attempt++) {
-    const search = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
-    const { messages } = (await search.json()) as { messages: { ID: string }[] };
-    if (messages.length > 0) {
-      const message = await fetch(`${MAILPIT}/api/v1/message/${messages[0].ID}`);
-      return ((await message.json()) as { Text: string }).Text;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  throw new Error(`No email to ${to}`);
-}
 ```
+
+Mail is read with `waitForMail` from `test/mailpit.ts` (Task 10), which already points at the dev Mailpit (`MAILPIT_URL` or `http://127.0.0.1:58025`); the e2e code keeps no second copy of the Mailpit client or its URL.
 
 If `signInWithOidc` cannot find the form, open `http://127.0.0.1:58090/default/debugger` once, read the login page's markup and fix the two selectors in this helper only. If the ID token lacks `groups` or fails nonce validation, check the mock's response in its debugger before touching the auth config.
 
@@ -8018,19 +8440,20 @@ test("an invitation creates the account and signs the invitee in", async ({ page
 ```ts
 // tests/e2e/reset.spec.ts
 import { expect, test } from "@playwright/test";
+import { waitForMail } from "../../test/mailpit";
 import { USERS } from "./env";
-import { latestMailTo, signInWithPassword } from "./helpers";
+import { signInWithPassword } from "./helpers";
 
 test("a reset email lets the user choose a new password", async ({ page }) => {
   await page.goto("/forgot-password");
   await page.getByLabel("Email").fill(USERS.reset.email);
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByRole("status")).toContainText("reset link is on its way");
-  const link = /(https?:\/\/\S+)/.exec(await latestMailTo(USERS.reset.email))?.[1];
+  const link = /(https?:\/\/\S+)/.exec((await waitForMail(USERS.reset.email)).Text)?.[1];
   expect(link).toBeTruthy();
   await page.goto(link!);
   await expect(page).toHaveURL(/\/reset-password\?token=/);
-  await page.getByLabel("New password").fill("brand-new-password-1");
+  await page.getByLabel("New password", { exact: true }).fill("brand-new-password-1");
   await page.getByLabel("Confirm new password").fill("brand-new-password-1");
   await page.getByRole("button", { name: "Set password" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
@@ -8041,19 +8464,26 @@ test("a reset email lets the user choose a new password", async ({ page }) => {
 ```ts
 // tests/e2e/preferences.spec.ts
 import { expect, test } from "@playwright/test";
+import { THEME_COOKIE } from "../../src/platform/theme";
 import { USERS } from "./env";
 import { signInWithPassword } from "./helpers";
 
 test("language and theme preferences apply and persist", async ({ page }) => {
   await signInWithPassword(page, USERS.prefs.email, USERS.prefs.password);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Toggle theme" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  // The toggle saves in a transition; reload only once the action's response has set the cookie.
+  await expect
+    .poll(async () => (await page.context().cookies()).find((cookie) => cookie.name === THEME_COOKIE)?.value)
+    .toBe("dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   await page.goto("/settings/profile");
   await page.getByLabel("Language").selectOption("it");
-  await page.getByRole("button", { name: "Save" }).click();
+  // Profile has two forms with a Save button; take the preferences one (the form holding "Language").
+  await page.locator("form", { has: page.getByLabel("Language") }).getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("navigation", { name: "Principale" }).getByRole("link", { name: "Panoramica" })).toBeVisible();
 });
 ```
@@ -8081,9 +8511,17 @@ Expected: all specs pass in both projects (desktop: auth ×3, oidc ×2, invite, 
 
 - [ ] **Step 5: Commit**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add playwright.config.ts tests/e2e scripts/seed-e2e.ts package.json .gitignore
-git commit -m "test(e2e): sign-in by password and OIDC, invitations, reset, preferences, mobile shell"
+git commit -F - <<'EOF'
+test(e2e): sign-in by password and OIDC, invitations, reset, preferences, mobile shell
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 ```
 
 ---
@@ -8095,8 +8533,10 @@ git commit -m "test(e2e): sign-in by password and OIDC, invitations, reset, pref
 - Modify: `package.json` (script `dev:seed`), `README.md`, `CLAUDE.md`, `.env.example` (complete)
 
 **Interfaces:**
-- Consumes: `createAuth`, `ensureBucket`, `getPreferences` path (Tasks 8–11).
-- Produces: `npm run dev:seed` (idempotent: owner account + bucket; later phases extend it with the design's invented sample data); final docs; the F0 gate.
+- Consumes: `createAuth` (Task 9), `users` table, `getDb`, `getPool` (Tasks 7–8), `ensureBucket` (Task 11).
+- Produces: `npm run dev:seed` (idempotent: owner account + bucket); final docs; the F0 gate.
+
+Spec §12 lists "development data from the design's sample data" under F0. F0 has no domain tables, so the F0 seed creates only the owner; each domain phase adds the design's sample data for its own tables to `scripts/seed-dev.ts`.
 
 - [ ] **Step 1: Write the dev seed**
 
@@ -8139,15 +8579,23 @@ OIDC_CLIENT_SECRET=finance-dev
 OIDC_ADMIN_GROUP=finance-admins
 SMTP_HOST=127.0.0.1
 SMTP_PORT=51025
+SMTP_SECURE=false
+# Mailpit accepts any login; leave both empty to send without authentication.
+SMTP_USER=
+SMTP_PASSWORD=
 MAIL_FROM=Finance Dashboard <finance@example.test>
 S3_ENDPOINT=http://127.0.0.1:59000
+S3_REGION=us-east-1
 S3_ACCESS_KEY_ID=finance
 S3_SECRET_ACCESS_KEY=finance-dev-secret
 S3_BUCKET=finance-dev
 CRON_SECRET=dev-cron-secret-dev-cron-secret
+HEARTBEAT_FILE=/tmp/finance-heartbeat
 ```
 
-`README.md` — replace the Develop section with: prerequisites (Node ≥22.12, Docker); `npm install`; `cp .env.example .env`; `npm run dev:services`; `npm run db:migrate`; `npm run dev:seed`; `npm run dev`; open `http://127.0.0.1:3000` (use `127.0.0.1`, not `localhost`, so the OIDC issuer matches); sign in as `owner@example.test` / `owner-password-123`, or with **Continue with Authentik** as `admin@example.test` (admin) or any other address (user) on the mock provider; Mailpit at `http://127.0.0.1:58025`, MinIO console at `http://127.0.0.1:59001`. A Check section with `npm run lint && npm run typecheck && npm test && npm run test:integration && npm run e2e`. A Docker section with the two `docker build` commands from Task 20. A Documentation section linking the spec and `docs/plans/`.
+Check it against the final `envSchema` in `src/platform/env.ts`: every key there appears here (optional ones with their default or empty), and nothing here is missing from the schema except `TEST_DATABASE_URL`, which only the test harness reads.
+
+`README.md` — replace the Develop section with: prerequisites (Node ≥22.12, Docker); `npm install`; `cp .env.example .env`; `npm run dev:services`; `npm run db:migrate`; `npm run dev:seed`; `npm run dev`; open `http://127.0.0.1:3000` (use `127.0.0.1`, not `localhost`, so the OIDC issuer matches); sign in as `owner@example.test` / `owner-password-123`, or with **Continue with Authentik** as `admin@example.test` (admin) or any other address (user) on the mock provider; Mailpit at `http://127.0.0.1:58025`, MinIO console at `http://127.0.0.1:59001`. A Check section with `npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:integration && npm run e2e`. A Docker section with the two `docker build` commands from Task 20. A Documentation section linking the spec and `docs/plans/`.
 
 `CLAUDE.md` — keep the Task 1 content and add: the dev services and their ports; "every string in `messages/en.json` and `messages/it.json`"; "each phase appends its nav items in `src/app/(app)/navigation.ts`, its icons in `src/ui/shell/icons.ts`, its jobs in `src/platform/jobs/registry.ts`, its tables in `src/platform/db/tables.ts`".
 
@@ -8165,10 +8613,12 @@ Serve the canvas (`cd "UI Recreation and branding decisions" && python3 -m http.
 - [ ] **Step 5: Whole-branch review split by area**
 
 Dispatch four reviewers, each with the file list of its area taken from `git diff --name-only $(git rev-list --max-parents=0 HEAD)..HEAD` (every file must belong to exactly one area):
-1. **Platform:** `src/platform/{money,dates,holidays,format,crypto,env,storage,storage-keys,mail}.ts`, `src/platform/db/**`, `src/platform/jobs/**`, `src/app/api/{health,metrics,jobs}/**`, `scripts/migrate.ts`, `drizzle/**`.
-2. **Auth and users:** `src/platform/auth/**`, `src/modules/users/**`, `src/proxy.ts`, `src/app/(auth)/**`, `src/app/api/auth/**`, `src/app/(app)/settings/**`, `src/app/(app)/actions.ts`, `scripts/create-admin.ts`.
-3. **UI:** `src/ui/**`, `src/app/layout.tsx`, `src/app/globals.css`, `src/app/(app)/{layout,page,navigation}.*`, `src/app/(app)/components/**`, `messages/**`, `src/platform/{theme,i18n/**}`.
-4. **Infrastructure and tests:** `Dockerfile`, `entrypoint.sh`, `.dockerignore`, `cron/**`, `compose.dev.yml`, `dev/**`, `vitest.config.ts`, `playwright.config.ts`, `tests/**`, `test/**`, `scripts/seed-*.ts`, config files, `README.md`, `CLAUDE.md`.
+1. **Platform:** `src/platform/{money,dates,holidays,format,crypto,env,context,storage,storage-keys,mail}.ts` and their `*.test.ts` / `*.itest.ts` siblings, `src/platform/db/**`, `src/platform/jobs/**`, `src/app/api/{health,metrics,jobs}/**`, `scripts/migrate.ts`, `drizzle/**`.
+2. **Auth and users:** `src/platform/auth/**`, `src/modules/users/**` (including `actions.ts`, every users-module Server Action), `src/proxy.ts`, `src/app/(auth)/**`, `src/app/api/auth/**`, `src/app/(app)/settings/**`, `scripts/create-admin.ts`.
+3. **UI:** `src/ui/**`, `src/app/layout.tsx`, `src/app/globals.css`, `src/app/(app)/{layout,page,navigation}.*` (with `navigation.test.ts`), `src/app/(app)/components/**`, `messages/**`, `src/platform/theme.ts`, `src/platform/theme.test.ts`, `src/platform/i18n/**`, `src/global.d.ts`.
+4. **Infrastructure, tests and docs:** `Dockerfile`, `entrypoint.sh`, `.dockerignore`, `cron/**`, `compose.dev.yml`, `dev/**`, `vitest.config.ts`, `playwright.config.ts`, `tests/**`, `test/**`, `src/architecture.test.ts`, `scripts/seed-*.ts`, `package.json`, `package-lock.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`, `drizzle.config.ts`, `.prettierrc.json`, `.prettierignore`, `.gitignore`, `.env.example`, `README.md`, `CLAUDE.md`, `docs/**`.
+
+Before dispatching, list the diff's files and confirm each one matches exactly one area; a file that matches none is assigned before the review starts.
 
 Every reviewer prompt names these defect classes (spec §4.3, lessons of the previous rebuild): a query that forgets `userScoped`; a network call inside a transaction; a civil date derived from UTC; money through `number`; two functions answering the same question; a check that silently returns a "safe" default; a constraint asserted in prose but not in SQL; docs describing something that does not exist; copy missing from one catalogue; a server action without `requireSession()`.
 
@@ -8176,9 +8626,17 @@ Fix the findings in sequential batches (never two implementers at once), re-run 
 
 - [ ] **Step 6: Commit and push**
 
+Run: `npm run format && npm run lint && npm run typecheck && npm run format:check`
+Expected: all four exit 0 (Prettier may rewrite this task's files first; they are staged below).
+
 ```bash
 git add scripts/seed-dev.ts package.json README.md CLAUDE.md .env.example
-git commit -m "docs: development guide, dev seed and F0 gate"
+git commit -F - <<'EOF'
+docs: development guide, dev seed and F0 gate
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Mqa6EW1ovPr8yp7pJu1Weg
+EOF
 git push origin dev-0.1
 ```
 
