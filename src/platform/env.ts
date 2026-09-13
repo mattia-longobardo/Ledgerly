@@ -24,6 +24,15 @@ export const envSchema = z
     OIDC_CLIENT_ID: z.string().min(1),
     OIDC_CLIENT_SECRET: z.string().min(1),
     OIDC_ADMIN_GROUP: z.string().min(1).default("finance-admins"),
+    SMTP_HOST: z.string().min(1),
+    SMTP_PORT: z.coerce.number().int().positive(),
+    SMTP_SECURE: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    MAIL_FROM: z.string().min(3),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;

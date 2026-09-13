@@ -9,6 +9,8 @@ import { count, eq } from "drizzle-orm";
 import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
+import { sendMail } from "@/platform/mail";
+import { passwordResetEmail } from "./emails";
 import { authLogger } from "./logger";
 import { accessControl, roles } from "./permissions";
 import { OIDC_PROVIDER_ID } from "./provider";
@@ -111,6 +113,13 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       password: {
         hash: (password) => hash(password, ARGON2),
         verify: ({ hash: stored, password }) => verify(stored, password),
+      },
+      resetPasswordTokenExpiresIn: 60 * 60,
+      // Fire and forget: the response time must not reveal whether the address exists.
+      sendResetPassword: async ({ user, url }) => {
+        void sendMail({ to: user.email, ...passwordResetEmail(url) }).catch((error: unknown) => {
+          console.error("[auth] password reset email failed", error);
+        });
       },
     },
     rateLimit: {
