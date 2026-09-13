@@ -141,4 +141,20 @@ describe("seal / open", () => {
     const blob = seal(ring, JSON.stringify({ token: "abc", limit: 5 }));
     expect(() => openJson(ring, blob)).toThrow("Sealed credentials must be string values");
   });
+
+  it("surfaces open()'s real error for a truncated blob instead of a JSON error", () => {
+    const ring = parseKeyRing(`k1:${key()}`);
+    const blob = sealJson(ring, { token: "abc" });
+    const truncated = blob.subarray(0, blob.length - 20);
+    expect(() => openJson(ring, truncated)).toThrow("Ciphertext is truncated");
+  });
+
+  it("surfaces open()'s real error for a tampered blob instead of a JSON error", () => {
+    const ring = parseKeyRing(`k1:${key()}`);
+    const blob = sealJson(ring, { token: "abc" });
+    const tampered = Buffer.from(blob);
+    tampered[tampered.length - 1] ^= 0xff;
+    expect(() => openJson(ring, tampered)).not.toThrow("Sealed credentials are not valid JSON");
+    expect(() => openJson(ring, tampered)).toThrow();
+  });
 });

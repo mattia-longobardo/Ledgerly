@@ -92,9 +92,10 @@ export function sealJson(ring: KeyRing, value: Record<string, string>): Buffer {
  * `JSON.parse`'s own error would otherwise quote it verbatim.
  */
 export function openJson(ring: KeyRing, blob: Buffer): Record<string, string> {
+  const plaintext = open(ring, blob);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(open(ring, blob));
+    parsed = JSON.parse(plaintext);
   } catch {
     throw new Error("Sealed credentials are not valid JSON");
   }
