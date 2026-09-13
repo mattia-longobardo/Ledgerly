@@ -23,3 +23,4 @@ playwright-report/
 # Tooling
 graphify-out/
 .DS_Store
+.vitest/
