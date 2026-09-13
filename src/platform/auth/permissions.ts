@@ -1,0 +1,18 @@
+// No `server-only`: the admin client plugin needs the same roles for its permission checks.
+import { createAccessControl } from "better-auth/plugins/access";
+import { defaultStatements } from "better-auth/plugins/admin/access";
+
+export const accessControl = createAccessControl(defaultStatements);
+
+/**
+ * An admin lists, invites (creates), re-roles, bans and removes users and revokes their sessions
+ * (spec §7.10). Impersonation and setting another user's password, email or profile directly are
+ * not granted: a password reset goes through the emailed link.
+ */
+export const roles = {
+  admin: accessControl.newRole({
+    user: ["create", "list", "set-role", "ban", "delete"],
+    session: ["list", "revoke"],
+  }),
+  user: accessControl.newRole({ user: [], session: [] }),
+};
