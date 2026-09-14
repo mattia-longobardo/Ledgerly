@@ -37,5 +37,49 @@
       "subject": "Reset your Finance Dashboard password",
       "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
     }
+  },
+  "auth": {
+    "version": "v0.1.0",
+    "signIn": {
+      "title": "Sign in",
+      "description": "Use your Authentik account, or your password if you have one.",
+      "authentik": "Continue with Authentik",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "forgot": "Forgot password?"
+    },
+    "errors": {
+      "credentials": "Wrong email or password.",
+      "invitationRequired": "This account needs an invitation. Ask an administrator.",
+      "oidc": "Sign-in with Authentik failed. Try again.",
+      "generic": "Sign-in failed. Try again."
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "description": "We will email you a link to choose a new password.",
+      "submit": "Send reset link",
+      "sent": "If an account exists for that address, a reset link is on its way.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "newPassword": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Set password",
+      "hint": "At least 12 characters.",
+      "mismatch": "The two passwords do not match.",
+      "invalid": "This reset link is invalid or has expired."
+    },
+    "invite": {
+      "title": "Join Finance Dashboard",
+      "description": "Invited as {email}.",
+      "name": "Full name",
+      "submit": "Create account",
+      "invalid": "This invitation is invalid, expired or already used.",
+      "emailTaken": "An account with this email already exists. Sign in instead.",
+      "emailMismatch": "This invitation is for a different email address than your Authentik account.",
+      "authentik": "Use Authentik instead"
+    }
   }
 }

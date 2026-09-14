@@ -2,10 +2,13 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { clearMailbox, waitForMail } from "../../../test/mailpit";
+import { createTestUser } from "../../../test/users";
+import type { Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { createAuth } from "./auth";
 import {
   acceptInvitation,
+  completeInvitationWithSso,
   createInvitation,
   findInvitation,
   InvitationError,
@@ -15,12 +18,25 @@ import { users } from "./schema";
 
 const auth = () => createAuth({ withNextCookies: false });
 
+/** A user as an SSO sign-in leaves it: no password, the given role. */
+async function ssoUser(email: string, role: Role) {
+  const user = await createTestUser(email);
+  await getDb().update(users).set({ role }).where(eq(users.id, user.id));
+  return { userId: user.id, email: user.email };
+}
+
+async function roleOf(userId: string) {
+  const [row] = await getDb().select({ role: users.role }).from(users).where(eq(users.id, userId));
+  return row.role;
+}
+
+afterAll(closeDatabase);
+
 describe("invitations", () => {
   beforeEach(async () => {
     await resetDatabase();
     await clearMailbox();
   });
-  afterAll(closeDatabase);
 
   it("emails a link that finds the invitation until it expires", async () => {
     const now = new Date("2026-09-13T10:00:00Z");
@@ -118,5 +134,78 @@ describe("invitations", () => {
       acceptInvitation(instance, { token, name: "Z", password: "z-password-123" }),
     ).rejects.toThrow("boom");
     expect(await findInvitation(token)).not.toBeNull();
+  });
+});
+
+describe("completing an invitation after an Authentik sign-in", () => {
+  beforeEach(resetDatabase);
+
+  it("gives the user the invited role and consumes the invitation", async () => {
+    const user = await ssoUser("giulia@example.test", "user");
+    const { token } = await createInvitation({
+      email: "giulia@example.test",
+      role: "admin",
+      invitedBy: null,
+    });
+    expect(await completeInvitationWithSso(token, user)).toBe("accepted");
+    expect(await roleOf(user.userId)).toBe("admin");
+    expect(await findInvitation(token)).toBeNull();
+    expect(await completeInvitationWithSso(token, user)).toBe("invalid");
+  });
+
+  it("matches the invited address regardless of case", async () => {
+    const user = await ssoUser("marco@example.test", "user");
+    const { token } = await createInvitation({ email: "marco@example.test", role: "admin", invitedBy: null });
+    expect(await completeInvitationWithSso(token, { ...user, email: "Marco@Example.TEST" })).toBe("accepted");
+    expect(await roleOf(user.userId)).toBe("admin");
+  });
+
+  it("leaves the invitation pending and the role unchanged for another address", async () => {
+    const user = await ssoUser("other@example.test", "user");
+    const { token } = await createInvitation({
+      email: "giulia@example.test",
+      role: "admin",
+      invitedBy: null,
+    });
+    expect(await completeInvitationWithSso(token, user)).toBe("email_mismatch");
+    expect(await roleOf(user.userId)).toBe("user");
+    expect(await findInvitation(token)).toMatchObject({ email: "giulia@example.test", role: "admin" });
+  });
+
+  it("refuses an expired invitation", async () => {
+    const user = await ssoUser("old@example.test", "user");
+    const { token } = await createInvitation(
+      { email: "old@example.test", role: "admin", invitedBy: null },
+      new Date("2020-01-01T00:00:00Z"),
+    );
+    expect(await completeInvitationWithSso(token, user)).toBe("invalid");
+    expect(await roleOf(user.userId)).toBe("user");
+  });
+
+  it("refuses an invitation already accepted with a password", async () => {
+    const { token } = await createInvitation({ email: "luca@example.test", role: "admin", invitedBy: null });
+    await acceptInvitation(auth(), { token, name: "Luca", password: "luca-password-12" });
+    const [luca] = await getDb()
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, "luca@example.test"));
+    await getDb().update(users).set({ role: "user" }).where(eq(users.id, luca.id));
+    expect(await completeInvitationWithSso(token, { userId: luca.id, email: "luca@example.test" })).toBe(
+      "invalid",
+    );
+    expect(await roleOf(luca.id)).toBe("user");
+  });
+
+  it("never demotes an admin invited as a plain user", async () => {
+    const user = await ssoUser("chief@example.test", "admin");
+    const { token } = await createInvitation({ email: "chief@example.test", role: "user", invitedBy: null });
+    expect(await completeInvitationWithSso(token, user)).toBe("accepted");
+    expect(await roleOf(user.userId)).toBe("admin");
+    expect(await findInvitation(token)).toBeNull();
+  });
+
+  it("refuses an unknown token", async () => {
+    const user = await ssoUser("nobody@example.test", "user");
+    expect(await completeInvitationWithSso("not-a-real-token", user)).toBe("invalid");
   });
 });
