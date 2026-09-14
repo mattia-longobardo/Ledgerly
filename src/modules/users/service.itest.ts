@@ -1,8 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { sessions } from "@/platform/auth/schema";
+import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { DEFAULT_PREFERENCES } from "./rules";
-import { getPreferences, updatePreferences } from "./service";
+import { findSessionToken, getPreferences, updatePreferences } from "./service";
 
 describe("preferences service", () => {
   beforeEach(resetDatabase);
@@ -38,5 +40,16 @@ describe("preferences service", () => {
     await updatePreferences({ userId: bob.id }, { ...DEFAULT_PREFERENCES, theme: "dark" });
     expect(await getPreferences({ userId: alice.id })).toEqual({ ...DEFAULT_PREFERENCES, locale: "it" });
     expect(await getPreferences({ userId: bob.id })).toEqual({ ...DEFAULT_PREFERENCES, theme: "dark" });
+  });
+
+  it("finds a session token only for the session's owner", async () => {
+    const alice = await createTestUser();
+    const bob = await createTestUser();
+    const [session] = await getDb()
+      .insert(sessions)
+      .values({ userId: alice.id, token: "alice-session-token", expiresAt: new Date(Date.now() + 60_000) })
+      .returning({ id: sessions.id });
+    expect(await findSessionToken({ userId: alice.id }, session.id)).toBe("alice-session-token");
+    expect(await findSessionToken({ userId: bob.id }, session.id)).toBeNull();
   });
 });
