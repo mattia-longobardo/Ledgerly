@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { describeUserAgent } from "@/modules/users/rules";
 import { listOwnSessions } from "@/modules/users/service";
+import { hasPasswordAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
@@ -12,14 +13,11 @@ import { type SessionRow, SessionsList } from "./sessions-list";
 
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const requestHeaders = await headers();
-  const auth = getAuth();
-  const [current, sessions, accounts] = await Promise.all([
-    auth.api.getSession({ headers: requestHeaders }),
+  const [current, sessions, hasPassword] = await Promise.all([
+    getAuth().api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
-    auth.api.listUserAccounts({ headers: requestHeaders }),
+    hasPasswordAccount(ctx.userId),
   ]);
-  const hasPassword = accounts.some((a) => a.providerId === "credential");
   const t = await getTranslations("settings");
 
   const rows: SessionRow[] = sessions.map((session) => {

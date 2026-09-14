@@ -5,11 +5,12 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin, genericOAuth } from "better-auth/plugins";
-import { and, count, eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
+import { hasSsoAccount } from "./accounts";
 import { passwordResetEmail } from "./emails";
 import { authLogger, redactForLog } from "./logger";
 import { nameSchema } from "./name-policy";
@@ -17,7 +18,7 @@ import { accessControl, roles } from "./permissions";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "./password-policy";
 import { OIDC_PROVIDER_ID } from "./provider";
 import { roleFromIdToken } from "./roles";
-import { authAccounts, users } from "./schema";
+import { users } from "./schema";
 
 export const RESET_PASSWORD_TOKEN_TTL_SECONDS = 60 * 60;
 
@@ -159,20 +160,11 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
           ctx.body.name !== undefined
         ) {
           const session = await getSessionFromCtx(ctx);
-          if (session) {
-            const [linked] = await getDb()
-              .select({ id: authAccounts.id })
-              .from(authAccounts)
-              .where(
-                and(eq(authAccounts.userId, session.user.id), eq(authAccounts.providerId, OIDC_PROVIDER_ID)),
-              )
-              .limit(1);
-            if (linked) {
-              throw new APIError("FORBIDDEN", {
-                code: "NAME_MANAGED_BY_SSO",
-                message: "The name is managed by Authentik while SSO is linked.",
-              });
-            }
+          if (session && (await hasSsoAccount(session.user.id))) {
+            throw new APIError("FORBIDDEN", {
+              code: "NAME_MANAGED_BY_SSO",
+              message: "The name is managed by Authentik while SSO is linked.",
+            });
           }
           const parsedName = nameSchema.safeParse(ctx.body.name);
           if (!parsedName.success) {
