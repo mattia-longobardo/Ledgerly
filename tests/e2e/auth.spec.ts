@@ -25,7 +25,7 @@ test("the first user is admin, reaches the app and signs out", async ({ page }) 
   const nav = page.getByRole("navigation", { name: "Primary" });
   await expect(nav.getByRole("link", { name: "Components" })).toBeVisible();
   await page.goto("/components");
-  await expect(page.getByRole("heading", { name: "Colour tokens" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Color tokens" })).toBeVisible();
 
   await page.goto("/settings/profile");
   const topbar = page.getByRole("banner");
