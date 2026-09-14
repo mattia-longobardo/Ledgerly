@@ -6,7 +6,8 @@ import { useFieldState } from "./field";
  * Focus (design: accent border and a 2 px soft halo): the soft halo alone is too faint to see
  * (about 1.1:1), so a 1 px accent outline doubles the accent border into a visible 2 px ring.
  */
-const FIELD_FOCUS = "focus:border-accent focus:outline-1 focus:outline-accent focus:ring-[3px] focus:ring-soft";
+const FIELD_FOCUS =
+  "focus:border-accent focus:outline-1 focus:outline-accent focus:ring-[3px] focus:ring-soft";
 
 const CONTROL =
   "h-8 w-full rounded-ctl border border-border bg-card px-2.5 text-base text-fg placeholder:text-faint " +

@@ -58,11 +58,12 @@ describe("overlays", () => {
     expect(await screen.findByText("Preferences saved")).toBeInTheDocument();
   });
 
-  it("gives an error toast the error tone", async () => {
+  it("gives an error toast the error tone and announces it assertively", async () => {
     render(<Toaster closeLabel="Close" />);
     act(() => notify("Couldn't save your theme. Try again.", "error"));
-    const toast = (await screen.findByText("Couldn't save your theme. Try again.")).closest("[data-type]");
-    expect(toast).toHaveAttribute("data-type", "error");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save your theme. Try again.");
+    const toast = document.querySelector('[role="alertdialog"][data-type="error"]');
+    expect(toast).toHaveTextContent("Couldn't save your theme. Try again.");
     expect(toast?.querySelector(".text-neg")).not.toBeNull();
   });
 

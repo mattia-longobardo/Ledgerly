@@ -58,7 +58,7 @@ describe("ThemeToggle", () => {
 
     await userEvent.click(screen.getByRole("button", { name: LABELS.toggleTheme }));
 
-    expect(await screen.findByText(LABELS.themeSaveError)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(LABELS.themeSaveError);
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(document.cookie).toContain("theme=light");
   });
@@ -73,7 +73,7 @@ describe("ThemeToggle", () => {
 
     await userEvent.click(screen.getByRole("button", { name: LABELS.toggleTheme }));
 
-    expect(await screen.findByText(LABELS.themeSaveError)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(LABELS.themeSaveError);
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(document.cookie).toContain("theme=system");
   });

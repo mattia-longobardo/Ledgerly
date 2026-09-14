@@ -39,7 +39,10 @@ export function Th({
         <button
           type="button"
           onClick={sort.onSort}
-          className={cn("focus-ring inline-flex items-center gap-1 rounded-[4px]", sort.direction && "text-fg")}
+          className={cn(
+            "focus-ring inline-flex items-center gap-1 rounded-[4px]",
+            sort.direction && "text-fg",
+          )}
         >
           {children}
           {sort.direction && (
