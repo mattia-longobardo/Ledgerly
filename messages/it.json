@@ -80,7 +80,8 @@
       "invalid": "Questo invito non è valido, è scaduto o è già stato usato.",
       "emailTaken": "Esiste già un account con questa email. Accedi.",
       "emailMismatch": "Questo invito è per un indirizzo email diverso da quello del tuo account Authentik.",
-      "nameInvalid": "Inserisci nome e cognome.",
+      "nameInvalid": "Inserisci nome e cognome, al massimo {max} caratteri.",
+      "failed": "Impossibile creare l'account. Riprova.",
       "authentik": "Usa Authentik"
     }
   },
@@ -95,7 +96,7 @@
       "ssoNote": "Nome ed email sono gestiti da Authentik finché l'SSO è collegato.",
       "saved": "Account salvato",
       "errors": {
-        "invalid": "Inserisci un nome tra 1 e 120 caratteri.",
+        "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
         "sso": "Il nome è gestito da Authentik finché l'SSO è collegato.",
         "failed": "Impossibile salvare. Riprova."
       }

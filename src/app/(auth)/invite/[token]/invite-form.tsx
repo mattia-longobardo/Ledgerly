@@ -1,7 +1,9 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
+import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
 import {
   isPasswordLengthValid,
   MAX_PASSWORD_LENGTH,
@@ -21,9 +23,11 @@ const ERROR_KEY = {
   weak_password: "reset.hint",
   mismatch: "reset.mismatch",
   oidc: "errors.oidc",
+  failed: "invite.failed",
 } as const;
 
 const PASSWORD_BOUNDS = { min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH };
+const NAME_BOUNDS = { max: MAX_NAME_LENGTH };
 
 export function InviteForm({
   token,
@@ -47,8 +51,14 @@ export function InviteForm({
     if (input.password !== input.confirm) return setError("mismatch");
     if (!isPasswordLengthValid(input.password)) return setError("weak_password");
     startTransition(async () => {
-      const result = await acceptInviteAction(token, input);
-      if (result) setError(result.error);
+      try {
+        const result = await acceptInviteAction(token, input);
+        if (result) setError(result.error);
+      } catch (thrown) {
+        // On success the action redirects, which reaches here as a rejection Next.js must handle.
+        unstable_rethrow(thrown);
+        setError("failed");
+      }
     });
   }
 
@@ -56,12 +66,12 @@ export function InviteForm({
     <div className="flex flex-col gap-4">
       {error && (
         <p role="alert" className="text-sm text-neg">
-          {t(ERROR_KEY[error], PASSWORD_BOUNDS)}
+          {t(ERROR_KEY[error], error === "name" ? NAME_BOUNDS : PASSWORD_BOUNDS)}
         </p>
       )}
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <Field label={t("invite.name")} htmlFor="name">
-          <Input id="name" name="name" autoComplete="name" maxLength={100} required />
+          <Input id="name" name="name" autoComplete="name" maxLength={MAX_NAME_LENGTH} required />
         </Field>
         <Field label={t("signIn.password")} htmlFor="password" hint={t("reset.hint", PASSWORD_BOUNDS)}>
           <Input id="password" name="password" type="password" autoComplete="new-password" required />

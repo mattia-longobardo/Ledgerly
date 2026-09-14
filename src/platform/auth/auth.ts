@@ -14,7 +14,7 @@ import { sendMail } from "@/platform/mail";
 import { hasPasswordAccount, hasSsoAccount } from "./accounts";
 import { passwordResetEmail } from "./emails";
 import { authLogger, redactForLog } from "./logger";
-import { nameSchema } from "./name-policy";
+import { MAX_NAME_LENGTH, nameSchema } from "./name-policy";
 import { accessControl, roles } from "./permissions";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "./password-policy";
 import { OIDC_PROVIDER_ID } from "./provider";
@@ -182,7 +182,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
           if (!parsedName.success) {
             throw new APIError("BAD_REQUEST", {
               code: "INVALID_NAME",
-              message: "Enter a name between 1 and 120 characters.",
+              message: `Enter a name between 1 and ${MAX_NAME_LENGTH} characters.`,
             });
           }
           return { context: { body: { name: parsedName.data } } };

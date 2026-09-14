@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAuth } from "@/platform/auth/auth";
 import { acceptInvitation, InvitationError } from "@/platform/auth/invitations";
+import { nameSchema } from "@/platform/auth/name-policy";
 
 // Public: the invitee has no session yet, so the arguments are whatever the caller sent.
 const acceptInviteInput = z.object({
   token: z.string(),
-  name: z.string().trim().min(1).max(100),
+  name: nameSchema,
   password: z.string(),
   confirm: z.string(),
 });
