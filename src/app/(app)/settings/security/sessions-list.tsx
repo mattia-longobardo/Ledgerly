@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { revokeOtherSessionsAction, revokeSessionAction } from "@/modules/users/actions";
 import { Button } from "@/ui/button";
 
@@ -16,8 +16,37 @@ export interface SessionRow {
 export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
   const t = useTranslations("settings.sessions");
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function revoke(sessionId: string) {
+    startTransition(async () => {
+      try {
+        const result = await revokeSessionAction(sessionId);
+        setError(result.ok ? null : t("errors.failed"));
+      } catch {
+        setError(t("errors.failed"));
+      }
+    });
+  }
+
+  function revokeOthers() {
+    startTransition(async () => {
+      try {
+        const result = await revokeOtherSessionsAction();
+        setError(result.ok ? null : t("errors.failed"));
+      } catch {
+        setError(t("errors.failed"));
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col">
+      {error && (
+        <p role="alert" className="pb-2 text-sm text-neg">
+          {error}
+        </p>
+      )}
       {sessions.map((session) => (
         <div
           key={session.id}
@@ -31,12 +60,7 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
             </div>
           </div>
           {!session.current && (
-            <Button
-              size="xs"
-              variant="danger"
-              disabled={pending}
-              onClick={() => startTransition(() => revokeSessionAction(session.id))}
-            >
+            <Button size="xs" variant="danger" disabled={pending} onClick={() => revoke(session.id)}>
               {t("signOut")}
             </Button>
           )}
@@ -44,12 +68,7 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
       ))}
       {sessions.length > 1 && (
         <div className="flex justify-end pt-3">
-          <Button
-            size="sm"
-            variant="danger"
-            disabled={pending}
-            onClick={() => startTransition(() => revokeOtherSessionsAction())}
-          >
+          <Button size="sm" variant="danger" disabled={pending} onClick={revokeOthers}>
             {t("signOutOthers")}
           </Button>
         </div>

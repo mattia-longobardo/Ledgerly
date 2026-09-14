@@ -4,7 +4,7 @@ import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { DEFAULT_PREFERENCES } from "./rules";
-import { findSessionToken, getPreferences, updatePreferences } from "./service";
+import { findSessionToken, getPreferences, listOwnSessions, updatePreferences } from "./service";
 
 describe("preferences service", () => {
   beforeEach(resetDatabase);
@@ -51,5 +51,29 @@ describe("preferences service", () => {
       .returning({ id: sessions.id });
     expect(await findSessionToken({ userId: alice.id }, session.id)).toBe("alice-session-token");
     expect(await findSessionToken({ userId: bob.id }, session.id)).toBeNull();
+  });
+
+  it("lists the caller's own sessions regardless of age, but not another user's or an expired one", async () => {
+    const alice = await createTestUser();
+    const bob = await createTestUser();
+    const [old] = await getDb()
+      .insert(sessions)
+      .values({
+        userId: alice.id,
+        token: "alice-old-token",
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 60_000),
+      })
+      .returning({ id: sessions.id });
+    await getDb()
+      .insert(sessions)
+      .values({ userId: bob.id, token: "bob-token", expiresAt: new Date(Date.now() + 60_000) });
+    await getDb()
+      .insert(sessions)
+      .values({ userId: alice.id, token: "alice-expired-token", expiresAt: new Date(Date.now() - 60_000) });
+
+    const rows = await listOwnSessions({ userId: alice.id });
+    expect(rows.map((row) => row.id)).toEqual([old.id]);
+    expect(rows[0]).not.toHaveProperty("token");
   });
 });

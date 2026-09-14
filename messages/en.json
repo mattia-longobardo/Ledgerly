@@ -93,7 +93,12 @@
       "name": "Full name",
       "email": "Email",
       "ssoNote": "Name and email are managed by Authentik while SSO is linked.",
-      "saved": "Account saved"
+      "saved": "Account saved",
+      "errors": {
+        "invalid": "Enter a name between 1 and 120 characters.",
+        "sso": "The name is managed by Authentik while SSO is linked.",
+        "failed": "Couldn't save. Try again."
+      }
     },
     "preferences": {
       "title": "Preferences",
@@ -120,8 +125,13 @@
       "monthlySummary": "Email me the monthly summary",
       "hoursPerDay": "Working day (hours)",
       "patronSaint": "Patron saint holiday",
+      "patronDay": "Day",
       "patronNone": "None",
-      "saved": "Preferences saved"
+      "saved": "Preferences saved",
+      "errors": {
+        "invalid": "Some of these preferences are invalid. Check your inputs and try again.",
+        "failed": "Couldn't save preferences. Try again."
+      }
     },
     "password": {
       "title": "Password",
@@ -132,7 +142,8 @@
       "submit": "Update password",
       "changed": "Password updated",
       "ssoOnly": "This account signs in with Authentik only; there is no password to change.",
-      "failed": "The current password is wrong."
+      "failed": "The current password is wrong.",
+      "errors": { "generic": "Something went wrong. Try again." }
     },
     "sessions": {
       "title": "Sessions",
@@ -141,7 +152,8 @@
       "unknownDevice": "Unknown device",
       "signOut": "Sign out",
       "signOutOthers": "Sign out other sessions",
-      "since": "since {date}"
+      "since": "since {date}",
+      "errors": { "failed": "Couldn't sign out. Try again." }
     }
   },
   "overview": {
