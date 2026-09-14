@@ -35,7 +35,7 @@ test("Authentik completes an invitation for the invited address only", async ({ 
       page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Components" }),
     ).toBeVisible();
     await page.goto("/components");
-    await expect(page.getByRole("heading", { name: "Colour tokens" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Color tokens" })).toBeVisible();
     await page.goto(`/invite/${token}`);
     await expect(pageAlert(page)).toHaveText(INVALID);
   });
