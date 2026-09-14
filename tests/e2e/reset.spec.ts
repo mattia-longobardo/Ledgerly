@@ -11,8 +11,10 @@ test("a reset email lets the user choose a new password", async ({ page }) => {
   await expect(page.getByRole("status")).toContainText("reset link is on its way");
   const link = /(https?:\/\/\S+)/.exec((await waitForMail(USERS.reset.email)).Text)?.[1];
   expect(link).toBeTruthy();
-  await page.goto(link!);
+  const response = await page.goto(link!);
   await expect(page).toHaveURL(/\/reset-password\?token=/);
+  // The token is in this page's URL: it must never travel on as a Referer.
+  expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
   await page.getByLabel("New password", { exact: true }).fill("brand-new-password-1");
   await page.getByLabel("Confirm new password").fill("brand-new-password-1");
   await page.getByRole("button", { name: "Set password" }).click();

@@ -7,7 +7,9 @@ const INVALID = "This invitation is invalid, expired or already used.";
 
 test("an invitation creates the account and signs the invitee in", async ({ page }) => {
   const token = invitationToken("password");
-  await page.goto(`/invite/${token}`);
+  const response = await page.goto(`/invite/${token}`);
+  // The token is in this page's URL: it must never travel on as a Referer.
+  expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
   await expect(page.getByText(`Invited as ${INVITATIONS.password.email}.`)).toBeVisible();
   await page.getByLabel("Full name").fill("Invitee Person");
   await page.getByLabel("Password", { exact: true }).fill("invitee-password-1");
