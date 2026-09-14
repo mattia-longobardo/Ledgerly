@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import { authClient } from "@/platform/auth/client";
-import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
+import { startAuthentikSignIn } from "../authentik";
 import { type SignInErrorKey, signInErrorKey } from "./errors";
 
 export function SignInForm({ initialError }: { initialError: SignInErrorKey | null }) {
@@ -48,13 +48,9 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
         size="lg"
         className="w-full"
         icon={<KeyRound aria-hidden className="size-4" />}
-        onClick={() =>
-          authClient.signIn.social({
-            provider: OIDC_PROVIDER_ID,
-            callbackURL: "/",
-            errorCallbackURL: "/sign-in?error=oidc",
-          })
-        }
+        onClick={async () => {
+          if (!(await startAuthentikSignIn("/"))) setError("oidc");
+        }}
       >
         {t("signIn.authentik")}
       </Button>

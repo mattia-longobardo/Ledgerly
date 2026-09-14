@@ -68,7 +68,7 @@
       "newPassword": "Nuova password",
       "confirm": "Conferma la nuova password",
       "submit": "Imposta la password",
-      "hint": "Almeno 12 caratteri.",
+      "hint": "Tra {min} e {max} caratteri.",
       "mismatch": "Le due password non coincidono.",
       "invalid": "Questo link non è valido o è scaduto."
     },
@@ -80,6 +80,7 @@
       "invalid": "Questo invito non è valido, è scaduto o è già stato usato.",
       "emailTaken": "Esiste già un account con questa email. Accedi.",
       "emailMismatch": "Questo invito è per un indirizzo email diverso da quello del tuo account Authentik.",
+      "nameInvalid": "Inserisci nome e cognome.",
       "authentik": "Usa Authentik"
     }
   }

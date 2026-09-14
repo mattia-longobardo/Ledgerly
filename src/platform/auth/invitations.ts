@@ -1,13 +1,14 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, sql, TransactionRollbackError } from "drizzle-orm";
 import { z } from "zod";
 import type { Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type Auth } from "./auth";
+import type { Auth } from "./auth";
 import { invitationEmail } from "./emails";
+import { isPasswordLengthValid } from "./password-policy";
 import { invitations, users } from "./schema";
 
 export const INVITATION_TTL_DAYS = 7;
@@ -74,7 +75,7 @@ export async function acceptInvitation(
   input: { token: string; name: string; password: string },
   now: Date = new Date(),
 ): Promise<{ userId: string; email: string }> {
-  if (input.password.length < MIN_PASSWORD_LENGTH || input.password.length > MAX_PASSWORD_LENGTH) {
+  if (!isPasswordLengthValid(input.password)) {
     throw new InvitationError("weak_password");
   }
   const db = getDb();
@@ -113,32 +114,41 @@ export type SsoInvitationOutcome = "accepted" | "invalid" | "email_mismatch";
  * The Authentik alternative to `acceptInvitation`: the invitee has just signed in through the
  * identity provider, which created (or found) their user. One transaction claims the invitation,
  * only if it is addressed to that user's email, and gives the user its role; an admin is never
- * demoted by a "user" invitation. On any other outcome nothing changes.
+ * demoted by a "user" invitation. On any other outcome nothing changes: when the user row is gone
+ * or does not carry the invited address, the claim is rolled back and the answer is "email_mismatch".
  */
 export async function completeInvitationWithSso(
   token: string,
   user: { userId: string; email: string },
   now: Date = new Date(),
 ): Promise<SsoInvitationOutcome> {
+  const email = user.email.toLowerCase();
   const pending = and(
     eq(invitations.tokenHash, hashToken(token)),
     isNull(invitations.acceptedAt),
     gt(invitations.expiresAt, now),
   );
-  return getDb().transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(invitations)
-      .set({ acceptedAt: now })
-      .where(and(pending, eq(sql`lower(${invitations.email})`, user.email.toLowerCase())))
-      .returning({ role: invitations.role });
-    if (!claimed) {
-      const [addressedElsewhere] = await tx.select({ id: invitations.id }).from(invitations).where(pending);
-      return addressedElsewhere ? "email_mismatch" : "invalid";
-    }
-    await tx
-      .update(users)
-      .set({ role: sql`case when ${users.role} = 'admin' then 'admin' else ${claimed.role} end` })
-      .where(eq(users.id, user.userId));
-    return "accepted";
-  });
+  try {
+    return await getDb().transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(invitations)
+        .set({ acceptedAt: now })
+        .where(and(pending, eq(sql`lower(${invitations.email})`, email)))
+        .returning({ role: invitations.role });
+      if (!claimed) {
+        const [addressedElsewhere] = await tx.select({ id: invitations.id }).from(invitations).where(pending);
+        return addressedElsewhere ? "email_mismatch" : "invalid";
+      }
+      const [updated] = await tx
+        .update(users)
+        .set({ role: sql`case when ${users.role} = 'admin' then 'admin' else ${claimed.role} end` })
+        .where(and(eq(users.id, user.userId), eq(sql`lower(${users.email})`, email)))
+        .returning({ id: users.id });
+      if (!updated) tx.rollback();
+      return "accepted";
+    });
+  } catch (error) {
+    if (error instanceof TransactionRollbackError) return "email_mismatch";
+    throw error;
+  }
 }

@@ -9,7 +9,7 @@ import { acceptInvitation, InvitationError } from "@/platform/auth/invitations";
 // Public: the invitee has no session yet, so the arguments are whatever the caller sent.
 const acceptInviteInput = z.object({
   token: z.string(),
-  name: z.string(),
+  name: z.string().trim().min(1).max(100),
   password: z.string(),
   confirm: z.string(),
 });
@@ -17,9 +17,11 @@ const acceptInviteInput = z.object({
 export async function acceptInviteAction(
   token: string,
   input: { name: string; password: string; confirm: string },
-): Promise<{ error: "invalid" | "email_taken" | "weak_password" | "mismatch" } | undefined> {
+): Promise<{ error: "invalid" | "email_taken" | "weak_password" | "mismatch" | "name" } | undefined> {
   const parsed = acceptInviteInput.safeParse({ ...input, token });
-  if (!parsed.success) return { error: "invalid" };
+  if (!parsed.success) {
+    return { error: parsed.error.issues.some((issue) => issue.path[0] === "name") ? "name" : "invalid" };
+  }
   const { password, confirm } = parsed.data;
   if (password !== confirm) return { error: "mismatch" };
   let email: string;
@@ -29,6 +31,11 @@ export async function acceptInviteAction(
     if (error instanceof InvitationError) return { error: error.reason };
     throw error;
   }
-  await getAuth().api.signInEmail({ body: { email, password }, headers: await headers() });
+  try {
+    await getAuth().api.signInEmail({ body: { email, password }, headers: await headers() });
+  } catch {
+    // The account exists; only the automatic sign-in failed (for example, rate limited).
+    redirect("/sign-in");
+  }
   redirect("/");
 }
