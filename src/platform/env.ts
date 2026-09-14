@@ -32,6 +32,10 @@ export const envSchema = z
       .transform((value) => value === "true"),
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
+    SMTP_REQUIRE_TLS: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     MAIL_FROM: z.string().min(3),
     S3_ENDPOINT: z.url(),
     S3_REGION: z.string().min(1).default("us-east-1"),
@@ -57,6 +61,14 @@ export const envSchema = z
         code: "custom",
         path: ["BETTER_AUTH_SECRET"],
         message: "Replace the .env.example placeholder",
+      });
+    }
+    if (env.SMTP_USER && !env.SMTP_SECURE && !env.SMTP_REQUIRE_TLS) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMTP_REQUIRE_TLS"],
+        message:
+          "Set SMTP_SECURE or SMTP_REQUIRE_TLS when SMTP_USER is set: credentials must not travel in plaintext",
       });
     }
   });

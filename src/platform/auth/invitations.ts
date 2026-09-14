@@ -6,7 +6,7 @@ import type { Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
-import { MIN_PASSWORD_LENGTH, type Auth } from "./auth";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type Auth } from "./auth";
 import { invitationEmail } from "./emails";
 import { invitations, users } from "./schema";
 
@@ -71,7 +71,9 @@ export async function acceptInvitation(
   input: { token: string; name: string; password: string },
   now: Date = new Date(),
 ): Promise<{ userId: string; email: string }> {
-  if (input.password.length < MIN_PASSWORD_LENGTH) throw new InvitationError("weak_password");
+  if (input.password.length < MIN_PASSWORD_LENGTH || input.password.length > MAX_PASSWORD_LENGTH) {
+    throw new InvitationError("weak_password");
+  }
   const db = getDb();
   const [claimed] = await db
     .update(invitations)
