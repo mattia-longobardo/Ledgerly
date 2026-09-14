@@ -2,9 +2,11 @@
 export const E2E_PORT = 3100;
 export const BASE_URL = `http://127.0.0.1:${E2E_PORT}`;
 
-// Better Auth rate-limits sign-ins per client IP, and every test signs in from 127.0.0.1: 5 password
-// sign-ins per minute (/sign-in/email, src/platform/auth/auth.ts) and 3 Authentik starts per 10 s
-// (/sign-in/social, Better Auth's default for /sign-in/*). One run uses all 5 and all 3: one more
+// Better Auth rate-limits sign-ins. No proxy sits in front of the e2e server (TRUSTED_PROXY_IPS is
+// empty below), so in production mode it cannot determine a per-client IP from X-Forwarded-For and
+// falls back to one shared bucket per path: 5 password sign-ins per minute (/sign-in/email,
+// src/platform/auth/auth.ts) and 3 Authentik starts per 10 s (/sign-in/social, Better Auth's
+// default for /sign-in/*), shared by every test in the run. One run uses all 5 and all 3: one more
 // sign-in is answered with HTTP 429 unless it replaces one of them.
 export const USERS = {
   owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
