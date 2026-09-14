@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { envSchema } from "./env";
+import { envSchema, isHttpsOrLoopback } from "./env";
 
 const valid = {
   DATABASE_URL: "postgres://finance:finance@127.0.0.1:55432/finance",
@@ -15,7 +15,7 @@ const valid = {
   S3_ACCESS_KEY_ID: "finance",
   S3_SECRET_ACCESS_KEY: "finance-dev-secret",
   S3_BUCKET: "finance-test",
-  CRON_SECRET: "a-real-cron-secret-sixteen-plus",
+  CRON_SECRET: "a-real-cron-secret-sixteen-plus-ok",
   METRICS_TOKEN: "a-real-metrics-token-thirty-two-chars-plus",
 };
 
@@ -58,6 +58,23 @@ describe("envSchema in production", () => {
     ).toEqual(["BETTER_AUTH_SECRET"]);
   });
 
+  it("rejects the .env.example placeholder CRON_SECRET", () => {
+    expect(failingKeys(production({ CRON_SECRET: "dev-cron-secret-dev-cron-secret-dev" }))).toEqual([
+      "CRON_SECRET",
+    ]);
+  });
+
+  it("rejects the .env.example placeholder METRICS_TOKEN", () => {
+    expect(failingKeys(production({ METRICS_TOKEN: "dev-metrics-token-dev-metrics-token" }))).toEqual([
+      "METRICS_TOKEN",
+    ]);
+  });
+
+  it("does not throw when a URL field is malformed", () => {
+    expect(() => production({ BETTER_AUTH_URL: "not-a-url" })).not.toThrow();
+    expect(production({ BETTER_AUTH_URL: "not-a-url" }).success).toBe(false);
+  });
+
   it("requires TLS when SMTP_USER is set", () => {
     expect(failingKeys(production({ SMTP_USER: "mailer" }))).toEqual(["SMTP_REQUIRE_TLS"]);
   });
@@ -89,5 +106,19 @@ describe("envSchema outside production", () => {
       BETTER_AUTH_SECRET: "change-me-change-me-change-me-change-me",
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("isHttpsOrLoopback", () => {
+  it("accepts https and loopback http, rejects everything else", () => {
+    expect(isHttpsOrLoopback("https://example.test")).toBe(true);
+    expect(isHttpsOrLoopback("http://127.0.0.1:3000")).toBe(true);
+    expect(isHttpsOrLoopback("http://localhost:3000")).toBe(true);
+    expect(isHttpsOrLoopback("http://example.test")).toBe(false);
+  });
+
+  it("never throws on a value that is not a parseable URL", () => {
+    expect(() => isHttpsOrLoopback("not a url")).not.toThrow();
+    expect(isHttpsOrLoopback("not a url")).toBe(true);
   });
 });

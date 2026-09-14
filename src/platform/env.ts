@@ -4,12 +4,20 @@ import { z } from "zod";
 /** Compose passes unset variables as "", which must behave like "absent". */
 const blankAsUndefined = (value: unknown) => (value === "" ? undefined : value);
 
-/** The secret committed in `.env.example`; a production deployment must generate its own. */
-const PLACEHOLDER_SECRET = "change-me-change-me-change-me-change-me";
+/** The values committed in `.env.example`; a production deployment must generate its own. */
+const PLACEHOLDER_BETTER_AUTH_SECRET = "change-me-change-me-change-me-change-me";
+const PLACEHOLDER_CRON_SECRET = "dev-cron-secret-dev-cron-secret-dev";
+const PLACEHOLDER_METRICS_TOKEN = "dev-metrics-token-dev-metrics-token";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
-/** Plain http is only acceptable on the machine itself (the end-to-end suite serves http://127.0.0.1). */
-function isHttpsOrLoopback(value: string): boolean {
+/**
+ * Plain http is only acceptable on the machine itself (the end-to-end suite serves
+ * http://127.0.0.1). A value that is not a parseable URL is skipped here: `z.url()` on the field
+ * itself already reported that issue, and `new URL()` on it would throw a bare `TypeError` that
+ * would escape `safeParse` and hide every other issue.
+ */
+export function isHttpsOrLoopback(value: string): boolean {
+  if (!URL.canParse(value)) return true;
   const { protocol, hostname } = new URL(value);
   return protocol === "https:" || (protocol === "http:" && LOOPBACK_HOSTS.has(hostname));
 }
@@ -37,12 +45,15 @@ export const envSchema = z
       .default("false")
       .transform((value) => value === "true"),
     MAIL_FROM: z.string().min(3),
+    // Silo (the homelab's S3-compatible store) is reached at http://silo:9000 on the internal
+    // `db_internal` network, never through the public app origin: intentionally exempt from the
+    // https gate below.
     S3_ENDPOINT: z.url(),
     S3_REGION: z.string().min(1).default("us-east-1"),
     S3_ACCESS_KEY_ID: z.string().min(1),
     S3_SECRET_ACCESS_KEY: z.string().min(1),
     S3_BUCKET: z.string().min(3),
-    CRON_SECRET: z.string().min(16),
+    CRON_SECRET: z.string().min(32),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/finance-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
   })
@@ -57,12 +68,15 @@ export const envSchema = z
         });
       }
     }
-    if (env.BETTER_AUTH_SECRET === PLACEHOLDER_SECRET) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["BETTER_AUTH_SECRET"],
-        message: "Replace the .env.example placeholder",
-      });
+    const placeholders: ReadonlyArray<["BETTER_AUTH_SECRET" | "CRON_SECRET" | "METRICS_TOKEN", string]> = [
+      ["BETTER_AUTH_SECRET", PLACEHOLDER_BETTER_AUTH_SECRET],
+      ["CRON_SECRET", PLACEHOLDER_CRON_SECRET],
+      ["METRICS_TOKEN", PLACEHOLDER_METRICS_TOKEN],
+    ];
+    for (const [key, placeholder] of placeholders) {
+      if (env[key] === placeholder) {
+        ctx.addIssue({ code: "custom", path: [key], message: "Replace the .env.example placeholder" });
+      }
     }
     if (env.SMTP_USER && !env.SMTP_SECURE && !env.SMTP_REQUIRE_TLS) {
       ctx.addIssue({
@@ -85,7 +99,12 @@ export type Env = z.infer<typeof envSchema>;
 
 let cached: Env | undefined;
 
-/** The validated environment. Parsed on first use, never at import time (the build has no secrets). */
+/**
+ * The validated environment. Parsed on first use, never at import time (the build has no
+ * secrets). `src/instrumentation.ts` also calls this once, at server start — after the process
+ * has its real environment, never during `next build` — so a misconfigured deployment fails
+ * loudly at boot instead of on the first request.
+ */
 export function readEnv(): Env {
   cached ??= envSchema.parse(
     Object.fromEntries(Object.entries(process.env).map(([key, value]) => [key, blankAsUndefined(value)])),

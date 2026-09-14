@@ -40,7 +40,7 @@ export const E2E_ENV: Record<string, string> = {
   S3_ACCESS_KEY_ID: "finance",
   S3_SECRET_ACCESS_KEY: "finance-dev-secret",
   S3_BUCKET: "finance-e2e",
-  CRON_SECRET: "e2e-cron-secret-000000",
+  CRON_SECRET: "e2e-cron-secret-e2e-cron-secret-e2e",
   HEARTBEAT_FILE: "/tmp/finance-heartbeat-e2e",
   METRICS_TOKEN: "e2e-metrics-token-e2e-metrics-token",
 };
