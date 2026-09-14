@@ -208,6 +208,18 @@ describe("admin permissions", () => {
     return { headers: await signedIn("admin@example.test"), userId: user.id };
   }
 
+  it("creates users server-side only: an admin session cannot call create-user", async () => {
+    const { headers } = await adminAndUser();
+    await expect(
+      auth().api.createUser({ body: { email: "x@example.test", password: PASSWORD, name: "X" }, headers }),
+    ).rejects.toMatchObject({ body: { code: "YOU_ARE_NOT_ALLOWED_TO_CREATE_USERS" } });
+    // The create-admin script and accepted invitations call it without a session.
+    const { user } = await auth().api.createUser({
+      body: { email: "x@example.test", password: PASSWORD, name: "X", role: "admin" },
+    });
+    expect(user).toMatchObject({ email: "x@example.test", role: "admin" });
+  });
+
   it("refuses impersonation and setting another user's password or email directly", async () => {
     const { headers, userId } = await adminAndUser();
     await expect(auth().api.impersonateUser({ body: { userId }, headers })).rejects.toMatchObject({
