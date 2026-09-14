@@ -54,6 +54,7 @@ export default defineConfig({
             S3_BUCKET: "finance-test",
             CRON_SECRET: "integration-cron-secret",
             HEARTBEAT_FILE: "/tmp/finance-heartbeat-test",
+            METRICS_TOKEN: "integration-metrics-token-integration-metrics-token",
           },
         },
       },

@@ -16,9 +16,10 @@ const valid = {
   S3_SECRET_ACCESS_KEY: "finance-dev-secret",
   S3_BUCKET: "finance-test",
   CRON_SECRET: "a-real-cron-secret-sixteen-plus",
+  METRICS_TOKEN: "a-real-metrics-token-thirty-two-chars-plus",
 };
 
-const production = (overrides: Record<string, string>) =>
+const production = (overrides: Record<string, string | undefined>) =>
   envSchema.safeParse({ ...valid, NODE_ENV: "production", ...overrides });
 
 const failingKeys = (result: ReturnType<typeof production>) =>
@@ -71,6 +72,10 @@ describe("envSchema in production", () => {
 
   it("does not require TLS when SMTP_USER is unset", () => {
     expect(production({}).success).toBe(true);
+  });
+
+  it("requires METRICS_TOKEN", () => {
+    expect(failingKeys(production({ METRICS_TOKEN: undefined }))).toEqual(["METRICS_TOKEN"]);
   });
 });
 

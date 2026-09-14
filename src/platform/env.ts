@@ -44,6 +44,7 @@ export const envSchema = z
     S3_BUCKET: z.string().min(3),
     CRON_SECRET: z.string().min(16),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/finance-heartbeat"),
+    METRICS_TOKEN: z.string().min(32).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;
@@ -69,6 +70,13 @@ export const envSchema = z
         path: ["SMTP_REQUIRE_TLS"],
         message:
           "Set SMTP_SECURE or SMTP_REQUIRE_TLS when SMTP_USER is set: credentials must not travel in plaintext",
+      });
+    }
+    if (!env.METRICS_TOKEN) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["METRICS_TOKEN"],
+        message: "Required in production: GET /api/metrics must never be unauthenticated",
       });
     }
   });

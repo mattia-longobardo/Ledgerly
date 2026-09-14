@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { POST } from "@/app/api/jobs/tick/route";
+import { GET as getMetrics } from "@/app/api/metrics/route";
 import { getDb } from "@/platform/db/client";
 import { heartbeatAgeMs } from "./heartbeat";
 import { withJobLock } from "./lock";
@@ -66,5 +67,24 @@ describe("jobs", () => {
       tier: "daily",
       outcomes: [{ job: "housekeeping", status: "success" }],
     });
+  });
+
+  it("protects metrics with a bearer token and serves Prometheus lines once authorized", async () => {
+    await runTier("hourly", [job("ok", async () => ({}))]);
+    const call = (authorization?: string) =>
+      getMetrics(
+        new Request(
+          "http://localhost/api/metrics",
+          authorization ? { headers: { authorization } } : undefined,
+        ),
+      );
+    expect((await call()).status).toBe(404);
+    expect((await call("Bearer wrong-token-wrong-token-wrong-token")).status).toBe(404);
+    const ok = await call("Bearer integration-metrics-token-integration-metrics-token");
+    expect(ok.status).toBe(200);
+    const body = await ok.text();
+    expect(body).toContain("# TYPE job_last_success_timestamp gauge");
+    expect(body).toContain("# TYPE job_runs_total counter");
+    expect(body).toContain('job_runs_total{job="ok",status="success"} 1');
   });
 });
