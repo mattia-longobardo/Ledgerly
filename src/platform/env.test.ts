@@ -56,6 +56,22 @@ describe("envSchema in production", () => {
       failingKeys(production({ BETTER_AUTH_SECRET: "change-me-change-me-change-me-change-me" })),
     ).toEqual(["BETTER_AUTH_SECRET"]);
   });
+
+  it("requires TLS when SMTP_USER is set", () => {
+    expect(failingKeys(production({ SMTP_USER: "mailer" }))).toEqual(["SMTP_REQUIRE_TLS"]);
+  });
+
+  it("accepts SMTP_USER when SMTP_SECURE is true", () => {
+    expect(production({ SMTP_USER: "mailer", SMTP_SECURE: "true" }).success).toBe(true);
+  });
+
+  it("accepts SMTP_USER when SMTP_REQUIRE_TLS is true", () => {
+    expect(production({ SMTP_USER: "mailer", SMTP_REQUIRE_TLS: "true" }).success).toBe(true);
+  });
+
+  it("does not require TLS when SMTP_USER is unset", () => {
+    expect(production({}).success).toBe(true);
+  });
 });
 
 describe("envSchema outside production", () => {

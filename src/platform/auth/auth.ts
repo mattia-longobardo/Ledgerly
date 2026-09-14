@@ -11,13 +11,14 @@ import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
 import { passwordResetEmail } from "./emails";
-import { authLogger } from "./logger";
+import { authLogger, redactForLog } from "./logger";
 import { accessControl, roles } from "./permissions";
 import { OIDC_PROVIDER_ID } from "./provider";
 import { roleFromIdToken } from "./roles";
 import { users } from "./schema";
 
 export const MIN_PASSWORD_LENGTH = 12;
+export const MAX_PASSWORD_LENGTH = 128;
 
 // OWASP argon2id parameters; @node-rs/argon2 uses argon2id by default.
 const ARGON2 = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -98,7 +99,9 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       accountLinking: { disableImplicitLinking: true },
       encryptOAuthTokens: true,
     },
-    verification: { modelName: "verifications" },
+    // The reset-password verification identifier embeds the raw token (`reset-password:<token>`);
+    // hashing it before storage keeps the token itself out of the database, like invitation tokens.
+    verification: { modelName: "verifications", storeIdentifier: "hashed" },
     advanced: {
       // Postgres generates every id (`DEFAULT uuidv7()`, spec §4.3); Better Auth inserts none.
       database: { generateId: false },
@@ -108,6 +111,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       enabled: true,
       disableSignUp: true,
       minPasswordLength: MIN_PASSWORD_LENGTH,
+      maxPasswordLength: MAX_PASSWORD_LENGTH,
       autoSignIn: true,
       revokeSessionsOnPasswordReset: true,
       password: {
@@ -118,7 +122,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       // Fire and forget: the response time must not reveal whether the address exists.
       sendResetPassword: async ({ user, url }) => {
         void sendMail({ to: user.email, ...passwordResetEmail(url) }).catch((error: unknown) => {
-          console.error("[auth] password reset email failed", error);
+          console.error("[auth] password reset email failed", redactForLog(error));
         });
       },
     },
