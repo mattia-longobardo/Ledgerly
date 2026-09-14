@@ -84,10 +84,10 @@ describe("SignInForm", () => {
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
   });
 
-  it("explains why Authentik refused an address that already has a password", () => {
+  it("explains why Authentik refused an address that already signs in another way", () => {
     renderForm("accountNotLinked");
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "This email already has a password sign-in; sign in with your password.",
+      "This email is already linked to a different sign-in method. Sign in the way you did before.",
     );
   });
 

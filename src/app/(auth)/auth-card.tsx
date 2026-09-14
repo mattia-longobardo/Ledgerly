@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import packageJson from "../../../package.json";
 import { identityProviderUrl } from "@/platform/auth/provider";
 import { BrandMark } from "@/ui/shell/brand";
 
@@ -22,13 +23,13 @@ export async function AuthCard({
         <span className="text-lg font-semibold">{common("product")}</span>
       </div>
       <div>
-        <h1 className="text-title leading-tight font-semibold tracking-[-0.02em]">{title}</h1>
+        <h1 className="text-title leading-[1.2] font-semibold tracking-[-0.02em]">{title}</h1>
         {description && <p className="mt-1.5 text-muted">{description}</p>}
       </div>
       {children}
       <div className="flex justify-between text-sm text-faint">
         <span>{host}</span>
-        <span>{t("version")}</span>
+        <span>{t("version", { version: packageJson.version })}</span>
       </div>
     </div>
   );
