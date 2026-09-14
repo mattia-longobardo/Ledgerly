@@ -8,7 +8,7 @@ export function assertStorageKey(key: string): string {
     !KEY.test(key) ||
     key.split("/").some((part) => part === "..")
   ) {
-    throw new RangeError(`Invalid storage key: "${key}"`);
+    throw new RangeError(`Invalid storage key (length ${key.length})`);
   }
   return key;
 }
