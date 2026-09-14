@@ -4,6 +4,15 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 
 export const SIDEBAR_COOKIE = "sidebar";
 
+/** "auto" follows the width (full from 1280 px, icons below); an explicit choice wins at any width. */
+export type SidebarState = "auto" | "collapsed" | "expanded";
+
+export function parseSidebar(value: string | undefined): SidebarState {
+  return value === "collapsed" || value === "expanded" ? value : "auto";
+}
+
+const WIDE_QUERY = "(min-width: 1280px)";
+
 export interface ShellLabels {
   product: string;
   primary: string;
@@ -13,12 +22,13 @@ export interface ShellLabels {
   toggleTheme: string;
   themeSaveError: string;
   signOut: string;
+  profile: string;
   more: string;
   palette: { placeholder: string; pages: string; empty: string; shortcut: string; escape: string };
 }
 
 interface ShellState {
-  collapsed: boolean;
+  sidebar: SidebarState;
   toggleSidebar: () => void;
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
@@ -34,23 +44,24 @@ export function useShell(): ShellState {
 }
 
 export function ShellProvider({
-  initialCollapsed,
+  initialSidebar,
   labels,
   children,
 }: {
-  initialCollapsed: boolean;
+  initialSidebar: SidebarState;
   labels: ShellLabels;
   children: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [sidebar, setSidebar] = useState(initialSidebar);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // The cookie is written outside the state updater: updaters must stay pure (Strict Mode runs them twice).
   const toggleSidebar = useCallback(() => {
-    const next = !collapsed;
-    document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
-    setCollapsed(next);
-  }, [collapsed]);
+    const collapsedNow = sidebar === "collapsed" || (sidebar === "auto" && !matchMedia(WIDE_QUERY).matches);
+    const next = collapsedNow ? "expanded" : "collapsed";
+    document.cookie = `${SIDEBAR_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    setSidebar(next);
+  }, [sidebar]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -68,8 +79,8 @@ export function ShellProvider({
   }, [toggleSidebar]);
 
   const value = useMemo(
-    () => ({ collapsed, toggleSidebar, paletteOpen, setPaletteOpen, labels }),
-    [collapsed, toggleSidebar, paletteOpen, labels],
+    () => ({ sidebar, toggleSidebar, paletteOpen, setPaletteOpen, labels }),
+    [sidebar, toggleSidebar, paletteOpen, labels],
   );
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

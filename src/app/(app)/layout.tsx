@@ -6,7 +6,7 @@ import { requireSession } from "@/platform/auth/session";
 import { CommandPalette } from "@/ui/shell/command-palette";
 import { MobileNav } from "@/ui/shell/mobile-nav";
 import type { NavLink } from "@/ui/shell/nav-types";
-import { ShellProvider, SIDEBAR_COOKIE } from "@/ui/shell/shell-context";
+import { parseSidebar, ShellProvider, SIDEBAR_COOKIE } from "@/ui/shell/shell-context";
 import { Sidebar } from "@/ui/shell/sidebar";
 import { Toaster } from "@/ui/toast";
 import { navFor } from "./navigation";
@@ -34,6 +34,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     toggleTheme: t("shell.toggleTheme"),
     themeSaveError: t("shell.themeSaveError"),
     signOut: t("shell.signOut"),
+    profile: t("shell.profile"),
     more: t("nav.more"),
     palette: {
       placeholder: t("shell.palette.placeholder"),
@@ -43,21 +44,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       escape: t("shell.palette.escape"),
     },
   };
-  const collapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "collapsed";
+  const sidebar = parseSidebar((await cookies()).get(SIDEBAR_COOKIE)?.value);
+  const user = {
+    name: session?.user.name ?? "",
+    via: t(viaSso ? "shell.via.authentik" : "shell.via.password"),
+  };
 
   return (
-    <ShellProvider initialCollapsed={collapsed} labels={labels}>
+    <ShellProvider initialSidebar={sidebar} labels={labels}>
       <div className="flex h-dvh overflow-hidden">
-        <Sidebar
-          links={links}
-          user={{
-            name: session?.user.name ?? "",
-            via: t(viaSso ? "shell.via.authentik" : "shell.via.password"),
-          }}
-        />
+        <Sidebar links={links} user={user} />
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
-      <MobileNav links={links} />
+      <MobileNav links={links} user={user} />
       <CommandPalette links={links} />
       <Toaster closeLabel={t("common.close")} />
     </ShellProvider>

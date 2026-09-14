@@ -14,6 +14,7 @@ const LABELS = {
   toggleTheme: "Toggle theme",
   themeSaveError: "Couldn't save your theme. Try again.",
   signOut: "Sign out",
+  profile: "Profile and preferences",
   more: "More",
   palette: {
     placeholder: "Jump to a page…",
@@ -26,7 +27,7 @@ const LABELS = {
 
 function renderToggle(onSave: (theme: "system" | "light" | "dark") => Promise<void>) {
   return render(
-    <ShellProvider initialCollapsed={false} labels={LABELS}>
+    <ShellProvider initialSidebar="expanded" labels={LABELS}>
       <ThemeToggle onSave={onSave} />
       <Toaster closeLabel="Close" />
     </ShellProvider>,

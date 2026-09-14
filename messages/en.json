@@ -21,6 +21,7 @@
     "toggleTheme": "Toggle theme",
     "themeSaveError": "Couldn't save your theme. Try again.",
     "signOut": "Sign out",
+    "profile": "Profile and preferences",
     "via": { "authentik": "via Authentik", "password": "via password" },
     "palette": {
       "placeholder": "Jump to a page…",

@@ -11,5 +11,12 @@ test("phones get bottom tabs and a More sheet instead of the sidebar", async ({ 
   await expect(tabs.getByRole("link", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("Finance Dashboard", { exact: true })).toBeHidden();
   await tabs.getByRole("button", { name: "More" }).click();
-  await expect(page.getByRole("dialog").getByRole("link", { name: "Settings" })).toBeVisible();
+  const sheet = page.getByRole("dialog", { name: "More" });
+  await expect(
+    sheet.getByRole("group", { name: "System" }).getByRole("link", { name: "Settings" }),
+  ).toBeVisible();
+  // The sheet sits above the tab bar, which stays in view.
+  await expect(tabs.getByRole("button", { name: "More" })).toBeInViewport();
+  await sheet.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
 });

@@ -23,12 +23,12 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-bg pr-5 pl-3 max-md:h-[52px] max-md:px-4">
       <IconButton label={labels.toggleSidebar} onClick={toggleSidebar} className="max-md:hidden">
-        <PanelLeft aria-hidden className="size-3.5" />
+        <PanelLeft aria-hidden className="size-4" />
       </IconButton>
       <div className="flex min-w-0 items-center gap-1.5 text-muted">
         {parent && (
           <>
-            <Link href={parent.href} className="hover:text-fg max-md:hidden">
+            <Link href={parent.href} className="focus-ring rounded-[4px] hover:text-fg max-md:hidden">
               {parent.label}
             </Link>
             <span aria-hidden className="text-faint max-md:hidden">
@@ -44,7 +44,7 @@ export function Topbar({
       <button
         type="button"
         onClick={() => setPaletteOpen(true)}
-        className="flex h-7 w-[220px] items-center gap-2 rounded-ctl border border-border bg-card px-2 text-sm text-muted max-md:hidden"
+        className="focus-ring flex h-7 w-[220px] items-center gap-2 rounded-ctl border border-border bg-card pr-2 pl-2.5 text-sm text-muted max-md:hidden"
       >
         <Search aria-hidden className="size-3.5" />
         <span className="flex-1 text-left">{labels.search}</span>
