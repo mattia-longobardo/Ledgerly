@@ -2,7 +2,7 @@
 // hard-coded here: callers pass the real value from their own source constant so the copy and
 // the actual expiry can never drift apart.
 
-import { createTranslator } from "next-intl";
+import { createTranslator } from "use-intl/core";
 import type { UiLocale } from "@/platform/format";
 import en from "../../../messages/en.json";
 import it from "../../../messages/it.json";
