@@ -19,6 +19,7 @@ import { users } from "./schema";
 
 export const MIN_PASSWORD_LENGTH = 12;
 export const MAX_PASSWORD_LENGTH = 128;
+export const RESET_PASSWORD_TOKEN_TTL_SECONDS = 60 * 60;
 
 // OWASP argon2id parameters; @node-rs/argon2 uses argon2id by default.
 const ARGON2 = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -118,10 +119,11 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
         hash: (password) => hash(password, ARGON2),
         verify: ({ hash: stored, password }) => verify(stored, password),
       },
-      resetPasswordTokenExpiresIn: 60 * 60,
+      resetPasswordTokenExpiresIn: RESET_PASSWORD_TOKEN_TTL_SECONDS,
       // Fire and forget: the response time must not reveal whether the address exists.
       sendResetPassword: async ({ user, url }) => {
-        void sendMail({ to: user.email, ...passwordResetEmail(url) }).catch((error: unknown) => {
+        const hours = RESET_PASSWORD_TOKEN_TTL_SECONDS / 3600;
+        void sendMail({ to: user.email, ...passwordResetEmail(url, hours) }).catch((error: unknown) => {
           console.error("[auth] password reset email failed", redactForLog(error));
         });
       },

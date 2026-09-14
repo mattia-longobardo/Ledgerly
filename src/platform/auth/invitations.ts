@@ -59,7 +59,10 @@ export async function findInvitation(token: string, now: Date = new Date()) {
 }
 
 export async function sendInvitationEmail({ email, token }: { email: string; token: string }): Promise<void> {
-  await sendMail({ to: email, ...invitationEmail(`${readEnv().BETTER_AUTH_URL}/invite/${token}`) });
+  await sendMail({
+    to: email,
+    ...invitationEmail(`${readEnv().BETTER_AUTH_URL}/invite/${token}`, INVITATION_TTL_DAYS),
+  });
 }
 
 /**

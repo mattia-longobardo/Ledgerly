@@ -1,15 +1,24 @@
-// User-facing email copy. Task 13 moves these strings into the next-intl message catalogue.
+// User-facing email copy, read from the next-intl message catalogues. The TTLs are never
+// hard-coded here: callers pass the real value from their own source constant so the copy and
+// the actual expiry can never drift apart.
 
-export function invitationEmail(url: string) {
-  return {
-    subject: "You are invited to Finance Dashboard",
-    text: `You have been invited to Finance Dashboard.\n\nAccept the invitation within 7 days:\n${url}\n`,
-  };
+import { createTranslator } from "next-intl";
+import type { UiLocale } from "@/platform/format";
+import en from "../../../messages/en.json";
+import it from "../../../messages/it.json";
+
+const CATALOGUES = { en, it } as const;
+
+function translator(locale: UiLocale, namespace: "emails.invitation" | "emails.passwordReset") {
+  return createTranslator({ locale, messages: CATALOGUES[locale], namespace });
 }
 
-export function passwordResetEmail(url: string) {
-  return {
-    subject: "Reset your Finance Dashboard password",
-    text: `Someone asked to reset the password of this account.\n\nChoose a new password within 1 hour:\n${url}\n\nIf it was not you, ignore this email.\n`,
-  };
+export function invitationEmail(url: string, days: number, locale: UiLocale = "en") {
+  const t = translator(locale, "emails.invitation");
+  return { subject: t("subject"), text: t("body", { url, days }) };
+}
+
+export function passwordResetEmail(url: string, hours: number, locale: UiLocale = "en") {
+  const t = translator(locale, "emails.passwordReset");
+  return { subject: t("subject"), text: t("body", { url, hours }) };
 }

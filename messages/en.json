@@ -1,0 +1,19 @@
+{
+  "common": {
+    "product": "Finance Dashboard",
+    "save": "Save",
+    "close": "Close",
+    "retry": "Try again",
+    "or": "or"
+  },
+  "emails": {
+    "invitation": {
+      "subject": "You are invited to Finance Dashboard",
+      "body": "You have been invited to Finance Dashboard.\n\nAccept the invitation within {days, plural, one {# day} other {# days}}:\n{url}\n"
+    },
+    "passwordReset": {
+      "subject": "Reset your Finance Dashboard password",
+      "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
+    }
+  }
+}
