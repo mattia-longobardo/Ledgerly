@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { describeUserAgent } from "@/modules/users/rules";
+import { listOwnSessions } from "@/modules/users/service";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
@@ -13,24 +14,24 @@ export default async function SecurityPage() {
   const ctx = await requireSession();
   const requestHeaders = await headers();
   const auth = getAuth();
-  const current = await auth.api.getSession({ headers: requestHeaders });
-  const sessions = await auth.api.listSessions({ headers: requestHeaders });
-  const accounts = await auth.api.listUserAccounts({ headers: requestHeaders });
+  const [current, sessions, accounts] = await Promise.all([
+    auth.api.getSession({ headers: requestHeaders }),
+    listOwnSessions(ctx),
+    auth.api.listUserAccounts({ headers: requestHeaders }),
+  ]);
   const hasPassword = accounts.some((a) => a.providerId === "credential");
   const t = await getTranslations("settings");
 
-  const rows: SessionRow[] = [...sessions]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .map((session) => {
-      const { browser, os } = describeUserAgent(session.userAgent ?? null);
-      const date = formatDate(civilDateIn(session.createdAt, ctx.timeZone), "long", ctx.locale);
-      return {
-        id: session.id,
-        device: browser && os ? `${browser} · ${os}` : t("sessions.unknownDevice"),
-        detail: [session.ipAddress, t("sessions.since", { date })].filter(Boolean).join(" · "),
-        current: session.id === current?.session.id,
-      };
-    });
+  const rows: SessionRow[] = sessions.map((session) => {
+    const { browser, os } = describeUserAgent(session.userAgent);
+    const date = formatDate(civilDateIn(session.createdAt, ctx.timeZone), "long", ctx.locale);
+    return {
+      id: session.id,
+      device: browser && os ? `${browser} · ${os}` : t("sessions.unknownDevice"),
+      detail: [session.ipAddress, t("sessions.since", { date })].filter(Boolean).join(" · "),
+      current: session.id === current?.session.id,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">

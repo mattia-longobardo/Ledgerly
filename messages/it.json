@@ -93,7 +93,12 @@
       "name": "Nome e cognome",
       "email": "Email",
       "ssoNote": "Nome ed email sono gestiti da Authentik finché l'SSO è collegato.",
-      "saved": "Account salvato"
+      "saved": "Account salvato",
+      "errors": {
+        "invalid": "Inserisci un nome tra 1 e 120 caratteri.",
+        "sso": "Il nome è gestito da Authentik finché l'SSO è collegato.",
+        "failed": "Impossibile salvare. Riprova."
+      }
     },
     "preferences": {
       "title": "Preferenze",
@@ -120,8 +125,13 @@
       "monthlySummary": "Inviami il riepilogo mensile via email",
       "hoursPerDay": "Giornata lavorativa (ore)",
       "patronSaint": "Festa del santo patrono",
+      "patronDay": "Giorno",
       "patronNone": "Nessuna",
-      "saved": "Preferenze salvate"
+      "saved": "Preferenze salvate",
+      "errors": {
+        "invalid": "Alcune di queste preferenze non sono valide. Controlla i valori e riprova.",
+        "failed": "Impossibile salvare le preferenze. Riprova."
+      }
     },
     "password": {
       "title": "Password",
@@ -132,7 +142,8 @@
       "submit": "Aggiorna la password",
       "changed": "Password aggiornata",
       "ssoOnly": "Questo account accede solo con Authentik: non c'è una password da cambiare.",
-      "failed": "La password attuale è errata."
+      "failed": "La password attuale è errata.",
+      "errors": { "generic": "Qualcosa è andato storto. Riprova." }
     },
     "sessions": {
       "title": "Sessioni",
@@ -141,7 +152,8 @@
       "unknownDevice": "Dispositivo sconosciuto",
       "signOut": "Disconnetti",
       "signOutOthers": "Disconnetti le altre sessioni",
-      "since": "dal {date}"
+      "since": "dal {date}",
+      "errors": { "failed": "Impossibile disconnettersi. Riprova." }
     }
   },
   "overview": {

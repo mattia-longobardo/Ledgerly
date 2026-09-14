@@ -2,21 +2,22 @@ import "server-only";
 import { hash, verify } from "@node-rs/argon2";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin, genericOAuth } from "better-auth/plugins";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
 import { passwordResetEmail } from "./emails";
 import { authLogger, redactForLog } from "./logger";
+import { nameSchema } from "./name-policy";
 import { accessControl, roles } from "./permissions";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "./password-policy";
 import { OIDC_PROVIDER_ID } from "./provider";
 import { roleFromIdToken } from "./roles";
-import { users } from "./schema";
+import { authAccounts, users } from "./schema";
 
 export const RESET_PASSWORD_TOKEN_TTL_SECONDS = 60 * 60;
 
@@ -136,6 +137,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
       customRules: {
         "/sign-in/email": { window: 60, max: 5 },
         "/request-password-reset": { window: 60 * 15, max: 3 },
+        "/change-password": { window: 60, max: 5 },
       },
     },
     hooks: {
@@ -145,6 +147,41 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
             code: "ID_TOKEN_SIGN_IN_DISABLED",
             message: "Sign in through the identity provider's login page.",
           });
+        }
+        // The React form (updateNameAction) hides itself and refuses server-side while SSO is
+        // linked, and trims/bounds the name the same way; this closes the same door for a request
+        // that calls POST /update-user directly, bypassing that action (P9, spec §5.1).
+        if (
+          ctx.path === "/update-user" &&
+          ctx.body &&
+          typeof ctx.body === "object" &&
+          "name" in ctx.body &&
+          ctx.body.name !== undefined
+        ) {
+          const session = await getSessionFromCtx(ctx);
+          if (session) {
+            const [linked] = await getDb()
+              .select({ id: authAccounts.id })
+              .from(authAccounts)
+              .where(
+                and(eq(authAccounts.userId, session.user.id), eq(authAccounts.providerId, OIDC_PROVIDER_ID)),
+              )
+              .limit(1);
+            if (linked) {
+              throw new APIError("FORBIDDEN", {
+                code: "NAME_MANAGED_BY_SSO",
+                message: "The name is managed by Authentik while SSO is linked.",
+              });
+            }
+          }
+          const parsedName = nameSchema.safeParse(ctx.body.name);
+          if (!parsedName.success) {
+            throw new APIError("BAD_REQUEST", {
+              code: "INVALID_NAME",
+              message: "Enter a name between 1 and 120 characters.",
+            });
+          }
+          return { context: { body: { name: parsedName.data } } };
         }
       }),
     },

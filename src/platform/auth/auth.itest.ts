@@ -39,9 +39,9 @@ async function signedIn(email: string): Promise<Headers> {
 
 /**
  * Runs the authorization-code flow against the mock identity provider, which issues `sub` and
- * `email` equal to the subject typed at its login form. Returns the signed-in user's id, or null.
+ * `email` equal to the subject typed at its login form. Returns the signed-in cookie header.
  */
-async function ssoSignIn(instance: Auth, subject: string): Promise<string | null> {
+async function ssoCallbackHeaders(instance: Auth, subject: string): Promise<Headers> {
   const start = await instance.handler(
     new Request(`${BASE_URL}/api/auth/sign-in/social`, {
       method: "POST",
@@ -58,7 +58,12 @@ async function ssoSignIn(instance: Auth, subject: string): Promise<string | null
   const callback = await instance.handler(
     new Request(login.headers.get("location") as string, { headers: cookiesFrom(start.headers) }),
   );
-  const session = await instance.api.getSession({ headers: cookiesFrom(callback.headers) });
+  return cookiesFrom(callback.headers);
+}
+
+/** The signed-in user's id after a real SSO sign-in, or null. */
+async function ssoSignIn(instance: Auth, subject: string): Promise<string | null> {
+  const session = await instance.api.getSession({ headers: await ssoCallbackHeaders(instance, subject) });
   return session?.user.id ?? null;
 }
 
@@ -226,5 +231,54 @@ describe("admin permissions", () => {
     await auth().api.revokeUserSessions({ body: { userId }, headers });
     await auth().api.removeUser({ body: { userId }, headers });
     expect(await getDb().select({ id: users.id }).from(users).where(eq(users.id, userId))).toEqual([]);
+  });
+});
+
+describe("update-user", () => {
+  it("trims and bounds the name for a password account", async () => {
+    await auth().api.createUser({ body: { email: "a@example.test", password: PASSWORD, name: "A" } });
+    const headers = await signedIn("a@example.test");
+    await auth().api.updateUser({ body: { name: "  Giulia Rossi  " }, headers });
+    const [row] = await getDb()
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.email, "a@example.test"));
+    expect(row.name).toBe("Giulia Rossi");
+  });
+
+  it("refuses a whitespace-only or too-long name, closing the direct-API bypass around the app's own 1-120 rule", async () => {
+    await auth().api.createUser({ body: { email: "a@example.test", password: PASSWORD, name: "A" } });
+    const headers = await signedIn("a@example.test");
+    await expect(auth().api.updateUser({ body: { name: "   " }, headers })).rejects.toMatchObject({
+      body: { code: "INVALID_NAME" },
+    });
+    await expect(auth().api.updateUser({ body: { name: "x".repeat(121) }, headers })).rejects.toMatchObject({
+      body: { code: "INVALID_NAME" },
+    });
+    const [row] = await getDb()
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.email, "a@example.test"));
+    expect(row.name).toBe("A");
+  });
+
+  it("refuses to rename an SSO-linked account, even calling the endpoint directly (P9 bypass)", async () => {
+    const headers = await ssoCallbackHeaders(auth(), "victim@example.test");
+    await expect(auth().api.updateUser({ body: { name: "Someone Else" }, headers })).rejects.toMatchObject({
+      body: { code: "NAME_MANAGED_BY_SSO" },
+    });
+    const session = await auth().api.getSession({ headers });
+    expect(session?.user.name).not.toBe("Someone Else");
+  });
+
+  it("leaves other update-user fields (such as image) alone when no name is sent", async () => {
+    await auth().api.createUser({ body: { email: "a@example.test", password: PASSWORD, name: "A" } });
+    const headers = await signedIn("a@example.test");
+    await auth().api.updateUser({ body: { image: "https://example.test/a.png" }, headers });
+    const [row] = await getDb()
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.email, "a@example.test"));
+    expect(row.name).toBe("A");
   });
 });

@@ -19,6 +19,7 @@ export function PasswordForm() {
   const t = useTranslations("settings.password");
   const auth = useTranslations("auth.reset");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,15 +28,25 @@ export function PasswordForm() {
     const newPassword = String(form.get("new"));
     if (newPassword !== String(form.get("confirm"))) return setError(auth("mismatch"));
     if (!isPasswordLengthValid(newPassword)) return setError(auth("hint", PASSWORD_BOUNDS));
-    const result = await authClient.changePassword({
-      currentPassword: String(form.get("current")),
-      newPassword,
-      revokeOtherSessions: true,
-    });
-    if (result.error) return setError(t("failed"));
-    setError(null);
-    formElement.reset();
-    notify(t("changed"));
+    setPending(true);
+    try {
+      const result = await authClient.changePassword({
+        currentPassword: String(form.get("current")),
+        newPassword,
+        revokeOtherSessions: true,
+      });
+      if (result.error) {
+        setError(result.error.code === "INVALID_PASSWORD" ? t("failed") : t("errors.generic"));
+        return;
+      }
+      setError(null);
+      formElement.reset();
+      notify(t("changed"));
+    } catch {
+      setError(t("errors.generic"));
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -56,7 +67,7 @@ export function PasswordForm() {
         <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required />
       </Field>
       <div className="flex justify-end sm:col-span-2">
-        <Button type="submit" variant="primary" size="sm">
+        <Button type="submit" variant="primary" size="sm" disabled={pending}>
           {t("submit")}
         </Button>
       </div>

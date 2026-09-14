@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@/modules/users/rules";
@@ -11,28 +10,54 @@ import { Checkbox, Input, Select } from "@/ui/input";
 import { notify } from "@/ui/toast";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+// A non-leap-year probe (matches the server's own patron-saint validation): Feb has 28 days here.
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+
+function daysInMonth(month: number | undefined): number {
+  return month ? DAYS_IN_MONTH[month - 1] : 31;
+}
 
 export function PreferencesForm({ initial, timeZones }: { initial: Preferences; timeZones: string[] }) {
   const t = useTranslations("settings.preferences");
   const common = useTranslations("common");
-  const router = useRouter();
+  const locale = useLocale();
   const [prefs, setPrefs] = useState<Preferences>(initial);
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPrefs((p) => ({ ...p, [key]: value }));
+
+  const monthFormatter = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
+    month: "long",
+    timeZone: "UTC",
+  });
+  const monthLabel = (month: number) => monthFormatter.format(new Date(Date.UTC(2023, month - 1, 1)));
+  const days = Array.from({ length: daysInMonth(prefs.patronSaint?.month) }, (_, i) => i + 1);
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     startTransition(async () => {
-      await savePreferencesAction(prefs);
-      notify(t("saved"));
-      router.refresh();
+      try {
+        const result = await savePreferencesAction(prefs);
+        if (!result.ok) {
+          setError(result.error === "invalid" ? t("errors.invalid") : t("errors.failed"));
+          return;
+        }
+        setError(null);
+        notify(t("saved"));
+      } catch {
+        setError(t("errors.failed"));
+      }
     });
   }
 
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+      {error && (
+        <p role="alert" className="text-sm text-neg sm:col-span-2">
+          {error}
+        </p>
+      )}
       <Field label={t("timeZone")} htmlFor="timeZone">
         <Select id="timeZone" value={prefs.timeZone} onChange={(e) => set("timeZone", e.target.value)}>
           {timeZones.map((zone) => (
@@ -112,22 +137,23 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
           <Select
             id="patronMonth"
             value={prefs.patronSaint?.month ?? ""}
-            onChange={(e) =>
+            onChange={(e) => {
+              const month = e.target.value ? Number(e.target.value) : null;
               set(
                 "patronSaint",
-                e.target.value ? { month: Number(e.target.value), day: prefs.patronSaint?.day ?? 1 } : null,
-              )
-            }
+                month ? { month, day: Math.min(prefs.patronSaint?.day ?? 1, daysInMonth(month)) } : null,
+              );
+            }}
           >
             <option value="">{t("patronNone")}</option>
             {MONTHS.map((m) => (
               <option key={m} value={m}>
-                {m}
+                {monthLabel(m)}
               </option>
             ))}
           </Select>
           <Select
-            aria-label={t("patronSaint")}
+            aria-label={t("patronDay")}
             disabled={!prefs.patronSaint}
             value={prefs.patronSaint?.day ?? ""}
             onChange={(e) =>
@@ -135,7 +161,7 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
               set("patronSaint", { month: prefs.patronSaint.month, day: Number(e.target.value) })
             }
           >
-            {DAYS.map((d) => (
+            {days.map((d) => (
               <option key={d} value={d}>
                 {d}
               </option>

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { sessions } from "@/platform/auth/schema";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
@@ -63,4 +63,30 @@ export async function findSessionToken(ctx: Pick<Ctx, "userId">, sessionId: stri
     .from(sessions)
     .where(and(eq(sessions.id, sessionId), userScoped(ctx).owns(sessions)));
   return row?.token ?? null;
+}
+
+export interface OwnSession {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: Date;
+}
+
+/**
+ * The caller's own active (non-expired) sessions, newest first. Never selects the token — the
+ * Security page sends only these fields to the browser. `auth.api.listSessions` cannot be used
+ * here: it runs behind Better Auth's fresh-session gate (spec: freshAge 24h), so it would refuse
+ * any session older than a day even though listing your own sessions is not a sensitive action.
+ */
+export async function listOwnSessions(ctx: Pick<Ctx, "userId">): Promise<OwnSession[]> {
+  return getDb()
+    .select({
+      id: sessions.id,
+      userAgent: sessions.userAgent,
+      ipAddress: sessions.ipAddress,
+      createdAt: sessions.createdAt,
+    })
+    .from(sessions)
+    .where(and(userScoped(ctx).owns(sessions), gt(sessions.expiresAt, new Date())))
+    .orderBy(desc(sessions.createdAt), desc(sessions.id));
 }
