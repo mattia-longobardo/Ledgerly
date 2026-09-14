@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { cn } from "./cn";
+import { useFieldState } from "./field";
 
 const CONTROL =
   "h-8 w-full rounded-ctl border border-border bg-card px-2.5 text-base text-fg placeholder:text-faint " +
@@ -12,14 +13,17 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Input({ invalid, warning, numeric, className, ...props }: InputProps) {
+  const field = useFieldState();
+  const isInvalid = invalid ?? field.invalid;
   return (
     <input
-      aria-invalid={invalid || undefined}
+      aria-invalid={isInvalid || undefined}
+      aria-describedby={field.describedBy}
       className={cn(
         CONTROL,
         numeric && "text-right tabular-nums",
         warning && "border-warn",
-        invalid && "border-neg text-neg",
+        isInvalid && "border-neg text-neg",
         className,
       )}
       {...props}
@@ -46,7 +50,15 @@ export function InputGroup({
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(CONTROL, "px-2", className)} {...props} />;
+  const field = useFieldState();
+  return (
+    <select
+      aria-invalid={field.invalid || undefined}
+      aria-describedby={field.describedBy}
+      className={cn(CONTROL, "px-2", className)}
+      {...props}
+    />
+  );
 }
 
 export function Checkbox({
@@ -54,9 +66,16 @@ export function Checkbox({
   className,
   ...props
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
+  const field = useFieldState();
   return (
     <label className={cn("inline-flex items-center gap-2 text-sm", className)}>
-      <input type="checkbox" className="size-3.5 accent-primary" {...props} />
+      <input
+        type="checkbox"
+        className="size-3.5 accent-primary"
+        aria-invalid={field.invalid || undefined}
+        aria-describedby={field.describedBy}
+        {...props}
+      />
       {label}
     </label>
   );

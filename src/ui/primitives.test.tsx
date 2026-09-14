@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Avatar, initials } from "./avatar";
 import { Badge } from "./badge";
-import { Button, IconButton } from "./button";
+import { Button, IconButton, LinkButton } from "./button";
 import { cn } from "./cn";
 import { Field } from "./field";
 import { Input } from "./input";
@@ -45,6 +45,11 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Toggle sidebar" });
     expect(button).toHaveAttribute("title", "Toggle sidebar");
   });
+
+  it("gives link buttons the same focus-visible outline as other buttons", () => {
+    render(<LinkButton>Undo</LinkButton>);
+    expect(screen.getByRole("button", { name: "Undo" }).className).toContain("focus-visible:outline-accent");
+  });
 });
 
 describe("form controls", () => {
@@ -57,6 +62,30 @@ describe("form controls", () => {
     const input = screen.getByLabelText("Email");
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Required")).toBeInTheDocument();
+  });
+
+  it("associates the field's error text via aria-describedby without an explicit invalid prop", () => {
+    render(
+      <Field label="Amount" htmlFor="amount" error="Must be positive">
+        <Input id="amount" />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Amount");
+    const error = screen.getByText("Must be positive");
+    expect(input).toHaveAttribute("aria-describedby", error.id);
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("associates the field's hint text via aria-describedby and leaves aria-invalid absent", () => {
+    render(
+      <Field label="Notes" htmlFor="notes" hint="Optional">
+        <Input id="notes" />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Notes");
+    const hint = screen.getByText("Optional");
+    expect(input).toHaveAttribute("aria-describedby", hint.id);
+    expect(input).not.toHaveAttribute("aria-invalid");
   });
 });
 
@@ -83,5 +112,16 @@ describe("display", () => {
     expect(toneOfSign(null)).toBe("muted");
     render(<Avatar name="Mattia Longobardo" />);
     expect(screen.getByText("ML")).toBeInTheDocument();
+  });
+
+  it("gives the avatar an accessible name by default, and hides it when decorative", () => {
+    const { unmount } = render(<Avatar name="Mattia Longobardo" />);
+    expect(screen.getByRole("img", { name: "Mattia Longobardo" })).toHaveTextContent("ML");
+    unmount();
+
+    render(<Avatar name="Giulia Rossi" decorative />);
+    const decorativeAvatar = screen.getByText("GR");
+    expect(decorativeAvatar).toHaveAttribute("aria-hidden", "true");
+    expect(decorativeAvatar).not.toHaveAttribute("role");
   });
 });

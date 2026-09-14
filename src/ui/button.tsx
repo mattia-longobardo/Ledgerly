@@ -82,7 +82,11 @@ export function LinkButton({
   return (
     <button
       type={type}
-      className={cn("text-sm font-medium text-accent hover:underline", className)}
+      className={cn(
+        "text-sm font-medium text-accent hover:underline",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        className,
+      )}
       {...props}
     />
   );

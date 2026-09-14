@@ -16,10 +16,19 @@ export function initials(name: string): string {
     .join("");
 }
 
-export function Avatar({ name, size = 24 }: { name: string; size?: keyof typeof SIZE }) {
+export function Avatar({
+  name,
+  size = 24,
+  decorative = false,
+}: {
+  name: string;
+  size?: keyof typeof SIZE;
+  /** True when the name is already shown as adjacent visible text; hides this from assistive tech instead of announcing it twice. */
+  decorative?: boolean;
+}) {
   return (
     <span
-      aria-hidden
+      {...(decorative ? { "aria-hidden": true as const } : { role: "img", "aria-label": name })}
       className={cn(
         "inline-grid shrink-0 place-items-center rounded-full bg-soft font-semibold text-accent",
         SIZE[size],
