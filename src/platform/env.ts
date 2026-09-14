@@ -10,6 +10,8 @@ const PLACEHOLDER_CRON_SECRET = "dev-cron-secret-dev-cron-secret-dev";
 const PLACEHOLDER_METRICS_TOKEN = "dev-metrics-token-dev-metrics-token";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+const ipOrCidr = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
+
 /**
  * Plain http is only acceptable on the machine itself (the end-to-end suite serves
  * http://127.0.0.1). A value that is not a parseable URL is skipped here: `z.url()` on the field
@@ -56,6 +58,19 @@ export const envSchema = z
     CRON_SECRET: z.string().min(32),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/finance-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
+    // The reverse proxies in front of the app (comma-separated IPs or CIDR ranges): Better Auth
+    // reads the client IP from X-Forwarded-For past these hops, so each client gets its own
+    // rate-limit bucket. Empty: only a single-value X-Forwarded-For is trusted.
+    TRUSTED_PROXY_IPS: z
+      .string()
+      .default("")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((entry) => entry.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(ipOrCidr)),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;

@@ -120,7 +120,7 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
     advanced: {
       // Postgres generates every id (`DEFAULT uuidv7()`, spec §4.3); Better Auth inserts none.
       database: { generateId: false },
-      ipAddress: { ipAddressHeaders: ["x-forwarded-for"] },
+      ipAddress: { ipAddressHeaders: ["x-forwarded-for"], trustedProxies: env.TRUSTED_PROXY_IPS },
     },
     emailAndPassword: {
       enabled: true,
