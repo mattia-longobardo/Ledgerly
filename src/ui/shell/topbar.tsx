@@ -14,7 +14,7 @@ export function Topbar({
   actions,
   themeToggle,
 }: {
-  title: string;
+  title: ReactNode;
   parent?: { href: Route; label: string };
   actions?: ReactNode;
   themeToggle: ReactNode;

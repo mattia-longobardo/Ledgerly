@@ -19,3 +19,12 @@ export function CardHeader({ title, actions }: { title: ReactNode; actions?: Rea
     </div>
   );
 }
+
+/** A form card's last row: meta text or a control on the left, the actions on the right. */
+export function CardFooter({ children }: { children: ReactNode }) {
+  return (
+    <div className="col-span-full flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+      {children}
+    </div>
+  );
+}

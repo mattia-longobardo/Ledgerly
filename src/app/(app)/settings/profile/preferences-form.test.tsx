@@ -15,7 +15,13 @@ function renderForm(initial = DEFAULT_PREFERENCES) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <ThemeProvider saved={initial.theme}>
-        <PreferencesForm initial={initial} timeZones={["Europe/Rome", "Europe/London"]} />
+        <PreferencesForm
+          initial={initial}
+          timeZones={[
+            { value: "Europe/Rome", label: "Europe/Rome (UTC+2)" },
+            { value: "Europe/London", label: "Europe/London (UTC+1)" },
+          ]}
+        />
       </ThemeProvider>
     </NextIntlClientProvider>,
   );
@@ -36,6 +42,11 @@ describe("PreferencesForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, locale: "it", theme: "dark" });
     expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("labels every timezone with its UTC offset", () => {
+    renderForm();
+    expect(screen.getByRole("option", { name: "Europe/Rome (UTC+2)" })).toHaveValue("Europe/Rome");
   });
 
   it("shows a catalogued error instead of crashing when the action refuses to save", async () => {

@@ -94,10 +94,12 @@
     "tabs": { "label": "Sezioni delle impostazioni", "profile": "Profilo", "security": "Sicurezza" },
     "account": {
       "title": "Account",
-      "description": "Il tuo nome e l'indirizzo usato per inviti e avvisi.",
+      "description": "Come appari nell'app e dove arrivano le notifiche.",
       "name": "Nome e cognome",
       "email": "Email",
       "ssoNote": "Nome ed email sono gestiti da Authentik finché l'SSO è collegato.",
+      "role": "Ruolo: <strong>{role}</strong>",
+      "roles": { "admin": "Amministratore", "user": "Utente" },
       "saved": "Account salvato",
       "errors": {
         "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
@@ -107,7 +109,7 @@
     },
     "preferences": {
       "title": "Preferenze",
-      "description": "Come appaiono numeri, date e interfaccia.",
+      "description": "Formati e lingua. Gli importi restano in EUR.",
       "timeZone": "Fuso orario",
       "language": "Lingua",
       "languages": { "en": "English", "it": "Italiano" },
@@ -138,9 +140,20 @@
         "failed": "Impossibile salvare le preferenze. Riprova."
       }
     },
+    "signIn": {
+      "title": "Accesso",
+      "description": "Come accede questo account. Authentik è consigliato; la password locale resta come alternativa.",
+      "method": "Metodo di accesso: <strong>{method}</strong>",
+      "methods": {
+        "sso": "Authentik (SSO)",
+        "password": "Password locale",
+        "both": "Authentik (SSO) e password locale"
+      },
+      "linkedTo": "Collegato a {host}",
+      "ssoDetail": "Nome ed email arrivano da Authentik.",
+      "manage": "Gestisci in Authentik"
+    },
     "password": {
-      "title": "Password",
-      "description": "Serve quando accedi senza Authentik.",
       "current": "Password attuale",
       "new": "Nuova password",
       "confirm": "Conferma la nuova password",
@@ -152,8 +165,9 @@
     },
     "sessions": {
       "title": "Sessioni",
-      "description": "I dispositivi collegati al tuo account.",
+      "description": "Dispositivi attualmente connessi al tuo account.",
       "thisDevice": "questo dispositivo",
+      "activeNow": "Attiva ora",
       "unknownDevice": "Dispositivo sconosciuto",
       "signOut": "Disconnetti",
       "signOutDevice": "Disconnetti {device}",

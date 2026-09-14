@@ -13,8 +13,14 @@ vi.mock("@/modules/users/actions", () => ({
 }));
 
 const SESSIONS = [
-  { id: "s1", device: "Chrome · macOS", detail: "since 1 Jan 2026", current: true },
-  { id: "s2", device: "Safari · iOS", detail: "since 2 Jan 2026", current: false },
+  {
+    id: "s1",
+    device: "Chrome · macOS",
+    detail: "192.0.2.1 · this device",
+    status: "Active now",
+    current: true,
+  },
+  { id: "s2", device: "Safari · iOS", detail: "192.0.2.2", status: "since 2 Jan 2026", current: false },
 ];
 
 function renderList() {
@@ -26,6 +32,12 @@ function renderList() {
 }
 
 describe("SessionsList", () => {
+  it("shows this device as active now, with no sign-out of its own", () => {
+    renderList();
+    expect(screen.getByText("Active now")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out Chrome · macOS" })).not.toBeInTheDocument();
+  });
+
   it("signs out one session, from a button that names its device", async () => {
     revokeSession.mockResolvedValueOnce({ ok: true });
     renderList();

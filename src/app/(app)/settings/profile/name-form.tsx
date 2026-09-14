@@ -3,13 +3,26 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { updateNameAction } from "@/modules/users/actions";
+import type { Role } from "@/platform/context";
 import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
+import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
+import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
 
-export function NameForm({ name, email, sso }: { name: string; email: string; sso: boolean }) {
+export function NameForm({
+  name,
+  email,
+  role,
+  sso,
+}: {
+  name: string;
+  email: string;
+  role: Role;
+  sso: boolean;
+}) {
   const t = useTranslations("settings.account");
   const common = useTranslations("common");
   const [pending, startTransition] = useTransition();
@@ -40,21 +53,37 @@ export function NameForm({ name, email, sso }: { name: string; email: string; ss
           {error}
         </p>
       )}
+      <div className="sm:col-span-2">
+        <Avatar name={name} size={40} decorative />
+      </div>
       <Field label={t("name")} htmlFor="name">
-        <Input id="name" name="name" defaultValue={name} readOnly={sso} required />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={name}
+          readOnly={sso}
+          maxLength={MAX_NAME_LENGTH}
+          required
+        />
       </Field>
       <Field label={t("email")} htmlFor="email">
         <Input id="email" value={email} readOnly />
       </Field>
-      {sso ? (
-        <p className="text-sm text-muted sm:col-span-2">{t("ssoNote")}</p>
-      ) : (
-        <div className="flex justify-end sm:col-span-2">
+      <CardFooter>
+        <span className="text-sm text-muted">
+          {t.rich("role", {
+            role: t(`roles.${role}`),
+            strong: (chunks) => <span className="font-medium text-fg">{chunks}</span>,
+          })}
+        </span>
+        {sso ? (
+          <span className="text-sm text-muted">{t("ssoNote")}</span>
+        ) : (
           <Button type="submit" variant="primary" size="sm" disabled={pending}>
             {common("save")}
           </Button>
-        </div>
-      )}
+        )}
+      </CardFooter>
     </form>
   );
 }

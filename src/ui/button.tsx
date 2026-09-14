@@ -53,6 +53,11 @@ export interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorEle
   size?: Size;
 }
 
+/** A button's classes, for a link that must look like one (ButtonLink, or an external <a>). */
+export function buttonClassName(variant: Variant = "secondary", size: Size = "md"): string {
+  return cn(BASE, VARIANT[variant], SIZE[size]);
+}
+
 /** A navigation that looks like a button (e.g. an empty state's call to action). */
 export function ButtonLink({
   href,
@@ -61,7 +66,7 @@ export function ButtonLink({
   className,
   ...props
 }: ButtonLinkProps) {
-  return <Link href={href} className={cn(BASE, VARIANT[variant], SIZE[size], className)} {...props} />;
+  return <Link href={href} className={cn(buttonClassName(variant, size), className)} {...props} />;
 }
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {

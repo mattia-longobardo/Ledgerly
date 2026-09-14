@@ -11,7 +11,7 @@ vi.mock("@/modules/users/actions", () => ({ updateNameAction: (...a: unknown[]) 
 function renderForm(sso = false) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      <NameForm name="Giulia Rossi" email="giulia@example.test" sso={sso} />
+      <NameForm name="Giulia Rossi" email="giulia@example.test" role="admin" sso={sso} />
     </NextIntlClientProvider>,
   );
 }
@@ -39,6 +39,12 @@ describe("NameForm", () => {
     renderForm();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.account.errors.failed);
+  });
+
+  it("shows the avatar initials and the role in the card footer", () => {
+    renderForm();
+    expect(screen.getByText("GR")).toBeInTheDocument();
+    expect(screen.getByText("Admin").parentElement).toHaveTextContent("Role: Admin");
   });
 
   it("hides the Save button and shows the SSO note for an SSO-linked account", () => {

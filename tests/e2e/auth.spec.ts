@@ -26,6 +26,18 @@ test("the first user is admin, reaches the app and signs out", async ({ page }) 
   await expect(nav.getByRole("link", { name: "Components" })).toBeVisible();
   await page.goto("/components");
   await expect(page.getByRole("heading", { name: "Colour tokens" })).toBeVisible();
+
+  await page.goto("/settings/profile");
+  const topbar = page.getByRole("banner");
+  await expect(topbar.getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(topbar.getByText("Profile", { exact: true })).toBeVisible();
+  await expect(page.getByText("Role: Admin")).toBeVisible();
+  await expect(page.getByText("Sign-in method: Local password")).toBeVisible();
+  await expect(page.getByLabel("Current password")).toBeVisible();
+  await page.goto("/settings/security");
+  await expect(page.getByText("Active now")).toBeVisible();
+  await expect(page.getByLabel("Current password")).toHaveCount(0);
+
   await nav.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });
