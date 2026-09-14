@@ -11,8 +11,9 @@ function bearerToken(header: string | null): string | null {
 }
 
 /**
- * Prometheus text format for the homelab's Prometheus/Grafana (spec §10.4). The app is reachable
- * through the Cloudflare tunnel, so this must never serve unauthenticated: a missing
+ * Prometheus text format for the homelab's Prometheus/Grafana (spec §10.4). The scrape target is
+ * the `dashboard-app` service on the compose network (spec §13); the app itself is reached only
+ * over LAN/NetBird, but this endpoint must still never serve unauthenticated: a missing
  * `METRICS_TOKEN` (dev/test without it configured) or any failed check is a bare 404, matching
  * `/api/jobs/tick`'s behaviour, so the endpoint reveals nothing either way.
  */
@@ -25,8 +26,10 @@ export async function GET(request: Request) {
   const lastSuccess = await getDb().execute<{ job: string; ts: string }>(
     sql`SELECT job, extract(epoch FROM max(finished_at))::bigint AS ts FROM job_runs WHERE status = 'success' GROUP BY job ORDER BY job`,
   );
+  // `running` is a live, in-flight state, never a retained outcome: `job_runs_total` counts only
+  // rows housekeeping has not yet pruned (90-day retention, src/platform/jobs/housekeeping.ts).
   const totals = await getDb().execute<{ job: string; status: string; n: number }>(
-    sql`SELECT job, status, count(*)::int AS n FROM job_runs GROUP BY job, status ORDER BY job, status`,
+    sql`SELECT job, status, count(*)::int AS n FROM job_runs WHERE status != 'running' GROUP BY job, status ORDER BY job, status`,
   );
   const lines = [
     "# TYPE job_last_success_timestamp gauge",

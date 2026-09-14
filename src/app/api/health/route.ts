@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { redactForLog } from "@/platform/auth/logger";
 import { getDb } from "@/platform/db/client";
 import { HEARTBEAT_MAX_AGE_MS, heartbeatAgeMs } from "@/platform/jobs/heartbeat";
 
@@ -13,8 +14,9 @@ export async function GET() {
   let dbUp = true;
   try {
     await getDb().execute(sql`SELECT 1`);
-  } catch {
+  } catch (error) {
     dbUp = false;
+    console.error("[health] database check failed", redactForLog(error));
   }
   const age = await heartbeatAgeMs();
   const heartbeatStale = age === null || age > HEARTBEAT_MAX_AGE_MS;

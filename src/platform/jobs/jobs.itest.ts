@@ -35,6 +35,25 @@ describe("jobs", () => {
     expect(await heartbeatAgeMs()).toBeLessThan(5000);
   });
 
+  it("strips NUL bytes from a stored error so later jobs and the heartbeat still run", async () => {
+    const outcomes = await runTier("hourly", [
+      job("poison", async () => {
+        throw new Error("bad\u0000byte");
+      }),
+      job("after", async () => ({ ok: true })),
+    ]);
+    expect(outcomes).toEqual([
+      { job: "poison", status: "failed" },
+      { job: "after", status: "success" },
+    ]);
+    const [poisoned] = await getDb().select().from(jobRuns).where(eq(jobRuns.job, "poison"));
+    expect(poisoned.status).toBe("failed");
+    expect(poisoned.error).toBe("badbyte");
+    const [after] = await getDb().select().from(jobRuns).where(eq(jobRuns.job, "after"));
+    expect(after.status).toBe("success");
+    expect(await heartbeatAgeMs()).toBeLessThan(5000);
+  });
+
   it("skips a job that is already running elsewhere", async () => {
     let release: () => void = () => {};
     const held = withJobLock("job:slow", () => new Promise<void>((resolve) => (release = resolve)));
@@ -60,8 +79,8 @@ describe("jobs", () => {
         }),
       );
     expect((await call("daily", "wrong-secret-wrong")).status).toBe(404);
-    expect((await call("weekly", "integration-cron-secret")).status).toBe(404);
-    const ok = await call("daily", "integration-cron-secret");
+    expect((await call("weekly", "integration-cron-secret-integration")).status).toBe(404);
+    const ok = await call("daily", "integration-cron-secret-integration");
     expect(ok.status).toBe(200);
     expect(await ok.json()).toMatchObject({
       tier: "daily",
