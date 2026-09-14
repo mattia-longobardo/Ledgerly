@@ -52,6 +52,8 @@ export default defineConfig({
             S3_ACCESS_KEY_ID: "finance",
             S3_SECRET_ACCESS_KEY: "finance-dev-secret",
             S3_BUCKET: "finance-test",
+            CRON_SECRET: "integration-cron-secret",
+            HEARTBEAT_FILE: "/tmp/finance-heartbeat-test",
           },
         },
       },
