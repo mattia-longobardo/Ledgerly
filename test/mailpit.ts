@@ -11,17 +11,27 @@ export async function clearMailbox(): Promise<void> {
   if (!response.ok) throw new Error(`Mailpit clear failed: HTTP ${response.status}`);
 }
 
+/** The id of a message already in the mailbox for `to`, if any. */
+async function findMessageId(to: string): Promise<string | undefined> {
+  const search = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+  if (!search.ok) throw new Error(`Mailpit search failed: HTTP ${search.status}`);
+  const { messages } = (await search.json()) as MailpitSearchResult;
+  return messages.find((message) =>
+    message.To.some((recipient) => recipient.Address.toLowerCase() === to.toLowerCase()),
+  )?.ID;
+}
+
+/** Whether the mailbox holds a message for `to` right now; never waits. */
+export async function hasMail(to: string): Promise<boolean> {
+  return (await findMessageId(to)) !== undefined;
+}
+
 export async function waitForMail(to: string, timeoutMs = 5000): Promise<{ Subject: string; Text: string }> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const search = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
-    if (!search.ok) throw new Error(`Mailpit search failed: HTTP ${search.status}`);
-    const { messages } = (await search.json()) as MailpitSearchResult;
-    const match = messages.find((message) =>
-      message.To.some((recipient) => recipient.Address.toLowerCase() === to.toLowerCase()),
-    );
-    if (match) {
-      const message = await fetch(`${MAILPIT}/api/v1/message/${match.ID}`);
+    const id = await findMessageId(to);
+    if (id) {
+      const message = await fetch(`${MAILPIT}/api/v1/message/${id}`);
       if (!message.ok) throw new Error(`Mailpit message fetch failed: HTTP ${message.status}`);
       return (await message.json()) as { Subject: string; Text: string };
     }
