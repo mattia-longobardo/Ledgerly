@@ -94,10 +94,12 @@
     "tabs": { "label": "Settings sections", "profile": "Profile", "security": "Security" },
     "account": {
       "title": "Account",
-      "description": "Your name and the address used for invitations and alerts.",
+      "description": "How you appear in the app and where notifications go.",
       "name": "Full name",
       "email": "Email",
       "ssoNote": "Name and email are managed by Authentik while SSO is linked.",
+      "role": "Role: <strong>{role}</strong>",
+      "roles": { "admin": "Admin", "user": "User" },
       "saved": "Account saved",
       "errors": {
         "invalid": "Enter a name between 1 and {max} characters.",
@@ -107,7 +109,7 @@
     },
     "preferences": {
       "title": "Preferences",
-      "description": "How numbers, dates and the interface look for you.",
+      "description": "Formatting and locale. Amounts stay in EUR.",
       "timeZone": "Timezone",
       "language": "Language",
       "languages": { "en": "English", "it": "Italiano" },
@@ -138,9 +140,20 @@
         "failed": "Couldn't save preferences. Try again."
       }
     },
+    "signIn": {
+      "title": "Sign-in",
+      "description": "How this account signs in. Authentik is recommended; a local password works as a fallback.",
+      "method": "Sign-in method: <strong>{method}</strong>",
+      "methods": {
+        "sso": "Authentik (SSO)",
+        "password": "Local password",
+        "both": "Authentik (SSO) and local password"
+      },
+      "linkedTo": "Linked to {host}",
+      "ssoDetail": "Your name and email come from Authentik.",
+      "manage": "Manage in Authentik"
+    },
     "password": {
-      "title": "Password",
-      "description": "Used when you sign in without Authentik.",
       "current": "Current password",
       "new": "New password",
       "confirm": "Confirm new password",
@@ -152,8 +165,9 @@
     },
     "sessions": {
       "title": "Sessions",
-      "description": "Devices signed in to your account.",
+      "description": "Devices currently signed in to your account.",
       "thisDevice": "this device",
+      "activeNow": "Active now",
       "unknownDevice": "Unknown device",
       "signOut": "Sign out",
       "signOutDevice": "Sign out {device}",

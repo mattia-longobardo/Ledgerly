@@ -10,7 +10,7 @@ export function Page({
   actions,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   parent?: { href: Route; label: string };
   actions?: ReactNode;
   children: ReactNode;

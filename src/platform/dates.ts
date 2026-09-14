@@ -40,6 +40,15 @@ export function civilDateIn(instant: Date, timeZone: string): CivilDate {
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
+/** A zone's offset from UTC at an instant, as "UTC+2", "UTC−3:30" or "UTC" (the timezone picker). */
+export function utcOffsetLabel(timeZone: string, instant: Date): string {
+  const name = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
+    .formatToParts(instant)
+    .find((part) => part.type === "timeZoneName")?.value;
+  const offset = (name ?? "GMT").replace("GMT", "");
+  return offset === "" || offset === "+0" ? "UTC" : `UTC${offset.replace("-", "−")}`;
+}
+
 /** "Today" for a user. The only sanctioned way to obtain the current civil date. */
 export function today(timeZone: string, now: Date = new Date()): CivilDate {
   return civilDateIn(now, timeZone);

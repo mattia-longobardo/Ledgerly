@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { authClient } from "@/platform/auth/client";
 import {
   isPasswordLengthValid,
@@ -9,6 +9,7 @@ import {
   MIN_PASSWORD_LENGTH,
 } from "@/platform/auth/password-policy";
 import { Button } from "@/ui/button";
+import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
@@ -20,6 +21,7 @@ export function PasswordForm() {
   const auth = useTranslations("auth.reset");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const hintId = useId();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,17 +62,27 @@ export function PasswordForm() {
         <Input id="current" name="current" type="password" autoComplete="current-password" required />
       </Field>
       <div className="max-sm:hidden" />
-      <Field label={t("new")} htmlFor="new" hint={auth("hint", PASSWORD_BOUNDS)}>
-        <Input id="new" name="new" type="password" autoComplete="new-password" required />
+      <Field label={t("new")} htmlFor="new">
+        <Input
+          id="new"
+          name="new"
+          type="password"
+          autoComplete="new-password"
+          aria-describedby={hintId}
+          required
+        />
       </Field>
       <Field label={t("confirm")} htmlFor="confirm">
         <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required />
       </Field>
-      <div className="flex justify-end sm:col-span-2">
+      <CardFooter>
+        <span id={hintId} className="text-sm text-muted">
+          {auth("hint", PASSWORD_BOUNDS)}
+        </span>
         <Button type="submit" variant="primary" size="sm" disabled={pending}>
           {t("submit")}
         </Button>
-      </div>
+      </CardFooter>
     </form>
   );
 }

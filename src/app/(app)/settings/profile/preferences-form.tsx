@@ -5,6 +5,7 @@ import { type FormEvent, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@/modules/users/rules";
 import { Button } from "@/ui/button";
+import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
 import { useTheme } from "@/ui/theme-provider";
@@ -22,7 +23,14 @@ function daysInMonth(month: number | undefined): number {
  * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change
  * elsewhere, e.g. the topbar theme toggle, so a save never writes an out-of-date value back.
  */
-export function PreferencesForm({ initial, timeZones }: { initial: Preferences; timeZones: string[] }) {
+export function PreferencesForm({
+  initial,
+  timeZones,
+}: {
+  initial: Preferences;
+  /** Every selectable IANA zone, labelled with its current UTC offset. */
+  timeZones: { value: string; label: string }[];
+}) {
   const t = useTranslations("settings.preferences");
   const common = useTranslations("common");
   const locale = useLocale();
@@ -68,8 +76,8 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
       <Field label={t("timeZone")} htmlFor="timeZone">
         <Select id="timeZone" value={prefs.timeZone} onChange={(e) => set("timeZone", e.target.value)}>
           {timeZones.map((zone) => (
-            <option key={zone} value={zone}>
-              {zone}
+            <option key={zone.value} value={zone.value}>
+              {zone.label}
             </option>
           ))}
         </Select>
@@ -176,17 +184,16 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
           </Select>
         </div>
       </Field>
-      <Checkbox
-        className="sm:col-span-2"
-        label={t("monthlySummary")}
-        checked={prefs.monthlySummary}
-        onChange={(e) => set("monthlySummary", e.target.checked)}
-      />
-      <div className="flex justify-end border-t border-border pt-3 sm:col-span-2">
+      <CardFooter>
+        <Checkbox
+          label={t("monthlySummary")}
+          checked={prefs.monthlySummary}
+          onChange={(e) => set("monthlySummary", e.target.checked)}
+        />
         <Button type="submit" variant="primary" size="sm" disabled={pending}>
           {common("save")}
         </Button>
-      </div>
+      </CardFooter>
     </form>
   );
 }

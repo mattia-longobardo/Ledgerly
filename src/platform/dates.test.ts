@@ -9,6 +9,7 @@ import {
   monthKey,
   monthsBetween,
   today,
+  utcOffsetLabel,
 } from "./dates";
 
 describe("civil dates", () => {
@@ -51,5 +52,15 @@ describe("civil dates", () => {
   it("rejects malformed input instead of guessing", () => {
     expect(() => monthKey("13/09/2026")).toThrow(RangeError);
     expect(() => addDays("2026-02-31", 1)).toThrow(RangeError);
+  });
+});
+
+describe("utcOffsetLabel", () => {
+  it("names a zone's offset at the given instant, daylight saving included", () => {
+    expect(utcOffsetLabel("Europe/Rome", new Date("2026-07-01T12:00:00Z"))).toBe("UTC+2");
+    expect(utcOffsetLabel("Europe/Rome", new Date("2026-01-15T12:00:00Z"))).toBe("UTC+1");
+    expect(utcOffsetLabel("Asia/Kolkata", new Date("2026-01-15T12:00:00Z"))).toBe("UTC+5:30");
+    expect(utcOffsetLabel("America/St_Johns", new Date("2026-01-15T12:00:00Z"))).toBe("UTC−3:30");
+    expect(utcOffsetLabel("UTC", new Date("2026-01-15T12:00:00Z"))).toBe("UTC");
   });
 });

@@ -10,9 +10,12 @@ export interface SessionRow {
   id: string;
   device: string;
   detail: string;
+  /** "Active now" for this device, the sign-in date for the others. */
+  status: string;
   current: boolean;
 }
 
+/** Full-bleed rows in an unpadded card, as in the design: device, status, then Sign out. */
 export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
   const t = useTranslations("settings.sessions");
   const [pending, startTransition] = useTransition();
@@ -41,28 +44,29 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col text-sm">
       {error && (
-        <p role="alert" className="pb-2 text-sm text-neg">
+        <p role="alert" className="border-b border-border px-4 py-2.5 text-neg">
           {error}
         </p>
       )}
       {sessions.map((session) => (
         <div
           key={session.id}
-          className="grid grid-cols-[1fr_auto] items-center gap-6 border-b border-border py-2 last:border-0"
+          className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-6 border-b border-border px-4 py-2.5 last:border-0"
         >
-          <div>
-            <div className="font-medium">{session.device}</div>
-            <div className="text-sm text-muted">
-              {session.detail}
-              {session.current && ` · ${t("thisDevice")}`}
-            </div>
+          <div className="min-w-0">
+            <div className="truncate text-base font-medium">{session.device}</div>
+            <div className="truncate text-muted">{session.detail}</div>
           </div>
-          {!session.current && (
+          <span className="text-muted">{session.status}</span>
+          {session.current ? (
+            <span />
+          ) : (
             <Button
               size="xs"
               variant="danger"
+              className="font-normal"
               disabled={pending}
               aria-label={t("signOutDevice", { device: session.device })}
               onClick={() => revoke(session.id)}
@@ -73,7 +77,7 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
         </div>
       ))}
       {sessions.length > 1 && (
-        <div className="flex justify-end pt-3">
+        <div className="flex justify-end px-4 py-2.5">
           <Button size="sm" variant="danger" disabled={pending} onClick={revokeOthers}>
             {t("signOutOthers")}
           </Button>
