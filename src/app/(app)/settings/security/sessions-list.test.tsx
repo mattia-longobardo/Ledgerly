@@ -26,24 +26,24 @@ function renderList() {
 }
 
 describe("SessionsList", () => {
-  it("signs out one session", async () => {
+  it("signs out one session, from a button that names its device", async () => {
     revokeSession.mockResolvedValueOnce({ ok: true });
     renderList();
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out Safari · iOS" }));
     expect(revokeSession).toHaveBeenCalledWith("s2");
   });
 
   it("shows a catalogued error instead of crashing when the action reports failure", async () => {
     revokeSession.mockResolvedValueOnce({ ok: false, error: "failed" });
     renderList();
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out Safari · iOS" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.sessions.errors.failed);
   });
 
   it("shows a catalogued error instead of crashing when the action rejects unexpectedly", async () => {
     revokeSession.mockRejectedValueOnce(new Error("network down"));
     renderList();
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out Safari · iOS" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.sessions.errors.failed);
   });
 

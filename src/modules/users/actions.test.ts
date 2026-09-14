@@ -1,18 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { revokeSessionAction, updateNameAction } from "./actions";
+import { revokeOtherSessionsAction, revokeSessionAction, updateNameAction } from "./actions";
 
-const { requireSession, hasSsoAccount, updateUser, revokeSession, findSessionToken } = vi.hoisted(() => ({
-  requireSession: vi.fn(),
-  hasSsoAccount: vi.fn(),
-  updateUser: vi.fn(),
-  revokeSession: vi.fn(),
-  findSessionToken: vi.fn(),
-}));
+const { requireSession, hasSsoAccount, updateUser, revokeSession, revokeOtherSessions, findSessionToken } =
+  vi.hoisted(() => ({
+    requireSession: vi.fn(),
+    hasSsoAccount: vi.fn(),
+    updateUser: vi.fn(),
+    revokeSession: vi.fn(),
+    revokeOtherSessions: vi.fn(),
+    findSessionToken: vi.fn(),
+  }));
 
 vi.mock("@/platform/auth/session", () => ({ requireSession }));
 vi.mock("@/platform/auth/accounts", () => ({ hasSsoAccount }));
 vi.mock("@/platform/auth/auth", () => ({
-  getAuth: () => ({ api: { updateUser, revokeSession } }),
+  getAuth: () => ({ api: { updateUser, revokeSession, revokeOtherSessions } }),
 }));
 vi.mock("./service", () => ({ findSessionToken, getPreferences: vi.fn(), updatePreferences: vi.fn() }));
 vi.mock("next/headers", () => ({
@@ -29,6 +31,8 @@ const CTX = {
   numberFormat: "it-IT" as const,
 };
 const FOREIGN_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
+/** A provider error whose message carries a credential in a URL query string. */
+const LEAKY_ERROR = new Error("revoke failed at https://auth.example.test/revoke?token=secret-token");
 
 describe("updateNameAction", () => {
   beforeEach(() => {
@@ -77,5 +81,27 @@ describe("revokeSessionAction", () => {
     expect(revokeSession).toHaveBeenCalledWith(
       expect.objectContaining({ body: { token: "the-owner-session-token" } }),
     );
+  });
+});
+
+describe("session revocation failures", () => {
+  beforeEach(() => {
+    requireSession.mockReset().mockResolvedValue(CTX);
+    findSessionToken.mockReset().mockResolvedValue("the-owner-session-token");
+    revokeSession.mockReset().mockRejectedValue(LEAKY_ERROR);
+    revokeOtherSessions.mockReset().mockRejectedValue(LEAKY_ERROR);
+  });
+
+  it.each([
+    ["one session", () => revokeSessionAction(FOREIGN_SESSION_ID)],
+    ["the other sessions", () => revokeOtherSessionsAction()],
+  ])("reports failure and logs the error redacted when revoking %s", async (_, revoke) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await revoke()).toEqual({ ok: false, error: "failed" });
+    expect(log).toHaveBeenCalledWith(
+      "[users] session revocation failed",
+      expect.objectContaining({ message: "revoke failed at https://auth.example.test/revoke?[redacted]" }),
+    );
+    log.mockRestore();
   });
 });

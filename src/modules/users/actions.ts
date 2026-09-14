@@ -6,6 +6,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
+import { redactForLog } from "@/platform/auth/logger";
 import { nameSchema } from "@/platform/auth/name-policy";
 import { requireSession } from "@/platform/auth/session";
 import { LOCALE_COOKIE } from "@/platform/i18n/locales";
@@ -66,8 +67,8 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
     await getAuth().api.revokeSession({ body: { token }, headers: await headers() });
     revalidatePath("/settings/security");
     return { ok: true };
-  } catch {
-    return { ok: false, error: "failed" };
+  } catch (error) {
+    return revocationFailed(error);
   }
 }
 
@@ -77,7 +78,12 @@ export async function revokeOtherSessionsAction(): Promise<ActionResult> {
     await getAuth().api.revokeOtherSessions({ headers: await headers() });
     revalidatePath("/settings/security");
     return { ok: true };
-  } catch {
-    return { ok: false, error: "failed" };
+  } catch (error) {
+    return revocationFailed(error);
   }
+}
+
+function revocationFailed(error: unknown): ActionResult {
+  console.error("[users] session revocation failed", redactForLog(error));
+  return { ok: false, error: "failed" };
 }
