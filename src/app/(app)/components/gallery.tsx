@@ -141,10 +141,14 @@ export function Gallery() {
           {TYPE_SCALE.map(({ size, role, className, ...sample }) => (
             <div key={size} className="contents">
               <span className="text-xs text-muted">{size}</span>
-              <span className={cn("truncate", className)}>
-                {t(`typeRoles.${role}`)}
-                {"value" in sample && ` ${sample.value}`}
-              </span>
+              {"value" in sample ? (
+                <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                  <span className={className}>{sample.value}</span>
+                  <span className="text-sm text-muted">{t(`typeRoles.${role}`)}</span>
+                </span>
+              ) : (
+                <span className={className}>{t(`typeRoles.${role}`)}</span>
+              )}
             </div>
           ))}
         </div>
@@ -348,7 +352,7 @@ export function Gallery() {
           </InputGroup>
         </Modal>
         <h3 className="mt-1 text-lg font-semibold">{t("navStates")}</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <span className={navItemClassName(false)}>
             <LayoutDashboard aria-hidden className="size-4 shrink-0" />
             {t("sample.navDefault")}

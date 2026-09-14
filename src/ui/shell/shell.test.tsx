@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,7 @@ import type { NavLink } from "./nav-types";
 import { ShellProvider } from "./shell-context";
 import type { SidebarState } from "./sidebar-state";
 import { Sidebar } from "./sidebar";
+import { Topbar } from "./topbar";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ usePathname: () => "/settings/profile", useRouter: () => ({ push }) }));
@@ -104,6 +105,22 @@ describe("shell", () => {
       "href",
       "/settings/profile",
     );
+  });
+
+  it("shows the parent crumb and the page on desktop, and the section as the phone title", () => {
+    render(
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+        <Topbar
+          title="Profile"
+          parent={{ href: "/settings/profile" as Route, label: "Settings" }}
+          themeToggle={null}
+        />
+      </ShellProvider>,
+    );
+    const header = screen.getByRole("banner");
+    expect(within(header).getByRole("link", { name: "Settings" })).toHaveClass("max-md:hidden");
+    expect(within(header).getByText("Profile")).toHaveClass("max-md:hidden");
+    expect(within(header).getByText("Settings", { selector: "span" })).toHaveClass("md:hidden");
   });
 
   it("reopens the palette empty after closing it with ⌘K", async () => {
