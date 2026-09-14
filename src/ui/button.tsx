@@ -54,7 +54,13 @@ export interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorEle
 }
 
 /** A navigation that looks like a button (e.g. an empty state's call to action). */
-export function ButtonLink({ href, variant = "secondary", size = "md", className, ...props }: ButtonLinkProps) {
+export function ButtonLink({
+  href,
+  variant = "secondary",
+  size = "md",
+  className,
+  ...props
+}: ButtonLinkProps) {
   return <Link href={href} className={cn(BASE, VARIANT[variant], SIZE[size], className)} {...props} />;
 }
 

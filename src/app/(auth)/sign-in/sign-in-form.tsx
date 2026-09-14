@@ -76,7 +76,10 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
         <Button type="submit" disabled={pending} className="w-full">
           {t("signIn.submit")}
         </Button>
-        <Link href="/forgot-password" className="focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline">
+        <Link
+          href="/forgot-password"
+          className="focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline"
+        >
           {t("signIn.forgot")}
         </Link>
       </form>
