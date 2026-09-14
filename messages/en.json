@@ -143,5 +143,59 @@
       "signOutOthers": "Sign out other sessions",
       "since": "since {date}"
     }
+  },
+  "overview": {
+    "title": "Overview",
+    "empty": {
+      "title": "No data yet",
+      "description": "Accounts, balances and net worth appear here once the first account exists.",
+      "cta": "Open Settings"
+    }
+  },
+  "gallery": {
+    "title": "Components",
+    "colours": "Colour tokens",
+    "type": "Type scale",
+    "buttons": "Buttons",
+    "inputs": "Inputs",
+    "controls": "Segmented control and tabs",
+    "badges": "Badges and tags",
+    "table": "Table",
+    "stats": "KPI, progress and skeleton",
+    "identity": "Avatars and shortcuts",
+    "overlays": "Overlays",
+    "states": "Page states",
+    "layout": "Section layout",
+    "sample": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "ghost": "Ghost",
+      "danger": "Delete",
+      "disabled": "Disabled",
+      "placeholder": "Search merchant…",
+      "invalid": "Invalid value",
+      "fieldLabel": "Monthly limit",
+      "fieldHint": "Close to the account's balance",
+      "fieldError": "Required",
+      "cardTitle": "Recent expenses",
+      "tabActive": "Profile",
+      "tabOther": "Security",
+      "month": "Month",
+      "year": "Year",
+      "openModal": "Open modal",
+      "modalTitle": "Add to pocket",
+      "modalBody": "Earmarks part of a savings account. No money is moved.",
+      "toast": "Show toast",
+      "toastMessage": "Balance entry saved — history updated",
+      "menu": "Row actions",
+      "edit": "Edit",
+      "popover": "Filter",
+      "popoverBody": "Popover content",
+      "emptyTitle": "No expenses in this range",
+      "emptyDescription": "Try widening the date range or clearing filters.",
+      "errorTitle": "Could not load expenses",
+      "errorDescription": "The server did not answer. Your data is safe.",
+      "pending": "Pending"
+    }
   }
 }

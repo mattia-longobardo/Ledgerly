@@ -143,5 +143,59 @@
       "signOutOthers": "Disconnetti le altre sessioni",
       "since": "dal {date}"
     }
+  },
+  "overview": {
+    "title": "Panoramica",
+    "empty": {
+      "title": "Ancora nessun dato",
+      "description": "Conti, saldi e patrimonio compaiono qui dopo aver creato il primo conto.",
+      "cta": "Apri le impostazioni"
+    }
+  },
+  "gallery": {
+    "title": "Componenti",
+    "colours": "Colori",
+    "type": "Scala tipografica",
+    "buttons": "Pulsanti",
+    "inputs": "Campi",
+    "controls": "Controllo segmentato e schede",
+    "badges": "Badge ed etichette",
+    "table": "Tabella",
+    "stats": "KPI, avanzamento e scheletro",
+    "identity": "Avatar e scorciatoie",
+    "overlays": "Sovrapposizioni",
+    "states": "Stati della pagina",
+    "layout": "Struttura delle sezioni",
+    "sample": {
+      "primary": "Primario",
+      "secondary": "Secondario",
+      "ghost": "Discreto",
+      "danger": "Elimina",
+      "disabled": "Disattivato",
+      "placeholder": "Cerca esercente…",
+      "invalid": "Valore non valido",
+      "fieldLabel": "Limite mensile",
+      "fieldHint": "Vicino al saldo del conto",
+      "fieldError": "Obbligatorio",
+      "cardTitle": "Spese recenti",
+      "tabActive": "Profilo",
+      "tabOther": "Sicurezza",
+      "month": "Mese",
+      "year": "Anno",
+      "openModal": "Apri finestra",
+      "modalTitle": "Aggiungi al pocket",
+      "modalBody": "Accantona parte di un conto di risparmio. Il denaro non si sposta.",
+      "toast": "Mostra notifica",
+      "toastMessage": "Saldo salvato — storico aggiornato",
+      "menu": "Azioni riga",
+      "edit": "Modifica",
+      "popover": "Filtro",
+      "popoverBody": "Contenuto del popover",
+      "emptyTitle": "Nessuna spesa in questo intervallo",
+      "emptyDescription": "Prova ad allargare l'intervallo o a togliere i filtri.",
+      "errorTitle": "Impossibile caricare le spese",
+      "errorDescription": "Il server non ha risposto. I tuoi dati sono al sicuro.",
+      "pending": "In sospeso"
+    }
   }
 }
