@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
@@ -105,4 +105,40 @@ export async function acceptInvitation(
     await db.update(invitations).set({ acceptedAt: null }).where(eq(invitations.id, claimed.id));
     throw error;
   }
+}
+
+export type SsoInvitationOutcome = "accepted" | "invalid" | "email_mismatch";
+
+/**
+ * The Authentik alternative to `acceptInvitation`: the invitee has just signed in through the
+ * identity provider, which created (or found) their user. One transaction claims the invitation,
+ * only if it is addressed to that user's email, and gives the user its role; an admin is never
+ * demoted by a "user" invitation. On any other outcome nothing changes.
+ */
+export async function completeInvitationWithSso(
+  token: string,
+  user: { userId: string; email: string },
+  now: Date = new Date(),
+): Promise<SsoInvitationOutcome> {
+  const pending = and(
+    eq(invitations.tokenHash, hashToken(token)),
+    isNull(invitations.acceptedAt),
+    gt(invitations.expiresAt, now),
+  );
+  return getDb().transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(invitations)
+      .set({ acceptedAt: now })
+      .where(and(pending, eq(sql`lower(${invitations.email})`, user.email.toLowerCase())))
+      .returning({ role: invitations.role });
+    if (!claimed) {
+      const [addressedElsewhere] = await tx.select({ id: invitations.id }).from(invitations).where(pending);
+      return addressedElsewhere ? "email_mismatch" : "invalid";
+    }
+    await tx
+      .update(users)
+      .set({ role: sql`case when ${users.role} = 'admin' then 'admin' else ${claimed.role} end` })
+      .where(eq(users.id, user.userId));
+    return "accepted";
+  });
 }

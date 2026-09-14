@@ -37,5 +37,49 @@
       "subject": "Reimposta la password di Finance Dashboard",
       "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non sei stato tu, ignora questa email.\n"
     }
+  },
+  "auth": {
+    "version": "v0.1.0",
+    "signIn": {
+      "title": "Accedi",
+      "description": "Usa il tuo account Authentik, oppure la password se ne hai una.",
+      "authentik": "Continua con Authentik",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Accedi",
+      "forgot": "Password dimenticata?"
+    },
+    "errors": {
+      "credentials": "Email o password errate.",
+      "invitationRequired": "Questo account richiede un invito. Chiedi a un amministratore.",
+      "oidc": "Accesso con Authentik non riuscito. Riprova.",
+      "generic": "Accesso non riuscito. Riprova."
+    },
+    "forgot": {
+      "title": "Reimposta la password",
+      "description": "Ti invieremo via email un link per scegliere una nuova password.",
+      "submit": "Invia il link",
+      "sent": "Se esiste un account con questo indirizzo, il link è in arrivo.",
+      "back": "Torna all'accesso"
+    },
+    "reset": {
+      "title": "Scegli una nuova password",
+      "newPassword": "Nuova password",
+      "confirm": "Conferma la nuova password",
+      "submit": "Imposta la password",
+      "hint": "Almeno 12 caratteri.",
+      "mismatch": "Le due password non coincidono.",
+      "invalid": "Questo link non è valido o è scaduto."
+    },
+    "invite": {
+      "title": "Unisciti a Finance Dashboard",
+      "description": "Invitato come {email}.",
+      "name": "Nome e cognome",
+      "submit": "Crea l'account",
+      "invalid": "Questo invito non è valido, è scaduto o è già stato usato.",
+      "emailTaken": "Esiste già un account con questa email. Accedi.",
+      "emailMismatch": "Questo invito è per un indirizzo email diverso da quello del tuo account Authentik.",
+      "authentik": "Usa Authentik"
+    }
   }
 }
