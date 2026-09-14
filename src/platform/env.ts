@@ -38,6 +38,8 @@ export const envSchema = z
     S3_ACCESS_KEY_ID: z.string().min(1),
     S3_SECRET_ACCESS_KEY: z.string().min(1),
     S3_BUCKET: z.string().min(3),
+    CRON_SECRET: z.string().min(16),
+    HEARTBEAT_FILE: z.string().min(1).default("/tmp/finance-heartbeat"),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;
