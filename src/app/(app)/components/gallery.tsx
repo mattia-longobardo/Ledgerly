@@ -136,6 +136,7 @@ export function Gallery() {
           ]}
         />
         <TabLinks
+          label={t("controls")}
           tabs={[
             { href: "/settings/profile" as Route, label: t("sample.tabActive"), active: true },
             { href: "/settings/security" as Route, label: t("sample.tabOther"), active: false },
@@ -188,8 +189,7 @@ export function Gallery() {
                   {formatMoney(null, "it-IT")}
                 </Td>
               </Tr>
-              <TotalRow>
-                <Td>Total</Td>
+              <TotalRow label="Total">
                 <Td />
                 <Td align="right">{formatMoney(202888n, "it-IT", { signed: true })}</Td>
               </TotalRow>
@@ -260,7 +260,7 @@ export function Gallery() {
           onRetry={() => notify(common("retry"))}
           retryLabel={common("retry")}
         />
-        <LoadingState />
+        <LoadingState label={common("loading")} />
       </Section>
       <div className="xl:col-span-2">
         <h2 className="mb-3 text-lg font-semibold">{t("layout")}</h2>

@@ -4,7 +4,8 @@
     "save": "Save",
     "close": "Close",
     "retry": "Try again",
-    "or": "or"
+    "or": "or",
+    "loading": "Loading…"
   },
   "nav": {
     "primary": "Primary",
@@ -89,7 +90,7 @@
   },
   "settings": {
     "title": "Settings",
-    "tabs": { "profile": "Profile", "security": "Security" },
+    "tabs": { "label": "Settings sections", "profile": "Profile", "security": "Security" },
     "account": {
       "title": "Account",
       "description": "Your name and the address used for invitations and alerts.",

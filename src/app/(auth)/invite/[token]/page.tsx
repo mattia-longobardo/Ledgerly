@@ -15,7 +15,7 @@ export default async function InvitePage({ params, searchParams }: PageProps<"/i
         <p role="alert" className="text-neg">
           {t("invite.invalid")}
         </p>
-        <Link href="/sign-in" className="text-sm font-medium text-accent hover:underline">
+        <Link href="/sign-in" className="focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline">
           {t("forgot.back")}
         </Link>
       </AuthCard>

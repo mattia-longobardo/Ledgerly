@@ -4,7 +4,8 @@
     "save": "Salva",
     "close": "Chiudi",
     "retry": "Riprova",
-    "or": "oppure"
+    "or": "oppure",
+    "loading": "Caricamento…"
   },
   "nav": {
     "primary": "Principale",
@@ -89,7 +90,7 @@
   },
   "settings": {
     "title": "Impostazioni",
-    "tabs": { "profile": "Profilo", "security": "Sicurezza" },
+    "tabs": { "label": "Sezioni delle impostazioni", "profile": "Profilo", "security": "Sicurezza" },
     "account": {
       "title": "Account",
       "description": "Il tuo nome e l'indirizzo usato per inviti e avvisi.",

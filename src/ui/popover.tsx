@@ -16,7 +16,7 @@ export function Popover({
     <BasePopover.Root>
       <BasePopover.Trigger
         aria-label={triggerLabel}
-        className="inline-flex h-[30px] items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm hover:bg-hover"
+        className="focus-ring inline-flex h-[30px] items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm hover:bg-hover"
       >
         {trigger}
       </BasePopover.Trigger>

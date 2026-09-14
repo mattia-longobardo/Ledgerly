@@ -55,12 +55,15 @@ export function ErrorState({
   );
 }
 
-/** The generic page skeleton from the design (title, four KPI tiles, a table). */
-export function LoadingState() {
+/** The generic page skeleton from the design (title, four KPI tiles, a table); `label` is announced. */
+export function LoadingState({ label }: { label: string }) {
   return (
-    <div className="flex flex-col gap-4" aria-busy="true">
-      <Skeleton className="h-3 w-[120px]" />
-      <Skeleton className="h-8 w-[260px] rounded-ctl" />
+    <div role="status" className="flex flex-col gap-6">
+      <span className="sr-only">{label}</span>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-3 w-[120px]" />
+        <Skeleton className="h-8 w-[260px] rounded-ctl" />
+      </div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Card key={i} className="flex h-[92px] flex-col gap-3">

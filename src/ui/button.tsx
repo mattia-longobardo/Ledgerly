@@ -1,4 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { Route } from "next";
+import Link from "next/link";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "./cn";
 
 const VARIANT = {
@@ -16,13 +18,15 @@ const SIZE = {
 } as const;
 
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-ctl border font-medium " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
+  "focus-ring inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-ctl border font-medium " +
   "disabled:cursor-not-allowed disabled:border-border disabled:bg-hover disabled:text-faint disabled:hover:brightness-100";
 
+type Variant = keyof typeof VARIANT;
+type Size = keyof typeof SIZE;
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: keyof typeof VARIANT;
-  size?: keyof typeof SIZE;
+  variant?: Variant;
+  size?: Size;
   icon?: ReactNode;
 }
 
@@ -41,6 +45,17 @@ export function Button({
       {children}
     </button>
   );
+}
+
+export interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
+  href: Route;
+  variant?: Variant;
+  size?: Size;
+}
+
+/** A navigation that looks like a button (e.g. an empty state's call to action). */
+export function ButtonLink({ href, variant = "secondary", size = "md", className, ...props }: ButtonLinkProps) {
+  return <Link href={href} className={cn(BASE, VARIANT[variant], SIZE[size], className)} {...props} />;
 }
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {
@@ -63,8 +78,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        "inline-grid shrink-0 place-items-center rounded-ctl text-muted hover:bg-hover hover:text-fg",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        "focus-ring inline-grid shrink-0 place-items-center rounded-ctl text-muted hover:bg-hover hover:text-fg",
         size === 28 ? "size-7" : "size-8",
         bordered ? "border border-border bg-card" : "border border-transparent",
         className,
@@ -82,9 +96,26 @@ export function LinkButton({
   return (
     <button
       type={type}
+      className={cn("focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline", className)}
+      {...props}
+    />
+  );
+}
+
+/** A filter chip: a pill that toggles on and off. */
+export function Chip({
+  active,
+  className,
+  type = "button",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { active: boolean }) {
+  return (
+    <button
+      type={type}
+      aria-pressed={active}
       className={cn(
-        "text-sm font-medium text-accent hover:underline",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        "focus-ring inline-flex h-[26px] items-center rounded-[13px] border border-border px-2.5 text-sm",
+        active ? "bg-fg font-medium text-card" : "bg-card text-fg hover:bg-hover",
         className,
       )}
       {...props}
