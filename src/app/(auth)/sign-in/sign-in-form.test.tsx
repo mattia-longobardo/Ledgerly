@@ -65,6 +65,32 @@ describe("SignInForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Wrong email or password.");
   });
 
+  it("tells a blocked user so once the password is right", async () => {
+    signInEmail.mockResolvedValueOnce({ error: { code: "BANNED_USER" } });
+    renderForm();
+    await userEvent.type(screen.getByLabelText("Email"), "a@example.test");
+    await userEvent.type(screen.getByLabelText("Password"), "right-password");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your account is blocked.");
+  });
+
+  it("recovers from a password sign-in request that fails outright", async () => {
+    signInEmail.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    renderForm();
+    await userEvent.type(screen.getByLabelText("Email"), "a@example.test");
+    await userEvent.type(screen.getByLabelText("Password"), "any-password");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in failed. Try again.");
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
+  it("explains why Authentik refused an address that already has a password", () => {
+    renderForm("accountNotLinked");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This email already has a password sign-in; sign in with your password.",
+    );
+  });
+
   it("shows an error carried in the URL", () => {
     renderForm("invitationRequired");
     expect(screen.getByRole("alert")).toHaveTextContent("needs an invitation");

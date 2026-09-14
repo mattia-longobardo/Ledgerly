@@ -39,9 +39,9 @@ async function signedIn(email: string): Promise<Headers> {
 
 /**
  * Runs the authorization-code flow against the mock identity provider, which issues `sub` and
- * `email` equal to the subject typed at its login form. Returns the signed-in cookie header.
+ * `email` equal to the subject typed at its login form. Returns Better Auth's callback response.
  */
-async function ssoCallbackHeaders(instance: Auth, subject: string): Promise<Headers> {
+async function ssoCallback(instance: Auth, subject: string): Promise<Response> {
   const start = await instance.handler(
     new Request(`${BASE_URL}/api/auth/sign-in/social`, {
       method: "POST",
@@ -55,10 +55,20 @@ async function ssoCallbackHeaders(instance: Auth, subject: string): Promise<Head
     body: new URLSearchParams({ username: subject }),
     redirect: "manual",
   });
-  const callback = await instance.handler(
+  return instance.handler(
     new Request(login.headers.get("location") as string, { headers: cookiesFrom(start.headers) }),
   );
-  return cookiesFrom(callback.headers);
+}
+
+/** The signed-in cookie header after a real SSO sign-in. */
+async function ssoCallbackHeaders(instance: Auth, subject: string): Promise<Headers> {
+  return cookiesFrom((await ssoCallback(instance, subject)).headers);
+}
+
+/** The `error` codes Better Auth put on the redirect after a refused SSO sign-in. */
+async function ssoErrorCodes(instance: Auth, subject: string): Promise<string[]> {
+  const location = (await ssoCallback(instance, subject)).headers.get("location") as string;
+  return new URL(location, BASE_URL).searchParams.getAll("error");
 }
 
 /** The signed-in user's id after a real SSO sign-in, or null. */
@@ -165,6 +175,26 @@ describe("SSO sign-in", () => {
     expect(await ssoSignIn(auth(), "Victim@Example.test")).toBeNull();
     const accounts = await getDb().select({ accountId: authAccounts.accountId }).from(authAccounts);
     expect(accounts).toEqual([{ accountId: "victim@example.test" }]);
+  });
+
+  it("names the reason on the error redirect, which the sign-in page explains (errors.ts)", async () => {
+    const victim = await ssoSignIn(auth(), "victim@example.test");
+    expect(await ssoErrorCodes(auth(), "Victim@Example.test")).toEqual(["account_not_linked"]);
+    await getDb()
+      .update(users)
+      .set({ banned: true })
+      .where(eq(users.id, victim as string));
+    expect(await ssoErrorCodes(auth(), "victim@example.test")).toEqual(["BANNED_USER"]);
+  });
+
+  it("refuses a blocked user's password sign-in with its own code", async () => {
+    const { user } = await auth().api.createUser({
+      body: { email: "a@example.test", password: PASSWORD, name: "A" },
+    });
+    await getDb().update(users).set({ banned: true }).where(eq(users.id, user.id));
+    await expect(
+      auth().api.signInEmail({ body: { email: "a@example.test", password: PASSWORD } }),
+    ).rejects.toMatchObject({ body: { code: "BANNED_USER" } });
   });
 
   it("promotes a member of the admin group through a real SSO sign-in", async () => {

@@ -54,6 +54,8 @@
       "credentials": "Email o password errate.",
       "invitationRequired": "Questo account richiede un invito. Chiedi a un amministratore.",
       "oidc": "Accesso con Authentik non riuscito. Riprova.",
+      "accountNotLinked": "Questa email ha già un accesso con password: accedi con la tua password.",
+      "banned": "Il tuo account è bloccato.",
       "generic": "Accesso non riuscito. Riprova."
     },
     "forgot": {
