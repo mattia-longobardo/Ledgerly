@@ -1,0 +1,19 @@
+{
+  "common": {
+    "product": "Finance Dashboard",
+    "save": "Salva",
+    "close": "Chiudi",
+    "retry": "Riprova",
+    "or": "oppure"
+  },
+  "emails": {
+    "invitation": {
+      "subject": "Sei stato invitato su Finance Dashboard",
+      "body": "Hai ricevuto un invito a Finance Dashboard.\n\nAccetta l'invito entro {days, plural, one {# giorno} other {# giorni}}:\n{url}\n"
+    },
+    "passwordReset": {
+      "subject": "Reimposta la password di Finance Dashboard",
+      "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non sei stato tu, ignora questa email.\n"
+    }
+  }
+}
