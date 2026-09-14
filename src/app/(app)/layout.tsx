@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
+import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
-import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { requireSession } from "@/platform/auth/session";
 import { CommandPalette } from "@/ui/shell/command-palette";
 import { MobileNav } from "@/ui/shell/mobile-nav";
@@ -14,8 +14,7 @@ import { navFor } from "./navigation";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
   const session = await getAuth().api.getSession({ headers: await headers() });
-  const accounts = await getAuth().api.listUserAccounts({ headers: await headers() });
-  const viaSso = accounts.some((account) => account.providerId === OIDC_PROVIDER_ID);
+  const viaSso = await hasSsoAccount(ctx.userId);
   const t = await getTranslations();
 
   const links: NavLink[] = navFor(ctx.role).map(({ id, href, icon, group, mobile, labelKey }) => ({

@@ -4,9 +4,9 @@
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
+import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { nameSchema } from "@/platform/auth/name-policy";
-import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import { requireSession } from "@/platform/auth/session";
 import { LOCALE_COOKIE } from "@/platform/i18n/locales";
 import { parseTheme, THEME_COOKIE, type ThemePreference } from "@/platform/theme";
@@ -46,15 +46,11 @@ export async function savePreferencesAction(input: Preferences): Promise<ActionR
 
 /** With Authentik linked, name and email are managed by the provider (spec §5.1): refused here, not only in the UI. */
 export async function updateNameAction(name: string): Promise<ActionResult> {
-  await requireSession();
-  const requestHeaders = await headers();
-  const accounts = await getAuth().api.listUserAccounts({ headers: requestHeaders });
-  if (accounts.some((account) => account.providerId === OIDC_PROVIDER_ID)) {
-    return { ok: false, error: "sso" };
-  }
+  const ctx = await requireSession();
+  if (await hasSsoAccount(ctx.userId)) return { ok: false, error: "sso" };
   const parsed = nameSchema.safeParse(name);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  await getAuth().api.updateUser({ body: { name: parsed.data }, headers: requestHeaders });
+  await getAuth().api.updateUser({ body: { name: parsed.data }, headers: await headers() });
   revalidatePath("/", "layout");
   return { ok: true };
 }
