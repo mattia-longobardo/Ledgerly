@@ -204,6 +204,32 @@ describe("completing an invitation after an Authentik sign-in", () => {
     expect(await findInvitation(token)).toBeNull();
   });
 
+  it("rolls the claim back when the user does not carry the invited address", async () => {
+    const other = await ssoUser("other@example.test", "user");
+    const { token } = await createInvitation({
+      email: "giulia@example.test",
+      role: "admin",
+      invitedBy: null,
+    });
+    expect(
+      await completeInvitationWithSso(token, { userId: other.userId, email: "giulia@example.test" }),
+    ).toBe("email_mismatch");
+    expect(await roleOf(other.userId)).toBe("user");
+    expect(await findInvitation(token)).toMatchObject({ email: "giulia@example.test", role: "admin" });
+  });
+
+  it("rolls the claim back when the user no longer exists", async () => {
+    const gone = await ssoUser("giulia@example.test", "user");
+    await getDb().delete(users).where(eq(users.id, gone.userId));
+    const { token } = await createInvitation({
+      email: "giulia@example.test",
+      role: "admin",
+      invitedBy: null,
+    });
+    expect(await completeInvitationWithSso(token, gone)).toBe("email_mismatch");
+    expect(await findInvitation(token)).toMatchObject({ email: "giulia@example.test", role: "admin" });
+  });
+
   it("refuses an unknown token", async () => {
     const user = await ssoUser("nobody@example.test", "user");
     expect(await completeInvitationWithSso("not-a-real-token", user)).toBe("invalid");

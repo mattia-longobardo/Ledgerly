@@ -68,7 +68,7 @@
       "newPassword": "New password",
       "confirm": "Confirm new password",
       "submit": "Set password",
-      "hint": "At least 12 characters.",
+      "hint": "Between {min} and {max} characters.",
       "mismatch": "The two passwords do not match.",
       "invalid": "This reset link is invalid or has expired."
     },
@@ -80,6 +80,7 @@
       "invalid": "This invitation is invalid, expired or already used.",
       "emailTaken": "An account with this email already exists. Sign in instead.",
       "emailMismatch": "This invitation is for a different email address than your Authentik account.",
+      "nameInvalid": "Enter your full name.",
       "authentik": "Use Authentik instead"
     }
   }

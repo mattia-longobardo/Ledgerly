@@ -13,12 +13,11 @@ import { sendMail } from "@/platform/mail";
 import { passwordResetEmail } from "./emails";
 import { authLogger, redactForLog } from "./logger";
 import { accessControl, roles } from "./permissions";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "./password-policy";
 import { OIDC_PROVIDER_ID } from "./provider";
 import { roleFromIdToken } from "./roles";
 import { users } from "./schema";
 
-export const MIN_PASSWORD_LENGTH = 12;
-export const MAX_PASSWORD_LENGTH = 128;
 export const RESET_PASSWORD_TOKEN_TTL_SECONDS = 60 * 60;
 
 // OWASP argon2id parameters; @node-rs/argon2 uses argon2id by default.

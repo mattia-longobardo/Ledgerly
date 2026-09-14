@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
 import type { SignInErrorKey } from "./errors";
 import { SignInForm } from "./sign-in-form";
@@ -26,11 +26,34 @@ function renderForm(error: SignInErrorKey | null = null) {
   );
 }
 
+const authentik = () => userEvent.click(screen.getByRole("button", { name: "Continue with Authentik" }));
+
 describe("SignInForm", () => {
+  beforeEach(() => {
+    signInEmail.mockReset();
+    signInSocial.mockReset();
+  });
+
   it("offers Authentik and password sign-in", async () => {
+    signInSocial.mockResolvedValueOnce({ data: { url: "https://auth.example.test/authorize" }, error: null });
     renderForm();
-    await userEvent.click(screen.getByRole("button", { name: "Continue with Authentik" }));
+    await authentik();
     expect(signInSocial).toHaveBeenCalledWith(expect.objectContaining({ provider: "authentik" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says so when the Authentik sign-in cannot start", async () => {
+    signInSocial.mockResolvedValueOnce({ data: null, error: { status: 404 } });
+    renderForm();
+    await authentik();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in with Authentik failed. Try again.");
+  });
+
+  it("says so when the Authentik request fails outright", async () => {
+    signInSocial.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    renderForm();
+    await authentik();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in with Authentik failed. Try again.");
   });
 
   it("shows the error returned by a failed password sign-in", async () => {

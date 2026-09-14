@@ -9,4 +9,9 @@ describe("signInErrorKey", () => {
     expect(signInErrorKey("anything-else")).toBe("generic");
     expect(signInErrorKey(undefined)).toBeNull();
   });
+
+  it("reads the first value when Better Auth appended its own error code", () => {
+    expect(signInErrorKey(["oidc", "access_denied"])).toBe("oidc");
+    expect(signInErrorKey([])).toBeNull();
+  });
 });
