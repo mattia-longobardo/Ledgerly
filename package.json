@@ -17,6 +17,7 @@
     "test": "vitest run --project 'unit-*'",
     "test:watch": "vitest --project 'unit-*'",
     "test:integration": "vitest run --project integration",
+    "e2e": "npm run build && playwright test",
     "dev:services": "docker compose -f compose.dev.yml up -d --wait",
     "dev:services:down": "docker compose -f compose.dev.yml down",
     "db:generate": "drizzle-kit generate",
