@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
   HeadBucketCommand,
   NoSuchKey,
+  NotFound,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -32,7 +33,8 @@ export async function ensureBucket(): Promise<void> {
   const Bucket = readEnv().S3_BUCKET;
   try {
     await s3().send(new HeadBucketCommand({ Bucket }));
-  } catch {
+  } catch (error) {
+    if (!(error instanceof NotFound)) throw error;
     await s3().send(new CreateBucketCommand({ Bucket }));
   }
 }
