@@ -7,7 +7,7 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
   const t = await getTranslations("settings");
   return (
     <Page title={t("title")}>
-      <h1 className="text-title font-semibold tracking-[-0.02em] max-md:hidden">{t("title")}</h1>
+      <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
       <SettingsTabs
         label={t("tabs.label")}
         tabs={[

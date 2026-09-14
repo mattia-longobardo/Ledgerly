@@ -162,6 +162,17 @@
       "errors": { "failed": "Couldn't sign out. Try again." }
     }
   },
+  "errors": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "This page does not exist, or you cannot open it.",
+      "cta": "Go to Overview"
+    },
+    "generic": {
+      "title": "Something went wrong",
+      "description": "The page could not be shown. Your data is safe; try again."
+    }
+  },
   "overview": {
     "title": "Overview",
     "empty": {

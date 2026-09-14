@@ -29,7 +29,7 @@ const inter = localFont({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("common");
-  return { title: t("product") };
+  return { title: { default: t("product"), template: `%s · ${t("product")}` } };
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { findInvitation } from "@/platform/auth/invitations";
 import { AuthCard } from "../../auth-card";
 import { InviteForm } from "./invite-form";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("auth.invite"))("title") };
+}
 
 export default async function InvitePage({ params, searchParams }: PageProps<"/invite/[token]">) {
   const { token } = await params;

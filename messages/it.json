@@ -162,6 +162,17 @@
       "errors": { "failed": "Impossibile disconnettersi. Riprova." }
     }
   },
+  "errors": {
+    "notFound": {
+      "title": "Pagina non trovata",
+      "description": "Questa pagina non esiste, oppure non puoi aprirla.",
+      "cta": "Vai alla panoramica"
+    },
+    "generic": {
+      "title": "Qualcosa è andato storto",
+      "description": "Non è stato possibile mostrare la pagina. I tuoi dati sono al sicuro: riprova."
+    }
+  },
   "overview": {
     "title": "Panoramica",
     "empty": {
