@@ -1,10 +1,26 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/platform/db/client";
+import { readEnv } from "@/platform/env";
+import { secretMatches } from "@/platform/jobs/secret";
 
 export const dynamic = "force-dynamic";
 
-/** Prometheus text format for the homelab's Prometheus/Grafana (spec §10.4). */
-export async function GET() {
+function bearerToken(header: string | null): string | null {
+  const match = header?.match(/^Bearer (.+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Prometheus text format for the homelab's Prometheus/Grafana (spec §10.4). The app is reachable
+ * through the Cloudflare tunnel, so this must never serve unauthenticated: a missing
+ * `METRICS_TOKEN` (dev/test without it configured) or any failed check is a bare 404, matching
+ * `/api/jobs/tick`'s behaviour, so the endpoint reveals nothing either way.
+ */
+export async function GET(request: Request) {
+  const expected = readEnv().METRICS_TOKEN;
+  if (!expected || !secretMatches(bearerToken(request.headers.get("authorization")), expected)) {
+    return new Response(null, { status: 404 });
+  }
   // `pg` returns bigint columns as strings; the value is printed as is.
   const lastSuccess = await getDb().execute<{ job: string; ts: string }>(
     sql`SELECT job, extract(epoch FROM max(finished_at))::bigint AS ts FROM job_runs WHERE status = 'success' GROUP BY job ORDER BY job`,
