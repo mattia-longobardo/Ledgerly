@@ -39,7 +39,7 @@ export function Th({
         <button
           type="button"
           onClick={sort.onSort}
-          className={cn("inline-flex items-center gap-1", sort.direction && "text-fg")}
+          className={cn("focus-ring inline-flex items-center gap-1 rounded-[4px]", sort.direction && "text-fg")}
         >
           {children}
           {sort.direction && (
@@ -110,16 +110,24 @@ export function GroupRow({
 }) {
   return (
     <tr className="h-7 border-y border-border bg-bg">
-      <td colSpan={colSpan} className="px-4">
+      <th scope="row" colSpan={colSpan} className="px-4 text-left font-normal">
         <div className="flex items-center justify-between">
           <span className="font-semibold">{label}</span>
           {summary && <span className="text-sm text-muted">{summary}</span>}
         </div>
-      </td>
+      </th>
     </tr>
   );
 }
 
-export function TotalRow({ children }: { children: ReactNode }) {
-  return <tr className="h-9 bg-bg font-semibold">{children}</tr>;
+/** The totals row: `label` is its row header, `children` the remaining cells. */
+export function TotalRow({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <tr className="h-9 bg-bg font-semibold">
+      <th scope="row" className="px-2 text-left first:pl-4">
+        {label}
+      </th>
+      {children}
+    </tr>
+  );
 }

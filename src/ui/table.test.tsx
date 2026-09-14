@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { EmptyState, ErrorState } from "./states";
-import { Table, TBody, Td, Th, THead, Tr } from "./table";
+import { EmptyState, ErrorState, LoadingState } from "./states";
+import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "./table";
 
 describe("table", () => {
   it("marks the sorted column and asks to re-sort", async () => {
@@ -28,6 +28,22 @@ describe("table", () => {
     expect(onSort).toHaveBeenCalledOnce();
     expect(screen.getByRole("row", { selected: true })).toBeInTheDocument();
   });
+
+  it("labels group and total rows with row headers", () => {
+    render(
+      <Table>
+        <TBody>
+          <GroupRow colSpan={2} label="September 2026" summary="+2.028,88 €" />
+          <TotalRow label="Total">
+            <Td align="right">+2.028,88 €</Td>
+          </TotalRow>
+        </TBody>
+      </Table>,
+    );
+    const headers = screen.getAllByRole("rowheader");
+    expect(headers.map((header) => header.textContent)).toEqual(["September 2026+2.028,88 €", "Total"]);
+    for (const header of headers) expect(header).toHaveAttribute("scope", "row");
+  });
 });
 
 describe("states", () => {
@@ -41,6 +57,11 @@ describe("states", () => {
     );
     expect(screen.getByRole("heading", { name: "No data yet" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Settings" })).toBeInTheDocument();
+  });
+
+  it("announces the loading skeleton with its label", () => {
+    render(<LoadingState label="Loading…" />);
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
   });
 
   it("announces errors and offers a retry", async () => {

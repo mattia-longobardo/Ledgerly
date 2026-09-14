@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ActionMenu } from "./menu";
 import { Modal } from "./modal";
 import { Segmented } from "./segmented";
+import { TabLinks } from "./tab-links";
 import { notify, Toaster } from "./toast";
 
 function ModalHarness() {
@@ -55,5 +56,23 @@ describe("overlays", () => {
     render(<Toaster closeLabel="Close" />);
     act(() => notify("Preferences saved"));
     expect(await screen.findByText("Preferences saved")).toBeInTheDocument();
+  });
+
+  it("gives an error toast the error tone", async () => {
+    render(<Toaster closeLabel="Close" />);
+    act(() => notify("Couldn't save your theme. Try again.", "error"));
+    const toast = (await screen.findByText("Couldn't save your theme. Try again.")).closest("[data-type]");
+    expect(toast).toHaveAttribute("data-type", "error");
+    expect(toast?.querySelector(".text-neg")).not.toBeNull();
+  });
+
+  it("names the tab navigation", () => {
+    render(
+      <TabLinks
+        label="Settings sections"
+        tabs={[{ href: "/settings/profile", label: "Profile", active: true }]}
+      />,
+    );
+    expect(screen.getByRole("navigation", { name: "Settings sections" })).toBeInTheDocument();
   });
 });

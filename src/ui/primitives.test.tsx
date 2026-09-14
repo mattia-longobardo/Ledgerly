@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Avatar, initials } from "./avatar";
 import { Badge } from "./badge";
-import { Button, IconButton, LinkButton } from "./button";
+import { Button, ButtonLink, Chip, IconButton, LinkButton } from "./button";
 import { cn } from "./cn";
 import { Field } from "./field";
 import { Input } from "./input";
@@ -46,13 +46,55 @@ describe("Button", () => {
     expect(button).toHaveAttribute("title", "Toggle sidebar");
   });
 
-  it("gives link buttons the same focus-visible outline as other buttons", () => {
-    render(<LinkButton>Undo</LinkButton>);
-    expect(screen.getByRole("button", { name: "Undo" }).className).toContain("focus-visible:outline-accent");
+  it("gives every button-like control the one shared focus ring", () => {
+    render(
+      <>
+        <Button>Save</Button>
+        <IconButton label="Menu">…</IconButton>
+        <LinkButton>Undo</LinkButton>
+        <ButtonLink href="/settings/profile">Open Settings</ButtonLink>
+        <Chip active={false}>Casa</Chip>
+      </>,
+    );
+    for (const control of [
+      screen.getByRole("button", { name: "Save" }),
+      screen.getByRole("button", { name: "Menu" }),
+      screen.getByRole("button", { name: "Undo" }),
+      screen.getByRole("link", { name: "Open Settings" }),
+      screen.getByRole("button", { name: "Casa" }),
+    ])
+      expect(control).toHaveClass("focus-ring");
+  });
+
+  it("renders a button link as a link with the button's look", () => {
+    render(
+      <ButtonLink href="/settings/profile" variant="primary">
+        Open Settings
+      </ButtonLink>,
+    );
+    const link = screen.getByRole("link", { name: "Open Settings" });
+    expect(link).toHaveAttribute("href", "/settings/profile");
+    expect(link).toHaveClass("bg-primary", "h-8");
+  });
+
+  it("exposes a chip's state as pressed", () => {
+    render(
+      <>
+        <Chip active>Spesa</Chip>
+        <Chip active={false}>Casa</Chip>
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Spesa" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Casa" })).toHaveAttribute("aria-pressed", "false");
   });
 });
 
 describe("form controls", () => {
+  it("shows a visible accent focus ring on inputs, not only the faint soft halo", () => {
+    render(<Input aria-label="Amount" />);
+    expect(screen.getByLabelText("Amount")).toHaveClass("focus:outline-accent", "focus:border-accent");
+  });
+
   it("links a field label to its input and marks errors", () => {
     render(
       <Field label="Email" htmlFor="email" error="Required">

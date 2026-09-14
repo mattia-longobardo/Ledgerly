@@ -43,7 +43,7 @@ export function ThemeToggle({ onSave }: { onSave: (theme: ThemePreference) => Pr
       } catch {
         document.documentElement.dataset.theme = previousAttribute;
         writeThemeCookie(previousPreference);
-        notify(labels.themeSaveError);
+        notify(labels.themeSaveError, "error");
       }
     });
   }

@@ -16,7 +16,7 @@ export function ActionMenu({
       <Menu.Trigger
         aria-label={label}
         title={label}
-        className="inline-grid size-6 place-items-center rounded-[5px] text-faint hover:bg-hover hover:text-fg"
+        className="focus-ring inline-grid size-6 place-items-center rounded-[5px] text-faint hover:bg-hover hover:text-fg"
       >
         <Ellipsis aria-hidden className="size-3.5" />
       </Menu.Trigger>

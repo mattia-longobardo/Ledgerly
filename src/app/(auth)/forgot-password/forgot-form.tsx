@@ -35,7 +35,7 @@ export function ForgotForm() {
       <Button type="submit" variant="primary" disabled={pending} className="w-full">
         {t("forgot.submit")}
       </Button>
-      <Link href="/sign-in" className="text-sm font-medium text-accent hover:underline">
+      <Link href="/sign-in" className="focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline">
         {t("forgot.back")}
       </Link>
     </form>
