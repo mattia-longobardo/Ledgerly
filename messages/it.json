@@ -1,0 +1,297 @@
+{
+  "common": {
+    "product": "Finance Dashboard",
+    "save": "Salva",
+    "close": "Chiudi",
+    "retry": "Riprova",
+    "or": "oppure",
+    "loading": "Caricamento…"
+  },
+  "nav": {
+    "primary": "Principale",
+    "groups": { "finance": "Finanza", "work": "Lavoro", "system": "Sistema" },
+    "overview": "Panoramica",
+    "settings": "Impostazioni",
+    "components": "Componenti",
+    "more": "Altro"
+  },
+  "shell": {
+    "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
+    "search": "Cerca o vai a…",
+    "toggleTheme": "Cambia tema",
+    "themeSaveError": "Impossibile salvare il tema. Riprova.",
+    "signOut": "Esci",
+    "profile": "Profilo e preferenze",
+    "via": { "authentik": "tramite Authentik", "password": "tramite password" },
+    "palette": {
+      "placeholder": "Vai a una pagina…",
+      "pages": "Pagine",
+      "empty": "Nessun risultato",
+      "shortcut": "⌘K",
+      "escape": "esc"
+    }
+  },
+  "emails": {
+    "invitation": {
+      "subject": "Hai ricevuto un invito a Finance Dashboard",
+      "body": "Hai ricevuto un invito a Finance Dashboard.\n\nAccetta l'invito entro {days, plural, one {# giorno} other {# giorni}}:\n{url}\n"
+    },
+    "passwordReset": {
+      "subject": "Reimposta la password di Finance Dashboard",
+      "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non hai richiesto tu il reset, ignora questa email.\n"
+    }
+  },
+  "auth": {
+    "version": "v{version}",
+    "signIn": {
+      "title": "Accedi",
+      "description": "Usa il tuo account Authentik, oppure la password se ne hai una.",
+      "authentik": "Continua con Authentik",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Accedi",
+      "forgot": "Password dimenticata?"
+    },
+    "errors": {
+      "credentials": "Email o password errate.",
+      "invitationRequired": "Questo account richiede un invito. Chiedi a un amministratore.",
+      "oidc": "Accesso con Authentik non riuscito. Riprova.",
+      "accountNotLinked": "Questa email è già associata a un altro metodo di accesso. Accedi come hai fatto in precedenza.",
+      "banned": "Il tuo account è bloccato.",
+      "generic": "Accesso non riuscito. Riprova."
+    },
+    "forgot": {
+      "title": "Reimposta la password",
+      "description": "Ti invieremo via email un link per scegliere una nuova password.",
+      "submit": "Invia il link",
+      "sent": "Se esiste un account con questo indirizzo, il link è in arrivo.",
+      "back": "Torna all'accesso"
+    },
+    "reset": {
+      "title": "Scegli una nuova password",
+      "newPassword": "Nuova password",
+      "confirm": "Conferma la nuova password",
+      "submit": "Imposta la password",
+      "hint": "Tra {min} e {max} caratteri.",
+      "mismatch": "Le due password non coincidono.",
+      "invalid": "Questo link non è valido o è scaduto."
+    },
+    "invite": {
+      "title": "Unisciti a Finance Dashboard",
+      "description": "Invito per {email}.",
+      "name": "Nome e cognome",
+      "submit": "Crea l'account",
+      "invalid": "Questo invito non è valido, è scaduto o è già stato usato.",
+      "emailTaken": "Esiste già un account con questa email. Accedi.",
+      "emailMismatch": "Questo invito è per un indirizzo email diverso da quello del tuo account Authentik.",
+      "nameInvalid": "Inserisci nome e cognome, al massimo {max} caratteri.",
+      "failed": "Impossibile creare l'account. Riprova.",
+      "authentik": "Usa Authentik"
+    }
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "tabs": { "label": "Sezioni delle impostazioni", "profile": "Profilo", "security": "Sicurezza" },
+    "account": {
+      "title": "Account",
+      "description": "Come appari nell'app e dove arrivano le notifiche.",
+      "name": "Nome e cognome",
+      "email": "Email",
+      "ssoNote": "Nome ed email sono gestiti da Authentik finché l'SSO è collegato.",
+      "role": "Ruolo: <strong>{role}</strong>",
+      "roles": { "admin": "Amministratore", "user": "Utente" },
+      "saved": "Account salvato",
+      "errors": {
+        "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
+        "sso": "Il nome è gestito da Authentik finché l'SSO è collegato.",
+        "failed": "Impossibile salvare. Riprova."
+      }
+    },
+    "preferences": {
+      "title": "Preferenze",
+      "description": "Formati e lingua. Gli importi restano in EUR.",
+      "timeZone": "Fuso orario",
+      "language": "Lingua",
+      "languages": { "en": "English", "it": "Italiano" },
+      "numberFormat": "Formato dei numeri",
+      "numberFormats": {
+        "it-IT": "1.234,56 € (it-IT)",
+        "en-US": "€1,234.56 (en-US)",
+        "fr-FR": "1 234,56 € (fr-FR)"
+      },
+      "weekStart": "Primo giorno della settimana",
+      "weekStarts": { "monday": "Lunedì", "sunday": "Domenica" },
+      "theme": "Tema",
+      "themes": { "system": "Sistema", "light": "Chiaro", "dark": "Scuro" },
+      "defaultRange": "Intervallo predefinito",
+      "ranges": {
+        "this_month": "Questo mese",
+        "last_30_days": "Ultimi 30 giorni",
+        "year_to_date": "Da inizio anno"
+      },
+      "monthlySummary": "Inviami il riepilogo mensile via email",
+      "hoursPerDay": "Giornata lavorativa (ore)",
+      "patronSaint": "Festa del santo patrono",
+      "patronDay": "Giorno",
+      "patronNone": "Nessuna",
+      "saved": "Preferenze salvate",
+      "errors": {
+        "invalid": "Alcune di queste preferenze non sono valide. Controlla i valori e riprova.",
+        "failed": "Impossibile salvare le preferenze. Riprova."
+      }
+    },
+    "signIn": {
+      "title": "Accesso",
+      "description": "Come accede questo account. Authentik è consigliato; la password locale resta come alternativa.",
+      "method": "Metodo di accesso: <strong>{method}</strong>",
+      "methods": {
+        "sso": "Authentik (SSO)",
+        "password": "Password locale",
+        "both": "Authentik (SSO) e password locale"
+      },
+      "linkedTo": "Collegato a {host}",
+      "ssoDetail": "Nome ed email arrivano da Authentik.",
+      "manage": "Gestisci in Authentik"
+    },
+    "password": {
+      "current": "Password attuale",
+      "new": "Nuova password",
+      "confirm": "Conferma la nuova password",
+      "submit": "Aggiorna la password",
+      "changed": "Password aggiornata",
+      "ssoOnly": "Questo account accede solo con Authentik: non c'è una password da cambiare.",
+      "failed": "La password attuale è errata.",
+      "errors": { "generic": "Qualcosa è andato storto. Riprova." }
+    },
+    "sessions": {
+      "title": "Sessioni",
+      "description": "Dispositivi attualmente connessi al tuo account.",
+      "thisDevice": "questo dispositivo",
+      "activeNow": "Attiva ora",
+      "unknownDevice": "Dispositivo sconosciuto",
+      "signOut": "Disconnetti",
+      "signOutDevice": "Disconnetti {device}",
+      "signOutOthers": "Disconnetti le altre sessioni",
+      "since": "dal {date}",
+      "errors": { "failed": "Impossibile disconnettere la sessione. Riprova." }
+    }
+  },
+  "errors": {
+    "notFound": {
+      "title": "Pagina non trovata",
+      "description": "Questa pagina non esiste, oppure non puoi aprirla.",
+      "cta": "Vai alla panoramica"
+    },
+    "generic": {
+      "title": "Qualcosa è andato storto",
+      "description": "Non è stato possibile mostrare la pagina. I tuoi dati sono al sicuro: riprova."
+    }
+  },
+  "overview": {
+    "title": "Panoramica",
+    "empty": {
+      "title": "Ancora nessun dato",
+      "description": "Conti, saldi e patrimonio compaiono qui dopo la creazione del primo conto.",
+      "cta": "Apri le impostazioni"
+    }
+  },
+  "gallery": {
+    "title": "Componenti",
+    "description": "Token e controlli usati in tutta l'app. Cambia il tema dalla barra in alto per vedere la serie scura.",
+    "colours": "Token di colore",
+    "tokens": {
+      "bg": "sfondo dell'app",
+      "card": "superficie",
+      "side": "barra laterale",
+      "fg": "testo",
+      "muted": "secondario · AA",
+      "faint": "terziario, segnaposto",
+      "border": "filetto",
+      "border2": "filetto marcato, tratteggiato",
+      "accent": "link, focus, attivo",
+      "primary": "#0e7490",
+      "primary-fg": "testo sul primario",
+      "soft": "tinta d'accento",
+      "pos": "guadagni · entrate",
+      "neg": "perdite · uscite",
+      "warn": "avvisi",
+      "pos-bg": "tinta dei guadagni",
+      "neg-bg": "tinta delle perdite",
+      "warn-bg": "tinta degli avvisi",
+      "hover": "riga al passaggio",
+      "sel": "selezionato",
+      "track": "binario di avanzamento",
+      "skel": "segnaposto di caricamento",
+      "shadow": "solo sovrapposizioni"
+    },
+    "type": "Scala tipografica · Inter, cifre tabulari",
+    "typeRoles": {
+      "display": "Valore principale, grande",
+      "hero": "Valore principale",
+      "heroSm": "Valore principale, compatto",
+      "title": "Titolo di pagina",
+      "kpi": "Valore KPI",
+      "kpiSm": "Valore KPI, compatto",
+      "mobileTitle": "Titolo di pagina su mobile",
+      "cardTitle": "Titolo di card",
+      "input": "Campo della palette",
+      "body": "Testo, celle di tabella — 1.234,56 €",
+      "secondary": "Secondario, metadati, intestazioni di tabella",
+      "label": "Etichetta di sezione",
+      "micro": "Etichetta delle schede su mobile"
+    },
+    "scaleNotes": {
+      "spacing": "Spaziatura 4 · 8 · 12 · 16 · 24 · 32",
+      "radii": "Raggi 6 controlli · 10 card · 12 finestre",
+      "shadow": "Ombra: solo popover"
+    },
+    "buttons": "Pulsanti",
+    "inputs": "Campi",
+    "controls": "Controllo segmentato, schede e chip",
+    "badges": "Badge ed etichette",
+    "table": "Tabella · ordinamento, passaggio, selezione",
+    "stats": "KPI, avanzamento e segnaposto di caricamento",
+    "identity": "Avatar e scorciatoie",
+    "overlays": "Sovrapposizioni",
+    "navStates": "Stati delle voci della barra laterale",
+    "states": "Stati della pagina",
+    "layout": "Struttura delle sezioni",
+    "sample": {
+      "primary": "Primario",
+      "secondary": "Secondario",
+      "ghost": "Trasparente",
+      "danger": "Distruttivo",
+      "disabled": "Disattivato",
+      "focusRing": "Anello di focus",
+      "placeholder": "Cerca esercente…",
+      "invalid": "Valore non valido",
+      "fieldLabel": "Limite mensile",
+      "fieldHint": "Vicino al saldo del conto",
+      "fieldError": "Obbligatorio",
+      "tabActive": "Profilo",
+      "tabOther": "Sicurezza",
+      "month": "Mese",
+      "year": "Anno",
+      "openModal": "Apri finestra",
+      "modalTitle": "Aggiungi al pocket",
+      "modalBody": "Accantona parte di un conto di risparmio. Il denaro non si sposta.",
+      "toast": "Mostra notifica",
+      "toastMessage": "Saldo salvato — storico aggiornato",
+      "commandPalette": "Palette dei comandi",
+      "menu": "Azioni della riga",
+      "edit": "Modifica",
+      "popover": "Filtro",
+      "popoverBody": "Contenuto del popover",
+      "emptyTitle": "Nessuna spesa in questo intervallo",
+      "emptyDescription": "Prova ad allargare l'intervallo o a togliere i filtri.",
+      "errorTitle": "Impossibile caricare le spese",
+      "errorDescription": "Il server non ha risposto. I tuoi dati sono al sicuro.",
+      "pending": "In sospeso",
+      "hover": "al passaggio",
+      "selected": "selezionata",
+      "navDefault": "Normale",
+      "navHover": "Al passaggio",
+      "navActiveFocus": "Attiva + focus"
+    }
+  }
+}

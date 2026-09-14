@@ -1,0 +1,297 @@
+{
+  "common": {
+    "product": "Finance Dashboard",
+    "save": "Save",
+    "close": "Close",
+    "retry": "Try again",
+    "or": "or",
+    "loading": "Loading…"
+  },
+  "nav": {
+    "primary": "Primary",
+    "groups": { "finance": "Finance", "work": "Work", "system": "System" },
+    "overview": "Overview",
+    "settings": "Settings",
+    "components": "Components",
+    "more": "More"
+  },
+  "shell": {
+    "toggleSidebar": "Toggle sidebar (⌘\\)",
+    "search": "Search or jump to…",
+    "toggleTheme": "Toggle theme",
+    "themeSaveError": "Couldn't save your theme. Try again.",
+    "signOut": "Sign out",
+    "profile": "Profile and preferences",
+    "via": { "authentik": "via Authentik", "password": "via password" },
+    "palette": {
+      "placeholder": "Jump to a page…",
+      "pages": "Pages",
+      "empty": "No matches",
+      "shortcut": "⌘K",
+      "escape": "esc"
+    }
+  },
+  "emails": {
+    "invitation": {
+      "subject": "You are invited to Finance Dashboard",
+      "body": "You have been invited to Finance Dashboard.\n\nAccept the invitation within {days, plural, one {# day} other {# days}}:\n{url}\n"
+    },
+    "passwordReset": {
+      "subject": "Reset your Finance Dashboard password",
+      "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
+    }
+  },
+  "auth": {
+    "version": "v{version}",
+    "signIn": {
+      "title": "Sign in",
+      "description": "Use your Authentik account, or your password if you have one.",
+      "authentik": "Continue with Authentik",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "forgot": "Forgot password?"
+    },
+    "errors": {
+      "credentials": "Wrong email or password.",
+      "invitationRequired": "This account needs an invitation. Ask an administrator.",
+      "oidc": "Sign-in with Authentik failed. Try again.",
+      "accountNotLinked": "This email is already linked to a different sign-in method. Sign in the way you did before.",
+      "banned": "Your account is blocked.",
+      "generic": "Sign-in failed. Try again."
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "description": "We will email you a link to choose a new password.",
+      "submit": "Send reset link",
+      "sent": "If an account exists for that address, a reset link is on its way.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "newPassword": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Set password",
+      "hint": "Between {min} and {max} characters.",
+      "mismatch": "The two passwords do not match.",
+      "invalid": "This reset link is invalid or has expired."
+    },
+    "invite": {
+      "title": "Join Finance Dashboard",
+      "description": "Invited as {email}.",
+      "name": "Full name",
+      "submit": "Create account",
+      "invalid": "This invitation is invalid, expired or already used.",
+      "emailTaken": "An account with this email already exists. Sign in instead.",
+      "emailMismatch": "This invitation is for a different email address than your Authentik account.",
+      "nameInvalid": "Enter your full name, at most {max} characters.",
+      "failed": "Couldn't create the account. Try again.",
+      "authentik": "Use Authentik instead"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": { "label": "Settings sections", "profile": "Profile", "security": "Security" },
+    "account": {
+      "title": "Account",
+      "description": "How you appear in the app and where notifications go.",
+      "name": "Full name",
+      "email": "Email",
+      "ssoNote": "Name and email are managed by Authentik while SSO is linked.",
+      "role": "Role: <strong>{role}</strong>",
+      "roles": { "admin": "Admin", "user": "User" },
+      "saved": "Account saved",
+      "errors": {
+        "invalid": "Enter a name between 1 and {max} characters.",
+        "sso": "The name is managed by Authentik while SSO is linked.",
+        "failed": "Couldn't save. Try again."
+      }
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Formatting and locale. Amounts stay in EUR.",
+      "timeZone": "Timezone",
+      "language": "Language",
+      "languages": { "en": "English", "it": "Italiano" },
+      "numberFormat": "Number format",
+      "numberFormats": {
+        "it-IT": "1.234,56 € (it-IT)",
+        "en-US": "€1,234.56 (en-US)",
+        "fr-FR": "1 234,56 € (fr-FR)"
+      },
+      "weekStart": "Week starts on",
+      "weekStarts": { "monday": "Monday", "sunday": "Sunday" },
+      "theme": "Theme",
+      "themes": { "system": "System", "light": "Light", "dark": "Dark" },
+      "defaultRange": "Default date range",
+      "ranges": {
+        "this_month": "This month",
+        "last_30_days": "Last 30 days",
+        "year_to_date": "Year to date"
+      },
+      "monthlySummary": "Email me the monthly summary",
+      "hoursPerDay": "Working day (hours)",
+      "patronSaint": "Patron saint holiday",
+      "patronDay": "Day",
+      "patronNone": "None",
+      "saved": "Preferences saved",
+      "errors": {
+        "invalid": "Some of these preferences are invalid. Check your inputs and try again.",
+        "failed": "Couldn't save preferences. Try again."
+      }
+    },
+    "signIn": {
+      "title": "Sign-in",
+      "description": "How this account signs in. Authentik is recommended; a local password works as a fallback.",
+      "method": "Sign-in method: <strong>{method}</strong>",
+      "methods": {
+        "sso": "Authentik (SSO)",
+        "password": "Local password",
+        "both": "Authentik (SSO) and local password"
+      },
+      "linkedTo": "Linked to {host}",
+      "ssoDetail": "Your name and email come from Authentik.",
+      "manage": "Manage in Authentik"
+    },
+    "password": {
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "changed": "Password updated",
+      "ssoOnly": "This account signs in with Authentik only; there is no password to change.",
+      "failed": "The current password is wrong.",
+      "errors": { "generic": "Something went wrong. Try again." }
+    },
+    "sessions": {
+      "title": "Sessions",
+      "description": "Devices currently signed in to your account.",
+      "thisDevice": "this device",
+      "activeNow": "Active now",
+      "unknownDevice": "Unknown device",
+      "signOut": "Sign out",
+      "signOutDevice": "Sign out {device}",
+      "signOutOthers": "Sign out other sessions",
+      "since": "since {date}",
+      "errors": { "failed": "Couldn't sign out. Try again." }
+    }
+  },
+  "errors": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "This page does not exist, or you cannot open it.",
+      "cta": "Go to Overview"
+    },
+    "generic": {
+      "title": "Something went wrong",
+      "description": "The page could not be shown. Your data is safe; try again."
+    }
+  },
+  "overview": {
+    "title": "Overview",
+    "empty": {
+      "title": "No data yet",
+      "description": "Accounts, balances and net worth appear here once the first account exists.",
+      "cta": "Open Settings"
+    }
+  },
+  "gallery": {
+    "title": "Components",
+    "description": "Tokens and controls used across the app. Toggle the theme in the top bar to see the dark set.",
+    "colours": "Color tokens",
+    "tokens": {
+      "bg": "app background",
+      "card": "surface",
+      "side": "sidebar",
+      "fg": "text",
+      "muted": "secondary · AA",
+      "faint": "tertiary, placeholders",
+      "border": "hairline",
+      "border2": "strong hairline, dashed",
+      "accent": "links, focus, active",
+      "primary": "#0e7490",
+      "primary-fg": "text on primary",
+      "soft": "accent tint",
+      "pos": "gains · income",
+      "neg": "losses · expenses",
+      "warn": "warnings",
+      "pos-bg": "gain tint",
+      "neg-bg": "loss tint",
+      "warn-bg": "warning tint",
+      "hover": "row hover",
+      "sel": "selected",
+      "track": "progress track",
+      "skel": "loading placeholder",
+      "shadow": "overlays only"
+    },
+    "type": "Type scale · Inter, tabular-nums",
+    "typeRoles": {
+      "display": "Main value, large",
+      "hero": "Main value",
+      "heroSm": "Main value, compact",
+      "title": "Page title",
+      "kpi": "KPI value",
+      "kpiSm": "KPI value, compact",
+      "mobileTitle": "Mobile page title",
+      "cardTitle": "Card title",
+      "input": "Palette input",
+      "body": "Body text, table cells — 1.234,56 €",
+      "secondary": "Secondary, meta, table headers",
+      "label": "Section label",
+      "micro": "Mobile tab label"
+    },
+    "scaleNotes": {
+      "spacing": "Spacing 4 · 8 · 12 · 16 · 24 · 32",
+      "radii": "Radii 6 controls · 10 cards · 12 modals",
+      "shadow": "Shadow: popovers only"
+    },
+    "buttons": "Buttons",
+    "inputs": "Inputs",
+    "controls": "Segmented control, tabs and chips",
+    "badges": "Badges and tags",
+    "table": "Table · sort, hover, selected",
+    "stats": "KPI, progress and skeleton",
+    "identity": "Avatars and shortcuts",
+    "overlays": "Overlays",
+    "navStates": "Sidebar nav item states",
+    "states": "Page states",
+    "layout": "Section layout",
+    "sample": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "ghost": "Ghost",
+      "danger": "Destructive",
+      "disabled": "Disabled",
+      "focusRing": "Focus ring",
+      "placeholder": "Search merchant…",
+      "invalid": "Invalid value",
+      "fieldLabel": "Monthly limit",
+      "fieldHint": "Close to the account's balance",
+      "fieldError": "Required",
+      "tabActive": "Profile",
+      "tabOther": "Security",
+      "month": "Month",
+      "year": "Year",
+      "openModal": "Open modal",
+      "modalTitle": "Add to pocket",
+      "modalBody": "Earmarks part of a savings account. No money is moved.",
+      "toast": "Show toast",
+      "toastMessage": "Balance entry saved — history updated",
+      "commandPalette": "Command palette",
+      "menu": "Row actions",
+      "edit": "Edit",
+      "popover": "Filter",
+      "popoverBody": "Popover content",
+      "emptyTitle": "No expenses in this range",
+      "emptyDescription": "Try widening the date range or clearing filters.",
+      "errorTitle": "Could not load expenses",
+      "errorDescription": "The server did not answer. Your data is safe.",
+      "pending": "Pending",
+      "hover": "hover",
+      "selected": "selected",
+      "navDefault": "Default",
+      "navHover": "Hover",
+      "navActiveFocus": "Active + focus"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+# compose.dev.yml — local development and tests only. Never deployed (spec §3).
+name: finance-dev
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+      POSTGRES_DB: finance_dev
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql
+    volumes:
+      - ./dev/postgres-init.sql:/docker-entrypoint-initdb.d/10-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance -d finance_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: finance
+      MINIO_ROOT_PASSWORD: finance-dev-secret
+    ports:
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
+    tmpfs:
+      - /data
+
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "127.0.0.1:51025:1025"
+      - "127.0.0.1:58025:8025"
+
+  oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:6.0.2
+    environment:
+      SERVER_PORT: "8080"
+      JSON_CONFIG_PATH: /config/mock-oidc.json
+    ports:
+      - "127.0.0.1:58090:8080"
+    volumes:
+      - ./dev/mock-oidc.json:/config/mock-oidc.json:ro

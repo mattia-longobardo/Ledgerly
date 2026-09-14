@@ -1,155 +1,112 @@
 # Finance Dashboard
 
-A personal finance and household-admin dashboard: net worth across accounts,
-expenses, interest accrual, funds, budgets, payroll ingestion and time off.
-Single-tenant (one owner, OIDC-gated), built as a modular, API-first,
-PostgreSQL-canonical platform.
+Personal finance and household-admin dashboard. Version 0.1 is a from-scratch rebuild; the design is in
+[`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md) and each phase has its
+plan in [`docs/plans/`](docs/plans/).
 
-It was rebuilt in phases from a working single-file app. See
-[the design spec](docs/superpowers/specs/2026-09-02-finance-company-platform-design.md)
-for the target architecture and the phase plan, and
-[`docs/superpowers/handoff/`](docs/superpowers/handoff/) for the checkpoint of
-each phase.
+## Develop
 
-## Status: Phases 0–9 implemented; Phase 6 is what is deployed
-
-- **Phase 0** — platform foundations: `Principal`/permissions, RLS-scoped
-  Postgres access, a Hono REST API at `/api/v1` (error envelope, idempotency,
-  optimistic concurrency, rate limiting, audit, generated OpenAPI with a drift
-  test), a job registry behind a single tiered `/api/jobs/tick` endpoint, and
-  capability-driven navigation.
-- **Phase 1** — `accounts`: manual accounts, the Budget Makers Wallet adapter,
-  account groups, net-worth series, and the retirement of the Teable Allocation
-  table.
-- **Phase 2** — the integration framework: encrypted credentials, the sync
-  engine and queue, inbound webhooks, Settings › Integrations.
-- **Phase 3** — `expenses` and `interests`.
-- **Phase 4** — `payroll`: the payslip upload/ingest/review/apply pipeline,
-  document originals in an S3-compatible store, Company Overview and Earnings.
-- **Phase 5** — `funds`: plans, effective schedules, signed contributions,
-  reconciliation.
-- **Phase 6** — `budgets`: versioned initial amounts, virtual allocations,
-  derived usage. **This is the deployed build.**
-- **Phase 7 (reduced)** — `timeoff`: types, payroll-derived balances, booked
-  days, the Trek two-way sync, and the drop of every remaining legacy table.
-- **Phase 8 (reduced)** — personal access tokens: Bearer authentication for the
-  API, managed from Settings › Security.
-- **Phase 9 (reduced)** — session-level job locking, a retention job, inbound
-  webhook replay protection and rate limiting, and the management operations
-  (categories, labels, payroll mapping rules, reconciliation issues, sync-job
-  toggles) as API and server actions.
-
-Phases 7–9 were executed in reduced form: the UI is deliberately bare where a
-page exists at all, because it is being redesigned.
-[`docs/superpowers/DEFERRED.md`](docs/superpowers/DEFERRED.md) is the list of
-what was postponed and where each item is specified in full.
-
-## Stack
-
-- Next.js 16.3 (App Router, `output: standalone`), React 19, TypeScript,
-  Tailwind 4, Base UI, uPlot.
-- Hono + `@hono/zod-openapi` mounted inside Next.js for the REST API.
-- Drizzle ORM 0.45 + drizzle-kit over Postgres 18, with Postgres row-level
-  security as the tenancy boundary.
-- Auth.js v5 (beta), single OIDC provider (Authentik), plus personal access
-  tokens for scripts.
-- `dashboard-cron` — a supercronic sidecar that calls `/api/jobs/tick` on
-  three schedules (hourly, daily, monthly).
-- Vitest (unit + Postgres-backed integration), Playwright (e2e).
-
-See [`docs/architecture/overview.md`](docs/architecture/overview.md) for the
-module layout and the conventions this stack is organized around.
-
-## Running it
-
-The app is deployed via Docker Compose (`docker-compose.yml` at the repo
-root): the `dashboard-app` service (image `dashboard:latest`, migrations
-applied at boot by `entrypoint.sh`) plus the `dashboard-cron` sidecar, both on
-the shared `db_internal`/`proxy_public` networks alongside the shared
-Postgres 18 container (`postgres`, database `dashboard`).
+Prerequisites: Node.js `^22.13.0 || >=24` and Docker.
 
 ```bash
-cp .env.example .env   # fill in secrets — see the comments in the file
-docker compose build
-docker compose up -d
-```
-
-`docker compose ps` should show `dashboard-app` healthy
-(`GET /api/health`) within about a minute. For an actual release — rather than
-a first local bring-up — follow [`docs/deploy/README.md`](docs/deploy/README.md)
-instead of a bare `up -d`: it has the ordered sequence including the backup,
-the migration step and the post-deploy checks, and the release notes for the
-current change.
-
-## Developing
-
-All application code lives in `dashboard-app/`; work from there.
-
-```bash
-cd dashboard-app
 npm install
-npm run dev          # http://localhost:3000
+cp .env.example .env
+npm run dev:services   # Postgres, MinIO, Mailpit, mock OIDC (compose.dev.yml)
+npm run db:migrate
+npm run dev:seed       # creates the owner account (DEV_OWNER_EMAIL / DEV_OWNER_PASSWORD, see below)
+npm run dev            # binds to 127.0.0.1 — http://127.0.0.1:3000
 ```
 
-`npm run dev` and `npm run build && npx next start` both need the full
-environment `src/lib/env.ts` validates at boot (`DATABASE_URL`, `AUTH_*`,
-`OIDC_*`, `AUTHORIZED_SUB`, `APP_ENCRYPTION_KEY`, `CRON_SECRET`,
-`WEBHOOK_SECRET`) — [`docs/deploy/README.md`](docs/deploy/README.md) has the
-full matrix with defaults and what each one is for. `npx next start`, not
-`npm run start`: that script is `node server.js`, the standalone entry point
-the Docker image builds, and it does not exist in a source checkout.
+Open `http://127.0.0.1:3000` — use `127.0.0.1`, not `localhost`. This must match `BETTER_AUTH_URL`
+in `.env.example`, which Better Auth checks against `trustedOrigins` and the OAuth state
+cookie/redirect_uri on every sign-in; `npm run dev` also binds to `127.0.0.1` (`next dev -H
+127.0.0.1`) so Next 16's dev-origin check accepts the browser's requests.
 
-### Testing
+Sign in as `owner@example.test` / `owner-password-123` — override with `DEV_OWNER_EMAIL` /
+`DEV_OWNER_PASSWORD` before running `npm run dev:seed` — or with **Continue with Authentik** as
+`admin@example.test` (admin) or any other address (user) on the mock provider.
+
+Mailpit (outgoing mail): `http://127.0.0.1:58025`. MinIO console: `http://127.0.0.1:59001`. Users
+change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
+password — SSO-only — do not see that form).
+
+## Check
 
 ```bash
-npm test              # unit tests (vitest run) — no database needed
-npm run typecheck     # tsc --noEmit
+npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:integration && npm run e2e
 ```
 
-Integration tests exercise real Postgres RLS policies and need the
-throwaway test database:
+## Docker
 
 ```bash
-npm run test:db:up          # docker compose -f docker-compose.test.yml up -d --wait
-npm run test:integration    # vitest run --config vitest.integration.config.ts
-npm run test:db:down        # tear it down when done
+docker build -t finance-dashboard:dev .
+docker build -t finance-dashboard-cron:dev cron
 ```
 
-(`npm run test:all` runs both `test` and `test:integration` in sequence,
-still assuming `test:db:up` has already been run.)
+The app image applies pending migrations on boot, then serves the standalone Next.js server; it
+also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
+start if any check fails, so a misconfigured deployment fails loudly instead of on the first
+request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
+`http://dashboard-app:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
+`X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
+and reaches the app by its compose service name, `dashboard-app`, on the internal network. Each
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`; F0 has only `housekeeping`) for
+that tier; touching the heartbeat file is a side effect of every tick, not a job of its own.
 
-End-to-end tests drive a real running instance with Playwright. They never
-sign in — Authentik owns that — so they cover the unauthenticated surface and,
-with a personal access token in `E2E_TOKEN`, the REST API.
-[`dashboard-app/tests/e2e/README.md`](dashboard-app/tests/e2e/README.md) has
-the exact environment to export and how to mint the token:
+## Operations
 
-```bash
-npm run e2e   # E2E_BASE_URL defaults to http://localhost:3000
-```
-
-`npm run lint` is currently broken and is not a merge gate.
+- **Bootstrap the owner account**, before the app is reachable by anyone else, either by:
+  - running `ADMIN_PASSWORD=<12-128 chars> npm run user:create-admin -- <email> "<name>"`
+    (`scripts/create-admin.ts`) — it is not built into the Docker image, so run it from a checkout
+    whose `.env` points at the target database and has every other variable the app needs (the
+    script loads the same environment schema as the app); or
+  - binding the Authentik application to a group and letting the first person sign in with
+    **Continue with Authentik**. Sign-up is closed, so nobody can create a password account by
+    signing in — the first user _created_ by either path is granted the admin role automatically
+    (the `user.create` database hook in `src/platform/auth/auth.ts`).
+- **SSO never demotes admins:** removing someone from the Authentik admin group stops new sign-ins
+  from granting the admin role, but does not revoke an admin role already held in the app. F0 has
+  no Admin › Users screen (it arrives in a later phase); demote a user by calling Better Auth's
+  admin API as a signed-in admin:
+  ```bash
+  curl -X POST https://dash.longobardo.me/api/auth/admin/set-role \
+    -H "Content-Type: application/json" \
+    -H "Cookie: <the admin's session cookie>" \
+    -d '{"userId": "<user id>", "role": "user"}'
+  ```
+- **Password reset only reaches password accounts:** an SSO-only account (no stored password) never
+  gets a reset-link email — creating one would be a way around Authentik's own sign-in policy (such
+  as 2FA). That account signs in with **Continue with Authentik** instead.
+- **Reverse proxy:** set `TRUSTED_PROXY_IPS` to the address of the Traefik (or tunnel) hop in front
+  of the app on its Docker network, **and** configure Traefik with
+  `--entrypoints.web.forwardedHeaders.trustedIPs=<the same address>` — an owner action outside this
+  repo, so Traefik itself discards any `X-Forwarded-For` a client tries to inject before setting
+  its own. Only with both set does the app trust `X-Forwarded-For` from that one hop and give each
+  client its own sign-in rate-limit bucket; left unset, `TRUSTED_PROXY_IPS` defaults to empty and
+  every request shares one bucket. Never publish port 3000 on the host: the app is reached only
+  over LAN/NetBird (spec §13).
+- **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
+  inside the same Docker network as the app (its compose service name, `dashboard-app`), for
+  example:
+  ```yaml
+  scrape_configs:
+    - job_name: finance-dashboard
+      metrics_path: /api/metrics
+      authorization:
+        credentials: <METRICS_TOKEN>
+      static_configs:
+        - targets: ["dashboard-app:3000"]
+  ```
+- **Production requirements** (`src/platform/env.ts`, checked at boot by
+  `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
+  and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing
+  here is checked outside production); generate every secret — `BETTER_AUTH_SECRET`, `CRON_SECRET`
+  (32+ characters), `METRICS_TOKEN`, the OIDC client secret, and the S3 access/secret key — the
+  `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET` and `METRICS_TOKEN` are
+  rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
+  enabled so credentials never travel in plaintext.
 
 ## Documentation
 
-- [`docs/architecture/overview.md`](docs/architecture/overview.md) — module
-  layout, the use-case rule, RLS context, authentication, job tiers, API
-  conventions, known deviations.
-- [`docs/api/README.md`](docs/api/README.md) — how to authenticate, the error
-  envelope, pagination, idempotency, optimistic concurrency, one example per
-  module, how to regenerate the OpenAPI document.
-- [`docs/api/openapi.json`](docs/api/openapi.json) — the generated OpenAPI
-  document, kept in sync with the code by a drift test.
-- [`docs/deploy/README.md`](docs/deploy/README.md) — the release procedure, the
-  environment matrix, job tiers, backup and rollback, and the notes for the
-  release now pending.
-- [`docs/integrations/README.md`](docs/integrations/README.md) — the provider
-  framework and how to add one.
-- [`docs/migration/README.md`](docs/migration/README.md) — what the Teable →
-  Postgres migration did, for the record.
-- [`docs/superpowers/DEFERRED.md`](docs/superpowers/DEFERRED.md) — everything
-  the reduced phases postponed, and where each item is specified.
-- [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](docs/superpowers/specs/2026-09-02-finance-company-platform-design.md)
-  — the full design and phased plan.
-- [`BRAND.md`](BRAND.md) — the visual identity. Note that the UI built in
-  Phases 7–9 deliberately does not follow it; it is being redesigned.
+The full design and every binding decision: [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md).
+Phase-by-phase implementation plans: [`docs/plans/`](docs/plans/).

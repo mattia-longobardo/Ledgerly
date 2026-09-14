@@ -1,8 +1,0 @@
-node_modules
-.next
-.env
-.env.*
-tests
-*.md
-*.tsbuildinfo
-docker-compose.test.yml
