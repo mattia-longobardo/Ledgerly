@@ -23,6 +23,7 @@ describe("table", () => {
     );
     const header = screen.getByRole("columnheader", { name: /Date/ });
     expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(header).toHaveAttribute("scope", "col");
     await userEvent.click(screen.getByRole("button", { name: /Date/ }));
     expect(onSort).toHaveBeenCalledOnce();
     expect(screen.getByRole("row", { selected: true })).toBeInTheDocument();

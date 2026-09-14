@@ -28,6 +28,7 @@ export function Th({
     sort?.direction === "asc" ? "ascending" : sort?.direction === "desc" ? "descending" : undefined;
   return (
     <th
+      scope="col"
       aria-sort={ariaSort}
       className={cn(
         "h-8 px-2 text-sm font-medium whitespace-nowrap text-muted first:pl-4 last:pr-4",
