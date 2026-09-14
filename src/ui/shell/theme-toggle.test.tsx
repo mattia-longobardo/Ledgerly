@@ -62,4 +62,19 @@ describe("ThemeToggle", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(document.cookie).toContain("theme=light");
   });
+
+  it('restores a "system" preference (not a concrete light/dark) when the save is rejected', async () => {
+    // The rendered attribute is always resolved to light/dark (THEME_SCRIPT resolves "system" via
+    // matchMedia before first paint); only the cookie can say the actual preference was "system".
+    document.cookie = "theme=system; path=/";
+    document.documentElement.dataset.theme = "light";
+    const onSave = vi.fn().mockRejectedValue(new Error("network error"));
+    renderToggle(onSave);
+
+    await userEvent.click(screen.getByRole("button", { name: LABELS.toggleTheme }));
+
+    expect(await screen.findByText(LABELS.themeSaveError)).toBeInTheDocument();
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.cookie).toContain("theme=system");
+  });
 });
