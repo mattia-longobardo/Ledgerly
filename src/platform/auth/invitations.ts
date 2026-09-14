@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt, isNull, sql, TransactionRollbackError } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql, TransactionRollbackError } from "drizzle-orm";
 import { z } from "zod";
 import type { Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
@@ -106,6 +106,18 @@ export async function acceptInvitation(
     await db.update(invitations).set({ acceptedAt: null }).where(eq(invitations.id, claimed.id));
     throw error;
   }
+}
+
+/**
+ * Deletes invitations no longer worth keeping: expired (accepted or not) or accepted long ago.
+ * The single owner of invitation lifecycle, called by the daily housekeeping job.
+ */
+export async function deleteExpiredInvitations(cutoff: Date): Promise<number> {
+  const deleted = await getDb()
+    .delete(invitations)
+    .where(or(lt(invitations.expiresAt, cutoff), lt(invitations.acceptedAt, cutoff)))
+    .returning({ id: invitations.id });
+  return deleted.length;
 }
 
 export type SsoInvitationOutcome = "accepted" | "invalid" | "email_mismatch";

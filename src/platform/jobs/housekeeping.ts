@@ -1,6 +1,6 @@
 import "server-only";
-import { and, isNotNull, lt, or } from "drizzle-orm";
-import { invitations } from "@/platform/auth/schema";
+import { lt, sql } from "drizzle-orm";
+import { deleteExpiredInvitations } from "@/platform/auth/invitations";
 import { getDb } from "@/platform/db/client";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "./schema";
@@ -12,14 +12,13 @@ export const housekeepingJob: JobDefinition = {
   tier: "daily",
   async run() {
     const cutoff = new Date(Date.now() - RETENTION_MS);
+    // A run that never finished (crashed mid-job) is orphaned, not retained forever: it ages out
+    // by its start time.
     const runs = await getDb()
       .delete(jobRuns)
-      .where(and(isNotNull(jobRuns.finishedAt), lt(jobRuns.finishedAt, cutoff)))
+      .where(lt(sql`coalesce(${jobRuns.finishedAt}, ${jobRuns.startedAt})`, cutoff))
       .returning({ id: jobRuns.id });
-    const invites = await getDb()
-      .delete(invitations)
-      .where(or(lt(invitations.expiresAt, cutoff), lt(invitations.acceptedAt, cutoff)))
-      .returning({ id: invitations.id });
-    return { jobRunsDeleted: runs.length, invitationsDeleted: invites.length };
+    const invitationsDeleted = await deleteExpiredInvitations(cutoff);
+    return { jobRunsDeleted: runs.length, invitationsDeleted };
   },
 };

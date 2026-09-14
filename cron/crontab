@@ -1,4 +1,6 @@
 # cron/crontab — times are Europe/Rome (ENV TZ in cron/Dockerfile). Spec §10.2.
+# No --retry: a failed tick is retried by the next schedule, not by curl — jobs must run at most
+# once per tick (src/platform/jobs/tick.ts records each job's own outcome before moving on).
 7 * * * *  curl -fsS --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=hourly"
-0 12 * * * curl -fsS --retry 3 --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=daily"
-5 0 1 * *  curl -fsS --retry 3 --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=monthly"
+0 12 * * * curl -fsS --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=daily"
+5 0 1 * *  curl -fsS --max-time 600 -H "X-Cron-Secret: ${CRON_SECRET}" -X POST "http://dashboard-app:3000/api/jobs/tick?tier=monthly"
