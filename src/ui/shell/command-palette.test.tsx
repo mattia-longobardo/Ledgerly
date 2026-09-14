@@ -38,6 +38,7 @@ const LABELS = {
   toggleTheme: "Toggle theme",
   themeSaveError: "Couldn't save your theme. Try again.",
   signOut: "Sign out",
+  profile: "Profile and preferences",
   more: "More",
   palette: {
     placeholder: "Jump to a page…",
@@ -51,7 +52,7 @@ const LABELS = {
 describe("CommandPalette", () => {
   it("moves aria-activedescendant and aria-selected as ArrowDown moves the cursor", async () => {
     render(
-      <ShellProvider initialCollapsed={false} labels={LABELS}>
+      <ShellProvider initialSidebar="expanded" labels={LABELS}>
         <CommandPalette links={LINKS} />
       </ShellProvider>,
     );

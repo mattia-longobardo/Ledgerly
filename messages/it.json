@@ -21,6 +21,7 @@
     "toggleTheme": "Cambia tema",
     "themeSaveError": "Impossibile salvare il tema. Riprova.",
     "signOut": "Esci",
+    "profile": "Profilo e preferenze",
     "via": { "authentik": "tramite Authentik", "password": "tramite password" },
     "palette": {
       "placeholder": "Vai a una pagina…",

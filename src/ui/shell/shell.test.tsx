@@ -1,12 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isActive } from "./active";
 import { CommandPalette } from "./command-palette";
 import { filterCommands } from "./commands";
 import type { NavLink } from "./nav-types";
-import { ShellProvider } from "./shell-context";
+import { ShellProvider, type SidebarState } from "./shell-context";
 import { Sidebar } from "./sidebar";
 
 const push = vi.fn();
@@ -43,6 +43,7 @@ const LABELS = {
   toggleTheme: "Toggle theme",
   themeSaveError: "Couldn't save your theme. Try again.",
   signOut: "Sign out",
+  profile: "Profile and preferences",
   more: "More",
   palette: {
     placeholder: "Jump to a page…",
@@ -53,9 +54,9 @@ const LABELS = {
   },
 };
 
-function renderShell() {
+function renderShell(sidebar: SidebarState = "expanded") {
   return render(
-    <ShellProvider initialCollapsed={false} labels={LABELS}>
+    <ShellProvider initialSidebar={sidebar} labels={LABELS}>
       <Sidebar links={LINKS} user={{ name: "Mattia Longobardo", via: "via Authentik" }} />
       <CommandPalette links={LINKS} />
     </ShellProvider>,
@@ -64,6 +65,7 @@ function renderShell() {
 
 describe("shell", () => {
   beforeEach(() => push.mockReset());
+  afterEach(() => vi.unstubAllGlobals());
 
   it("matches active routes by prefix, the root exactly", () => {
     expect(isActive("/", "/")).toBe(true);
@@ -80,11 +82,43 @@ describe("shell", () => {
 
   it("marks the current page and collapses with ⌘\\", async () => {
     renderShell();
-    expect(screen.getByRole("link", { name: /Settings/ })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(nav).toHaveAttribute("data-collapsed", "false");
+    expect(nav).toHaveAttribute("data-sidebar", "expanded");
     await userEvent.keyboard("{Meta>}\\{/Meta}");
-    expect(nav).toHaveAttribute("data-collapsed", "true");
+    expect(nav).toHaveAttribute("data-sidebar", "collapsed");
+  });
+
+  it("expands an icon-only sidebar below 1280 px, where it starts collapsed", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query }));
+    renderShell("auto");
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    await userEvent.keyboard("{Meta>}\\{/Meta}");
+    expect(nav).toHaveAttribute("data-sidebar", "expanded");
+  });
+
+  it("opens Profile from the user in the sidebar footer", () => {
+    renderShell();
+    expect(screen.getByRole("link", { name: /Mattia Longobardo/ })).toHaveAttribute(
+      "href",
+      "/settings/profile",
+    );
+  });
+
+  it("reopens the palette empty after closing it with ⌘K", async () => {
+    renderShell();
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await userEvent.type(await screen.findByRole("combobox", { name: "Search or jump to…" }), "zzz");
+    expect(screen.getByRole("status")).toHaveTextContent("No matches");
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    expect(await screen.findByRole("combobox", { name: "Search or jump to…" })).toHaveValue("");
+  });
+
+  it("gives every palette row its group, Settings included", async () => {
+    renderShell();
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    expect(await screen.findByRole("option", { name: /Settings/ })).toHaveTextContent("SettingsSystem");
   });
 
   it("opens the palette with ⌘K and jumps to the first match on Enter", async () => {
