@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 // Column sets follow Better Auth 1.7 (core + admin plugin + database rate limit).
 // Better Auth validates export keys and column property names at startup, not SQL types.
@@ -70,7 +81,10 @@ export const authAccounts = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("auth_accounts_user_id_idx").on(table.userId)],
+  (table) => [
+    index("auth_accounts_user_id_idx").on(table.userId),
+    unique("auth_accounts_provider_account_uq").on(table.providerId, table.accountId),
+  ],
 );
 
 export const verifications = pgTable(

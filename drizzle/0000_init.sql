@@ -11,7 +11,8 @@ CREATE TABLE "auth_accounts" (
 	"scope" text,
 	"password" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "auth_accounts_provider_account_uq" UNIQUE("provider_id","account_id")
 );
 --> statement-breakpoint
 CREATE TABLE "invitations" (

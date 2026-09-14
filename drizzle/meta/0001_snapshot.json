@@ -1,6 +1,6 @@
 {
-  "id": "45b023d4-c551-4d68-b649-e7059b130035",
-  "prevId": "60c6ddd2-dde1-4518-a676-5bd8f080dae1",
+  "id": "e511c449-c3d9-4741-a3a6-68735642f1e8",
+  "prevId": "594a4533-2a91-4da6-bdc8-adf265bcf8c2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -123,7 +123,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "auth_accounts_provider_account_uq": {
+          "name": "auth_accounts_provider_account_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "provider_id",
+            "account_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -652,7 +661,16 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "job_runs_tier_ck": {
+          "name": "job_runs_tier_ck",
+          "value": "\"job_runs\".\"tier\" in ('hourly', 'daily', 'monthly')"
+        },
+        "job_runs_status_ck": {
+          "name": "job_runs_status_ck",
+          "value": "\"job_runs\".\"status\" in ('running', 'success', 'failed', 'skipped')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.user_preferences": {
