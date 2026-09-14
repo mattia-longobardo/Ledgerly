@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { AuthCard } from "../auth-card";
 import { ResetForm } from "./reset-form";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("auth.reset"))("title") };
+}
 
 export default async function ResetPasswordPage({ searchParams }: PageProps<"/reset-password">) {
   const { token, error } = await searchParams;

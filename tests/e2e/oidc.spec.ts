@@ -16,4 +16,5 @@ test("other Authentik users are plain users", async ({ page }) => {
   await expect(nav.getByRole("link", { name: "Components" })).toHaveCount(0);
   const response = await page.goto("/components");
   expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
 });
