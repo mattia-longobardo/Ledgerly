@@ -83,5 +83,65 @@
       "nameInvalid": "Enter your full name.",
       "authentik": "Use Authentik instead"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": { "profile": "Profile", "security": "Security" },
+    "account": {
+      "title": "Account",
+      "description": "Your name and the address used for invitations and alerts.",
+      "name": "Full name",
+      "email": "Email",
+      "ssoNote": "Name and email are managed by Authentik while SSO is linked.",
+      "saved": "Account saved"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "How numbers, dates and the interface look for you.",
+      "timeZone": "Timezone",
+      "language": "Language",
+      "languages": { "en": "English", "it": "Italiano" },
+      "numberFormat": "Number format",
+      "numberFormats": {
+        "it-IT": "1.234,56 € (it-IT)",
+        "en-US": "€1,234.56 (en-US)",
+        "fr-FR": "1 234,56 € (fr-FR)"
+      },
+      "weekStart": "Week starts on",
+      "weekStarts": { "monday": "Monday", "sunday": "Sunday" },
+      "theme": "Theme",
+      "themes": { "system": "System", "light": "Light", "dark": "Dark" },
+      "defaultRange": "Default date range",
+      "ranges": {
+        "this_month": "This month",
+        "last_30_days": "Last 30 days",
+        "year_to_date": "Year to date"
+      },
+      "monthlySummary": "Email me the monthly summary",
+      "hoursPerDay": "Working day (hours)",
+      "patronSaint": "Patron saint holiday",
+      "patronNone": "None",
+      "saved": "Preferences saved"
+    },
+    "password": {
+      "title": "Password",
+      "description": "Used when you sign in without Authentik.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "changed": "Password updated",
+      "ssoOnly": "This account signs in with Authentik only; there is no password to change.",
+      "failed": "The current password is wrong."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "description": "Devices signed in to your account.",
+      "thisDevice": "this device",
+      "unknownDevice": "Unknown device",
+      "signOut": "Sign out",
+      "signOutOthers": "Sign out other sessions",
+      "since": "since {date}"
+    }
   }
 }

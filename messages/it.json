@@ -83,5 +83,65 @@
       "nameInvalid": "Inserisci nome e cognome.",
       "authentik": "Usa Authentik"
     }
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "tabs": { "profile": "Profilo", "security": "Sicurezza" },
+    "account": {
+      "title": "Account",
+      "description": "Il tuo nome e l'indirizzo usato per inviti e avvisi.",
+      "name": "Nome e cognome",
+      "email": "Email",
+      "ssoNote": "Nome ed email sono gestiti da Authentik finché l'SSO è collegato.",
+      "saved": "Account salvato"
+    },
+    "preferences": {
+      "title": "Preferenze",
+      "description": "Come appaiono numeri, date e interfaccia.",
+      "timeZone": "Fuso orario",
+      "language": "Lingua",
+      "languages": { "en": "English", "it": "Italiano" },
+      "numberFormat": "Formato dei numeri",
+      "numberFormats": {
+        "it-IT": "1.234,56 € (it-IT)",
+        "en-US": "€1,234.56 (en-US)",
+        "fr-FR": "1 234,56 € (fr-FR)"
+      },
+      "weekStart": "La settimana inizia di",
+      "weekStarts": { "monday": "Lunedì", "sunday": "Domenica" },
+      "theme": "Tema",
+      "themes": { "system": "Sistema", "light": "Chiaro", "dark": "Scuro" },
+      "defaultRange": "Intervallo predefinito",
+      "ranges": {
+        "this_month": "Questo mese",
+        "last_30_days": "Ultimi 30 giorni",
+        "year_to_date": "Da inizio anno"
+      },
+      "monthlySummary": "Inviami il riepilogo mensile via email",
+      "hoursPerDay": "Giornata lavorativa (ore)",
+      "patronSaint": "Festa del santo patrono",
+      "patronNone": "Nessuna",
+      "saved": "Preferenze salvate"
+    },
+    "password": {
+      "title": "Password",
+      "description": "Serve quando accedi senza Authentik.",
+      "current": "Password attuale",
+      "new": "Nuova password",
+      "confirm": "Conferma la nuova password",
+      "submit": "Aggiorna la password",
+      "changed": "Password aggiornata",
+      "ssoOnly": "Questo account accede solo con Authentik: non c'è una password da cambiare.",
+      "failed": "La password attuale è errata."
+    },
+    "sessions": {
+      "title": "Sessioni",
+      "description": "I dispositivi collegati al tuo account.",
+      "thisDevice": "questo dispositivo",
+      "unknownDevice": "Dispositivo sconosciuto",
+      "signOut": "Disconnetti",
+      "signOutOthers": "Disconnetti le altre sessioni",
+      "since": "dal {date}"
+    }
   }
 }

@@ -1,4 +1,6 @@
 import "server-only";
+import { and, eq } from "drizzle-orm";
+import { sessions } from "@/platform/auth/schema";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Ctx } from "@/platform/context";
@@ -49,4 +51,16 @@ export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown
     .onConflictDoUpdate({ target: userPreferences.userId, set: values })
     .returning();
   return fromRow(row);
+}
+
+/**
+ * The token of one of the user's own sessions, or null. The Security page sends only session ids
+ * to the browser; the revoke action resolves the token here, by id AND owner.
+ */
+export async function findSessionToken(ctx: Pick<Ctx, "userId">, sessionId: string): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ token: sessions.token })
+    .from(sessions)
+    .where(and(eq(sessions.id, sessionId), userScoped(ctx).owns(sessions)));
+  return row?.token ?? null;
 }
