@@ -15,8 +15,17 @@ test("phones get bottom tabs and a More sheet instead of the sidebar", async ({ 
   await expect(
     sheet.getByRole("group", { name: "System" }).getByRole("link", { name: "Settings" }),
   ).toBeVisible();
-  // The sheet sits above the tab bar, which stays in view.
-  await expect(tabs.getByRole("button", { name: "More" })).toBeInViewport();
+  // The sheet sits above the tab bar instead of covering it (the open modal hides the bar from the
+  // accessibility tree, so it is found by its markup here).
+  const bar = await page
+    .locator("nav", { has: page.locator('button[aria-haspopup="dialog"]') })
+    .boundingBox();
+  await expect
+    .poll(async () => {
+      const box = await sheet.boundingBox();
+      return box && box.y + box.height;
+    })
+    .toBe(bar!.y);
   await sheet.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });

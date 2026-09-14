@@ -1,15 +1,8 @@
 "use client";
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
-
-export const SIDEBAR_COOKIE = "sidebar";
-
-/** "auto" follows the width (full from 1280 px, icons below); an explicit choice wins at any width. */
-export type SidebarState = "auto" | "collapsed" | "expanded";
-
-export function parseSidebar(value: string | undefined): SidebarState {
-  return value === "collapsed" || value === "expanded" ? value : "auto";
-}
+import type { ThemePreference } from "@/platform/theme";
+import { SIDEBAR_COOKIE, type SidebarState } from "./sidebar-state";
 
 const WIDE_QUERY = "(min-width: 1280px)";
 
@@ -33,6 +26,8 @@ interface ShellState {
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
   labels: ShellLabels;
+  /** Saves the theme preference: a Server Action the app layout hands down, so src/ui needs no domain module. */
+  saveTheme: (theme: ThemePreference) => Promise<void>;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -46,10 +41,12 @@ export function useShell(): ShellState {
 export function ShellProvider({
   initialSidebar,
   labels,
+  saveTheme,
   children,
 }: {
   initialSidebar: SidebarState;
   labels: ShellLabels;
+  saveTheme: (theme: ThemePreference) => Promise<void>;
   children: ReactNode;
 }) {
   const [sidebar, setSidebar] = useState(initialSidebar);
@@ -79,8 +76,8 @@ export function ShellProvider({
   }, [toggleSidebar]);
 
   const value = useMemo(
-    () => ({ sidebar, toggleSidebar, paletteOpen, setPaletteOpen, labels }),
-    [sidebar, toggleSidebar, paletteOpen, labels],
+    () => ({ sidebar, toggleSidebar, paletteOpen, setPaletteOpen, labels, saveTheme }),
+    [sidebar, toggleSidebar, paletteOpen, labels, saveTheme],
   );
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

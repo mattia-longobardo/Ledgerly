@@ -1,6 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubColorScheme } from "../../../test/color-scheme";
+import type { ThemePreference } from "@/platform/theme";
+import { ThemeProvider } from "@/ui/theme-provider";
 import { Toaster } from "@/ui/toast";
 import { ShellProvider } from "./shell-context";
 import { ThemeToggle } from "./theme-toggle";
@@ -25,57 +28,56 @@ const LABELS = {
   },
 };
 
-function renderToggle(onSave: (theme: "system" | "light" | "dark") => Promise<void>) {
+function renderToggle(saved: ThemePreference, saveTheme: (theme: ThemePreference) => Promise<void>) {
   return render(
-    <ShellProvider initialSidebar="expanded" labels={LABELS}>
-      <ThemeToggle onSave={onSave} />
-      <Toaster closeLabel="Close" />
-    </ShellProvider>,
+    <ThemeProvider saved={saved}>
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={saveTheme}>
+        <ThemeToggle />
+        <Toaster closeLabel="Close" />
+      </ShellProvider>
+    </ThemeProvider>,
   );
 }
 
+const theme = () => document.documentElement.dataset.theme;
+
 describe("ThemeToggle", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     delete document.documentElement.dataset.theme;
-    document.cookie = "theme=; path=/; max-age=0";
   });
 
-  it("flips the theme immediately and persists it on a successful save", async () => {
-    document.documentElement.dataset.theme = "light";
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    renderToggle(onSave);
+  it("flips the theme at once and saves the new preference", async () => {
+    stubColorScheme(false);
+    const saveTheme = vi.fn().mockResolvedValue(undefined);
+    renderToggle("light", saveTheme);
 
     await userEvent.click(screen.getByRole("button", { name: LABELS.toggleTheme }));
 
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(document.cookie).toContain("theme=dark");
-    expect(onSave).toHaveBeenCalledWith("dark");
+    expect(theme()).toBe("dark");
+    expect(saveTheme).toHaveBeenCalledWith("dark");
   });
 
-  it("reverts the attribute and cookie and shows a toast when the save is rejected, without throwing", async () => {
-    document.documentElement.dataset.theme = "light";
-    const onSave = vi.fn().mockRejectedValue(new Error("network error"));
-    renderToggle(onSave);
+  it("puts the theme back and shows an error toast when the save is rejected, without throwing", async () => {
+    stubColorScheme(false);
+    renderToggle("light", vi.fn().mockRejectedValue(new Error("network error")));
 
     await userEvent.click(screen.getByRole("button", { name: LABELS.toggleTheme }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(LABELS.themeSaveError);
-    expect(document.documentElement.dataset.theme).toBe("light");
-    expect(document.cookie).toContain("theme=light");
+    expect(theme()).toBe("light");
   });
 
-  it('restores a "system" preference (not a concrete light/dark) when the save is rejected', async () => {
-    // The rendered attribute is always resolved to light/dark (THEME_SCRIPT resolves "system" via
-    // matchMedia before first paint); only the cookie can say the actual preference was "system".
-    document.cookie = "theme=system; path=/";
-    document.documentElement.dataset.theme = "light";
-    const onSave = vi.fn().mockRejectedValue(new Error("network error"));
-    renderToggle(onSave);
+  it('restores a "system" preference, not a concrete light or dark, when the save is rejected', async () => {
+    const scheme = stubColorScheme(false);
+    renderToggle("system", vi.fn().mockRejectedValue(new Error("network error")));
 
     await userEvent.click(screen.getByRole("button", { name: LABELS.toggleTheme }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(LABELS.themeSaveError);
-    expect(document.documentElement.dataset.theme).toBe("light");
-    expect(document.cookie).toContain("theme=system");
+    expect(theme()).toBe("light");
+    // Back on System, the theme follows the OS again.
+    act(() => scheme.setDark(true));
+    expect(theme()).toBe("dark");
   });
 });

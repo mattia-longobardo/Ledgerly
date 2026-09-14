@@ -52,7 +52,7 @@ const LABELS = {
 describe("CommandPalette", () => {
   it("moves aria-activedescendant and aria-selected as ArrowDown moves the cursor", async () => {
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS}>
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
         <CommandPalette links={LINKS} />
       </ShellProvider>,
     );

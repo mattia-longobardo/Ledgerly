@@ -6,7 +6,8 @@ import { isActive } from "./active";
 import { CommandPalette } from "./command-palette";
 import { filterCommands } from "./commands";
 import type { NavLink } from "./nav-types";
-import { ShellProvider, type SidebarState } from "./shell-context";
+import { ShellProvider } from "./shell-context";
+import type { SidebarState } from "./sidebar-state";
 import { Sidebar } from "./sidebar";
 
 const push = vi.fn();
@@ -56,7 +57,7 @@ const LABELS = {
 
 function renderShell(sidebar: SidebarState = "expanded") {
   return render(
-    <ShellProvider initialSidebar={sidebar} labels={LABELS}>
+    <ShellProvider initialSidebar={sidebar} labels={LABELS} saveTheme={async () => undefined}>
       <Sidebar links={LINKS} user={{ name: "Mattia Longobardo", via: "via Authentik" }} />
       <CommandPalette links={LINKS} />
     </ShellProvider>,

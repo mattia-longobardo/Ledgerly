@@ -23,11 +23,13 @@ const YEAR = 60 * 60 * 24 * 365;
  */
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+/** The saved preference is what every page renders with; the cookie only serves anonymous pages. */
 export async function saveTheme(theme: ThemePreference): Promise<void> {
   const ctx = await requireSession();
   const next = parseTheme(theme);
   await updatePreferences(ctx, { ...(await getPreferences(ctx)), theme: next });
   (await cookies()).set(THEME_COOKIE, next, { path: "/", maxAge: YEAR, sameSite: "lax" });
+  revalidatePath("/", "layout");
 }
 
 export async function savePreferencesAction(input: Preferences): Promise<ActionResult> {

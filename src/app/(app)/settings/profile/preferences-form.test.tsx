@@ -1,9 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../messages/en.json";
 import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
+import { ThemeProvider } from "@/ui/theme-provider";
+import { stubColorScheme } from "../../../../../test/color-scheme";
 import { PreferencesForm } from "./preferences-form";
 
 const save = vi.fn();
@@ -12,19 +14,28 @@ vi.mock("@/modules/users/actions", () => ({ savePreferencesAction: (...a: unknow
 function renderForm(initial = DEFAULT_PREFERENCES) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      <PreferencesForm initial={initial} timeZones={["Europe/Rome", "Europe/London"]} />
+      <ThemeProvider saved={initial.theme}>
+        <PreferencesForm initial={initial} timeZones={["Europe/Rome", "Europe/London"]} />
+      </ThemeProvider>
     </NextIntlClientProvider>,
   );
 }
 
 describe("PreferencesForm", () => {
-  it("submits the edited preferences", async () => {
+  beforeEach(() => stubColorScheme(false));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.theme;
+  });
+
+  it("submits the edited preferences and applies the saved theme", async () => {
     save.mockResolvedValueOnce({ ok: true });
     renderForm();
     await userEvent.selectOptions(screen.getByLabelText("Language"), "it");
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, locale: "it", theme: "dark" });
+    expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
   it("shows a catalogued error instead of crashing when the action refuses to save", async () => {
