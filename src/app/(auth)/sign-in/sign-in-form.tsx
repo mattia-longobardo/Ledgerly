@@ -23,11 +23,18 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setPending(true);
-    const result = await authClient.signIn.email({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
-    setPending(false);
+    let result;
+    try {
+      result = await authClient.signIn.email({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      });
+    } catch {
+      setError("generic");
+      return;
+    } finally {
+      setPending(false);
+    }
     if (result.error) {
       setError(signInErrorKey(result.error.code ?? "generic"));
       return;

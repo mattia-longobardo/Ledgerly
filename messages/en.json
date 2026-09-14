@@ -54,6 +54,8 @@
       "credentials": "Wrong email or password.",
       "invitationRequired": "This account needs an invitation. Ask an administrator.",
       "oidc": "Sign-in with Authentik failed. Try again.",
+      "accountNotLinked": "This email already has a password sign-in; sign in with your password.",
+      "banned": "Your account is blocked.",
       "generic": "Sign-in failed. Try again."
     },
     "forgot": {
