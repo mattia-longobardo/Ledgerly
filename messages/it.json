@@ -33,16 +33,16 @@
   },
   "emails": {
     "invitation": {
-      "subject": "Sei stato invitato su Finance Dashboard",
+      "subject": "Hai ricevuto un invito a Finance Dashboard",
       "body": "Hai ricevuto un invito a Finance Dashboard.\n\nAccetta l'invito entro {days, plural, one {# giorno} other {# giorni}}:\n{url}\n"
     },
     "passwordReset": {
       "subject": "Reimposta la password di Finance Dashboard",
-      "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non sei stato tu, ignora questa email.\n"
+      "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non hai richiesto tu il reset, ignora questa email.\n"
     }
   },
   "auth": {
-    "version": "v0.1.0",
+    "version": "v{version}",
     "signIn": {
       "title": "Accedi",
       "description": "Usa il tuo account Authentik, oppure la password se ne hai una.",
@@ -56,7 +56,7 @@
       "credentials": "Email o password errate.",
       "invitationRequired": "Questo account richiede un invito. Chiedi a un amministratore.",
       "oidc": "Accesso con Authentik non riuscito. Riprova.",
-      "accountNotLinked": "Questa email ha già un accesso con password: accedi con la tua password.",
+      "accountNotLinked": "Questa email è già associata a un altro metodo di accesso. Accedi come hai fatto in precedenza.",
       "banned": "Il tuo account è bloccato.",
       "generic": "Accesso non riuscito. Riprova."
     },
@@ -78,7 +78,7 @@
     },
     "invite": {
       "title": "Unisciti a Finance Dashboard",
-      "description": "Invitato come {email}.",
+      "description": "Invito per {email}.",
       "name": "Nome e cognome",
       "submit": "Crea l'account",
       "invalid": "Questo invito non è valido, è scaduto o è già stato usato.",
@@ -119,7 +119,7 @@
         "en-US": "€1,234.56 (en-US)",
         "fr-FR": "1 234,56 € (fr-FR)"
       },
-      "weekStart": "La settimana inizia di",
+      "weekStart": "Primo giorno della settimana",
       "weekStarts": { "monday": "Lunedì", "sunday": "Domenica" },
       "theme": "Tema",
       "themes": { "system": "Sistema", "light": "Chiaro", "dark": "Scuro" },
@@ -173,7 +173,7 @@
       "signOutDevice": "Disconnetti {device}",
       "signOutOthers": "Disconnetti le altre sessioni",
       "since": "dal {date}",
-      "errors": { "failed": "Impossibile disconnettersi. Riprova." }
+      "errors": { "failed": "Impossibile disconnettere la sessione. Riprova." }
     }
   },
   "errors": {
@@ -191,7 +191,7 @@
     "title": "Panoramica",
     "empty": {
       "title": "Ancora nessun dato",
-      "description": "Conti, saldi e patrimonio compaiono qui dopo aver creato il primo conto.",
+      "description": "Conti, saldi e patrimonio compaiono qui dopo la creazione del primo conto.",
       "cta": "Apri le impostazioni"
     }
   },
