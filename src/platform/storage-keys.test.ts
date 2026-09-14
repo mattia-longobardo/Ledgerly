@@ -12,4 +12,13 @@ describe("assertStorageKey", () => {
       expect(() => assertStorageKey(key)).toThrow(RangeError);
     },
   );
+
+  it("never echoes the rejected key, only its length", () => {
+    expect(() => assertStorageKey("bad key")).toThrow(/length 7/);
+    try {
+      assertStorageKey("bad key");
+    } catch (error) {
+      expect((error as Error).message).not.toContain("bad key");
+    }
+  });
 });
