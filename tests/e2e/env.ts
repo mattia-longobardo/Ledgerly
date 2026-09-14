@@ -43,4 +43,6 @@ export const E2E_ENV: Record<string, string> = {
   CRON_SECRET: "e2e-cron-secret-e2e-cron-secret-e2e",
   HEARTBEAT_FILE: "/tmp/finance-heartbeat-e2e",
   METRICS_TOKEN: "e2e-metrics-token-e2e-metrics-token",
+  // No proxy in front of the e2e server: X-Forwarded-For is the one address Next.js sets, 127.0.0.1.
+  TRUSTED_PROXY_IPS: "",
 };

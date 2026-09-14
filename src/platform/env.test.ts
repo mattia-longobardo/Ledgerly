@@ -109,6 +109,30 @@ describe("envSchema outside production", () => {
   });
 });
 
+describe("TRUSTED_PROXY_IPS", () => {
+  const trustedProxies = (value: string | undefined) => {
+    const result = envSchema.safeParse({ ...valid, TRUSTED_PROXY_IPS: value });
+    return result.success ? result.data.TRUSTED_PROXY_IPS : null;
+  };
+
+  it("trusts no proxy when unset", () => {
+    expect(trustedProxies(undefined)).toEqual([]);
+  });
+
+  it("reads comma-separated IPs and CIDR ranges", () => {
+    expect(trustedProxies(" 172.18.0.2, 10.0.0.0/24,fd00::/8 ,, ")).toEqual([
+      "172.18.0.2",
+      "10.0.0.0/24",
+      "fd00::/8",
+    ]);
+  });
+
+  it("rejects an entry that is not an IP or a CIDR range", () => {
+    expect(trustedProxies("172.18.0.2, traefik")).toBeNull();
+    expect(trustedProxies("10.0.0.0/33")).toBeNull();
+  });
+});
+
 describe("isHttpsOrLoopback", () => {
   it("accepts https and loopback http, rejects everything else", () => {
     expect(isHttpsOrLoopback("https://example.test")).toBe(true);

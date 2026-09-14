@@ -55,6 +55,8 @@ export default defineConfig({
             CRON_SECRET: "integration-cron-secret-integration",
             HEARTBEAT_FILE: "/tmp/finance-heartbeat-test",
             METRICS_TOKEN: "integration-metrics-token-integration-metrics-token",
+            // One reverse-proxy hop (TEST-NET-1), for the rate-limit test in auth.itest.ts.
+            TRUSTED_PROXY_IPS: "192.0.2.10",
           },
         },
       },

@@ -234,6 +234,34 @@ describe("admin permissions", () => {
   });
 });
 
+describe("rate limiting behind the reverse proxy", () => {
+  // vitest.config.ts sets TRUSTED_PROXY_IPS to this one hop, as production sets it to Traefik's.
+  const PROXY = process.env.TRUSTED_PROXY_IPS as string;
+
+  function signInThrough(instance: Auth, forwardedFor: string) {
+    return instance.handler(
+      new Request(`${BASE_URL}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: BASE_URL, "x-forwarded-for": forwardedFor },
+        body: JSON.stringify({ email: "a@example.test", password: PASSWORD }),
+      }),
+    );
+  }
+
+  it("counts the password sign-ins of each client behind the proxy separately", async () => {
+    await auth().api.createUser({ body: { email: "a@example.test", password: PASSWORD, name: "A" } });
+    const instance = auth();
+    const statuses = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      statuses.push((await signInThrough(instance, `203.0.113.1, ${PROXY}`)).status);
+    }
+    expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
+    // A forged left-most entry opens no fresh bucket: the chain is read from the proxy's end.
+    expect((await signInThrough(instance, `198.51.100.7, 203.0.113.1, ${PROXY}`)).status).toBe(429);
+    expect((await signInThrough(instance, `203.0.113.2, ${PROXY}`)).status).toBe(200);
+  });
+});
+
 describe("update-user", () => {
   it("trims and bounds the name for a password account", async () => {
     await auth().api.createUser({ body: { email: "a@example.test", password: PASSWORD, name: "A" } });
