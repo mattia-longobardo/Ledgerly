@@ -1,27 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { revokeOtherSessionsAction, revokeSessionAction, updateNameAction } from "./actions";
+import { DEFAULT_PREFERENCES } from "./rules";
+import { revokeOtherSessionsAction, revokeSessionAction, saveTheme, updateNameAction } from "./actions";
 
-const { requireSession, hasSsoAccount, updateUser, revokeSession, revokeOtherSessions, findSessionToken } =
-  vi.hoisted(() => ({
-    requireSession: vi.fn(),
-    hasSsoAccount: vi.fn(),
-    updateUser: vi.fn(),
-    revokeSession: vi.fn(),
-    revokeOtherSessions: vi.fn(),
-    findSessionToken: vi.fn(),
-  }));
+const {
+  requireSession,
+  hasSsoAccount,
+  updateUser,
+  revokeSession,
+  revokeOtherSessions,
+  findSessionToken,
+  getPreferences,
+  updatePreferences,
+  revalidatePath,
+} = vi.hoisted(() => ({
+  requireSession: vi.fn(),
+  hasSsoAccount: vi.fn(),
+  updateUser: vi.fn(),
+  revokeSession: vi.fn(),
+  revokeOtherSessions: vi.fn(),
+  findSessionToken: vi.fn(),
+  getPreferences: vi.fn(),
+  updatePreferences: vi.fn(),
+  revalidatePath: vi.fn(),
+}));
 
 vi.mock("@/platform/auth/session", () => ({ requireSession }));
 vi.mock("@/platform/auth/accounts", () => ({ hasSsoAccount }));
 vi.mock("@/platform/auth/auth", () => ({
   getAuth: () => ({ api: { updateUser, revokeSession, revokeOtherSessions } }),
 }));
-vi.mock("./service", () => ({ findSessionToken, getPreferences: vi.fn(), updatePreferences: vi.fn() }));
+vi.mock("./service", () => ({ findSessionToken, getPreferences, updatePreferences }));
 vi.mock("next/headers", () => ({
   headers: async () => new Headers(),
   cookies: async () => ({ set: vi.fn() }),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath }));
 
 const CTX = {
   userId: "alice",
@@ -33,6 +46,21 @@ const CTX = {
 const FOREIGN_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 /** A provider error whose message carries a credential in a URL query string. */
 const LEAKY_ERROR = new Error("revoke failed at https://auth.example.test/revoke?token=secret-token");
+
+describe("saveTheme", () => {
+  beforeEach(() => {
+    requireSession.mockReset().mockResolvedValue(CTX);
+    getPreferences.mockReset().mockResolvedValue({ ...DEFAULT_PREFERENCES });
+    updatePreferences.mockReset();
+    revalidatePath.mockReset();
+  });
+
+  it("saves the theme into the preferences and re-renders the layout with it", async () => {
+    await saveTheme("system");
+    expect(updatePreferences).toHaveBeenCalledWith(CTX, { ...DEFAULT_PREFERENCES, theme: "system" });
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+});
 
 describe("updateNameAction", () => {
   beforeEach(() => {

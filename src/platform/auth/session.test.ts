@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
-import { ctxFrom, requireAdmin, requireSession } from "./session";
+import { ctxFrom, getOptionalPreferences, requireAdmin, requireSession } from "./session";
 
 const getSession = vi.hoisted(() => vi.fn());
 
 vi.mock("./auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
-vi.mock("@/modules/users/service", () => ({ getPreferences: async () => ({ ...DEFAULT_PREFERENCES }) }));
+vi.mock("@/modules/users/service", () => ({
+  getPreferences: async () => ({ ...DEFAULT_PREFERENCES, theme: "system" }),
+}));
 
 describe("ctxFrom", () => {
   it("builds the request context from the user and their preferences", () => {
@@ -46,6 +48,17 @@ describe("requireSession", () => {
     await expect(requireSession()).rejects.toMatchObject({
       digest: expect.stringMatching(/^NEXT_REDIRECT;.*;\/sign-in;/),
     });
+  });
+});
+
+describe("getOptionalPreferences", () => {
+  beforeEach(() => getSession.mockReset());
+
+  it("gives the signed-in user's saved preferences, and null to an anonymous visitor", async () => {
+    getSession.mockResolvedValueOnce({ user: { id: "u1", role: "user" } });
+    expect(await getOptionalPreferences()).toEqual({ ...DEFAULT_PREFERENCES, theme: "system" });
+    getSession.mockResolvedValueOnce(null);
+    expect(await getOptionalPreferences()).toBeNull();
   });
 });
 

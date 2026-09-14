@@ -7,6 +7,7 @@ import type { Preferences } from "@/modules/users/rules";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
+import { useTheme } from "@/ui/theme-provider";
 import { notify } from "@/ui/toast";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -17,10 +18,15 @@ function daysInMonth(month: number | undefined): number {
   return month ? DAYS_IN_MONTH[month - 1] : 31;
 }
 
+/**
+ * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change
+ * elsewhere, e.g. the topbar theme toggle, so a save never writes an out-of-date value back.
+ */
 export function PreferencesForm({ initial, timeZones }: { initial: Preferences; timeZones: string[] }) {
   const t = useTranslations("settings.preferences");
   const common = useTranslations("common");
   const locale = useLocale();
+  const { setPreference: setTheme } = useTheme();
   const [prefs, setPrefs] = useState<Preferences>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +50,7 @@ export function PreferencesForm({ initial, timeZones }: { initial: Preferences; 
           return;
         }
         setError(null);
+        setTheme(prefs.theme);
         notify(t("saved"));
       } catch {
         setError(t("errors.failed"));

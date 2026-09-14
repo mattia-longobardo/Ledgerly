@@ -10,7 +10,8 @@ import { isActive } from "./active";
 import { BrandMark } from "./brand";
 import { NAV_ICONS } from "./icons";
 import type { NavLink } from "./nav-types";
-import { type SidebarState, useShell } from "./shell-context";
+import { useShell } from "./shell-context";
+import type { SidebarState } from "./sidebar-state";
 import { useSignOut } from "./sign-out";
 
 const GROUPS = ["finance", "work", "system"] as const;

@@ -53,7 +53,7 @@ const LABELS = {
 
 async function openMore() {
   render(
-    <ShellProvider initialSidebar="expanded" labels={LABELS}>
+    <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
       <MobileNav links={LINKS} user={{ name: "Mattia Longobardo", via: "via Authentik" }} />
     </ShellProvider>,
   );

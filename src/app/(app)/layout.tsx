@@ -1,12 +1,14 @@
 import { cookies, headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
+import { saveTheme } from "@/modules/users/actions";
 import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { CommandPalette } from "@/ui/shell/command-palette";
 import { MobileNav } from "@/ui/shell/mobile-nav";
 import type { NavLink } from "@/ui/shell/nav-types";
-import { parseSidebar, ShellProvider, SIDEBAR_COOKIE } from "@/ui/shell/shell-context";
+import { ShellProvider } from "@/ui/shell/shell-context";
+import { parseSidebar, SIDEBAR_COOKIE } from "@/ui/shell/sidebar-state";
 import { Sidebar } from "@/ui/shell/sidebar";
 import { Toaster } from "@/ui/toast";
 import { navFor } from "./navigation";
@@ -51,7 +53,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   };
 
   return (
-    <ShellProvider initialSidebar={sidebar} labels={labels}>
+    <ShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
       <div className="flex h-dvh overflow-hidden">
         <Sidebar links={links} user={user} />
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
