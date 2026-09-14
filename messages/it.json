@@ -6,6 +6,28 @@
     "retry": "Riprova",
     "or": "oppure"
   },
+  "nav": {
+    "primary": "Principale",
+    "groups": { "finance": "Finanza", "work": "Lavoro", "system": "Sistema" },
+    "overview": "Panoramica",
+    "settings": "Impostazioni",
+    "components": "Componenti",
+    "more": "Altro"
+  },
+  "shell": {
+    "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
+    "search": "Cerca o vai a…",
+    "toggleTheme": "Cambia tema",
+    "signOut": "Esci",
+    "via": { "authentik": "tramite Authentik", "password": "tramite password" },
+    "palette": {
+      "placeholder": "Vai a una pagina…",
+      "pages": "Pagine",
+      "empty": "Nessun risultato",
+      "shortcut": "⌘K",
+      "escape": "esc"
+    }
+  },
   "emails": {
     "invitation": {
       "subject": "Sei stato invitato su Finance Dashboard",
