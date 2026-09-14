@@ -6,6 +6,28 @@
     "retry": "Try again",
     "or": "or"
   },
+  "nav": {
+    "primary": "Primary",
+    "groups": { "finance": "Finance", "work": "Work", "system": "System" },
+    "overview": "Overview",
+    "settings": "Settings",
+    "components": "Components",
+    "more": "More"
+  },
+  "shell": {
+    "toggleSidebar": "Toggle sidebar (⌘\\)",
+    "search": "Search or jump to…",
+    "toggleTheme": "Toggle theme",
+    "signOut": "Sign out",
+    "via": { "authentik": "via Authentik", "password": "via password" },
+    "palette": {
+      "placeholder": "Jump to a page…",
+      "pages": "Pages",
+      "empty": "No matches",
+      "shortcut": "⌘K",
+      "escape": "esc"
+    }
+  },
   "emails": {
     "invitation": {
       "subject": "You are invited to Finance Dashboard",
