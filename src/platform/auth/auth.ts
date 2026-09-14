@@ -6,11 +6,12 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { nextCookies } from "better-auth/next-js";
 import { admin, genericOAuth } from "better-auth/plugins";
 import { count, eq } from "drizzle-orm";
+import { getPreferences } from "@/modules/users/service";
 import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
-import { hasSsoAccount } from "./accounts";
+import { hasPasswordAccount, hasSsoAccount } from "./accounts";
 import { passwordResetEmail } from "./emails";
 import { authLogger, redactForLog } from "./logger";
 import { nameSchema } from "./name-policy";
@@ -40,6 +41,18 @@ export async function applyOidcRole(account: {
   if (account.providerId !== OIDC_PROVIDER_ID || !account.idToken) return;
   const role = roleFromIdToken(account.idToken, readEnv().OIDC_ADMIN_GROUP);
   if (role) await getDb().update(users).set({ role }).where(eq(users.id, account.userId));
+}
+
+/**
+ * Only a password account gets the link: Better Auth's reset endpoint would otherwise create a
+ * password for an Authentik-only user, a way around Authentik's own sign-in policy (such as 2FA).
+ * Nothing is logged when no email goes out, so the logs do not tell the two cases apart either.
+ */
+async function sendPasswordResetEmail(user: { id: string; email: string }, url: string): Promise<void> {
+  if (!(await hasPasswordAccount(user.id))) return;
+  const { locale } = await getPreferences({ userId: user.id });
+  const hours = RESET_PASSWORD_TOKEN_TTL_SECONDS / 3600;
+  await sendMail({ to: user.email, ...passwordResetEmail(url, hours, locale) });
 }
 
 async function noUsersYet(): Promise<boolean> {
@@ -121,10 +134,9 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
         verify: ({ hash: stored, password }) => verify(stored, password),
       },
       resetPasswordTokenExpiresIn: RESET_PASSWORD_TOKEN_TTL_SECONDS,
-      // Fire and forget: the response time must not reveal whether the address exists.
+      // Fire and forget: the response time must not reveal whether the address exists or how it signs in.
       sendResetPassword: async ({ user, url }) => {
-        const hours = RESET_PASSWORD_TOKEN_TTL_SECONDS / 3600;
-        void sendMail({ to: user.email, ...passwordResetEmail(url, hours) }).catch((error: unknown) => {
+        void sendPasswordResetEmail(user, url).catch((error: unknown) => {
           console.error("[auth] password reset email failed", redactForLog(error));
         });
       },
