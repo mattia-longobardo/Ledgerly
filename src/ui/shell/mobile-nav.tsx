@@ -60,14 +60,16 @@ export function MobileNav({ links }: { links: NavLink[] }) {
             <div aria-hidden className="mx-auto mb-3 h-1 w-9 rounded-full bg-border2" />
             {rest.map((link) => {
               const Icon = NAV_ICONS[link.icon];
+              const active = isActive(pathname, link.href);
               return (
                 <Link
                   key={link.id}
                   href={link.href}
                   onClick={() => setMoreOpen(false)}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex h-11 items-center gap-3 rounded-lg px-2 font-medium",
-                    isActive(pathname, link.href) && "text-accent",
+                    active && "text-accent",
                   )}
                 >
                   <Icon aria-hidden className="size-[18px] text-muted" />

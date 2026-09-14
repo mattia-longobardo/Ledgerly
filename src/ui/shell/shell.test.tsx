@@ -41,6 +41,7 @@ const LABELS = {
   toggleSidebar: "Toggle sidebar",
   search: "Search or jump to…",
   toggleTheme: "Toggle theme",
+  themeSaveError: "Couldn't save your theme. Try again.",
   signOut: "Sign out",
   more: "More",
   palette: {
