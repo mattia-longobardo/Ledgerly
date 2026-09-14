@@ -72,6 +72,24 @@ describe("InviteForm", () => {
     expect(acceptInviteAction).not.toHaveBeenCalled();
   });
 
+  it("bounds the name as the server does and says so when it refuses one", async () => {
+    acceptInviteAction.mockResolvedValueOnce({ error: "name" });
+    renderForm();
+    expect(screen.getByLabelText("Full name")).toHaveAttribute("maxLength", "120");
+    await fill("long-enough-password");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Enter your full name, at most 120 characters.",
+    );
+  });
+
+  it("shows a catalogued error instead of crashing when the action rejects unexpectedly", async () => {
+    acceptInviteAction.mockRejectedValueOnce(new Error("network down"));
+    renderForm();
+    await fill("long-enough-password");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't create the account. Try again.");
+    expect(screen.getByRole("button", { name: "Create account" })).toBeEnabled();
+  });
+
   it("shows the reason the server refused the invitation", async () => {
     acceptInviteAction.mockResolvedValueOnce({ error: "email_taken" });
     renderForm();

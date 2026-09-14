@@ -80,7 +80,8 @@
       "invalid": "This invitation is invalid, expired or already used.",
       "emailTaken": "An account with this email already exists. Sign in instead.",
       "emailMismatch": "This invitation is for a different email address than your Authentik account.",
-      "nameInvalid": "Enter your full name.",
+      "nameInvalid": "Enter your full name, at most {max} characters.",
+      "failed": "Couldn't create the account. Try again.",
       "authentik": "Use Authentik instead"
     }
   },
@@ -95,7 +96,7 @@
       "ssoNote": "Name and email are managed by Authentik while SSO is linked.",
       "saved": "Account saved",
       "errors": {
-        "invalid": "Enter a name between 1 and 120 characters.",
+        "invalid": "Enter a name between 1 and {max} characters.",
         "sso": "The name is managed by Authentik while SSO is linked.",
         "failed": "Couldn't save. Try again."
       }

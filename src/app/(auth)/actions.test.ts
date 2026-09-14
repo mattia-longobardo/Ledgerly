@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
 import { acceptInviteAction } from "./actions";
 
 const { acceptInvitation, signInEmail, InvitationError } = vi.hoisted(() => ({
@@ -46,9 +47,19 @@ describe("acceptInviteAction", () => {
     await expect(acceptInviteAction("tok", valid)).rejects.toMatchObject(redirectTo("/sign-in"));
   });
 
-  it.each([[""], ["   "], ["x".repeat(101)]])("refuses an unusable name (%#)", async (name) => {
-    expect(await acceptInviteAction("tok", { ...valid, name })).toEqual({ error: "name" });
-    expect(acceptInvitation).not.toHaveBeenCalled();
+  it.each([[""], ["   "], ["x".repeat(MAX_NAME_LENGTH + 1)]])(
+    "refuses an unusable name (%#)",
+    async (name) => {
+      expect(await acceptInviteAction("tok", { ...valid, name })).toEqual({ error: "name" });
+      expect(acceptInvitation).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts a name as long as the settings name rule allows", async () => {
+    acceptInvitation.mockResolvedValueOnce({ userId: "u1", email: "giulia@example.test" });
+    const name = "x".repeat(MAX_NAME_LENGTH);
+    await expect(acceptInviteAction("tok", { ...valid, name })).rejects.toMatchObject(redirectTo("/"));
+    expect(acceptInvitation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name }));
   });
 
   it("refuses arguments that are not strings", async () => {

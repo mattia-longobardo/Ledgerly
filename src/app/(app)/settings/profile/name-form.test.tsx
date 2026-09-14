@@ -31,7 +31,7 @@ describe("NameForm", () => {
     update.mockResolvedValueOnce({ ok: false, error: "invalid" });
     renderForm();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.account.errors.invalid);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Enter a name between 1 and 120 characters.");
   });
 
   it("shows a catalogued error instead of crashing when the action rejects unexpectedly", async () => {

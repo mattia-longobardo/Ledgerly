@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { updateNameAction } from "@/modules/users/actions";
+import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
@@ -21,7 +22,7 @@ export function NameForm({ name, email, sso }: { name: string; email: string; ss
       try {
         const result = await updateNameAction(value);
         if (!result.ok) {
-          setError(result.error === "sso" ? t("errors.sso") : t("errors.invalid"));
+          setError(result.error === "sso" ? t("errors.sso") : t("errors.invalid", { max: MAX_NAME_LENGTH }));
           return;
         }
         setError(null);
