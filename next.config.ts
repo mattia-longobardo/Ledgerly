@@ -7,6 +7,9 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
+/** Pages whose URL carries a secret token (invitation path, reset query): no Referer ever. */
+const TOKEN_PAGES = ["/invite/:path*", "/reset-password"];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
@@ -15,7 +18,14 @@ const nextConfig: NextConfig = {
   // Otherwise `next dev` writes its own CLAUDE.md/AGENTS.md into the repository.
   agentRules: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Listed last: for the same header key, the last matching entry wins.
+      ...TOKEN_PAGES.map((source) => ({
+        source,
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      })),
+    ];
   },
 };
 
