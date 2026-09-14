@@ -14,3 +14,7 @@ cron
 Fondo Cometa
 Payroll
 UI Recreation and branding decisions
+.superpowers
+tests/e2e/.state
+graphify-out
+*.tsbuildinfo

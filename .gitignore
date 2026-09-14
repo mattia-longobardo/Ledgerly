@@ -25,3 +25,4 @@ tests/e2e/.state/
 graphify-out/
 .DS_Store
 .vitest/
+.superpowers/

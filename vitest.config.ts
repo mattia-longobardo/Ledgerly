@@ -1,5 +1,10 @@
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+// Matches test/integration-setup.ts's own DEFAULT_TEST_DATABASE_URL fallback (not imported here:
+// that file's own imports are unsafe for Vite's config-loading, see its comment).
+const DEFAULT_TEST_DATABASE_URL = "postgres://finance:finance@127.0.0.1:55432/finance_test";
 
 export default defineConfig({
   plugins: [react()],
@@ -7,11 +12,10 @@ export default defineConfig({
     tsconfigPaths: true,
     alias: {
       // `server-only` throws outside React Server Components; tests import server modules directly.
-      "server-only": new URL("./test/server-only.ts", import.meta.url).pathname,
+      "server-only": fileURLToPath(new URL("./test/server-only.ts", import.meta.url)),
     },
   },
   test: {
-    passWithNoTests: true,
     projects: [
       {
         extends: true,
@@ -37,8 +41,7 @@ export default defineConfig({
           hookTimeout: 60_000,
           globalSetup: ["./test/integration-setup.ts"],
           env: {
-            DATABASE_URL:
-              process.env.TEST_DATABASE_URL ?? "postgres://finance:finance@127.0.0.1:55432/finance_test",
+            DATABASE_URL: process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL,
             BETTER_AUTH_URL: "http://127.0.0.1:3000",
             BETTER_AUTH_SECRET: "integration-secret-integration-secret-32",
             OIDC_DISCOVERY_URL: "http://127.0.0.1:58090/default/.well-known/openid-configuration",
