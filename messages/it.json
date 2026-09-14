@@ -18,6 +18,7 @@
     "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
     "search": "Cerca o vai a…",
     "toggleTheme": "Cambia tema",
+    "themeSaveError": "Impossibile salvare il tema. Riprova.",
     "signOut": "Esci",
     "via": { "authentik": "tramite Authentik", "password": "tramite password" },
     "palette": {

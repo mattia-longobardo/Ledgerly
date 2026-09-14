@@ -18,6 +18,7 @@
     "toggleSidebar": "Toggle sidebar (⌘\\)",
     "search": "Search or jump to…",
     "toggleTheme": "Toggle theme",
+    "themeSaveError": "Couldn't save your theme. Try again.",
     "signOut": "Sign out",
     "via": { "authentik": "via Authentik", "password": "via password" },
     "palette": {

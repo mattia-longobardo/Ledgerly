@@ -33,6 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     toggleSidebar: t("shell.toggleSidebar"),
     search: t("shell.search"),
     toggleTheme: t("shell.toggleTheme"),
+    themeSaveError: t("shell.themeSaveError"),
     signOut: t("shell.signOut"),
     more: t("nav.more"),
     palette: {

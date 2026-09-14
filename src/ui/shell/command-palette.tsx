@@ -3,7 +3,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { cn } from "@/ui/cn";
 import { Kbd } from "@/ui/kbd";
 import { filterCommands } from "./commands";
@@ -16,6 +16,11 @@ export function CommandPalette({ links }: { links: NavLink[] }) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const matches = filterCommands(links, query);
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+  const pagesLabelId = `${baseId}-pages-label`;
+  const optionId = (id: string) => `${baseId}-option-${id}`;
+  const activeOption = matches[cursor];
 
   function close() {
     setPaletteOpen(false);
@@ -39,6 +44,11 @@ export function CommandPalette({ links }: { links: NavLink[] }) {
             <Search aria-hidden className="size-4 text-muted" />
             <input
               autoFocus
+              role="combobox"
+              aria-expanded={paletteOpen}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              aria-activedescendant={activeOption ? optionId(activeOption.id) : undefined}
               value={query}
               placeholder={labels.palette.placeholder}
               onChange={(event) => {
@@ -55,27 +65,34 @@ export function CommandPalette({ links }: { links: NavLink[] }) {
             <Kbd>{labels.palette.escape}</Kbd>
           </div>
           <div className="p-1.5">
-            <div className="px-2 pt-1 pb-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase">
+            <div
+              id={pagesLabelId}
+              className="px-2 pt-1 pb-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase"
+            >
               {labels.palette.pages}
             </div>
             {matches.length === 0 && <p className="px-2 py-3 text-muted">{labels.palette.empty}</p>}
-            {matches.map((link, index) => (
-              <button
-                key={link.id}
-                type="button"
-                onMouseEnter={() => setCursor(index)}
-                onClick={() => go(link)}
-                className={cn(
-                  "flex h-8 w-full items-center justify-between rounded-ctl px-2 text-left",
-                  index === cursor && "bg-hover",
-                )}
-              >
-                <span className="font-medium">{link.label}</span>
-                {link.group !== "footer" && (
-                  <span className="text-sm text-muted">{labels.groups[link.group]}</span>
-                )}
-              </button>
-            ))}
+            <div role="listbox" id={listboxId} aria-labelledby={pagesLabelId}>
+              {matches.map((link, index) => (
+                <div
+                  key={link.id}
+                  id={optionId(link.id)}
+                  role="option"
+                  aria-selected={index === cursor}
+                  onMouseEnter={() => setCursor(index)}
+                  onClick={() => go(link)}
+                  className={cn(
+                    "flex h-8 w-full cursor-pointer items-center justify-between rounded-ctl px-2 text-left",
+                    index === cursor && "bg-hover",
+                  )}
+                >
+                  <span className="font-medium">{link.label}</span>
+                  {link.group !== "footer" && (
+                    <span className="text-sm text-muted">{labels.groups[link.group]}</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </Dialog.Popup>
       </Dialog.Portal>

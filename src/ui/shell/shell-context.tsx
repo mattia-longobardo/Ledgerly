@@ -11,6 +11,7 @@ export interface ShellLabels {
   toggleSidebar: string;
   search: string;
   toggleTheme: string;
+  themeSaveError: string;
   signOut: string;
   more: string;
   palette: { placeholder: string; pages: string; empty: string; shortcut: string; escape: string };
