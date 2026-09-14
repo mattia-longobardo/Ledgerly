@@ -154,6 +154,7 @@
       "thisDevice": "this device",
       "unknownDevice": "Unknown device",
       "signOut": "Sign out",
+      "signOutDevice": "Sign out {device}",
       "signOutOthers": "Sign out other sessions",
       "since": "since {date}",
       "errors": { "failed": "Couldn't sign out. Try again." }

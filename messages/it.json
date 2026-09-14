@@ -154,6 +154,7 @@
       "thisDevice": "questo dispositivo",
       "unknownDevice": "Dispositivo sconosciuto",
       "signOut": "Disconnetti",
+      "signOutDevice": "Disconnetti {device}",
       "signOutOthers": "Disconnetti le altre sessioni",
       "since": "dal {date}",
       "errors": { "failed": "Impossibile disconnettersi. Riprova." }

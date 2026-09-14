@@ -60,7 +60,13 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
             </div>
           </div>
           {!session.current && (
-            <Button size="xs" variant="danger" disabled={pending} onClick={() => revoke(session.id)}>
+            <Button
+              size="xs"
+              variant="danger"
+              disabled={pending}
+              aria-label={t("signOutDevice", { device: session.device })}
+              onClick={() => revoke(session.id)}
+            >
               {t("signOut")}
             </Button>
           )}
