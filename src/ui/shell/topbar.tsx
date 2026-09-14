@@ -5,8 +5,11 @@ import Link from "next/link";
 import type { Route } from "next";
 import type { ReactNode } from "react";
 import { IconButton } from "@/ui/button";
+import { cn } from "@/ui/cn";
 import { Kbd } from "@/ui/kbd";
 import { useShell } from "./shell-context";
+
+const MOBILE_TITLE = "max-md:text-xl max-md:font-semibold max-md:tracking-[-0.01em]";
 
 export function Topbar({
   title,
@@ -36,9 +39,11 @@ export function Topbar({
             </span>
           </>
         )}
-        <span className="truncate font-medium text-fg max-md:text-xl max-md:font-semibold max-md:tracking-[-0.01em]">
+        <span className={cn("truncate font-medium text-fg", parent ? "max-md:hidden" : MOBILE_TITLE)}>
           {title}
         </span>
+        {/* Phones show one title, the section's (as the design's mobile header does). */}
+        {parent && <span className={cn("truncate text-fg md:hidden", MOBILE_TITLE)}>{parent.label}</span>}
       </div>
       <div className="flex-1" />
       <button
