@@ -29,7 +29,7 @@ services:
       - "autoheal=true"
       - "traefik.enable=true"
       - "traefik.docker.network=proxy_public"
-      - "traefik.http.routers.ledgerly-router.rule=Host(`${LEDGERLY_HOST}`)"
+      - "traefik.http.routers.ledgerly-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`)"
       - "traefik.http.routers.ledgerly-router.entrypoints=web"
       - "traefik.http.routers.ledgerly-router.middlewares=lan-only@file,ledgerly-https"
       - "traefik.http.middlewares.ledgerly-https.headers.customrequestheaders.X-Forwarded-Proto=https"
