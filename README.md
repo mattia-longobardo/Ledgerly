@@ -143,10 +143,13 @@ a side effect of every tick, not a job of its own.
   - **Authentik** (`security/`, `auth.longobardo.me`): the OAuth2/OIDC provider and application
     `Ledgerly` (slug `ledgerly`, confidential, implicit-consent authorization flow, the four default
     OpenID scope mappings). Its redirect URIs are
-    `<BETTER_AUTH_URL>/api/auth/oauth2/callback/authentik` — `authentik` is `OIDC_PROVIDER_ID`, the
-    Better Auth provider id — for production and for `http://127.0.0.1:3000`. The `profile` scope
-    mapping is what puts `groups` in the id token, which is how `OIDC_ADMIN_GROUP` (the `Ledgerly`
-    group) grants the admin role on sign-in.
+    `<BETTER_AUTH_URL>/api/auth/callback/authentik` — for production and for
+    `http://127.0.0.1:3000`. That path is the **social** callback, not the generic-OAuth one
+    (`/api/auth/oauth2/callback/…`): the sign-in button calls `authClient.signIn.social`
+    (`src/app/(auth)/authentik.ts`), and `authentik` is `OIDC_PROVIDER_ID`. Register the wrong one
+    and Authentik answers `redirect_uri_no_match`. The `profile` scope mapping is what puts
+    `groups` in the id token, which is how `OIDC_ADMIN_GROUP` (the `Ledgerly` group) grants the
+    admin role on sign-in.
   - **Stalwart** (`network/`, `mx.longobardo.me`): send as `no-reply@longobardo.me` over implicit
     TLS on 465, with that mailbox's password in `SMTP_PASSWORD`.
   - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
