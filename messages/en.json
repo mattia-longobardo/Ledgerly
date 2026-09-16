@@ -191,7 +191,7 @@
         "connected": "Wallet connected",
         "replaced": "Token replaced",
         "disconnected": "Wallet disconnected",
-        "queued": "Sync queued",
+        "synced": "Sync finished",
         "tested": "Wallet answered: the token works"
       },
       "errors": {
@@ -420,6 +420,9 @@
         "label": "Date range",
         "previous": "Previous period",
         "next": "Next period",
+        "latest": "Latest",
+        "previousMonth": "Previous month",
+        "nextMonth": "Next month",
         "from": "From",
         "to": "To",
         "apply": "Apply",
@@ -464,8 +467,10 @@
     "group": {
       "summary": "{count, plural, one {# transaction} other {# transactions}} · {total}"
     },
+    "truncated": "Showing the first {shown} of {count} transactions.",
     "selection": {
       "label": "{count, plural, one {# selected} other {# selected}}",
+      "all": "Select all",
       "setCategory": "Set category",
       "hide": "Hide",
       "restore": "Restore",
@@ -473,11 +478,15 @@
     },
     "row": {
       "editCategory": "Edit category",
+      "edit": "Edit details",
       "menu": "Row actions",
       "note": "Note",
       "labels": "Labels",
+      "noLabels": "No labels",
       "uncategorised": "Uncategorised",
-      "noPayee": "No payee"
+      "noPayee": "No payee",
+      "save": "Save",
+      "cancel": "Cancel"
     },
     "badges": {
       "hidden": "Hidden",

@@ -344,3 +344,123 @@ Il **token di Budget Makers Wallet** è del proprietario. Senza, T2 e T8 si cost
 contro fixture sintetiche e il contratto documentato in §9.1, ma il primo collegamento vero e il
 recupero dei 12 mesi restano da fare a mano. Non è un motivo per fermarsi: è un motivo per tenere il
 client onesto sulle fixture e chiedere il token quando F2 è pronta da collaudare.
+
+---
+
+## 11. Esito (2026-09-16)
+
+F2 è chiusa. Il cancello di §8 è verde per intero: `format:check`, `lint`, `typecheck`,
+**619 test unitari**, **210 di integrazione** (migrazioni da database vuoto), e `npm run e2e` —
+build compresa — con **13 percorsi**, fra cui Expenses a 1440 px e a 400 px. La migrazione è una
+sola, `drizzle/0003_integrations_transactions.sql`.
+
+Il piano è stato eseguito come scritto: T0 da solo, poi il gruppo A (T1–T4), poi il gruppo B
+(T5–T7), poi T8, con il cancello completo e un commit fra un gruppo e l'altro. T8 è partito in
+parallelo con T6 perché le sue quattro dipendenze (T1, T2, T3, T5) erano consegnate e i loro file
+non si toccavano.
+
+### 11.1 Contratti di §3 cambiati in corsa
+
+Ogni cambiamento è stato deciso dall'orchestratore e propagato, mai concordato fra due agenti.
+
+- **`categories()` aggiunta al client Wallet** (§3.3). Senza di essa l'adozione per nome esatto di
+  §9.1 è irrealizzabile: un movimento porta solo l'id della categoria, non il nome. Additiva.
+- **`skipRun(ctx, runId, reason?)`** invece di allargare l'outcome di `finishRun`. `sync_runs.state
+  = "skipped"` serve a un collegamento revocato, ma la firma di §3.3 va rispettata alla lettera.
+- **`linkExternal` accetta la transazione del chiamante** (`(ctx, input, now?, tx?)`). Riga,
+  etichette e collegamento erano scritti da due servizi su due connessioni: un processo morto fra
+  i due commit lasciava un movimento senza collegamento, che la passata dopo **duplicava**. §4.2
+  prevede esattamente questo caso («funzioni sink chiamate dentro la transazione del chiamante»),
+  quindi la finestra è chiusa invece che documentata. La compensazione manuale di T5 è stata
+  rimossa: il rollback *è* quella compensazione.
+- **`upsertFromProvider` e `updateTransaction` allargate** con `restoreTransaction(s)`,
+  `hideTransactions`, `setCategory`, `clearRemovedUpstream` e un quarto argomento `options`
+  (`provider`, `now`, `window`). §3.3 non prevedeva il ripristino, che §7.2 esige («permette di
+  ripristinarle») e che il catalogo già nominava: la specifica di §3.3 era incompleta.
+- **`TransactionSort` da tre a cinque chiavi** (`account`, `category`). Il design ordina cinque
+  colonne; con tre, due intestazioni del prototipo non avrebbero fatto nulla (§8.4 punto 2).
+- **`WindowRow.externalId` rinominato `key`**, e `returnedExternalIds` in `returnedKeys`. §4.3
+  tiene l'id del provider fuori da `transactions`, quindi il modulo passava id locali in un campo
+  che diceva "esterno". Il campo è un'identità opaca, purché coerente fra i due lati della
+  chiamata.
+- **`PeriodStepper.periodLabel` da `string` a `ReactNode`** (`accounts/ui/controls.tsx`, F1). Nel
+  design l'etichetta del periodo **è** il pulsante che apre i calendari. Retrocompatibile.
+
+### 11.2 Dove la specifica ha vinto sul lavoro consegnato
+
+- **Nessuna finestra di grazia su `removed_upstream_at`.** T1 aveva introdotto 24 ore di assenze
+  consecutive prima di dichiarare sparito un movimento. §7.2 dice «non restituito dentro la
+  finestra di rilettura», e la finestra — 7 giorni riletti ogni ora — *è* già la tolleranza.
+  `isGone` e `MISSING_GRACE_HOURS` sono stati rimossi perché senza quel ritardo non avevano più un
+  chiamante, e `applyPresence` non restituisce più un campo `gone` che contraddiceva la specifica.
+- **Il pannello per nota ed etichette si fa.** Il design non ce l'ha, ma §7.2 dichiara nota ed
+  etichette modificabili in locale e §9 vuole §7.2 «per intero». Che fosse previsto lo dicevano
+  `toasts.noteSaved` e `toasts.labelsSaved`, seminati in T0 e inutilizzati.
+- **`toasts.queued` → `toasts.synced`.** Il catalogo descriveva un accodamento; `syncWalletNow` è
+  sincrona e l'utente aspetta. Rinominata la chiave, non solo il testo.
+
+### 11.3 Difetti trovati verificando, non accettando i rapporti
+
+- **`startOfDayIn` sbagliava di un giorno intero** su un fuso che salta la mezzanotte
+  (America/Santiago, 6 settembre 2026): la correzione di offset a due passaggi restituiva sempre il
+  secondo candidato, e in quel caso è il primo a cadere sul giorno richiesto. Il caso era *nominato*
+  nel rapporto di T8 come verificato, ma l'asserzione non copriva la data risultante. Ora la
+  funzione sceglie il candidato più antico che cade davvero sul giorno, con test diretti in
+  `dates.test.ts` su cinque fusi.
+- **`payee` ordinava i `null` in testa** in ordine discendente, affidandosi al default di Postgres.
+  Difetto preesistente, emerso aggiungendo le due chiavi nuove; ora `NULLS LAST` è esplicito su
+  tutte e tre le colonne testuali.
+- **Direzione di ordinamento predefinita divergente** fra l'interfaccia (tutto `desc`) e le letture
+  (per colonna): `/expenses?sort=payee` avrebbe disegnato la freccia in giù mentre il database
+  ordinava in su.
+- **`setState` sincrono in un effetto** nella palette (rilievo di ESLint). La correzione tiene i
+  risultati insieme alla query che li ha trovati, così mostrarli è un confronto e non un secondo
+  stato da azzerare: la risposta a una query vecchia non può comparire sotto una nuova.
+
+### 11.4 Deviazioni consapevoli, da portare alla revisione di fase di §11
+
+- **Tre componenti di §8.3 non stanno in `src/ui/`**: `ColorSwatchPicker` (in
+  `settings/data/categories/`), `DateRangePicker` e `MultiSelectFilter` (in
+  `modules/transactions/ui/`). Promuoverne uno e lasciare gli altri due sarebbe arbitrario, e la
+  pagina Components resterebbe incompleta comunque; la regola applicata è quella del **secondo
+  consumatore**. Vale anche per `formatDateTime`, che oggi vive come `formatInstant` locale nella
+  pagina Integrations.
+- **Il controllo di intervallo** non è il gruppo bordato unico del design, ma lo stepper di F1 con
+  i calendari dentro l'etichetta del periodo.
+- **`provider_links.entity_id` non è una chiave esterna reale.** §4.3 fissa le colonne della
+  tabella, e una FK vera vorrebbe una colonna nullable per entità collegabile, invertendo la
+  direzione `platform → modules` che `architecture.test.ts` fa rispettare. Conseguenza: la
+  piattaforma non può verificare che un `entity_id` appartenga a chi lo dichiara — inerte, perché
+  ogni servizio a valle è scopato su `ctx.userId`, e asserito nei test.
+- **Gli id dei conti del provider stanno in `accounts.provider_account_id`**, non in
+  `provider_links`: tensione con §4.3 ereditata da F1, e aprire una seconda fonte di verità sarebbe
+  stato peggio. Movimenti e categorie passano da `provider_links`.
+- **`cadence` e `payee` delle ricorrenze non sono persistiti**: le colonne di §3.2 non li
+  prevedono, la cadenza è implicita in `interval_days`, e aggiungerli avrebbe richiesto una seconda
+  migrazione.
+- **`saveProviderBalance` timbra anche `accounts.last_synced_at`.** `applyProviderAccounts` lo
+  timbra solo sui conti per cui la riconciliazione produce un passo, quindi un conto sincronizzato e
+  invariato non verrebbe mai timbrato, risulterebbe obsoleto dopo 36 h e manderebbe un'email a
+  settimana a fronte di letture riuscite ogni ora. §7.1 misura l'obsolescenza dall'ultima lettura.
+- **La card «Scheduled jobs»** del prototipo (§10.3, esecuzione di qualunque job da parte di un
+  admin) resta fuori: non è perimetro di F2. Da decidere se sezione condizionale nella stessa rotta
+  o rotta admin separata.
+- **«Sync now» non ricalcola le ricorrenze**: la loro persistenza vive nel job, e nessuna schermata
+  di F2 le mostra. Si chiude con una riga in `settings/integrations/actions.ts` che chiami
+  `refreshRecurrences` dopo `syncWalletNow`.
+- **`expenses.errors.invalid`** non è stata aggiunta: `invalid_reference` cade su `errors.failed`.
+
+### 11.5 Resta al proprietario (§10)
+
+Il **token di Budget Makers Wallet**. Senza, il client e il motore girano contro le fixture
+sintetiche di `tests/fixtures/wallet/`. Al primo collaudo vero vanno verificati, in quest'ordine:
+
+1. **Il filtro di data chiuso `recordDate=lte.<data>`** (forma PostgREST): è l'**unica** inferenza
+   sulla forma dell'URL, perché l'implementazione di riferimento su `origin/main` usa solo `gte.`.
+2. **La forma dell'envelope** delle risposte: il client accetta sia `{ records: [...] }` sia un
+   array nudo, e qualunque altra forma è un errore `payload` rumoroso.
+3. **Il recupero dei 12 mesi** al primo collegamento, e che il cursore in `sync_jobs` non si scriva
+   se il backfill cade a metà (un backfill incompleto deve ripetersi, non perdersi).
+
+Poi i due passaggi di §11 che sono del proprietario e che l'orchestratore non dichiara fatti: il
+**confronto visivo con il design** e la **revisione del branch divisa per aree**.

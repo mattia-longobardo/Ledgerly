@@ -1,0 +1,225 @@
+import { Check, ChevronDown, Landmark, Search, Tag as TagIcon } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import Link from "next/link";
+import { LinkTabs, type Params, PeriodStepper, withParams } from "@/modules/accounts/ui/controls";
+import type { UiLocale } from "@/platform/format";
+import { IconButton } from "@/ui/button";
+import { cn } from "@/ui/cn";
+import { Input } from "@/ui/input";
+import { rangeLabel } from "./display";
+import { categoryParam, type ExpensesQuery, RANGE_PRESETS, toggleCategory, UNCATEGORISED } from "./filters";
+import { RangePicker } from "./range-picker";
+import type { AccountFilterOption, CategoryFilterOption } from "./view";
+
+const CONTROL =
+  "focus-ring flex h-[30px] cursor-pointer list-none items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm font-medium hover:bg-hover [&::-webkit-details-marker]:hidden";
+
+const PANEL =
+  "absolute top-9 left-0 z-30 flex w-[240px] max-w-[calc(100vw-32px)] animate-in flex-col rounded-lg border border-border bg-card p-1.5 shadow-overlay";
+
+const OPTION = "focus-ring flex h-[30px] items-center gap-2.5 rounded-[5px] px-2 text-sm hover:bg-hover";
+
+/** The design's checkbox square, as a glyph: these are links, not form controls. */
+function Box({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid size-3.5 shrink-0 place-items-center rounded-[4px] border",
+        checked ? "border-primary bg-primary text-primary-fg" : "border-border2",
+      )}
+    >
+      {checked && <Check className="size-2.5" />}
+    </span>
+  );
+}
+
+function Dot({ color }: { color: string | null }) {
+  return (
+    <span
+      aria-hidden
+      className={cn("size-2 shrink-0 rounded-[2px]", color === null && "bg-faint")}
+      style={color === null ? undefined : { background: color }}
+    />
+  );
+}
+
+/**
+ * The filter row of the design: the date range with its stepper, its four presets and its
+ * two-month picker, then categories, account, "Show hidden", the payee search and "Clear filters".
+ *
+ * Everything here is a link or a GET form, which is the whole point of keeping the state in the
+ * URL (spec §8.4 point 2): the row is rendered by the server and every control works before any
+ * JavaScript has run. `LinkTabs` and `PeriodStepper` come from F1 unchanged.
+ */
+export async function FilterBar({
+  query,
+  categories,
+  accounts,
+  uncategorisedCount,
+  locale,
+  path = "/expenses",
+}: {
+  query: ExpensesQuery;
+  categories: readonly CategoryFilterOption[];
+  accounts: readonly AccountFilterOption[];
+  /** How many movements of the range carry no category: the count of the last chip. */
+  uncategorisedCount: number;
+  locale: UiLocale;
+  path?: string;
+}) {
+  const t = await getTranslations("expenses.filters");
+  const selected = query.categorySelection;
+  const account = accounts.find((one) => one.id === query.accountId) ?? null;
+
+  /** A filter changes, the period does not: the links keep the window the reader is looking at. */
+  const carry: Params = query.params;
+  const categoryHref = (id: string) =>
+    withParams(path, carry, { cat: categoryParam(toggleCategory(selected, id)) });
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <PeriodStepper
+        label={t("range.label")}
+        path={path}
+        params={query.stepperParams}
+        offset={query.offset}
+        periodLabel={
+          <RangePicker
+            range={query.range}
+            text={rangeLabel(query.range, locale)}
+            params={query.presetParams}
+            locale={locale}
+            label={t("range.label")}
+            path={path}
+          />
+        }
+        previousLabel={t("range.previous")}
+        nextLabel={t("range.next")}
+        latestLabel={t("range.latest")}
+      />
+
+      <LinkTabs
+        label={t("range.label")}
+        path={path}
+        params={query.presetParams}
+        name="preset"
+        current={query.preset ?? ""}
+        options={RANGE_PRESETS.map((preset) => ({ value: preset, label: t(`presets.${preset}`) }))}
+      />
+
+      <span aria-hidden className="mx-1 h-[18px] w-px bg-border max-md:hidden" />
+
+      <details className="relative">
+        <summary className={cn(CONTROL, selected.length > 0 && "border-accent")}>
+          <TagIcon aria-hidden className="size-3.5 text-muted" />
+          {selected.length === 0 ? t("categories.all") : t("categories.some", { count: selected.length })}
+          <ChevronDown aria-hidden className="size-3 text-muted" />
+        </summary>
+        <div className={PANEL}>
+          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+            {t("categories.title")}
+            <Link
+              href={withParams(path, carry, { cat: "" })}
+              className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+            >
+              {t("categories.clear")}
+            </Link>
+          </div>
+          <div className="max-h-[320px] overflow-y-auto">
+            {categories.map((category) => (
+              <Link
+                key={category.id}
+                href={categoryHref(category.id)}
+                aria-current={selected.includes(category.id) ? "true" : undefined}
+                className={OPTION}
+              >
+                <Box checked={selected.includes(category.id)} />
+                <Dot color={category.color} />
+                <span className="min-w-0 flex-1 truncate">{category.name}</span>
+                <span className="text-micro text-muted">{category.count}</span>
+              </Link>
+            ))}
+            <Link
+              href={categoryHref(UNCATEGORISED)}
+              aria-current={selected.includes(UNCATEGORISED) ? "true" : undefined}
+              className={OPTION}
+            >
+              <Box checked={selected.includes(UNCATEGORISED)} />
+              <Dot color={null} />
+              <span className="min-w-0 flex-1 truncate">{t("categories.none")}</span>
+              <span className="text-micro text-muted">{uncategorisedCount}</span>
+            </Link>
+          </div>
+        </div>
+      </details>
+
+      <details className="relative">
+        <summary className={cn(CONTROL, account !== null && "border-accent")}>
+          <Landmark aria-hidden className="size-3.5 text-muted" />
+          {account === null ? t("accounts.all") : t("accounts.one", { name: account.name })}
+          <ChevronDown aria-hidden className="size-3 text-muted" />
+        </summary>
+        <div className={cn(PANEL, "w-[220px]")}>
+          <Link
+            href={withParams(path, carry, { acc: "" })}
+            aria-current={account === null ? "true" : undefined}
+            className={cn(OPTION, account === null && "font-medium")}
+          >
+            {t("accounts.all")}
+          </Link>
+          {accounts.map((one) => (
+            <Link
+              key={one.id}
+              href={withParams(path, carry, { acc: one.id })}
+              aria-current={one.id === query.accountId ? "true" : undefined}
+              className={cn(OPTION, one.id === query.accountId && "font-medium")}
+            >
+              <span className="min-w-0 flex-1 truncate">{one.name}</span>
+              <span className="text-micro text-muted">{one.count}</span>
+            </Link>
+          ))}
+        </div>
+      </details>
+
+      <Link
+        href={withParams(path, carry, { hidden: query.showHidden ? "" : "1" })}
+        aria-current={query.showHidden ? "true" : undefined}
+        className={cn(CONTROL, "font-medium", query.showHidden && "border-accent")}
+      >
+        <Box checked={query.showHidden} />
+        {t("showHidden")}
+      </Link>
+
+      {query.filtered && (
+        <Link
+          href={withParams(path, query.clearedParams, {})}
+          className="focus-ring rounded-[2px] px-1 font-medium text-accent hover:underline"
+        >
+          {t("clear")}
+        </Link>
+      )}
+
+      <span className="flex-1" />
+
+      <form method="get" action={path} className="flex items-center gap-1.5">
+        {Object.entries(query.params).map(([name, value]) =>
+          name === "q" || value === undefined || value === "" ? null : (
+            <input key={name} type="hidden" name={name} value={value} />
+          ),
+        )}
+        <Input
+          type="search"
+          name="q"
+          defaultValue={query.search}
+          placeholder={t("search")}
+          aria-label={t("searchLabel")}
+          className="h-[30px] w-[200px] text-sm max-md:w-full"
+        />
+        <IconButton label={t("searchLabel")} type="submit" size={28} bordered>
+          <Search aria-hidden className="size-3.5" />
+        </IconButton>
+      </form>
+    </div>
+  );
+}
