@@ -140,11 +140,21 @@ export interface Facets {
   categories: { categoryId: string | null; count: number }[];
 }
 
-/** A month header in the table, with the rows the list actually carries for it. */
+/**
+ * A month header in the table, with the rows the list actually carries for it.
+ *
+ * `count` and `totalCents` describe the **whole filtered range** for that month — they come from
+ * `monthlyTotals`, computed in SQL with no `limit` — while `rows` is only what this page brought
+ * back. So `rows.length` may be less than `count`, and that difference is the truth the page has
+ * to tell rather than hide: the header's amount is the month's, not the page's.
+ */
 export interface MonthGroup {
   month: MonthKey;
+  /** The movements the range holds for this month, hidden rows left out (spec §7.2). */
   count: number;
+  /** Their signed total, over the range and not over `rows`. */
   totalCents: Cents;
+  /** The rows of this month the page carries: `rows.length <= count` when `limit` cut in. */
   rows: TransactionRow[];
 }
 
@@ -155,9 +165,19 @@ export interface ExpensesView {
   breakdown: CategoryTotal[];
   /** The counts behind the filter chips, each dimension counted with its own filter dropped. */
   facets: Facets;
-  /** The counts and totals of the whole filtered range, whatever `limit` cut off. */
+  /**
+   * The counts and totals of the whole filtered range, whatever `limit` cut off, with hidden and
+   * gone-from-provider rows left out whatever "Show hidden" says (spec §7.2).
+   */
   summary: TransactionsSummary;
-  /** `true` when `limit` stopped the list short of `summary.count`. */
+  /**
+   * How many rows the whole filtered range holds **for the list**: the same number as
+   * `summary.count` unless "Show hidden" is on, when the list carries rows the totals leave out.
+   * `rows` is a page of this, so this — not `summary.count` — is what the truncation notice
+   * counts against.
+   */
+  listCount: number;
+  /** `true` when `limit` stopped the list short of `listCount`. */
   truncated: boolean;
   /** Whether the user has any movement at all: tells "empty range" from "nothing synced yet". */
   hasAny: boolean;
@@ -219,6 +239,9 @@ const DEFAULT_DIRECTION: Record<TransactionSort, SortDirection> = {
  * The `WHERE` of every read here, the user's scope first. A filter left out adds no condition;
  * `includeHidden` is the only one whose absence adds one, because hidden and gone-from-provider
  * rows are out of every list until "Show hidden" asks for them (spec §7.2).
+ *
+ * `includeHidden` decides what the **list** shows and nothing else: every total passes its
+ * filters through `withoutHidden` first, so the flag can never reach a sum.
  */
 function conditions(ctx: Pick<Ctx, "userId" | "timeZone">, filters: TransactionFilters): SQL {
   const parts: (SQL | undefined)[] = [userScoped(ctx).owns(transactions)];
@@ -262,6 +285,19 @@ function conditions(ctx: Pick<Ctx, "userId" | "timeZone">, filters: TransactionF
   }
 
   return and(...parts) as SQL;
+}
+
+/**
+ * The same filters with "Show hidden" taken back off. §7.2 keeps hidden and gone-from-provider
+ * rows out of totals, budgets, the subscription check and recurrence detection, and grants the
+ * filter **visibility** only: a total that moved when the filter was switched on would be a
+ * different answer to "how much is this" depending on a list control, which is exactly the one
+ * source of truth §4.3 forbids splitting. Every sum in this file goes through here; the list,
+ * the facet counts behind its chips and `listCount` do not, because they describe the rows on
+ * screen rather than an amount.
+ */
+function withoutHidden(filters: TransactionFilters): TransactionFilters {
+  return filters.includeHidden ? { ...filters, includeHidden: false } : filters;
 }
 
 /**
@@ -385,6 +421,24 @@ export async function getTransaction(ctx: Pick<Ctx, "userId">, id: string): Prom
   return found.get(id) ?? null;
 }
 
+/**
+ * Every movement of an account, ids only, with no window and no limit: what the accounts module
+ * needs to forget an account's provider links before the rows go (spec §4.3 keeps those ids in
+ * `provider_links`, which has no foreign key to cascade). A window would be a sentinel here, and
+ * a sentinel date is a lie that outlives whoever wrote it.
+ */
+export async function transactionIdsOfAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<string[]> {
+  const rows = await getDb()
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(and(eq(transactions.accountId, accountId), userScoped(ctx).owns(transactions)))
+    .orderBy(asc(transactions.id));
+  return rows.map((row) => row.id);
+}
+
 /** A movement as the re-read window sees it (spec §7.2): the account's rows over a date range. */
 export async function transactionsInWindow(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -418,6 +472,11 @@ export async function countAllTransactions(ctx: Pick<Ctx, "userId">): Promise<nu
   return Number(row?.total ?? 0);
 }
 
+/**
+ * How many rows the filtered range holds for the **list**, `limit` aside: unlike a total this one
+ * follows "Show hidden", because it is what the page compares its rows against to know whether
+ * `limit` cut anything off.
+ */
 export async function countTransactions(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
@@ -480,7 +539,10 @@ export async function listTransactions(
   }));
 }
 
-/** The header of the page: `{count} · {total}` over the whole filtered range. */
+/**
+ * The header of the page: `{count} · {total}` over the whole filtered range, hidden and
+ * gone-from-provider rows left out whatever "Show hidden" says (spec §7.2).
+ */
 export async function transactionsSummary(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
@@ -497,7 +559,7 @@ export async function transactionsSummary(
       ),
     })
     .from(transactions)
-    .where(conditions(ctx, filters));
+    .where(conditions(ctx, withoutHidden(filters)));
   return {
     count: Number(row?.total ?? 0),
     totalCents: cents(row?.totalCents ?? null),
@@ -509,6 +571,10 @@ export async function transactionsSummary(
 /**
  * One row per month of the filtered range, newest first. The month is the user's own
  * (`date_trunc` on the instant shifted into their zone), never a UTC month (spec §4.3).
+ *
+ * This is the only answer to "how much is this month": `expensesView` builds the table's month
+ * headers from it rather than summing the page, because a page is cut by `limit` and a header
+ * summing it would print a wrong amount in the same shape as a right one.
  */
 export async function monthlyTotals(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -518,7 +584,7 @@ export async function monthlyTotals(
   const rows = await getDb()
     .select({ month, total: count(), totalCents: sum(transactions.amountCents) })
     .from(transactions)
-    .where(conditions(ctx, filters))
+    .where(conditions(ctx, withoutHidden(filters)))
     // By position: the same expression is written differently in a select list and in a
     // `GROUP BY`, and Postgres compares the two textually.
     .groupBy(sql`1`)
@@ -532,7 +598,8 @@ export async function monthlyTotals(
 
 /**
  * The "By category" card (spec §7.2), biggest slice first. Transfers are left out: a giroconto is
- * not spending, and its two legs would cancel out inside whatever category they landed in.
+ * not spending, and its two legs would cancel out inside whatever category they landed in. Hidden
+ * and gone-from-provider rows are left out too, whatever "Show hidden" says: the card is a total.
  */
 export async function categoryTotals(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -548,7 +615,7 @@ export async function categoryTotals(
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
-    .where(and(conditions(ctx, filters), ne(transactions.type, "transfer")))
+    .where(and(conditions(ctx, withoutHidden(filters)), ne(transactions.type, "transfer")))
     .groupBy(transactions.categoryId, categories.name, categories.color)
     .orderBy(asc(categories.name), asc(transactions.categoryId));
 
@@ -570,7 +637,10 @@ export async function categoryTotals(
     );
 }
 
-/** The counts behind the account and category chips of the filter bar (spec §7.2). */
+/**
+ * The counts behind the account and category chips of the filter bar (spec §7.2). A chip promises
+ * rows in the list rather than an amount, so these follow "Show hidden" the way the list does.
+ */
 export async function facetCounts(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
@@ -629,20 +699,69 @@ export async function searchPayees(
 }
 
 /**
+ * The table's month headers: one per month the page carries rows for, in the order the rows meet
+ * them, each carrying the range's own count and total.
+ *
+ * The split is deliberate. `rows` decides **which** rows a month shows, because that is all a
+ * page knows; `totals` decides **how many** it holds and **how much** they add up to, because
+ * that is the answer `monthlyTotals` computes in SQL over the whole range. Summing the page
+ * instead made the header of the month at the `limit` boundary print a wrong amount of money —
+ * always the oldest month, the one reached by scrolling down — in the same shape and with the
+ * same authority as a right one. A header that counts more than it shows is a true statement the
+ * page can render; a header that under-counts by €2.640 is not (review B1, spec §4.3).
+ *
+ * A month `totals` does not mention holds nothing the totals count: zero and `0n` are the honest
+ * header over rows that are all hidden, which is what "Show hidden" puts on screen.
+ */
+export function monthGroups(rows: readonly TransactionRow[], totals: readonly MonthTotal[]): MonthGroup[] {
+  const byMonth = new Map(totals.map((total) => [total.month, total]));
+  const groups = new Map<MonthKey, MonthGroup>();
+  for (const row of rows) {
+    const month = monthKey(row.on);
+    const group = groups.get(month);
+    if (group) {
+      group.rows.push(row);
+      continue;
+    }
+    const range = byMonth.get(month);
+    groups.set(month, {
+      month,
+      count: range?.count ?? 0,
+      totalCents: range?.totalCents ?? 0n,
+      rows: [row],
+    });
+  }
+  return [...groups.values()];
+}
+
+/**
  * Everything the Expenses screen renders, read once (the shape `accountsView` has in F1).
  *
- * The month groups are built from the rows the list carries, so a header never claims movements
- * the table is not showing; `summary` and `breakdown` describe the whole filtered range, and
- * `truncated` says when the two differ. Month groups only mean anything under the date sort, so a
- * caller sorting by amount or payee should render `rows` flat.
+ * The month groups carry the rows the list brought back and the counts and totals of the whole
+ * range (`monthGroups`); `summary` and `breakdown` describe the range too, and `truncated` says
+ * when the page holds fewer rows than the range has. Month groups only mean anything under the
+ * date sort, so a caller sorting by amount or payee should render `rows` flat.
  */
 export async function expensesView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<ExpensesView> {
-  const [rows, summary, breakdown, facets, hasAny, accounts, categoryList, labelList] = await Promise.all([
+  const [
+    rows,
+    listCount,
+    summary,
+    monthTotals,
+    breakdown,
+    facets,
+    hasAny,
+    accounts,
+    categoryList,
+    labelList,
+  ] = await Promise.all([
     listTransactions(ctx, filters),
+    countTransactions(ctx, filters),
     transactionsSummary(ctx, filters),
+    monthlyTotals(ctx, filters),
     categoryTotals(ctx, filters),
     facetCounts(ctx, filters),
     countAllTransactions(ctx),
@@ -651,27 +770,14 @@ export async function expensesView(
     listLabels(ctx),
   ]);
 
-  const months: MonthGroup[] = [];
-  for (const row of rows) {
-    const month = monthKey(row.on);
-    const last = months.at(-1);
-    const group = last?.month === month ? last : undefined;
-    if (group) {
-      group.count += 1;
-      group.totalCents += row.amountCents;
-      group.rows.push(row);
-      continue;
-    }
-    months.push({ month, count: 1, totalCents: row.amountCents, rows: [row] });
-  }
-
   return {
     rows,
-    months,
+    months: monthGroups(rows, monthTotals),
     breakdown,
     facets,
     summary,
-    truncated: rows.length < summary.count,
+    listCount,
+    truncated: rows.length < listCount,
     hasAny: hasAny > 0,
     accounts,
     categories: categoryList,

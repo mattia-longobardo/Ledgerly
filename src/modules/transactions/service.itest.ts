@@ -27,7 +27,7 @@ import {
   updateTransaction,
   upsertFromProvider,
 } from "./service";
-import { createCategory, createLabel, listCategories, listLabels } from "./taxonomy";
+import { createCategory, createLabel, deleteLabel, listCategories, listLabels } from "./taxonomy";
 
 function contextFor(userId: string): Ctx {
   return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
@@ -444,6 +444,44 @@ describe("updateTransaction", () => {
   });
 });
 
+describe("a deleted label (review B12)", () => {
+  it("never comes back onto a movement the person cleared it from", async () => {
+    await upsertFromProvider(ctx, accountId, [movement()]);
+    const [food] = await listLabels(ctx);
+    expect(food.name).toBe("Food");
+    expect((await listTransactions(ctx, {}))[0].labels).toMatchObject([{ id: food.id }]);
+
+    await deleteLabel(ctx, food.id);
+    expect((await listTransactions(ctx, {}))[0].labels).toEqual([]);
+
+    // The hour after: Wallet still sends the movement with the same label name.
+    await upsertFromProvider(ctx, accountId, [movement()]);
+
+    const row = (await listTransactions(ctx, {}))[0];
+    expect(row.labels).toEqual([]);
+    expect(row.locallyEdited).toEqual(["labels"]);
+
+    // The name itself does come back in Settings › Data — §9.1 matches labels by name and
+    // `service.ts` resolves every movement's names before it consults a marker — but it comes
+    // back carrying nothing, and a fresh id cannot undo the person's choice any more.
+    const [reborn] = await listLabels(ctx);
+    expect(reborn.name).toBe("Food");
+    expect(reborn.id).not.toBe(food.id);
+  });
+
+  it("leaves the movement following the provider's other fields", async () => {
+    await upsertFromProvider(ctx, accountId, [movement()]);
+    const [food] = await listLabels(ctx);
+    await deleteLabel(ctx, food.id);
+
+    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -3_000n, payee: "Esselunga Bis" })]);
+
+    const row = (await listTransactions(ctx, {}))[0];
+    expect(row).toMatchObject({ amountCents: -3_000n, payee: "Esselunga Bis" });
+    expect(row.labels).toEqual([]);
+  });
+});
+
 describe("visibility", () => {
   let id: string;
 
@@ -460,6 +498,53 @@ describe("visibility", () => {
 
     expect(await restoreTransactions(ctx, [id])).toBe(1);
     expect(await listTransactions(ctx, {})).toHaveLength(1);
+  });
+
+  it("shows a hidden movement without letting it into any total (review B11)", async () => {
+    // §7.2 grants "Show hidden" the visibility and nothing else: hidden rows stay out of totals,
+    // budgets, the subscription check and recurrence detection. Before the fix the header's
+    // `{count} · {total}` and the "By category" card counted them back in as soon as the filter
+    // was switched on, so the same range answered two different amounts.
+    await upsertFromProvider(ctx, accountId, [
+      movement({
+        externalId: "w-2",
+        amountCents: -1_000n,
+        payee: "Enel",
+        categoryExternalId: "wc-9",
+        categoryName: "Utilities",
+        labels: [],
+      }),
+    ]);
+    await hideTransaction(ctx, id);
+
+    expect(await listTransactions(ctx, { includeHidden: true })).toHaveLength(2);
+    expect(await transactionsSummary(ctx, { includeHidden: true })).toEqual(
+      await transactionsSummary(ctx, {}),
+    );
+    expect((await transactionsSummary(ctx, { includeHidden: true })).totalCents).toBe(-1_000n);
+    expect(await categoryTotals(ctx, { includeHidden: true })).toEqual(await categoryTotals(ctx, {}));
+    expect((await categoryTotals(ctx, { includeHidden: true })).map((slice) => slice.name)).toEqual([
+      "Utilities",
+    ]);
+    expect(await monthlyTotals(ctx, { includeHidden: true })).toEqual(await monthlyTotals(ctx, {}));
+
+    const view = await expensesView(ctx, { includeHidden: true });
+    expect(view.rows).toHaveLength(2);
+    expect(view.summary).toMatchObject({ count: 1, totalCents: -1_000n });
+    expect(view.listCount).toBe(2);
+    expect(view.truncated).toBe(false);
+    expect(view.months).toHaveLength(1);
+    expect(view.months[0]).toMatchObject({ count: 1, totalCents: -1_000n });
+    expect(view.months[0].rows).toHaveLength(2);
+  });
+
+  it("keeps a movement the provider dropped out of the totals too (review B11)", async () => {
+    await markRemovedUpstream(ctx, [id]);
+
+    expect(await listTransactions(ctx, { includeHidden: true })).toHaveLength(1);
+    expect((await transactionsSummary(ctx, { includeHidden: true })).totalCents).toBe(0n);
+    expect(await categoryTotals(ctx, { includeHidden: true })).toEqual([]);
+    expect(await monthlyTotals(ctx, { includeHidden: true })).toEqual([]);
   });
 
   it("hides once: a second pass over the same selection changes nothing", async () => {
@@ -546,8 +631,23 @@ describe("reads", () => {
     expect(view.months.map((group) => group.month)).toEqual(["2026-03-01"]);
     expect(view.months[0]).toMatchObject({ count: 3, totalCents: -25_000n });
     expect(view.summary).toMatchObject({ count: 3, totalCents: -25_000n, expenseCents: -5_000n });
+    expect(view.listCount).toBe(3);
     expect(view.truncated).toBe(false);
     expect(view.hasAny).toBe(true);
+  });
+
+  it("gives a month header the range's total, not the page's (review B1)", async () => {
+    // The `limit` boundary falls inside March: the page brings back 2 of its 3 movements. The
+    // header used to sum the page and print −240,00 € where the month really is −250,00 € — a
+    // wrong amount of money in the same shape as a right one, always on the oldest month shown.
+    const view = await expensesView(ctx, { limit: 2 });
+
+    expect(view.rows.map((row) => row.payee)).toEqual(["Revolut", "Esselunga"]);
+    expect(view.months.map((group) => group.month)).toEqual(["2026-03-01"]);
+    expect(view.months[0]).toMatchObject({ count: 3, totalCents: -25_000n });
+    expect(view.months[0].rows).toHaveLength(2);
+    expect(view.listCount).toBe(4);
+    expect(view.truncated).toBe(true);
   });
 
   it("breaks the range down by category, transfers left out, biggest slice first", async () => {

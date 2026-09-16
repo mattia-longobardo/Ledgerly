@@ -1,6 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "@/platform/context";
+import { upsertFromProvider } from "@/modules/transactions/service";
 import { addDays, today } from "@/platform/dates";
+import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { accountsView, listBalanceEntries, listSnapshotRuns } from "./queries";
@@ -369,6 +372,34 @@ describe("removeAccount", () => {
     expect(await removeAccount(ctx, account.id)).toBe("deleted");
     expect((await accountsView(ctx)).rows).toEqual([]);
     expect(await listBalanceEntries(ctx, account.id)).toEqual([]);
+  });
+
+  // The movements fall by foreign key; their `provider_links` rows would not (§11.4: `entity_id`
+  // is not a real foreign key), and a link nothing can resolve keeps the entity unique key of a
+  // row that no longer exists.
+  it("forgets the provider links of the movements it takes with it", async () => {
+    const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
+    await upsertFromProvider(ctx, account.id, [
+      {
+        externalId: "w-1",
+        counterpartExternalId: null,
+        occurredAt: new Date("2026-01-10T09:00:00Z"),
+        amountCents: -2_500n,
+        currency: "EUR",
+        type: "expense",
+        state: "cleared",
+        payee: "Esselunga",
+        note: null,
+        categoryExternalId: null,
+        categoryName: null,
+        labels: [],
+      },
+    ]);
+    const linked = await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"]);
+    expect(linked.size).toBe(1);
+
+    expect(await removeAccount(ctx, account.id)).toBe("deleted");
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"])).toEqual(new Map());
   });
 
   it("archives a synced account instead of deleting it", async () => {

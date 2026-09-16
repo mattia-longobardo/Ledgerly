@@ -53,6 +53,16 @@ import { type DateWindow, firstLinkWindows, recentWindow } from "./mapping";
 export interface WalletSyncResult {
   accounts: Record<string, number>;
   transactions: Record<string, number>;
+  /**
+   * `"revoked"` when the pass attempted nothing at all because the token is already refused: both
+   * kinds were recorded and skipped and no call was made. `null` when the provider was really
+   * asked something, whatever the answer was.
+   *
+   * It is stated here, by the only code that knows, because a caller cannot tell the two apart
+   * from the counts: a refused connection and a pass that found nothing new both come back empty.
+   * Counting the first as a pass is how §10.4's "failed sync" gets reported as "out of date".
+   */
+  refused: "revoked" | null;
 }
 
 export interface WalletSyncOptions {
@@ -546,7 +556,8 @@ async function syncTransactions(
  *
  * The three outcomes T1 and I agreed on:
  * - a connection already `revoked` attempts nothing: each kind is recorded and skipped, without a
- *   `finishRun` that would claim the provider was asked anything;
+ *   `finishRun` that would claim the provider was asked anything, and the result says
+ *   `refused: "revoked"` so no caller can count it as a pass that happened;
  * - a token refused mid-pass (401/403) closes its run with the error **and then** marks the
  *   connection `revoked` — `finishRun` cannot tell a refused credential from a bad afternoon — and
  *   the kinds after it are skipped, because the credential is dead for all of them;
@@ -584,11 +595,11 @@ async function walletPass(
 ): Promise<WalletSyncResult> {
   const now = options.now ?? new Date();
   const connection = await walletConnection(ctx, connectionId);
-  const result: WalletSyncResult = { accounts: {}, transactions: {} };
+  const result: WalletSyncResult = { accounts: {}, transactions: {}, refused: null };
 
   if (connection.state === "revoked") {
     for (const kind of SYNC_KINDS) await skipKind(ctx, connectionId, kind, REVOKED_REASON, now);
-    return result;
+    return { ...result, refused: "revoked" };
   }
 
   const client =

@@ -4,7 +4,7 @@ import { withParams } from "@/modules/accounts/ui/controls";
 import { expensesView, type TransactionRow as QueryRow } from "@/modules/transactions/queries";
 import { displayPayee, isHidden } from "@/modules/transactions/rules";
 import { BreakdownCard } from "@/modules/transactions/ui/breakdown-card";
-import { badgesOf, breakdownBars, categoryColor, monthLabel } from "@/modules/transactions/ui/display";
+import { badgesOf, categoryBreakdown, categoryColor, monthLabel } from "@/modules/transactions/ui/display";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
 import { ShortcutsCard } from "@/modules/transactions/ui/shortcuts-card";
@@ -114,7 +114,13 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
           },
         ];
 
-  const bars = breakdownBars(
+  /**
+   * The card and the number over it are one answer: `categoryBreakdown` totals the very rows it
+   * returns, so the heading can never claim an amount the rows do not hold. The range's own
+   * signed total — transfers and income included — belongs to the page header, not here: the card
+   * leaves transfers out and measures its rows by size (review B2).
+   */
+  const breakdown = categoryBreakdown(
     view.breakdown.map((slice) => ({
       id: slice.categoryId ?? UNCATEGORISED,
       name: slice.name ?? t("row.uncategorised"),
@@ -184,17 +190,24 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
               />
             </Card>
             {/* The read stops at its own page size: say so rather than let the header's count
-                disagree with the rows silently (spec §8.4 point 5). */}
+                disagree with the rows silently (spec §8.4 point 5). It counts against
+                `listCount`, the rows the range holds for the list: `summary.count` leaves the
+                hidden ones out, and with "Show hidden" on the notice would claim fewer than the
+                table is already showing. */}
             {view.truncated && (
               <p className="text-sm text-warn">
-                {t("truncated", { shown: view.rows.length, count: view.summary.count })}
+                {t("truncated", { shown: view.rows.length, count: view.listCount })}
               </p>
             )}
           </div>
         )}
 
         <div className="flex flex-col gap-4">
-          <BreakdownCard bars={bars} total={money(view.summary.totalCents)} numberFormat={ctx.numberFormat} />
+          <BreakdownCard
+            bars={breakdown.bars}
+            total={money(breakdown.totalCents)}
+            numberFormat={ctx.numberFormat}
+          />
           <ShortcutsCard />
         </div>
       </div>

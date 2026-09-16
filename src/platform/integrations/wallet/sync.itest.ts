@@ -421,7 +421,9 @@ describe("syncWalletNow", () => {
 
     const stub = walletStub();
     const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options });
-    expect(result).toEqual({ accounts: {}, transactions: {} });
+    // Nothing was attempted, and the result says so: the hourly job must not count this as a
+    // pass, or a refused token is reported as a sync that is merely out of date (§10.4).
+    expect(result).toEqual({ accounts: {}, transactions: {}, refused: "revoked" });
     expect(stub.calls).toEqual([]);
 
     // One from the pass that was refused (its second kind), two from this one.

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount } from "@/modules/accounts/service";
 import type { Ctx } from "@/platform/context";
@@ -55,6 +56,15 @@ async function addTransaction(ctx: Ctx, accountId: string, categoryId: string | 
     })
     .returning({ id: transactions.id });
   return row.id;
+}
+
+/** The `locally_edited` markers of §7.2 on one movement, read straight from the column. */
+async function markersOf(transactionId: string): Promise<string[]> {
+  const [row] = await getDb()
+    .select({ locallyEdited: transactions.locallyEdited })
+    .from(transactions)
+    .where(eq(transactions.id, transactionId));
+  return row.locallyEdited;
 }
 
 async function anAccount(ctx: Ctx): Promise<string> {
@@ -386,6 +396,62 @@ describe("labels", () => {
 
     await deleteLabel(ctx, label.id);
     expect(await getDb().select().from(transactionLabels)).toEqual([]);
+  });
+
+  it("marks the movements it was taken off, and only those (review B12)", async () => {
+    // Deleting a label edits the `labels` field of the movements that carried it, so §7.2's
+    // marker is what keeps the deletion: labels have no provider link, §9.1 matches them by name,
+    // and without the marker the next pass re-created the name and the merge re-attached it.
+    const label = await createLabel(ctx, { name: "Holiday", color: null });
+    const accountId = await anAccount(ctx);
+    const tagged = await addTransaction(ctx, accountId, null);
+    const untouched = await addTransaction(ctx, accountId, null);
+    await getDb()
+      .insert(transactionLabels)
+      .values({ userId: ctx.userId, transactionId: tagged, labelId: label.id });
+
+    await deleteLabel(ctx, label.id);
+
+    expect(await markersOf(tagged)).toEqual(["labels"]);
+    expect(await markersOf(untouched)).toEqual([]);
+  });
+
+  it("adds the marker to the ones a movement already had, without repeating it", async () => {
+    const label = await createLabel(ctx, { name: "Holiday", color: null });
+    const accountId = await anAccount(ctx);
+    const edited = await addTransaction(ctx, accountId, null);
+    const already = await addTransaction(ctx, accountId, null);
+    await getDb()
+      .insert(transactionLabels)
+      .values([
+        { userId: ctx.userId, transactionId: edited, labelId: label.id },
+        { userId: ctx.userId, transactionId: already, labelId: label.id },
+      ]);
+    await getDb()
+      .update(transactions)
+      .set({ locallyEdited: ["note"] })
+      .where(eq(transactions.id, edited));
+    await getDb()
+      .update(transactions)
+      .set({ locallyEdited: ["labels"] })
+      .where(eq(transactions.id, already));
+
+    await deleteLabel(ctx, label.id);
+
+    expect(await markersOf(edited)).toEqual(["labels", "note"]);
+    expect(await markersOf(already)).toEqual(["labels"]);
+  });
+
+  it("marks nothing when the label it is asked to delete is not there", async () => {
+    const accountId = await anAccount(ctx);
+    const transactionId = await addTransaction(ctx, accountId, null);
+    const label = await createLabel(ctx, { name: "Holiday", color: null });
+    await getDb().insert(transactionLabels).values({ userId: ctx.userId, transactionId, labelId: label.id });
+
+    await expect(deleteLabel(ctx, crypto.randomUUID())).rejects.toMatchObject({ code: "not_found" });
+
+    expect(await markersOf(transactionId)).toEqual([]);
+    expect(await listLabels(ctx)).toHaveLength(1);
   });
 
   it("reports a label that is not there", async () => {

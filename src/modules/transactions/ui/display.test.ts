@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { badgesOf, type BadgeSource, breakdownBars, calendarCells, rangeLabel } from "./display";
+import { badgesOf, type BadgeSource, calendarCells, categoryBreakdown, rangeLabel } from "./display";
 
 const PLAIN: BadgeSource = {
   hiddenAt: null,
@@ -41,8 +41,8 @@ describe("badgesOf", () => {
   });
 });
 
-describe("breakdownBars", () => {
-  const bars = breakdownBars([
+describe("categoryBreakdown", () => {
+  const { bars, totalCents } = categoryBreakdown([
     { id: "a", name: "Groceries", color: "#1", cents: -4000n },
     { id: "b", name: "Rent", color: "#2", cents: -6000n },
     { id: "c", name: "Nothing", color: "#3", cents: 0n },
@@ -58,21 +58,37 @@ describe("breakdownBars", () => {
     expect(bars[1].width).toBeCloseTo(0.666, 2);
   });
 
+  it("totals the very rows it returns, in cents", () => {
+    expect(totalCents).toBe(10000n);
+  });
+
   it("compares sizes and not signs, so an income slice is a slice", () => {
-    const mixed = breakdownBars([
+    const mixed = categoryBreakdown([
       { id: "in", name: "Salary", color: "#1", cents: 300000n },
       { id: "out", name: "Rent", color: "#2", cents: -100000n },
     ]);
-    expect(mixed.map((bar) => bar.id)).toEqual(["in", "out"]);
-    expect(mixed[0].share).toBe(0.75);
+    expect(mixed.bars.map((bar) => bar.id)).toEqual(["in", "out"]);
+    expect(mixed.bars[0].share).toBe(0.75);
+  });
+
+  it("heads a card whose rows cancel out with what those rows moved, not with zero", () => {
+    // The reviewer's September: a salary of +2.500 and a rent of −2.500. A signed sum would say
+    // "0,00 €" over two rows of 2.500, which is the header contradicting its own list.
+    const cancelling = categoryBreakdown([
+      { id: "in", name: "Stipendio", color: "#1", cents: 250000n },
+      { id: "out", name: "Affitto", color: "#2", cents: -250000n },
+    ]);
+    expect(cancelling.totalCents).toBe(500000n);
+    expect(cancelling.bars.map((bar) => bar.share)).toEqual([0.5, 0.5]);
   });
 
   it("gives no shares at all when the slices cancel out", () => {
-    const zero = breakdownBars([
+    const zero = categoryBreakdown([
       { id: "in", name: "In", color: "#1", cents: 0n },
       { id: "out", name: "Out", color: "#2", cents: 0n },
     ]);
-    expect(zero).toEqual([]);
+    expect(zero.bars).toEqual([]);
+    expect(zero.totalCents).toBe(0n);
   });
 });
 

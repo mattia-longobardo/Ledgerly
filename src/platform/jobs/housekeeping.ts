@@ -2,6 +2,7 @@ import "server-only";
 import { lt, sql } from "drizzle-orm";
 import { deleteExpiredInvitations } from "@/platform/auth/invitations";
 import { getDb } from "@/platform/db/client";
+import { deleteOldSyncRuns } from "@/platform/integrations/service";
 import { deleteOldNotifications } from "@/platform/notifications/service";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "./schema";
@@ -19,8 +20,12 @@ export const housekeepingJob: JobDefinition = {
       .delete(jobRuns)
       .where(lt(sql`coalesce(${jobRuns.finishedAt}, ${jobRuns.startedAt})`, cutoff))
       .returning({ id: jobRuns.id });
+    // A sync run is an execution too (spec §10.2), and its own table is the one that grows
+    // without anybody touching it: a revoked connection records two skipped runs an hour, for
+    // ever. Its owner prunes it, with the same care over a run that never finished.
+    const syncRunsDeleted = await deleteOldSyncRuns(cutoff);
     const invitationsDeleted = await deleteExpiredInvitations(cutoff);
     const notificationsDeleted = await deleteOldNotifications(cutoff);
-    return { jobRunsDeleted: runs.length, invitationsDeleted, notificationsDeleted };
+    return { jobRunsDeleted: runs.length, syncRunsDeleted, invitationsDeleted, notificationsDeleted };
   },
 };

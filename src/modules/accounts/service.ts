@@ -12,7 +12,10 @@ import {
 } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
+import { PROVIDERS } from "@/platform/integrations/rules";
+import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
+import { transactionIdsOfAccount } from "@/modules/transactions/queries";
 import {
   type AccountCreateInput,
   accountCreateSchema,
@@ -166,17 +169,36 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
  *
  * Nothing can reference an account yet: transactions, pockets, subscriptions, interest rules and
  * funds arrive from F2 onwards, and each adds its count here.
+ *
+ * A real deletion also forgets the provider links of the movements it takes with it, through the
+ * integrations service (§4.3: one owner per table — this module never writes `provider_links`
+ * itself). The provider ids of the *account* are not there at all: they live in
+ * `accounts.provider_account_id` (§11.4), so they go with the row.
  */
-export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<"deleted" | "archived"> {
+export async function removeAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+): Promise<"deleted" | "archived"> {
   const account = await requireAccount(ctx, id);
   const references = 0;
   if (!canDelete(account, references)) {
     await archiveAccount(ctx, id);
     return "archived";
   }
+  // The ids before the delete, because the movements fall by foreign key and their
+  // `provider_links` rows do not (`entity_id` is not a real foreign key: the deviation of §11.4).
+  // Left behind they would hold the entity unique key of rows nothing can resolve, and claim a
+  // `first_seen_at` for movements that no longer exist.
+  const movementIds = await transactionIdsOfAccount(ctx, id);
   await getDb()
     .delete(accounts)
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  // After the delete, never before. A link removed while its row survives is worse than an
+  // orphan: the next sync would not recognise the movement and would import it a second time,
+  // which is wrong money in every total. This way the failure mode is the one we already have.
+  for (const provider of PROVIDERS) {
+    await unlinkEntities(ctx, provider, "transaction", movementIds);
+  }
   return "deleted";
 }
 

@@ -165,14 +165,26 @@ describe("walletSyncJob", () => {
     expect(await patterns(ctx)).toHaveLength(1);
   });
 
-  it("emails the user about a connection that is not syncing (spec §10.4)", async () => {
+  // §10.4 lists "sync failed **or** out of date" as two conditions, and a refused credential is
+  // the first: the token was rejected, the database says so, and "out of date since <date>" would
+  // hide the only sentence the user can act on.
+  it("tells the user the token was rejected, not that the sync is out of date (spec §10.4)", async () => {
     await revokedConnection();
 
-    // A refused token attempts nothing, so it can only ever be out of date: the stale case.
-    expect(await walletSyncJob.run()).toMatchObject({ connections: 1, failures: 0, notified: 1 });
+    // A connection that attempts no call is not a pass: it is counted apart, and reported as the
+    // failure it is.
+    expect(await walletSyncJob.run()).toMatchObject({
+      connections: 1,
+      passes: 0,
+      refused: 1,
+      failures: 0,
+      notified: 1,
+    });
     const mail = await waitForMail(email);
-    expect(mail.Subject).toBe("Wallet sync is out of date");
-    expect(mail.Text).toContain("has not synced since");
+    expect(mail.Subject).toBe("Wallet sync failed");
+    expect(mail.Text).toContain("token rejected");
+    expect(mail.Text).toContain("Check the token");
+    expect(mail.Text).not.toContain("out of date");
   });
 
   it("sends one email for the condition, not one an hour", async () => {

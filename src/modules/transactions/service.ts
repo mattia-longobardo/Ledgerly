@@ -629,8 +629,8 @@ export async function restoreTransactions(ctx: Pick<Ctx, "userId">, ids: readonl
 }
 
 /**
- * Stamps the movements the provider stopped returning (spec §7.2): what `applyPresence` names on
- * the pass that noticed. A row already stamped keeps its original moment, so calling this again
+ * Stamps the movements the provider stopped returning (spec §7.2): what `planUpstreamRemovals`
+ * names on the pass that noticed. A row already stamped keeps its original moment, so calling this again
  * with the same ids writes nothing.
  */
 export async function markRemovedUpstream(

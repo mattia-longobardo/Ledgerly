@@ -39,7 +39,13 @@ const CATALOGUES = { en, it } as const;
 /** A condition that lasts for weeks is worth one email a week, not one an hour. */
 const NOTIFY_COOLDOWN_HOURS = 24 * 7;
 
-/** The two conditions of §10.4 this job reports, keyed on the connection they are about. */
+/**
+ * The two conditions of §10.4 this job reports, keyed on the connection they are about — and this
+ * job is the only place either is reported. §10.4 has one "sync failed or out of date" condition,
+ * and the connection is where it lives: the credential is the thing the user can fix, and one
+ * dead token would otherwise send one email per account as well (see `modules/accounts/jobs.ts`,
+ * which keeps its per-account staleness for the interface and mails none of it).
+ */
 const FAILED = "wallet_sync_failed";
 const STALE = "wallet_sync_stale";
 
@@ -197,34 +203,65 @@ function syncMail(
 }
 
 /**
- * What the pass just recorded, for the email: the newest run that failed, which carries both the
- * kind and the message `sync_runs` stored. Read back from the log rather than from the thrown
+ * What the pass just recorded, for the email: the newest run that did not work, which carries both
+ * the kind and the message `sync_runs` stored. Read back from the log rather than from the thrown
  * error so the email quotes exactly what Settings › Integrations shows.
+ *
+ * A `skipped` run counts here when it carries a reason, because that is what a refused credential
+ * leaves behind: the engine attempts nothing for a `revoked` connection and records "token
+ * rejected" instead of a failure. Without it the email would fall back to a generic kind and lose
+ * the one sentence the user can act on.
  */
 async function lastFailure(
   ctx: Pick<Ctx, "userId">,
   connectionId: string,
 ): Promise<{ kind: string; error: string } | null> {
   const runs = await listRuns(ctx, { connectionId, limit: 4 });
-  const failed = runs.find((run) => run.state === "failed");
+  const failed = runs.find(
+    (run) => run.state === "failed" || (run.state === "skipped" && run.error !== null),
+  );
   return failed ? { kind: failed.kind, error: failed.error ?? "" } : null;
 }
 
+/** What one pass of one connection amounted to, for the purpose of §10.4's two conditions. */
+type SyncOutcome =
+  /** The provider was asked something, and answered. */
+  | "answered"
+  /** The pass failed: the provider refused, broke, or came back in a shape we would not trust. */
+  | "failed"
+  /** Nothing was attempted: the credential is already refused, so no call was made. */
+  | "refused";
+
 /**
- * The two conditions of §10.4, and only ever one email at a time: a sync that just failed says
- * why, and one that has not succeeded for longer than the staleness window (the single constant of
- * §7.1) says since when — a `revoked` connection, which attempts nothing, is exactly that case. A
- * connection that is healthy again has both records cleared, so the next occurrence is reported
+ * The two conditions of §10.4, and only ever one email at a time.
+ *
+ * "Failed" and "out of date" are two conditions, not two words for one, and a refused credential
+ * is the first: the token was rejected, the database already knows it (`sync_runs.error`,
+ * `connection.last_error`), and "the sync is out of date since <date>" would hide the one sentence
+ * the user can act on behind a date they cannot fix. So a pass that failed **and** a connection
+ * that attempted nothing because it is `revoked` both send the failure, with the kind and the
+ * message the log holds; only a connection that is answering and merely behind the staleness
+ * window (the single constant of §7.1) sends "out of date".
+ *
+ * A connection that is healthy again has both records cleared, so the next occurrence is reported
  * straight away instead of waiting out the cooldown.
+ *
+ * That leaves "out of date" a narrow condition, and deliberately so: every pass that is attempted
+ * either moves `last_ok_at` (`finishRun`) or is reported as the failure it was, so what is left
+ * for it is a connection nothing has attempted for longer than the window. §10.4 names the
+ * condition, so it stays: it is the one that would catch a future kind that stops writing
+ * `last_ok_at` without anybody failing.
  */
 async function reportSync(
   person: Person,
   ctx: Ctx,
   connection: Connection,
-  failed: boolean,
+  outcome: SyncOutcome,
   now: Date,
 ): Promise<boolean> {
-  if (failed) {
+  // `revoked` covers the pass that was refused mid-flight too: `markConnection` has already
+  // written it by the time the job re-reads the connection.
+  if (outcome !== "answered" || connection.state === "revoked") {
     const failure = await lastFailure(ctx, connection.id);
     return notifyOnce(
       {
@@ -284,6 +321,11 @@ async function reportSync(
  * stored. A sync that fails is caught here: the engine has already written its own `sync_runs` row
  * and left the connection's health saying so, and the pass continues to the recurrences rather
  * than losing them to a provider's bad afternoon.
+ *
+ * The detail counts the four things that can become of one connection, and keeps them apart:
+ * `passes` is a pass that really asked the provider something, `failures` one that asked and did
+ * not get an answer it could use, `refused` a credential the provider has already rejected (no
+ * call made), `skipped` a pass another one was already running.
  */
 export const walletSyncJob: JobDefinition = {
   name: "wallet-sync",
@@ -293,6 +335,7 @@ export const walletSyncJob: JobDefinition = {
     let connections = 0;
     let passes = 0;
     let failures = 0;
+    let refused = 0;
     let notified = 0;
     let patterns = 0;
     let skipped = 0;
@@ -301,10 +344,18 @@ export const walletSyncJob: JobDefinition = {
       const connection = (await listConnections(ctx)).find((one) => one.provider === WALLET_PROVIDER);
       if (connection) {
         connections += 1;
-        let failed = false;
+        let outcome: SyncOutcome | "busy" = "answered";
         try {
-          await syncWalletNow(ctx, connection.id, { now });
-          passes += 1;
+          const pass = await syncWalletNow(ctx, connection.id, { now });
+          // A refused credential attempts no call at all: counting it as a pass would put a
+          // connection that was never contacted in `passes`, and leave §10.4 with nothing but
+          // "out of date" to say about a token the provider rejected.
+          if (pass.refused === null) {
+            passes += 1;
+          } else {
+            refused += 1;
+            outcome = "refused";
+          }
         } catch (error) {
           // A pass already running on this connection — the owner pressed "Sync now" as the tick
           // came round — is not a failure: nothing was attempted, so there is nothing to report
@@ -312,20 +363,32 @@ export const walletSyncJob: JobDefinition = {
           // that never happened.
           if (isSyncBusy(error)) {
             skipped += 1;
+            outcome = "busy";
           } else {
-            failed = true;
+            outcome = "failed";
             failures += 1;
             console.error("[wallet-sync] the Wallet pass failed", redactForLog(error));
           }
         }
-        // Re-read: `finishRun` has just written `last_ok_at` and the connection's state, and both
-        // decide which of the two conditions of §10.4 applies.
-        const after = (await listConnections(ctx)).find((one) => one.id === connection.id) ?? connection;
-        if (await reportSync(person, ctx, after, failed, now)) notified += 1;
+        if (outcome !== "busy") {
+          // Re-read: `finishRun` has just written `last_ok_at` and the connection's state, and
+          // both decide which of the two conditions of §10.4 applies.
+          const after = (await listConnections(ctx)).find((one) => one.id === connection.id) ?? connection;
+          if (await reportSync(person, ctx, after, outcome, now)) notified += 1;
+        }
       }
       patterns += await refreshRecurrences(ctx, now);
     });
 
-    return { ...counts, connections, passes, failures, skipped, notified, recurrences: patterns };
+    return {
+      ...counts,
+      connections,
+      passes,
+      failures,
+      refused,
+      skipped,
+      notified,
+      recurrences: patterns,
+    };
   },
 };

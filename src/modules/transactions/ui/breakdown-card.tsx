@@ -16,7 +16,10 @@ export async function BreakdownCard({
   numberFormat,
 }: {
   bars: readonly BreakdownBar[];
-  /** The range's total, already formatted: the design shows it next to the card's title. */
+  /**
+   * The total of the rows below, already formatted: the design shows it next to the card's title.
+   * It is the sum the bars are drawn against, so it says what the rows say (review B2).
+   */
   total: string;
   numberFormat: NumberFormat;
 }) {
@@ -26,7 +29,14 @@ export async function BreakdownCard({
     <Card className="flex flex-col gap-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold">{t("title")}</h2>
-        <span className="text-sm text-muted tabular-nums">{total}</span>
+        {/* The rows are compared by magnitude, so this is what they *moved*, not a signed
+            balance: the design leaves the number bare, which reads as spending and would be a
+            second, contradictory total next to the page's own (spec §8.4 point 5). The label is
+            what makes it honest without changing the shape. */}
+        <span className="text-sm text-muted tabular-nums" title={t("total", { total })}>
+          <span className="sr-only">{t("total", { total })}</span>
+          <span aria-hidden>{total}</span>
+        </span>
       </div>
 
       {bars.length === 0 ? (

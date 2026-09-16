@@ -8,8 +8,6 @@ import {
   normalizeCounts,
   outcomeState,
   providerLinkSchema,
-  reconcileExternalIds,
-  type SeenLink,
   syncErrorText,
   WALLET_PROVIDER,
 } from "./rules";
@@ -68,54 +66,6 @@ describe("providerLinkSchema", () => {
     expect(providerLinkSchema.safeParse({ ...link, entityType: "payslip" }).success).toBe(false);
     expect(providerLinkSchema.safeParse({ ...link, entityId: "42" }).success).toBe(false);
     expect(providerLinkSchema.safeParse({ ...link, externalId: "   " }).success).toBe(false);
-  });
-});
-
-describe("reconcileExternalIds", () => {
-  const known: SeenLink[] = [
-    { externalId: "a", missingSince: null },
-    { externalId: "b", missingSince: null },
-    { externalId: "c", missingSince: hoursAgo(2) },
-    { externalId: "d", missingSince: hoursAgo(40) },
-  ];
-
-  it("splits the links by what the provider returned", () => {
-    expect(reconcileExternalIds(known, ["a", "c", "e"])).toEqual({
-      present: ["a"],
-      returned: ["c"],
-      missing: ["b"],
-      stillMissing: ["d"],
-      unknown: ["e"],
-    });
-  });
-
-  it("leaves a link that was already absent alone, so its disappearance keeps its date", () => {
-    const twice = reconcileExternalIds(known, []);
-    expect(twice.missing).toEqual(["a", "b"]);
-    expect(twice.stillMissing).toEqual(["c", "d"]);
-  });
-
-  it("calls nothing missing when the provider returned everything", () => {
-    expect(reconcileExternalIds(known, ["a", "b", "c", "d"])).toMatchObject({
-      present: ["a", "b"],
-      returned: ["c", "d"],
-      missing: [],
-      stillMissing: [],
-    });
-  });
-
-  it("reports each unknown external id once, in the order it arrived", () => {
-    expect(reconcileExternalIds([], ["z", "y", "z"]).unknown).toEqual(["z", "y"]);
-  });
-
-  it("marks nothing missing when there is nothing to reconcile against", () => {
-    expect(reconcileExternalIds([], ["a"])).toEqual({
-      present: [],
-      returned: [],
-      missing: [],
-      stillMissing: [],
-      unknown: ["a"],
-    });
   });
 });
 

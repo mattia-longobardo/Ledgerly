@@ -59,6 +59,17 @@ export interface BreakdownBar extends BreakdownInput {
   width: number;
 }
 
+/** The "By category" card as it is drawn: the rows, and the total those rows come to. */
+export interface Breakdown {
+  bars: BreakdownBar[];
+  /**
+   * What the rows of the card add up to, measured the way the card measures them: by size. It is
+   * the whole the shares are shares of, so the heading of the card and its rows can never
+   * disagree. Summed here, on `bigint` cents and on the server, never in the browser (spec §8.5).
+   */
+  totalCents: Cents;
+}
+
 /**
  * The "By category" card of the design, biggest first.
  *
@@ -66,7 +77,7 @@ export interface BreakdownBar extends BreakdownInput {
  * and an income category would otherwise eat the bar of everything next to it. A range whose
  * categories cancel each other out to zero has no shares at all rather than shares of infinity.
  */
-export function breakdownBars(items: readonly BreakdownInput[]): BreakdownBar[] {
+export function categoryBreakdown(items: readonly BreakdownInput[]): Breakdown {
   const magnitude = (cents: Cents) => (cents < 0n ? -cents : cents);
   const sorted = [...items]
     .filter((item) => item.cents !== 0n)
@@ -77,11 +88,14 @@ export function breakdownBars(items: readonly BreakdownInput[]): BreakdownBar[] 
     });
   const total = sorted.reduce((sum, item) => sum + magnitude(item.cents), 0n);
   const largest = sorted.length === 0 ? 0n : magnitude(sorted[0].cents);
-  return sorted.map((item) => ({
-    ...item,
-    share: total === 0n ? 0 : Number(magnitude(item.cents)) / Number(total),
-    width: largest === 0n ? 0 : Number(magnitude(item.cents)) / Number(largest),
-  }));
+  return {
+    bars: sorted.map((item) => ({
+      ...item,
+      share: total === 0n ? 0 : Number(magnitude(item.cents)) / Number(total),
+      width: largest === 0n ? 0 : Number(magnitude(item.cents)) / Number(largest),
+    })),
+    totalCents: total,
+  };
 }
 
 /** A month group's heading: the month spelled out, as in the design's group rows. */
