@@ -293,7 +293,11 @@ export function toIncomingTransaction(
     payee: movement.payee,
     note: movement.note,
     categoryExternalId,
-    categoryName: categoryExternalId === null ? null : (categoryNames.get(categoryExternalId) ?? null),
+    // The record carries its own category name (measured at the collaudo), so prefer it: it also
+    // covers a category created between the `/categories` read and this window.
+    categoryName:
+      movement.categoryName ??
+      (categoryExternalId === null ? null : (categoryNames.get(categoryExternalId) ?? null)),
     labels: movement.labels,
   };
 }

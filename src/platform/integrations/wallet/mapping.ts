@@ -41,53 +41,131 @@ export const walletAccountSchema = z.object({
 });
 export type WalletAccountPayload = z.infer<typeof walletAccountSchema>;
 
-/** A movement as `/records` returns it. */
+/**
+ * The money of a movement. Wallet nests the figure together with its own currency, and a record
+ * carries no currency of its own: `amount.currencyCode` is the movement's currency, full stop.
+ *
+ * `client.ts` keeps every number of a response as its source text, at any depth, so `value`
+ * arrives here as the digits Wallet sent even though it is nested one object down — the place
+ * §4.3's guard is easiest to lose.
+ */
+export const walletRecordAmountSchema = z.object({
+  value: wireAmount,
+  currencyCode: z.string(),
+});
+
+/**
+ * The category Wallet embeds in a movement. The *name* travels with the record, so the name §9.1
+ * adopts by does not have to be looked up in the `/categories` list any more.
+ */
+export const walletRecordCategorySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().nullish(),
+  group: z.string().nullish(),
+  color: z.string().nullish(),
+});
+
+/**
+ * Wallet's transfer block: `null` for an ordinary movement.
+ *
+ * The two ids are not interchangeable, and only one of them is a counterpart:
+ * - `mirrorRecord` is the **other record's** id — the reference §7.2 pairs transfers on, and the
+ *   one `transferPairKey` builds an ordered pair of two record ids out of;
+ * - `transferId` looks like a **group** id shared by both legs. It is not a record id, so using it
+ *   as a counterpart would build a pair key out of a group id and never match anything, or match
+ *   the wrong thing. It is deliberately not read — see {@link mapWalletRecord}.
+ *
+ * Both are optional because both were observed absent: a transfer block carrying only
+ * `{ type, transferId }` leaves §7.2 with no counterpart, which is a missing pairing rule and not
+ * something this file may invent.
+ */
+export const walletTransferSchema = z.object({
+  type: z.string().nullish(),
+  transferId: z.string().nullish(),
+  mirrorRecord: z.string().nullish(),
+});
+
+/**
+ * A movement as `/records` returns it, measured against the live API on 2026-09-16. The fields
+ * this app has no use for (`accountName`, `accountIsBankSync`, `source`, `createdAt`) are part of
+ * the answer and are dropped here rather than carried unused.
+ *
+ * `labels` is an array — the one thing that is certain about it. It came back empty in every one of
+ * the 40 records sampled, so **the element's own shape is not verified**: it is read as `unknown`
+ * and turned into names as tolerantly as {@link walletLabelNames} can manage, instead of asserting
+ * a shape nobody has seen and failing a whole page over it.
+ */
 export const walletRecordSchema = z.object({
   id: z.string().min(1),
   accountId: z.string().min(1),
-  amount: wireAmount,
-  currencyCode: z.string(),
+  amount: walletRecordAmountSchema,
   recordDate: z.string(),
-  categoryId: z.string().nullish(),
-  labels: z.array(z.string()).default([]),
+  category: walletRecordCategorySchema.nullish(),
+  labels: z.array(z.unknown()).default([]),
   recordType: z.string().nullish(),
   recordState: z.string().nullish(),
   note: z.string().nullish(),
-  partyName: z.string().nullish(),
-  transferCounterRecordId: z.string().nullish(),
+  counterParty: z.string().nullish(),
+  transfer: walletTransferSchema.nullish(),
   updatedAt: z.string().nullish(),
 });
 export type WalletRecordPayload = z.infer<typeof walletRecordSchema>;
 
-/** A category as `/categories` returns it: a movement carries only the id, never the name. */
+/**
+ * A category as `/categories` returns it. Wallet publishes no income flag of its own on this
+ * endpoint — 91 categories came back with `id`, `name`, `group` and `color` and nothing else — so
+ * there is none to carry: deciding this app's category type is the taxonomy's call anyway.
+ */
+/**
+ * A category as `/categories` really answers (measured at the collaudo of 2026-09-17, 91 rows):
+ * `group` is an **object** `{ id, name }`, not a string. Expecting a string here is what made the
+ * whole union fail with `(root): Invalid input` — a union's message names neither the field nor
+ * the reason, so it hid the cause. `/categories` is read before `/records`, so this alone stopped
+ * every transactions pass.
+ */
 export const walletCategorySchema = z.object({
   id: z.string().min(1),
   name: z.string(),
-  group: z.string().nullish(),
-  isIncome: z.boolean().nullish(),
+  group: z.object({ id: z.string().nullish(), name: z.string().nullish() }).nullish(),
+  color: z.string().nullish(),
 });
 export type WalletCategoryPayload = z.infer<typeof walletCategorySchema>;
 
 /**
- * Reads come wrapped (`{ accounts: [...] }`, `{ records: [...] }`), the shape the previous
- * version's client used against the live API. A bare array is accepted as well: no token is
- * available to verify the envelope on every endpoint, and an envelope-only schema would turn a
- * naming difference into a sync that can never run. Anything else is a loud payload error.
+ * `/accounts` and `/categories` come wrapped (`{ accounts: [...] }`, `{ categories, limit, offset }`).
+ * A bare array is accepted as well, the tolerance the client was written with while no token was
+ * available to verify either envelope; anything else is a loud payload error.
  */
 export const walletAccountsPayloadSchema = z.union([
   z.object({ accounts: z.array(walletAccountSchema) }).transform((body) => body.accounts),
   z.array(walletAccountSchema),
 ]);
 
-export const walletRecordsPayloadSchema = z.union([
-  z.object({ records: z.array(walletRecordSchema) }).transform((body) => body.records),
-  z.array(walletRecordSchema),
-]);
-
 export const walletCategoriesPayloadSchema = z.union([
   z.object({ categories: z.array(walletCategorySchema) }).transform((body) => body.categories),
   z.array(walletCategorySchema),
 ]);
+
+/**
+ * A page of `/records`, envelope and all: `{ records, limit, offset, nextOffset,
+ * appliedRecordDateFilters }`, measured against the live API on 2026-09-16.
+ *
+ * No bare-array arm here, unlike the two lists above. That tolerance was there because nobody had
+ * seen the envelope; now it has been seen, and accepting an answer without one would mean
+ * accepting an answer that cannot declare which window it covers — the single fact this endpoint
+ * has to be believed about (§7.2 reads a movement's absence from a window as its removal).
+ *
+ * `appliedRecordDateFilters` is required for the same reason: it is what turns "the window was
+ * applied" from an inference into a fact. `limit`, `offset` and `nextOffset` are part of the
+ * answer and are not declared — nothing reads them yet, and a JSON number reaches a schema here as
+ * its own source text (see `parseJsonPreservingNumbers`), so whoever adopts the real pagination
+ * has to coerce them rather than expect `z.number()` to match.
+ */
+export const walletRecordsPayloadSchema = z.object({
+  records: z.array(walletRecordSchema),
+  appliedRecordDateFilters: z.array(z.string()),
+});
+export type WalletRecordsPage = z.infer<typeof walletRecordsPayloadSchema>;
 
 /** A Wallet account, in this app's vocabulary. */
 export interface WalletAccount {
@@ -120,6 +198,11 @@ export interface WalletTransaction {
   /**
    * The external id of the opposite leg of a transfer, `null` for anything else. §7.2 pairs
    * transfers by this reference alone — never by amount and date — so it is carried verbatim.
+   *
+   * It is `transfer.mirrorRecord` and only that. `transfer.transferId`, which a transfer block may
+   * carry instead, is a group id rather than a record id: pairing on it is a different rule, and
+   * until that rule exists a leg without a mirror has no counterpart here (see
+   * {@link mapWalletRecord}).
    */
   transferCounterExternalId: string | null;
   /** The day Wallet stamped on the movement, as Wallet's own text (see {@link walletRecordDate}). */
@@ -132,6 +215,12 @@ export interface WalletTransaction {
   payee: string | null;
   note: string | null;
   categoryExternalId: string | null;
+  /**
+   * The category's own name, as Wallet spells it. A movement carries its whole category — id,
+   * name, group and colour — so the name §9.1 adopts by arrives with the movement instead of
+   * having to be found in the `/categories` list.
+   */
+  categoryName: string | null;
   /** Provider label *names*: §9.1 adopts labels by name, so there is no external id to keep. */
   labels: string[];
   /** Wallet's own `recordType`/`recordState`, lower-cased, `null` when absent. Mapping them onto
@@ -142,16 +231,15 @@ export interface WalletTransaction {
 }
 
 /**
- * A Wallet category. §9.1 adopts a category by its exact name when no link exists yet, so the name
- * has to come from somewhere: a movement carries only `categoryId`, which is why the client reads
- * `/categories` as well. `isIncome` is Wallet's own flag and unknown is `null` — deciding this
- * app's category type from it is the taxonomy's call, not this file's.
+ * A Wallet category, as the `/categories` list publishes it. §9.1 links a provider category,
+ * adopts one by its exact name, or creates it, and that needs Wallet's whole list — including the
+ * categories no movement of the window happens to use. Wallet publishes no income flag here, so
+ * there is none to carry.
  */
 export interface WalletCategory {
   externalId: string;
   name: string;
   groupName: string | null;
-  isIncome: boolean | null;
 }
 
 /**
@@ -240,6 +328,34 @@ function optionalText(value: string | null | undefined): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/**
+ * The name of one label, or `null` when this file cannot tell.
+ *
+ * **Not verified.** `labels` was an array in all 40 records sampled with a real token and empty in
+ * every one of them, so no element has ever been seen. Both arms below are therefore guesses, and
+ * they are written to cost nothing if they are wrong: a bare string is the shape §9.1 implies
+ * ("etichette per nome"), and an object with a `name` is the shape every other nested block of a
+ * record uses (`amount`, `category`, `transfer`). Anything else yields `null` and is dropped
+ * rather than failing the page — a label is a user-owned hint, and a whole window of movements is
+ * not worth losing over one. The first non-empty page of labels from a real token settles it.
+ */
+function labelName(label: unknown): string | null {
+  if (typeof label === "string") return label;
+  if (typeof label !== "object" || label === null) return null;
+  const name = (label as { name?: unknown }).name;
+  return typeof name === "string" ? name : null;
+}
+
+/** Label names, trimmed, de-duplicated and in the order Wallet listed them. */
+export function walletLabelNames(labels: readonly unknown[]): string[] {
+  const names = new Set<string>();
+  for (const label of labels) {
+    const name = optionalText(labelName(label));
+    if (name !== null) names.add(name);
+  }
+  return [...names];
+}
+
 export function mapWalletAccount(raw: WalletAccountPayload): WalletAccount {
   return {
     externalId: raw.id,
@@ -261,19 +377,35 @@ export function mapWalletBalance(raw: WalletAccountPayload): WalletBalance {
   };
 }
 
+/**
+ * A movement in this app's vocabulary.
+ *
+ * The currency comes from `amount.currencyCode`, because a record has no currency of its own, and
+ * `amount.value` is handed to {@link walletAmountToCents} as the source text `client.ts` preserved
+ * — nesting the figure inside an object changes nothing about §4.3, and that is worth a test.
+ *
+ * The counterpart is `transfer.mirrorRecord` and nothing else. §7.2 pairs transfers on the id of
+ * the *opposite record* (`transferPairKey` sorts two record ids into one key), which is what
+ * `mirrorRecord` is; `transfer.transferId` is a group id shared by both legs, so putting it here
+ * would key a pair on something that is not a record and pair nothing — or worse, pair by
+ * coincidence. A leg whose block carries only `{ type, transferId }` therefore gets `null`: that
+ * is a rule §7.2 does not have yet (group by a shared `transferId`), not a field this file may
+ * substitute.
+ */
 export function mapWalletRecord(raw: WalletRecordPayload): WalletTransaction {
   return {
     externalId: raw.id,
     accountExternalId: raw.accountId,
-    transferCounterExternalId: optionalText(raw.transferCounterRecordId),
+    transferCounterExternalId: optionalText(raw.transfer?.mirrorRecord),
     occurredOn: walletRecordDate(raw.recordDate),
     occurredAt: recordInstant(raw.recordDate),
-    amountCents: walletAmountToCents(raw.amount),
-    currency: raw.currencyCode.trim().toUpperCase(),
-    payee: optionalText(raw.partyName),
+    amountCents: walletAmountToCents(raw.amount.value),
+    currency: raw.amount.currencyCode.trim().toUpperCase(),
+    payee: optionalText(raw.counterParty),
     note: optionalText(raw.note),
-    categoryExternalId: optionalText(raw.categoryId),
-    labels: [...new Set(raw.labels.map((label) => label.trim()).filter((label) => label !== ""))],
+    categoryExternalId: optionalText(raw.category?.id),
+    categoryName: optionalText(raw.category?.name),
+    labels: walletLabelNames(raw.labels),
     providerType: optionalText(raw.recordType)?.toLowerCase() ?? null,
     providerState: optionalText(raw.recordState)?.toLowerCase() ?? null,
     updatedAt: instant(raw.updatedAt),
@@ -284,8 +416,7 @@ export function mapWalletCategory(raw: WalletCategoryPayload): WalletCategory {
   return {
     externalId: raw.id,
     name: raw.name.trim(),
-    groupName: optionalText(raw.group),
-    isIncome: raw.isIncome ?? null,
+    groupName: optionalText(raw.group?.name),
   };
 }
 

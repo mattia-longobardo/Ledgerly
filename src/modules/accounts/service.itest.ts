@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "@/platform/context";
+import { addDays, today } from "@/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { accountsView, listBalanceEntries, listSnapshotRuns } from "./queries";
@@ -82,7 +83,7 @@ describe("createAccount", () => {
   });
 
   it("refuses an opening balance dated in the future, writing nothing", async () => {
-    const future = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+    const future = addDays(today(ctx.timeZone), 3);
     await expect(
       createAccount(ctx, { ...CHECKING, openingBalance: { on: future, cents: 1n } }),
     ).rejects.toThrow(AccountError);
@@ -109,7 +110,10 @@ describe("balance entries", () => {
 
   it("refuses a balance dated in the future", async () => {
     const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
-    const future = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    // Tomorrow in the user's own zone, not in UTC: `toISOString()` is forbidden for a civil date
+    // (spec §4.3) and between Rome midnight and UTC midnight it names a day that is already today,
+    // so the service rightly accepts it and this test used to fail for two hours a night.
+    const future = addDays(today(ctx.timeZone), 1);
     await expect(saveBalanceEntry(ctx, account.id, { on: future, cents: 1n, note: "" })).rejects.toThrow(
       AccountError,
     );

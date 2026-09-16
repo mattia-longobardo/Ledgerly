@@ -32,7 +32,7 @@ import {
  * sentence: the card turns it into a catalogued message, so no English text is built here.
  */
 export type IntegrationActionError =
-  "rejected" | "unreachable" | "empty" | "notConnected" | "busy" | "failed";
+  "rejected" | "unreachable" | "provider" | "empty" | "notConnected" | "busy" | "failed";
 
 /**
  * What the card gets back. Deliberately this narrow: there is no field a token could travel in,
@@ -57,7 +57,16 @@ async function walletConnection(ctx: Ctx): Promise<Connection | null> {
  */
 function walletFailure(error: unknown): { code: IntegrationActionError; detail: string } {
   if (error instanceof WalletError) {
-    return { code: isTokenRejected(error) ? "rejected" : "unreachable", detail: error.message };
+    // Only a real connectivity failure is reported as one. A provider that *answered* — an HTTP
+    // status, a body this app cannot read — is a different sentence, and the collaudo of
+    // 2026-09-17 showed why it matters: "Wallet could not be reached" sent the owner hunting the
+    // network while the answer, and its reason, were sitting in the sync log.
+    const code: IntegrationActionError = isTokenRejected(error)
+      ? "rejected"
+      : error.kind === "network" || error.kind === "timeout"
+        ? "unreachable"
+        : "provider";
+    return { code, detail: error.message };
   }
   return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
 }

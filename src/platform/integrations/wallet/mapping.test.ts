@@ -18,6 +18,7 @@ import {
   walletAccountType,
   walletCategoriesPayloadSchema,
   walletAmountToCents,
+  walletLabelNames,
   walletRecordDate,
   type WalletRecordPayload,
   walletRecordsPayloadSchema,
@@ -37,7 +38,7 @@ function accountsFixture(): WalletAccountPayload[] {
 }
 
 function recordsFixture(name: string): WalletRecordPayload[] {
-  return walletRecordsPayloadSchema.parse(fixture(name));
+  return walletRecordsPayloadSchema.parse(fixture(name)).records;
 }
 
 function byId<T extends { id: string }>(rows: readonly T[], id: string): T {
@@ -196,11 +197,35 @@ describe("mapWalletRecord", () => {
       payee: "Panificio Rossi",
       note: "pane e latte",
       categoryExternalId: "wc-groceries",
+      categoryName: "Spesa",
       labels: ["spesa"],
       providerType: "expense",
       providerState: "cleared",
       updatedAt: new Date("2026-01-05T19:02:00.000Z"),
     });
+  });
+
+  /**
+   * The currency of a movement is `amount.currencyCode` and there is no other: a record carries no
+   * currency of its own, so a schema that demanded one at the top level refused *every* record.
+   */
+  it("takes the currency from inside the amount, and upper-cases it", () => {
+    const records = recordsFixture("records-edge-cases.json");
+    expect(mapWalletRecord(byId(records, "wr-4003")).currency).toBe("EUR");
+    expect(mapWalletRecord(byId(records, "wr-4002")).currency).toBe("EUR");
+  });
+
+  /**
+   * §4.3 through a nested amount. `1.0049999999` is the digits Wallet sent; as a double it becomes
+   * `1.005` at six decimals and rounds up. The two answers differ, so this asserts which path the
+   * value took rather than only that the result looks plausible — and the answer has to stay the
+   * text's one now that the figure sits one object down.
+   */
+  it("reads a nested amount from its source text, not from a float", () => {
+    const raw = byId(recordsFixture("records-edge-cases.json"), "wr-4002");
+    expect(raw.amount.value).toBe("1.0049999999");
+    expect(mapWalletRecord(raw).amountCents).toBe(100n);
+    expect(walletAmountToCents(1.0049999999)).toBe(101n);
   });
 
   it("keeps the instant of a timestamped record next to its own day", () => {
@@ -210,24 +235,70 @@ describe("mapWalletRecord", () => {
     expect(record.amountCents).toBe(190000n);
     expect(record.payee).toBe("Datore di lavoro");
     expect(record.categoryExternalId).toBeNull();
+    expect(record.categoryName).toBeNull();
   });
 
-  it("carries the opposite leg's id and never invents a payee", () => {
+  it("carries the category's own name, so nothing has to be looked up to adopt it", () => {
+    const record = mapWalletRecord(byId(recordsFixture("records-edge-cases.json"), "wr-4003"));
+    expect(record.categoryExternalId).toBe("wc-unsorted");
+    // An id with no name is not a name: §9.1 adopts by name, and inventing one from the id would
+    // create a category called "wc-unsorted".
+    expect(record.categoryName).toBeNull();
+  });
+
+  it("carries the mirror record's id and never invents a payee", () => {
     const record = mapWalletRecord(byId(recordsFixture("records-january-fourth-quarter.json"), "wr-1003"));
     expect(record.transferCounterExternalId).toBe("wr-2003");
     expect(record.payee).toBeNull();
     expect(record.providerType).toBe("transfer");
     expect(record.amountCents).toBe(-25000n);
   });
+
+  /**
+   * The one place this file refuses to guess. §7.2 pairs transfers on the id of the opposite
+   * *record*, which is `transfer.mirrorRecord`; `transfer.transferId` is a group id shared by both
+   * legs. A block carrying only the group id therefore leaves the counterpart unknown — `null`,
+   * never 0 and never the group id (§4.3) — and pairing such a leg needs a rule §7.2 does not have.
+   */
+  it("leaves the counterpart unknown when a transfer carries only its group id", () => {
+    const raw = byId(recordsFixture("records-edge-cases.json"), "wr-4001");
+    expect(raw.transfer).toMatchObject({ transferId: "wt-9002" });
+    expect(raw.transfer?.mirrorRecord ?? null).toBeNull();
+    expect(mapWalletRecord(raw).transferCounterExternalId).toBeNull();
+  });
+
+  it("has no counterpart at all for an ordinary movement", () => {
+    const record = mapWalletRecord(byId(recordsFixture("records-january-third-quarter.json"), "wr-1002"));
+    expect(record.transferCounterExternalId).toBeNull();
+  });
+});
+
+/**
+ * Labels, the one part of a record whose element shape is **not verified**: the array came back
+ * empty in every record sampled with a real token, so both arms below are tolerance rather than
+ * knowledge. What is asserted is the contract, not the guess — a label that cannot be read costs
+ * that label and never the page.
+ */
+describe("walletLabelNames", () => {
+  it("reads a bare string and an object with a name, and drops what it cannot read", () => {
+    const record = mapWalletRecord(byId(recordsFixture("records-edge-cases.json"), "wr-4003"));
+    expect(record.labels).toEqual(["casa", "spesa"]);
+  });
+
+  it("trims, de-duplicates and keeps Wallet's own order", () => {
+    expect(walletLabelNames([" b ", "a", "b", { name: "a" }, ""])).toEqual(["b", "a"]);
+    expect(walletLabelNames([])).toEqual([]);
+    expect(walletLabelNames([null, true, 7, {}, { name: 7 }, []])).toEqual([]);
+  });
 });
 
 describe("mapWalletCategory", () => {
-  it("keeps the name §9.1 adopts by, and leaves Wallet's own flag unknown when absent", () => {
+  it("keeps the name §9.1 adopts by, and carries no flag Wallet does not publish", () => {
     const categories = walletCategoriesPayloadSchema.parse(fixture("categories.json")).map(mapWalletCategory);
     expect(categories).toEqual([
-      { externalId: "wc-groceries", name: "Spesa", groupName: "Casa", isIncome: false },
-      { externalId: "wc-salary", name: "Stipendio", groupName: null, isIncome: true },
-      { externalId: "wc-unsorted", name: "Da classificare", groupName: null, isIncome: null },
+      { externalId: "wc-groceries", name: "Spesa", groupName: "Casa" },
+      { externalId: "wc-salary", name: "Stipendio", groupName: null },
+      { externalId: "wc-unsorted", name: "Da classificare", groupName: null },
     ]);
   });
 });

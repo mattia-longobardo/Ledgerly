@@ -3,24 +3,44 @@
     {
       "id": "wr-1101",
       "accountId": "wa-cash",
-      "amount": -3.5,
-      "currencyCode": "EUR",
-      "recordDate": "2026-01-05",
+      "accountName": "Contanti",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -3.5,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "Bar Centrale",
       "labels": [],
-      "recordType": "expense",
+      "note": null,
+      "recordDate": "2026-01-05",
       "recordState": "cleared",
-      "partyName": "Bar Centrale"
+      "recordType": "expense",
+      "source": "manual",
+      "transfer": null
     },
     {
       "id": "wr-1102",
       "accountId": "wa-cash",
-      "amount": -1.2,
-      "currencyCode": "EUR",
-      "recordDate": "2026-01-05",
+      "accountName": "Contanti",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -1.2,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "Edicola",
       "labels": [],
-      "recordType": "expense",
+      "note": null,
+      "recordDate": "2026-01-05",
       "recordState": "cleared",
-      "partyName": "Edicola"
+      "recordType": "expense",
+      "source": "manual",
+      "transfer": null
     }
-  ]
+  ],
+  "limit": 2,
+  "offset": 0,
+  "nextOffset": 2,
+  "appliedRecordDateFilters": ["gte.2026-01-05T00:00:00.000Z", "lt.2026-01-06T00:00:00.000Z"]
 }

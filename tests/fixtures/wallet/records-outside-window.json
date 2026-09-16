@@ -3,24 +3,44 @@
     {
       "id": "wr-2101",
       "accountId": "wa-general",
-      "amount": -12.5,
-      "currencyCode": "EUR",
-      "recordDate": "2026-02-10",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -12.5,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "Farmacia",
       "labels": [],
-      "recordType": "expense",
+      "note": null,
+      "recordDate": "2026-02-10",
       "recordState": "cleared",
-      "partyName": "Farmacia"
+      "recordType": "expense",
+      "source": "manual",
+      "transfer": null
     },
     {
       "id": "wr-2102",
       "accountId": "wa-general",
-      "amount": -30,
-      "currencyCode": "EUR",
-      "recordDate": "2026-03-04",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -30,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "Officina",
       "labels": [],
-      "recordType": "expense",
+      "note": null,
+      "recordDate": "2026-03-04",
       "recordState": "cleared",
-      "partyName": "Officina"
+      "recordType": "expense",
+      "source": "manual",
+      "transfer": null
     }
-  ]
+  ],
+  "limit": 3,
+  "offset": 0,
+  "nextOffset": null,
+  "appliedRecordDateFilters": ["gte.2026-02-01T00:00:00.000Z", "lt.2026-03-01T00:00:00.000Z"]
 }
