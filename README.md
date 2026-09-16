@@ -61,10 +61,20 @@ npm run format:check && npm run lint && npm run typecheck && npm test && npm run
 
 ## Docker
 
+`docker-compose.yml` is the homelab deployment: the `ledgerly` app behind Traefik on
+`proxy_public`, and the `ledgerly-cron` sidecar beside it on `db_internal`. Both read
+`.env.homelab` — never `.env`, which is the local-development one — and both are discovered by
+`projects/stack.sh`, so `./stack.sh up` starts them along with the other projects.
+
 ```bash
-docker build -t ledgerly:dev .
-docker build -t ledgerly-cron:dev cron
+docker compose build          # or: docker compose up -d --build
 ```
+
+Being on `db_internal` is what lets the app reach `postgres:5432` and `silo:9000` by name; those
+are internal-only and unreachable from a workstation, which is why `npm run dev` uses
+`compose.dev.yml` instead. `dash.longobardo.me` is served through the `lan-only@file` middleware:
+LAN and NetBird only, never the public internet, so it is deliberately absent from the blackbox
+probes in `db/prometheus/prometheus.yml`.
 
 The app image applies pending migrations on boot, then serves the standalone Next.js server; it
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
