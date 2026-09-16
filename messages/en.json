@@ -217,6 +217,7 @@
         "group": "Group",
         "type": "Type",
         "color": "Colour",
+        "noColor": "No colour",
         "noGroup": "No group",
         "types": {
           "income": "Income",
@@ -249,6 +250,7 @@
         "add": "Add label",
         "name": "Name",
         "color": "Colour",
+        "noColor": "No colour",
         "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
         "rename": "Rename",
         "edit": "Edit label",

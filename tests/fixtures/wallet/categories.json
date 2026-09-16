@@ -1,0 +1,20 @@
+{
+  "categories": [
+    {
+      "id": "wc-groceries",
+      "name": "  Spesa  ",
+      "group": "Casa",
+      "isIncome": false
+    },
+    {
+      "id": "wc-salary",
+      "name": "Stipendio",
+      "group": null,
+      "isIncome": true
+    },
+    {
+      "id": "wc-unsorted",
+      "name": "Da classificare"
+    }
+  ]
+}

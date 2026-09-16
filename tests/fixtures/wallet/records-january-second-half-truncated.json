@@ -1,0 +1,27 @@
+{
+  "records": [
+    {
+      "id": "wr-1002",
+      "accountId": "wa-general",
+      "amount": 1900,
+      "currencyCode": "EUR",
+      "recordDate": "2026-01-20T23:40:00.000Z",
+      "labels": [],
+      "recordType": "INCOME",
+      "recordState": "cleared",
+      "partyName": "Datore di lavoro"
+    },
+    {
+      "id": "wr-1003",
+      "accountId": "wa-general",
+      "amount": -250,
+      "currencyCode": "EUR",
+      "recordDate": "2026-01-28",
+      "labels": ["giroconto"],
+      "recordType": "transfer",
+      "recordState": "cleared",
+      "partyName": "   ",
+      "transferCounterRecordId": " wr-2003 "
+    }
+  ]
+}
