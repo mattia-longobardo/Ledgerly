@@ -1,6 +1,6 @@
 {
   "common": {
-    "product": "Finance Dashboard",
+    "product": "Ledgerly",
     "save": "Salva",
     "close": "Chiudi",
     "retry": "Riprova",
@@ -42,20 +42,20 @@
   },
   "emails": {
     "invitation": {
-      "subject": "Hai ricevuto un invito a Finance Dashboard",
-      "body": "Hai ricevuto un invito a Finance Dashboard.\n\nAccetta l'invito entro {days, plural, one {# giorno} other {# giorni}}:\n{url}\n"
+      "subject": "Hai ricevuto un invito a Ledgerly",
+      "body": "Hai ricevuto un invito a Ledgerly.\n\nAccetta l'invito entro {days, plural, one {# giorno} other {# giorni}}:\n{url}\n"
     },
     "passwordReset": {
-      "subject": "Reimposta la password di Finance Dashboard",
+      "subject": "Reimposta la password di Ledgerly",
       "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non hai richiesto tu il reset, ignora questa email.\n"
     },
     "lowBalance": {
       "subject": "{account} è sotto la soglia",
-      "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Finance Dashboard per controllare."
+      "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Ledgerly per controllare."
     },
     "staleSync": {
       "subject": "{account} non si sincronizza da un po'",
-      "body": "L'ultima lettura di {account} è più vecchia di {hours} ore.\n\nApri Finance Dashboard per ricollegarlo o inserire un saldo a mano."
+      "body": "L'ultima lettura di {account} è più vecchia di {hours} ore.\n\nApri Ledgerly per ricollegarlo o inserire un saldo a mano."
     }
   },
   "auth": {
@@ -94,7 +94,7 @@
       "invalid": "Questo link non è valido o è scaduto."
     },
     "invite": {
-      "title": "Unisciti a Finance Dashboard",
+      "title": "Unisciti a Ledgerly",
       "description": "Invito per {email}.",
       "name": "Nome e cognome",
       "submit": "Crea l'account",

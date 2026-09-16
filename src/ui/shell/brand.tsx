@@ -9,7 +9,7 @@ export function BrandMark({ size = 24 }: { size?: 24 | 28 }) {
         size === 24 ? "size-6 rounded-ctl text-sm" : "size-7 rounded-[7px] text-md",
       )}
     >
-      F
+      L
     </span>
   );
 }

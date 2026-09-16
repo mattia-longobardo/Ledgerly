@@ -7,7 +7,7 @@ test("anonymous visitors are sent to sign-in", async ({ page }) => {
   await page.goto("/settings/profile");
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page).toHaveTitle("Sign in · Finance Dashboard");
+  await expect(page).toHaveTitle("Sign in · Ledgerly");
 });
 
 test("a wrong password is refused with a message", async ({ page }) => {
@@ -21,7 +21,7 @@ test("a wrong password is refused with a message", async ({ page }) => {
 test("the first user is admin, reaches the app and signs out", async ({ page }) => {
   await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
   await expect(page.getByRole("heading", { name: "No accounts yet" })).toBeVisible();
-  await expect(page).toHaveTitle("Overview · Finance Dashboard");
+  await expect(page).toHaveTitle("Overview · Ledgerly");
   const nav = page.getByRole("navigation", { name: "Primary" });
   await expect(nav.getByRole("link", { name: "Components" })).toBeVisible();
   await page.goto("/components");

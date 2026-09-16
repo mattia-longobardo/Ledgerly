@@ -90,7 +90,7 @@ function withDiscoveryDeadline(plugin: OidcPlugin): OidcPlugin {
 export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
   const env = readEnv();
   return betterAuth({
-    appName: "Finance Dashboard",
+    appName: "Ledgerly",
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.BETTER_AUTH_URL],
