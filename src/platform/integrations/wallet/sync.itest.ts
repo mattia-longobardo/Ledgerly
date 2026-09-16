@@ -12,16 +12,48 @@ import { createTestUser } from "../../../../test/users";
 import { WALLET_PROVIDER } from "../rules";
 import { listConnections, listRuns, readSyncJob, saveConnection } from "../service";
 import { WalletError, type WalletClientOptions } from "./client";
-import { syncWalletNow } from "./sync";
+import {
+  MAX_WINDOW_REMOVAL_SHARE,
+  RemovalRefusedError,
+  SyncBusyError,
+  isSyncBusy,
+  syncWalletNow,
+} from "./sync";
 
 const FIXTURES = join(process.cwd(), "tests/fixtures/wallet");
 const fixture = (name: string): { [key: string]: unknown } =>
   JSON.parse(readFileSync(join(FIXTURES, name), "utf8"));
 
-const ACCOUNTS = fixture("accounts.json");
 const CATEGORIES = fixture("categories.json");
+/** A `/records` row and an `/accounts` row as Wallet sends them: this file only ever filters. */
+type WireRecord = { recordDate: string; [key: string]: unknown };
+type WireAccount = { id: string; [key: string]: unknown };
+
+const ACCOUNTS = fixture("accounts.json").accounts as WireAccount[];
 /** One expense, 2026-01-05, on `wa-general`, category `wc-groceries`. */
-const JANUARY = fixture("records-january-first-half.json").records as { recordDate: string }[];
+const JANUARY = fixture("records-january-first-half.json").records as WireRecord[];
+
+/**
+ * Another movement on `wa-general`, so a window can hold more than one: the brake of §7.2 reasons
+ * on the *share* of a window an answer would remove, and one row out of one can only ever be an
+ * empty answer.
+ */
+function alsoOn(recordDate: string, id: string): WireRecord {
+  return {
+    id,
+    accountId: "wa-general",
+    amount: -12.5,
+    currencyCode: "EUR",
+    recordDate,
+    categoryId: "wc-groceries",
+    labels: [],
+    recordType: "Expense",
+    recordState: "Cleared",
+    note: "frutta",
+    partyName: "Fruttivendolo",
+    updatedAt: null,
+  };
+}
 
 const BASE = "https://wallet.test/api";
 /** A Tuesday 09:07 in Rome (spec §10.2's minute), inside the seven days after the fixture's date. */
@@ -40,7 +72,15 @@ interface Stub {
  * in for a refused token and an unreachable provider.
  */
 function walletStub(
-  options: { records?: { recordDate: string }[]; status?: number; offline?: boolean } = {},
+  options: {
+    records?: WireRecord[];
+    /** Which accounts the answer carries. Leaving one out is how Wallet says it is gone (§7.1). */
+    accounts?: WireAccount[];
+    status?: number;
+    /** A status for `/accounts` alone: that pass fails, the movements pass still runs. */
+    accountsStatus?: number;
+    offline?: boolean;
+  } = {},
 ): Stub {
   const records = options.records ?? JANUARY;
   const calls: string[] = [];
@@ -54,7 +94,10 @@ function walletStub(
       calls.push(`${url.pathname}${url.search}`);
       if (options.offline) throw new TypeError("fetch failed");
       if (options.status) return new Response("{}", { status: options.status });
-      if (url.pathname.endsWith("/accounts")) return Response.json(ACCOUNTS);
+      if (url.pathname.endsWith("/accounts")) {
+        if (options.accountsStatus) return new Response("{}", { status: options.accountsStatus });
+        return Response.json({ accounts: options.accounts ?? ACCOUNTS });
+      }
       if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
       const bounds = url.searchParams.getAll("recordDate");
       const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
@@ -77,9 +120,16 @@ async function storedTransactions(ctx: Ctx) {
   return listTransactions(ctx, { includeHidden: true, sort: "date", direction: "asc" });
 }
 
+/**
+ * The **latest** run of each kind. `listRuns` is newest first, and a test that syncs twice wants
+ * the second pass: reading the map straight off the list would keep the oldest row of each kind.
+ */
 async function runsByKind(ctx: Ctx) {
-  const runs = await listRuns(ctx, { limit: 50 });
-  return Object.fromEntries(runs.map((run) => [run.kind, run]));
+  const latest = new Map<string, Awaited<ReturnType<typeof listRuns>>[number]>();
+  for (const run of await listRuns(ctx, { limit: 50 })) {
+    if (!latest.has(run.kind)) latest.set(run.kind, run);
+  }
+  return Object.fromEntries(latest);
 }
 
 let ctx: Ctx;
@@ -169,19 +219,170 @@ describe("syncWalletNow", () => {
   });
 
   it("marks a movement the re-read window no longer returns, with no grace period", async () => {
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    // Two movements in the seven-day window, and an answer that still carries one of them: the
+    // answer proves it reached this account and this window, so its silence about the other is a
+    // verdict (spec §7.2, no tolerance on top of the window itself).
+    const both = [JANUARY[0], alsoOn("2026-01-04", "wr-1002")];
+    await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: walletStub({ records: both }).options,
+    });
+    expect(await storedTransactions(ctx)).toHaveLength(2);
 
-    const gone = walletStub({ records: [] });
+    const gone = walletStub({ records: [JANUARY[0]] });
     const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: gone.options });
     expect(result.transactions).toMatchObject({ removed: 1 });
+    expect((await runsByKind(ctx)).transactions).toMatchObject({ state: "success", error: null });
 
-    const [movement] = await storedTransactions(ctx);
-    expect(movement.removedUpstreamAt).not.toBeNull();
+    const stored = await storedTransactions(ctx);
+    expect(stored.find((row) => row.payee === "Fruttivendolo")?.removedUpstreamAt).not.toBeNull();
+    expect(stored.find((row) => row.payee === "Panificio Rossi")?.removedUpstreamAt).toBeNull();
 
     // And it counts again the moment Wallet sends it back.
-    const back = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    const back = await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: walletStub({ records: both }).options,
+    });
     expect(back.transactions).toMatchObject({ removed: 0 });
+    expect((await storedTransactions(ctx)).every((row) => row.removedUpstreamAt === null)).toBe(true);
+  });
+
+  it("refuses an empty answer for an account that has movements in the window, and fails the pass", async () => {
+    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+
+    const empty = walletStub({ records: [] });
+    const error = await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: empty.options,
+    }).catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(RemovalRefusedError);
+
+    // Nothing is hidden: a 200 with no rows is indistinguishable from "I did not answer you".
+    const [movement] = await storedTransactions(ctx);
+    expect(movement.removedUpstreamAt).toBeNull();
+
+    // And the register says which account and which window stopped the pass, without the token.
+    const runs = await runsByKind(ctx);
+    expect(runs.accounts.state).toBe("success");
+    expect(runs.transactions.state).toBe("failed");
+    expect(runs.transactions.error).toContain("wa-general");
+    expect(runs.transactions.error).toContain("2025-12-31..2026-01-06");
+    expect(runs.transactions.error).not.toContain(TOKEN);
+  });
+
+  it("refuses an answer that would remove more of the window than the ceiling, and imports it anyway", async () => {
+    const three = [JANUARY[0], alsoOn("2026-01-02", "wr-1002"), alsoOn("2026-01-04", "wr-1003")];
+    await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: walletStub({ records: three }).options,
+    });
+    expect(await storedTransactions(ctx)).toHaveLength(3);
+
+    // What a provider that caps its own page size sends: a prefix of the truth. Two of three gone
+    // is over the ceiling, and the one row it did carry arrives changed.
+    const truncated = [{ ...JANUARY[0], partyName: "Panificio Bianchi" }];
+    expect(2 / 3).toBeGreaterThan(MAX_WINDOW_REMOVAL_SHARE);
+    const error = await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: walletStub({ records: truncated }).options,
+    }).catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(RemovalRefusedError);
+
+    const stored = await storedTransactions(ctx);
+    expect(stored).toHaveLength(3);
+    expect(stored.every((row) => row.removedUpstreamAt === null)).toBe(true);
+    // No work is lost: the refusal gives up hiding, not importing.
+    expect(stored.some((row) => row.payee === "Panificio Bianchi")).toBe(true);
+    const runs = await runsByKind(ctx);
+    expect(runs.transactions.state).toBe("failed");
+    expect(runs.transactions.error).toContain("ceiling");
+    expect(runs.transactions.counts).toMatchObject({ updated: 1 });
+  });
+
+  it("never judges the window of an account the answer no longer carries", async () => {
+    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+
+    // Wallet stopped returning `wa-general`: it becomes `unavailable` and is never deleted (§7.1),
+    // and hiding its movements one window at a time would delete it in all but name.
+    const without = walletStub({
+      accounts: ACCOUNTS.filter((account) => account.id !== "wa-general"),
+      records: [],
+    });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: without.options });
+
+    const [movement] = await storedTransactions(ctx);
+    expect(movement.removedUpstreamAt).toBeNull();
+    expect(result.transactions).toMatchObject({ removed: 0 });
+    // Silently, with no failure: this is an ordinary pass over an account nobody asked about.
+    const runs = await runsByKind(ctx);
+    expect(runs.transactions).toMatchObject({ state: "success", error: null });
+    expect(runs.accounts.counts).toMatchObject({ removed: 1 });
+
+    const general = (await listAccounts(ctx, { includeArchived: true })).find(
+      (account) => account.providerAccountId === "wa-general",
+    );
+    expect(general?.state).toBe("unavailable");
+  });
+
+  it("judges nobody's window when the accounts pass never said who was there", async () => {
+    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+
+    // `/accounts` fails, `/records` answers an empty window: the movements pass knows nothing about
+    // who is present, so it imports and removes nothing.
+    const blind = walletStub({ accountsStatus: 500, records: [] });
+    const result = await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: blind.options,
+    }).catch((reason: unknown) => reason);
+    expect(result).toBeInstanceOf(WalletError);
+
     expect((await storedTransactions(ctx))[0].removedUpstreamAt).toBeNull();
+    const runs = await runsByKind(ctx);
+    expect(runs.accounts.state).toBe("failed");
+    expect(runs.transactions).toMatchObject({ state: "success", error: null });
+    expect(runs.transactions.counts).toMatchObject({ removed: 0 });
+  });
+
+  it("refuses a second pass on the same connection while one is running, and records nothing for it", async () => {
+    const held = walletStub();
+    let entered!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: {
+        ...held.options,
+        fetch: async (input, init) => {
+          entered();
+          await gate;
+          return held.options.fetch!(input, init);
+        },
+      },
+    });
+    await started;
+
+    // The hourly job of §10.2 arriving while "Sync now" is in flight: two passes would write two
+    // `transactions` rows for one Wallet movement, and orphan the first for ever.
+    const second = walletStub();
+    const busy = await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: second.options,
+    }).catch((reason: unknown) => reason);
+    expect(busy).toBeInstanceOf(SyncBusyError);
+    expect(isSyncBusy(busy)).toBe(true);
+    // It asked the provider nothing and opened no run: it is not an execution.
+    expect(second.calls).toEqual([]);
+    expect(await listRuns(ctx, { limit: 50 })).toHaveLength(1);
+
+    release();
+    await first;
+    expect(await storedTransactions(ctx)).toHaveLength(1);
+    expect(await listRuns(ctx, { limit: 50 })).toHaveLength(2);
   });
 
   it("records the failure, then revokes the connection, when the token is refused", async () => {

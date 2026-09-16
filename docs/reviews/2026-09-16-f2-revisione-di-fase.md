@@ -14,7 +14,39 @@ assegna al proprietario.
 
 ---
 
-## Lotto A — prima del collaudo col token vero
+## Lotto A — **CHIUSO** (2026-09-16)
+
+Tutti e sei corretti. Cancello verde sull'albero intero: 647 test unitari, 219 di
+integrazione, 13 end-to-end con la build. Tre correzioni sono state verificate
+**per mutazione** — riscrivendo il difetto e controllando quali test cadono —
+perché tre dei sei erano coperti da asserzioni che passavano col bug.
+
+Decisione del proprietario applicata a tutto il lotto: **meglio una passata
+fallita che dati sbagliati in silenzio.**
+
+Due conseguenze della decisione, accettate e da sapere:
+
+- **Il freno può incollarsi.** Se l'utente cancella davvero più di metà dei
+  movimenti di una finestra, la passata fallisce ogni ora e in F2 non c'è modo di
+  dire «confermo la sparizione». Niente si perde e i movimenti restano visibili.
+  L'alternativa automatica — fidarsi di un dubbio che si ripete identico —
+  riaprirebbe la cancellazione silenziosa, perché un provider che tronca ripete
+  identico anche lui. Una via d'uscita nell'interfaccia è lavoro da F3.
+- **§7.2 letta alla lettera vorrebbe la rimozione** anche da una risposta vuota:
+  una risposta vuota *è* una risposta. Il freno è una **deroga deliberata**, e
+  va scritta in §7.2 dal proprietario, altrimenti la prossima lettura della
+  specifica la leggerà come un difetto.
+
+Dettaglio che non era nel piano e che è emerso correggendo: costruire l'oggetto
+degli header fuori dal `try` **non** sposta il lancio, perché con un oggetto
+semplice è `fetch` stesso a chiamare `Headers.append`. La chiusura vera è
+passare a `fetch` un'istanza `Headers` già valida, più un `catch` **senza
+binding** (un errore che nessuno tiene in mano non può essere interpolato) e una
+redazione su qualunque messaggio estraneo.
+
+### Rilievi originali
+
+
 
 Tutti nascondono o sporcano dati al primo uso reale. Un collaudo eseguito sopra
 questo codice farebbe sospettare il provider invece del nostro motore, e
@@ -239,6 +271,24 @@ Conta quanto l'elenco sopra.
   ripristino, che conserva anche lo storico.
 
 ---
+
+## Aggiunte alla lista del collaudo col token
+
+Emerse correggendo il lotto A, oltre alle otto già elencate:
+
+- **`transferCounterRecordId` è il campo più pericoloso e resta non verificabile
+  in laboratorio.** §7.2 abbina i giroconti **solo** su quel riferimento, quindi
+  un nome di campo sbagliato significa nessun giroconto abbinato mai, senza un
+  messaggio. La guardia `assertFieldSeenSomewhere` è stata ripristinata per
+  `recordType` e `recordState` ma **non** per questo campo, con una ragione
+  buona: una pagina senza nessun giroconto è una pagina del tutto normale,
+  quindi «assente da ogni record» lì non dimostra niente e la guardia farebbe
+  fallire quasi ogni passata. Va verificato su una pagina vera, oppure coperto
+  con un contatore sull'intera passata (giroconti letti contro riferimenti
+  presenti e abbinati).
+- **Un carattere di controllo C0 passa `new Headers`** e fa fallire undici più
+  tardi con un generico `fetch failed`: nessuna fuga, ma cinque tentativi
+  bruciati. Per questo `isUsableToken` è più severo di `new Headers`.
 
 ## Già corretto in questa tornata
 

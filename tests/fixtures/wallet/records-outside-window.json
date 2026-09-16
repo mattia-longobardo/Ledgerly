@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "id": "wr-2101",
+      "accountId": "wa-general",
+      "amount": -12.5,
+      "currencyCode": "EUR",
+      "recordDate": "2026-02-10",
+      "labels": [],
+      "recordType": "expense",
+      "recordState": "cleared",
+      "partyName": "Farmacia"
+    },
+    {
+      "id": "wr-2102",
+      "accountId": "wa-general",
+      "amount": -30,
+      "currencyCode": "EUR",
+      "recordDate": "2026-03-04",
+      "labels": [],
+      "recordType": "expense",
+      "recordState": "cleared",
+      "partyName": "Officina"
+    }
+  ]
+}

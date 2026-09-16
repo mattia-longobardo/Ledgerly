@@ -6,7 +6,8 @@
  * can read on behalf of several users without this file ever knowing where tokens are kept.
  *
  * Reads get 5 attempts with exponential backoff that honours `Retry-After`; a write gets one
- * ({@link WRITE_ATTEMPTS}); 401 and 403 fail at once as {@link WalletError} `token_rejected`.
+ * ({@link WRITE_ATTEMPTS}); 401 and 403 fail at once as {@link WalletError} `token_rejected`, and
+ * so does a token that cannot be sent in a header at all ({@link isUsableToken}).
  */
 
 import { type ZodType } from "zod";
@@ -24,6 +25,8 @@ import {
   type WalletBalance,
   walletCategoriesPayloadSchema,
   type WalletCategory,
+  walletRecordDate,
+  type WalletRecordPayload,
   walletRecordsPayloadSchema,
   type WalletTransaction,
 } from "./mapping";
@@ -88,6 +91,35 @@ export class WalletError extends Error {
 /** The check T7 (connection test) and T8 (sync) make before treating a failure as transient. */
 export function isTokenRejected(error: unknown): boolean {
   return error instanceof WalletError && error.kind === "token_rejected";
+}
+
+/** Tab, the visible ASCII range and `obs-text`: everything an HTTP header value may carry. */
+function isHeaderValueCode(code: number): boolean {
+  return code === 0x09 || (code >= 0x20 && code <= 0x7e) || (code >= 0x80 && code <= 0xff);
+}
+
+/**
+ * Whether a token can be sent at all: not empty once trimmed, and made only of characters an HTTP
+ * header value may carry.
+ *
+ * A token pasted out of a wrapped page keeps the line break in the *middle*, where `trim()` cannot
+ * reach it, and building `Authorization` out of it throws an error that quotes the whole value —
+ * which would then be stored in `sync_runs.error` and `integration_connections.last_error`, shown
+ * verbatim in Settings › Integrations, and printed to the log. This predicate is the check the
+ * interface makes where the token is pasted, before it is ever sealed into the connection; the
+ * client makes it again before its first request.
+ *
+ * Deliberately stricter than `new Headers`, which accepts a C0 control or a DEL that `fetch` then
+ * refuses further down ("invalid authorization header", after five pointless attempts): every
+ * character outside the set above is a paste accident, never a credential.
+ */
+export function isUsableToken(token: string): boolean {
+  const trimmed = token.trim();
+  if (trimmed === "") return false;
+  for (const character of trimmed) {
+    if (!isHeaderValueCode(character.codePointAt(0) ?? 0)) return false;
+  }
+  return true;
 }
 
 export interface WalletClientOptions {
@@ -193,6 +225,84 @@ function assertWholePage(endpoint: string, count: number, limit: number): void {
   );
 }
 
+/**
+ * Every movement of a page falls inside the window that was asked for, or the page is refused.
+ *
+ * `/records` is the one endpoint that can *hide* data — a window that comes back without a
+ * movement is what declares that movement gone (§7.2) — and the shape of the request that bounds
+ * the window is the only inference this client makes about the API: the filter's name, and the two
+ * `recordDate` bounds being combined with AND. If either is wrong Wallet answers with far more
+ * than the window, and for a user under the page limit the answer still looks complete, so the
+ * mistake would show up as wrong data rather than as a failure. One date outside the window proves
+ * the request did not mean what it said, which is worth a failed pass: the same trade
+ * {@link assertWholePage} already makes for `/accounts` and `/categories`.
+ *
+ * The message carries the window and the offending day — never the movement, and never the token.
+ */
+function assertWithinWindow(window: DateWindow, page: readonly WalletRecordPayload[]): void {
+  for (const raw of page) {
+    const day = walletRecordDate(raw.recordDate);
+    if (day >= window.from && day <= window.to) continue;
+    throw new WalletError(
+      "payload",
+      `Wallet answered /records for ${window.from}..${window.to} with a movement dated ${day}: the requested window was not applied`,
+      null,
+      { from: window.from, to: window.to, occurredOn: day },
+    );
+  }
+}
+
+/**
+ * A page may come back exactly at the limit — that is what splitting the window is for — but never
+ * over it. A provider that returns more rows than `limit` asked for is not paging at all, and
+ * feeding that page to the splitter would narrow the window down to a single day and then blame
+ * the day. The true cause is named instead.
+ */
+function assertLimitHonoured(count: number, limit: number): void {
+  if (count <= limit) return;
+  throw new WalletError(
+    "payload",
+    `Wallet answered /records with ${count} records for a requested limit of ${limit}: the provider is not honouring \`limit\`, so a window cannot be paged`,
+    null,
+    { count, limit },
+  );
+}
+
+/**
+ * A field whose name nobody has verified against a live token, absent from *every* record of a
+ * non-empty page.
+ *
+ * One record genuinely without a `recordType` is plausible; a whole page without it is far more
+ * likely to mean the field name is wrong than that Wallet stamps none of them — and the silent
+ * outcome is worse than a failure, because `sync.ts` then names every movement's type from the
+ * sign of its amount and its state from a default, for good. Restored from the previous version's
+ * client (`assertFieldSeenSomewhere`), which `dev-0.1` dropped.
+ *
+ * A field explicitly `null` counts as seen: the provider knows the name and has no value for it.
+ * `transferCounterRecordId` is deliberately *not* guarded here — a page holding no transfer at all
+ * is an ordinary page, so its absence proves nothing.
+ */
+function assertFieldSeenSomewhere(
+  page: readonly WalletRecordPayload[],
+  field: "recordType" | "recordState",
+): void {
+  if (page.length === 0) return;
+  if (page.some((raw) => raw[field] !== undefined)) return;
+  throw new WalletError(
+    "payload",
+    `Every one of the ${page.length} records Wallet returned is missing "${field}": a wrong field name is likelier than an absence across a whole page`,
+    null,
+    { field, count: page.length },
+  );
+}
+
+/**
+ * The one message a token this client cannot send is ever reported with. It says what to do about
+ * it and nothing about its value, and every path that could otherwise name the token ends here.
+ */
+const UNUSABLE_TOKEN_MESSAGE =
+  "The Wallet token cannot be sent in an HTTP header — a line break or a control character inside it — so no request was made: paste the token again from Wallet";
+
 function byDateThenId(left: WalletTransaction, right: WalletTransaction): number {
   if (left.occurredOn !== right.occurredOn) return left.occurredOn < right.occurredOn ? -1 : 1;
   if (left.externalId === right.externalId) return 0;
@@ -211,9 +321,47 @@ export function createWalletClient(token: string, options: WalletClientOptions =
   const now = options.now ?? Date.now;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const recordsLimit = options.pageLimit ?? RECORDS_LIMIT;
+  // Edge whitespace is a paste artefact, dropped once and here, so that what `isUsableToken`
+  // judges is exactly what goes on the wire.
+  const secret = token.trim();
+  const secrets = [...new Set([token, secret])];
+
+  /**
+   * The request headers, built and validated *outside* every `try`.
+   *
+   * Moving the construction out of the block that wraps `fetch` is not enough on its own:
+   * `Headers.append` runs inside `fetch` when `init.headers` is a plain object, and its error
+   * quotes the whole value. Handing `fetch` an already-valid `Headers` instance leaves it nothing
+   * to validate, so the only place the value can be refused is this function — where the original
+   * error is caught unbound and replaced by {@link UNUSABLE_TOKEN_MESSAGE}. Refusing here rather
+   * than in the constructor also means the failure passes through the caller's own error handling,
+   * so a stored token gone bad is recorded in `sync_runs` and marks the connection.
+   */
+  function requestHeaders(): Headers {
+    if (!isUsableToken(secret)) {
+      throw new WalletError("token_rejected", UNUSABLE_TOKEN_MESSAGE, null, null, false);
+    }
+    try {
+      return new Headers({ accept: "application/json", authorization: `Bearer ${secret}` });
+    } catch {
+      // Unbound on purpose: an error nobody holds cannot be interpolated into a message.
+      throw new WalletError("token_rejected", UNUSABLE_TOKEN_MESSAGE, null, null, false);
+    }
+  }
+
+  /**
+   * A message from outside, with the credential taken out of it. Nothing should reach here holding
+   * the token — it is refused before any request and the header is built outside every `try` — but
+   * this is the one place a foreign message is wrapped into `sync_runs.error`, and a redaction
+   * that costs nothing outlives any chain of reasoning about who throws what.
+   */
+  function withoutToken(text: string): string {
+    return secrets.reduce((clean, value) => clean.split(value).join("[token redacted]"), text);
+  }
 
   /** One HTTP attempt: fetch, classify the answer, validate the payload. */
   async function attempt<T>(path: string, schema: ZodType<T>): Promise<T> {
+    const headers = requestHeaders();
     const controller = new AbortController();
     let timedOut = false;
     const timer = setTimeout(() => {
@@ -225,14 +373,20 @@ export function createWalletClient(token: string, options: WalletClientOptions =
     try {
       response = await call(`${baseUrl}${path}`, {
         method: "GET",
-        headers: { accept: "application/json", authorization: `Bearer ${token}` },
+        headers,
         signal: controller.signal,
       });
     } catch (error) {
       if (timedOut) {
         throw new WalletError("timeout", `Wallet request timed out after ${timeoutMs} ms`, null, null, true);
       }
-      throw new WalletError("network", `Wallet request failed: ${errorText(error)}`, null, null, true);
+      throw new WalletError(
+        "network",
+        `Wallet request failed: ${withoutToken(errorText(error))}`,
+        null,
+        null,
+        true,
+      );
     } finally {
       clearTimeout(timer);
     }
@@ -309,6 +463,12 @@ export function createWalletClient(token: string, options: WalletClientOptions =
    * One window of `/records`, halving it instead of failing when the page comes back full
    * (spec §9.1).
    *
+   * Three checks come first, on every page, full or not: that the window was actually applied
+   * ({@link assertWithinWindow}), that `limit` was honoured ({@link assertLimitHonoured}), and that
+   * the fields whose names were never verified are present somewhere
+   * ({@link assertFieldSeenSomewhere}). They run before the split so a wrong request is reported
+   * as one, instead of being narrowed down to a single day and blamed on that day.
+   *
    * A full page is not kept: it may be any subset of the window, so both halves are read again in
    * full. The halves are disjoint, so nothing is read twice in practice — `found` is keyed by
    * external id anyway, which also makes a boundary the provider happens to treat as exclusive
@@ -322,6 +482,11 @@ export function createWalletClient(token: string, options: WalletClientOptions =
     query.append("recordDate", `gte.${window.from}`);
     query.append("recordDate", `lte.${window.to}`);
     const page = await read(`/records?${query.toString()}`, walletRecordsPayloadSchema);
+
+    assertWithinWindow(window, page);
+    assertLimitHonoured(page.length, recordsLimit);
+    assertFieldSeenSomewhere(page, "recordType");
+    assertFieldSeenSomewhere(page, "recordState");
 
     if (page.length < recordsLimit) {
       for (const raw of page) {

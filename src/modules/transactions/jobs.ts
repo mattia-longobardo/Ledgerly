@@ -25,7 +25,7 @@ import { formatDate, type UiLocale } from "@/platform/format";
 import { DEFAULT_STALE_AFTER_HOURS, isStale } from "@/modules/accounts/rules";
 import { type Connection, listConnections, listRuns } from "@/platform/integrations/service";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { syncWalletNow } from "@/platform/integrations/wallet/sync";
+import { isSyncBusy, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
 import { clearNotification, notifyOnce } from "@/platform/notifications/service";
@@ -295,6 +295,7 @@ export const walletSyncJob: JobDefinition = {
     let failures = 0;
     let notified = 0;
     let patterns = 0;
+    let skipped = 0;
 
     const counts = await forEachUser("wallet-sync", async (person, ctx) => {
       const connection = (await listConnections(ctx)).find((one) => one.provider === WALLET_PROVIDER);
@@ -305,9 +306,17 @@ export const walletSyncJob: JobDefinition = {
           await syncWalletNow(ctx, connection.id, { now });
           passes += 1;
         } catch (error) {
-          failed = true;
-          failures += 1;
-          console.error("[wallet-sync] the Wallet pass failed", redactForLog(error));
+          // A pass already running on this connection — the owner pressed "Sync now" as the tick
+          // came round — is not a failure: nothing was attempted, so there is nothing to report
+          // and no email to send. Counting it as one would mail "Wallet sync failed" for a pass
+          // that never happened.
+          if (isSyncBusy(error)) {
+            skipped += 1;
+          } else {
+            failed = true;
+            failures += 1;
+            console.error("[wallet-sync] the Wallet pass failed", redactForLog(error));
+          }
         }
         // Re-read: `finishRun` has just written `last_ok_at` and the connection's state, and both
         // decide which of the two conditions of §10.4 applies.
@@ -317,6 +326,6 @@ export const walletSyncJob: JobDefinition = {
       patterns += await refreshRecurrences(ctx, now);
     });
 
-    return { ...counts, connections, passes, failures, notified, recurrences: patterns };
+    return { ...counts, connections, passes, failures, skipped, notified, recurrences: patterns };
   },
 };

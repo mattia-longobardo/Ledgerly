@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { syncWalletNow } from "@/platform/integrations/wallet/sync";
+import { isSyncBusy, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import {
   type Connection,
   deleteConnection,
@@ -20,13 +20,19 @@ import {
   readCredentials,
   saveConnection,
 } from "@/platform/integrations/service";
-import { createWalletClient, isTokenRejected, WalletError } from "@/platform/integrations/wallet/client";
+import {
+  createWalletClient,
+  isTokenRejected,
+  isUsableToken,
+  WalletError,
+} from "@/platform/integrations/wallet/client";
 
 /**
  * Why an action refused, as one of the `settings.integrations.errors.*` keys. A code, not a
  * sentence: the card turns it into a catalogued message, so no English text is built here.
  */
-export type IntegrationActionError = "rejected" | "unreachable" | "empty" | "notConnected" | "failed";
+export type IntegrationActionError =
+  "rejected" | "unreachable" | "empty" | "notConnected" | "busy" | "failed";
 
 /**
  * What the card gets back. Deliberately this narrow: there is no field a token could travel in,
@@ -69,6 +75,12 @@ export async function connectWalletAction(token: string): Promise<IntegrationAct
   const ctx = await requireSession();
   const secret = token.trim();
   if (secret.length === 0) return { ok: false, error: "empty" };
+  // A token that cannot be sent as an HTTP header value can never authenticate anything, so it is
+  // refused here rather than encrypted and kept: `trim()` only cleans the edges, and a newline in
+  // the *middle* (pasted from a wrapped page) makes undici throw an error that quotes the value —
+  // which is how a token in clear reaches `sync_runs.error`, `last_error` and this very card.
+  // "Wallet rejected that token" is the honest sentence: it is the token that is wrong.
+  if (!isUsableToken(secret)) return { ok: false, error: "rejected" };
   try {
     await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: secret } });
   } catch (error) {
@@ -125,6 +137,9 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
     // A sync writes rows before it fails, and it records its own `sync_runs` entry either way, so
     // the log is refreshed on the way out of both branches.
     revalidate();
+    // The hourly job (or another tab) holds this connection's advisory lock: nothing was written
+    // and nothing is wrong, so the card says "already running" instead of blaming the provider.
+    if (isSyncBusy(error)) return { ok: false, error: "busy" };
     if (error instanceof IntegrationError) {
       return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
     }

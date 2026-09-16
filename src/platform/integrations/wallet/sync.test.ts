@@ -5,6 +5,10 @@ import { describe, expect, it } from "vitest";
 import { civilDateIn } from "@/platform/dates";
 import type { WalletAccount, WalletTransaction } from "./client";
 import {
+  MAX_WINDOW_REMOVAL_SHARE,
+  SyncBusyError,
+  isSyncBusy,
+  removalDoubt,
   toIncomingTransaction,
   toRemoteAccount,
   walletTransactionState,
@@ -79,9 +83,59 @@ describe("toIncomingTransaction", () => {
     expect(incoming.counterpartExternalId).toBe("wr-2");
   });
 
-  it("keeps the instant Wallet sent when it sent one", () => {
+  it("keeps the instant Wallet sent when it agrees with the day Wallet stamped", () => {
     const occurredAt = new Date("2026-01-05T18:02:00.000Z");
-    expect(toIncomingTransaction(movement({ occurredAt }), CATEGORIES, ROME).occurredAt).toEqual(occurredAt);
+    const incoming = toIncomingTransaction(movement({ occurredAt }), CATEGORIES, ROME);
+    expect(incoming.occurredAt).toEqual(occurredAt);
+    // 19:02 in Rome: the instant refines the day instead of moving it.
+    expect(civilDateIn(incoming.occurredAt, ROME)).toBe("2026-01-05");
+  });
+
+  it("drops an instant that lands on another civil day east of Greenwich", () => {
+    // Wallet stamped the 20th; 23:40 UTC is 00:40 on the 21st in Rome. Keeping the instant would
+    // move the movement to another day, another month header, and out of Wallet's own window
+    // filter — where it would be declared gone every hour (spec §7.2).
+    const incoming = toIncomingTransaction(
+      movement({ occurredOn: "2026-01-20", occurredAt: new Date("2026-01-20T23:40:00.000Z") }),
+      CATEGORIES,
+      ROME,
+    );
+    expect(incoming.occurredAt.toISOString()).toBe("2026-01-19T23:00:00.000Z");
+    expect(civilDateIn(incoming.occurredAt, ROME)).toBe("2026-01-20");
+  });
+
+  it("drops an instant that lands on another civil day west of Greenwich", () => {
+    // The same defect with the sign reversed: 02:00 UTC is still the 19th in New York.
+    const incoming = toIncomingTransaction(
+      movement({ occurredOn: "2026-01-20", occurredAt: new Date("2026-01-20T02:00:00.000Z") }),
+      CATEGORIES,
+      "America/New_York",
+    );
+    expect(incoming.occurredAt.toISOString()).toBe("2026-01-20T05:00:00.000Z");
+    expect(civilDateIn(incoming.occurredAt, "America/New_York")).toBe("2026-01-20");
+  });
+
+  it("puts every movement on the day Wallet stamped it, whatever instant came with it", () => {
+    // The invariant of `occurredAtOf`, as a property: the civil date the app reads back is always
+    // `occurredOn`. Zones east and west of Greenwich, one half-hour offset, an ordinary day, both
+    // of Rome's clock changes, and a bare day with no instant at all.
+    const zones = ["Europe/Rome", "UTC", "America/New_York", "Pacific/Apia", "Asia/Kolkata"];
+    const days = ["2026-01-20", "2026-03-29", "2026-07-01", "2026-10-25"];
+    for (const timeZone of zones) {
+      for (const occurredOn of days) {
+        const bare = toIncomingTransaction(movement({ occurredOn, occurredAt: null }), CATEGORIES, timeZone);
+        expect(civilDateIn(bare.occurredAt, timeZone)).toBe(occurredOn);
+        for (let hour = 0; hour < 24; hour += 1) {
+          const stamp = `${occurredOn}T${String(hour).padStart(2, "0")}:40:00.000Z`;
+          const incoming = toIncomingTransaction(
+            movement({ occurredOn, occurredAt: new Date(stamp) }),
+            CATEGORIES,
+            timeZone,
+          );
+          expect(civilDateIn(incoming.occurredAt, timeZone)).toBe(occurredOn);
+        }
+      }
+    }
   });
 
   it("stamps a bare day as midnight in the user's own zone", () => {
@@ -141,5 +195,59 @@ describe("toRemoteAccount", () => {
       type: "checking",
       currency: "EUR",
     });
+  });
+});
+
+describe("removalDoubt", () => {
+  it("has nothing to doubt when the account has nothing stored in the window", () => {
+    expect(removalDoubt(0, 0)).toBeNull();
+    expect(removalDoubt(0, 5)).toBeNull();
+  });
+
+  it("refuses an empty answer for an account that has movements stored in the window", () => {
+    // A 200 with no rows is indistinguishable from "I did not answer you", and it is the answer
+    // that would hide a whole window in one pass.
+    expect(removalDoubt(1, 0)).toBe("empty_answer");
+    expect(removalDoubt(40, 0)).toBe("empty_answer");
+  });
+
+  it("refuses an answer that would remove more than the ceiling", () => {
+    expect(removalDoubt(9, 2)).toBe("over_removal_ceiling");
+    expect(removalDoubt(300, 100)).toBe("over_removal_ceiling");
+  });
+
+  it("allows a removal at the ceiling itself, and any smaller one", () => {
+    expect(MAX_WINDOW_REMOVAL_SHARE).toBe(0.5);
+    expect(removalDoubt(2, 1)).toBeNull();
+    expect(removalDoubt(4, 2)).toBeNull();
+    expect(removalDoubt(10, 9)).toBeNull();
+  });
+
+  it("doubts nothing when the answer brings at least as much as is stored", () => {
+    expect(removalDoubt(3, 3)).toBeNull();
+    expect(removalDoubt(3, 11)).toBeNull();
+  });
+});
+
+describe("isSyncBusy", () => {
+  it("recognises the lock's own refusal, and nothing else", () => {
+    expect(isSyncBusy(new SyncBusyError())).toBe(true);
+    expect(new SyncBusyError().code).toBe("busy");
+    expect(isSyncBusy(new Error("busy"))).toBe(false);
+    expect(isSyncBusy("busy")).toBe(false);
+    expect(isSyncBusy(null)).toBe(false);
+  });
+
+  it("recognises it across two copies of the module, where `instanceof` cannot", () => {
+    // What a Next.js build produces when a Server Action bundle and a job bundle each load this
+    // module: the same class twice. The name is what survives.
+    class SyncBusyError extends Error {
+      readonly code = "busy";
+      constructor() {
+        super("a Wallet pass is already running on this connection");
+        this.name = "SyncBusyError";
+      }
+    }
+    expect(isSyncBusy(new SyncBusyError())).toBe(true);
   });
 });
