@@ -19,7 +19,8 @@
     "settings": "Settings",
     "components": "Components",
     "more": "More",
-    "accounts": "Accounts"
+    "accounts": "Accounts",
+    "expenses": "Expenses"
   },
   "shell": {
     "toggleSidebar": "Toggle sidebar (⌘\\)",
@@ -112,7 +113,164 @@
       "label": "Settings sections",
       "profile": "Profile",
       "security": "Security",
+      "integrations": "Integrations",
       "data": "Data"
+    },
+    "integrations": {
+      "title": "Data sources",
+      "description": "Where balances and transactions come from. Credentials are encrypted at rest and never shown again.",
+      "providers": {
+        "wallet": {
+          "name": "Budget Makers Wallet",
+          "role": "Accounts, balances and transactions"
+        }
+      },
+      "states": {
+        "absent": "Not connected",
+        "active": "Connected",
+        "error": "Error",
+        "revoked": "Disconnected"
+      },
+      "fields": {
+        "lastSync": "Last sync",
+        "schedule": "Schedule",
+        "never": "Never"
+      },
+      "schedule": "Hourly, at minute 07",
+      "firstSync": "The first sync fetches 12 months. After that each run re-reads the last 7 days.",
+      "connect": {
+        "title": "Connect Wallet",
+        "description": "Paste the API token from your Wallet account. It is sealed with the app's encryption key and never returned to the browser.",
+        "token": "API token",
+        "tokenHint": "Stored encrypted. Replace it here if it is ever rotated.",
+        "submit": "Connect",
+        "replace": "Replace token",
+        "cancel": "Cancel"
+      },
+      "actions": {
+        "test": "Test connection",
+        "sync": "Sync now",
+        "disconnect": "Disconnect",
+        "configure": "Configure"
+      },
+      "disconnect": {
+        "title": "Disconnect Wallet?",
+        "description": "The token is deleted. Synced accounts and transactions stay, and stop being updated.",
+        "confirm": "Disconnect",
+        "cancel": "Keep connected"
+      },
+      "runs": {
+        "title": "Sync log",
+        "description": "One row per sync run, newest first.",
+        "started": "Started",
+        "kind": "Job",
+        "result": "Result",
+        "counts": "Counts",
+        "detail": "Detail",
+        "empty": "No sync has run yet.",
+        "running": "Running…",
+        "duration": "{seconds}s"
+      },
+      "kinds": {
+        "accounts": "Accounts and balances",
+        "transactions": "Transactions"
+      },
+      "runStates": {
+        "running": "Running",
+        "success": "OK",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      },
+      "counts": {
+        "created": "{count} new",
+        "updated": "{count} updated",
+        "skipped": "{count} unchanged",
+        "removed": "{count} gone"
+      },
+      "toasts": {
+        "connected": "Wallet connected",
+        "replaced": "Token replaced",
+        "disconnected": "Wallet disconnected",
+        "queued": "Sync queued",
+        "tested": "Wallet answered: the token works"
+      },
+      "errors": {
+        "rejected": "Wallet rejected that token.",
+        "unreachable": "Wallet could not be reached. Try again in a minute.",
+        "empty": "Paste a token first.",
+        "notConnected": "Wallet is not connected.",
+        "failed": "Couldn't save. Try again."
+      },
+      "notifications": {
+        "failedSubject": "Wallet sync failed",
+        "failedBody": "The last {kind} sync for Budget Makers Wallet failed: {error}. Check the token in Settings › Integrations.",
+        "staleSubject": "Wallet sync is out of date",
+        "staleBody": "Budget Makers Wallet has not synced since {since}. Check the connection in Settings › Integrations."
+      }
+    },
+    "data": {
+      "categories": {
+        "title": "Categories",
+        "description": "Categories of the transactions in Expenses. A synced category is matched by name before a new one is created.",
+        "add": "Add category",
+        "name": "Name",
+        "group": "Group",
+        "type": "Type",
+        "color": "Colour",
+        "noGroup": "No group",
+        "types": {
+          "income": "Income",
+          "expense": "Expense",
+          "transfer": "Transfer"
+        },
+        "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
+        "rename": "Rename",
+        "edit": "Edit category",
+        "archive": "Archive",
+        "restore": "Restore",
+        "archived": "Archived",
+        "showArchived": "Show archived",
+        "save": "Save",
+        "cancel": "Cancel",
+        "empty": "No categories yet. They also appear on their own as transactions sync.",
+        "saved": "Category saved",
+        "archivedToast": "Category archived",
+        "restoredToast": "Category restored",
+        "errors": {
+          "duplicate": "A category with this name already exists.",
+          "invalid": "Enter a name between 1 and {max} characters.",
+          "notFound": "That category no longer exists.",
+          "failed": "Couldn't save. Try again."
+        }
+      },
+      "labels": {
+        "title": "Labels",
+        "description": "Free-form labels you can put on a transaction. Synced labels are matched by name.",
+        "add": "Add label",
+        "name": "Name",
+        "color": "Colour",
+        "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
+        "rename": "Rename",
+        "edit": "Edit label",
+        "remove": "Delete",
+        "save": "Save",
+        "cancel": "Cancel",
+        "empty": "No labels yet.",
+        "saved": "Label saved",
+        "removedToast": "Label deleted",
+        "remove_confirm": {
+          "title": "Delete this label?",
+          "description": "It is removed from {count, plural, one {# transaction} other {# transactions}}. Nothing else changes.",
+          "confirm": "Delete",
+          "cancel": "Keep it"
+        },
+        "errors": {
+          "duplicate": "A label with this name already exists.",
+          "invalid": "Enter a name between 1 and {max} characters.",
+          "notFound": "That label no longer exists.",
+          "failed": "Couldn't save. Try again."
+        }
+      }
     },
     "account": {
       "title": "Account",
@@ -248,6 +406,119 @@
     "generic": {
       "title": "Something went wrong",
       "description": "The page could not be shown. Your data is safe; try again."
+    }
+  },
+  "expenses": {
+    "title": "Expenses",
+    "summary": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}} · {total}",
+    "countTransactions": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}}",
+    "filters": {
+      "label": "Filters",
+      "range": {
+        "label": "Date range",
+        "previous": "Previous period",
+        "next": "Next period",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "cancel": "Cancel",
+        "pickEnd": "Pick the end date",
+        "hint": "{from} – {to} · {count, plural, one {# day} other {# days}}"
+      },
+      "presets": {
+        "thisMonth": "This month",
+        "lastMonth": "Last month",
+        "last3Months": "Last 3 months",
+        "ytd": "Year to date"
+      },
+      "categories": {
+        "title": "Categories",
+        "all": "All categories",
+        "some": "{count, plural, one {# category} other {# categories}}",
+        "clear": "Clear",
+        "none": "Uncategorised"
+      },
+      "accounts": {
+        "all": "All accounts",
+        "one": "{name}"
+      },
+      "search": "Search payee…",
+      "searchLabel": "Search by payee",
+      "clear": "Clear filters",
+      "showHidden": "Show hidden"
+    },
+    "columns": {
+      "date": "Date",
+      "payee": "Payee",
+      "account": "Account",
+      "category": "Category",
+      "amount": "Amount",
+      "actions": "Actions"
+    },
+    "sort": {
+      "ascending": "Sort ascending",
+      "descending": "Sort descending"
+    },
+    "group": {
+      "summary": "{count, plural, one {# transaction} other {# transactions}} · {total}"
+    },
+    "selection": {
+      "label": "{count, plural, one {# selected} other {# selected}}",
+      "setCategory": "Set category",
+      "hide": "Hide",
+      "restore": "Restore",
+      "clear": "Clear"
+    },
+    "row": {
+      "editCategory": "Edit category",
+      "menu": "Row actions",
+      "note": "Note",
+      "labels": "Labels",
+      "uncategorised": "Uncategorised",
+      "noPayee": "No payee"
+    },
+    "badges": {
+      "hidden": "Hidden",
+      "removedUpstream": "Gone from provider",
+      "edited": "Edited here",
+      "transfer": "Transfer",
+      "pending": "Pending"
+    },
+    "breakdown": {
+      "title": "By category",
+      "empty": "Nothing to break down in this range.",
+      "share": "{share}%"
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "editCategory": "Edit category",
+      "selectRow": "Select row",
+      "nextPrevious": "Next / previous"
+    },
+    "empty": {
+      "title": "No transactions in this range",
+      "description": "Try widening the date range or clearing the filters.",
+      "action": "Clear filters"
+    },
+    "unsynced": {
+      "title": "Nothing synced yet",
+      "description": "Connect Budget Makers Wallet to pull in your transactions.",
+      "action": "Open Integrations"
+    },
+    "toasts": {
+      "categorySet": "{count, plural, one {# transaction updated} other {# transactions updated}}",
+      "hidden": "{count, plural, one {# transaction hidden} other {# transactions hidden}}",
+      "restored": "{count, plural, one {# transaction restored} other {# transactions restored}}",
+      "noteSaved": "Note saved",
+      "labelsSaved": "Labels saved"
+    },
+    "errors": {
+      "notFound": "That transaction no longer exists.",
+      "providerOwned": "Payee, amount and date belong to the provider and cannot be edited here.",
+      "failed": "Couldn't save. Try again."
+    },
+    "palette": {
+      "payees": "Payees"
     }
   },
   "overview": {
