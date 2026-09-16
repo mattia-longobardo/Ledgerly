@@ -27,5 +27,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/|_next/static/|_next/image|favicon\\.ico$|robots\\.txt$).*)"],
+  // `icon.svg` is the App Router's own favicon route (`src/app/icon.svg`), and it has to be
+  // reachable without a session: the sign-in page is exactly where a browser asks for the tab
+  // icon, and behind the session guard the request is answered with a redirect to sign-in. The
+  // pre-existing `favicon.ico` exclusion anticipated a file that does not exist here.
+  matcher: ["/((?!api/|_next/static/|_next/image|favicon\\.ico$|icon\\.svg$|robots\\.txt$).*)"],
 };
