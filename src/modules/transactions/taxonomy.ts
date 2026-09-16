@@ -236,6 +236,12 @@ export async function restoreCategory(ctx: Pick<Ctx, "userId">, id: string): Pro
  * name, then a new one. Steps 2 and 3 file the link, so the next sync stops at step 1 and follows
  * the category through a later rename.
  *
+ * The order is the whole point, so the link is read before the name is so much as validated. A
+ * name the column cannot hold (over `NAME_MAX`, which is this application's limit and not the
+ * provider's) must never undo an adoption that already happened: validating first turned a rename
+ * in the provider into `categoryId: null` on movements that were already filed and already linked,
+ * once an hour, across the whole re-read window, with no error and nothing to reconcile against.
+ *
  * An archived namesake is adopted as it stands and stays archived: the name is already taken, and
  * resurrecting a category somebody deliberately put away is not the sync's decision to make.
  */
@@ -244,8 +250,6 @@ export async function adoptOrCreateCategory(
   name: string,
   external?: ExternalCategoryRef,
 ): Promise<Category> {
-  const wanted = parsed(nameSchema, name);
-
   if (external) {
     const linked = await resolveExternal(ctx, external.provider, CATEGORY_ENTITY, [external.externalId]);
     const entityId = linked.get(external.externalId);
@@ -255,6 +259,11 @@ export async function adoptOrCreateCategory(
     if (category) return category;
   }
 
+  // Only here does the name carry any weight: with no usable link there is nothing to adopt but
+  // the name, so one the column cannot hold is a real refusal. `service.ts` leaves that movement
+  // uncategorised rather than failing the pass, which is the right call for a first encounter —
+  // it takes nothing away, because there was nothing there yet.
+  const wanted = parsed(nameSchema, name);
   const category = (await categoryByName(ctx, wanted)) ?? (await insertAdoptedCategory(ctx, wanted));
   if (external) {
     try {
@@ -372,11 +381,32 @@ export async function deleteLabel(ctx: Pick<Ctx, "userId">, id: string): Promise
 }
 
 /**
+ * The first `NAME_MAX` characters of a name. Characters, not code units: the column's CHECK is
+ * `length(btrim(name)) between 1 and 60` and Postgres counts characters, so the budget is spent
+ * exactly as the column measures it — and a surrogate pair is never cut in half.
+ */
+function clipped(name: string): string {
+  const trimmed = name.trim();
+  const characters = [...trimmed];
+  return characters.length <= NAME_MAX ? trimmed : characters.slice(0, NAME_MAX).join("");
+}
+
+/**
  * Labels are matched by name alone (spec §9.1): `provider_links` has no `label` entity type, so
- * there is no link step to take first.
+ * there is no link step to take first — the name is the only identity a provider label has in
+ * here, and an over-long one is therefore **clipped** rather than refused.
+ *
+ * Refusing it made this function answer "no label", and `service.ts` then took the label off every
+ * movement that carried it: a silent, hourly removal caused by a column width, with no link to
+ * recover the tag from afterwards. Clipping keeps the tag on the movement and turns the case into
+ * the ordinary provider rename it actually is; it is deterministic, so the next pass lands on the
+ * same row. The price is that two provider labels sharing a 60-character prefix collapse into one
+ * local label, which merges two tags instead of losing both — the smaller harm, and a visible one.
+ *
+ * A name that is blank once trimmed is still a refusal: there is nothing there to adopt.
  */
 export async function adoptOrCreateLabel(ctx: Pick<Ctx, "userId">, name: string): Promise<Label> {
-  const wanted = parsed(nameSchema, name);
+  const wanted = parsed(nameSchema, clipped(name));
   const existing = await labelByName(ctx, wanted);
   if (existing) return existing;
   const [row] = await getDb()

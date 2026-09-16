@@ -19,6 +19,7 @@ import {
   listCategoriesWithUsage,
   listLabels,
   listLabelsWithUsage,
+  NAME_MAX,
   renameCategory,
   renameLabel,
   restoreCategory,
@@ -41,14 +42,14 @@ const GROCERIES = { name: "Groceries", group: "Living", type: "expense", color: 
  * A movement, written straight to the table: `service.ts` (T5) is what the application uses, and
  * these tests only need something for the usage counts to count.
  */
-async function addTransaction(ctx: Ctx, accountId: string, categoryId: string | null) {
+async function addTransaction(ctx: Ctx, accountId: string, categoryId: string | null, amountCents = -1_250n) {
   const [row] = await getDb()
     .insert(transactions)
     .values({
       userId: ctx.userId,
       accountId,
       occurredAt: new Date("2026-03-01T10:00:00Z"),
-      amountCents: -1_250n,
+      amountCents,
       type: "expense",
       categoryId,
     })
@@ -301,9 +302,40 @@ describe("adoptOrCreateCategory", () => {
     expect(links.get("w-cat-2")).toBeUndefined();
   });
 
-  it("refuses a name the column could not hold", async () => {
+  it("refuses a name the column could not hold, when the name is all there is to go on", async () => {
     await expect(adoptOrCreateCategory(ctx, "  ")).rejects.toMatchObject({ code: "invalid" });
     await expect(adoptOrCreateCategory(ctx, "x".repeat(61))).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("keeps the linked category when the provider's name has grown past the column", async () => {
+    // Review A6, with its numbers: Wallet category `wc-1` is "Spesa", adopted, linked, and carries
+    // three Esselunga movements adding up to 85,20 €. The person then renames it *in Wallet* to
+    // something 65 characters long. Validating the name before reading the link made this answer
+    // `null`, `service.ts` turned that into `categoryId: null`, and the three movements lost their
+    // category every hour — the "By category" card moving 85,20 € onto "Uncategorised" with no
+    // error anywhere. The link exists and points at a live category, so the provider's name is not
+    // needed at all, whatever it says.
+    const local = await createCategory(ctx, { ...GROCERIES, name: "Spesa" });
+    await linkExternal(ctx, {
+      provider: WALLET_PROVIDER,
+      entityType: "category",
+      entityId: local.id,
+      externalId: external.externalId,
+    });
+    const accountId = await anAccount(ctx);
+    for (let i = 0; i < 3; i += 1) await addTransaction(ctx, accountId, local.id, -2_840n);
+
+    const renamedInWallet = "Spesa ".repeat(11).trim();
+    expect(renamedInWallet.length).toBe(65);
+    expect(renamedInWallet.length).toBeGreaterThan(NAME_MAX);
+
+    expect(await adoptOrCreateCategory(ctx, renamedInWallet, external)).toMatchObject({
+      id: local.id,
+      name: "Spesa",
+    });
+
+    expect(await listCategories(ctx)).toHaveLength(1);
+    expect(await listCategoriesWithUsage(ctx)).toMatchObject([{ category: { id: local.id }, usage: 3 }]);
   });
 });
 
@@ -370,6 +402,29 @@ describe("adoptOrCreateLabel", () => {
     expect(await adoptOrCreateLabel(ctx, "Holiday")).toMatchObject({ id: created.id });
     expect(await adoptOrCreateLabel(ctx, "holiday")).not.toMatchObject({ id: created.id });
     expect(await listLabels(ctx)).toHaveLength(2);
+  });
+
+  it("clips a name past the column instead of answering with nothing", async () => {
+    // Review A6 for labels: refusing the name made `service.ts` answer "no label", which took the
+    // tag off every movement that carried it. A label has no provider link to recover it from, so
+    // the clip is what keeps the movements tagged.
+    const long = "Holiday in the Dolomites with the whole family".padEnd(70, "!");
+    const adopted = await adoptOrCreateLabel(ctx, long);
+    expect(adopted.name).toBe(long.slice(0, NAME_MAX));
+    expect(await adoptOrCreateLabel(ctx, long)).toMatchObject({ id: adopted.id });
+    expect(await listLabels(ctx)).toHaveLength(1);
+  });
+
+  it("clips whole characters, so a surrogate pair is never cut in half", async () => {
+    // `NAME_MAX` is what the column counts, and Postgres counts characters: 60 of these fit even
+    // though they are 120 code units, and cutting by code units would leave a lone surrogate.
+    const adopted = await adoptOrCreateLabel(ctx, "\u{1F3D4}".repeat(70));
+    expect([...adopted.name]).toHaveLength(NAME_MAX);
+    expect(adopted.name).toBe("\u{1F3D4}".repeat(NAME_MAX));
+  });
+
+  it("still refuses a name that is blank once trimmed", async () => {
+    await expect(adoptOrCreateLabel(ctx, "   ")).rejects.toMatchObject({ code: "invalid" });
   });
 });
 

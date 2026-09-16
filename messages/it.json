@@ -199,6 +199,7 @@
         "unreachable": "Wallet non è raggiungibile. Riprova tra un minuto.",
         "empty": "Incolla prima un token.",
         "notConnected": "Wallet non è collegato.",
+        "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
         "failed": "Non è stato possibile salvare. Riprova."
       },
       "notifications": {
