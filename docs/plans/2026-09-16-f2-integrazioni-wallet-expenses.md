@@ -350,7 +350,7 @@ client onesto sulle fixture e chiedere il token quando F2 è pronta da collaudar
 ## 11. Esito (2026-09-16)
 
 F2 è chiusa. Il cancello di §8 è verde per intero: `format:check`, `lint`, `typecheck`,
-**619 test unitari**, **210 di integrazione** (migrazioni da database vuoto), e `npm run e2e` —
+**621 test unitari**, **210 di integrazione** (migrazioni da database vuoto), e `npm run e2e` —
 build compresa — con **13 percorsi**, fra cui Expenses a 1440 px e a 400 px. La migrazione è una
 sola, `drizzle/0003_integrations_transactions.sql`.
 

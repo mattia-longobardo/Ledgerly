@@ -20,7 +20,8 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
   await test.step("the month opens with the movements the sync brought in", async () => {
     await page.goto("/expenses");
     await expect(page.getByRole("heading", { name: "Expenses", level: 1 })).toBeVisible();
-    // September is seeded with four movements; the fifth is August's and must not be here.
+    // This month is seeded with four movements; the fifth is last month's and must not be here.
+    // The seed derives both from today, so this journey does not go stale (scripts/seed-e2e.ts).
     const rows = page.getByRole("row").filter({ hasText: "Netflix" });
     await expect(rows).toHaveCount(1);
     await expect(page.getByRole("row").filter({ hasText: "Esselunga" })).toHaveCount(1);

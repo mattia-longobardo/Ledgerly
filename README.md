@@ -192,10 +192,26 @@ a side effect of every tick, not a job of its own.
   `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
   and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing
   here is checked outside production); generate every secret — `BETTER_AUTH_SECRET`, `CRON_SECRET`
-  (32+ characters), `METRICS_TOKEN`, the OIDC client secret, and the S3 access/secret key — the
+  (32+ characters), `METRICS_TOKEN`, `APP_ENCRYPTION_KEY`, the OIDC client secret, and the S3
+  access/secret key — the
   `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET`, `METRICS_TOKEN` and
   `APP_ENCRYPTION_KEY` are rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
   enabled so credentials never travel in plaintext.
+
+### Keep `APP_ENCRYPTION_KEY` somewhere else too
+
+It is the only value in the deployment whose loss cannot be recovered from anything else on the
+machine. Keep a copy off the host.
+
+- **What is actually lost with it**: the Budget Makers Wallet API token, and nothing more — it is
+  the only encrypted column in the database (`integration_connections.credentials`). Accounts,
+  balances, transactions, categories, labels and recurrences are all in clear. Pasting a new token
+  in Settings › Integrations _is_ the recovery, and it keeps the sync log.
+- **Rotating**: _prepend_ the new key and leave the old one in place
+  (`APP_ENCRYPTION_KEY=k2:<new>,k1:<old>`). The first key seals from then on and every key still
+  opens. **Replacing** a key instead of prepending it starts the app perfectly — everything but the
+  token reads fine — and the only symptom is an hourly "Wallet sync failed: Unknown key id" email,
+  which reads like a fault at the provider rather than at the key.
 
 ## Documentation
 
