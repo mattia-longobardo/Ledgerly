@@ -150,7 +150,7 @@ describe("Better Auth configuration", () => {
     await applyOidcRole({
       providerId: OIDC_PROVIDER_ID,
       userId: user.id,
-      idToken: await idToken(["finance-users"]),
+      idToken: await idToken(["ledgerly-users"]),
     });
     const roleOf = async () =>
       (await getDb().select({ role: users.role }).from(users).where(eq(users.id, user.id)))[0].role;
@@ -158,7 +158,7 @@ describe("Better Auth configuration", () => {
     await applyOidcRole({
       providerId: OIDC_PROVIDER_ID,
       userId: user.id,
-      idToken: await idToken(["finance-admins"]),
+      idToken: await idToken(["ledgerly-admins"]),
     });
     expect(await roleOf()).toBe("admin");
     await applyOidcRole({ providerId: OIDC_PROVIDER_ID, userId: user.id, idToken: await idToken([]) });

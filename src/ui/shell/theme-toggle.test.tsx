@@ -9,7 +9,7 @@ import { ShellProvider } from "./shell-context";
 import { ThemeToggle } from "./theme-toggle";
 
 const LABELS = {
-  product: "Finance Dashboard",
+  product: "Ledgerly",
   primary: "Primary",
   groups: { finance: "Finance", work: "Work", system: "System" },
   toggleSidebar: "Toggle sidebar",

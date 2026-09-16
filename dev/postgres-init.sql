@@ -1,3 +1,3 @@
 -- dev/postgres-init.sql — extra databases for the test suites
-CREATE DATABASE finance_test;
-CREATE DATABASE finance_e2e;
+CREATE DATABASE ledgerly_test;
+CREATE DATABASE ledgerly_e2e;

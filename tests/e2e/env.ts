@@ -12,7 +12,19 @@ export const USERS = {
   owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
   reset: { email: "reset@example.test", password: "reset-password-123", name: "Reset" },
+  accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
 } as const;
+
+/**
+ * A ready signed-in session for the journeys that are not about signing in, written by the seed.
+ * The seed signs in through Better Auth's server API, in process, so a module's journey costs none
+ * of the run's rate-limited sign-ins — the budget above is for the auth specs that need it.
+ */
+export const SESSIONS = {
+  accounts: { user: "accounts", file: "accounts-session.json" },
+} as const;
+
+export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;
 
 /** Pending invitations created by the seed; each token is written to `tests/e2e/.state/<file>`. */
 export const INVITATIONS = {
@@ -28,22 +40,22 @@ export const STATE_DIR = "tests/e2e/.state";
 export const E2E_ENV: Record<string, string> = {
   PORT: String(E2E_PORT),
   HOSTNAME: "127.0.0.1",
-  DATABASE_URL: "postgres://finance:finance@127.0.0.1:55432/finance_e2e",
+  DATABASE_URL: "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly_e2e",
   BETTER_AUTH_URL: BASE_URL,
   BETTER_AUTH_SECRET: "C4xCHKh9Mn+vqDxmFFkYqBDvEABVTob17HmmDDJqCf0=",
   OIDC_DISCOVERY_URL: "http://127.0.0.1:58090/default/.well-known/openid-configuration",
-  OIDC_CLIENT_ID: "finance",
-  OIDC_CLIENT_SECRET: "finance-dev",
-  OIDC_ADMIN_GROUP: "finance-admins",
+  OIDC_CLIENT_ID: "ledgerly",
+  OIDC_CLIENT_SECRET: "ledgerly-dev",
+  OIDC_ADMIN_GROUP: "ledgerly-admins",
   SMTP_HOST: "127.0.0.1",
   SMTP_PORT: "51025",
-  MAIL_FROM: "Finance Dashboard <finance@example.test>",
+  MAIL_FROM: "Ledgerly <ledgerly@example.test>",
   S3_ENDPOINT: "http://127.0.0.1:59000",
-  S3_ACCESS_KEY_ID: "finance",
-  S3_SECRET_ACCESS_KEY: "finance-dev-secret",
-  S3_BUCKET: "finance-e2e",
+  S3_ACCESS_KEY_ID: "ledgerly",
+  S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
+  S3_BUCKET: "ledgerly-e2e",
   CRON_SECRET: "e2e-cron-secret-e2e-cron-secret-e2e",
-  HEARTBEAT_FILE: "/tmp/finance-heartbeat-e2e",
+  HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-e2e",
   METRICS_TOKEN: "e2e-metrics-token-e2e-metrics-token",
   // No proxy in front of the e2e server: X-Forwarded-For is the one address Next.js sets, 127.0.0.1.
   TRUSTED_PROXY_IPS: "",

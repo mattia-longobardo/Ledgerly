@@ -3,7 +3,7 @@ import type { Role } from "@/platform/context";
 import type { NavLink } from "@/ui/shell/nav-types";
 
 export interface NavItem extends Omit<NavLink, "label"> {
-  labelKey: "overview" | "settings" | "components";
+  labelKey: "overview" | "accounts" | "settings" | "components";
   adminOnly: boolean;
 }
 
@@ -14,6 +14,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     href: "/" as Route,
     labelKey: "overview",
     icon: "overview",
+    group: "finance",
+    mobile: true,
+    adminOnly: false,
+  },
+  {
+    id: "accounts",
+    href: "/accounts" as Route,
+    labelKey: "accounts",
+    icon: "accounts",
     group: "finance",
     mobile: true,
     adminOnly: false,

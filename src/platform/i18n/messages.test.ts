@@ -14,7 +14,26 @@ function flatten(tree: Tree, prefix = ""): Map<string, string> {
   return out;
 }
 
-const placeholders = (text: string) => [...text.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort();
+const ARGUMENT = /^\{\s*(\w+)\s*[,}]/;
+
+/**
+ * The ICU arguments of a message — `{url}`, `{count, plural, …}` — and not the branch bodies of a
+ * plural (`one {# account}`), which are translated text and so differ between languages. Braces
+ * alternate: an argument opens at an even depth, a branch body at an odd one.
+ */
+function placeholders(text: string): string[] {
+  const names: string[] = [];
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === "}") depth -= 1;
+    else if (text[i] === "{") {
+      const argument = depth % 2 === 0 ? ARGUMENT.exec(text.slice(i)) : null;
+      if (argument) names.push(argument[1]);
+      depth += 1;
+    }
+  }
+  return names.sort();
+}
 
 describe("message catalogues", () => {
   const english = flatten(en as Tree);

@@ -1,13 +1,13 @@
 # compose.dev.yml — local development and tests only. Never deployed (spec §3).
-name: finance-dev
+name: ledgerly-dev
 
 services:
   postgres:
     image: postgres:18
     environment:
-      POSTGRES_USER: finance
-      POSTGRES_PASSWORD: finance
-      POSTGRES_DB: finance_dev
+      POSTGRES_USER: ledgerly
+      POSTGRES_PASSWORD: ledgerly
+      POSTGRES_DB: ledgerly_dev
     ports:
       - "127.0.0.1:55432:5432"
     tmpfs:
@@ -15,7 +15,7 @@ services:
     volumes:
       - ./dev/postgres-init.sql:/docker-entrypoint-initdb.d/10-databases.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U finance -d finance_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ledgerly -d ledgerly_dev"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -24,8 +24,8 @@ services:
     image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: finance
-      MINIO_ROOT_PASSWORD: finance-dev-secret
+      MINIO_ROOT_USER: ledgerly
+      MINIO_ROOT_PASSWORD: ledgerly-dev-secret
     ports:
       - "127.0.0.1:59000:9000"
       - "127.0.0.1:59001:9001"

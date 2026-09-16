@@ -1,4 +1,4 @@
-# Finance Dashboard
+# Ledgerly
 
 Personal finance and household-admin dashboard. Version 0.1 is a from-scratch rebuild; the design is in
 [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md) and each phase has its
@@ -13,7 +13,7 @@ npm install
 cp .env.example .env
 npm run dev:services   # Postgres, MinIO, Mailpit, mock OIDC (compose.dev.yml)
 npm run db:migrate
-npm run dev:seed       # creates the owner account (DEV_OWNER_EMAIL / DEV_OWNER_PASSWORD, see below)
+npm run dev:seed       # owner account (DEV_OWNER_EMAIL / DEV_OWNER_PASSWORD, below) + sample accounts
 npm run dev            # binds to 127.0.0.1 — http://127.0.0.1:3000
 ```
 
@@ -30,6 +30,29 @@ Mailpit (outgoing mail): `http://127.0.0.1:58025`. MinIO console: `http://127.0.
 change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
 password — SSO-only — do not see that form).
 
+## Accounts and Overview (F1)
+
+**Overview** is the net worth over time; **Accounts** lists the accounts behind it and each one has
+its own page with Overview, Transactions (from F2), Balance entries and Settings tabs.
+
+- **Balances are dated observations.** An account's worth on a day is its last balance on or before
+  it, held forward; a month before an account's first balance is unknown (`—`), never zero, and a
+  total that is missing an account says so rather than passing itself off as complete. An account
+  set to **interpolate** has a straight line drawn between its known months in its own charts only —
+  totals are always held.
+- **Manual and synced accounts.** Balances are added, corrected and deleted by hand from the
+  Balance entries tab. From F2 an account can also come from a provider; a balance typed here then
+  counts as a correction and wins for that date. A synced account keeps the provider's type and
+  currency, follows its renames only until the name is changed here, and becomes `unavailable`
+  rather than disappearing when the provider stops sending it.
+- **Monthly snapshot.** On the 1st at 00:05 (`accounts-snapshot`) every account included in it gets
+  a `system` balance dated the last day of the month just ended, copied from the last balance
+  actually observed up to that day. Accounts with no data are skipped, running it again changes
+  nothing, and each run is listed under **Settings → Data**, where it can also be run at once.
+- **Alerts.** Daily at 12:00 (`accounts-alerts`) a balance under its account's threshold and a sync
+  older than its account's limit (36 h by default) send one email a week while the condition lasts;
+  an account that recovers is reported again straight away.
+
 ## Check
 
 ```bash
@@ -38,20 +61,31 @@ npm run format:check && npm run lint && npm run typecheck && npm test && npm run
 
 ## Docker
 
+`docker-compose.yml` is the homelab deployment: the `ledgerly` app behind Traefik on
+`proxy_public`, and the `ledgerly-cron` sidecar beside it on `db_internal`. Both read
+`.env.homelab` — never `.env`, which is the local-development one — and both are discovered by
+`projects/stack.sh`, so `./stack.sh up` starts them along with the other projects.
+
 ```bash
-docker build -t finance-dashboard:dev .
-docker build -t finance-dashboard-cron:dev cron
+docker compose build          # or: docker compose up -d --build
 ```
+
+Being on `db_internal` is what lets the app reach `postgres:5432` and `silo:9000` by name; those
+are internal-only and unreachable from a workstation, which is why `npm run dev` uses
+`compose.dev.yml` instead. `dash.longobardo.me` is served through the `lan-only@file` middleware:
+LAN and NetBird only, never the public internet, so it is deliberately absent from the blackbox
+probes in `db/prometheus/prometheus.yml`.
 
 The app image applies pending migrations on boot, then serves the standalone Next.js server; it
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
 start if any check fails, so a misconfigured deployment fails loudly instead of on the first
 request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
-`http://dashboard-app:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
+`http://ledgerly:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
-and reaches the app by its compose service name, `dashboard-app`, on the internal network. Each
-tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`; F0 has only `housekeeping`) for
-that tier; touching the heartbeat file is a side effect of every tick, not a job of its own.
+and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `housekeeping` and
+`accounts-alerts` daily, `accounts-snapshot` monthly) for that tier; touching the heartbeat file is
+a side effect of every tick, not a job of its own.
 
 ## Operations
 
@@ -86,17 +120,43 @@ that tier; touching the heartbeat file is a side effect of every tick, not a job
   every request shares one bucket. Never publish port 3000 on the host: the app is reached only
   over LAN/NetBird (spec §13).
 - **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
-  inside the same Docker network as the app (its compose service name, `dashboard-app`), for
+  inside the same Docker network as the app (its compose service name, `ledgerly`), for
   example:
   ```yaml
   scrape_configs:
-    - job_name: finance-dashboard
+    - job_name: ledgerly
       metrics_path: /api/metrics
       authorization:
         credentials: <METRICS_TOKEN>
       static_configs:
-        - targets: ["dashboard-app:3000"]
+        - targets: ["ledgerly:3000"]
   ```
+- **Homelab services** (`/home/mattia/docker`, conventions in its `AGENTS.md`). Ledgerly reuses the
+  shared tier rather than running its own copies; `.env.homelab` holds the matching values, and no
+  value in it may contain a `$` — Compose interpolates `env_file` contents, so a `$` in a secret
+  silently reaches the container truncated.
+  - **Postgres** (`db/`, published on the host as `5432`): one database and one role per app.
+    ```sql
+    CREATE ROLE ledgerly LOGIN PASSWORD '<the DATABASE_URL password>';
+    CREATE DATABASE ledgerly OWNER ledgerly;
+    ```
+  - **Authentik** (`security/`, `auth.longobardo.me`): the OAuth2/OIDC provider and application
+    `Ledgerly` (slug `ledgerly`, confidential, implicit-consent authorization flow, the four default
+    OpenID scope mappings). Its redirect URIs are
+    `<BETTER_AUTH_URL>/api/auth/callback/authentik` — for production and for
+    `http://127.0.0.1:3000`. That path is the **social** callback, not the generic-OAuth one
+    (`/api/auth/oauth2/callback/…`): the sign-in button calls `authClient.signIn.social`
+    (`src/app/(auth)/authentik.ts`), and `authentik` is `OIDC_PROVIDER_ID`. Register the wrong one
+    and Authentik answers `redirect_uri_no_match`. The `profile` scope mapping is what puts
+    `groups` in the id token, which is how `OIDC_ADMIN_GROUP` (the `Ledgerly` group) grants the
+    admin role on sign-in.
+  - **Stalwart** (`network/`, `mx.longobardo.me`): send as `no-reply@longobardo.me` over implicit
+    TLS on 465, with that mailbox's password in `SMTP_PASSWORD`.
+  - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
+    folders inside it (`payslips/`, `cometa/`, `avatars/`, …), never split buckets. Its S3 API
+    listens on `db_internal` only, so a copy of the app running on a workstation cannot reach it;
+    in production the app sits on that network and `http://silo:9000` resolves. Through F1 nothing
+    in the running app touches S3 — only `npm run dev:seed` and the storage integration tests do.
 - **Production requirements** (`src/platform/env.ts`, checked at boot by
   `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
   and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing

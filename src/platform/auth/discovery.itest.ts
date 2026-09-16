@@ -36,7 +36,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  (globalThis as { financeAuth?: unknown }).financeAuth = undefined;
+  (globalThis as { ledgerlyAuth?: unknown }).ledgerlyAuth = undefined;
   consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 

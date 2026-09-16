@@ -15,7 +15,7 @@
             "email_verified": true,
             "name": "Admin User",
             "preferred_username": "admin",
-            "groups": ["finance-admins"]
+            "groups": ["ledgerly-admins"]
           }
         },
         {
@@ -26,7 +26,7 @@
             "email": "${subject}",
             "email_verified": true,
             "name": "${subject}",
-            "groups": ["finance-users"]
+            "groups": ["ledgerly-users"]
           }
         }
       ]

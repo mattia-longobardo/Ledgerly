@@ -15,6 +15,13 @@
       "when": 1789395277326,
       "tag": "0001_job_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789551339107,
+      "tag": "0002_accounts",
+      "breakpoints": true
     }
   ]
 }

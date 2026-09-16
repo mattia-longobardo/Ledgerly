@@ -84,7 +84,10 @@ describe("jobs", () => {
     expect(ok.status).toBe(200);
     expect(await ok.json()).toMatchObject({
       tier: "daily",
-      outcomes: [{ job: "housekeeping", status: "success" }],
+      outcomes: [
+        { job: "housekeeping", status: "success" },
+        { job: "accounts-alerts", status: "success" },
+      ],
     });
   });
 

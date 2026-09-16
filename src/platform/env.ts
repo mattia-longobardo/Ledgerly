@@ -33,7 +33,7 @@ export const envSchema = z
     OIDC_DISCOVERY_URL: z.url(),
     OIDC_CLIENT_ID: z.string().min(1),
     OIDC_CLIENT_SECRET: z.string().min(1),
-    OIDC_ADMIN_GROUP: z.string().min(1).default("finance-admins"),
+    OIDC_ADMIN_GROUP: z.string().min(1).default("ledgerly-admins"),
     SMTP_HOST: z.string().min(1),
     SMTP_PORT: z.coerce.number().int().positive(),
     SMTP_SECURE: z
@@ -56,7 +56,7 @@ export const envSchema = z
     S3_SECRET_ACCESS_KEY: z.string().min(1),
     S3_BUCKET: z.string().min(3),
     CRON_SECRET: z.string().min(32),
-    HEARTBEAT_FILE: z.string().min(1).default("/tmp/finance-heartbeat"),
+    HEARTBEAT_FILE: z.string().min(1).default("/tmp/ledgerly-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
     // The reverse proxies in front of the app (comma-separated IPs or CIDR ranges): Better Auth
     // reads the client IP from X-Forwarded-For past these hops, so each client gets its own
