@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, DrizzleQueryError, eq, inArray, ne } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
 import {
@@ -23,6 +23,9 @@ import {
 import { integrationConnections, providerLinks, syncJobs, syncRuns } from "./schema";
 
 export type { ProviderLink, SyncKind } from "./rules";
+// Re-exported so a caller that wants to write a link inside its own transaction has the type to
+// hand without reaching into the database client itself.
+export type { Tx } from "@/platform/db/client";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type IntegrationErrorCode =
@@ -280,17 +283,28 @@ export async function skipRun(
  * twice produces the same row rather than a second one. The second unique key does the other
  * half — one local entity cannot be claimed by two of a provider's ids — and a caller that tries
  * gets `link_conflict` instead of a raw database error.
+ *
+ * `tx` makes this the sink of spec §4.2: a module that creates a row and its link writes both
+ * inside its own transaction, so the pair either exists or does not. Without it, a process that
+ * died between the two commits would leave a row no `resolveExternal` can find, and the next pass
+ * would import it a second time — a movement counted twice is wrong money in every total.
+ *
+ * With `tx`, a `link_conflict` has already aborted the caller's transaction by the time it is
+ * thrown: Postgres does not survive a constraint violation mid-transaction. The caller catches it
+ * to decide *what to say*, not to carry on writing — every statement of that transaction, its own
+ * row included, is gone. Deciding beforehand (`resolveExternal`) is the way to avoid the throw.
  */
 export async function linkExternal(
   ctx: Pick<Ctx, "userId">,
   input: ProviderLink,
   now: Date = new Date(),
+  tx?: Tx,
 ): Promise<void> {
   const parsed = providerLinkSchema.safeParse(input);
   if (!parsed.success) throw new IntegrationError("invalid_link");
   const link = parsed.data;
   try {
-    await getDb()
+    await (tx ?? getDb())
       .insert(providerLinks)
       .values(
         userScoped(ctx).stamp({

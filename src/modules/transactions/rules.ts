@@ -420,10 +420,16 @@ export function markLocallyEdited(
 
 /* Disappeared upstream */
 
-/** A stored row as the removal check sees it. */
+/**
+ * A stored row as the removal check sees it. `key` is only ever tested for membership in the set
+ * of keys the answer returned, so it may be the provider's external id or the local id — whichever
+ * the caller can produce — as long as one call uses the same kind on both sides. The provider's id
+ * lives in `provider_links`, not in `transactions` (spec §4.3), so a caller inside this module
+ * usually has only the local one.
+ */
 export interface WindowRow {
   id: string;
-  externalId: string;
+  key: string;
   occurredAt: Date;
   removedUpstreamAt: Date | null;
 }
@@ -446,16 +452,16 @@ export interface UpstreamRemovalPlan {
  */
 export function planUpstreamRemovals(
   stored: readonly WindowRow[],
-  returnedExternalIds: readonly string[],
+  returnedKeys: readonly string[],
   window: { from: CivilDate; to: CivilDate },
   timeZone: string,
 ): UpstreamRemovalPlan {
-  const returned = new Set(returnedExternalIds);
+  const returned = new Set(returnedKeys);
   const plan: UpstreamRemovalPlan = { removed: [], restored: [] };
   for (const row of stored) {
     const on = civilDateIn(row.occurredAt, timeZone);
     if (on < window.from || on > window.to) continue;
-    if (returned.has(row.externalId)) {
+    if (returned.has(row.key)) {
       if (row.removedUpstreamAt !== null) plan.restored.push(row.id);
     } else if (row.removedUpstreamAt === null) {
       plan.removed.push(row.id);

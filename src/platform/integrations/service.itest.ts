@@ -333,6 +333,48 @@ describe("linkExternal and resolveExternal", () => {
   });
 });
 
+describe("linkExternal inside the caller's transaction", () => {
+  it("leaves no link behind when the caller rolls back", async () => {
+    const link = transactionLink();
+    await expect(
+      getDb().transaction(async (tx) => {
+        await linkExternal(ctx, link, NOW, tx);
+        throw new Error("the caller changed its mind");
+      }),
+    ).rejects.toThrow("the caller changed its mind");
+
+    // The sink of spec §4.2: the row and its link share one fate, so the next pass sees neither
+    // a duplicate to create nor an entity it cannot recognise.
+    expect(await storedLink(ctx, "w-1")).toBeUndefined();
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"])).toEqual(new Map());
+  });
+
+  it("commits with the caller", async () => {
+    const link = transactionLink();
+    await getDb().transaction(async (tx) => {
+      await linkExternal(ctx, link, NOW, tx);
+    });
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"])).toEqual(
+      new Map([["w-1", link.entityId]]),
+    );
+  });
+
+  it("still reports a conflicting link, and takes the caller's transaction down with it", async () => {
+    const first = transactionLink();
+    await linkExternal(ctx, first, NOW);
+
+    await expect(
+      getDb().transaction(async (tx) => {
+        await linkExternal(ctx, { ...first, externalId: "w-2" }, NOW, tx);
+      }),
+    ).rejects.toThrow(IntegrationError);
+
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1", "w-2"])).toEqual(
+      new Map([["w-1", first.entityId]]),
+    );
+  });
+});
+
 describe("applyPresence", () => {
   const candidates = ["w-1", "w-2"];
 

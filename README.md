@@ -53,6 +53,37 @@ its own page with Overview, Transactions (from F2), Balance entries and Settings
   older than its account's limit (36 h by default) send one email a week while the condition lasts;
   an account that recovers is reported again straight away.
 
+## Integrations, Wallet and Expenses (F2)
+
+**Settings → Integrations** links a Budget Makers Wallet account; **Expenses** is what the sync
+brings in.
+
+- **The token is sealed, not stored.** A credential is encrypted with AES-256-GCM under
+  `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
+  key can be rotated by prepending a new one) before it is ever written, and it is never returned
+  to the browser afterwards: the field on the card only ever _replaces_ it.
+- **What a sync does.** Hourly at minute 07 (`wallet-sync`), per user: accounts and balances first,
+  then transactions. The first pass after linking fetches **12 months** in monthly windows; every
+  pass after that re-reads the **last 7 days**. A page that comes back full splits its window
+  instead of failing, reads are retried five times honouring `Retry-After`, and a 401 or 403 stops
+  at once, marks the link revoked and says the token was rejected. Every attempt is a row in the
+  sync log on that page, skipped ones included.
+- **Local edits win.** Payee, amount and date belong to the provider; category, labels, note and
+  visibility belong to you, and each field you actually change is recorded so no later sync
+  overwrites it — submitting the provider's own value claims nothing. **Hide** (the design's
+  "Delete") keeps a movement out of the totals and can be undone; a movement the provider stops
+  returning inside the re-read window is marked as gone and treated the same way.
+- **Transfers and recurrences.** Two movements are paired only by the reference Wallet gives them,
+  never by amount and date, so a pair forms whichever sync each leg arrives in. A payee becomes a
+  recurrence after three occurrences whose gaps all fall in one band (weekly through yearly) and
+  whose amounts are all within 10% of the median.
+- **Categories and labels** live under **Settings → Data**. A synced category is matched to an
+  existing link, then to a local name exactly, and only then created. Categories are archived,
+  never deleted.
+- **Without a token** the client and the engine run against the synthetic fixtures in
+  `tests/fixtures/wallet/`; the first real link and its 12-month backfill still have to be done by
+  hand.
+
 ## Check
 
 ```bash
@@ -155,15 +186,15 @@ a side effect of every tick, not a job of its own.
   - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
     folders inside it (`payslips/`, `cometa/`, `avatars/`, …), never split buckets. Its S3 API
     listens on `db_internal` only, so a copy of the app running on a workstation cannot reach it;
-    in production the app sits on that network and `http://silo:9000` resolves. Through F1 nothing
+    in production the app sits on that network and `http://silo:9000` resolves. Through F2 nothing
     in the running app touches S3 — only `npm run dev:seed` and the storage integration tests do.
 - **Production requirements** (`src/platform/env.ts`, checked at boot by
   `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
   and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing
   here is checked outside production); generate every secret — `BETTER_AUTH_SECRET`, `CRON_SECRET`
   (32+ characters), `METRICS_TOKEN`, the OIDC client secret, and the S3 access/secret key — the
-  `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET` and `METRICS_TOKEN` are
-  rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
+  `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET`, `METRICS_TOKEN` and
+  `APP_ENCRYPTION_KEY` are rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
   enabled so credentials never travel in plaintext.
 
 ## Documentation

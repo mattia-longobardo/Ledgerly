@@ -1,7 +1,15 @@
 import "server-only";
 import { and, asc, eq, max, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
-import { type CivilDate, addMonths, lastDayOfMonth, type MonthKey, monthKey, today } from "@/platform/dates";
+import {
+  type CivilDate,
+  addMonths,
+  isCivilDate,
+  lastDayOfMonth,
+  type MonthKey,
+  monthKey,
+  today,
+} from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { type Cents, sumCents } from "@/platform/money";
@@ -195,6 +203,59 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
     })
     .returning();
   return row;
+}
+
+/** A provider's reading of a balance, as the Wallet sync hands it over (spec §9.1). */
+export interface ProviderBalanceInput {
+  /** The civil date of the reading **in the user's zone** (spec §9.1): the caller's to compute. */
+  on: CivilDate;
+  cents: Cents;
+  availableCents?: Cents | null;
+}
+
+/**
+ * A balance Wallet published, stored as its own `provider` row (spec §9.1).
+ *
+ * Deliberately separate from {@link saveBalanceEntry}, which writes `manual` and only ever that:
+ * the unique key is `(account, on, source)`, so the two never collide, and a manual balance stays
+ * the correction that wins for its date (spec §7.1, `SOURCE_RANK`). Idempotent on that key — the
+ * same reading applied twice updates one row instead of adding a second — and no future-date check
+ * is needed, because "the date of the reading" cannot be in the future.
+ *
+ * It also moves `accounts.last_synced_at`: §7.1 measures staleness from the last *reading*, and a
+ * provider balance written is exactly the evidence that one happened. `applyProviderAccounts`
+ * stamps it only on the accounts its reconciliation had a step for, so an account that came back
+ * unchanged would otherwise go stale while being read every hour. Same transaction as the balance,
+ * so the two facts cannot disagree.
+ */
+export async function saveProviderBalance(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  input: ProviderBalanceInput,
+  now: Date = new Date(),
+): Promise<BalanceEntry> {
+  await requireAccount(ctx, accountId);
+  if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
+  const values = {
+    balanceCents: input.cents,
+    availableCents: input.availableCents ?? null,
+    capturedAt: now,
+  };
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .insert(balanceEntries)
+      .values(userScoped(ctx).stamp({ accountId, on: input.on, source: "provider" as const, ...values }))
+      .onConflictDoUpdate({
+        target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
+        set: values,
+      })
+      .returning();
+    await tx
+      .update(accounts)
+      .set({ lastSyncedAt: now })
+      .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
+    return row;
+  });
 }
 
 export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {

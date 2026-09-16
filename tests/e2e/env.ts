@@ -13,6 +13,7 @@ export const USERS = {
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
   reset: { email: "reset@example.test", password: "reset-password-123", name: "Reset" },
   accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
+  expenses: { email: "expenses@example.test", password: "expenses-password-123", name: "Expenses" },
 } as const;
 
 /**
@@ -22,6 +23,7 @@ export const USERS = {
  */
 export const SESSIONS = {
   accounts: { user: "accounts", file: "accounts-session.json" },
+  expenses: { user: "expenses", file: "expenses-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;

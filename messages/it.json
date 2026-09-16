@@ -191,7 +191,7 @@
         "connected": "Wallet collegato",
         "replaced": "Token sostituito",
         "disconnected": "Wallet scollegato",
-        "queued": "Sincronizzazione in coda",
+        "synced": "Sincronizzazione completata",
         "tested": "Wallet ha risposto: il token funziona"
       },
       "errors": {
@@ -420,6 +420,9 @@
         "label": "Intervallo di date",
         "previous": "Periodo precedente",
         "next": "Periodo successivo",
+        "latest": "Ultimo",
+        "previousMonth": "Mese precedente",
+        "nextMonth": "Mese successivo",
         "from": "Da",
         "to": "A",
         "apply": "Applica",
@@ -464,8 +467,10 @@
     "group": {
       "summary": "{count, plural, one {# movimento} other {# movimenti}} · {total}"
     },
+    "truncated": "Mostrati i primi {shown} di {count} movimenti.",
     "selection": {
       "label": "{count, plural, one {# selezionato} other {# selezionati}}",
+      "all": "Seleziona tutto",
       "setCategory": "Imposta categoria",
       "hide": "Nascondi",
       "restore": "Ripristina",
@@ -473,11 +478,15 @@
     },
     "row": {
       "editCategory": "Modifica categoria",
+      "edit": "Modifica dettagli",
       "menu": "Azioni sulla riga",
       "note": "Nota",
       "labels": "Etichette",
+      "noLabels": "Nessuna etichetta",
       "uncategorised": "Senza categoria",
-      "noPayee": "Senza beneficiario"
+      "noPayee": "Senza beneficiario",
+      "save": "Salva",
+      "cancel": "Annulla"
     },
     "badges": {
       "hidden": "Nascosto",

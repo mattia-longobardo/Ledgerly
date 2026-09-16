@@ -40,6 +40,61 @@ export function civilDateIn(instant: Date, timeZone: string): CivilDate {
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
+/** A zone's offset from UTC at an instant, in milliseconds; positive east of Greenwich. */
+function offsetAt(millis: number, timeZone: string): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const at = Object.fromEntries(
+    formatter.formatToParts(new Date(millis)).map((part) => [part.type, part.value]),
+  );
+  // `hour12: false` renders midnight as "24" in this locale, which `Date.UTC` would carry into the
+  // next day: the modulo keeps it on the day the other parts name.
+  const local = Date.UTC(
+    Number(at.year),
+    Number(at.month) - 1,
+    Number(at.day),
+    Number(at.hour) % 24,
+    Number(at.minute),
+    Number(at.second),
+  );
+  return local - millis;
+}
+
+/**
+ * The instant a civil date begins in `timeZone`: local midnight, as a UTC instant. The counterpart
+ * of {@link civilDateIn}, and the sanctioned way to turn a bare day into an instant — a provider
+ * that sends a date with no time still has to be stored in a `timestamptz` column, and `§4.3`
+ * forbids getting there through `toISOString()`.
+ *
+ * The offset is itself a function of the instant, so it is measured twice: once at the UTC guess,
+ * then again at the corrected one, which is what makes a day whose offset changed overnight come
+ * out right. A midnight a zone skips entirely has no instant of its own; the value returned is the
+ * one the clock jumped to.
+ */
+export function startOfDayIn(on: CivilDate, timeZone: string): Date {
+  const [year, month, day] = parts(on);
+  const midnight = Date.UTC(year, month - 1, day);
+  const once = midnight - offsetAt(midnight, timeZone);
+  const twice = midnight - offsetAt(once, timeZone);
+  // The earliest candidate that really falls on `on`. Both land on it on an ordinary day; they
+  // disagree when the offset changed overnight, and when a zone skips its own midnight (Santiago
+  // springs forward at 00:00) only the first one does — the second lands on the day before, which
+  // is a whole day of error. Neither matching cannot happen, and taking the later of the two is
+  // the safe answer if it ever did.
+  for (const candidate of [Math.min(once, twice), Math.max(once, twice)]) {
+    if (civilDateIn(new Date(candidate), timeZone) === on) return new Date(candidate);
+  }
+  return new Date(Math.max(once, twice));
+}
+
 /** A zone's offset from UTC at an instant, as "UTC+2", "UTC−3:30" or "UTC" (the timezone picker). */
 export function utcOffsetLabel(timeZone: string, instant: Date): string {
   const name = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })

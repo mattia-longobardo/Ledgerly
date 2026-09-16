@@ -1,4 +1,5 @@
 import { accountAlertsJob, accountsSnapshotJob } from "@/modules/accounts/jobs";
+import { walletSyncJob } from "@/modules/transactions/jobs";
 import { housekeepingJob } from "./housekeeping";
 import type { JobDetail } from "./schema";
 
@@ -11,4 +12,9 @@ export interface JobDefinition {
 }
 
 /** The one list of scheduled jobs. Each phase appends its jobs here. */
-export const JOBS: readonly JobDefinition[] = [housekeepingJob, accountAlertsJob, accountsSnapshotJob];
+export const JOBS: readonly JobDefinition[] = [
+  housekeepingJob,
+  accountAlertsJob,
+  accountsSnapshotJob,
+  walletSyncJob,
+];

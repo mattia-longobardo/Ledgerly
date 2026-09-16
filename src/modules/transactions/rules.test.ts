@@ -374,26 +374,26 @@ describe("markLocallyEdited", () => {
 
 describe("planUpstreamRemovals", () => {
   const window = { from: "2026-03-01", to: "2026-03-08" };
-  const row = (over: Partial<WindowRow> & Pick<WindowRow, "id" | "externalId">): WindowRow => ({
+  const row = (over: Partial<WindowRow> & Pick<WindowRow, "id" | "key">): WindowRow => ({
     occurredAt: new Date("2026-03-04T10:00:00Z"),
     removedUpstreamAt: null,
     ...over,
   });
 
   it("stamps a row inside the window the provider did not return", () => {
-    const plan = planUpstreamRemovals([row({ id: "t1", externalId: "w-1" })], [], window, ROME);
+    const plan = planUpstreamRemovals([row({ id: "t1", key: "w-1" })], [], window, ROME);
     expect(plan).toEqual({ removed: ["t1"], restored: [] });
   });
 
   it("leaves a row the provider still returns alone", () => {
-    const plan = planUpstreamRemovals([row({ id: "t1", externalId: "w-1" })], ["w-1"], window, ROME);
+    const plan = planUpstreamRemovals([row({ id: "t1", key: "w-1" })], ["w-1"], window, ROME);
     expect(plan).toEqual({ removed: [], restored: [] });
   });
 
   it("clears the stamp when the provider sends the row again", () => {
     const back = row({
       id: "t1",
-      externalId: "w-1",
+      key: "w-1",
       removedUpstreamAt: new Date("2026-03-05T00:00:00Z"),
     });
     expect(planUpstreamRemovals([back], ["w-1"], window, ROME)).toEqual({ removed: [], restored: ["t1"] });
@@ -402,21 +402,21 @@ describe("planUpstreamRemovals", () => {
   it("does not stamp a row twice while it stays missing", () => {
     const gone = row({
       id: "t1",
-      externalId: "w-1",
+      key: "w-1",
       removedUpstreamAt: new Date("2026-03-05T00:00:00Z"),
     });
     expect(planUpstreamRemovals([gone], [], window, ROME)).toEqual({ removed: [], restored: [] });
   });
 
   it("says nothing about a row outside the window: it was never asked about", () => {
-    const older = row({ id: "t1", externalId: "w-1", occurredAt: new Date("2026-02-01T10:00:00Z") });
-    const newer = row({ id: "t2", externalId: "w-2", occurredAt: new Date("2026-03-20T10:00:00Z") });
+    const older = row({ id: "t1", key: "w-1", occurredAt: new Date("2026-02-01T10:00:00Z") });
+    const newer = row({ id: "t2", key: "w-2", occurredAt: new Date("2026-03-20T10:00:00Z") });
     expect(planUpstreamRemovals([older, newer], [], window, ROME)).toEqual({ removed: [], restored: [] });
   });
 
   it("places a row on the user's own day, not on the UTC one", () => {
     // 23:30 UTC on the 8th is already the 9th in Rome, which is past the window's last day.
-    const late = row({ id: "t1", externalId: "w-1", occurredAt: new Date("2026-03-08T23:30:00Z") });
+    const late = row({ id: "t1", key: "w-1", occurredAt: new Date("2026-03-08T23:30:00Z") });
     expect(planUpstreamRemovals([late], [], window, ROME)).toEqual({ removed: [], restored: [] });
     expect(planUpstreamRemovals([late], [], window, "UTC")).toEqual({ removed: ["t1"], restored: [] });
   });
