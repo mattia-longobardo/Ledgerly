@@ -197,6 +197,7 @@
       "errors": {
         "rejected": "Wallet ha rifiutato il token.",
         "unreachable": "Wallet non è raggiungibile. Riprova tra un minuto.",
+        "provider": "Wallet ha risposto qualcosa che l'app non sa usare. Il dettaglio è nel registro.",
         "empty": "Incolla prima un token.",
         "notConnected": "Wallet non è collegato.",
         "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",

@@ -197,6 +197,7 @@
       "errors": {
         "rejected": "Wallet rejected that token.",
         "unreachable": "Wallet could not be reached. Try again in a minute.",
+        "provider": "Wallet answered something this app could not use. The sync log has the detail.",
         "empty": "Paste a token first.",
         "notConnected": "Wallet is not connected.",
         "busy": "A sync is already running. Try again in a moment.",

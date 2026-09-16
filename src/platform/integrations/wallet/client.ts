@@ -7,11 +7,13 @@
  *
  * Reads get 5 attempts with exponential backoff that honours `Retry-After`; a write gets one
  * ({@link WRITE_ATTEMPTS}); 401 and 403 fail at once as {@link WalletError} `token_rejected`, and
- * so does a token that cannot be sent in a header at all ({@link isUsableToken}).
+ * so does a token that cannot be sent in a header at all ({@link isUsableToken}). Every other
+ * answer outside 2xx is an `http` failure carrying whatever the body put in its `error` field,
+ * decided before the body is ever shown to a schema.
  */
 
 import { type ZodType } from "zod";
-import { type CivilDate } from "@/platform/dates";
+import { addDays, type CivilDate } from "@/platform/dates";
 import {
   type DateWindow,
   mapWalletAccount,
@@ -39,6 +41,7 @@ export type {
   WalletCategory,
   WalletCategoryPayload,
   WalletRecordPayload,
+  WalletRecordsPage,
   WalletTransaction,
 } from "./mapping";
 
@@ -54,9 +57,15 @@ export const READ_ATTEMPTS = 5;
  */
 export const WRITE_ATTEMPTS = 1;
 
+/**
+ * 200 is the API's own ceiling on all three lists, and the one number it refuses loudly: a
+ * `/records?limit=500` answers `HTTP 400 {"error":"limit must be at most 200"}` — every call, so a
+ * sync that asks for more never reads a single movement. Measured on 2026-09-16. `/categories`
+ * returns 91 rows, comfortably under it.
+ */
 const ACCOUNTS_LIMIT = 200;
 const CATEGORIES_LIMIT = 200;
-const RECORDS_LIMIT = 500;
+const RECORDS_LIMIT = 200;
 const BASE_DELAY_MS = 2_000;
 const MAX_DELAY_MS = 32_000;
 const JITTER_FRACTION = 0.25;
@@ -142,9 +151,10 @@ export interface WalletClient {
   balances(): Promise<WalletBalance[]>;
   transactions(window: { from: CivilDate; to: CivilDate }): Promise<WalletTransaction[]>;
   /**
-   * Beyond the three signatures F2 agreed on, and additive to them: a movement carries only
-   * `categoryId`, and §9.1 adopts a category by its exact *name*, so the sync needs this read to
-   * follow that rule at all.
+   * Beyond the three signatures F2 agreed on, and additive to them: §9.1 links a provider category,
+   * adopts one by its exact *name*, or creates it, and that needs Wallet's whole list — the
+   * categories no movement of the window happens to use included. A movement does carry its own
+   * category's name as well, so this is no longer the only place a name can come from.
    */
   categories(): Promise<WalletCategory[]>;
 }
@@ -201,6 +211,30 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * What the body says went wrong, when it says anything: the `error` field of a JSON error body.
+ *
+ * `{"error":"limit must be at most 200"}` is the best account of a failure this API gives, and a
+ * `WalletError`'s *message* is the only part of it that reaches `sync_runs.error` and the
+ * Settings › Integrations card — `detail` stops at the database. Leaving the field out of the
+ * message is what turned a limit violation into "Wallet could not be reached" and cost a whole
+ * round of diagnosis.
+ *
+ * Parsed with the ordinary `JSON.parse`, deliberately: nothing in an error body is money, so the
+ * source-text reviver has no business here.
+ */
+function errorFieldOf(body: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const field = (parsed as { error?: unknown }).error;
+  return typeof field === "string" && field.trim() !== "" ? field.trim() : null;
+}
+
 /** An error body, bounded: a provider that answers with an HTML page must not fill a log with it. */
 function detailOf(body: string): string | null {
   const trimmed = body.trim();
@@ -225,17 +259,74 @@ function assertWholePage(endpoint: string, count: number, limit: number): void {
   );
 }
 
+/** One bound of `appliedRecordDateFilters`: an operator and the instant it is measured against. */
+const APPLIED_FILTER = /^(gte|gt|lte|lt)\.(.+)$/;
+
+/**
+ * The window Wallet *says* it applied covers the window that was asked for, or the page is refused.
+ *
+ * `/records` answers with `appliedRecordDateFilters`, the date filters the API actually applied —
+ * `["gte.2026-09-01T00:00:00.000Z","lt.2026-09-17T00:00:00.000Z"]` (measured 2026-09-16). That
+ * replaces this client's last inference about the request with a fact. It matters because every
+ * way the request can go wrong is silent: a filter name Wallet does not know, a bound it drops, or
+ * no date filter at all — in which case it applies a window of its own, the last three months or
+ * so — all produce an answer that looks like a complete account of the window while hiding
+ * movements, and a movement hidden inside a re-read window is what §7.2 reads as its removal.
+ *
+ * Only a *narrower* applied window is judged here. A wider one is harmless to the question this
+ * asks (every movement of the requested window is still in the answer) and is refused anyway by
+ * {@link assertWithinWindow} the moment it carries a movement from outside.
+ *
+ * Both bounds have to be declared: an undeclared side is not an open-ended read, it is the API's
+ * own default window applied invisibly. `lte.<day>` comes back as `lt.<day+1>T00:00Z`, so the last
+ * day of a closed window is included in full, and the exclusive upper bound compared against here
+ * is midnight after `window.to`.
+ *
+ * The message carries the window and the filters — never a movement, and never the token.
+ */
+function assertWindowApplied(window: DateWindow, filters: readonly string[]): void {
+  const from = Date.parse(`${window.from}T00:00:00.000Z`);
+  const until = Date.parse(`${addDays(window.to, 1)}T00:00:00.000Z`);
+  let lower = Number.NEGATIVE_INFINITY;
+  let upper = Number.POSITIVE_INFINITY;
+  for (const filter of filters) {
+    const bound = APPLIED_FILTER.exec(filter.trim());
+    const at = bound === null ? Number.NaN : Date.parse(bound[2]);
+    if (bound === null || Number.isNaN(at)) {
+      throw new WalletError(
+        "payload",
+        `Wallet answered /records for ${window.from}..${window.to} declaring a date filter this client cannot read ("${filter}"): the window it covers cannot be established`,
+        null,
+        { from: window.from, to: window.to, appliedRecordDateFilters: [...filters] },
+      );
+    }
+    if (bound[1] === "gte") lower = Math.max(lower, at);
+    if (bound[1] === "gt") lower = Math.max(lower, at + 1);
+    if (bound[1] === "lte") upper = Math.min(upper, at + 1);
+    if (bound[1] === "lt") upper = Math.min(upper, at);
+  }
+  // Both bounds have to be there: an undeclared side is the API's own bound applied invisibly,
+  // never an open-ended read, so `-Infinity`/`+Infinity` must not be allowed to satisfy the test.
+  if (Number.isFinite(lower) && Number.isFinite(upper) && lower <= from && upper >= until) return;
+  const declared = filters.length === 0 ? "no date filter" : filters.join(", ");
+  throw new WalletError(
+    "payload",
+    `Wallet answered /records for ${window.from}..${window.to} having applied ${declared}: the answer does not cover the window that was asked for`,
+    null,
+    { from: window.from, to: window.to, appliedRecordDateFilters: [...filters] },
+  );
+}
+
 /**
  * Every movement of a page falls inside the window that was asked for, or the page is refused.
  *
  * `/records` is the one endpoint that can *hide* data — a window that comes back without a
- * movement is what declares that movement gone (§7.2) — and the shape of the request that bounds
- * the window is the only inference this client makes about the API: the filter's name, and the two
- * `recordDate` bounds being combined with AND. If either is wrong Wallet answers with far more
- * than the window, and for a user under the page limit the answer still looks complete, so the
- * mistake would show up as wrong data rather than as a failure. One date outside the window proves
- * the request did not mean what it said, which is worth a failed pass: the same trade
- * {@link assertWholePage} already makes for `/accounts` and `/categories`.
+ * movement is what declares that movement gone (§7.2). {@link assertWindowApplied} checks the
+ * window Wallet says it applied; this checks the movements it actually sent, which is the other
+ * half of the same question: a filter can be declared and still not be honoured, and a page wider
+ * than the window looks complete to a user under the page limit, so the mistake would show up as
+ * wrong data rather than as a failure. One date outside the window is worth a failed pass: the
+ * same trade {@link assertWholePage} already makes for `/accounts` and `/categories`.
  *
  * The message carries the window and the offending day — never the movement, and never the token.
  */
@@ -393,10 +484,17 @@ export function createWalletClient(token: string, options: WalletClientOptions =
 
     const body = await response.text().catch(() => "");
 
+    // The status decides first, every time: an answer outside 2xx is never handed to a schema.
+    // A 400 fed to the record schema comes back as "an unexpected shape", which reads as an
+    // unintelligible provider and then, one mapping later, as a network problem — three wrong
+    // diagnoses for a body that said exactly what was wrong.
+    const reason = errorFieldOf(body);
+    const said = reason === null ? "" : `: ${withoutToken(reason)}`;
+
     if (response.status === 401 || response.status === 403) {
       throw new WalletError(
         "token_rejected",
-        `Wallet rejected the token (HTTP ${response.status})`,
+        `Wallet rejected the token (HTTP ${response.status})${said}`,
         response.status,
         detailOf(body),
         false,
@@ -404,10 +502,12 @@ export function createWalletClient(token: string, options: WalletClientOptions =
     }
     if (!response.ok) {
       const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"), now());
+      // 429 and 5xx are worth another go; a 4xx is the request's own fault and will be refused
+      // identically five times over.
       const retryable = isRetryableStatus(response.status, body);
       throw new WalletError(
         "http",
-        `Wallet answered HTTP ${response.status}`,
+        `Wallet answered HTTP ${response.status}${said}`,
         response.status,
         detailOf(body),
         retryable,
@@ -463,11 +563,12 @@ export function createWalletClient(token: string, options: WalletClientOptions =
    * One window of `/records`, halving it instead of failing when the page comes back full
    * (spec §9.1).
    *
-   * Three checks come first, on every page, full or not: that the window was actually applied
-   * ({@link assertWithinWindow}), that `limit` was honoured ({@link assertLimitHonoured}), and that
-   * the fields whose names were never verified are present somewhere
-   * ({@link assertFieldSeenSomewhere}). They run before the split so a wrong request is reported
-   * as one, instead of being narrowed down to a single day and blamed on that day.
+   * Four checks come first, on every page, full or not: that Wallet declares having applied the
+   * window that was asked for ({@link assertWindowApplied}), that every movement it sent falls
+   * inside that window ({@link assertWithinWindow}), that `limit` was honoured
+   * ({@link assertLimitHonoured}), and that the fields whose names were never verified are present
+   * somewhere ({@link assertFieldSeenSomewhere}). They run before the split so a wrong request is
+   * reported as one, instead of being narrowed down to a single day and blamed on that day.
    *
    * A full page is not kept: it may be any subset of the window, so both halves are read again in
    * full. The halves are disjoint, so nothing is read twice in practice — `found` is keyed by
@@ -483,13 +584,14 @@ export function createWalletClient(token: string, options: WalletClientOptions =
     query.append("recordDate", `lte.${window.to}`);
     const page = await read(`/records?${query.toString()}`, walletRecordsPayloadSchema);
 
-    assertWithinWindow(window, page);
-    assertLimitHonoured(page.length, recordsLimit);
-    assertFieldSeenSomewhere(page, "recordType");
-    assertFieldSeenSomewhere(page, "recordState");
+    assertWindowApplied(window, page.appliedRecordDateFilters);
+    assertWithinWindow(window, page.records);
+    assertLimitHonoured(page.records.length, recordsLimit);
+    assertFieldSeenSomewhere(page.records, "recordType");
+    assertFieldSeenSomewhere(page.records, "recordState");
 
-    if (page.length < recordsLimit) {
-      for (const raw of page) {
+    if (page.records.length < recordsLimit) {
+      for (const raw of page.records) {
         const transaction = mapWalletRecord(raw);
         found.set(transaction.externalId, transaction);
       }

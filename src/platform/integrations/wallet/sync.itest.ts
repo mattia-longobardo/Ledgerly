@@ -7,6 +7,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { listTransactions } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
+import { addDays } from "@/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
 import { WALLET_PROVIDER } from "../rules";
@@ -42,15 +43,15 @@ function alsoOn(recordDate: string, id: string): WireRecord {
   return {
     id,
     accountId: "wa-general",
-    amount: -12.5,
-    currencyCode: "EUR",
+    amount: { value: -12.5, currencyCode: "EUR" },
     recordDate,
-    categoryId: "wc-groceries",
+    category: { id: "wc-groceries", name: "Spesa", group: null, color: null },
     labels: [],
     recordType: "Expense",
     recordState: "Cleared",
     note: "frutta",
-    partyName: "Fruttivendolo",
+    counterParty: "Fruttivendolo",
+    transfer: null,
     updatedAt: null,
   };
 }
@@ -103,7 +104,14 @@ function walletStub(
       const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
       const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
       const inWindow = records.filter((row) => row.recordDate >= from && row.recordDate <= to);
-      return Response.json({ records: inWindow });
+      // The real API declares which date filters it applied, and translates `lte.<day>` into an
+      // exclusive `lt.<day+1>T00:00Z` (measured at the collaudo). The client verifies that
+      // declaration, so the stub has to make it — otherwise these tests would pass against an
+      // answer that never proved it covered the window.
+      return Response.json({
+        records: inWindow,
+        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+      });
     },
   };
   return { calls, options: stub };
@@ -280,7 +288,7 @@ describe("syncWalletNow", () => {
 
     // What a provider that caps its own page size sends: a prefix of the truth. Two of three gone
     // is over the ceiling, and the one row it did carry arrives changed.
-    const truncated = [{ ...JANUARY[0], partyName: "Panificio Bianchi" }];
+    const truncated = [{ ...JANUARY[0], counterParty: "Panificio Bianchi" }];
     expect(2 / 3).toBeGreaterThan(MAX_WINDOW_REMOVAL_SHARE);
     const error = await syncWalletNow(ctx, connectionId, {
       now: NOW,

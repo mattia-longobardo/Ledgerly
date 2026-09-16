@@ -29,6 +29,7 @@ function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
     payee: "Panificio Rossi",
     note: "pane e latte",
     categoryExternalId: "wc-groceries",
+    categoryName: null,
     labels: ["spesa"],
     providerType: "expense",
     providerState: "cleared",
@@ -155,6 +156,14 @@ describe("toIncomingTransaction", () => {
 
   it("carries the category name the /categories read gave, and null for an id it did not", () => {
     expect(toIncomingTransaction(movement(), CATEGORIES, ROME).categoryName).toBe("Spesa");
+  });
+
+  it("prefers the category name the record carries over the one /categories published", () => {
+    // The record brings its own `category.name` (measured at the collaudo), which also covers a
+    // category created between the two reads. An empty map proves the name did not come from it.
+    const carried = movement({ categoryExternalId: "wc-new", categoryName: "Bollette" });
+    expect(toIncomingTransaction(carried, new Map(), ROME).categoryName).toBe("Bollette");
+    expect(toIncomingTransaction(carried, CATEGORIES, ROME).categoryName).toBe("Bollette");
     expect(
       toIncomingTransaction(movement({ categoryExternalId: "wc-unknown" }), CATEGORIES, ROME).categoryName,
     ).toBeNull();
