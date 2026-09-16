@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { parseKeyRing } from "@/platform/crypto";
+import { parseKeyRing } from "@/platform/keyring";
 
 /** Compose passes unset variables as "", which must behave like "absent". */
 const blankAsUndefined = (value: unknown) => (value === "" ? undefined : value);

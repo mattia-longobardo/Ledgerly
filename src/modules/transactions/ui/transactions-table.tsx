@@ -42,6 +42,35 @@ const COLUMN_COUNT = COLUMNS.length + 2;
 
 const CHIP = "focus-ring inline-flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-sm";
 
+/**
+ * What the shortcuts keep their hands off. Fields and popups are the obvious ones; every kind of
+ * button is here because Space is the way a button is activated, so intercepting it would mean a
+ * category chip, a row menu, a sortable heading or a `<summary>` silently doing nothing while a
+ * row nobody pointed at gets selected instead.
+ */
+const FOREIGN_KEYBOARD = [
+  "input",
+  "textarea",
+  "select",
+  "button",
+  "summary",
+  "a[href]",
+  "[role='button']",
+  "[role='link']",
+  "[contenteditable]",
+  "[role='dialog']",
+  "[role='menu']",
+].join(", ");
+
+/**
+ * The direction one more click on a heading would order by, which is what `sortBy` asks for: a
+ * column already sorted turns round, a new one starts in its own natural direction. The heading
+ * announces this, so what a screen reader hears is what the click does (review B4).
+ */
+function nextDirection(key: SortKey, sort: SortKey, direction: SortDirection): SortDirection {
+  return key === sort ? (direction === "asc" ? "desc" : "asc") : DEFAULT_DIRECTION[key];
+}
+
 function domId(id: string): string {
   return `expenses-row-${id}`;
 }
@@ -94,20 +123,16 @@ export function TransactionsTable({
 
   /**
    * The prototype's shortcuts, for real (spec §8.4 point 2). Bound to the document so they work
-   * the moment the page is read, and ignored while the caret is in a field or a popup owns the
-   * keyboard — a menu answers its own arrows, and ⌘K is not ours to intercept.
+   * the moment the page is read, and ignored while the caret is in a field, a control owns its
+   * own keys or a popup owns the keyboard — Space is how a button is pressed, a menu answers its
+   * own arrows, and ⌘K is not ours to intercept.
    */
   useEffect(() => {
     function handle(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       if (rows.length === 0) return;
       const target = event.target;
-      if (
-        target instanceof Element &&
-        target.closest("input, textarea, select, [contenteditable], [role='dialog'], [role='menu']")
-      ) {
-        return;
-      }
+      if (target instanceof Element && target.closest(FOREIGN_KEYBOARD)) return;
       const key = event.key.toLowerCase();
       if (key === "j" || key === "k") {
         event.preventDefault();
@@ -190,8 +215,7 @@ export function TransactionsTable({
 
   /** A new column starts in its own natural direction; clicking the current one turns it round. */
   function sortBy(key: SortKey) {
-    const next: SortDirection =
-      key === sort ? (direction === "asc" ? "desc" : "asc") : DEFAULT_DIRECTION[key];
+    const next = nextDirection(key, sort, direction);
     router.push(
       withParams(path, params, {
         sort: key === "date" ? undefined : key,
@@ -352,9 +376,11 @@ export function TransactionsTable({
                   onSort: () => sortBy(column.name),
                 }}
               >
-                {t(`columns.${column.name}`)}
+                {t(`columns.${column.name}`)}{" "}
                 <span className="sr-only">
-                  {column.name === sort && direction === "desc" ? t("sort.ascending") : t("sort.descending")}
+                  {nextDirection(column.name, sort, direction) === "asc"
+                    ? t("sort.ascending")
+                    : t("sort.descending")}
                 </span>
               </Th>
             ))}

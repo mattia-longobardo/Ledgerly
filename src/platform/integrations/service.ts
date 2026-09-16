@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, DrizzleQueryError, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, DrizzleQueryError, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -16,7 +16,6 @@ import {
   outcomeState,
   type ProviderLink,
   providerLinkSchema,
-  reconcileExternalIds,
   type SyncKind,
   syncErrorText,
 } from "./rules";
@@ -366,110 +365,16 @@ export async function resolveExternal(
   return new Map(rows.map((row) => [row.externalId, row.entityId]));
 }
 
-export interface PresenceInput {
-  provider: string;
-  entityType: string;
-  /**
-   * The external ids the provider's answer was expected to cover — for Wallet's hourly pass, the
-   * links of the last 7 days (spec §9.1). **This list is the whole safety net.** Anything outside
-   * it is not absent, it was not asked for, and listing it here would call a year of history
-   * disappeared the first time a window came back short.
-   */
-  candidates: string[];
-  /** The external ids the provider actually returned. */
-  present: string[];
-}
-
-export interface PresenceOutcome {
-  /** How many links the provider confirmed. */
-  seen: number;
-  /**
-   * Local entities the provider stopped returning: what a caller turns into
-   * `removed_upstream_at` (spec §7.2). Named once, on the pass that noticed.
-   */
-  missing: string[];
-}
-
-/**
- * The other half of {@link linkExternal}: what a sighting says about the links that did *not*
- * come back. The decision lives in `reconcileExternalIds`; this applies it.
- *
- * A link absent from an answer that covered its date is gone at once — the re-read window is
- * itself the tolerance (spec §7.2), so there is no grace period on top of it. A link that was
- * already absent is left exactly as it was, so `missing_since` keeps saying when it disappeared
- * instead of sliding forward once an hour, and `missing` names it on that one pass only.
- */
-export async function applyPresence(
-  ctx: Pick<Ctx, "userId">,
-  input: PresenceInput,
-  now: Date = new Date(),
-): Promise<PresenceOutcome> {
-  const type = entityTypeSchema.safeParse(input.entityType);
-  if (!type.success) throw new IntegrationError("invalid_link");
-  const asked = [...new Set([...input.candidates, ...input.present])];
-  if (asked.length === 0) return { seen: 0, missing: [] };
-
-  const known = await getDb()
-    .select({
-      externalId: providerLinks.externalId,
-      entityId: providerLinks.entityId,
-      missingSince: providerLinks.missingSince,
-    })
-    .from(providerLinks)
-    .where(
-      and(
-        userScoped(ctx).owns(providerLinks),
-        eq(providerLinks.provider, input.provider),
-        eq(providerLinks.entityType, type.data),
-        inArray(providerLinks.externalId, asked),
-      ),
-    )
-    .orderBy(asc(providerLinks.externalId));
-
-  const presence = reconcileExternalIds(known, input.present);
-  const entityOf = new Map(known.map((link) => [link.externalId, link.entityId]));
-  const seen = [...presence.present, ...presence.returned];
-
-  if (seen.length > 0 || presence.missing.length > 0) {
-    await getDb().transaction(async (tx) => {
-      if (seen.length > 0) {
-        await tx
-          .update(providerLinks)
-          .set({ lastSeenAt: now, missingSince: null })
-          .where(
-            and(
-              userScoped(ctx).owns(providerLinks),
-              eq(providerLinks.provider, input.provider),
-              eq(providerLinks.entityType, type.data),
-              inArray(providerLinks.externalId, seen),
-            ),
-          );
-      }
-      if (presence.missing.length > 0) {
-        await tx
-          .update(providerLinks)
-          .set({ missingSince: now })
-          .where(
-            and(
-              userScoped(ctx).owns(providerLinks),
-              eq(providerLinks.provider, input.provider),
-              eq(providerLinks.entityType, type.data),
-              inArray(providerLinks.externalId, presence.missing),
-            ),
-          );
-      }
-    });
-  }
-
-  return {
-    seen: seen.length,
-    missing: presence.missing.map((externalId) => entityOf.get(externalId) as string),
-  };
-}
-
 /**
  * Forgets the links of entities that no longer exist here. Called by the module that owns them:
- * a deleted local row must not leave a link behind holding its half of the entity unique key.
+ * a deleted local row must not leave a link behind holding its half of the entity unique key,
+ * claiming a `first_seen_at` for a row nothing can resolve any more (`entity_id` is not a real
+ * foreign key — the deviation of §11.4 — so no cascade does this for us).
+ *
+ * `missing_since` is written by nobody. The disappearance of §7.2 is decided and applied in the
+ * transactions module, from the re-read window, and a second copy of that rule here would be a
+ * second source of truth (§4.3). The column stays because §4.3 fixes the shape of this table and
+ * changing it would take a second migration; {@link linkExternal} only ever clears it.
  */
 export async function unlinkEntities(
   ctx: Pick<Ctx, "userId">,
@@ -586,4 +491,21 @@ export async function listRuns(
     )
     .orderBy(desc(syncRuns.startedAt), desc(syncRuns.id))
     .limit(limit);
+}
+
+/**
+ * Drops the sync runs past the retention window (spec §10.2: "executions and logs older than 90
+ * days" — a sync run is an execution). Nothing else collects them, and a connection that attempts
+ * nothing still records: a revoked token writes two skipped runs an hour, for ever, because
+ * {@link skipRun} deliberately does not move `next_run_at`.
+ *
+ * A run with no `finished_at` — a process killed mid-pass — ages out by `started_at`, exactly as
+ * `job_runs` does, so an orphan cannot be kept for ever by the absence of its own end.
+ */
+export async function deleteOldSyncRuns(cutoff: Date): Promise<number> {
+  const deleted = await getDb()
+    .delete(syncRuns)
+    .where(lt(sql`coalesce(${syncRuns.finishedAt}, ${syncRuns.startedAt})`, cutoff))
+    .returning({ id: syncRuns.id });
+  return deleted.length;
 }

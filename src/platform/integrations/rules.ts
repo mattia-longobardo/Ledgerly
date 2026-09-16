@@ -61,61 +61,6 @@ export type ProviderLink = z.input<typeof providerLinkSchema>;
 /** How often a connection is synced (spec §10.2: the hourly tier). */
 export const SYNC_INTERVAL_HOURS = 1;
 
-export interface SeenLink {
-  externalId: string;
-  missingSince: Date | null;
-}
-
-/**
- * What a sighting changes, split so the caller writes each group once. `present` and `returned`
- * both move `last_seen_at`; only `returned` clears `missing_since`. `stillMissing` is
- * deliberately untouched: keeping the original `missing_since` is what makes a repeated sync
- * idempotent, instead of pushing the disappearance forward by an hour every hour.
- *
- * `missing` is the whole of "gone from the provider" (spec §7.2): the re-read window *is* the
- * tolerance, so a link absent from an answer that covered its date is absent now, with no grace
- * period on top. `missing_since` records when that happened; it never gates it.
- */
-export interface LinkPresence {
-  present: string[];
-  returned: string[];
-  missing: string[];
-  stillMissing: string[];
-  unknown: string[];
-}
-
-/**
- * Reconciles the links already stored against the external ids the provider just returned.
- *
- * `known` must hold only the links the answer was expected to cover — for a 7-day re-read, the
- * links of those 7 days. A link outside the window is not absent, it was never asked for, and
- * handing it in here would mark a year of history as disappeared. Each list keeps the order it
- * arrived in, so the same input always produces the same writes.
- */
-export function reconcileExternalIds(
-  known: readonly SeenLink[],
-  externalIds: readonly string[],
-): LinkPresence {
-  const returned = new Set(externalIds);
-  const presence: LinkPresence = { present: [], returned: [], missing: [], stillMissing: [], unknown: [] };
-  const linked = new Set<string>();
-  for (const link of known) {
-    linked.add(link.externalId);
-    if (returned.has(link.externalId)) {
-      (link.missingSince === null ? presence.present : presence.returned).push(link.externalId);
-    } else {
-      (link.missingSince === null ? presence.missing : presence.stillMissing).push(link.externalId);
-    }
-  }
-  const unknown = new Set<string>();
-  for (const externalId of externalIds) {
-    if (linked.has(externalId) || unknown.has(externalId)) continue;
-    unknown.add(externalId);
-    presence.unknown.push(externalId);
-  }
-  return presence;
-}
-
 /** When the next pass of a sync is expected, written on `sync_jobs.next_run_at`. */
 export function nextRunAt(from: Date, intervalHours: number = SYNC_INTERVAL_HOURS): Date {
   return new Date(from.getTime() + intervalHours * 3_600_000);

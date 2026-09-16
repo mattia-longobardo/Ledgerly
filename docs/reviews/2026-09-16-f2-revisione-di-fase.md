@@ -144,7 +144,57 @@ con posta minore, per le etichette (vengono togliate).
 
 ---
 
-## Lotto B — prima di F3
+## Lotto B — **CHIUSO** (2026-09-17)
+
+Tutti e dodici corretti. Cancello verde sull'albero intero: 681 test unitari, 226 di
+integrazione, 13 end-to-end con la build. Le correzioni di B1, B7, B8, B11 e B12
+sono state verificate **per mutazione**.
+
+Decisioni prese chiudendo il lotto:
+
+- **B6 — parla il collegamento, non il conto.** Le due condizioni si accendono
+  sempre insieme (solo `saveProviderBalance` muove `accounts.last_synced_at`),
+  quindi l'avviso per conto non aggiungeva informazione: la moltiplicava per il
+  numero di conti. `stale_sync` resta un **badge** in pagina e non manda più
+  email. Conseguenza voluta: dopo un Disconnect i conti restano obsoleti e
+  nessuno scrive, perché l'ha fatto l'utente e l'interfaccia lo mostra.
+- **Un conto `unavailable` non è più «obsoleto»**: lo stato dice già che il
+  provider non lo restituisce, §7.1 vieta di cancellarlo, e l'avviso non si
+  sarebbe mai spento. Nessun test lo copriva: adesso sì.
+- **B12 — il marcatore, non l'archiviazione.** Cancellare un'etichetta *è* una
+  modifica locale del campo `labels`, e §7.2 ha già la sua regola. Chiuso tutto
+  il danno ai dati; resta una riga con uso 0 in Settings › Data. Vedi sotto: la
+  specifica chiede l'archiviazione, e serve una seconda migrazione.
+- **B9 — via il percorso morto**: `applyPresence` e `reconcileExternalIds` sono
+  rimosse, `unlinkEntities` ha il chiamante che le mancava (la cancellazione di
+  un conto), e l'ordine è: leggere gli id, cancellare, poi scollegare — perché
+  scollegare prima, con una cancellazione che fallisce, farebbe reimportare il
+  movimento alla passata successiva, cioè denaro contato due volte.
+  `missing_since` resta come colonna (§4.3 ne fissa l'elenco) ed è documentata
+  come non scritta da nessuno.
+- **B2 — il numero in testa alla card è etichettato**, non solo corretto: ora è
+  la somma **in grandezza** delle righe che elenca, e nel prototipo quel posto
+  ospita il totale firmato. Senza etichetta avremmo scambiato una
+  contraddizione con un'ambiguità.
+
+Fuori lotto, chiuso nello stesso giro: il **favicon** (`src/app/icon.svg`,
+mancava del tutto) e il warning Edge che la validazione della key ring aveva
+introdotto in T0 — `parseKeyRing` vive ora in `platform/keyring.ts` e non
+trascina `node:crypto` nel bundle che Next analizza per Edge.
+
+### Aperto, e da decidere dal proprietario
+
+**§7.2 riga 211 chiede l'archiviazione anche per le etichette** — «crea,
+rinomina, colore, *archivia*» — e la cancellazione non è prevista. L'app offre
+`deleteLabelAction`, cioè un'operazione che la specifica non sanziona; il
+commento nel codice che diceva il contrario era falso. Il seguito corretto è
+`archived_at` su `labels`, che richiede una **seconda migrazione**: §9 del piano
+elenca «la migrazione è una sola» fra i criteri di «Fatto quando», quindi è una
+decisione del proprietario e non dell'orchestratore.
+
+### Rilievi originali
+
+
 
 Budget e abbonamenti si appoggiano direttamente su transazioni e categorie.
 

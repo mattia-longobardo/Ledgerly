@@ -158,6 +158,15 @@ describe("alertsFor", () => {
   it("stays quiet about an archived account", () => {
     expect(alertsFor({ ...base, state: "archived", origin: "synced" }, 1n, now)).toEqual([]);
   });
+
+  it("does not call an account stale when the provider no longer has it", () => {
+    // `unavailable` already says the provider stopped returning it (spec §7.1), and §7.1 forbids
+    // deleting it — so a stale alert on top would never clear and would add nothing. A low balance
+    // is still the account's own fact and still worth saying.
+    const gone = { ...base, state: "unavailable" as const, origin: "synced" as const };
+    expect(alertsFor({ ...gone, lowBalanceCents: null }, 10n, now)).toEqual([]);
+    expect(alertsFor(gone, 10n, now)).toEqual([{ accountId: "a", kind: "low_balance" }]);
+  });
 });
 
 describe("canDelete", () => {

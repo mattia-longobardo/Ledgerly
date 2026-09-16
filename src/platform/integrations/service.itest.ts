@@ -8,7 +8,6 @@ import { createTestUser } from "../../../test/users";
 import { type ProviderLink, WALLET_PROVIDER } from "./rules";
 import { integrationConnections, providerLinks } from "./schema";
 import {
-  applyPresence,
   type Connection,
   deleteConnection,
   finishRun,
@@ -375,75 +374,6 @@ describe("linkExternal inside the caller's transaction", () => {
   });
 });
 
-describe("applyPresence", () => {
-  const candidates = ["w-1", "w-2"];
-
-  async function twoLinks(): Promise<ProviderLink[]> {
-    const links = [transactionLink({ externalId: "w-1" }), transactionLink({ externalId: "w-2" })];
-    for (const link of links) await linkExternal(ctx, link, NOW);
-    return links;
-  }
-
-  it("dates the disappearance once and never moves it again", async () => {
-    const [, second] = await twoLinks();
-    const first = await applyPresence(
-      ctx,
-      { provider: WALLET_PROVIDER, entityType: "transaction", candidates, present: ["w-1"] },
-      hoursAfter(1),
-    );
-    expect(first).toEqual({ seen: 1, missing: [second.entityId] });
-    expect((await storedLink(ctx, "w-2")).missingSince).toEqual(hoursAfter(1));
-
-    const again = await applyPresence(
-      ctx,
-      { provider: WALLET_PROVIDER, entityType: "transaction", candidates, present: ["w-1"] },
-      hoursAfter(2),
-    );
-    expect(again).toEqual({ seen: 1, missing: [] });
-    expect((await storedLink(ctx, "w-2")).missingSince).toEqual(hoursAfter(1));
-  });
-
-  it("names a link missing on the pass that noticed, and only that one", async () => {
-    const [, second] = await twoLinks();
-    const input = {
-      provider: WALLET_PROVIDER,
-      entityType: "transaction",
-      candidates,
-      present: ["w-1"],
-    };
-    // The re-read window is itself the tolerance (spec §7.2): absence is reported at once, with
-    // no grace period, and the passes that follow do not report it again.
-    expect(await applyPresence(ctx, input, hoursAfter(1))).toEqual({
-      seen: 1,
-      missing: [second.entityId],
-    });
-    expect(await applyPresence(ctx, input, hoursAfter(2))).toEqual({ seen: 1, missing: [] });
-    expect(await applyPresence(ctx, input, hoursAfter(200))).toEqual({ seen: 1, missing: [] });
-  });
-
-  it("clears the disappearance of a link the provider sends again", async () => {
-    await twoLinks();
-    const input = { provider: WALLET_PROVIDER, entityType: "transaction", candidates };
-    await applyPresence(ctx, { ...input, present: ["w-1"] }, hoursAfter(1));
-    const back = await applyPresence(ctx, { ...input, present: candidates }, hoursAfter(2));
-
-    expect(back).toEqual({ seen: 2, missing: [] });
-    const stored = await storedLink(ctx, "w-2");
-    expect(stored).toMatchObject({ missingSince: null, lastSeenAt: hoursAfter(2) });
-  });
-
-  it("marks nothing when the answer covered nothing", async () => {
-    await twoLinks();
-    const outcome = await applyPresence(
-      ctx,
-      { provider: WALLET_PROVIDER, entityType: "transaction", candidates: [], present: [] },
-      hoursAfter(1),
-    );
-    expect(outcome).toEqual({ seen: 0, missing: [] });
-    expect((await storedLink(ctx, "w-1")).missingSince).toBeNull();
-  });
-});
-
 describe("unlinkEntities", () => {
   it("forgets the links of entities that no longer exist here", async () => {
     const link = transactionLink();
@@ -518,16 +448,6 @@ describe("isolation between users", () => {
     expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"])).toEqual(
       new Map([["w-1", mine.entityId]]),
     );
-  });
-
-  it("does not make A's links disappear", async () => {
-    await linkExternal(ctx, transactionLink({ externalId: "w-1" }), NOW);
-    await applyPresence(
-      other,
-      { provider: WALLET_PROVIDER, entityType: "transaction", candidates: ["w-1"], present: [] },
-      hoursAfter(1),
-    );
-    expect((await storedLink(ctx, "w-1")).missingSince).toBeNull();
   });
 
   it("gives each user their own connection for the same provider", async () => {

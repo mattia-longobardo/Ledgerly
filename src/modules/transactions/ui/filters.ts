@@ -133,6 +133,18 @@ function civilDate(value: string): CivilDate | null {
 }
 
 /**
+ * Every id in the address goes straight into a `uuid` column of the read model, where a value
+ * that is not one is not an empty result but an error: `?acc=x` costs the whole screen. So an id
+ * is read like every other parameter here — understood or dropped — and one wrong letter in a
+ * pasted address narrows nothing instead of taking the page down.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uuid(value: string): string | null {
+  return UUID.test(value) ? value : null;
+}
+
+/**
  * What the filters ask the read model for. Structurally the `TransactionFilters` of
  * `modules/transactions/queries.ts`, written out here rather than imported: that module is
  * `server-only`, and this one is read by the table in the browser.
@@ -196,10 +208,12 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
       one(raw.cat)
         .split(",")
         .map((id) => id.trim())
-        .filter((id) => id !== ""),
+        // `UNCATEGORISED` is this screen's own literal, not an id: it is the one value the read
+        // model turns into `null` rather than comparing to a column.
+        .filter((id) => id === UNCATEGORISED || uuid(id) !== null),
     ),
   ];
-  const accountId = one(raw.acc) || null;
+  const accountId = uuid(one(raw.acc));
   const search = one(raw.q);
   const showHidden = one(raw.hidden) === "1";
   const sort = SORT_KEYS.find((key) => key === one(raw.sort)) ?? DEFAULT_SORT;

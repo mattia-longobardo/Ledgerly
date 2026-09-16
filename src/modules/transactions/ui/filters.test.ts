@@ -12,6 +12,12 @@ import {
 
 const TODAY = "2026-09-16";
 
+/** Real ids: the read model puts them in `uuid` columns, so the parser only accepts that shape. */
+const ACCOUNT = "018f3a36-5c2e-7b1a-9d44-2b7c1f4e9a01";
+const OTHER_ACCOUNT = "018f3a36-5c2e-7b1a-9d44-2b7c1f4e9a02";
+const CATEGORY_A = "018f3a36-5c2e-7b1a-9d44-2b7c1f4e9a03";
+const CATEGORY_B = "018f3a36-5c2e-7b1a-9d44-2b7c1f4e9a04";
+
 describe("presetRange", () => {
   it("gives the four presets of the design as whole-month windows", () => {
     expect(presetRange("thisMonth", TODAY)).toEqual({ from: "2026-09-01", to: "2026-09-30" });
@@ -92,12 +98,38 @@ describe("parseExpensesQuery", () => {
 
   it("falls back to the default rather than refusing an unreadable address", () => {
     const query = parseExpensesQuery(
-      { preset: "sometime", from: "not-a-date", to: "2026-03-06", sort: "colour", dir: "sideways" },
+      {
+        preset: "sometime",
+        from: "not-a-date",
+        to: "2026-03-06",
+        sort: "colour",
+        dir: "sideways",
+        acc: "x",
+        cat: "x",
+      },
       TODAY,
     );
     expect(query.preset).toBe("thisMonth");
     expect(query.sort).toBe("date");
     expect(query.direction).toBe("desc");
+    // An id that is not one reaches a `uuid` column and takes the whole screen down with it.
+    expect(query.accountId).toBeNull();
+    expect(query.categorySelection).toEqual([]);
+    expect(query.filtered).toBe(false);
+    expect(query.params.acc).toBeUndefined();
+    expect(query.params.cat).toBeUndefined();
+  });
+
+  it("drops the ids that are not ids and keeps the ones that are", () => {
+    // One wrong letter in a pasted address: the rest of the filter still narrows the list.
+    const query = parseExpensesQuery(
+      { acc: `${ACCOUNT}x`, cat: `${CATEGORY_A},nonsense,${UNCATEGORISED}` },
+      TODAY,
+    );
+    expect(query.accountId).toBeNull();
+    expect(query.categorySelection).toEqual([CATEGORY_A, UNCATEGORISED]);
+    expect(filtersOf(query).accountIds).toBeUndefined();
+    expect(filtersOf(query).categoryIds).toEqual([CATEGORY_A, null]);
   });
 
   it("refuses a backwards range and keeps the preset", () => {
@@ -107,11 +139,17 @@ describe("parseExpensesQuery", () => {
 
   it("reads the filters, deduplicating the categories and keeping their order", () => {
     const query = parseExpensesQuery(
-      { cat: `b, a ,b,${UNCATEGORISED}`, acc: "acc-1", q: " Netflix ", hidden: "1", dir: "asc" },
+      {
+        cat: `${CATEGORY_B}, ${CATEGORY_A} ,${CATEGORY_B},${UNCATEGORISED}`,
+        acc: ACCOUNT,
+        q: " Netflix ",
+        hidden: "1",
+        dir: "asc",
+      },
       TODAY,
     );
-    expect(query.categorySelection).toEqual(["b", "a", UNCATEGORISED]);
-    expect(query.accountId).toBe("acc-1");
+    expect(query.categorySelection).toEqual([CATEGORY_B, CATEGORY_A, UNCATEGORISED]);
+    expect(query.accountId).toBe(ACCOUNT);
     expect(query.search).toBe("Netflix");
     expect(query.showHidden).toBe(true);
     expect(query.direction).toBe("asc");
@@ -119,10 +157,10 @@ describe("parseExpensesQuery", () => {
   });
 
   it("carries the right parameters for each control", () => {
-    const query = parseExpensesQuery({ preset: "lastMonth", off: "1", cat: "a", q: "x" }, TODAY);
+    const query = parseExpensesQuery({ preset: "lastMonth", off: "1", cat: CATEGORY_A, q: "x" }, TODAY);
     // A preset restarts from its own window: no offset, no explicit range.
     expect(query.presetParams).toEqual({
-      cat: "a",
+      cat: CATEGORY_A,
       q: "x",
       acc: undefined,
       hidden: undefined,
@@ -144,21 +182,21 @@ describe("parseExpensesQuery", () => {
   });
 
   it("takes only the first value of a repeated parameter", () => {
-    expect(parseExpensesQuery({ acc: ["one", "two"] }, TODAY).accountId).toBe("one");
+    expect(parseExpensesQuery({ acc: [ACCOUNT, OTHER_ACCOUNT] }, TODAY).accountId).toBe(ACCOUNT);
   });
 });
 
 describe("filtersOf", () => {
   it("asks the read model for exactly what the URL says", () => {
     const query = parseExpensesQuery(
-      { cat: `cat-1,${UNCATEGORISED}`, acc: "acc-1", q: "netflix", hidden: "1", sort: "amount" },
+      { cat: `${CATEGORY_A},${UNCATEGORISED}`, acc: ACCOUNT, q: "netflix", hidden: "1", sort: "amount" },
       TODAY,
     );
     expect(filtersOf(query)).toEqual({
       from: "2026-09-01",
       to: "2026-09-30",
-      accountIds: ["acc-1"],
-      categoryIds: ["cat-1", null],
+      accountIds: [ACCOUNT],
+      categoryIds: [CATEGORY_A, null],
       payee: "netflix",
       includeHidden: true,
       sort: "amount",

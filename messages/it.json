@@ -53,10 +53,6 @@
     "lowBalance": {
       "subject": "{account} è sotto la soglia",
       "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Ledgerly per controllare."
-    },
-    "staleSync": {
-      "subject": "{account} non si sincronizza da un po'",
-      "body": "L'ultima lettura di {account} è più vecchia di {hours} ore.\n\nApri Ledgerly per ricollegarlo o inserire un saldo a mano."
     }
   },
   "auth": {
@@ -129,7 +125,7 @@
         "absent": "Non collegato",
         "active": "Collegato",
         "error": "Errore",
-        "revoked": "Scollegato"
+        "revoked": "Token rifiutato"
       },
       "fields": {
         "lastSync": "Ultima sincronizzazione",
@@ -499,6 +495,7 @@
     },
     "breakdown": {
       "title": "Per categoria",
+      "total": "{total} movimentati nell'intervallo",
       "empty": "Niente da suddividere in questo intervallo.",
       "share": "{share} %"
     },

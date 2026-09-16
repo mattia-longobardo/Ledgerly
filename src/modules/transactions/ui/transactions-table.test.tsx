@@ -209,6 +209,36 @@ describe("TransactionsTable", () => {
     expect(await screen.findByRole("menuitem", { name: "Groceries" })).toBeInTheDocument();
   });
 
+  it("announces the direction one more click would order by, column by column", () => {
+    // The list is in date order, biggest first, so Date turns round and every other column
+    // starts in its own natural direction: A to Z for a name, biggest first for an amount.
+    const table = renderTable();
+    expect(table.getByRole("button", { name: "Date Sort ascending" })).toBeInTheDocument();
+    expect(table.getByRole("button", { name: "Payee Sort ascending" })).toBeInTheDocument();
+    expect(table.getByRole("button", { name: "Account Sort ascending" })).toBeInTheDocument();
+    expect(table.getByRole("button", { name: "Category Sort ascending" })).toBeInTheDocument();
+    expect(table.getByRole("button", { name: "Amount Sort descending" })).toBeInTheDocument();
+  });
+
+  it("leaves Space to the button under the focus instead of selecting a row", async () => {
+    // Space is how a button is pressed: eating it would open no menu and select a row the
+    // reader never pointed at.
+    const table = renderTable();
+    await userEvent.keyboard("j");
+    table.getAllByRole("button", { name: "Edit category" })[0].focus();
+    await userEvent.keyboard(" ");
+    expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+
+    table.getAllByRole("button", { name: "Row actions" })[0].focus();
+    await userEvent.keyboard(" ");
+    expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+
+    table.getByRole("button", { name: /Amount/ }).focus();
+    await userEvent.keyboard(" ");
+    expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+    expect(push).toHaveBeenCalledWith("/expenses?preset=lastMonth&sort=amount");
+  });
+
   it("leaves the shortcuts alone while the caret is in a field", async () => {
     render(
       <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">

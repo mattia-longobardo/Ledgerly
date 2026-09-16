@@ -228,7 +228,15 @@ export function alertsFor(
   if (account.lowBalanceCents !== null && latest !== null && latest < account.lowBalanceCents) {
     alerts.push({ accountId: account.id, kind: "low_balance" });
   }
-  if (account.origin === "synced" && isStale(account.lastSyncedAt, account.staleAfterHours, now)) {
+  // Not for an `unavailable` account: the provider has stopped returning it, so of course its
+  // reading is old, and §7.1 forbids deleting it — the alert would never clear and says nothing
+  // the state does not already say. "Stale" is for an account the provider still has and is not
+  // sending.
+  if (
+    account.origin === "synced" &&
+    account.state !== "unavailable" &&
+    isStale(account.lastSyncedAt, account.staleAfterHours, now)
+  ) {
     alerts.push({ accountId: account.id, kind: "stale_sync" });
   }
   return alerts;
