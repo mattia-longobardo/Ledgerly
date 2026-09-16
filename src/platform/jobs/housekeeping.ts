@@ -2,6 +2,7 @@ import "server-only";
 import { lt, sql } from "drizzle-orm";
 import { deleteExpiredInvitations } from "@/platform/auth/invitations";
 import { getDb } from "@/platform/db/client";
+import { deleteOldNotifications } from "@/platform/notifications/service";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "./schema";
 
@@ -19,6 +20,7 @@ export const housekeepingJob: JobDefinition = {
       .where(lt(sql`coalesce(${jobRuns.finishedAt}, ${jobRuns.startedAt})`, cutoff))
       .returning({ id: jobRuns.id });
     const invitationsDeleted = await deleteExpiredInvitations(cutoff);
-    return { jobRunsDeleted: runs.length, invitationsDeleted };
+    const notificationsDeleted = await deleteOldNotifications(cutoff);
+    return { jobRunsDeleted: runs.length, invitationsDeleted, notificationsDeleted };
   },
 };

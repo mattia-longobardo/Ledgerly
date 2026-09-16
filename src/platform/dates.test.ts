@@ -7,6 +7,7 @@ import {
   isCivilDate,
   lastDayOfMonth,
   monthKey,
+  monthsApart,
   monthsBetween,
   today,
   utcOffsetLabel,
@@ -52,6 +53,15 @@ describe("civil dates", () => {
   it("rejects malformed input instead of guessing", () => {
     expect(() => monthKey("13/09/2026")).toThrow(RangeError);
     expect(() => addDays("2026-02-31", 1)).toThrow(RangeError);
+  });
+});
+
+describe("monthsApart", () => {
+  it("counts whole months in both directions, and zero within one month", () => {
+    expect(monthsApart("2026-01-01", "2026-04-01")).toBe(3);
+    expect(monthsApart("2026-04-01", "2026-01-01")).toBe(-3);
+    expect(monthsApart("2025-11-01", "2026-02-01")).toBe(3);
+    expect(monthsApart("2026-01-05", "2026-01-28")).toBe(0);
   });
 });
 

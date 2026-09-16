@@ -12,7 +12,19 @@ export const USERS = {
   owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
   reset: { email: "reset@example.test", password: "reset-password-123", name: "Reset" },
+  accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
 } as const;
+
+/**
+ * A ready signed-in session for the journeys that are not about signing in, written by the seed.
+ * The seed signs in through Better Auth's server API, in process, so a module's journey costs none
+ * of the run's rate-limited sign-ins — the budget above is for the auth specs that need it.
+ */
+export const SESSIONS = {
+  accounts: { user: "accounts", file: "accounts-session.json" },
+} as const;
+
+export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;
 
 /** Pending invitations created by the seed; each token is written to `tests/e2e/.state/<file>`. */
 export const INVITATIONS = {

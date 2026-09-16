@@ -39,7 +39,7 @@ describe("housekeepingJob", () => {
     ]);
 
     const detail = await housekeepingJob.run();
-    expect(detail).toEqual({ jobRunsDeleted: 2, invitationsDeleted: 2 });
+    expect(detail).toEqual({ jobRunsDeleted: 2, invitationsDeleted: 2, notificationsDeleted: 0 });
 
     const remainingRuns = await db.select({ job: jobRuns.job }).from(jobRuns).orderBy(jobRuns.job);
     expect(remainingRuns.map((r) => r.job)).toEqual(["in-flight", "recent"]);

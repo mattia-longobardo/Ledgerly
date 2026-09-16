@@ -3,3 +3,5 @@
 export * from "@/platform/auth/schema";
 export * from "@/modules/users/schema";
 export * from "@/platform/jobs/schema";
+export * from "@/platform/notifications/schema";
+export * from "@/modules/accounts/schema";
