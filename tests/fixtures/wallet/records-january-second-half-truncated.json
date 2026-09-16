@@ -40,7 +40,10 @@
       "transfer": {
         "type": "withdrawal",
         "transferId": "wt-9001",
-        "mirrorRecord": " wr-2003 "
+        "mirrorRecord": {
+          "id": " wr-2003 ",
+          "accountId": "wa-savings"
+        }
       }
     }
   ],

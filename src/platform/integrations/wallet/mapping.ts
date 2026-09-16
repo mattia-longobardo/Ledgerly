@@ -61,7 +61,8 @@ export const walletRecordAmountSchema = z.object({
 export const walletRecordCategorySchema = z.object({
   id: z.string().min(1),
   name: z.string().nullish(),
-  group: z.string().nullish(),
+  // An object `{ id, name }`, the same shape `/categories` publishes — not a string.
+  group: z.object({ id: z.string().nullish(), name: z.string().nullish() }).nullish(),
   color: z.string().nullish(),
 });
 
@@ -69,20 +70,25 @@ export const walletRecordCategorySchema = z.object({
  * Wallet's transfer block: `null` for an ordinary movement.
  *
  * The two ids are not interchangeable, and only one of them is a counterpart:
- * - `mirrorRecord` is the **other record's** id — the reference §7.2 pairs transfers on, and the
- *   one `transferPairKey` builds an ordered pair of two record ids out of;
+ * - `mirrorRecord` is the **other record itself**, and `mirrorRecord.id` is the reference §7.2
+ *   pairs transfers on — the one `transferPairKey` builds an ordered pair of two record ids from;
  * - `transferId` looks like a **group** id shared by both legs. It is not a record id, so using it
  *   as a counterpart would build a pair key out of a group id and never match anything, or match
  *   the wrong thing. It is deliberately not read — see {@link mapWalletRecord}.
  *
- * Both are optional because both were observed absent: a transfer block carrying only
- * `{ type, transferId }` leaves §7.2 with no counterpart, which is a missing pairing rule and not
- * something this file may invent.
+ * Both stay optional because a transfer block carrying only `{ type, transferId }` was observed:
+ * that leg has no counterpart to pair on, and inventing one from the group id is not this file's
+ * call.
  */
 export const walletTransferSchema = z.object({
   type: z.string().nullish(),
   transferId: z.string().nullish(),
-  mirrorRecord: z.string().nullish(),
+  /**
+   * The **whole other record**, not its id: `{ id, accountId, amount, note }` (measured on the
+   * live API). `mirrorRecord.id` is therefore the counterpart reference §7.2 pairs on, and its
+   * presence means the ordered pair of two record ids is expressible — no group rule is needed.
+   */
+  mirrorRecord: z.object({ id: z.string().min(1), accountId: z.string().nullish() }).nullish(),
 });
 
 /**
@@ -199,7 +205,7 @@ export interface WalletTransaction {
    * The external id of the opposite leg of a transfer, `null` for anything else. §7.2 pairs
    * transfers by this reference alone — never by amount and date — so it is carried verbatim.
    *
-   * It is `transfer.mirrorRecord` and only that. `transfer.transferId`, which a transfer block may
+   * It is `transfer.mirrorRecord.id` and only that. `transfer.transferId`, which a transfer block may
    * carry instead, is a group id rather than a record id: pairing on it is a different rule, and
    * until that rule exists a leg without a mirror has no counterpart here (see
    * {@link mapWalletRecord}).
@@ -384,7 +390,7 @@ export function mapWalletBalance(raw: WalletAccountPayload): WalletBalance {
  * `amount.value` is handed to {@link walletAmountToCents} as the source text `client.ts` preserved
  * — nesting the figure inside an object changes nothing about §4.3, and that is worth a test.
  *
- * The counterpart is `transfer.mirrorRecord` and nothing else. §7.2 pairs transfers on the id of
+ * The counterpart is `transfer.mirrorRecord.id` and nothing else. §7.2 pairs transfers on the id of
  * the *opposite record* (`transferPairKey` sorts two record ids into one key), which is what
  * `mirrorRecord` is; `transfer.transferId` is a group id shared by both legs, so putting it here
  * would key a pair on something that is not a record and pair nothing — or worse, pair by
@@ -396,7 +402,7 @@ export function mapWalletRecord(raw: WalletRecordPayload): WalletTransaction {
   return {
     externalId: raw.id,
     accountExternalId: raw.accountId,
-    transferCounterExternalId: optionalText(raw.transfer?.mirrorRecord),
+    transferCounterExternalId: optionalText(raw.transfer?.mirrorRecord?.id),
     occurredOn: walletRecordDate(raw.recordDate),
     occurredAt: recordInstant(raw.recordDate),
     amountCents: walletAmountToCents(raw.amount.value),

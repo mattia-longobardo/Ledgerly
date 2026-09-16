@@ -12,7 +12,10 @@
       "category": {
         "id": "wc-groceries",
         "name": "  Spesa  ",
-        "group": "Casa",
+        "group": {
+          "id": "wcg-casa",
+          "name": "Casa"
+        },
         "color": "#3B82F6"
       },
       "counterParty": " Panificio Rossi ",
