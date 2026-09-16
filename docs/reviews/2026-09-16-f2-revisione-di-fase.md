@@ -297,3 +297,72 @@ Emerse correggendo il lotto A, oltre alle otto già elencate:
 - Il README non diceva che `APP_ENCRYPTION_KEY` va messa in salvo né come si
   ruota senza danni, e non era nella lista dei segreti da generare (`605c84c`).
 - Il registro dei job non era coperto da nessun test (`19409b6`).
+
+---
+
+## Esito del collaudo col token vero (2026-09-16)
+
+Il primo collegamento vero ha dato `Wallet could not be reached`. **Wallet era
+raggiungibile e il token è valido**: la corsa `accounts` è `success`, solo quella
+`transactions` fallisce. Tre diagnosi sbagliate in fila hanno nascosto la causa.
+
+### La causa
+
+`/records` risponde **HTTP 400** con `{"error":"limit must be at most 200"}`.
+Il client chiede `RECORDS_LIMIT = 500`. Poi:
+
+1. il 400 **non** viene classificato come errore HTTP (solo 401/403, 429 e 5xx lo
+   sono), quindi il corpo del 400 viene dato in pasto allo schema dei record →
+   `payload`: «Wallet answered an unexpected shape: (root): Invalid input»;
+2. `payload` non è `token_rejected`, quindi l'interfaccia lo mappa su
+   `errors.unreachable` → «Wallet could not be reached».
+
+Una violazione di un limite è stata raccontata come una risposta illeggibile e
+poi come un problema di rete.
+
+### La forma vera di `/records` (fatti, non inferenze)
+
+Risposta: `{ records: [...], limit, offset, nextOffset, appliedRecordDateFilters }`.
+
+Campi di un record: `id`, `accountId`, `accountName`, `accountIsBankSync`,
+`amount: { value, currencyCode }`, `category: { id, name, group, color }`,
+`counterParty`, `labels: []`, `note`, `recordDate`, `recordState`, `recordType`,
+`source`, `transfer: null | { type, transferId?, mirrorRecord? }`, `createdAt`,
+`updatedAt`.
+
+**Confronto con `walletRecordSchema`** — cinque disallineamenti, di cui tre
+fatali:
+
+| il client si aspetta | la realtà | esito |
+|---|---|---|
+| `currencyCode` in cima, **obbligatorio** | sta dentro `amount` | **ogni record non passa lo schema** |
+| `amount` scalare | `{ value, currencyCode }` | **ogni record non passa lo schema** |
+| `limit=500` | il massimo è **200** | **HTTP 400 su ogni chiamata** |
+| `partyName` | `counterParty` | beneficiario sempre `null` → §7.2 (ricorrenze, ⌘K, ricerca) morto in silenzio |
+| `transferCounterRecordId` | `transfer.mirrorRecord` / `transfer.transferId` | **nessun giroconto abbinato mai**, in silenzio |
+| `categoryId` | `category: { id, name, … }` | il nome arriva già col movimento |
+
+Gli ultimi due sono esattamente i campi che la revisione aveva segnalato come
+«nomi che nessuno ha verificato», e `transferCounterRecordId` è quello su cui
+§7.2 fonda **tutto** l'abbinamento dei giroconti.
+
+### Risposte alle inferenze aperte
+
+1. **`recordDate` ripetuto due volte è messo in AND**: sì. E `lte.<data>` viene
+   tradotto dall'API in `lt.<data+1g>T00:00Z`, quindi **l'ultimo giorno è incluso
+   per intero** — la semantica della finestra chiusa era giusta.
+2. **La risposta dichiara i filtri applicati** (`appliedRecordDateFilters`, es.
+   `["gte.2026-09-01T00:00:00.000Z","lt.2026-09-17T00:00:00.000Z"]`). Non serve
+   più inferire che la finestra sia stata applicata: si può **verificare**.
+3. **Esiste una paginazione vera**: `limit`, `offset`, `nextOffset`. L'euristica
+   «pagina piena → dividi la finestra», con il suo rischio di troncatura
+   silenziosa, può essere ritirata in favore di `nextOffset`.
+4. **Senza filtro di data l'API applica una finestra sua** (ultimi ~3 mesi):
+   omettere il filtro non restituisce tutto.
+5. **`/categories`** risponde `{ categories, limit, offset }`, 91 voci sotto il
+   tetto di 200, con `id`, `name`, `group`, `color` (nessun `isIncome`).
+6. **`recordType` e `recordState` esistono**: la guardia ripristinata sui nomi di
+   quei due campi è giusta.
+
+Restano aperte: se esistano conti non in EUR, e se gli importi arrivino mai con
+più di due decimali o in notazione esponenziale.
