@@ -193,25 +193,29 @@ function emptyBuckets(): BucketTotals {
  */
 export async function accountsView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  options: { months?: number; now?: Date } = {},
+  options: { months?: number; now?: Date; through?: MonthKey } = {},
 ): Promise<AccountsView> {
   const now = options.now ?? new Date();
   const span = options.months ?? WINDOW_MONTHS;
   const todayOn = today(ctx.timeZone, now);
   const thisMonth = monthKey(todayOn);
-  const months = monthsBetween(addMonths(thisMonth, -(span - 1)), thisMonth);
+  // The window ends on the month asked for, or on the current one. A past month is read at its
+  // last day; the current month is read at today, because its end has not happened yet.
+  const end = options.through ? monthKey(options.through) : thisMonth;
+  const on = end >= thisMonth ? todayOn : lastDayOfMonth(end);
+  const months = monthsBetween(addMonths(end, -(span - 1)), end);
 
   const [open, points, snapshots] = await Promise.all([
     listAccounts(ctx),
-    monthlyPoints(ctx, todayOn),
+    monthlyPoints(ctx, on),
     listSnapshotRuns(ctx, 1),
   ]);
   const latest = await balancesOn(
     ctx,
     open.map((account) => account.id),
-    todayOn,
+    on,
   );
-  const previousMonthEnd = lastDayOfMonth(addMonths(thisMonth, -1));
+  const previousMonthEnd = lastDayOfMonth(addMonths(end, -1));
   const previous = await balancesOn(
     ctx,
     open.map((account) => account.id),

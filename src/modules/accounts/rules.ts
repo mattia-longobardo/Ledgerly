@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { type CivilDate, isCivilDate, type MonthKey, monthKey, monthsApart } from "@/platform/dates";
+import {
+  addMonths,
+  type CivilDate,
+  isCivilDate,
+  type MonthKey,
+  monthKey,
+  monthsApart,
+} from "@/platform/dates";
 import type { NumberFormat } from "@/platform/format";
 import { type Cents, parseCents, sumCents } from "@/platform/money";
 
@@ -329,4 +336,17 @@ export function parseAmount(input: string, format: NumberFormat): Cents {
   const plain =
     format === "en-US" ? cleaned.replaceAll(",", "") : cleaned.replaceAll(".", "").replace(",", ".");
   return parseCents(plain);
+}
+
+export type Grain = "month" | "year";
+
+/**
+ * The last month of the period the Accounts page is showing. `offset` steps back one grain at a
+ * time, so 0 is the period still running: the current month, or the current year to date.
+ */
+export function periodEnd(grain: Grain, offset: number, todayOn: CivilDate): MonthKey {
+  const thisMonth = monthKey(todayOn);
+  if (offset <= 0) return thisMonth;
+  if (grain === "month") return addMonths(thisMonth, -offset);
+  return `${Number(thisMonth.slice(0, 4)) - offset}-12-01`;
 }

@@ -51,6 +51,27 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page.getByRole("row").filter({ hasText: "Total" })).toContainText("1.750,50 €");
   });
 
+  await test.step("the period and chart controls work without JavaScript state", async () => {
+    await page.goto("/accounts");
+    const columns = page.getByRole("columnheader");
+
+    await page.getByRole("group", { name: "Granularity" }).getByRole("link", { name: "Year" }).click();
+    await expect(page).toHaveURL(/grain=year/);
+    await expect(columns.filter({ hasText: "Balance · 2026" })).toBeVisible();
+
+    const period = page.getByRole("group", { name: "Period" });
+    await period.getByRole("link", { name: "Previous period" }).click();
+    await expect(page).toHaveURL(/off=1/);
+    await expect(period.getByRole("link", { name: "Latest" })).toBeVisible();
+    await period.getByRole("link", { name: "Latest" }).click();
+    await expect(page).not.toHaveURL(/off=/);
+
+    await page.goto(`${account}?span=3m`);
+    await expect(page.getByRole("heading", { name: "Balance · 3 months" })).toBeVisible();
+    await page.getByRole("group", { name: "Chart type" }).getByRole("link", { name: "Bars" }).click();
+    await expect(page).toHaveURL(/mode=bars/);
+  });
+
   await test.step("settings rename the account and set a balance warning", async () => {
     await page.goto(`${account}?tab=settings`);
     await page.getByLabel("Name").fill("ING main");

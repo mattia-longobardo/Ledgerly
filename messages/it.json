@@ -396,7 +396,8 @@
       "yoy": "Su anno",
       "share": "Quota",
       "lastSynced": "Ultima sincronizzazione",
-      "history": "Andamento"
+      "history": "Andamento",
+      "balanceOn": "Saldo · {period}"
     },
     "kpis": {
       "total": "Totale",
@@ -478,7 +479,18 @@
       },
       "chart": {
         "title": "Saldo · {count} mesi",
-        "summary": "{name} nel tempo, fino a {value}."
+        "summary": "{name} nel tempo, fino a {value}.",
+        "span": "Intervallo del grafico",
+        "mode": "Tipo di grafico",
+        "modes": {
+          "line": "Linea",
+          "bars": "Barre"
+        },
+        "from": "Da",
+        "to": "A",
+        "apply": "Applica",
+        "change": "variazione",
+        "barsSummary": "Variazione mese su mese di {name}."
       },
       "monthEnd": {
         "title": "Saldi di fine mese",
@@ -604,6 +616,19 @@
         "archive": "Archivia conto",
         "restore": "Ripristina conto"
       }
+    },
+    "period": {
+      "label": "Periodo",
+      "grain": "Granularità",
+      "grains": {
+        "month": "Mese",
+        "year": "Anno"
+      },
+      "previous": "Periodo precedente",
+      "next": "Periodo successivo",
+      "latest": "Ultimo",
+      "today": "oggi",
+      "ytd": "da inizio anno"
     }
   }
 }

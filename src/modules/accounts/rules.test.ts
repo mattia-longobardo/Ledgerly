@@ -11,6 +11,7 @@ import {
   monthEndSeries,
   normalizeName,
   parseAmount,
+  periodEnd,
   reconcileProviderAccounts,
   type RemoteAccount,
   settingsForSynced,
@@ -316,5 +317,26 @@ describe("reconcileProviderAccounts", () => {
       state: "unavailable",
     });
     expect(reconcileProviderAccounts([gone], [], "wallet")).toEqual([]);
+  });
+});
+
+describe("periodEnd", () => {
+  const todayOn = "2026-09-16";
+
+  it("is the month or the year still running at offset zero", () => {
+    expect(periodEnd("month", 0, todayOn)).toBe("2026-09-01");
+    expect(periodEnd("year", 0, todayOn)).toBe("2026-09-01");
+  });
+
+  it("steps back one month or one whole year at a time", () => {
+    expect(periodEnd("month", 1, todayOn)).toBe("2026-08-01");
+    expect(periodEnd("month", 9, todayOn)).toBe("2025-12-01");
+    expect(periodEnd("year", 1, todayOn)).toBe("2025-12-01");
+    expect(periodEnd("year", 2, todayOn)).toBe("2024-12-01");
+  });
+
+  it("never walks into the future, whatever a hand-typed offset says", () => {
+    expect(periodEnd("month", -3, todayOn)).toBe("2026-09-01");
+    expect(periodEnd("year", -1, todayOn)).toBe("2026-09-01");
   });
 });
