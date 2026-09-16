@@ -9,7 +9,7 @@
 !.env.example
 
 # Dependencies and build output
-node_modules/
+node_modules
 .next/
 out/
 next-env.d.ts
