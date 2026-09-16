@@ -14,14 +14,18 @@ import {
 } from "@/modules/accounts/ui/display";
 import { BalanceEntries, type EntryRow } from "@/modules/accounts/ui/balance-entries";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
+import { LinkTabs, type SpanKey, SPAN_OPTIONS, spanMonths } from "@/modules/accounts/ui/controls";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
-import { today } from "@/platform/dates";
+import { monthKey, monthsBetween, today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Field } from "@/ui/field";
+import { Input } from "@/ui/input";
 import { Card } from "@/ui/card";
-import { AreaLine } from "@/ui/chart";
+import { AreaLine, Bars } from "@/ui/chart";
 import { KpiTile } from "@/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
@@ -45,13 +49,35 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const { id } = await params;
   const now = new Date();
 
-  const view = await accountsView(ctx, { now });
+  const query = await searchParams;
+  const asMonth = (value: unknown) =>
+    typeof value === "string" && /^\d{4}-\d{2}$/.test(value) ? `${value}-01` : null;
+  const from = asMonth(query.from);
+  const to = asMonth(query.to);
+  const custom = from !== null && to !== null && to >= from;
+  const span: SpanKey = SPAN_OPTIONS.some((option) => option.value === query.span)
+    ? (query.span as SpanKey)
+    : "1y";
+  const thisMonth = monthKey(today(ctx.timeZone, now));
+  const chart = {
+    mode: query.mode === "bars" ? ("bars" as const) : ("line" as const),
+    span,
+    from: from ?? "",
+    to: to ?? "",
+    custom,
+  };
+  const through = custom ? (to as string) : thisMonth;
+  const width = custom
+    ? monthsBetween(from as string, to as string).length
+    : spanMonths(span, Number(thisMonth.slice(5, 7)));
+
+  const view = await accountsView(ctx, { now, months: width, through });
   const index = view.rows.findIndex((row) => row.account.id === id);
   if (index < 0) notFound();
   const row = view.rows[index];
   const account = row.account;
 
-  const requested = (await searchParams).tab;
+  const requested = query.tab;
   const tab: Tab = TABS.includes(requested as Tab) ? (requested as Tab) : "overview";
   const tabs = TABS.map((key) => ({
     href: (key === "overview" ? `/accounts/${id}` : `/accounts/${id}?tab=${key}`) as Route,
@@ -110,7 +136,16 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
       <TabLinks label={td("tabs.label")} tabs={tabs} />
 
       {tab === "overview" && (
-        <OverviewTab ctx={ctx} row={row} months={view.months} yoy={yoy} share={share} color={color} />
+        <OverviewTab
+          ctx={ctx}
+          row={row}
+          months={view.months}
+          yoy={yoy}
+          share={share}
+          color={color}
+          id={id}
+          chart={chart}
+        />
       )}
 
       {tab === "transactions" && (
@@ -166,6 +201,8 @@ async function OverviewTab({
   yoy,
   share,
   color,
+  id,
+  chart,
 }: {
   ctx: Ctx;
   row: Row;
@@ -173,9 +210,14 @@ async function OverviewTab({
   yoy: ReturnType<typeof changeBetween>;
   share: number | null;
   color: string;
+  id: string;
+  chart: { mode: "line" | "bars"; span: SpanKey; from: string; to: string; custom: boolean };
 }) {
   const t = await getTranslations("accounts.detail");
   const ta = await getTranslations("accounts");
+  const changes = months.map((_, i) =>
+    i === 0 ? null : changeBetween(row.series[i], row.series[i - 1]).cents,
+  );
   const monthRows = months
     .map((month, index) => ({
       month,
@@ -210,16 +252,72 @@ async function OverviewTab({
       </div>
 
       <Card padded={false} className="flex flex-col gap-3 p-4">
-        <h2 className="text-lg font-semibold">{t("chart.title", { count: months.length })}</h2>
-        <AreaLine
-          values={asNumbers(row.series)}
-          yLabels={axisLabels(row.series, ctx.numberFormat)}
-          xLabels={monthLabels(months, ctx.locale)}
-          summary={t("chart.summary", {
-            name: row.account.name,
-            value: formatMoney(row.balance, ctx.numberFormat),
-          })}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">{t("chart.title", { count: months.length })}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <LinkTabs
+              label={t("chart.span")}
+              path={`/accounts/${id}`}
+              params={{ mode: chart.mode === "line" ? undefined : chart.mode }}
+              name="span"
+              current={chart.custom ? "" : chart.span}
+              options={SPAN_OPTIONS}
+            />
+            <LinkTabs
+              label={t("chart.mode")}
+              path={`/accounts/${id}`}
+              params={{
+                span: chart.custom ? undefined : chart.span,
+                from: chart.custom ? chart.from.slice(0, 7) : undefined,
+                to: chart.custom ? chart.to.slice(0, 7) : undefined,
+              }}
+              name="mode"
+              current={chart.mode}
+              options={[
+                { value: "line", label: t("chart.modes.line") },
+                { value: "bars", label: t("chart.modes.bars") },
+              ]}
+            />
+          </div>
+        </div>
+        <form method="get" className="flex flex-wrap items-end gap-2">
+          {chart.mode === "bars" && <input type="hidden" name="mode" value="bars" />}
+          <Field label={t("chart.from")} htmlFor="from">
+            <Input id="from" name="from" type="month" defaultValue={chart.from.slice(0, 7)} />
+          </Field>
+          <Field label={t("chart.to")} htmlFor="to">
+            <Input id="to" name="to" type="month" defaultValue={chart.to.slice(0, 7)} />
+          </Field>
+          <Button type="submit" size="sm">
+            {t("chart.apply")}
+          </Button>
+        </form>
+        {chart.mode === "bars" ? (
+          <Bars
+            values={changes.map((change) => (change === null ? null : Number(change)))}
+            yLabels={axisLabels(changes, ctx.numberFormat)}
+            xLabels={monthLabels(months, ctx.locale)}
+            summary={t("chart.barsSummary", { name: row.account.name })}
+          />
+        ) : (
+          <AreaLine
+            hover={months.map((month, i) => ({
+              label: formatDate(month, "monthYear", ctx.locale),
+              value: formatMoney(row.series[i], ctx.numberFormat),
+              note:
+                changes[i] === null
+                  ? undefined
+                  : `${formatMoney(changes[i], ctx.numberFormat, { signed: true })} ${t("chart.change")}`,
+            }))}
+            values={asNumbers(row.series)}
+            yLabels={axisLabels(row.series, ctx.numberFormat)}
+            xLabels={monthLabels(months, ctx.locale)}
+            summary={t("chart.summary", {
+              name: row.account.name,
+              value: formatMoney(row.balance, ctx.numberFormat),
+            })}
+          />
+        )}
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

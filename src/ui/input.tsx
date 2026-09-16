@@ -1,3 +1,5 @@
+"use client";
+
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { cn } from "./cn";
 import { useFieldState } from "./field";

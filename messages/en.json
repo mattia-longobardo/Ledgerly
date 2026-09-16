@@ -396,7 +396,8 @@
       "yoy": "YoY",
       "share": "Share",
       "lastSynced": "Last synced",
-      "history": "History"
+      "history": "History",
+      "balanceOn": "Balance · {period}"
     },
     "kpis": {
       "total": "Total",
@@ -478,7 +479,18 @@
       },
       "chart": {
         "title": "Balance · {count} months",
-        "summary": "{name} over time, ending at {value}."
+        "summary": "{name} over time, ending at {value}.",
+        "span": "Chart span",
+        "mode": "Chart type",
+        "modes": {
+          "line": "Line",
+          "bars": "Bars"
+        },
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "change": "change",
+        "barsSummary": "Month-on-month change for {name}."
       },
       "monthEnd": {
         "title": "Month-end balances",
@@ -604,6 +616,19 @@
         "archive": "Archive account",
         "restore": "Restore account"
       }
+    },
+    "period": {
+      "label": "Period",
+      "grain": "Granularity",
+      "grains": {
+        "month": "Month",
+        "year": "Year"
+      },
+      "previous": "Previous period",
+      "next": "Next period",
+      "latest": "Latest",
+      "today": "today",
+      "ytd": "year to date"
     }
   }
 }

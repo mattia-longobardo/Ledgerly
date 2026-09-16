@@ -1,3 +1,4 @@
+import { ChartHover, type HoverPoint } from "./chart-hover";
 import { cn } from "./cn";
 
 export interface Series {
@@ -113,12 +114,14 @@ export function AreaLine({
   yLabels,
   xLabels,
   height = 200,
+  hover,
 }: {
   values: readonly (number | null)[];
   summary: string;
   yLabels: readonly string[];
   xLabels: readonly string[];
   height?: number;
+  hover?: readonly HoverPoint[];
 }) {
   const box: Box = { width: 720, height, pad: 6 };
   const extent = extentOf([{ values }]);
@@ -153,6 +156,7 @@ export function AreaLine({
               </g>
             ))}
           </svg>
+          {hover && hover.length > 0 && <ChartHover points={hover} />}
         </div>
         <div
           aria-hidden
@@ -256,5 +260,77 @@ export function CompositionBar({
         />
       ))}
     </div>
+  );
+}
+
+/**
+ * Month-over-month change as bars around a zero line (spec §8.3): gains above, losses below. A
+ * month with no comparable value draws nothing rather than a bar of height zero, which would read
+ * as "no change" instead of "not known".
+ */
+export function Bars({
+  values,
+  summary,
+  yLabels,
+  xLabels,
+  height = 240,
+}: {
+  values: readonly (number | null)[];
+  summary: string;
+  yLabels: readonly string[];
+  xLabels: readonly string[];
+  height?: number;
+}) {
+  const known = values.filter((value): value is number => value !== null);
+  const reach = Math.max(1, ...known.map(Math.abs));
+  const zero = height / 2;
+  const width = 720;
+  const slot = width / Math.max(1, values.length);
+  const barWidth = Math.max(2, slot * 0.6);
+
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="flex gap-3">
+        <div className="relative min-w-0 flex-1" style={{ height }}>
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            aria-hidden
+            className="h-full w-full"
+          >
+            <line x1={0} x2={width} y1={zero} y2={zero} stroke="var(--border)" strokeWidth={1} />
+            {values.map((value, index) => {
+              if (value === null) return null;
+              const size = (Math.abs(value) / reach) * (zero - 4);
+              return (
+                <rect
+                  key={index}
+                  x={index * slot + (slot - barWidth) / 2}
+                  y={value >= 0 ? zero - size : zero}
+                  width={barWidth}
+                  height={Math.max(1, size)}
+                  fill={value >= 0 ? "var(--pos)" : "var(--neg)"}
+                />
+              );
+            })}
+          </svg>
+        </div>
+        <div
+          aria-hidden
+          className="flex shrink-0 flex-col justify-between text-right text-xs text-faint tabular-nums"
+          style={{ height }}
+        >
+          {yLabels.map((label, index) => (
+            <span key={index}>{label}</span>
+          ))}
+        </div>
+      </div>
+      <div aria-hidden className="flex justify-between text-xs text-faint">
+        {xLabels.map((label, index) => (
+          <span key={index}>{label}</span>
+        ))}
+      </div>
+      <figcaption className="sr-only">{summary}</figcaption>
+    </figure>
   );
 }

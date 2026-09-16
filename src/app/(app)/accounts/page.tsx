@@ -11,8 +11,11 @@ import {
   shareOf,
   since,
 } from "@/modules/accounts/ui/display";
+import { LinkTabs, PeriodStepper } from "@/modules/accounts/ui/controls";
+import { type Grain, periodEnd } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
-import { formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { today } from "@/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { ButtonLink } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
@@ -27,11 +30,22 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("accounts"))("title") };
 }
 
-export default async function AccountsPage() {
+export default async function AccountsPage({ searchParams }: PageProps<"/accounts">) {
   const ctx = await requireSession();
   const t = await getTranslations("accounts");
   const now = new Date();
-  const view = await accountsView(ctx, { now });
+
+  const query = await searchParams;
+  const grain: Grain = query.grain === "year" ? "year" : "month";
+  const offset = Math.max(0, Number(query.off ?? 0) || 0);
+  const params = { grain: grain === "month" ? undefined : grain, off: offset ? String(offset) : undefined };
+  const end = periodEnd(grain, offset, today(ctx.timeZone, now));
+  const periodShort = grain === "year" ? end.slice(0, 4) : formatDate(end, "monthShort", ctx.locale);
+  const periodLong =
+    (grain === "year" ? end.slice(0, 4) : formatDate(end, "monthYear", ctx.locale)) +
+    (offset === 0 ? ` · ${grain === "year" ? t("period.ytd") : t("period.today")}` : "");
+
+  const view = await accountsView(ctx, { now, through: end });
 
   const add = (
     <ButtonLink href="/accounts/new" variant="primary" size="sm">
@@ -92,6 +106,30 @@ export default async function AccountsPage() {
         </p>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <LinkTabs
+          label={t("period.grain")}
+          path="/accounts"
+          params={params}
+          name="grain"
+          current={grain}
+          options={[
+            { value: "month", label: t("period.grains.month") },
+            { value: "year", label: t("period.grains.year") },
+          ]}
+        />
+        <PeriodStepper
+          label={t("period.label")}
+          path="/accounts"
+          params={params}
+          offset={offset}
+          periodLabel={periodLong}
+          previousLabel={t("period.previous")}
+          nextLabel={t("period.next")}
+          latestLabel={t("period.latest")}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((kpi) => (
           <KpiTile
@@ -109,7 +147,7 @@ export default async function AccountsPage() {
             <THead>
               <Th>{t("columns.name")}</Th>
               <Th>{t("columns.type")}</Th>
-              <Th align="right">{t("columns.balance")}</Th>
+              <Th align="right">{t("columns.balanceOn", { period: periodShort })}</Th>
               <Th align="right">{t("columns.monthlyChange")}</Th>
               <Th align="right">{t("columns.yoy")}</Th>
               <Th align="right">{t("columns.share")}</Th>

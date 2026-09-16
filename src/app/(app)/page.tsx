@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { accountsView } from "@/modules/accounts/queries";
 import { asNumbers, axisLabels, changeBetween, monthLabels } from "@/modules/accounts/ui/display";
-import { RangeTabs, type RangeKey, rangeMonths } from "@/modules/accounts/ui/range-tabs";
+import { LinkTabs, RANGE_OPTIONS, type RangeKey, rangeMonths } from "@/modules/accounts/ui/controls";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -122,9 +122,20 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
       <Card padded={false} className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
-          <RangeTabs current={range} label={t("chart.range")} />
+          <LinkTabs
+            label={t("chart.range")}
+            path="/"
+            params={{}}
+            name="range"
+            current={range}
+            options={RANGE_OPTIONS}
+          />
         </div>
         <AreaLine
+          hover={months.map((month, index) => ({
+            label: formatDate(month, "monthYear", ctx.locale),
+            value: formatMoney(series[index], ctx.numberFormat),
+          }))}
           values={asNumbers(series)}
           yLabels={axisLabels(series, ctx.numberFormat)}
           xLabels={monthLabels(months, ctx.locale)}
