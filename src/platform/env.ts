@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { parseKeyRing } from "@/platform/crypto";
 
 /** Compose passes unset variables as "", which must behave like "absent". */
 const blankAsUndefined = (value: unknown) => (value === "" ? undefined : value);
@@ -8,6 +9,7 @@ const blankAsUndefined = (value: unknown) => (value === "" ? undefined : value);
 const PLACEHOLDER_BETTER_AUTH_SECRET = "change-me-change-me-change-me-change-me";
 const PLACEHOLDER_CRON_SECRET = "dev-cron-secret-dev-cron-secret-dev";
 const PLACEHOLDER_METRICS_TOKEN = "dev-metrics-token-dev-metrics-token";
+const PLACEHOLDER_ENCRYPTION_KEY = "dev:1fXJEH66bW3y0iE+bgEqimdJ1uEjw3fXyqeUmHosTdA=";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 const ipOrCidr = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
@@ -55,6 +57,21 @@ export const envSchema = z
     S3_ACCESS_KEY_ID: z.string().min(1),
     S3_SECRET_ACCESS_KEY: z.string().min(1),
     S3_BUCKET: z.string().min(3),
+    // `id:base64[,older…]` (spec §9.4): the first key seals new credentials, every key can still
+    // open old ones. Validated here, not on first use, so a rotation typo fails at boot.
+    APP_ENCRYPTION_KEY: z
+      .string()
+      .min(1)
+      .superRefine((value, ctx) => {
+        try {
+          parseKeyRing(value);
+        } catch (error) {
+          ctx.addIssue({
+            code: "custom",
+            message: error instanceof Error ? error.message : "Invalid key ring",
+          });
+        }
+      }),
     CRON_SECRET: z.string().min(32),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/ledgerly-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
@@ -83,10 +100,13 @@ export const envSchema = z
         });
       }
     }
-    const placeholders: ReadonlyArray<["BETTER_AUTH_SECRET" | "CRON_SECRET" | "METRICS_TOKEN", string]> = [
+    const placeholders: ReadonlyArray<
+      ["BETTER_AUTH_SECRET" | "CRON_SECRET" | "METRICS_TOKEN" | "APP_ENCRYPTION_KEY", string]
+    > = [
       ["BETTER_AUTH_SECRET", PLACEHOLDER_BETTER_AUTH_SECRET],
       ["CRON_SECRET", PLACEHOLDER_CRON_SECRET],
       ["METRICS_TOKEN", PLACEHOLDER_METRICS_TOKEN],
+      ["APP_ENCRYPTION_KEY", PLACEHOLDER_ENCRYPTION_KEY],
     ];
     for (const [key, placeholder] of placeholders) {
       if (env[key] === placeholder) {

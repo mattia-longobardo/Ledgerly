@@ -15,6 +15,7 @@ const valid = {
   S3_ACCESS_KEY_ID: "ledgerly",
   S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
   S3_BUCKET: "ledgerly-test",
+  APP_ENCRYPTION_KEY: "k1:PB4iEGbA1r5Ct3ySrU8MdGe9FB7bR9ZxKt4QmVxgZ0Y=",
   CRON_SECRET: "a-real-cron-secret-sixteen-plus-ok",
   METRICS_TOKEN: "a-real-metrics-token-thirty-two-chars-plus",
 };
@@ -64,6 +65,12 @@ describe("envSchema in production", () => {
     ]);
   });
 
+  it("rejects the .env.example placeholder APP_ENCRYPTION_KEY", () => {
+    expect(
+      failingKeys(production({ APP_ENCRYPTION_KEY: "dev:1fXJEH66bW3y0iE+bgEqimdJ1uEjw3fXyqeUmHosTdA=" })),
+    ).toEqual(["APP_ENCRYPTION_KEY"]);
+  });
+
   it("rejects the .env.example placeholder METRICS_TOKEN", () => {
     expect(failingKeys(production({ METRICS_TOKEN: "dev-metrics-token-dev-metrics-token" }))).toEqual([
       "METRICS_TOKEN",
@@ -93,6 +100,31 @@ describe("envSchema in production", () => {
 
   it("requires METRICS_TOKEN", () => {
     expect(failingKeys(production({ METRICS_TOKEN: undefined }))).toEqual(["METRICS_TOKEN"]);
+  });
+});
+
+describe("APP_ENCRYPTION_KEY", () => {
+  const keyRing = (value: string | undefined) =>
+    failingKeys(envSchema.safeParse({ ...valid, APP_ENCRYPTION_KEY: value }));
+
+  it("is required: without it nothing can be sealed", () => {
+    expect(keyRing(undefined)).toEqual(["APP_ENCRYPTION_KEY"]);
+  });
+
+  it("rejects a key that is not 32 bytes of base64", () => {
+    expect(keyRing("k1:dG9vLXNob3J0")).toEqual(["APP_ENCRYPTION_KEY"]);
+  });
+
+  it("rejects an entry without a key id", () => {
+    expect(keyRing("PB4iEGbA1r5Ct3ySrU8MdGe9FB7bR9ZxKt4QmVxgZ0Y=")).toEqual(["APP_ENCRYPTION_KEY"]);
+  });
+
+  it("accepts a ring of a new key and the one it replaces", () => {
+    expect(
+      keyRing(
+        "k2:PB4iEGbA1r5Ct3ySrU8MdGe9FB7bR9ZxKt4QmVxgZ0Y=,k1:gBubFxNEhi1CSofEa9MtLb5lSXHXROI4WupEIGMhsZU=",
+      ),
+    ).toEqual([]);
   });
 });
 

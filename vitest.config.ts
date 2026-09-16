@@ -55,6 +55,7 @@ export default defineConfig({
             S3_ACCESS_KEY_ID: "ledgerly",
             S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
             S3_BUCKET: "ledgerly-test",
+            APP_ENCRYPTION_KEY: "k1:gBubFxNEhi1CSofEa9MtLb5lSXHXROI4WupEIGMhsZU=",
             CRON_SECRET: "integration-cron-secret-integration",
             HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-test",
             METRICS_TOKEN: "integration-metrics-token-integration-metrics-token",
