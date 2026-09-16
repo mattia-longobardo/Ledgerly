@@ -18,6 +18,9 @@
 - The LLM fallback (later phases) is OpenAI only (spec D18): no other provider's SDK or configuration.
 - Dev services (`npm run dev:services`, `compose.dev.yml`): Postgres `55432`, MinIO `59000`/`59001`,
   Mailpit SMTP `51025` / UI `58025`, mock OIDC `58090`.
+- Two environment files, both untracked: `.env` for local development against `compose.dev.yml`,
+  and `.env.homelab` for the deployment, which `docker-compose.yml` passes as `env_file`. No value
+  in either may contain a `$`: Compose interpolates `env_file` contents and would truncate it.
 - Every user-facing string is a next-intl message in `messages/en.json` **and** `messages/it.json`.
 - Each phase appends its nav items in `src/app/(app)/navigation.ts`, its icons in `src/ui/shell/icons.ts`,
   its jobs in `src/platform/jobs/registry.ts`, its tables in `src/platform/db/tables.ts`.
