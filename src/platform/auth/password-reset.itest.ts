@@ -28,7 +28,7 @@ describe("password reset", () => {
     });
     await requestReset("a@example.test");
     const mail = await waitForMail("a@example.test");
-    expect(mail.Subject).toBe("Reset your Finance Dashboard password");
+    expect(mail.Subject).toBe("Reset your Ledgerly password");
     const token = /[?&]token=([^&\s]+)|\/reset-password\/([^?\s]+)/.exec(mail.Text);
     const value = token?.[1] ?? token?.[2];
     expect(value).toBeTruthy();
@@ -50,7 +50,7 @@ describe("password reset", () => {
     });
     await updatePreferences({ userId: user.id }, { ...DEFAULT_PREFERENCES, locale: "it" });
     await requestReset("it@example.test");
-    expect((await waitForMail("it@example.test")).Subject).toBe("Reimposta la password di Finance Dashboard");
+    expect((await waitForMail("it@example.test")).Subject).toBe("Reimposta la password di Ledgerly");
   });
 
   it("sends an Authentik-only user no link, so they never gain a password", async () => {

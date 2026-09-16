@@ -30,7 +30,7 @@ const LINKS: NavLink[] = [
 ];
 
 const LABELS = {
-  product: "Finance Dashboard",
+  product: "Ledgerly",
   primary: "Primary",
   groups: { finance: "Finance", work: "Work", system: "System" },
   toggleSidebar: "Toggle sidebar",

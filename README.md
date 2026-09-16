@@ -1,4 +1,4 @@
-# Finance Dashboard
+# Ledgerly
 
 Personal finance and household-admin dashboard. Version 0.1 is a from-scratch rebuild; the design is in
 [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md) and each phase has its
@@ -62,17 +62,17 @@ npm run format:check && npm run lint && npm run typecheck && npm test && npm run
 ## Docker
 
 ```bash
-docker build -t finance-dashboard:dev .
-docker build -t finance-dashboard-cron:dev cron
+docker build -t ledgerly:dev .
+docker build -t ledgerly-cron:dev cron
 ```
 
 The app image applies pending migrations on boot, then serves the standalone Next.js server; it
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
 start if any check fails, so a misconfigured deployment fails loudly instead of on the first
 request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
-`http://dashboard-app:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
+`http://ledgerly:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
-and reaches the app by its compose service name, `dashboard-app`, on the internal network. Each
+and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
 tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `housekeeping` and
 `accounts-alerts` daily, `accounts-snapshot` monthly) for that tier; touching the heartbeat file is
 a side effect of every tick, not a job of its own.
@@ -110,17 +110,36 @@ a side effect of every tick, not a job of its own.
   every request shares one bucket. Never publish port 3000 on the host: the app is reached only
   over LAN/NetBird (spec §13).
 - **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
-  inside the same Docker network as the app (its compose service name, `dashboard-app`), for
+  inside the same Docker network as the app (its compose service name, `ledgerly`), for
   example:
   ```yaml
   scrape_configs:
-    - job_name: finance-dashboard
+    - job_name: ledgerly
       metrics_path: /api/metrics
       authorization:
         credentials: <METRICS_TOKEN>
       static_configs:
-        - targets: ["dashboard-app:3000"]
+        - targets: ["ledgerly:3000"]
   ```
+- **Homelab services** (`/home/mattia/docker`, conventions in its `AGENTS.md`). Ledgerly reuses the
+  shared tier rather than running its own copies; `.env.homelab` holds the matching values. Four
+  things have to exist first, and none of them can be created from this repository:
+  - **Postgres** (`db/`, published on the host as `5432`): one database and one role per app.
+    ```sql
+    CREATE ROLE ledgerly LOGIN PASSWORD '<the DATABASE_URL password>';
+    CREATE DATABASE ledgerly OWNER ledgerly;
+    ```
+  - **Authentik** (`security/`, `auth.longobardo.me`): an OAuth2/OIDC provider and application
+    named `ledgerly`, whose client id and secret go into `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`.
+    Its redirect URI is `<BETTER_AUTH_URL>/api/auth/oauth2/callback/authentik`, and the group in
+    `OIDC_ADMIN_GROUP` (`ledgerly-admins`) is the one that grants the admin role on sign-in.
+  - **Stalwart** (`network/`, `mx.longobardo.me`): send as `no-reply@longobardo.me` over implicit
+    TLS on 465, with that mailbox's password in `SMTP_PASSWORD`.
+  - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
+    folders inside it (`payslips/`, `cometa/`, `avatars/`, …), never split buckets. Its S3 API
+    listens on `db_internal` only, so a copy of the app running on a workstation cannot reach it;
+    in production the app sits on that network and `http://silo:9000` resolves. Through F1 nothing
+    in the running app touches S3 — only `npm run dev:seed` and the storage integration tests do.
 - **Production requirements** (`src/platform/env.ts`, checked at boot by
   `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
   and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing

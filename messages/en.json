@@ -1,6 +1,6 @@
 {
   "common": {
-    "product": "Finance Dashboard",
+    "product": "Ledgerly",
     "save": "Save",
     "close": "Close",
     "retry": "Try again",
@@ -42,20 +42,20 @@
   },
   "emails": {
     "invitation": {
-      "subject": "You are invited to Finance Dashboard",
-      "body": "You have been invited to Finance Dashboard.\n\nAccept the invitation within {days, plural, one {# day} other {# days}}:\n{url}\n"
+      "subject": "You are invited to Ledgerly",
+      "body": "You have been invited to Ledgerly.\n\nAccept the invitation within {days, plural, one {# day} other {# days}}:\n{url}\n"
     },
     "passwordReset": {
-      "subject": "Reset your Finance Dashboard password",
+      "subject": "Reset your Ledgerly password",
       "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
     },
     "lowBalance": {
       "subject": "{account} is below its threshold",
-      "body": "{account} is at {balance}, below the {threshold} you set.\n\nOpen Finance Dashboard to check it."
+      "body": "{account} is at {balance}, below the {threshold} you set.\n\nOpen Ledgerly to check it."
     },
     "staleSync": {
       "subject": "{account} has not synced recently",
-      "body": "The last reading for {account} is older than {hours} hours.\n\nOpen Finance Dashboard to reconnect it or add a balance by hand."
+      "body": "The last reading for {account} is older than {hours} hours.\n\nOpen Ledgerly to reconnect it or add a balance by hand."
     }
   },
   "auth": {
@@ -94,7 +94,7 @@
       "invalid": "This reset link is invalid or has expired."
     },
     "invite": {
-      "title": "Join Finance Dashboard",
+      "title": "Join Ledgerly",
       "description": "Invited as {email}.",
       "name": "Full name",
       "submit": "Create account",

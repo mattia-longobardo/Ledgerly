@@ -9,7 +9,7 @@ test("phones get bottom tabs and a More sheet instead of the sidebar", async ({ 
     .getByRole("navigation", { name: "Primary" })
     .filter({ has: page.getByRole("button", { name: "More" }) });
   await expect(tabs.getByRole("link", { name: "Overview" })).toBeVisible();
-  await expect(page.getByText("Finance Dashboard", { exact: true })).toBeHidden();
+  await expect(page.getByText("Ledgerly", { exact: true })).toBeHidden();
   await tabs.getByRole("button", { name: "More" }).click();
   const sheet = page.getByRole("dialog", { name: "More" });
   await expect(
