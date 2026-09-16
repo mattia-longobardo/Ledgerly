@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "id": "wr-1001",
+      "accountId": "wa-general",
+      "amount": -8.615,
+      "currencyCode": "EUR",
+      "recordDate": "2026-01-05",
+      "categoryId": "wc-groceries",
+      "labels": ["spesa", " spesa ", ""],
+      "recordType": "Expense",
+      "recordState": "Cleared",
+      "note": "  pane e latte  ",
+      "partyName": " Panificio Rossi ",
+      "updatedAt": "2026-01-05T19:02:00.000Z"
+    }
+  ]
+}

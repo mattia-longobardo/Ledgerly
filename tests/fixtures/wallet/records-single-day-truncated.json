@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "id": "wr-1101",
+      "accountId": "wa-cash",
+      "amount": -3.5,
+      "currencyCode": "EUR",
+      "recordDate": "2026-01-05",
+      "labels": [],
+      "recordType": "expense",
+      "recordState": "cleared",
+      "partyName": "Bar Centrale"
+    },
+    {
+      "id": "wr-1102",
+      "accountId": "wa-cash",
+      "amount": -1.2,
+      "currencyCode": "EUR",
+      "recordDate": "2026-01-05",
+      "labels": [],
+      "recordType": "expense",
+      "recordState": "cleared",
+      "partyName": "Edicola"
+    }
+  ]
+}

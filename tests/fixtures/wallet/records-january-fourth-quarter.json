@@ -1,0 +1,16 @@
+{
+  "records": [
+    {
+      "id": "wr-1003",
+      "accountId": "wa-general",
+      "amount": -250,
+      "currencyCode": "EUR",
+      "recordDate": "2026-01-28",
+      "labels": ["giroconto"],
+      "recordType": "transfer",
+      "recordState": "cleared",
+      "partyName": "   ",
+      "transferCounterRecordId": " wr-2003 "
+    }
+  ]
+}
