@@ -132,17 +132,21 @@ a side effect of every tick, not a job of its own.
         - targets: ["ledgerly:3000"]
   ```
 - **Homelab services** (`/home/mattia/docker`, conventions in its `AGENTS.md`). Ledgerly reuses the
-  shared tier rather than running its own copies; `.env.homelab` holds the matching values. Four
-  things have to exist first, and none of them can be created from this repository:
+  shared tier rather than running its own copies; `.env.homelab` holds the matching values, and no
+  value in it may contain a `$` — Compose interpolates `env_file` contents, so a `$` in a secret
+  silently reaches the container truncated.
   - **Postgres** (`db/`, published on the host as `5432`): one database and one role per app.
     ```sql
     CREATE ROLE ledgerly LOGIN PASSWORD '<the DATABASE_URL password>';
     CREATE DATABASE ledgerly OWNER ledgerly;
     ```
-  - **Authentik** (`security/`, `auth.longobardo.me`): an OAuth2/OIDC provider and application
-    named `ledgerly`, whose client id and secret go into `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`.
-    Its redirect URI is `<BETTER_AUTH_URL>/api/auth/oauth2/callback/authentik`, and the group in
-    `OIDC_ADMIN_GROUP` (`ledgerly-admins`) is the one that grants the admin role on sign-in.
+  - **Authentik** (`security/`, `auth.longobardo.me`): the OAuth2/OIDC provider and application
+    `Ledgerly` (slug `ledgerly`, confidential, implicit-consent authorization flow, the four default
+    OpenID scope mappings). Its redirect URIs are
+    `<BETTER_AUTH_URL>/api/auth/oauth2/callback/authentik` — `authentik` is `OIDC_PROVIDER_ID`, the
+    Better Auth provider id — for production and for `http://127.0.0.1:3000`. The `profile` scope
+    mapping is what puts `groups` in the id token, which is how `OIDC_ADMIN_GROUP` (the `Ledgerly`
+    group) grants the admin role on sign-in.
   - **Stalwart** (`network/`, `mx.longobardo.me`): send as `no-reply@longobardo.me` over implicit
     TLS on 465, with that mailbox's password in `SMTP_PASSWORD`.
   - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
