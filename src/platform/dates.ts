@@ -87,3 +87,10 @@ export function dayOfWeek(date: CivilDate): number {
   const [year, month, day] = parts(date);
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
+
+/** Whole months from `from` to `to`; negative when `to` comes first. */
+export function monthsApart(from: MonthKey, to: MonthKey): number {
+  const [fromYear, fromMonth] = parts(monthKey(from));
+  const [toYear, toMonth] = parts(monthKey(to));
+  return (toYear - fromYear) * 12 + (toMonth - fromMonth);
+}

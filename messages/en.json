@@ -5,15 +5,21 @@
     "close": "Close",
     "retry": "Try again",
     "or": "or",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "cancel": "Cancel"
   },
   "nav": {
     "primary": "Primary",
-    "groups": { "finance": "Finance", "work": "Work", "system": "System" },
+    "groups": {
+      "finance": "Finance",
+      "work": "Work",
+      "system": "System"
+    },
     "overview": "Overview",
     "settings": "Settings",
     "components": "Components",
-    "more": "More"
+    "more": "More",
+    "accounts": "Accounts"
   },
   "shell": {
     "toggleSidebar": "Toggle sidebar (⌘\\)",
@@ -22,7 +28,10 @@
     "themeSaveError": "Couldn't save your theme. Try again.",
     "signOut": "Sign out",
     "profile": "Profile and preferences",
-    "via": { "authentik": "via Authentik", "password": "via password" },
+    "via": {
+      "authentik": "via Authentik",
+      "password": "via password"
+    },
     "palette": {
       "placeholder": "Jump to a page…",
       "pages": "Pages",
@@ -39,6 +48,14 @@
     "passwordReset": {
       "subject": "Reset your Finance Dashboard password",
       "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
+    },
+    "lowBalance": {
+      "subject": "{account} is below its threshold",
+      "body": "{account} is at {balance}, below the {threshold} you set.\n\nOpen Finance Dashboard to check it."
+    },
+    "staleSync": {
+      "subject": "{account} has not synced recently",
+      "body": "The last reading for {account} is older than {hours} hours.\n\nOpen Finance Dashboard to reconnect it or add a balance by hand."
     }
   },
   "auth": {
@@ -91,7 +108,12 @@
   },
   "settings": {
     "title": "Settings",
-    "tabs": { "label": "Settings sections", "profile": "Profile", "security": "Security" },
+    "tabs": {
+      "label": "Settings sections",
+      "profile": "Profile",
+      "security": "Security",
+      "data": "Data"
+    },
     "account": {
       "title": "Account",
       "description": "How you appear in the app and where notifications go.",
@@ -99,7 +121,10 @@
       "email": "Email",
       "ssoNote": "Name and email are managed by Authentik while SSO is linked.",
       "role": "Role: <strong>{role}</strong>",
-      "roles": { "admin": "Admin", "user": "User" },
+      "roles": {
+        "admin": "Admin",
+        "user": "User"
+      },
       "saved": "Account saved",
       "errors": {
         "invalid": "Enter a name between 1 and {max} characters.",
@@ -112,7 +137,10 @@
       "description": "Formatting and locale. Amounts stay in EUR.",
       "timeZone": "Timezone",
       "language": "Language",
-      "languages": { "en": "English", "it": "Italiano" },
+      "languages": {
+        "en": "English",
+        "it": "Italiano"
+      },
       "numberFormat": "Number format",
       "numberFormats": {
         "it-IT": "1.234,56 € (it-IT)",
@@ -120,9 +148,16 @@
         "fr-FR": "1 234,56 € (fr-FR)"
       },
       "weekStart": "Week starts on",
-      "weekStarts": { "monday": "Monday", "sunday": "Sunday" },
+      "weekStarts": {
+        "monday": "Monday",
+        "sunday": "Sunday"
+      },
       "theme": "Theme",
-      "themes": { "system": "System", "light": "Light", "dark": "Dark" },
+      "themes": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
       "defaultRange": "Default date range",
       "ranges": {
         "this_month": "This month",
@@ -161,7 +196,9 @@
       "changed": "Password updated",
       "ssoOnly": "This account signs in with Authentik only; there is no password to change.",
       "failed": "The current password is wrong.",
-      "errors": { "generic": "Something went wrong. Try again." }
+      "errors": {
+        "generic": "Something went wrong. Try again."
+      }
     },
     "sessions": {
       "title": "Sessions",
@@ -173,7 +210,33 @@
       "signOutDevice": "Sign out {device}",
       "signOutOthers": "Sign out other sessions",
       "since": "since {date}",
-      "errors": { "failed": "Couldn't sign out. Try again." }
+      "errors": {
+        "failed": "Couldn't sign out. Try again."
+      }
+    },
+    "snapshots": {
+      "title": "Monthly snapshot",
+      "description": "On the 1st of each month every included account gets a balance for the last day of the month just ended.",
+      "takeNow": "Take snapshot now",
+      "taken": "Snapshot taken",
+      "failed": "Couldn't take the snapshot. Try again.",
+      "states": {
+        "success": "OK",
+        "warning": "Warning",
+        "failed": "Failed"
+      },
+      "log": {
+        "title": "Snapshot log",
+        "description": "One row per monthly snapshot.",
+        "empty": "No snapshot has run yet.",
+        "month": "Month",
+        "result": "Result",
+        "accounts": "Accounts",
+        "total": "Total",
+        "detail": "Detail",
+        "written": "{written} written · {skipped} skipped",
+        "stale": "Stale when taken: {accounts}"
+      }
     }
   },
   "errors": {
@@ -190,10 +253,29 @@
   "overview": {
     "title": "Overview",
     "empty": {
-      "title": "No data yet",
-      "description": "Accounts, balances and net worth appear here once the first account exists.",
-      "cta": "Open Settings"
-    }
+      "title": "No accounts yet",
+      "description": "Add your first account to start tracking your net worth.",
+      "cta": "Add account"
+    },
+    "netWorth": {
+      "on": "Net worth · {date}",
+      "vsLastMonth": "vs last month",
+      "ytd": "YTD {value}"
+    },
+    "lastSnapshot": "Last snapshot {date}",
+    "noSnapshot": "No snapshot taken yet",
+    "partial": "Some accounts have no balance yet, so this total is incomplete.",
+    "kpis": {
+      "cash": "Cash",
+      "savings": "Savings",
+      "investments": "Investments"
+    },
+    "chart": {
+      "title": "Net worth over time",
+      "range": "Range",
+      "summary": "Net worth from {from} to {to}, ending at {value}."
+    },
+    "manageAccounts": "Manage"
   },
   "gallery": {
     "title": "Components",
@@ -292,6 +374,236 @@
       "navDefault": "Default",
       "navHover": "Hover",
       "navActiveFocus": "Active + focus"
+    }
+  },
+  "accounts": {
+    "title": "Accounts",
+    "add": "Add account",
+    "summary": "{total} across {count, plural, =0 {no accounts} one {# account} other {# accounts}}",
+    "countAccounts": "{count, plural, =0 {no accounts} one {# account} other {# accounts}}",
+    "total": "Total",
+    "stale": "Stale",
+    "partial": "Some accounts have no balance yet, so these totals are incomplete.",
+    "empty": {
+      "title": "No accounts yet",
+      "description": "Add an account by hand, or connect a provider once integrations arrive."
+    },
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "balance": "Balance",
+      "monthlyChange": "Monthly change",
+      "yoy": "YoY",
+      "share": "Share",
+      "lastSynced": "Last synced",
+      "history": "History"
+    },
+    "kpis": {
+      "total": "Total",
+      "cash": "Cash",
+      "savings": "Savings",
+      "investments": "Invested"
+    },
+    "types": {
+      "checking": "Checking",
+      "savings": "Savings",
+      "cash": "Cash",
+      "investment": "Investment",
+      "pension": "Pension",
+      "crypto": "Crypto",
+      "credit": "Credit",
+      "other": "Other"
+    },
+    "states": {
+      "active": "Active",
+      "unavailable": "Unavailable",
+      "archived": "Archived"
+    },
+    "origins": {
+      "manual": "Manual",
+      "syncedWith": "Synced with {provider}"
+    },
+    "synced": {
+      "never": "Never",
+      "minutes": "{count, plural, one {# minute ago} other {# minutes ago}}",
+      "hours": "{count, plural, one {# hour ago} other {# hours ago}}",
+      "days": "{count, plural, one {# day ago} other {# days ago}}"
+    },
+    "chart": {
+      "title": "Balances · {count} months",
+      "summary": "One line per account, {count} accounts in total."
+    },
+    "composition": {
+      "title": "Composition",
+      "liquid": "Liquid · cash",
+      "invested": "Invested · funds and pension"
+    },
+    "new": {
+      "title": "New account",
+      "description": "A manual account you keep up to date yourself. An opening balance is optional and can be added later.",
+      "name": "Name",
+      "type": "Type",
+      "purpose": "Purpose",
+      "purposeHint": "What you use it for, e.g. salary and bills.",
+      "reference": "IBAN or reference",
+      "currency": "Currency",
+      "color": "Colour",
+      "openedOn": "Opened on",
+      "openingBalance": "Opening balance",
+      "openingBalanceHint": "Leave empty to add balances later.",
+      "openingBalanceOn": "Balance date",
+      "submit": "Create account",
+      "errors": {
+        "invalid": "Check the highlighted fields and try again.",
+        "futureDate": "A balance cannot be dated in the future.",
+        "failed": "Couldn't create the account. Try again."
+      }
+    },
+    "detail": {
+      "tabs": {
+        "label": "Account sections",
+        "overview": "Overview",
+        "transactions": "Transactions",
+        "entries": "Balance entries",
+        "settings": "Settings"
+      },
+      "thisMonth": "this month",
+      "shareOfNetWorth": "{value} of net worth",
+      "kpis": {
+        "balance": "Balance",
+        "yoy": "Year on year",
+        "share": "Share",
+        "shareNote": "of net worth",
+        "opened": "Opened"
+      },
+      "chart": {
+        "title": "Balance · {count} months",
+        "summary": "{name} over time, ending at {value}."
+      },
+      "monthEnd": {
+        "title": "Month-end balances",
+        "empty": "No balances recorded yet.",
+        "month": "Month",
+        "balance": "Balance",
+        "change": "Change",
+        "percent": "%"
+      },
+      "details": {
+        "title": "Details",
+        "reference": "Reference",
+        "purpose": "Purpose",
+        "currency": "Currency",
+        "source": "Data source",
+        "betweenEntries": "Between entries",
+        "inNetWorth": "In net worth",
+        "inSnapshot": "In monthly snapshot",
+        "yes": "Yes",
+        "no": "No",
+        "trends": {
+          "hold": "Hold last value",
+          "interpolate": "Interpolate for charts"
+        }
+      },
+      "transactions": {
+        "title": "Transactions arrive with expenses",
+        "description": "This account's transactions will appear here once the expenses module lands."
+      }
+    },
+    "entries": {
+      "saved": "Balance saved",
+      "deleted": "Balance deleted",
+      "errors": {
+        "invalid": "Check the date and the amount, then try again.",
+        "futureDate": "A balance cannot be dated in the future.",
+        "failed": "Couldn't save the balance. Try again."
+      },
+      "add": {
+        "title": "Add balance entry",
+        "manualNote": "Balances you record here drive every total and chart for this account.",
+        "syncedNote": "This account is synced. A balance you add is a correction and wins for that date.",
+        "date": "Date",
+        "balance": "Balance",
+        "note": "Note",
+        "submit": "Save balance"
+      },
+      "list": {
+        "title": "Balance entries",
+        "count": "{count, plural, =0 {none} one {# entry} other {# entries}}",
+        "empty": "No balances recorded yet.",
+        "date": "Date",
+        "balance": "Balance",
+        "change": "Change",
+        "note": "Note",
+        "source": "Source",
+        "actions": "Actions",
+        "delete": "Delete"
+      },
+      "sources": {
+        "manual": "Manual",
+        "provider": "Provider",
+        "system": "Snapshot",
+        "import": "Import"
+      }
+    },
+    "settings": {
+      "saved": "Account saved",
+      "restored": "Account restored",
+      "errors": {
+        "invalid": "Check the highlighted fields and try again.",
+        "failed": "Couldn't save. Try again."
+      },
+      "general": {
+        "title": "General",
+        "description": "How this account is named and identified.",
+        "name": "Name",
+        "provider": "Provider",
+        "manualProvider": "Manual accounts have no provider.",
+        "type": "Type",
+        "locked": "Set by the provider.",
+        "purpose": "Purpose",
+        "reference": "IBAN or reference",
+        "color": "Colour",
+        "currency": "Currency",
+        "openedOn": "Opened on"
+      },
+      "source": {
+        "title": "Data source",
+        "description": "Where the balance comes from and how it behaves between readings.",
+        "syncedNote": "Connected through {provider}. Credentials live in Settings › Integrations.",
+        "manualNote": "You keep this account up to date from the Balance entries tab.",
+        "reminder": "Reminder to update",
+        "reminders": {
+          "monthly": "Monthly",
+          "quarterly": "Quarterly",
+          "never": "Never"
+        },
+        "betweenEntries": "Between entries",
+        "trendHint": "Interpolation shapes the charts only, never the totals.",
+        "trends": {
+          "hold": "Hold last value",
+          "interpolate": "Interpolate linearly"
+        },
+        "staleAfter": "Stale after (hours)"
+      },
+      "reporting": {
+        "title": "Reporting",
+        "description": "What this account counts towards, and when to warn you.",
+        "inNetWorth": "Include in net worth",
+        "inSnapshot": "Include in the monthly snapshot",
+        "countsAsLiquid": "Count as liquid",
+        "lowBalance": "Warn below",
+        "lowBalanceHint": "Leave empty for no balance warning.",
+        "notes": "Notes",
+        "footnote": "Warnings are sent once a week while the condition lasts."
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Archiving hides the account and keeps its history in past snapshots.",
+        "explain": "Archive this account, or delete it outright when nothing depends on it.",
+        "archived": "This account is archived. Its balances are still counted in past months.",
+        "archive": "Archive account",
+        "restore": "Restore account"
+      }
     }
   }
 }

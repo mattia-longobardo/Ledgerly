@@ -8,6 +8,7 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
   const tabs: { href: Route; label: string }[] = [
     { href: "/settings/profile", label: t("tabs.profile") },
     { href: "/settings/security", label: t("tabs.security") },
+    { href: "/settings/data", label: t("tabs.data") },
   ];
   return (
     <Page title={<SettingsTitle tabs={tabs} />} parent={{ href: "/settings/profile", label: t("title") }}>

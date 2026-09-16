@@ -5,15 +5,21 @@
     "close": "Chiudi",
     "retry": "Riprova",
     "or": "oppure",
-    "loading": "Caricamento…"
+    "loading": "Caricamento…",
+    "cancel": "Annulla"
   },
   "nav": {
     "primary": "Principale",
-    "groups": { "finance": "Finanza", "work": "Lavoro", "system": "Sistema" },
+    "groups": {
+      "finance": "Finanza",
+      "work": "Lavoro",
+      "system": "Sistema"
+    },
     "overview": "Panoramica",
     "settings": "Impostazioni",
     "components": "Componenti",
-    "more": "Altro"
+    "more": "Altro",
+    "accounts": "Conti"
   },
   "shell": {
     "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
@@ -22,7 +28,10 @@
     "themeSaveError": "Impossibile salvare il tema. Riprova.",
     "signOut": "Esci",
     "profile": "Profilo e preferenze",
-    "via": { "authentik": "tramite Authentik", "password": "tramite password" },
+    "via": {
+      "authentik": "tramite Authentik",
+      "password": "tramite password"
+    },
     "palette": {
       "placeholder": "Vai a una pagina…",
       "pages": "Pagine",
@@ -39,6 +48,14 @@
     "passwordReset": {
       "subject": "Reimposta la password di Finance Dashboard",
       "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non hai richiesto tu il reset, ignora questa email.\n"
+    },
+    "lowBalance": {
+      "subject": "{account} è sotto la soglia",
+      "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Finance Dashboard per controllare."
+    },
+    "staleSync": {
+      "subject": "{account} non si sincronizza da un po'",
+      "body": "L'ultima lettura di {account} è più vecchia di {hours} ore.\n\nApri Finance Dashboard per ricollegarlo o inserire un saldo a mano."
     }
   },
   "auth": {
@@ -91,7 +108,12 @@
   },
   "settings": {
     "title": "Impostazioni",
-    "tabs": { "label": "Sezioni delle impostazioni", "profile": "Profilo", "security": "Sicurezza" },
+    "tabs": {
+      "label": "Sezioni delle impostazioni",
+      "profile": "Profilo",
+      "security": "Sicurezza",
+      "data": "Dati"
+    },
     "account": {
       "title": "Account",
       "description": "Come appari nell'app e dove arrivano le notifiche.",
@@ -99,7 +121,10 @@
       "email": "Email",
       "ssoNote": "Nome ed email sono gestiti da Authentik finché l'SSO è collegato.",
       "role": "Ruolo: <strong>{role}</strong>",
-      "roles": { "admin": "Amministratore", "user": "Utente" },
+      "roles": {
+        "admin": "Amministratore",
+        "user": "Utente"
+      },
       "saved": "Account salvato",
       "errors": {
         "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
@@ -112,7 +137,10 @@
       "description": "Formati e lingua. Gli importi restano in EUR.",
       "timeZone": "Fuso orario",
       "language": "Lingua",
-      "languages": { "en": "English", "it": "Italiano" },
+      "languages": {
+        "en": "English",
+        "it": "Italiano"
+      },
       "numberFormat": "Formato dei numeri",
       "numberFormats": {
         "it-IT": "1.234,56 € (it-IT)",
@@ -120,9 +148,16 @@
         "fr-FR": "1 234,56 € (fr-FR)"
       },
       "weekStart": "Primo giorno della settimana",
-      "weekStarts": { "monday": "Lunedì", "sunday": "Domenica" },
+      "weekStarts": {
+        "monday": "Lunedì",
+        "sunday": "Domenica"
+      },
       "theme": "Tema",
-      "themes": { "system": "Sistema", "light": "Chiaro", "dark": "Scuro" },
+      "themes": {
+        "system": "Sistema",
+        "light": "Chiaro",
+        "dark": "Scuro"
+      },
       "defaultRange": "Intervallo predefinito",
       "ranges": {
         "this_month": "Questo mese",
@@ -161,7 +196,9 @@
       "changed": "Password aggiornata",
       "ssoOnly": "Questo account accede solo con Authentik: non c'è una password da cambiare.",
       "failed": "La password attuale è errata.",
-      "errors": { "generic": "Qualcosa è andato storto. Riprova." }
+      "errors": {
+        "generic": "Qualcosa è andato storto. Riprova."
+      }
     },
     "sessions": {
       "title": "Sessioni",
@@ -173,7 +210,33 @@
       "signOutDevice": "Disconnetti {device}",
       "signOutOthers": "Disconnetti le altre sessioni",
       "since": "dal {date}",
-      "errors": { "failed": "Impossibile disconnettere la sessione. Riprova." }
+      "errors": {
+        "failed": "Impossibile disconnettere la sessione. Riprova."
+      }
+    },
+    "snapshots": {
+      "title": "Snapshot mensile",
+      "description": "Il 1° di ogni mese ogni conto incluso riceve un saldo all'ultimo giorno del mese appena chiuso.",
+      "takeNow": "Esegui ora lo snapshot",
+      "taken": "Snapshot eseguito",
+      "failed": "Non è stato possibile eseguire lo snapshot. Riprova.",
+      "states": {
+        "success": "OK",
+        "warning": "Avviso",
+        "failed": "Fallito"
+      },
+      "log": {
+        "title": "Registro degli snapshot",
+        "description": "Una riga per ogni snapshot mensile.",
+        "empty": "Nessuno snapshot eseguito.",
+        "month": "Mese",
+        "result": "Esito",
+        "accounts": "Conti",
+        "total": "Totale",
+        "detail": "Dettaglio",
+        "written": "{written} scritti · {skipped} saltati",
+        "stale": "Non aggiornati al momento dello snapshot: {accounts}"
+      }
     }
   },
   "errors": {
@@ -190,10 +253,29 @@
   "overview": {
     "title": "Panoramica",
     "empty": {
-      "title": "Ancora nessun dato",
-      "description": "Conti, saldi e patrimonio compaiono qui dopo la creazione del primo conto.",
-      "cta": "Apri le impostazioni"
-    }
+      "title": "Ancora nessun conto",
+      "description": "Aggiungi il primo conto per iniziare a seguire il patrimonio.",
+      "cta": "Aggiungi conto"
+    },
+    "netWorth": {
+      "on": "Patrimonio · {date}",
+      "vsLastMonth": "rispetto al mese scorso",
+      "ytd": "Da inizio anno {value}"
+    },
+    "lastSnapshot": "Ultimo snapshot {date}",
+    "noSnapshot": "Nessuno snapshot ancora",
+    "partial": "Alcuni conti non hanno ancora un saldo: questo totale è incompleto.",
+    "kpis": {
+      "cash": "Liquidità",
+      "savings": "Risparmi",
+      "investments": "Investimenti"
+    },
+    "chart": {
+      "title": "Patrimonio nel tempo",
+      "range": "Intervallo",
+      "summary": "Patrimonio da {from} a {to}, fino a {value}."
+    },
+    "manageAccounts": "Gestisci"
   },
   "gallery": {
     "title": "Componenti",
@@ -292,6 +374,236 @@
       "navDefault": "Normale",
       "navHover": "Al passaggio",
       "navActiveFocus": "Attiva + focus"
+    }
+  },
+  "accounts": {
+    "title": "Conti",
+    "add": "Aggiungi conto",
+    "summary": "{total} su {count, plural, =0 {nessun conto} one {# conto} other {# conti}}",
+    "countAccounts": "{count, plural, =0 {nessun conto} one {# conto} other {# conti}}",
+    "total": "Totale",
+    "stale": "Non aggiornato",
+    "partial": "Alcuni conti non hanno ancora un saldo: questi totali sono incompleti.",
+    "empty": {
+      "title": "Ancora nessun conto",
+      "description": "Aggiungi un conto a mano, o collega un provider quando arriveranno le integrazioni."
+    },
+    "columns": {
+      "name": "Nome",
+      "type": "Tipo",
+      "balance": "Saldo",
+      "monthlyChange": "Variazione mensile",
+      "yoy": "Su anno",
+      "share": "Quota",
+      "lastSynced": "Ultima sincronizzazione",
+      "history": "Andamento"
+    },
+    "kpis": {
+      "total": "Totale",
+      "cash": "Liquidità",
+      "savings": "Risparmi",
+      "investments": "Investito"
+    },
+    "types": {
+      "checking": "Conto corrente",
+      "savings": "Deposito",
+      "cash": "Contanti",
+      "investment": "Investimento",
+      "pension": "Pensione",
+      "crypto": "Cripto",
+      "credit": "Credito",
+      "other": "Altro"
+    },
+    "states": {
+      "active": "Attivo",
+      "unavailable": "Non disponibile",
+      "archived": "Archiviato"
+    },
+    "origins": {
+      "manual": "Manuale",
+      "syncedWith": "Sincronizzato con {provider}"
+    },
+    "synced": {
+      "never": "Mai",
+      "minutes": "{count, plural, one {# minuto fa} other {# minuti fa}}",
+      "hours": "{count, plural, one {# ora fa} other {# ore fa}}",
+      "days": "{count, plural, one {# giorno fa} other {# giorni fa}}"
+    },
+    "chart": {
+      "title": "Saldi · {count} mesi",
+      "summary": "Una linea per conto, {count} conti in tutto."
+    },
+    "composition": {
+      "title": "Composizione",
+      "liquid": "Liquido · contanti",
+      "invested": "Investito · fondi e pensione"
+    },
+    "new": {
+      "title": "Nuovo conto",
+      "description": "Un conto manuale che aggiorni tu. Il saldo iniziale è facoltativo e si può aggiungere dopo.",
+      "name": "Nome",
+      "type": "Tipo",
+      "purpose": "Scopo",
+      "purposeHint": "A cosa serve, per esempio stipendio e bollette.",
+      "reference": "IBAN o riferimento",
+      "currency": "Valuta",
+      "color": "Colore",
+      "openedOn": "Aperto il",
+      "openingBalance": "Saldo iniziale",
+      "openingBalanceHint": "Lascia vuoto per inserire i saldi più avanti.",
+      "openingBalanceOn": "Data del saldo",
+      "submit": "Crea conto",
+      "errors": {
+        "invalid": "Controlla i campi segnalati e riprova.",
+        "futureDate": "Un saldo non può avere una data futura.",
+        "failed": "Non è stato possibile creare il conto. Riprova."
+      }
+    },
+    "detail": {
+      "tabs": {
+        "label": "Sezioni del conto",
+        "overview": "Panoramica",
+        "transactions": "Movimenti",
+        "entries": "Saldi",
+        "settings": "Impostazioni"
+      },
+      "thisMonth": "questo mese",
+      "shareOfNetWorth": "{value} del patrimonio",
+      "kpis": {
+        "balance": "Saldo",
+        "yoy": "Su base annua",
+        "share": "Quota",
+        "shareNote": "del patrimonio",
+        "opened": "Aperto"
+      },
+      "chart": {
+        "title": "Saldo · {count} mesi",
+        "summary": "{name} nel tempo, fino a {value}."
+      },
+      "monthEnd": {
+        "title": "Saldi di fine mese",
+        "empty": "Nessun saldo registrato.",
+        "month": "Mese",
+        "balance": "Saldo",
+        "change": "Variazione",
+        "percent": "%"
+      },
+      "details": {
+        "title": "Dettagli",
+        "reference": "Riferimento",
+        "purpose": "Scopo",
+        "currency": "Valuta",
+        "source": "Origine dei dati",
+        "betweenEntries": "Tra due saldi",
+        "inNetWorth": "Nel patrimonio",
+        "inSnapshot": "Nello snapshot mensile",
+        "yes": "Sì",
+        "no": "No",
+        "trends": {
+          "hold": "Riporta l'ultimo valore",
+          "interpolate": "Interpola nei grafici"
+        }
+      },
+      "transactions": {
+        "title": "I movimenti arrivano con le spese",
+        "description": "I movimenti di questo conto compariranno qui quando arriverà il modulo spese."
+      }
+    },
+    "entries": {
+      "saved": "Saldo salvato",
+      "deleted": "Saldo eliminato",
+      "errors": {
+        "invalid": "Controlla la data e l'importo, poi riprova.",
+        "futureDate": "Un saldo non può avere una data futura.",
+        "failed": "Non è stato possibile salvare il saldo. Riprova."
+      },
+      "add": {
+        "title": "Aggiungi saldo",
+        "manualNote": "I saldi che registri qui alimentano tutti i totali e i grafici di questo conto.",
+        "syncedNote": "Questo conto è sincronizzato. Un saldo inserito a mano è una correzione e vale per quella data.",
+        "date": "Data",
+        "balance": "Saldo",
+        "note": "Nota",
+        "submit": "Salva saldo"
+      },
+      "list": {
+        "title": "Saldi",
+        "count": "{count, plural, =0 {nessuno} one {# saldo} other {# saldi}}",
+        "empty": "Nessun saldo registrato.",
+        "date": "Data",
+        "balance": "Saldo",
+        "change": "Variazione",
+        "note": "Nota",
+        "source": "Origine",
+        "actions": "Azioni",
+        "delete": "Elimina"
+      },
+      "sources": {
+        "manual": "Manuale",
+        "provider": "Provider",
+        "system": "Snapshot",
+        "import": "Importazione"
+      }
+    },
+    "settings": {
+      "saved": "Conto salvato",
+      "restored": "Conto ripristinato",
+      "errors": {
+        "invalid": "Controlla i campi segnalati e riprova.",
+        "failed": "Non è stato possibile salvare. Riprova."
+      },
+      "general": {
+        "title": "Generale",
+        "description": "Come si chiama e come si riconosce questo conto.",
+        "name": "Nome",
+        "provider": "Provider",
+        "manualProvider": "I conti manuali non hanno un provider.",
+        "type": "Tipo",
+        "locked": "Deciso dal provider.",
+        "purpose": "Scopo",
+        "reference": "IBAN o riferimento",
+        "color": "Colore",
+        "currency": "Valuta",
+        "openedOn": "Aperto il"
+      },
+      "source": {
+        "title": "Origine dei dati",
+        "description": "Da dove arriva il saldo e come si comporta tra una lettura e l'altra.",
+        "syncedNote": "Collegato tramite {provider}. Le credenziali stanno in Impostazioni › Integrazioni.",
+        "manualNote": "Questo conto lo aggiorni tu dalla scheda Saldi.",
+        "reminder": "Promemoria di aggiornamento",
+        "reminders": {
+          "monthly": "Ogni mese",
+          "quarterly": "Ogni trimestre",
+          "never": "Mai"
+        },
+        "betweenEntries": "Tra due saldi",
+        "trendHint": "L'interpolazione vale solo per i grafici, mai per i totali.",
+        "trends": {
+          "hold": "Riporta l'ultimo valore",
+          "interpolate": "Interpola linearmente"
+        },
+        "staleAfter": "Obsoleto dopo (ore)"
+      },
+      "reporting": {
+        "title": "Conteggi",
+        "description": "In quali totali entra questo conto e quando avvisarti.",
+        "inNetWorth": "Includi nel patrimonio",
+        "inSnapshot": "Includi nello snapshot mensile",
+        "countsAsLiquid": "Conta come liquidità",
+        "lowBalance": "Avvisa sotto",
+        "lowBalanceHint": "Lascia vuoto per non ricevere avvisi di saldo.",
+        "notes": "Note",
+        "footnote": "Gli avvisi arrivano una volta a settimana finché la condizione dura."
+      },
+      "danger": {
+        "title": "Zona pericolosa",
+        "description": "L'archiviazione nasconde il conto e ne conserva lo storico negli snapshot passati.",
+        "explain": "Archivia questo conto, oppure eliminalo se non dipende nulla da lui.",
+        "archived": "Questo conto è archiviato. I suoi saldi contano ancora nei mesi passati.",
+        "archive": "Archivia conto",
+        "restore": "Ripristina conto"
+      }
     }
   }
 }

@@ -26,6 +26,21 @@ test("phones get bottom tabs and a More sheet instead of the sidebar", async ({ 
       return box && box.y + box.height;
     })
     .toBe(bar!.y);
-  await sheet.getByRole("button", { name: "Sign out" }).click();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+
+  // Accounts is one of the bottom tabs, and its page fits a 400 px screen without sideways
+  // scrolling (spec §8.2). Checked inside this test rather than its own: the run's password
+  // sign-ins are all spoken for (tests/e2e/env.ts).
+  await tabs.getByRole("link", { name: "Accounts" }).click();
+  await expect(page).toHaveURL("/accounts");
+  await expect(page.getByRole("heading", { name: "No accounts yet" })).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  await tabs.getByRole("button", { name: "More" }).click();
+  await page.getByRole("dialog", { name: "More" }).getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });
