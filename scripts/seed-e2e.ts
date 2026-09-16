@@ -9,6 +9,7 @@ import { createAuth } from "../src/platform/auth/auth";
 import { createInvitation } from "../src/platform/auth/invitations";
 import { users } from "../src/platform/auth/schema";
 import type { Ctx } from "../src/platform/context";
+import { addMonths, monthKey, today } from "../src/platform/dates";
 import { getDb } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
 import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
@@ -98,8 +99,12 @@ async function seedExpenses(): Promise<void> {
     .where(userScoped(ctx).owns(accounts));
   if (!account) throw new Error("The provider account was not adopted");
 
-  // Invented figures, two months apart so the month groups and the period stepper both have
-  // something to show. September is the month the journey looks at.
+  // Invented figures, in this month and the one before, so the month groups and the period
+  // stepper both have something to show. The dates are derived from today rather than written
+  // down: `/expenses` opens on the current month, so a fixed month would make the journey pass
+  // until that month went by and then fail as though Expenses were broken.
+  const thisMonth = monthKey(today(ctx.timeZone)).slice(0, 7);
+  const lastMonth = addMonths(monthKey(today(ctx.timeZone)), -1).slice(0, 7);
   const movement = (
     externalId: string,
     on: string,
@@ -122,11 +127,11 @@ async function seedExpenses(): Promise<void> {
   });
 
   await upsertFromProvider(ctx, account.id, [
-    movement("e2e-tx-1", "2026-09-02", -1299n, "Netflix", "Abbonamenti"),
-    movement("e2e-tx-2", "2026-09-04", -4550n, "Esselunga", "Spesa"),
-    movement("e2e-tx-3", "2026-09-09", -2100n, "Trenitalia", "Trasporti"),
-    movement("e2e-tx-4", "2026-09-11", 210000n, "Stipendio", null),
-    movement("e2e-tx-5", "2026-08-12", -1299n, "Netflix", "Abbonamenti"),
+    movement("e2e-tx-1", `${thisMonth}-02`, -1299n, "Netflix", "Abbonamenti"),
+    movement("e2e-tx-2", `${thisMonth}-04`, -4550n, "Esselunga", "Spesa"),
+    movement("e2e-tx-3", `${thisMonth}-09`, -2100n, "Trenitalia", "Trasporti"),
+    movement("e2e-tx-4", `${thisMonth}-11`, 210000n, "Stipendio", null),
+    movement("e2e-tx-5", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
   ]);
 }
 
