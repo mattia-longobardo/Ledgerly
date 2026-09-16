@@ -10,7 +10,7 @@ export async function resetDatabase(): Promise<void> {
 /** Closes the shared pool. Call in `afterAll`. */
 export async function closeDatabase(): Promise<void> {
   await getPool().end();
-  const cache = globalThis as unknown as { financePool?: unknown; financeDb?: unknown };
-  cache.financePool = undefined;
-  cache.financeDb = undefined;
+  const cache = globalThis as unknown as { ledgerlyPool?: unknown; ledgerlyDb?: unknown };
+  cache.ledgerlyPool = undefined;
+  cache.ledgerlyDb = undefined;
 }

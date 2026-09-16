@@ -33,7 +33,7 @@ export const envSchema = z
     OIDC_DISCOVERY_URL: z.url(),
     OIDC_CLIENT_ID: z.string().min(1),
     OIDC_CLIENT_SECRET: z.string().min(1),
-    OIDC_ADMIN_GROUP: z.string().min(1).default("finance-admins"),
+    OIDC_ADMIN_GROUP: z.string().min(1).default("ledgerly-admins"),
     SMTP_HOST: z.string().min(1),
     SMTP_PORT: z.coerce.number().int().positive(),
     SMTP_SECURE: z

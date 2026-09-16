@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 
 // Matches test/integration-setup.ts's own DEFAULT_TEST_DATABASE_URL fallback (not imported here:
 // that file's own imports are unsafe for Vite's config-loading, see its comment).
-const DEFAULT_TEST_DATABASE_URL = "postgres://finance:finance@127.0.0.1:55432/finance_test";
+const DEFAULT_TEST_DATABASE_URL = "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly_test";
 
 export default defineConfig({
   plugins: [react()],
@@ -45,16 +45,16 @@ export default defineConfig({
             BETTER_AUTH_URL: "http://127.0.0.1:3000",
             BETTER_AUTH_SECRET: "integration-secret-integration-secret-32",
             OIDC_DISCOVERY_URL: "http://127.0.0.1:58090/default/.well-known/openid-configuration",
-            OIDC_CLIENT_ID: "finance",
-            OIDC_CLIENT_SECRET: "finance-dev",
-            OIDC_ADMIN_GROUP: "finance-admins",
+            OIDC_CLIENT_ID: "ledgerly",
+            OIDC_CLIENT_SECRET: "ledgerly-dev",
+            OIDC_ADMIN_GROUP: "ledgerly-admins",
             SMTP_HOST: "127.0.0.1",
             SMTP_PORT: "51025",
             MAIL_FROM: "Ledgerly <ledgerly@example.test>",
             S3_ENDPOINT: "http://127.0.0.1:59000",
-            S3_ACCESS_KEY_ID: "finance",
-            S3_SECRET_ACCESS_KEY: "finance-dev-secret",
-            S3_BUCKET: "finance-test",
+            S3_ACCESS_KEY_ID: "ledgerly",
+            S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
+            S3_BUCKET: "ledgerly-test",
             CRON_SECRET: "integration-cron-secret-integration",
             HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-test",
             METRICS_TOKEN: "integration-metrics-token-integration-metrics-token",
