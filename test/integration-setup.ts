@@ -6,13 +6,13 @@ import { runMigrations } from "../src/platform/db/migrate";
 // same value when TEST_DATABASE_URL is unset. Not imported there: that would pull this file's own
 // imports (pg, drizzle) into Vite's config-loading, which does not tolerate extension-less
 // relative imports.
-export const DEFAULT_TEST_DATABASE_URL = "postgres://finance:finance@127.0.0.1:55432/finance_test";
+export const DEFAULT_TEST_DATABASE_URL = "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly_test";
 
 /**
  * Drops and recreates the `public` and `drizzle` schemas before every integration run, so
  * `runMigrations` always applies from an empty database (spec §11) instead of from whatever the
  * previous run left behind. Guarded on the database name: this must never run against anything
- * but the `finance_test` database `TEST_DATABASE_URL` points at.
+ * but the `ledgerly_test` database `TEST_DATABASE_URL` points at.
  */
 async function resetTestDatabase(pool: Pool): Promise<void> {
   const {

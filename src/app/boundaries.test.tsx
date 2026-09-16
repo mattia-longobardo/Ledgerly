@@ -8,7 +8,7 @@ import ErrorBoundary from "./error";
 import GlobalError from "./global-error";
 import NotFound from "./not-found";
 
-const LEAK = new Error('relation "user_preferences" does not exist at postgres://finance@db');
+const LEAK = new Error('relation "user_preferences" does not exist at postgres://ledgerly@db');
 
 function inItalian(children: React.ReactNode) {
   return render(

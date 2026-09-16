@@ -240,7 +240,7 @@ interface CachedAuth {
   retryAt: number | null;
 }
 
-const cache = globalThis as unknown as { financeAuth?: CachedAuth };
+const cache = globalThis as unknown as { ledgerlyAuth?: CachedAuth };
 
 /**
  * The app-wide instance. `nextCookies()` lets Server Actions set the session cookie. An instance
@@ -248,14 +248,14 @@ const cache = globalThis as unknown as { financeAuth?: CachedAuth };
  * backoff (5 s, doubling, at most 5 min) so SSO recovers without a restart.
  */
 export function getAuth(): Auth {
-  const cached = cache.financeAuth;
+  const cached = cache.ledgerlyAuth;
   if (cached && (cached.retryAt === null || Date.now() < cached.retryAt)) return cached.auth;
   const entry: CachedAuth = {
     auth: createAuth({ withNextCookies: true }),
     failures: cached?.failures ?? 0,
     retryAt: null,
   };
-  cache.financeAuth = entry;
+  cache.ledgerlyAuth = entry;
   const degraded = () => {
     entry.failures += 1;
     entry.retryAt = Date.now() + Math.min(RETRY_BASE_MS * 2 ** (entry.failures - 1), RETRY_MAX_MS);

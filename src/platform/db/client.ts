@@ -8,14 +8,14 @@ export type Db = NodePgDatabase<typeof tables>;
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 // Cached on globalThis so `next dev` hot reloads do not open a new pool each time.
-const cache = globalThis as unknown as { financePool?: Pool; financeDb?: Db };
+const cache = globalThis as unknown as { ledgerlyPool?: Pool; ledgerlyDb?: Db };
 
 export function getPool(): Pool {
-  cache.financePool ??= new Pool({ connectionString: readEnv().DATABASE_URL, max: 10 });
-  return cache.financePool;
+  cache.ledgerlyPool ??= new Pool({ connectionString: readEnv().DATABASE_URL, max: 10 });
+  return cache.ledgerlyPool;
 }
 
 export function getDb(): Db {
-  cache.financeDb ??= drizzle(getPool(), { schema: tables });
-  return cache.financeDb;
+  cache.ledgerlyDb ??= drizzle(getPool(), { schema: tables });
+  return cache.ledgerlyDb;
 }
