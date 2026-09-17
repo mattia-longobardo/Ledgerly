@@ -1,12 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Ledgerly">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Ledgerly">
   <title>Ledgerly</title>
   <!--
     The brand mark of spec §8.1: the letter in a rounded square, matching `BrandMark` in
-    `src/ui/shell/brand.tsx`. Painted in `--primary` (#0e7490), which is the one brand colour that
+    `src/ui/shell/brand.tsx`. Painted in the `primary` token (#0e7490), which is the one brand colour that
     is identical in the light and dark palettes of `globals.css` — a favicon has no theme of its
     own and has to stay legible on either browser chrome. The letter is a path, not text: a tab
     icon is rendered without the page's fonts, so `font-family` here would fall back to whatever
     the platform offers and change shape per machine.
+
+    This file is the source of the raster icons beside it — `favicon.ico`, `icon.png`,
+    `apple-icon.png` — which exist because an SVG favicon alone is not enough: Safari does not use
+    one, and every browser asks for `/favicon.ico` unprompted. Re-render them with
+    `node scripts/icons.mjs` after changing anything here.
   -->
   <rect width="32" height="32" rx="8" fill="#0e7490" />
   <path d="M10.5 7.75h4v12.5h7v4h-11z" fill="#ffffff" />
