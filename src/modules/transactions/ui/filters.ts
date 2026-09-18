@@ -19,6 +19,12 @@ export type RangePreset = (typeof RANGE_PRESETS)[number];
 /** The range the screen opens on. */
 export const DEFAULT_PRESET: RangePreset = "thisMonth";
 
+/** What the spending chart adds up per point: days, or months (F2.5). */
+export type ChartGrain = "day" | "month";
+
+/** Up to this many days a range is drawn day by day unless the address says otherwise. */
+export const DAY_GRAIN_MAX_DAYS = 62;
+
 /** The five sortable columns of the design, matching `TransactionSort` in `queries.ts`. */
 export const SORT_KEYS = ["date", "payee", "account", "category", "amount"] as const;
 
@@ -181,6 +187,8 @@ export interface ExpensesQuery {
   showHidden: boolean;
   sort: SortKey;
   direction: SortDirection;
+  /** The spending chart's grain: the one the address chose, or the one the range calls for. */
+  grain: ChartGrain;
   /** Whether anything other than the date range narrows the list (the design's "Clear filters"). */
   filtered: boolean;
   /** The current parameters, for a control that changes one of them and keeps the rest. */
@@ -233,9 +241,16 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     q: search || undefined,
     hidden: showHidden ? "1" : undefined,
   };
+  const wantedGrain = one(raw.grain);
+  const chosenGrain: ChartGrain | null =
+    wantedGrain === "day" || wantedGrain === "month" ? wantedGrain : null;
+  const grain: ChartGrain = chosenGrain ?? (daysInRange(range) <= DAY_GRAIN_MAX_DAYS ? "day" : "month");
+  // How the screen is drawn rather than what it holds: it travels with every link, and "Clear
+  // filters" keeps it, like the sort.
   const order: Params = {
     sort: sort === DEFAULT_SORT ? undefined : sort,
     dir: direction === DEFAULT_DIRECTION[sort] ? undefined : direction,
+    grain: chosenGrain ?? undefined,
   };
   const period: Params = {
     preset: preset === null || preset === DEFAULT_PRESET ? undefined : preset,
@@ -255,6 +270,7 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     showHidden,
     sort,
     direction,
+    grain,
     filtered:
       categorySelection.length > 0 || accountId !== null || type !== null || search !== "" || showHidden,
     params: { ...period, ...filters, ...order },

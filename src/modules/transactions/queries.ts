@@ -736,6 +736,63 @@ export async function categoryTotals(
     );
 }
 
+/** What one group of categories spent in one day or month (F2.5): the Expenses chart's unit. */
+export interface SpendingPoint {
+  /** The day, or the first of the month, in the user's own zone. */
+  bucket: CivilDate;
+  /** The group — a sub-category counts in its parent — or `null` for the uncategorised. */
+  groupId: string | null;
+  groupName: string | null;
+  groupColor: string | null;
+  /** What was spent, as a positive amount. */
+  cents: Cents;
+}
+
+/**
+ * The spending of the filtered range per day or per month and per group of categories (spec §7.2,
+ * F2.5), for the stacked chart over the Expenses table. Only `expense` movements count — a
+ * giroconto is not spending, and neither is income — and hidden or gone-from-provider rows stay
+ * out as in every total. The type filter is set aside: the chart is about spending whatever the
+ * list shows; every other filter narrows it like the list.
+ */
+export async function spendingOverTime(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters,
+  grain: "day" | "month",
+): Promise<SpendingPoint[]> {
+  const parents = alias(categories, "spending_parents");
+  const bucket =
+    grain === "day"
+      ? sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`
+      : monthExpression(ctx.timeZone);
+  const rows = await getDb()
+    .select({
+      bucket,
+      groupId: sql<string | null>`coalesce(${categories.parentId}, ${transactions.categoryId})`,
+      groupName: sql<string | null>`coalesce(${parents.name}, ${categories.name})`,
+      groupColor: sql<
+        string | null
+      >`case when ${categories.parentId} is null then ${categories.color} else ${parents.color} end`,
+      cents: sum(transactions.amountCents),
+    })
+    .from(transactions)
+    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+    .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
+    .where(
+      and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, "expense")),
+    )
+    // By position, for the same reason as `monthlyTotals`.
+    .groupBy(sql`1`, sql`2`, sql`3`, sql`4`)
+    .orderBy(sql`1`, sql`2`);
+  return rows.map((row) => ({
+    bucket: row.bucket,
+    groupId: row.groupId,
+    groupName: row.groupName,
+    groupColor: row.groupColor,
+    cents: -cents(row.cents),
+  }));
+}
+
 /**
  * The counts behind the account, category and type chips of the filter bar (spec §7.2). A chip
  * promises rows in the list rather than an amount, so these follow "Show hidden" the way the list

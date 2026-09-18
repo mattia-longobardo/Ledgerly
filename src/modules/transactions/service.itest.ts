@@ -13,6 +13,7 @@ import {
   listTransactions,
   monthlyTotals,
   searchPayees,
+  spendingOverTime,
   transactionsSummary,
 } from "./queries";
 import type { IncomingTransaction } from "./rules";
@@ -768,6 +769,34 @@ describe("reads", () => {
       ["Groceries", "Living"],
     ]);
     expect(slices[0]).toMatchObject({ parentId: living.id, parentColor: null });
+  });
+
+  it("adds up the spending per day or per month and per group, giroconti left out (F2.5)", async () => {
+    const living = await createCategory(ctx, { name: "Living" });
+    const groceries = (await listCategories(ctx)).find((one) => one.name === "Groceries");
+    await updateCategory(ctx, groceries?.id ?? "", { name: "Groceries", parentId: living.id });
+    const utilities = (await listCategories(ctx)).find((one) => one.name === "Utilities");
+
+    // March by day: the two Groceries movements under their group, the −200 € giroconto nowhere.
+    expect(await spendingOverTime(ctx, MARCH, "day")).toEqual([
+      { bucket: "2026-03-02", groupId: living.id, groupName: "Living", groupColor: null, cents: 1_000n },
+      { bucket: "2026-03-10", groupId: living.id, groupName: "Living", groupColor: null, cents: 4_000n },
+    ]);
+    // By month, February's Enel under its own (ungrouped) category.
+    expect(await spendingOverTime(ctx, {}, "month")).toEqual([
+      {
+        bucket: "2026-02-01",
+        groupId: utilities?.id,
+        groupName: "Utilities",
+        groupColor: null,
+        cents: 6_000n,
+      },
+      { bucket: "2026-03-01", groupId: living.id, groupName: "Living", groupColor: null, cents: 5_000n },
+    ]);
+    // The other filters narrow it, the type filter does not turn it into something else.
+    expect(await spendingOverTime(ctx, { ...MARCH, payee: "essel", types: ["income"] }, "day")).toEqual([
+      { bucket: "2026-03-10", groupId: living.id, groupName: "Living", groupColor: null, cents: 4_000n },
+    ]);
   });
 
   it("sorts by amount and by payee, deterministically", async () => {

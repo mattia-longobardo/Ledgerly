@@ -307,30 +307,54 @@ export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, 
 }
 
 /**
- * One account's balance on every day of a window (spec §7.1, F2.5), for Account detail's day grain:
- * a synced account's from its readings and its movements, a manual one's held between entries
- * (`dailySeries`). Both ends included; a window reaching past today is the caller's to trim.
+ * Several accounts' balances on every day of a window, in one read (spec §7.1, F2.5): a synced
+ * account's from its readings and its movements, a manual one's held between entries
+ * (`dailySeries`). Both ends included; a window reaching past today is the caller's to trim. An id
+ * that is not one of this user's accounts is simply absent from `series`.
  */
+export async function dailyBalancesOf(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+  window: { from: CivilDate; to: CivilDate },
+): Promise<{ days: CivilDate[]; series: Map<string, { values: (Cents | null)[]; estimated: boolean[] }> }> {
+  const wanted = new Set(accountIds);
+  const owned = (await listAccounts(ctx, { includeArchived: true })).filter((account) =>
+    wanted.has(account.id),
+  );
+  const syncedIds = owned.filter((account) => account.origin === "synced").map((account) => account.id);
+  const [observed, daily] = await Promise.all([
+    observedDays(
+      ctx,
+      owned.map((account) => account.id),
+    ),
+    dailyNetByAccount(ctx, syncedIds),
+  ]);
+  const days: CivilDate[] = [];
+  for (let day = window.from; day <= window.to; day = addDays(day, 1)) days.push(day);
+  const series = new Map(
+    owned.map((account) => [
+      account.id,
+      dailySeries(
+        observed.get(account.id) ?? [],
+        daily.get(account.id) ?? [],
+        days,
+        account.origin === "synced" ? "movements" : "hold",
+      ),
+    ]),
+  );
+  return { days, series };
+}
+
+/** One account day by day, for Account detail's day grain (see {@link dailyBalancesOf}). */
 export async function accountDailyBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountId: string,
   window: { from: CivilDate; to: CivilDate },
 ): Promise<{ days: CivilDate[]; values: (Cents | null)[]; estimated: boolean[] }> {
   const account = await requireAccount(ctx, accountId);
-  const synced = account.origin === "synced";
-  const [observed, daily] = await Promise.all([
-    observedDays(ctx, [account.id]),
-    synced ? dailyNetByAccount(ctx, [account.id]) : Promise.resolve(new Map<string, never[]>()),
-  ]);
-  const days: CivilDate[] = [];
-  for (let day = window.from; day <= window.to; day = addDays(day, 1)) days.push(day);
-  const series = dailySeries(
-    observed.get(account.id) ?? [],
-    daily.get(account.id) ?? [],
-    days,
-    synced ? "movements" : "hold",
-  );
-  return { days, ...series };
+  const { days, series } = await dailyBalancesOf(ctx, [account.id], window);
+  const one = series.get(account.id) ?? { values: days.map(() => null), estimated: days.map(() => false) };
+  return { days, ...one };
 }
 
 /**

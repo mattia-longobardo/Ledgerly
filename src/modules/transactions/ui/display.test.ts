@@ -8,6 +8,7 @@ import {
   categoryColors,
   groupedBreakdown,
   rangeLabel,
+  spendingLayers,
 } from "./display";
 
 const PLAIN: BadgeSource = {
@@ -215,5 +216,34 @@ describe("categoryColors", () => {
 
   it("keeps its own colour for a sub-category whose group is not in the list", () => {
     expect(categoryColors([category("orphan", "#10b981", "archived-group")]).get("orphan")).toBe("#10b981");
+  });
+});
+
+describe("spendingLayers", () => {
+  const buckets = ["2026-09-01", "2026-09-02", "2026-09-03"];
+
+  it("gives each group a value for every day, zero where it spent nothing, the biggest spender first", () => {
+    const { groups, totals } = spendingLayers(
+      [
+        { bucket: "2026-09-01", groupId: "casa", cents: 1_000n },
+        { bucket: "2026-09-03", groupId: "casa", cents: 500n },
+        { bucket: "2026-09-02", groupId: "svago", cents: 4_000n },
+        { bucket: "2026-09-02", groupId: null, cents: 200n },
+      ],
+      buckets,
+    );
+    expect(groups).toEqual([
+      { id: "svago", values: [0n, 4_000n, 0n], total: 4_000n },
+      { id: "casa", values: [1_000n, 0n, 500n], total: 1_500n },
+      { id: null, values: [0n, 200n, 0n], total: 200n },
+    ]);
+    expect(totals).toEqual([1_000n, 4_200n, 500n]);
+  });
+
+  it("ignores a point outside the buckets and answers zeros for a quiet range", () => {
+    expect(spendingLayers([{ bucket: "2026-08-31", groupId: "casa", cents: 1n }], buckets)).toEqual({
+      groups: [],
+      totals: [0n, 0n, 0n],
+    });
   });
 });

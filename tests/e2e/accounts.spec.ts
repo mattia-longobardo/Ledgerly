@@ -127,6 +127,12 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     const legend = page.getByRole("list", { name: "Accounts in the chart" });
     await expect(legend).toContainText("ING main");
     await expect(legend).toContainText("100");
+
+    // Day by day too, keeping the range.
+    await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Day" }).click();
+    await expect(page).toHaveURL(/grain=day/);
+    await expect(page).toHaveURL(/from=2026-01/);
+    await expect(legend).toContainText("ING main");
   });
 
   await test.step("a snapshot can be taken at once and lands in the log", async () => {

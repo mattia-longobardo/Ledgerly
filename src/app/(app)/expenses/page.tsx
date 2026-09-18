@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { withParams } from "@/modules/accounts/ui/controls";
-import { expensesView, type TransactionRow as QueryRow } from "@/modules/transactions/queries";
+import {
+  expensesView,
+  spendingOverTime,
+  type TransactionRow as QueryRow,
+} from "@/modules/transactions/queries";
+import { dayLabels, monthLabels } from "@/modules/accounts/ui/display";
+import { type SpendingBand, SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { displayPayee, isHidden } from "@/modules/transactions/rules";
 import { BreakdownCard } from "@/modules/transactions/ui/breakdown-card";
 import {
@@ -11,6 +17,7 @@ import {
   categoryColors,
   groupedBreakdown,
   monthLabel,
+  spendingLayers,
 } from "@/modules/transactions/ui/display";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
@@ -23,7 +30,7 @@ import type {
   RowView,
 } from "@/modules/transactions/ui/view";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
+import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { ButtonLink } from "@/ui/button";
@@ -49,8 +56,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ExpensesPage({ searchParams }: PageProps<"/expenses">) {
   const ctx = await requireSession();
   const t = await getTranslations("expenses");
-  const query = parseExpensesQuery(await searchParams, today(ctx.timeZone));
-  const view = await expensesView(ctx, filtersOf(query));
+  const todayOn = today(ctx.timeZone);
+  const query = parseExpensesQuery(await searchParams, todayOn);
+  const filters = filtersOf(query);
+  const [view, spending] = await Promise.all([
+    expensesView(ctx, filters),
+    spendingOverTime(ctx, filters, query.grain),
+  ]);
 
   const money = (cents: Cents) => formatMoney(cents, ctx.numberFormat);
 
@@ -164,6 +176,34 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     }),
   );
 
+  /**
+   * The spending chart's steps (F2.5): every day, or every month, from the start of the range to
+   * today at the latest — a day that has not happened spent nothing, and drawing it as zero would
+   * read as a quiet day.
+   */
+  const lastDay = query.range.to < todayOn ? query.range.to : todayOn;
+  const buckets: string[] = [];
+  if (query.grain === "day") {
+    for (let day = query.range.from; day <= lastDay; day = addDays(day, 1)) buckets.push(day);
+  } else if (query.range.from <= lastDay) {
+    buckets.push(...monthsBetween(monthKey(query.range.from), monthKey(lastDay)));
+  }
+  const layers = spendingLayers(spending, buckets);
+  const bands: SpendingBand[] = layers.groups.map((group) => {
+    const point = spending.find((one) => one.groupId === group.id);
+    return {
+      id: group.id ?? UNCATEGORISED,
+      name: group.id === null ? t("row.uncategorised") : (point?.groupName ?? NULL_DISPLAY),
+      // The group's colour, the one its chips and its card row have too.
+      color:
+        group.id === null
+          ? "var(--faint)"
+          : (colorOf.get(group.id) ?? categoryColor(point?.groupColor ?? null, 0)),
+      values: group.values,
+      total: group.total,
+    };
+  });
+
   if (!view.hasAny) {
     return (
       <Page title={t("title")}>
@@ -223,6 +263,19 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
         uncategorisedCount={categoryCount.get(UNCATEGORISED) ?? 0}
         typeCounts={typeCounts}
         locale={ctx.locale}
+      />
+
+      <SpendingCard
+        bands={bands}
+        totals={layers.totals}
+        labels={buckets.map((bucket) =>
+          formatDate(bucket, query.grain === "day" ? "long" : "monthYear", ctx.locale),
+        )}
+        xLabels={query.grain === "day" ? dayLabels(buckets, ctx.locale) : monthLabels(buckets, ctx.locale)}
+        grain={query.grain}
+        path="/expenses"
+        params={query.params}
+        numberFormat={ctx.numberFormat}
       />
 
       {/* Two columns from a medium width; past the wide threshold the table takes the extra room,
