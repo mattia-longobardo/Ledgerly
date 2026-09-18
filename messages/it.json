@@ -557,6 +557,18 @@
       "net": "Netto",
       "transfers": "{count, plural, one {# giroconto escluso dai totali} other {# giroconti esclusi dai totali}}",
       "unpaired": "{count, plural, one {# senza l'altra gamba qui} other {# senza l'altra gamba qui}}"
+    },
+    "spending": {
+      "title": "Spese nel tempo",
+      "inRange": "spesi nell'intervallo",
+      "empty": "Nessuna spesa in questo intervallo.",
+      "legend": "Gruppi nel grafico",
+      "grain": "Dettaglio del grafico",
+      "grains": {
+        "month": "Mese",
+        "day": "Giorno"
+      },
+      "summary": "Spese dell'intervallo per gruppo di categorie, {total} in tutto."
     }
   },
   "overview": {

@@ -36,6 +36,17 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
     await expect(net(page)).toHaveText("+2.020,51 €");
   });
 
+  await test.step("the spending chart stacks the range by group, day by day on a month (F2.5)", async () => {
+    await expect(page.getByRole("heading", { name: "Spending over time" })).toBeVisible();
+    const legend = page.getByRole("list", { name: "Groups in the chart" });
+    for (const group of ["Abbonamenti", "Spesa", "Trasporti"]) await expect(legend).toContainText(group);
+    // −12,99 − 45,50 − 21,00: the salary is income, not spending.
+    await expect(page.getByText("79,49 €").first()).toBeVisible();
+    await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Month" }).click();
+    await expect(page).toHaveURL(/grain=month/);
+    await page.goto("/expenses");
+  });
+
   await test.step("the payee search narrows the table and lives in the URL", async () => {
     // The field and its submit button share the label; `type="search"` makes the field a searchbox.
     const search = page.getByRole("searchbox", { name: "Search by payee" });

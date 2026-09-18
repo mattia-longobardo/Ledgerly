@@ -557,6 +557,18 @@
       "net": "Net",
       "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of the totals",
       "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}"
+    },
+    "spending": {
+      "title": "Spending over time",
+      "inRange": "spent in the range",
+      "empty": "No spending in this range.",
+      "legend": "Groups in the chart",
+      "grain": "Chart detail",
+      "grains": {
+        "month": "Month",
+        "day": "Day"
+      },
+      "summary": "Spending over the range by group of categories, {total} in all."
     }
   },
   "overview": {

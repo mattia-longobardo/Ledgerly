@@ -14,6 +14,7 @@ import {
   applyProviderAccounts,
   createAccount,
   accountDailyBalances,
+  dailyBalancesOf,
   deleteBalanceEntry,
   rebuildDerivedBalances,
   removeAccount,
@@ -586,6 +587,22 @@ describe("rebuildDerivedBalances", () => {
       days: ["2026-09-01", "2026-09-02", "2026-09-03"],
       values: [520_000n, 500_000n, 500_000n],
       estimated: [true, true, true],
+    });
+  });
+
+  it("gives several accounts day by day in one read, each the way it keeps its balance (F2.5)", async () => {
+    const synced = await aSyncedAccount();
+    const manual = await createAccount(ctx, {
+      ...CHECKING,
+      name: "Cash box",
+      openingBalance: { on: "2026-09-02", cents: 900n },
+    });
+    const read = await dailyBalancesOf(ctx, [synced, manual.id], { from: "2026-09-01", to: "2026-09-03" });
+    expect(read.days).toEqual(["2026-09-01", "2026-09-02", "2026-09-03"]);
+    expect(read.series.get(synced)?.values).toEqual([520_000n, 500_000n, 500_000n]);
+    expect(read.series.get(manual.id)).toEqual({
+      values: [null, 900n, 900n],
+      estimated: [false, false, false],
     });
   });
 

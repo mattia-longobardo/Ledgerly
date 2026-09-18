@@ -208,6 +208,36 @@ export function groupedBreakdown(slices: readonly BreakdownSlice[]): {
   };
 }
 
+/**
+ * The spending chart's bands (F2.5): one series per group of categories with a value for every
+ * bucket — zero where it spent nothing, because spending nothing is a known amount — the biggest
+ * spender first (it goes at the bottom of the pile), and the total of each bucket. A point outside
+ * the buckets (a day past today) is left out; a group that spent nothing in them has no band.
+ */
+export function spendingLayers(
+  points: readonly { bucket: string; groupId: string | null; cents: Cents }[],
+  buckets: readonly string[],
+): { groups: { id: string | null; values: Cents[]; total: Cents }[]; totals: Cents[] } {
+  const position = new Map(buckets.map((bucket, index) => [bucket, index]));
+  const byGroup = new Map<string | null, Cents[]>();
+  for (const point of points) {
+    const index = position.get(point.bucket);
+    if (index === undefined) continue;
+    const values = byGroup.get(point.groupId) ?? buckets.map(() => 0n);
+    values[index] += point.cents;
+    byGroup.set(point.groupId, values);
+  }
+  const groups = [...byGroup.entries()]
+    .map(([id, values]) => ({ id, values, total: values.reduce((sum, value) => sum + value, 0n) }))
+    .sort((a, b) => {
+      const difference = b.total - a.total;
+      if (difference !== 0n) return difference > 0n ? 1 : -1;
+      return (a.id ?? "").localeCompare(b.id ?? "");
+    });
+  const totals = buckets.map((_, index) => groups.reduce((sum, group) => sum + group.values[index], 0n));
+  return { groups, totals };
+}
+
 /** A month group's heading: the month spelled out, as in the design's group rows. */
 export function monthLabel(month: MonthKey, locale: UiLocale): string {
   return formatDate(month, "monthYear", locale);

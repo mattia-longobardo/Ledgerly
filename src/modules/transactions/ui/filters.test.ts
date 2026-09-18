@@ -80,6 +80,19 @@ describe("parseExpensesQuery", () => {
     });
   });
 
+  it("draws the chart by day on short ranges and by month on long ones, unless told (F2.5)", () => {
+    expect(parseExpensesQuery({}, TODAY).grain).toBe("day");
+    expect(parseExpensesQuery({ preset: "last3Months" }, TODAY).grain).toBe("month");
+    const chosen = parseExpensesQuery({ preset: "last3Months", grain: "day" }, TODAY);
+    expect(chosen.grain).toBe("day");
+    // Chosen, it travels with every other control and survives "Clear filters": it is no filter.
+    expect(chosen.params.grain).toBe("day");
+    expect(chosen.presetParams.grain).toBe("day");
+    expect(chosen.clearedParams.grain).toBe("day");
+    expect(chosen.filtered).toBe(false);
+    expect(parseExpensesQuery({ grain: "week" }, TODAY).params.grain).toBeUndefined();
+  });
+
   it("reads the type filter and ignores a type it does not know (F2.5)", () => {
     const transfers = parseExpensesQuery({ type: "transfer" }, TODAY);
     expect(transfers.type).toBe("transfer");
