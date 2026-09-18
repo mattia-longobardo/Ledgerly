@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import { envSchema, isHttpsOrLoopback } from "./env";
 
 const valid = {
-  DATABASE_URL: "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly",
+  DATABASE_URL: "postgres://ledgerly:ledgerly@postgres:5432/ledgerly",
   BETTER_AUTH_URL: "https://ledgerly.example.test",
   BETTER_AUTH_SECRET: "a-real-secret-a-real-secret-a-real-secret",
   OIDC_DISCOVERY_URL: "https://auth.example.test/application/o/ledgerly/.well-known/openid-configuration",
   OIDC_CLIENT_ID: "ledgerly",
   OIDC_CLIENT_SECRET: "client-secret",
-  SMTP_HOST: "127.0.0.1",
-  SMTP_PORT: "51025",
+  SMTP_HOST: "mx.example.test",
+  SMTP_PORT: "465",
   MAIL_FROM: "Ledgerly <ledgerly@example.test>",
-  S3_ENDPOINT: "http://127.0.0.1:59000",
+  S3_ENDPOINT: "http://silo:9000",
   S3_ACCESS_KEY_ID: "ledgerly",
-  S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
+  S3_SECRET_ACCESS_KEY: "s3-secret",
   S3_BUCKET: "ledgerly-test",
   APP_ENCRYPTION_KEY: "k1:PB4iEGbA1r5Ct3ySrU8MdGe9FB7bR9ZxKt4QmVxgZ0Y=",
   CRON_SECRET: "a-real-cron-secret-sixteen-plus-ok",

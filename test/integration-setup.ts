@@ -2,12 +2,6 @@
 import { Pool } from "pg";
 import { runMigrations } from "../src/platform/db/migrate";
 
-// The one place the default TEST_DATABASE_URL literal lives; vitest.config.ts falls back to the
-// same value when TEST_DATABASE_URL is unset. Not imported there: that would pull this file's own
-// imports (pg, drizzle) into Vite's config-loading, which does not tolerate extension-less
-// relative imports.
-export const DEFAULT_TEST_DATABASE_URL = "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly_test";
-
 /**
  * Drops and recreates the `public` and `drizzle` schemas before every integration run, so
  * `runMigrations` always applies from an empty database (spec §11) instead of from whatever the
@@ -27,10 +21,10 @@ async function resetTestDatabase(pool: Pool): Promise<void> {
 }
 
 export default async function setup(): Promise<void> {
-  const pool = new Pool({
-    connectionString: process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL,
-    max: 1,
-  });
+  // Set by scripts/test-integration.sh: the separate `ledgerly_test` database of the homelab.
+  const connectionString = process.env.TEST_DATABASE_URL;
+  if (!connectionString) throw new Error("TEST_DATABASE_URL is not set: run `npm run test:integration`");
+  const pool = new Pool({ connectionString, max: 1 });
   try {
     await resetTestDatabase(pool);
     await runMigrations(pool, "./drizzle");

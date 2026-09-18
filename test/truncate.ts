@@ -6,8 +6,8 @@ export async function truncateAllTables(db: Pool | ClientBase): Promise<void> {
   const {
     rows: [{ current_database: database }],
   } = await db.query<{ current_database: string }>("SELECT current_database()");
-  if (!database.endsWith("_test") && !database.endsWith("_e2e")) {
-    throw new Error(`Refusing to truncate "${database}": not a _test or _e2e database`);
+  if (!database.endsWith("_test")) {
+    throw new Error(`Refusing to truncate "${database}": not a _test database`);
   }
   const { rows } = await db.query<{ tablename: string }>(
     "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename",
