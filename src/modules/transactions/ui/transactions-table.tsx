@@ -246,6 +246,8 @@ export function TransactionsTable({
         onOpenChange={(open) => setEditing(open ? key : null)}
         onPick={(categoryId) => onSetCategory([row.id], categoryId)}
         uncategorisedLabel={t("row.uncategorised")}
+        searchLabel={t("row.searchCategory")}
+        noMatchLabel={t("row.noCategoryMatch")}
         triggerLabel={t("row.editCategory")}
         disabled={pending}
         triggerClassName={cn(
@@ -332,6 +334,8 @@ export function TransactionsTable({
               )
             }
             uncategorisedLabel={t("row.uncategorised")}
+            searchLabel={t("row.searchCategory")}
+            noMatchLabel={t("row.noCategoryMatch")}
             triggerLabel={t("selection.setCategory")}
             disabled={pending}
             triggerClassName={cn(CHIP, "h-6 border border-border bg-card px-2 hover:bg-hover")}

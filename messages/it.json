@@ -500,6 +500,8 @@
       "labels": "Etichette",
       "noLabels": "Nessuna etichetta",
       "uncategorised": "Senza categoria",
+      "searchCategory": "Cerca categoria…",
+      "noCategoryMatch": "Nessuna categoria trovata",
       "noPayee": "Senza beneficiario",
       "save": "Salva",
       "cancel": "Annulla"

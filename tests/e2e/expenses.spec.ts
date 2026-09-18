@@ -65,7 +65,8 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
   await test.step("a category set by hand sticks to the movement", async () => {
     const row = page.getByRole("row").filter({ hasText: "Stipendio" });
     await row.getByRole("button", { name: "Edit category" }).first().click();
-    await page.getByRole("menuitem", { name: "Spesa" }).click();
+    await page.getByRole("combobox", { name: "Search categories…" }).fill("spe");
+    await page.getByRole("option", { name: "Spesa" }).click();
     await expect(page.getByRole("row").filter({ hasText: "Stipendio" })).toContainText("Spesa");
   });
 

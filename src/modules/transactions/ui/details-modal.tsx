@@ -5,7 +5,7 @@ import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
-import { Checkbox, Input } from "@/ui/input";
+import { Checkbox, Textarea } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
 import { setLabels, setNote } from "./commands";
@@ -100,6 +100,7 @@ export function TransactionDetails({
 
   return (
     <Modal
+      width={520}
       open={open}
       onOpenChange={onOpenChange}
       title={t("row.edit")}
@@ -132,7 +133,8 @@ export function TransactionDetails({
         </dl>
 
         <Field label={t("row.note")} htmlFor="transaction-note">
-          <Input id="transaction-note" name="note" defaultValue={row.note ?? ""} autoFocus />
+          {/* A note is often a sentence or two, or a bank's whole remittance line: room to read it. */}
+          <Textarea id="transaction-note" name="note" defaultValue={row.note ?? ""} rows={6} autoFocus />
         </Field>
 
         <fieldset className="flex flex-col gap-1.5">

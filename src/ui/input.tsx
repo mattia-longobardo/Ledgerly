@@ -1,6 +1,6 @@
 "use client";
 
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "./cn";
 import { useFieldState } from "./field";
 
@@ -35,6 +35,19 @@ export function Input({ invalid, warning, numeric, className, ...props }: InputP
         isInvalid && "border-neg text-neg",
         className,
       )}
+      {...props}
+    />
+  );
+}
+
+/** Several lines of text: the field's look, a height of its own, and a user-resizable height. */
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const field = useFieldState();
+  return (
+    <textarea
+      aria-invalid={field.invalid || undefined}
+      aria-describedby={field.describedBy}
+      className={cn(CONTROL, "h-auto min-h-24 resize-y py-1.5 leading-snug", className)}
       {...props}
     />
   );

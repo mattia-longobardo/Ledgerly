@@ -159,7 +159,7 @@ describe("TransactionsTable", () => {
     const table = renderTable();
     const chips = table.getAllByRole("button", { name: "Edit category" });
     await userEvent.click(chips[0]);
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Rent" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Rent" }));
     expect(setCategory).toHaveBeenCalledWith(["tx-1"], "cat-2");
   });
 
@@ -206,7 +206,7 @@ describe("TransactionsTable", () => {
     renderTable();
     await userEvent.keyboard("j");
     await userEvent.keyboard("e");
-    expect(await screen.findByRole("menuitem", { name: "Groceries" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Groceries" })).toBeInTheDocument();
   });
 
   it("announces the direction one more click would order by, column by column", () => {

@@ -500,6 +500,8 @@
       "labels": "Labels",
       "noLabels": "No labels",
       "uncategorised": "Uncategorised",
+      "searchCategory": "Search categories…",
+      "noCategoryMatch": "No category matches",
       "noPayee": "No payee",
       "save": "Save",
       "cancel": "Cancel"
