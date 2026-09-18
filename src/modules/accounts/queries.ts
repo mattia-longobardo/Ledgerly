@@ -208,6 +208,11 @@ export interface AccountRow {
   series: (Cents | null)[];
   /** Per month, whether the value stands on a month end rebuilt from the movements (F2.5). */
   estimated: boolean[];
+  /**
+   * The same months held, never interpolated: what the net worth sums. The stacked Overview chart
+   * draws these, so its bands add up to its total exactly.
+   */
+  held: (Cents | null)[];
   stale: boolean;
 }
 
@@ -280,12 +285,13 @@ export async function accountsView(
     previous: previous.get(account.id) ?? null,
     series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
     estimated: estimatedMonths(points.get(account.id) ?? [], months),
+    held: monthEndSeries(points.get(account.id) ?? [], months, "hold"),
     stale: account.origin === "synced" && isStale(account.lastSyncedAt, account.staleAfterHours, now),
   }));
 
   const counted = rows.filter((row) => row.account.inNetWorth);
   const netWorth = totalSeries(
-    counted.map((row) => monthEndSeries(points.get(row.account.id) ?? [], months, "hold")),
+    counted.map((row) => row.held),
     months.length,
   );
   const current = netWorth.at(-1) ?? { total: null, partial: false };

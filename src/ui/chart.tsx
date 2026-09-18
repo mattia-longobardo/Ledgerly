@@ -221,6 +221,172 @@ export function AreaLine({
   );
 }
 
+/** One band of a stacked chart: where it starts and where it ends at each step. */
+export interface Band {
+  lower: (number | null)[];
+  upper: (number | null)[];
+}
+
+/**
+ * Layers piled one on the other, in the order given (the first at the bottom), so the top edge of
+ * the last is the total. Positive values pile up from zero, negative ones down from it, so a
+ * credit card never eats into the accounts above the line. A layer with no value at a step counts
+ * as nothing there; a step no layer knows is a gap in every band, never a fall to zero.
+ */
+export function stackLayers(
+  layers: readonly (readonly (number | null)[])[],
+  length: number,
+): { bands: Band[]; top: (number | null)[]; bottom: (number | null)[] } {
+  const bands: Band[] = layers.map(() => ({ lower: [], upper: [] }));
+  const top: (number | null)[] = [];
+  const bottom: (number | null)[] = [];
+  for (let i = 0; i < length; i += 1) {
+    const known = layers.some((values) => values[i] !== null && values[i] !== undefined);
+    let above = 0;
+    let below = 0;
+    layers.forEach((values, index) => {
+      if (!known) {
+        bands[index].lower.push(null);
+        bands[index].upper.push(null);
+        return;
+      }
+      const value = values[i] ?? 0;
+      const base = value < 0 ? below : above;
+      bands[index].lower.push(base);
+      bands[index].upper.push(base + value);
+      if (value < 0) below += value;
+      else above += value;
+    });
+    top.push(known ? above : null);
+    bottom.push(known ? below : null);
+  }
+  return { bands, top, bottom };
+}
+
+/** A band as closed paths, one per run of known steps: along the top, back along the bottom. */
+function bandPaths(band: Band, extent: { low: number; high: number }, box: Box): string[] {
+  const paths: string[] = [];
+  let run: number[] = [];
+  const close = () => {
+    if (run.length > 1) {
+      const count = band.upper.length;
+      const along = run.map(
+        (i) => `${xOf(i, count, box).toFixed(1)},${scale(band.upper[i] as number, extent, box).toFixed(1)}`,
+      );
+      const back = [...run]
+        .reverse()
+        .map(
+          (i) => `${xOf(i, count, box).toFixed(1)},${scale(band.lower[i] as number, extent, box).toFixed(1)}`,
+        );
+      paths.push(`M ${along.join(" L ")} L ${back.join(" L ")} Z`);
+    }
+    run = [];
+  };
+  band.upper.forEach((value, i) => {
+    if (value === null) close();
+    else run.push(i);
+  });
+  close();
+  return paths;
+}
+
+/**
+ * The net worth of the design, account by account (F2.5): one band per account in its own colour,
+ * piled so the top edge is the total, and the total drawn over them as the figure's main line —
+ * dashed where it stands on month ends rebuilt from the movements. The figure carries a text
+ * summary, so the chart is not the only way to the numbers.
+ */
+export function StackedArea({
+  layers,
+  total,
+  estimated,
+  summary,
+  yLabels,
+  xLabels,
+  height = 240,
+  hover,
+}: {
+  /** Bottom first. */
+  layers: readonly { label: string; color: string; values: readonly (number | null)[] }[];
+  total: readonly (number | null)[];
+  estimated?: readonly boolean[];
+  summary: string;
+  yLabels: readonly string[];
+  xLabels: readonly string[];
+  height?: number;
+  hover?: readonly HoverPoint[];
+}) {
+  const box: Box = { width: 720, height, pad: 6 };
+  const { bands, top, bottom } = stackLayers(
+    layers.map((layer) => layer.values),
+    total.length,
+  );
+  const extent = extentOf([{ values: top }, { values: bottom }, { values: total }]);
+  const strokes = strokesOf(total, estimated ?? [], extent, box);
+
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="flex gap-3">
+        <div className="relative min-w-0 flex-1" style={{ height }}>
+          <div aria-hidden className="absolute inset-0 flex flex-col justify-between">
+            {yLabels.map((_, index) => (
+              <div key={index} className="border-t border-border/60" />
+            ))}
+          </div>
+          <svg
+            viewBox={`0 0 720 ${height}`}
+            preserveAspectRatio="none"
+            aria-hidden
+            className="relative h-full w-full"
+          >
+            {bands.map((band, index) =>
+              bandPaths(band, extent, box).map((d, runIndex) => (
+                <path
+                  key={`${index}-${runIndex}`}
+                  data-band={layers[index].label}
+                  d={d}
+                  fill={layers[index].color}
+                  fillOpacity={0.55}
+                  stroke={layers[index].color}
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+              )),
+            )}
+            {strokes.map((stroke, index) => (
+              <polyline
+                key={index}
+                points={path(stroke.points)}
+                fill="none"
+                stroke="var(--fg)"
+                strokeWidth={2}
+                strokeDasharray={stroke.dashed ? "5 4" : undefined}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </svg>
+          {hover && hover.length > 0 && <ChartHover points={hover} />}
+        </div>
+        <div
+          aria-hidden
+          className="flex shrink-0 flex-col justify-between text-right text-xs text-faint tabular-nums"
+          style={{ height }}
+        >
+          {yLabels.map((label, index) => (
+            <span key={index}>{label}</span>
+          ))}
+        </div>
+      </div>
+      <div aria-hidden className="flex justify-between text-xs text-faint">
+        {xLabels.map((label, index) => (
+          <span key={index}>{label}</span>
+        ))}
+      </div>
+      <figcaption className="sr-only">{summary}</figcaption>
+    </figure>
+  );
+}
+
 /** One line per account, on a shared scale: the Accounts page's 24-month comparison. */
 export function MultiLine({
   series,
@@ -343,7 +509,8 @@ export function Bars({
           >
             <line x1={0} x2={width} y1={zero} y2={zero} stroke="var(--border)" strokeWidth={1} />
             {values.map((value, index) => {
-              if (value === null) return null;
+              // No change is no bar: a hairline on zero, one per quiet day, read as a dashed line.
+              if (value === null || value === 0) return null;
               const size = (Math.abs(value) / reach) * (zero - 4);
               return (
                 <rect

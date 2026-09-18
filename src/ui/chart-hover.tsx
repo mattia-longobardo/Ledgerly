@@ -6,6 +6,8 @@ export interface HoverPoint {
   label: string;
   value: string;
   note?: string;
+  /** A breakdown under the value, one line each (F2.5: the accounts of a stacked chart). */
+  rows?: readonly { label: string; value: string; color: string }[];
 }
 
 /**
@@ -45,6 +47,17 @@ export function ChartHover({ points }: { points: readonly HoverPoint[] }) {
             <div className="text-xs text-muted">{active.label}</div>
             <div className="text-sm font-medium tabular-nums">{active.value}</div>
             {active.note && <div className="text-xs text-muted tabular-nums">{active.note}</div>}
+            {active.rows && active.rows.length > 0 && (
+              <div className="mt-1 flex flex-col gap-0.5 border-t border-border pt-1">
+                {active.rows.map((row) => (
+                  <div key={row.label} className="flex items-center gap-1.5 text-xs">
+                    <span className="size-2 shrink-0 rounded-[2px]" style={{ background: row.color }} />
+                    <span className="text-muted">{row.label}</span>
+                    <span className="ml-auto pl-3 tabular-nums">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

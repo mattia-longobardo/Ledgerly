@@ -1,4 +1,4 @@
-import { type MonthKey } from "@/platform/dates";
+import { type CivilDate, type MonthKey } from "@/platform/dates";
 import { type NumberFormat, type UiLocale, formatDate, formatMoney } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 
@@ -53,12 +53,36 @@ export function axisLabels(values: readonly (Cents | null)[], format: NumberForm
   });
 }
 
+/**
+ * The labels of a chart whose zero is its middle line — the changes drawn as bars around it —
+ * from the largest change at the top to its opposite at the bottom, zero in the middle. The plain
+ * `axisLabels` runs from the highest to the lowest value, which put a figure like "2.600 €" on the
+ * bars' baseline.
+ */
+export function symmetricAxisLabels(values: readonly (Cents | null)[], format: NumberFormat): string[] {
+  const reach = values.reduce<Cents>((largest, value) => {
+    if (value === null) return largest;
+    const size = value < 0n ? -value : value;
+    return size > largest ? size : largest;
+  }, 0n);
+  return axisLabels([reach, -reach], format, 5);
+}
+
 /** At most `count` month labels, evenly spread, always including the first and the last. */
 export function monthLabels(months: readonly MonthKey[], locale: UiLocale, count = 5): string[] {
   if (months.length <= count) return months.map((month) => formatDate(month, "monthShort", locale));
   const step = (months.length - 1) / (count - 1);
   return Array.from({ length: count }, (_, index) =>
     formatDate(months[Math.round(index * step)], "monthShort", locale),
+  );
+}
+
+/** At most `count` day labels, evenly spread, always including the first and the last (F2.5). */
+export function dayLabels(days: readonly CivilDate[], locale: UiLocale, count = 5): string[] {
+  if (days.length <= count) return days.map((day) => formatDate(day, "dayMonth", locale));
+  const step = (days.length - 1) / (count - 1);
+  return Array.from({ length: count }, (_, index) =>
+    formatDate(days[Math.round(index * step)], "dayMonth", locale),
   );
 }
 

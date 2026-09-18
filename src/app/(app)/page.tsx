@@ -2,17 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { accountsView } from "@/modules/accounts/queries";
-import { asNumbers, axisLabels, changeBetween, monthLabels } from "@/modules/accounts/ui/display";
+import {
+  asNumbers,
+  axisLabels,
+  changeBetween,
+  colorFor,
+  monthLabels,
+  shareOf,
+} from "@/modules/accounts/ui/display";
 import { LinkTabs, RANGE_OPTIONS, type RangeKey, rangeMonths } from "@/modules/accounts/ui/controls";
 import { MonthRangePicker } from "@/modules/accounts/ui/month-range-picker";
 import { monthRange } from "@/modules/accounts/ui/range";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import type { Cents } from "@/platform/money";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
-import { AreaLine } from "@/ui/chart";
+import { StackedArea } from "@/ui/chart";
 import { KpiTile } from "@/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
@@ -67,6 +75,28 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const series = chart.netWorth.slice(from).map((point) => point.total);
   // Months that stand on a month end rebuilt from the movements (spec §7.1, F2.5): drawn dashed.
   const estimated = chart.netWorthEstimated.slice(from);
+
+  /**
+   * The chart's bands: every account in the net worth, held month by month exactly as the total
+   * sums them, the largest at the end of the window at the bottom of the pile. Each keeps the
+   * colour it has everywhere else (its own, or its place in the palette).
+   */
+  const stacked = chart.rows
+    .map((row, index) => ({ row, color: colorFor(row.account, index), held: row.held.slice(from) }))
+    .filter(({ row }) => row.account.inNetWorth)
+    .sort((a, b) => {
+      const difference = (b.held.at(-1) ?? 0n) - (a.held.at(-1) ?? 0n);
+      return difference > 0n ? 1 : difference < 0n ? -1 : 0;
+    });
+  /** What the accounts below zero add up to each month: the bottom of the chart's scale. */
+  const negatives = months.map((_, index) =>
+    stacked.reduce<Cents>((sum, { held }) => {
+      const value = held[index];
+      return value !== null && value < 0n ? sum + value : sum;
+    }, 0n),
+  );
+  const periodEnd = series[series.length - 1] ?? null;
+  const periodChange = changeBetween(periodEnd, series.find((value) => value !== null) ?? null);
 
   const monthly = changeBetween(view.total, view.previousTotal);
   const yearStart = view.months.indexOf(`${thisMonth.slice(0, 4)}-01-01`);
@@ -136,9 +166,28 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
 
       {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}
       <div className="grid items-start gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card padded={false} className="flex flex-col gap-3 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
+        <Card padded={false} className="flex flex-col gap-4 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
+              {/* What the window says, not what today says: the hero above already has today. */}
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-kpi font-semibold tracking-[-0.01em] tabular-nums">
+                  {formatMoney(periodEnd, ctx.numberFormat)}
+                </span>
+                <span
+                  className={cn(
+                    "text-sm font-medium tabular-nums",
+                    TONE_TEXT[toneOfSign(periodChange.cents)],
+                  )}
+                >
+                  {formatMoney(periodChange.cents, ctx.numberFormat, { signed: true })}
+                  {periodChange.fraction !== null &&
+                    ` (${formatPercent(periodChange.fraction, ctx.numberFormat, { signed: true })})`}
+                </span>
+                <span className="text-sm text-muted">{t("chart.inPeriod")}</span>
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <MonthRangePicker
                 from={months[0]}
@@ -158,22 +207,62 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
               />
             </div>
           </div>
-          <AreaLine
+          <StackedArea
+            layers={stacked.map(({ row, color, held }) => ({
+              label: row.account.name,
+              color,
+              values: asNumbers(held),
+            }))}
+            total={asNumbers(series)}
+            estimated={estimated}
             hover={months.map((month, index) => ({
               label: formatDate(month, "monthYear", ctx.locale),
               value: formatMoney(series[index], ctx.numberFormat),
               note: estimated[index] ? ta("estimated.short") : undefined,
+              // Top of the pile first, as the eye reads the chart.
+              rows: [...stacked]
+                .reverse()
+                .filter(({ held }) => held[index] !== null)
+                .map(({ row, color, held }) => ({
+                  label: row.account.name,
+                  value: formatMoney(held[index], ctx.numberFormat),
+                  color,
+                })),
             }))}
-            estimated={estimated}
-            values={asNumbers(series)}
-            yLabels={axisLabels(series, ctx.numberFormat)}
+            yLabels={axisLabels([...series, ...negatives], ctx.numberFormat)}
             xLabels={monthLabels(months, ctx.locale)}
             summary={t("chart.summary", {
               from: formatDate(months[0], "monthYear", ctx.locale),
               to: formatDate(months[months.length - 1], "monthYear", ctx.locale),
-              value: formatMoney(series[series.length - 1] ?? null, ctx.numberFormat),
+              value: formatMoney(periodEnd, ctx.numberFormat),
             })}
           />
+          <ul aria-label={t("chart.legend")} className="grid gap-x-6 gap-y-1.5 text-sm @3xl:grid-cols-2">
+            {[...stacked].reverse().map(({ row, color, held }) => {
+              const value = held[held.length - 1] ?? null;
+              return (
+                <li key={row.account.id} className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="size-2.5 shrink-0 rounded-[3px]"
+                    style={{ background: color }}
+                  />
+                  <Link
+                    href={`/accounts/${row.account.id}`}
+                    className="focus-ring min-w-0 truncate rounded-[2px] hover:underline"
+                  >
+                    {row.account.name}
+                  </Link>
+                  <span className="ml-auto shrink-0 tabular-nums">
+                    {formatMoney(value, ctx.numberFormat)}
+                  </span>
+                  <span className="w-14 shrink-0 text-right text-muted tabular-nums">
+                    {formatPercent(shareOf(value, periodEnd), ctx.numberFormat)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
           {estimated.some(Boolean) && <p className="text-sm text-muted">{ta("estimated.note")}</p>}
         </Card>
 

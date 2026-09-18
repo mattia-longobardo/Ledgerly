@@ -177,24 +177,7 @@ export function deriveMonthEnds(
   const readMonths = new Set(readings.map((reading) => monthKey(reading.on)));
   const latest = readings[readings.length - 1].on;
 
-  // Prefix sums over the days, so "what moved in (a, b]" is one subtraction.
-  const cumulative: Cents[] = [];
-  let running = 0n;
-  for (const day of daily) {
-    running += day.cents;
-    cumulative.push(running);
-  }
-  /** Everything that moved on or before `on`. */
-  const movedThrough = (on: CivilDate): Cents => {
-    let low = 0;
-    let high = daily.length;
-    while (low < high) {
-      const middle = (low + high) >> 1;
-      if (daily[middle].on <= on) low = middle + 1;
-      else high = middle;
-    }
-    return low === 0 ? 0n : cumulative[low - 1];
-  };
+  const movedThrough = movementsThrough(daily);
 
   const derived: BalancePoint[] = [];
   for (
@@ -209,6 +192,73 @@ export function deriveMonthEnds(
     derived.push({ on: end, cents: next.cents - (movedThrough(next.on) - movedThrough(end)), derived: true });
   }
   return derived;
+}
+
+/**
+ * Everything an account moved on or before a day, from its daily nets (sorted by day): prefix sums
+ * and a binary search, so "what moved in (a, b]" is one subtraction whatever the history's length.
+ */
+function movementsThrough(daily: readonly DailyNet[]): (on: CivilDate) => Cents {
+  const cumulative: Cents[] = [];
+  let running = 0n;
+  for (const day of daily) {
+    running += day.cents;
+    cumulative.push(running);
+  }
+  return (on) => {
+    let low = 0;
+    let high = daily.length;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (daily[middle].on <= on) low = middle + 1;
+      else high = middle;
+    }
+    return low === 0 ? 0n : cumulative[low - 1];
+  };
+}
+
+/**
+ * An account's balance on each of `days` (F2.5), for Account detail's day grain.
+ *
+ * `movements` (a synced account): the nearest reading on or after the day, minus what moved in
+ * between — so a reading, or a correction typed by hand, is never walked over — and past the latest
+ * reading, that reading plus what moved since. Days before the first reading are rebuilt and flagged
+ * `estimated`, like the month ends of `deriveMonthEnds`, and nothing is rebuilt before the month the
+ * first movement falls in. `hold` (a manual account, or one with no movements): the last entry
+ * carries until the next, and a day before the first one is unknown.
+ *
+ * `readings` holds one value per day at most; `daily` is sorted by day.
+ */
+export function dailySeries(
+  readings: readonly BalancePoint[],
+  daily: readonly DailyNet[],
+  days: readonly CivilDate[],
+  mode: "movements" | "hold",
+): { values: (Cents | null)[]; estimated: boolean[] } {
+  const sorted = [...readings].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
+  const held = (day: CivilDate): Cents | null => {
+    let value: Cents | null = null;
+    for (const reading of sorted) {
+      if (reading.on > day) break;
+      value = reading.cents;
+    }
+    return value;
+  };
+  if (mode === "hold" || daily.length === 0 || sorted.length === 0) {
+    return { values: days.map(held), estimated: days.map(() => false) };
+  }
+
+  const movedThrough = movementsThrough(daily);
+  const earliest = lastDayOfMonth(addMonths(monthKey(daily[0].on), -1));
+  const first = sorted[0];
+  const latest = sorted[sorted.length - 1];
+  const values = days.map((day) => {
+    if (day < earliest) return held(day);
+    const next = sorted.find((reading) => reading.on >= day);
+    if (next) return next.cents - (movedThrough(next.on) - movedThrough(day));
+    return latest.cents + (movedThrough(day) - movedThrough(latest.on));
+  });
+  return { values, estimated: days.map((day, i) => values[i] !== null && day < first.on) };
 }
 
 /**

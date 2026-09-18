@@ -582,7 +582,9 @@
     "chart": {
       "title": "Net worth over time",
       "range": "Range",
-      "summary": "Net worth from {from} to {to}, ending at {value}."
+      "summary": "Net worth from {from} to {to}, ending at {value}.",
+      "inPeriod": "in the period",
+      "legend": "Accounts in the chart"
     },
     "manageAccounts": "Manage"
   },
@@ -796,7 +798,13 @@
           "bars": "Bars"
         },
         "change": "change",
-        "barsSummary": "Month-on-month change for {name}."
+        "barsSummary": "Month-on-month change for {name}.",
+        "grain": "Chart detail",
+        "grains": {
+          "month": "Month",
+          "day": "Day"
+        },
+        "dayBarsSummary": "Day-by-day change for {name}."
       },
       "monthEnd": {
         "title": "Month-end balances",
