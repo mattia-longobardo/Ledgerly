@@ -18,6 +18,30 @@ export function categoryColor(color: string | null, index: number): string {
 }
 
 /**
+ * The colour every category is drawn in, decided once for the whole screen: a group's own colour,
+ * or one from the palette counted by group; and a sub-category **always** in its group's colour, so
+ * a group and its children read as one family in the table, the menus and the card. A sub-category
+ * whose group is not in the list (archived) keeps a colour of its own.
+ */
+export function categoryColors(
+  categories: readonly { id: string; parentId: string | null; color: string | null }[],
+): Map<string, string> {
+  const present = new Set(categories.map((category) => category.id));
+  const colors = new Map<string, string>();
+  let groups = 0;
+  for (const category of categories) {
+    if (category.parentId !== null && present.has(category.parentId)) continue;
+    colors.set(category.id, categoryColor(category.color, groups));
+    groups += 1;
+  }
+  for (const category of categories) {
+    if (category.parentId === null || !present.has(category.parentId)) continue;
+    colors.set(category.id, colors.get(category.parentId) as string);
+  }
+  return colors;
+}
+
+/**
  * The markers of spec §7.2, in the order the row shows them. `unpaired` takes the place of
  * `transfer` on a giroconto with no other leg here (F2.5): it is still not spending, but it usually
  * means the other account is not linked.

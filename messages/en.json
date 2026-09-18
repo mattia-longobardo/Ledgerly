@@ -250,7 +250,8 @@
           "invalidParent": "Pick an active group that is not inside another one. A category with sub-categories cannot go into a group."
         },
         "hasChildren": "It has sub-categories, so it stays a group.",
-        "typeFromGroup": "A category in a group has the group's type."
+        "typeFromGroup": "A category in a group has the group's type.",
+        "colorFromGroup": "A category in a group has the group's colour."
       },
       "labels": {
         "title": "Labels",

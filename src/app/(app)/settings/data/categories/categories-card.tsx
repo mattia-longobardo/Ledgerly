@@ -80,6 +80,9 @@ export function CategoriesCard({ rows }: { rows: CategoryRow[] }) {
   /** The groups a category can go in: any active top-level category (F2.5). */
   const groups = rows.filter((row) => row.parentId === null && !row.archived);
   const parent = draft?.parentId ? groups.find((group) => group.id === draft.parentId) : undefined;
+  /** A sub-category is drawn in its group's colour (spec §7.2), whatever colour it keeps of its own. */
+  const colorOf = (row: CategoryRow) =>
+    row.parentId === null ? row.color : (rows.find((one) => one.id === row.parentId)?.color ?? row.color);
 
   /** A `TaxonomyError` code, spelled out one branch at a time so the catalogue keys stay literal. */
   function messageFor(code: string): string {
@@ -193,7 +196,7 @@ export function CategoriesCard({ rows }: { rows: CategoryRow[] }) {
                 <Tr key={row.id}>
                   <Td className={row.depth === 1 ? "pl-8" : undefined}>
                     <span className="flex items-center gap-2">
-                      <ColorDot color={row.color} />
+                      <ColorDot color={colorOf(row)} />
                       <span className="min-w-0 truncate">{row.name}</span>
                       {row.archived && <Badge tone="neutral">{t("archived")}</Badge>}
                     </span>
@@ -296,15 +299,18 @@ export function CategoriesCard({ rows }: { rows: CategoryRow[] }) {
             </Field>
             {parent && <p className="-mt-1.5 text-sm text-muted">{t("typeFromGroup")}</p>}
             <Field label={t("color")} htmlFor="category-color">
+              {/* In a group the colour is the group's, like the type: shown, locked, and submitted
+                  through the picker's own hidden field. */}
               <ColorSwatchPicker
                 id="category-color"
                 name="color"
-                value={draft.color}
+                value={parent ? parent.color : draft.color}
                 clearLabel={t("noColor")}
-                disabled={pending}
+                disabled={pending || parent !== undefined}
                 onChange={(color) => setDraft({ ...draft, color })}
               />
             </Field>
+            {parent && <p className="-mt-1.5 text-sm text-muted">{t("colorFromGroup")}</p>}
           </form>
         )}
       </Modal>

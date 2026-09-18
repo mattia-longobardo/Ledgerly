@@ -250,7 +250,8 @@
           "invalidParent": "Scegli un gruppo attivo che non stia dentro un altro. Una categoria con sottocategorie non può entrare in un gruppo."
         },
         "hasChildren": "Ha delle sottocategorie, quindi resta un gruppo.",
-        "typeFromGroup": "Una categoria in un gruppo ha il tipo del gruppo."
+        "typeFromGroup": "Una categoria in un gruppo ha il tipo del gruppo.",
+        "colorFromGroup": "Una categoria in un gruppo ha il colore del gruppo."
       },
       "labels": {
         "title": "Etichette",

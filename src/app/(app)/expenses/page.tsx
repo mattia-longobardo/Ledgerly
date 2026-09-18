@@ -8,6 +8,7 @@ import {
   amountToneOf,
   badgesOf,
   categoryColor,
+  categoryColors,
   groupedBreakdown,
   monthLabel,
 } from "@/modules/transactions/ui/display";
@@ -55,15 +56,16 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
 
   /**
    * One colour per category, decided once: the filter menu, the row chips and the card all read
-   * this map, so a category without a colour of its own still looks the same everywhere.
+   * this map, so a category without a colour of its own still looks the same everywhere — and a
+   * sub-category always has its group's colour (spec §7.2).
    */
-  const options = view.categories.map((category, index) => ({
+  const colorOf = categoryColors(view.categories);
+  const options = view.categories.map((category) => ({
     id: category.id,
     name: category.name,
-    color: categoryColor(category.color, index),
+    color: colorOf.get(category.id) as string,
     depth: category.depth,
   }));
-  const colorOf = new Map(options.map((option) => [option.id, option.color]));
   const categoryCount = new Map(
     view.facets.categories.map((facet) => [facet.categoryId ?? UNCATEGORISED, facet.count]),
   );
@@ -143,19 +145,23 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
    * leaves transfers out and measures its rows by size (review B2).
    */
   const breakdown = groupedBreakdown(
-    view.breakdown.map((slice) => ({
-      id: slice.categoryId ?? UNCATEGORISED,
-      name: slice.name ?? t("row.uncategorised"),
-      color:
-        slice.categoryId === null
-          ? "var(--faint)"
-          : (colorOf.get(slice.categoryId) ?? categoryColor(slice.color, 0)),
-      cents: slice.totalCents,
-      parentId: slice.parentId,
-      parentName: slice.parentName,
-      parentColor:
-        slice.parentId === null ? null : (colorOf.get(slice.parentId) ?? categoryColor(slice.parentColor, 0)),
-    })),
+    view.breakdown.map((slice) => {
+      // An archived category is not in the map: it still takes its group's colour when it has one.
+      const parentColor =
+        slice.parentId === null ? null : (colorOf.get(slice.parentId) ?? categoryColor(slice.parentColor, 0));
+      return {
+        id: slice.categoryId ?? UNCATEGORISED,
+        name: slice.name ?? t("row.uncategorised"),
+        color:
+          slice.categoryId === null
+            ? "var(--faint)"
+            : (colorOf.get(slice.categoryId) ?? parentColor ?? categoryColor(slice.color, 0)),
+        cents: slice.totalCents,
+        parentId: slice.parentId,
+        parentName: slice.parentName,
+        parentColor,
+      };
+    }),
   );
 
   if (!view.hasAny) {

@@ -23,7 +23,7 @@ const LIVING: CategoryRow = {
   parentId: null,
   parentName: null,
   type: "expense",
-  color: null,
+  color: "#10b981",
   archived: false,
   usage: 0,
   depth: 0,
@@ -137,7 +137,13 @@ describe("CategoriesCard", () => {
     expect(screen.getByLabelText("Type")).toHaveValue("expense");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(create).toHaveBeenCalledWith({ name: "Rent", parentId: LIVING.id, type: "expense", color: null });
+    // The group's colour too: a sub-category is drawn in its group's colour.
+    expect(create).toHaveBeenCalledWith({
+      name: "Rent",
+      parentId: LIVING.id,
+      type: "expense",
+      color: "#10b981",
+    });
   });
 
   it("keeps a group with sub-categories out of any other group (F2.5)", async () => {
@@ -166,20 +172,41 @@ describe("CategoriesCard", () => {
   it("edits the category the row's menu points at, colour and all", async () => {
     save.mockResolvedValueOnce({ ok: true });
     renderCard();
-    await userEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salary" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
 
     const name = screen.getByLabelText("Name");
     await userEvent.clear(name);
-    await userEvent.type(name, "Food");
-    await userEvent.click(screen.getByRole("button", { name: "No colour" }));
+    await userEvent.type(name, "Wages");
+    await userEvent.click(screen.getByRole("button", { name: "#2563eb" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(save).toHaveBeenCalledWith(SALARY.id, {
+      name: "Wages",
+      parentId: "",
+      type: "income",
+      color: "#2563eb",
+    });
+  });
+
+  it("draws a sub-category in its group's colour, and keeps the colour with the group (F2.5)", async () => {
+    save.mockResolvedValueOnce({ ok: true });
+    renderCard();
+    // Groceries has a blue of its own; in Living it is Living's green.
+    const dot = rowOf("Groceries").querySelector<HTMLElement>("span[style]");
+    expect(dot?.style.backgroundColor).toBe("rgb(16, 185, 129)");
+
+    await userEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    expect(screen.getByText(messages.settings.data.categories.colorFromGroup)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "#2563eb" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(save).toHaveBeenCalledWith(GROCERIES.id, {
-      name: "Food",
+      name: "Groceries",
       parentId: LIVING.id,
       type: "expense",
-      color: null,
+      color: "#10b981",
     });
   });
 
