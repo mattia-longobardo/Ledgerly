@@ -53,6 +53,37 @@ its own page with Overview, Transactions (from F2), Balance entries and Settings
   older than its account's limit (36 h by default) send one email a week while the condition lasts;
   an account that recovers is reported again straight away.
 
+## Integrations, Wallet and Expenses (F2)
+
+**Settings → Integrations** links a Budget Makers Wallet account; **Expenses** is what the sync
+brings in.
+
+- **The token is sealed, not stored.** A credential is encrypted with AES-256-GCM under
+  `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
+  key can be rotated by prepending a new one) before it is ever written, and it is never returned
+  to the browser afterwards: the field on the card only ever _replaces_ it.
+- **What a sync does.** Hourly at minute 07 (`wallet-sync`), per user: accounts and balances first,
+  then transactions. The first pass after linking fetches **12 months** in monthly windows; every
+  pass after that re-reads the **last 7 days**. A page that comes back full splits its window
+  instead of failing, reads are retried five times honouring `Retry-After`, and a 401 or 403 stops
+  at once, marks the link revoked and says the token was rejected. Every attempt is a row in the
+  sync log on that page, skipped ones included.
+- **Local edits win.** Payee, amount and date belong to the provider; category, labels, note and
+  visibility belong to you, and each field you actually change is recorded so no later sync
+  overwrites it — submitting the provider's own value claims nothing. **Hide** (the design's
+  "Delete") keeps a movement out of the totals and can be undone; a movement the provider stops
+  returning inside the re-read window is marked as gone and treated the same way.
+- **Transfers and recurrences.** Two movements are paired only by the reference Wallet gives them,
+  never by amount and date, so a pair forms whichever sync each leg arrives in. A payee becomes a
+  recurrence after three occurrences whose gaps all fall in one band (weekly through yearly) and
+  whose amounts are all within 10% of the median.
+- **Categories and labels** live under **Settings → Data**. A synced category is matched to an
+  existing link, then to a local name exactly, and only then created. Categories are archived,
+  never deleted.
+- **Without a token** the client and the engine run against the synthetic fixtures in
+  `tests/fixtures/wallet/`; the first real link and its 12-month backfill still have to be done by
+  hand.
+
 ## Check
 
 ```bash
@@ -72,9 +103,14 @@ docker compose build          # or: docker compose up -d --build
 
 Being on `db_internal` is what lets the app reach `postgres:5432` and `silo:9000` by name; those
 are internal-only and unreachable from a workstation, which is why `npm run dev` uses
-`compose.dev.yml` instead. `dash.longobardo.me` is served through the `lan-only@file` middleware:
-LAN and NetBird only, never the public internet, so it is deliberately absent from the blackbox
-probes in `db/prometheus/prometheus.yml`.
+`compose.dev.yml` instead. `dash.longobardo.me` is reachable from the public internet, but through one door only (spec D20).
+Two Traefik routers serve it and they are not interchangeable: `ledgerly-router` on the `web`
+entrypoint is what the Cloudflare tunnel hits, and it carries no IP filter; `ledgerly-secure-router`
+on `websecure` is the direct 443 — the only port the home router forwards — and it keeps
+`lan-only@file`, so nobody reaches the app from the internet without passing Cloudflare. Port 80 is
+not forwarded, which is what makes the tunnel the sole public entrance. Nothing guards that entrance
+except the app's own sign-in (Better Auth, sign-up disabled), so the blackbox probes in
+`db/prometheus/prometheus.yml` still leave it alone: a probe would only ever see the login page.
 
 The app image applies pending migrations on boot, then serves the standalone Next.js server; it
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
@@ -117,8 +153,14 @@ a side effect of every tick, not a job of its own.
   repo, so Traefik itself discards any `X-Forwarded-For` a client tries to inject before setting
   its own. Only with both set does the app trust `X-Forwarded-For` from that one hop and give each
   client its own sign-in rate-limit bucket; left unset, `TRUSTED_PROXY_IPS` defaults to empty and
-  every request shares one bucket. Never publish port 3000 on the host: the app is reached only
-  over LAN/NetBird (spec §13).
+  every request shares one bucket. Never publish port 3000 on the host: Traefik must stay the only
+  way in (spec D20). Note that Traefik's `web` entrypoint currently sets no
+  `forwardedHeaders.trustedIPs`, so it overwrites `X-Forwarded-For` with the tunnel hop's address
+  and every visitor arriving from the internet lands in the **same** sign-in rate-limit bucket
+  (5 attempts per minute on `/sign-in/email`) — one bot hammering the login locks the owner out
+  from outside too. Preserving the real client address means adding
+  `--entrypoints.web.forwardedHeaders.trustedIPs=<the cloudflared hop>` to Traefik, which is an
+  owner action in `network/docker-compose.yml`, outside this repo.
 - **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
   inside the same Docker network as the app (its compose service name, `ledgerly`), for
   example:
@@ -155,16 +197,32 @@ a side effect of every tick, not a job of its own.
   - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
     folders inside it (`payslips/`, `cometa/`, `avatars/`, …), never split buckets. Its S3 API
     listens on `db_internal` only, so a copy of the app running on a workstation cannot reach it;
-    in production the app sits on that network and `http://silo:9000` resolves. Through F1 nothing
+    in production the app sits on that network and `http://silo:9000` resolves. Through F2 nothing
     in the running app touches S3 — only `npm run dev:seed` and the storage integration tests do.
 - **Production requirements** (`src/platform/env.ts`, checked at boot by
   `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
   and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing
   here is checked outside production); generate every secret — `BETTER_AUTH_SECRET`, `CRON_SECRET`
-  (32+ characters), `METRICS_TOKEN`, the OIDC client secret, and the S3 access/secret key — the
-  `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET` and `METRICS_TOKEN` are
-  rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
+  (32+ characters), `METRICS_TOKEN`, `APP_ENCRYPTION_KEY`, the OIDC client secret, and the S3
+  access/secret key — the
+  `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET`, `METRICS_TOKEN` and
+  `APP_ENCRYPTION_KEY` are rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
   enabled so credentials never travel in plaintext.
+
+### Keep `APP_ENCRYPTION_KEY` somewhere else too
+
+It is the only value in the deployment whose loss cannot be recovered from anything else on the
+machine. Keep a copy off the host.
+
+- **What is actually lost with it**: the Budget Makers Wallet API token, and nothing more — it is
+  the only encrypted column in the database (`integration_connections.credentials`). Accounts,
+  balances, transactions, categories, labels and recurrences are all in clear. Pasting a new token
+  in Settings › Integrations _is_ the recovery, and it keeps the sync log.
+- **Rotating**: _prepend_ the new key and leave the old one in place
+  (`APP_ENCRYPTION_KEY=k2:<new>,k1:<old>`). The first key seals from then on and every key still
+  opens. **Replacing** a key instead of prepending it starts the app perfectly — everything but the
+  token reads fine — and the only symptom is an hourly "Wallet sync failed: Unknown key id" email,
+  which reads like a fault at the provider rather than at the key.
 
 ## Documentation
 

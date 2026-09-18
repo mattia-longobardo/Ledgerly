@@ -1,12 +1,17 @@
 // scripts/seed-dev.ts — local development data. Idempotent. Later phases add their sample data here.
 import { eq } from "drizzle-orm";
 import { accounts, balanceEntries } from "../src/modules/accounts/schema";
+import { applyProviderAccounts } from "../src/modules/accounts/service";
+import type { IncomingTransaction } from "../src/modules/transactions/rules";
+import { upsertFromProvider } from "../src/modules/transactions/service";
 import { createAuth } from "../src/platform/auth/auth";
 import { users } from "../src/platform/auth/schema";
 import type { Ctx } from "../src/platform/context";
 import { addMonths, lastDayOfMonth, monthKey, today } from "../src/platform/dates";
 import { getDb, getPool } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
+import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
+import { saveConnection } from "../src/platform/integrations/service";
 import { ensureBucket } from "../src/platform/storage";
 
 const email = (process.env.DEV_OWNER_EMAIL ?? "owner@example.test").toLowerCase();
@@ -107,5 +112,74 @@ if (already) {
   }
   console.log(`[seed] created ${SAMPLE.length} accounts with twelve months of balances`);
 }
+
+/**
+ * F2's sample data. Seeded through the services the hourly job uses — a connection, a synced
+ * account through `applyProviderAccounts`, movements through `upsertFromProvider` — so the dev
+ * instance shows what a real sync produces, provider links included, rather than rows that look
+ * right and behave differently. Idempotent: the provider ids are fixed, so running the seed twice
+ * updates instead of duplicating.
+ */
+async function seedExpenses(ctx: Pick<Ctx, "userId">): Promise<void> {
+  // The seed has no request behind it, so there is no user preference to read: the sample is
+  // written in the zone the app defaults to (spec §4.3).
+  const zoned = { ...ctx, timeZone: "Europe/Rome" };
+  await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "dev-sample-token" } });
+  await applyProviderAccounts(ctx, WALLET_PROVIDER, [
+    {
+      provider: WALLET_PROVIDER,
+      providerAccountId: "dev-acc-1",
+      name: "ING Conto Arancio",
+      type: "checking",
+      currency: "EUR",
+    },
+  ]);
+  const [synced] = await getDb()
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(eq(accounts.providerAccountId, "dev-acc-1"));
+  if (!synced) throw new Error("the provider account was not adopted");
+
+  const month = monthKey(today(zoned.timeZone)).slice(0, 7);
+  const before = addMonths(monthKey(today(zoned.timeZone)), -1).slice(0, 7);
+  const movement = (
+    id: string,
+    on: string,
+    cents: bigint,
+    payee: string,
+    category: string | null,
+    counterpart: string | null = null,
+  ): IncomingTransaction => ({
+    externalId: id,
+    counterpartExternalId: counterpart,
+    occurredAt: new Date(`${on}T10:00:00Z`),
+    amountCents: cents,
+    currency: "EUR",
+    type: counterpart !== null ? "transfer" : cents < 0n ? "expense" : "income",
+    state: "cleared",
+    payee,
+    note: null,
+    categoryExternalId: category === null ? null : `dev-cat-${category.toLowerCase()}`,
+    categoryName: category,
+    labels: [],
+  });
+
+  // Invented figures. Netflix three times a month apart is enough for the recurrence rule of §7.2
+  // (three occurrences, one interval band, amounts within 10% of the median) to have something to
+  // find, and the two transfer legs name each other so the pairing has something to pair.
+  const outcome = await upsertFromProvider(zoned, synced.id, [
+    movement("dev-tx-1", `${month}-02`, -1299n, "Netflix", "Abbonamenti"),
+    movement("dev-tx-2", `${month}-04`, -4550n, "Esselunga", "Spesa"),
+    movement("dev-tx-3", `${month}-09`, -2100n, "Trenitalia", "Trasporti"),
+    movement("dev-tx-4", `${month}-11`, 210000n, "Stipendio", null),
+    movement("dev-tx-5", `${month}-12`, -50000n, "Giroconto", null, "dev-tx-6"),
+    movement("dev-tx-6", `${month}-12`, 50000n, "Giroconto", null, "dev-tx-5"),
+    movement("dev-tx-7", `${before}-02`, -1299n, "Netflix", "Abbonamenti"),
+    movement("dev-tx-8", `${before}-06`, -3890n, "Esselunga", "Spesa"),
+  ]);
+  console.log(`[seed] ${outcome.created} movements, ${outcome.updated} updated on the synced account`);
+}
+
+await seedExpenses(ctx);
 
 await getPool().end();

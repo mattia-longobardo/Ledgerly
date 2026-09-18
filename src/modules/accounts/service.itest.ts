@@ -1,5 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "@/platform/context";
+import { upsertFromProvider } from "@/modules/transactions/service";
+import { addDays, today } from "@/platform/dates";
+import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { accountsView, listBalanceEntries, listSnapshotRuns } from "./queries";
@@ -82,7 +86,7 @@ describe("createAccount", () => {
   });
 
   it("refuses an opening balance dated in the future, writing nothing", async () => {
-    const future = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+    const future = addDays(today(ctx.timeZone), 3);
     await expect(
       createAccount(ctx, { ...CHECKING, openingBalance: { on: future, cents: 1n } }),
     ).rejects.toThrow(AccountError);
@@ -109,7 +113,10 @@ describe("balance entries", () => {
 
   it("refuses a balance dated in the future", async () => {
     const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
-    const future = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    // Tomorrow in the user's own zone, not in UTC: `toISOString()` is forbidden for a civil date
+    // (spec §4.3) and between Rome midnight and UTC midnight it names a day that is already today,
+    // so the service rightly accepts it and this test used to fail for two hours a night.
+    const future = addDays(today(ctx.timeZone), 1);
     await expect(saveBalanceEntry(ctx, account.id, { on: future, cents: 1n, note: "" })).rejects.toThrow(
       AccountError,
     );
@@ -365,6 +372,34 @@ describe("removeAccount", () => {
     expect(await removeAccount(ctx, account.id)).toBe("deleted");
     expect((await accountsView(ctx)).rows).toEqual([]);
     expect(await listBalanceEntries(ctx, account.id)).toEqual([]);
+  });
+
+  // The movements fall by foreign key; their `provider_links` rows would not (§11.4: `entity_id`
+  // is not a real foreign key), and a link nothing can resolve keeps the entity unique key of a
+  // row that no longer exists.
+  it("forgets the provider links of the movements it takes with it", async () => {
+    const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
+    await upsertFromProvider(ctx, account.id, [
+      {
+        externalId: "w-1",
+        counterpartExternalId: null,
+        occurredAt: new Date("2026-01-10T09:00:00Z"),
+        amountCents: -2_500n,
+        currency: "EUR",
+        type: "expense",
+        state: "cleared",
+        payee: "Esselunga",
+        note: null,
+        categoryExternalId: null,
+        categoryName: null,
+        labels: [],
+      },
+    ]);
+    const linked = await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"]);
+    expect(linked.size).toBe(1);
+
+    expect(await removeAccount(ctx, account.id)).toBe("deleted");
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"])).toEqual(new Map());
   });
 
   it("archives a synced account instead of deleting it", async () => {

@@ -7,6 +7,7 @@ import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
 import { SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { TaxonomyPanels } from "./categories/panels";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("settings.tabs"))("data") };
@@ -59,6 +60,8 @@ export default async function SettingsDataPage() {
           </Table>
         )}
       </SettingsSection>
+
+      <TaxonomyPanels />
     </div>
   );
 }

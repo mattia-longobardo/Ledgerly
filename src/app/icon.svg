@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Ledgerly">
+  <title>Ledgerly</title>
+  <style>
+    /*
+      The pair `BrandMark` paints with (`src/ui/shell/brand.tsx`: `bg-fg text-card`), so the tab
+      icon and the mark in the sidebar are the same object: a near-black plate with a white letter
+      in the light palette, inverted in the dark one. The tokens of `globals.css` are copied as
+      literals because an icon is fetched on its own and never sees that stylesheet.
+
+      A favicon follows the browser's theme, not the app's `data-theme`, so with the app forced to
+      one theme and the system on the other the two differ. Unavoidable, and still far closer to
+      the mark than one fixed colour for both would be. The raster fallbacks beside this file
+      cannot switch at all and carry the light variant, which is the common case.
+
+      The letter is a path, not text: a tab icon is rendered without the page's fonts, so
+      `font-family` here would fall back to whatever the platform offers and change shape per
+      machine. This file is the source of `favicon.ico`, `icon.png` and `apple-icon.png`, which
+      exist because an SVG alone is not enough — Safari does not use one, and every browser asks
+      for `/favicon.ico` unprompted. Re-render them with `node scripts/icons.mjs`.
+    */
+    .plate {
+      fill: #15181d;
+    }
+    .letter {
+      fill: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      .plate {
+        fill: #e8e9ec;
+      }
+      .letter {
+        fill: #16181b;
+      }
+    }
+  </style>
+  <rect class="plate" width="32" height="32" rx="8" />
+  <path class="letter" d="M10.5 7.75h4v12.5h7v4h-11z" />
+</svg>

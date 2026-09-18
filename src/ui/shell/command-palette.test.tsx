@@ -1,12 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandPalette } from "./command-palette";
 import type { NavLink } from "./nav-types";
 import { ShellProvider } from "./shell-context";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn() }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push }) }));
 
 // "/components" and "/settings/profile" are not yet real routes (Tasks 18-19 add their pages).
 const LINKS: NavLink[] = [
@@ -43,6 +44,7 @@ const LABELS = {
   palette: {
     placeholder: "Jump to a page…",
     pages: "Pages",
+    payees: "Payees",
     empty: "No matches",
     shortcut: "⌘K",
     escape: "esc",
@@ -50,6 +52,8 @@ const LABELS = {
 };
 
 describe("CommandPalette", () => {
+  beforeEach(() => push.mockReset());
+
   it("moves aria-activedescendant and aria-selected as ArrowDown moves the cursor", async () => {
     render(
       <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
@@ -73,5 +77,61 @@ describe("CommandPalette", () => {
     expect(input.getAttribute("aria-activedescendant")).toBe(options[1].id);
     expect(options[0]).toHaveAttribute("aria-selected", "false");
     expect(options[1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("offers the payees the search found, under their own heading, and opens them filtered", async () => {
+    const searchPayees = vi.fn(async () => [{ payee: "Netflix", count: 7 }]);
+    render(
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+        <CommandPalette links={LINKS} searchPayees={searchPayees} />
+      </ShellProvider>,
+    );
+
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await userEvent.type(await screen.findByPlaceholderText("Jump to a page…"), "netfl");
+
+    const payee = await screen.findByRole("option", { name: /Netflix/ });
+    expect(searchPayees).toHaveBeenCalledWith("netfl");
+    expect(payee).toHaveTextContent("7");
+    expect(screen.getByText("Payees")).toBeInTheDocument();
+
+    await userEvent.click(payee);
+    expect(push).toHaveBeenCalledWith("/expenses?q=Netflix");
+  });
+
+  it("asks once for the settled query, not once per keystroke", async () => {
+    const searchPayees = vi.fn(async () => []);
+    render(
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+        <CommandPalette links={LINKS} searchPayees={searchPayees} />
+      </ShellProvider>,
+    );
+
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await userEvent.type(await screen.findByPlaceholderText("Jump to a page…"), "netflix");
+
+    await vi.waitFor(() => expect(searchPayees).toHaveBeenCalled());
+    expect(searchPayees).toHaveBeenCalledTimes(1);
+    expect(searchPayees).toHaveBeenCalledWith("netflix");
+  });
+
+  it("keeps navigating when the payee search fails", async () => {
+    const searchPayees = vi.fn(async () => {
+      throw new Error("offline");
+    });
+    render(
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+        <CommandPalette links={LINKS} searchPayees={searchPayees} />
+      </ShellProvider>,
+    );
+
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    const input = await screen.findByPlaceholderText("Jump to a page…");
+    await userEvent.type(input, "comp");
+    await vi.waitFor(() => expect(searchPayees).toHaveBeenCalled());
+
+    expect(await screen.findByRole("option", { name: /Components/ })).toBeInTheDocument();
+    await userEvent.type(input, "{Enter}");
+    expect(push).toHaveBeenCalledWith("/components");
   });
 });

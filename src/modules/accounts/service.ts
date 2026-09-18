@@ -1,10 +1,21 @@
 import "server-only";
 import { and, asc, eq, max, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
-import { type CivilDate, addMonths, lastDayOfMonth, type MonthKey, monthKey, today } from "@/platform/dates";
+import {
+  type CivilDate,
+  addMonths,
+  isCivilDate,
+  lastDayOfMonth,
+  type MonthKey,
+  monthKey,
+  today,
+} from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
+import { PROVIDERS } from "@/platform/integrations/rules";
+import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
+import { transactionIdsOfAccount } from "@/modules/transactions/queries";
 import {
   type AccountCreateInput,
   accountCreateSchema,
@@ -158,17 +169,36 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
  *
  * Nothing can reference an account yet: transactions, pockets, subscriptions, interest rules and
  * funds arrive from F2 onwards, and each adds its count here.
+ *
+ * A real deletion also forgets the provider links of the movements it takes with it, through the
+ * integrations service (§4.3: one owner per table — this module never writes `provider_links`
+ * itself). The provider ids of the *account* are not there at all: they live in
+ * `accounts.provider_account_id` (§11.4), so they go with the row.
  */
-export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<"deleted" | "archived"> {
+export async function removeAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+): Promise<"deleted" | "archived"> {
   const account = await requireAccount(ctx, id);
   const references = 0;
   if (!canDelete(account, references)) {
     await archiveAccount(ctx, id);
     return "archived";
   }
+  // The ids before the delete, because the movements fall by foreign key and their
+  // `provider_links` rows do not (`entity_id` is not a real foreign key: the deviation of §11.4).
+  // Left behind they would hold the entity unique key of rows nothing can resolve, and claim a
+  // `first_seen_at` for movements that no longer exist.
+  const movementIds = await transactionIdsOfAccount(ctx, id);
   await getDb()
     .delete(accounts)
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  // After the delete, never before. A link removed while its row survives is worse than an
+  // orphan: the next sync would not recognise the movement and would import it a second time,
+  // which is wrong money in every total. This way the failure mode is the one we already have.
+  for (const provider of PROVIDERS) {
+    await unlinkEntities(ctx, provider, "transaction", movementIds);
+  }
   return "deleted";
 }
 
@@ -195,6 +225,59 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
     })
     .returning();
   return row;
+}
+
+/** A provider's reading of a balance, as the Wallet sync hands it over (spec §9.1). */
+export interface ProviderBalanceInput {
+  /** The civil date of the reading **in the user's zone** (spec §9.1): the caller's to compute. */
+  on: CivilDate;
+  cents: Cents;
+  availableCents?: Cents | null;
+}
+
+/**
+ * A balance Wallet published, stored as its own `provider` row (spec §9.1).
+ *
+ * Deliberately separate from {@link saveBalanceEntry}, which writes `manual` and only ever that:
+ * the unique key is `(account, on, source)`, so the two never collide, and a manual balance stays
+ * the correction that wins for its date (spec §7.1, `SOURCE_RANK`). Idempotent on that key — the
+ * same reading applied twice updates one row instead of adding a second — and no future-date check
+ * is needed, because "the date of the reading" cannot be in the future.
+ *
+ * It also moves `accounts.last_synced_at`: §7.1 measures staleness from the last *reading*, and a
+ * provider balance written is exactly the evidence that one happened. `applyProviderAccounts`
+ * stamps it only on the accounts its reconciliation had a step for, so an account that came back
+ * unchanged would otherwise go stale while being read every hour. Same transaction as the balance,
+ * so the two facts cannot disagree.
+ */
+export async function saveProviderBalance(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  input: ProviderBalanceInput,
+  now: Date = new Date(),
+): Promise<BalanceEntry> {
+  await requireAccount(ctx, accountId);
+  if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
+  const values = {
+    balanceCents: input.cents,
+    availableCents: input.availableCents ?? null,
+    capturedAt: now,
+  };
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .insert(balanceEntries)
+      .values(userScoped(ctx).stamp({ accountId, on: input.on, source: "provider" as const, ...values }))
+      .onConflictDoUpdate({
+        target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
+        set: values,
+      })
+      .returning();
+    await tx
+      .update(accounts)
+      .set({ lastSyncedAt: now })
+      .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
+    return row;
+  });
 }
 
 export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {

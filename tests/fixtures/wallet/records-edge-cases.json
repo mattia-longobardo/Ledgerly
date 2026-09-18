@@ -1,0 +1,85 @@
+{
+  "records": [
+    {
+      "id": "wr-4001",
+      "accountId": "wa-general",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -75,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": null,
+      "labels": [],
+      "note": null,
+      "recordDate": "2026-01-08",
+      "recordState": "cleared",
+      "recordType": "transfer",
+      "source": "manual",
+      "transfer": {
+        "type": "withdrawal",
+        "transferId": "wt-9002"
+      }
+    },
+    {
+      "id": "wr-4002",
+      "accountId": "wa-general",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": 1.0049999999,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "Rimborso spicci",
+      "labels": [],
+      "note": null,
+      "recordDate": "2026-01-09",
+      "recordState": "cleared",
+      "recordType": "income",
+      "source": "manual",
+      "transfer": null
+    },
+    {
+      "id": "wr-4003",
+      "accountId": "wa-general",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -4.2,
+        "currencyCode": "eur"
+      },
+      "category": {
+        "id": "wc-unsorted",
+        "name": null,
+        "group": null,
+        "color": null
+      },
+      "counterParty": null,
+      "labels": [
+        " casa ",
+        {
+          "name": " spesa ",
+          "color": "#10B981"
+        },
+        {
+          "id": "wl-7"
+        },
+        "",
+        true,
+        null
+      ],
+      "note": null,
+      "recordDate": "2026-01-10",
+      "recordState": "cleared",
+      "recordType": "expense",
+      "source": "manual",
+      "transfer": null
+    }
+  ],
+  "limit": 200,
+  "offset": 0,
+  "nextOffset": null,
+  "appliedRecordDateFilters": ["gte.2026-01-01T00:00:00.000Z", "lt.2026-02-01T00:00:00.000Z"]
+}

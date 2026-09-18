@@ -17,7 +17,14 @@ export interface ShellLabels {
   signOut: string;
   profile: string;
   more: string;
-  palette: { placeholder: string; pages: string; empty: string; shortcut: string; escape: string };
+  palette: {
+    placeholder: string;
+    pages: string;
+    payees: string;
+    empty: string;
+    shortcut: string;
+    escape: string;
+  };
 }
 
 interface ShellState {

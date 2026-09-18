@@ -27,5 +27,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/|_next/static/|_next/image|favicon\\.ico$|robots\\.txt$).*)"],
+  // The App Router's icon routes (`src/app/{favicon.ico,icon.svg,icon.png,apple-icon.png}`) have
+  // to be reachable without a session: the sign-in page is exactly where a browser asks for the
+  // tab icon, and behind the session guard the request is answered with a redirect to sign-in.
+  // Matched as a family rather than listed one by one, because adding a size later and forgetting
+  // this line is a silent failure — the page still renders, only the icon quietly does not.
+  // Non-capturing groups: Next refuses a matcher that captures (`invalid-route-source`).
+  matcher: [
+    "/((?!api/|_next/static/|_next/image|favicon\\.ico$|(?:apple-)?icon\\.(?:svg|png)$|robots\\.txt$).*)",
+  ],
 };

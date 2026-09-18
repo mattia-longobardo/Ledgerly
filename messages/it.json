@@ -19,7 +19,8 @@
     "settings": "Impostazioni",
     "components": "Componenti",
     "more": "Altro",
-    "accounts": "Conti"
+    "accounts": "Conti",
+    "expenses": "Spese"
   },
   "shell": {
     "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
@@ -52,10 +53,6 @@
     "lowBalance": {
       "subject": "{account} è sotto la soglia",
       "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Ledgerly per controllare."
-    },
-    "staleSync": {
-      "subject": "{account} non si sincronizza da un po'",
-      "body": "L'ultima lettura di {account} è più vecchia di {hours} ore.\n\nApri Ledgerly per ricollegarlo o inserire un saldo a mano."
     }
   },
   "auth": {
@@ -112,7 +109,168 @@
       "label": "Sezioni delle impostazioni",
       "profile": "Profilo",
       "security": "Sicurezza",
+      "integrations": "Integrazioni",
       "data": "Dati"
+    },
+    "integrations": {
+      "title": "Sorgenti dei dati",
+      "description": "Da dove arrivano saldi e movimenti. Le credenziali sono cifrate a riposo e non vengono più mostrate.",
+      "providers": {
+        "wallet": {
+          "name": "Budget Makers Wallet",
+          "role": "Conti, saldi e movimenti"
+        }
+      },
+      "states": {
+        "absent": "Non collegato",
+        "active": "Collegato",
+        "error": "Errore",
+        "revoked": "Token rifiutato"
+      },
+      "fields": {
+        "lastSync": "Ultima sincronizzazione",
+        "schedule": "Pianificazione",
+        "never": "Mai"
+      },
+      "schedule": "Ogni ora, al minuto 07",
+      "firstSync": "La prima sincronizzazione recupera 12 mesi. Dopo, ogni esecuzione rilegge gli ultimi 7 giorni.",
+      "connect": {
+        "title": "Collega Wallet",
+        "description": "Incolla il token API del tuo account Wallet. Viene sigillato con la chiave di cifratura dell'app e non torna mai al browser.",
+        "token": "Token API",
+        "tokenHint": "Salvato cifrato. Se lo rigeneri, sostituiscilo qui.",
+        "submit": "Collega",
+        "replace": "Sostituisci il token",
+        "cancel": "Annulla"
+      },
+      "actions": {
+        "test": "Prova la connessione",
+        "sync": "Sincronizza ora",
+        "disconnect": "Scollega",
+        "configure": "Configura"
+      },
+      "disconnect": {
+        "title": "Scollegare Wallet?",
+        "description": "Il token viene eliminato. Conti e movimenti sincronizzati restano, e non vengono più aggiornati.",
+        "confirm": "Scollega",
+        "cancel": "Resta collegato"
+      },
+      "runs": {
+        "title": "Registro delle sincronizzazioni",
+        "description": "Una riga per esecuzione, dalla più recente.",
+        "started": "Avvio",
+        "kind": "Job",
+        "result": "Esito",
+        "counts": "Conteggi",
+        "detail": "Dettaglio",
+        "empty": "Nessuna sincronizzazione è ancora stata eseguita.",
+        "running": "In corso…",
+        "duration": "{seconds} s"
+      },
+      "kinds": {
+        "accounts": "Conti e saldi",
+        "transactions": "Movimenti"
+      },
+      "runStates": {
+        "running": "In corso",
+        "success": "OK",
+        "failed": "Fallita",
+        "skipped": "Saltata"
+      },
+      "counts": {
+        "created": "{count} nuovi",
+        "updated": "{count} aggiornati",
+        "skipped": "{count} invariati",
+        "removed": "{count} spariti"
+      },
+      "toasts": {
+        "connected": "Wallet collegato",
+        "replaced": "Token sostituito",
+        "disconnected": "Wallet scollegato",
+        "synced": "Sincronizzazione completata",
+        "tested": "Wallet ha risposto: il token funziona"
+      },
+      "errors": {
+        "rejected": "Wallet ha rifiutato il token.",
+        "unreachable": "Wallet non è raggiungibile. Riprova tra un minuto.",
+        "provider": "Wallet ha risposto qualcosa che l'app non sa usare. Il dettaglio è nel registro.",
+        "empty": "Incolla prima un token.",
+        "notConnected": "Wallet non è collegato.",
+        "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
+        "failed": "Non è stato possibile salvare. Riprova."
+      },
+      "notifications": {
+        "failedSubject": "Sincronizzazione Wallet fallita",
+        "failedBody": "L'ultima sincronizzazione «{kind}» di Budget Makers Wallet è fallita: {error}. Controlla il token in Impostazioni › Integrazioni.",
+        "staleSubject": "La sincronizzazione Wallet è vecchia",
+        "staleBody": "Budget Makers Wallet non si sincronizza dal {since}. Controlla il collegamento in Impostazioni › Integrazioni."
+      }
+    },
+    "data": {
+      "categories": {
+        "title": "Categorie",
+        "description": "Le categorie dei movimenti in Spese. Una categoria sincronizzata viene abbinata per nome prima di crearne una nuova.",
+        "add": "Aggiungi categoria",
+        "name": "Nome",
+        "group": "Gruppo",
+        "type": "Tipo",
+        "color": "Colore",
+        "noColor": "Nessun colore",
+        "noGroup": "Nessun gruppo",
+        "types": {
+          "income": "Entrata",
+          "expense": "Spesa",
+          "transfer": "Giroconto"
+        },
+        "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
+        "rename": "Rinomina",
+        "edit": "Modifica categoria",
+        "archive": "Archivia",
+        "restore": "Ripristina",
+        "archived": "Archiviata",
+        "showArchived": "Mostra le archiviate",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "empty": "Ancora nessuna categoria. Compaiono anche da sole man mano che i movimenti si sincronizzano.",
+        "saved": "Categoria salvata",
+        "archivedToast": "Categoria archiviata",
+        "restoredToast": "Categoria ripristinata",
+        "errors": {
+          "duplicate": "Esiste già una categoria con questo nome.",
+          "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
+          "notFound": "Questa categoria non esiste più.",
+          "failed": "Non è stato possibile salvare. Riprova."
+        }
+      },
+      "labels": {
+        "title": "Etichette",
+        "description": "Etichette libere da mettere su un movimento. Quelle sincronizzate vengono abbinate per nome.",
+        "add": "Aggiungi etichetta",
+        "name": "Nome",
+        "color": "Colore",
+        "noColor": "Nessun colore",
+        "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
+        "rename": "Rinomina",
+        "edit": "Modifica etichetta",
+        "remove": "Elimina",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "empty": "Ancora nessuna etichetta.",
+        "saved": "Etichetta salvata",
+        "removedToast": "Etichetta eliminata",
+        "remove_confirm": {
+          "title": "Eliminare questa etichetta?",
+          "description": "Viene rimossa da {count, plural, one {# movimento} other {# movimenti}}. Non cambia nient'altro.",
+          "confirm": "Elimina",
+          "cancel": "Tienila"
+        },
+        "errors": {
+          "duplicate": "Esiste già un'etichetta con questo nome.",
+          "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
+          "notFound": "Questa etichetta non esiste più.",
+          "failed": "Non è stato possibile salvare. Riprova."
+        }
+      }
     },
     "account": {
       "title": "Account",
@@ -248,6 +406,129 @@
     "generic": {
       "title": "Qualcosa è andato storto",
       "description": "Non è stato possibile mostrare la pagina. I tuoi dati sono al sicuro: riprova."
+    }
+  },
+  "expenses": {
+    "title": "Spese",
+    "summary": "{count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}} · {total}",
+    "countTransactions": "{count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
+    "filters": {
+      "label": "Filtri",
+      "range": {
+        "label": "Intervallo di date",
+        "previous": "Periodo precedente",
+        "next": "Periodo successivo",
+        "latest": "Ultimo",
+        "previousMonth": "Mese precedente",
+        "nextMonth": "Mese successivo",
+        "from": "Da",
+        "to": "A",
+        "apply": "Applica",
+        "cancel": "Annulla",
+        "pickEnd": "Scegli la data di fine",
+        "hint": "{from} – {to} · {count, plural, one {# giorno} other {# giorni}}"
+      },
+      "presets": {
+        "thisMonth": "Questo mese",
+        "lastMonth": "Mese scorso",
+        "last3Months": "Ultimi 3 mesi",
+        "ytd": "Da inizio anno"
+      },
+      "categories": {
+        "title": "Categorie",
+        "all": "Tutte le categorie",
+        "some": "{count, plural, one {# categoria} other {# categorie}}",
+        "clear": "Azzera",
+        "none": "Senza categoria"
+      },
+      "accounts": {
+        "all": "Tutti i conti",
+        "one": "{name}"
+      },
+      "search": "Cerca beneficiario…",
+      "searchLabel": "Cerca per beneficiario",
+      "clear": "Azzera i filtri",
+      "showHidden": "Mostra i nascosti"
+    },
+    "columns": {
+      "date": "Data",
+      "payee": "Beneficiario",
+      "account": "Conto",
+      "category": "Categoria",
+      "amount": "Importo",
+      "actions": "Azioni"
+    },
+    "sort": {
+      "ascending": "Ordina in modo crescente",
+      "descending": "Ordina in modo decrescente"
+    },
+    "group": {
+      "summary": "{count, plural, one {# movimento} other {# movimenti}} · {total}"
+    },
+    "truncated": "Mostrati i primi {shown} di {count} movimenti.",
+    "selection": {
+      "label": "{count, plural, one {# selezionato} other {# selezionati}}",
+      "all": "Seleziona tutto",
+      "setCategory": "Imposta categoria",
+      "hide": "Nascondi",
+      "restore": "Ripristina",
+      "clear": "Deseleziona"
+    },
+    "row": {
+      "editCategory": "Modifica categoria",
+      "edit": "Modifica dettagli",
+      "menu": "Azioni sulla riga",
+      "note": "Nota",
+      "labels": "Etichette",
+      "noLabels": "Nessuna etichetta",
+      "uncategorised": "Senza categoria",
+      "noPayee": "Senza beneficiario",
+      "save": "Salva",
+      "cancel": "Annulla"
+    },
+    "badges": {
+      "hidden": "Nascosto",
+      "removedUpstream": "Sparito dal provider",
+      "edited": "Modificato qui",
+      "transfer": "Giroconto",
+      "pending": "In attesa"
+    },
+    "breakdown": {
+      "title": "Per categoria",
+      "total": "{total} movimentati nell'intervallo",
+      "empty": "Niente da suddividere in questo intervallo.",
+      "share": "{share} %"
+    },
+    "shortcuts": {
+      "title": "Scorciatoie",
+      "editCategory": "Modifica categoria",
+      "selectRow": "Seleziona la riga",
+      "nextPrevious": "Successivo / precedente"
+    },
+    "empty": {
+      "title": "Nessun movimento in questo intervallo",
+      "description": "Prova ad allargare l'intervallo di date o ad azzerare i filtri.",
+      "action": "Azzera i filtri"
+    },
+    "unsynced": {
+      "title": "Ancora niente di sincronizzato",
+      "description": "Collega Budget Makers Wallet per importare i tuoi movimenti.",
+      "action": "Apri le integrazioni"
+    },
+    "toasts": {
+      "categorySet": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
+      "hidden": "{count, plural, one {# movimento nascosto} other {# movimenti nascosti}}",
+      "restored": "{count, plural, one {# movimento ripristinato} other {# movimenti ripristinati}}",
+      "noteSaved": "Nota salvata",
+      "labelsSaved": "Etichette salvate"
+    },
+    "errors": {
+      "notFound": "Questo movimento non esiste più.",
+      "providerOwned": "Beneficiario, importo e data appartengono al provider e non si modificano qui.",
+      "failed": "Non è stato possibile salvare. Riprova."
+    },
+    "palette": {
+      "payees": "Beneficiari"
     }
   },
   "overview": {

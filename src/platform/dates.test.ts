@@ -9,6 +9,7 @@ import {
   monthKey,
   monthsApart,
   monthsBetween,
+  startOfDayIn,
   today,
   utcOffsetLabel,
 } from "./dates";
@@ -72,5 +73,39 @@ describe("utcOffsetLabel", () => {
     expect(utcOffsetLabel("Asia/Kolkata", new Date("2026-01-15T12:00:00Z"))).toBe("UTC+5:30");
     expect(utcOffsetLabel("America/St_Johns", new Date("2026-01-15T12:00:00Z"))).toBe("UTC−3:30");
     expect(utcOffsetLabel("UTC", new Date("2026-01-15T12:00:00Z"))).toBe("UTC");
+  });
+});
+
+describe("startOfDayIn", () => {
+  it("is the instant the civil day begins in that zone, not in UTC", () => {
+    expect(startOfDayIn("2026-09-13", "UTC").toISOString()).toBe("2026-09-13T00:00:00.000Z");
+    // Rome is UTC+2 in September: its midnight is the previous 22:00 UTC.
+    expect(startOfDayIn("2026-09-13", "Europe/Rome").toISOString()).toBe("2026-09-12T22:00:00.000Z");
+    // …and UTC+1 in January, so the same wall clock is a different instant.
+    expect(startOfDayIn("2026-01-13", "Europe/Rome").toISOString()).toBe("2026-01-12T23:00:00.000Z");
+    expect(startOfDayIn("2026-09-13", "America/New_York").toISOString()).toBe("2026-09-13T04:00:00.000Z");
+  });
+
+  it("round-trips through civilDateIn, which is what the sync relies on", () => {
+    for (const zone of ["UTC", "Europe/Rome", "America/New_York", "Pacific/Apia", "Asia/Kolkata"]) {
+      for (const on of ["2026-01-01", "2026-03-29", "2026-06-15", "2026-10-25", "2026-12-31"]) {
+        expect(civilDateIn(startOfDayIn(on, zone), zone), `${on} in ${zone}`).toBe(on);
+      }
+    }
+  });
+
+  it("lands on the real start of a day whose midnight the clock skips", () => {
+    // Santiago springs forward at midnight on 2026-09-06: 00:00 does not exist, and the day
+    // starts at 01:00 local. The two-pass offset is what keeps this from drifting a day.
+    const start = startOfDayIn("2026-09-06", "America/Santiago");
+    expect(civilDateIn(start, "America/Santiago")).toBe("2026-09-06");
+    expect(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Santiago",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).format(start),
+    ).toBe("01:00");
   });
 });

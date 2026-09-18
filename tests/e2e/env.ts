@@ -13,6 +13,7 @@ export const USERS = {
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
   reset: { email: "reset@example.test", password: "reset-password-123", name: "Reset" },
   accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
+  expenses: { email: "expenses@example.test", password: "expenses-password-123", name: "Expenses" },
 } as const;
 
 /**
@@ -22,6 +23,7 @@ export const USERS = {
  */
 export const SESSIONS = {
   accounts: { user: "accounts", file: "accounts-session.json" },
+  expenses: { user: "expenses", file: "expenses-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;
@@ -54,6 +56,7 @@ export const E2E_ENV: Record<string, string> = {
   S3_ACCESS_KEY_ID: "ledgerly",
   S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
   S3_BUCKET: "ledgerly-e2e",
+  APP_ENCRYPTION_KEY: "k1:yy1bMD1Zx+AvatfJaiBLql/352uA2W9ixjHOS27eyds=",
   CRON_SECRET: "e2e-cron-secret-e2e-cron-secret-e2e",
   HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-e2e",
   METRICS_TOKEN: "e2e-metrics-token-e2e-metrics-token",

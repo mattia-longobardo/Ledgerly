@@ -1,0 +1,90 @@
+{
+  "accounts": [
+    {
+      "id": "wa-cash",
+      "name": "  Contanti  ",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": " Cash ",
+      "isInvestmentAccount": true,
+      "updatedAt": "2026-03-14T08:30:00.000Z",
+      "balance": { "currentBalance": 128.4 }
+    },
+    {
+      "id": "wa-general",
+      "name": "Conto corrente",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "general",
+      "isInvestmentAccount": false,
+      "updatedAt": "2026-03-14T08:30:00.000Z",
+      "balance": { "currentBalance": 2615.39 }
+    },
+    {
+      "id": "wa-current",
+      "name": "Conto secondario",
+      "currencyCode": "eur",
+      "archived": false,
+      "accountType": "Current",
+      "balance": { "currentBalance": 1234567.89 }
+    },
+    {
+      "id": "wa-saving",
+      "name": "Salvadanaio",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "saving",
+      "balance": { "currentBalance": 1.005 }
+    },
+    {
+      "id": "wa-savings",
+      "name": "Deposito",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "SAVINGS",
+      "balance": { "currentBalance": 0.1 }
+    },
+    {
+      "id": "wa-investment",
+      "name": "Fondo indicizzato",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "investment",
+      "isInvestmentAccount": true,
+      "balance": { "currentBalance": 8231.07 }
+    },
+    {
+      "id": "wa-credit",
+      "name": "Carta di credito",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "Credit Card",
+      "balance": { "currentBalance": -432.1 }
+    },
+    {
+      "id": "wa-crypto",
+      "name": "Portafoglio crypto",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "crypto",
+      "balance": { "currentBalance": 96.66 }
+    },
+    {
+      "id": "wa-brokerage",
+      "name": "Gestione patrimoniale",
+      "currencyCode": "EUR",
+      "archived": false,
+      "accountType": "brokerage account",
+      "isInvestmentAccount": true,
+      "balance": { "currentBalance": 15000 }
+    },
+    {
+      "id": "wa-mystery",
+      "name": "Conto misterioso",
+      "currencyCode": "EUR",
+      "archived": true,
+      "updatedAt": "not a date",
+      "balance": { "currentBalance": 0 }
+    }
+  ]
+}

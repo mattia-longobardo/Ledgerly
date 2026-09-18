@@ -5,3 +5,5 @@ export * from "@/modules/users/schema";
 export * from "@/platform/jobs/schema";
 export * from "@/platform/notifications/schema";
 export * from "@/modules/accounts/schema";
+export * from "@/platform/integrations/schema";
+export * from "@/modules/transactions/schema";

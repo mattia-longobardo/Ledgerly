@@ -1,5 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/ui/cn";
 
@@ -74,7 +75,8 @@ export function PeriodStepper({
   path: string;
   params: Params;
   offset: number;
-  periodLabel: string;
+  /** Text, or the control that opens a date picker: in the design the period label is the button. */
+  periodLabel: ReactNode;
   previousLabel: string;
   nextLabel: string;
   latestLabel: string;
