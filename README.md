@@ -103,9 +103,14 @@ docker compose build          # or: docker compose up -d --build
 
 Being on `db_internal` is what lets the app reach `postgres:5432` and `silo:9000` by name; those
 are internal-only and unreachable from a workstation, which is why `npm run dev` uses
-`compose.dev.yml` instead. `dash.longobardo.me` is served through the `lan-only@file` middleware:
-LAN and NetBird only, never the public internet, so it is deliberately absent from the blackbox
-probes in `db/prometheus/prometheus.yml`.
+`compose.dev.yml` instead. `dash.longobardo.me` is reachable from the public internet, but through one door only (spec D20).
+Two Traefik routers serve it and they are not interchangeable: `ledgerly-router` on the `web`
+entrypoint is what the Cloudflare tunnel hits, and it carries no IP filter; `ledgerly-secure-router`
+on `websecure` is the direct 443 — the only port the home router forwards — and it keeps
+`lan-only@file`, so nobody reaches the app from the internet without passing Cloudflare. Port 80 is
+not forwarded, which is what makes the tunnel the sole public entrance. Nothing guards that entrance
+except the app's own sign-in (Better Auth, sign-up disabled), so the blackbox probes in
+`db/prometheus/prometheus.yml` still leave it alone: a probe would only ever see the login page.
 
 The app image applies pending migrations on boot, then serves the standalone Next.js server; it
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
@@ -148,8 +153,14 @@ a side effect of every tick, not a job of its own.
   repo, so Traefik itself discards any `X-Forwarded-For` a client tries to inject before setting
   its own. Only with both set does the app trust `X-Forwarded-For` from that one hop and give each
   client its own sign-in rate-limit bucket; left unset, `TRUSTED_PROXY_IPS` defaults to empty and
-  every request shares one bucket. Never publish port 3000 on the host: the app is reached only
-  over LAN/NetBird (spec §13).
+  every request shares one bucket. Never publish port 3000 on the host: Traefik must stay the only
+  way in (spec D20). Note that Traefik's `web` entrypoint currently sets no
+  `forwardedHeaders.trustedIPs`, so it overwrites `X-Forwarded-For` with the tunnel hop's address
+  and every visitor arriving from the internet lands in the **same** sign-in rate-limit bucket
+  (5 attempts per minute on `/sign-in/email`) — one bot hammering the login locks the owner out
+  from outside too. Preserving the real client address means adding
+  `--entrypoints.web.forwardedHeaders.trustedIPs=<the cloudflared hop>` to Traefik, which is an
+  owner action in `network/docker-compose.yml`, outside this repo.
 - **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
   inside the same Docker network as the app (its compose service name, `ledgerly`), for
   example:

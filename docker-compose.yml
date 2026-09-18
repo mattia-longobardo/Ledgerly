@@ -31,7 +31,7 @@ services:
       - "traefik.docker.network=proxy_public"
       - "traefik.http.routers.ledgerly-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`)"
       - "traefik.http.routers.ledgerly-router.entrypoints=web"
-      - "traefik.http.routers.ledgerly-router.middlewares=ledgerly-https,lan-only@file"
+      - "traefik.http.routers.ledgerly-router.middlewares=ledgerly-https"
       - "traefik.http.routers.ledgerly-secure-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`)"
       - "traefik.http.routers.ledgerly-secure-router.entrypoints=websecure"
       - "traefik.http.routers.ledgerly-secure-router.tls=true"
