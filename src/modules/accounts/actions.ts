@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
+import { linkOwnTransfers } from "@/modules/transactions/service";
 import { parseAmount } from "./rules";
 import {
   AccountError,
@@ -96,6 +97,9 @@ export async function saveAccountSettingsAction(
       ...input,
       lowBalanceCents: input.lowBalance ? amount(input.lowBalance, ctx) : null,
     });
+    // A new IBAN may make giroconti of movements already stored (F2.5).
+    await linkOwnTransfers(ctx);
+    revalidatePath("/expenses");
     revalidatePath(`/accounts/${id}`);
     revalidatePath("/accounts");
     revalidatePath("/");

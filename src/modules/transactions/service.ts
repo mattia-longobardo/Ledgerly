@@ -6,9 +6,9 @@
 // anywhere here (spec §4.3): the movements arrive already fetched, and the sync engine that
 // fetched them is outside.
 import "server-only";
-import { and, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { z } from "zod";
-import { getAccount } from "@/modules/accounts/queries";
+import { getAccount, listAccounts } from "@/modules/accounts/queries";
 import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -23,7 +23,10 @@ import {
   type TransferLeg,
   type UserEdit,
   type WindowRow,
+  normalizeIban,
+  type OwnIban,
   pairTransfers,
+  planIbanTransfers,
   planProviderMerge,
   planUpstreamRemovals,
   planUserEdit,
@@ -473,6 +476,50 @@ export async function upsertFromProvider(
   });
 
   return outcome;
+}
+
+/**
+ * Finds the giroconti between the user's own accounts that the provider sent as a plain expense
+ * and income, by the IBAN in their details (`planIbanTransfers`), and files them as transfers.
+ * Reads first, then one short transaction for the changes; returns how many rows changed. Run
+ * after every sync pass and whenever an account's IBAN is saved; with no IBAN on any account it
+ * reads nothing more.
+ */
+export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number> {
+  const own: OwnIban[] = [];
+  for (const account of await listAccounts(ctx, { includeArchived: true })) {
+    const iban = normalizeIban(account.reference);
+    if (iban !== null) own.push({ accountId: account.id, iban });
+  }
+  if (own.length === 0) return 0;
+
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      amountCents: transactions.amountCents,
+      currency: transactions.currency,
+      type: transactions.type,
+      transferGroupId: transactions.transferGroupId,
+      payee: transactions.payee,
+      note: transactions.note,
+    })
+    .from(transactions)
+    .where(userScoped(ctx).owns(transactions))
+    .orderBy(asc(transactions.occurredAt), asc(transactions.id));
+  const assignments = planIbanTransfers(own, rows);
+  if (assignments.length === 0) return 0;
+
+  await getDb().transaction(async (tx) => {
+    for (const assignment of assignments) {
+      await tx
+        .update(transactions)
+        .set({ type: "transfer", transferGroupId: assignment.transferGroupId })
+        .where(and(eq(transactions.id, assignment.id), userScoped(ctx).owns(transactions)));
+    }
+  });
+  return assignments.length;
 }
 
 /**

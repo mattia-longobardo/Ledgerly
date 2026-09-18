@@ -22,6 +22,7 @@ import {
   clearRemovedUpstream,
   hideTransaction,
   hideTransactions,
+  linkOwnTransfers,
   markRemovedUpstream,
   restoreTransactions,
   setCategory,
@@ -45,13 +46,13 @@ async function newContext(): Promise<Ctx> {
   return contextFor((await createTestUser()).id);
 }
 
-async function anAccount(ctx: Ctx, name = "ING Conto Arancio"): Promise<string> {
+async function anAccount(ctx: Ctx, name = "ING Conto Arancio", reference = ""): Promise<string> {
   const account = await createAccount(ctx, {
     name,
     type: "checking",
     currency: "EUR",
     color: null,
-    reference: "",
+    reference,
     purpose: "",
     openedOn: null,
     notes: "",
@@ -986,5 +987,50 @@ describe("isolation between users (spec §4.4, §11)", () => {
     expect(mine[0].id).not.toBe(theirs[0].id);
     expect(theirs[0].payee).toBe("Their Esselunga");
     expect((await listCategories(intruder)).map((one) => one.name)).toEqual(["Groceries"]);
+  });
+});
+
+describe("linkOwnTransfers (F2.5)", () => {
+  beforeEach(resetDatabase);
+  afterAll(closeDatabase);
+
+  it("takes a giroconto sent as an expense and an income out of the totals, once", async () => {
+    const ctx = await newContext();
+    // ISO 13616's example IBANs: valid check digits, nobody's account.
+    const ing = await anAccount(ctx, "ING", "IT60 X054 2811 1010 0000 0123 456");
+    const revolut = await anAccount(ctx, "Revolut", "GB82WEST12345698765432");
+    await upsertFromProvider(ctx, ing, [
+      movement({
+        externalId: "w-out",
+        amountCents: -50_000n,
+        payee: "Bonifico",
+        note: "A GB82 WEST 1234 5698 7654 32",
+      }),
+      movement({ externalId: "w-shop", amountCents: -2_500n }),
+    ]);
+    await upsertFromProvider(ctx, revolut, [
+      movement({ externalId: "w-in", type: "income", amountCents: 50_000n, payee: "Mario", note: null }),
+    ]);
+
+    expect(await linkOwnTransfers(ctx)).toBe(2);
+    const summary = await transactionsSummary(ctx);
+    expect(summary).toMatchObject({
+      incomeCents: 0n,
+      expenseCents: -2_500n,
+      transferCount: 2,
+      unpairedTransferCount: 0,
+    });
+    expect(await linkOwnTransfers(ctx)).toBe(0);
+
+    // The next sync re-reads the expense as Wallet sends it: it stays a giroconto.
+    await upsertFromProvider(ctx, ing, [
+      movement({
+        externalId: "w-out",
+        amountCents: -50_000n,
+        payee: "Bonifico",
+        note: "A GB82 WEST 1234 5698 7654 32",
+      }),
+    ]);
+    expect((await transactionsSummary(ctx)).expenseCents).toBe(-2_500n);
   });
 });

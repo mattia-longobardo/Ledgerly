@@ -9,6 +9,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
+import { linkOwnTransfers } from "@/modules/transactions/service";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
 import { isSyncBusy, requestWalletBackfill, syncWalletNow } from "@/platform/integrations/wallet/sync";
@@ -143,6 +144,7 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
 
   try {
     await syncWalletNow(ctx, connection.id);
+    await linkOwnTransfers(ctx);
   } catch (error) {
     // A sync writes rows before it fails, and it records its own `sync_runs` entry either way, so
     // the log is refreshed on the way out of both branches.

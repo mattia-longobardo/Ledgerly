@@ -9,6 +9,9 @@ import {
   markLocallyEdited,
   pairTransfers,
   payeeKeyOf,
+  normalizeIban,
+  type IbanRuleRow,
+  planIbanTransfers,
   planProviderMerge,
   planUpstreamRemovals,
   planUserEdit,
@@ -338,6 +341,22 @@ describe("planProviderMerge", () => {
   });
 });
 
+describe("planProviderMerge on a giroconto found by IBAN", () => {
+  it("keeps a paired leg a transfer when the provider re-sends it as an expense", () => {
+    const plan = planProviderMerge(
+      stored({ type: "transfer", transferGroupId: "t-1" }),
+      incoming({ type: "expense" }),
+      resolution(),
+    );
+    expect(plan.patch.type).toBeUndefined();
+  });
+
+  it("still follows the provider for a transfer that is not in a group", () => {
+    const plan = planProviderMerge(stored({ type: "transfer" }), incoming({ type: "expense" }), resolution());
+    expect(plan.patch.type).toBe("expense");
+  });
+});
+
 describe("planUserEdit", () => {
   it("marks every field it changes, and only those", () => {
     const plan = planUserEdit(stored(), { categoryId: "cat-2", note: null });
@@ -639,5 +658,106 @@ describe("treeOrder", () => {
 
   it("answers with nothing for nothing", () => {
     expect(treeOrder([])).toEqual([]);
+  });
+});
+
+// The standard example IBANs of the ISO 13616 documentation: valid check digits, nobody's account.
+const IBAN_A = "IT60X0542811101000000123456";
+const IBAN_B = "GB82WEST12345698765432";
+
+describe("normalizeIban", () => {
+  it("accepts an IBAN written with spaces or in lower case, and returns it compact", () => {
+    expect(normalizeIban("it60 x054 2811 1010 0000 0123 456")).toBe(IBAN_A);
+    expect(normalizeIban(IBAN_B)).toBe(IBAN_B);
+  });
+
+  it("refuses a free-text reference, a wrong check digit and nothing at all", () => {
+    expect(normalizeIban("Conto di casa")).toBeNull();
+    expect(normalizeIban("IT61X0542811101000000123456")).toBeNull();
+    expect(normalizeIban(null)).toBeNull();
+  });
+});
+
+describe("planIbanTransfers", () => {
+  const own = [
+    { accountId: "ing", iban: IBAN_A },
+    { accountId: "rev", iban: IBAN_B },
+  ];
+  const row = (over: Partial<IbanRuleRow> & Pick<IbanRuleRow, "id" | "accountId">): IbanRuleRow => ({
+    occurredAt: new Date("2026-03-05T10:00:00Z"),
+    amountCents: -50_000n,
+    currency: "EUR",
+    type: "expense",
+    transferGroupId: null,
+    payee: null,
+    note: null,
+    ...over,
+  });
+
+  it("pairs a leg naming another own account's IBAN with the opposite amount there", () => {
+    const rows = [
+      row({ id: "t2", accountId: "ing", note: `Bonifico a ${IBAN_B.replace(/(.{4})/g, "$1 ")}` }),
+      row({
+        id: "t1",
+        accountId: "rev",
+        amountCents: 50_000n,
+        type: "income",
+        occurredAt: new Date("2026-03-06T08:00:00Z"),
+      }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([
+      { id: "t1", transferGroupId: "t1" },
+      { id: "t2", transferGroupId: "t1" },
+    ]);
+  });
+
+  it("files a leg whose twin is not there as a giroconto of its own", () => {
+    expect(planIbanTransfers(own, [row({ id: "t1", accountId: "ing", payee: IBAN_B })])).toEqual([
+      { id: "t1", transferGroupId: "t1" },
+    ]);
+  });
+
+  it("does not pair across more than the clearing days, nor a different amount", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-20T10:00:00Z") }),
+      row({ id: "t3", accountId: "rev", amountCents: 49_999n }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([{ id: "t1", transferGroupId: "t1" }]);
+  });
+
+  it("ignores the account's own IBAN, an unknown one, and every row when no account has an IBAN", () => {
+    const rows = [row({ id: "t1", accountId: "ing", note: IBAN_A }), row({ id: "t2", accountId: "ing" })];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
+    expect(planIbanTransfers([], [row({ id: "t3", accountId: "ing", note: IBAN_B })])).toEqual([]);
+  });
+
+  it("never takes a pair apart, and a second run changes nothing", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B, type: "transfer", transferGroupId: "t1" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "transfer", transferGroupId: "t1" }),
+      // Same amount and day, but t1 is already in a pair.
+      row({ id: "t3", accountId: "rev", amountCents: 50_000n }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
+  });
+
+  it("pairs a lone leg once its twin arrives", () => {
+    const rows = [
+      row({ id: "t5", accountId: "ing", note: IBAN_B, type: "transfer", transferGroupId: "t5" }),
+      row({ id: "t7", accountId: "rev", amountCents: 50_000n, type: "income" }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([{ id: "t7", transferGroupId: "t5" }]);
+  });
+
+  it("prefers the twin that names this account back", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n }),
+      row({ id: "t3", accountId: "rev", amountCents: 50_000n, note: `da ${IBAN_A}` }),
+    ];
+    const plan = planIbanTransfers(own, rows);
+    expect(plan).toContainEqual({ id: "t3", transferGroupId: "t1" });
+    expect(plan.some((one) => one.id === "t2")).toBe(false);
   });
 });

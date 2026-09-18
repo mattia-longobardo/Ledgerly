@@ -123,6 +123,8 @@ export interface StoredTransaction {
   hiddenAt: Date | null;
   removedUpstreamAt: Date | null;
   locallyEdited: readonly string[];
+  /** Set once the row is a leg of a giroconto, whichever rule paired it. */
+  transferGroupId?: string | null;
 }
 
 /** The columns a row is created with; the id, the user and the timestamps are the database's. */
@@ -292,6 +294,138 @@ export function pairTransfers(legs: readonly TransferLeg[]): TransferAssignment[
   return assignments.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
+/* Giroconti by IBAN */
+
+/** The longest gap between the two legs of a giroconto found by IBAN: a bank transfer's clearing. */
+export const IBAN_TRANSFER_MAX_DAYS = 5;
+
+/** Spaces and dashes out, upper case: the form an IBAN is compared in. */
+function compact(text: string): string {
+  return text.replace(/[\s-]/g, "").toUpperCase();
+}
+
+/**
+ * An account's "IBAN or reference" as an IBAN, or `null` when it is not one: the shape and the
+ * ISO 13616 mod-97 check both have to hold, so a free-text reference never matches a note.
+ */
+export function normalizeIban(reference: string | null): string | null {
+  if (reference === null) return null;
+  const iban = compact(reference);
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban)) return null;
+  const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (letter) =>
+    String(letter.charCodeAt(0) - 55),
+  );
+  let remainder = 0;
+  for (const digit of digits) remainder = (remainder * 10 + Number(digit)) % 97;
+  return remainder === 1 ? iban : null;
+}
+
+/** One of the user's accounts that has an IBAN. */
+export interface OwnIban {
+  accountId: string;
+  iban: string;
+}
+
+/** A stored movement as the IBAN rule reads it. */
+export interface IbanRuleRow {
+  id: string;
+  accountId: string;
+  occurredAt: Date;
+  amountCents: Cents;
+  currency: string;
+  type: TransactionType;
+  transferGroupId: string | null;
+  payee: string | null;
+  note: string | null;
+}
+
+/**
+ * Giroconti the provider sent as a plain expense and a plain income (F2.5, 2026-09-18). A bank
+ * transfer between two of the user's own accounts names the other account's IBAN in its details;
+ * Wallet does not pair such legs, so both used to count, once as spending and once as income.
+ *
+ * A movement whose payee or note holds the IBAN of *another* of the user's accounts is a leg of a
+ * giroconto. Its other leg is looked for in the account that IBAN names: the opposite amount, in
+ * the same currency, at most {@link IBAN_TRANSFER_MAX_DAYS} days apart, not in a pair already —
+ * preferring one that names this account's IBAN back, then the nearest in time. The IBAN is what
+ * makes this a fact rather than a coincidence of amount and date, which on its own pairs nothing.
+ * The pair's group id is the smaller local id, as for the provider's pairs; a leg whose twin is
+ * not there (the other side is not synced, or not yet) is a group of its own, so it leaves the
+ * totals all the same, and pairs later when the twin arrives.
+ *
+ * Only rows not in a pair are considered, so a pair found once — by this rule or by the provider's
+ * reference — is never taken apart. Returns only the rows whose type or group changes.
+ */
+export function planIbanTransfers(
+  own: readonly OwnIban[],
+  rows: readonly IbanRuleRow[],
+  maxDays = IBAN_TRANSFER_MAX_DAYS,
+): TransferAssignment[] {
+  if (own.length === 0) return [];
+  const members = new Map<string, number>();
+  for (const row of rows) {
+    if (row.transferGroupId !== null) {
+      members.set(row.transferGroupId, (members.get(row.transferGroupId) ?? 0) + 1);
+    }
+  }
+  /** Not in a pair: no group, or a group of its own that nobody else has joined. */
+  const single = (row: IbanRuleRow) =>
+    row.transferGroupId === null || (row.transferGroupId === row.id && members.get(row.id) === 1);
+  const ibanOf = new Map(own.map((one) => [one.accountId, one.iban]));
+  const named = (row: IbanRuleRow): string | null => {
+    const text = compact(`${row.payee ?? ""} ${row.note ?? ""}`);
+    const hit = own.find((one) => one.accountId !== row.accountId && text.includes(one.iban));
+    return hit ? hit.accountId : null;
+  };
+
+  const ordered = [...rows].sort(
+    (a, b) => a.occurredAt.getTime() - b.occurredAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+  const decided = new Map<string, string>();
+  for (const leg of ordered) {
+    if (decided.has(leg.id) || !single(leg)) continue;
+    const target = named(leg);
+    if (target === null) continue;
+    const back = ibanOf.get(leg.accountId);
+    const twin = ordered
+      .filter(
+        (other) =>
+          other.accountId === target &&
+          !decided.has(other.id) &&
+          single(other) &&
+          other.currency === leg.currency &&
+          other.amountCents === -leg.amountCents &&
+          Math.abs(other.occurredAt.getTime() - leg.occurredAt.getTime()) <= maxDays * DAY_MS,
+      )
+      .sort((a, b) => {
+        const namesBack = (row: IbanRuleRow) =>
+          back !== undefined && compact(`${row.payee ?? ""} ${row.note ?? ""}`).includes(back) ? 0 : 1;
+        return (
+          namesBack(a) - namesBack(b) ||
+          Math.abs(a.occurredAt.getTime() - leg.occurredAt.getTime()) -
+            Math.abs(b.occurredAt.getTime() - leg.occurredAt.getTime()) ||
+          (a.id < b.id ? -1 : 1)
+        );
+      })[0];
+    if (twin) {
+      const group = leg.id < twin.id ? leg.id : twin.id;
+      decided.set(leg.id, group);
+      decided.set(twin.id, group);
+    } else {
+      decided.set(leg.id, leg.id);
+    }
+  }
+
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return [...decided]
+    .filter(([id, group]) => {
+      const row = byId.get(id) as IbanRuleRow;
+      return row.type !== "transfer" || row.transferGroupId !== group;
+    })
+    .map(([id, transferGroupId]) => ({ id, transferGroupId }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
 /* Merge */
 
 /**
@@ -390,7 +524,12 @@ export function planProviderMerge(
   );
   take("amountCents", "amountCents", incoming.amountCents, current.amountCents === incoming.amountCents);
   take("currency", "currency", incoming.currency, current.currency === incoming.currency);
-  const type = resolveType(incoming);
+  // A leg already paired as a giroconto stays one: the IBAN rule may have found what the provider
+  // sent as a plain expense or income to be money moved between two of the user's accounts.
+  const type =
+    current.type === "transfer" && (current.transferGroupId ?? null) !== null
+      ? "transfer"
+      : resolveType(incoming);
   take("type", "type", type, current.type === type);
   take("state", "state", incoming.state, current.state === incoming.state);
   const payee = displayPayee(incoming.payee);

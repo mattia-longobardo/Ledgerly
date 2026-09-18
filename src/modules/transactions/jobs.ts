@@ -33,6 +33,7 @@ import en from "../../../messages/en.json";
 import it from "../../../messages/it.json";
 import { type RecurrenceInput, detectRecurrences } from "./rules";
 import { recurringPatterns, transactions } from "./schema";
+import { linkOwnTransfers } from "./service";
 
 const CATALOGUES = { en, it } as const;
 
@@ -377,6 +378,8 @@ export const walletSyncJob: JobDefinition = {
           if (await reportSync(person, ctx, after, outcome, now)) notified += 1;
         }
       }
+      // Before the recurrences: a giroconto found by IBAN is no longer a candidate series.
+      await linkOwnTransfers(ctx);
       patterns += await refreshRecurrences(ctx, now);
     });
 
