@@ -4,7 +4,13 @@ import { withParams } from "@/modules/accounts/ui/controls";
 import { expensesView, type TransactionRow as QueryRow } from "@/modules/transactions/queries";
 import { displayPayee, isHidden } from "@/modules/transactions/rules";
 import { BreakdownCard } from "@/modules/transactions/ui/breakdown-card";
-import { badgesOf, categoryBreakdown, categoryColor, monthLabel } from "@/modules/transactions/ui/display";
+import {
+  amountToneOf,
+  badgesOf,
+  categoryColor,
+  groupedBreakdown,
+  monthLabel,
+} from "@/modules/transactions/ui/display";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
 import { ShortcutsCard } from "@/modules/transactions/ui/shortcuts-card";
@@ -23,7 +29,7 @@ import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
-import { toneOfSign } from "@/ui/tone";
+import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("expenses"))("title") };
@@ -55,16 +61,32 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     id: category.id,
     name: category.name,
     color: categoryColor(category.color, index),
+    depth: category.depth,
   }));
   const colorOf = new Map(options.map((option) => [option.id, option.color]));
   const categoryCount = new Map(
     view.facets.categories.map((facet) => [facet.categoryId ?? UNCATEGORISED, facet.count]),
   );
   const accountCount = new Map(view.facets.accounts.map((facet) => [facet.accountId, facet.count]));
+  const typeCounts = Object.fromEntries(view.facets.types.map((facet) => [facet.type, facet.count]));
 
-  /** The chips show what the range actually holds, plus whatever is selected (so it can be undone). */
+  /**
+   * The chips show what the range actually holds, plus whatever is selected (so it can be undone).
+   * A group counts its sub-categories' movements with its own (F2.5): picking it takes them in.
+   */
+  const childCount = new Map<string, number>();
+  for (const category of view.categories) {
+    if (category.parentId === null || category.depth === 0) continue;
+    childCount.set(
+      category.parentId,
+      (childCount.get(category.parentId) ?? 0) + (categoryCount.get(category.id) ?? 0),
+    );
+  }
   const categoryFilters: CategoryFilterOption[] = options
-    .map((option) => ({ ...option, count: categoryCount.get(option.id) ?? 0 }))
+    .map((option) => ({
+      ...option,
+      count: (categoryCount.get(option.id) ?? 0) + (childCount.get(option.id) ?? 0),
+    }))
     .filter((option) => option.count > 0 || query.categorySelection.includes(option.id));
   const accountFilters: AccountFilterOption[] = view.accounts
     .map((account) => ({
@@ -85,7 +107,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
       categoryName: row.categoryName,
       categoryColor: row.categoryId === null ? null : (colorOf.get(row.categoryId) ?? row.categoryColor),
       amount: money(row.amountCents),
-      amountTone: toneOfSign(row.amountCents),
+      amountTone: amountToneOf(row),
       badges: badgesOf(row),
       hidden: isHidden(row),
       note: row.note,
@@ -101,7 +123,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
           key: month.month,
           label: monthLabel(month.month, ctx.locale),
           count: month.count,
-          total: money(month.totalCents),
+          total: money(month.netCents),
           rows: month.rows.map(toRow),
         }))
       : [
@@ -109,7 +131,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
             key: "all",
             label: null,
             count: view.summary.count,
-            total: money(view.summary.totalCents),
+            total: money(view.summary.netCents),
             rows: view.rows.map(toRow),
           },
         ];
@@ -120,7 +142,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
    * signed total — transfers and income included — belongs to the page header, not here: the card
    * leaves transfers out and measures its rows by size (review B2).
    */
-  const breakdown = categoryBreakdown(
+  const breakdown = groupedBreakdown(
     view.breakdown.map((slice) => ({
       id: slice.categoryId ?? UNCATEGORISED,
       name: slice.name ?? t("row.uncategorised"),
@@ -129,6 +151,10 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
           ? "var(--faint)"
           : (colorOf.get(slice.categoryId) ?? categoryColor(slice.color, 0)),
       cents: slice.totalCents,
+      parentId: slice.parentId,
+      parentName: slice.parentName,
+      parentColor:
+        slice.parentId === null ? null : (colorOf.get(slice.parentId) ?? categoryColor(slice.parentColor, 0)),
     })),
   );
 
@@ -151,11 +177,37 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
 
   return (
     <Page title={t("title")}>
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
-        <p className="text-muted">
-          {t("summary", { count: view.summary.count, total: money(view.summary.totalCents) })}
-        </p>
+      {/* Income, spending and net, never a single signed sum: a giroconto moves money between two
+          of the person's own accounts and is neither (spec §7.2, F2.5). What the totals leave out
+          is said right under them rather than silently subtracted. */}
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
+          <p className="text-muted">{t("summary", { count: view.summary.count })}</p>
+          <dl aria-label={t("totals.label")} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            {(
+              [
+                ["income", view.summary.incomeCents],
+                ["expenses", view.summary.expenseCents],
+                ["net", view.summary.netCents],
+              ] as const
+            ).map(([key, cents]) => (
+              <div key={key} className="flex items-baseline gap-1.5">
+                <dt className="text-sm text-muted">{t(`totals.${key}`)}</dt>
+                <dd className={`font-medium tabular-nums ${TONE_TEXT[toneOfSign(cents)]}`}>
+                  {formatMoney(cents, ctx.numberFormat, { signed: key === "net" })}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        {view.summary.transferCount > 0 && (
+          <p className="text-sm text-muted">
+            {t("totals.transfers", { count: view.summary.transferCount })}
+            {view.summary.unpairedTransferCount > 0 &&
+              ` · ${t("totals.unpaired", { count: view.summary.unpairedTransferCount })}`}
+          </p>
+        )}
       </div>
 
       <FilterBar
@@ -163,10 +215,14 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
         categories={categoryFilters}
         accounts={accountFilters}
         uncategorisedCount={categoryCount.get(UNCATEGORISED) ?? 0}
+        typeCounts={typeCounts}
         locale={ctx.locale}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+      {/* Two columns from a medium width; past the wide threshold the table takes the extra room,
+          which is where the long names are (spec §8.2). A third band for the shortcuts left the
+          table narrower on the widest screens, not wider. */}
+      <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)] @wide:grid-cols-[minmax(0,9fr)_minmax(0,3fr)]">
         {view.rows.length === 0 ? (
           <EmptyState
             title={t("empty.title")}
@@ -202,13 +258,14 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
           </div>
         )}
 
+        {/* The shortcuts are short and fixed; the card below them grows with the categories. */}
         <div className="flex flex-col gap-4">
+          <ShortcutsCard />
           <BreakdownCard
-            bars={breakdown.bars}
+            groups={breakdown.groups}
             total={money(breakdown.totalCents)}
             numberFormat={ctx.numberFormat}
           />
-          <ShortcutsCard />
         </div>
       </div>
     </Page>

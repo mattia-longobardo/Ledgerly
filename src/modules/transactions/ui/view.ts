@@ -45,11 +45,13 @@ export interface GroupView {
   rows: readonly RowView[];
 }
 
-/** A category as every picker in the screen offers it. */
+/** A category as every picker in the screen offers it, in tree order (F2.5). */
 export interface CategoryOption {
   id: string;
   name: string;
   color: string;
+  /** 1 for a sub-category, which the pickers indent under its group. */
+  depth?: 0 | 1;
 }
 
 /** A label as the details panel offers it (spec §7.2: labels are the user's, like the note). */

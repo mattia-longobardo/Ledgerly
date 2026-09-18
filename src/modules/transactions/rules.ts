@@ -91,6 +91,12 @@ export interface IncomingTransaction {
   note: string | null;
   categoryExternalId: string | null;
   categoryName: string | null;
+  /**
+   * The provider's group of that category (F2.5), which becomes its parent here. Wallet sends it
+   * as `{ id, name }`; either may be missing, and without a name there is nothing to adopt.
+   */
+  categoryGroupExternalId: string | null;
+  categoryGroupName: string | null;
   labels: readonly string[];
 }
 
@@ -185,6 +191,37 @@ export function isHidden(row: Visibility): boolean {
 /** The rows that count, in the order they came in. The one filter every aggregate starts from. */
 export function excludeHidden<T extends Visibility>(rows: readonly T[]): T[] {
   return rows.filter((row) => !isHidden(row));
+}
+
+/* Categories */
+
+/**
+ * Categories in the order of their tree (spec §7.2, F2.5): each group followed by its
+ * sub-categories, with the depth a list indents them by. The order *within* each level is the one
+ * the rows arrive in — the query's deterministic `ORDER BY` — so this only moves children under
+ * their parent and never sorts on its own.
+ *
+ * A sub-category whose group is not in the list (an active child of an archived group, when the
+ * archived ones are left out) is shown at the top level where it stands rather than dropped.
+ */
+export function treeOrder<T extends { id: string; parentId: string | null }>(
+  rows: readonly T[],
+): (T & { depth: 0 | 1 })[] {
+  const present = new Set(rows.map((one) => one.id));
+  const children = new Map<string, T[]>();
+  for (const one of rows) {
+    if (one.parentId === null || !present.has(one.parentId)) continue;
+    const siblings = children.get(one.parentId) ?? [];
+    siblings.push(one);
+    children.set(one.parentId, siblings);
+  }
+  const ordered: (T & { depth: 0 | 1 })[] = [];
+  for (const one of rows) {
+    if (one.parentId !== null && present.has(one.parentId)) continue;
+    ordered.push({ ...one, depth: 0 });
+    for (const child of children.get(one.id) ?? []) ordered.push({ ...child, depth: 1 });
+  }
+  return ordered;
 }
 
 /* Transfers */

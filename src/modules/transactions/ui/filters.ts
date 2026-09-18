@@ -8,6 +8,7 @@
  */
 
 import type { Params } from "@/modules/accounts/ui/controls";
+import { TRANSACTION_TYPES, type TransactionType } from "@/modules/transactions/rules";
 import { addDays, addMonths, type CivilDate, isCivilDate, lastDayOfMonth, monthKey } from "@/platform/dates";
 
 /** The four presets of the design, in the order the segmented control shows them. */
@@ -157,6 +158,7 @@ export interface ReadFilters {
   to: CivilDate;
   accountIds?: readonly string[];
   categoryIds?: readonly (string | null)[];
+  types?: readonly TransactionType[];
   payee?: string;
   /** Spec §7.2: hidden rows stay out of the totals unless they are asked for. */
   includeHidden?: boolean;
@@ -173,6 +175,8 @@ export interface ExpensesQuery {
   /** The category filter as the menu shows it: real ids, plus `UNCATEGORISED` when selected. */
   categorySelection: string[];
   accountId: string | null;
+  /** One movement type, or `null` for all of them (F2.5: how the giroconti are isolated). */
+  type: TransactionType | null;
   search: string;
   showHidden: boolean;
   sort: SortKey;
@@ -214,6 +218,7 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     ),
   ];
   const accountId = uuid(one(raw.acc));
+  const type = TRANSACTION_TYPES.find((known) => known === one(raw.type)) ?? null;
   const search = one(raw.q);
   const showHidden = one(raw.hidden) === "1";
   const sort = SORT_KEYS.find((key) => key === one(raw.sort)) ?? DEFAULT_SORT;
@@ -224,6 +229,7 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
   const filters: Params = {
     cat: categorySelection.length > 0 ? categorySelection.join(",") : undefined,
     acc: accountId ?? undefined,
+    type: type ?? undefined,
     q: search || undefined,
     hidden: showHidden ? "1" : undefined,
   };
@@ -244,11 +250,13 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     range,
     categorySelection,
     accountId,
+    type,
     search,
     showHidden,
     sort,
     direction,
-    filtered: categorySelection.length > 0 || accountId !== null || search !== "" || showHidden,
+    filtered:
+      categorySelection.length > 0 || accountId !== null || type !== null || search !== "" || showHidden,
     params: { ...period, ...filters, ...order },
     presetParams: { ...filters, ...order },
     stepperParams: { ...period, off: undefined, ...filters, ...order },
@@ -266,6 +274,7 @@ export function filtersOf(query: ExpensesQuery): ReadFilters {
     to: query.range.to,
     accountIds: query.accountId === null ? undefined : [query.accountId],
     categoryIds: categoryIds.length === 0 ? undefined : categoryIds,
+    types: query.type === null ? undefined : [query.type],
     payee: query.search === "" ? undefined : query.search,
     includeHidden: query.showHidden ? true : undefined,
     sort: query.sort,

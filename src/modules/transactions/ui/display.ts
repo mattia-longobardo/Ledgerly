@@ -6,9 +6,10 @@
 
 import { PALETTE } from "@/modules/accounts/ui/display";
 import type { TransactionState, TransactionType } from "@/modules/transactions/rules";
-import { type CivilDate, type MonthKey } from "@/platform/dates";
+import type { MonthKey } from "@/platform/dates";
 import { formatDate, type UiLocale } from "@/platform/format";
 import type { Cents } from "@/platform/money";
+import { type Tone, toneOfSign } from "@/ui/tone";
 import { type DateRange, isSingleMonth } from "./filters";
 
 /** A category's own colour wins; the ones without get a stable one from the shared palette. */
@@ -16,8 +17,12 @@ export function categoryColor(color: string | null, index: number): string {
   return color ?? PALETTE[index % PALETTE.length];
 }
 
-/** The five markers of spec §7.2, in the order the row shows them. */
-export const ROW_BADGES = ["hidden", "removedUpstream", "edited", "transfer", "pending"] as const;
+/**
+ * The markers of spec §7.2, in the order the row shows them. `unpaired` takes the place of
+ * `transfer` on a giroconto with no other leg here (F2.5): it is still not spending, but it usually
+ * means the other account is not linked.
+ */
+export const ROW_BADGES = ["hidden", "removedUpstream", "edited", "transfer", "unpaired", "pending"] as const;
 
 export type RowBadge = (typeof ROW_BADGES)[number];
 
@@ -40,9 +45,19 @@ export function badgesOf(row: BadgeSource): RowBadge[] {
   if (row.hiddenAt !== null) badges.push("hidden");
   if (row.removedUpstreamAt !== null) badges.push("removedUpstream");
   if (row.locallyEdited.length > 0) badges.push("edited");
-  if (row.type === "transfer" || row.transferGroupId !== null) badges.push("transfer");
+  if (row.type === "transfer" && row.transferGroupId === null) badges.push("unpaired");
+  else if (row.type === "transfer" || row.transferGroupId !== null) badges.push("transfer");
   if (row.state === "pending") badges.push("pending");
   return badges;
+}
+
+/**
+ * The colour of a movement's amount: red out, green in — except a giroconto, which is grey both
+ * ways, because moving money between two of one's own accounts is neither spending nor income
+ * (spec §7.2), and a red leg read exactly like the expense it is not.
+ */
+export function amountToneOf(row: { type: TransactionType; amountCents: Cents }): Tone {
+  return row.type === "transfer" ? "muted" : toneOfSign(row.amountCents);
 }
 
 export interface BreakdownInput {
@@ -98,6 +113,77 @@ export function categoryBreakdown(items: readonly BreakdownInput[]): Breakdown {
   };
 }
 
+/** A slice of the card with its group (F2.5), colours already decided by the page. */
+export interface BreakdownSlice extends BreakdownInput {
+  parentId: string | null;
+  parentName: string | null;
+  parentColor: string | null;
+}
+
+/** A group of the card: its own bar, and its sub-categories' bars measured within it. */
+export interface BreakdownGroup extends BreakdownBar {
+  children: BreakdownBar[];
+}
+
+/**
+ * The "By category" card on two levels (spec §7.2, F2.5): one bar per group, biggest first, each
+ * holding its sub-categories. A group's amount is its children's plus whatever was filed on the
+ * group itself, which then shows as one of its rows under the group's own name. A category with no
+ * group is a group with no rows under it, so a range without groups draws the card it always did.
+ *
+ * Both levels are measured by `categoryBreakdown`: groups against the whole range, children against
+ * their group, so the percentages read "of Casa" once inside Casa.
+ */
+export function groupedBreakdown(slices: readonly BreakdownSlice[]): {
+  groups: BreakdownGroup[];
+  totalCents: Cents;
+} {
+  const gathered = new Map<
+    string,
+    { head: BreakdownInput; own: BreakdownInput | null; children: BreakdownInput[] }
+  >();
+  for (const slice of slices) {
+    const item: BreakdownInput = { id: slice.id, name: slice.name, color: slice.color, cents: slice.cents };
+    const groupId = slice.parentId ?? slice.id;
+    const entry = gathered.get(groupId) ?? {
+      head:
+        slice.parentId === null
+          ? { ...item, cents: 0n }
+          : {
+              id: slice.parentId,
+              name: slice.parentName ?? slice.name,
+              color: slice.parentColor ?? slice.color,
+              cents: 0n,
+            },
+      own: null,
+      children: [],
+    };
+    if (slice.parentId === null) {
+      entry.own = item;
+      entry.head = { ...item, cents: 0n };
+    } else {
+      entry.children.push(item);
+    }
+    gathered.set(groupId, entry);
+  }
+
+  const top = categoryBreakdown(
+    [...gathered.values()].map(({ head, own, children }) => ({
+      ...head,
+      cents: children.reduce((sum, child) => sum + child.cents, own?.cents ?? 0n),
+    })),
+  );
+  return {
+    groups: top.bars.map((bar) => {
+      const entry = gathered.get(bar.id);
+      const rows =
+        entry && entry.children.length > 0 ? [...entry.children, ...(entry.own ? [entry.own] : [])] : [];
+      return { ...bar, children: rows.length === 0 ? [] : categoryBreakdown(rows).bars };
+    }),
+    totalCents: top.totalCents,
+  };
+}
+
 /** A month group's heading: the month spelled out, as in the design's group rows. */
 export function monthLabel(month: MonthKey, locale: UiLocale): string {
   return formatDate(month, "monthYear", locale);
@@ -111,18 +197,4 @@ export function monthLabel(month: MonthKey, locale: UiLocale): string {
 export function rangeLabel(range: DateRange, locale: UiLocale): string {
   if (isSingleMonth(range)) return formatDate(range.from, "monthYear", locale);
   return `${formatDate(range.from, "long", locale)} – ${formatDate(range.to, "long", locale)}`;
-}
-
-/** The calendar cells of one month, Monday first, with the leading blanks of the design's grid. */
-export function calendarCells(month: MonthKey): (CivilDate | null)[] {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const blanks = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() + 6) % 7;
-  const days = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return [
-    ...Array.from({ length: blanks }, () => null),
-    ...Array.from(
-      { length: days },
-      (_, index) => `${month.slice(0, 7)}-${String(index + 1).padStart(2, "0")}`,
-    ),
-  ];
 }

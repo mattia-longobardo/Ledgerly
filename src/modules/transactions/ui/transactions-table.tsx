@@ -25,6 +25,8 @@ const BADGE_TONE: Record<RowBadge, "neutral" | "warn" | "accent"> = {
   removedUpstream: "warn",
   edited: "accent",
   transfer: "neutral",
+  // A leg with no other side here usually asks for the other account to be linked.
+  unpaired: "warn",
   pending: "warn",
 };
 
@@ -248,7 +250,8 @@ export function TransactionsTable({
         disabled={pending}
         triggerClassName={cn(
           CHIP,
-          "max-w-[150px] border border-transparent hover:border-border hover:bg-card",
+          // As wide as its column allows (the table's layout is fixed), and truncated past that.
+          "max-w-full border border-transparent hover:border-border hover:bg-card",
           editing === key && "border-accent bg-card",
         )}
       >
@@ -356,7 +359,21 @@ export function TransactionsTable({
       )}
 
       <div className="max-h-[calc(100vh-240px)] overflow-auto max-md:hidden [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-[2] [&_thead_th]:bg-card">
-        <Table>
+        {/* A fixed layout: the checkbox, the date, the amount and the menu have their widths, the
+            account and the category a share, and the payee what is left — every text column
+            truncates instead of pushing the table past its column. With an automatic layout the
+            longest name set the width, and real names (a 40-character category, a card-terminal
+            payee) gave the table a sideways scrollbar at every width (2026-09-18). */}
+        <Table className="table-fixed">
+          <colgroup>
+            <col className="w-10" />
+            <col className="w-[104px]" />
+            <col />
+            <col className="w-[15%]" />
+            <col className="w-[20%]" />
+            <col className="w-[120px]" />
+            <col className="w-12" />
+          </colgroup>
           <THead>
             <Th>
               <Checkbox
@@ -421,15 +438,20 @@ export function TransactionsTable({
                     <Td muted className="text-sm">
                       {row.date}
                     </Td>
-                    <Td className="max-w-[260px]">
-                      <span className="flex items-center gap-2">
-                        <span className="min-w-0 truncate font-medium">{payeeLabel(row)}</span>
+                    <Td>
+                      <span className="flex min-w-0 items-center gap-2">
+                        {/* Truncated when the column is short: the whole name is on hover. */}
+                        <span className="min-w-0 truncate font-medium" title={payeeLabel(row)}>
+                          {payeeLabel(row)}
+                        </span>
                         {badges(row)}
                       </span>
                       {details(row)}
                     </Td>
-                    <Td muted className="max-w-[140px] text-sm">
-                      <span className="block truncate">{row.account}</span>
+                    <Td muted className="text-sm">
+                      <span className="block truncate" title={row.account}>
+                        {row.account}
+                      </span>
                     </Td>
                     <Td>{categoryTrigger(row, "table")}</Td>
                     <Td align="right" className={cn("font-medium", TONE_TEXT[row.amountTone])}>

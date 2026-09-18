@@ -72,11 +72,28 @@ describe("parseExpensesQuery", () => {
       off: undefined,
       cat: undefined,
       acc: undefined,
+      type: undefined,
       q: undefined,
       hidden: undefined,
       sort: undefined,
       dir: undefined,
     });
+  });
+
+  it("reads the type filter and ignores a type it does not know (F2.5)", () => {
+    const transfers = parseExpensesQuery({ type: "transfer" }, TODAY);
+    expect(transfers.type).toBe("transfer");
+    expect(transfers.filtered).toBe(true);
+    expect(transfers.params.type).toBe("transfer");
+    expect(transfers.presetParams.type).toBe("transfer");
+    // "Clear filters" takes the type off with the rest.
+    expect(transfers.clearedParams.type).toBeUndefined();
+    expect(filtersOf(transfers).types).toEqual(["transfer"]);
+
+    const unknown = parseExpensesQuery({ type: "refund" }, TODAY);
+    expect(unknown.type).toBeNull();
+    expect(unknown.filtered).toBe(false);
+    expect(filtersOf(unknown).types).toBeUndefined();
   });
 
   it("steps back by whole periods, never into the future", () => {
@@ -163,6 +180,7 @@ describe("parseExpensesQuery", () => {
       cat: CATEGORY_A,
       q: "x",
       acc: undefined,
+      type: undefined,
       hidden: undefined,
       sort: undefined,
       dir: undefined,
@@ -197,6 +215,7 @@ describe("filtersOf", () => {
       to: "2026-09-30",
       accountIds: [ACCOUNT],
       categoryIds: [CATEGORY_A, null],
+      types: undefined,
       payee: "netflix",
       includeHidden: true,
       sort: "amount",
@@ -210,6 +229,7 @@ describe("filtersOf", () => {
       to: "2026-09-30",
       accountIds: undefined,
       categoryIds: undefined,
+      types: undefined,
       payee: undefined,
       includeHidden: undefined,
       sort: "date",

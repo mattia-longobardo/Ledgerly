@@ -72,6 +72,23 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page).toHaveURL(/mode=bars/);
   });
 
+  await test.step("a past chart range moves the chart and leaves the header on today (F2.5)", async () => {
+    await page.goto(account);
+    await page.getByTitle("Chart range").click();
+    await page.getByLabel("From", { exact: true }).fill("2026-01");
+    await page.getByLabel("To", { exact: true }).fill("2026-01");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/from=2026-01&to=2026-01/);
+    await expect(page.getByRole("heading", { name: "Balance · 1 month" })).toBeVisible();
+    // January ended at 1.500,00 €; the header is about today, and today is 1.750,50 €.
+    await expect(page.getByText("1.750,50 €").first()).toBeVisible();
+    await expect(page.getByText("1.500,00 €").first()).toBeVisible();
+
+    // A span drops the range again.
+    await page.getByRole("group", { name: "Chart span" }).getByRole("link", { name: "1Y" }).click();
+    await expect(page).not.toHaveURL(/from=/);
+  });
+
   await test.step("settings rename the account and set a balance warning", async () => {
     await page.goto(`${account}?tab=settings`);
     await page.getByLabel("Name").fill("ING main");
@@ -88,6 +105,14 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page).toHaveURL("/");
     await expect(page.getByText("1.750,50 €").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Net worth over time" })).toBeVisible();
+
+    // Overview has the same picker (F2.5); a range ending in January keeps the hero on today.
+    await page.getByTitle("Chart range").click();
+    await page.getByLabel("From", { exact: true }).fill("2026-01");
+    await page.getByLabel("To", { exact: true }).fill("2026-02");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/from=2026-01&to=2026-02/);
+    await expect(page.locator("p.text-hero")).toHaveText("1.750,50 €");
   });
 
   await test.step("a snapshot can be taken at once and lands in the log", async () => {

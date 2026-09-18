@@ -19,6 +19,7 @@ import {
   toNewTransaction,
   type TransferLeg,
   transferPairKey,
+  treeOrder,
   type WindowRow,
 } from "./rules";
 
@@ -177,6 +178,8 @@ const incoming = (over: Partial<IncomingTransaction> = {}): IncomingTransaction 
   note: null,
   categoryExternalId: "c-1",
   categoryName: "Subscriptions",
+  categoryGroupExternalId: null,
+  categoryGroupName: null,
   labels: ["fun"],
   ...over,
 });
@@ -601,5 +604,40 @@ describe("detectRecurrences", () => {
   it("ignores an amount of zero: it has no sign to group by", () => {
     const rows = [at("2026-01-05", 0n), at("2026-02-05", 0n), at("2026-03-05", 0n)];
     expect(detectRecurrences(rows, ROME)).toEqual([]);
+  });
+});
+
+describe("treeOrder", () => {
+  const row = (id: string, name: string, parentId: string | null = null) => ({ id, name, parentId });
+
+  it("puts each group's sub-categories right after it, keeping the order it was given", () => {
+    const rows = [
+      row("b", "Books", "f"),
+      row("f", "Fun"),
+      row("g", "Groceries", "l"),
+      row("l", "Living"),
+      row("o", "Loose"),
+      row("r", "Rent", "l"),
+    ];
+    expect(treeOrder(rows).map((one) => [one.name, one.depth])).toEqual([
+      ["Fun", 0],
+      ["Books", 1],
+      ["Living", 0],
+      ["Groceries", 1],
+      ["Rent", 1],
+      ["Loose", 0],
+    ]);
+  });
+
+  it("shows a sub-category whose group is not in the list at the top level, never losing it", () => {
+    // An active child of an archived group, when the archived ones are left out.
+    expect(treeOrder([row("a", "Apples", "gone"), row("z", "Zoo")])).toEqual([
+      { ...row("a", "Apples", "gone"), depth: 0 },
+      { ...row("z", "Zoo"), depth: 0 },
+    ]);
+  });
+
+  it("answers with nothing for nothing", () => {
+    expect(treeOrder([])).toEqual([]);
   });
 });

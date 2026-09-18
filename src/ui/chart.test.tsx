@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { AreaLine, extentOf, segmentsOf, Sparkline } from "./chart";
+import { AreaLine, extentOf, segmentsOf, Sparkline, strokesOf } from "./chart";
 
 const BOX = { width: 100, height: 20, pad: 0 };
 
@@ -39,6 +39,30 @@ describe("segmentsOf", () => {
 
   it("has nothing to draw when every value is unknown", () => {
     expect(segmentsOf([null, null], { low: 0, high: 1 }, BOX)).toEqual([]);
+  });
+});
+
+describe("strokesOf", () => {
+  const extent = { low: 0, high: 10 };
+
+  it("draws one solid stroke for a series nothing is estimated in", () => {
+    const strokes = strokesOf([1, 2, 3], [false, false, false], extent, BOX);
+    expect(strokes.map((stroke) => [stroke.dashed, stroke.points.length])).toEqual([[false, 3]]);
+  });
+
+  it("dashes every step that touches an estimated month, and joins the strokes where they meet (F2.5)", () => {
+    const strokes = strokesOf([1, 2, 3, 4], [true, true, false, false], extent, BOX);
+    expect(strokes.map((stroke) => [stroke.dashed, stroke.points.length])).toEqual([
+      [true, 3],
+      [false, 2],
+    ]);
+    // The solid stroke starts where the dashed one ends: no gap in the line.
+    expect(strokes[1].points[0]).toEqual(strokes[0].points[2]);
+  });
+
+  it("still breaks at a gap, and draws nothing for a lone point", () => {
+    const strokes = strokesOf([1, null, 3, 4], [true, false, false, false], extent, BOX);
+    expect(strokes.map((stroke) => [stroke.dashed, stroke.points.length])).toEqual([[false, 2]]);
   });
 });
 

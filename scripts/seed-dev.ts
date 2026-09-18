@@ -1,7 +1,11 @@
 // scripts/seed-dev.ts — local development data. Idempotent. Later phases add their sample data here.
 import { eq } from "drizzle-orm";
 import { accounts, balanceEntries } from "../src/modules/accounts/schema";
-import { applyProviderAccounts } from "../src/modules/accounts/service";
+import {
+  applyProviderAccounts,
+  rebuildDerivedBalances,
+  saveProviderBalance,
+} from "../src/modules/accounts/service";
 import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { upsertFromProvider } from "../src/modules/transactions/service";
 import { createAuth } from "../src/platform/auth/auth";
@@ -142,6 +146,7 @@ async function seedExpenses(ctx: Pick<Ctx, "userId">): Promise<void> {
 
   const month = monthKey(today(zoned.timeZone)).slice(0, 7);
   const before = addMonths(monthKey(today(zoned.timeZone)), -1).slice(0, 7);
+  const DEV_GROUPS: Record<string, string> = { Abbonamenti: "Svago", Spesa: "Casa", Trasporti: "Mobilità" };
   const movement = (
     id: string,
     on: string,
@@ -161,6 +166,9 @@ async function seedExpenses(ctx: Pick<Ctx, "userId">): Promise<void> {
     note: null,
     categoryExternalId: category === null ? null : `dev-cat-${category.toLowerCase()}`,
     categoryName: category,
+    // Wallet's category groups become parents (F2.5), so development shows the two levels.
+    categoryGroupExternalId: category === null ? null : `dev-group-${DEV_GROUPS[category].toLowerCase()}`,
+    categoryGroupName: category === null ? null : DEV_GROUPS[category],
     labels: [],
   });
 
@@ -178,6 +186,12 @@ async function seedExpenses(ctx: Pick<Ctx, "userId">): Promise<void> {
     movement("dev-tx-8", `${before}-06`, -3890n, "Esselunga", "Spesa"),
   ]);
   console.log(`[seed] ${outcome.created} movements, ${outcome.updated} updated on the synced account`);
+
+  // One reading today, as the hourly sync would take, and the month ends before it rebuilt from the
+  // movements (spec §7.1, F2.5): the Overview chart shows them dashed.
+  await saveProviderBalance(zoned, synced.id, { on: today(zoned.timeZone), cents: 1_250_000n });
+  const rebuilt = await rebuildDerivedBalances(zoned);
+  console.log(`[seed] ${rebuilt.written} month ends rebuilt from the movements`);
 }
 
 await seedExpenses(ctx);

@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { accountsView } from "@/modules/accounts/queries";
 import { asNumbers, axisLabels, changeBetween, monthLabels } from "@/modules/accounts/ui/display";
 import { LinkTabs, RANGE_OPTIONS, type RangeKey, rangeMonths } from "@/modules/accounts/ui/controls";
+import { MonthRangePicker } from "@/modules/accounts/ui/month-range-picker";
+import { monthRange } from "@/modules/accounts/ui/range";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -26,8 +28,18 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const t = await getTranslations("overview");
   const ta = await getTranslations("accounts");
   const now = new Date();
-  const range = ((await searchParams).range as RangeKey | undefined) ?? "1y";
-  const view = await accountsView(ctx, { months: rangeMonths(range), now });
+  const query = await searchParams;
+  const thisMonth = monthKey(today(ctx.timeZone, now));
+  const custom = monthRange(query, thisMonth);
+  const range: RangeKey = RANGE_OPTIONS.find((option) => option.value === query.range)?.value ?? "1y";
+  // The hero, the KPIs and the table always speak of today; only the chart follows the preset or
+  // the range the picker wrote (spec §7.1, F2.5). One reading for both used to let a past range
+  // print an old net worth under today's date, and made "YTD" blank whenever the chart was 3M.
+  const view = await accountsView(ctx, { now });
+  const chart = await accountsView(
+    ctx,
+    custom ? { now, months: custom.months, through: custom.to } : { now, months: rangeMonths(range) },
+  );
 
   if (view.rows.length === 0) {
     return (
@@ -46,16 +58,19 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
     );
   }
 
-  // "All" asks for more months than there is history: the months before the first known balance
-  // would be an empty stretch of chart, so they are dropped rather than drawn as a gap.
-  const firstKnown = view.netWorth.findIndex((point) => point.total !== null);
+  // "All" (or a range reaching back past the history) asks for more months than there are: the
+  // months before the first known balance would be an empty stretch of chart, so they are dropped
+  // rather than drawn as a gap.
+  const firstKnown = chart.netWorth.findIndex((point) => point.total !== null);
   const from = firstKnown < 0 ? 0 : firstKnown;
-  const months = view.months.slice(from);
-  const series = view.netWorth.slice(from).map((point) => point.total);
+  const months = chart.months.slice(from);
+  const series = chart.netWorth.slice(from).map((point) => point.total);
+  // Months that stand on a month end rebuilt from the movements (spec §7.1, F2.5): drawn dashed.
+  const estimated = chart.netWorthEstimated.slice(from);
 
   const monthly = changeBetween(view.total, view.previousTotal);
-  const yearStart = months.indexOf(monthKey(`${today(ctx.timeZone, now).slice(0, 4)}-01-01`));
-  const ytd = changeBetween(view.total, yearStart > 0 ? series[yearStart - 1] : null);
+  const yearStart = view.months.indexOf(`${thisMonth.slice(0, 4)}-01-01`);
+  const ytd = changeBetween(view.total, yearStart > 0 ? view.netWorth[yearStart - 1].total : null);
 
   const kpis = [
     { key: "cash", bucket: view.buckets.cash },
@@ -108,7 +123,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
 
       {view.totalPartial && <p className="text-sm text-warn">{t("partial")}</p>}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-3">
         {kpis.map(({ key, bucket }) => (
           <KpiTile
             key={key}
@@ -119,76 +134,92 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
         ))}
       </div>
 
-      <Card padded={false} className="flex flex-col gap-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
-          <LinkTabs
-            label={t("chart.range")}
-            path="/"
-            params={{}}
-            name="range"
-            current={range}
-            options={RANGE_OPTIONS}
-          />
-        </div>
-        <AreaLine
-          hover={months.map((month, index) => ({
-            label: formatDate(month, "monthYear", ctx.locale),
-            value: formatMoney(series[index], ctx.numberFormat),
-          }))}
-          values={asNumbers(series)}
-          yLabels={axisLabels(series, ctx.numberFormat)}
-          xLabels={monthLabels(months, ctx.locale)}
-          summary={t("chart.summary", {
-            from: formatDate(months[0], "monthYear", ctx.locale),
-            to: formatDate(months[months.length - 1], "monthYear", ctx.locale),
-            value: formatMoney(view.total, ctx.numberFormat),
-          })}
-        />
-      </Card>
-
-      <Card padded={false}>
-        <CardHeader
-          title={ta("title")}
-          actions={
-            <Link href="/accounts" className="focus-ring rounded-[2px] text-accent hover:underline">
-              {t("manageAccounts")}
-            </Link>
-          }
-        />
-        <Table>
-          <THead>
-            <Th>{ta("columns.name")}</Th>
-            <Th>{ta("columns.type")}</Th>
-            <Th align="right">{ta("columns.balance")}</Th>
-            <Th align="right">{ta("columns.monthlyChange")}</Th>
-          </THead>
-          <TBody>
-            {view.rows.map((row) => {
-              const change = changeBetween(row.balance, row.previous);
-              return (
-                <Tr key={row.account.id}>
-                  <Td>
-                    <Link
-                      href={`/accounts/${row.account.id}`}
-                      className="focus-ring rounded-[2px] font-medium hover:underline"
-                    >
-                      {row.account.name}
-                    </Link>
-                  </Td>
-                  <Td muted>{ta(`types.${row.account.type}`)}</Td>
-                  <Td align="right">{formatMoney(row.balance, ctx.numberFormat)}</Td>
-                  <Td align="right" className={TONE_TEXT[toneOfSign(change.cents)]}>
-                    {change.cents === null
-                      ? NULL_DISPLAY
-                      : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
-                  </Td>
-                </Tr>
-              );
+      {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}
+      <div className="grid items-start gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <Card padded={false} className="flex flex-col gap-3 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <MonthRangePicker
+                from={months[0]}
+                to={months[months.length - 1]}
+                path="/"
+                params={{}}
+                locale={ctx.locale}
+              />
+              {/* A preset link carries no `from`/`to`: picking one leaves the custom range. */}
+              <LinkTabs
+                label={t("chart.range")}
+                path="/"
+                params={{}}
+                name="range"
+                current={custom ? "" : range}
+                options={RANGE_OPTIONS}
+              />
+            </div>
+          </div>
+          <AreaLine
+            hover={months.map((month, index) => ({
+              label: formatDate(month, "monthYear", ctx.locale),
+              value: formatMoney(series[index], ctx.numberFormat),
+              note: estimated[index] ? ta("estimated.short") : undefined,
+            }))}
+            estimated={estimated}
+            values={asNumbers(series)}
+            yLabels={axisLabels(series, ctx.numberFormat)}
+            xLabels={monthLabels(months, ctx.locale)}
+            summary={t("chart.summary", {
+              from: formatDate(months[0], "monthYear", ctx.locale),
+              to: formatDate(months[months.length - 1], "monthYear", ctx.locale),
+              value: formatMoney(series[series.length - 1] ?? null, ctx.numberFormat),
             })}
-          </TBody>
-        </Table>
-      </Card>
+          />
+          {estimated.some(Boolean) && <p className="text-sm text-muted">{ta("estimated.note")}</p>}
+        </Card>
+
+        <Card padded={false}>
+          <CardHeader
+            title={ta("title")}
+            actions={
+              <Link href="/accounts" className="focus-ring rounded-[2px] text-accent hover:underline">
+                {t("manageAccounts")}
+              </Link>
+            }
+          />
+          <Table>
+            <THead>
+              <Th>{ta("columns.name")}</Th>
+              <Th>{ta("columns.type")}</Th>
+              <Th align="right">{ta("columns.balance")}</Th>
+              <Th align="right">{ta("columns.monthlyChange")}</Th>
+            </THead>
+            <TBody>
+              {view.rows.map((row) => {
+                const change = changeBetween(row.balance, row.previous);
+                return (
+                  <Tr key={row.account.id}>
+                    <Td>
+                      <Link
+                        href={`/accounts/${row.account.id}`}
+                        className="focus-ring rounded-[2px] font-medium hover:underline"
+                      >
+                        {row.account.name}
+                      </Link>
+                    </Td>
+                    <Td muted>{ta(`types.${row.account.type}`)}</Td>
+                    <Td align="right">{formatMoney(row.balance, ctx.numberFormat)}</Td>
+                    <Td align="right" className={TONE_TEXT[toneOfSign(change.cents)]}>
+                      {change.cents === null
+                        ? NULL_DISPLAY
+                        : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </Table>
+        </Card>
+      </div>
     </Page>
   );
 }

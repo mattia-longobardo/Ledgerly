@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, notInArray, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
   type CivilDate,
@@ -19,6 +19,7 @@ import {
   type Bucket,
   alertsFor,
   bucketOf,
+  estimatedMonths,
   isStale,
   monthEndSeries,
   totalSeries,
@@ -30,8 +31,15 @@ export type BalanceEntry = typeof balanceEntries.$inferSelect;
 export type SnapshotRun = typeof snapshotRuns.$inferSelect;
 export type AccountGroup = typeof accountGroups.$inferSelect;
 
-/** Same day, more than one source: the correction a person typed comes first (spec §7.1). */
-export const SOURCE_RANK = sql`case ${balanceEntries.source} when 'manual' then 0 when 'import' then 1 when 'provider' then 2 else 3 end`;
+/**
+ * Same day, more than one source: the correction a person typed comes first (spec §7.1), and a
+ * month end rebuilt from the movements comes last of all (F2.5) — every source is named, so a new
+ * one cannot fall into a tie by accident.
+ */
+export const SOURCE_RANK = sql`case ${balanceEntries.source} when 'manual' then 0 when 'import' then 1 when 'provider' then 2 when 'system' then 3 else 4 end`;
+
+/** The sources that are not a reading of the account: the snapshot's copies and the rebuilt ends. */
+const NOT_OBSERVED = ["system", "derived"] as const;
 
 const MONTH_OF = sql`date_trunc('month', ${balanceEntries.on})`;
 
@@ -63,7 +71,7 @@ export async function balancesOn(
         userScoped(ctx).owns(balanceEntries),
         inArray(balanceEntries.accountId, [...accountIds]),
         lte(balanceEntries.on, on),
-        options.observed ? ne(balanceEntries.source, "system") : undefined,
+        options.observed ? notInArray(balanceEntries.source, [...NOT_OBSERVED]) : undefined,
       ),
     )
     .orderBy(
@@ -89,6 +97,7 @@ export async function monthlyPoints(
       accountId: balanceEntries.accountId,
       on: balanceEntries.on,
       balanceCents: balanceEntries.balanceCents,
+      source: balanceEntries.source,
     })
     .from(balanceEntries)
     .where(and(userScoped(ctx).owns(balanceEntries), lte(balanceEntries.on, through)))
@@ -96,6 +105,45 @@ export async function monthlyPoints(
       asc(balanceEntries.accountId),
       MONTH_OF,
       desc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const byAccount = new Map<string, BalancePoint[]>();
+  for (const row of rows) {
+    const points = byAccount.get(row.accountId) ?? [];
+    points.push({ on: row.on, cents: row.balanceCents, derived: row.source === "derived" });
+    byAccount.set(row.accountId, points);
+  }
+  return byAccount;
+}
+
+/**
+ * The readings of each account, one per day — the best source of that day — and nothing the app
+ * wrote itself (no snapshot copy, no rebuilt end): what `deriveMonthEnds` rebuilds the history
+ * from (spec §7.1, F2.5). In date order.
+ */
+export async function observedDays(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, BalancePoint[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .selectDistinctOn([balanceEntries.accountId, balanceEntries.on], {
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+    })
+    .from(balanceEntries)
+    .where(
+      and(
+        userScoped(ctx).owns(balanceEntries),
+        inArray(balanceEntries.accountId, [...accountIds]),
+        notInArray(balanceEntries.source, [...NOT_OBSERVED]),
+      ),
+    )
+    .orderBy(
+      asc(balanceEntries.accountId),
+      asc(balanceEntries.on),
       asc(SOURCE_RANK),
       desc(balanceEntries.capturedAt),
     );
@@ -158,6 +206,8 @@ export interface AccountRow {
   previous: Cents | null;
   /** One month-end value per month of the window; `interpolate` applies here and nowhere else. */
   series: (Cents | null)[];
+  /** Per month, whether the value stands on a month end rebuilt from the movements (F2.5). */
+  estimated: boolean[];
   stale: boolean;
 }
 
@@ -168,6 +218,8 @@ export interface AccountsView {
   rows: AccountRow[];
   /** The net-worth series: the accounts included in it, held (never interpolated) and summed. */
   netWorth: { total: Cents | null; partial: boolean }[];
+  /** Per month, whether any account in the net worth stands on a rebuilt month end (F2.5). */
+  netWorthEstimated: boolean[];
   total: Cents | null;
   totalPartial: boolean;
   previousTotal: Cents | null;
@@ -227,6 +279,7 @@ export async function accountsView(
     balance: latest.get(account.id) ?? null,
     previous: previous.get(account.id) ?? null,
     series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
+    estimated: estimatedMonths(points.get(account.id) ?? [], months),
     stale: account.origin === "synced" && isStale(account.lastSyncedAt, account.staleAfterHours, now),
   }));
 
@@ -236,6 +289,7 @@ export async function accountsView(
     months.length,
   );
   const current = netWorth.at(-1) ?? { total: null, partial: false };
+  const netWorthEstimated = months.map((_, i) => counted.some((row) => row.estimated[i]));
 
   const buckets = emptyBuckets();
   for (const row of counted) {
@@ -251,6 +305,7 @@ export async function accountsView(
     months,
     rows,
     netWorth,
+    netWorthEstimated,
     total: current.total,
     totalPartial: current.partial,
     previousTotal: netWorth.at(-2)?.total ?? null,

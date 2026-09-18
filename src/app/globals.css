@@ -109,6 +109,11 @@
   --text-hero: 32px;
   --text-display: 36px;
 
+  /* The wide threshold of spec §8.2 (F2.5): a page column of 1600 px and more gets a third band.
+     A container size, so `@wide:` measures the column the page really has — sidebar open or shut —
+     rather than the window. */
+  --container-wide: 100rem;
+
   --radius-ctl: 6px;
   --radius-card: 10px;
   --radius-modal: 12px;

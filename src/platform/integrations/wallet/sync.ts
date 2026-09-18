@@ -19,7 +19,11 @@
 import "server-only";
 import { listAccounts } from "@/modules/accounts/queries";
 import type { RemoteAccount } from "@/modules/accounts/rules";
-import { applyProviderAccounts, saveProviderBalance } from "@/modules/accounts/service";
+import {
+  applyProviderAccounts,
+  rebuildDerivedBalances,
+  saveProviderBalance,
+} from "@/modules/accounts/service";
 import { transactionsInWindow } from "@/modules/transactions/queries";
 import type { IncomingTransaction, TransactionState, TransactionType } from "@/modules/transactions/rules";
 import { upsertFromProvider } from "@/modules/transactions/service";
@@ -41,12 +45,14 @@ import {
 } from "../service";
 import {
   type WalletAccount,
+  type WalletCategory,
   type WalletClient,
   type WalletClientOptions,
   type WalletTransaction,
   createWalletClient,
   isTokenRejected,
 } from "./client";
+import { BACKFILL_MONTHS, backfillDepth, MAX_BACKFILL_MONTHS } from "./depth";
 import { type DateWindow, firstLinkWindows, recentWindow } from "./mapping";
 
 /** The counts of one pass, per kind, as `sync_runs.counts` stores them. */
@@ -288,10 +294,16 @@ export function occurredAtOf(
 
 export function toIncomingTransaction(
   movement: WalletTransaction,
-  categoryNames: ReadonlyMap<string, string>,
+  categories: ReadonlyMap<string, WalletCategory>,
   timeZone: string,
 ): IncomingTransaction {
   const categoryExternalId = movement.categoryExternalId;
+  // The record carries its own category — name and group — (measured at the collaudo), so it is
+  // preferred whole: it also covers a category created between the `/categories` read and this
+  // window, and a record saying "no group" is fresher than the list. The list is the fallback for a
+  // record that carries the id alone.
+  const listed = categoryExternalId === null ? undefined : categories.get(categoryExternalId);
+  const fromRecord = movement.categoryName !== null;
   return {
     externalId: movement.externalId,
     counterpartExternalId: movement.transferCounterExternalId,
@@ -303,11 +315,11 @@ export function toIncomingTransaction(
     payee: movement.payee,
     note: movement.note,
     categoryExternalId,
-    // The record carries its own category name (measured at the collaudo), so prefer it: it also
-    // covers a category created between the `/categories` read and this window.
-    categoryName:
-      movement.categoryName ??
-      (categoryExternalId === null ? null : (categoryNames.get(categoryExternalId) ?? null)),
+    categoryName: fromRecord ? movement.categoryName : (listed?.name ?? null),
+    categoryGroupExternalId: fromRecord
+      ? movement.categoryGroupExternalId
+      : (listed?.groupExternalId ?? null),
+    categoryGroupName: fromRecord ? movement.categoryGroupName : (listed?.groupName ?? null),
     labels: movement.labels,
   };
 }
@@ -432,13 +444,47 @@ async function syncAccounts(
 }
 
 /**
- * The windows one pass reads (spec §9.1): twelve monthly windows the first time, oldest first, and
- * the last seven days every hour after that. Which of the two it is depends on the cursor and on
- * nothing else — not on whether rows exist, which a user who deleted a connection and reconnected
- * would make lie, and not on a clock.
+ * The windows one pass reads (spec §9.1): the monthly windows of a backfill the first time — twelve,
+ * or the depth a re-download asked for (F2.5) — oldest first, and the last seven days every hour
+ * after that. Which of the two it is depends on the cursor and on nothing else — not on whether
+ * rows exist, which a user who deleted a connection and reconnected would make lie, and not on a
+ * clock.
+ *
+ * `judge` says whether the pass may declare a movement gone (F2.5): only the seven-day re-read
+ * may. A backfill imports and nothing else. On a first link that changes nothing, because nothing
+ * is stored yet; on a re-download of sixty months it is what keeps an answer the removal brake
+ * would doubt from failing the pass, and the pass from hiding years of history on one bad read.
  */
-function windowsFor(cursor: Record<string, string> | null, day: string): DateWindow[] {
-  return cursor?.[BACKFILL_FROM] === undefined ? firstLinkWindows(day) : [recentWindow(day)];
+function windowsFor(
+  cursor: Record<string, string> | null,
+  day: string,
+): { windows: DateWindow[]; judge: boolean } {
+  if (cursor?.[BACKFILL_FROM] !== undefined) return { windows: [recentWindow(day)], judge: true };
+  return { windows: firstLinkWindows(day, backfillDepth(cursor)), judge: false };
+}
+
+/**
+ * "Download the history again" (spec §9.1, F2.5): the next pass of this connection is a backfill
+ * of `months` monthly windows instead of the seven-day re-read. The cursor forgets how far the last
+ * backfill went and remembers the depth asked for, so the backfill that follows reads exactly that
+ * and, once it is through, the hourly passes go back to seven days. Nothing is read here: the
+ * caller runs the pass (or leaves it to the hourly job).
+ */
+export async function requestWalletBackfill(
+  ctx: Pick<Ctx, "userId">,
+  connectionId: string,
+  months: number,
+): Promise<void> {
+  if (!Number.isInteger(months) || months < 1 || months > MAX_BACKFILL_MONTHS) {
+    throw new RangeError(`Not a backfill depth: ${months}`);
+  }
+  const job = await readSyncJob(ctx, connectionId, "transactions");
+  const kept = Object.entries(job?.cursor ?? {}).filter(
+    ([key]) => key !== BACKFILL_FROM && key !== BACKFILL_THROUGH,
+  );
+  await saveSyncJob(ctx, connectionId, "transactions", {
+    cursor: { ...Object.fromEntries(kept), [BACKFILL_MONTHS]: String(months) },
+  });
 }
 
 /**
@@ -473,10 +519,8 @@ async function syncTransactions(
   covered: ReadonlySet<string> | undefined,
 ): Promise<Record<string, number>> {
   const job = await readSyncJob(ctx, connectionId, "transactions");
-  const windows = windowsFor(job?.cursor ?? null, today(ctx.timeZone, now));
-  const categoryNames = new Map(
-    (await client.categories()).map((category) => [category.externalId, category.name]),
-  );
+  const { windows, judge } = windowsFor(job?.cursor ?? null, today(ctx.timeZone, now));
+  const categories = new Map((await client.categories()).map((category) => [category.externalId, category]));
   const accounts = await linkedAccounts(ctx);
 
   const counts = { [CREATED]: 0, [UPDATED]: 0, [SKIPPED]: 0, [REMOVED]: 0 };
@@ -492,7 +536,7 @@ async function syncTransactions(
         continue;
       }
       const movements = byAccount.get(accountId) ?? [];
-      movements.push(toIncomingTransaction(row, categoryNames, ctx.timeZone));
+      movements.push(toIncomingTransaction(row, categories, ctx.timeZone));
       byAccount.set(accountId, movements);
       const seen = returned.get(accountId) ?? new Set<string>();
       seen.add(row.externalId);
@@ -500,7 +544,7 @@ async function syncTransactions(
     }
     for (const [accountExternalId, accountId] of accounts) {
       let judged: DateWindow | undefined;
-      if (covered?.has(accountExternalId) === true) {
+      if (judge && covered?.has(accountExternalId) === true) {
         // Only the rows nothing has declared gone yet are at risk: `planUpstreamRemovals` writes
         // `removed_upstream_at` where it is still null and nowhere else.
         const stored = (await transactionsInWindow(ctx, accountId, window)).filter(
@@ -627,6 +671,10 @@ async function walletPass(
       }
       result[kind] = counts;
       await finishRun(ctx, run.id, { counts }, now);
+      // The movements are in: the month ends of the synced accounts are rebuilt from them (spec
+      // §7.1, F2.5). After the reads, with nothing held open; a failure here fails the pass like
+      // any other, because a chart standing on stale rebuilt ends is a wrong answer.
+      if (kind === "transactions") await rebuildDerivedBalances(ctx);
     } catch (error) {
       const message = describeError(error);
       // A refused verdict still imported everything it read: the run says so, and says why.

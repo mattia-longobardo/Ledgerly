@@ -85,8 +85,8 @@ function row(on: CivilDate, amountCents: Cents, id = on + amountCents): Transact
 
 describe("monthGroups", () => {
   const totals: MonthTotal[] = [
-    { month: "2026-12-01", count: 48, totalCents: -180_000n },
-    { month: "2026-01-01", count: 132, totalCents: -298_000n },
+    { month: "2026-12-01", count: 48, netCents: -180_000n },
+    { month: "2026-01-01", count: 132, netCents: -298_000n },
   ];
 
   it("takes each header's count and total from the range, never from the page (review B1)", () => {
@@ -98,9 +98,9 @@ describe("monthGroups", () => {
     const groups = monthGroups([...december, ...january], totals);
 
     expect(groups.map((group) => group.month)).toEqual(["2026-12-01", "2026-01-01"]);
-    expect(groups[1]).toMatchObject({ count: 132, totalCents: -298_000n });
+    expect(groups[1]).toMatchObject({ count: 132, netCents: -298_000n });
     expect(groups[1].rows).toHaveLength(12);
-    expect(groups[0]).toMatchObject({ count: 48, totalCents: -180_000n });
+    expect(groups[0]).toMatchObject({ count: 48, netCents: -180_000n });
     expect(groups[0].rows).toHaveLength(2);
   });
 
@@ -111,7 +111,7 @@ describe("monthGroups", () => {
       {
         month: "2026-11-01",
         count: 0,
-        totalCents: 0n,
+        netCents: 0n,
         rows: [expect.objectContaining({ on: "2026-11-03" })],
       },
     ]);

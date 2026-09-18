@@ -19,6 +19,7 @@ import {
   monthKey,
 } from "@/platform/dates";
 import { type Cents, centsFromNumber, parseCents } from "@/platform/money";
+import { FIRST_LINK_MONTHS } from "./depth";
 
 /**
  * A money field as it reaches a schema. Wallet sends money as a JSON number; `client.ts` parses
@@ -227,6 +228,12 @@ export interface WalletTransaction {
    * having to be found in the `/categories` list.
    */
   categoryName: string | null;
+  /**
+   * The category's group, `{ id, name }` on the record (F2.5): it becomes the category's parent
+   * here. Either half may be missing; without a name there is nothing to adopt.
+   */
+  categoryGroupExternalId: string | null;
+  categoryGroupName: string | null;
   /** Provider label *names*: §9.1 adopts labels by name, so there is no external id to keep. */
   labels: string[];
   /** Wallet's own `recordType`/`recordState`, lower-cased, `null` when absent. Mapping them onto
@@ -245,6 +252,7 @@ export interface WalletTransaction {
 export interface WalletCategory {
   externalId: string;
   name: string;
+  groupExternalId: string | null;
   groupName: string | null;
 }
 
@@ -411,6 +419,8 @@ export function mapWalletRecord(raw: WalletRecordPayload): WalletTransaction {
     note: optionalText(raw.note),
     categoryExternalId: optionalText(raw.category?.id),
     categoryName: optionalText(raw.category?.name),
+    categoryGroupExternalId: optionalText(raw.category?.group?.id),
+    categoryGroupName: optionalText(raw.category?.group?.name),
     labels: walletLabelNames(raw.labels),
     providerType: optionalText(raw.recordType)?.toLowerCase() ?? null,
     providerState: optionalText(raw.recordState)?.toLowerCase() ?? null,
@@ -422,6 +432,7 @@ export function mapWalletCategory(raw: WalletCategoryPayload): WalletCategory {
   return {
     externalId: raw.id,
     name: raw.name.trim(),
+    groupExternalId: optionalText(raw.group?.id),
     groupName: optionalText(raw.group?.name),
   };
 }
@@ -432,8 +443,8 @@ export interface DateWindow {
   to: CivilDate;
 }
 
-/** The first link fetches twelve months (spec §9.1). */
-export const FIRST_LINK_MONTHS = 12;
+/** The first link fetches twelve months (spec §9.1); the constant lives in `depth.ts` since F2.5. */
+export { FIRST_LINK_MONTHS };
 /** The hourly pass re-reads the last seven days (spec §9.1); the schedule itself is the job's. */
 export const REREAD_DAYS = 7;
 /**

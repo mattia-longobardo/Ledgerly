@@ -35,7 +35,7 @@ export function CategoryPicker({
   disabled?: boolean;
   children: ReactNode;
 }) {
-  const items: { id: string | null; name: string; color: string | null }[] = [
+  const items: { id: string | null; name: string; color: string | null; depth?: 0 | 1 }[] = [
     { id: null, name: uncategorisedLabel, color: null },
     ...categories,
   ];
@@ -59,6 +59,8 @@ export function CategoryPicker({
                 onClick={() => onPick(item.id)}
                 className={cn(
                   "flex h-7 cursor-default items-center gap-2 rounded-[5px] px-2 text-sm data-[highlighted]:bg-hover",
+                  // A sub-category sits under its group (F2.5).
+                  item.depth === 1 && "pl-6",
                   item.id === currentId && "font-medium",
                 )}
               >
