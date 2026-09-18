@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { PALETTE } from "@/modules/accounts/ui/display";
 import {
   amountToneOf,
   badgesOf,
   type BadgeSource,
   categoryBreakdown,
+  categoryColors,
   groupedBreakdown,
   rangeLabel,
 } from "./display";
@@ -178,5 +180,40 @@ describe("amountToneOf", () => {
   it("paints a giroconto grey whichever way it goes: it is neither (spec §7.2)", () => {
     expect(amountToneOf({ type: "transfer", amountCents: -50_000n })).toBe("muted");
     expect(amountToneOf({ type: "transfer", amountCents: 50_000n })).toBe("muted");
+  });
+});
+
+describe("categoryColors", () => {
+  const category = (id: string, color: string | null, parentId: string | null = null) => ({
+    id,
+    color,
+    parentId,
+  });
+
+  it("gives every sub-category its group's colour, whatever colour it has of its own", () => {
+    const colors = categoryColors([
+      category("casa", "#2563eb"),
+      category("spesa", "#dc2626", "casa"),
+      category("affitto", null, "casa"),
+    ]);
+    expect(colors.get("spesa")).toBe("#2563eb");
+    expect(colors.get("affitto")).toBe("#2563eb");
+  });
+
+  it("gives a group without a colour one from the palette, counted by group so siblings never shift it", () => {
+    const colors = categoryColors([
+      category("casa", null),
+      category("spesa", null, "casa"),
+      category("svago", null),
+      category("abbonamenti", null, "svago"),
+    ]);
+    expect(colors.get("casa")).toBe(PALETTE[0]);
+    expect(colors.get("spesa")).toBe(PALETTE[0]);
+    expect(colors.get("svago")).toBe(PALETTE[1]);
+    expect(colors.get("abbonamenti")).toBe(PALETTE[1]);
+  });
+
+  it("keeps its own colour for a sub-category whose group is not in the list", () => {
+    expect(categoryColors([category("orphan", "#10b981", "archived-group")]).get("orphan")).toBe("#10b981");
   });
 });
