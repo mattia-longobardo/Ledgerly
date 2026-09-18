@@ -582,7 +582,9 @@
     "chart": {
       "title": "Patrimonio nel tempo",
       "range": "Intervallo",
-      "summary": "Patrimonio da {from} a {to}, fino a {value}."
+      "summary": "Patrimonio da {from} a {to}, fino a {value}.",
+      "inPeriod": "nel periodo",
+      "legend": "Conti nel grafico"
     },
     "manageAccounts": "Gestisci"
   },
@@ -796,7 +798,13 @@
           "bars": "Barre"
         },
         "change": "variazione",
-        "barsSummary": "Variazione mese su mese di {name}."
+        "barsSummary": "Variazione mese su mese di {name}.",
+        "grain": "Dettaglio del grafico",
+        "grains": {
+          "month": "Mese",
+          "day": "Giorno"
+        },
+        "dayBarsSummary": "Variazione giorno per giorno di {name}."
       },
       "monthEnd": {
         "title": "Saldi di fine mese",

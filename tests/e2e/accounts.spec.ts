@@ -89,6 +89,16 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page).not.toHaveURL(/from=/);
   });
 
+  await test.step("the account chart goes down to the day, and keeps it across its other controls (F2.5)", async () => {
+    await page.goto(account);
+    await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Day" }).click();
+    await expect(page).toHaveURL(/grain=day/);
+    await page.getByRole("group", { name: "Chart type" }).getByRole("link", { name: "Bars" }).click();
+    await expect(page).toHaveURL(/grain=day/);
+    await expect(page).toHaveURL(/mode=bars/);
+    await expect(page.getByRole("figure")).toContainText("Day-by-day change");
+  });
+
   await test.step("settings rename the account and set a balance warning", async () => {
     await page.goto(`${account}?tab=settings`);
     await page.getByLabel("Name").fill("ING main");
@@ -113,6 +123,10 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await page.getByRole("button", { name: "Apply" }).click();
     await expect(page).toHaveURL(/from=2026-01&to=2026-02/);
     await expect(page.locator("p.text-hero")).toHaveText("1.750,50 €");
+    // The stacked chart names each account under it, with its share of the total.
+    const legend = page.getByRole("list", { name: "Accounts in the chart" });
+    await expect(legend).toContainText("ING main");
+    await expect(legend).toContainText("100");
   });
 
   await test.step("a snapshot can be taken at once and lands in the log", async () => {

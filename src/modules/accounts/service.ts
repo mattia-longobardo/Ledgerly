@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, max, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
   type CivilDate,
+  addDays,
   addMonths,
   isCivilDate,
   lastDayOfMonth,
@@ -24,6 +25,7 @@ import {
   type BalanceEntryInput,
   balanceEntrySchema,
   canDelete,
+  dailySeries,
   DEFAULT_STALE_AFTER_HOURS,
   deriveMonthEnds,
   isFutureDate,
@@ -302,6 +304,33 @@ export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, 
     )
     .returning({ accountId: balanceEntries.accountId });
   if (row) await rebuildDerivedBalances(ctx, [row.accountId]);
+}
+
+/**
+ * One account's balance on every day of a window (spec §7.1, F2.5), for Account detail's day grain:
+ * a synced account's from its readings and its movements, a manual one's held between entries
+ * (`dailySeries`). Both ends included; a window reaching past today is the caller's to trim.
+ */
+export async function accountDailyBalances(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountId: string,
+  window: { from: CivilDate; to: CivilDate },
+): Promise<{ days: CivilDate[]; values: (Cents | null)[]; estimated: boolean[] }> {
+  const account = await requireAccount(ctx, accountId);
+  const synced = account.origin === "synced";
+  const [observed, daily] = await Promise.all([
+    observedDays(ctx, [account.id]),
+    synced ? dailyNetByAccount(ctx, [account.id]) : Promise.resolve(new Map<string, never[]>()),
+  ]);
+  const days: CivilDate[] = [];
+  for (let day = window.from; day <= window.to; day = addDays(day, 1)) days.push(day);
+  const series = dailySeries(
+    observed.get(account.id) ?? [],
+    daily.get(account.id) ?? [],
+    days,
+    synced ? "movements" : "hold",
+  );
+  return { days, ...series };
 }
 
 /**

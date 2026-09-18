@@ -13,6 +13,7 @@ import {
   AccountError,
   applyProviderAccounts,
   createAccount,
+  accountDailyBalances,
   deleteBalanceEntry,
   rebuildDerivedBalances,
   removeAccount,
@@ -575,6 +576,26 @@ describe("rebuildDerivedBalances", () => {
 
     await deleteBalanceEntry(ctx, correction.id);
     expect(await rebuilt(accountId)).toHaveLength(3);
+  });
+
+  it("gives a synced account's balance day by day, rebuilt before its first reading (F2.5)", async () => {
+    const accountId = await aSyncedAccount();
+    const days = await accountDailyBalances(ctx, accountId, { from: "2026-09-01", to: "2026-09-03" });
+    // 5.000 read on the 16th, 200 spent on the 2nd: 5.200 before it, 5.000 from it on.
+    expect(days).toEqual({
+      days: ["2026-09-01", "2026-09-02", "2026-09-03"],
+      values: [520_000n, 500_000n, 500_000n],
+      estimated: [true, true, true],
+    });
+  });
+
+  it("holds a manual account's entries day by day", async () => {
+    const account = await createAccount(ctx, {
+      ...CHECKING,
+      openingBalance: { on: "2026-01-10", cents: 7n },
+    });
+    const days = await accountDailyBalances(ctx, account.id, { from: "2026-01-09", to: "2026-01-11" });
+    expect(days.values).toEqual([null, 7n, 7n]);
   });
 
   it("leaves a manual account alone: it has no movements to rebuild from", async () => {
