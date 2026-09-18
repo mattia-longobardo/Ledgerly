@@ -188,7 +188,8 @@
         "replaced": "Token replaced",
         "disconnected": "Wallet disconnected",
         "synced": "Sync finished",
-        "tested": "Wallet answered: the token works"
+        "tested": "Wallet answered: the token works",
+        "redownloaded": "History downloaded again"
       },
       "errors": {
         "rejected": "Wallet rejected that token.",
@@ -204,12 +205,18 @@
         "failedBody": "The last {kind} sync for Budget Makers Wallet failed: {error}. Check the token in Settings › Integrations.",
         "staleSubject": "Wallet sync is out of date",
         "staleBody": "Budget Makers Wallet has not synced since {since}. Check the connection in Settings › Integrations."
+      },
+      "history": {
+        "label": "History",
+        "months": "{count, plural, one {# month} other {# months}}",
+        "action": "Download again",
+        "hint": "It only imports: nothing already here is ever removed by it."
       }
     },
     "data": {
       "categories": {
         "title": "Categories",
-        "description": "Categories of the transactions in Expenses. A synced category is matched by name before a new one is created.",
+        "description": "Categories of the transactions in Expenses, in groups. A synced category is matched by name before a new one is created, and its Wallet group becomes its group.",
         "add": "Add category",
         "name": "Name",
         "group": "Group",
@@ -239,8 +246,11 @@
           "duplicate": "A category with this name already exists.",
           "invalid": "Enter a name between 1 and {max} characters.",
           "notFound": "That category no longer exists.",
-          "failed": "Couldn't save. Try again."
-        }
+          "failed": "Couldn't save. Try again.",
+          "invalidParent": "Pick an active group that is not inside another one. A category with sub-categories cannot go into a group."
+        },
+        "hasChildren": "It has sub-categories, so it stays a group.",
+        "typeFromGroup": "A category in a group has the group's type."
       },
       "labels": {
         "title": "Labels",
@@ -410,7 +420,7 @@
   },
   "expenses": {
     "title": "Expenses",
-    "summary": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}} · {total}",
+    "summary": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}}",
     "countTransactions": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}}",
     "filters": {
       "label": "Filters",
@@ -448,7 +458,14 @@
       "search": "Search payee…",
       "searchLabel": "Search by payee",
       "clear": "Clear filters",
-      "showHidden": "Show hidden"
+      "showHidden": "Show hidden",
+      "types": {
+        "label": "Type",
+        "all": "All",
+        "income": "Income",
+        "expense": "Spending",
+        "transfer": "Transfers"
+      }
     },
     "columns": {
       "date": "Date",
@@ -491,13 +508,15 @@
       "removedUpstream": "Gone from provider",
       "edited": "Edited here",
       "transfer": "Transfer",
-      "pending": "Pending"
+      "pending": "Pending",
+      "unpaired": "Unpaired transfer"
     },
     "breakdown": {
       "title": "By category",
       "total": "{total} moved in this range",
       "empty": "Nothing to break down in this range.",
-      "share": "{share}%"
+      "share": "{share}%",
+      "expand": "Show the categories in {name}"
     },
     "shortcuts": {
       "title": "Shortcuts",
@@ -529,6 +548,14 @@
     },
     "palette": {
       "payees": "Payees"
+    },
+    "totals": {
+      "label": "Totals of the range",
+      "income": "Income",
+      "expenses": "Spending",
+      "net": "Net",
+      "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of the totals",
+      "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}"
     }
   },
   "overview": {
@@ -759,7 +786,7 @@
         "opened": "Opened"
       },
       "chart": {
-        "title": "Balance · {count} months",
+        "title": "Balance · {count, plural, one {# month} other {# months}}",
         "summary": "{name} over time, ending at {value}.",
         "span": "Chart span",
         "mode": "Chart type",
@@ -767,9 +794,6 @@
           "line": "Line",
           "bars": "Bars"
         },
-        "from": "From",
-        "to": "To",
-        "apply": "Apply",
         "change": "change",
         "barsSummary": "Month-on-month change for {name}."
       },
@@ -835,7 +859,8 @@
         "manual": "Manual",
         "provider": "Provider",
         "system": "Snapshot",
-        "import": "Import"
+        "import": "Import",
+        "derived": "Rebuilt"
       }
     },
     "settings": {
@@ -910,6 +935,21 @@
       "latest": "Latest",
       "today": "today",
       "ytd": "year to date"
+    },
+    "range": {
+      "label": "Chart range",
+      "from": "From",
+      "to": "To",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "pickEnd": "Pick the end month",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "hint": "{from} – {to} · {count, plural, one {# month} other {# months}}"
+    },
+    "estimated": {
+      "short": "estimated",
+      "note": "Dashed months are rebuilt from the synced movements, before the first balance Wallet reported."
     }
   }
 }

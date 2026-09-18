@@ -57,6 +57,41 @@ export function segmentsOf(
   return runs;
 }
 
+/** A piece of a line drawn in one style: solid, or dashed where the values are estimates. */
+export interface Stroke {
+  points: { x: number; y: number }[];
+  dashed: boolean;
+}
+
+/**
+ * A series as the strokes it is drawn with (F2.5). A step between two months is dashed when either
+ * end is an estimate — a month end rebuilt from the movements rather than read — so the line says
+ * where it stops knowing and starts reconstructing. Consecutive steps of one style are one stroke,
+ * and neighbouring strokes share their meeting point, so the line has no gap where the style
+ * changes. A gap in the values still breaks the line, as in `segmentsOf`.
+ */
+export function strokesOf(
+  values: readonly (number | null)[],
+  estimated: readonly boolean[],
+  extent: { low: number; high: number },
+  box: Box,
+): Stroke[] {
+  const strokes: Stroke[] = [];
+  for (let i = 0; i + 1 < values.length; i += 1) {
+    const from = values[i];
+    const to = values[i + 1];
+    if (from === null || to === null) continue;
+    const dashed = estimated[i] === true || estimated[i + 1] === true;
+    const start = { x: xOf(i, values.length, box), y: scale(from, extent, box) };
+    const end = { x: xOf(i + 1, values.length, box), y: scale(to, extent, box) };
+    const last = strokes.at(-1);
+    const joined = last && last.dashed === dashed && last.points.at(-1)?.x === start.x;
+    if (joined) last.points.push(end);
+    else strokes.push({ points: [start, end], dashed });
+  }
+  return strokes;
+}
+
 const path = (run: { x: number; y: number }[]) =>
   run.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
 
@@ -115,6 +150,7 @@ export function AreaLine({
   xLabels,
   height = 200,
   hover,
+  estimated,
 }: {
   values: readonly (number | null)[];
   summary: string;
@@ -122,10 +158,13 @@ export function AreaLine({
   xLabels: readonly string[];
   height?: number;
   hover?: readonly HoverPoint[];
+  /** Per value, whether it is an estimate (F2.5): those steps of the line are dashed. */
+  estimated?: readonly boolean[];
 }) {
   const box: Box = { width: 720, height, pad: 6 };
   const extent = extentOf([{ values }]);
   const runs = segmentsOf(values, extent, box);
+  const strokes = strokesOf(values, estimated ?? [], extent, box);
   const floor = box.height - box.pad;
 
   return (
@@ -143,17 +182,21 @@ export function AreaLine({
             aria-hidden
             className="relative h-full w-full"
           >
-            {runs.map((run, index) => (
-              <g key={index}>
-                {run.length > 1 && <path d={areaPath(run, floor)} fill="var(--soft)" opacity={0.6} />}
-                <polyline
-                  points={path(run)}
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
+            {runs.map((run, index) =>
+              run.length > 1 ? (
+                <path key={index} d={areaPath(run, floor)} fill="var(--soft)" opacity={0.6} />
+              ) : null,
+            )}
+            {strokes.map((stroke, index) => (
+              <polyline
+                key={index}
+                points={path(stroke.points)}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={2}
+                strokeDasharray={stroke.dashed ? "5 4" : undefined}
+                vectorEffect="non-scaling-stroke"
+              />
             ))}
           </svg>
           {hover && hover.length > 0 && <ChartHover points={hover} />}

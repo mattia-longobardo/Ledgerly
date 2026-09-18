@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, DrizzleQueryError, eq, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -74,11 +74,17 @@ function keyRing(): KeyRing {
 }
 
 /** True for the unique violation of one named constraint, wherever drizzle wrapped it. */
-function isUniqueViolation(error: unknown, constraint: string): boolean {
-  const cause = error instanceof DrizzleQueryError ? error.cause : error;
-  if (typeof cause !== "object" || cause === null) return false;
-  const { code, constraint: violated } = cause as { code?: unknown; constraint?: unknown };
-  return code === "23505" && violated === constraint;
+export function isUniqueViolation(error: unknown, constraint: string): boolean {
+  // Walks the causes rather than asking `instanceof DrizzleQueryError`: the production bundle can
+  // hold more than one copy of drizzle-orm, and an error thrown by one copy is not an instance of
+  // the other's class. That is how, on 2026-09-18, a second Wallet group reaching an already linked
+  // local group was never recognised as `link_conflict` and failed every transactions pass.
+  for (let cause: unknown = error; typeof cause === "object" && cause !== null;) {
+    const { code, constraint: violated } = cause as { code?: unknown; constraint?: unknown };
+    if (code === "23505" && violated === constraint) return true;
+    cause = (cause as { cause?: unknown }).cause;
+  }
+  return false;
 }
 
 async function requireConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<Connection> {

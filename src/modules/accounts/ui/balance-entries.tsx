@@ -20,7 +20,8 @@ export interface EntryRow {
   change: string;
   changeSign: number;
   note: string | null;
-  source: "manual" | "provider" | "system" | "import";
+  /** `derived` (F2.5) is a month end rebuilt from the movements: shown, never edited here. */
+  source: "manual" | "provider" | "system" | "import" | "derived";
 }
 
 /**
@@ -76,7 +77,7 @@ export function BalanceEntries({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+    <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <Card className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">{t("add.title")}</h2>
         <p className="text-sm text-muted">{synced ? t("add.syncedNote") : t("add.manualNote")}</p>
@@ -131,7 +132,15 @@ export function BalanceEntries({
                     </Td>
                     <Td muted>{entry.note ?? "—"}</Td>
                     <Td>
-                      <Badge tone={entry.source === "manual" ? "accent" : "neutral"}>
+                      <Badge
+                        tone={
+                          entry.source === "manual"
+                            ? "accent"
+                            : entry.source === "derived"
+                              ? "warn"
+                              : "neutral"
+                        }
+                      >
                         {t(`sources.${entry.source}`)}
                       </Badge>
                     </Td>

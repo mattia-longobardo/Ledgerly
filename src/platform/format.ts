@@ -63,7 +63,7 @@ function monthName(date: CivilDate, locale: UiLocale, width: "short" | "long"): 
  */
 export function formatDate(
   date: CivilDate | null,
-  style: "dayMonth" | "long" | "monthYear" | "monthShort",
+  style: "dayMonth" | "long" | "monthYear" | "monthShort" | "month",
   locale: UiLocale,
 ): string {
   if (date === null) return NULL_DISPLAY;
@@ -78,5 +78,8 @@ export function formatDate(
       return `${monthName(date, locale, "long")} ${year}`;
     case "monthShort":
       return `${monthName(date, locale, "short")} ${year.slice(2)}`;
+    case "month":
+      // The month alone, for a grid that already names the year above it (the month picker).
+      return monthName(date, locale, "short");
   }
 }

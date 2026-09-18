@@ -2,8 +2,10 @@ import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
+  boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -21,9 +23,18 @@ import { CATEGORY_TYPES, TRANSACTION_STATES, TRANSACTION_TYPES } from "./rules";
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
 /**
- * Spending categories (spec §6). Unique on the name because that is what adoption keys on
- * (spec §9.1): a provider category is matched to an existing local name before a new one is
- * created. An archived category keeps its name, so adoption never resurrects it by accident.
+ * Spending categories (spec §6), on two levels since F2.5: a group (no parent) and its
+ * sub-categories. Unique on the name **among siblings**, because that is what adoption keys on
+ * (spec §9.1) — "Other" under two groups is two categories — and `NULLS NOT DISTINCT` makes the
+ * groups siblings of one another. An archived category keeps its name, so adoption never
+ * resurrects it by accident.
+ *
+ * The two generated columns are how the database itself refuses a third level: a child points at
+ * `(parent_id, true)`, and only a row without a parent has `is_root = true`. Giving a parent to a
+ * group that has children fails too, because the key its children point at would change under
+ * them. The key has no `ON DELETE` action — Postgres allows none on a key with a generated column —
+ * and needs none: a category is archived, never deleted (spec §7.2), and deleting a user takes a
+ * group and its children away in the same statement.
  */
 export const categories = pgTable(
   "categories",
@@ -35,7 +46,17 @@ export const categories = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    group: text("group"),
+    parentId: uuid("parent_id"),
+    isRoot: boolean("is_root").generatedAlwaysAs(sql`parent_id is null`),
+    parentIsRoot: boolean("parent_is_root").generatedAlwaysAs(
+      sql`case when parent_id is null then null else true end`,
+    ),
+    /**
+     * The person chose this category's group — or no group — by hand (spec §7.2: local edits win).
+     * The sync then never files it under the provider's group again; without it, taking a Wallet
+     * category out of its group was undone by the next hourly pass.
+     */
+    parentSetLocally: boolean("parent_set_locally").notNull().default(false),
     type: text("type", { enum: CATEGORY_TYPES }).notNull().default("expense"),
     color: text("color"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
@@ -46,8 +67,15 @@ export const categories = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    unique("categories_user_name_uq").on(table.userId, table.name),
+    unique("categories_id_root_uq").on(table.id, table.isRoot),
+    foreignKey({
+      name: "categories_parent_fk",
+      columns: [table.parentId, table.parentIsRoot],
+      foreignColumns: [table.id, table.isRoot],
+    }),
+    unique("categories_user_parent_name_uq").on(table.userId, table.parentId, table.name).nullsNotDistinct(),
     index("categories_user_name_idx").on(table.userId, table.name),
+    index("categories_parent_idx").on(table.parentId),
     check("categories_type_ck", sql`${table.type} in (${sql.raw(inList(CATEGORY_TYPES))})`),
     check("categories_name_ck", sql`length(btrim(${table.name})) between 1 and 60`),
   ],

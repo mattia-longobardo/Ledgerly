@@ -130,7 +130,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
         {kpis.map((kpi) => (
           <KpiTile
             key={kpi.key}
@@ -219,7 +219,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
 
       {view.totalPartial && <p className="text-sm text-warn">{t("partial")}</p>}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card padded={false} className="flex flex-col gap-3 p-4">
           <h2 className="text-lg font-semibold">{t("chart.title", { count: view.months.length })}</h2>
           <MultiLine

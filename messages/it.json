@@ -188,7 +188,8 @@
         "replaced": "Token sostituito",
         "disconnected": "Wallet scollegato",
         "synced": "Sincronizzazione completata",
-        "tested": "Wallet ha risposto: il token funziona"
+        "tested": "Wallet ha risposto: il token funziona",
+        "redownloaded": "Storico scaricato di nuovo"
       },
       "errors": {
         "rejected": "Wallet ha rifiutato il token.",
@@ -204,12 +205,18 @@
         "failedBody": "L'ultima sincronizzazione «{kind}» di Budget Makers Wallet è fallita: {error}. Controlla il token in Impostazioni › Integrazioni.",
         "staleSubject": "La sincronizzazione Wallet è vecchia",
         "staleBody": "Budget Makers Wallet non si sincronizza dal {since}. Controlla il collegamento in Impostazioni › Integrazioni."
+      },
+      "history": {
+        "label": "Storico",
+        "months": "{count, plural, one {# mese} other {# mesi}}",
+        "action": "Scarica di nuovo",
+        "hint": "Importa soltanto: non toglie mai nulla di ciò che c'è già."
       }
     },
     "data": {
       "categories": {
         "title": "Categorie",
-        "description": "Le categorie dei movimenti in Spese. Una categoria sincronizzata viene abbinata per nome prima di crearne una nuova.",
+        "description": "Le categorie dei movimenti in Spese, a gruppi. Una categoria sincronizzata viene abbinata per nome prima di crearne una nuova, e il suo gruppo di Wallet diventa il suo gruppo.",
         "add": "Aggiungi categoria",
         "name": "Nome",
         "group": "Gruppo",
@@ -239,8 +246,11 @@
           "duplicate": "Esiste già una categoria con questo nome.",
           "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
           "notFound": "Questa categoria non esiste più.",
-          "failed": "Non è stato possibile salvare. Riprova."
-        }
+          "failed": "Non è stato possibile salvare. Riprova.",
+          "invalidParent": "Scegli un gruppo attivo che non stia dentro un altro. Una categoria con sottocategorie non può entrare in un gruppo."
+        },
+        "hasChildren": "Ha delle sottocategorie, quindi resta un gruppo.",
+        "typeFromGroup": "Una categoria in un gruppo ha il tipo del gruppo."
       },
       "labels": {
         "title": "Etichette",
@@ -410,7 +420,7 @@
   },
   "expenses": {
     "title": "Spese",
-    "summary": "{count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}} · {total}",
+    "summary": "{count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
     "countTransactions": "{count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
     "filters": {
       "label": "Filtri",
@@ -448,7 +458,14 @@
       "search": "Cerca beneficiario…",
       "searchLabel": "Cerca per beneficiario",
       "clear": "Azzera i filtri",
-      "showHidden": "Mostra i nascosti"
+      "showHidden": "Mostra i nascosti",
+      "types": {
+        "label": "Tipo",
+        "all": "Tutti",
+        "income": "Entrate",
+        "expense": "Spese",
+        "transfer": "Giroconti"
+      }
     },
     "columns": {
       "date": "Data",
@@ -491,13 +508,15 @@
       "removedUpstream": "Sparito dal provider",
       "edited": "Modificato qui",
       "transfer": "Giroconto",
-      "pending": "In attesa"
+      "pending": "In attesa",
+      "unpaired": "Giroconto spaiato"
     },
     "breakdown": {
       "title": "Per categoria",
       "total": "{total} movimentati nell'intervallo",
       "empty": "Niente da suddividere in questo intervallo.",
-      "share": "{share} %"
+      "share": "{share} %",
+      "expand": "Mostra le categorie di {name}"
     },
     "shortcuts": {
       "title": "Scorciatoie",
@@ -529,6 +548,14 @@
     },
     "palette": {
       "payees": "Beneficiari"
+    },
+    "totals": {
+      "label": "Totali dell'intervallo",
+      "income": "Entrate",
+      "expenses": "Spese",
+      "net": "Netto",
+      "transfers": "{count, plural, one {# giroconto escluso dai totali} other {# giroconti esclusi dai totali}}",
+      "unpaired": "{count, plural, one {# senza l'altra gamba qui} other {# senza l'altra gamba qui}}"
     }
   },
   "overview": {
@@ -759,7 +786,7 @@
         "opened": "Aperto"
       },
       "chart": {
-        "title": "Saldo · {count} mesi",
+        "title": "Saldo · {count, plural, one {# mese} other {# mesi}}",
         "summary": "{name} nel tempo, fino a {value}.",
         "span": "Intervallo del grafico",
         "mode": "Tipo di grafico",
@@ -767,9 +794,6 @@
           "line": "Linea",
           "bars": "Barre"
         },
-        "from": "Da",
-        "to": "A",
-        "apply": "Applica",
         "change": "variazione",
         "barsSummary": "Variazione mese su mese di {name}."
       },
@@ -835,7 +859,8 @@
         "manual": "Manuale",
         "provider": "Provider",
         "system": "Snapshot",
-        "import": "Importazione"
+        "import": "Importazione",
+        "derived": "Ricostruito"
       }
     },
     "settings": {
@@ -910,6 +935,21 @@
       "latest": "Ultimo",
       "today": "oggi",
       "ytd": "da inizio anno"
+    },
+    "range": {
+      "label": "Intervallo del grafico",
+      "from": "Da",
+      "to": "A",
+      "previousYear": "Anno precedente",
+      "nextYear": "Anno successivo",
+      "pickEnd": "Scegli il mese di fine",
+      "apply": "Applica",
+      "cancel": "Annulla",
+      "hint": "{from} – {to} · {count, plural, one {# mese} other {# mesi}}"
+    },
+    "estimated": {
+      "short": "stimato",
+      "note": "I mesi tratteggiati sono ricostruiti dai movimenti sincronizzati, prima del primo saldo letto da Wallet."
     }
   }
 }

@@ -1,0 +1,2 @@
+ALTER TABLE "balance_entries" DROP CONSTRAINT "balance_entries_source_ck";--> statement-breakpoint
+ALTER TABLE "balance_entries" ADD CONSTRAINT "balance_entries_source_ck" CHECK ("balance_entries"."source" in ('manual', 'provider', 'system', 'import', 'derived'));

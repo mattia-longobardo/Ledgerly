@@ -5,7 +5,8 @@ import type { Ctx } from "@/platform/context";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY } from "@/platform/format";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { listConnections, listRuns, type SyncRun } from "@/platform/integrations/service";
+import { listConnections, listRuns, readSyncJob, type SyncRun } from "@/platform/integrations/service";
+import { backfillDepth } from "@/platform/integrations/wallet/depth";
 import { Badge } from "@/ui/badge";
 import { SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
@@ -68,11 +69,12 @@ export default async function SettingsIntegrationsPage() {
   const wallet = connections.find((connection) => connection.provider === WALLET_PROVIDER) ?? null;
   const state: WalletCardState = wallet?.state ?? "absent";
   const lastSync = wallet?.lastOkAt ? formatInstant(wallet.lastOkAt, ctx) : null;
+  const job = wallet ? await readSyncJob(ctx, wallet.id, "transactions") : null;
 
   return (
     <div className="flex flex-col gap-6">
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
-        <WalletCard state={state} lastSync={lastSync} />
+        <WalletCard state={state} lastSync={lastSync} history={backfillDepth(job?.cursor)} />
       </SettingsSection>
 
       <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false}>

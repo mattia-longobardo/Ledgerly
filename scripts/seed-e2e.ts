@@ -111,18 +111,22 @@ async function seedExpenses(): Promise<void> {
     cents: bigint,
     payee: string,
     category: string | null,
+    counterpartExternalId: string | null = null,
   ): IncomingTransaction => ({
     externalId,
-    counterpartExternalId: null,
+    counterpartExternalId,
     occurredAt: new Date(`${on}T10:00:00Z`),
     amountCents: cents,
     currency: "EUR",
-    type: cents < 0n ? "expense" : "income",
+    type: counterpartExternalId !== null ? "transfer" : cents < 0n ? "expense" : "income",
     state: "cleared",
     payee,
     note: null,
     categoryExternalId: category === null ? null : `cat-${category.toLowerCase()}`,
     categoryName: category,
+    // No groups here: this journey checks the "By category" rows one category at a time.
+    categoryGroupExternalId: null,
+    categoryGroupName: null,
     labels: [],
   });
 
@@ -132,6 +136,9 @@ async function seedExpenses(): Promise<void> {
     movement("e2e-tx-3", `${thisMonth}-09`, -2100n, "Trenitalia", "Trasporti"),
     movement("e2e-tx-4", `${thisMonth}-11`, 210000n, "Stipendio", null),
     movement("e2e-tx-5", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
+    // One leg of a giroconto whose other account is not linked here (F2.5): in the list, flagged as
+    // unpaired, and in no total. Last month, so this month's figures stay what they were.
+    movement("e2e-tx-6", `${lastMonth}-15`, -50000n, "Revolut", null, "e2e-tx-7"),
   ]);
 }
 

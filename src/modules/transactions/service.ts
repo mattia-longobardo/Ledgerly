@@ -31,7 +31,7 @@ import {
 } from "./rules";
 import { type Transaction, getTransaction, transactionsByIds, transactionsInWindow } from "./queries";
 import { categories, labels, transactionLabels, transactions } from "./schema";
-import { TaxonomyError, adoptOrCreateCategory, adoptOrCreateLabel } from "./taxonomy";
+import { type ProviderGroupRef, TaxonomyError, adoptOrCreateCategory, adoptOrCreateLabel } from "./taxonomy";
 
 /**
  * Every failure a caller is expected to handle. `provider_owned` is the refusal of §7.2: payee,
@@ -194,22 +194,31 @@ class ProviderIds {
   async category(incoming: IncomingTransaction): Promise<string | null> {
     const externalId = incoming.categoryExternalId;
     const name = incoming.categoryName?.trim() ?? "";
-    const key = JSON.stringify([externalId, name]);
+    const groupName = incoming.categoryGroupName?.trim() ?? "";
+    // The provider's group becomes the parent (F2.5), so it is part of what makes a category.
+    const group =
+      groupName === "" ? undefined : { name: groupName, externalId: incoming.categoryGroupExternalId };
+    const key = JSON.stringify([externalId, name, group?.externalId ?? null, groupName]);
     const known = this.categoryCache.get(key);
     if (known !== undefined) return known;
 
-    const resolved = await this.resolveCategory(externalId, name);
+    const resolved = await this.resolveCategory(externalId, name, group);
     this.categoryCache.set(key, resolved);
     return resolved;
   }
 
-  private async resolveCategory(externalId: string | null, name: string): Promise<string | null> {
+  private async resolveCategory(
+    externalId: string | null,
+    name: string,
+    group: ProviderGroupRef | undefined,
+  ): Promise<string | null> {
     if (name !== "") {
       try {
         const category = await adoptOrCreateCategory(
           this.ctx,
           name,
           externalId === null ? undefined : { provider: this.provider, externalId },
+          group,
         );
         return category.id;
       } catch (error) {

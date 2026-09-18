@@ -1,20 +1,12 @@
-import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/ui/cn";
+import { type Params, withParams } from "@/ui/url";
 
-export type Params = Record<string, string | undefined>;
-
-/** The page's own address with some parameters changed; an empty value drops the parameter. */
-export function withParams(path: string, current: Params, changes: Params): Route {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries({ ...current, ...changes })) {
-    if (value !== undefined && value !== "") query.set(key, value);
-  }
-  const search = query.toString();
-  return (search ? `${path}?${search}` : path) as Route;
-}
+// Moved to `src/ui/url.ts` in F2.5 so the date range picker in `src/ui` can build addresses too;
+// re-exported here because every screen of F1 and F2 already imports them from this file.
+export { type Params, withParams };
 
 /**
  * The design's segmented switches (range, span, chart mode, grain) as links rather than state: the
@@ -34,7 +26,8 @@ export function LinkTabs({
   params: Params;
   name: string;
   current: string;
-  options: readonly { value: string; label: string }[];
+  /** `count`, when given, is shown after the label the way the filter chips show theirs. */
+  options: readonly { value: string; label: string; count?: number }[];
 }) {
   return (
     <div role="group" aria-label={label} className="inline-flex gap-0.5 rounded-[7px] bg-hover p-0.5">
@@ -51,6 +44,9 @@ export function LinkTabs({
           )}
         >
           {option.label}
+          {option.count !== undefined && (
+            <span className="ml-1.5 text-micro text-muted tabular-nums">{option.count}</span>
+          )}
         </Link>
       ))}
     </div>

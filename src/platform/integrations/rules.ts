@@ -8,7 +8,8 @@ import { z } from "zod";
 export const CONNECTION_STATES = ["active", "error", "revoked"] as const;
 export const SYNC_KINDS = ["accounts", "transactions"] as const;
 export const SYNC_STATES = ["running", "success", "failed", "skipped"] as const;
-export const ENTITY_TYPES = ["account", "transaction", "category"] as const;
+/** `category_group` is a Wallet category group, filed as the local parent category (F2.5). */
+export const ENTITY_TYPES = ["account", "transaction", "category", "category_group"] as const;
 
 export type ConnectionState = (typeof CONNECTION_STATES)[number];
 export type SyncKind = (typeof SYNC_KINDS)[number];
