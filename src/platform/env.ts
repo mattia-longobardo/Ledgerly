@@ -15,7 +15,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const ipOrCidr = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
 
 /**
- * Plain http is only acceptable on the machine itself (the end-to-end suite serves
+ * Plain http is only acceptable on the machine itself (a server started by hand on
  * http://127.0.0.1). A value that is not a parseable URL is skipped here: `z.url()` on the field
  * itself already reported that issue, and `new URL()` on it would throw a bare `TypeError` that
  * would escape `safeParse` and hide every other issue.

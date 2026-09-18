@@ -1,20 +1,23 @@
-// tests/e2e/env.ts — one environment for the e2e server, the seed and the specs.
-export const E2E_PORT = 3100;
-export const BASE_URL = `http://127.0.0.1:${E2E_PORT}`;
+// tests/e2e/env.ts — one place for the site the specs drive and the users they drive it as.
+//
+// The e2e suite runs against the deployed site, https://dash.longobardo.me: there is no local
+// server any more. It signs in only as the users below, all on the reserved `example.test` domain;
+// the seed creates them with their sample data before the run and removes them, with everything
+// they own, after it (scripts/seed-e2e.ts). No spec reads or writes anybody else's data.
+export const BASE_URL = "https://dash.longobardo.me";
 
-// Better Auth rate-limits sign-ins. No proxy sits in front of the e2e server (TRUSTED_PROXY_IPS is
-// empty below), so in production mode it cannot determine a per-client IP from X-Forwarded-For and
-// falls back to one shared bucket per path: 5 password sign-ins per minute (/sign-in/email,
-// src/platform/auth/auth.ts) and 3 Authentik starts per 10 s (/sign-in/social, Better Auth's
-// default for /sign-in/*), shared by every test in the run. One run uses all 5 and all 3: one more
-// sign-in is answered with HTTP 429 unless it replaces one of them.
+// Better Auth rate-limits password sign-ins to 5 per minute per client (/sign-in/email,
+// src/platform/auth/auth.ts), and the whole run is one client. The suite spends 4; a spec that
+// only needs to be signed in starts from a session the seed prepared and spends none.
 export const USERS = {
   owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
-  reset: { email: "reset@example.test", password: "reset-password-123", name: "Reset" },
   accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
   expenses: { email: "expenses@example.test", password: "expenses-password-123", name: "Expenses" },
 } as const;
+
+/** The only addresses the seed may create or delete. */
+export const TEST_EMAIL_DOMAIN = "@example.test";
 
 /**
  * A ready signed-in session for the journeys that are not about signing in, written by the seed.
@@ -28,38 +31,4 @@ export const SESSIONS = {
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;
 
-/** Pending invitations created by the seed; each token is written to `tests/e2e/.state/<file>`. */
-export const INVITATIONS = {
-  password: { email: "invitee@example.test", role: "user", file: "invite-token" },
-  sso: { email: "sso-invitee@example.test", role: "admin", file: "sso-invite-token" },
-  ssoMismatch: { email: "sso-mismatch@example.test", role: "user", file: "sso-mismatch-invite-token" },
-} as const;
-
 export const STATE_DIR = "tests/e2e/.state";
-
-// The server runs the production build (NODE_ENV=production), so this satisfies the production
-// checks in src/platform/env.ts: loopback http, a non-placeholder secret, a metrics token, no SMTP_USER.
-export const E2E_ENV: Record<string, string> = {
-  PORT: String(E2E_PORT),
-  HOSTNAME: "127.0.0.1",
-  DATABASE_URL: "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly_e2e",
-  BETTER_AUTH_URL: BASE_URL,
-  BETTER_AUTH_SECRET: "C4xCHKh9Mn+vqDxmFFkYqBDvEABVTob17HmmDDJqCf0=",
-  OIDC_DISCOVERY_URL: "http://127.0.0.1:58090/default/.well-known/openid-configuration",
-  OIDC_CLIENT_ID: "ledgerly",
-  OIDC_CLIENT_SECRET: "ledgerly-dev",
-  OIDC_ADMIN_GROUP: "ledgerly-admins",
-  SMTP_HOST: "127.0.0.1",
-  SMTP_PORT: "51025",
-  MAIL_FROM: "Ledgerly <ledgerly@example.test>",
-  S3_ENDPOINT: "http://127.0.0.1:59000",
-  S3_ACCESS_KEY_ID: "ledgerly",
-  S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
-  S3_BUCKET: "ledgerly-e2e",
-  APP_ENCRYPTION_KEY: "k1:yy1bMD1Zx+AvatfJaiBLql/352uA2W9ixjHOS27eyds=",
-  CRON_SECRET: "e2e-cron-secret-e2e-cron-secret-e2e",
-  HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-e2e",
-  METRICS_TOKEN: "e2e-metrics-token-e2e-metrics-token",
-  // No proxy in front of the e2e server: X-Forwarded-For is the one address Next.js sets, 127.0.0.1.
-  TRUSTED_PROXY_IPS: "",
-};

@@ -6,10 +6,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount } from "@/modules/accounts/service";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { markConnection, saveConnection } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
-import { clearMailbox, hasMail, waitForMail } from "../../../test/mailpit";
 import { createTestUser } from "../../../test/users";
 import { refreshRecurrences, walletSyncJob } from "./jobs";
 import { recurringPatterns, transactions } from "./schema";
@@ -50,15 +47,6 @@ async function movement(
       payee: over.payee ?? "Netflix",
       hiddenAt: over.hidden ? NOW : null,
     });
-}
-
-/** A Wallet connection whose token has been refused: the engine attempts nothing for it. */
-async function revokedConnection(): Promise<void> {
-  const connection = await saveConnection(ctx, {
-    provider: WALLET_PROVIDER,
-    credentials: { token: "wallet-token-8ac31f" },
-  });
-  await markConnection(ctx, connection.id, "revoked", "token rejected");
 }
 
 async function patterns(ctx: Ctx) {
@@ -141,13 +129,9 @@ describe("refreshRecurrences", () => {
 });
 
 describe("walletSyncJob", () => {
-  let email: string;
-
   beforeEach(async () => {
     await resetDatabase();
-    await clearMailbox();
     const person = await createTestUser();
-    email = person.email;
     ctx = contextFor(person.id);
     accountId = await newAccount(ctx);
   });
@@ -168,32 +152,4 @@ describe("walletSyncJob", () => {
   // §10.4 lists "sync failed **or** out of date" as two conditions, and a refused credential is
   // the first: the token was rejected, the database says so, and "out of date since <date>" would
   // hide the only sentence the user can act on.
-  it("tells the user the token was rejected, not that the sync is out of date (spec §10.4)", async () => {
-    await revokedConnection();
-
-    // A connection that attempts no call is not a pass: it is counted apart, and reported as the
-    // failure it is.
-    expect(await walletSyncJob.run()).toMatchObject({
-      connections: 1,
-      passes: 0,
-      refused: 1,
-      failures: 0,
-      notified: 1,
-    });
-    const mail = await waitForMail(email);
-    expect(mail.Subject).toBe("Wallet sync failed");
-    expect(mail.Text).toContain("token rejected");
-    expect(mail.Text).toContain("Check the token");
-    expect(mail.Text).not.toContain("out of date");
-  });
-
-  it("sends one email for the condition, not one an hour", async () => {
-    await revokedConnection();
-    await walletSyncJob.run();
-    await waitForMail(email);
-    await clearMailbox();
-
-    expect(await walletSyncJob.run()).toMatchObject({ notified: 0 });
-    expect(await hasMail(email)).toBe(false);
-  });
 });

@@ -1,6 +1,6 @@
-// playwright.config.ts
+// playwright.config.ts — the e2e suite drives the deployed site (tests/e2e/env.ts): deploy first.
 import { defineConfig, devices } from "@playwright/test";
-import { BASE_URL, E2E_ENV } from "./tests/e2e/env";
+import { BASE_URL } from "./tests/e2e/env";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -9,6 +9,7 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   globalSetup: "./tests/e2e/global-setup.ts",
+  globalTeardown: "./tests/e2e/global-teardown.ts",
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",
@@ -33,11 +34,4 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: "sh tests/e2e/serve.sh",
-    url: `${BASE_URL}/api/health`,
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: E2E_ENV,
-  },
 });

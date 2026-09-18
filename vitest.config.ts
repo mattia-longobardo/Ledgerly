@@ -2,9 +2,10 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// Matches test/integration-setup.ts's own DEFAULT_TEST_DATABASE_URL fallback (not imported here:
-// that file's own imports are unsafe for Vite's config-loading, see its comment).
-const DEFAULT_TEST_DATABASE_URL = "postgres://ledgerly:ledgerly@127.0.0.1:55432/ledgerly_test";
+// The integration project runs inside a throwaway container on the homelab's internal network
+// (scripts/test-integration.sh), against the separate `ledgerly_test` database and Silo (the app's
+// bucket, `tests/` prefix only): the script passes those as TEST_*. Nothing here may point at the
+// production database.
 
 export default defineConfig({
   plugins: [react()],
@@ -41,20 +42,23 @@ export default defineConfig({
           hookTimeout: 60_000,
           globalSetup: ["./test/integration-setup.ts"],
           env: {
-            DATABASE_URL: process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL,
+            DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
             BETTER_AUTH_URL: "http://127.0.0.1:3000",
             BETTER_AUTH_SECRET: "integration-secret-integration-secret-32",
-            OIDC_DISCOVERY_URL: "http://127.0.0.1:58090/default/.well-known/openid-configuration",
+            // Never contacted: no integration test signs in through Authentik any more.
+            OIDC_DISCOVERY_URL: "http://127.0.0.1:9/.well-known/openid-configuration",
             OIDC_CLIENT_ID: "ledgerly",
-            OIDC_CLIENT_SECRET: "ledgerly-dev",
+            OIDC_CLIENT_SECRET: "unused",
             OIDC_ADMIN_GROUP: "ledgerly-admins",
+            // Never contacted either: nothing here reads a mailbox.
             SMTP_HOST: "127.0.0.1",
-            SMTP_PORT: "51025",
+            SMTP_PORT: "9",
             MAIL_FROM: "Ledgerly <ledgerly@example.test>",
-            S3_ENDPOINT: "http://127.0.0.1:59000",
-            S3_ACCESS_KEY_ID: "ledgerly",
-            S3_SECRET_ACCESS_KEY: "ledgerly-dev-secret",
-            S3_BUCKET: "ledgerly-test",
+            S3_ENDPOINT: process.env.TEST_S3_ENDPOINT ?? "",
+            S3_REGION: process.env.TEST_S3_REGION ?? "us-east-1",
+            S3_ACCESS_KEY_ID: process.env.TEST_S3_ACCESS_KEY_ID ?? "",
+            S3_SECRET_ACCESS_KEY: process.env.TEST_S3_SECRET_ACCESS_KEY ?? "",
+            S3_BUCKET: process.env.TEST_S3_BUCKET ?? "",
             APP_ENCRYPTION_KEY: "k1:gBubFxNEhi1CSofEa9MtLb5lSXHXROI4WupEIGMhsZU=",
             CRON_SECRET: "integration-cron-secret-integration",
             HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-test",

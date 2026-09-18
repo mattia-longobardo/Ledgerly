@@ -16,11 +16,13 @@
   list query has a deterministic `ORDER BY`.
 - Users-module Server Actions live in `src/modules/users/actions.ts`.
 - The LLM fallback (later phases) is OpenAI only (spec D18): no other provider's SDK or configuration.
-- Dev services (`npm run dev:services`, `compose.dev.yml`): Postgres `55432`, MinIO `59000`/`59001`,
-  Mailpit SMTP `51025` / UI `58025`, mock OIDC `58090`.
-- Two environment files, both untracked: `.env` for local development against `compose.dev.yml`,
-  and `.env.homelab` for the deployment, which `docker-compose.yml` passes as `env_file`. No value
-  in either may contain a `$`: Compose interpolates `env_file` contents and would truncate it.
+- There is no local dev server: changes are deployed to `https://dash.longobardo.me`
+  (`docker compose build && docker compose up -d`) and checked there.
+- One environment file, untracked: `.env.homelab`, which `docker-compose.yml` passes as `env_file`
+  (shape in `.env.example`). No value may contain a `$`: Compose would interpolate and truncate it.
+- Integration tests (`npm run test:integration`) run in a container on `db_internal` against the
+  `ledgerly_test` database, never `ledgerly`. E2E (`npm run e2e`) drives the deployed site as
+  `@example.test` users only, created before and deleted after the run; never touch real users' data.
 - Every user-facing string is a next-intl message in `messages/en.json` **and** `messages/it.json`.
 - Each phase appends its nav items in `src/app/(app)/navigation.ts`, its icons in `src/ui/shell/icons.ts`,
   its jobs in `src/platform/jobs/registry.ts`, its tables in `src/platform/db/tables.ts`.

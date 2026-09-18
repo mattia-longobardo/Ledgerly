@@ -1,33 +1,50 @@
-// scripts/seed-e2e.ts — runs after the e2e server has migrated the database.
-import { mkdirSync, writeFileSync } from "node:fs";
-import { eq } from "drizzle-orm";
+// scripts/seed-e2e.ts — the e2e suite's users on the deployed site (tests/e2e/homelab.ts).
+//
+//   seed    removes any test users a failed run left behind, then creates them with their sample
+//           data and writes the signed-in sessions the specs start from;
+//   remove  deletes the test users; every row they own goes with them (ON DELETE CASCADE).
+//
+// Both touch only users whose address ends in `@example.test`: the site's real users and their
+// data are never read or written here.
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { eq, like } from "drizzle-orm";
 import { applyProviderAccounts } from "../src/modules/accounts/service";
 import { accounts } from "../src/modules/accounts/schema";
 import { upsertFromProvider } from "../src/modules/transactions/service";
 import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { createAuth } from "../src/platform/auth/auth";
-import { createInvitation } from "../src/platform/auth/invitations";
 import { users } from "../src/platform/auth/schema";
 import type { Ctx } from "../src/platform/context";
 import { addMonths, monthKey, today } from "../src/platform/dates";
 import { getDb } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
 import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
-import { saveConnection } from "../src/platform/integrations/service";
-import { ensureBucket } from "../src/platform/storage";
-import { BASE_URL, INVITATIONS, SESSIONS, STATE_DIR, USERS, sessionState } from "../tests/e2e/env";
+import { BASE_URL, SESSIONS, STATE_DIR, TEST_EMAIL_DOMAIN, USERS, sessionState } from "../tests/e2e/env";
+
+const mode = process.argv[2];
+if (mode !== "seed" && mode !== "remove") throw new Error("usage: seed-e2e.ts seed|remove");
+
+async function removeTestUsers(): Promise<void> {
+  for (const user of Object.values(USERS)) {
+    if (!user.email.endsWith(TEST_EMAIL_DOMAIN)) throw new Error(`Not a test address: ${user.email}`);
+  }
+  const removed = await getDb()
+    .delete(users)
+    .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`))
+    .returning({ email: users.email });
+  console.log(`e2e: removed ${removed.length} test users`);
+  rmSync(STATE_DIR, { recursive: true, force: true });
+}
+
+await removeTestUsers();
+if (mode === "remove") process.exit(0);
 
 const auth = createAuth({ withNextCookies: false });
-// In order: the first user created becomes the admin.
-for (const user of [USERS.owner, USERS.prefs, USERS.reset, USERS.accounts, USERS.expenses]) {
+// The site already has its admin, so these are ordinary users.
+for (const user of Object.values(USERS)) {
   await auth.api.createUser({ body: user });
 }
-await ensureBucket();
 mkdirSync(STATE_DIR, { recursive: true });
-for (const { email, role, file } of Object.values(INVITATIONS)) {
-  const { token } = await createInvitation({ email, role, invitedBy: null });
-  writeFileSync(`${STATE_DIR}/${file}`, token);
-}
 
 /**
  * A Playwright storage state holding one user's session cookie. Better Auth is called here as a
@@ -51,7 +68,7 @@ async function writeSessionState(name: keyof typeof SESSIONS): Promise<void> {
       path: "/",
       expires: -1,
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "Lax" as const,
     }));
   if (cookies.length === 0) throw new Error(`No session cookie for ${user.email}`);
@@ -63,9 +80,9 @@ for (const name of Object.keys(SESSIONS) as (keyof typeof SESSIONS)[]) {
 }
 
 /**
- * The Expenses journey needs movements that arrived the way real ones do: a Wallet connection, a
- * synced account adopted through `applyProviderAccounts`, and transactions applied by
- * `upsertFromProvider`. Seeding through the services rather than with inserts means the journey
+ * The Expenses journey needs movements that arrived the way real ones do: a synced account adopted
+ * through `applyProviderAccounts`, and transactions applied by `upsertFromProvider`. There is no
+ * Wallet connection behind them, so the site's hourly sync has nothing to try for this user. Seeding through the services rather than with inserts means the journey
  * exercises the same path the hourly job uses — including the provider links that make it
  * idempotent — so a break in that path fails here too.
  */
@@ -83,7 +100,6 @@ async function seedExpenses(): Promise<void> {
     numberFormat: "it-IT",
   };
 
-  await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "e2e-wallet-token" } });
   await applyProviderAccounts(ctx, WALLET_PROVIDER, [
     {
       provider: WALLET_PROVIDER,
@@ -143,5 +159,6 @@ async function seedExpenses(): Promise<void> {
 }
 
 await seedExpenses();
+console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 
 process.exit(0);

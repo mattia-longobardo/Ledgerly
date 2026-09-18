@@ -18,20 +18,19 @@ test("a wrong password is refused with a message", async ({ page }) => {
   await expect(pageAlert(page)).toHaveText("Wrong email or password.");
 });
 
-test("the first user is admin, reaches the app and signs out", async ({ page }) => {
+// The site already has its admin, so a test user is an ordinary one: no admin pages for it.
+test("a user signs in with a password, reaches the app and signs out", async ({ page }) => {
   await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
   await expect(page.getByRole("heading", { name: "No accounts yet" })).toBeVisible();
   await expect(page).toHaveTitle("Overview · Ledgerly");
   const nav = page.getByRole("navigation", { name: "Primary" });
-  await expect(nav.getByRole("link", { name: "Components" })).toBeVisible();
-  await page.goto("/components");
-  await expect(page.getByRole("heading", { name: "Color tokens" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Components" })).toHaveCount(0);
 
   await page.goto("/settings/profile");
   const topbar = page.getByRole("banner");
   await expect(topbar.getByRole("link", { name: "Settings" })).toBeVisible();
   await expect(topbar.getByText("Profile", { exact: true })).toBeVisible();
-  await expect(page.getByText("Role: Admin")).toBeVisible();
+  await expect(page.getByText("Role: User")).toBeVisible();
   await expect(page.getByText("Sign-in method: Local password")).toBeVisible();
   await expect(page.getByLabel("Current password")).toBeVisible();
   await page.goto("/settings/security");
