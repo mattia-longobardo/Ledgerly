@@ -31,11 +31,17 @@ export async function GET(request: Request) {
   const totals = await getDb().execute<{ job: string; status: string; n: number }>(
     sql`SELECT job, status, count(*)::int AS n FROM job_runs WHERE status != 'running' GROUP BY job, status ORDER BY job, status`,
   );
+  // Across every user, a count only: no user is named.
+  const awaiting = await getDb().execute<{ n: number }>(
+    sql`SELECT count(*)::int AS n FROM documents WHERE state IN ('needs_review', 'needs_ocr', 'verified')`,
+  );
   const lines = [
     "# TYPE job_last_success_timestamp gauge",
     ...lastSuccess.rows.map((r) => `job_last_success_timestamp{job="${r.job}"} ${r.ts}`),
     "# TYPE job_runs_total counter",
     ...totals.rows.map((r) => `job_runs_total{job="${r.job}",status="${r.status}"} ${r.n}`),
+    "# TYPE documents_awaiting_review gauge",
+    `documents_awaiting_review ${awaiting.rows[0]?.n ?? 0}`,
   ];
   return new Response(`${lines.join("\n")}\n`, { headers: { "Content-Type": "text/plain; version=0.0.4" } });
 }

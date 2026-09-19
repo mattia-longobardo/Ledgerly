@@ -12,6 +12,7 @@ describe("navFor", () => {
       "interests",
       "pockets",
       "subscriptions",
+      "payroll",
       "settings",
     ]);
     expect(navFor("admin").map((i) => i.id)).toEqual([
@@ -23,6 +24,7 @@ describe("navFor", () => {
       "interests",
       "pockets",
       "subscriptions",
+      "payroll",
       "components",
       "settings",
     ]);

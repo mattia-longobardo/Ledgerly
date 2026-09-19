@@ -1,4 +1,5 @@
 import {
+  Banknote,
   ChartPie,
   Component,
   Landmark,
@@ -23,6 +24,7 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   interests: Percent,
   pockets: WalletCards,
   subscriptions: Repeat,
+  payroll: Banknote,
   settings: Settings,
   components: Component,
 };

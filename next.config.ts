@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   // Otherwise `next dev` writes its own CLAUDE.md/AGENTS.md into the repository.
   agentRules: false,
+  // A document is at most 10 MB (spec §9.3); the multipart envelope needs a little more.
+  experimental: { proxyClientMaxBodySize: "11mb", serverActions: { bodySizeLimit: "11mb" } },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

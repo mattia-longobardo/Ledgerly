@@ -1,6 +1,8 @@
 import { accountAlertsJob, accountsSnapshotJob } from "@/modules/accounts/jobs";
 import { fundsDepositsJob } from "@/modules/funds/jobs";
+import { documentsRetentionJob } from "@/modules/imports/jobs";
 import { interestsAccrualJob } from "@/modules/interests/jobs";
+import { payslipsSweepJob } from "@/modules/payroll/jobs";
 import { pocketsAccrualJob } from "@/modules/pockets/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
 import { walletSyncJob } from "@/modules/transactions/jobs";
@@ -26,4 +28,6 @@ export const JOBS: readonly JobDefinition[] = [
   subscriptionsCheckJob,
   fundsDepositsJob,
   pocketsAccrualJob,
+  documentsRetentionJob,
+  payslipsSweepJob,
 ];

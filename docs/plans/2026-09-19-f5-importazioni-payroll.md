@@ -319,4 +319,79 @@ In più: `db:generate` → nessuna differenza; nessun PDF, testo o importo dei c
 
 ## 8. Esito
 
-*(da scrivere a fine fase.)*
+Fase implementata il 2026-09-19, lotti L0–L6 in un unico passaggio con cancello e deploy alla fine
+di L5 e di L6. Distribuita su `https://dash.longobardo.me` (migrazione `0011` applicata).
+
+### 8.1 Verifiche
+
+- **Unitari 894, integrazione 310, end-to-end 35/35** sul sito; `db:generate` → nessuna differenza.
+- **I 12 cedolini veri** (in locale, `src/modules/payroll/parse/real-payslips.test.ts`, saltato senza
+  `Payroll/`): entrambe le tabelle di SP L184–222 con i totali, il lordo stampato complessivo, i
+  controlli bloccanti tutti superati (netto al centesimo compreso), IRPEF saltata con motivo per 13ª e
+  conguaglio, ferie 2026 per mese di utilizzo e per cedolino, TFR 2025/2026, fondo gennaio–agosto,
+  13ª senza eventi e con la rettifica aziendale da rivedere. I valori attesi sono letti **dalla
+  specifica a runtime**: nel repository non c'è nessun importo dei cedolini veri (verificato con
+  `grep` prima della fine: alcuni esempi nei commenti e nei test di `layout` usavano importi veri e
+  sono stati sostituiti con numeri inventati).
+- **Gemelli sintetici** (`tests/fixtures/payroll/twin.ts`, `samples.ts`): il modulo TeamSystem
+  disegnato con pdf-lib alle posizioni reali, numeri inventati coerenti (marzo, aprile con ROL, 13ª,
+  ristampa, codice sconosciuto). Percorrono lo stesso codice nei test unitari, d'integrazione ed e2e.
+- Controllo visivo di registro, revisione (riquadro evidenziato sulla voce 8054), 400 px e Settings ›
+  Data con screenshot da una spec temporanea (non committata).
+
+### 8.2 Scelte fatte in implementazione
+
+1. **Parser generico a coordinate** (`imports/pdf/layout.ts`): etichette = testo ≤ 7 pt, valori = testo
+   più grande diviso in parole (passo fisso Courier); righe per baseline; una seconda riga di etichetta
+   si unisce a quella sopra; un valore appartiene all'ultima etichetta che inizia prima del suo bordo
+   destro; la riga di valori riempie la riga di etichette 12–19 pt sopra. Le due generazioni di PDF
+   differiscono solo per gli spazi dentro le etichette ("MES E RETRIBUITO"): le chiavi le ignorano.
+2. **Prima occorrenza dall'alto** di un'etichetta, non il primo valore trovato: IMPONIBILE IRPEF,
+   IRPEF LORDA e TOTALE DETRAZIONI si ripetono nei progressivi annui e a dicembre le caselle del mese
+   sono vuote.
+3. **Definizioni ricavate e verificate sui 12**: lordo = TOTALE LORDO − rimborso welfare; imposte =
+   TOTALE TRATTENUTE IRPEF (o il conguaglio a debito) + 1150 + imposta sostitutiva del riepilogo T.S.;
+   netto ricostruito = Σ competenze − Σ trattenute del corpo − contributi sociali − IRPEF (o conguaglio)
+   − sostitutiva − arrotondamento precedente + attuale; secondo controllo su TOTALE TRATTENUTE.
+   L'addizionale regionale del conguaglio di dicembre (riga 604) non è trattenuta e non entra.
+4. **ROL**: un permesso (309) è ROL solo se residuo precedente + maturato del mese − ore = residuo ROL
+   stampato; il cedolino precedente è quello applicato (o in revisione). Applicare un cedolino rilegge
+   gli eventi del mese dopo, se già applicato: l'ordine di applicazione non conta.
+5. **Tabelle**: `payslips` porta una colonna per ogni importo del catalogo (`payroll/fields.ts`) e
+   `active` (indice unico parziale sulla chiave logica); gli stati stanno solo in `documents`.
+   Istantanee ed eventi ferie si scrivono solo all'applicazione e si cancellano con la sostituzione.
+6. **Revisione**: i derivati non si correggono (si ricalcolano); i totali di colonna del corpo sì,
+   perché una riga letta male non ha un campo suo. "Verifica" con controlli bloccanti falliti chiede
+   una conferma esplicita ("Verifica comunque"); i valori dedotti dall'LLM vanno confermati prima.
+7. **Viewer**: pdf.js nel browser (`src/ui/pdf-viewer.tsx`); worker e font standard copiati in
+   `public/pdfjs/` da `scripts/copy-pdfjs.mjs` a ogni build (non versionati). L'originale è servito da
+   `/payroll/[id]/original` (sessione, proprietà, `no-store`, `frame-ancestors 'self'`).
+8. **S3**: `S3_KEY_PREFIX` (vuoto in produzione, `tests/` nei test d'integrazione, che condividono il
+   bucket dell'app); `deleteFolder` elimina gli originali degli utenti e2e alla loro rimozione.
+9. **Fallback LLM**: **solo manuale** (bottone "Completa i vuoti con OpenAI" in revisione), non
+   automatico dopo la lettura come diceva §3.5: sui 12 cedolini veri alcuni campi che l'LLM potrebbe
+   riempire sono vuoti legittimamente (IRPEF del mese a dicembre, detrazioni della 13ª), e una
+   chiamata automatica inviterebbe a inventarli. Il prompt riporta le definizioni della specifica
+   **senza gli esempi**, che sono importi del proprietario (D14). Chiave sigillata in `app_settings`,
+   mai restituita (solo le ultime 4 cifre), modello validato come id OpenAI. Nessuna chiamata reale nei
+   test (`fetch` finto).
+10. **Admin › Server** è per ora la scheda "Server" di Settings, visibile e raggiungibile solo dagli
+    admin (404 agli altri); F8 la completa.
+11. **Metriche**: `documents_awaiting_review` in `/api/metrics` (spec §10.4).
+12. **Job**: `documents-retention` (giornaliero) e `payslips-sweep` (orario) in coda al registro.
+
+### 8.3 Correzione dopo la consegna
+
+- Tornare dalla revisione al registro con la navigazione dell'app ("Payroll" nel breadcrumb o nella
+  barra laterale) mostrava "Something went wrong": smontando il viewer si chiamava `destroy()` sul
+  documento di pdf.js 6, che non ce l'ha. Ora si chiude il loading task; l'e2e torna al registro
+  cliccando e fallisce su qualunque errore del browser (prima gli e2e ricaricavano sempre la pagina).
+
+### 8.4 Resta al proprietario
+
+- Caricare i 12 cedolini sul sito, rivederli e applicarli (il registro e i KPI si riempiono solo con
+  quelli applicati).
+- Configurare il fallback (Settings › Server: modello e chiave OpenAI) se lo vuole, e provarlo su un
+  cedolino con un campo vuoto.
+- Revisione visiva di registro e revisione rispetto al design.
+- I commit.
