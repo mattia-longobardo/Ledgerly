@@ -17,7 +17,7 @@ const summary = (page: Page) =>
     .locator("p")
     .first();
 
-/** The range's net beside the count: income plus spending, never a transfer (spec §7.2, F2.5). */
+/** The range's net beside the count: its cash flow, every movement summed (spec §7.2). */
 const net = (page: Page) =>
   page.locator("dt", { hasText: /^Net$/ }).locator("xpath=following-sibling::dd[1]");
 
@@ -120,23 +120,28 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
     await expect(page.getByRole("row").filter({ hasText: "Esselunga" })).toHaveCount(0);
   });
 
-  await test.step("a giroconto stays in the list and out of every total (F2.5)", async () => {
+  await test.step("a giroconto stays out of income and spending, and in the cash flow (F2.5)", async () => {
     // Last month also holds one leg of a transfer whose other side is not linked: −500,00 € that
-    // left the account but was never spent, so the net is Netflix alone.
+    // left the account but was never spent. It is no spending, but it did leave: the net, which is
+    // the month's cash flow as Wallet shows it, counts it with Netflix.
     const transfer = page.getByRole("row").filter({ hasText: "Revolut" });
     await expect(transfer).toHaveCount(1);
     await expect(transfer).toContainText("Unpaired transfer");
     // Grey, not red: it left the account but was not spent.
     await expect(transfer.getByText("−500,00 €")).toHaveClass(/text-muted/);
     await expect(summary(page)).toHaveText("2 transactions");
-    await expect(net(page)).toHaveText("−12,99 €");
-    await expect(page.getByText("1 transfer left out of the totals · 1 has no other leg here")).toBeVisible();
+    await expect(net(page)).toHaveText("−512,99 €");
+    await expect(
+      page.getByText(
+        "1 transfer left out of income and spending, counted in the net · 1 has no other leg here",
+      ),
+    ).toBeVisible();
 
     await page.getByRole("link", { name: /^Transfers/ }).click();
     await expect(page).toHaveURL(/type=transfer/);
     await expect(page.getByRole("row").filter({ hasText: "Netflix" })).toHaveCount(0);
     await expect(page.getByRole("row").filter({ hasText: "Revolut" })).toHaveCount(1);
-    await expect(net(page)).toHaveText("0,00 €");
+    await expect(net(page)).toHaveText("−500,00 €");
   });
 
   await test.step("the palette finds a payee and opens Expenses filtered on it", async () => {

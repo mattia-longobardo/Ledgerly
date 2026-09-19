@@ -341,22 +341,6 @@ describe("planProviderMerge", () => {
   });
 });
 
-describe("planProviderMerge on a giroconto found by IBAN", () => {
-  it("keeps a paired leg a transfer when the provider re-sends it as an expense", () => {
-    const plan = planProviderMerge(
-      stored({ type: "transfer", transferGroupId: "t-1" }),
-      incoming({ type: "expense" }),
-      resolution(),
-    );
-    expect(plan.patch.type).toBeUndefined();
-  });
-
-  it("still follows the provider for a transfer that is not in a group", () => {
-    const plan = planProviderMerge(stored({ type: "transfer" }), incoming({ type: "expense" }), resolution());
-    expect(plan.patch.type).toBe("expense");
-  });
-});
-
 describe("planUserEdit", () => {
   it("marks every field it changes, and only those", () => {
     const plan = planUserEdit(stored(), { categoryId: "cat-2", note: null });
@@ -687,23 +671,17 @@ describe("planIbanTransfers", () => {
     occurredAt: new Date("2026-03-05T10:00:00Z"),
     amountCents: -50_000n,
     currency: "EUR",
-    type: "expense",
+    type: "transfer",
     transferGroupId: null,
     payee: null,
     note: null,
     ...over,
   });
 
-  it("pairs a leg naming another own account's IBAN with the opposite amount there", () => {
+  it("pairs a transfer naming another own account's IBAN with the opposite transfer there", () => {
     const rows = [
       row({ id: "t2", accountId: "ing", note: `Bonifico a ${IBAN_B.replace(/(.{4})/g, "$1 ")}` }),
-      row({
-        id: "t1",
-        accountId: "rev",
-        amountCents: 50_000n,
-        type: "income",
-        occurredAt: new Date("2026-03-06T08:00:00Z"),
-      }),
+      row({ id: "t1", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-06T08:00:00Z") }),
     ];
     expect(planIbanTransfers(own, rows)).toEqual([
       { id: "t1", transferGroupId: "t1" },
@@ -711,43 +689,51 @@ describe("planIbanTransfers", () => {
     ]);
   });
 
-  it("files a leg whose twin is not there as a giroconto of its own", () => {
-    expect(planIbanTransfers(own, [row({ id: "t1", accountId: "ing", payee: IBAN_B })])).toEqual([
-      { id: "t1", transferGroupId: "t1" },
-    ]);
+  it("never makes a giroconto of what the provider counts as spending or income", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B, type: "expense" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "income" }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
   });
 
-  it("does not pair across more than the clearing days, nor a different amount", () => {
+  it("does not pair across more than the clearing days, nor a different amount, nor a lone leg", () => {
     const rows = [
       row({ id: "t1", accountId: "ing", note: IBAN_B }),
       row({ id: "t2", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-20T10:00:00Z") }),
       row({ id: "t3", accountId: "rev", amountCents: 49_999n }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([{ id: "t1", transferGroupId: "t1" }]);
+    expect(planIbanTransfers(own, rows)).toEqual([]);
   });
 
-  it("ignores the account's own IBAN, an unknown one, and every row when no account has an IBAN", () => {
-    const rows = [row({ id: "t1", accountId: "ing", note: IBAN_A }), row({ id: "t2", accountId: "ing" })];
+  it("ignores the account's own IBAN", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_A }),
+      row({ id: "t2", accountId: "ing", amountCents: 50_000n }),
+    ];
     expect(planIbanTransfers(own, rows)).toEqual([]);
-    expect(planIbanTransfers([], [row({ id: "t3", accountId: "ing", note: IBAN_B })])).toEqual([]);
   });
 
   it("never takes a pair apart, and a second run changes nothing", () => {
     const rows = [
-      row({ id: "t1", accountId: "ing", note: IBAN_B, type: "transfer", transferGroupId: "t1" }),
-      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "transfer", transferGroupId: "t1" }),
-      // Same amount and day, but t1 is already in a pair.
+      row({ id: "t1", accountId: "ing", note: IBAN_B, transferGroupId: "t1" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, transferGroupId: "t1" }),
       row({ id: "t3", accountId: "rev", amountCents: 50_000n }),
     ];
     expect(planIbanTransfers(own, rows)).toEqual([]);
   });
 
-  it("pairs a lone leg once its twin arrives", () => {
+  it("takes out of its pair a row the provider re-filed as income, and the group of one it leaves", () => {
     const rows = [
-      row({ id: "t5", accountId: "ing", note: IBAN_B, type: "transfer", transferGroupId: "t5" }),
-      row({ id: "t7", accountId: "rev", amountCents: 50_000n, type: "income" }),
+      row({ id: "t1", accountId: "ing", note: IBAN_B, transferGroupId: "t1" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "income", transferGroupId: "t1" }),
+      row({ id: "t5", accountId: "ing", amountCents: -7n, transferGroupId: "t5" }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([{ id: "t7", transferGroupId: "t5" }]);
+    expect(planIbanTransfers(own, rows)).toEqual([
+      { id: "t1", transferGroupId: null },
+      { id: "t2", transferGroupId: null },
+      { id: "t5", transferGroupId: null },
+    ]);
   });
 
   it("prefers the twin that names this account back", () => {

@@ -200,6 +200,7 @@ describe("mapWalletRecord", () => {
       categoryName: "Spesa",
       categoryGroupExternalId: "wcg-casa",
       categoryGroupName: "Casa",
+      categorySystemId: null,
       labels: ["spesa"],
       providerType: "expense",
       providerState: "cleared",
@@ -298,9 +299,21 @@ describe("mapWalletCategory", () => {
   it("keeps the name §9.1 adopts by, and carries no flag Wallet does not publish", () => {
     const categories = walletCategoriesPayloadSchema.parse(fixture("categories.json")).map(mapWalletCategory);
     expect(categories).toEqual([
-      { externalId: "wc-groceries", name: "Spesa", groupExternalId: "wcg-casa", groupName: "Casa" },
-      { externalId: "wc-salary", name: "Stipendio", groupExternalId: null, groupName: null },
-      { externalId: "wc-unsorted", name: "Da classificare", groupExternalId: null, groupName: null },
+      {
+        externalId: "wc-groceries",
+        name: "Spesa",
+        groupExternalId: "wcg-casa",
+        groupName: "Casa",
+        systemId: null,
+      },
+      { externalId: "wc-salary", name: "Stipendio", groupExternalId: null, groupName: null, systemId: null },
+      {
+        externalId: "wc-unsorted",
+        name: "Da classificare",
+        groupExternalId: null,
+        groupName: null,
+        systemId: null,
+      },
     ]);
   });
 });

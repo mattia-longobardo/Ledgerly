@@ -479,11 +479,10 @@ export async function upsertFromProvider(
 }
 
 /**
- * Finds the giroconti between the user's own accounts that the provider sent as a plain expense
- * and income, by the IBAN in their details (`planIbanTransfers`), and files them as transfers.
- * Reads first, then one short transaction for the changes; returns how many rows changed. Run
- * after every sync pass and whenever an account's IBAN is saved; with no IBAN on any account it
- * reads nothing more.
+ * Links the two legs of the giroconti the provider left unpaired, by the IBAN in their details
+ * (`planIbanTransfers`), and undoes a pairing whose row is no longer a transfer. Reads first, then
+ * one short transaction for the changes; returns how many rows changed. Run after every sync pass
+ * and whenever an account's IBAN is saved.
  */
 export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number> {
   const own: OwnIban[] = [];
@@ -491,8 +490,6 @@ export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number
     const iban = normalizeIban(account.reference);
     if (iban !== null) own.push({ accountId: account.id, iban });
   }
-  if (own.length === 0) return 0;
-
   const rows = await getDb()
     .select({
       id: transactions.id,
@@ -515,7 +512,7 @@ export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number
     for (const assignment of assignments) {
       await tx
         .update(transactions)
-        .set({ type: "transfer", transferGroupId: assignment.transferGroupId })
+        .set({ transferGroupId: assignment.transferGroupId })
         .where(and(eq(transactions.id, assignment.id), userScoped(ctx).owns(transactions)));
     }
   });
