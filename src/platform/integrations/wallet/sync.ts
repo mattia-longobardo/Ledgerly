@@ -53,7 +53,7 @@ import {
   isTokenRejected,
 } from "./client";
 import { BACKFILL_MONTHS, backfillDepth, MAX_BACKFILL_MONTHS } from "./depth";
-import { type DateWindow, firstLinkWindows, recentWindow } from "./mapping";
+import { type DateWindow, WALLET_TRANSFER_CATEGORY, firstLinkWindows, recentWindow } from "./mapping";
 
 /** The counts of one pass, per kind, as `sync_runs.counts` stores them. */
 export interface WalletSyncResult {
@@ -304,13 +304,17 @@ export function toIncomingTransaction(
   // record that carries the id alone.
   const listed = categoryExternalId === null ? undefined : categories.get(categoryExternalId);
   const fromRecord = movement.categoryName !== null;
+  // Wallet's own word for a giroconto: its built-in Transfer category, whatever the record type
+  // says. Wallet leaves such a movement out of its statistics, and so does the app.
+  const inTransferCategory =
+    (movement.categorySystemId ?? listed?.systemId ?? null) === WALLET_TRANSFER_CATEGORY;
   return {
     externalId: movement.externalId,
     counterpartExternalId: movement.transferCounterExternalId,
     occurredAt: occurredAtOf(movement, timeZone),
     amountCents: movement.amountCents,
     currency: movement.currency,
-    type: walletTransactionType(movement),
+    type: inTransferCategory ? "transfer" : walletTransactionType(movement),
     state: walletTransactionState(movement.providerState),
     payee: movement.payee,
     note: movement.note,

@@ -58,7 +58,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <ShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
       <div className="flex h-dvh overflow-hidden">
         <Sidebar links={links} user={user} />
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        {/* `relative`: the containing block of every absolutely placed element of a page. Without it
+            an `sr-only` label far down a long list was placed against the viewport instead, and
+            stretched the document itself: a second scrollbar over an empty half page (2026-09-18). */}
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
       <MobileNav links={links} user={user} />
       <CommandPalette links={links} searchPayees={searchPayeesAction} />

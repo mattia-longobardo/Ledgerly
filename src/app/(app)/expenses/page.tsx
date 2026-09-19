@@ -223,9 +223,9 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
 
   return (
     <Page title={t("title")}>
-      {/* Income, spending and net, never a single signed sum: a giroconto moves money between two
-          of the person's own accounts and is neither (spec §7.2, F2.5). What the totals leave out
-          is said right under them rather than silently subtracted. */}
+      {/* Income and spending leave the giroconti out: moving money between two of the person's own
+          accounts is neither (spec §7.2, F2.5). The net is the cash flow, every movement summed, as
+          Wallet shows it. What the totals leave out is said right under them. */}
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
@@ -294,7 +294,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
           />
         ) : (
           <div className="flex min-w-0 flex-col gap-2">
-            <Card padded={false} className="overflow-hidden">
+            <Card padded={false} className="overflow-clip">
               <TransactionsTable
                 groups={groups}
                 categories={options}

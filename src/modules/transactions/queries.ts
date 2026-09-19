@@ -106,16 +106,17 @@ export interface TransactionFilters {
 }
 
 /**
- * The money of a range, with the giroconti kept out of it (spec §7.2, F2.5): moving money between
- * two of one's own accounts is neither spending nor income, and filtering on one of the two
- * accounts used to turn one leg into a plain expense. `count` is still every row, transfers
- * included, because it describes the list rather than an amount.
+ * The money of a range (spec §7.2, F2.5). Income and spending keep the giroconti out: moving money
+ * between two of one's own accounts is neither. The net is the range's cash flow, every movement
+ * summed, as Wallet reports it (2026-09-19): the two legs of a giroconto between accounts that are
+ * both here cancel out, and a leg whose other side is elsewhere — or that Wallet filed under
+ * another type — moved money all the same. `count` is every row, because it describes the list.
  */
 export interface TransactionsSummary {
   count: number;
   incomeCents: Cents;
   expenseCents: Cents;
-  /** `incomeCents + expenseCents`: never a transfer. */
+  /** Every movement summed, giroconti included: the cash flow Wallet shows. */
   netCents: Cents;
   /** How many of the rows are giroconti, so the header can say what it left out. */
   transferCount: number;
@@ -126,7 +127,7 @@ export interface TransactionsSummary {
 export interface MonthTotal {
   month: MonthKey;
   count: number;
-  /** The month's net, transfers left out like every other total. */
+  /** The month's cash flow, every movement summed like the header's net. */
   netCents: Cents;
 }
 
@@ -626,6 +627,7 @@ export async function transactionsSummary(
       expenseCents: sum(
         sql`case when ${transactions.type} = 'expense' then ${transactions.amountCents} else 0 end`,
       ),
+      netCents: sum(transactions.amountCents),
       transfers: sql<string>`count(*) filter (where ${transactions.type} = 'transfer')`,
       unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null)`,
     })
@@ -637,7 +639,7 @@ export async function transactionsSummary(
     count: Number(row?.total ?? 0),
     incomeCents,
     expenseCents,
-    netCents: incomeCents + expenseCents,
+    netCents: cents(row?.netCents ?? null),
     transferCount: Number(row?.transfers ?? 0),
     unpairedTransferCount: Number(row?.unpaired ?? 0),
   };
@@ -660,10 +662,8 @@ export async function monthlyTotals(
     .select({
       month,
       total: count(),
-      // Every row of the month is counted, but a giroconto moves none of its money (F2.5).
-      netCents: sum(
-        sql`case when ${transactions.type} <> 'transfer' then ${transactions.amountCents} else 0 end`,
-      ),
+      // The month's cash flow, as the header's net: a paired giroconto cancels itself out.
+      netCents: sum(transactions.amountCents),
     })
     .from(transactions)
     .where(conditions(ctx, withoutHidden(filters)))

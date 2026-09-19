@@ -32,6 +32,7 @@ function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
     categoryName: null,
     categoryGroupExternalId: null,
     categoryGroupName: null,
+    categorySystemId: null,
     labels: ["spesa"],
     providerType: "expense",
     providerState: "cleared",
@@ -43,7 +44,13 @@ function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
 const CATEGORIES = new Map<string, WalletCategory>([
   [
     "wc-groceries",
-    { externalId: "wc-groceries", name: "Spesa", groupExternalId: "wcg-casa", groupName: "Casa" },
+    {
+      externalId: "wc-groceries",
+      name: "Spesa",
+      groupExternalId: "wcg-casa",
+      groupName: "Casa",
+      systemId: null,
+    },
   ],
 ]);
 
@@ -86,6 +93,28 @@ describe("walletTransactionState", () => {
 });
 
 describe("toIncomingTransaction", () => {
+  it("files a movement in Wallet's Transfer category as a giroconto, as Wallet counts it", () => {
+    const transfer = { categorySystemId: "system_categories__transfer", providerType: "expense" };
+    expect(toIncomingTransaction(movement(transfer), CATEGORIES, ROME).type).toBe("transfer");
+    // From the category list when the record carries the id alone.
+    const listed = new Map([
+      [
+        "wc-transfer",
+        {
+          externalId: "wc-transfer",
+          name: "Trasferimento",
+          groupExternalId: "system_categories",
+          groupName: null,
+          systemId: "system_categories__transfer",
+        },
+      ],
+    ]);
+    expect(toIncomingTransaction(movement({ categoryExternalId: "wc-transfer" }), listed, ROME).type).toBe(
+      "transfer",
+    );
+    expect(toIncomingTransaction(movement(), CATEGORIES, ROME).type).toBe("expense");
+  });
+
   it("renames the transfer reference to the one the module pairs on", () => {
     const incoming = toIncomingTransaction(movement({ transferCounterExternalId: "wr-2" }), CATEGORIES, ROME);
     expect(incoming.counterpartExternalId).toBe("wr-2");

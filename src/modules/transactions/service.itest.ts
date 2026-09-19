@@ -634,19 +634,20 @@ describe("reads", () => {
   it("groups by the user's month, newest first", async () => {
     const months = await monthlyTotals(ctx, {});
     expect(months).toEqual([
-      // The Revolut giroconto is one of March's three rows but none of its money (spec §7.2).
-      { month: "2026-03-01", count: 3, netCents: -5_000n },
+      // The Revolut giroconto is one of March's rows and, its other leg being elsewhere, part of
+      // March's cash flow (spec §7.2, 2026-09-19), though none of its spending.
+      { month: "2026-03-01", count: 3, netCents: -25_000n },
       { month: "2026-02-01", count: 1, netCents: -6_000n },
     ]);
 
     const view = await expensesView(ctx, { from: "2026-03-01", to: "2026-03-31" });
     expect(view.months.map((group) => group.month)).toEqual(["2026-03-01"]);
-    expect(view.months[0]).toMatchObject({ count: 3, netCents: -5_000n });
+    expect(view.months[0]).toMatchObject({ count: 3, netCents: -25_000n });
     expect(view.summary).toEqual({
       count: 3,
       incomeCents: 0n,
       expenseCents: -5_000n,
-      netCents: -5_000n,
+      netCents: -25_000n,
       transferCount: 1,
       unpairedTransferCount: 1,
     });
@@ -663,7 +664,7 @@ describe("reads", () => {
 
     expect(view.rows.map((row) => row.payee)).toEqual(["Revolut", "Esselunga"]);
     expect(view.months.map((group) => group.month)).toEqual(["2026-03-01"]);
-    expect(view.months[0]).toMatchObject({ count: 3, netCents: -5_000n });
+    expect(view.months[0]).toMatchObject({ count: 3, netCents: -25_000n });
     expect(view.months[0].rows).toHaveLength(2);
     expect(view.listCount).toBe(4);
     expect(view.truncated).toBe(true);
@@ -707,7 +708,7 @@ describe("reads", () => {
     expect(await listTransactions(ctx, { accountIds: [] })).toHaveLength(4);
   });
 
-  it("keeps a giroconto out of every total, even with only one of its accounts in view (F2.5)", async () => {
+  it("keeps a giroconto out of income and spending, and cancels it out of the net when both legs are in view", async () => {
     // The other leg lands on a second account, so the pair is complete: filtering on the first
     // account used to show −200,00 € of "spending" that was only money changing pockets.
     const savings = await anAccount(ctx, "Revolut Savings");
@@ -730,15 +731,18 @@ describe("reads", () => {
       count: 3,
       incomeCents: 0n,
       expenseCents: -5_000n,
-      netCents: -5_000n,
+      // One account's own cash flow: the 200,00 € did leave it.
+      netCents: -25_000n,
       transferCount: 1,
       unpairedTransferCount: 0,
     });
     const savingsOnly = await transactionsSummary(ctx, { ...MARCH, accountIds: [savings] });
-    expect(savingsOnly).toMatchObject({ count: 1, incomeCents: 0n, netCents: 0n, transferCount: 1 });
+    expect(savingsOnly).toMatchObject({ count: 1, incomeCents: 0n, netCents: 20_000n, transferCount: 1 });
+    // Both accounts in view: the two legs cancel, and the net is the spending alone.
+    expect(await transactionsSummary(ctx, MARCH)).toMatchObject({ expenseCents: -5_000n, netCents: -5_000n });
 
     expect(await monthlyTotals(ctx, { ...MARCH, accountIds: [accountId] })).toEqual([
-      { month: "2026-03-01", count: 3, netCents: -5_000n },
+      { month: "2026-03-01", count: 3, netCents: -25_000n },
     ]);
     const view = await expensesView(ctx, MARCH);
     expect(view.facets.types).toEqual([
@@ -994,43 +998,28 @@ describe("linkOwnTransfers (F2.5)", () => {
   beforeEach(resetDatabase);
   afterAll(closeDatabase);
 
-  it("takes a giroconto sent as an expense and an income out of the totals, once", async () => {
+  it("pairs the two legs of a giroconto Wallet left unlinked, and leaves its income and spending alone", async () => {
     const ctx = await newContext();
     // ISO 13616's example IBANs: valid check digits, nobody's account.
     const ing = await anAccount(ctx, "ING", "IT60 X054 2811 1010 0000 0123 456");
     const revolut = await anAccount(ctx, "Revolut", "GB82WEST12345698765432");
+    const out = { amountCents: -50_000n, payee: "Bonifico", note: "A GB82 WEST 1234 5698 7654 32" };
     await upsertFromProvider(ctx, ing, [
-      movement({
-        externalId: "w-out",
-        amountCents: -50_000n,
-        payee: "Bonifico",
-        note: "A GB82 WEST 1234 5698 7654 32",
-      }),
-      movement({ externalId: "w-shop", amountCents: -2_500n }),
+      movement({ externalId: "w-out", type: "transfer", ...out }),
+      // Names Revolut's IBAN too, but Wallet counts it as spending: so does the app.
+      movement({ externalId: "w-gift", amountCents: -2_500n, note: "GB82WEST12345698765432" }),
     ]);
     await upsertFromProvider(ctx, revolut, [
-      movement({ externalId: "w-in", type: "income", amountCents: 50_000n, payee: "Mario", note: null }),
+      movement({ externalId: "w-in", type: "transfer", amountCents: 50_000n, payee: "Mario", note: null }),
     ]);
+    expect((await transactionsSummary(ctx)).unpairedTransferCount).toBe(2);
 
     expect(await linkOwnTransfers(ctx)).toBe(2);
-    const summary = await transactionsSummary(ctx);
-    expect(summary).toMatchObject({
-      incomeCents: 0n,
+    expect(await transactionsSummary(ctx)).toMatchObject({
       expenseCents: -2_500n,
       transferCount: 2,
       unpairedTransferCount: 0,
     });
     expect(await linkOwnTransfers(ctx)).toBe(0);
-
-    // The next sync re-reads the expense as Wallet sends it: it stays a giroconto.
-    await upsertFromProvider(ctx, ing, [
-      movement({
-        externalId: "w-out",
-        amountCents: -50_000n,
-        payee: "Bonifico",
-        note: "A GB82 WEST 1234 5698 7654 32",
-      }),
-    ]);
-    expect((await transactionsSummary(ctx)).expenseCents).toBe(-2_500n);
   });
 });

@@ -557,7 +557,7 @@
       "income": "Income",
       "expenses": "Spending",
       "net": "Net",
-      "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of the totals",
+      "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of income and spending, counted in the net",
       "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}"
     },
     "spending": {

@@ -362,7 +362,11 @@ export function TransactionsTable({
         </div>
       )}
 
-      <div className="max-h-[calc(100vh-240px)] overflow-auto max-md:hidden [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-[2] [&_thead_th]:bg-card">
+      {/* The table scrolls with the page, not in a box of its own: a nested scrollbar beside the
+          page's left the side cards and the table scrolling apart (2026-09-18). The headings stay
+          in sight under the sticky top bar (48 px); `overflow-clip` on the card, unlike `hidden`,
+          does not make it a scroll container that would catch them. */}
+      <div className="max-md:hidden [&_thead_th]:sticky [&_thead_th]:top-12 [&_thead_th]:z-[2] [&_thead_th]:bg-card">
         {/* A fixed layout: the checkbox, the date, the amount and the menu have their widths, the
             account and the category a share, and the payee what is left — every text column
             truncates instead of pushing the table past its column. With an automatic layout the

@@ -557,7 +557,7 @@
       "income": "Entrate",
       "expenses": "Spese",
       "net": "Netto",
-      "transfers": "{count, plural, one {# giroconto escluso dai totali} other {# giroconti esclusi dai totali}}",
+      "transfers": "{count, plural, one {# giroconto escluso da entrate e spese, contato nel netto} other {# giroconti esclusi da entrate e spese, contati nel netto}}",
       "unpaired": "{count, plural, one {# senza l'altra gamba qui} other {# senza l'altra gamba qui}}"
     },
     "spending": {
