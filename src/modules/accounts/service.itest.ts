@@ -7,15 +7,20 @@ import { resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { accountsView, listBalanceEntries, listSnapshotRuns } from "./queries";
+import type { IncomingTransaction } from "@/modules/transactions/rules";
 import type { RemoteAccount } from "./rules";
 import {
   AccountError,
   applyProviderAccounts,
   createAccount,
+  accountDailyBalances,
+  dailyBalancesOf,
   deleteBalanceEntry,
+  rebuildDerivedBalances,
   removeAccount,
   runSnapshot,
   saveBalanceEntry,
+  saveProviderBalance,
   snapshotMonthFor,
   updateAccountSettings,
 } from "./service";
@@ -392,6 +397,8 @@ describe("removeAccount", () => {
         note: null,
         categoryExternalId: null,
         categoryName: null,
+        categoryGroupExternalId: null,
+        categoryGroupName: null,
         labels: [],
       },
     ]);
@@ -481,5 +488,145 @@ describe("applyProviderAccounts", () => {
     const other = await newContext();
     await applyProviderAccounts(ctx, "wallet", [remote()]);
     expect((await accountsView(other)).rows).toEqual([]);
+  });
+});
+
+/** Spec §7.1, F2.5: a synced account's past month ends, rebuilt from its movements. */
+describe("rebuildDerivedBalances", () => {
+  const spent = (externalId: string, on: string, amountCents: bigint): IncomingTransaction => ({
+    externalId,
+    counterpartExternalId: null,
+    occurredAt: new Date(`${on}T10:00:00Z`),
+    amountCents,
+    currency: "EUR",
+    type: amountCents < 0n ? "expense" : "income",
+    state: "cleared",
+    payee: "Somebody",
+    note: null,
+    categoryExternalId: null,
+    categoryName: null,
+    categoryGroupExternalId: null,
+    categoryGroupName: null,
+    labels: [],
+  });
+
+  /** A Wallet account read once, on 16 September, with a summer of movements behind it. */
+  async function aSyncedAccount(): Promise<string> {
+    await applyProviderAccounts(ctx, "wallet", [
+      { provider: "wallet", providerAccountId: "r1", name: "Revolut", type: "checking", currency: "EUR" },
+    ]);
+    const [row] = (await accountsView(ctx)).rows;
+    await saveProviderBalance(ctx, row.account.id, { on: "2026-09-16", cents: 500_000n });
+    await upsertFromProvider(ctx, row.account.id, [
+      spent("w-1", "2026-07-03", -10_000n),
+      spent("w-2", "2026-08-10", 250_000n),
+      spent("w-3", "2026-08-20", -30_000n),
+      spent("w-4", "2026-09-02", -20_000n),
+    ]);
+    return row.account.id;
+  }
+
+  const rebuilt = async (accountId: string) =>
+    (await listBalanceEntries(ctx, accountId))
+      .filter((entry) => entry.source === "derived")
+      .map((entry) => [entry.on, entry.balanceCents]);
+
+  it("writes the month ends before the first reading, and nothing new when it runs again", async () => {
+    const accountId = await aSyncedAccount();
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
+    const first = await rebuilt(accountId);
+    expect(first).toEqual([
+      ["2026-08-31", 520_000n],
+      ["2026-07-31", 300_000n],
+      ["2026-06-30", 310_000n],
+    ]);
+
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
+    expect(await rebuilt(accountId)).toEqual(first);
+
+    // The chart stands on them, and says so; September is the real reading.
+    const view = await accountsView(ctx, {
+      months: 4,
+      through: "2026-09-01",
+      now: new Date("2026-09-17T10:00:00Z"),
+    });
+    expect(view.netWorth.map((point) => point.total)).toEqual([310_000n, 300_000n, 520_000n, 500_000n]);
+    expect(view.netWorthEstimated).toEqual([true, true, true, false]);
+  });
+
+  it("never overrides a reading, and moves what it rebuilds when a correction is added or removed", async () => {
+    const accountId = await aSyncedAccount();
+    await rebuildDerivedBalances(ctx);
+
+    // A correction in August: August has a reading now, and July leans on it instead.
+    const correction = await saveBalanceEntry(ctx, accountId, {
+      on: "2026-08-15",
+      cents: 600_000n,
+      note: "",
+    });
+    expect(await rebuilt(accountId)).toEqual([
+      ["2026-07-31", 350_000n],
+      ["2026-06-30", 360_000n],
+    ]);
+    expect(
+      (await listBalanceEntries(ctx, accountId)).find((entry) => entry.source === "manual"),
+    ).toMatchObject({
+      on: "2026-08-15",
+      balanceCents: 600_000n,
+    });
+
+    await deleteBalanceEntry(ctx, correction.id);
+    expect(await rebuilt(accountId)).toHaveLength(3);
+  });
+
+  it("gives a synced account's balance day by day, rebuilt before its first reading (F2.5)", async () => {
+    const accountId = await aSyncedAccount();
+    const days = await accountDailyBalances(ctx, accountId, { from: "2026-09-01", to: "2026-09-03" });
+    // 5.000 read on the 16th, 200 spent on the 2nd: 5.200 before it, 5.000 from it on.
+    expect(days).toEqual({
+      days: ["2026-09-01", "2026-09-02", "2026-09-03"],
+      values: [520_000n, 500_000n, 500_000n],
+      estimated: [true, true, true],
+    });
+  });
+
+  it("gives several accounts day by day in one read, each the way it keeps its balance (F2.5)", async () => {
+    const synced = await aSyncedAccount();
+    const manual = await createAccount(ctx, {
+      ...CHECKING,
+      name: "Cash box",
+      openingBalance: { on: "2026-09-02", cents: 900n },
+    });
+    const read = await dailyBalancesOf(ctx, [synced, manual.id], { from: "2026-09-01", to: "2026-09-03" });
+    expect(read.days).toEqual(["2026-09-01", "2026-09-02", "2026-09-03"]);
+    expect(read.series.get(synced)?.values).toEqual([520_000n, 500_000n, 500_000n]);
+    expect(read.series.get(manual.id)).toEqual({
+      values: [null, 900n, 900n],
+      estimated: [false, false, false],
+    });
+  });
+
+  it("holds a manual account's entries day by day", async () => {
+    const account = await createAccount(ctx, {
+      ...CHECKING,
+      openingBalance: { on: "2026-01-10", cents: 7n },
+    });
+    const days = await accountDailyBalances(ctx, account.id, { from: "2026-01-09", to: "2026-01-11" });
+    expect(days.values).toEqual([null, 7n, 7n]);
+  });
+
+  it("leaves a manual account alone: it has no movements to rebuild from", async () => {
+    const account = await createAccount(ctx, {
+      ...CHECKING,
+      openingBalance: { on: "2026-01-10", cents: 1n },
+    });
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 0 });
+    expect((await listBalanceEntries(ctx, account.id)).map((entry) => entry.source)).toEqual(["manual"]);
+  });
+
+  it("rebuilds nobody else's accounts", async () => {
+    await aSyncedAccount();
+    const other = await newContext();
+    expect(await rebuildDerivedBalances(other)).toEqual({ written: 0 });
   });
 });

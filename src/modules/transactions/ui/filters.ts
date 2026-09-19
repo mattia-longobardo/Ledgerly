@@ -8,6 +8,7 @@
  */
 
 import type { Params } from "@/modules/accounts/ui/controls";
+import { TRANSACTION_TYPES, type TransactionType } from "@/modules/transactions/rules";
 import { addDays, addMonths, type CivilDate, isCivilDate, lastDayOfMonth, monthKey } from "@/platform/dates";
 
 /** The four presets of the design, in the order the segmented control shows them. */
@@ -17,6 +18,12 @@ export type RangePreset = (typeof RANGE_PRESETS)[number];
 
 /** The range the screen opens on. */
 export const DEFAULT_PRESET: RangePreset = "thisMonth";
+
+/** What the spending chart adds up per point: days, or months (F2.5). */
+export type ChartGrain = "day" | "month";
+
+/** Up to this many days a range is drawn day by day unless the address says otherwise. */
+export const DAY_GRAIN_MAX_DAYS = 62;
 
 /** The five sortable columns of the design, matching `TransactionSort` in `queries.ts`. */
 export const SORT_KEYS = ["date", "payee", "account", "category", "amount"] as const;
@@ -157,6 +164,7 @@ export interface ReadFilters {
   to: CivilDate;
   accountIds?: readonly string[];
   categoryIds?: readonly (string | null)[];
+  types?: readonly TransactionType[];
   payee?: string;
   /** Spec §7.2: hidden rows stay out of the totals unless they are asked for. */
   includeHidden?: boolean;
@@ -173,10 +181,14 @@ export interface ExpensesQuery {
   /** The category filter as the menu shows it: real ids, plus `UNCATEGORISED` when selected. */
   categorySelection: string[];
   accountId: string | null;
+  /** One movement type, or `null` for all of them (F2.5: how the giroconti are isolated). */
+  type: TransactionType | null;
   search: string;
   showHidden: boolean;
   sort: SortKey;
   direction: SortDirection;
+  /** The spending chart's grain: the one the address chose, or the one the range calls for. */
+  grain: ChartGrain;
   /** Whether anything other than the date range narrows the list (the design's "Clear filters"). */
   filtered: boolean;
   /** The current parameters, for a control that changes one of them and keeps the rest. */
@@ -214,6 +226,7 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     ),
   ];
   const accountId = uuid(one(raw.acc));
+  const type = TRANSACTION_TYPES.find((known) => known === one(raw.type)) ?? null;
   const search = one(raw.q);
   const showHidden = one(raw.hidden) === "1";
   const sort = SORT_KEYS.find((key) => key === one(raw.sort)) ?? DEFAULT_SORT;
@@ -224,12 +237,20 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
   const filters: Params = {
     cat: categorySelection.length > 0 ? categorySelection.join(",") : undefined,
     acc: accountId ?? undefined,
+    type: type ?? undefined,
     q: search || undefined,
     hidden: showHidden ? "1" : undefined,
   };
+  const wantedGrain = one(raw.grain);
+  const chosenGrain: ChartGrain | null =
+    wantedGrain === "day" || wantedGrain === "month" ? wantedGrain : null;
+  const grain: ChartGrain = chosenGrain ?? (daysInRange(range) <= DAY_GRAIN_MAX_DAYS ? "day" : "month");
+  // How the screen is drawn rather than what it holds: it travels with every link, and "Clear
+  // filters" keeps it, like the sort.
   const order: Params = {
     sort: sort === DEFAULT_SORT ? undefined : sort,
     dir: direction === DEFAULT_DIRECTION[sort] ? undefined : direction,
+    grain: chosenGrain ?? undefined,
   };
   const period: Params = {
     preset: preset === null || preset === DEFAULT_PRESET ? undefined : preset,
@@ -244,11 +265,14 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     range,
     categorySelection,
     accountId,
+    type,
     search,
     showHidden,
     sort,
     direction,
-    filtered: categorySelection.length > 0 || accountId !== null || search !== "" || showHidden,
+    grain,
+    filtered:
+      categorySelection.length > 0 || accountId !== null || type !== null || search !== "" || showHidden,
     params: { ...period, ...filters, ...order },
     presetParams: { ...filters, ...order },
     stepperParams: { ...period, off: undefined, ...filters, ...order },
@@ -266,6 +290,7 @@ export function filtersOf(query: ExpensesQuery): ReadFilters {
     to: query.range.to,
     accountIds: query.accountId === null ? undefined : [query.accountId],
     categoryIds: categoryIds.length === 0 ? undefined : categoryIds,
+    types: query.type === null ? undefined : [query.type],
     payee: query.search === "" ? undefined : query.search,
     includeHidden: query.showHidden ? true : undefined,
     sort: query.sort,

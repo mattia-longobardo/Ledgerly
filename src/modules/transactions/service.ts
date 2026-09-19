@@ -6,9 +6,9 @@
 // anywhere here (spec §4.3): the movements arrive already fetched, and the sync engine that
 // fetched them is outside.
 import "server-only";
-import { and, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { z } from "zod";
-import { getAccount } from "@/modules/accounts/queries";
+import { getAccount, listAccounts } from "@/modules/accounts/queries";
 import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -23,7 +23,10 @@ import {
   type TransferLeg,
   type UserEdit,
   type WindowRow,
+  normalizeIban,
+  type OwnIban,
   pairTransfers,
+  planIbanTransfers,
   planProviderMerge,
   planUpstreamRemovals,
   planUserEdit,
@@ -31,7 +34,7 @@ import {
 } from "./rules";
 import { type Transaction, getTransaction, transactionsByIds, transactionsInWindow } from "./queries";
 import { categories, labels, transactionLabels, transactions } from "./schema";
-import { TaxonomyError, adoptOrCreateCategory, adoptOrCreateLabel } from "./taxonomy";
+import { type ProviderGroupRef, TaxonomyError, adoptOrCreateCategory, adoptOrCreateLabel } from "./taxonomy";
 
 /**
  * Every failure a caller is expected to handle. `provider_owned` is the refusal of §7.2: payee,
@@ -194,22 +197,31 @@ class ProviderIds {
   async category(incoming: IncomingTransaction): Promise<string | null> {
     const externalId = incoming.categoryExternalId;
     const name = incoming.categoryName?.trim() ?? "";
-    const key = JSON.stringify([externalId, name]);
+    const groupName = incoming.categoryGroupName?.trim() ?? "";
+    // The provider's group becomes the parent (F2.5), so it is part of what makes a category.
+    const group =
+      groupName === "" ? undefined : { name: groupName, externalId: incoming.categoryGroupExternalId };
+    const key = JSON.stringify([externalId, name, group?.externalId ?? null, groupName]);
     const known = this.categoryCache.get(key);
     if (known !== undefined) return known;
 
-    const resolved = await this.resolveCategory(externalId, name);
+    const resolved = await this.resolveCategory(externalId, name, group);
     this.categoryCache.set(key, resolved);
     return resolved;
   }
 
-  private async resolveCategory(externalId: string | null, name: string): Promise<string | null> {
+  private async resolveCategory(
+    externalId: string | null,
+    name: string,
+    group: ProviderGroupRef | undefined,
+  ): Promise<string | null> {
     if (name !== "") {
       try {
         const category = await adoptOrCreateCategory(
           this.ctx,
           name,
           externalId === null ? undefined : { provider: this.provider, externalId },
+          group,
         );
         return category.id;
       } catch (error) {
@@ -464,6 +476,47 @@ export async function upsertFromProvider(
   });
 
   return outcome;
+}
+
+/**
+ * Links the two legs of the giroconti the provider left unpaired, by the IBAN in their details
+ * (`planIbanTransfers`), and undoes a pairing whose row is no longer a transfer. Reads first, then
+ * one short transaction for the changes; returns how many rows changed. Run after every sync pass
+ * and whenever an account's IBAN is saved.
+ */
+export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number> {
+  const own: OwnIban[] = [];
+  for (const account of await listAccounts(ctx, { includeArchived: true })) {
+    const iban = normalizeIban(account.reference);
+    if (iban !== null) own.push({ accountId: account.id, iban });
+  }
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      amountCents: transactions.amountCents,
+      currency: transactions.currency,
+      type: transactions.type,
+      transferGroupId: transactions.transferGroupId,
+      payee: transactions.payee,
+      note: transactions.note,
+    })
+    .from(transactions)
+    .where(userScoped(ctx).owns(transactions))
+    .orderBy(asc(transactions.occurredAt), asc(transactions.id));
+  const assignments = planIbanTransfers(own, rows);
+  if (assignments.length === 0) return 0;
+
+  await getDb().transaction(async (tx) => {
+    for (const assignment of assignments) {
+      await tx
+        .update(transactions)
+        .set({ transferGroupId: assignment.transferGroupId })
+        .where(and(eq(transactions.id, assignment.id), userScoped(ctx).owns(transactions)));
+    }
+  });
+  return assignments.length;
 }
 
 /**

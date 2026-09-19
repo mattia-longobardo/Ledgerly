@@ -21,7 +21,7 @@ import {
   sum,
   type SQL,
 } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { alias, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { listAccounts, type Account } from "@/modules/accounts/queries";
 import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, civilDateIn, type MonthKey, monthKey } from "@/platform/dates";
@@ -30,7 +30,7 @@ import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
 import { isHidden, type TransactionType } from "./rules";
 import { categories, labels, transactionLabels, transactions } from "./schema";
-import { type Category, type Label, listCategories, listLabels } from "./taxonomy";
+import { type Label, listCategories, listLabels, type TreeCategory } from "./taxonomy";
 
 /** The stored row on its own; `Transaction` adds the label ids the rules reason about. */
 export type TransactionRecord = typeof transactions.$inferSelect;
@@ -105,18 +105,30 @@ export interface TransactionFilters {
   offset?: number;
 }
 
+/**
+ * The money of a range (spec §7.2, F2.5). Income and spending keep the giroconti out: moving money
+ * between two of one's own accounts is neither. The net is the range's cash flow, every movement
+ * summed, as Wallet reports it (2026-09-19): the two legs of a giroconto between accounts that are
+ * both here cancel out, and a leg whose other side is elsewhere — or that Wallet filed under
+ * another type — moved money all the same. `count` is every row, because it describes the list.
+ */
 export interface TransactionsSummary {
   count: number;
-  /** The signed sum of every matching movement, transfers included. */
-  totalCents: Cents;
   incomeCents: Cents;
   expenseCents: Cents;
+  /** Every movement summed, giroconti included: the cash flow Wallet shows. */
+  netCents: Cents;
+  /** How many of the rows are giroconti, so the header can say what it left out. */
+  transferCount: number;
+  /** Of those, the legs with no counterpart here: usually the other account is not linked. */
+  unpairedTransferCount: number;
 }
 
 export interface MonthTotal {
   month: MonthKey;
   count: number;
-  totalCents: Cents;
+  /** The month's cash flow, every movement summed like the header's net. */
+  netCents: Cents;
 }
 
 /** One slice of the "By category" card: `null` everywhere is the uncategorised slice. */
@@ -124,6 +136,10 @@ export interface CategoryTotal {
   categoryId: string | null;
   name: string | null;
   color: string | null;
+  /** The slice's group (F2.5), so the card can gather sub-categories under it; `null` for a group. */
+  parentId: string | null;
+  parentName: string | null;
+  parentColor: string | null;
   count: number;
   totalCents: Cents;
   /** Percentage of the card, one decimal, over the absolute values of the slices. */
@@ -138,6 +154,7 @@ export interface CategoryTotal {
 export interface Facets {
   accounts: { accountId: string; count: number }[];
   categories: { categoryId: string | null; count: number }[];
+  types: { type: TransactionType; count: number }[];
 }
 
 /**
@@ -152,8 +169,8 @@ export interface MonthGroup {
   month: MonthKey;
   /** The movements the range holds for this month, hidden rows left out (spec §7.2). */
   count: number;
-  /** Their signed total, over the range and not over `rows`. */
-  totalCents: Cents;
+  /** Their net, over the range and not over `rows`, transfers left out. */
+  netCents: Cents;
   /** The rows of this month the page carries: `rows.length <= count` when `limit` cut in. */
   rows: TransactionRow[];
 }
@@ -182,8 +199,11 @@ export interface ExpensesView {
   /** Whether the user has any movement at all: tells "empty range" from "nothing synced yet". */
   hasAny: boolean;
   accounts: Account[];
-  /** The chips of the filter bar: archived categories stay out of a picker (spec §7.2). */
-  categories: Category[];
+  /**
+   * The chips of the filter bar, in tree order (F2.5): archived categories stay out of a picker
+   * (spec §7.2).
+   */
+  categories: TreeCategory[];
   labels: Label[];
 }
 
@@ -255,7 +275,20 @@ function conditions(ctx: Pick<Ctx, "userId" | "timeZone">, filters: TransactionF
     const named = filters.categoryIds.filter((id): id is string => id !== null);
     const wantsUncategorised = filters.categoryIds.some((id) => id === null);
     const choices: (SQL | undefined)[] = [];
-    if (named.length > 0) choices.push(inArray(transactions.categoryId, named));
+    if (named.length > 0) {
+      choices.push(inArray(transactions.categoryId, named));
+      // A group stands for its sub-categories too (spec §7.2, F2.5): the address keeps naming the
+      // group alone, and what it covers is decided here, where the tree is.
+      choices.push(
+        inArray(
+          transactions.categoryId,
+          getDb()
+            .select({ id: categories.id })
+            .from(categories)
+            .where(and(inArray(categories.parentId, named), userScoped(ctx).owns(categories))),
+        ),
+      );
+    }
     if (wantsUncategorised) choices.push(isNull(transactions.categoryId));
     parts.push(or(...choices));
   }
@@ -463,6 +496,43 @@ export async function transactionsInWindow(
     .orderBy(asc(transactions.occurredAt), asc(transactions.id));
 }
 
+/**
+ * What each account moved per civil day, in the user's zone and in date order: what the accounts
+ * module rebuilds a synced account's past month ends from (spec §7.1, F2.5). It goes through here
+ * because `transactions` is this module's table (§4.2).
+ *
+ * Everything that moved the balance counts: hidden movements (hiding is about totals, not about
+ * the money) and giroconti (they are exactly money leaving or entering this account). A movement
+ * the provider stopped returning does not: it is no longer in the balance the provider reads.
+ */
+export async function dailyNetByAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+): Promise<Map<string, { on: CivilDate; cents: Cents }[]>> {
+  if (accountIds.length === 0) return new Map();
+  const day = sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`;
+  const rows = await getDb()
+    .select({ accountId: transactions.accountId, on: day, cents: sum(transactions.amountCents) })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        inArray(transactions.accountId, [...accountIds]),
+        isNull(transactions.removedUpstreamAt),
+      ),
+    )
+    // By position, for the same reason as `monthlyTotals`.
+    .groupBy(sql`1`, sql`2`)
+    .orderBy(sql`1`, sql`2`);
+  const byAccount = new Map<string, { on: CivilDate; cents: Cents }[]>();
+  for (const row of rows) {
+    const days = byAccount.get(row.accountId) ?? [];
+    days.push({ on: row.on, cents: cents(row.cents) });
+    byAccount.set(row.accountId, days);
+  }
+  return byAccount;
+}
+
 /** How many movements the user has at all: the "Nothing synced yet" answer (spec §7.2). */
 export async function countAllTransactions(ctx: Pick<Ctx, "userId">): Promise<number> {
   const [row] = await getDb()
@@ -540,8 +610,9 @@ export async function listTransactions(
 }
 
 /**
- * The header of the page: `{count} · {total}` over the whole filtered range, hidden and
- * gone-from-provider rows left out whatever "Show hidden" says (spec §7.2).
+ * The header of the page over the whole filtered range, hidden and gone-from-provider rows left out
+ * whatever "Show hidden" says (spec §7.2). Income and expenses are summed by type, so a transfer
+ * never reaches either of them nor the net (F2.5); it is only counted, to be named in the header.
  */
 export async function transactionsSummary(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -550,21 +621,27 @@ export async function transactionsSummary(
   const [row] = await getDb()
     .select({
       total: count(),
-      totalCents: sum(transactions.amountCents),
       incomeCents: sum(
         sql`case when ${transactions.type} = 'income' then ${transactions.amountCents} else 0 end`,
       ),
       expenseCents: sum(
         sql`case when ${transactions.type} = 'expense' then ${transactions.amountCents} else 0 end`,
       ),
+      netCents: sum(transactions.amountCents),
+      transfers: sql<string>`count(*) filter (where ${transactions.type} = 'transfer')`,
+      unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null)`,
     })
     .from(transactions)
     .where(conditions(ctx, withoutHidden(filters)));
+  const incomeCents = cents(row?.incomeCents ?? null);
+  const expenseCents = cents(row?.expenseCents ?? null);
   return {
     count: Number(row?.total ?? 0),
-    totalCents: cents(row?.totalCents ?? null),
-    incomeCents: cents(row?.incomeCents ?? null),
-    expenseCents: cents(row?.expenseCents ?? null),
+    incomeCents,
+    expenseCents,
+    netCents: cents(row?.netCents ?? null),
+    transferCount: Number(row?.transfers ?? 0),
+    unpairedTransferCount: Number(row?.unpaired ?? 0),
   };
 }
 
@@ -582,7 +659,12 @@ export async function monthlyTotals(
 ): Promise<MonthTotal[]> {
   const month = monthExpression(ctx.timeZone);
   const rows = await getDb()
-    .select({ month, total: count(), totalCents: sum(transactions.amountCents) })
+    .select({
+      month,
+      total: count(),
+      // The month's cash flow, as the header's net: a paired giroconto cancels itself out.
+      netCents: sum(transactions.amountCents),
+    })
     .from(transactions)
     .where(conditions(ctx, withoutHidden(filters)))
     // By position: the same expression is written differently in a select list and in a
@@ -592,7 +674,7 @@ export async function monthlyTotals(
   return rows.map((row) => ({
     month: monthKey(row.month),
     count: Number(row.total),
-    totalCents: cents(row.totalCents),
+    netCents: cents(row.netCents),
   }));
 }
 
@@ -605,24 +687,41 @@ export async function categoryTotals(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<CategoryTotal[]> {
+  // The slice's group comes along (F2.5), archived or not: a movement filed under a sub-category of
+  // an archived group still belongs to that group in the card.
+  const parents = alias(categories, "parents");
   const rows = await getDb()
     .select({
       categoryId: transactions.categoryId,
       name: categories.name,
       color: categories.color,
+      parentId: categories.parentId,
+      parentName: parents.name,
+      parentColor: parents.color,
       total: count(),
       totalCents: sum(transactions.amountCents),
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+    .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
     .where(and(conditions(ctx, withoutHidden(filters)), ne(transactions.type, "transfer")))
-    .groupBy(transactions.categoryId, categories.name, categories.color)
+    .groupBy(
+      transactions.categoryId,
+      categories.name,
+      categories.color,
+      categories.parentId,
+      parents.name,
+      parents.color,
+    )
     .orderBy(asc(categories.name), asc(transactions.categoryId));
 
   const slices = rows.map((row) => ({
     categoryId: row.categoryId,
     name: row.name,
     color: row.color,
+    parentId: row.parentId,
+    parentName: row.parentName,
+    parentColor: row.parentColor,
     count: Number(row.total),
     totalCents: cents(row.totalCents),
   }));
@@ -637,15 +736,73 @@ export async function categoryTotals(
     );
 }
 
+/** What one group of categories spent in one day or month (F2.5): the Expenses chart's unit. */
+export interface SpendingPoint {
+  /** The day, or the first of the month, in the user's own zone. */
+  bucket: CivilDate;
+  /** The group — a sub-category counts in its parent — or `null` for the uncategorised. */
+  groupId: string | null;
+  groupName: string | null;
+  groupColor: string | null;
+  /** What was spent, as a positive amount. */
+  cents: Cents;
+}
+
 /**
- * The counts behind the account and category chips of the filter bar (spec §7.2). A chip promises
- * rows in the list rather than an amount, so these follow "Show hidden" the way the list does.
+ * The spending of the filtered range per day or per month and per group of categories (spec §7.2,
+ * F2.5), for the stacked chart over the Expenses table. Only `expense` movements count — a
+ * giroconto is not spending, and neither is income — and hidden or gone-from-provider rows stay
+ * out as in every total. The type filter is set aside: the chart is about spending whatever the
+ * list shows; every other filter narrows it like the list.
+ */
+export async function spendingOverTime(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters,
+  grain: "day" | "month",
+): Promise<SpendingPoint[]> {
+  const parents = alias(categories, "spending_parents");
+  const bucket =
+    grain === "day"
+      ? sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`
+      : monthExpression(ctx.timeZone);
+  const rows = await getDb()
+    .select({
+      bucket,
+      groupId: sql<string | null>`coalesce(${categories.parentId}, ${transactions.categoryId})`,
+      groupName: sql<string | null>`coalesce(${parents.name}, ${categories.name})`,
+      groupColor: sql<
+        string | null
+      >`case when ${categories.parentId} is null then ${categories.color} else ${parents.color} end`,
+      cents: sum(transactions.amountCents),
+    })
+    .from(transactions)
+    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+    .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
+    .where(
+      and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, "expense")),
+    )
+    // By position, for the same reason as `monthlyTotals`.
+    .groupBy(sql`1`, sql`2`, sql`3`, sql`4`)
+    .orderBy(sql`1`, sql`2`);
+  return rows.map((row) => ({
+    bucket: row.bucket,
+    groupId: row.groupId,
+    groupName: row.groupName,
+    groupColor: row.groupColor,
+    cents: -cents(row.cents),
+  }));
+}
+
+/**
+ * The counts behind the account, category and type chips of the filter bar (spec §7.2). A chip
+ * promises rows in the list rather than an amount, so these follow "Show hidden" the way the list
+ * does.
  */
 export async function facetCounts(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<Facets> {
-  const [accountRows, categoryRows] = await Promise.all([
+  const [accountRows, categoryRows, typeRows] = await Promise.all([
     getDb()
       .select({ accountId: transactions.accountId, total: count() })
       .from(transactions)
@@ -658,6 +815,12 @@ export async function facetCounts(
       .where(conditions(ctx, { ...filters, categoryIds: undefined }))
       .groupBy(transactions.categoryId)
       .orderBy(asc(transactions.categoryId)),
+    getDb()
+      .select({ type: transactions.type, total: count() })
+      .from(transactions)
+      .where(conditions(ctx, { ...filters, types: undefined }))
+      .groupBy(transactions.type)
+      .orderBy(asc(transactions.type)),
   ]);
   return {
     accounts: accountRows.map((row) => ({ accountId: row.accountId, count: Number(row.total) })),
@@ -665,6 +828,7 @@ export async function facetCounts(
       categoryId: row.categoryId,
       count: Number(row.total),
     })),
+    types: typeRows.map((row) => ({ type: row.type, count: Number(row.total) })),
   };
 }
 
@@ -727,7 +891,7 @@ export function monthGroups(rows: readonly TransactionRow[], totals: readonly Mo
     groups.set(month, {
       month,
       count: range?.count ?? 0,
-      totalCents: range?.totalCents ?? 0n,
+      netCents: range?.netCents ?? 0n,
       rows: [row],
     });
   }

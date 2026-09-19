@@ -2,23 +2,27 @@
 // `service.ts` because they are their own use case: Settings › Data edits them by hand, while the
 // Wallet sync adopts them by name (§9.1). Both entry points come through here.
 import "server-only";
-import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { EntityType } from "@/platform/integrations/rules";
 import { IntegrationError, linkExternal, resolveExternal } from "@/platform/integrations/service";
-import { CATEGORY_TYPES, markLocallyEdited, NAME_MAX } from "./rules";
+import { CATEGORY_TYPES, markLocallyEdited, NAME_MAX, treeOrder } from "./rules";
 import { categories, labels, transactionLabels, transactions } from "./schema";
 
 export type Category = typeof categories.$inferSelect;
 export type Label = typeof labels.$inferSelect;
 
+/** A category as the lists hand it out (F2.5): in tree order, with how deep a list indents it. */
+export type TreeCategory = Category & { depth: 0 | 1 };
+
 /** A row of the Settings › Data tables: the record plus how many movements point at it. */
 export interface CategoryWithUsage {
   category: Category;
   usage: number;
+  depth: 0 | 1;
 }
 
 export interface LabelWithUsage {
@@ -26,8 +30,12 @@ export interface LabelWithUsage {
   usage: number;
 }
 
-/** Every failure a caller is expected to handle; anything else is a bug and keeps throwing. */
-export type TaxonomyErrorCode = "not_found" | "duplicate" | "invalid";
+/**
+ * Every failure a caller is expected to handle; anything else is a bug and keeps throwing.
+ * `invalid_parent` (F2.5): a parent that is missing, archived, somebody else's, itself a
+ * sub-category or the category itself — or a parent for a group that has sub-categories.
+ */
+export type TaxonomyErrorCode = "not_found" | "duplicate" | "invalid" | "invalid_parent";
 
 export class TaxonomyError extends Error {
   constructor(readonly code: TaxonomyErrorCode) {
@@ -50,11 +58,16 @@ const colourSchema = z
   .preprocess(blank, z.string().trim().regex(HEX_COLOUR).nullable())
   .transform((value) => value?.toLowerCase() ?? null);
 
-const groupSchema = z.preprocess(blank, z.string().trim().max(NAME_MAX).nullable());
+/** Absent or blank is "no parent": the category is a group of its own. */
+const parentSchema = z.preprocess(blank, z.uuid().nullable());
 
+/**
+ * A whole category as the edit dialog submits it: an update replaces every field, so a parent left
+ * out is "no parent", not "keep the current one" (`renameCategory` passes the current one on).
+ */
 const categoryInputSchema = z.object({
   name: nameSchema,
-  group: groupSchema,
+  parentId: parentSchema,
   type: z.enum(CATEGORY_TYPES).default("expense"),
   color: colourSchema,
 });
@@ -68,6 +81,8 @@ const idSchema = z.uuid();
 
 /** The entity type `provider_links` files a category under (`platform/integrations/rules.ts`). */
 const CATEGORY_ENTITY: EntityType = "category";
+/** And a provider's category group, which is a parent category here (F2.5). */
+const GROUP_ENTITY: EntityType = "category_group";
 
 /**
  * A provider's own reference to one of its categories. Optional everywhere, because a person
@@ -78,6 +93,12 @@ export interface ExternalCategoryRef {
   externalId: string;
 }
 
+/** The provider's group of a category (F2.5): its name, and its own id when it sent one. */
+export interface ProviderGroupRef {
+  name: string;
+  externalId: string | null;
+}
+
 /** A rejected input is a catalogued error, not a stack trace: only `TaxonomyError` leaves here. */
 function parsed<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
@@ -85,20 +106,27 @@ function parsed<T>(schema: z.ZodType<T>, input: unknown): T {
   return result.data;
 }
 
-/** Postgres' unique-violation code, however deeply the driver error was wrapped. */
-function isDuplicate(error: unknown): boolean {
+/** A Postgres error code, however deeply the driver error was wrapped. */
+function hasCode(error: unknown, code: string): boolean {
   for (let cause: unknown = error; cause instanceof Error; cause = cause.cause) {
-    if ((cause as { code?: unknown }).code === "23505") return true;
+    if ((cause as { code?: unknown }).code === code) return true;
   }
   return false;
 }
 
+/**
+ * The two refusals the database has the last word on. A unique violation is a taken name among
+ * siblings; a foreign-key violation on `categories_parent_fk` is a third level that a concurrent
+ * write made possible after the service had checked (F2.5).
+ */
 function duplicateAware(error: unknown): never {
-  if (isDuplicate(error)) throw new TaxonomyError("duplicate");
+  if (hasCode(error, "23505")) throw new TaxonomyError("duplicate");
+  if (hasCode(error, "23503")) throw new TaxonomyError("invalid_parent");
   throw error;
 }
 
-const CATEGORY_ORDER = [asc(categories.group), asc(categories.name), asc(categories.id)];
+/** Name order within each level; `treeOrder` then puts every sub-category under its group. */
+const CATEGORY_ORDER = [asc(categories.name), asc(categories.id)];
 const LABEL_ORDER = [asc(labels.name), asc(labels.id)];
 
 function categoryScope(ctx: Pick<Ctx, "userId">, includeArchived: boolean) {
@@ -107,18 +135,20 @@ function categoryScope(ctx: Pick<Ctx, "userId">, includeArchived: boolean) {
 }
 
 /**
- * The categories a movement may be filed under: the archived ones are left out unless asked for,
- * so an archived name never comes back in a picker (Settings › Data asks for them to list them).
+ * The categories a movement may be filed under, each group followed by its sub-categories: the
+ * archived ones are left out unless asked for, so an archived name never comes back in a picker
+ * (Settings › Data asks for them to list them).
  */
 export async function listCategories(
   ctx: Pick<Ctx, "userId">,
   options: { includeArchived?: boolean } = {},
-): Promise<Category[]> {
-  return getDb()
+): Promise<TreeCategory[]> {
+  const rows = await getDb()
     .select()
     .from(categories)
     .where(categoryScope(ctx, options.includeArchived ?? false))
     .orderBy(...CATEGORY_ORDER);
+  return treeOrder(rows);
 }
 
 /**
@@ -139,7 +169,10 @@ export async function listCategoriesWithUsage(
     .where(categoryScope(ctx, options.includeArchived ?? false))
     .groupBy(categories.id)
     .orderBy(...CATEGORY_ORDER);
-  return rows.map((row) => ({ category: row.category, usage: Number(row.usage) }));
+  const ordered = treeOrder(
+    rows.map((row) => ({ id: row.category.id, parentId: row.category.parentId, row })),
+  );
+  return ordered.map(({ row, depth }) => ({ category: row.category, usage: Number(row.usage), depth }));
 }
 
 async function categoryById(ctx: Pick<Ctx, "userId">, id: string): Promise<Category | undefined> {
@@ -151,15 +184,52 @@ async function categoryById(ctx: Pick<Ctx, "userId">, id: string): Promise<Categ
 }
 
 /**
- * The exact name §9.1 adopts on. Case-sensitive and archived-inclusive on purpose: the unique key
- * is `(user_id, name)`, so an archived namesake is the row that would collide with a new one.
+ * The exact name §9.1 adopts on, among the siblings under `parentId` (`null`: among the groups).
+ * Case-sensitive and archived-inclusive on purpose: the unique key is `(user_id, parent_id, name)`,
+ * so an archived namesake is the row that would collide with a new one.
  */
-async function categoryByName(ctx: Pick<Ctx, "userId">, name: string): Promise<Category | undefined> {
+async function categoryByName(
+  ctx: Pick<Ctx, "userId">,
+  name: string,
+  parentId: string | null,
+): Promise<Category | undefined> {
   const [row] = await getDb()
     .select()
     .from(categories)
-    .where(and(eq(categories.name, name), userScoped(ctx).owns(categories)));
+    .where(
+      and(
+        eq(categories.name, name),
+        parentId === null ? isNull(categories.parentId) : eq(categories.parentId, parentId),
+        userScoped(ctx).owns(categories),
+      ),
+    );
   return row;
+}
+
+async function hasChildren(ctx: Pick<Ctx, "userId">, id: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.parentId, id), userScoped(ctx).owns(categories)))
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
+ * The parent a category asks for, checked (F2.5): it has to be this user's, active, a group, and
+ * not the category itself. `null` asks for no parent at all.
+ */
+async function parentFor(
+  ctx: Pick<Ctx, "userId">,
+  parentId: string | null,
+  selfId: string | null,
+): Promise<Category | null> {
+  if (parentId === null) return null;
+  const parent = await categoryById(ctx, parentId);
+  if (!parent || parent.id === selfId || parent.parentId !== null || parent.archivedAt !== null) {
+    throw new TaxonomyError("invalid_parent");
+  }
+  return parent;
 }
 
 export async function getCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<Category> {
@@ -168,17 +238,26 @@ export async function getCategory(ctx: Pick<Ctx, "userId">, id: string): Promise
   return row;
 }
 
+/** A sub-category always has its group's type (spec §7.2, F2.5), whatever the input said. */
 export async function createCategory(ctx: Pick<Ctx, "userId">, input: unknown): Promise<Category> {
   const values = parsed(categoryInputSchema, input);
+  const parent = await parentFor(ctx, values.parentId, null);
   try {
-    const [row] = await getDb().insert(categories).values(userScoped(ctx).stamp(values)).returning();
+    const [row] = await getDb()
+      .insert(categories)
+      .values(userScoped(ctx).stamp({ ...values, type: parent?.type ?? values.type }))
+      .returning();
     return row;
   } catch (error) {
     return duplicateAware(error);
   }
 }
 
-/** Name, group, type and colour in one write: the edit dialog submits all four together. */
+/**
+ * Name, parent, type and colour in one write: the edit dialog submits all four together. Moving a
+ * category under a group gives it the group's type; changing a group's type takes its
+ * sub-categories along, in the same transaction, so a child and its parent never disagree.
+ */
 export async function updateCategory(
   ctx: Pick<Ctx, "userId">,
   id: string,
@@ -186,13 +265,38 @@ export async function updateCategory(
 ): Promise<Category> {
   const categoryId = parsed(idSchema, id);
   const values = parsed(categoryInputSchema, input);
+  const current = await categoryById(ctx, categoryId);
+  if (!current) throw new TaxonomyError("not_found");
+  const parent = await parentFor(ctx, values.parentId, categoryId);
+  // A group with sub-categories cannot go inside another one: that would be a third level. The
+  // foreign key refuses it too; asking first gives the person a reason rather than an error.
+  if (parent && (await hasChildren(ctx, categoryId))) throw new TaxonomyError("invalid_parent");
+  const type = parent?.type ?? values.type;
+  // Choosing the group by hand — into one, out of one, or into another — is a local edit the sync
+  // must not undo (spec §7.2); a rename that leaves the group alone is not that choice.
+  const parentSetLocally = current.parentSetLocally || current.parentId !== values.parentId;
   let row: Category | undefined;
   try {
-    [row] = await getDb()
-      .update(categories)
-      .set(values)
-      .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)))
-      .returning();
+    row = await getDb().transaction(async (tx) => {
+      const [updated] = await tx
+        .update(categories)
+        .set({ ...values, type, parentSetLocally })
+        .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)))
+        .returning();
+      if (updated?.parentId === null) {
+        await tx
+          .update(categories)
+          .set({ type })
+          .where(
+            and(
+              eq(categories.parentId, updated.id),
+              ne(categories.type, type),
+              userScoped(ctx).owns(categories),
+            ),
+          );
+      }
+      return updated;
+    });
   } catch (error) {
     return duplicateAware(error);
   }
@@ -204,19 +308,39 @@ export async function renameCategory(ctx: Pick<Ctx, "userId">, id: string, name:
   const current = await getCategory(ctx, id);
   return updateCategory(ctx, current.id, {
     name,
-    group: current.group,
+    parentId: current.parentId,
     type: current.type,
     color: current.color,
   });
 }
 
+/**
+ * Archiving a group archives its active sub-categories with the same moment (F2.5): a group put
+ * away should not leave its children offered in every picker. Restoring brings the group alone
+ * back, because which of its children are still wanted is not something this can know.
+ */
 async function setArchived(ctx: Pick<Ctx, "userId">, id: string, archivedAt: Date | null): Promise<void> {
-  const [row] = await getDb()
-    .update(categories)
-    .set({ archivedAt })
-    .where(and(eq(categories.id, parsed(idSchema, id)), userScoped(ctx).owns(categories)))
-    .returning({ id: categories.id });
-  if (!row) throw new TaxonomyError("not_found");
+  const categoryId = parsed(idSchema, id);
+  await getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .update(categories)
+      .set({ archivedAt })
+      .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)))
+      .returning({ id: categories.id, parentId: categories.parentId });
+    if (!row) throw new TaxonomyError("not_found");
+    if (archivedAt !== null && row.parentId === null) {
+      await tx
+        .update(categories)
+        .set({ archivedAt })
+        .where(
+          and(
+            eq(categories.parentId, row.id),
+            isNull(categories.archivedAt),
+            userScoped(ctx).owns(categories),
+          ),
+        );
+    }
+  });
 }
 
 /**
@@ -244,19 +368,39 @@ export async function restoreCategory(ctx: Pick<Ctx, "userId">, id: string): Pro
  *
  * An archived namesake is adopted as it stands and stays archived: the name is already taken, and
  * resurrecting a category somebody deliberately put away is not the sync's decision to make.
+ *
+ * **The provider's group (F2.5)** becomes the category's parent, found by the same ladder — its
+ * `category_group` link, then a group with that exact name — and created only once the category is
+ * known, so a group made for it takes *its* type: a category somebody marked as income must not
+ * land under a group made up as spending. The name is then looked for under that group first and
+ * among the groups second, which is where F2 left every category it adopted. A category found
+ * without a parent is filed under the group when the two share a type and it has no children of its
+ * own (`attachToGroup`); one that already has a parent is never moved. A group name the column
+ * cannot hold is no group: the category is still adopted, where it would have been before F2.5.
  */
 export async function adoptOrCreateCategory(
   ctx: Pick<Ctx, "userId">,
   name: string,
   external?: ExternalCategoryRef,
+  group?: ProviderGroupRef,
 ): Promise<Category> {
+  let linked: Category | undefined;
   if (external) {
-    const linked = await resolveExternal(ctx, external.provider, CATEGORY_ENTITY, [external.externalId]);
-    const entityId = linked.get(external.externalId);
+    const found = await resolveExternal(ctx, external.provider, CATEGORY_ENTITY, [external.externalId]);
+    const entityId = found.get(external.externalId);
     // A link whose category has since been deleted falls through to the name: `provider_links`
     // holds a plain uuid, not a foreign key (spec §4.3), so it can outlive its row.
-    const category = entityId ? await categoryById(ctx, entityId) : undefined;
-    if (category) return category;
+    linked = entityId ? await categoryById(ctx, entityId) : undefined;
+  }
+
+  const groupName = group ? validName(group.name) : null;
+  const groupRef = group && groupName !== null ? { name: groupName, externalId: group.externalId } : null;
+  let parent = groupRef ? await findGroup(ctx, groupRef, external?.provider) : undefined;
+
+  if (linked) {
+    if (!groupRef) return linked;
+    parent ??= await createGroup(ctx, groupRef, linked.type, external?.provider);
+    return attachToGroup(ctx, linked, parent);
   }
 
   // Only here does the name carry any weight: with no usable link there is nothing to adopt but
@@ -264,35 +408,148 @@ export async function adoptOrCreateCategory(
   // uncategorised rather than failing the pass, which is the right call for a first encounter —
   // it takes nothing away, because there was nothing there yet.
   const wanted = parsed(nameSchema, name);
-  const category = (await categoryByName(ctx, wanted)) ?? (await insertAdoptedCategory(ctx, wanted));
-  if (external) {
-    try {
-      await linkExternal(ctx, {
-        provider: external.provider,
-        entityType: CATEGORY_ENTITY,
-        entityId: category.id,
-        externalId: external.externalId,
-      });
-    } catch (error) {
-      // Two of the provider's categories share this local name, so only the first of them owns
-      // the link. The movement is still filed correctly, and the name lookup above keeps working
-      // for the other one, so this is not worth failing a whole sync over.
-      if (!(error instanceof IntegrationError) || error.code !== "link_conflict") throw error;
-    }
+  let category = parent ? await categoryByName(ctx, wanted, parent.id) : undefined;
+  category ??= await categoryByName(ctx, wanted, null);
+  if (groupRef) {
+    parent ??= await createGroup(ctx, groupRef, category?.type, external?.provider);
+    if (category) category = await attachToGroup(ctx, category, parent);
+    // A category named like its own group ("Others" in "Others") is the group itself, not a twin
+    // underneath it.
+    else if (parent.name === wanted) category = parent;
+    else category = await insertAdoptedCategory(ctx, wanted, parent);
+  } else {
+    category ??= await insertAdoptedCategory(ctx, wanted, null);
   }
+
+  if (external) await linkQuietly(ctx, external.provider, CATEGORY_ENTITY, category.id, external.externalId);
   return category;
 }
 
-/** The provider gives a name and nothing else, so the type falls back to the column default. */
-async function insertAdoptedCategory(ctx: Pick<Ctx, "userId">, name: string): Promise<Category> {
+/** A provider name as the column can hold it, or `null` when it cannot. */
+function validName(name: string): string | null {
+  const result = nameSchema.safeParse(name);
+  return result.success ? result.data : null;
+}
+
+/**
+ * Files a provider link, keeping going when another external id already owns this row: two of the
+ * provider's categories (or groups) sharing one local name means only the first owns the link, and
+ * the name lookup keeps working for the other, so it is not worth failing a whole sync over.
+ */
+async function linkQuietly(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  entityType: EntityType,
+  entityId: string,
+  externalId: string,
+): Promise<void> {
+  try {
+    await linkExternal(ctx, { provider, entityType, entityId, externalId });
+  } catch (error) {
+    if (!(error instanceof IntegrationError) || error.code !== "link_conflict") throw error;
+  }
+}
+
+/**
+ * The group a provider group already is here: its link, while it still points at a group, then a
+ * group with that exact name — which gets the link, so a rename on either side is followed next
+ * time. `undefined` when there is none yet; creating it waits for the category's type.
+ */
+async function findGroup(
+  ctx: Pick<Ctx, "userId">,
+  group: ProviderGroupRef,
+  provider: string | undefined,
+): Promise<Category | undefined> {
+  if (provider && group.externalId !== null) {
+    const found = await resolveExternal(ctx, provider, GROUP_ENTITY, [group.externalId]);
+    const entityId = found.get(group.externalId);
+    const linked = entityId ? await categoryById(ctx, entityId) : undefined;
+    if (linked && linked.parentId === null) return linked;
+  }
+  const named = await categoryByName(ctx, group.name, null);
+  if (named && provider && group.externalId !== null) {
+    await linkQuietly(ctx, provider, GROUP_ENTITY, named.id, group.externalId);
+  }
+  return named;
+}
+
+/** A new group for a provider group, of the type of the category it is being made for. */
+async function createGroup(
+  ctx: Pick<Ctx, "userId">,
+  group: ProviderGroupRef,
+  type: Category["type"] | undefined,
+  provider: string | undefined,
+): Promise<Category> {
   const [row] = await getDb()
     .insert(categories)
-    .values(userScoped(ctx).stamp({ name }))
+    .values(userScoped(ctx).stamp({ name: group.name, ...(type ? { type } : {}) }))
+    .onConflictDoNothing()
+    .returning();
+  // Two syncs met on the same new group: the other one won, so take its row.
+  const created = row ?? (await categoryByName(ctx, group.name, null));
+  if (!created) throw new TaxonomyError("duplicate");
+  if (provider && group.externalId !== null) {
+    await linkQuietly(ctx, provider, GROUP_ENTITY, created.id, group.externalId);
+  }
+  return created;
+}
+
+/**
+ * A category without a parent filed under the provider's group — when that is possible without
+ * breaking a rule of §7.2: not the group itself, not a group with children of its own (a third
+ * level), not one of another type (a child has its parent's type, and changing a type a person
+ * may have set is not the sync's call), and never one whose group a person chose by hand — taking
+ * a category out of its group is a local edit, and local edits win. Anything else leaves the
+ * category where it is.
+ */
+async function attachToGroup(
+  ctx: Pick<Ctx, "userId">,
+  category: Category,
+  group: Category,
+): Promise<Category> {
+  if (
+    category.id === group.id ||
+    category.parentSetLocally ||
+    category.parentId !== null ||
+    group.parentId !== null ||
+    category.type !== group.type ||
+    (await hasChildren(ctx, category.id))
+  ) {
+    return category;
+  }
+  try {
+    const [row] = await getDb()
+      .update(categories)
+      .set({ parentId: group.id })
+      .where(
+        and(eq(categories.id, category.id), isNull(categories.parentId), userScoped(ctx).owns(categories)),
+      )
+      .returning();
+    return row ?? category;
+  } catch (error) {
+    // A child was given to this category between the check and the write: it stays a group.
+    if (hasCode(error, "23503")) return category;
+    throw error;
+  }
+}
+
+/**
+ * The provider gives a name and nothing else, so the type is the parent's, or the column default
+ * for a category with no parent.
+ */
+async function insertAdoptedCategory(
+  ctx: Pick<Ctx, "userId">,
+  name: string,
+  parent: Category | null,
+): Promise<Category> {
+  const [row] = await getDb()
+    .insert(categories)
+    .values(userScoped(ctx).stamp({ name, ...(parent ? { parentId: parent.id, type: parent.type } : {}) }))
     .onConflictDoNothing()
     .returning();
   if (row) return row;
   // Two syncs met on the same new name: the other one won, so take its row.
-  const raced = await categoryByName(ctx, name);
+  const raced = await categoryByName(ctx, name, parent?.id ?? null);
   if (!raced) throw new TaxonomyError("duplicate");
   return raced;
 }

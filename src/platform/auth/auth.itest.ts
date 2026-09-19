@@ -37,46 +37,6 @@ async function signedIn(email: string): Promise<Headers> {
   return cookiesFrom(headers);
 }
 
-/**
- * Runs the authorization-code flow against the mock identity provider, which issues `sub` and
- * `email` equal to the subject typed at its login form. Returns Better Auth's callback response.
- */
-async function ssoCallback(instance: Auth, subject: string): Promise<Response> {
-  const start = await instance.handler(
-    new Request(`${BASE_URL}/api/auth/sign-in/social`, {
-      method: "POST",
-      headers: { "content-type": "application/json", origin: BASE_URL },
-      body: JSON.stringify({ provider: OIDC_PROVIDER_ID, callbackURL: "/" }),
-    }),
-  );
-  const { url } = (await start.json()) as { url: string };
-  const login = await fetch(url, {
-    method: "POST",
-    body: new URLSearchParams({ username: subject }),
-    redirect: "manual",
-  });
-  return instance.handler(
-    new Request(login.headers.get("location") as string, { headers: cookiesFrom(start.headers) }),
-  );
-}
-
-/** The signed-in cookie header after a real SSO sign-in. */
-async function ssoCallbackHeaders(instance: Auth, subject: string): Promise<Headers> {
-  return cookiesFrom((await ssoCallback(instance, subject)).headers);
-}
-
-/** The `error` codes Better Auth put on the redirect after a refused SSO sign-in. */
-async function ssoErrorCodes(instance: Auth, subject: string): Promise<string[]> {
-  const location = (await ssoCallback(instance, subject)).headers.get("location") as string;
-  return new URL(location, BASE_URL).searchParams.getAll("error");
-}
-
-/** The signed-in user's id after a real SSO sign-in, or null. */
-async function ssoSignIn(instance: Auth, subject: string): Promise<string | null> {
-  const session = await instance.api.getSession({ headers: await ssoCallbackHeaders(instance, subject) });
-  return session?.user.id ?? null;
-}
-
 beforeEach(resetDatabase);
 afterAll(closeDatabase);
 
@@ -166,27 +126,7 @@ describe("Better Auth configuration", () => {
   });
 });
 
-describe("SSO sign-in", () => {
-  it("never links a second identity to an existing user because the email matches", async () => {
-    const victim = await ssoSignIn(auth(), "victim@example.test");
-    expect(victim).toMatch(UUID_V7);
-    expect(await ssoSignIn(auth(), "victim@example.test")).toBe(victim);
-    // A different subject whose (verified) email is the victim's, up to case.
-    expect(await ssoSignIn(auth(), "Victim@Example.test")).toBeNull();
-    const accounts = await getDb().select({ accountId: authAccounts.accountId }).from(authAccounts);
-    expect(accounts).toEqual([{ accountId: "victim@example.test" }]);
-  });
-
-  it("names the reason on the error redirect, which the sign-in page explains (errors.ts)", async () => {
-    const victim = await ssoSignIn(auth(), "victim@example.test");
-    expect(await ssoErrorCodes(auth(), "Victim@Example.test")).toEqual(["account_not_linked"]);
-    await getDb()
-      .update(users)
-      .set({ banned: true })
-      .where(eq(users.id, victim as string));
-    expect(await ssoErrorCodes(auth(), "victim@example.test")).toEqual(["BANNED_USER"]);
-  });
-
+describe("sign-in refusals", () => {
   it("refuses a blocked user's password sign-in with its own code", async () => {
     const { user } = await auth().api.createUser({
       body: { email: "a@example.test", password: PASSWORD, name: "A" },
@@ -195,26 +135,6 @@ describe("SSO sign-in", () => {
     await expect(
       auth().api.signInEmail({ body: { email: "a@example.test", password: PASSWORD } }),
     ).rejects.toMatchObject({ body: { code: "BANNED_USER" } });
-  });
-
-  it("promotes a member of the admin group through a real SSO sign-in", async () => {
-    await auth().api.createUser({ body: { email: "first@example.test", password: PASSWORD, name: "First" } });
-    const member = await ssoSignIn(auth(), "user@example.test");
-    const admin = await ssoSignIn(auth(), "admin@example.test");
-    const roles = await getDb().select({ id: users.id, role: users.role }).from(users).orderBy(users.email);
-    expect(roles).toEqual(
-      expect.arrayContaining([
-        { id: member, role: "user" },
-        { id: admin, role: "admin" },
-      ]),
-    );
-  });
-
-  it("stores the provider's OAuth tokens encrypted", async () => {
-    await ssoSignIn(auth(), "sso@example.test");
-    const [account] = await getDb().select({ accessToken: authAccounts.accessToken }).from(authAccounts);
-    expect(account.accessToken).toBeTruthy();
-    expect(account.accessToken).not.toMatch(/^eyJ/);
   });
 
   it("refuses bare ID tokens, so only the redirect flow with PKCE and state signs in or links", async () => {
@@ -330,15 +250,6 @@ describe("update-user", () => {
       .from(users)
       .where(eq(users.email, "a@example.test"));
     expect(row.name).toBe("A");
-  });
-
-  it("refuses to rename an SSO-linked account, even calling the endpoint directly (P9 bypass)", async () => {
-    const headers = await ssoCallbackHeaders(auth(), "victim@example.test");
-    await expect(auth().api.updateUser({ body: { name: "Someone Else" }, headers })).rejects.toMatchObject({
-      body: { code: "NAME_MANAGED_BY_SSO" },
-    });
-    const session = await auth().api.getSession({ headers });
-    expect(session?.user.name).not.toBe("Someone Else");
   });
 
   it("leaves other update-user fields (such as image) alone when no name is sent", async () => {

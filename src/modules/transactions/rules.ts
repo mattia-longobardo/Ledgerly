@@ -91,6 +91,12 @@ export interface IncomingTransaction {
   note: string | null;
   categoryExternalId: string | null;
   categoryName: string | null;
+  /**
+   * The provider's group of that category (F2.5), which becomes its parent here. Wallet sends it
+   * as `{ id, name }`; either may be missing, and without a name there is nothing to adopt.
+   */
+  categoryGroupExternalId: string | null;
+  categoryGroupName: string | null;
   labels: readonly string[];
 }
 
@@ -187,6 +193,37 @@ export function excludeHidden<T extends Visibility>(rows: readonly T[]): T[] {
   return rows.filter((row) => !isHidden(row));
 }
 
+/* Categories */
+
+/**
+ * Categories in the order of their tree (spec §7.2, F2.5): each group followed by its
+ * sub-categories, with the depth a list indents them by. The order *within* each level is the one
+ * the rows arrive in — the query's deterministic `ORDER BY` — so this only moves children under
+ * their parent and never sorts on its own.
+ *
+ * A sub-category whose group is not in the list (an active child of an archived group, when the
+ * archived ones are left out) is shown at the top level where it stands rather than dropped.
+ */
+export function treeOrder<T extends { id: string; parentId: string | null }>(
+  rows: readonly T[],
+): (T & { depth: 0 | 1 })[] {
+  const present = new Set(rows.map((one) => one.id));
+  const children = new Map<string, T[]>();
+  for (const one of rows) {
+    if (one.parentId === null || !present.has(one.parentId)) continue;
+    const siblings = children.get(one.parentId) ?? [];
+    siblings.push(one);
+    children.set(one.parentId, siblings);
+  }
+  const ordered: (T & { depth: 0 | 1 })[] = [];
+  for (const one of rows) {
+    if (one.parentId !== null && present.has(one.parentId)) continue;
+    ordered.push({ ...one, depth: 0 });
+    for (const child of children.get(one.id) ?? []) ordered.push({ ...child, depth: 1 });
+  }
+  return ordered;
+}
+
 /* Transfers */
 
 /** One side of a possible transfer: a stored row, or one this sync is about to write. */
@@ -253,6 +290,137 @@ export function pairTransfers(legs: readonly TransferLeg[]): TransferAssignment[
     }
   }
   return assignments.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/* Giroconti by IBAN */
+
+/** The longest gap between the two legs of a giroconto found by IBAN: a bank transfer's clearing. */
+export const IBAN_TRANSFER_MAX_DAYS = 5;
+
+/** Spaces and dashes out, upper case: the form an IBAN is compared in. */
+function compact(text: string): string {
+  return text.replace(/[\s-]/g, "").toUpperCase();
+}
+
+/**
+ * An account's "IBAN or reference" as an IBAN, or `null` when it is not one: the shape and the
+ * ISO 13616 mod-97 check both have to hold, so a free-text reference never matches a note.
+ */
+export function normalizeIban(reference: string | null): string | null {
+  if (reference === null) return null;
+  const iban = compact(reference);
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban)) return null;
+  const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (letter) =>
+    String(letter.charCodeAt(0) - 55),
+  );
+  let remainder = 0;
+  for (const digit of digits) remainder = (remainder * 10 + Number(digit)) % 97;
+  return remainder === 1 ? iban : null;
+}
+
+/** One of the user's accounts that has an IBAN. */
+export interface OwnIban {
+  accountId: string;
+  iban: string;
+}
+
+/** A stored movement as the IBAN rule reads it. */
+export interface IbanRuleRow {
+  id: string;
+  accountId: string;
+  occurredAt: Date;
+  amountCents: Cents;
+  currency: string;
+  type: TransactionType;
+  transferGroupId: string | null;
+  payee: string | null;
+  note: string | null;
+}
+
+/** A change of pairing the IBAN rule decides: the row's new group, or `null` to leave a pair. */
+export interface IbanPairing {
+  id: string;
+  transferGroupId: string | null;
+}
+
+/**
+ * Pairs the two legs of a giroconto by IBAN (F2.5, 2026-09-18). Which movements *are* giroconti is
+ * the provider's call, never this rule's: Wallet files one under its Transfer category, or links
+ * its two legs, and the app follows it so its totals reconcile with Wallet's own. A movement Wallet
+ * counts as income or spending stays one here too, whatever IBAN its details name.
+ *
+ * What Wallet often leaves undone is the link between the legs. A transfer whose payee or note holds
+ * the IBAN of *another* of the user's accounts is looked for in the account that IBAN names: a
+ * transfer of the opposite amount, in the same currency, at most {@link IBAN_TRANSFER_MAX_DAYS}
+ * days apart, not in a pair already — preferring one that names this account's IBAN back, then the
+ * nearest in time. The IBAN is what makes the match a fact rather than a coincidence of amount and
+ * date. The pair's group id is the smaller local id, as for the provider's pairs.
+ *
+ * A row that is no longer a transfer (Wallet re-filed it under a category of the user's) leaves its
+ * group, and so does a group of one — both left behind by an earlier version of this rule. A pair
+ * of two transfers is never taken apart. Returns only the rows whose group changes.
+ */
+export function planIbanTransfers(
+  own: readonly OwnIban[],
+  rows: readonly IbanRuleRow[],
+  maxDays = IBAN_TRANSFER_MAX_DAYS,
+): IbanPairing[] {
+  const changes = new Map<string, string | null>();
+  const groupOf = (row: IbanRuleRow) => (changes.has(row.id) ? changes.get(row.id)! : row.transferGroupId);
+
+  // Leaving: a grouped row that is not a transfer, then any group left with a single member.
+  for (const row of rows) {
+    if (row.type !== "transfer" && row.transferGroupId !== null) changes.set(row.id, null);
+  }
+  const members = new Map<string, number>();
+  for (const row of rows) {
+    const group = groupOf(row);
+    if (group !== null) members.set(group, (members.get(group) ?? 0) + 1);
+  }
+  for (const row of rows) {
+    const group = groupOf(row);
+    if (group !== null && members.get(group) === 1) changes.set(row.id, null);
+  }
+
+  if (own.length > 0) {
+    const single = (row: IbanRuleRow) => row.type === "transfer" && groupOf(row) === null;
+    const ibanOf = new Map(own.map((one) => [one.accountId, one.iban]));
+    const textOf = (row: IbanRuleRow) => compact(`${row.payee ?? ""} ${row.note ?? ""}`);
+    const ordered = [...rows].sort(
+      (a, b) => a.occurredAt.getTime() - b.occurredAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+    for (const leg of ordered) {
+      if (!single(leg)) continue;
+      const text = textOf(leg);
+      const target = own.find((one) => one.accountId !== leg.accountId && text.includes(one.iban));
+      if (!target) continue;
+      const back = ibanOf.get(leg.accountId);
+      const distance = (row: IbanRuleRow) => Math.abs(row.occurredAt.getTime() - leg.occurredAt.getTime());
+      const namesBack = (row: IbanRuleRow) => (back !== undefined && textOf(row).includes(back) ? 0 : 1);
+      const twin = ordered
+        .filter(
+          (other) =>
+            other.accountId === target.accountId &&
+            single(other) &&
+            other.currency === leg.currency &&
+            other.amountCents === -leg.amountCents &&
+            distance(other) <= maxDays * DAY_MS,
+        )
+        .sort(
+          (a, b) => namesBack(a) - namesBack(b) || distance(a) - distance(b) || (a.id < b.id ? -1 : 1),
+        )[0];
+      if (!twin) continue;
+      const group = leg.id < twin.id ? leg.id : twin.id;
+      changes.set(leg.id, group);
+      changes.set(twin.id, group);
+    }
+  }
+
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return [...changes]
+    .filter(([id, group]) => byId.get(id)?.transferGroupId !== group)
+    .map(([id, transferGroupId]) => ({ id, transferGroupId }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 /* Merge */

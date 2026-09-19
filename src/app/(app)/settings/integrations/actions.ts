@@ -9,8 +9,10 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
+import { linkOwnTransfers } from "@/modules/transactions/service";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { isSyncBusy, syncWalletNow } from "@/platform/integrations/wallet/sync";
+import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
+import { isSyncBusy, requestWalletBackfill, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import {
   type Connection,
   deleteConnection,
@@ -142,6 +144,7 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
 
   try {
     await syncWalletNow(ctx, connection.id);
+    await linkOwnTransfers(ctx);
   } catch (error) {
     // A sync writes rows before it fails, and it records its own `sync_runs` entry either way, so
     // the log is refreshed on the way out of both branches.
@@ -156,6 +159,22 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
   }
   revalidate();
   return { ok: true };
+}
+
+/**
+ * "Download the history again" (spec §9.1, F2.5): the next pass reads `months` monthly windows,
+ * and it runs now, exactly as "Sync now" does. Only the depths the card offers are accepted — the
+ * number comes from the browser. The backfill imports and never removes, so asking for it cannot
+ * cost anything already here; if the hourly job holds the connection, the request stays in the
+ * cursor and that job's next pass is the backfill.
+ */
+export async function redownloadWalletHistoryAction(months: number): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  if (!BACKFILL_CHOICES.some((choice) => choice === months)) return { ok: false, error: "failed" };
+  const connection = await walletConnection(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  await requestWalletBackfill(ctx, connection.id, months);
+  return syncWalletNowAction();
 }
 
 /**

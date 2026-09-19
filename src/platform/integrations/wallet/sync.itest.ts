@@ -6,18 +6,20 @@ import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { listTransactions } from "@/modules/transactions/queries";
+import { listCategories } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { addDays } from "@/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
 import { WALLET_PROVIDER } from "../rules";
-import { listConnections, listRuns, readSyncJob, saveConnection } from "../service";
+import { listConnections, listRuns, readSyncJob, resolveExternal, saveConnection } from "../service";
 import { WalletError, type WalletClientOptions } from "./client";
 import {
   MAX_WINDOW_REMOVAL_SHARE,
   RemovalRefusedError,
   SyncBusyError,
   isSyncBusy,
+  requestWalletBackfill,
   syncWalletNow,
 } from "./sync";
 
@@ -207,6 +209,39 @@ describe("syncWalletNow", () => {
     expect(await storedTransactions(ctx)).toHaveLength(1);
   });
 
+  it("reads as many months as a re-download asks for, and never declares anything gone doing it (F2.5)", async () => {
+    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    expect(await storedTransactions(ctx)).toHaveLength(1);
+
+    await requestWalletBackfill(ctx, connectionId, 24);
+    // Wallet no longer returns the January movement. Judged, that answer would be an empty window
+    // for an account with movements in it — refused, and the whole pass failed. A re-download only
+    // imports, so it goes through and the movement stays.
+    const again = walletStub({ records: [] });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: again.options });
+
+    expect(recordCalls(again)).toHaveLength(24);
+    expect(recordCalls(again)[0]).toContain("gte.2024-02-01");
+    expect(result.transactions).toMatchObject({ removed: 0 });
+    expect((await runsByKind(ctx)).transactions).toMatchObject({ state: "success", error: null });
+    const [movement] = await storedTransactions(ctx);
+    expect(movement.removedUpstreamAt).toBeNull();
+
+    const job = await readSyncJob(ctx, connectionId, "transactions");
+    expect(job?.cursor).toMatchObject({ backfillMonths: "24", backfilledFrom: "2024-02-01" });
+
+    // The next pass is back to the seven-day re-read, which is the one that judges.
+    const hourly = walletStub();
+    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: hourly.options });
+    expect(recordCalls(hourly)).toHaveLength(1);
+  });
+
+  it("refuses a re-download of a depth it does not offer", async () => {
+    for (const months of [0, 121, 1.5]) {
+      await expect(requestWalletBackfill(ctx, connectionId, months)).rejects.toThrow(RangeError);
+    }
+  });
+
   it("imports a movement on the day Wallet stamped it, in the user's own zone", async () => {
     const stub = walletStub();
     const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options });
@@ -224,6 +259,22 @@ describe("syncWalletNow", () => {
       removedUpstreamAt: null,
     });
     expect(movement.categoryId).not.toBeNull();
+  });
+
+  it("files a category under the Wallet group it belongs to, linked as a group (F2.5)", async () => {
+    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+
+    const [movement] = await storedTransactions(ctx);
+    const tree = await listCategories(ctx);
+    expect(tree.map((one) => [one.name, one.depth])).toEqual([
+      ["Casa", 0],
+      ["Spesa", 1],
+    ]);
+    const [casa, spesa] = tree;
+    expect(spesa.parentId).toBe(casa.id);
+    expect(movement.categoryId).toBe(spesa.id);
+    const groups = await resolveExternal(ctx, WALLET_PROVIDER, "category_group", ["wcg-casa"]);
+    expect(groups.get("wcg-casa")).toBe(casa.id);
   });
 
   it("marks a movement the re-read window no longer returns, with no grace period", async () => {

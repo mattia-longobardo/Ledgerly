@@ -23,7 +23,8 @@ export type TaxonomyActionResult = { ok: true } | { ok: false; error: string };
 
 export interface CategoryFormInput {
   name: string;
-  group: string;
+  /** The group's id, `""` for none (F2.5). */
+  parentId: string;
   type: string;
   color: string | null;
 }

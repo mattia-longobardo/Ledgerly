@@ -37,7 +37,12 @@ async function newContext(): Promise<Ctx> {
   return contextFor((await createTestUser()).id);
 }
 
-const GROCERIES = { name: "Groceries", group: "Living", type: "expense", color: "#2563EB" };
+const GROCERIES = { name: "Groceries", type: "expense", color: "#2563EB" };
+
+/** A group: a category with no parent, which sub-categories can be filed under (F2.5). */
+async function aGroup(ctx: Ctx, name = "Living", type = "expense") {
+  return createCategory(ctx, { name, type, color: null });
+}
 
 /**
  * A movement, written straight to the table: `service.ts` (T5) is what the application uses, and
@@ -96,7 +101,8 @@ describe("createCategory", () => {
     const category = await createCategory(ctx, GROCERIES);
     expect(category).toMatchObject({
       name: "Groceries",
-      group: "Living",
+      parentId: null,
+      isRoot: true,
       type: "expense",
       color: "#2563eb",
       archivedAt: null,
@@ -104,12 +110,51 @@ describe("createCategory", () => {
   });
 
   it("takes an income category with no group and no colour", async () => {
-    const category = await createCategory(ctx, { name: "Salary", group: "", type: "income", color: "" });
-    expect(category).toMatchObject({ name: "Salary", group: null, type: "income", color: null });
+    const category = await createCategory(ctx, { name: "Salary", parentId: "", type: "income", color: "" });
+    expect(category).toMatchObject({ name: "Salary", parentId: null, type: "income", color: null });
+  });
+
+  it("files a sub-category under a group, and gives it the group's type (F2.5)", async () => {
+    const living = await aGroup(ctx);
+    const salary = await createCategory(ctx, {
+      name: "Salary",
+      parentId: living.id,
+      type: "income",
+      color: null,
+    });
+    expect(salary).toMatchObject({ parentId: living.id, isRoot: false, type: "expense" });
+  });
+
+  it("takes one name under two groups, but not twice under one, nor for two groups (F2.5)", async () => {
+    const living = await aGroup(ctx, "Living");
+    const fun = await aGroup(ctx, "Fun");
+    await createCategory(ctx, { name: "Other", parentId: living.id });
+    await createCategory(ctx, { name: "Other", parentId: fun.id });
+    await expect(createCategory(ctx, { name: "Other", parentId: living.id })).rejects.toMatchObject({
+      code: "duplicate",
+    });
+    await expect(aGroup(ctx, "Fun")).rejects.toMatchObject({ code: "duplicate" });
+  });
+
+  it("refuses a parent that is a sub-category, archived, missing or somebody else's (F2.5)", async () => {
+    const living = await aGroup(ctx);
+    const groceries = await createCategory(ctx, { ...GROCERIES, parentId: living.id });
+    const archived = await aGroup(ctx, "Old");
+    await archiveCategory(ctx, archived.id);
+    const theirs = await aGroup(await newContext(), "Theirs");
+
+    for (const parentId of [groceries.id, archived.id, crypto.randomUUID(), theirs.id]) {
+      await expect(createCategory(ctx, { name: "Apples", parentId })).rejects.toMatchObject({
+        code: "invalid_parent",
+      });
+    }
+    await expect(createCategory(ctx, { name: "Apples", parentId: "not-a-uuid" })).rejects.toMatchObject({
+      code: "invalid",
+    });
   });
 
   it("defaults the type to expense", async () => {
-    expect(await createCategory(ctx, { name: "Bits", group: null, color: null })).toMatchObject({
+    expect(await createCategory(ctx, { name: "Bits", parentId: null, color: null })).toMatchObject({
       type: "expense",
     });
   });
@@ -133,16 +178,26 @@ describe("createCategory", () => {
 });
 
 describe("listCategories", () => {
-  it("orders by group, then name, and leaves the archived ones out unless asked", async () => {
-    const rent = await createCategory(ctx, { name: "Rent", group: "Living", type: "expense", color: null });
-    await createCategory(ctx, { name: "Apples", group: "Living", type: "expense", color: null });
-    await createCategory(ctx, { name: "Books", group: "Fun", type: "expense", color: null });
-    await createCategory(ctx, { name: "Loose", group: null, type: "expense", color: null });
+  it("lists each group with its sub-categories under it, and leaves the archived ones out unless asked", async () => {
+    const living = await aGroup(ctx, "Living");
+    const fun = await aGroup(ctx, "Fun");
+    const rent = await createCategory(ctx, { name: "Rent", parentId: living.id });
+    await createCategory(ctx, { name: "Apples", parentId: living.id });
+    await createCategory(ctx, { name: "Books", parentId: fun.id });
+    await createCategory(ctx, { name: "Loose" });
     await archiveCategory(ctx, rent.id);
 
-    expect((await listCategories(ctx)).map((row) => row.name)).toEqual(["Books", "Apples", "Loose"]);
-    expect((await listCategories(ctx, { includeArchived: true })).map((row) => row.name)).toEqual([
+    expect((await listCategories(ctx)).map((row) => row.name)).toEqual([
+      "Fun",
       "Books",
+      "Living",
+      "Apples",
+      "Loose",
+    ]);
+    expect((await listCategories(ctx, { includeArchived: true })).map((row) => row.name)).toEqual([
+      "Fun",
+      "Books",
+      "Living",
       "Apples",
       "Rent",
       "Loose",
@@ -153,39 +208,73 @@ describe("listCategories", () => {
 describe("listCategoriesWithUsage", () => {
   it("counts the movements filed under each category", async () => {
     const category = await createCategory(ctx, GROCERIES);
-    const unused = await createCategory(ctx, { name: "Fun", group: null, type: "expense", color: null });
+    const unused = await createCategory(ctx, { name: "Fun", type: "expense", color: null });
     const accountId = await anAccount(ctx);
     await addTransaction(ctx, accountId, category.id);
     await addTransaction(ctx, accountId, category.id);
     await addTransaction(ctx, accountId, null);
 
-    // "Living" before the ungrouped row: ascending group order puts the nulls last.
+    // Two groups, in name order.
     const rows = await listCategoriesWithUsage(ctx);
     expect(rows).toEqual([
-      { category: expect.objectContaining({ id: category.id }), usage: 2 },
-      { category: expect.objectContaining({ id: unused.id }), usage: 0 },
+      { category: expect.objectContaining({ id: unused.id }), usage: 0, depth: 0 },
+      { category: expect.objectContaining({ id: category.id }), usage: 2, depth: 0 },
     ]);
   });
 });
 
 describe("updateCategory", () => {
-  it("saves the name, group, type and colour together", async () => {
+  it("saves the name, type and colour together", async () => {
     const category = await createCategory(ctx, GROCERIES);
     const saved = await updateCategory(ctx, category.id, {
       name: "Food",
-      group: "",
+      parentId: "",
       type: "transfer",
       color: "#aabbcc",
     });
-    expect(saved).toMatchObject({ name: "Food", group: null, type: "transfer", color: "#aabbcc" });
+    expect(saved).toMatchObject({ name: "Food", parentId: null, type: "transfer", color: "#aabbcc" });
+  });
+
+  it("moves a category into a group and back out, the group's type coming with it (F2.5)", async () => {
+    const living = await aGroup(ctx, "Living", "expense");
+    const salary = await createCategory(ctx, { name: "Salary", type: "income" });
+
+    const moved = await updateCategory(ctx, salary.id, {
+      name: "Salary",
+      parentId: living.id,
+      type: "income",
+    });
+    expect(moved).toMatchObject({ parentId: living.id, type: "expense" });
+
+    const out = await updateCategory(ctx, salary.id, { name: "Salary", parentId: null, type: "income" });
+    expect(out).toMatchObject({ parentId: null, type: "income" });
+  });
+
+  it("takes a group's sub-categories along when its type changes (F2.5)", async () => {
+    const living = await aGroup(ctx, "Income", "expense");
+    const salary = await createCategory(ctx, { name: "Salary", parentId: living.id });
+    await updateCategory(ctx, living.id, { name: "Income", type: "income" });
+    expect(await getCategory(ctx, salary.id)).toMatchObject({ type: "income" });
+  });
+
+  it("refuses a parent for a group that has sub-categories, and a category as its own parent (F2.5)", async () => {
+    const living = await aGroup(ctx, "Living");
+    const fun = await aGroup(ctx, "Fun");
+    await createCategory(ctx, { name: "Rent", parentId: living.id });
+    await expect(updateCategory(ctx, living.id, { name: "Living", parentId: fun.id })).rejects.toMatchObject({
+      code: "invalid_parent",
+    });
+    await expect(updateCategory(ctx, fun.id, { name: "Fun", parentId: fun.id })).rejects.toMatchObject({
+      code: "invalid_parent",
+    });
   });
 
   it("refuses a name another category already has", async () => {
     await createCategory(ctx, GROCERIES);
-    const other = await createCategory(ctx, { name: "Fun", group: null, type: "expense", color: null });
-    await expect(
-      updateCategory(ctx, other.id, { ...GROCERIES, group: null, color: null }),
-    ).rejects.toMatchObject({ code: "duplicate" });
+    const other = await createCategory(ctx, { name: "Fun", type: "expense", color: null });
+    await expect(updateCategory(ctx, other.id, { ...GROCERIES, color: null })).rejects.toMatchObject({
+      code: "duplicate",
+    });
   });
 
   it("reports a category that is not there", async () => {
@@ -197,10 +286,11 @@ describe("updateCategory", () => {
 });
 
 describe("renameCategory", () => {
-  it("changes the name and keeps the rest", async () => {
-    const category = await createCategory(ctx, GROCERIES);
+  it("changes the name and keeps the rest, its group included", async () => {
+    const living = await aGroup(ctx);
+    const category = await createCategory(ctx, { ...GROCERIES, parentId: living.id });
     const renamed = await renameCategory(ctx, category.id, "Food");
-    expect(renamed).toMatchObject({ name: "Food", group: "Living", type: "expense", color: "#2563eb" });
+    expect(renamed).toMatchObject({ name: "Food", parentId: living.id, type: "expense", color: "#2563eb" });
   });
 });
 
@@ -221,6 +311,23 @@ describe("archiveCategory", () => {
   it("reports a category that is not there", async () => {
     await expect(archiveCategory(ctx, crypto.randomUUID())).rejects.toMatchObject({ code: "not_found" });
   });
+
+  it("archives a group with its sub-categories, and restores the group alone (F2.5)", async () => {
+    const living = await aGroup(ctx);
+    const rent = await createCategory(ctx, { name: "Rent", parentId: living.id });
+    const food = await createCategory(ctx, { name: "Food", parentId: living.id });
+    await archiveCategory(ctx, food.id);
+    const foodArchivedAt = (await getCategory(ctx, food.id)).archivedAt;
+
+    await archiveCategory(ctx, living.id);
+    expect((await getCategory(ctx, rent.id)).archivedAt).toBeInstanceOf(Date);
+    // Already archived before: its own moment is kept.
+    expect((await getCategory(ctx, food.id)).archivedAt).toEqual(foodArchivedAt);
+
+    await restoreCategory(ctx, living.id);
+    expect((await getCategory(ctx, living.id)).archivedAt).toBeNull();
+    expect((await getCategory(ctx, rent.id)).archivedAt).toBeInstanceOf(Date);
+  });
 });
 
 describe("adoptOrCreateCategory", () => {
@@ -228,7 +335,7 @@ describe("adoptOrCreateCategory", () => {
 
   it("creates the category when nothing matches, and files the link", async () => {
     const created = await adoptOrCreateCategory(ctx, "Groceries", external);
-    expect(created).toMatchObject({ name: "Groceries", type: "expense", group: null, color: null });
+    expect(created).toMatchObject({ name: "Groceries", type: "expense", parentId: null, color: null });
 
     const links = await resolveExternal(ctx, WALLET_PROVIDER, "category", [external.externalId]);
     expect(links.get(external.externalId)).toBe(created.id);
@@ -346,6 +453,137 @@ describe("adoptOrCreateCategory", () => {
 
     expect(await listCategories(ctx)).toHaveLength(1);
     expect(await listCategoriesWithUsage(ctx)).toMatchObject([{ category: { id: local.id }, usage: 3 }]);
+  });
+});
+
+/** Spec §9.1, F2.5: Wallet's group of a category becomes its parent here. */
+describe("adoptOrCreateCategory with a provider group", () => {
+  const external = { provider: WALLET_PROVIDER, externalId: "w-cat-1" };
+  const food = { name: "Food & Drinks", externalId: "w-group-1" };
+
+  async function groupLink(externalId = food.externalId) {
+    return (await resolveExternal(ctx, WALLET_PROVIDER, "category_group", [externalId])).get(externalId);
+  }
+
+  it("files a new category under the group, creating the group and linking both", async () => {
+    const groceries = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    const [group] = (await listCategories(ctx)).filter((one) => one.parentId === null);
+    expect(group).toMatchObject({ name: "Food & Drinks", type: "expense" });
+    expect(groceries).toMatchObject({ name: "Groceries", parentId: group.id });
+    expect(await groupLink()).toBe(group.id);
+
+    // A second category of the same group goes under the same row.
+    const restaurant = await adoptOrCreateCategory(
+      ctx,
+      "Restaurant",
+      { provider: WALLET_PROVIDER, externalId: "w-cat-2" },
+      food,
+    );
+    expect(restaurant.parentId).toBe(group.id);
+    expect((await listCategories(ctx)).map((one) => one.name)).toEqual([
+      "Food & Drinks",
+      "Groceries",
+      "Restaurant",
+    ]);
+  });
+
+  it("follows the group's link through a rename, here or in the provider", async () => {
+    const groceries = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    const groupId = groceries.parentId as string;
+    await renameCategory(ctx, groupId, "Cibo");
+
+    const again = await adoptOrCreateCategory(ctx, "Groceries", external, { ...food, name: "Food" });
+    expect(again).toMatchObject({ id: groceries.id, parentId: groupId });
+    expect(await listCategories(ctx)).toHaveLength(2);
+  });
+
+  it("puts a category adopted before groups existed under its group, when the types agree", async () => {
+    // F2 adopted every Wallet category as a top-level one: the next sync files it.
+    const before = await adoptOrCreateCategory(ctx, "Groceries", external);
+    const after = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    expect(after.id).toBe(before.id);
+    expect(after.parentId).not.toBeNull();
+  });
+
+  it("gives a new group the type of the category it is created for", async () => {
+    const salary = await createCategory(ctx, { name: "Salary", type: "income" });
+    const adopted = await adoptOrCreateCategory(ctx, "Salary", external, {
+      name: "Income",
+      externalId: "w-group-9",
+    });
+    expect(adopted).toMatchObject({ id: salary.id, type: "income" });
+    expect(await getCategory(ctx, adopted.parentId as string)).toMatchObject({
+      name: "Income",
+      type: "income",
+    });
+  });
+
+  it("leaves a category where it is when the group has another type", async () => {
+    await aGroup(ctx, "Food & Drinks", "expense");
+    const salary = await createCategory(ctx, { name: "Salary", type: "income" });
+    const adopted = await adoptOrCreateCategory(ctx, "Salary", external, food);
+    expect(adopted).toMatchObject({ id: salary.id, parentId: null, type: "income" });
+  });
+
+  it("never moves a category that already has a group", async () => {
+    const mine = await aGroup(ctx, "Mine");
+    const groceries = await createCategory(ctx, { name: "Groceries", parentId: mine.id });
+    await linkExternal(ctx, {
+      provider: WALLET_PROVIDER,
+      entityType: "category",
+      entityId: groceries.id,
+      externalId: external.externalId,
+    });
+    const adopted = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    expect(adopted).toMatchObject({ id: groceries.id, parentId: mine.id });
+  });
+
+  it("never puts back a category somebody took out of its group by hand (spec §7.2)", async () => {
+    // The sync files a parentless category under its group, and a category somebody took out of it
+    // is parentless too: without a marker, the next pass undid that choice every hour.
+    const groceries = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    await updateCategory(ctx, groceries.id, { name: "Groceries", parentId: null });
+
+    const again = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    expect(again).toMatchObject({ id: groceries.id, parentId: null, parentSetLocally: true });
+  });
+
+  it("files a category named like its group under the group itself, not under a twin", async () => {
+    const others = await adoptOrCreateCategory(ctx, "Others", external, {
+      name: "Others",
+      externalId: "w-group-2",
+    });
+    expect(others.parentId).toBeNull();
+    expect(await listCategories(ctx)).toHaveLength(1);
+    expect(await groupLink("w-group-2")).toBe(others.id);
+  });
+
+  it("keeps the category when the group's name is one the column cannot hold", async () => {
+    const groceries = await adoptOrCreateCategory(ctx, "Groceries", external, {
+      name: "x".repeat(61),
+      externalId: null,
+    });
+    expect(groceries).toMatchObject({ name: "Groceries", parentId: null });
+  });
+
+  it("keeps going when two of the provider's groups share one local name", async () => {
+    // Production, 2026-09-18: two Wallet groups with different ids reached the same local group,
+    // and the second link failed the whole transactions pass, every hour.
+    const first = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    const second = await adoptOrCreateCategory(
+      ctx,
+      "Restaurant",
+      { provider: WALLET_PROVIDER, externalId: "w-cat-2" },
+      { name: food.name, externalId: "w-group-2" },
+    );
+    expect(second.parentId).toBe(first.parentId);
+  });
+
+  it("changes nothing when it runs twice", async () => {
+    const first = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    const second = await adoptOrCreateCategory(ctx, "Groceries", external, food);
+    expect(second).toMatchObject({ id: first.id, parentId: first.parentId });
+    expect(await listCategories(ctx)).toHaveLength(2);
   });
 });
 
@@ -519,6 +757,9 @@ describe("isolation between users", () => {
     await expect(renameCategory(other, category.id, "Stolen")).rejects.toMatchObject({ code: "not_found" });
     await expect(archiveCategory(other, category.id)).rejects.toMatchObject({ code: "not_found" });
     await expect(restoreCategory(other, category.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(createCategory(other, { name: "Mine now", parentId: category.id })).rejects.toMatchObject({
+      code: "invalid_parent",
+    });
     await expect(renameLabel(other, label.id, "Stolen")).rejects.toMatchObject({ code: "not_found" });
     await expect(updateLabel(other, label.id, { name: "Stolen", color: null })).rejects.toMatchObject({
       code: "not_found",

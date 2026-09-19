@@ -13,6 +13,7 @@ import {
   listTransactions,
   monthlyTotals,
   searchPayees,
+  spendingOverTime,
   transactionsSummary,
 } from "./queries";
 import type { IncomingTransaction } from "./rules";
@@ -21,13 +22,21 @@ import {
   clearRemovedUpstream,
   hideTransaction,
   hideTransactions,
+  linkOwnTransfers,
   markRemovedUpstream,
   restoreTransactions,
   setCategory,
   updateTransaction,
   upsertFromProvider,
 } from "./service";
-import { createCategory, createLabel, deleteLabel, listCategories, listLabels } from "./taxonomy";
+import {
+  createCategory,
+  createLabel,
+  deleteLabel,
+  listCategories,
+  listLabels,
+  updateCategory,
+} from "./taxonomy";
 
 function contextFor(userId: string): Ctx {
   return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
@@ -37,13 +46,13 @@ async function newContext(): Promise<Ctx> {
   return contextFor((await createTestUser()).id);
 }
 
-async function anAccount(ctx: Ctx, name = "ING Conto Arancio"): Promise<string> {
+async function anAccount(ctx: Ctx, name = "ING Conto Arancio", reference = ""): Promise<string> {
   const account = await createAccount(ctx, {
     name,
     type: "checking",
     currency: "EUR",
     color: null,
-    reference: "",
+    reference,
     purpose: "",
     openedOn: null,
     notes: "",
@@ -66,6 +75,8 @@ function movement(overrides: Partial<IncomingTransaction> = {}): IncomingTransac
     note: null,
     categoryExternalId: "wc-1",
     categoryName: "Groceries",
+    categoryGroupExternalId: null,
+    categoryGroupName: null,
     labels: ["Food"],
     ...overrides,
   };
@@ -493,7 +504,7 @@ describe("visibility", () => {
   it("hides a movement, keeps it out of the lists and totals, and restores it", async () => {
     await hideTransaction(ctx, id);
     expect(await listTransactions(ctx, {})).toEqual([]);
-    expect((await transactionsSummary(ctx, {})).totalCents).toBe(0n);
+    expect((await transactionsSummary(ctx, {})).netCents).toBe(0n);
     expect((await listTransactions(ctx, { includeHidden: true }))[0].hidden).toBe(true);
 
     expect(await restoreTransactions(ctx, [id])).toBe(1);
@@ -521,7 +532,7 @@ describe("visibility", () => {
     expect(await transactionsSummary(ctx, { includeHidden: true })).toEqual(
       await transactionsSummary(ctx, {}),
     );
-    expect((await transactionsSummary(ctx, { includeHidden: true })).totalCents).toBe(-1_000n);
+    expect((await transactionsSummary(ctx, { includeHidden: true })).netCents).toBe(-1_000n);
     expect(await categoryTotals(ctx, { includeHidden: true })).toEqual(await categoryTotals(ctx, {}));
     expect((await categoryTotals(ctx, { includeHidden: true })).map((slice) => slice.name)).toEqual([
       "Utilities",
@@ -530,11 +541,11 @@ describe("visibility", () => {
 
     const view = await expensesView(ctx, { includeHidden: true });
     expect(view.rows).toHaveLength(2);
-    expect(view.summary).toMatchObject({ count: 1, totalCents: -1_000n });
+    expect(view.summary).toMatchObject({ count: 1, netCents: -1_000n });
     expect(view.listCount).toBe(2);
     expect(view.truncated).toBe(false);
     expect(view.months).toHaveLength(1);
-    expect(view.months[0]).toMatchObject({ count: 1, totalCents: -1_000n });
+    expect(view.months[0]).toMatchObject({ count: 1, netCents: -1_000n });
     expect(view.months[0].rows).toHaveLength(2);
   });
 
@@ -542,7 +553,7 @@ describe("visibility", () => {
     await markRemovedUpstream(ctx, [id]);
 
     expect(await listTransactions(ctx, { includeHidden: true })).toHaveLength(1);
-    expect((await transactionsSummary(ctx, { includeHidden: true })).totalCents).toBe(0n);
+    expect((await transactionsSummary(ctx, { includeHidden: true })).netCents).toBe(0n);
     expect(await categoryTotals(ctx, { includeHidden: true })).toEqual([]);
     expect(await monthlyTotals(ctx, { includeHidden: true })).toEqual([]);
   });
@@ -623,14 +634,23 @@ describe("reads", () => {
   it("groups by the user's month, newest first", async () => {
     const months = await monthlyTotals(ctx, {});
     expect(months).toEqual([
-      { month: "2026-03-01", count: 3, totalCents: -25_000n },
-      { month: "2026-02-01", count: 1, totalCents: -6_000n },
+      // The Revolut giroconto is one of March's rows and, its other leg being elsewhere, part of
+      // March's cash flow (spec §7.2, 2026-09-19), though none of its spending.
+      { month: "2026-03-01", count: 3, netCents: -25_000n },
+      { month: "2026-02-01", count: 1, netCents: -6_000n },
     ]);
 
     const view = await expensesView(ctx, { from: "2026-03-01", to: "2026-03-31" });
     expect(view.months.map((group) => group.month)).toEqual(["2026-03-01"]);
-    expect(view.months[0]).toMatchObject({ count: 3, totalCents: -25_000n });
-    expect(view.summary).toMatchObject({ count: 3, totalCents: -25_000n, expenseCents: -5_000n });
+    expect(view.months[0]).toMatchObject({ count: 3, netCents: -25_000n });
+    expect(view.summary).toEqual({
+      count: 3,
+      incomeCents: 0n,
+      expenseCents: -5_000n,
+      netCents: -25_000n,
+      transferCount: 1,
+      unpairedTransferCount: 1,
+    });
     expect(view.listCount).toBe(3);
     expect(view.truncated).toBe(false);
     expect(view.hasAny).toBe(true);
@@ -644,7 +664,7 @@ describe("reads", () => {
 
     expect(view.rows.map((row) => row.payee)).toEqual(["Revolut", "Esselunga"]);
     expect(view.months.map((group) => group.month)).toEqual(["2026-03-01"]);
-    expect(view.months[0]).toMatchObject({ count: 3, totalCents: -25_000n });
+    expect(view.months[0]).toMatchObject({ count: 3, netCents: -25_000n });
     expect(view.months[0].rows).toHaveLength(2);
     expect(view.listCount).toBe(4);
     expect(view.truncated).toBe(true);
@@ -657,6 +677,9 @@ describe("reads", () => {
         categoryId: slices[0].categoryId,
         name: "Groceries",
         color: null,
+        parentId: null,
+        parentName: null,
+        parentColor: null,
         count: 2,
         totalCents: -5_000n,
         share: 100,
@@ -683,6 +706,102 @@ describe("reads", () => {
     ]);
     expect(await listTransactions(ctx, { accountIds: [accountId] })).toHaveLength(4);
     expect(await listTransactions(ctx, { accountIds: [] })).toHaveLength(4);
+  });
+
+  it("keeps a giroconto out of income and spending, and cancels it out of the net when both legs are in view", async () => {
+    // The other leg lands on a second account, so the pair is complete: filtering on the first
+    // account used to show −200,00 € of "spending" that was only money changing pockets.
+    const savings = await anAccount(ctx, "Revolut Savings");
+    await upsertFromProvider(ctx, savings, [
+      movement({
+        externalId: "w-5",
+        occurredAt: new Date("2026-03-12T09:00:00Z"),
+        amountCents: 20_000n,
+        type: "income",
+        payee: "Revolut",
+        counterpartExternalId: "w-4",
+        categoryExternalId: null,
+        categoryName: null,
+        labels: [],
+      }),
+    ]);
+
+    const checkingOnly = await transactionsSummary(ctx, { ...MARCH, accountIds: [accountId] });
+    expect(checkingOnly).toEqual({
+      count: 3,
+      incomeCents: 0n,
+      expenseCents: -5_000n,
+      // One account's own cash flow: the 200,00 € did leave it.
+      netCents: -25_000n,
+      transferCount: 1,
+      unpairedTransferCount: 0,
+    });
+    const savingsOnly = await transactionsSummary(ctx, { ...MARCH, accountIds: [savings] });
+    expect(savingsOnly).toMatchObject({ count: 1, incomeCents: 0n, netCents: 20_000n, transferCount: 1 });
+    // Both accounts in view: the two legs cancel, and the net is the spending alone.
+    expect(await transactionsSummary(ctx, MARCH)).toMatchObject({ expenseCents: -5_000n, netCents: -5_000n });
+
+    expect(await monthlyTotals(ctx, { ...MARCH, accountIds: [accountId] })).toEqual([
+      { month: "2026-03-01", count: 3, netCents: -25_000n },
+    ]);
+    const view = await expensesView(ctx, MARCH);
+    expect(view.facets.types).toEqual([
+      { type: "expense", count: 2 },
+      { type: "transfer", count: 2 },
+    ]);
+    // A type filter narrows the list, and the facet it came from still counts every type.
+    const transfers = await expensesView(ctx, { ...MARCH, types: ["transfer"] });
+    expect(transfers.rows.map((row) => row.payee)).toEqual(["Revolut", "Revolut"]);
+    expect(transfers.facets.types).toEqual(view.facets.types);
+  });
+
+  it("takes a group's sub-categories in when the filter names the group, and says whose they are (F2.5)", async () => {
+    const living = await createCategory(ctx, { name: "Living" });
+    const groceries = (await listCategories(ctx)).find((one) => one.name === "Groceries");
+    const utilities = (await listCategories(ctx)).find((one) => one.name === "Utilities");
+    await updateCategory(ctx, groceries?.id ?? "", { name: "Groceries", parentId: living.id });
+    await updateCategory(ctx, utilities?.id ?? "", { name: "Utilities", parentId: living.id });
+
+    const payees = async (categoryIds: (string | null)[]) =>
+      (await listTransactions(ctx, { categoryIds })).map((row) => row.payee);
+    expect(await payees([living.id])).toEqual(["Esselunga", "Late Night", "Enel"]);
+    expect(await payees([groceries?.id ?? ""])).toEqual(["Esselunga", "Late Night"]);
+    expect(await payees([living.id, null])).toEqual(["Revolut", "Esselunga", "Late Night", "Enel"]);
+
+    const slices = await categoryTotals(ctx, {});
+    expect(slices.map((slice) => [slice.name, slice.parentName])).toEqual([
+      ["Utilities", "Living"],
+      ["Groceries", "Living"],
+    ]);
+    expect(slices[0]).toMatchObject({ parentId: living.id, parentColor: null });
+  });
+
+  it("adds up the spending per day or per month and per group, giroconti left out (F2.5)", async () => {
+    const living = await createCategory(ctx, { name: "Living" });
+    const groceries = (await listCategories(ctx)).find((one) => one.name === "Groceries");
+    await updateCategory(ctx, groceries?.id ?? "", { name: "Groceries", parentId: living.id });
+    const utilities = (await listCategories(ctx)).find((one) => one.name === "Utilities");
+
+    // March by day: the two Groceries movements under their group, the −200 € giroconto nowhere.
+    expect(await spendingOverTime(ctx, MARCH, "day")).toEqual([
+      { bucket: "2026-03-02", groupId: living.id, groupName: "Living", groupColor: null, cents: 1_000n },
+      { bucket: "2026-03-10", groupId: living.id, groupName: "Living", groupColor: null, cents: 4_000n },
+    ]);
+    // By month, February's Enel under its own (ungrouped) category.
+    expect(await spendingOverTime(ctx, {}, "month")).toEqual([
+      {
+        bucket: "2026-02-01",
+        groupId: utilities?.id,
+        groupName: "Utilities",
+        groupColor: null,
+        cents: 6_000n,
+      },
+      { bucket: "2026-03-01", groupId: living.id, groupName: "Living", groupColor: null, cents: 5_000n },
+    ]);
+    // The other filters narrow it, the type filter does not turn it into something else.
+    expect(await spendingOverTime(ctx, { ...MARCH, payee: "essel", types: ["income"] }, "day")).toEqual([
+      { bucket: "2026-03-10", groupId: living.id, groupName: "Living", groupColor: null, cents: 4_000n },
+    ]);
   });
 
   it("sorts by amount and by payee, deterministically", async () => {
@@ -826,9 +945,11 @@ describe("isolation between users (spec §4.4, §11)", () => {
     expect(await searchPayees(intruder, "essel")).toEqual([]);
     expect(await transactionsSummary(intruder, {})).toEqual({
       count: 0,
-      totalCents: 0n,
       incomeCents: 0n,
       expenseCents: 0n,
+      netCents: 0n,
+      transferCount: 0,
+      unpairedTransferCount: 0,
     });
     const view = await expensesView(intruder, {});
     expect(view.rows).toEqual([]);
@@ -870,5 +991,35 @@ describe("isolation between users (spec §4.4, §11)", () => {
     expect(mine[0].id).not.toBe(theirs[0].id);
     expect(theirs[0].payee).toBe("Their Esselunga");
     expect((await listCategories(intruder)).map((one) => one.name)).toEqual(["Groceries"]);
+  });
+});
+
+describe("linkOwnTransfers (F2.5)", () => {
+  beforeEach(resetDatabase);
+  afterAll(closeDatabase);
+
+  it("pairs the two legs of a giroconto Wallet left unlinked, and leaves its income and spending alone", async () => {
+    const ctx = await newContext();
+    // ISO 13616's example IBANs: valid check digits, nobody's account.
+    const ing = await anAccount(ctx, "ING", "IT60 X054 2811 1010 0000 0123 456");
+    const revolut = await anAccount(ctx, "Revolut", "GB82WEST12345698765432");
+    const out = { amountCents: -50_000n, payee: "Bonifico", note: "A GB82 WEST 1234 5698 7654 32" };
+    await upsertFromProvider(ctx, ing, [
+      movement({ externalId: "w-out", type: "transfer", ...out }),
+      // Names Revolut's IBAN too, but Wallet counts it as spending: so does the app.
+      movement({ externalId: "w-gift", amountCents: -2_500n, note: "GB82WEST12345698765432" }),
+    ]);
+    await upsertFromProvider(ctx, revolut, [
+      movement({ externalId: "w-in", type: "transfer", amountCents: 50_000n, payee: "Mario", note: null }),
+    ]);
+    expect((await transactionsSummary(ctx)).unpairedTransferCount).toBe(2);
+
+    expect(await linkOwnTransfers(ctx)).toBe(2);
+    expect(await transactionsSummary(ctx)).toMatchObject({
+      expenseCents: -2_500n,
+      transferCount: 2,
+      unpairedTransferCount: 0,
+    });
+    expect(await linkOwnTransfers(ctx)).toBe(0);
   });
 });

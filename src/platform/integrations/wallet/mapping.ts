@@ -19,6 +19,7 @@ import {
   monthKey,
 } from "@/platform/dates";
 import { type Cents, centsFromNumber, parseCents } from "@/platform/money";
+import { FIRST_LINK_MONTHS } from "./depth";
 
 /**
  * A money field as it reaches a schema. Wallet sends money as a JSON number; `client.ts` parses
@@ -64,6 +65,9 @@ export const walletRecordCategorySchema = z.object({
   // An object `{ id, name }`, the same shape `/categories` publishes — not a string.
   group: z.object({ id: z.string().nullish(), name: z.string().nullish() }).nullish(),
   color: z.string().nullish(),
+  // Wallet's own identity for its built-in categories, the same in every language:
+  // `system_categories__transfer` is how Wallet itself tells a giroconto (see WALLET_TRANSFER_CATEGORY).
+  systemId: z.string().nullish(),
 });
 
 /**
@@ -134,6 +138,7 @@ export const walletCategorySchema = z.object({
   name: z.string(),
   group: z.object({ id: z.string().nullish(), name: z.string().nullish() }).nullish(),
   color: z.string().nullish(),
+  systemId: z.string().nullish(),
 });
 export type WalletCategoryPayload = z.infer<typeof walletCategorySchema>;
 
@@ -227,6 +232,14 @@ export interface WalletTransaction {
    * having to be found in the `/categories` list.
    */
   categoryName: string | null;
+  /**
+   * The category's group, `{ id, name }` on the record (F2.5): it becomes the category's parent
+   * here. Either half may be missing; without a name there is nothing to adopt.
+   */
+  categoryGroupExternalId: string | null;
+  categoryGroupName: string | null;
+  /** Wallet's `systemId` of a built-in category (`system_categories__transfer`…), `null` otherwise. */
+  categorySystemId: string | null;
   /** Provider label *names*: §9.1 adopts labels by name, so there is no external id to keep. */
   labels: string[];
   /** Wallet's own `recordType`/`recordState`, lower-cased, `null` when absent. Mapping them onto
@@ -245,8 +258,18 @@ export interface WalletTransaction {
 export interface WalletCategory {
   externalId: string;
   name: string;
+  groupExternalId: string | null;
   groupName: string | null;
+  systemId: string | null;
 }
+
+/**
+ * Wallet's `systemId` of its built-in "Transfer" category. Wallet files a movement between two of
+ * the user's accounts under it — also one it did not link to its other leg — and leaves it out of
+ * its income and expense statistics; the app does the same (spec §7.2, 2026-09-18). The id holds in
+ * every language, where the name ("Transfer", "Trasferimento"…) does not.
+ */
+export const WALLET_TRANSFER_CATEGORY = "system_categories__transfer";
 
 /**
  * Wallet's own type vocabulary (spec §9.1), lower-cased so a casing change upstream is not a
@@ -411,6 +434,9 @@ export function mapWalletRecord(raw: WalletRecordPayload): WalletTransaction {
     note: optionalText(raw.note),
     categoryExternalId: optionalText(raw.category?.id),
     categoryName: optionalText(raw.category?.name),
+    categoryGroupExternalId: optionalText(raw.category?.group?.id),
+    categoryGroupName: optionalText(raw.category?.group?.name),
+    categorySystemId: optionalText(raw.category?.systemId),
     labels: walletLabelNames(raw.labels),
     providerType: optionalText(raw.recordType)?.toLowerCase() ?? null,
     providerState: optionalText(raw.recordState)?.toLowerCase() ?? null,
@@ -422,7 +448,9 @@ export function mapWalletCategory(raw: WalletCategoryPayload): WalletCategory {
   return {
     externalId: raw.id,
     name: raw.name.trim(),
+    groupExternalId: optionalText(raw.group?.id),
     groupName: optionalText(raw.group?.name),
+    systemId: optionalText(raw.systemId),
   };
 }
 
@@ -432,8 +460,8 @@ export interface DateWindow {
   to: CivilDate;
 }
 
-/** The first link fetches twelve months (spec §9.1). */
-export const FIRST_LINK_MONTHS = 12;
+/** The first link fetches twelve months (spec §9.1); the constant lives in `depth.ts` since F2.5. */
+export { FIRST_LINK_MONTHS };
 /** The hourly pass re-reads the last seven days (spec §9.1); the schedule itself is the job's. */
 export const REREAD_DAYS = 7;
 /**

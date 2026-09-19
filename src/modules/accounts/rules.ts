@@ -3,6 +3,7 @@ import {
   addMonths,
   type CivilDate,
   isCivilDate,
+  lastDayOfMonth,
   type MonthKey,
   monthKey,
   monthsApart,
@@ -22,7 +23,11 @@ export const ACCOUNT_TYPES = [
 ] as const;
 export const ACCOUNT_STATES = ["active", "unavailable", "archived"] as const;
 export const ACCOUNT_ORIGINS = ["manual", "synced"] as const;
-export const BALANCE_SOURCES = ["manual", "provider", "system", "import"] as const;
+/**
+ * `derived` (F2.5) is a month end rebuilt from the movements (`deriveMonthEnds`): it loses to every
+ * other source, and is rewritten from scratch whenever the readings or the movements change.
+ */
+export const BALANCE_SOURCES = ["manual", "provider", "system", "import", "derived"] as const;
 export const REMINDERS = ["monthly", "quarterly", "never"] as const;
 export const TRENDS = ["hold", "interpolate"] as const;
 export const SNAPSHOT_STATES = ["success", "warning", "failed"] as const;
@@ -139,6 +144,142 @@ export function isStale(lastSyncedAt: Date | null, staleAfterHours: number, now:
 export interface BalancePoint {
   on: CivilDate;
   cents: Cents;
+  /** Rebuilt from the movements rather than read (F2.5): the charts draw it dashed. */
+  derived?: boolean;
+}
+
+/** One day's net of an account's movements, as `dailyNetByAccount` gives it. */
+export interface DailyNet {
+  on: CivilDate;
+  cents: Cents;
+}
+
+/**
+ * The month ends of a synced account rebuilt from its movements (spec §7.1, F2.5).
+ *
+ * A month that holds **any** reading gets nothing: `monthlyPoints` takes a month's latest day
+ * before its source, so a derived point on the 31st would beat a real reading of the 20th. Every
+ * other month end between the month before the first movement and the latest reading gets the
+ * nearest reading **after** it, minus what moved in between — so a gap between two readings is
+ * filled too, and each value leans on the closest thing actually known. Before the month of the
+ * first movement nothing is known about the history, and nothing is written.
+ *
+ * `observed` must hold one reading per day at most (the best source of that day); `daily` is sorted
+ * by day. A day's movements count up to and including the reading of that day, which is how a
+ * balance read today already contains today's movements.
+ */
+export function deriveMonthEnds(
+  observed: readonly BalancePoint[],
+  daily: readonly DailyNet[],
+): BalancePoint[] {
+  if (observed.length === 0 || daily.length === 0) return [];
+  const readings = [...observed].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
+  const readMonths = new Set(readings.map((reading) => monthKey(reading.on)));
+  const latest = readings[readings.length - 1].on;
+
+  const movedThrough = movementsThrough(daily);
+
+  const derived: BalancePoint[] = [];
+  for (
+    let month = addMonths(monthKey(daily[0].on), -1);
+    lastDayOfMonth(month) < latest;
+    month = addMonths(month, 1)
+  ) {
+    if (readMonths.has(month)) continue;
+    const end = lastDayOfMonth(month);
+    const next = readings.find((reading) => reading.on > end);
+    if (!next) break;
+    derived.push({ on: end, cents: next.cents - (movedThrough(next.on) - movedThrough(end)), derived: true });
+  }
+  return derived;
+}
+
+/**
+ * Everything an account moved on or before a day, from its daily nets (sorted by day): prefix sums
+ * and a binary search, so "what moved in (a, b]" is one subtraction whatever the history's length.
+ */
+function movementsThrough(daily: readonly DailyNet[]): (on: CivilDate) => Cents {
+  const cumulative: Cents[] = [];
+  let running = 0n;
+  for (const day of daily) {
+    running += day.cents;
+    cumulative.push(running);
+  }
+  return (on) => {
+    let low = 0;
+    let high = daily.length;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (daily[middle].on <= on) low = middle + 1;
+      else high = middle;
+    }
+    return low === 0 ? 0n : cumulative[low - 1];
+  };
+}
+
+/**
+ * An account's balance on each of `days` (F2.5), for Account detail's day grain.
+ *
+ * `movements` (a synced account): the nearest reading on or after the day, minus what moved in
+ * between — so a reading, or a correction typed by hand, is never walked over — and past the latest
+ * reading, that reading plus what moved since. Days before the first reading are rebuilt and flagged
+ * `estimated`, like the month ends of `deriveMonthEnds`, and nothing is rebuilt before the month the
+ * first movement falls in. `hold` (a manual account, or one with no movements): the last entry
+ * carries until the next, and a day before the first one is unknown.
+ *
+ * `readings` holds one value per day at most; `daily` is sorted by day.
+ */
+export function dailySeries(
+  readings: readonly BalancePoint[],
+  daily: readonly DailyNet[],
+  days: readonly CivilDate[],
+  mode: "movements" | "hold",
+): { values: (Cents | null)[]; estimated: boolean[] } {
+  const sorted = [...readings].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
+  const held = (day: CivilDate): Cents | null => {
+    let value: Cents | null = null;
+    for (const reading of sorted) {
+      if (reading.on > day) break;
+      value = reading.cents;
+    }
+    return value;
+  };
+  if (mode === "hold" || daily.length === 0 || sorted.length === 0) {
+    return { values: days.map(held), estimated: days.map(() => false) };
+  }
+
+  const movedThrough = movementsThrough(daily);
+  const earliest = lastDayOfMonth(addMonths(monthKey(daily[0].on), -1));
+  const first = sorted[0];
+  const latest = sorted[sorted.length - 1];
+  const values = days.map((day) => {
+    if (day < earliest) return held(day);
+    const next = sorted.find((reading) => reading.on >= day);
+    if (next) return next.cents - (movedThrough(next.on) - movedThrough(day));
+    return latest.cents + (movedThrough(day) - movedThrough(latest.on));
+  });
+  return { values, estimated: days.map((day, i) => values[i] !== null && day < first.on) };
+}
+
+/**
+ * Which months of a chart stand on a derived point (F2.5), with the same carrying forward as
+ * `monthEndSeries`: a month takes the flag of the point its value comes from. A month before the
+ * first point is a gap in the series, and a gap is not an estimate.
+ */
+export function estimatedMonths(points: readonly BalancePoint[], months: readonly MonthKey[]): boolean[] {
+  if (months.length === 0) return [];
+  const first = months[0];
+  const anchors = new Map<number, boolean>();
+  for (const point of points) anchors.set(monthsApart(first, monthKey(point.on)), point.derived === true);
+  const indexes = [...anchors.keys()].sort((a, b) => a - b);
+  return months.map((_, i) => {
+    let previous: number | null = null;
+    for (const index of indexes) {
+      if (index <= i) previous = index;
+      else break;
+    }
+    return previous === null ? false : (anchors.get(previous) as boolean);
+  });
 }
 
 function roundedBetween(from: Cents, to: Cents, step: number, span: number): Cents {

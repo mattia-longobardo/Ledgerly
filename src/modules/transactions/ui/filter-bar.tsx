@@ -2,6 +2,7 @@ import { Check, ChevronDown, Landmark, Search, Tag as TagIcon } from "lucide-rea
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { LinkTabs, type Params, PeriodStepper, withParams } from "@/modules/accounts/ui/controls";
+import { TRANSACTION_TYPES, type TransactionType } from "@/modules/transactions/rules";
 import type { UiLocale } from "@/platform/format";
 import { IconButton } from "@/ui/button";
 import { cn } from "@/ui/cn";
@@ -46,7 +47,8 @@ function Dot({ color }: { color: string | null }) {
 
 /**
  * The filter row of the design: the date range with its stepper, its four presets and its
- * two-month picker, then categories, account, "Show hidden", the payee search and "Clear filters".
+ * two-month picker, then categories, account, type (F2.5), "Show hidden", the payee search and
+ * "Clear filters".
  *
  * Everything here is a link or a GET form, which is the whole point of keeping the state in the
  * URL (spec §8.4 point 2): the row is rendered by the server and every control works before any
@@ -57,6 +59,7 @@ export async function FilterBar({
   categories,
   accounts,
   uncategorisedCount,
+  typeCounts,
   locale,
   path = "/expenses",
 }: {
@@ -65,6 +68,8 @@ export async function FilterBar({
   accounts: readonly AccountFilterOption[];
   /** How many movements of the range carry no category: the count of the last chip. */
   uncategorisedCount: number;
+  /** How many movements of the range each type holds, counted without the type filter. */
+  typeCounts: Partial<Record<TransactionType, number>>;
   locale: UiLocale;
   path?: string;
 }) {
@@ -132,7 +137,7 @@ export async function FilterBar({
                 key={category.id}
                 href={categoryHref(category.id)}
                 aria-current={selected.includes(category.id) ? "true" : undefined}
-                className={OPTION}
+                className={cn(OPTION, category.depth === 1 && "pl-7")}
               >
                 <Box checked={selected.includes(category.id)} />
                 <Dot color={category.color} />
@@ -181,6 +186,22 @@ export async function FilterBar({
           ))}
         </div>
       </details>
+
+      <LinkTabs
+        label={t("types.label")}
+        path={path}
+        params={carry}
+        name="type"
+        current={query.type ?? ""}
+        options={[
+          { value: "", label: t("types.all") },
+          ...TRANSACTION_TYPES.map((type) => ({
+            value: type,
+            label: t(`types.${type}`),
+            count: typeCounts[type] ?? 0,
+          })),
+        ]}
+      />
 
       <Link
         href={withParams(path, carry, { hidden: query.showHidden ? "" : "1" })}

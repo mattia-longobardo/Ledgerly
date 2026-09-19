@@ -44,6 +44,8 @@ describe("formatDate", () => {
     expect(formatDate("2026-09-01", "long", "en")).toBe("1 Sep 2026");
     expect(formatDate("2026-09-01", "monthYear", "en")).toBe("September 2026");
     expect(formatDate("2026-09-01", "monthShort", "en")).toBe("Sep 26");
+    expect(formatDate("2026-09-01", "month", "en")).toBe("Sep");
+    expect(formatDate("2026-09-01", "month", "it")).toBe("set");
     expect(formatDate("2026-09-09", "dayMonth", "it")).toBe("09 set");
     expect(formatDate("2026-09-01", "monthYear", "it")).toBe("settembre 2026");
     expect(formatDate(null, "long", "en")).toBe("—");

@@ -1,8 +1,9 @@
 import "server-only";
-import { and, asc, eq, max, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, max, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
   type CivilDate,
+  addDays,
   addMonths,
   isCivilDate,
   lastDayOfMonth,
@@ -15,7 +16,7 @@ import { userScoped } from "@/platform/db/scope";
 import { PROVIDERS } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
-import { transactionIdsOfAccount } from "@/modules/transactions/queries";
+import { dailyNetByAccount, transactionIdsOfAccount } from "@/modules/transactions/queries";
 import {
   type AccountCreateInput,
   accountCreateSchema,
@@ -24,14 +25,23 @@ import {
   type BalanceEntryInput,
   balanceEntrySchema,
   canDelete,
+  dailySeries,
   DEFAULT_STALE_AFTER_HOURS,
+  deriveMonthEnds,
   isFutureDate,
   isStale,
   type RemoteAccount,
   reconcileProviderAccounts,
   settingsForSynced,
 } from "./rules";
-import { type Account, type AccountGroup, type BalanceEntry, balancesOn } from "./queries";
+import {
+  type Account,
+  type AccountGroup,
+  type BalanceEntry,
+  balancesOn,
+  listAccounts,
+  observedDays,
+} from "./queries";
 import { accountGroups, accounts, balanceEntries, snapshotRuns } from "./schema";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
@@ -224,6 +234,8 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
       set: values,
     })
     .returning();
+  // A correction on a synced account moves the month ends rebuilt before it (F2.5).
+  await rebuildDerivedBalances(ctx, [accountId]);
   return row;
 }
 
@@ -280,8 +292,8 @@ export async function saveProviderBalance(
   });
 }
 
-export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
-  await getDb()
+export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, id: string): Promise<void> {
+  const [row] = await getDb()
     .delete(balanceEntries)
     .where(
       and(
@@ -289,7 +301,107 @@ export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId">, id: string): 
         eq(balanceEntries.source, "manual"),
         userScoped(ctx).owns(balanceEntries),
       ),
-    );
+    )
+    .returning({ accountId: balanceEntries.accountId });
+  if (row) await rebuildDerivedBalances(ctx, [row.accountId]);
+}
+
+/**
+ * Several accounts' balances on every day of a window, in one read (spec §7.1, F2.5): a synced
+ * account's from its readings and its movements, a manual one's held between entries
+ * (`dailySeries`). Both ends included; a window reaching past today is the caller's to trim. An id
+ * that is not one of this user's accounts is simply absent from `series`.
+ */
+export async function dailyBalancesOf(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+  window: { from: CivilDate; to: CivilDate },
+): Promise<{ days: CivilDate[]; series: Map<string, { values: (Cents | null)[]; estimated: boolean[] }> }> {
+  const wanted = new Set(accountIds);
+  const owned = (await listAccounts(ctx, { includeArchived: true })).filter((account) =>
+    wanted.has(account.id),
+  );
+  const syncedIds = owned.filter((account) => account.origin === "synced").map((account) => account.id);
+  const [observed, daily] = await Promise.all([
+    observedDays(
+      ctx,
+      owned.map((account) => account.id),
+    ),
+    dailyNetByAccount(ctx, syncedIds),
+  ]);
+  const days: CivilDate[] = [];
+  for (let day = window.from; day <= window.to; day = addDays(day, 1)) days.push(day);
+  const series = new Map(
+    owned.map((account) => [
+      account.id,
+      dailySeries(
+        observed.get(account.id) ?? [],
+        daily.get(account.id) ?? [],
+        days,
+        account.origin === "synced" ? "movements" : "hold",
+      ),
+    ]),
+  );
+  return { days, series };
+}
+
+/** One account day by day, for Account detail's day grain (see {@link dailyBalancesOf}). */
+export async function accountDailyBalances(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountId: string,
+  window: { from: CivilDate; to: CivilDate },
+): Promise<{ days: CivilDate[]; values: (Cents | null)[]; estimated: boolean[] }> {
+  const account = await requireAccount(ctx, accountId);
+  const { days, series } = await dailyBalancesOf(ctx, [account.id], window);
+  const one = series.get(account.id) ?? { values: days.map(() => null), estimated: days.map(() => false) };
+  return { days, ...one };
+}
+
+/**
+ * The month ends of the user's synced accounts rebuilt from their movements (spec §7.1, F2.5),
+ * from scratch: every `derived` row of those accounts goes, and `deriveMonthEnds` writes the ones
+ * the current readings and movements support, in one transaction — so running it twice changes
+ * nothing, and a reading or a correction added since simply moves what gets rebuilt. A manual
+ * account has no movements, so there is nothing to rebuild it from.
+ *
+ * Reads first, writes after, and no network anywhere (spec §4.3): the sync calls it once its own
+ * reads are over.
+ */
+export async function rebuildDerivedBalances(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds?: readonly string[],
+): Promise<{ written: number }> {
+  const synced = (await listAccounts(ctx, { includeArchived: true })).filter(
+    (account) => account.origin === "synced" && (accountIds === undefined || accountIds.includes(account.id)),
+  );
+  if (synced.length === 0) return { written: 0 };
+  const ids = synced.map((account) => account.id);
+  const [observed, daily] = await Promise.all([observedDays(ctx, ids), dailyNetByAccount(ctx, ids)]);
+  const capturedAt = new Date();
+  const rows = ids.flatMap((accountId) =>
+    deriveMonthEnds(observed.get(accountId) ?? [], daily.get(accountId) ?? []).map((point) =>
+      userScoped(ctx).stamp({
+        accountId,
+        on: point.on,
+        balanceCents: point.cents,
+        source: "derived" as const,
+        capturedAt,
+      }),
+    ),
+  );
+  await getDb().transaction(async (tx) => {
+    await tx
+      .delete(balanceEntries)
+      .where(
+        and(
+          userScoped(ctx).owns(balanceEntries),
+          inArray(balanceEntries.accountId, ids),
+          eq(balanceEntries.source, "derived"),
+        ),
+      );
+    if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+  });
+  return { written: rows.length };
 }
 
 export interface SnapshotOutcome {

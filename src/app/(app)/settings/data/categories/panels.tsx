@@ -17,14 +17,19 @@ export async function TaxonomyPanels() {
     listLabelsWithUsage(ctx),
   ]);
 
-  const categoryRows: CategoryRow[] = categories.map(({ category, usage }) => ({
+  const nameOf = new Map(categories.map(({ category }) => [category.id, category.name]));
+  const parents = new Set(categories.map(({ category }) => category.parentId));
+  const categoryRows: CategoryRow[] = categories.map(({ category, usage, depth }) => ({
     id: category.id,
     name: category.name,
-    group: category.group,
+    parentId: category.parentId,
+    parentName: category.parentId === null ? null : (nameOf.get(category.parentId) ?? null),
     type: category.type,
     color: category.color,
     archived: category.archivedAt !== null,
     usage,
+    depth,
+    hasChildren: parents.has(category.id),
   }));
   const labelRows: LabelRow[] = labels.map(({ label, usage }) => ({
     id: label.id,

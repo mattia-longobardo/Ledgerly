@@ -5,7 +5,8 @@ import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
+import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
+import { Input, Select } from "@/ui/input";
 import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
@@ -13,6 +14,7 @@ import { TONE_TEXT, type Tone } from "@/ui/tone";
 import {
   connectWalletAction,
   disconnectWalletAction,
+  redownloadWalletHistoryAction,
   syncWalletNowAction,
   testWalletAction,
 } from "./actions";
@@ -31,6 +33,8 @@ export type WalletCardState = "absent" | "active" | "error" | "revoked";
 export interface WalletCardProps {
   state: WalletCardState;
   lastSync: string | null;
+  /** How many months the last (or next) backfill reads (F2.5): what the history picker starts on. */
+  history: number;
 }
 
 const DOT: Record<WalletCardState, string> = {
@@ -59,8 +63,9 @@ const FORM_ID = "wallet-token-form";
  * unmounts on close — so the secret is never in React state, never in a prop and never in the DOM
  * a moment longer than the dialog is open.
  */
-export function WalletCard({ state, lastSync }: WalletCardProps) {
+export function WalletCard({ state, lastSync, history }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
+  const [months, setMonths] = useState(history);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +79,8 @@ export function WalletCard({ state, lastSync }: WalletCardProps) {
     if (code === "unreachable") return t("errors.unreachable");
     if (code === "empty") return t("errors.empty");
     if (code === "notConnected") return t("errors.notConnected");
+    if (code === "busy") return t("errors.busy");
+    if (code === "provider") return t("errors.provider");
     return t("errors.failed");
   }
 
@@ -176,6 +183,39 @@ export function WalletCard({ state, lastSync }: WalletCardProps) {
           )}
         </div>
       </div>
+
+      {/* How far back the movements go (spec §9.1, F2.5). The re-download only imports, which is
+          what makes it safe to offer as a plain button: it never removes a movement. */}
+      {connected && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-4 py-2.5 text-sm">
+          <label htmlFor="wallet-history" className="text-muted">
+            {t("history.label")}
+          </label>
+          <Select
+            id="wallet-history"
+            value={String(months)}
+            onChange={(event) => setMonths(Number(event.currentTarget.value))}
+            className="w-auto"
+          >
+            {BACKFILL_CHOICES.map((choice) => (
+              <option key={choice} value={choice}>
+                {t("history.months", { count: choice })}
+              </option>
+            ))}
+          </Select>
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => {
+              setError(null);
+              run(() => redownloadWalletHistoryAction(months), t("toasts.redownloaded"));
+            }}
+          >
+            {t("history.action")}
+          </Button>
+          <span className="text-muted">{t("history.hint")}</span>
+        </div>
+      )}
 
       {/* The first pass fetches a year (spec §9.1), which is worth saying before it is asked for
           and while it has not happened yet. */}

@@ -9,6 +9,9 @@ import {
   markLocallyEdited,
   pairTransfers,
   payeeKeyOf,
+  normalizeIban,
+  type IbanRuleRow,
+  planIbanTransfers,
   planProviderMerge,
   planUpstreamRemovals,
   planUserEdit,
@@ -19,6 +22,7 @@ import {
   toNewTransaction,
   type TransferLeg,
   transferPairKey,
+  treeOrder,
   type WindowRow,
 } from "./rules";
 
@@ -177,6 +181,8 @@ const incoming = (over: Partial<IncomingTransaction> = {}): IncomingTransaction 
   note: null,
   categoryExternalId: "c-1",
   categoryName: "Subscriptions",
+  categoryGroupExternalId: null,
+  categoryGroupName: null,
   labels: ["fun"],
   ...over,
 });
@@ -601,5 +607,143 @@ describe("detectRecurrences", () => {
   it("ignores an amount of zero: it has no sign to group by", () => {
     const rows = [at("2026-01-05", 0n), at("2026-02-05", 0n), at("2026-03-05", 0n)];
     expect(detectRecurrences(rows, ROME)).toEqual([]);
+  });
+});
+
+describe("treeOrder", () => {
+  const row = (id: string, name: string, parentId: string | null = null) => ({ id, name, parentId });
+
+  it("puts each group's sub-categories right after it, keeping the order it was given", () => {
+    const rows = [
+      row("b", "Books", "f"),
+      row("f", "Fun"),
+      row("g", "Groceries", "l"),
+      row("l", "Living"),
+      row("o", "Loose"),
+      row("r", "Rent", "l"),
+    ];
+    expect(treeOrder(rows).map((one) => [one.name, one.depth])).toEqual([
+      ["Fun", 0],
+      ["Books", 1],
+      ["Living", 0],
+      ["Groceries", 1],
+      ["Rent", 1],
+      ["Loose", 0],
+    ]);
+  });
+
+  it("shows a sub-category whose group is not in the list at the top level, never losing it", () => {
+    // An active child of an archived group, when the archived ones are left out.
+    expect(treeOrder([row("a", "Apples", "gone"), row("z", "Zoo")])).toEqual([
+      { ...row("a", "Apples", "gone"), depth: 0 },
+      { ...row("z", "Zoo"), depth: 0 },
+    ]);
+  });
+
+  it("answers with nothing for nothing", () => {
+    expect(treeOrder([])).toEqual([]);
+  });
+});
+
+// The standard example IBANs of the ISO 13616 documentation: valid check digits, nobody's account.
+const IBAN_A = "IT60X0542811101000000123456";
+const IBAN_B = "GB82WEST12345698765432";
+
+describe("normalizeIban", () => {
+  it("accepts an IBAN written with spaces or in lower case, and returns it compact", () => {
+    expect(normalizeIban("it60 x054 2811 1010 0000 0123 456")).toBe(IBAN_A);
+    expect(normalizeIban(IBAN_B)).toBe(IBAN_B);
+  });
+
+  it("refuses a free-text reference, a wrong check digit and nothing at all", () => {
+    expect(normalizeIban("Conto di casa")).toBeNull();
+    expect(normalizeIban("IT61X0542811101000000123456")).toBeNull();
+    expect(normalizeIban(null)).toBeNull();
+  });
+});
+
+describe("planIbanTransfers", () => {
+  const own = [
+    { accountId: "ing", iban: IBAN_A },
+    { accountId: "rev", iban: IBAN_B },
+  ];
+  const row = (over: Partial<IbanRuleRow> & Pick<IbanRuleRow, "id" | "accountId">): IbanRuleRow => ({
+    occurredAt: new Date("2026-03-05T10:00:00Z"),
+    amountCents: -50_000n,
+    currency: "EUR",
+    type: "transfer",
+    transferGroupId: null,
+    payee: null,
+    note: null,
+    ...over,
+  });
+
+  it("pairs a transfer naming another own account's IBAN with the opposite transfer there", () => {
+    const rows = [
+      row({ id: "t2", accountId: "ing", note: `Bonifico a ${IBAN_B.replace(/(.{4})/g, "$1 ")}` }),
+      row({ id: "t1", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-06T08:00:00Z") }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([
+      { id: "t1", transferGroupId: "t1" },
+      { id: "t2", transferGroupId: "t1" },
+    ]);
+  });
+
+  it("never makes a giroconto of what the provider counts as spending or income", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B, type: "expense" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "income" }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
+  });
+
+  it("does not pair across more than the clearing days, nor a different amount, nor a lone leg", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-20T10:00:00Z") }),
+      row({ id: "t3", accountId: "rev", amountCents: 49_999n }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
+  });
+
+  it("ignores the account's own IBAN", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_A }),
+      row({ id: "t2", accountId: "ing", amountCents: 50_000n }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
+  });
+
+  it("never takes a pair apart, and a second run changes nothing", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B, transferGroupId: "t1" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, transferGroupId: "t1" }),
+      row({ id: "t3", accountId: "rev", amountCents: 50_000n }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([]);
+  });
+
+  it("takes out of its pair a row the provider re-filed as income, and the group of one it leaves", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B, transferGroupId: "t1" }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "income", transferGroupId: "t1" }),
+      row({ id: "t5", accountId: "ing", amountCents: -7n, transferGroupId: "t5" }),
+    ];
+    expect(planIbanTransfers(own, rows)).toEqual([
+      { id: "t1", transferGroupId: null },
+      { id: "t2", transferGroupId: null },
+      { id: "t5", transferGroupId: null },
+    ]);
+  });
+
+  it("prefers the twin that names this account back", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B }),
+      row({ id: "t2", accountId: "rev", amountCents: 50_000n }),
+      row({ id: "t3", accountId: "rev", amountCents: 50_000n, note: `da ${IBAN_A}` }),
+    ];
+    const plan = planIbanTransfers(own, rows);
+    expect(plan).toContainEqual({ id: "t3", transferGroupId: "t1" });
+    expect(plan.some((one) => one.id === "t2")).toBe(false);
   });
 });

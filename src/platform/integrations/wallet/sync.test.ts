@@ -3,7 +3,7 @@
 // `sync.itest.ts` against a real Postgres (spec §11: no in-memory fakes).
 import { describe, expect, it } from "vitest";
 import { civilDateIn } from "@/platform/dates";
-import type { WalletAccount, WalletTransaction } from "./client";
+import type { WalletAccount, WalletCategory, WalletTransaction } from "./client";
 import {
   MAX_WINDOW_REMOVAL_SHARE,
   SyncBusyError,
@@ -30,6 +30,9 @@ function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
     note: "pane e latte",
     categoryExternalId: "wc-groceries",
     categoryName: null,
+    categoryGroupExternalId: null,
+    categoryGroupName: null,
+    categorySystemId: null,
     labels: ["spesa"],
     providerType: "expense",
     providerState: "cleared",
@@ -38,7 +41,18 @@ function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
   };
 }
 
-const CATEGORIES = new Map([["wc-groceries", "Spesa"]]);
+const CATEGORIES = new Map<string, WalletCategory>([
+  [
+    "wc-groceries",
+    {
+      externalId: "wc-groceries",
+      name: "Spesa",
+      groupExternalId: "wcg-casa",
+      groupName: "Casa",
+      systemId: null,
+    },
+  ],
+]);
 
 describe("walletTransactionType", () => {
   it("keeps the type Wallet named", () => {
@@ -79,6 +93,28 @@ describe("walletTransactionState", () => {
 });
 
 describe("toIncomingTransaction", () => {
+  it("files a movement in Wallet's Transfer category as a giroconto, as Wallet counts it", () => {
+    const transfer = { categorySystemId: "system_categories__transfer", providerType: "expense" };
+    expect(toIncomingTransaction(movement(transfer), CATEGORIES, ROME).type).toBe("transfer");
+    // From the category list when the record carries the id alone.
+    const listed = new Map([
+      [
+        "wc-transfer",
+        {
+          externalId: "wc-transfer",
+          name: "Trasferimento",
+          groupExternalId: "system_categories",
+          groupName: null,
+          systemId: "system_categories__transfer",
+        },
+      ],
+    ]);
+    expect(toIncomingTransaction(movement({ categoryExternalId: "wc-transfer" }), listed, ROME).type).toBe(
+      "transfer",
+    );
+    expect(toIncomingTransaction(movement(), CATEGORIES, ROME).type).toBe("expense");
+  });
+
   it("renames the transfer reference to the one the module pairs on", () => {
     const incoming = toIncomingTransaction(movement({ transferCounterExternalId: "wr-2" }), CATEGORIES, ROME);
     expect(incoming.counterpartExternalId).toBe("wr-2");
@@ -170,6 +206,31 @@ describe("toIncomingTransaction", () => {
     const none = toIncomingTransaction(movement({ categoryExternalId: null }), CATEGORIES, ROME);
     expect(none.categoryExternalId).toBeNull();
     expect(none.categoryName).toBeNull();
+  });
+
+  it("carries the category's group the way it carries its name: the record's, else the list's (F2.5)", () => {
+    // The record says nothing about the category: the /categories list gives name and group.
+    expect(toIncomingTransaction(movement(), CATEGORIES, ROME)).toMatchObject({
+      categoryName: "Spesa",
+      categoryGroupExternalId: "wcg-casa",
+      categoryGroupName: "Casa",
+    });
+    // The record carries its category, with a group: that one wins.
+    const regrouped = movement({
+      categoryName: "Spesa",
+      categoryGroupExternalId: "wcg-cibo",
+      categoryGroupName: "Cibo",
+    });
+    expect(toIncomingTransaction(regrouped, CATEGORIES, ROME)).toMatchObject({
+      categoryGroupExternalId: "wcg-cibo",
+      categoryGroupName: "Cibo",
+    });
+    // The record carries its category and no group: it is fresher than the list, so no group.
+    const ungrouped = movement({ categoryName: "Spesa" });
+    expect(toIncomingTransaction(ungrouped, CATEGORIES, ROME)).toMatchObject({
+      categoryGroupExternalId: null,
+      categoryGroupName: null,
+    });
   });
 
   it("carries identity, money and taxonomy through unchanged", () => {

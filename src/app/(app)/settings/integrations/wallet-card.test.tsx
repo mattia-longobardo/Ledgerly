@@ -10,8 +10,10 @@ const connect = vi.fn();
 const test_ = vi.fn();
 const sync = vi.fn();
 const disconnect = vi.fn();
+const redownload = vi.fn();
 
 vi.mock("./actions", () => ({
+  redownloadWalletHistoryAction: (...args: unknown[]) => redownload(...args),
   connectWalletAction: (...args: unknown[]) => connect(...args),
   testWalletAction: (...args: unknown[]) => test_(...args),
   syncWalletNowAction: (...args: unknown[]) => sync(...args),
@@ -37,7 +39,7 @@ const RESULT_CARRIES_NO_SECRET: CarriesNoSecret<IntegrationActionResult> = true;
 function renderCard(state: WalletCardState = "active", lastSync: string | null = "3 Feb 2026, 09:07") {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      <WalletCard state={state} lastSync={lastSync} />
+      <WalletCard state={state} lastSync={lastSync} history={12} />
     </NextIntlClientProvider>,
   );
 }
@@ -53,6 +55,22 @@ beforeEach(() => {
 });
 
 describe("WalletCard", () => {
+  it("downloads the history again at the depth picked, and says a busy sync is busy (F2.5)", async () => {
+    redownload.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, error: "busy" });
+    renderCard();
+    await userEvent.selectOptions(screen.getByLabelText(T.history.label), "60");
+    await userEvent.click(screen.getByRole("button", { name: T.history.action }));
+    expect(redownload).toHaveBeenCalledWith(60);
+
+    await userEvent.click(screen.getByRole("button", { name: T.history.action }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(T.errors.busy);
+  });
+
+  it("offers no history download while nothing is connected", () => {
+    renderCard("absent", null);
+    expect(screen.queryByLabelText(T.history.label)).not.toBeInTheDocument();
+  });
+
   it("offers only the token dialog while nothing is connected", () => {
     renderCard("absent", null);
     expect(screen.getByText(T.states.absent)).toBeInTheDocument();

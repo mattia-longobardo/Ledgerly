@@ -6,28 +6,16 @@ plan in [`docs/plans/`](docs/plans/).
 
 ## Develop
 
-Prerequisites: Node.js `^22.13.0 || >=24` and Docker.
+Prerequisites: Node.js `^22.13.0 || >=24` and Docker, on the homelab host. There is no local
+development server: every change is built and deployed to `https://dash.longobardo.me`
+(`docker compose build && docker compose up -d`, see Docker below) and checked there.
 
 ```bash
 npm install
-cp .env.example .env
-npm run dev:services   # Postgres, MinIO, Mailpit, mock OIDC (compose.dev.yml)
-npm run db:migrate
-npm run dev:seed       # owner account (DEV_OWNER_EMAIL / DEV_OWNER_PASSWORD, below) + sample accounts
-npm run dev            # binds to 127.0.0.1 — http://127.0.0.1:3000
+cp .env.example .env.homelab   # then replace every value (README, Operations)
 ```
 
-Open `http://127.0.0.1:3000` — use `127.0.0.1`, not `localhost`. This must match `BETTER_AUTH_URL`
-in `.env.example`, which Better Auth checks against `trustedOrigins` and the OAuth state
-cookie/redirect_uri on every sign-in; `npm run dev` also binds to `127.0.0.1` (`next dev -H
-127.0.0.1`) so Next 16's dev-origin check accepts the browser's requests.
-
-Sign in as `owner@example.test` / `owner-password-123` — override with `DEV_OWNER_EMAIL` /
-`DEV_OWNER_PASSWORD` before running `npm run dev:seed` — or with **Continue with Authentik** as
-`admin@example.test` (admin) or any other address (user) on the mock provider.
-
-Mailpit (outgoing mail): `http://127.0.0.1:58025`. MinIO console: `http://127.0.0.1:59001`. Users
-change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
+Users change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
 password — SSO-only — do not see that form).
 
 ## Accounts and Overview (F1)
@@ -87,14 +75,27 @@ brings in.
 ## Check
 
 ```bash
-npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:integration && npm run e2e
+npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:integration
+docker compose build && docker compose up -d   # deploy, then:
+npm run e2e
 ```
+
+- **Unit** (`npm test`) needs nothing but Node.
+- **Integration** (`npm run test:integration`, `scripts/test-integration.sh`) runs in a throwaway
+  Node container on `db_internal`, against the separate `ledgerly_test` database of the homelab
+  Postgres — its schemas are dropped and recreated on every run, so it must never be `ledgerly` —
+  and against Silo, in the app's bucket under `tests/` only. Create the database once, as the
+  Postgres superuser: `CREATE DATABASE ledgerly_test OWNER ledgerly;`.
+- **End-to-end** (`npm run e2e`) drives the deployed site. Before the run the seed
+  (`scripts/seed-e2e.ts`, through `scripts/on-homelab.sh`) creates four users on `@example.test`
+  with their sample data; after it, it deletes them and everything they own. It never touches
+  anyone else's data. Nothing that needs a real mailbox or an Authentik login is tested end to end.
 
 ## Docker
 
 `docker-compose.yml` is the homelab deployment: the `ledgerly` app behind Traefik on
 `proxy_public`, and the `ledgerly-cron` sidecar beside it on `db_internal`. Both read
-`.env.homelab` — never `.env`, which is the local-development one — and both are discovered by
+`.env.homelab`, and both are discovered by
 `projects/stack.sh`, so `./stack.sh up` starts them along with the other projects.
 
 ```bash
@@ -102,8 +103,9 @@ docker compose build          # or: docker compose up -d --build
 ```
 
 Being on `db_internal` is what lets the app reach `postgres:5432` and `silo:9000` by name; those
-are internal-only and unreachable from a workstation, which is why `npm run dev` uses
-`compose.dev.yml` instead. `dash.longobardo.me` is reachable from the public internet, but through one door only (spec D20).
+are internal-only and unreachable from a workstation, which is why the scripts that need them
+(`scripts/on-homelab.sh`, `scripts/test-integration.sh`) run in a container on that network.
+`dash.longobardo.me` is reachable from the public internet, but through one door only (spec D20).
 Two Traefik routers serve it and they are not interchangeable: `ledgerly-router` on the `web`
 entrypoint is what the Cloudflare tunnel hits, and it carries no IP filter; `ledgerly-secure-router`
 on `websecure` is the direct 443 — the only port the home router forwards — and it keeps
@@ -127,9 +129,8 @@ a side effect of every tick, not a job of its own.
 
 - **Bootstrap the owner account**, before the app is reachable by anyone else, either by:
   - running `ADMIN_PASSWORD=<12-128 chars> npm run user:create-admin -- <email> "<name>"`
-    (`scripts/create-admin.ts`) — it is not built into the Docker image, so run it from a checkout
-    whose `.env` points at the target database and has every other variable the app needs (the
-    script loads the same environment schema as the app); or
+    (`scripts/create-admin.ts`) on the homelab host — it is not built into the Docker image, and
+    runs through `scripts/on-homelab.sh` with the deployment's `.env.homelab`; or
   - binding the Authentik application to a group and letting the first person sign in with
     **Continue with Authentik**. Sign-up is closed, so nobody can create a password account by
     signing in — the first user _created_ by either path is granted the admin role automatically
@@ -185,8 +186,7 @@ a side effect of every tick, not a job of its own.
   - **Authentik** (`security/`, `auth.longobardo.me`): the OAuth2/OIDC provider and application
     `Ledgerly` (slug `ledgerly`, confidential, implicit-consent authorization flow, the four default
     OpenID scope mappings). Its redirect URIs are
-    `<BETTER_AUTH_URL>/api/auth/callback/authentik` — for production and for
-    `http://127.0.0.1:3000`. That path is the **social** callback, not the generic-OAuth one
+    `<BETTER_AUTH_URL>/api/auth/callback/authentik`. That path is the **social** callback, not the generic-OAuth one
     (`/api/auth/oauth2/callback/…`): the sign-in button calls `authClient.signIn.social`
     (`src/app/(auth)/authentik.ts`), and `authentik` is `OIDC_PROVIDER_ID`. Register the wrong one
     and Authentik answers `redirect_uri_no_match`. The `profile` scope mapping is what puts
@@ -198,7 +198,7 @@ a side effect of every tick, not a job of its own.
     folders inside it (`payslips/`, `cometa/`, `avatars/`, …), never split buckets. Its S3 API
     listens on `db_internal` only, so a copy of the app running on a workstation cannot reach it;
     in production the app sits on that network and `http://silo:9000` resolves. Through F2 nothing
-    in the running app touches S3 — only `npm run dev:seed` and the storage integration tests do.
+    in the running app touches S3 — only the storage integration tests do, under `tests/`.
 - **Production requirements** (`src/platform/env.ts`, checked at boot by
   `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
   and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing
