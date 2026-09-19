@@ -83,3 +83,22 @@ export function formatDate(
       return monthName(date, locale, "short");
   }
 }
+
+/**
+ * An amount as a person would type it back into a field, in their own format: the locale's decimal
+ * separator and no grouping ("1234,56" in Italian, "1234.56" in English), which `parseAmount` reads
+ * back to the same cents. `null` is an empty field.
+ */
+export function formatAmountInput(cents: Cents | null, format: NumberFormat): string {
+  if (cents === null) return "";
+  const plain = centsToDecimal(cents);
+  return format === "en-US" ? plain : plain.replace(".", ",");
+}
+
+/** A whole percentage as the design writes it ("88 %" in Italian, "88%" in English), past 100 too. */
+export function formatWholePercent(percent: number, format: NumberFormat): string {
+  const number = new Intl.NumberFormat(format, { maximumFractionDigits: 0, useGrouping: "always" }).format(
+    percent,
+  );
+  return format === "en-US" ? `${number}%` : `${number}${NBSP}%`;
+}

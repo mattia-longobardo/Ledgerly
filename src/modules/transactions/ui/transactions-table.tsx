@@ -12,7 +12,7 @@ import { ActionMenu } from "@/ui/menu";
 import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 import { TONE_TEXT } from "@/ui/tone";
-import { CategoryPicker } from "./category-picker";
+import { CategoryPicker } from "@/ui/category-picker";
 import { type CommandResult, hide, restore, setCategory } from "./commands";
 import { TransactionDetails } from "./details-modal";
 import type { RowBadge } from "./display";

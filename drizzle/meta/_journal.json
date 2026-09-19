@@ -43,6 +43,41 @@
       "when": 1789698745215,
       "tag": "0005_balance_source_derived",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789816532016,
+      "tag": "0006_budgets_pockets_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789833170316,
+      "tag": "0007_budget_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789837522728,
+      "tag": "0008_interests_funds",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789838600620,
+      "tag": "0009_provider_link_interest_entry",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789840473265,
+      "tag": "0010_interest_daily_settlement",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ export interface ShellLabels {
   palette: {
     placeholder: string;
     pages: string;
+    records: string;
     payees: string;
     empty: string;
     shortcut: string;

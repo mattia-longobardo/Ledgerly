@@ -76,3 +76,89 @@ test.describe("expenses on a phone", () => {
     await expect(tabs.getByRole("link", { name: "Expenses" })).toBeVisible();
   });
 });
+
+/** The Budgets journey at 400 px (spec §8.2, §11): the table becomes a list and fits the screen. */
+test.describe("budgets on a phone", () => {
+  test.use({ storageState: sessionState("budgets") });
+
+  test("the budgets are a list reachable from the More sheet", async ({ page }) => {
+    await page.goto("/");
+    const tabs = page
+      .getByRole("navigation", { name: "Primary" })
+      .filter({ has: page.getByRole("button", { name: "More" }) });
+    await tabs.getByRole("button", { name: "More" }).click();
+    await page.getByRole("dialog", { name: "More" }).getByRole("link", { name: "Budgets" }).click();
+    await expect(page).toHaveURL("/budgets");
+
+    await expect(page.getByRole("columnheader", { name: "Budget" })).toBeHidden();
+    await expect(page.getByTestId("budget-item").filter({ hasText: "Spesa" })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+/** The Pockets page at 400 px (spec §8.2, §11): list above the detail, nothing sideways. */
+test.describe("pockets on a phone", () => {
+  test.use({ storageState: sessionState("pockets") });
+
+  test("the list sits above the pocket and the page fits the screen", async ({ page }) => {
+    await page.goto("/pockets");
+    const card = page.getByTestId("pocket-card").first();
+    const detail = page.getByTestId("pocket-detail");
+    await expect(detail).toBeVisible();
+    expect((await card.boundingBox())!.y).toBeLessThan((await detail.boundingBox())!.y);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+/** The Subscriptions page at 400 px (spec §8.2, §11): the table becomes a list. */
+test.describe("subscriptions on a phone", () => {
+  test.use({ storageState: sessionState("subscriptions") });
+
+  test("the subscriptions are a list and the page fits the screen", async ({ page }) => {
+    await page.goto("/subscriptions");
+    // The top bar keeps the primary action inside the screen; the suggestions move into the page.
+    const add = page.getByRole("button", { name: "Add subscription" });
+    await expect(add).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: /Suggest from recurring payments/ })).toBeInViewport();
+    await expect(page.getByRole("columnheader", { name: "Billing" })).toBeHidden();
+    await expect(page.getByTestId("subscription-item").filter({ hasText: "Netflix" })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+/** Interests at 400 px (spec §8.2, §11): the rules are a list and the page fits. */
+test.describe("interests on a phone", () => {
+  test.use({ storageState: sessionState("interests") });
+
+  test("the page fits the screen", async ({ page }) => {
+    await page.goto("/interests");
+    await expect(page.getByRole("heading", { name: "Interests" }).first()).toBeAttached();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+/** Funds at 400 px (spec §8.2, §11): the page fits the screen. */
+test.describe("funds on a phone", () => {
+  test.use({ storageState: sessionState("funds") });
+
+  test("the page fits the screen", async ({ page }) => {
+    await page.goto("/funds");
+    await expect(page.getByRole("heading", { name: "Funds" }).first()).toBeAttached();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});

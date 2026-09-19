@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AreaLine,
   Bars,
+  MiniBars,
   extentOf,
   segmentsOf,
   Sparkline,
@@ -159,5 +160,30 @@ describe("Bars", () => {
       <Bars values={[0, 500, -300, null, 0]} summary="Changes." yLabels={["5", "0", "-5"]} xLabels={[]} />,
     );
     expect(container.querySelectorAll("rect")).toHaveLength(2);
+  });
+});
+
+describe("MiniBars", () => {
+  it("scales to the target, caps a column above it and draws nothing for an unknown period", () => {
+    render(
+      <MiniBars
+        values={[null, 200, 400, 600]}
+        labels={["a", "b", "c", "d"]}
+        xLabels={["J", "F", "M", "A"]}
+        summary="Pocket history"
+        target={400}
+      />,
+    );
+    const heights = screen.getAllByTestId("mini-bar").map((bar) => bar.style.height);
+    expect(heights).toEqual(["0px", "50%", "100%", "100%"]);
+    expect(screen.getByTestId("mini-bars-target")).toBeInTheDocument();
+    expect(screen.getByText("Pocket history")).toBeInTheDocument();
+  });
+
+  it("leaves headroom above the highest value without a target", () => {
+    render(<MiniBars values={[115]} labels={["a"]} xLabels={["J"]} summary="s" />);
+    // 115 against a top of 115 × 1.15: the tallest column stops at about 87 %.
+    expect(parseFloat(screen.getByTestId("mini-bar").style.height)).toBeCloseTo(86.96, 1);
+    expect(screen.queryByTestId("mini-bars-target")).toBeNull();
   });
 });

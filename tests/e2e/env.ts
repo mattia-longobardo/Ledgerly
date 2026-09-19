@@ -14,6 +14,15 @@ export const USERS = {
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
   accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
   expenses: { email: "expenses@example.test", password: "expenses-password-123", name: "Expenses" },
+  budgets: { email: "budgets@example.test", password: "budgets-password-123", name: "Budgets" },
+  pockets: { email: "pockets@example.test", password: "pockets-password-123", name: "Pockets" },
+  subscriptions: {
+    email: "subscriptions@example.test",
+    password: "subscriptions-password-123",
+    name: "Subscriptions",
+  },
+  interests: { email: "interests@example.test", password: "interests-password-123", name: "Interests" },
+  funds: { email: "funds@example.test", password: "funds-password-123", name: "Funds" },
 } as const;
 
 /** The only addresses the seed may create or delete. */
@@ -27,6 +36,11 @@ export const TEST_EMAIL_DOMAIN = "@example.test";
 export const SESSIONS = {
   accounts: { user: "accounts", file: "accounts-session.json" },
   expenses: { user: "expenses", file: "expenses-session.json" },
+  budgets: { user: "budgets", file: "budgets-session.json" },
+  pockets: { user: "pockets", file: "pockets-session.json" },
+  subscriptions: { user: "subscriptions", file: "subscriptions-session.json" },
+  interests: { user: "interests", file: "interests-session.json" },
+  funds: { user: "funds", file: "funds-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;

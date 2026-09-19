@@ -135,6 +135,14 @@ function one(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
 
+/** A comma-separated parameter as its trimmed, non-empty entries (the first value if repeated). */
+function list(value: string | string[] | undefined): string[] {
+  return one(value)
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+}
+
 function civilDate(value: string): CivilDate | null {
   return value !== "" && isCivilDate(value) ? value : null;
 }
@@ -180,9 +188,10 @@ export interface ExpensesQuery {
   range: DateRange;
   /** The category filter as the menu shows it: real ids, plus `UNCATEGORISED` when selected. */
   categorySelection: string[];
-  accountId: string | null;
-  /** One movement type, or `null` for all of them (F2.5: how the giroconti are isolated). */
-  type: TransactionType | null;
+  /** The accounts ticked in the menu; empty is every account. */
+  accountSelection: string[];
+  /** The movement types ticked in the menu (F2.5: how the giroconti are isolated); empty is all. */
+  typeSelection: TransactionType[];
   search: string;
   showHidden: boolean;
   sort: SortKey;
@@ -225,8 +234,9 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
         .filter((id) => id === UNCATEGORISED || uuid(id) !== null),
     ),
   ];
-  const accountId = uuid(one(raw.acc));
-  const type = TRANSACTION_TYPES.find((known) => known === one(raw.type)) ?? null;
+  // Several accounts and several types, comma-separated like the categories.
+  const accountSelection = [...new Set(list(raw.acc).filter((id) => uuid(id) !== null))];
+  const typeSelection = TRANSACTION_TYPES.filter((known) => list(raw.type).includes(known));
   const search = one(raw.q);
   const showHidden = one(raw.hidden) === "1";
   const sort = SORT_KEYS.find((key) => key === one(raw.sort)) ?? DEFAULT_SORT;
@@ -236,8 +246,8 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
 
   const filters: Params = {
     cat: categorySelection.length > 0 ? categorySelection.join(",") : undefined,
-    acc: accountId ?? undefined,
-    type: type ?? undefined,
+    acc: accountSelection.length > 0 ? accountSelection.join(",") : undefined,
+    type: typeSelection.length > 0 ? typeSelection.join(",") : undefined,
     q: search || undefined,
     hidden: showHidden ? "1" : undefined,
   };
@@ -264,15 +274,19 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     offset,
     range,
     categorySelection,
-    accountId,
-    type,
+    accountSelection,
+    typeSelection,
     search,
     showHidden,
     sort,
     direction,
     grain,
     filtered:
-      categorySelection.length > 0 || accountId !== null || type !== null || search !== "" || showHidden,
+      categorySelection.length > 0 ||
+      accountSelection.length > 0 ||
+      typeSelection.length > 0 ||
+      search !== "" ||
+      showHidden,
     params: { ...period, ...filters, ...order },
     presetParams: { ...filters, ...order },
     stepperParams: { ...period, off: undefined, ...filters, ...order },
@@ -288,9 +302,9 @@ export function filtersOf(query: ExpensesQuery): ReadFilters {
   return {
     from: query.range.from,
     to: query.range.to,
-    accountIds: query.accountId === null ? undefined : [query.accountId],
+    accountIds: query.accountSelection.length === 0 ? undefined : query.accountSelection,
     categoryIds: categoryIds.length === 0 ? undefined : categoryIds,
-    types: query.type === null ? undefined : [query.type],
+    types: query.typeSelection.length === 0 ? undefined : query.typeSelection,
     payee: query.search === "" ? undefined : query.search,
     includeHidden: query.showHidden ? true : undefined,
     sort: query.sort,
@@ -298,12 +312,12 @@ export function filtersOf(query: ExpensesQuery): ReadFilters {
   };
 }
 
-/** The category filter with one entry toggled, as the menu's links need it. */
-export function toggleCategory(selection: readonly string[], id: string): string[] {
+/** A multiple-choice filter with one entry toggled, as the menus' links need it. */
+export function toggle<T extends string>(selection: readonly T[], id: T): T[] {
   return selection.includes(id) ? selection.filter((current) => current !== id) : [...selection, id];
 }
 
-/** The parameter value a category link writes; an empty string drops the parameter. */
-export function categoryParam(selection: readonly string[]): string {
+/** The parameter value a menu link writes; an empty string drops the parameter. */
+export function listParam(selection: readonly string[]): string {
   return selection.join(",");
 }

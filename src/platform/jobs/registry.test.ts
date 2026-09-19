@@ -12,8 +12,12 @@ describe("JOBS", () => {
     expect(JOBS.map((job) => [job.name, job.tier])).toEqual([
       ["housekeeping", "daily"],
       ["accounts-alerts", "daily"],
+      ["interests-accrual", "daily"],
       ["accounts-snapshot", "monthly"],
       ["wallet-sync", "hourly"],
+      ["subscriptions-check", "hourly"],
+      ["funds-deposits", "hourly"],
+      ["pockets-accrual", "monthly"],
     ]);
   });
 

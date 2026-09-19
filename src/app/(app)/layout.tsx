@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { searchPayeesAction } from "@/modules/transactions/actions";
+import { searchRecordsAction } from "./palette-actions";
 import { saveTheme } from "@/modules/users/actions";
 import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
@@ -42,6 +43,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     palette: {
       placeholder: t("shell.palette.placeholder"),
       pages: t("shell.palette.pages"),
+      records: t("shell.palette.records"),
       payees: t("expenses.palette.payees"),
       empty: t("shell.palette.empty"),
       shortcut: t("shell.palette.shortcut"),
@@ -64,7 +66,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
       <MobileNav links={links} user={user} />
-      <CommandPalette links={links} searchPayees={searchPayeesAction} />
+      <CommandPalette links={links} searchPayees={searchPayeesAction} searchRecords={searchRecordsAction} />
       <Toaster closeLabel={t("common.close")} />
     </ShellProvider>
   );

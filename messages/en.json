@@ -20,7 +20,12 @@
     "components": "Components",
     "more": "More",
     "accounts": "Accounts",
-    "expenses": "Expenses"
+    "expenses": "Expenses",
+    "budgets": "Budgets",
+    "pockets": "Pockets",
+    "subscriptions": "Subscriptions",
+    "funds": "Funds",
+    "interests": "Interests"
   },
   "shell": {
     "toggleSidebar": "Toggle sidebar (⌘\\)",
@@ -38,7 +43,11 @@
       "pages": "Pages",
       "empty": "No matches",
       "shortcut": "⌘K",
-      "escape": "esc"
+      "escape": "esc",
+      "records": "Pockets, funds and subscriptions",
+      "pocket": "Pocket",
+      "subscription": "Subscription",
+      "fund": "Fund"
     }
   },
   "emails": {
@@ -454,7 +463,9 @@
       },
       "accounts": {
         "all": "All accounts",
-        "one": "{name}"
+        "title": "Accounts",
+        "some": "{count, plural, one {# account} other {# accounts}}",
+        "clear": "Clear"
       },
       "search": "Search payee…",
       "searchLabel": "Search by payee",
@@ -462,10 +473,12 @@
       "showHidden": "Show hidden",
       "types": {
         "label": "Type",
-        "all": "All",
+        "all": "All types",
         "income": "Income",
         "expense": "Spending",
-        "transfer": "Transfers"
+        "transfer": "Transfers",
+        "some": "{count, plural, one {# type} other {# types}}",
+        "clear": "Clear"
       }
     },
     "columns": {
@@ -755,10 +768,6 @@
       "hours": "{count, plural, one {# hour ago} other {# hours ago}}",
       "days": "{count, plural, one {# day ago} other {# days ago}}"
     },
-    "chart": {
-      "title": "Balances · {count} months",
-      "summary": "One line per account, {count} accounts in total."
-    },
     "composition": {
       "title": "Composition",
       "liquid": "Liquid · cash",
@@ -973,6 +982,780 @@
     "estimated": {
       "short": "estimated",
       "note": "Dashed months are rebuilt from the synced movements, before the first balance Wallet reported."
+    }
+  },
+  "budgets": {
+    "title": "Budgets",
+    "summary": "{spent} of {limit} · {percent}",
+    "period": {
+      "label": "Month",
+      "previous": "Previous month",
+      "next": "Next month",
+      "latest": "This month"
+    },
+    "add": "Add budget",
+    "total": {
+      "title": "Total this month",
+      "remaining": "{amount} remaining",
+      "over": "{amount} over",
+      "spent": "Spent",
+      "limit": "Limit",
+      "progress": "Spent of the total limit",
+      "unbudgeted": "Not budgeted this month: {amount}"
+    },
+    "columns": {
+      "category": "Budget",
+      "progress": "Progress",
+      "spent": "Spent",
+      "limit": "Limit",
+      "remaining": "Remaining",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "over": "Over",
+      "near": "Near limit",
+      "on_track": "On track"
+    },
+    "editLimit": "Edit limit",
+    "limitInput": "Monthly limit for {category}",
+    "progressOf": "{category}: {percent} of the limit",
+    "hint": "Click a limit to edit it inline; Enter saves, Esc cancels.",
+    "row": {
+      "menu": "Budget actions",
+      "remove": "Remove from this month"
+    },
+    "empty": {
+      "title": "No budgets set",
+      "description": "Set a monthly limit per category to see progress here.",
+      "cta": "Add budget"
+    },
+    "form": {
+      "title": "Add budget",
+      "description": "A monthly limit on a category, an account or both, from {month} onwards.",
+      "category": "Category",
+      "amount": "Monthly limit (€)",
+      "search": "Search categories",
+      "noMatch": "No category matches",
+      "save": "Add budget",
+      "cancel": "Cancel",
+      "account": "Account",
+      "anyAccount": "All accounts",
+      "anyCategory": "All categories",
+      "needScope": "Pick a category, an account or both."
+    },
+    "toasts": {
+      "saved": "Limit saved",
+      "added": "Budget added",
+      "removed": "Budget removed from {month}"
+    },
+    "errors": {
+      "invalid": "Enter an amount above zero.",
+      "not_found": "That category no longer exists.",
+      "failed": "Couldn't save. Try again."
+    },
+    "overview": {
+      "title": "Budgets · {month}",
+      "viewAll": "View all",
+      "remaining": "{amount} left",
+      "over": "{amount} over",
+      "empty": "No budgets this month."
+    },
+    "allCategories": "All categories",
+    "allAccounts": "All accounts"
+  },
+  "pockets": {
+    "title": "Pockets",
+    "subtitle": "Virtual envelopes: each month you earmark an amount without moving money, so savings keep earning interest.",
+    "kpis": {
+      "earmarked": "Earmarked in pockets",
+      "count": "{count, plural, one {# pocket} other {# pockets}}",
+      "backing": "Backing balances",
+      "noBacking": "no pocket rests on an account",
+      "free": "Free (not earmarked)",
+      "freeNote": "available for new pockets",
+      "monthly": "Monthly accrual · all pockets",
+      "nextAccrual": "next accrual {date}"
+    },
+    "list": {
+      "label": "Pockets",
+      "openEnded": "open-ended",
+      "ofTarget": "of {target}",
+      "noTarget": "no target",
+      "perMonth": "+{amount} / month",
+      "paused": "Paused",
+      "new": "New pocket"
+    },
+    "detail": {
+      "since": "since {month}",
+      "onAccount": "on {account}",
+      "standalone": "standalone envelope",
+      "target": "Target",
+      "accruedSince": "Accrued since {month}",
+      "funded": "{percent} funded",
+      "toGo": "{amount} to go",
+      "eta": "ETA {months, plural, one {# month} other {# months}} · {month}",
+      "reached": "Target reached",
+      "noEta": "no monthly accrual",
+      "openEnded": "Open-ended pocket — no target, no limit, accrues indefinitely.",
+      "monthly": "Monthly accrual",
+      "manual": "Manual",
+      "withdrawn": "Withdrawn · 12 months",
+      "interest": "Interest earned on backing",
+      "interestUnknown": "No interest rule on the account, or no positive balance.",
+      "interestStandalone": "A standalone envelope rests on no account.",
+      "paused": "Paused: no monthly accrual until resumed.",
+      "interestEstimate": "Estimate: the account's interest of the last 12 months × this pocket's share."
+    },
+    "chart": {
+      "title": "Earmarked · 12 months",
+      "topIsTarget": "top = target",
+      "noTarget": "no target",
+      "summary": "{name}: balance at the end of each month, {value} now."
+    },
+    "withdrawals": {
+      "title": "Withdrawals",
+      "count": "{count, plural, =0 {none} one {# in the last 12 months} other {# in the last 12 months}}",
+      "date": "Date",
+      "purpose": "Purpose",
+      "amount": "Amount",
+      "empty": "Nothing withdrawn yet."
+    },
+    "actions": {
+      "add": "Add to pocket",
+      "withdraw": "Record withdrawal",
+      "edit": "Edit pocket",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "Archive",
+      "restore": "Restore",
+      "more": "More pocket actions"
+    },
+    "archived": {
+      "title": "Archived pockets",
+      "count": "{count, plural, one {# archived pocket} other {# archived pockets}}"
+    },
+    "move": {
+      "title": "Add to {name}",
+      "descriptionAccount": "Earmarks part of {account} for this pocket. No money is moved.",
+      "descriptionStandalone": "Adds to this envelope. No money is moved.",
+      "amount": "Amount",
+      "date": "Date",
+      "free": "Free on {account}: {amount}",
+      "after": "Pocket after: {amount}",
+      "submit": "Add to pocket"
+    },
+    "withdraw": {
+      "title": "Record withdrawal",
+      "description": "Money you actually spent from {name}. Lowers the earmarked amount.",
+      "amount": "Amount (€)",
+      "date": "Date",
+      "purpose": "Purpose",
+      "purposePlaceholder": "e.g. Hotel + ferry",
+      "submit": "Record"
+    },
+    "form": {
+      "newTitle": "New pocket",
+      "editTitle": "Edit pocket",
+      "description": "A pocket is a virtual envelope you fill each month. It can sit on a real account or stand alone; a target is optional.",
+      "name": "Name",
+      "account": "Backing account · optional",
+      "none": "None — standalone envelope",
+      "target": "Target (€) · optional",
+      "targetPlaceholder": "Leave empty for no target",
+      "monthly": "Monthly accrual (€)",
+      "accrues": "Accrues on",
+      "firstOfMonth": "1st of month",
+      "manually": "Manually",
+      "startMonth": "Starting from",
+      "note": "Standalone pockets track a virtual amount only; pockets on an account also show the free (not earmarked) balance.",
+      "save": "Save pocket",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "saved": "Pocket saved",
+      "added": "Earmarked {amount} for the pocket",
+      "withdrawn": "Withdrawal recorded",
+      "paused": "Pocket paused",
+      "resumed": "Pocket resumed",
+      "archived": "Pocket archived",
+      "restored": "Pocket restored"
+    },
+    "errors": {
+      "invalid": "Check the values: amounts above zero, a name up to 60 characters.",
+      "not_found": "That pocket no longer exists.",
+      "invalid_account": "Pick one of your open accounts.",
+      "duplicate_name": "There is already a pocket with that name.",
+      "archived": "An archived pocket can't be moved. Restore it first.",
+      "future_date": "The date can't be in the future.",
+      "insufficient": "The pocket doesn't hold that much.",
+      "failed": "Couldn't save. Try again."
+    },
+    "empty": {
+      "title": "No pockets yet",
+      "description": "Create a pocket to earmark part of a savings account each month.",
+      "cta": "New pocket"
+    },
+    "overview": {
+      "label": "Pockets",
+      "perMonth": "+{amount} · per month"
+    },
+    "account": {
+      "label": "Pockets",
+      "none": "None"
+    }
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "subtitle": "{count, plural, one {# recurring} other {# recurring}} · {monthly} / month equivalent",
+    "add": "Add subscription",
+    "export": "Export CSV",
+    "suggest": "Suggest from recurring payments",
+    "kpis": {
+      "monthly": "Monthly total",
+      "monthlyNote": "equivalent, all plans",
+      "yearly": "Yearly total",
+      "yearlyNote": "all plans, 12 months",
+      "low": "Low utility (≤ 5)",
+      "lowNote": "per year · {count, plural, one {# subscription} other {# subscriptions}} to review",
+      "next30": "Next 30 days",
+      "next30Note": "charges due by {date}"
+    },
+    "columns": {
+      "name": "Name",
+      "utility": "Utility",
+      "price": "Price",
+      "billing": "Billing",
+      "paidFrom": "Paid from",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "status": "Paid this period",
+      "edit": "Edit"
+    },
+    "cycles": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    },
+    "status": {
+      "paid": "Paid",
+      "amount_differs": "Amount differs",
+      "due": "Due",
+      "not_found": "Not found",
+      "not_due": "Not due"
+    },
+    "statusDetail": {
+      "paid": "Matched \"{match}\" on {account} · {date}",
+      "amount_differs": "Found {actual} instead of {expected} · {date}",
+      "due": "Charge on {date} · not yet found",
+      "not_found": "No expense matching \"{match}\" in {period}",
+      "not_due": "Next charge {date}",
+      "unchecked": "No text to look for: not checked"
+    },
+    "anyAccount": "any account",
+    "setUtility": "Set utility 1–10",
+    "utilityOf": "{value}/10",
+    "total": "Grand total",
+    "totalCount": "{count, plural, one {# subscription} other {# subscriptions}}",
+    "inactive": {
+      "title": "{count, plural, one {# paused or cancelled} other {# paused or cancelled}}",
+      "paused": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "alerts": {
+      "not_found": "no expense matching \"{match}\" found on {account} in {period} ({price} expected).",
+      "amount_differs": "charged {actual} on {date}, plan says {expected} — price increase?",
+      "due": "charge expected on {date} ({price}), not found yet on {account}.",
+      "checkExpenses": "Check expenses",
+      "label": "Payment alerts"
+    },
+    "projection": {
+      "title": "Projection by account",
+      "month": "Month",
+      "year": "Year",
+      "monthText": "Balance today minus committed subscriptions for the coming month.",
+      "yearText": "Balance today minus committed subscriptions for the next 12 months.",
+      "count": "{count, plural, one {# subscription} other {# subscriptions}}",
+      "balance": "Balance today",
+      "commit": "Subscriptions",
+      "projected": "Projected",
+      "noAccount": "No paying account",
+      "share": "Committed share of the balance",
+      "empty": "No active subscription."
+    },
+    "byCategory": {
+      "title": "By category · yearly",
+      "uncategorised": "Uncategorised"
+    },
+    "form": {
+      "newTitle": "New subscription",
+      "editTitle": "Edit subscription",
+      "description": "Recurring charges are used for balance projections and matched to expenses when they post.",
+      "name": "Name",
+      "category": "Category",
+      "pickCategory": "No category",
+      "search": "Search categories",
+      "noMatch": "No category matches",
+      "paidFrom": "Paid from",
+      "anyAccount": "Any account",
+      "price": "Price (€)",
+      "billing": "Billing",
+      "nextCharge": "Next charge",
+      "check": "Payment check",
+      "checkDescription": "Looks for a matching expense on the paying account in the month of each charge (three days either side for weekly plans). Alerts here if it is missing or the amount differs.",
+      "match": "Expense description contains",
+      "tolerance": "Amount tolerance (± %)",
+      "lastMatch": "Last match: {date} · {amount}",
+      "never": "Last match: never",
+      "utility": "Utility",
+      "utilityRare": "{value} · rarely used",
+      "utilityNice": "{value} · nice to have",
+      "utilityEssential": "{value} · essential",
+      "cancelSubscription": "Cancel subscription",
+      "pause": "Pause",
+      "resume": "Resume",
+      "reactivate": "Reactivate",
+      "close": "Close",
+      "save": "Save"
+    },
+    "suggestions": {
+      "title": "Suggested from recurring payments",
+      "description": "Outgoing payments that repeat on a regular cycle and no subscription covers yet.",
+      "add": "Add",
+      "empty": "Nothing to suggest: every recurring payment is covered, or none has been detected yet.",
+      "detail": "{price} · {cycle} · next {date} · seen {count} times"
+    },
+    "toasts": {
+      "saved": "Subscription saved",
+      "cancelled": "Subscription cancelled — projections updated",
+      "paused": "Subscription paused",
+      "resumed": "Subscription resumed",
+      "utility": "Utility saved"
+    },
+    "errors": {
+      "invalid": "Check the values: a name, a price above zero, a date, a tolerance between 0 and 100 %.",
+      "not_found": "That subscription no longer exists.",
+      "invalid_account": "Pick one of your open accounts.",
+      "invalid_category": "Pick one of your spending categories.",
+      "failed": "Couldn't save. Try again."
+    },
+    "empty": {
+      "title": "No subscriptions",
+      "description": "Add recurring charges to project account balances.",
+      "cta": "Add subscription"
+    },
+    "account": {
+      "label": "Subscriptions",
+      "value": "{count, plural, one {# recurring} other {# recurring}} · {amount} / month",
+      "none": "None"
+    },
+    "csv": {
+      "name": "Name",
+      "category": "Category",
+      "utility": "Utility",
+      "price": "Price",
+      "billing": "Billing",
+      "paidFrom": "Paid from",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "nextCharge": "Next charge",
+      "state": "State",
+      "status": "Paid this period"
+    }
+  },
+  "interests": {
+    "title": "Interests",
+    "subtitle": "{gross} gross accrued in {year} · {net} net",
+    "add": "Add rule",
+    "columns": {
+      "account": "Account · start",
+      "tiers": "Rate tiers (gross)",
+      "tax": "Tax",
+      "basis": "Basis · payout",
+      "accrued": "Accrued YTD",
+      "next": "Next payout",
+      "status": "Status",
+      "edit": "Edit"
+    },
+    "from": "from {date}",
+    "to": "until {date}",
+    "tier": {
+      "upTo": "up to {amount}",
+      "to": "to {amount}",
+      "above": "above",
+      "any": "any balance"
+    },
+    "basis": {
+      "365": "365 days",
+      "360": "360 days"
+    },
+    "settlement": {
+      "daily": "Daily",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "annual": "Yearly"
+    },
+    "state": {
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "footer": "Estimates from the daily balance. Tiered rules apply the first rate up to the threshold and the next rate on the amount above it; the tax rate is withheld on each day's interest.",
+    "empty": {
+      "title": "No interest rules",
+      "description": "Define a rate per account to estimate accrued interest.",
+      "cta": "Add rule"
+    },
+    "form": {
+      "newTitle": "New interest rule",
+      "editTitle": "Edit rule · {account}",
+      "description": "Rates are gross; the tax rate is withheld. Tiers apply progressively.",
+      "account": "Account",
+      "validFrom": "Starts on",
+      "validTo": "Ends on · optional",
+      "tiers": "Rate tiers",
+      "upTo": "Balance up to",
+      "rate": "Gross rate",
+      "above": "above",
+      "addTier": "+ Add tier",
+      "removeTier": "Remove tier",
+      "tax": "Tax on interest",
+      "basis": "Day basis",
+      "payout": "Payout",
+      "match": "Paid interest is recognised by",
+      "matchHint": "Text in the payee or category of the bank's interest payment, e.g. \"interessi\". Leave empty to skip the check.",
+      "publish": "Post each payout to Wallet",
+      "publishHint": "Only for a synced account. Off, the rule only analyses.",
+      "active": "Rule is active",
+      "cancel": "Cancel",
+      "save": "Save rule"
+    },
+    "toasts": {
+      "saved": "Interest rule saved — accrual recalculated since the last payout",
+      "paused": "Rule paused",
+      "resumed": "Rule resumed"
+    },
+    "errors": {
+      "invalid": "Check the values: dates, rates between 0 and 100 %, amounts above zero.",
+      "not_found": "That rule no longer exists.",
+      "invalid_account": "Pick one of your open accounts.",
+      "invalid_tiers": "Thresholds must increase and only the last tier is open.",
+      "not_synced": "Only a synced Wallet account can be posted to.",
+      "failed": "Couldn't save. Try again."
+    },
+    "detail": {
+      "back": "Interests",
+      "summary": "{account} · {settlement} · {basis}",
+      "accruedYtd": "Accrued this year",
+      "pending": "Accrued, not yet paid out",
+      "next": "Next payout",
+      "mode": "Mode",
+      "modes": {
+        "analyze_only": "Analysis only",
+        "post_to_provider": "Posted to Wallet"
+      },
+      "pause": "Pause",
+      "resume": "Resume",
+      "edit": "Edit rule",
+      "settlements": {
+        "title": "Payouts",
+        "empty": "No period has closed yet.",
+        "period": "Period",
+        "days": "Days",
+        "gross": "Gross",
+        "tax": "Tax",
+        "net": "Net",
+        "paid": "Paid",
+        "status": "Check",
+        "posting": "Wallet",
+        "daysValue": "{accrued} accrued{skipped, plural, =0 {} other { · # skipped}}"
+      },
+      "reconciliation": {
+        "no_data": "No data",
+        "indeterminate": "Unsure",
+        "matched": "Matched",
+        "missing": "Missing",
+        "delayed": "Awaited",
+        "anomalous": "Anomalous"
+      },
+      "days": {
+        "title": "Daily accruals",
+        "subtitle": "Last {count} days",
+        "date": "Day",
+        "balance": "Balance",
+        "gross": "Gross",
+        "net": "Net",
+        "statuses": {
+          "negative_balance": "Negative balance · skipped",
+          "no_balance": "No balance · skipped"
+        },
+        "empty": "Nothing accrued yet."
+      },
+      "posting": {
+        "states": {
+          "none": "Not posted",
+          "claimed": "Posting…",
+          "posted": "Posted",
+          "indeterminate": "Unsure"
+        },
+        "postNow": "Post now",
+        "retry": "Retry",
+        "markPosted": "Mark as posted",
+        "unsureHint": "The posting may or may not have reached Wallet. Check Wallet, then retry or mark it posted.",
+        "toasts": {
+          "posted": "Posted to Wallet",
+          "indeterminate": "Unsure — check Wallet",
+          "none": "Not posted",
+          "marked": "Marked as posted"
+        }
+      }
+    },
+    "account": {
+      "label": "Interest rule",
+      "none": "—",
+      "manage": "Manage"
+    }
+  },
+  "funds": {
+    "title": "Funds",
+    "summary": "{value} across {count, plural, one {# fund} other {# funds}}",
+    "add": "Add fund",
+    "kpis": {
+      "value": "Current value",
+      "paidIn": "Paid in",
+      "gain": "Total gain",
+      "monthly": "Monthly contributions"
+    },
+    "chart": {
+      "title": "Combined value vs paid in · 12 months",
+      "value": "Value",
+      "paid": "Paid in",
+      "summary": "Value of the funds and what had been paid in, month by month; {value} now."
+    },
+    "table": {
+      "title": "All funds",
+      "hint": "Click a fund for its page",
+      "fund": "Fund",
+      "type": "Type",
+      "paidIn": "Paid in",
+      "value": "Value",
+      "gain": "Gain",
+      "cumulative": "Cumulative",
+      "lastValuation": "Last valuation",
+      "month": "This month",
+      "edit": "Edit",
+      "valuation": "Record valuation",
+      "total": "Total",
+      "perMonth": "{amount} / month"
+    },
+    "types": {
+      "pac": "PAC",
+      "pension": "Pension fund"
+    },
+    "month": {
+      "found": "Deposit found · {date}",
+      "awaited": "Awaited",
+      "missing": "Not found",
+      "none": "—"
+    },
+    "alert": {
+      "missing": "no deposit found by {date} ({amount} expected).",
+      "cta": "Check expenses"
+    },
+    "archived": {
+      "count": "{count, plural, one {# archived fund} other {# archived funds}}",
+      "restore": "Restore"
+    },
+    "empty": {
+      "title": "No investment funds",
+      "description": "Add a fund to track contributions and returns.",
+      "cta": "Add fund"
+    },
+    "detail": {
+      "kind": "Accumulation plan (PAC)",
+      "since": "since {date}",
+      "asOf": "{paidIn} paid in · as of {date}",
+      "cumulative": "cumulative",
+      "noValue": "No valuation yet",
+      "tabs": {
+        "label": "Fund",
+        "overview": "Overview",
+        "deposits": "Deposits",
+        "valuations": "Valuations",
+        "settings": "Settings"
+      },
+      "kpis": {
+        "invested": "Invested (net of fees)",
+        "investedNote": "{count, plural, one {# deposit} other {# deposits}}",
+        "investedPartial": "a fee is unknown",
+        "fees": "Fees paid on deposits",
+        "feesNote": "{fee} per deposit",
+        "feesNone": "no fee set",
+        "gain": "Gain",
+        "gainNote": "{percent} on paid in",
+        "year": "Last 12 months",
+        "yearNote": "compounded · TER {ter}",
+        "yearNoTer": "compounded"
+      },
+      "chart": {
+        "title": "Value vs paid in · {months} months",
+        "value": "Value",
+        "paid": "Paid in",
+        "summary": "{name}: value and paid in at each month end; {value} now."
+      },
+      "returns": {
+        "title": "Monthly return",
+        "avg": "avg {value} / month",
+        "best": "Best month",
+        "worst": "Worst month",
+        "positive": "Positive months",
+        "positiveValue": "{positive} / {counted}",
+        "empty": "Needs a valuation at both ends of a month.",
+        "bar": "{month} {value}"
+      },
+      "recent": {
+        "title": "Recent deposits",
+        "all": "All deposits"
+      }
+    },
+    "deposits": {
+      "title": "Deposits",
+      "hint": "{count, plural, one {# deposit} other {# deposits}}",
+      "date": "Date",
+      "debited": "Debited",
+      "fee": "Fee",
+      "invested": "Invested",
+      "source": "Source",
+      "sources": {
+        "manual": "Manual",
+        "rule": "Matched"
+      },
+      "note": "Note",
+      "edit": "Edit",
+      "delete": "Delete",
+      "total": "Total",
+      "empty": "No deposits yet.",
+      "add": {
+        "title": "Add deposit",
+        "hint": "Enter the debited amount; the fee is subtracted.",
+        "date": "Date",
+        "debited": "Debited (€)",
+        "fee": "Fee (€)",
+        "invested": "Invested",
+        "note": "Note",
+        "save": "Save deposit"
+      },
+      "editTitle": "Edit deposit",
+      "rule": {
+        "title": "Linked expense rule",
+        "text": "Expenses on {account} whose payee contains {match} become a deposit, less {fee} fee.",
+        "anyAccount": "any account",
+        "noFee": "no",
+        "active": "Active",
+        "paused": "Paused",
+        "edit": "Edit rule",
+        "none": "No rule: deposits are entered by hand."
+      }
+    },
+    "valuations": {
+      "title": "Valuation records",
+      "hint": "{count, plural, one {# record} other {# records}}",
+      "date": "Date",
+      "value": "Value",
+      "paidIn": "Paid in",
+      "gain": "Gain",
+      "units": "Units",
+      "note": "Note",
+      "edit": "Edit",
+      "delete": "Delete",
+      "empty": "No valuation yet.",
+      "form": {
+        "title": "Record valuation · {name}",
+        "description": "Enter the value shown on the latest statement. It is saved as the balance of the fund's account; monthly returns are computed from it.",
+        "date": "Valuation date",
+        "value": "Current value (€)",
+        "units": "Units · optional",
+        "note": "Note",
+        "last": "Last recorded: {value} · {date}",
+        "cancel": "Cancel",
+        "save": "Save valuation"
+      }
+    },
+    "settings": {
+      "general": {
+        "title": "General",
+        "description": "Name, provider and identifiers.",
+        "name": "Name",
+        "provider": "Provider",
+        "compartment": "Type / compartment",
+        "isin": "ISIN",
+        "start": "Start date"
+      },
+      "plan": {
+        "title": "Contributions",
+        "description": "The monthly plan and the fee taken on each deposit.",
+        "monthly": "Monthly amount debited (€)",
+        "fee": "Fee per deposit (€)",
+        "investedPerMonth": "Invested per month: {value}",
+        "debitAccount": "Paying account",
+        "noAccount": "None",
+        "debitDay": "Charge day",
+        "ter": "Annual management fee (TER, %)"
+      },
+      "rule": {
+        "title": "Linked expense",
+        "description": "Create a deposit automatically when a matching expense appears on the paying account.",
+        "active": "Link expenses to deposits",
+        "match": "Payee contains",
+        "account": "On account",
+        "anyAccount": "Any account",
+        "save": "Save rule"
+      },
+      "valuations": {
+        "title": "Valuations",
+        "description": "The value lives on the fund's account: its settings decide net worth, snapshot and reminders.",
+        "open": "Open {account} settings"
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Archiving hides the fund but keeps its history.",
+        "text": "Archive {name}. Deposits and valuations stay readable.",
+        "archive": "Archive fund",
+        "restore": "Restore fund"
+      },
+      "save": "Save"
+    },
+    "form": {
+      "newTitle": "New fund",
+      "description": "A monthly plan into a fund. Its value is kept on an account of its own, so net worth counts it once.",
+      "valuationAccount": "Value kept on",
+      "newAccount": "A new account named after the fund",
+      "initial": "Initial capital (€)",
+      "cancel": "Cancel",
+      "save": "Save fund"
+    },
+    "toasts": {
+      "saved": "Fund saved",
+      "archived": "Fund archived — history kept",
+      "restored": "Fund restored",
+      "valuation": "Valuation recorded",
+      "valuationDeleted": "Valuation deleted",
+      "deposit": "Deposit saved",
+      "depositDeleted": "Deposit deleted",
+      "rule": "Rule saved"
+    },
+    "errors": {
+      "invalid": "Check the values: a name, amounts above zero, a fee not above the amount, TER between 0 and 100 %.",
+      "not_found": "That fund no longer exists.",
+      "invalid_account": "Pick an open account; the value needs a manual account no other fund uses.",
+      "duplicate_name": "There is already a fund with that name.",
+      "archived": "An archived fund can't change. Restore it first.",
+      "linked": "This deposit comes from a movement: hide the movement in Expenses to drop it.",
+      "future_date": "The date can't be in the future.",
+      "failed": "Couldn't save. Try again."
+    },
+    "account": {
+      "label": "Fund"
     }
   }
 }

@@ -8,7 +8,7 @@ import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { listConnections, listRuns, readSyncJob, type SyncRun } from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
 import { Badge } from "@/ui/badge";
-import { SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { WalletCard, type WalletCardState } from "./wallet-card";
 
@@ -72,12 +72,12 @@ export default async function SettingsIntegrationsPage() {
   const job = wallet ? await readSyncJob(ctx, wallet.id, "transactions") : null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
         <WalletCard state={state} lastSync={lastSync} history={backfillDepth(job?.cursor)} />
       </SettingsSection>
 
-      <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false}>
+      <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false} wide>
         {runs.length === 0 ? (
           <p className="p-4 text-muted">{t("runs.empty")}</p>
         ) : (
@@ -120,6 +120,6 @@ export default async function SettingsIntegrationsPage() {
           </div>
         )}
       </SettingsSection>
-    </div>
+    </SettingsGrid>
   );
 }

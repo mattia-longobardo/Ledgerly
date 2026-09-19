@@ -6,6 +6,9 @@
 
 import type { RowBadge } from "./display";
 import type { Tone } from "@/ui/tone";
+import type { CategoryOption } from "@/ui/category-picker";
+
+export type { CategoryOption };
 
 /** One movement, as the table and the mobile list draw it. */
 export interface RowView {
@@ -46,13 +49,6 @@ export interface GroupView {
 }
 
 /** A category as every picker in the screen offers it, in tree order (F2.5). */
-export interface CategoryOption {
-  id: string;
-  name: string;
-  color: string;
-  /** 1 for a sub-category, which the pickers indent under its group. */
-  depth?: 0 | 1;
-}
 
 /** A label as the details panel offers it (spec §7.2: labels are the user's, like the note). */
 export interface LabelOption {

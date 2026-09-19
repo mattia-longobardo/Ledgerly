@@ -137,11 +137,19 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
       ),
     ).toBeVisible();
 
+    await page.locator("summary", { hasText: "All types" }).click();
     await page.getByRole("link", { name: /^Transfers/ }).click();
     await expect(page).toHaveURL(/type=transfer/);
     await expect(page.getByRole("row").filter({ hasText: "Netflix" })).toHaveCount(0);
     await expect(page.getByRole("row").filter({ hasText: "Revolut" })).toHaveCount(1);
     await expect(net(page)).toHaveText("−500,00 €");
+
+    // Types are multiple choice: spending and transfers together. The menu stays open after a
+    // pick, like the categories', so a second type is one more click.
+    await page.getByRole("link", { name: /^Spending/ }).click();
+    await expect(page).toHaveURL(/type=expense%2Ctransfer|type=expense,transfer/);
+    await expect(page.getByRole("row").filter({ hasText: "Netflix" })).toHaveCount(1);
+    await expect(page.getByRole("row").filter({ hasText: "Revolut" })).toHaveCount(1);
   });
 
   await test.step("the palette finds a payee and opens Expenses filtered on it", async () => {

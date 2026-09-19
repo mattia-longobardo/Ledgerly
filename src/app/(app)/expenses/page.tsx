@@ -108,7 +108,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
       name: account.name,
       count: accountCount.get(account.id) ?? 0,
     }))
-    .filter((account) => account.count > 0 || account.id === query.accountId)
+    .filter((account) => account.count > 0 || query.accountSelection.includes(account.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   function toRow(row: QueryRow): RowView {

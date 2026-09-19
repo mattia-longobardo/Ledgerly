@@ -7,7 +7,7 @@ import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate } from "@/platform/format";
-import { SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { type SessionRow, SessionsList } from "./sessions-list";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,10 +37,15 @@ export default async function SecurityPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <SettingsSection title={t("sessions.title")} description={t("sessions.description")} padded={false}>
+    <SettingsGrid>
+      <SettingsSection
+        title={t("sessions.title")}
+        description={t("sessions.description")}
+        padded={false}
+        wide
+      >
         <SessionsList sessions={rows} />
       </SettingsSection>
-    </div>
+    </SettingsGrid>
   );
 }

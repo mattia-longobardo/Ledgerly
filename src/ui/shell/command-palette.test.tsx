@@ -44,6 +44,7 @@ const LABELS = {
   palette: {
     placeholder: "Jump to a page…",
     pages: "Pages",
+    records: "Pockets and subscriptions",
     payees: "Payees",
     empty: "No matches",
     shortcut: "⌘K",
@@ -97,6 +98,30 @@ describe("CommandPalette", () => {
 
     await userEvent.click(payee);
     expect(push).toHaveBeenCalledWith("/expenses?q=Netflix");
+  });
+
+  it("offers the pockets and subscriptions found by name, before the payees (spec §8.2)", async () => {
+    const searchRecords = vi.fn(async () => [
+      { id: "pocket:p-1", label: "Holidays", hint: "Pocket", href: "/pockets?pocket=p-1" as Route },
+    ]);
+    const searchPayees = vi.fn(async () => [{ payee: "Holiday Inn", count: 2 }]);
+    render(
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+        <CommandPalette links={LINKS} searchPayees={searchPayees} searchRecords={searchRecords} />
+      </ShellProvider>,
+    );
+
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await userEvent.type(await screen.findByPlaceholderText("Jump to a page…"), "holi");
+
+    const pocket = await screen.findByRole("option", { name: /Holidays/ });
+    expect(screen.getByText("Pockets and subscriptions")).toBeInTheDocument();
+    const names = screen.getAllByRole("option").map((option) => option.textContent);
+    expect(names.indexOf(pocket.textContent)).toBeLessThan(
+      names.findIndex((name) => name?.includes("Holiday Inn")),
+    );
+    await userEvent.click(pocket);
+    expect(push).toHaveBeenCalledWith("/pockets?pocket=p-1");
   });
 
   it("asks once for the settled query, not once per keystroke", async () => {

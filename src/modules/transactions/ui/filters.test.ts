@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  categoryParam,
+  listParam,
   filtersOf,
   isWholeMonths,
   parseExpensesQuery,
   presetRange,
   shiftRange,
-  toggleCategory,
+  toggle,
   UNCATEGORISED,
 } from "./filters";
 
@@ -95,7 +95,7 @@ describe("parseExpensesQuery", () => {
 
   it("reads the type filter and ignores a type it does not know (F2.5)", () => {
     const transfers = parseExpensesQuery({ type: "transfer" }, TODAY);
-    expect(transfers.type).toBe("transfer");
+    expect(transfers.typeSelection).toEqual(["transfer"]);
     expect(transfers.filtered).toBe(true);
     expect(transfers.params.type).toBe("transfer");
     expect(transfers.presetParams.type).toBe("transfer");
@@ -104,7 +104,7 @@ describe("parseExpensesQuery", () => {
     expect(filtersOf(transfers).types).toEqual(["transfer"]);
 
     const unknown = parseExpensesQuery({ type: "refund" }, TODAY);
-    expect(unknown.type).toBeNull();
+    expect(unknown.typeSelection).toEqual([]);
     expect(unknown.filtered).toBe(false);
     expect(filtersOf(unknown).types).toBeUndefined();
   });
@@ -143,7 +143,7 @@ describe("parseExpensesQuery", () => {
     expect(query.sort).toBe("date");
     expect(query.direction).toBe("desc");
     // An id that is not one reaches a `uuid` column and takes the whole screen down with it.
-    expect(query.accountId).toBeNull();
+    expect(query.accountSelection).toEqual([]);
     expect(query.categorySelection).toEqual([]);
     expect(query.filtered).toBe(false);
     expect(query.params.acc).toBeUndefined();
@@ -156,7 +156,7 @@ describe("parseExpensesQuery", () => {
       { acc: `${ACCOUNT}x`, cat: `${CATEGORY_A},nonsense,${UNCATEGORISED}` },
       TODAY,
     );
-    expect(query.accountId).toBeNull();
+    expect(query.accountSelection).toEqual([]);
     expect(query.categorySelection).toEqual([CATEGORY_A, UNCATEGORISED]);
     expect(filtersOf(query).accountIds).toBeUndefined();
     expect(filtersOf(query).categoryIds).toEqual([CATEGORY_A, null]);
@@ -179,7 +179,7 @@ describe("parseExpensesQuery", () => {
       TODAY,
     );
     expect(query.categorySelection).toEqual([CATEGORY_B, CATEGORY_A, UNCATEGORISED]);
-    expect(query.accountId).toBe(ACCOUNT);
+    expect(query.accountSelection).toEqual([ACCOUNT]);
     expect(query.search).toBe("Netflix");
     expect(query.showHidden).toBe(true);
     expect(query.direction).toBe("asc");
@@ -213,7 +213,23 @@ describe("parseExpensesQuery", () => {
   });
 
   it("takes only the first value of a repeated parameter", () => {
-    expect(parseExpensesQuery({ acc: [ACCOUNT, OTHER_ACCOUNT] }, TODAY).accountId).toBe(ACCOUNT);
+    expect(parseExpensesQuery({ acc: [ACCOUNT, OTHER_ACCOUNT] }, TODAY).accountSelection).toEqual([ACCOUNT]);
+  });
+});
+
+describe("several accounts and types", () => {
+  it("reads comma-separated accounts and types, in a fixed type order, and asks for all of them", () => {
+    const query = parseExpensesQuery(
+      { acc: `${ACCOUNT},${OTHER_ACCOUNT},${ACCOUNT}`, type: "transfer,refund,expense" },
+      TODAY,
+    );
+    expect(query.accountSelection).toEqual([ACCOUNT, OTHER_ACCOUNT]);
+    expect(query.typeSelection).toEqual(["expense", "transfer"]);
+    expect(query.params.acc).toBe(`${ACCOUNT},${OTHER_ACCOUNT}`);
+    expect(query.params.type).toBe("expense,transfer");
+    expect(filtersOf(query).accountIds).toEqual([ACCOUNT, OTHER_ACCOUNT]);
+    expect(filtersOf(query).types).toEqual(["expense", "transfer"]);
+    expect(query.filtered).toBe(true);
   });
 });
 
@@ -266,11 +282,11 @@ describe("sort directions", () => {
   });
 });
 
-describe("toggleCategory", () => {
+describe("toggle", () => {
   it("adds what is missing and takes away what is there", () => {
-    expect(toggleCategory([], "a")).toEqual(["a"]);
-    expect(toggleCategory(["a", "b"], "a")).toEqual(["b"]);
-    expect(categoryParam(toggleCategory(["a"], "b"))).toBe("a,b");
-    expect(categoryParam(toggleCategory(["a"], "a"))).toBe("");
+    expect(toggle([], "a")).toEqual(["a"]);
+    expect(toggle(["a", "b"], "a")).toEqual(["b"]);
+    expect(listParam(toggle(["a"], "b"))).toBe("a,b");
+    expect(listParam(toggle(["a"], "a"))).toBe("");
   });
 });

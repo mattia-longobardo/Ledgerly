@@ -12,6 +12,7 @@ import {
   today,
 } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
+import { FOREIGN_KEY_VIOLATION, hasPgError } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { PROVIDERS } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
@@ -177,8 +178,11 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
  * Deletion when nothing depends on the account, archiving otherwise (spec §7.1). The caller is
  * told which of the two happened so the interface can say so.
  *
- * Nothing can reference an account yet: transactions, pockets, subscriptions, interest rules and
- * funds arrive from F2 onwards, and each adds its count here.
+ * What depends on an account lives in other modules — pockets, subscriptions, and from F4 interest
+ * rules and funds — and this module does not read their tables (§4.2). Their foreign keys to
+ * `accounts` are `on delete no action`, so the database itself refuses the deletion (23503) of an
+ * account something still rests on, and that refusal is the reference count. A provider's account
+ * is never deleted at all.
  *
  * A real deletion also forgets the provider links of the movements it takes with it, through the
  * integrations service (§4.3: one owner per table — this module never writes `provider_links`
@@ -190,8 +194,7 @@ export async function removeAccount(
   id: string,
 ): Promise<"deleted" | "archived"> {
   const account = await requireAccount(ctx, id);
-  const references = 0;
-  if (!canDelete(account, references)) {
+  if (!canDelete(account, 0)) {
     await archiveAccount(ctx, id);
     return "archived";
   }
@@ -200,9 +203,15 @@ export async function removeAccount(
   // Left behind they would hold the entity unique key of rows nothing can resolve, and claim a
   // `first_seen_at` for movements that no longer exist.
   const movementIds = await transactionIdsOfAccount(ctx, id);
-  await getDb()
-    .delete(accounts)
-    .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  try {
+    await getDb()
+      .delete(accounts)
+      .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  } catch (error) {
+    if (!hasPgError(error, FOREIGN_KEY_VIOLATION)) throw error;
+    await archiveAccount(ctx, id);
+    return "archived";
+  }
   // After the delete, never before. A link removed while its row survives is worse than an
   // orphan: the next sync would not recognise the movement and would import it a second time,
   // which is wrong money in every total. This way the failure mode is the one we already have.

@@ -2,25 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { accountsView } from "@/modules/accounts/queries";
-import {
-  asNumbers,
-  axisLabels,
-  changeBetween,
-  colorFor,
-  monthLabels,
-  shareOf,
-  since,
-} from "@/modules/accounts/ui/display";
+import { asNumbers, changeBetween, colorFor, shareOf, since } from "@/modules/accounts/ui/display";
 import { LinkTabs, PeriodStepper } from "@/modules/accounts/ui/controls";
+import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { type Grain, periodEnd } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
 import { ButtonLink } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
-import { CompositionBar, Sparkline, StackedArea } from "@/ui/chart";
+import { CompositionBar, Sparkline } from "@/ui/chart";
 import { KpiTile } from "@/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
@@ -94,25 +86,6 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
     },
   ];
   const totalChange = changeBetween(view.total, view.previousTotal);
-
-  /**
-   * The chart, drawn like Overview's: one band per account in the net worth, the largest at the end
-   * of the window at the bottom of the pile, and the net worth as the line on top.
-   */
-  const layers = rows
-    .filter((row) => row.account.inNetWorth)
-    .sort((a, b) => {
-      const difference = (b.held.at(-1) ?? 0n) - (a.held.at(-1) ?? 0n);
-      return difference > 0n ? 1 : difference < 0n ? -1 : 0;
-    });
-  const netWorth = view.netWorth.map((point) => point.total);
-  /** What the accounts below zero add up to each month: the bottom of the chart's scale. */
-  const negatives = view.months.map((_, index) =>
-    layers.reduce<Cents>((sum, row) => {
-      const value = row.held[index];
-      return value !== null && value < 0n ? sum + value : sum;
-    }, 0n),
-  );
 
   return (
     <Page title={t("title")} actions={add}>
@@ -240,46 +213,8 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       {view.totalPartial && <p className="text-sm text-warn">{t("partial")}</p>}
 
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card padded={false} className="flex flex-col gap-3 p-4">
-          <h2 className="text-lg font-semibold">{t("chart.title", { count: view.months.length })}</h2>
-          <StackedArea
-            layers={layers.map((row) => ({
-              label: row.account.name,
-              color: row.color,
-              values: asNumbers(row.held),
-            }))}
-            total={asNumbers(netWorth)}
-            estimated={view.netWorthEstimated}
-            hover={view.months.map((month, index) => ({
-              label: formatDate(month, "monthYear", ctx.locale),
-              value: formatMoney(netWorth[index], ctx.numberFormat),
-              note: view.netWorthEstimated[index] ? t("estimated.short") : undefined,
-              // Top of the pile first, as the eye reads the chart.
-              rows: [...layers]
-                .reverse()
-                .filter((row) => row.held[index] !== null)
-                .map((row) => ({
-                  label: row.account.name,
-                  value: formatMoney(row.held[index], ctx.numberFormat),
-                  color: row.color,
-                })),
-            }))}
-            yLabels={axisLabels([...netWorth, ...negatives], ctx.numberFormat)}
-            xLabels={monthLabels(view.months, ctx.locale)}
-            summary={t("chart.summary", { count: layers.length })}
-          />
-          <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted">
-            {[...layers].reverse().map((row) => (
-              <li key={row.account.id} className="flex items-center gap-1.5">
-                <span aria-hidden className="size-2.5 rounded-[3px]" style={{ background: row.color }} />
-                {row.account.name}
-              </li>
-            ))}
-          </ul>
-          {view.netWorthEstimated.some(Boolean) && (
-            <p className="text-sm text-muted">{t("estimated.note")}</p>
-          )}
-        </Card>
+        {/* Overview's chart, with its own range and grain (`chart=` here: `grain` is the table's). */}
+        <NetWorthCard ctx={ctx} query={query} path="/accounts" carry={params} grainParam="chart" now={now} />
 
         <Card padded={false} className="flex flex-col gap-3 p-4">
           <h2 className="text-lg font-semibold">{t("composition.title")}</h2>

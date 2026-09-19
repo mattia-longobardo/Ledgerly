@@ -9,7 +9,7 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { EntityType } from "@/platform/integrations/rules";
 import { IntegrationError, linkExternal, resolveExternal } from "@/platform/integrations/service";
-import { CATEGORY_TYPES, markLocallyEdited, NAME_MAX, treeOrder } from "./rules";
+import { CATEGORY_TYPES, type CategoryType, markLocallyEdited, NAME_MAX, treeOrder } from "./rules";
 import { categories, labels, transactionLabels, transactions } from "./schema";
 
 export type Category = typeof categories.$inferSelect;
@@ -149,6 +149,24 @@ export async function listCategories(
     .where(categoryScope(ctx, options.includeArchived ?? false))
     .orderBy(...CATEGORY_ORDER);
   return treeOrder(rows);
+}
+
+/**
+ * The open categories of one type as a picker offers them (F3): tree order, a sub-category in its
+ * group's colour (spec §7.2, F2.5), grey for a category with no colour at all.
+ */
+export async function categoryOptions(
+  ctx: Pick<Ctx, "userId">,
+  type: CategoryType,
+): Promise<{ id: string; name: string; color: string; depth: 0 | 1 }[]> {
+  const tree = (await listCategories(ctx)).filter((category) => category.type === type);
+  const colorOf = new Map(tree.map((category) => [category.id, category.color]));
+  return tree.map((category) => ({
+    id: category.id,
+    name: category.name,
+    color: (category.parentId === null ? category.color : colorOf.get(category.parentId)) ?? "#8a8f98",
+    depth: category.depth,
+  }));
 }
 
 /**
