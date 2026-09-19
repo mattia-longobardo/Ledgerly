@@ -87,6 +87,7 @@ describe("jobs", () => {
       outcomes: [
         { job: "housekeeping", status: "success" },
         { job: "accounts-alerts", status: "success" },
+        { job: "interests-accrual", status: "success" },
       ],
     });
   });

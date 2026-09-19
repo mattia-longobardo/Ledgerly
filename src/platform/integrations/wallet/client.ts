@@ -12,8 +12,9 @@
  * decided before the body is ever shown to a schema.
  */
 
-import { type ZodType } from "zod";
-import { addDays, type CivilDate } from "@/platform/dates";
+import { z, type ZodType } from "zod";
+import { addDays, type CivilDate, isCivilDate } from "@/platform/dates";
+import { type Cents, centsToDecimal } from "@/platform/money";
 import {
   type DateWindow,
   mapWalletAccount,
@@ -28,6 +29,7 @@ import {
   walletCategoriesPayloadSchema,
   type WalletCategory,
   walletRecordDate,
+  walletRecordSchema,
   type WalletRecordPayload,
   walletRecordsPayloadSchema,
   type WalletTransaction,
@@ -157,6 +159,31 @@ export interface WalletClient {
    * category's name as well, so this is no longer the only place a name can come from.
    */
   categories(): Promise<WalletCategory[]>;
+  /**
+   * F4: the records of one Wallet account on one day whose note contains `marker` — the duplicate
+   * check before publishing an interest settlement (spec §7.6). The filter shape
+   * (`accountId=eq.`, `recordDate=eq.`, `note=contains.`) is the one the owner's `interest.py`
+   * used against the live API.
+   */
+  recordsWithNote(query: { accountId: string; on: CivilDate; marker: string }): Promise<WalletNoteRecord[]>;
+  /**
+   * F4: one new record (spec §7.6, §9.1), **one attempt** (`WRITE_ATTEMPTS`): a 5xx after Wallet
+   * stored it must not store it twice. The answer's id is `null` when the body carries none that
+   * can be read — the record may well exist; the caller treats that as unsure, never as done.
+   */
+  createRecord(input: {
+    accountId: string;
+    amountCents: Cents;
+    on: CivilDate;
+    note: string;
+  }): Promise<{ id: string | null }>;
+}
+
+/** A record found by the duplicate check: enough to tell whether it is the one we would post. */
+export interface WalletNoteRecord {
+  id: string;
+  amountCents: Cents;
+  note: string | null;
 }
 
 const defaultSleep = (ms: number): Promise<void> =>
@@ -400,6 +427,21 @@ function byDateThenId(left: WalletTransaction, right: WalletTransaction): number
   return left.externalId < right.externalId ? -1 : 1;
 }
 
+/** The duplicate check's answer: records, with or without the filters Wallet says it applied. */
+const noteRecordsSchema = z.object({ records: z.array(walletRecordSchema) });
+
+/**
+ * What a POST of records answers — never verified against the live API (plan F4 §3.5): wrapped like
+ * every read (`{ records: [...] }`) or a bare array. Anything else fails as `payload`, which the
+ * caller records as unsure.
+ */
+const createdRecordsSchema = z.union([
+  z
+    .object({ records: z.array(z.object({ id: z.string().min(1) }).passthrough()) })
+    .transform((v) => v.records),
+  z.array(z.object({ id: z.string().min(1) }).passthrough()),
+]);
+
 export function createWalletClient(token: string, options: WalletClientOptions = {}): WalletClient {
   // An empty token is a bug in the caller, not a rejected credential: the vault handed over
   // nothing. Raised before any request so it can never be reported as the provider's fault.
@@ -451,8 +493,9 @@ export function createWalletClient(token: string, options: WalletClientOptions =
   }
 
   /** One HTTP attempt: fetch, classify the answer, validate the payload. */
-  async function attempt<T>(path: string, schema: ZodType<T>): Promise<T> {
+  async function attempt<T>(path: string, schema: ZodType<T>, body?: string): Promise<T> {
     const headers = requestHeaders();
+    if (body !== undefined) headers.set("content-type", "application/json");
     const controller = new AbortController();
     let timedOut = false;
     const timer = setTimeout(() => {
@@ -463,8 +506,9 @@ export function createWalletClient(token: string, options: WalletClientOptions =
     let response: Response;
     try {
       response = await call(`${baseUrl}${path}`, {
-        method: "GET",
+        method: body === undefined ? "GET" : "POST",
         headers,
+        body,
         signal: controller.signal,
       });
     } catch (error) {
@@ -482,13 +526,13 @@ export function createWalletClient(token: string, options: WalletClientOptions =
       clearTimeout(timer);
     }
 
-    const body = await response.text().catch(() => "");
+    const answer = await response.text().catch(() => "");
 
     // The status decides first, every time: an answer outside 2xx is never handed to a schema.
     // A 400 fed to the record schema comes back as "an unexpected shape", which reads as an
     // unintelligible provider and then, one mapping later, as a network problem — three wrong
     // diagnoses for a body that said exactly what was wrong.
-    const reason = errorFieldOf(body);
+    const reason = errorFieldOf(answer);
     const said = reason === null ? "" : `: ${withoutToken(reason)}`;
 
     if (response.status === 401 || response.status === 403) {
@@ -496,7 +540,7 @@ export function createWalletClient(token: string, options: WalletClientOptions =
         "token_rejected",
         `Wallet rejected the token (HTTP ${response.status})${said}`,
         response.status,
-        detailOf(body),
+        detailOf(answer),
         false,
       );
     }
@@ -504,12 +548,12 @@ export function createWalletClient(token: string, options: WalletClientOptions =
       const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"), now());
       // 429 and 5xx are worth another go; a 4xx is the request's own fault and will be refused
       // identically five times over.
-      const retryable = isRetryableStatus(response.status, body);
+      const retryable = isRetryableStatus(response.status, answer);
       throw new WalletError(
         "http",
         `Wallet answered HTTP ${response.status}${said}`,
         response.status,
-        detailOf(body),
+        detailOf(answer),
         retryable,
         retryAfterMs ?? (retryable && response.status === 409 ? INIT_SYNC_DELAY_MS : null),
       );
@@ -517,7 +561,7 @@ export function createWalletClient(token: string, options: WalletClientOptions =
 
     let payload: unknown;
     try {
-      payload = parseJsonPreservingNumbers(body);
+      payload = parseJsonPreservingNumbers(answer);
     } catch (error) {
       throw new WalletError("payload", `Wallet answered with a body that is not JSON: ${errorText(error)}`);
     }
@@ -622,6 +666,24 @@ export function createWalletClient(token: string, options: WalletClientOptions =
       await readWindow(window, found);
       // Deterministic order, so a sync applies the same rows in the same sequence every pass.
       return [...found.values()].sort(byDateThenId);
+    },
+    async recordsWithNote({ accountId, on, marker }) {
+      const query = new URLSearchParams({ limit: "5" });
+      query.append("accountId", `eq.${accountId}`);
+      query.append("recordDate", `eq.${on}`);
+      query.append("note", `contains.${marker}`);
+      const page = await read(`/records?${query.toString()}`, noteRecordsSchema);
+      return page.records.map((raw) => {
+        const record = mapWalletRecord(raw);
+        return { id: record.externalId, amountCents: record.amountCents, note: record.note };
+      });
+    },
+    async createRecord({ accountId, amountCents, on, note }) {
+      if (!isCivilDate(on)) throw new RangeError(`Not a civil date: "${on}"`);
+      // Written by hand so the amount reaches the wire as its exact decimal, never through a float.
+      const body = `[{"accountId":${JSON.stringify(accountId)},"amount":${centsToDecimal(amountCents)},"recordDate":${JSON.stringify(on)},"note":${JSON.stringify(note)}}]`;
+      const created = await withRetry(() => attempt("/records", createdRecordsSchema, body), WRITE_ATTEMPTS);
+      return { id: created[0]?.id ?? null };
     },
     async categories() {
       const categories = await read(`/categories?limit=${CATEGORIES_LIMIT}`, walletCategoriesPayloadSchema);

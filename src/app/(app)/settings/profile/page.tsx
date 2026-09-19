@@ -6,7 +6,7 @@ import { hasPasswordAccount, hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { utcOffsetLabel } from "@/platform/dates";
-import { SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { NameForm } from "./name-form";
 import { PreferencesForm } from "./preferences-form";
 import { SignInMethod } from "./sign-in-method";
@@ -31,7 +31,7 @@ export default async function ProfilePage() {
     label: `${zone} (${utcOffsetLabel(zone, now)})`,
   }));
   return (
-    <div className="flex flex-col gap-6">
+    <SettingsGrid>
       <SettingsSection title={t("account.title")} description={t("account.description")}>
         <NameForm
           name={session?.user.name ?? ""}
@@ -46,6 +46,6 @@ export default async function ProfilePage() {
       <SettingsSection title={t("preferences.title")} description={t("preferences.description")}>
         <PreferencesForm key={JSON.stringify(preferences)} initial={preferences} timeZones={timeZones} />
       </SettingsSection>
-    </div>
+    </SettingsGrid>
   );
 }

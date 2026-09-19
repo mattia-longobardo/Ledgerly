@@ -20,7 +20,12 @@
     "components": "Componenti",
     "more": "Altro",
     "accounts": "Conti",
-    "expenses": "Spese"
+    "expenses": "Spese",
+    "budgets": "Budget",
+    "pockets": "Pocket",
+    "subscriptions": "Abbonamenti",
+    "funds": "Fondi",
+    "interests": "Interessi"
   },
   "shell": {
     "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
@@ -38,7 +43,11 @@
       "pages": "Pagine",
       "empty": "Nessun risultato",
       "shortcut": "⌘K",
-      "escape": "esc"
+      "escape": "esc",
+      "records": "Pocket, fondi e abbonamenti",
+      "pocket": "Pocket",
+      "subscription": "Abbonamento",
+      "fund": "Fondo"
     }
   },
   "emails": {
@@ -454,7 +463,9 @@
       },
       "accounts": {
         "all": "Tutti i conti",
-        "one": "{name}"
+        "title": "Conti",
+        "some": "{count, plural, one {# conto} other {# conti}}",
+        "clear": "Azzera"
       },
       "search": "Cerca beneficiario…",
       "searchLabel": "Cerca per beneficiario",
@@ -462,10 +473,12 @@
       "showHidden": "Mostra i nascosti",
       "types": {
         "label": "Tipo",
-        "all": "Tutti",
+        "all": "Tutti i tipi",
         "income": "Entrate",
         "expense": "Spese",
-        "transfer": "Giroconti"
+        "transfer": "Giroconti",
+        "some": "{count, plural, one {# tipo} other {# tipi}}",
+        "clear": "Azzera"
       }
     },
     "columns": {
@@ -755,10 +768,6 @@
       "hours": "{count, plural, one {# ora fa} other {# ore fa}}",
       "days": "{count, plural, one {# giorno fa} other {# giorni fa}}"
     },
-    "chart": {
-      "title": "Saldi · {count} mesi",
-      "summary": "Una linea per conto, {count} conti in tutto."
-    },
     "composition": {
       "title": "Composizione",
       "liquid": "Liquido · contanti",
@@ -973,6 +982,780 @@
     "estimated": {
       "short": "stimato",
       "note": "I mesi tratteggiati sono ricostruiti dai movimenti sincronizzati, prima del primo saldo letto da Wallet."
+    }
+  },
+  "budgets": {
+    "title": "Budget",
+    "summary": "{spent} su {limit} · {percent}",
+    "period": {
+      "label": "Mese",
+      "previous": "Mese precedente",
+      "next": "Mese successivo",
+      "latest": "Questo mese"
+    },
+    "add": "Aggiungi budget",
+    "total": {
+      "title": "Totale del mese",
+      "remaining": "{amount} rimanenti",
+      "over": "{amount} oltre",
+      "spent": "Speso",
+      "limit": "Limite",
+      "progress": "Speso sul limite totale",
+      "unbudgeted": "Fuori budget questo mese: {amount}"
+    },
+    "columns": {
+      "category": "Budget",
+      "progress": "Avanzamento",
+      "spent": "Speso",
+      "limit": "Limite",
+      "remaining": "Rimanente",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "status": {
+      "over": "Superato",
+      "near": "Vicino al limite",
+      "on_track": "In linea"
+    },
+    "editLimit": "Modifica limite",
+    "limitInput": "Limite mensile per {category}",
+    "progressOf": "{category}: {percent} del limite",
+    "hint": "Fai clic su un limite per modificarlo; Invio salva, Esc annulla.",
+    "row": {
+      "menu": "Azioni del budget",
+      "remove": "Rimuovi da questo mese"
+    },
+    "empty": {
+      "title": "Nessun budget",
+      "description": "Imposta un limite mensile per categoria per vederne l'avanzamento qui.",
+      "cta": "Aggiungi budget"
+    },
+    "form": {
+      "title": "Aggiungi budget",
+      "description": "Un limite mensile su una categoria, un conto o entrambi, da {month} in avanti.",
+      "category": "Categoria",
+      "amount": "Limite mensile (€)",
+      "search": "Cerca categorie",
+      "noMatch": "Nessuna categoria corrisponde",
+      "save": "Aggiungi budget",
+      "cancel": "Annulla",
+      "account": "Conto",
+      "anyAccount": "Tutti i conti",
+      "anyCategory": "Tutte le categorie",
+      "needScope": "Scegli una categoria, un conto o entrambi."
+    },
+    "toasts": {
+      "saved": "Limite salvato",
+      "added": "Budget aggiunto",
+      "removed": "Budget rimosso da {month}"
+    },
+    "errors": {
+      "invalid": "Inserisci un importo maggiore di zero.",
+      "not_found": "Quella categoria non esiste più.",
+      "failed": "Salvataggio non riuscito. Riprova."
+    },
+    "overview": {
+      "title": "Budget · {month}",
+      "viewAll": "Vedi tutti",
+      "remaining": "{amount} rimasti",
+      "over": "{amount} oltre",
+      "empty": "Nessun budget questo mese."
+    },
+    "allCategories": "Tutte le categorie",
+    "allAccounts": "Tutti i conti"
+  },
+  "pockets": {
+    "title": "Pocket",
+    "subtitle": "Buste virtuali: ogni mese accantoni una somma senza spostare denaro, così i risparmi continuano a rendere.",
+    "kpis": {
+      "earmarked": "Accantonato nei pocket",
+      "count": "{count, plural, one {# pocket} other {# pocket}}",
+      "backing": "Saldi di appoggio",
+      "noBacking": "nessun pocket poggia su un conto",
+      "free": "Libero (non accantonato)",
+      "freeNote": "disponibile per nuovi pocket",
+      "monthly": "Accantonamento mensile · tutti i pocket",
+      "nextAccrual": "prossimo accantonamento {date}"
+    },
+    "list": {
+      "label": "Pocket",
+      "openEnded": "senza obiettivo",
+      "ofTarget": "su {target}",
+      "noTarget": "nessun obiettivo",
+      "perMonth": "+{amount} / mese",
+      "paused": "In pausa",
+      "new": "Nuovo pocket"
+    },
+    "detail": {
+      "since": "dal {month}",
+      "onAccount": "su {account}",
+      "standalone": "busta autonoma",
+      "target": "Obiettivo",
+      "accruedSince": "Accantonato dal {month}",
+      "funded": "{percent} raggiunto",
+      "toGo": "mancano {amount}",
+      "eta": "ETA {months, plural, one {# mese} other {# mesi}} · {month}",
+      "reached": "Obiettivo raggiunto",
+      "noEta": "nessun accantonamento mensile",
+      "openEnded": "Pocket senza obiettivo: nessun limite, accantona senza fine.",
+      "monthly": "Accantonamento mensile",
+      "manual": "Manuale",
+      "withdrawn": "Prelevato · 12 mesi",
+      "interest": "Interessi dal conto di appoggio",
+      "interestUnknown": "Nessuna regola di interessi sul conto, o nessun saldo positivo.",
+      "interestStandalone": "Una busta autonoma non poggia su nessun conto.",
+      "paused": "In pausa: nessun accantonamento finché non riprende.",
+      "interestEstimate": "Stima: gli interessi del conto negli ultimi 12 mesi × la quota di questo pocket."
+    },
+    "chart": {
+      "title": "Accantonato · 12 mesi",
+      "topIsTarget": "in alto = obiettivo",
+      "noTarget": "nessun obiettivo",
+      "summary": "{name}: saldo a fine mese, {value} oggi."
+    },
+    "withdrawals": {
+      "title": "Prelievi",
+      "count": "{count, plural, =0 {nessuno} one {# negli ultimi 12 mesi} other {# negli ultimi 12 mesi}}",
+      "date": "Data",
+      "purpose": "Motivo",
+      "amount": "Importo",
+      "empty": "Ancora nessun prelievo."
+    },
+    "actions": {
+      "add": "Aggiungi al pocket",
+      "withdraw": "Registra prelievo",
+      "edit": "Modifica pocket",
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "archive": "Archivia",
+      "restore": "Ripristina",
+      "more": "Altre azioni del pocket"
+    },
+    "archived": {
+      "title": "Pocket archiviati",
+      "count": "{count, plural, one {# pocket archiviato} other {# pocket archiviati}}"
+    },
+    "move": {
+      "title": "Aggiungi a {name}",
+      "descriptionAccount": "Accantona una parte di {account} per questo pocket. Nessun denaro viene spostato.",
+      "descriptionStandalone": "Aggiunge a questa busta. Nessun denaro viene spostato.",
+      "amount": "Importo",
+      "date": "Data",
+      "free": "Libero su {account}: {amount}",
+      "after": "Pocket dopo: {amount}",
+      "submit": "Aggiungi al pocket"
+    },
+    "withdraw": {
+      "title": "Registra prelievo",
+      "description": "Denaro speso davvero da {name}. Riduce l'importo accantonato.",
+      "amount": "Importo (€)",
+      "date": "Data",
+      "purpose": "Motivo",
+      "purposePlaceholder": "es. Hotel + traghetto",
+      "submit": "Registra"
+    },
+    "form": {
+      "newTitle": "Nuovo pocket",
+      "editTitle": "Modifica pocket",
+      "description": "Un pocket è una busta virtuale che riempi ogni mese. Può poggiare su un conto vero o stare da sola; l'obiettivo è facoltativo.",
+      "name": "Nome",
+      "account": "Conto di appoggio · facoltativo",
+      "none": "Nessuno — busta autonoma",
+      "target": "Obiettivo (€) · facoltativo",
+      "targetPlaceholder": "Lascia vuoto per nessun obiettivo",
+      "monthly": "Accantonamento mensile (€)",
+      "accrues": "Accantona",
+      "firstOfMonth": "Il 1° del mese",
+      "manually": "A mano",
+      "startMonth": "A partire da",
+      "note": "I pocket autonomi tengono solo un importo virtuale; quelli su un conto mostrano anche il saldo libero (non accantonato).",
+      "save": "Salva pocket",
+      "cancel": "Annulla"
+    },
+    "toasts": {
+      "saved": "Pocket salvato",
+      "added": "Accantonati {amount} per il pocket",
+      "withdrawn": "Prelievo registrato",
+      "paused": "Pocket in pausa",
+      "resumed": "Pocket ripreso",
+      "archived": "Pocket archiviato",
+      "restored": "Pocket ripristinato"
+    },
+    "errors": {
+      "invalid": "Controlla i valori: importi maggiori di zero, un nome fino a 60 caratteri.",
+      "not_found": "Quel pocket non esiste più.",
+      "invalid_account": "Scegli uno dei tuoi conti aperti.",
+      "duplicate_name": "Esiste già un pocket con quel nome.",
+      "archived": "Un pocket archiviato non si muove. Ripristinalo prima.",
+      "future_date": "La data non può essere nel futuro.",
+      "insufficient": "Il pocket non contiene così tanto.",
+      "failed": "Salvataggio non riuscito. Riprova."
+    },
+    "empty": {
+      "title": "Ancora nessun pocket",
+      "description": "Crea un pocket per accantonare ogni mese una parte di un conto di risparmio.",
+      "cta": "Nuovo pocket"
+    },
+    "overview": {
+      "label": "Pocket",
+      "perMonth": "+{amount} · al mese"
+    },
+    "account": {
+      "label": "Pocket",
+      "none": "Nessuno"
+    }
+  },
+  "subscriptions": {
+    "title": "Abbonamenti",
+    "subtitle": "{count, plural, one {# ricorrente} other {# ricorrenti}} · {monthly} / mese equivalente",
+    "add": "Aggiungi abbonamento",
+    "export": "Esporta CSV",
+    "suggest": "Suggerisci dai pagamenti ricorrenti",
+    "kpis": {
+      "monthly": "Totale mensile",
+      "monthlyNote": "equivalente, tutti i piani",
+      "yearly": "Totale annuo",
+      "yearlyNote": "tutti i piani, 12 mesi",
+      "low": "Utilità bassa (≤ 5)",
+      "lowNote": "all'anno · {count, plural, one {# abbonamento} other {# abbonamenti}} da rivedere",
+      "next30": "Prossimi 30 giorni",
+      "next30Note": "addebiti entro il {date}"
+    },
+    "columns": {
+      "name": "Nome",
+      "utility": "Utilità",
+      "price": "Prezzo",
+      "billing": "Addebito",
+      "paidFrom": "Pagato da",
+      "monthly": "Mensile",
+      "yearly": "Annuo",
+      "status": "Pagato nel periodo",
+      "edit": "Modifica"
+    },
+    "cycles": {
+      "weekly": "Settimanale",
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "yearly": "Annuale"
+    },
+    "status": {
+      "paid": "Pagato",
+      "amount_differs": "Importo diverso",
+      "due": "In scadenza",
+      "not_found": "Non trovato",
+      "not_due": "Non dovuto"
+    },
+    "statusDetail": {
+      "paid": "Trovato \"{match}\" su {account} · {date}",
+      "amount_differs": "Trovati {actual} invece di {expected} · {date}",
+      "due": "Addebito il {date} · non ancora trovato",
+      "not_found": "Nessuna spesa con \"{match}\" in {period}",
+      "not_due": "Prossimo addebito {date}",
+      "unchecked": "Nessun testo da cercare: non controllato"
+    },
+    "anyAccount": "qualunque conto",
+    "setUtility": "Imposta l'utilità 1–10",
+    "utilityOf": "{value}/10",
+    "total": "Totale",
+    "totalCount": "{count, plural, one {# abbonamento} other {# abbonamenti}}",
+    "inactive": {
+      "title": "{count, plural, one {# in pausa o annullato} other {# in pausa o annullati}}",
+      "paused": "In pausa",
+      "cancelled": "Annullato"
+    },
+    "alerts": {
+      "not_found": "nessuna spesa con \"{match}\" trovata su {account} in {period} ({price} attesi).",
+      "amount_differs": "addebitati {actual} il {date}, il piano dice {expected}: aumento di prezzo?",
+      "due": "addebito atteso il {date} ({price}), non ancora trovato su {account}.",
+      "checkExpenses": "Controlla le spese",
+      "label": "Avvisi di pagamento"
+    },
+    "projection": {
+      "title": "Proiezione per conto",
+      "month": "Mese",
+      "year": "Anno",
+      "monthText": "Saldo di oggi meno gli abbonamenti in scadenza nel prossimo mese.",
+      "yearText": "Saldo di oggi meno gli abbonamenti in scadenza nei prossimi 12 mesi.",
+      "count": "{count, plural, one {# abbonamento} other {# abbonamenti}}",
+      "balance": "Saldo di oggi",
+      "commit": "Abbonamenti",
+      "projected": "Proiezione",
+      "noAccount": "Senza conto di pagamento",
+      "share": "Quota del saldo impegnata",
+      "empty": "Nessun abbonamento attivo."
+    },
+    "byCategory": {
+      "title": "Per categoria · annuo",
+      "uncategorised": "Senza categoria"
+    },
+    "form": {
+      "newTitle": "Nuovo abbonamento",
+      "editTitle": "Modifica abbonamento",
+      "description": "Gli addebiti ricorrenti servono alle proiezioni dei saldi e vengono abbinati alle spese quando arrivano.",
+      "name": "Nome",
+      "category": "Categoria",
+      "pickCategory": "Nessuna categoria",
+      "search": "Cerca categorie",
+      "noMatch": "Nessuna categoria corrisponde",
+      "paidFrom": "Pagato da",
+      "anyAccount": "Qualunque conto",
+      "price": "Prezzo (€)",
+      "billing": "Addebito",
+      "nextCharge": "Prossimo addebito",
+      "check": "Controllo pagamenti",
+      "checkDescription": "Cerca una spesa corrispondente sul conto di pagamento nel mese di ogni addebito (tre giorni prima o dopo per i piani settimanali). Avvisa qui se manca o se l'importo è diverso.",
+      "match": "La descrizione della spesa contiene",
+      "tolerance": "Tolleranza sull'importo (± %)",
+      "lastMatch": "Ultimo riscontro: {date} · {amount}",
+      "never": "Ultimo riscontro: mai",
+      "utility": "Utilità",
+      "utilityRare": "{value} · usato di rado",
+      "utilityNice": "{value} · utile",
+      "utilityEssential": "{value} · essenziale",
+      "cancelSubscription": "Annulla abbonamento",
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "reactivate": "Riattiva",
+      "close": "Chiudi",
+      "save": "Salva"
+    },
+    "suggestions": {
+      "title": "Suggeriti dai pagamenti ricorrenti",
+      "description": "Pagamenti in uscita che si ripetono a intervalli regolari e che nessun abbonamento copre ancora.",
+      "add": "Aggiungi",
+      "empty": "Niente da suggerire: ogni pagamento ricorrente è coperto, oppure non ne è ancora stato rilevato nessuno.",
+      "detail": "{price} · {cycle} · prossimo {date} · visto {count} volte"
+    },
+    "toasts": {
+      "saved": "Abbonamento salvato",
+      "cancelled": "Abbonamento annullato: proiezioni aggiornate",
+      "paused": "Abbonamento in pausa",
+      "resumed": "Abbonamento ripreso",
+      "utility": "Utilità salvata"
+    },
+    "errors": {
+      "invalid": "Controlla i valori: un nome, un prezzo maggiore di zero, una data, una tolleranza fra 0 e 100 %.",
+      "not_found": "Quell'abbonamento non esiste più.",
+      "invalid_account": "Scegli uno dei tuoi conti aperti.",
+      "invalid_category": "Scegli una delle tue categorie di spesa.",
+      "failed": "Salvataggio non riuscito. Riprova."
+    },
+    "empty": {
+      "title": "Nessun abbonamento",
+      "description": "Aggiungi gli addebiti ricorrenti per proiettare i saldi dei conti.",
+      "cta": "Aggiungi abbonamento"
+    },
+    "account": {
+      "label": "Abbonamenti",
+      "value": "{count, plural, one {# ricorrente} other {# ricorrenti}} · {amount} / mese",
+      "none": "Nessuno"
+    },
+    "csv": {
+      "name": "Nome",
+      "category": "Categoria",
+      "utility": "Utilità",
+      "price": "Prezzo",
+      "billing": "Addebito",
+      "paidFrom": "Pagato da",
+      "monthly": "Mensile",
+      "yearly": "Annuo",
+      "nextCharge": "Prossimo addebito",
+      "state": "Stato",
+      "status": "Pagato nel periodo"
+    }
+  },
+  "interests": {
+    "title": "Interessi",
+    "subtitle": "{gross} lordi maturati nel {year} · {net} netti",
+    "add": "Aggiungi regola",
+    "columns": {
+      "account": "Conto · inizio",
+      "tiers": "Scaglioni (lordi)",
+      "tax": "Imposta",
+      "basis": "Base · liquidazione",
+      "accrued": "Maturato nell'anno",
+      "next": "Prossima liquidazione",
+      "status": "Stato",
+      "edit": "Modifica"
+    },
+    "from": "dal {date}",
+    "to": "fino al {date}",
+    "tier": {
+      "upTo": "fino a {amount}",
+      "to": "fino a {amount}",
+      "above": "oltre",
+      "any": "qualunque saldo"
+    },
+    "basis": {
+      "365": "365 giorni",
+      "360": "360 giorni"
+    },
+    "settlement": {
+      "daily": "Giornaliera",
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "annual": "Annuale"
+    },
+    "state": {
+      "active": "Attiva",
+      "paused": "In pausa"
+    },
+    "footer": "Stime dal saldo giornaliero. Le regole a scaglioni applicano il primo tasso fino alla soglia e il successivo sulla parte eccedente; l'imposta è trattenuta sull'interesse di ogni giorno.",
+    "empty": {
+      "title": "Nessuna regola di interessi",
+      "description": "Imposta un tasso per conto per stimare gli interessi maturati.",
+      "cta": "Aggiungi regola"
+    },
+    "form": {
+      "newTitle": "Nuova regola di interessi",
+      "editTitle": "Modifica regola · {account}",
+      "description": "I tassi sono lordi; l'imposta viene trattenuta. Gli scaglioni si applicano progressivamente.",
+      "account": "Conto",
+      "validFrom": "Dal",
+      "validTo": "Al · facoltativo",
+      "tiers": "Scaglioni",
+      "upTo": "Saldo fino a",
+      "rate": "Tasso lordo",
+      "above": "oltre",
+      "addTier": "+ Aggiungi scaglione",
+      "removeTier": "Togli scaglione",
+      "tax": "Imposta sugli interessi",
+      "basis": "Base giorni",
+      "payout": "Liquidazione",
+      "match": "L'interesse pagato si riconosce da",
+      "matchHint": "Testo nel beneficiario o nella categoria del pagamento degli interessi della banca, es. \"interessi\". Vuoto per non controllare.",
+      "publish": "Pubblica ogni liquidazione su Wallet",
+      "publishHint": "Solo per un conto sincronizzato. Spenta, la regola analizza soltanto.",
+      "active": "Regola attiva",
+      "cancel": "Annulla",
+      "save": "Salva regola"
+    },
+    "toasts": {
+      "saved": "Regola salvata: maturazione ricalcolata dall'ultima liquidazione",
+      "paused": "Regola in pausa",
+      "resumed": "Regola ripresa"
+    },
+    "errors": {
+      "invalid": "Controlla i valori: date, tassi fra 0 e 100 %, importi maggiori di zero.",
+      "not_found": "Quella regola non esiste più.",
+      "invalid_account": "Scegli uno dei tuoi conti aperti.",
+      "invalid_tiers": "Le soglie devono crescere e solo l'ultimo scaglione è aperto.",
+      "not_synced": "Si pubblica su Wallet solo da un conto sincronizzato.",
+      "failed": "Salvataggio non riuscito. Riprova."
+    },
+    "detail": {
+      "back": "Interessi",
+      "summary": "{account} · {settlement} · {basis}",
+      "accruedYtd": "Maturato nell'anno",
+      "pending": "Maturato, non ancora liquidato",
+      "next": "Prossima liquidazione",
+      "mode": "Modalità",
+      "modes": {
+        "analyze_only": "Solo analisi",
+        "post_to_provider": "Pubblicata su Wallet"
+      },
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "edit": "Modifica regola",
+      "settlements": {
+        "title": "Liquidazioni",
+        "empty": "Nessun periodo ancora chiuso.",
+        "period": "Periodo",
+        "days": "Giorni",
+        "gross": "Lordo",
+        "tax": "Imposta",
+        "net": "Netto",
+        "paid": "Pagato",
+        "status": "Riscontro",
+        "posting": "Wallet",
+        "daysValue": "{accrued} maturati{skipped, plural, =0 {} other { · # saltati}}"
+      },
+      "reconciliation": {
+        "no_data": "Nessun dato",
+        "indeterminate": "Incerto",
+        "matched": "Riscontrato",
+        "missing": "Mancante",
+        "delayed": "In attesa",
+        "anomalous": "Anomalo"
+      },
+      "days": {
+        "title": "Maturazione giornaliera",
+        "subtitle": "Ultimi {count} giorni",
+        "date": "Giorno",
+        "balance": "Saldo",
+        "gross": "Lordo",
+        "net": "Netto",
+        "statuses": {
+          "negative_balance": "Saldo negativo · saltato",
+          "no_balance": "Nessun saldo · saltato"
+        },
+        "empty": "Ancora nessuna maturazione."
+      },
+      "posting": {
+        "states": {
+          "none": "Non pubblicata",
+          "claimed": "In pubblicazione…",
+          "posted": "Pubblicata",
+          "indeterminate": "Incerta"
+        },
+        "postNow": "Pubblica ora",
+        "retry": "Riprova",
+        "markPosted": "Segna come pubblicata",
+        "unsureHint": "La pubblicazione potrebbe essere arrivata o no a Wallet. Controlla Wallet, poi riprova o segnala come pubblicata.",
+        "toasts": {
+          "posted": "Pubblicata su Wallet",
+          "indeterminate": "Esito incerto: controlla Wallet",
+          "none": "Non pubblicata",
+          "marked": "Segnata come pubblicata"
+        }
+      }
+    },
+    "account": {
+      "label": "Regola interessi",
+      "none": "—",
+      "manage": "Gestisci"
+    }
+  },
+  "funds": {
+    "title": "Fondi",
+    "summary": "{value} in {count, plural, one {# fondo} other {# fondi}}",
+    "add": "Aggiungi fondo",
+    "kpis": {
+      "value": "Valore attuale",
+      "paidIn": "Versato",
+      "gain": "Guadagno totale",
+      "monthly": "Versamenti mensili"
+    },
+    "chart": {
+      "title": "Valore complessivo e versato · 12 mesi",
+      "value": "Valore",
+      "paid": "Versato",
+      "summary": "Valore dei fondi e versato, mese per mese; {value} oggi."
+    },
+    "table": {
+      "title": "Tutti i fondi",
+      "hint": "Fai clic su un fondo per la sua pagina",
+      "fund": "Fondo",
+      "type": "Tipo",
+      "paidIn": "Versato",
+      "value": "Valore",
+      "gain": "Guadagno",
+      "cumulative": "Cumulato",
+      "lastValuation": "Ultima valorizzazione",
+      "month": "Questo mese",
+      "edit": "Modifica",
+      "valuation": "Registra valorizzazione",
+      "total": "Totale",
+      "perMonth": "{amount} / mese"
+    },
+    "types": {
+      "pac": "PAC",
+      "pension": "Fondo pensione"
+    },
+    "month": {
+      "found": "Versamento trovato · {date}",
+      "awaited": "Atteso",
+      "missing": "Non trovato",
+      "none": "—"
+    },
+    "alert": {
+      "missing": "nessun versamento trovato entro il {date} ({amount} attesi).",
+      "cta": "Controlla le spese"
+    },
+    "archived": {
+      "count": "{count, plural, one {# fondo archiviato} other {# fondi archiviati}}",
+      "restore": "Ripristina"
+    },
+    "empty": {
+      "title": "Nessun fondo",
+      "description": "Aggiungi un fondo per seguire versamenti e rendimenti.",
+      "cta": "Aggiungi fondo"
+    },
+    "detail": {
+      "kind": "Piano di accumulo (PAC)",
+      "since": "dal {date}",
+      "asOf": "{paidIn} versati · al {date}",
+      "cumulative": "cumulato",
+      "noValue": "Ancora nessuna valorizzazione",
+      "tabs": {
+        "label": "Fondo",
+        "overview": "Panoramica",
+        "deposits": "Versamenti",
+        "valuations": "Valorizzazioni",
+        "settings": "Impostazioni"
+      },
+      "kpis": {
+        "invested": "Investito (al netto delle commissioni)",
+        "investedNote": "{count, plural, one {# versamento} other {# versamenti}}",
+        "investedPartial": "una commissione è sconosciuta",
+        "fees": "Commissioni sui versamenti",
+        "feesNote": "{fee} per versamento",
+        "feesNone": "nessuna commissione impostata",
+        "gain": "Guadagno",
+        "gainNote": "{percent} sul versato",
+        "year": "Ultimi 12 mesi",
+        "yearNote": "composto · TER {ter}",
+        "yearNoTer": "composto"
+      },
+      "chart": {
+        "title": "Valore e versato · {months} mesi",
+        "value": "Valore",
+        "paid": "Versato",
+        "summary": "{name}: valore e versato a ogni fine mese; {value} oggi."
+      },
+      "returns": {
+        "title": "Rendimento mensile",
+        "avg": "media {value} / mese",
+        "best": "Mese migliore",
+        "worst": "Mese peggiore",
+        "positive": "Mesi positivi",
+        "positiveValue": "{positive} / {counted}",
+        "empty": "Serve una valorizzazione a entrambi i capi di un mese.",
+        "bar": "{month} {value}"
+      },
+      "recent": {
+        "title": "Versamenti recenti",
+        "all": "Tutti i versamenti"
+      }
+    },
+    "deposits": {
+      "title": "Versamenti",
+      "hint": "{count, plural, one {# versamento} other {# versamenti}}",
+      "date": "Data",
+      "debited": "Addebitato",
+      "fee": "Commissione",
+      "invested": "Investito",
+      "source": "Origine",
+      "sources": {
+        "manual": "Manuale",
+        "rule": "Abbinato"
+      },
+      "note": "Nota",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "total": "Totale",
+      "empty": "Ancora nessun versamento.",
+      "add": {
+        "title": "Aggiungi versamento",
+        "hint": "Inserisci l'importo addebitato; la commissione viene sottratta.",
+        "date": "Data",
+        "debited": "Addebitato (€)",
+        "fee": "Commissione (€)",
+        "invested": "Investito",
+        "note": "Nota",
+        "save": "Salva versamento"
+      },
+      "editTitle": "Modifica versamento",
+      "rule": {
+        "title": "Regola di abbinamento",
+        "text": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento, meno {fee} di commissione.",
+        "anyAccount": "qualunque conto",
+        "noFee": "nessuna",
+        "active": "Attiva",
+        "paused": "In pausa",
+        "edit": "Modifica regola",
+        "none": "Nessuna regola: i versamenti si inseriscono a mano."
+      }
+    },
+    "valuations": {
+      "title": "Valorizzazioni",
+      "hint": "{count, plural, one {# registrazione} other {# registrazioni}}",
+      "date": "Data",
+      "value": "Valore",
+      "paidIn": "Versato",
+      "gain": "Guadagno",
+      "units": "Quote",
+      "note": "Nota",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "empty": "Ancora nessuna valorizzazione.",
+      "form": {
+        "title": "Registra valorizzazione · {name}",
+        "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo; i rendimenti mensili si calcolano da lì.",
+        "date": "Data valorizzazione",
+        "value": "Valore attuale (€)",
+        "units": "Quote · facoltativo",
+        "note": "Nota",
+        "last": "Ultima registrata: {value} · {date}",
+        "cancel": "Annulla",
+        "save": "Salva valorizzazione"
+      }
+    },
+    "settings": {
+      "general": {
+        "title": "Generale",
+        "description": "Nome, gestore e identificativi.",
+        "name": "Nome",
+        "provider": "Gestore",
+        "compartment": "Tipo / comparto",
+        "isin": "ISIN",
+        "start": "Data di inizio"
+      },
+      "plan": {
+        "title": "Versamenti",
+        "description": "Il piano mensile e la commissione su ogni versamento.",
+        "monthly": "Importo mensile addebitato (€)",
+        "fee": "Commissione per versamento (€)",
+        "investedPerMonth": "Investito al mese: {value}",
+        "debitAccount": "Conto di addebito",
+        "noAccount": "Nessuno",
+        "debitDay": "Giorno di addebito",
+        "ter": "Commissione di gestione annua (TER, %)"
+      },
+      "rule": {
+        "title": "Abbinamento delle spese",
+        "description": "Crea un versamento da solo quando sul conto di addebito compare una spesa corrispondente.",
+        "active": "Abbina le spese ai versamenti",
+        "match": "Il beneficiario contiene",
+        "account": "Sul conto",
+        "anyAccount": "Qualunque conto",
+        "save": "Salva regola"
+      },
+      "valuations": {
+        "title": "Valorizzazioni",
+        "description": "Il valore sta sul conto del fondo: le sue impostazioni decidono patrimonio, snapshot e promemoria.",
+        "open": "Apri le impostazioni di {account}"
+      },
+      "danger": {
+        "title": "Zona pericolosa",
+        "description": "Archiviare nasconde il fondo ma ne conserva la storia.",
+        "text": "Archivia {name}. Versamenti e valorizzazioni restano leggibili.",
+        "archive": "Archivia fondo",
+        "restore": "Ripristina fondo"
+      },
+      "save": "Salva"
+    },
+    "form": {
+      "newTitle": "Nuovo fondo",
+      "description": "Un piano mensile in un fondo. Il valore sta su un conto suo, così il patrimonio lo conta una volta sola.",
+      "valuationAccount": "Il valore sta su",
+      "newAccount": "Un conto nuovo con il nome del fondo",
+      "initial": "Capitale iniziale (€)",
+      "cancel": "Annulla",
+      "save": "Salva fondo"
+    },
+    "toasts": {
+      "saved": "Fondo salvato",
+      "archived": "Fondo archiviato: storia conservata",
+      "restored": "Fondo ripristinato",
+      "valuation": "Valorizzazione registrata",
+      "valuationDeleted": "Valorizzazione eliminata",
+      "deposit": "Versamento salvato",
+      "depositDeleted": "Versamento eliminato",
+      "rule": "Regola salvata"
+    },
+    "errors": {
+      "invalid": "Controlla i valori: un nome, importi maggiori di zero, una commissione non oltre l'importo, TER fra 0 e 100 %.",
+      "not_found": "Quel fondo non esiste più.",
+      "invalid_account": "Scegli un conto aperto; il valore vuole un conto manuale che nessun altro fondo usa.",
+      "duplicate_name": "Esiste già un fondo con quel nome.",
+      "archived": "Un fondo archiviato non cambia. Ripristinalo prima.",
+      "linked": "Questo versamento viene da un movimento: nascondi il movimento in Spese per toglierlo.",
+      "future_date": "La data non può essere nel futuro.",
+      "failed": "Salvataggio non riuscito. Riprova."
+    },
+    "account": {
+      "label": "Fondo"
     }
   }
 }

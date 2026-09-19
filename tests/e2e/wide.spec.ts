@@ -122,8 +122,18 @@ test("Overview puts the chart and the accounts side by side only past the wide t
   expect(narrowAccounts.y).toBeGreaterThan(narrowChart.y + 200);
 });
 
-test("Settings keeps a reading width of its own on a wide screen", async ({ page }) => {
+test("Settings uses the width: two sections side by side only past the wide threshold", async ({ page }) => {
+  const account = page.getByRole("heading", { name: "Account", level: 2 });
+  const signIn = page.getByRole("heading", { name: "Sign-in", level: 2 });
+
   await openAt(page, 2560, "expanded", "/settings/profile");
   const tabs = await box(page, page.getByRole("heading", { name: "Settings", level: 1 }).locator(".."));
-  expect(tabs.width).toBeLessThanOrEqual(960);
+  expect(tabs.width).toBeGreaterThan(1600);
+  const [wideAccount, wideSignIn] = [await box(page, account), await box(page, signIn)];
+  expect(wideSignIn.x).toBeGreaterThan(wideAccount.x + 500);
+  expect(Math.abs(wideSignIn.y - wideAccount.y)).toBeLessThan(40);
+
+  await openAt(page, 1280, "expanded", "/settings/profile");
+  const [narrowAccount, narrowSignIn] = [await box(page, account), await box(page, signIn)];
+  expect(narrowSignIn.y).toBeGreaterThan(narrowAccount.y + 100);
 });

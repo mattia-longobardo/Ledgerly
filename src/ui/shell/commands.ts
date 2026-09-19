@@ -12,6 +12,15 @@ export interface PayeeMatch {
   count: number;
 }
 
+/** A record of the user's the palette found by name — a pocket, a subscription (spec §8.2). */
+export interface RecordMatch {
+  id: string;
+  label: string;
+  /** What kind of record it is, already translated. */
+  hint: string;
+  href: Route;
+}
+
 /**
  * One option in the palette's single listbox. Pages and payees share the cursor, so the arrow keys
  * walk from the last page into the first payee without the caller tracking two indices.
@@ -21,7 +30,7 @@ export interface PaletteOption {
   label: string;
   hint: string;
   href: Route;
-  group: "pages" | "payees";
+  group: "pages" | "records" | "payees";
 }
 
 /** Where a payee leads: the Expenses screen already reads its search from `q` (spec §7.2). */
@@ -33,6 +42,7 @@ export function paletteOptions(
   pages: readonly NavLink[],
   payees: readonly PayeeMatch[],
   groupLabel: (link: NavLink) => string,
+  records: readonly RecordMatch[] = [],
 ): PaletteOption[] {
   return [
     ...pages.map((link) => ({
@@ -41,6 +51,13 @@ export function paletteOptions(
       hint: groupLabel(link),
       href: link.href,
       group: "pages" as const,
+    })),
+    ...records.map((match) => ({
+      id: `record:${match.id}`,
+      label: match.label,
+      hint: match.hint,
+      href: match.href,
+      group: "records" as const,
     })),
     ...payees.map((match) => ({
       id: `payee:${match.payee}`,

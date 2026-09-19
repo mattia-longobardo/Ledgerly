@@ -1,6 +1,16 @@
 import type { Route } from "next";
 
-export type IconName = "overview" | "accounts" | "expenses" | "settings" | "components";
+export type IconName =
+  | "overview"
+  | "accounts"
+  | "expenses"
+  | "budgets"
+  | "funds"
+  | "interests"
+  | "pockets"
+  | "subscriptions"
+  | "settings"
+  | "components";
 
 export interface NavLink {
   id: string;

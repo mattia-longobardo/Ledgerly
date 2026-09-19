@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatMoney, formatPercent } from "./format";
+import { formatAmountInput, formatDate, formatWholePercent, formatMoney, formatPercent } from "./format";
 
 /** Intl uses no-break spaces (U+00A0, U+202F); compare with plain spaces. */
 const plain = (s: string) => s.replace(/\s/g, " ");
@@ -49,5 +49,22 @@ describe("formatDate", () => {
     expect(formatDate("2026-09-09", "dayMonth", "it")).toBe("09 set");
     expect(formatDate("2026-09-01", "monthYear", "it")).toBe("settembre 2026");
     expect(formatDate(null, "long", "en")).toBe("—");
+  });
+});
+
+describe("formatAmountInput", () => {
+  it("writes the decimal separator of the format and no grouping", () => {
+    expect(formatAmountInput(123_456n, "it-IT")).toBe("1234,56");
+    expect(formatAmountInput(123_456n, "en-US")).toBe("1234.56");
+    expect(formatAmountInput(-50n, "fr-FR")).toBe("-0,50");
+    expect(formatAmountInput(null, "it-IT")).toBe("");
+  });
+});
+
+describe("formatWholePercent", () => {
+  it("rounds to a whole number with the locale's spacing", () => {
+    expect(plain(formatWholePercent(112, "it-IT"))).toBe("112 %");
+    expect(formatWholePercent(88, "en-US")).toBe("88%");
+    expect(plain(formatWholePercent(1234, "it-IT"))).toBe("1.234 %");
   });
 });

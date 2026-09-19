@@ -58,6 +58,14 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await page.getByRole("group", { name: "Granularity" }).getByRole("link", { name: "Year" }).click();
     await expect(page).toHaveURL(/grain=year/);
     await expect(columns.filter({ hasText: "Balance · 2026" })).toBeVisible();
+    // Overview's chart, here too; its day grain is `chart=` and keeps the table's `grain=year`.
+    await expect(page.getByRole("heading", { name: "Net worth over time" })).toBeVisible();
+    await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Day" }).click();
+    await expect(page).toHaveURL(/chart=day/);
+    await expect(page).toHaveURL(/grain=year/);
+    await expect(page.getByRole("list", { name: "Accounts in the chart" })).toContainText(
+      "ING Conto Arancio",
+    );
 
     const period = page.getByRole("group", { name: "Period" });
     await period.getByRole("link", { name: "Previous period" }).click();

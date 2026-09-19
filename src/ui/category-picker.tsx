@@ -2,8 +2,16 @@
 
 import { Popover } from "@base-ui/react/popover";
 import { type KeyboardEvent, type ReactNode, useId, useState } from "react";
-import { cn } from "@/ui/cn";
-import type { CategoryOption } from "./view";
+import { cn } from "./cn";
+
+/** A category as a picker offers it: in tree order, a sub-category in its group's colour. */
+export interface CategoryOption {
+  id: string;
+  name: string;
+  color: string;
+  /** 1 for a sub-category, which the pickers indent under its group. */
+  depth?: 0 | 1;
+}
 
 interface PickerItem {
   id: string | null;
@@ -51,7 +59,8 @@ export function searchCategories(items: readonly PickerItem[], query: string): P
  * letters beats scrolling for one. Arrows move through what is left and Enter picks it.
  *
  * Picking "Uncategorised" is a real choice and not a way out of the list: a person can take a
- * category off a movement, and that too is a local edit the sync must not undo (spec §7.2).
+ * category off a movement, and that too is a local edit the sync must not undo (spec §7.2). A
+ * caller with nothing to offer for "none" (a budget is always on a category) leaves the label out.
  */
 export function CategoryPicker({
   categories,
@@ -63,6 +72,7 @@ export function CategoryPicker({
   searchLabel,
   noMatchLabel,
   triggerLabel,
+  triggerId,
   triggerClassName,
   disabled,
   children,
@@ -72,10 +82,12 @@ export function CategoryPicker({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPick: (categoryId: string | null) => void;
-  uncategorisedLabel: string;
+  uncategorisedLabel?: string;
   searchLabel: string;
   noMatchLabel: string;
   triggerLabel: string;
+  /** For a form label that names the trigger. */
+  triggerId?: string;
   triggerClassName: string;
   disabled?: boolean;
   children: ReactNode;
@@ -83,7 +95,10 @@ export function CategoryPicker({
   const listId = useId();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const items: PickerItem[] = [{ id: null, name: uncategorisedLabel, color: null }, ...categories];
+  const items: PickerItem[] =
+    uncategorisedLabel === undefined
+      ? [...categories]
+      : [{ id: null, name: uncategorisedLabel, color: null }, ...categories];
   const shown = searchCategories(items, query);
   const highlighted = Math.min(active, shown.length - 1);
 
@@ -123,6 +138,7 @@ export function CategoryPicker({
   return (
     <Popover.Root open={open} onOpenChange={change}>
       <Popover.Trigger
+        id={triggerId}
         aria-label={triggerLabel}
         title={triggerLabel}
         disabled={disabled}
@@ -131,7 +147,8 @@ export function CategoryPicker({
         {children}
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner sideOffset={4} align="start" className="z-40">
+        {/* Above a modal (z-50): the picker also opens inside dialogs (Add budget, F3). */}
+        <Popover.Positioner sideOffset={4} align="start" className="z-[60]">
           <Popover.Popup
             aria-label={triggerLabel}
             className="flex w-[240px] animate-in flex-col gap-1.5 rounded-lg border border-border bg-card p-1.5 shadow-overlay"

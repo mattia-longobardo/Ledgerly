@@ -9,6 +9,9 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
+import { matchDeposits } from "@/modules/funds/service";
+import { checkSubscriptions } from "@/modules/subscriptions/service";
+import { refreshRecurrences } from "@/modules/transactions/jobs";
 import { linkOwnTransfers } from "@/modules/transactions/service";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
@@ -145,6 +148,13 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
   try {
     await syncWalletNow(ctx, connection.id);
     await linkOwnTransfers(ctx);
+    // What the hourly job does after a pass (spec §10.2): the recurrences, then the subscription
+    // check against the movements just brought in (F3; closes the deviation of F2 §11.4).
+    await refreshRecurrences(ctx);
+    await checkSubscriptions(ctx);
+    await matchDeposits(ctx);
+    revalidatePath("/subscriptions");
+    revalidatePath("/funds");
   } catch (error) {
     // A sync writes rows before it fails, and it records its own `sync_runs` entry either way, so
     // the log is refreshed on the way out of both branches.

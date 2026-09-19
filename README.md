@@ -72,6 +72,54 @@ brings in.
   `tests/fixtures/wallet/`; the first real link and its 12-month backfill still have to be done by
   hand.
 
+## Budgets, Pockets and Subscriptions (F3)
+
+- **Budgets** are monthly limits on a spending category, an account, or both, versioned by month: a limit set or edited
+  in a month applies from that month on (and replaces the ones set for later months); "Remove from
+  this month" ends it there. Spent is the month's expenses of the category in your own time zone —
+  never a giroconto, never a hidden movement — on that account or on all of them, and a group's spent
+  includes its sub-categories. A budget inside another adds nothing to the total limit, and each
+  movement counts once in the total spent.
+  Over the limit is **Over**, from 85 % **Near limit**. The five closest to their limit are on
+  Overview.
+- **Pockets** earmark money without moving it. A pocket may rest on an account or stand alone, and
+  target and monthly accrual are both optional. On the 1st at 00:05 (`pockets-accrual`) every active
+  pocket gets its month's accrual — once, whatever runs twice — and a new or resumed pocket gets
+  the current month's at once; months in the past are never back-filled. **Free** is what the
+  backing accounts hold beyond their pockets, unknown (`—`) while one of them has no balance. The
+  share of the account's interest stays unknown until the interest rules of F4 exist.
+- **Subscriptions** are entered by hand or accepted from the recurring payments already detected
+  in Expenses. Hourly, right after the Wallet pass (`subscriptions-check`), each active one with a
+  text to look for is checked against the paying account's expenses: **Paid**, **Amount differs**
+  (outside its tolerance, 5 % by default), **Due** (within seven days and not found yet) or **Not
+  found** (the month of the charge closed without it). A movement pays one charge only. The banners
+  at the top of the page are the alerts; there are no emails for them. **Projection by account** is
+  today's balance minus the charges due in the next 30 days or 12 months; **Export CSV** downloads
+  the table.
+- An account a pocket or a subscription points at is archived instead of deleted.
+
+## Interests and PAC funds (F4)
+
+- **Interests.** A rule per account: rate tiers (the first rate up to its threshold, the next on
+  the part above), tax withheld, 365 or 360 days, a daily, monthly, quarterly or yearly payout, a validity.
+  Every day at 12:00 (`interests-accrual`) each active rule accrues up to yesterday on the account's
+  daily balance, in fixed point with the remainder of the day before, missed days caught up in order;
+  a negative or unknown balance is a skipped day, shown. Each closed period becomes a payout, checked
+  against what the bank paid (income whose payee or category contains the rule's text, each payment
+  counted for one payout only) as matched,
+  missing, awaited, anomalous or no data. Editing a rule recomputes only what has not been paid out.
+- **Posting to Wallet** is off unless a rule asks for it (synced accounts only). A payout is claimed
+  first, a record with its marker is looked for, then posted once; a failure after sending is
+  _unsure_ and never retried by itself — the rule's page has "Retry" and "Mark as posted".
+- **Funds (PAC).** A fund's value lives on its own account (created with it, or an existing manual
+  one), so net worth counts it once; "Record valuation" writes that account's balance. Deposits are
+  entered by hand or matched hourly (`funds-deposits`) from the paying account's debits whose payee
+  contains the rule's text, less the fund's fee per deposit. Gain is value − paid in; the monthly
+  return is Simple Dietz between two month-end values. A missing debit three days after the charge
+  day is an in-app alert.
+- A pocket's "Interest earned on backing" is now the account's last 12 months of interest × the
+  pocket's share of the balance, as an estimate.
+
 ## Check
 
 ```bash
@@ -121,9 +169,10 @@ request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
 `http://ledgerly:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
 and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
-tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `housekeeping` and
-`accounts-alerts` daily, `accounts-snapshot` monthly) for that tier; touching the heartbeat file is
-a side effect of every tick, not a job of its own.
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `wallet-sync` then
+`subscriptions-check` and `funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
+`interests-accrual` daily, `accounts-snapshot` and `pockets-accrual` monthly) for that tier, in that order; touching the heartbeat file is a side
+effect of every tick, not a job of its own.
 
 ## Operations
 

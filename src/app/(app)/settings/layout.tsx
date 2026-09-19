@@ -13,9 +13,9 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
   ];
   return (
     <Page title={<SettingsTitle tabs={tabs} />} parent={{ href: "/settings/profile", label: t("title") }}>
-      {/* Settings is forms and short tables: stretched across a 1920 px column they read worse, not
-          better, so it keeps a reading width of its own (spec §8.2, F2.5). */}
-      <div className="mx-auto flex w-full max-w-[960px] flex-col gap-4">
+      {/* The whole column: each section narrows its own description, and past the wide threshold the
+          short ones sit two by two (`SettingsGrid`, spec §8.2). */}
+      <div className="flex w-full flex-col gap-4">
         <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
         <SettingsTabs label={t("tabs.label")} tabs={tabs} />
         {children}

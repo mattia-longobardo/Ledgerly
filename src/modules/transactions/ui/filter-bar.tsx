@@ -8,7 +8,7 @@ import { IconButton } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Input } from "@/ui/input";
 import { rangeLabel } from "./display";
-import { categoryParam, type ExpensesQuery, RANGE_PRESETS, toggleCategory, UNCATEGORISED } from "./filters";
+import { type ExpensesQuery, listParam, RANGE_PRESETS, toggle, UNCATEGORISED } from "./filters";
 import { RangePicker } from "./range-picker";
 import type { AccountFilterOption, CategoryFilterOption } from "./view";
 
@@ -75,12 +75,24 @@ export async function FilterBar({
 }) {
   const t = await getTranslations("expenses.filters");
   const selected = query.categorySelection;
-  const account = accounts.find((one) => one.id === query.accountId) ?? null;
+  const accountSelection = query.accountSelection;
+  const typeSelection = query.typeSelection;
 
   /** A filter changes, the period does not: the links keep the window the reader is looking at. */
   const carry: Params = query.params;
-  const categoryHref = (id: string) =>
-    withParams(path, carry, { cat: categoryParam(toggleCategory(selected, id)) });
+  const categoryHref = (id: string) => withParams(path, carry, { cat: listParam(toggle(selected, id)) });
+  const accountHref = (id: string) =>
+    withParams(path, carry, { acc: listParam(toggle(accountSelection, id)) });
+  // In the fixed order of the types, so one selection is always one address.
+  const typeHref = (type: TransactionType) => {
+    const next = toggle(typeSelection, type);
+    return withParams(path, carry, {
+      type: listParam(TRANSACTION_TYPES.filter((one) => next.includes(one))),
+    });
+  };
+  /** A menu's summary: "All …", the one name picked, or how many. */
+  const summaryOf = (count: number, all: string, oneName: string | undefined, some: string) =>
+    count === 0 ? all : count === 1 && oneName !== undefined ? oneName : some;
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -159,49 +171,79 @@ export async function FilterBar({
         </div>
       </details>
 
+      {/* Accounts and types are multiple choice too, like the categories. */}
       <details className="relative">
-        <summary className={cn(CONTROL, account !== null && "border-accent")}>
+        <summary className={cn(CONTROL, accountSelection.length > 0 && "border-accent")}>
           <Landmark aria-hidden className="size-3.5 text-muted" />
-          {account === null ? t("accounts.all") : t("accounts.one", { name: account.name })}
+          {summaryOf(
+            accountSelection.length,
+            t("accounts.all"),
+            accounts.find((one) => one.id === accountSelection[0])?.name,
+            t("accounts.some", { count: accountSelection.length }),
+          )}
           <ChevronDown aria-hidden className="size-3 text-muted" />
         </summary>
-        <div className={cn(PANEL, "w-[220px]")}>
-          <Link
-            href={withParams(path, carry, { acc: "" })}
-            aria-current={account === null ? "true" : undefined}
-            className={cn(OPTION, account === null && "font-medium")}
-          >
-            {t("accounts.all")}
-          </Link>
-          {accounts.map((one) => (
+        <div className={cn(PANEL, "w-[240px]")}>
+          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+            {t("accounts.title")}
             <Link
-              key={one.id}
-              href={withParams(path, carry, { acc: one.id })}
-              aria-current={one.id === query.accountId ? "true" : undefined}
-              className={cn(OPTION, one.id === query.accountId && "font-medium")}
+              href={withParams(path, carry, { acc: "" })}
+              className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
             >
-              <span className="min-w-0 flex-1 truncate">{one.name}</span>
-              <span className="text-micro text-muted">{one.count}</span>
+              {t("accounts.clear")}
+            </Link>
+          </div>
+          <div className="max-h-[320px] overflow-y-auto">
+            {accounts.map((one) => (
+              <Link
+                key={one.id}
+                href={accountHref(one.id)}
+                aria-current={accountSelection.includes(one.id) ? "true" : undefined}
+                className={OPTION}
+              >
+                <Box checked={accountSelection.includes(one.id)} />
+                <span className="min-w-0 flex-1 truncate">{one.name}</span>
+                <span className="text-micro text-muted">{one.count}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </details>
+
+      <details className="relative">
+        <summary className={cn(CONTROL, typeSelection.length > 0 && "border-accent")}>
+          {summaryOf(
+            typeSelection.length,
+            t("types.all"),
+            typeSelection[0] === undefined ? undefined : t(`types.${typeSelection[0]}`),
+            t("types.some", { count: typeSelection.length }),
+          )}
+          <ChevronDown aria-hidden className="size-3 text-muted" />
+        </summary>
+        <div className={cn(PANEL, "w-[200px]")}>
+          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+            {t("types.label")}
+            <Link
+              href={withParams(path, carry, { type: "" })}
+              className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+            >
+              {t("types.clear")}
+            </Link>
+          </div>
+          {TRANSACTION_TYPES.map((type) => (
+            <Link
+              key={type}
+              href={typeHref(type)}
+              aria-current={typeSelection.includes(type) ? "true" : undefined}
+              className={OPTION}
+            >
+              <Box checked={typeSelection.includes(type)} />
+              <span className="min-w-0 flex-1 truncate">{t(`types.${type}`)}</span>
+              <span className="text-micro text-muted">{typeCounts[type] ?? 0}</span>
             </Link>
           ))}
         </div>
       </details>
-
-      <LinkTabs
-        label={t("types.label")}
-        path={path}
-        params={carry}
-        name="type"
-        current={query.type ?? ""}
-        options={[
-          { value: "", label: t("types.all") },
-          ...TRANSACTION_TYPES.map((type) => ({
-            value: type,
-            label: t(`types.${type}`),
-            count: typeCounts[type] ?? 0,
-          })),
-        ]}
-      />
 
       <Link
         href={withParams(path, carry, { hidden: query.showHidden ? "" : "1" })}

@@ -5,7 +5,7 @@ import { SnapshotButton } from "@/modules/accounts/ui/snapshot-button";
 import { requireSession } from "@/platform/auth/session";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
-import { SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TaxonomyPanels } from "./categories/panels";
 
@@ -19,7 +19,7 @@ export default async function SettingsDataPage() {
   const runs = await listSnapshotRuns(ctx);
 
   return (
-    <div className="flex flex-col gap-6">
+    <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")}>
         <SnapshotButton />
       </SettingsSection>
@@ -62,6 +62,6 @@ export default async function SettingsDataPage() {
       </SettingsSection>
 
       <TaxonomyPanels />
-    </div>
+    </SettingsGrid>
   );
 }

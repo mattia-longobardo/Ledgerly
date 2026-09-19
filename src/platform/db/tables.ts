@@ -7,3 +7,8 @@ export * from "@/platform/notifications/schema";
 export * from "@/modules/accounts/schema";
 export * from "@/platform/integrations/schema";
 export * from "@/modules/transactions/schema";
+export * from "@/modules/budgets/schema";
+export * from "@/modules/pockets/schema";
+export * from "@/modules/subscriptions/schema";
+export * from "@/modules/interests/schema";
+export * from "@/modules/funds/schema";
