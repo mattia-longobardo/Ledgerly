@@ -1,15 +1,19 @@
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
+import { requireSession } from "@/platform/auth/session";
 import { Page } from "@/ui/shell/page";
 import { SettingsTabs, SettingsTitle } from "./settings-tabs";
 
 export default async function SettingsLayout({ children }: LayoutProps<"/settings">) {
+  const ctx = await requireSession();
   const t = await getTranslations("settings");
   const tabs: { href: Route; label: string }[] = [
     { href: "/settings/profile", label: t("tabs.profile") },
     { href: "/settings/security", label: t("tabs.security") },
     { href: "/settings/integrations", label: t("tabs.integrations") },
     { href: "/settings/data", label: t("tabs.data") },
+    // Admin › Server (spec §7.10): only admins see it, and its page answers 404 to anyone else.
+    ...(ctx.role === "admin" ? [{ href: "/settings/server" as Route, label: t("tabs.server") }] : []),
   ];
   return (
     <Page title={<SettingsTitle tabs={tabs} />} parent={{ href: "/settings/profile", label: t("title") }}>

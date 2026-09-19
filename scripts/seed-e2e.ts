@@ -23,6 +23,7 @@ import type { Ctx } from "../src/platform/context";
 import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
 import { getDb } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
+import { deleteFolder } from "../src/platform/storage";
 import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
 import { BASE_URL, SESSIONS, STATE_DIR, TEST_EMAIL_DOMAIN, USERS, sessionState } from "../tests/e2e/env";
 
@@ -36,7 +37,9 @@ async function removeTestUsers(): Promise<void> {
   const removed = await getDb()
     .delete(users)
     .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`))
-    .returning({ email: users.email });
+    .returning({ id: users.id, email: users.email });
+  // Their documents' originals are in S3, where no cascade reaches.
+  for (const user of removed) await deleteFolder(`payslips/${user.id}/`);
   console.log(`e2e: removed ${removed.length} test users`);
   rmSync(STATE_DIR, { recursive: true, force: true });
 }

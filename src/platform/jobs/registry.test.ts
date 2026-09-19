@@ -18,6 +18,8 @@ describe("JOBS", () => {
       ["subscriptions-check", "hourly"],
       ["funds-deposits", "hourly"],
       ["pockets-accrual", "monthly"],
+      ["documents-retention", "daily"],
+      ["payslips-sweep", "hourly"],
     ]);
   });
 

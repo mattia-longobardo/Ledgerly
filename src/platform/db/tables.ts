@@ -12,3 +12,6 @@ export * from "@/modules/pockets/schema";
 export * from "@/modules/subscriptions/schema";
 export * from "@/modules/interests/schema";
 export * from "@/modules/funds/schema";
+export * from "@/platform/settings/schema";
+export * from "@/modules/imports/schema";
+export * from "@/modules/payroll/schema";

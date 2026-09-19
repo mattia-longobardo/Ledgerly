@@ -88,6 +88,7 @@ describe("jobs", () => {
         { job: "housekeeping", status: "success" },
         { job: "accounts-alerts", status: "success" },
         { job: "interests-accrual", status: "success" },
+        { job: "documents-retention", status: "success" },
       ],
     });
   });
@@ -109,5 +110,6 @@ describe("jobs", () => {
     expect(body).toContain("# TYPE job_last_success_timestamp gauge");
     expect(body).toContain("# TYPE job_runs_total counter");
     expect(body).toContain('job_runs_total{job="ok",status="success"} 1');
+    expect(body).toContain("documents_awaiting_review 0");
   });
 });

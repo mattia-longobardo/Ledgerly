@@ -9,6 +9,7 @@ export type IconName =
   | "interests"
   | "pockets"
   | "subscriptions"
+  | "payroll"
   | "settings"
   | "components";
 
