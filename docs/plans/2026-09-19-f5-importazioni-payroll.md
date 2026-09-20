@@ -380,12 +380,21 @@ di L5 e di L6. Distribuita su `https://dash.longobardo.me` (migrazione `0011` ap
 11. **Metriche**: `documents_awaiting_review` in `/api/metrics` (spec §10.4).
 12. **Job**: `documents-retention` (giornaliero) e `payslips-sweep` (orario) in coda al registro.
 
-### 8.3 Correzione dopo la consegna
+### 8.3 Correzioni dopo la consegna
 
 - Tornare dalla revisione al registro con la navigazione dell'app ("Payroll" nel breadcrumb o nella
   barra laterale) mostrava "Something went wrong": smontando il viewer si chiamava `destroy()` sul
   documento di pdf.js 6, che non ce l'ha. Ora si chiude il loading task; l'e2e torna al registro
   cliccando e fallisce su qualunque errore del browser (prima gli e2e ricaricavano sempre la pagina).
+
+- **Il viewer perdeva le immagini JBIG2** (trovato il 2026-09-20 su un cedolino vero): pdf.js 6
+  decodifica JBIG2 e JPEG 2000 attraverso i propri file WASM, e `scripts/copy-pdfjs.mjs` copiava
+  solo il worker e i font standard. Senza `wasmUrl` la pagina si disegnava **senza il logo** e il
+  browser registrava `#instantiateWasm: … Ensure that the wasmUrl API parameter is provided`. Ora lo
+  script copia anche `wasm/` e il viewer passa `wasmUrl`; gli indirizzi stanno in un solo posto
+  (`src/ui/pdf-assets.ts`) e `src/ui/pdf-assets.test.ts` verifica che lo script copi tutto quello che
+  il viewer chiede. I gemelli sintetici non hanno immagini — per questo nessun test lo aveva visto:
+  il difetto si vede solo sui cedolini della generazione con il logo (444 KB).
 
 ### 8.4 Resta al proprietario
 

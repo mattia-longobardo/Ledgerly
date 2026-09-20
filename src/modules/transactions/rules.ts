@@ -586,6 +586,31 @@ export function markLocallyEdited(
   return [...new Set([...locallyEdited, ...edited])].sort();
 }
 
+/* Categories: the same marker, on the fields a person can change here */
+
+/**
+ * What `categories.locally_edited` may hold. `name` is the one the two-way sync acts on — it makes
+ * the local name win and be written to Wallet — and it is dropped again once Wallet has been told,
+ * because from then on the two agree. `type` is never dropped: Wallet has no income/expense/
+ * transfer of its own to disagree with, so a type chosen here is local for good (spec §9.1).
+ */
+export const CATEGORY_EDITABLE_FIELDS = ["name", "type"] as const;
+export type CategoryEditableField = (typeof CATEGORY_EDITABLE_FIELDS)[number];
+
+/** `locally_edited` for a category, with `edited` added: a set, sorted, never losing a marker. */
+export function markCategoryEdited(
+  locallyEdited: readonly string[],
+  edited: readonly CategoryEditableField[],
+): string[] {
+  return [...new Set([...locallyEdited, ...edited])].sort();
+}
+
+/**
+ * A settled push takes the `name` marker off again — the local value did not lose, it arrived —
+ * and that happens in one SQL statement in `service.ts` (`array_remove`), never as a read and a
+ * write around it: a rename saved in between would be the one thing lost.
+ */
+
 /* Disappeared upstream */
 
 /**

@@ -4,14 +4,16 @@ import { applyProviderAccounts, saveBalanceEntry } from "@/modules/accounts/serv
 import { listAccounts } from "@/modules/accounts/queries";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
+import { createCategory } from "@/modules/transactions/taxonomy";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { resolveExternal } from "@/platform/integrations/service";
+import { linkExternal, resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
 import { markPosted, postEntry, postPending, type PostingClient, retryPosting } from "./posting";
 import { ruleDetail } from "./queries";
+import { CATEGORY_NOT_LINKED } from "./rules";
 import { interestEntries } from "./schema";
-import { createRule } from "./service";
+import { createRule, type RuleInput } from "./service";
 
 let ctx: Ctx;
 let entryId: string;
@@ -20,7 +22,13 @@ let entryId: string;
 function fakeWallet(
   options: { existing?: { id: string; amountCents: bigint }[]; fail?: Error; noId?: boolean } = {},
 ) {
-  const posts: { accountId: string; amountCents: bigint; on: string; note: string }[] = [];
+  const posts: {
+    accountId: string;
+    amountCents: bigint;
+    on: string;
+    note: string;
+    categoryId?: string | null;
+  }[] = [];
   const client: PostingClient = {
     async recordsWithNote() {
       return (options.existing ?? []).map((record) => ({ ...record, note: "marker" }));
@@ -40,6 +48,24 @@ async function postingOf(id: string) {
     .from(interestEntries)
     .where(and(eq(interestEntries.id, id)));
   return row;
+}
+
+/** The fixture's rule again, on the same account and period, with a category to publish under. */
+async function ruleWithCategory(categoryId: string | null): Promise<string> {
+  const [account] = await listAccounts(ctx);
+  const input: RuleInput = {
+    accountId: account.id,
+    taxRate: "0",
+    dayBasis: "365",
+    settlement: "monthly",
+    validFrom: "2026-02-01",
+    validTo: "2026-02-28",
+    mode: "post_to_provider",
+    postingCategoryId: categoryId,
+    tiers: [{ upToCents: null, annualRate: "0.0365" }],
+  };
+  const rule = await createRule(ctx, input);
+  return (await ruleDetail(ctx, rule.id)).settlements[0].entry.id;
 }
 
 beforeEach(async () => {
@@ -130,6 +156,54 @@ describe("publishing a settlement to Wallet (spec §7.6)", () => {
   it("gives the claim back when there is no Wallet connection to post with", async () => {
     expect(await postEntry(ctx, entryId)).toBe("none");
     expect(await postingOf(entryId)).toMatchObject({ posting: "none", error: "no_connection" });
+  });
+
+  it("files the record under the Wallet category the rule's category is linked to", async () => {
+    const category = await createCategory(ctx, {
+      name: "Interessi",
+      parentId: null,
+      type: "income",
+      color: null,
+    });
+    await linkExternal(ctx, {
+      provider: WALLET_PROVIDER,
+      entityType: "category",
+      entityId: category.id,
+      externalId: "wc-interest",
+    });
+    const withCategory = await ruleWithCategory(category.id);
+    const wallet = fakeWallet();
+
+    expect(await postEntry(ctx, withCategory, { client: wallet.client })).toBe("posted");
+    expect(wallet.posts[0].categoryId).toBe("wc-interest");
+    // Nothing to report: the settlement is posted, filed, and says nothing more.
+    expect(await postingOf(withCategory)).toMatchObject({ posting: "posted", error: null });
+  });
+
+  it("posts all the same without a category when the rule's category is not linked, and says so", async () => {
+    const category = await createCategory(ctx, {
+      name: "Interessi",
+      parentId: null,
+      type: "income",
+      color: null,
+    });
+    const withCategory = await ruleWithCategory(category.id);
+    const wallet = fakeWallet();
+
+    expect(await postEntry(ctx, withCategory, { client: wallet.client })).toBe("posted");
+    expect(wallet.posts).toHaveLength(1);
+    expect(wallet.posts[0].categoryId).toBeNull();
+    // The money is in Wallet; the outcome of the settlement carries the one thing that is missing.
+    expect(await postingOf(withCategory)).toMatchObject({
+      posting: "posted",
+      error: CATEGORY_NOT_LINKED,
+    });
+  });
+
+  it("says nothing about a category for a rule that was never given one", async () => {
+    const wallet = fakeWallet();
+    expect(await postEntry(ctx, await ruleWithCategory(null), { client: wallet.client })).toBe("posted");
+    expect(wallet.posts[0].categoryId).toBeNull();
   });
 
   it("never posts for another user", async () => {

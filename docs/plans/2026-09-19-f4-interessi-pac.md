@@ -387,3 +387,21 @@ stesso pagamento, il riscontro legge le entrate una volta sola e le assegna in o
 (`assignPayments`): una liquidazione di periodo prende i pagamenti della sua finestra non già presi,
 una giornaliera il primo della sua finestra (dal giorno ai due successivi). La pagina della regola
 mostra le ultime 90 liquidazioni.
+
+## 10. Modifica chiesta dopo la consegna (2026-09-20)
+
+**L'ora in cui gira una regola.** `interest_rules` guadagna `run_hour smallint null` (migrazione
+`0013_preferences_and_interest_hour.sql`, con il CHECK 0–23): `null` vuol dire mezzogiorno, cioè
+quello che l'app faceva finora. Il job `interests-accrual` passa dal livello **giornaliero** a quello
+**orario** e a ogni passaggio tratta solo le regole la cui ora effettiva (`run_hour ?? 12`) coincide
+con l'ora dell'orologio **nel fuso dell'utente**, mai in quello del server; la maturazione resta una
+per regola e per giorno (unico `(rule_id, on)`), quindi un passaggio in più non matura due volte.
+`postPending` gira ora solo nei passaggi in cui qualcosa è maturato, non una volta al giorno a vuoto.
+
+Due frasi della specifica restano da aggiornare, e sono **del proprietario**, quindi non le ho
+riscritte io:
+
+- **§10.2** elenca la maturazione degli interessi sotto «Ogni giorno alle 12:00»: ora è oraria.
+- **§7.6** dice «Il design non ha medie mensili o trimestrali né un'ora d'inizio: non si fanno».
+  La richiesta del proprietario (2026-09-20) la supera; per inciso il suo stesso mock ha un campo
+  «At time» nella modale della regola, quindi la frase nasceva da una lettura parziale del design.

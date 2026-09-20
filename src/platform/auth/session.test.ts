@@ -18,7 +18,19 @@ describe("ctxFrom", () => {
       role: "admin",
       locale: "it",
       timeZone: "Europe/Rome",
-      numberFormat: "it-IT",
+      numberFormat: { format: "it-IT", decimalSeparator: null, currencyPosition: null },
+    });
+  });
+
+  it("carries the formatting overrides, so no formatter has to read them back", () => {
+    const ctx = ctxFrom(
+      { id: "u1" },
+      { ...DEFAULT_PREFERENCES, numberFormat: "en-US", decimalSeparator: ",", currencyPosition: "after" },
+    );
+    expect(ctx.numberFormat).toEqual({
+      format: "en-US",
+      decimalSeparator: ",",
+      currencyPosition: "after",
     });
   });
 

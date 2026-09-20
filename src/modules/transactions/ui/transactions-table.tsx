@@ -2,18 +2,19 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, type MouseEvent, useEffect, useMemo, useState, useTransition } from "react";
 import { type Params, withParams } from "@/modules/accounts/ui/controls";
 import { Badge, Tag } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Checkbox } from "@/ui/input";
 import { ActionMenu } from "@/ui/menu";
+import { Modal } from "@/ui/modal";
 import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 import { TONE_TEXT } from "@/ui/tone";
 import { CategoryPicker } from "@/ui/category-picker";
-import { type CommandResult, hide, restore, setCategory } from "./commands";
+import { type CommandResult, hide, removeHidden, restore, setCategory } from "./commands";
 import { TransactionDetails } from "./details-modal";
 import type { RowBadge } from "./display";
 import { DEFAULT_DIRECTION, type SortDirection, type SortKey } from "./filters";
@@ -111,7 +112,23 @@ export function TransactionsTable({
   const [cursor, setCursor] = useState(-1);
   const [editing, setEditing] = useState<string | null>(null);
   const [detailsFor, setDetailsFor] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  /**
+   * Double-click a row to open it for editing (owner, 2026-09-20). The same panel the row menu's
+   * "Edit" opens and the same one `E` opens, so the mouse gains a shortcut and nothing else moves.
+   *
+   * A double-click that lands on a control of the row — the checkbox, the category chip, the menu
+   * — belongs to that control: opening the panel on top of it would undo what the person was
+   * doing. The text selection a double-click leaves behind is cleared, because it was a gesture
+   * here and not a request to select a word.
+   */
+  function openOnDoubleClick(event: MouseEvent<HTMLElement>, id: string) {
+    if ((event.target as HTMLElement).closest("button, a, input, select, [role='menu']")) return;
+    window.getSelection()?.removeAllRanges();
+    setDetailsFor(id);
+  }
 
   const rows = useMemo(() => groups.flatMap((group) => group.rows), [groups]);
   /** A revalidation can take a selected row away; the ones left are the ones that count. */
@@ -279,6 +296,9 @@ export function TransactionsTable({
             onSelect: () => onVisibility([row.id], row.hidden),
             danger: !row.hidden,
           },
+          ...(row.hidden
+            ? [{ label: t("selection.delete"), onSelect: () => setDeleting(row.id), danger: true }]
+            : []),
         ]}
       />
     );
@@ -319,6 +339,34 @@ export function TransactionsTable({
 
   return (
     <div className="flex flex-col">
+      <Modal
+        open={deleting !== null}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title={t("deleteHidden.title")}
+        description={t("deleteHidden.description")}
+        footer={
+          <>
+            <Button onClick={() => setDeleting(null)}>{t("deleteHidden.cancel")}</Button>
+            <Button
+              variant="danger"
+              disabled={pending}
+              onClick={() => {
+                const id = deleting;
+                setDeleting(null);
+                if (id)
+                  run(
+                    () => removeHidden([id]),
+                    (count) => t("toasts.deleted", { count }),
+                  );
+              }}
+            >
+              {t("selection.delete")}
+            </Button>
+          </>
+        }
+      >
+        {null}
+      </Modal>
       {chosen.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-border bg-sel px-4 py-1.5 text-sm">
           <span className="font-medium">{t("selection.label", { count: chosen.length })}</span>
@@ -429,6 +477,7 @@ export function TransactionsTable({
                     id={domId(row.id)}
                     tabIndex={-1}
                     selected={selection.includes(row.id)}
+                    onDoubleClick={(event) => openOnDoubleClick(event, row.id)}
                     className={cn(
                       "focus:outline-1 focus:-outline-offset-1 focus:outline-accent",
                       row.hidden && "opacity-60",
@@ -489,6 +538,7 @@ export function TransactionsTable({
               {group.rows.map((row) => (
                 <li
                   key={row.id}
+                  onDoubleClick={(event) => openOnDoubleClick(event, row.id)}
                   className={cn(
                     "flex items-start gap-3 border-b border-border px-4 py-2.5",
                     selection.includes(row.id) && "bg-sel",

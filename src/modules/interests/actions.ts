@@ -39,12 +39,16 @@ export interface RuleFormInput {
   accountId: string;
   validFrom: string;
   validTo: string;
+  /** The hour the rule accrues at, "0"–"23"; empty is the default hour. */
+  runHour: string;
   tiers: { upTo: string; rate: string }[];
   tax: string;
   dayBasis: string;
   settlement: string;
   payeeMatch: string;
   publish: boolean;
+  /** The category a published settlement is filed under in Wallet; empty is none. */
+  categoryId: string;
   active: boolean;
 }
 
@@ -53,6 +57,7 @@ function toInput(input: RuleFormInput, ctx: Ctx) {
     accountId: input.accountId,
     validFrom: input.validFrom,
     validTo: input.validTo === "" ? null : input.validTo,
+    runHour: input.runHour === "" ? null : z.coerce.number().int().min(0).max(23).parse(input.runHour),
     tiers: input.tiers.map((tier, index) => ({
       upToCents: index === input.tiers.length - 1 ? null : parseAmount(tier.upTo, ctx.numberFormat),
       annualRate: rate(tier.rate, ctx),
@@ -62,6 +67,7 @@ function toInput(input: RuleFormInput, ctx: Ctx) {
     settlement: z.enum(["daily", "monthly", "quarterly", "annual"]).parse(input.settlement),
     payeeMatch: input.payeeMatch,
     mode: input.publish ? ("post_to_provider" as const) : ("analyze_only" as const),
+    postingCategoryId: input.categoryId === "" ? null : z.uuid().parse(input.categoryId),
     state: input.active ? ("active" as const) : ("paused" as const),
   };
 }

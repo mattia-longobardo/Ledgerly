@@ -16,6 +16,7 @@ import {
   uploadDocument,
   writeEvidence,
 } from "@/modules/imports/service";
+import { dropCompetence, recordCompetence } from "@/modules/funds/pension/service";
 import { readPdfText } from "@/modules/imports/pdf/text";
 import { MIN_TEXT_CHARS } from "@/modules/imports/rules";
 import type { Ctx } from "@/platform/context";
@@ -41,6 +42,7 @@ import { hasBlockingFailure, type HistoryPoint, type Warning } from "./parse/che
 import { moneyOf, type Values } from "./parse/derive";
 import type { PreviousPayslip } from "./parse/leave";
 import { PARSER_VERSION, parseReplyTeamsystem, type RawLine } from "./parse/reply-teamsystem";
+import { fundLineIds, pensionCompetenceOf } from "./pension";
 import {
   type CodeRole,
   CODE_ROLES,
@@ -534,8 +536,8 @@ export async function verifyPayslip(
 
 /**
  * Step 5 (spec §7.8 "Applicazione"), one transaction: the active payslip with the same logical key
- * is superseded — never summed —, this one becomes the active one, and its leave snapshots and
- * events are written. The payslip after it, if applied, has its leave read again, since its permits
+ * is superseded — never summed —, this one becomes the active one, its leave snapshots and
+ * events are written, and what it accrued goes to the pension fund. The payslip after it, if applied, has its leave read again, since its permits
  * are confirmed against this one.
  */
 export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string, now: Date = new Date()): Promise<Payslip> {
@@ -552,6 +554,7 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
           .set({ active: false, supersededBy: payslip.id })
           .where(and(eq(payslips.id, replaced.id), userScoped(ctx).owns(payslips)));
         await clearLeave(ctx, replaced.id, tx);
+        await dropCompetence(ctx, replaced.id, tx);
         if (!(await transition(ctx, replaced.documentId, "superseded", {}, tx))) throw new PayrollError("conflict");
       }
       const [applied] = await tx
@@ -560,6 +563,12 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
         .where(and(eq(payslips.id, payslip.id), userScoped(ctx).owns(payslips)))
         .returning();
       await writeLeave(ctx, applied, tx);
+      // The pension sink (spec §7.8): what this payslip accrued for the fund taking payroll.
+      const competence = pensionCompetenceOf(
+        applied,
+        await fundLineIds(ctx, applied.documentId, await codeMapOf(ctx), tx),
+      );
+      if (competence) await recordCompetence(ctx, competence, tx);
       if (!(await transition(ctx, documentId, "applied", {}, tx))) throw new PayrollError("conflict");
 
       // The next month's payslip, if applied, confirms its permits against this one.

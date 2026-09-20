@@ -6,9 +6,11 @@ import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/displa
 import { fundsView, valuationAccountOptions } from "@/modules/funds/queries";
 import { FundStateButton, NewFundButton, ValuationButton } from "@/modules/funds/ui/fund-forms";
 import { monthPill, newFundDraft } from "@/modules/funds/ui/present";
+import { createPensionFundAction } from "./pension-setup";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";
 import { MultiLine } from "@/ui/chart";
 import { cn } from "@/ui/cn";
@@ -36,11 +38,14 @@ export default async function FundsPage() {
   ]);
   const money = (cents: bigint | null) => formatMoney(cents, ctx.numberFormat);
   const open = accounts.map((account) => ({ id: account.id, name: account.name }));
+  // One "Add fund" for both kinds (design "Fund kind"): the dialog asks which, and a pension fund
+  // is created by the app-layer action, the only place allowed to call payroll and funds at once.
   const add = (label: string, size: "sm" | "md" = "sm") => (
     <NewFundButton
       draft={newFundDraft(todayOn)}
       accounts={open}
       valuationAccounts={valuationAccounts}
+      createPension={createPensionFundAction}
       label={label}
       size={size}
     />
@@ -178,7 +183,7 @@ export default async function FundsPage() {
               <Th align="right">{t("table.cumulative")}</Th>
               <Th>{t("table.lastValuation")}</Th>
               <Th>{t("table.month")}</Th>
-              <Th>
+              <Th align="right">
                 <span className="sr-only">{t("table.edit")}</span>
               </Th>
             </THead>
@@ -188,13 +193,19 @@ export default async function FundsPage() {
                 return (
                   <Tr key={row.fund.id} data-testid="fund-row">
                     <Td>
-                      <Link href={`/funds/${row.fund.id}` as Route} className="font-medium hover:underline">
+                      <Link
+                        href={`/funds/${row.fund.id}` as Route}
+                        className="inline-flex h-6 items-center font-medium hover:underline"
+                      >
                         {row.fund.name}
                       </Link>
                     </Td>
                     <Td muted className="text-sm">
                       {[t(`types.${row.fund.type}`), row.fund.compartment].filter(Boolean).join(" · ")}
                     </Td>
+                    {/* A pension fund fed by payslips alone shows what the transfer schedule has
+                        already carried; it is the same paid-in as anyone else's and carries no
+                        caption of its own (owner, 2026-09-20). */}
                     <Td align="right">{money(row.metrics.paidInCents)}</Td>
                     <Td align="right" className="font-semibold">
                       {money(row.metrics.valueCents)}
@@ -220,22 +231,22 @@ export default async function FundsPage() {
                         {pill.text}
                       </span>
                     </Td>
-                    <Td>
-                      <span className="flex gap-1">
-                        <Link
+                    <Td align="right">
+                      <span className="flex justify-end gap-1">
+                        <ButtonLink
                           href={`/funds/${row.fund.id}?tab=settings` as Route}
-                          className="focus-ring rounded-[5px] px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg"
+                          variant="ghost"
+                          size="xs"
                         >
                           {t("table.edit")}
-                        </Link>
+                        </ButtonLink>
                         <ValuationButton
                           fundId={row.fund.id}
                           fundName={row.fund.name}
                           today={todayOn}
                           lastLine={null}
                           label={t("table.valuation")}
-                          variant="ghost"
-                          size="xs"
+                          place="row"
                         />
                       </span>
                     </Td>

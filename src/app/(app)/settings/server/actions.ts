@@ -4,7 +4,13 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/platform/auth/session";
-import { removeLlmFallback, saveLlmFallback, SettingsError } from "@/platform/settings/service";
+import type { LlmProbeResult } from "@/platform/settings/llm-probe";
+import {
+  removeLlmFallback,
+  saveLlmFallback,
+  SettingsError,
+  testLlmFallback,
+} from "@/platform/settings/service";
 
 export type ServerActionResult = { ok: true } | { ok: false; error: "invalid" | "forbidden" };
 
@@ -18,6 +24,16 @@ export async function saveLlmFallbackAction(model: string, apiKey: string): Prom
   }
   revalidatePath("/settings/server");
   return { ok: true };
+}
+
+/**
+ * Tries the saved key and model against OpenAI and says what came back, as a message key. The
+ * request is made here, on the server: the key never reaches the browser, and what comes back
+ * carries neither the key nor OpenAI's answer body (spec §5.4, §9.4). It saves nothing.
+ */
+export async function testLlmFallbackAction(): Promise<LlmProbeResult> {
+  const ctx = await requireAdmin();
+  return await testLlmFallback(ctx);
 }
 
 export async function removeLlmFallbackAction(): Promise<ServerActionResult> {

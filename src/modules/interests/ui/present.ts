@@ -44,6 +44,7 @@ export function draftOf(
     accountName: row.accountName,
     validFrom: rule.validFrom,
     validTo: rule.validTo ?? "",
+    runHour: rule.runHour === null ? "" : String(rule.runHour),
     tiers: row.tiers.map((tier) => ({
       upTo: formatAmountInput(tier.upToCents, format),
       rate: rateInput(tier.annualRate, format),
@@ -53,11 +54,12 @@ export function draftOf(
     settlement: rule.settlement,
     payeeMatch: rule.payeeMatch ?? "",
     publish: rule.mode === "post_to_provider",
+    categoryId: rule.postingCategoryId,
     active: rule.state === "active",
   };
 }
 
-/** A new rule: the first open account, today, one tier, 26 % tax, monthly, active. */
+/** A new rule: the first open account, today, the default hour, one tier, 26 % tax, monthly, active. */
 export function newDraft(accounts: readonly { id: string; name: string }[], today: string): RuleDraft {
   return {
     id: null,
@@ -65,12 +67,14 @@ export function newDraft(accounts: readonly { id: string; name: string }[], toda
     accountName: accounts[0]?.name ?? "",
     validFrom: today,
     validTo: "",
+    runHour: "",
     tiers: [{ upTo: "", rate: "" }],
     tax: "26",
     dayBasis: "365",
     settlement: "monthly",
     payeeMatch: "",
     publish: false,
+    categoryId: null,
     active: true,
   };
 }

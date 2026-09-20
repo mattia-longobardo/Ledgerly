@@ -1,6 +1,6 @@
 import { centsToDecimal, type Cents, parseCents } from "@/platform/money";
 import { type FieldName, type MoneyField } from "../fields";
-import type { PayslipType, TfrSource } from "../rules";
+import { isExtraMonth, type PayslipType, type TfrSource } from "../rules";
 import type { Warning } from "./checks";
 
 /** The values of a payslip's fields as they stand: the correction when there is one, else as read. */
@@ -84,13 +84,17 @@ export function deriveFields(values: Values, type: PayslipType): Derived {
   ]);
   const employerPrinted = money("employerFundPrinted");
   const employerAdjustments = money("employerFundAdjustments");
-  // An adjustment with no regular quota beside it (a 13th's, L147) is not a month's
-  // employer contribution: no amount is computed, and a person decides.
+  // An adjustment with no regular quota beside it (L147) is not a month's employer contribution:
+  // it is never summed into one, and no amount is computed for that month.
   set("employerFundEffective", employerPrinted === null ? null : employerPrinted + (employerAdjustments ?? 0n), [
     "employerFundPrinted",
     "employerFundAdjustments",
   ]);
-  if (employerPrinted === null && employerAdjustments !== null) {
+  // On a 13th or a 14th that is simply how the payslip is written — the extra month carries the
+  // adjustment of the ordinary months and no quota of its own — so there is nothing to review and
+  // nothing to say: the amount stands on its own line and is kept apart. On an ordinary month the
+  // same shape is unexpected, and only there is it worth a word.
+  if (employerPrinted === null && employerAdjustments !== null && !isExtraMonth(type)) {
     out.warnings.push({ code: "employer_fund_adjustment_only", field: "employerFundAdjustments" });
   }
 

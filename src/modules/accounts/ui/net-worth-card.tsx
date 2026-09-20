@@ -234,7 +234,7 @@ export async function NetWorthCard({
               <span aria-hidden className="size-2.5 shrink-0 rounded-[3px]" style={{ background: color }} />
               <Link
                 href={`/accounts/${row.account.id}`}
-                className="focus-ring min-w-0 truncate rounded-[2px] hover:underline"
+                className="focus-ring inline-flex h-6 min-w-0 items-center truncate rounded-[2px] hover:underline"
               >
                 {row.account.name}
               </Link>

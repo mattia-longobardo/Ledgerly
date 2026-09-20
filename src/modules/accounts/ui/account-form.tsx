@@ -7,21 +7,26 @@ import { type FormEvent, useState, useTransition } from "react";
 import { Button, ButtonLink } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
-import { Input, Select } from "@/ui/input";
+import { Checkbox, Input, Select } from "@/ui/input";
 import { createAccountAction } from "../actions";
+import { colorField } from "./display";
 import { ACCOUNT_TYPES } from "../rules";
 
 /**
  * A new manual account, with the optional opening balance of spec §7.1. The amount stays text all
  * the way to the Server Action, which reads it in the user's own number format.
  */
-export function AccountForm({ today }: { today: string }) {
+export function AccountForm({ today, index }: { today: string; index: number }) {
   const t = useTranslations("accounts.new");
   const types = useTranslations("accounts.types");
   const common = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // The colour the account will be drawn with once it exists: the palette's, for the place it
+  // takes at the end of the list. Left automatic, it stays the palette's and follows any reordering.
+  const colour = colorField({ color: null }, index);
+  const [automatic, setAutomatic] = useState(true);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,7 +39,7 @@ export function AccountForm({ today }: { today: string }) {
           name: text("name"),
           type: text("type"),
           currency: text("currency") || "EUR",
-          color: text("color") || null,
+          color: automatic ? null : text("color") || null,
           reference: text("reference"),
           purpose: text("purpose"),
           openedOn: text("openedOn") || null,
@@ -80,8 +85,22 @@ export function AccountForm({ today }: { today: string }) {
       <Field label={t("currency")} htmlFor="currency">
         <Input id="currency" name="currency" defaultValue="EUR" maxLength={3} readOnly />
       </Field>
-      <Field label={t("color")} htmlFor="color">
-        <Input id="color" name="color" type="color" defaultValue="#2563eb" className="p-1" />
+      <Field label={t("color")} htmlFor="color" hint={t("colorHint")}>
+        <div className="flex items-center gap-3">
+          <Input
+            id="color"
+            name="color"
+            type="color"
+            defaultValue={colour.value}
+            disabled={automatic}
+            className="p-1"
+          />
+          <Checkbox
+            label={t("automaticColor")}
+            checked={automatic}
+            onChange={(event) => setAutomatic(event.target.checked)}
+          />
+        </div>
       </Field>
       <Field label={t("openedOn")} htmlFor="openedOn">
         <Input id="openedOn" name="openedOn" type="date" max={today} />

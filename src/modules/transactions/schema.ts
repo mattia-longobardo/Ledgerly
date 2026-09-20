@@ -57,6 +57,27 @@ export const categories = pgTable(
      * category out of its group was undone by the next hourly pass.
      */
     parentSetLocally: boolean("parent_set_locally").notNull().default(false),
+    /**
+     * The fields the person changed here, exactly as `transactions.locally_edited` records them
+     * (spec §7.2). Since the two-way category sync it means something more precise than "never
+     * overwrite this again": a `name` in this list is what makes the local name **win**, and the
+     * next pass writes it to Wallet (`platform/integrations/wallet/categories.ts`) and then clears
+     * the marker, because once Wallet has been told the two agree and a later rename *there* is
+     * free to come back here. `type` never leaves: Wallet has no notion of income or expense, so a
+     * type chosen here is local for ever.
+     */
+    locallyEdited: text("locally_edited")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /**
+     * The name Wallet published for this category the last time the two sides agreed — the
+     * baseline of the three-way merge, and the only way to tell "only here changed" from "both
+     * changed" (which is reported, spec §7.2). `null` for a category Wallet has never seen, and
+     * for the rows that predate this column: those fall back to "a local edit wins, otherwise
+     * Wallet's name is adopted", which is what the one-way sync did.
+     */
+    providerName: text("provider_name"),
     type: text("type", { enum: CATEGORY_TYPES }).notNull().default("expense"),
     color: text("color"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),

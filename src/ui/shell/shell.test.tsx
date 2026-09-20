@@ -22,7 +22,7 @@ const LINKS: NavLink[] = [
     id: "components",
     href: "/components" as Route,
     label: "Components",
-    icon: "components",
+    icon: "funds",
     group: "system",
     mobile: false,
   },

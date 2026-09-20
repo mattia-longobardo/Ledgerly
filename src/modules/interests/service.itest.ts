@@ -1,8 +1,8 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { removeAccount, saveBalanceEntry } from "@/modules/accounts/service";
 import { upsertFromProvider } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
+import { monthKey, startOfDayIn, today } from "@/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { interestsAccrualJob } from "./jobs";
@@ -32,6 +32,10 @@ beforeEach(async () => {
   ctx = await newContext();
   accountId = await anAccount(ctx, "Revolut Saving");
   await saveBalanceEntry(ctx, accountId, { on: "2025-12-31", cents: 1_000_000n });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 afterAll(closeDatabase);
@@ -186,6 +190,11 @@ describe("the rest of the page", () => {
       code: "not_synced",
     });
     await expect(createRule(ctx, rule({ validTo: "2025-01-01" }))).rejects.toThrow();
+    // A category to publish under has to be one of this user's (spec §7.6): another user's, or one
+    // that does not exist, is refused rather than kept as an id nothing can resolve.
+    await expect(
+      createRule(ctx, rule({ postingCategoryId: "00000000-0000-4000-8000-000000000000" })),
+    ).rejects.toMatchObject({ code: "invalid_category" });
     await createRule(ctx, rule());
     expect(await removeAccount(ctx, accountId)).toBe("archived");
   });
@@ -206,5 +215,77 @@ describe("isolation between users (spec §4.4, §11)", () => {
       await expect(attempt()).rejects.toBeInstanceOf(InterestError);
     }
     await expect(createRule(other, rule())).rejects.toMatchObject({ code: "invalid_account" });
+  });
+});
+
+describe("the accrual pass and the hour a rule runs at (spec §10.2)", () => {
+  /** The instant `day` shows `hour` on the user's clock; February, far from any change of offset. */
+  function at(day: string, hour: number): Date {
+    return new Date(startOfDayIn(day, ctx.timeZone).getTime() + hour * 3_600_000);
+  }
+
+  async function daysOf(id: string): Promise<number> {
+    return (await ruleDetail(ctx, id)).days.length;
+  }
+
+  /** Only `Date` is faked: the pool's own timers must keep running. */
+  function clockAt(instant: Date): void {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(instant);
+  }
+
+  it("accrues a rule with an hour set only in the pass at that hour, once", async () => {
+    clockAt(at("2026-02-10", 8));
+    const created = await createRule(ctx, rule({ runHour: 9 }));
+    // Created at 08:00 on the 10th: accrued up to the 9th, the last day whose balance is closed.
+    expect(await daysOf(created.id)).toBe(40);
+
+    // The next day's passes at every other hour leave it where it is.
+    for (const hour of [0, 8, 10, 12, 23]) {
+      clockAt(at("2026-02-11", hour));
+      await interestsAccrualJob.run();
+      expect(await daysOf(created.id)).toBe(40);
+    }
+
+    clockAt(at("2026-02-11", 9));
+    const detail = await interestsAccrualJob.run();
+    expect(detail).toMatchObject({ rules: 1 });
+    expect(await daysOf(created.id)).toBe(41); // the 10th, and nothing else
+
+    // A second pass in the same hour — and a third later the same day — accrue nothing twice.
+    await interestsAccrualJob.run();
+    clockAt(at("2026-02-11", 21));
+    await interestsAccrualJob.run();
+    expect(await daysOf(created.id)).toBe(41);
+  });
+
+  it("accrues a rule with no hour of its own at noon, as the daily job did", async () => {
+    clockAt(at("2026-02-10", 8));
+    const created = await createRule(ctx, rule());
+    expect(created.runHour).toBeNull();
+    expect(await daysOf(created.id)).toBe(40);
+
+    clockAt(at("2026-02-11", 11));
+    expect(await interestsAccrualJob.run()).toMatchObject({ rules: 0 });
+    expect(await daysOf(created.id)).toBe(40);
+
+    clockAt(at("2026-02-11", 12));
+    expect(await interestsAccrualJob.run()).toMatchObject({ rules: 1 });
+    expect(await daysOf(created.id)).toBe(41);
+  });
+
+  it("keeps the hour the rule was saved with, and changing it moves the pass", async () => {
+    clockAt(at("2026-02-10", 8));
+    const created = await createRule(ctx, rule({ runHour: 6 }));
+    expect(created.runHour).toBe(6);
+
+    const changed = await updateRule(ctx, created.id, rule({ runHour: 20 }));
+    expect(changed.runHour).toBe(20);
+    clockAt(at("2026-02-11", 6));
+    await interestsAccrualJob.run();
+    expect(await daysOf(created.id)).toBe(40);
+    clockAt(at("2026-02-11", 20));
+    await interestsAccrualJob.run();
+    expect(await daysOf(created.id)).toBe(41);
   });
 });

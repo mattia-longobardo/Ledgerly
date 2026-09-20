@@ -4,6 +4,7 @@ import { redactForLog } from "@/platform/auth/logger";
 import { users } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
+import { numberStyle } from "@/platform/format";
 import { getPreferences } from "./service";
 
 /** A user as a scheduled job meets them: who, and where to write if they must be told. */
@@ -24,7 +25,7 @@ export async function contextFor(person: Pick<Person, "id">): Promise<Ctx> {
     role: "user",
     locale: preferences.locale,
     timeZone: preferences.timeZone,
-    numberFormat: preferences.numberFormat,
+    numberFormat: numberStyle(preferences),
   };
 }
 

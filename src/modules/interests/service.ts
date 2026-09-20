@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "@/modules/accounts/queries";
 import { dailyBalancesOf } from "@/modules/accounts/service";
+import { listCategories } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, isCivilDate, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -30,7 +31,8 @@ export type InterestRule = typeof interestRules.$inferSelect;
 export type InterestEntry = typeof interestEntries.$inferSelect;
 export type InterestAccrual = typeof interestAccruals.$inferSelect;
 
-export type InterestErrorCode = "not_found" | "invalid_account" | "invalid_tiers" | "not_synced";
+export type InterestErrorCode =
+  "not_found" | "invalid_account" | "invalid_tiers" | "not_synced" | "invalid_category";
 
 export class InterestError extends Error {
   constructor(readonly code: InterestErrorCode) {
@@ -53,7 +55,10 @@ export const ruleInputSchema = z
     settlement: z.enum(SETTLEMENTS),
     validFrom: civilDate,
     validTo: civilDate.nullable().default(null),
+    runHour: z.int().min(0).max(23).nullable().default(null),
     mode: z.enum(RULE_MODES).default("analyze_only"),
+    /** The local category a published settlement is filed under in Wallet (spec §7.6). */
+    postingCategoryId: z.uuid().nullable().default(null),
     state: z.enum(RULE_STATES).default("active"),
     payeeMatch: z
       .string()
@@ -89,6 +94,17 @@ async function checkAccount(ctx: Pick<Ctx, "userId">, accountId: string, mode: s
   }
 }
 
+/**
+ * The category a rule publishes under: one of this user's open categories, read through the
+ * module that owns them (spec §4.3 — no table of another module is touched here). An archived one
+ * is refused rather than kept: it would not be in the picker to take back out.
+ */
+async function checkCategory(ctx: Pick<Ctx, "userId">, categoryId: string | null): Promise<void> {
+  if (categoryId === null) return;
+  const known = (await listCategories(ctx)).some((category) => category.id === categoryId);
+  if (!known) throw new InterestError("invalid_category");
+}
+
 export async function tiersOf(
   ctx: Pick<Ctx, "userId">,
   ruleIds: readonly string[],
@@ -122,6 +138,7 @@ export async function createRule(
 ): Promise<InterestRule> {
   const { tiers, ...rule } = parse(input);
   await checkAccount(ctx, rule.accountId, rule.mode);
+  await checkCategory(ctx, rule.postingCategoryId);
   const row = await getDb().transaction(async (tx) => {
     const [created] = await tx.insert(interestRules).values(userScoped(ctx).stamp(rule)).returning();
     await tx
@@ -149,6 +166,9 @@ export async function updateRule(
   const { tiers, ...rule } = parse(input);
   if (rule.accountId !== current.accountId || rule.mode !== current.mode) {
     await checkAccount(ctx, rule.accountId, rule.mode);
+  }
+  if (rule.postingCategoryId !== current.postingCategoryId) {
+    await checkCategory(ctx, rule.postingCategoryId);
   }
   const row = await getDb().transaction(async (tx) => {
     const [updated] = await tx
@@ -191,7 +211,7 @@ export async function setRuleState(
   await bringUpToDate(ctx, id);
 }
 
-/** Accrued to yesterday and settled to today: what the daily job does, for one rule. */
+/** Accrued to yesterday and settled to today: what a pass of the accrual job does, for one rule. */
 export async function bringUpToDate(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   id: string,

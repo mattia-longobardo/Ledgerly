@@ -6,10 +6,15 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { linkExternal, listConnections, readCredentials } from "@/platform/integrations/service";
+import {
+  externalIdsOf,
+  linkExternal,
+  listConnections,
+  readCredentials,
+} from "@/platform/integrations/service";
 import { createWalletClient, type WalletClient } from "@/platform/integrations/wallet/client";
 import { centsToDecimal } from "@/platform/money";
-import type { PostingState } from "./rules";
+import { CATEGORY_NOT_LINKED, type PostingState } from "./rules";
 import { interestEntries, interestRules } from "./schema";
 import { InterestError } from "./service";
 
@@ -33,6 +38,25 @@ async function walletClient(ctx: Pick<Ctx, "userId">): Promise<PostingClient | n
   if (!connection || connection.state === "revoked") return null;
   const { token } = await readCredentials(ctx, connection.id);
   return createWalletClient(token);
+}
+
+/**
+ * Wallet's own id of the category a rule publishes under (spec §7.6, §9.1), from the `category`
+ * links of `provider_links` — the same links the category sync files. `null` when the rule has no
+ * category, or when the one it has has never been linked to a Wallet category: the settlement is
+ * then published **without** a category and the entry says so ({@link CATEGORY_NOT_LINKED}).
+ *
+ * Deliberately not the owner's `interest.py` ladder, which reads `/categories` and matches on the
+ * name: a name match would file the money under whatever category happens to be called that today.
+ * The link is the fact; there is no fallback, and nothing here creates a category.
+ */
+async function providerCategoryId(
+  ctx: Pick<Ctx, "userId">,
+  categoryId: string | null,
+): Promise<string | null> {
+  if (categoryId === null) return null;
+  const links = await externalIdsOf(ctx, WALLET_PROVIDER, "category", [categoryId]);
+  return links.get(categoryId) ?? null;
 }
 
 async function setPosting(
@@ -98,6 +122,11 @@ export async function postEntry(
       await setPosting(ctx, entryId, "none", providerId === null ? "not_synced" : "no_connection");
       return "none";
     }
+    // Resolved before the duplicate check so a settlement taken over from an existing record
+    // reports the missing link too: the fact is about the rule, not about this one POST.
+    const category = await providerCategoryId(ctx, rule.postingCategoryId);
+    const uncategorised = rule.postingCategoryId !== null && category === null;
+    const note = uncategorised ? CATEGORY_NOT_LINKED : null;
     const marker = postingMarker(entryId);
     const existing = await client.recordsWithNote({ accountId: providerId, on: entry.settleOn, marker });
     let recordId: string | null;
@@ -120,6 +149,7 @@ export async function postEntry(
         amountCents: entry.netCents,
         on: entry.settleOn,
         note: `${marker} · ${entry.periodFrom}…${entry.periodTo} · net ${centsToDecimal(entry.netCents)}`,
+        categoryId: category,
       });
       recordId = created.id;
       if (recordId === null) {
@@ -130,7 +160,8 @@ export async function postEntry(
     await getDb().transaction(async (tx) => {
       await tx
         .update(interestEntries)
-        .set({ posting: "posted", postedAt: new Date(), postingError: null })
+        // `posted` with a note, not a failure: the money is in Wallet, only its filing is not.
+        .set({ posting: "posted", postedAt: new Date(), postingError: note })
         .where(and(eq(interestEntries.id, entryId), userScoped(ctx).owns(interestEntries)));
       await linkExternal(
         ctx,
@@ -174,7 +205,7 @@ export async function markPosted(ctx: Pick<Ctx, "userId">, entryId: string): Pro
   if (updated.length === 0) throw new InterestError("not_found");
 }
 
-/** Every settlement of a publishing rule still to post: what the daily job does after settling. */
+/** Every settlement of a publishing rule still to post: what the accrual job does after settling. */
 export async function postPending(ctx: Pick<Ctx, "userId">, client?: PostingClient): Promise<number> {
   const pending = await getDb()
     .select({ id: interestEntries.id })

@@ -41,16 +41,25 @@ function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
   };
 }
 
+/** A category as `/categories` publishes it, with the three levels F6 needs left at their defaults. */
+function category(
+  over: Partial<WalletCategory> & Pick<WalletCategory, "externalId" | "name">,
+): WalletCategory {
+  return {
+    groupExternalId: null,
+    groupName: null,
+    systemId: null,
+    custom: false,
+    parentExternalId: null,
+    archived: false,
+    ...over,
+  };
+}
+
 const CATEGORIES = new Map<string, WalletCategory>([
   [
     "wc-groceries",
-    {
-      externalId: "wc-groceries",
-      name: "Spesa",
-      groupExternalId: "wcg-casa",
-      groupName: "Casa",
-      systemId: null,
-    },
+    category({ externalId: "wc-groceries", name: "Spesa", groupExternalId: "wcg-casa", groupName: "Casa" }),
   ],
 ]);
 
@@ -100,13 +109,12 @@ describe("toIncomingTransaction", () => {
     const listed = new Map([
       [
         "wc-transfer",
-        {
+        category({
           externalId: "wc-transfer",
           name: "Trasferimento",
           groupExternalId: "system_categories",
-          groupName: null,
           systemId: "system_categories__transfer",
-        },
+        }),
       ],
     ]);
     expect(toIncomingTransaction(movement({ categoryExternalId: "wc-transfer" }), listed, ROME).type).toBe(

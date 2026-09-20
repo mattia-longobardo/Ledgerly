@@ -201,7 +201,8 @@ describe("assembling a twin (derived values, checks, leave)", () => {
       employerFundEffective: null,
       taxesTotal: "104.43",
     });
-    expect(assembled.warnings.map((warning) => warning.code)).toEqual(["employer_fund_adjustment_only"]);
+    // An extra month carrying only the adjustment is the ordinary shape of a 13th: no remark.
+    expect(assembled.warnings.map((warning) => warning.code)).toEqual([]);
     expect(assembled.checks.find((check) => check.id === "irpef")).toMatchObject({ status: "skipped", reason: "extra_month" });
     expect(assembled.checks.find((check) => check.id === "net")?.status).toBe("passed");
     expect(assembled.events).toEqual([]);

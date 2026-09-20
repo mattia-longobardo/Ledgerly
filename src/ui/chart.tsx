@@ -8,6 +8,13 @@ export interface Series {
   label?: string;
   /** Drawn dashed: a reference line (what was paid in) beside a measured one. */
   dashed?: boolean;
+  /**
+   * Drawn as a step, flat then vertical, instead of sloping from point to point. What a fund has
+   * paid in does not creep up through the month: it lands on the day the money leaves, and a line
+   * sloping from the month before made a credit of 20 April look as if it had begun in March
+   * (owner, 2026-09-20). The same holds for a value that only moves when a document says so.
+   */
+  step?: boolean;
 }
 
 interface Box {
@@ -57,6 +64,16 @@ export function segmentsOf(
   });
   if (run.length > 0) runs.push(run);
   return runs;
+}
+
+/** The same run, drawn flat until the next point and then straight up to it. */
+export function stepped(run: readonly { x: number; y: number }[]): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  run.forEach((point, index) => {
+    if (index > 0) out.push({ x: point.x, y: run[index - 1].y });
+    out.push(point);
+  });
+  return out;
 }
 
 /** A piece of a line drawn in one style: solid, or dashed where the values are estimates. */
@@ -396,12 +413,14 @@ export function MultiLine({
   yLabels,
   xLabels,
   height = 180,
+  hover,
 }: {
   series: readonly Series[];
   summary: string;
   yLabels: readonly string[];
   xLabels: readonly string[];
   height?: number;
+  hover?: readonly HoverPoint[];
 }) {
   const box: Box = { width: 720, height, pad: 6 };
   const extent = extentOf(series);
@@ -425,7 +444,7 @@ export function MultiLine({
               segmentsOf(one.values, extent, box).map((run, runIndex) => (
                 <polyline
                   key={`${index}-${runIndex}`}
-                  points={path(run)}
+                  points={path(one.step ? stepped(run) : run)}
                   fill="none"
                   stroke={one.color ?? "var(--accent)"}
                   strokeWidth={1.5}
@@ -435,6 +454,7 @@ export function MultiLine({
               )),
             )}
           </svg>
+          {hover && hover.length > 0 && <ChartHover points={hover} />}
         </div>
         <div
           aria-hidden
@@ -486,12 +506,14 @@ export function Bars({
   yLabels,
   xLabels,
   height = 240,
+  hover,
 }: {
   values: readonly (number | null)[];
   summary: string;
   yLabels: readonly string[];
   xLabels: readonly string[];
   height?: number;
+  hover?: readonly HoverPoint[];
 }) {
   const known = values.filter((value): value is number => value !== null);
   const reach = Math.max(1, ...known.map(Math.abs));
@@ -527,6 +549,8 @@ export function Bars({
               );
             })}
           </svg>
+          {/* Bars sit in slots, not on points: the crosshair is placed slot by slot to match. */}
+          {hover && hover.length > 0 && <ChartHover points={hover} slots />}
         </div>
         <div
           aria-hidden

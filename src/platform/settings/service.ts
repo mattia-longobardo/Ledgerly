@@ -5,6 +5,7 @@ import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb } from "@/platform/db/client";
 import { readEnv } from "@/platform/env";
+import { type LlmProbeResult, probeLlmFallback } from "./llm-probe";
 import { appSettings } from "./schema";
 
 /** The key of the OpenAI fallback's settings (spec D12, D18). */
@@ -101,6 +102,19 @@ export async function llmFallbackCredentials(): Promise<{ model: string; apiKey:
   if (!row?.sealed || !row.value?.model) return null;
   const { apiKey } = openJson(keyRing(), row.sealed);
   return apiKey ? { model: String(row.value.model), apiKey } : null;
+}
+
+/**
+ * "Test connection" (admin only): asks OpenAI whether the *saved* key and model still work, with
+ * the cheapest request that proves both — see {@link probeLlmFallback}. It changes nothing: the
+ * fallback's own behaviour and the sealed key are left exactly as they are.
+ */
+export async function testLlmFallback(
+  ctx: Pick<Ctx, "role">,
+  deps: { fetch: typeof fetch } = { fetch: globalThis.fetch },
+): Promise<LlmProbeResult> {
+  requireAdminCtx(ctx);
+  return probeLlmFallback(await llmFallbackCredentials(), deps);
 }
 
 /** Whether the fallback is configured, for everyone's review page (no detail). */

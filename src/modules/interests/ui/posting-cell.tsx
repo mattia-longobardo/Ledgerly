@@ -6,7 +6,7 @@ import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { notify } from "@/ui/toast";
 import { markPostedAction, postEntryAction } from "../actions";
-import type { PostingState } from "../rules";
+import { CATEGORY_NOT_LINKED, type PostingState } from "../rules";
 
 const TONE: Record<PostingState, string> = {
   none: "bg-hover text-muted",
@@ -33,6 +33,9 @@ export function PostingCell({
 }) {
   const t = useTranslations("interests.detail.posting");
   const [pending, startTransition] = useTransition();
+  // The one "error" that is not a failure: the record is in Wallet, filed under no category
+  // because the rule's category has no Wallet counterpart (spec §7.6).
+  const uncategorised = posting === "posted" && error === CATEGORY_NOT_LINKED;
 
   function run(
     action: () => Promise<{ ok: true; state: string } | { ok: false; error: string }>,
@@ -55,12 +58,22 @@ export function PostingCell({
         title={
           posting === "indeterminate"
             ? `${t("unsureHint")}${error ? ` (${error})` : ""}`
-            : (error ?? undefined)
+            : uncategorised
+              ? t("categoryNotLinkedHint")
+              : (error ?? undefined)
         }
         className={cn("rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap", TONE[posting])}
       >
         {t(`states.${posting}`)}
       </span>
+      {uncategorised && (
+        <span
+          title={t("categoryNotLinkedHint")}
+          className="rounded-full bg-warn-bg px-2 py-0.5 text-xs font-medium whitespace-nowrap text-warn"
+        >
+          {t("categoryNotLinked")}
+        </span>
+      )}
       {posting === "none" && (
         <Button
           size="xs"

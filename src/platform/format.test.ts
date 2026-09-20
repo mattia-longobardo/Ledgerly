@@ -1,8 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { formatAmountInput, formatDate, formatWholePercent, formatMoney, formatPercent } from "./format";
+import { parseAmount } from "@/modules/accounts/rules";
+import {
+  formatAmountInput,
+  formatDate,
+  formatWholePercent,
+  formatMoney,
+  formatPercent,
+  type NumberStyle,
+  numberSeparators,
+} from "./format";
 
 /** Intl uses no-break spaces (U+00A0, U+202F); compare with plain spaces. */
 const plain = (s: string) => s.replace(/\s/g, " ");
+
+/** A saved style: the number format plus the two explicit overrides, either of them left alone. */
+const style = (over: Partial<NumberStyle> = {}): NumberStyle => ({
+  format: "it-IT",
+  decimalSeparator: null,
+  currencyPosition: null,
+  ...over,
+});
 
 describe("formatMoney", () => {
   it("always groups thousands, even for four-digit amounts", () => {
@@ -24,6 +41,51 @@ describe("formatMoney", () => {
   it("follows the chosen number format", () => {
     expect(plain(formatMoney(123456n, "en-US"))).toBe("€1,234.56");
     expect(plain(formatMoney(123456n, "fr-FR"))).toBe("1 234,56 €");
+  });
+
+  it("leaves a style with no override formatting exactly as the format alone does", () => {
+    for (const format of ["it-IT", "en-US", "fr-FR"] as const) {
+      expect(formatMoney(123456n, style({ format }))).toBe(formatMoney(123456n, format));
+      expect(formatMoney(-31240n, style({ format }))).toBe(formatMoney(-31240n, format));
+    }
+  });
+
+  it("takes the decimal separator and the euro's side from the preferences, in any combination", () => {
+    const money = (over: Partial<NumberStyle>) => plain(formatMoney(123456n, style(over)));
+    expect(money({ decimalSeparator: ",", currencyPosition: "after" })).toBe("1.234,56 €");
+    expect(money({ decimalSeparator: ",", currencyPosition: "before" })).toBe("€ 1.234,56");
+    expect(money({ decimalSeparator: ".", currencyPosition: "after" })).toBe("1,234.56 €");
+    expect(money({ decimalSeparator: ".", currencyPosition: "before" })).toBe("€ 1,234.56");
+  });
+
+  it("keeps the thousands separator different from the decimal one, whatever the format", () => {
+    // en-US natively groups with the character an Italian decimal uses, and the other way round:
+    // the two swap rather than collide. fr-FR groups with a narrow space, which collides with neither.
+    expect(numberSeparators(style({ format: "it-IT", decimalSeparator: "." }))).toEqual({
+      decimal: ".",
+      group: ",",
+    });
+    expect(numberSeparators(style({ format: "en-US", decimalSeparator: "," }))).toEqual({
+      decimal: ",",
+      group: ".",
+    });
+    for (const format of ["it-IT", "en-US", "fr-FR"] as const) {
+      for (const decimalSeparator of [".", ","] as const) {
+        const { decimal, group } = numberSeparators(style({ format, decimalSeparator }));
+        expect(decimal).toBe(decimalSeparator);
+        expect(group).not.toBe(decimal);
+      }
+    }
+    expect(plain(formatMoney(123456n, style({ format: "en-US", decimalSeparator: "," })))).toBe("€1.234,56");
+    expect(plain(formatMoney(123456n, style({ format: "fr-FR", decimalSeparator: "." })))).toBe("1 234.56 €");
+  });
+
+  it("keeps the typographic minus, the explicit plus and the dash in front of the chosen layout", () => {
+    const flipped = style({ decimalSeparator: ".", currencyPosition: "before" });
+    expect(plain(formatMoney(-31240n, flipped))).toBe("−€ 312.40");
+    expect(plain(formatMoney(136710n, flipped, { signed: true }))).toBe("+€ 1,367.10");
+    expect(plain(formatMoney(4095000n, flipped, { decimals: false }))).toBe("€ 40,950");
+    expect(formatMoney(null, flipped)).toBe("—");
   });
 });
 
@@ -59,6 +121,24 @@ describe("formatAmountInput", () => {
     expect(formatAmountInput(-50n, "fr-FR")).toBe("-0,50");
     expect(formatAmountInput(null, "it-IT")).toBe("");
   });
+
+  it("writes the chosen decimal separator, overriding the format's own", () => {
+    expect(formatAmountInput(123_456n, style({ format: "it-IT", decimalSeparator: "." }))).toBe("1234.56");
+    expect(formatAmountInput(123_456n, style({ format: "en-US", decimalSeparator: "," }))).toBe("1234,56");
+  });
+
+  it("is read back to the same cents by parseAmount, with either separator", () => {
+    for (const format of ["it-IT", "en-US", "fr-FR"] as const) {
+      for (const decimalSeparator of [null, ".", ","] as const) {
+        const chosen = style({ format, decimalSeparator });
+        for (const cents of [123_456n, -50n, 0n, 100_000_000n]) {
+          expect(parseAmount(formatAmountInput(cents, chosen), chosen)).toBe(cents);
+        }
+        // And grouped as the same style displays it, which is what a person copies back into a field.
+        expect(parseAmount(formatMoney(123_456n, chosen), chosen)).toBe(123_456n);
+      }
+    }
+  });
 });
 
 describe("formatWholePercent", () => {
@@ -66,5 +146,13 @@ describe("formatWholePercent", () => {
     expect(plain(formatWholePercent(112, "it-IT"))).toBe("112 %");
     expect(formatWholePercent(88, "en-US")).toBe("88%");
     expect(plain(formatWholePercent(1234, "it-IT"))).toBe("1.234 %");
+  });
+});
+
+describe("formatPercent and formatWholePercent", () => {
+  it("use the chosen separators too, so a percentage never contradicts an amount", () => {
+    expect(plain(formatPercent(0.297, style({ decimalSeparator: "." })))).toBe("29.7 %");
+    expect(plain(formatWholePercent(1234, style({ decimalSeparator: "." })))).toBe("1,234 %");
+    expect(plain(formatPercent(0.297, style()))).toBe("29,7 %");
   });
 });

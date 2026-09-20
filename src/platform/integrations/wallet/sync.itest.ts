@@ -266,9 +266,14 @@ describe("syncWalletNow", () => {
 
     const [movement] = await storedTransactions(ctx);
     const tree = await listCategories(ctx);
+    // Wallet's whole list is taken on, not only the category this window's movement was filed
+    // under: "Stipendio" and "Da classificare" have no movement here and are here anyway
+    // (owner, 2026-09-20). "Spesa" hangs from the group Wallet gives it; the other two have none.
     expect(tree.map((one) => [one.name, one.depth])).toEqual([
       ["Casa", 0],
       ["Spesa", 1],
+      ["Da classificare", 0],
+      ["Stipendio", 0],
     ]);
     const [casa, spesa] = tree;
     expect(spesa.parentId).toBe(casa.id);

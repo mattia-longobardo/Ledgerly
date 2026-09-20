@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { listAccounts } from "@/modules/accounts/queries";
+import { categoryOptions } from "@/modules/transactions/taxonomy";
 import { ruleDetail } from "@/modules/interests/queries";
 import { InterestError } from "@/modules/interests/service";
 import { draftOf, formatRate, tierChips } from "@/modules/interests/ui/present";
 import { PostingCell } from "@/modules/interests/ui/posting-cell";
 import { RuleButton, RuleStateButton } from "@/modules/interests/ui/rule-dialog";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
+import { civilDateIn, today } from "@/platform/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
@@ -44,7 +45,8 @@ export async function generateMetadata({ params }: PageProps<"/interests/[id]">)
 export default async function RulePage({ params }: PageProps<"/interests/[id]">) {
   const { ctx, detail } = await load((await params).id);
   const t = await getTranslations("interests");
-  const accounts = (await listAccounts(ctx)).map((account) => ({ id: account.id, name: account.name }));
+  const [open, categories] = await Promise.all([listAccounts(ctx), categoryOptions(ctx, "income")]);
+  const accounts = open.map((account) => ({ id: account.id, name: account.name }));
   const money = (cents: bigint | null) => formatMoney(cents, ctx.numberFormat);
   const { rule } = detail;
   const labels = {
@@ -73,6 +75,7 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
           <RuleButton
             draft={draftOf(detail, ctx.numberFormat)}
             accounts={accounts}
+            categories={categories}
             label={t("detail.edit")}
           />
         </>
@@ -102,10 +105,30 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
         </div>
       </div>
 
+      {/*
+        The accrual job refuses to accrue on a reading it does not trust (spec §7.6): said here,
+        where the days stop, rather than left as an unexplained gap in the ledger below.
+      */}
+      {detail.balance.stale && rule.state === "active" && (
+        <p role="status" className="rounded-ctl bg-warn-bg px-3 py-2 text-sm text-warn">
+          {detail.balance.lastSyncedAt === null
+            ? t("detail.balance.never")
+            : t("detail.balance.stale", {
+                when: formatDate(civilDateIn(detail.balance.lastSyncedAt, ctx.timeZone), "long", ctx.locale),
+              })}
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
         <KpiTile label={t("detail.accruedYtd")} value={money(accruedYtd)} valueTone="pos" />
         <KpiTile label={t("detail.pending")} value={money(detail.pendingCents)} />
-        <KpiTile label={t("detail.mode")} value={t(`detail.modes.${rule.mode}`)} />
+        <KpiTile
+          label={t("detail.mode")}
+          value={t(`detail.modes.${rule.mode}`)}
+          note={
+            rule.mode === "post_to_provider" ? (detail.categoryName ?? t("detail.noCategory")) : undefined
+          }
+        />
         <KpiTile label={t("columns.status")} value={t(`state.${rule.state}`)} />
       </div>
 

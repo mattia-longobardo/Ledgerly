@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
+import { categories } from "../transactions/schema";
 import { ACCRUAL_STATUSES, DAY_BASES, POSTING_STATES, RULE_MODES, RULE_STATES, SETTLEMENTS } from "./rules";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
@@ -43,7 +44,26 @@ export const interestRules = pgTable(
     settlement: text("settlement", { enum: SETTLEMENTS }).notNull().default("monthly"),
     validFrom: date("valid_from").notNull(),
     validTo: date("valid_to"),
+    /**
+     * The hour of the user's own day the rule accrues at (0–23, their zone); `null` keeps the
+     * default hour, `DEFAULT_RUN_HOUR` in `./rules`: noon, where the job ran for everyone before.
+     */
+    runHour: smallint("run_hour"),
     mode: text("mode", { enum: RULE_MODES }).notNull().default("analyze_only"),
+    /**
+     * The local category a published settlement is filed under in Wallet (spec §7.6, §9.1): the
+     * provider's own category id is never stored here — it is read from the `category` link of
+     * `provider_links` when the record is posted, so a category re-adopted under another provider
+     * id keeps working. `null` publishes with no category at all, which is what the owner's
+     * `interest.py` did when it could not find its category by name.
+     *
+     * `on delete set null` and not `no action`: a category is archived rather than deleted, so
+     * this only ever fires when the whole user goes — and a rule that outlives its category
+     * publishes uncategorised instead of blocking the delete.
+     */
+    postingCategoryId: uuid("posting_category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
     state: text("state", { enum: RULE_STATES }).notNull().default("active"),
     payeeMatch: text("payee_match"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -60,6 +80,7 @@ export const interestRules = pgTable(
     check("interest_rules_settlement_ck", sql`${table.settlement} in (${sql.raw(inList(SETTLEMENTS))})`),
     check("interest_rules_mode_ck", sql`${table.mode} in (${sql.raw(inList(RULE_MODES))})`),
     check("interest_rules_state_ck", sql`${table.state} in (${sql.raw(inList(RULE_STATES))})`),
+    check("interest_rules_run_hour_ck", sql`${table.runHour} is null or ${table.runHour} between 0 and 23`),
     check(
       "interest_rules_validity_ck",
       sql`${table.validTo} is null or ${table.validTo} >= ${table.validFrom}`,

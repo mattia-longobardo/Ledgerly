@@ -8,7 +8,7 @@ import {
   monthKey,
   monthsApart,
 } from "@/platform/dates";
-import type { NumberFormat } from "@/platform/format";
+import { type NumberFormat, numberSeparators } from "@/platform/format";
 import { type Cents, parseCents, sumCents } from "@/platform/money";
 
 export const ACCOUNT_TYPES = [
@@ -477,13 +477,15 @@ export function reconcileProviderAccounts(
 /**
  * An amount as a person types it, in their own number format (spec §8.5): "1.234,56", "1 234,56"
  * or "1,234.56", with or without a euro sign. Grouping and decimal separators are resolved by the
- * format rather than guessed, so "1.234" is one thousand in Italian and one point two in English.
+ * style rather than guessed, so "1.234" is one thousand in Italian and one point two in English —
+ * and they come from the same place `formatAmountInput` writes them, including the user's own
+ * decimal-separator override, so a field always reads back what it printed.
  */
 export function parseAmount(input: string, format: NumberFormat): Cents {
   const cleaned = input.replace(/[\s\u00a0\u202f€]/g, "").replace(/\u2212/g, "-");
   if (cleaned === "") throw new RangeError("Empty amount");
-  const plain =
-    format === "en-US" ? cleaned.replaceAll(",", "") : cleaned.replaceAll(".", "").replace(",", ".");
+  const { decimal, group } = numberSeparators(format);
+  const plain = cleaned.split(group).join("").replace(decimal, ".");
   return parseCents(plain);
 }
 

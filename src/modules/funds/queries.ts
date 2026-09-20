@@ -13,15 +13,135 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
 import {
+  annualisedOverPeriods,
   cumulativeAt,
-  flowsByMonth,
+  fundForecast,
+  type FundForecast,
   fundMetrics,
   type FundMetrics,
-  monthlyReturns,
-  returnStats,
+  type PeriodReturn,
+  periodReturns,
+  periodStats,
 } from "./rules";
-import { fundDeposits, fundDepositRules, funds, fundValuations } from "./schema";
+import { COMETA_SCHEDULE, dueDate, parseSchedule, type Quarter, type ScheduleEntry } from "./pension/rules";
+import {
+  fundDeposits,
+  fundDepositRules,
+  fundOperations,
+  funds,
+  fundValuations,
+  pensionCompetences,
+  pensionRules,
+} from "./schema";
 import { type Fund, type FundDeposit, FundError } from "./service";
+
+interface PensionFlow {
+  on: CivilDate;
+  chargedCents: Cents;
+  feeCents: Cents;
+}
+
+/**
+ * What a pension fund has paid in (GC §9.1): the gross inflows of its operations — contributions,
+ * enrolment and voluntary payments —, since a pension fund has no PAC deposits (plan F6 L5).
+ *
+ * A fund with no operation at all has nothing to put on that line, and an empty row says less than
+ * the money the payslips already carry (owner, 2026-09-20): for those funds the accrued of the
+ * competences stands in, with no caption of its own — it is the same paid-in as any other. The
+ * first imported operation ends the stand-in.
+ *
+ * The stand-in follows the fund's own transfer schedule, not the payslip months: the employer
+ * pays quarterly, so a month accrued in March has not reached the fund until the deadline of its
+ * quarter. Each quarter counts once its due date has passed, dated by that date — which is what
+ * makes this line agree with the quarters the fund's own page calls `transferred`.
+ */
+async function pensionInflows(
+  ctx: Pick<Ctx, "userId">,
+  fundIds: readonly string[],
+  todayOn: CivilDate,
+): Promise<Map<string, PensionFlow[]>> {
+  if (fundIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      fundId: fundOperations.fundId,
+      on: fundOperations.operationDate,
+      fees: fundOperations.feesCents,
+      classification: fundOperations.classification,
+      worker: fundOperations.workerCents,
+      employer: fundOperations.employerCents,
+      tfr: fundOperations.tfrCents,
+      other: fundOperations.otherCents,
+    })
+    .from(fundOperations)
+    .where(and(userScoped(ctx).owns(fundOperations), inArray(fundOperations.fundId, [...fundIds])))
+    .orderBy(asc(fundOperations.operationDate), asc(fundOperations.id));
+  const flows = new Map<string, PensionFlow[]>();
+  const add = (fundId: string, flow: PensionFlow) => {
+    flows.set(fundId, [...(flows.get(fundId) ?? []), flow]);
+  };
+  for (const row of rows) {
+    if (!["contribution", "enrollment", "voluntary"].includes(row.classification)) continue;
+    const gross = row.worker + row.employer + row.tfr + row.other;
+    add(row.fundId, { on: row.on, chargedCents: gross, feeCents: row.fees });
+  }
+
+  const bare = fundIds.filter((id) => !flows.has(id));
+  if (bare.length === 0) return flows;
+  const schedules = await paymentSchedules(ctx, bare);
+  const accrued = await getDb()
+    .select({
+      fundId: pensionCompetences.fundId,
+      period: pensionCompetences.payrollPeriod,
+      year: pensionCompetences.year,
+      quarter: pensionCompetences.quarter,
+      worker: pensionCompetences.workerCents,
+      employer: pensionCompetences.employerCents,
+      tfr: pensionCompetences.tfrCents,
+    })
+    .from(pensionCompetences)
+    .where(and(userScoped(ctx).owns(pensionCompetences), inArray(pensionCompetences.fundId, [...bare])))
+    .orderBy(asc(pensionCompetences.year), asc(pensionCompetences.quarter), asc(pensionCompetences.id));
+  for (const row of accrued) {
+    // Worker + employer + TFR, enrolment apart, exactly as the fund detail adds them up (GC §8.2).
+    const cents = (row.worker ?? 0n) + (row.employer ?? 0n) + (row.tfr ?? 0n);
+    if (cents === 0n) continue;
+    // The money leaves on its quarter's deadline, whatever month the payslip was: a quarter still
+    // running has accrued something and paid in nothing.
+    const due = dueDate(row.year, row.quarter as Quarter, schedules.get(row.fundId) ?? COMETA_SCHEDULE);
+    if (due === null || due > todayOn) continue;
+    add(row.fundId, { on: due, chargedCents: cents, feeCents: 0n });
+  }
+  // A fund whose quarters are all still running has simply paid in nothing yet.
+  for (const id of bare) if (!flows.has(id)) flows.set(id, []);
+  return flows;
+}
+
+/** The transfer schedule in force for each fund, the provider's own when none is recorded. */
+async function paymentSchedules(
+  ctx: Pick<Ctx, "userId">,
+  fundIds: readonly string[],
+): Promise<Map<string, ScheduleEntry[]>> {
+  const rows = await getDb()
+    .select({ fundId: pensionRules.fundId, schedule: pensionRules.schedule })
+    .from(pensionRules)
+    .where(
+      and(
+        userScoped(ctx).owns(pensionRules),
+        inArray(pensionRules.fundId, [...fundIds]),
+        eq(pensionRules.kind, "payment_schedule"),
+      ),
+    )
+    .orderBy(asc(pensionRules.fundId), desc(pensionRules.validFrom), asc(pensionRules.id));
+  const out = new Map<string, ScheduleEntry[]>();
+  // Ordered newest first per fund: the first row of each is the one in force. A row that stores
+  // nothing readable is no schedule at all, and the provider's own is used instead.
+  for (const row of rows) {
+    if (out.has(row.fundId)) continue;
+    const schedule = parseSchedule(row.schedule);
+    if (schedule.length > 0) out.set(row.fundId, schedule);
+  }
+  return out;
+}
 
 /** Days after the charge day before a missing deposit is worth saying (plan F4 §3.6.7). */
 export const DEPOSIT_GRACE_DAYS = 3;
@@ -124,18 +244,63 @@ export async function fundsView(
   ]);
   const accountName = new Map(accounts.map((account) => [account.id, account.name]));
   const entryDates = new Map<string, CivilDate>();
+  // A pension fund's value is the one its statement documents, with the statement's own date
+  // (GC §12) — never "as of today", which would leave a fund valued only in the future blank.
+  const statementValues = new Map<string, Cents>();
   for (const fund of open) {
     const entries = await listBalanceEntries(ctx, fund.valuationAccountId, 50);
+    if (fund.type === "pension") {
+      const latest = entries[0];
+      if (latest) {
+        entryDates.set(fund.id, latest.on);
+        statementValues.set(fund.id, latest.balanceCents);
+      }
+      continue;
+    }
     const ids = new Set(lastEntries.filter((row) => row.fundId === fund.id).map((row) => row.balanceEntryId));
     const latest = entries.find((entry) => ids.has(entry.id));
     if (latest) entryDates.set(fund.id, latest.on);
   }
 
+  const inflowsByFund = await pensionInflows(
+    ctx,
+    open.filter((fund) => fund.type === "pension").map((fund) => fund.id),
+    todayOn,
+  );
   const rows: FundRow[] = open.map((fund) => {
     const own = deposits.get(fund.id) ?? [];
+    const value =
+      fund.type === "pension"
+        ? (statementValues.get(fund.id) ?? null)
+        : (values.get(fund.valuationAccountId) ?? null);
+    const base = fundMetrics(own, value);
+    const inflows = inflowsByFund.get(fund.id) ?? [];
+    const paidIn = inflows.reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);
+    const fees = inflows.reduce<Cents>((sum, flow) => sum + flow.feeCents, 0n);
+    // The gain is measured against what had gone in *by the date of the value*, whether the fund's
+    // own operations said so or the transfer schedule did: money that left afterwards is not
+    // inside the position it would be compared to. With nothing gone in, a value is a position and
+    // not a gain, so it stays unknown rather than being claimed whole (owner, 2026-09-20).
+    const valueOn = entryDates.get(fund.id) ?? null;
+    const basis = inflows
+      .filter((flow) => valueOn === null || flow.on <= valueOn)
+      .reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);
     return {
       fund,
-      metrics: fundMetrics(own, values.get(fund.valuationAccountId) ?? null),
+      metrics:
+        fund.type === "pension"
+          ? {
+              ...base,
+              paidInCents: paidIn,
+              feesCents: fees,
+              investedCents: paidIn - fees,
+              gainCents: value === null || basis === 0n ? null : value - basis,
+              gainFraction:
+                value === null || basis === 0n
+                  ? null
+                  : Number(((value - basis) * 1_000_000_000n) / basis) / 1_000_000_000,
+            }
+          : base,
       lastValuation: entryDates.get(fund.id) ?? null,
       month: monthStatus(fund, own, todayOn),
       debitAccountName: fund.debitAccountId ? (accountName.get(fund.debitAccountId) ?? null) : null,
@@ -153,7 +318,14 @@ export async function fundsView(
       return value === null ? sum : (sum ?? 0n) + value;
     }, null),
   );
-  const allDeposits = [...deposits.values()].flat();
+  // The pension funds' credits count in the combined "paid in" line too (GC §12) — and, while a
+  // fund has no export of its own, what its payslips accrued stands in for them.
+  const allDeposits = [
+    ...[...deposits.values()].flat(),
+    ...[...inflowsByFund.values()]
+      .flat()
+      .map((flow) => ({ on: flow.on, chargedCents: flow.chargedCents, feeCents: flow.feeCents })),
+  ];
   return {
     rows,
     archived: all.filter((fund) => fund.state === "archived"),
@@ -189,8 +361,10 @@ export interface FundDetail {
   valueSeries: (Cents | null)[];
   paidSeries: Cents[];
   /** One Simple Dietz return per month of `months` (spec §7.7). */
-  returns: (number | null)[];
-  stats: ReturnType<typeof returnStats>;
+  /** What the fund did between one documented value and the next (spec §7.7). */
+  periods: PeriodReturn[];
+  stats: ReturnType<typeof periodStats>;
+  forecast: FundForecast;
   month: MonthStatus;
   rule: typeof fundDepositRules.$inferSelect | null;
   accounts: { id: string; name: string }[];
@@ -231,9 +405,10 @@ export async function fundDetail(
   const held = row?.held ?? chart.months.map(() => null);
   const months = chart.months.slice(-span);
   const valueSeries = held.slice(-span);
-  // Returns over the last 12 months: 13 month ends, the first being the end of the month before.
+  // What the fund did between one documented value and the next. Month by month against a value
+  // held forward from the last document, the month a deposit landed read as a loss of its own size
+  // (owner, 2026-09-20): a return needs two documented ends.
   const returnMonths = chart.months.slice(-12);
-  const returns = monthlyReturns(returnMonths, held.slice(-13), flowsByMonth(deposits));
   const byEntry = new Map(valuationRows.map((valuation) => [valuation.balanceEntryId, valuation]));
   const valuations: ValuationRow[] = entries
     .filter((entry) => byEntry.has(entry.id))
@@ -252,6 +427,10 @@ export async function fundDetail(
         )[0],
       };
     });
+  const periods = periodReturns(
+    valuations.map((row) => ({ on: row.on, cents: row.valueCents })),
+    deposits,
+  );
   const names = new Map(accounts.map((one) => [one.id, one.name]));
   return {
     fund,
@@ -263,8 +442,15 @@ export async function fundDetail(
     months,
     valueSeries,
     paidSeries: cumulativeAt(deposits, months),
-    returns,
-    stats: returnStats(returns),
+    periods,
+    stats: periodStats(periods),
+    forecast: fundForecast({
+      valueCents: value,
+      paidInCents: fundMetrics(deposits, value).paidInCents,
+      flows: deposits,
+      months: returnMonths,
+      ownRate: annualisedOverPeriods(periods),
+    }),
     month: monthStatus(fund, deposits, todayOn),
     rule: rule ?? null,
     accounts: accounts.map((one) => ({ id: one.id, name: one.name })),

@@ -1,8 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { sessions } from "@/platform/auth/schema";
 import { getDb } from "@/platform/db/client";
+import { formatMoney } from "@/platform/format";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
+import { contextFor } from "./jobs";
 import { DEFAULT_PREFERENCES } from "./rules";
 import { findSessionToken, getPreferences, listOwnSessions, updatePreferences } from "./service";
 
@@ -23,6 +25,66 @@ describe("preferences service", () => {
     );
     expect(saved.locale).toBe("it");
     expect(await getPreferences({ userId: user.id })).toEqual(saved);
+  });
+
+  it("saves the decimal separator and the euro's position, and reads them back", async () => {
+    const user = await createTestUser();
+    const saved = await updatePreferences(
+      { userId: user.id },
+      {
+        ...DEFAULT_PREFERENCES,
+        numberFormat: "en-US",
+        decimalSeparator: ",",
+        currencyPosition: "after",
+      },
+    );
+    expect(saved.decimalSeparator).toBe(",");
+    expect(saved.currencyPosition).toBe("after");
+    expect(await getPreferences({ userId: user.id })).toEqual(saved);
+    // Both are overrides: cleared, they go back to following the number format.
+    const cleared = await updatePreferences(
+      { userId: user.id },
+      { ...saved, decimalSeparator: null, currencyPosition: null },
+    );
+    expect(cleared.decimalSeparator).toBeNull();
+    expect(cleared.currencyPosition).toBeNull();
+  });
+
+  it("refuses a separator or a position that is not one of the two", async () => {
+    const user = await createTestUser();
+    await expect(
+      updatePreferences({ userId: user.id }, { ...DEFAULT_PREFERENCES, decimalSeparator: ";" }),
+    ).rejects.toThrow();
+    await expect(
+      updatePreferences({ userId: user.id }, { ...DEFAULT_PREFERENCES, currencyPosition: "above" }),
+    ).rejects.toThrow();
+    expect(await getPreferences({ userId: user.id })).toEqual(DEFAULT_PREFERENCES);
+  });
+
+  it("hands the saved formatting preferences to the context a job acts in", async () => {
+    const user = await createTestUser();
+    expect((await contextFor({ id: user.id })).numberFormat).toEqual({
+      format: DEFAULT_PREFERENCES.numberFormat,
+      decimalSeparator: null,
+      currencyPosition: null,
+    });
+    await updatePreferences(
+      { userId: user.id },
+      {
+        ...DEFAULT_PREFERENCES,
+        numberFormat: "en-US",
+        decimalSeparator: ",",
+        currencyPosition: "after",
+      },
+    );
+    const ctx = await contextFor({ id: user.id });
+    expect(ctx.numberFormat).toEqual({
+      format: "en-US",
+      decimalSeparator: ",",
+      currencyPosition: "after",
+    });
+    // The context is all a formatter needs: no second read, and it formats the way the user asked.
+    expect(formatMoney(123_456n, ctx.numberFormat).replace(/\s/g, " ")).toBe("1.234,56 €");
   });
 
   it("rejects invalid input without writing", async () => {
