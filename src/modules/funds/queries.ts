@@ -273,7 +273,9 @@ export async function fundsView(
       fund.type === "pension"
         ? (statementValues.get(fund.id) ?? null)
         : (values.get(fund.valuationAccountId) ?? null);
-    const base = fundMetrics(own, value);
+    // The value's own day: a PAC's debits are picked up on their own, its value only when somebody
+    // records one, so every percentage is measured against what had been paid in by then.
+    const base = fundMetrics(own, value, entryDates.get(fund.id) ?? null);
     const inflows = inflowsByFund.get(fund.id) ?? [];
     const paidIn = inflows.reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);
     const fees = inflows.reduce<Cents>((sum, flow) => sum + flow.feeCents, 0n);
@@ -326,12 +328,14 @@ export async function fundsView(
       .flat()
       .map((flow) => ({ on: flow.on, chargedCents: flow.chargedCents, feeCents: flow.feeCents })),
   ];
+  const basisCents = rows.reduce((sum, row) => sum + row.metrics.gainBasisCents, 0n);
   return {
     rows,
     archived: all.filter((fund) => fund.state === "archived"),
     valueCents,
     paidInCents,
-    gainCents: valueCents === null ? null : valueCents - paidInCents,
+    // Measured the same way as each row's: only what had been paid in by each fund's own value.
+    gainCents: valueCents === null ? null : valueCents - basisCents,
     monthlyCents: open.reduce((sum, fund) => sum + (fund.monthlyCents ?? 0n), 0n),
     months: chart.months,
     valueSeries,
@@ -432,11 +436,12 @@ export async function fundDetail(
     deposits,
   );
   const names = new Map(accounts.map((one) => [one.id, one.name]));
+  const metrics = fundMetrics(deposits, value, valuations[0]?.on ?? null);
   return {
     fund,
     accountName: account?.name ?? "",
     debitAccountName: fund.debitAccountId ? (names.get(fund.debitAccountId) ?? null) : null,
-    metrics: fundMetrics(deposits, value),
+    metrics,
     deposits,
     valuations,
     months,
@@ -446,7 +451,7 @@ export async function fundDetail(
     stats: periodStats(periods),
     forecast: fundForecast({
       valueCents: value,
-      paidInCents: fundMetrics(deposits, value).paidInCents,
+      paidInCents: metrics.paidInCents,
       flows: deposits,
       months: returnMonths,
       ownRate: annualisedOverPeriods(periods),

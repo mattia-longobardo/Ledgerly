@@ -47,6 +47,36 @@ describe("fundMetrics (spec §7.7)", () => {
   it("has no gain fraction on nothing paid in", () => {
     expect(fundMetrics([], 1_000n).gainFraction).toBeNull();
   });
+
+  /*
+    The two halves of a PAC arrive by different roads: the debit is picked up from the bank on its
+    own, the value only when a valuation is recorded. A deposit that landed after the last
+    valuation is not a loss — it is money that valuation never saw (owner, 2026-09-20).
+  */
+  it("measures the gain against the deposits the valuation could see", () => {
+    // Valued on 31 Aug: the 5 September deposit is outside it.
+    const metrics = fundMetrics(deposits, 600_000n, "2026-08-31");
+    expect(metrics).toMatchObject({
+      paidInCents: 550_200n,
+      gainBasisCents: 525_100n,
+      paidInAfterValueCents: 25_100n,
+      gainCents: 74_900n,
+    });
+    expect(metrics.gainFraction).toBeCloseTo(74_900 / 525_100, 8);
+    // Without the date every deposit counts, and the gain is the one the old code answered.
+    expect(fundMetrics(deposits, 600_000n)).toMatchObject({
+      gainBasisCents: 550_200n,
+      paidInAfterValueCents: 0n,
+      gainCents: 49_800n,
+    });
+  });
+
+  it("says nothing was invested yet when every deposit came after the valuation", () => {
+    const metrics = fundMetrics(deposits, 600_000n, "2019-01-01");
+    expect(metrics).toMatchObject({ gainBasisCents: 0n, gainFraction: null });
+    // A value with nothing behind it is still shown; only the percentage is unknown.
+    expect(metrics.gainCents).toBe(600_000n);
+  });
 });
 
 describe("simpleDietz (spec §7.7)", () => {

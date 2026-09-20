@@ -9,6 +9,7 @@ import { parseAmount } from "@/modules/accounts/rules";
 import { MAX_DOCUMENT_BYTES, sniffFormat } from "@/modules/imports/rules";
 import { deleteDocument, ImportError } from "@/modules/imports/service";
 import { requireSession } from "@/platform/auth/session";
+import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
 import { centsToDecimal } from "@/platform/money";
 import { FundError } from "../service";
@@ -62,8 +63,13 @@ function readLater(ctx: Ctx, documentId: string): void {
   after(async () => {
     try {
       await processCometaDocument(ctx, documentId);
-    } catch {
-      // Left `extracting`: the hourly sweep reads it again (spec §10.2).
+    } catch (error) {
+      // Left `extracting`: the hourly sweep reads it again (spec §10.2). Said out loud, though:
+      // a document stuck on "being read" with nothing in the log is a silence that costs an hour
+      // to diagnose, and the reason is already in hand here (2026-09-20).
+      console.error(
+        `[cometa] reading ${documentId} failed: ${redactForLog(error instanceof Error ? error.message : String(error))}`,
+      );
     }
   });
 }

@@ -405,3 +405,31 @@ riscritte io:
 - **§7.6** dice «Il design non ha medie mensili o trimestrali né un'ora d'inizio: non si fanno».
   La richiesta del proprietario (2026-09-20) la supera; per inciso il suo stesso mock ha un campo
   «At time» nella modale della regola, quindi la frase nasceva da una lettura parziale del design.
+
+## 11. Il guadagno di un PAC sta sul versato alla data del valore (2026-09-20)
+
+Le due metà di un PAC arrivano per strade diverse: l'addebito lo prende la sincronizzazione dalla
+banca, da solo, ogni ora; il valore si muove solo quando qualcuno registra una valutazione. Fino a
+ora ogni percentuale confrontava il valore con **tutto** il versato, compreso quello uscito dopo
+l'ultima valutazione — che nessuna valutazione ha ancora avuto modo di contare. Un versamento del 17,
+con l'ultimo valore registrato al 1°, si leggeva come una perdita della sua stessa dimensione.
+
+`fundMetrics` prende ora la data del valore e ne ricava `gainBasisCents`, il versato che quella
+valutazione poteva vedere: guadagno, percentuale cumulativa e totali combinati della lista stanno su
+quello. `paidInCents` resta quello che è — quanto è uscito davvero, a oggi — e `paidInAfterValueCents`
+dice quanto è uscito dopo, così l'intestazione del fondo può spiegare la differenza invece di lasciare
+due numeri che non tornano.
+
+Esempio verificato a schermo: valore 500,00 € al 31 lug, addebiti di 251,00 € il 5 lug e il 5 ago →
+**+249,00 € · +99,2 %** sul versato di 251,00 €, con «251,00 € versati dopo, che nessuna valutazione ha
+ancora contato». Prima erano −2,00 €.
+
+Due cose trovate lungo la strada:
+
+- la lettura di un documento Cometa falliva **in silenzio** (`catch {}`): un documento fermo su «in
+  lettura» senza una riga di log costa un'ora a diagnosticare. Ora il motivo viene scritto, redatto;
+- `tests/e2e/cometa.spec.ts` girava nei trenta secondi di default di Playwright, e la corsa intera —
+  dodici cedolini, un export e un riepilogo, ciascuno letto dal server dopo il caricamento — non ci
+  sta più. Il budget del test è ora di tre minuti; i timeout dei singoli passi, che sono quelli che
+  davvero verificano qualcosa, restano invariati. Verificato che falliva anche sul codice committato,
+  prima di questa modifica.
