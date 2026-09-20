@@ -8,5 +8,10 @@ export interface Ctx {
   role: Role;
   locale: UiLocale;
   timeZone: string;
+  /**
+   * The user's number format together with their explicit separator and euro-position overrides
+   * (a `NumberStyle`), so every formatting call already written as `formatMoney(x, ctx.numberFormat)`
+   * honours them without reading the database again.
+   */
   numberFormat: NumberFormat;
 }

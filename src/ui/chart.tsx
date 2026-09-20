@@ -6,6 +6,15 @@ export interface Series {
   values: readonly (number | null)[];
   color?: string;
   label?: string;
+  /** Drawn dashed: a reference line (what was paid in) beside a measured one. */
+  dashed?: boolean;
+  /**
+   * Drawn as a step, flat then vertical, instead of sloping from point to point. What a fund has
+   * paid in does not creep up through the month: it lands on the day the money leaves, and a line
+   * sloping from the month before made a credit of 20 April look as if it had begun in March
+   * (owner, 2026-09-20). The same holds for a value that only moves when a document says so.
+   */
+  step?: boolean;
 }
 
 interface Box {
@@ -55,6 +64,16 @@ export function segmentsOf(
   });
   if (run.length > 0) runs.push(run);
   return runs;
+}
+
+/** The same run, drawn flat until the next point and then straight up to it. */
+export function stepped(run: readonly { x: number; y: number }[]): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  run.forEach((point, index) => {
+    if (index > 0) out.push({ x: point.x, y: run[index - 1].y });
+    out.push(point);
+  });
+  return out;
 }
 
 /** A piece of a line drawn in one style: solid, or dashed where the values are estimates. */
@@ -394,12 +413,14 @@ export function MultiLine({
   yLabels,
   xLabels,
   height = 180,
+  hover,
 }: {
   series: readonly Series[];
   summary: string;
   yLabels: readonly string[];
   xLabels: readonly string[];
   height?: number;
+  hover?: readonly HoverPoint[];
 }) {
   const box: Box = { width: 720, height, pad: 6 };
   const extent = extentOf(series);
@@ -423,15 +444,17 @@ export function MultiLine({
               segmentsOf(one.values, extent, box).map((run, runIndex) => (
                 <polyline
                   key={`${index}-${runIndex}`}
-                  points={path(run)}
+                  points={path(one.step ? stepped(run) : run)}
                   fill="none"
                   stroke={one.color ?? "var(--accent)"}
                   strokeWidth={1.5}
+                  strokeDasharray={one.dashed ? "4 4" : undefined}
                   vectorEffect="non-scaling-stroke"
                 />
               )),
             )}
           </svg>
+          {hover && hover.length > 0 && <ChartHover points={hover} />}
         </div>
         <div
           aria-hidden
@@ -483,12 +506,14 @@ export function Bars({
   yLabels,
   xLabels,
   height = 240,
+  hover,
 }: {
   values: readonly (number | null)[];
   summary: string;
   yLabels: readonly string[];
   xLabels: readonly string[];
   height?: number;
+  hover?: readonly HoverPoint[];
 }) {
   const known = values.filter((value): value is number => value !== null);
   const reach = Math.max(1, ...known.map(Math.abs));
@@ -524,6 +549,8 @@ export function Bars({
               );
             })}
           </svg>
+          {/* Bars sit in slots, not on points: the crosshair is placed slot by slot to match. */}
+          {hover && hover.length > 0 && <ChartHover points={hover} slots />}
         </div>
         <div
           aria-hidden
@@ -538,6 +565,72 @@ export function Bars({
       <div aria-hidden className="flex justify-between text-xs text-faint">
         {xLabels.map((label, index) => (
           <span key={index}>{label}</span>
+        ))}
+      </div>
+      <figcaption className="sr-only">{summary}</figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Columns from zero, one per period (spec §8.3 MiniBars; the design's "Earmarked · 12 months"). The
+ * top of the scale is `target` when there is one, drawn as a dashed line; otherwise the highest
+ * value with some headroom. A `null` period draws no column: unknown, not zero. Each column carries
+ * its own tooltip (`labels`).
+ */
+export function MiniBars({
+  values,
+  labels,
+  xLabels,
+  summary,
+  target = null,
+  height = 120,
+}: {
+  values: readonly (number | null)[];
+  labels: readonly string[];
+  xLabels: readonly string[];
+  summary: string;
+  target?: number | null;
+  height?: number;
+}) {
+  const known = values.filter((value): value is number => value !== null && value > 0);
+  const top = target !== null && target > 0 ? target : Math.max(1, ...known) * 1.15;
+  const scale = (value: number) => Math.min(1, Math.max(0, value) / top) * 100;
+
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="relative" style={{ height }}>
+        {target !== null && (
+          <div
+            aria-hidden
+            data-testid="mini-bars-target"
+            className="absolute inset-x-0 top-0 border-t border-dashed border-muted"
+          />
+        )}
+        <div
+          className="grid h-full items-end gap-1.5"
+          style={{ gridTemplateColumns: `repeat(${Math.max(1, values.length)}, minmax(0, 1fr))` }}
+        >
+          {values.map((value, index) => (
+            <div
+              key={index}
+              title={labels[index]}
+              data-testid="mini-bar"
+              className="rounded-t-[3px] bg-accent opacity-85"
+              style={{ height: value === null ? 0 : `${scale(value)}%` }}
+            />
+          ))}
+        </div>
+      </div>
+      <div
+        aria-hidden
+        className="grid text-center text-xs text-faint"
+        style={{ gridTemplateColumns: `repeat(${Math.max(1, xLabels.length)}, minmax(0, 1fr))` }}
+      >
+        {xLabels.map((label, index) => (
+          <span key={index} className="truncate">
+            {label}
+          </span>
         ))}
       </div>
       <figcaption className="sr-only">{summary}</figcaption>

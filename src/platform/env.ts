@@ -57,6 +57,15 @@ export const envSchema = z
     S3_ACCESS_KEY_ID: z.string().min(1),
     S3_SECRET_ACCESS_KEY: z.string().min(1),
     S3_BUCKET: z.string().min(3),
+    // Prepended to every object key. Empty in production; `tests/` for the integration project,
+    // which shares the application's bucket and may only write under that prefix.
+    S3_KEY_PREFIX: z.preprocess(
+      blankAsUndefined,
+      z
+        .string()
+        .regex(/^([a-z0-9_-]+\/)+$/)
+        .optional(),
+    ),
     // `id:base64[,older…]` (spec §9.4): the first key seals new credentials, every key can still
     // open old ones. Validated here, not on first use, so a rotation typo fails at boot.
     APP_ENCRYPTION_KEY: z

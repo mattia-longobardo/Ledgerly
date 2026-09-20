@@ -59,6 +59,8 @@ export default defineConfig({
             S3_ACCESS_KEY_ID: process.env.TEST_S3_ACCESS_KEY_ID ?? "",
             S3_SECRET_ACCESS_KEY: process.env.TEST_S3_SECRET_ACCESS_KEY ?? "",
             S3_BUCKET: process.env.TEST_S3_BUCKET ?? "",
+            // Every object a service writes lands under `tests/` (see the note above).
+            S3_KEY_PREFIX: "tests/",
             APP_ENCRYPTION_KEY: "k1:gBubFxNEhi1CSofEa9MtLb5lSXHXROI4WupEIGMhsZU=",
             CRON_SECRET: "integration-cron-secret-integration",
             HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-test",

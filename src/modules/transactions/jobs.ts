@@ -14,9 +14,8 @@
 import "server-only";
 import { and, asc, eq, isNull, isNotNull, ne } from "drizzle-orm";
 import { createTranslator } from "use-intl/core";
-import { getPreferences } from "@/modules/users/service";
+import { forEachUser, type Person } from "@/modules/users/jobs";
 import { redactForLog } from "@/platform/auth/logger";
-import { users } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
 import { civilDateIn } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -49,45 +48,6 @@ const NOTIFY_COOLDOWN_HOURS = 24 * 7;
  */
 const FAILED = "wallet_sync_failed";
 const STALE = "wallet_sync_stale";
-
-interface Person {
-  id: string;
-  email: string;
-}
-
-/* Iterating over the users — the same shape as `modules/accounts/jobs.ts` (spec §10.1). */
-
-async function everyone(): Promise<Person[]> {
-  return getDb().select({ id: users.id, email: users.email }).from(users).orderBy(asc(users.id));
-}
-
-async function contextFor(person: Person): Promise<Ctx> {
-  const preferences = await getPreferences({ userId: person.id });
-  return {
-    userId: person.id,
-    role: "user",
-    locale: preferences.locale,
-    timeZone: preferences.timeZone,
-    numberFormat: preferences.numberFormat,
-  };
-}
-
-async function forEachUser(
-  job: string,
-  body: (person: Person, ctx: Ctx) => Promise<void>,
-): Promise<{ users: number; failed: number }> {
-  let failed = 0;
-  const people = await everyone();
-  for (const person of people) {
-    try {
-      await body(person, await contextFor(person));
-    } catch (error) {
-      failed += 1;
-      console.error(`[${job}] failed for one user`, redactForLog(error));
-    }
-  }
-  return { users: people.length, failed };
-}
 
 /* Recurrences (spec §7.2) */
 

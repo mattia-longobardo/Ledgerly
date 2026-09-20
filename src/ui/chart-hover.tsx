@@ -16,7 +16,18 @@ export interface HoverPoint {
  * text summary exist without JavaScript — this adds comfort, it is never the only way to the
  * numbers.
  */
-export function ChartHover({ points }: { points: readonly HoverPoint[] }) {
+export function ChartHover({
+  points,
+  slots = false,
+}: {
+  points: readonly HoverPoint[];
+  /**
+   * `true` when the chart draws in slots rather than on points — a bar chart. The pointer then
+   * picks the slot it is over, and the crosshair stands in the middle of it, instead of snapping
+   * to the nearest of `points.length − 1` positions.
+   */
+  slots?: boolean;
+}) {
   const [index, setIndex] = useState<number | null>(null);
   const active = index === null ? null : (points[index] ?? null);
 
@@ -24,11 +35,18 @@ export function ChartHover({ points }: { points: readonly HoverPoint[] }) {
     const box = event.currentTarget.getBoundingClientRect();
     if (box.width === 0 || points.length === 0) return;
     const ratio = (event.clientX - box.left) / box.width;
-    const nearest = Math.round(ratio * (points.length - 1));
+    const nearest = slots ? Math.floor(ratio * points.length) : Math.round(ratio * (points.length - 1));
     setIndex(Math.min(points.length - 1, Math.max(0, nearest)));
   }
 
-  const left = index === null || points.length < 2 ? 0 : (index / (points.length - 1)) * 100;
+  const left =
+    index === null
+      ? 0
+      : slots
+        ? ((index + 0.5) / points.length) * 100
+        : points.length < 2
+          ? 0
+          : (index / (points.length - 1)) * 100;
 
   return (
     <div className="absolute inset-0" onMouseMove={onMove} onMouseLeave={() => setIndex(null)}>

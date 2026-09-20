@@ -296,25 +296,48 @@ describe("walletLabelNames", () => {
 });
 
 describe("mapWalletCategory", () => {
+  /** What a category that says nothing about Wallet's three levels comes back as (F2's answer). */
+  const plain = { systemId: null, custom: false, parentExternalId: null, archived: false };
+
   it("keeps the name §9.1 adopts by, and carries no flag Wallet does not publish", () => {
     const categories = walletCategoriesPayloadSchema.parse(fixture("categories.json")).map(mapWalletCategory);
     expect(categories).toEqual([
-      {
-        externalId: "wc-groceries",
-        name: "Spesa",
-        groupExternalId: "wcg-casa",
-        groupName: "Casa",
-        systemId: null,
-      },
-      { externalId: "wc-salary", name: "Stipendio", groupExternalId: null, groupName: null, systemId: null },
+      { externalId: "wc-groceries", name: "Spesa", groupExternalId: "wcg-casa", groupName: "Casa", ...plain },
+      { externalId: "wc-salary", name: "Stipendio", groupExternalId: null, groupName: null, ...plain },
       {
         externalId: "wc-unsorted",
         name: "Da classificare",
         groupExternalId: null,
         groupName: null,
-        systemId: null,
+        ...plain,
       },
     ]);
+  });
+
+  it("carries the three levels the two-way sync needs, when Wallet publishes them (F6)", () => {
+    const [base, custom] = walletCategoriesPayloadSchema
+      .parse({
+        categories: [
+          {
+            id: "wc-base",
+            name: "Spesa",
+            group: { id: "wcg-casa", name: "Casa" },
+            systemId: "food_and_drinks__groceries",
+            customCategory: false,
+          },
+          {
+            id: "wc-mine",
+            name: "Cane",
+            group: { id: "wcg-casa", name: "Casa" },
+            customCategory: true,
+            parentId: "wc-base",
+            archived: true,
+          },
+        ],
+      })
+      .map(mapWalletCategory);
+    expect(base).toMatchObject({ custom: false, parentExternalId: null, archived: false });
+    expect(custom).toMatchObject({ custom: true, parentExternalId: "wc-base", archived: true });
   });
 });
 

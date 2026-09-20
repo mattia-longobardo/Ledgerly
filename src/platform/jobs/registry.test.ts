@@ -14,6 +14,13 @@ describe("JOBS", () => {
       ["accounts-alerts", "daily"],
       ["accounts-snapshot", "monthly"],
       ["wallet-sync", "hourly"],
+      ["subscriptions-check", "hourly"],
+      ["interests-accrual", "hourly"],
+      ["funds-deposits", "hourly"],
+      ["pockets-accrual", "monthly"],
+      ["documents-retention", "daily"],
+      ["payslips-sweep", "hourly"],
+      ["cometa-sweep", "hourly"],
     ]);
   });
 

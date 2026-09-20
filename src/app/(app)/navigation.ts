@@ -3,7 +3,17 @@ import type { Role } from "@/platform/context";
 import type { NavLink } from "@/ui/shell/nav-types";
 
 export interface NavItem extends Omit<NavLink, "label"> {
-  labelKey: "overview" | "accounts" | "expenses" | "settings" | "components";
+  labelKey:
+    | "overview"
+    | "accounts"
+    | "expenses"
+    | "budgets"
+    | "funds"
+    | "interests"
+    | "pockets"
+    | "subscriptions"
+    | "payroll"
+    | "settings";
   adminOnly: boolean;
 }
 
@@ -37,13 +47,58 @@ export const NAV_ITEMS: readonly NavItem[] = [
     adminOnly: false,
   },
   {
-    id: "components",
-    href: "/components" as Route,
-    labelKey: "components",
-    icon: "components",
-    group: "system",
+    id: "budgets",
+    href: "/budgets" as Route,
+    labelKey: "budgets",
+    icon: "budgets",
+    group: "finance",
     mobile: false,
-    adminOnly: true,
+    adminOnly: false,
+  },
+  {
+    id: "funds",
+    href: "/funds" as Route,
+    labelKey: "funds",
+    icon: "funds",
+    group: "finance",
+    mobile: false,
+    adminOnly: false,
+  },
+  {
+    id: "interests",
+    href: "/interests" as Route,
+    labelKey: "interests",
+    icon: "interests",
+    group: "finance",
+    mobile: false,
+    adminOnly: false,
+  },
+  {
+    id: "pockets",
+    href: "/pockets" as Route,
+    labelKey: "pockets",
+    icon: "pockets",
+    group: "finance",
+    mobile: false,
+    adminOnly: false,
+  },
+  {
+    id: "subscriptions",
+    href: "/subscriptions" as Route,
+    labelKey: "subscriptions",
+    icon: "subscriptions",
+    group: "finance",
+    mobile: false,
+    adminOnly: false,
+  },
+  {
+    id: "payroll",
+    href: "/payroll" as Route,
+    labelKey: "payroll",
+    icon: "payroll",
+    group: "work",
+    mobile: true,
+    adminOnly: false,
   },
   {
     id: "settings",

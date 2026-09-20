@@ -32,5 +32,7 @@ export default defineConfig([
     "Fondo Cometa/**",
     "Payroll/**",
     "UI Recreation and branding decisions/**",
+    // Copied from node_modules before each build (scripts/copy-pdfjs.mjs).
+    "public/pdfjs/**",
   ]),
 ]);

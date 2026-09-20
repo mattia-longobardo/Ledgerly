@@ -44,6 +44,28 @@ describe("PreferencesForm", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
+  it("saves the decimal separator and the euro's position, and starts from the saved ones", async () => {
+    save.mockResolvedValueOnce({ ok: true });
+    renderForm();
+    // Left alone, both follow the number format: the first option of each select.
+    expect(screen.getByLabelText("Decimal separator")).toHaveValue("");
+    expect(screen.getByLabelText("Euro sign")).toHaveValue("");
+    await userEvent.selectOptions(screen.getByLabelText("Decimal separator"), ".");
+    await userEvent.selectOptions(screen.getByLabelText("Euro sign"), "after");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(save).toHaveBeenCalledWith({
+      ...DEFAULT_PREFERENCES,
+      decimalSeparator: ".",
+      currencyPosition: "after",
+    });
+  });
+
+  it("shows the saved overrides when they are set", () => {
+    renderForm({ ...DEFAULT_PREFERENCES, decimalSeparator: ",", currencyPosition: "before" });
+    expect(screen.getByLabelText("Decimal separator")).toHaveValue(",");
+    expect(screen.getByLabelText("Euro sign")).toHaveValue("before");
+  });
+
   it("labels every timezone with its UTC offset", () => {
     renderForm();
     expect(screen.getByRole("option", { name: "Europe/Rome (UTC+2)" })).toHaveValue("Europe/Rome");

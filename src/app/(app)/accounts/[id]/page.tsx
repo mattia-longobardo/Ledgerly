@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { accountsView, listBalanceEntries } from "@/modules/accounts/queries";
@@ -20,11 +21,15 @@ import { accountDailyBalances } from "@/modules/accounts/service";
 import { LinkTabs, type SpanKey, SPAN_OPTIONS, spanMonths } from "@/modules/accounts/ui/controls";
 import { MonthRangePicker } from "@/modules/accounts/ui/month-range-picker";
 import { monthRange } from "@/modules/accounts/ui/range";
+import { pocketsOnAccount } from "@/modules/pockets/queries";
+import { subscriptionsOnAccount } from "@/modules/subscriptions/queries";
+import { rulesOnAccount } from "@/modules/interests/queries";
+import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
 import { lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
 import { AreaLine, Bars } from "@/ui/chart";
@@ -176,6 +181,9 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
       {tab === "settings" && (
         <AccountSettingsForm
           today={today(ctx.timeZone, now)}
+          // The place the account holds in the list, so the colour control shows the colour the
+          // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
+          index={index}
           account={{
             id: account.id,
             name: account.name,
@@ -237,6 +245,24 @@ async function OverviewTab({
 }) {
   const t = await getTranslations("accounts.detail");
   const ta = await getTranslations("accounts");
+  const tp = await getTranslations("pockets.account");
+  const ts = await getTranslations("subscriptions.account");
+  const ti = await getTranslations("interests");
+  const [pockets, paying, rules] = await Promise.all([
+    pocketsOnAccount(ctx, id),
+    subscriptionsOnAccount(ctx, id),
+    rulesOnAccount(ctx, id),
+  ]);
+  const ruleText = rules
+    .flatMap((rule) =>
+      tierChips(rule.tiers, ctx.numberFormat, {
+        upTo: (amount) => ti("tier.upTo", { amount }),
+        to: (amount) => ti("tier.to", { amount }),
+        above: ti("tier.above"),
+        any: ti("tier.any"),
+      }).map((chip) => `${chip.rate} ${chip.range}`),
+    )
+    .join(" · ");
   const series = windowRow.series;
   /**
    * What the chart draws: the month ends of the window, or — at day grain — every day of it (F2.5).
@@ -435,6 +461,29 @@ async function OverviewTab({
               <dd>{row.account.inNetWorth ? t("details.yes") : t("details.no")}</dd>
               <dt className="text-muted">{t("details.inSnapshot")}</dt>
               <dd>{row.account.inSnapshot ? t("details.yes") : t("details.no")}</dd>
+              <dt className="text-muted">{tp("label")}</dt>
+              <dd className="truncate">
+                {pockets.length === 0 ? tp("none") : pockets.map((pocket) => pocket.name).join(", ")}
+              </dd>
+              <dt className="text-muted">{ti("account.label")}</dt>
+              <dd className="flex min-w-0 items-center gap-2">
+                <span className="truncate">{ruleText === "" ? ti("account.none") : ruleText}</span>
+                <Link
+                  href={(rules.length === 1 ? `/interests/${rules[0].id}` : "/interests") as Route}
+                  className="focus-ring shrink-0 rounded-[2px] text-accent hover:underline"
+                >
+                  {ti("account.manage")}
+                </Link>
+              </dd>
+              <dt className="text-muted">{ts("label")}</dt>
+              <dd className="truncate">
+                {paying.count === 0
+                  ? ts("none")
+                  : ts("value", {
+                      count: paying.count,
+                      amount: formatMoney(paying.monthlyCents, ctx.numberFormat),
+                    })}
+              </dd>
             </dl>
             <span aria-hidden className="h-1 rounded-full" style={{ background: color }} />
           </Card>
@@ -459,6 +508,9 @@ async function entryRows(ctx: Ctx, accountId: string): Promise<EntryRow[]> {
       changeSign: change.cents === null ? 0 : Number(change.cents),
       note: entry.note,
       source: entry.source,
+      // What the correction form puts back in its fields, written the way the person types amounts.
+      amountInput: formatAmountInput(entry.balanceCents, ctx.numberFormat),
+      availableInput: formatAmountInput(entry.availableCents, ctx.numberFormat),
     };
   });
 }

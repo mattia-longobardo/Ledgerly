@@ -103,6 +103,32 @@ export function PreferencesForm({
           <option value="fr-FR">{t("numberFormats.fr-FR")}</option>
         </Select>
       </Field>
+      <Field label={t("decimalSeparator")} htmlFor="decimalSeparator">
+        <Select
+          id="decimalSeparator"
+          value={prefs.decimalSeparator ?? ""}
+          onChange={(e) =>
+            set("decimalSeparator", (e.target.value || null) as Preferences["decimalSeparator"])
+          }
+        >
+          <option value="">{t("decimalSeparators.auto")}</option>
+          <option value=".">{t("decimalSeparators.dot")}</option>
+          <option value=",">{t("decimalSeparators.comma")}</option>
+        </Select>
+      </Field>
+      <Field label={t("currencyPosition")} htmlFor="currencyPosition">
+        <Select
+          id="currencyPosition"
+          value={prefs.currencyPosition ?? ""}
+          onChange={(e) =>
+            set("currencyPosition", (e.target.value || null) as Preferences["currencyPosition"])
+          }
+        >
+          <option value="">{t("currencyPositions.auto")}</option>
+          <option value="before">{t("currencyPositions.before")}</option>
+          <option value="after">{t("currencyPositions.after")}</option>
+        </Select>
+      </Field>
       <Field label={t("weekStart")} htmlFor="weekStart">
         <Select
           id="weekStart"

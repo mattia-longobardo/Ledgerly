@@ -17,10 +17,15 @@
     },
     "overview": "Overview",
     "settings": "Settings",
-    "components": "Components",
     "more": "More",
     "accounts": "Accounts",
-    "expenses": "Expenses"
+    "expenses": "Expenses",
+    "budgets": "Budgets",
+    "pockets": "Pockets",
+    "subscriptions": "Subscriptions",
+    "funds": "Funds",
+    "interests": "Interests",
+    "payroll": "Payroll"
   },
   "shell": {
     "toggleSidebar": "Toggle sidebar (⌘\\)",
@@ -38,7 +43,11 @@
       "pages": "Pages",
       "empty": "No matches",
       "shortcut": "⌘K",
-      "escape": "esc"
+      "escape": "esc",
+      "records": "Pockets, funds and subscriptions",
+      "pocket": "Pocket",
+      "subscription": "Subscription",
+      "fund": "Fund"
     }
   },
   "emails": {
@@ -110,7 +119,8 @@
       "profile": "Profile",
       "security": "Security",
       "integrations": "Integrations",
-      "data": "Data"
+      "data": "Data",
+      "server": "Server"
     },
     "integrations": {
       "title": "Data sources",
@@ -181,7 +191,13 @@
         "created": "{count} new",
         "updated": "{count} updated",
         "skipped": "{count} unchanged",
-        "removed": "{count} gone"
+        "removed": "{count} gone",
+        "categoriesAdded": "{count} categories taken on",
+        "categoriesAdopted": "{count} categories renamed here",
+        "categoriesPushed": "{count} categories renamed in Wallet",
+        "categoriesCreated": "{count} categories added to Wallet",
+        "categoriesReported": "{count} categories to look at",
+        "categoriesRetyped": "{count} categories given their type"
       },
       "toasts": {
         "connected": "Wallet connected",
@@ -316,6 +332,18 @@
         "en-US": "€1,234.56 (en-US)",
         "fr-FR": "1 234,56 € (fr-FR)"
       },
+      "decimalSeparator": "Decimal separator",
+      "decimalSeparators": {
+        "auto": "From the number format",
+        "dot": "Point (1,234.56)",
+        "comma": "Comma (1.234,56)"
+      },
+      "currencyPosition": "Euro sign",
+      "currencyPositions": {
+        "auto": "From the number format",
+        "before": "Before the amount (€ 1,234.56)",
+        "after": "After the amount (1,234.56 €)"
+      },
       "weekStart": "Week starts on",
       "weekStarts": {
         "monday": "Monday",
@@ -406,6 +434,49 @@
         "written": "{written} written · {skipped} skipped",
         "stale": "Stale when taken: {accounts}"
       }
+    },
+    "codeMap": {
+      "title": "Payslip code map",
+      "description": "What each body code of your payslips means (Reply/TeamSystem profile). A change counts for payslips read afterwards: use \"Read again\" on the ones already imported.",
+      "code": "Code",
+      "role": "Meaning",
+      "note": "Note",
+      "add": "Add a code",
+      "addCode": "Code",
+      "save": "Save",
+      "reset": "Reset",
+      "remove": "Remove",
+      "saved": "Code map saved",
+      "seeded": "From the profile",
+      "custom": "Yours"
+    },
+    "llm": {
+      "title": "LLM fallback (OpenAI)",
+      "description": "For payslip values the parser could not find: one request to the OpenAI API with the document's text, fiscal code and IBAN masked. What comes back is marked inferred and must be confirmed. Nothing is sent while this is not set.",
+      "model": "Model",
+      "modelHint": "An OpenAI model id, for example gpt-5-mini.",
+      "apiKey": "API key",
+      "apiKeyKeep": "Leave empty to keep the saved key.",
+      "save": "Save",
+      "remove": "Remove",
+      "saved": "LLM fallback saved",
+      "removed": "LLM fallback removed",
+      "configured": "Configured: {model}, key ending in {hint}.",
+      "notConfigured": "Not configured: no payslip text is ever sent.",
+      "test": {
+        "action": "Test connection",
+        "running": "Testing…",
+        "ok": "Works: OpenAI answered for {model}.",
+        "keyRejected": "OpenAI refused the saved key.",
+        "modelMissing": "OpenAI has no such model, or this key cannot use it.",
+        "rateLimited": "OpenAI refused: quota or rate limit reached.",
+        "notConfigured": "Nothing saved yet: save a model and a key first.",
+        "unreachable": "OpenAI could not be reached: network or timeout."
+      },
+      "errors": {
+        "invalid": "Check the model and the key (sk-…).",
+        "forbidden": "Only admins can change this."
+      }
     }
   },
   "errors": {
@@ -454,7 +525,9 @@
       },
       "accounts": {
         "all": "All accounts",
-        "one": "{name}"
+        "title": "Accounts",
+        "some": "{count, plural, one {# account} other {# accounts}}",
+        "clear": "Clear"
       },
       "search": "Search payee…",
       "searchLabel": "Search by payee",
@@ -462,10 +535,12 @@
       "showHidden": "Show hidden",
       "types": {
         "label": "Type",
-        "all": "All",
+        "all": "All types",
         "income": "Income",
         "expense": "Spending",
-        "transfer": "Transfers"
+        "transfer": "Transfers",
+        "some": "{count, plural, one {# type} other {# types}}",
+        "clear": "Clear"
       }
     },
     "columns": {
@@ -490,7 +565,8 @@
       "setCategory": "Set category",
       "hide": "Hide",
       "restore": "Restore",
-      "clear": "Clear"
+      "clear": "Clear",
+      "delete": "Delete"
     },
     "row": {
       "editCategory": "Edit category",
@@ -542,7 +618,8 @@
       "hidden": "{count, plural, one {# transaction hidden} other {# transactions hidden}}",
       "restored": "{count, plural, one {# transaction restored} other {# transactions restored}}",
       "noteSaved": "Note saved",
-      "labelsSaved": "Labels saved"
+      "labelsSaved": "Labels saved",
+      "deleted": "{count, plural, one {# transaction deleted} other {# transactions deleted}}"
     },
     "errors": {
       "notFound": "That transaction no longer exists.",
@@ -571,6 +648,11 @@
         "day": "Day"
       },
       "summary": "Spending over the range by group of categories, {total} in all."
+    },
+    "deleteHidden": {
+      "title": "Delete this transaction?",
+      "description": "It is removed for good, and a synced one is not imported again.",
+      "cancel": "Cancel"
     }
   },
   "overview": {
@@ -755,10 +837,6 @@
       "hours": "{count, plural, one {# hour ago} other {# hours ago}}",
       "days": "{count, plural, one {# day ago} other {# days ago}}"
     },
-    "chart": {
-      "title": "Balances · {count} months",
-      "summary": "One line per account, {count} accounts in total."
-    },
     "composition": {
       "title": "Composition",
       "liquid": "Liquid · cash",
@@ -783,7 +861,9 @@
         "invalid": "Check the highlighted fields and try again.",
         "futureDate": "A balance cannot be dated in the future.",
         "failed": "Couldn't create the account. Try again."
-      }
+      },
+      "automaticColor": "Automatic colour",
+      "colorHint": "Automatic follows the account's place in the list; the swatch shows the colour it will have."
     },
     "detail": {
       "tabs": {
@@ -855,7 +935,8 @@
       "errors": {
         "invalid": "Check the date and the amount, then try again.",
         "futureDate": "A balance cannot be dated in the future.",
-        "failed": "Couldn't save the balance. Try again."
+        "failed": "Couldn't save the balance. Try again.",
+        "notFound": "That balance is not one you can edit."
       },
       "add": {
         "title": "Add balance entry",
@@ -864,7 +945,9 @@
         "date": "Date",
         "balance": "Balance",
         "note": "Note",
-        "submit": "Save balance"
+        "submit": "Save balance",
+        "available": "Available",
+        "availableHint": "Optional: what was spendable that day."
       },
       "list": {
         "title": "Balance entries",
@@ -876,7 +959,8 @@
         "note": "Note",
         "source": "Source",
         "actions": "Actions",
-        "delete": "Delete"
+        "delete": "Delete",
+        "edit": "Edit"
       },
       "sources": {
         "manual": "Manual",
@@ -884,6 +968,13 @@
         "system": "Snapshot",
         "import": "Import",
         "derived": "Rebuilt"
+      },
+      "updated": "Balance updated",
+      "edit": {
+        "title": "Edit balance entry",
+        "description": "Only balances you entered by hand can be changed.",
+        "cancel": "Cancel",
+        "submit": "Save changes"
       }
     },
     "settings": {
@@ -905,7 +996,9 @@
         "reference": "IBAN or reference",
         "color": "Colour",
         "currency": "Currency",
-        "openedOn": "Opened on"
+        "openedOn": "Opened on",
+        "automaticColor": "Automatic colour",
+        "colorHint": "Automatic follows the account's place in the list; the swatch shows the colour in use."
       },
       "source": {
         "title": "Data source",
@@ -973,6 +1066,1618 @@
     "estimated": {
       "short": "estimated",
       "note": "Dashed months are rebuilt from the synced movements, before the first balance Wallet reported."
+    }
+  },
+  "budgets": {
+    "title": "Budgets",
+    "summary": "{spent} of {limit} · {percent}",
+    "period": {
+      "label": "Month",
+      "previous": "Previous month",
+      "next": "Next month",
+      "latest": "This month"
+    },
+    "add": "Add budget",
+    "total": {
+      "title": "Total this month",
+      "remaining": "{amount} remaining",
+      "over": "{amount} over",
+      "spent": "Spent",
+      "limit": "Limit",
+      "progress": "Spent of the total limit",
+      "unbudgeted": "Not budgeted this month: {amount}"
+    },
+    "columns": {
+      "category": "Budget",
+      "progress": "Progress",
+      "spent": "Spent",
+      "limit": "Limit",
+      "remaining": "Remaining",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "over": "Over",
+      "near": "Near limit",
+      "on_track": "On track"
+    },
+    "editLimit": "Edit limit",
+    "limitInput": "Monthly limit for {category}",
+    "progressOf": "{category}: {percent} of the limit",
+    "hint": "Click a limit to edit it inline; Enter saves, Esc cancels.",
+    "row": {
+      "menu": "Budget actions",
+      "remove": "Remove from this month"
+    },
+    "empty": {
+      "title": "No budgets set",
+      "description": "Set a monthly limit per category to see progress here.",
+      "cta": "Add budget"
+    },
+    "form": {
+      "title": "Add budget",
+      "description": "A monthly limit on a category, an account or both, from {month} onwards.",
+      "category": "Category",
+      "amount": "Monthly limit (€)",
+      "search": "Search categories",
+      "noMatch": "No category matches",
+      "save": "Add budget",
+      "cancel": "Cancel",
+      "account": "Account",
+      "anyAccount": "All accounts",
+      "anyCategory": "All categories",
+      "needScope": "Pick a category, an account or both."
+    },
+    "toasts": {
+      "saved": "Limit saved",
+      "added": "Budget added",
+      "removed": "Budget removed from {month}"
+    },
+    "errors": {
+      "invalid": "Enter an amount above zero.",
+      "not_found": "That category no longer exists.",
+      "failed": "Couldn't save. Try again."
+    },
+    "overview": {
+      "title": "Budgets · {month}",
+      "viewAll": "View all",
+      "remaining": "{amount} left",
+      "over": "{amount} over",
+      "empty": "No budgets this month."
+    },
+    "allCategories": "All categories",
+    "allAccounts": "All accounts"
+  },
+  "pockets": {
+    "title": "Pockets",
+    "subtitle": "Virtual envelopes: each month you earmark an amount without moving money, so savings keep earning interest.",
+    "kpis": {
+      "earmarked": "Earmarked in pockets",
+      "count": "{count, plural, one {# pocket} other {# pockets}}",
+      "backing": "Backing balances",
+      "noBacking": "no pocket rests on an account",
+      "free": "Free (not earmarked)",
+      "freeNote": "available for new pockets",
+      "monthly": "Monthly accrual · all pockets",
+      "nextAccrual": "next accrual {date}"
+    },
+    "list": {
+      "label": "Pockets",
+      "openEnded": "open-ended",
+      "ofTarget": "of {target}",
+      "noTarget": "no target",
+      "perMonth": "+{amount} / month",
+      "paused": "Paused",
+      "new": "New pocket"
+    },
+    "detail": {
+      "since": "since {month}",
+      "onAccount": "on {account}",
+      "standalone": "standalone envelope",
+      "target": "Target",
+      "accruedSince": "Accrued since {month}",
+      "funded": "{percent} funded",
+      "toGo": "{amount} to go",
+      "eta": "ETA {months, plural, one {# month} other {# months}} · {month}",
+      "reached": "Target reached",
+      "noEta": "no monthly accrual",
+      "openEnded": "Open-ended pocket — no target, no limit, accrues indefinitely.",
+      "monthly": "Monthly accrual",
+      "manual": "Manual",
+      "withdrawn": "Withdrawn · 12 months",
+      "interest": "Interest earned on backing",
+      "interestUnknown": "No interest rule on the account, or no positive balance.",
+      "interestStandalone": "A standalone envelope rests on no account.",
+      "paused": "Paused: no monthly accrual until resumed.",
+      "interestEstimate": "Estimate: the account's interest of the last 12 months × this pocket's share."
+    },
+    "chart": {
+      "title": "Earmarked · 12 months",
+      "topIsTarget": "top = target",
+      "noTarget": "no target",
+      "summary": "{name}: balance at the end of each month, {value} now."
+    },
+    "withdrawals": {
+      "title": "Withdrawals",
+      "count": "{count, plural, =0 {none} one {# in the last 12 months} other {# in the last 12 months}}",
+      "date": "Date",
+      "purpose": "Purpose",
+      "amount": "Amount",
+      "empty": "Nothing withdrawn yet."
+    },
+    "actions": {
+      "add": "Add to pocket",
+      "withdraw": "Record withdrawal",
+      "edit": "Edit pocket",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "Archive",
+      "restore": "Restore",
+      "more": "More pocket actions"
+    },
+    "archived": {
+      "title": "Archived pockets",
+      "count": "{count, plural, one {# archived pocket} other {# archived pockets}}"
+    },
+    "move": {
+      "title": "Add to {name}",
+      "descriptionAccount": "Earmarks part of {account} for this pocket. No money is moved.",
+      "descriptionStandalone": "Adds to this envelope. No money is moved.",
+      "amount": "Amount",
+      "date": "Date",
+      "free": "Free on {account}: {amount}",
+      "after": "Pocket after: {amount}",
+      "submit": "Add to pocket"
+    },
+    "withdraw": {
+      "title": "Record withdrawal",
+      "description": "Money you actually spent from {name}. Lowers the earmarked amount.",
+      "amount": "Amount (€)",
+      "date": "Date",
+      "purpose": "Purpose",
+      "purposePlaceholder": "e.g. Hotel + ferry",
+      "submit": "Record"
+    },
+    "form": {
+      "newTitle": "New pocket",
+      "editTitle": "Edit pocket",
+      "description": "A pocket is a virtual envelope you fill each month. It can sit on a real account or stand alone; a target is optional.",
+      "name": "Name",
+      "account": "Backing account · optional",
+      "none": "None — standalone envelope",
+      "target": "Target (€) · optional",
+      "targetPlaceholder": "Leave empty for no target",
+      "monthly": "Monthly accrual (€)",
+      "accrues": "Accrues on",
+      "firstOfMonth": "1st of month",
+      "manually": "Manually",
+      "startMonth": "Starting from",
+      "note": "Standalone pockets track a virtual amount only; pockets on an account also show the free (not earmarked) balance.",
+      "save": "Save pocket",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "saved": "Pocket saved",
+      "added": "Earmarked {amount} for the pocket",
+      "withdrawn": "Withdrawal recorded",
+      "paused": "Pocket paused",
+      "resumed": "Pocket resumed",
+      "archived": "Pocket archived",
+      "restored": "Pocket restored"
+    },
+    "errors": {
+      "invalid": "Check the values: amounts above zero, a name up to 60 characters.",
+      "not_found": "That pocket no longer exists.",
+      "invalid_account": "Pick one of your open accounts.",
+      "duplicate_name": "There is already a pocket with that name.",
+      "archived": "An archived pocket can't be moved. Restore it first.",
+      "future_date": "The date can't be in the future.",
+      "insufficient": "The pocket doesn't hold that much.",
+      "failed": "Couldn't save. Try again."
+    },
+    "empty": {
+      "title": "No pockets yet",
+      "description": "Create a pocket to earmark part of a savings account each month.",
+      "cta": "New pocket"
+    },
+    "overview": {
+      "label": "Pockets",
+      "perMonth": "+{amount} · per month"
+    },
+    "account": {
+      "label": "Pockets",
+      "none": "None"
+    }
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "subtitle": "{count, plural, one {# recurring} other {# recurring}} · {monthly} / month equivalent",
+    "add": "Add subscription",
+    "export": "Export CSV",
+    "suggest": "Suggest from recurring payments",
+    "kpis": {
+      "monthly": "Monthly total",
+      "monthlyNote": "equivalent, all plans",
+      "yearly": "Yearly total",
+      "yearlyNote": "all plans, 12 months",
+      "low": "Low utility (≤ 5)",
+      "lowNote": "per year · {count, plural, one {# subscription} other {# subscriptions}} to review",
+      "next30": "Next 30 days",
+      "next30Note": "charges due by {date}"
+    },
+    "columns": {
+      "name": "Name",
+      "utility": "Utility",
+      "price": "Price",
+      "billing": "Billing",
+      "paidFrom": "Paid from",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "status": "Paid this period",
+      "edit": "Edit"
+    },
+    "cycles": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    },
+    "status": {
+      "paid": "Paid",
+      "amount_differs": "Amount differs",
+      "due": "Due",
+      "not_found": "Not found",
+      "not_due": "Not due"
+    },
+    "statusDetail": {
+      "paid": "Matched \"{match}\" on {account} · {date}",
+      "amount_differs": "Found {actual} instead of {expected} · {date}",
+      "due": "Charge on {date} · not yet found",
+      "not_found": "No expense matching \"{match}\" in {period}",
+      "not_due": "Next charge {date}",
+      "unchecked": "No text to look for: not checked"
+    },
+    "anyAccount": "any account",
+    "setUtility": "Set utility 1–10",
+    "utilityOf": "{value}/10",
+    "total": "Grand total",
+    "totalCount": "{count, plural, one {# subscription} other {# subscriptions}}",
+    "inactive": {
+      "title": "{count, plural, one {# paused or cancelled} other {# paused or cancelled}}",
+      "paused": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "alerts": {
+      "not_found": "no expense matching \"{match}\" found on {account} in {period} ({price} expected).",
+      "amount_differs": "charged {actual} on {date}, plan says {expected} — price increase?",
+      "due": "charge expected on {date} ({price}), not found yet on {account}.",
+      "checkExpenses": "Check expenses",
+      "label": "Payment alerts"
+    },
+    "projection": {
+      "title": "Projection by account",
+      "month": "Month",
+      "year": "Year",
+      "monthText": "Balance today minus committed subscriptions for the coming month.",
+      "yearText": "Balance today minus committed subscriptions for the next 12 months.",
+      "count": "{count, plural, one {# subscription} other {# subscriptions}}",
+      "balance": "Balance today",
+      "commit": "Subscriptions",
+      "projected": "Projected",
+      "noAccount": "No paying account",
+      "share": "Committed share of the balance",
+      "empty": "No active subscription."
+    },
+    "byCategory": {
+      "title": "By category · yearly",
+      "uncategorised": "Uncategorised"
+    },
+    "form": {
+      "newTitle": "New subscription",
+      "editTitle": "Edit subscription",
+      "description": "Recurring charges are used for balance projections and matched to expenses when they post.",
+      "name": "Name",
+      "category": "Category",
+      "pickCategory": "No category",
+      "search": "Search categories",
+      "noMatch": "No category matches",
+      "paidFrom": "Paid from",
+      "anyAccount": "Any account",
+      "price": "Price (€)",
+      "billing": "Billing",
+      "nextCharge": "Next charge",
+      "check": "Payment check",
+      "checkDescription": "Looks for a matching expense on the paying account in the month of each charge (three days either side for weekly plans). Alerts here if it is missing or the amount differs.",
+      "match": "Expense description contains",
+      "tolerance": "Amount tolerance (± %)",
+      "lastMatch": "Last match: {date} · {amount}",
+      "never": "Last match: never",
+      "utility": "Utility",
+      "utilityRare": "{value} · rarely used",
+      "utilityNice": "{value} · nice to have",
+      "utilityEssential": "{value} · essential",
+      "cancelSubscription": "Cancel subscription",
+      "pause": "Pause",
+      "resume": "Resume",
+      "reactivate": "Reactivate",
+      "close": "Close",
+      "save": "Save"
+    },
+    "suggestions": {
+      "title": "Suggested from recurring payments",
+      "description": "Outgoing payments that repeat on a regular cycle and no subscription covers yet.",
+      "add": "Add",
+      "empty": "Nothing to suggest: every recurring payment is covered, or none has been detected yet.",
+      "detail": "{price} · {cycle} · next {date} · seen {count} times"
+    },
+    "toasts": {
+      "saved": "Subscription saved",
+      "cancelled": "Subscription cancelled — projections updated",
+      "paused": "Subscription paused",
+      "resumed": "Subscription resumed",
+      "utility": "Utility saved"
+    },
+    "errors": {
+      "invalid": "Check the values: a name, a price above zero, a date, a tolerance between 0 and 100 %.",
+      "not_found": "That subscription no longer exists.",
+      "invalid_account": "Pick one of your open accounts.",
+      "invalid_category": "Pick one of your spending categories.",
+      "failed": "Couldn't save. Try again."
+    },
+    "empty": {
+      "title": "No subscriptions",
+      "description": "Add recurring charges to project account balances.",
+      "cta": "Add subscription"
+    },
+    "account": {
+      "label": "Subscriptions",
+      "value": "{count, plural, one {# recurring} other {# recurring}} · {amount} / month",
+      "none": "None"
+    },
+    "csv": {
+      "name": "Name",
+      "category": "Category",
+      "utility": "Utility",
+      "price": "Price",
+      "billing": "Billing",
+      "paidFrom": "Paid from",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "nextCharge": "Next charge",
+      "state": "State",
+      "status": "Paid this period"
+    }
+  },
+  "interests": {
+    "title": "Interests",
+    "subtitle": "{gross} gross accrued in {year} · {net} net",
+    "add": "Add rule",
+    "columns": {
+      "account": "Account · start",
+      "tiers": "Rate tiers (gross)",
+      "tax": "Tax",
+      "basis": "Basis · payout",
+      "accrued": "Accrued YTD",
+      "next": "Next payout",
+      "status": "Status",
+      "edit": "Edit"
+    },
+    "from": "from {date}",
+    "to": "until {date}",
+    "tier": {
+      "upTo": "up to {amount}",
+      "to": "to {amount}",
+      "above": "above",
+      "any": "any balance"
+    },
+    "basis": {
+      "365": "365 days",
+      "360": "360 days"
+    },
+    "settlement": {
+      "daily": "Daily",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "annual": "Yearly"
+    },
+    "state": {
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "footer": "Estimates from the daily balance. Tiered rules apply the first rate up to the threshold and the next rate on the amount above it; the tax rate is withheld on each day's interest.",
+    "empty": {
+      "title": "No interest rules",
+      "description": "Define a rate per account to estimate accrued interest.",
+      "cta": "Add rule"
+    },
+    "form": {
+      "newTitle": "New interest rule",
+      "editTitle": "Edit rule · {account}",
+      "description": "Rates are gross; the tax rate is withheld. Tiers apply progressively.",
+      "account": "Account",
+      "validFrom": "Starts on",
+      "validTo": "Ends on · optional",
+      "tiers": "Rate tiers",
+      "upTo": "Balance up to",
+      "rate": "Gross rate",
+      "above": "above",
+      "addTier": "+ Add tier",
+      "removeTier": "Remove tier",
+      "tax": "Tax on interest",
+      "basis": "Day basis",
+      "payout": "Payout",
+      "runHour": "Accrual time",
+      "runHourDefault": "Default · {time}",
+      "runHourHint": "Each day at this hour, in your timezone.",
+      "match": "Paid interest is recognised by",
+      "matchHint": "Text in the payee or category of the bank's interest payment, e.g. \"interessi\". Leave empty to skip the check.",
+      "publish": "Post each payout to Wallet",
+      "publishHint": "Only for a synced account. Off, the rule only analyses.",
+      "category": "Wallet category",
+      "categoryHint": "The category the payout is filed under in Wallet. It has to be a category Wallet knows: one it doesn't is posted without a category, and the payout says so.",
+      "noCategory": "No category",
+      "categorySearch": "Search a category",
+      "categoryNoMatch": "No category matches",
+      "active": "Rule is active",
+      "cancel": "Cancel",
+      "save": "Save rule"
+    },
+    "toasts": {
+      "saved": "Interest rule saved — accrual recalculated since the last payout",
+      "paused": "Rule paused",
+      "resumed": "Rule resumed"
+    },
+    "errors": {
+      "invalid": "Check the values: dates, rates between 0 and 100 %, amounts above zero.",
+      "not_found": "That rule no longer exists.",
+      "invalid_account": "Pick one of your open accounts.",
+      "invalid_tiers": "Thresholds must increase and only the last tier is open.",
+      "not_synced": "Only a synced Wallet account can be posted to.",
+      "invalid_category": "Pick one of your open categories.",
+      "failed": "Couldn't save. Try again."
+    },
+    "detail": {
+      "back": "Interests",
+      "summary": "{account} · {settlement} · {basis}",
+      "accruedYtd": "Accrued this year",
+      "pending": "Accrued, not yet paid out",
+      "next": "Next payout",
+      "mode": "Mode",
+      "modes": {
+        "analyze_only": "Analysis only",
+        "post_to_provider": "Posted to Wallet"
+      },
+      "noCategory": "No category",
+      "balance": {
+        "stale": "Accrual is on hold: the last balance reading is from {when}. It resumes as soon as a Wallet sync succeeds — no interest is computed on an out-of-date balance.",
+        "never": "Accrual is on hold: this account has no balance reading from Wallet yet."
+      },
+      "pause": "Pause",
+      "resume": "Resume",
+      "edit": "Edit rule",
+      "settlements": {
+        "title": "Payouts",
+        "empty": "No period has closed yet.",
+        "period": "Period",
+        "days": "Days",
+        "gross": "Gross",
+        "tax": "Tax",
+        "net": "Net",
+        "paid": "Paid",
+        "status": "Check",
+        "posting": "Wallet",
+        "daysValue": "{accrued} accrued{skipped, plural, =0 {} other { · # skipped}}"
+      },
+      "reconciliation": {
+        "no_data": "No data",
+        "indeterminate": "Unsure",
+        "matched": "Matched",
+        "missing": "Missing",
+        "delayed": "Awaited",
+        "anomalous": "Anomalous"
+      },
+      "days": {
+        "title": "Daily accruals",
+        "subtitle": "Last {count} days",
+        "date": "Day",
+        "balance": "Balance",
+        "gross": "Gross",
+        "net": "Net",
+        "statuses": {
+          "negative_balance": "Negative balance · skipped",
+          "no_balance": "No balance · skipped"
+        },
+        "empty": "Nothing accrued yet."
+      },
+      "posting": {
+        "states": {
+          "none": "Not posted",
+          "claimed": "Posting…",
+          "posted": "Posted",
+          "indeterminate": "Unsure"
+        },
+        "postNow": "Post now",
+        "retry": "Retry",
+        "markPosted": "Mark as posted",
+        "unsureHint": "The posting may or may not have reached Wallet. Check Wallet, then retry or mark it posted.",
+        "categoryNotLinked": "No category",
+        "categoryNotLinkedHint": "The record is in Wallet, filed under no category: the rule's category has no Wallet counterpart. Nothing was invented and nothing failed.",
+        "toasts": {
+          "posted": "Posted to Wallet",
+          "indeterminate": "Unsure — check Wallet",
+          "none": "Not posted",
+          "marked": "Marked as posted"
+        }
+      }
+    },
+    "account": {
+      "label": "Interest rule",
+      "none": "—",
+      "manage": "Manage"
+    }
+  },
+  "funds": {
+    "title": "Funds",
+    "summary": "{value} across {count, plural, one {# fund} other {# funds}}",
+    "add": "Add fund",
+    "kpis": {
+      "value": "Current value",
+      "paidIn": "Paid in",
+      "gain": "Total gain",
+      "monthly": "Monthly contributions"
+    },
+    "chart": {
+      "title": "Combined value vs paid in · 12 months",
+      "value": "Value",
+      "paid": "Paid in",
+      "summary": "Value of the funds and what had been paid in, month by month; {value} now."
+    },
+    "table": {
+      "title": "All funds",
+      "hint": "Click a fund for its page",
+      "fund": "Fund",
+      "type": "Type",
+      "paidIn": "Paid in",
+      "value": "Value",
+      "gain": "Gain",
+      "cumulative": "Cumulative",
+      "lastValuation": "Last valuation",
+      "month": "This month",
+      "edit": "Edit",
+      "valuation": "Record valuation",
+      "total": "Total",
+      "perMonth": "{amount} / month"
+    },
+    "types": {
+      "pac": "PAC",
+      "pension": "Pension fund"
+    },
+    "month": {
+      "found": "Deposit found · {date}",
+      "awaited": "Awaited",
+      "missing": "Not found",
+      "none": "—"
+    },
+    "alert": {
+      "missing": "no deposit found by {date} ({amount} expected).",
+      "cta": "Check expenses"
+    },
+    "archived": {
+      "count": "{count, plural, one {# archived fund} other {# archived funds}}",
+      "restore": "Restore"
+    },
+    "empty": {
+      "title": "No investment funds",
+      "description": "Add a fund to track contributions and returns.",
+      "cta": "Add fund"
+    },
+    "detail": {
+      "kind": "Accumulation plan (PAC)",
+      "since": "since {date}",
+      "asOf": "{paidIn} paid in · as of {date}",
+      "afterValue": "{amount} paid in since, which no valuation has counted yet",
+      "cumulative": "cumulative",
+      "noValue": "No valuation yet",
+      "tabs": {
+        "label": "Fund",
+        "overview": "Overview",
+        "deposits": "Deposits",
+        "valuations": "Valuations",
+        "settings": "Settings"
+      },
+      "kpis": {
+        "invested": "Invested (net of fees)",
+        "investedNote": "{count, plural, one {# deposit} other {# deposits}}",
+        "investedPartial": "a fee is unknown",
+        "fees": "Fees paid on deposits",
+        "feesNote": "{fee} per deposit",
+        "feesNone": "no fee set",
+        "gain": "Gain",
+        "gainNote": "{percent} on paid in",
+        "year": "Last 12 months",
+        "yearNote": "compounded · TER {ter}",
+        "yearNoTer": "compounded"
+      },
+      "chart": {
+        "title": "Value vs paid in · {months} months",
+        "value": "Value",
+        "paid": "Paid in",
+        "summary": "{name}: value and paid in at each month end; {value} now."
+      },
+      "returns": {
+        "title": "Monthly return",
+        "avg": "avg {value} / month",
+        "best": "Best month",
+        "worst": "Worst month",
+        "positive": "Positive months",
+        "positiveValue": "{positive} / {counted}",
+        "empty": "Needs a valuation at both ends of a month.",
+        "bar": "{month} {value}"
+      },
+      "recent": {
+        "title": "Recent deposits",
+        "all": "All deposits"
+      }
+    },
+    "forecast": {
+      "title": "Where this is heading",
+      "description": "If {monthly} a month keeps going in and the fund grows at the rate in each column. A projection, not a promise: no rate here is the fund's unless the last column says so.",
+      "noRhythm": "Nothing has gone in over the last twelve months, so there is no rhythm to carry forward.",
+      "horizon": "Horizon",
+      "years": "In {years, plural, one {# year} other {# years}}",
+      "paidIn": "Paid in",
+      "rate": "at {rate}",
+      "ownRate": "at its own {rate}",
+      "ownRateNote": "The last column is the fund's own yearly rate, measured over the twelve months in the chart above.",
+      "noOwnRate": "The fund's own rate needs twelve months measured: until then only the hypotheses are drawn.",
+      "noValue": "No valuation recorded, so only what will have been paid in can be said."
+    },
+    "returns": {
+      "title": "Return between valuations",
+      "details": "Details",
+      "empty": "Two valuations are needed before a return can be measured. Record one and this fills in.",
+      "since": "over {days, plural, one {# day} other {# days}}",
+      "hover": "{gain} gained · {paidIn} paid in",
+      "best": "Best stretch",
+      "worst": "Worst stretch",
+      "positive": "Positive",
+      "positiveValue": "{positive} / {counted}",
+      "page": {
+        "title": "Return",
+        "description": "What the fund did between one documented value and the next, never annualised. The money paid in over a stretch is subtracted before the gain is read (Simple Dietz).",
+        "from": "From",
+        "to": "To",
+        "days": "Days",
+        "start": "Value at the start",
+        "end": "Value at the end",
+        "flows": "Paid in",
+        "gain": "Gain",
+        "rate": "Return",
+        "compounded": "Compounded",
+        "annualised": "Per year",
+        "noAnnualised": "needs a year of history",
+        "back": "Back to the fund"
+      }
+    },
+    "detect": {
+      "button": "Find this charge everywhere",
+      "title": "Find this charge everywhere",
+      "description": "Pick one of the fund's debits. The app reads what makes it recognisable — the creditor of the direct debit, its mandate, or its payee — and finds every other charge that carries the same name.",
+      "movement": "A charge of this fund",
+      "pick": "Pick a charge…",
+      "hint": "Nothing is saved until you press «Use this».",
+      "looking": "Looking…",
+      "nothing": "This charge carries nothing to recognise it by. Pick another one, or write the text by hand in Settings.",
+      "kinds": {
+        "creditor": "Creditor of the direct debit",
+        "mandate": "Mandate reference",
+        "payee": "Payee"
+      },
+      "charges": "Found",
+      "chargesValue": "{count, plural, one {# charge} other {# charges}} · {from} → {to}",
+      "usual": "Usually",
+      "every": "every {days, plural, one {# day} other {# days}}",
+      "use": "Use this",
+      "cancel": "Cancel",
+      "saved": "{count, plural, one {# charge} other {# charges}} taken on; the next ones will follow by themselves.",
+      "failed": "Couldn't do it. Try again."
+    },
+    "deposits": {
+      "title": "Deposits",
+      "hint": "{count, plural, one {# deposit} other {# deposits}}",
+      "date": "Date",
+      "debited": "Debited",
+      "fee": "Fee",
+      "invested": "Invested",
+      "source": "Source",
+      "sources": {
+        "manual": "Manual",
+        "rule": "Matched"
+      },
+      "note": "Note",
+      "edit": "Edit",
+      "delete": "Delete",
+      "total": "Total",
+      "empty": "No deposits yet.",
+      "add": {
+        "title": "Add deposit",
+        "hint": "Enter the debited amount; the fee is subtracted.",
+        "date": "Date",
+        "debited": "Debited (€)",
+        "fee": "Fee (€)",
+        "invested": "Invested",
+        "note": "Note",
+        "save": "Save deposit"
+      },
+      "editTitle": "Edit deposit",
+      "rule": {
+        "title": "Linked expense rule",
+        "text": "Expenses on {account} whose payee contains {match} become a deposit, less {fee} fee.",
+        "anyAccount": "any account",
+        "noFee": "no",
+        "active": "Active",
+        "paused": "Paused",
+        "edit": "Edit rule",
+        "none": "No rule: deposits are entered by hand."
+      }
+    },
+    "valuations": {
+      "title": "Valuation records",
+      "hint": "{count, plural, one {# record} other {# records}}",
+      "date": "Date",
+      "value": "Value",
+      "paidIn": "Paid in",
+      "gain": "Gain",
+      "note": "Note",
+      "edit": "Edit",
+      "delete": "Delete",
+      "editTitle": "Edit valuation",
+      "empty": "No valuation yet.",
+      "form": {
+        "title": "Record valuation · {name}",
+        "description": "Enter the value shown on the latest statement. It is saved as the balance of the fund's account; monthly returns are computed from it.",
+        "date": "Valuation date",
+        "value": "Current value (€)",
+        "note": "Note",
+        "last": "Last recorded: {value} · {date}",
+        "cancel": "Cancel",
+        "save": "Save valuation"
+      }
+    },
+    "settings": {
+      "general": {
+        "title": "General",
+        "description": "Name, provider and how the fund is classified in net worth.",
+        "name": "Name",
+        "provider": "Provider",
+        "compartment": "Type / compartment",
+        "kind": "Fund kind",
+        "kindPac": "Accumulation plan (PAC)",
+        "kindPension": "Pension fund",
+        "kindHelp": "A PAC is fed by a monthly deposit from one of your accounts, with a fee on each one; a pension fund is fed by the contributions of your payslips and by the fund's own documents.",
+        "kindFixed": "The kind is chosen when the fund is created: a PAC keeps deposits, a pension fund keeps contributions and operations, so it can't be switched afterwards.",
+        "isin": "ISIN",
+        "start": "Start date",
+        "memberSince": "Member since"
+      },
+      "plan": {
+        "title": "Contributions",
+        "description": "The monthly plan and the fee taken on each deposit.",
+        "monthly": "Monthly amount debited (€)",
+        "fee": "Fee per deposit (€)",
+        "investedPerMonth": "Invested per month: {value}",
+        "debitAccount": "Paying account",
+        "noAccount": "None",
+        "debitDay": "Charge day",
+        "ter": "Annual management fee (TER, %)"
+      },
+      "rule": {
+        "title": "Linked expense",
+        "description": "Create a deposit automatically when a matching expense appears on the paying account.",
+        "active": "Link expenses to deposits",
+        "match": "Payee contains",
+        "account": "On account",
+        "anyAccount": "Any account",
+        "save": "Save rule"
+      },
+      "valuations": {
+        "title": "Valuations",
+        "description": "The value lives on the fund's account: its settings decide net worth, snapshot and reminders.",
+        "open": "Open {account} settings"
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Archiving hides the fund but keeps its history.",
+        "text": "Archive {name}. Deposits and valuations stay readable.",
+        "archive": "Archive fund",
+        "restore": "Restore fund"
+      },
+      "save": "Save"
+    },
+    "form": {
+      "newTitle": "New fund",
+      "description": "Choose the kind, then fill in what it needs. The value is kept on an account of its own, so net worth counts it once.",
+      "valuationAccount": "Value kept on",
+      "newAccount": "A new account named after the fund",
+      "initial": "Initial capital (€)",
+      "cancel": "Cancel",
+      "save": "Save fund"
+    },
+    "toasts": {
+      "saved": "Fund saved",
+      "archived": "Fund archived — history kept",
+      "restored": "Fund restored",
+      "valuation": "Valuation recorded",
+      "valuationUpdated": "Valuation updated",
+      "valuationDeleted": "Valuation deleted",
+      "deposit": "Deposit saved",
+      "depositDeleted": "Deposit deleted",
+      "rule": "Rule saved"
+    },
+    "errors": {
+      "invalid": "Check the values: a name, amounts above zero, a fee not above the amount, TER between 0 and 100 %.",
+      "not_found": "That fund no longer exists.",
+      "invalid_account": "Pick an open account; the value needs a manual account no other fund uses.",
+      "duplicate_name": "There is already a fund with that name.",
+      "archived": "An archived fund can't change. Restore it first.",
+      "linked": "This deposit comes from a movement: hide the movement in Expenses to drop it.",
+      "future_date": "The date can't be in the future.",
+      "failed": "Couldn't save. Try again."
+    },
+    "account": {
+      "label": "Fund"
+    },
+    "pension": {
+      "kind": "Pension fund",
+      "notAnnualised": "gain / paid in, not annualised",
+      "tabs": {
+        "overview": "Overview",
+        "contributions": "Contributions",
+        "valuations": "Valuations",
+        "settings": "Settings"
+      },
+      "header": {
+        "paidIn": "{paidIn} paid in · value as of {date}",
+        "accrued": "Accrued in payslips"
+      },
+      "kpis": {
+        "value": "Position value",
+        "valueNote": "as of {date}",
+        "noValue": "no statement yet",
+        "paidIn": "Paid in",
+        "paidInNote": "including {enrollment} of enrolment fees",
+        "gain": "Gain since start",
+        "gainNote": "{percent} of paid in, not annualised",
+        "pending": "Still to be credited",
+        "pendingNote": "payslips accrued, employer transfer due {date}",
+        "pendingNone": "every quarter due has been transferred"
+      },
+      "gainReasons": {
+        "no_value": "no statement: the value is unknown",
+        "nothing_paid": "nothing paid in yet",
+        "outflows_unknown": "an outflow is not documented"
+      },
+      "notice": {
+        "pending": "{amount} accrued in the payslips of {quarter} is not yet in the fund · employer transfer due {date}.",
+        "dated": "Value dated {date} — not a delay."
+      },
+      "chart": {
+        "title": "Value and paid in",
+        "hint": "Documented points only: the valuations you record.",
+        "steps": "Steps are quarterly credits, not returns; nothing between two documents is drawn.",
+        "summary": "{name}: value and paid in at each month end; {value} at the last statement.",
+        "hoverPaidIn": "{paidIn} paid in"
+      },
+      "operations": {
+        "title": "Fund operations",
+        "hint": "{count, plural, one {# operation} other {# operations}}",
+        "empty": "No operation imported yet.",
+        "competence": "Competence",
+        "date": "Op. date",
+        "worker": "Worker",
+        "employer": "Employer",
+        "tfr": "TFR",
+        "fees": "Fees",
+        "net": "Net invested",
+        "total": "Total",
+        "remove": "Remove",
+        "removed": "Operation removed"
+      },
+      "classes": {
+        "contribution": "Contribution",
+        "enrollment": "Enrolment",
+        "voluntary": "Voluntary",
+        "transfer_in": "Transfer in",
+        "switch": "Compartment switch",
+        "withdrawal": "Withdrawal",
+        "other": "Other"
+      },
+      "bridge": {
+        "title": "Why the numbers differ",
+        "noValue": "A statement is needed to reconcile the figures.",
+        "note": "Gain / paid in is not annualised and is net of the explicit fees only, not of taxation at payout.",
+        "lines": {
+          "accrued": "Accrued in payslips",
+          "pending": "Not yet in the fund",
+          "enrollment": "Enrolment fees",
+          "voluntary": "Voluntary payments",
+          "other": "Other differences",
+          "paidIn": "Paid in",
+          "fees": "Explicit fees",
+          "invested": "Invested",
+          "market": "Change in value",
+          "value": "Position value"
+        }
+      },
+      "position": {
+        "title": "Position",
+        "fees": "Explicit fees",
+        "feesSplit": "{enrollment} enrolment · {association} association",
+        "management": "Management fee",
+        "managementNote": "already taken off the value · informative",
+        "rule": "Contribution rule",
+        "noRule": "no rule recorded",
+        "covered": "Competences covered until",
+        "coveredNote": "the last quarter the fund credited"
+      },
+      "months": {
+        "title": "Accrued in payslips",
+        "hint": "enrolment fees excluded",
+        "empty": "No payslip applied yet.",
+        "period": "Payslip period",
+        "quarter": "Quarter",
+        "worker": "Worker",
+        "employer": "Employer",
+        "tfr": "TFR",
+        "total": "Total",
+        "status": "Status",
+        "totalRow": "Total",
+        "thirteenth": "13th",
+        "openPayslip": "Open the payslip"
+      },
+      "payslipTypes": {
+        "ordinary": "Ordinary",
+        "thirteenth": "13th month",
+        "fourteenth": "14th month",
+        "bonus": "Bonus",
+        "settlement": "Settlement"
+      },
+      "quarters": {
+        "title": "Employer transfers",
+        "hint": "Quarterly · {days} days of tolerance before a missing credit is flagged",
+        "empty": "Nothing accrued or credited yet.",
+        "due": "due {date}",
+        "credited": "credited {date}",
+        "credited2": "in the fund",
+        "accrued": "accrued",
+        "difference": "difference",
+        "accept": "Accept difference",
+        "clear": "Reopen",
+        "missing": "Payslip missing for {months}."
+      },
+      "components": {
+        "worker": "Worker",
+        "employer": "Employer",
+        "tfr": "TFR",
+        "enrollment": "Enrolment"
+      },
+      "statuses": {
+        "accrued_not_due": "Accrued, not due",
+        "transferred": "Transferred",
+        "to_verify": "To verify after the deadline",
+        "present": "In the fund",
+        "invested": "Invested",
+        "reconciled": "Reconciled",
+        "discrepancy": "Discrepancy",
+        "incomplete": "Incomplete data"
+      },
+      "reasons": {
+        "missing_payslip": "a payslip is missing",
+        "stale_export": "the export predates the deadline"
+      },
+      "reconciliation": {
+        "accepted": "Difference accepted",
+        "accept": {
+          "title": "Accept the {component} difference",
+          "description": "The difference of {difference} stays recorded with your note; no amount is invented to make the two sides meet.",
+          "note": "Why it is accepted",
+          "submit": "Accept",
+          "cancel": "Cancel"
+        }
+      },
+      "voluntary": {
+        "title": "Add a voluntary contribution",
+        "description": "Payments made straight to the fund, outside payroll, are a separate flow and can be tied to the movement that paid them.",
+        "add": "Add contribution",
+        "date": "Date",
+        "amount": "Amount (€)",
+        "fee": "Fee (€)",
+        "movement": "Linked movement",
+        "noMovement": "No movement",
+        "note": "Note",
+        "submit": "Add",
+        "cancel": "Cancel",
+        "added": "Contribution added"
+      },
+      "tax": {
+        "title": "Deductibility by year",
+        "empty": "No contribution credited yet.",
+        "year": "Year",
+        "worker": "Worker",
+        "employer": "Employer",
+        "total": "Total",
+        "limit": "Limit",
+        "note": "Worker and employer contributions only, TFR excluded, by the date of the operation: the certified tax year can differ."
+      },
+      "statements": {
+        "title": "Statements",
+        "empty": "No statement imported yet.",
+        "date": "Valuation date",
+        "value": "Value",
+        "worker": "Worker",
+        "employer": "Employer",
+        "tfr": "TFR",
+        "inflows": "Inflows",
+        "outflows": "Outflows",
+        "gain": "Reported gain"
+      },
+      "documents": {
+        "title": "Cometa documents",
+        "import": "Import documents",
+        "empty": "No document yet.",
+        "file": "File",
+        "kind": "Kind",
+        "received": "Received",
+        "state": "State",
+        "kinds": {
+          "cometa_operations": "Operations export",
+          "cometa_position": "Position summary"
+        }
+      },
+      "documentStates": {
+        "received": "Received",
+        "scanning": "Scanning",
+        "extracting": "Reading",
+        "needs_review": "To review",
+        "needs_ocr": "Needs OCR",
+        "verified": "Verified",
+        "applied": "Applied",
+        "superseded": "Superseded",
+        "rejected": "Set aside",
+        "failed": "Failed"
+      },
+      "import": {
+        "title": "Import Cometa documents",
+        "description": "The operations export and the position summary. What each file is comes from its content.",
+        "choose": "Choose files",
+        "drop": "or drop them here · PDF, XLS table or XLSX, up to 10 MB each",
+        "submit": "Upload",
+        "cancel": "Cancel",
+        "uploaded": "{count, plural, one {# document uploaded} other {# documents uploaded}}",
+        "duplicates": "{count, plural, one {# file was already imported} other {# files were already imported}}",
+        "refused": "{name} was refused"
+      },
+      "review": {
+        "title": "Review document",
+        "back": "Fund",
+        "subtitle": "{file} · received {date}",
+        "values": "Values read",
+        "confirm": "Confirm",
+        "correct": "Correct",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Saved",
+        "originalValue": "read as {value}",
+        "apply": "Apply",
+        "applied": "Applied to the fund",
+        "retry": "Retry",
+        "delete": "Delete document",
+        "deleted": "Document deleted",
+        "verification": {
+          "unverified": "To check",
+          "confirmed": "Confirmed",
+          "corrected": "Corrected"
+        },
+        "viewer": {
+          "page": "Page {page} of {pages}",
+          "previous": "Previous page",
+          "next": "Next page",
+          "zoomIn": "Zoom in",
+          "zoomOut": "Zoom out",
+          "open": "Open original",
+          "loading": "Loading the document…",
+          "failed": "The document could not be displayed.",
+          "deleted": "The original was deleted at the end of its retention; the data read from it stay."
+        },
+        "fields": {
+          "valuationDate": "Valuation date",
+          "value": "Position value",
+          "tfr": "TFR",
+          "worker": "Worker (aderente)",
+          "employer": "Employer (azienda)",
+          "transfersIn": "Transfers in",
+          "inflows": "Total inflows",
+          "advances": "Advances",
+          "redemptions": "Redemptions",
+          "rita": "R.I.T.A. instalments",
+          "outflows": "Total outflows",
+          "reportedGain": "Reported gain"
+        },
+        "preview": {
+          "title": "Operations in this export",
+          "hint": "{count, plural, one {# operation} other {# operations}} · {added} new",
+          "state": {
+            "new": "New",
+            "known": "Already in the fund",
+            "changed": "Updated"
+          },
+          "competence": "Competence",
+          "date": "Op. date",
+          "type": "As exported",
+          "worker": "Worker",
+          "employer": "Employer",
+          "tfr": "TFR",
+          "fees": "Fees",
+          "net": "Net",
+          "units": "Units",
+          "empty": "This export holds no operation.",
+          "enrollmentNote": "A contribution whose net is zero and which bought no unit is the enrolment fee."
+        },
+        "states": {
+          "reading": "The document is being read.",
+          "failed": "The document could not be read: {error}.",
+          "applied": "Applied to the fund.",
+          "rejected": "Set aside."
+        }
+      },
+      "create": {
+        "created": "Fund created",
+        "published": "{count, plural, one {# payslip} other {# payslips}} published to the fund"
+      },
+      "settings": {
+        "general": "General",
+        "generalDescription": "Name, provider and compartment of the fund.",
+        "name": "Display name",
+        "provider": "Provider",
+        "compartment": "Compartment",
+        "start": "Member since",
+        "save": "Save",
+        "saved": "Saved",
+        "payroll": "Source: payslips",
+        "payrollDescription": "Which payslip codes feed each component, and whether this fund receives them. Specific to the Reply / TeamSystem layout.",
+        "payrollOn": "This fund takes the contributions of every applied payslip.",
+        "payrollOff": "Another fund takes the payslips' contributions.",
+        "codes": "The codes each component comes from are the payroll code map, in Settings › Data.",
+        "takePayroll": "Take the payslips' contributions",
+        "rebuild": "Rebuild from payslips",
+        "rebuilt": "{count, plural, one {# payslip} other {# payslips}} read again",
+        "transfers": "Employer transfers",
+        "transfersDescription": "When accrued amounts are expected in the fund. Computed automatically, no confirmation needed.",
+        "schedule": "Due on {dates} of the month after the quarter.",
+        "source": "Source: {source} · verified {date}",
+        "tolerance": "Display tolerance (days)",
+        "toleranceHint": "How long after a deadline a missing credit is still shown as on its way.",
+        "rules": "Contribution rules",
+        "rulesDescription": "Optional. It only lets you compare what the contract provides with what the payslip withholds; it enters no calculation.",
+        "from": "From",
+        "ccnl": "CCNL",
+        "worker": "Worker %",
+        "employer": "Employer %",
+        "tfrShare": "TFR %",
+        "sourceColumn": "Source",
+        "removeRule": "Remove rule",
+        "addRule": "Add rule",
+        "ruleAdded": "Rule added",
+        "validFrom": "Valid from",
+        "validTo": "Valid to",
+        "base": "Base",
+        "workerPct": "Worker %",
+        "employerPct": "Employer %",
+        "tfrPct": "TFR %",
+        "verifiedOn": "Verified on",
+        "sourceHint": "The page or document the rule was read from.",
+        "valuationAccount": "Valuation account",
+        "valuationDescription": "The account the fund's value is written to.",
+        "openAccount": "Open {account}",
+        "danger": "Danger zone",
+        "dangerDescription": "Archiving hides the fund but keeps its history.",
+        "codesTitle": "Codes that feed each component",
+        "codeGroups": {
+          "worker": "Worker contribution",
+          "employer": "Employer contribution",
+          "tfr": "TFR contribution",
+          "enrollment": "Enrolment fees",
+          "adjustment": "Corrections"
+        },
+        "openCodeMap": "Open Settings › Data",
+        "frequency": "Frequency",
+        "frequencies": {
+          "quarterly": "Quarterly",
+          "monthly": "Monthly",
+          "custom": "Custom"
+        },
+        "dueDay": "Due day of the following month",
+        "noSchedule": "No payment rule recorded for this fund.",
+        "ruleOnly": "Frequency and due day come from the versioned rule, not from a setting: only the tolerance below is yours to change.",
+        "fees": "Fees",
+        "feesDescription": "Explicit charges come from imported operations; the tariff is for explanations and estimates only.",
+        "feeItems": {
+          "enrollmentWorker": "Enrolment · worker",
+          "enrollmentEmployer": "Enrolment · employer",
+          "association": "Membership fee",
+          "management": "Management fee"
+        },
+        "feeUnits": {
+          "once": "once",
+          "year": "per year, charged quarterly",
+          "yearOfAssets": "per year of assets"
+        },
+        "tariffFrom": "Public tariff of {provider}, valid from {date}.",
+        "feesActual": "What you were actually charged comes from the fees of the imported operations, never from this tariff.",
+        "noTariff": "No tariff loaded for this provider.",
+        "saveRule": "Save rule"
+      },
+      "errors": {
+        "failed": "Something went wrong. Try again.",
+        "invalid": "Check the values entered.",
+        "not_found": "Not found.",
+        "linked": "An operation that came from a document cannot be removed.",
+        "duplicate_name": "A fund with this name already exists.",
+        "empty": "The file is empty.",
+        "too_large": "The file is larger than 10 MB.",
+        "too_many": "Too many files at once.",
+        "unsupported_format": "This file is neither a PDF nor an operations table.",
+        "invalid_state": "The document is in no state for this.",
+        "no_table": "No operations table was found in the file. Send the «Dettaglio operazioni» exported from the Cometa portal (an .xls table or an .xlsx).",
+        "missing_columns": "The table is missing columns this reader needs.",
+        "bad_value": "A value in the table could not be read.",
+        "binary_xls": "This is an old binary XLS: export it as XLSX or HTML.",
+        "storage_failed": "The file could not be stored.",
+        "not_an_export": "This spreadsheet is not Cometa's «Dettaglio operazioni»: the operations table, with a «Tipo Operazione» column, is not in it. Download the operations detail from the Cometa portal and send that one; this document can be deleted.",
+        "extraction_failed": "The document could not be read. Try again; if it keeps failing, the file is not one this reader knows.",
+        "parse_failed": "The document could not be read to the end.",
+        "original_missing": "The original is no longer in storage, so it cannot be read again.",
+        "unreadable_pdf": "This PDF could not be opened. Download the position summary from the Cometa portal again."
+      },
+      "kpiReasons": {
+        "cometa_operations": "no operations export imported yet",
+        "cometa_position": "no position summary imported yet"
+      }
+    }
+  },
+  "payroll": {
+    "title": "Payroll",
+    "summary": "{count, plural, one {# payslip} other {# payslips}} · {from} – {to}",
+    "summaryEmpty": "No payslip applied yet",
+    "awaiting": "{count, plural, one {# payslip to review} other {# payslips to review}}",
+    "add": "Add payslip",
+    "kpis": {
+      "net3": "Avg net · 3 months",
+      "net6": "Avg net · 6 months",
+      "net12": "Avg net · 12 months",
+      "taxRate": "Avg tax rate",
+      "ral": "RAL · gross annual",
+      "ralComplete": "{year}, complete year",
+      "ralEstimate": "{year}, estimated",
+      "ordinaryOnly": "ordinary payslips only"
+    },
+    "empty": {
+      "title": "No payslips yet",
+      "description": "Add a payslip PDF: it is read, checked against itself and waits for you to review it before it counts.",
+      "cta": "Add payslip"
+    },
+    "register": {
+      "label": "Payslips by year",
+      "month": "Month",
+      "gross": "Gross",
+      "taxes": "Taxes",
+      "social": "Social contributions",
+      "net": "Net",
+      "document": "Document",
+      "status": "Status",
+      "actions": "Actions",
+      "review": "Review",
+      "open": "Open",
+      "total": "Total {year}",
+      "average": "Monthly average",
+      "details": "Show details",
+      "hideDetails": "Hide details",
+      "irpefGross": "Gross IRPEF",
+      "deductions": "Deductions",
+      "surtax": "Regional surtax",
+      "substitute": "Substitute tax",
+      "refund730": "730 refund",
+      "welfare": "Welfare",
+      "fundYou": "Fund (you)",
+      "fundEmployer": "Fund (employer)",
+      "tfr": "TFR",
+      "vacationLeft": "Holiday left",
+      "rolLeft": "ROL left",
+      "thirteenth": "13th",
+      "fourteenth": "14th",
+      "bonus": "Bonus",
+      "settlement": "Final pay",
+      "notApplied": "Not in the totals until applied",
+      "warningsBadge": "{count, plural, one {# to check} other {# to check}}",
+      "warningsHint": "Open the payslip: something on it was read but needs a person's eye — an adjustment that is kept apart, a code nobody knows."
+    },
+    "inbox": {
+      "title": "Documents",
+      "description": "Being read, or needing you before they can be reviewed.",
+      "received": "Received {date}",
+      "open": "Open"
+    },
+    "states": {
+      "received": "Received",
+      "scanning": "Checking",
+      "extracting": "Reading…",
+      "needs_review": "To review",
+      "needs_ocr": "Needs OCR",
+      "verified": "Verified",
+      "applied": "Applied",
+      "superseded": "Superseded",
+      "rejected": "Discarded",
+      "failed": "Not read"
+    },
+    "upload": {
+      "title": "Add payslips",
+      "description": "PDF payslips, up to 10 MB each. The same file twice is imported once; a payslip for a month already in the register replaces it only when you apply it.",
+      "choose": "Choose PDF files",
+      "drop": "or drop them here",
+      "selected": "{count, plural, one {# file selected} other {# files selected}}",
+      "submit": "Upload",
+      "cancel": "Cancel",
+      "uploaded": "{count, plural, one {# payslip uploaded: reading it now} other {# payslips uploaded: reading them now}}",
+      "duplicates": "{count, plural, one {# was already imported} other {# were already imported}}",
+      "refused": "{name}: {error}"
+    },
+    "review": {
+      "title": "Review payslip",
+      "subtitle": "{file} · received {date}",
+      "back": "Payroll",
+      "reading": "Reading the document… this page updates by itself.",
+      "needsOcr": "This PDF has no text to read: it is a scan. OCR is not available in this version, so it can only be discarded.",
+      "failed": "The document could not be read ({error}). Try again, or discard it.",
+      "rejected": "You discarded this document. Retry reads it again.",
+      "applied": "Applied to the register. Its values are final; a new version of the same payslip replaces it.",
+      "superseded": "A newer version of this payslip replaced it.",
+      "verified": "Verified: apply it to put it in the register.",
+      "groups": {
+        "identity": "Identity",
+        "compensation": "Pay",
+        "taxes": "Taxes",
+        "contributions": "Contributions and fund",
+        "tfr": "TFR",
+        "net": "Net reconciliation",
+        "leave": "Leave balances"
+      },
+      "field": "Field",
+      "value": "Value",
+      "source": "Source",
+      "origins": {
+        "printed": "Printed",
+        "derived": "Derived",
+        "inferred": "Inferred"
+      },
+      "verification": {
+        "unverified": "Not checked",
+        "confirmed": "Confirmed",
+        "corrected": "Corrected"
+      },
+      "originalValue": "Read as {value}",
+      "blank": "Blank on the payslip",
+      "derivedFrom": "From {fields}",
+      "confirm": "Confirm",
+      "correct": "Correct",
+      "save": "Save",
+      "cancel": "Cancel",
+      "lowConfidence": "Amber values were read with less than 75 % confidence: check them against the document.",
+      "show": "Show on the document",
+      "noBox": "Not on the document",
+      "checks": {
+        "title": "Checks",
+        "passed": "Passed",
+        "failed": "Failed",
+        "skipped": "Not applicable",
+        "expectedActual": "Expected {expected}, found {actual}",
+        "names": {
+          "irpef": "IRPEF: gross − deductions = withheld",
+          "net": "Net reconciled to the cent",
+          "body_deductions": "Body deductions = TRATTENUTE CORPO",
+          "total_deductions": "TOTALE TRATTENUTE adds up",
+          "substitute_tax": "Substitute tax counted once",
+          "leave_vacation": "Holiday: A.P. + MAT. − GOD. = RES.",
+          "leave_rol": "ROL: A.P. + MAT. − GOD. = RES.",
+          "leave_permit": "Permits: A.P. + MAT. − GOD. = RES.",
+          "plausibility_net": "Net in line with recent months",
+          "plausibility_gross": "Gross in line with recent months"
+        },
+        "reasons": {
+          "extra_month": "not an ordinary month",
+          "year_end_adjustment": "year-end adjustment month",
+          "missing": "a value is missing",
+          "single_source": "printed once",
+          "blank": "blank on the payslip",
+          "no_history": "no earlier payslips"
+        }
+      },
+      "warnings": {
+        "title": "Needs your attention",
+        "unknown_code": "Code {code} is not in your code map: its line is kept, but counted for nothing until you map it (Settings › Data).",
+        "tfr_both_differ": "The TFR box ({monthField}) and line 8003 ({contributionLine}) differ: line 8003 is used, never both.",
+        "tfr_partial_month": "TFR on a partial month: transcribed as printed, not recomputed.",
+        "employer_fund_adjustment_only": "An employer fund adjustment with no regular quota beside it: no monthly employer amount is computed. Check it against the payslip before.",
+        "permit_unclassified": "{hours} h of permits the ROL balance does not confirm: kept as permits, not ROL.",
+        "extra_month_leave": "Leave lines on a 13th or 14th: they are not counted.",
+        "rectification": "A payslip for the same month is already applied: applying this one replaces it.",
+        "missing_identity": "The month, the employer or the employee was not found: correct them to go on.",
+        "unknown_layout": "This is not a Reply/TeamSystem payslip: nothing could be read from it."
+      },
+      "lines": {
+        "title": "Body lines",
+        "code": "Code",
+        "description": "Description",
+        "quantity": "Qty",
+        "rate": "Rate",
+        "earnings": "Earnings",
+        "deductions": "Deductions",
+        "statistical": "Statistical",
+        "role": "Role"
+      },
+      "leave": {
+        "title": "Leave in this payslip",
+        "event": "{hours} h of {kind} used in {month}",
+        "none": "No leave in this payslip.",
+        "snapshot": "Balances as printed on the {period} payslip; leave counted up to {usage}.",
+        "kinds": {
+          "vacation": "holiday",
+          "rol": "ROL",
+          "permit": "permits"
+        }
+      },
+      "actions": {
+        "verify": "Verify",
+        "verifyAnyway": "Verify anyway",
+        "verifyAnywayTitle": "Some checks failed",
+        "verifyAnywayDescription": "You are vouching for values that do not reconcile. They stay marked, and the register shows the payslip as it is.",
+        "apply": "Apply to payroll",
+        "reject": "Discard",
+        "retry": "Read again",
+        "delete": "Delete",
+        "deleteTitle": "Delete this document?",
+        "deleteDescription": "The original and everything read from it are deleted. Nothing was applied from it.",
+        "cancel": "Cancel",
+        "llm": "Fill blanks with OpenAI"
+      },
+      "toasts": {
+        "verified": "Payslip verified",
+        "applied": "Payslip applied",
+        "rejected": "Document discarded",
+        "retried": "Read again",
+        "deleted": "Document deleted",
+        "saved": "Saved",
+        "llm": "{filled, plural, =0 {Nothing inferred} one {# value inferred: confirm or correct it} other {# values inferred: confirm or correct them}}"
+      },
+      "viewer": {
+        "page": "Page {page} of {pages}",
+        "previous": "Previous",
+        "next": "Next",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "open": "Open original",
+        "loading": "Loading the document…",
+        "failed": "The document could not be shown.",
+        "deleted": "The original was deleted at the end of its retention; the values read from it stay."
+      }
+    },
+    "roles": {
+      "ordinary_earnings": "Ordinary earnings",
+      "thirteenth_earnings": "13th month",
+      "holiday_pay": "Holiday pay",
+      "absence": "Absence",
+      "paid_leave": "Paid leave",
+      "vacation_offset": "Holiday (offset)",
+      "vacation_event": "Holiday taken",
+      "permit_offset": "Permits (offset)",
+      "permit_event": "Permits taken",
+      "separate_payment": "Separate payment",
+      "refund_730": "730 refund",
+      "regional_installment": "Regional surtax",
+      "municipal_installment": "Municipal surtax",
+      "substitute_tax": "Substitute tax",
+      "substitute_tax_base": "Substitute tax base",
+      "employee_fund": "Fund, your quota",
+      "employee_fund_adjustment": "Fund, your adjustment",
+      "employee_fund_enrollment": "Fund enrolment, you",
+      "employer_fund": "Fund, employer quota",
+      "employer_fund_adjustment": "Fund, employer adjustment",
+      "employer_fund_enrollment": "Fund enrolment, employer",
+      "tfr_contribution": "TFR contribution",
+      "tfr_exemption": "TFR exemption",
+      "welfare_cash": "Welfare reimbursement",
+      "welfare_in_kind": "Welfare in kind",
+      "compensated_credit": "Credit offset",
+      "statistical": "Statistical",
+      "other": "Not mapped"
+    },
+    "tfrSources": {
+      "month_field": "TFR box",
+      "contribution_line": "Line 8003",
+      "both": "Both printed"
+    },
+    "errors": {
+      "not_found": "This payslip is not there any more.",
+      "invalid_state": "That is not possible in the payslip's current state.",
+      "invalid_value": "Not a valid value.",
+      "derived_field": "This value is computed from the others.",
+      "unconfirmed_inferred": "Confirm or correct every inferred value first.",
+      "blocking_checks": "Some checks failed.",
+      "no_identity": "The month, the employer or the employee is missing.",
+      "conflict": "Someone changed this payslip at the same time: reload the page.",
+      "empty": "Choose at least one file.",
+      "too_many": "At most 24 files at a time.",
+      "too_large": "larger than 10 MB",
+      "unsupported_format": "not a PDF",
+      "storage_failed": "could not be stored, try again",
+      "llm_not_configured": "The OpenAI fallback is not configured.",
+      "llm_failed": "The OpenAI request failed; nothing was changed."
+    },
+    "fields": {
+      "periodLabel": "Period",
+      "employerKey": "Employer",
+      "employeeKey": "Employee code",
+      "printedOn": "Printed on",
+      "contractualGross": "Contractual monthly pay",
+      "ordinaryEarnings": "Ordinary earnings",
+      "totalGrossPrinted": "Total gross (printed)",
+      "welfareCash": "Welfare reimbursement",
+      "welfareInKind": "Welfare in kind",
+      "gross": "Gross pay",
+      "irpefTaxable": "IRPEF taxable income",
+      "irpefGross": "Gross IRPEF",
+      "taxDeductions": "Tax deductions",
+      "irpefWithheld": "IRPEF withheld",
+      "yearEndAdjustment": "Year-end IRPEF adjustment",
+      "regionalInstallment": "Regional surtax instalment",
+      "municipalWithheld": "Municipal surtax",
+      "substituteTax": "Substitute tax",
+      "refund730": "730 refund",
+      "compensatedCredit": "Credit offset",
+      "taxesTotal": "Taxes",
+      "taxesNetOfRefunds": "Taxes net of refunds",
+      "employeeSocial": "Social contributions",
+      "employeeFundRegular": "Pension fund, your quota",
+      "employeeFundAdjustments": "Pension fund, your adjustments",
+      "employeeFundEnrollment": "Fund enrolment, your fee",
+      "employeeFundEffective": "Pension fund withheld from you",
+      "employerFundPrinted": "Pension fund, employer quota",
+      "employerFundAdjustments": "Pension fund, employer adjustments",
+      "employerFundEnrollment": "Fund enrolment, employer fee",
+      "employerFundEffective": "Pension fund paid by the employer",
+      "employerSocialTotal": "Employer social contributions",
+      "tfrMonthField": "TFR of the month (box)",
+      "tfrContributionLine": "TFR contribution (line 8003)",
+      "tfrSelected": "TFR",
+      "tfrSource": "TFR source",
+      "bodyEarnings": "Earnings column",
+      "bodyDeductions": "Deductions column",
+      "bodyDeductionsPrinted": "Body deductions (printed)",
+      "totalDeductionsPrinted": "Total deductions (printed)",
+      "roundingPrevious": "Previous rounding",
+      "roundingCurrent": "Current rounding",
+      "netPay": "Net pay",
+      "vacationPreviousYear": "Holiday, previous year",
+      "vacationAccrued": "Holiday, accrued",
+      "vacationUsed": "Holiday, used",
+      "vacationRemaining": "Holiday, remaining",
+      "permitPreviousYear": "Permits, previous year",
+      "permitAccrued": "Permits, accrued",
+      "permitUsed": "Permits, used",
+      "permitRemaining": "Permits, remaining",
+      "rolPreviousYear": "ROL, previous year",
+      "rolAccrued": "ROL, accrued",
+      "rolUsed": "ROL, used",
+      "rolRemaining": "ROL, remaining"
     }
   }
 }

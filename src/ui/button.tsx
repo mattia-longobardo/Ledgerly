@@ -107,7 +107,12 @@ export function LinkButton({
   return (
     <button
       type={type}
-      className={cn("focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline", className)}
+      // `h-6 inline-flex`: the words are 17 px tall, which is smaller than anything should be to
+      // press on a phone. The height is the target's, not the text's, so nothing moves.
+      className={cn(
+        "focus-ring inline-flex h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline",
+        className,
+      )}
       {...props}
     />
   );

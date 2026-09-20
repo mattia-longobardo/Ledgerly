@@ -22,6 +22,7 @@ const LABELS = {
   palette: {
     placeholder: "Jump to a page…",
     pages: "Pages",
+    records: "Pockets and subscriptions",
     payees: "Payees",
     empty: "No matches",
     shortcut: "⌘K",

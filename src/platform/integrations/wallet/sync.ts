@@ -26,7 +26,8 @@ import {
 } from "@/modules/accounts/service";
 import { transactionsInWindow } from "@/modules/transactions/queries";
 import type { IncomingTransaction, TransactionState, TransactionType } from "@/modules/transactions/rules";
-import { upsertFromProvider } from "@/modules/transactions/service";
+import { purgeRemovedUpstream, upsertFromProvider } from "@/modules/transactions/service";
+import { alignCategoryTypesToMovements } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { civilDateIn, startOfDayIn, today } from "@/platform/dates";
 import { withJobLock } from "@/platform/jobs/lock";
@@ -52,6 +53,7 @@ import {
   createWalletClient,
   isTokenRejected,
 } from "./client";
+import { type WalletCategoryWriter, createWalletCategoryWriter, syncWalletCategories } from "./categories";
 import { BACKFILL_MONTHS, backfillDepth, MAX_BACKFILL_MONTHS } from "./depth";
 import { type DateWindow, WALLET_TRANSFER_CATEGORY, firstLinkWindows, recentWindow } from "./mapping";
 
@@ -77,6 +79,11 @@ export interface WalletSyncOptions {
   client?: WalletClient;
   /** Passed to {@link createWalletClient} when no client is injected. */
   clientOptions?: WalletClientOptions;
+  /**
+   * Who writes the categories back to Wallet. Injected in tests; built from the connection's own
+   * token otherwise. `null` keeps the pass read-only on that side — Wallet → here still runs.
+   */
+  categoryWriter?: WalletCategoryWriter | null;
 }
 
 /**
@@ -87,6 +94,8 @@ const CREATED = "created";
 const UPDATED = "updated";
 const SKIPPED = "skipped";
 const REMOVED = "removed";
+/** Categories moved to the type their own movements say they are. */
+const RETYPED = "categoriesRetyped";
 
 /**
  * Why a run was skipped, as `sync_runs.error` keeps it: one short line, the same vocabulary §9.1
@@ -521,13 +530,22 @@ async function syncTransactions(
   client: WalletClient,
   now: Date,
   covered: ReadonlySet<string> | undefined,
+  categoryWriter: WalletCategoryWriter | null,
 ): Promise<Record<string, number>> {
   const job = await readSyncJob(ctx, connectionId, "transactions");
   const { windows, judge } = windowsFor(job?.cursor ?? null, today(ctx.timeZone, now));
   const categories = new Map((await client.categories()).map((category) => [category.externalId, category]));
   const accounts = await linkedAccounts(ctx);
 
-  const counts = { [CREATED]: 0, [UPDATED]: 0, [SKIPPED]: 0, [REMOVED]: 0 };
+  const counts: Record<string, number> = { [CREATED]: 0, [UPDATED]: 0, [SKIPPED]: 0, [REMOVED]: 0 };
+  // The categories are reconciled with the list just read, in both directions, before a single
+  // movement is written: a movement must never land on a category whose name this pass is about
+  // to change, and the counts of that reconciliation belong to the same `sync_runs` row.
+  const categorySync = await syncWalletCategories(ctx, {
+    remote: [...categories.values()],
+    writer: categoryWriter,
+  });
+  Object.assign(counts, categorySync.counts);
   const doubts: string[] = [];
   for (const window of windows) {
     const rows = await client.transactions(window);
@@ -571,6 +589,10 @@ async function syncTransactions(
     }
   }
 
+  // What a trusted window declared gone is deleted, with its link (and so is anything an earlier
+  // pass had only marked).
+  await purgeRemovedUpstream(ctx);
+
   // Everything the answers carried is written by now. The refusal comes here, before the cursor:
   // a pass whose verdict was not trusted is repeated whole rather than downgraded to seven days.
   if (doubts.length > 0) throw new RemovalRefusedError(doubts, counts);
@@ -593,6 +615,12 @@ async function syncTransactions(
       now,
     );
   }
+
+  // Last, with this window's movements already in: Wallet publishes no type on a category, so what
+  // is filed under one is the only thing that can say whether it is income, expense or a transfer
+  // (owner, 2026-09-20). It runs after the import, never before, or it would judge on last hour's
+  // evidence.
+  counts[RETYPED] = await alignCategoryTypesToMovements(ctx);
 
   return counts;
 }
@@ -650,8 +678,16 @@ async function walletPass(
     return { ...result, refused: "revoked" };
   }
 
-  const client =
-    options.client ?? createWalletClient(await walletToken(ctx, connectionId), options.clientOptions);
+  // Read once: the writer needs the same credential the client uses, and an injected client means
+  // there is no token to read (tests, spec §10).
+  const token = options.client ? null : await walletToken(ctx, connectionId);
+  const client = options.client ?? createWalletClient(token ?? "", options.clientOptions);
+  const categoryWriter =
+    options.categoryWriter !== undefined
+      ? options.categoryWriter
+      : token === null
+        ? null
+        : createWalletCategoryWriter(token, options.clientOptions);
   let refused = false;
   let failure: unknown;
   // What the accounts pass proved present, and therefore whose window the movements pass may
@@ -671,7 +707,7 @@ async function walletPass(
         covered = pass.present;
         counts = pass.counts;
       } else {
-        counts = await syncTransactions(ctx, connectionId, client, now, covered);
+        counts = await syncTransactions(ctx, connectionId, client, now, covered, categoryWriter);
       }
       result[kind] = counts;
       await finishRun(ctx, run.id, { counts }, now);

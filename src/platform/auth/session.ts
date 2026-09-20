@@ -6,6 +6,7 @@ import { cache } from "react";
 import { getPreferences } from "@/modules/users/service";
 import type { Preferences } from "@/modules/users/rules";
 import type { Ctx } from "@/platform/context";
+import { numberStyle } from "@/platform/format";
 import { getAuth } from "./auth";
 
 export function ctxFrom(user: { id: string; role?: string | null }, prefs: Preferences): Ctx {
@@ -14,7 +15,7 @@ export function ctxFrom(user: { id: string; role?: string | null }, prefs: Prefe
     role: user.role === "admin" ? "admin" : "user",
     locale: prefs.locale,
     timeZone: prefs.timeZone,
-    numberFormat: prefs.numberFormat,
+    numberFormat: numberStyle(prefs),
   };
 }
 

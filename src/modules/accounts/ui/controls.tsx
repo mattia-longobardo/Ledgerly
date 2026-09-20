@@ -88,9 +88,11 @@ export function PeriodStepper({
       </Link>
       <span className="min-w-[150px] text-center text-sm font-medium">{periodLabel}</span>
       {atLatest ? (
-        <span aria-label={nextLabel} aria-disabled className={cn(arrow, "text-faint")}>
+        // A disabled control, not a decorated span: `aria-label` on a span with no role is
+        // prohibited (WCAG 4.1.2), and a screen reader would read it as nothing at all.
+        <button type="button" disabled aria-label={nextLabel} className={cn(arrow, "text-faint")}>
           <ChevronRight aria-hidden className="size-3.5" />
-        </span>
+        </button>
       ) : (
         <Link href={step(offset - 1)} aria-label={nextLabel} className={cn(arrow, "hover:bg-hover")}>
           <ChevronRight aria-hidden className="size-3.5" />

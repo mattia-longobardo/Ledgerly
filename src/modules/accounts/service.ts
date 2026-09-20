@@ -11,7 +11,8 @@ import {
   monthKey,
   today,
 } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
+import { FOREIGN_KEY_VIOLATION, hasPgError } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { PROVIDERS } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
@@ -177,8 +178,11 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
  * Deletion when nothing depends on the account, archiving otherwise (spec §7.1). The caller is
  * told which of the two happened so the interface can say so.
  *
- * Nothing can reference an account yet: transactions, pockets, subscriptions, interest rules and
- * funds arrive from F2 onwards, and each adds its count here.
+ * What depends on an account lives in other modules — pockets, subscriptions, and from F4 interest
+ * rules and funds — and this module does not read their tables (§4.2). Their foreign keys to
+ * `accounts` are `on delete no action`, so the database itself refuses the deletion (23503) of an
+ * account something still rests on, and that refusal is the reference count. A provider's account
+ * is never deleted at all.
  *
  * A real deletion also forgets the provider links of the movements it takes with it, through the
  * integrations service (§4.3: one owner per table — this module never writes `provider_links`
@@ -190,8 +194,7 @@ export async function removeAccount(
   id: string,
 ): Promise<"deleted" | "archived"> {
   const account = await requireAccount(ctx, id);
-  const references = 0;
-  if (!canDelete(account, references)) {
+  if (!canDelete(account, 0)) {
     await archiveAccount(ctx, id);
     return "archived";
   }
@@ -200,9 +203,15 @@ export async function removeAccount(
   // Left behind they would hold the entity unique key of rows nothing can resolve, and claim a
   // `first_seen_at` for movements that no longer exist.
   const movementIds = await transactionIdsOfAccount(ctx, id);
-  await getDb()
-    .delete(accounts)
-    .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  try {
+    await getDb()
+      .delete(accounts)
+      .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  } catch (error) {
+    if (!hasPgError(error, FOREIGN_KEY_VIOLATION)) throw error;
+    await archiveAccount(ctx, id);
+    return "archived";
+  }
   // After the delete, never before. A link removed while its row survives is worse than an
   // orphan: the next sync would not recognise the movement and would import it a second time,
   // which is wrong money in every total. This way the failure mode is the one we already have.
@@ -236,6 +245,65 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
     .returning();
   // A correction on a synced account moves the month ends rebuilt before it (F2.5).
   await rebuildDerivedBalances(ctx, [accountId]);
+  return row;
+}
+
+/**
+ * A manual balance corrected in place: its date, its amount, what was available and its note.
+ *
+ * Only `manual` rows are a person's to edit — a provider's reading, a snapshot and a rebuilt month
+ * end are records of what happened, not entries — so anything else is `not_found`, as is another
+ * user's row.
+ *
+ * Moving it to another date is why this is one call and not a delete plus a
+ * {@link saveBalanceEntry}: the unique key is `(account, on, source)`, so a manual balance already
+ * standing on the new date would collide. In one transaction that one goes and the edited row takes
+ * its place, so the day ends with one manual balance and never two, and no moment exists in which
+ * the balance is on neither date. `rebuildDerivedBalances` follows as in {@link saveBalanceEntry}:
+ * which month ends get rebuilt depends on the manual corrections, and here two dates moved.
+ */
+export async function updateBalanceEntry(ctx: Ctx, id: string, input: unknown): Promise<BalanceEntry> {
+  const parsed: BalanceEntryInput = balanceEntrySchema.parse(input);
+  const [current] = await getDb()
+    .select()
+    .from(balanceEntries)
+    .where(
+      and(
+        eq(balanceEntries.id, id),
+        eq(balanceEntries.source, "manual"),
+        userScoped(ctx).owns(balanceEntries),
+      ),
+    );
+  if (!current) throw new AccountError("not_found");
+  if (isFutureDate(parsed.on, today(ctx.timeZone))) throw new AccountError("future_date");
+  const values = {
+    on: parsed.on,
+    balanceCents: parsed.cents,
+    availableCents: parsed.availableCents,
+    note: parsed.note,
+    capturedAt: new Date(),
+  };
+  const row = await getDb().transaction(async (tx) => {
+    if (parsed.on !== current.on) {
+      await tx
+        .delete(balanceEntries)
+        .where(
+          and(
+            userScoped(ctx).owns(balanceEntries),
+            eq(balanceEntries.accountId, current.accountId),
+            eq(balanceEntries.on, parsed.on),
+            eq(balanceEntries.source, "manual"),
+          ),
+        );
+    }
+    const [updated] = await tx
+      .update(balanceEntries)
+      .set(values)
+      .where(and(eq(balanceEntries.id, id), userScoped(ctx).owns(balanceEntries)))
+      .returning();
+    return updated;
+  });
+  await rebuildDerivedBalances(ctx, [current.accountId]);
   return row;
 }
 
@@ -290,6 +358,48 @@ export async function saveProviderBalance(
       .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
     return row;
   });
+}
+
+/**
+ * A balance read from an imported document (spec §6 `import`; F6: a pension statement), inside the
+ * caller's transaction. Its own source, so a person's `manual` correction for the same day still
+ * wins; the same day imported again updates the one row.
+ */
+export async function saveImportBalance(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  input: { on: CivilDate; cents: Cents; note: string | null },
+  tx: Tx,
+): Promise<BalanceEntry> {
+  if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
+  const [owned] = await tx
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
+  if (!owned) throw new AccountError("not_found");
+  const values = { balanceCents: input.cents, note: input.note, capturedAt: new Date() };
+  const [row] = await tx
+    .insert(balanceEntries)
+    .values(userScoped(ctx).stamp({ accountId, on: input.on, source: "import" as const, ...values }))
+    .onConflictDoUpdate({
+      target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
+      set: values,
+    })
+    .returning();
+  return row;
+}
+
+/** Removes an `import` balance (its statement was taken back), inside the caller's transaction. */
+export async function deleteImportBalance(ctx: Pick<Ctx, "userId">, id: string, tx: Tx): Promise<void> {
+  await tx
+    .delete(balanceEntries)
+    .where(
+      and(
+        eq(balanceEntries.id, id),
+        eq(balanceEntries.source, "import"),
+        userScoped(ctx).owns(balanceEntries),
+      ),
+    );
 }
 
 export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, id: string): Promise<void> {

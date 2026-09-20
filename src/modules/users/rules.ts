@@ -23,6 +23,10 @@ export const preferencesInputSchema = z.object({
     .transform((value) => canonicalTimeZone(value) as string),
   locale: z.enum(["en", "it"]),
   numberFormat: z.enum(["it-IT", "en-US", "fr-FR"]),
+  // Both override the number format when set; null follows it (a point for en-US, a comma
+  // otherwise), so the display of anyone who never touches them does not change.
+  decimalSeparator: z.enum([".", ","]).nullable(),
+  currencyPosition: z.enum(["before", "after"]).nullable(),
   weekStart: z.union([z.literal(0), z.literal(1)]),
   theme: z.enum(["system", "light", "dark"]),
   defaultRange: z.enum(["this_month", "last_30_days", "year_to_date"]),
@@ -37,6 +41,8 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   timeZone: "Europe/Rome",
   locale: "en",
   numberFormat: "it-IT",
+  decimalSeparator: null,
+  currencyPosition: null,
   weekStart: 1,
   theme: "light",
   defaultRange: "this_month",

@@ -10,6 +10,7 @@ const push = vi.fn();
 const setCategory = vi.fn();
 const hide = vi.fn();
 const restore = vi.fn();
+const removeHidden = vi.fn();
 const setNote = vi.fn();
 const setLabels = vi.fn();
 const notify = vi.fn();
@@ -20,6 +21,7 @@ vi.mock("./commands", () => ({
   setCategory: (...args: unknown[]) => setCategory(...args),
   hide: (...args: unknown[]) => hide(...args),
   restore: (...args: unknown[]) => restore(...args),
+  removeHidden: (...args: unknown[]) => removeHidden(...args),
   setNote: (...args: unknown[]) => setNote(...args),
   setLabels: (...args: unknown[]) => setLabels(...args),
 }));
@@ -143,6 +145,27 @@ describe("TransactionsTable", () => {
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     expect(restore).toHaveBeenCalledWith(["tx-2"]);
     expect(notify).toHaveBeenCalledWith("1 transaction restored");
+  });
+
+  it("offers Delete under Restore on a hidden row only, and deletes after a confirmation", async () => {
+    removeHidden.mockResolvedValue({ ok: true, count: 1 });
+    const table = renderTable();
+    const visible = table.getByRole("row", { name: /Netflix/ });
+    await userEvent.click(within(visible).getByRole("button", { name: "Row actions" }));
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    const hidden = table.getByRole("row", { name: /No payee/ });
+    await userEvent.click(within(hidden).getByRole("button", { name: "Row actions" }));
+    await screen.findByRole("menuitem", { name: "Delete" });
+    const items = screen.getAllByRole("menuitem").map((item) => item.textContent);
+    expect(items.slice(-2)).toEqual(["Restore", "Delete"]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
+    expect(removeHidden).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(removeHidden).toHaveBeenCalledWith(["tx-2"]);
+    expect(notify).toHaveBeenCalledWith("1 transaction deleted");
   });
 
   it("selects and clears every row at once", async () => {
@@ -270,6 +293,18 @@ describe("TransactionsTable", () => {
     expect(within(panel).getByText("Netflix")).toBeInTheDocument();
     expect(within(panel).getByText("−12,99 €")).toBeInTheDocument();
     expect(within(panel).queryByLabelText("Payee")).not.toBeInTheDocument();
+  });
+
+  it("opens the same panel on a double click, and not from a control of the row", async () => {
+    const table = renderTable();
+    const row = table.getAllByRole("row").find((one) => within(one).queryByText("Netflix"))!;
+    await userEvent.dblClick(within(row).getByText("Netflix"));
+    expect(within(screen.getByRole("dialog")).getByLabelText("Note")).toHaveValue("family plan");
+
+    await userEvent.keyboard("{Escape}");
+    // The checkbox is the checkbox's: a double click there ticks it and opens nothing.
+    await userEvent.dblClick(within(row).getByRole("checkbox"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   async function openDetails() {

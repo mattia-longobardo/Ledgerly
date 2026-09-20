@@ -20,6 +20,7 @@ import {
   saveBalanceEntry,
   snapshotMonthFor,
   updateAccountSettings,
+  updateBalanceEntry,
 } from "./service";
 
 /**
@@ -109,17 +110,51 @@ export async function saveAccountSettingsAction(
   }
 }
 
+/** What the balance-entry form sends, for both the new entry and the correction of one. */
+export interface BalanceEntryFormInput {
+  on: string;
+  amount: string;
+  /** What was spendable that day, blank when unknown (the column is nullable). */
+  available: string;
+  note: string;
+}
+
+function entryValues(input: BalanceEntryFormInput, ctx: Ctx) {
+  return {
+    on: input.on,
+    cents: amount(input.amount, ctx),
+    availableCents: input.available.trim() === "" ? null : amount(input.available, ctx),
+    note: input.note,
+  };
+}
+
 export async function saveBalanceEntryAction(
   accountId: string,
-  input: { on: string; amount: string; note: string },
+  input: BalanceEntryFormInput,
 ): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    await saveBalanceEntry(ctx, accountId, {
-      on: input.on,
-      cents: amount(input.amount, ctx),
-      note: input.note,
-    });
+    await saveBalanceEntry(ctx, accountId, entryValues(input, ctx));
+    revalidatePath(`/accounts/${accountId}`);
+    revalidatePath("/accounts");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** The same form again on a `manual` entry already stored; the service refuses any other source. */
+export async function updateBalanceEntryAction(
+  accountId: string,
+  entryId: string,
+  input: BalanceEntryFormInput,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  const parsed = z.uuid().safeParse(entryId);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  try {
+    await updateBalanceEntry(ctx, parsed.data, entryValues(input, ctx));
     revalidatePath(`/accounts/${accountId}`);
     revalidatePath("/accounts");
     revalidatePath("/");

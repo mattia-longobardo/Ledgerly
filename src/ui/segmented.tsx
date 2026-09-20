@@ -12,7 +12,7 @@ export function Segmented<T extends string>({
   label: string;
   value: T;
   onChange: (value: T) => void;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; disabled?: boolean }[];
 }) {
   return (
     <ToggleGroup
@@ -28,6 +28,7 @@ export function Segmented<T extends string>({
         <Toggle
           key={option.value}
           value={option.value}
+          disabled={option.disabled}
           className="focus-ring h-6 rounded-[5px] px-2.5 text-sm font-medium text-muted data-[pressed]:bg-card data-[pressed]:text-fg data-[pressed]:shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
         >
           {option.label}

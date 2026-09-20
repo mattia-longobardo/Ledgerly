@@ -10,6 +10,7 @@ import { createTestUser } from "../../../test/users";
 import { transactionLabels, transactions } from "./schema";
 import {
   adoptOrCreateCategory,
+  alignCategoryTypesToMovements,
   adoptOrCreateLabel,
   archiveCategory,
   createCategory,
@@ -25,6 +26,7 @@ import {
   renameLabel,
   restoreCategory,
   TaxonomyError,
+  typeFromMovements,
   updateCategory,
   updateLabel,
 } from "./taxonomy";
@@ -48,7 +50,13 @@ async function aGroup(ctx: Ctx, name = "Living", type = "expense") {
  * A movement, written straight to the table: `service.ts` (T5) is what the application uses, and
  * these tests only need something for the usage counts to count.
  */
-async function addTransaction(ctx: Ctx, accountId: string, categoryId: string | null, amountCents = -1_250n) {
+async function addTransaction(
+  ctx: Ctx,
+  accountId: string,
+  categoryId: string | null,
+  amountCents = -1_250n,
+  type: "income" | "expense" | "transfer" = "expense",
+) {
   const [row] = await getDb()
     .insert(transactions)
     .values({
@@ -56,7 +64,7 @@ async function addTransaction(ctx: Ctx, accountId: string, categoryId: string | 
       accountId,
       occurredAt: new Date("2026-03-01T10:00:00Z"),
       amountCents,
-      type: "expense",
+      type,
       categoryId,
     })
     .returning({ id: transactions.id });
@@ -799,5 +807,67 @@ describe("isolation between users", () => {
 
     expect(await listCategoriesWithUsage(ctx)).toMatchObject([{ usage: 0 }]);
     expect(await listCategoriesWithUsage(other)).toEqual([]);
+  });
+});
+
+/*
+  Wallet publishes no type on a category, so everything adopted from it is born an expense — the
+  owner's "Interest, dividends", with thirty-two income movements under it, among them. What is
+  filed under a category is the only evidence there is (owner, 2026-09-20).
+*/
+describe("the type a category's movements say it is", () => {
+  it("needs enough evidence, and enough agreement", () => {
+    expect(typeFromMovements({ income: 2, expense: 0, transfer: 0 })).toBeNull();
+    expect(typeFromMovements({ income: 3, expense: 0, transfer: 0 })).toBe("income");
+    // One stray movement out of ten is noise; four out of ten is a disagreement.
+    expect(typeFromMovements({ income: 9, expense: 1, transfer: 0 })).toBe("income");
+    expect(typeFromMovements({ income: 6, expense: 4, transfer: 0 })).toBeNull();
+    expect(typeFromMovements({ income: 0, expense: 0, transfer: 5 })).toBe("transfer");
+  });
+
+  it("moves a category the movements disagree with, and leaves the rest alone", async () => {
+    const account = await anAccount(ctx);
+    const group = await createCategory(ctx, { name: "Income", type: "expense" });
+    const interest = await createCategory(ctx, {
+      name: "Interest, dividends",
+      type: "expense",
+      parentId: group.id,
+    });
+    const groceries = await createCategory(ctx, GROCERIES);
+    for (let i = 0; i < 4; i += 1) await addTransaction(ctx, account, interest.id, 1_000n, "income");
+    for (let i = 0; i < 3; i += 1) await addTransaction(ctx, account, groceries.id, -1_000n, "expense");
+
+    expect(await alignCategoryTypesToMovements(ctx)).toBe(1);
+    expect((await getCategory(ctx, interest.id))?.type).toBe("income");
+    expect((await getCategory(ctx, groceries.id))?.type).toBe("expense");
+    // Nothing left to do on the second pass.
+    expect(await alignCategoryTypesToMovements(ctx)).toBe(0);
+  });
+
+  it("takes the silent children of a group with it, and never a type set by hand", async () => {
+    const account = await anAccount(ctx);
+    const group = await createCategory(ctx, { name: "Income", type: "expense" });
+    const silent = await createCategory(ctx, { name: "Refunds", type: "expense", parentId: group.id });
+    const byHand = await createCategory(ctx, { name: "Gifts", type: "expense", parentId: group.id });
+    // The owner says this one is an expense, whatever is filed under it.
+    await updateCategory(ctx, byHand.id, { name: "Gifts", type: "expense", color: null, parentId: null });
+    await updateCategory(ctx, byHand.id, {
+      name: "Gifts",
+      type: "income",
+      color: null,
+      parentId: null,
+    });
+    await updateCategory(ctx, byHand.id, {
+      name: "Gifts",
+      type: "expense",
+      color: null,
+      parentId: group.id,
+    });
+    for (let i = 0; i < 5; i += 1) await addTransaction(ctx, account, group.id, 1_000n, "income");
+
+    await alignCategoryTypesToMovements(ctx);
+    expect((await getCategory(ctx, group.id))?.type).toBe("income");
+    expect((await getCategory(ctx, silent.id))?.type).toBe("income");
+    expect((await getCategory(ctx, byHand.id))?.type).toBe("expense");
   });
 });

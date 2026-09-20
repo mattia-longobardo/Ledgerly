@@ -12,7 +12,10 @@
   --border2: #d3d6db;
   --fg: #15181d;
   --muted: #5f6670;
-  --faint: #9aa0a8;
+  /* The design's #9aa0a8 reads at 2.5:1 on this background: below AA for the small text it is
+     used for (sidebar groups, the ⌘K hint, a tile's note). Darkened to 4.75:1 on the sidebar's
+     own background, which is the tightest one (owner, 2026-09-20). */
+  --faint: #6a7079;
   --accent: #0e7490;
   --primary: #0e7490;
   --primary-fg: #ffffff;

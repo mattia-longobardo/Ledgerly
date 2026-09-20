@@ -1,12 +1,7 @@
 import "server-only";
-import { asc } from "drizzle-orm";
 import { createTranslator } from "use-intl/core";
-import { getPreferences } from "@/modules/users/service";
-import { redactForLog } from "@/platform/auth/logger";
-import { users } from "@/platform/auth/schema";
-import type { Ctx } from "@/platform/context";
+import { forEachUser } from "@/modules/users/jobs";
 import { today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
 import { formatMoney, type UiLocale } from "@/platform/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
@@ -20,47 +15,6 @@ const CATALOGUES = { en, it } as const;
 
 /** A condition that lasts for weeks is worth one email a week, not one a day. */
 const ALERT_COOLDOWN_HOURS = 24 * 7;
-
-interface Person {
-  id: string;
-  email: string;
-}
-
-async function everyone(): Promise<Person[]> {
-  return getDb().select({ id: users.id, email: users.email }).from(users).orderBy(asc(users.id));
-}
-
-async function contextFor(person: Person): Promise<Ctx> {
-  const preferences = await getPreferences({ userId: person.id });
-  return {
-    userId: person.id,
-    role: "user",
-    locale: preferences.locale,
-    timeZone: preferences.timeZone,
-    numberFormat: preferences.numberFormat,
-  };
-}
-
-/**
- * Runs `body` for every user, keeping one user's failure to that user (spec §10.1). The counters
- * it returns become the job's recorded detail.
- */
-async function forEachUser(
-  job: string,
-  body: (person: Person, ctx: Ctx) => Promise<void>,
-): Promise<{ users: number; failed: number }> {
-  let failed = 0;
-  const people = await everyone();
-  for (const person of people) {
-    try {
-      await body(person, await contextFor(person));
-    } catch (error) {
-      failed += 1;
-      console.error(`[${job}] failed for one user`, redactForLog(error));
-    }
-  }
-  return { users: people.length, failed };
-}
 
 /**
  * The 1st of the month at 00:05 (spec §10.2): every user's snapshot of the month that just ended,

@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { cn } from "@/ui/cn";
 import { Kbd } from "@/ui/kbd";
-import { filterCommands, type PaletteOption, type PayeeMatch, paletteOptions } from "./commands";
+import {
+  filterCommands,
+  type PaletteOption,
+  type PayeeMatch,
+  paletteOptions,
+  type RecordMatch,
+} from "./commands";
 import type { NavLink } from "./nav-types";
 import { useShell } from "./shell-context";
 
@@ -16,6 +22,7 @@ const DEBOUNCE_MS = 200;
 export function CommandPalette({
   links,
   searchPayees,
+  searchRecords,
 }: {
   links: NavLink[];
   /**
@@ -23,6 +30,8 @@ export function CommandPalette({
    * `saveTheme` is, so `src/ui` needs no domain module. Left out, the palette is pages only.
    */
   searchPayees?: (query: string) => Promise<PayeeMatch[]>;
+  /** Looks up the user's records by name (pockets, subscriptions), handed down the same way. */
+  searchRecords?: (query: string) => Promise<RecordMatch[]>;
 }) {
   const { paletteOpen, setPaletteOpen, labels } = useShell();
   const router = useRouter();
@@ -33,18 +42,24 @@ export function CommandPalette({
    * rather than a second piece of state to clear: an answer to an older query is simply not this
    * query's answer, so a stale list can never be displayed under a new one.
    */
-  const [found, setFound] = useState<{ query: string; payees: PayeeMatch[] }>({ query: "", payees: [] });
+  const [found, setFound] = useState<{ query: string; payees: PayeeMatch[]; records: RecordMatch[] }>({
+    query: "",
+    payees: [],
+    records: [],
+  });
   const needle = query.trim();
   const pages = filterCommands(links, query);
   const options = paletteOptions(
     pages,
     found.query === needle ? found.payees : [],
     (link) => labels.groups[link.group === "footer" ? "system" : link.group],
+    found.query === needle ? found.records : [],
   );
   const baseId = useId();
   const listboxId = `${baseId}-listbox`;
   const pagesLabelId = `${baseId}-pages-label`;
   const payeesLabelId = `${baseId}-payees-label`;
+  const recordsLabelId = `${baseId}-records-label`;
   const optionId = (id: string) => `${baseId}-option-${id}`;
   const activeOption = options[cursor];
 
@@ -65,22 +80,25 @@ export function CommandPalette({
    * already superseded it, so a slow reply cannot overwrite a faster one that came after it.
    */
   useEffect(() => {
-    if (!paletteOpen || searchPayees === undefined || needle === "") return;
+    if (!paletteOpen || (searchPayees === undefined && searchRecords === undefined) || needle === "") return;
     let current = true;
-    const timer = setTimeout(async () => {
+    // A failed lookup leaves the pages alone: the palette still navigates.
+    const safely = async <T,>(search: ((query: string) => Promise<T[]>) | undefined): Promise<T[]> => {
       try {
-        const payees = await searchPayees(needle);
-        if (current) setFound({ query: needle, payees });
+        return search ? await search(needle) : [];
       } catch {
-        // A failed lookup leaves the pages alone: the palette still navigates.
-        if (current) setFound({ query: needle, payees: [] });
+        return [];
       }
+    };
+    const timer = setTimeout(async () => {
+      const [payees, records] = await Promise.all([safely(searchPayees), safely(searchRecords)]);
+      if (current) setFound({ query: needle, payees, records });
     }, DEBOUNCE_MS);
     return () => {
       current = false;
       clearTimeout(timer);
     };
-  }, [needle, paletteOpen, searchPayees]);
+  }, [needle, paletteOpen, searchPayees, searchRecords]);
 
   function go(option: PaletteOption | undefined) {
     if (!option) return;
@@ -90,6 +108,7 @@ export function CommandPalette({
 
   const pageOptions = options.filter((option) => option.group === "pages");
   const payeeOptions = options.filter((option) => option.group === "payees");
+  const recordOptions = options.filter((option) => option.group === "records");
 
   function renderOption(option: PaletteOption) {
     const index = options.indexOf(option);
@@ -155,6 +174,18 @@ export function CommandPalette({
             </p>
             <div role="listbox" id={listboxId} aria-labelledby={pagesLabelId}>
               {pageOptions.map(renderOption)}
+              {recordOptions.length > 0 && (
+                <>
+                  <div
+                    id={recordsLabelId}
+                    role="presentation"
+                    className="px-2 py-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase"
+                  >
+                    {labels.palette.records}
+                  </div>
+                  {recordOptions.map(renderOption)}
+                </>
+              )}
               {payeeOptions.length > 0 && (
                 <>
                   <div

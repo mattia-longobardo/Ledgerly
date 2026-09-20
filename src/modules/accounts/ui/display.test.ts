@@ -3,6 +3,7 @@ import { monthsBetween } from "@/platform/dates";
 import {
   axisLabels,
   changeBetween,
+  colorField,
   colorFor,
   dayLabels,
   monthLabels,
@@ -49,6 +50,22 @@ describe("colorFor", () => {
     expect(colorFor({ color: "#123456" }, 3)).toBe("#123456");
     expect(colorFor({ color: null }, 0)).toBe(PALETTE[0]);
     expect(colorFor({ color: null }, PALETTE.length)).toBe(PALETTE[0]);
+  });
+});
+
+describe("colorField", () => {
+  it("shows the chosen colour as chosen", () => {
+    expect(colorField({ color: "#123456" }, 3)).toEqual({ value: "#123456", automatic: false });
+  });
+
+  it("shows the palette colour of the account's place when it has none of its own", () => {
+    expect(colorField({ color: null }, 2)).toEqual({ value: PALETTE[2], automatic: true });
+    expect(colorField({ color: null }, PALETTE.length + 1)).toEqual({ value: PALETTE[1], automatic: true });
+  });
+
+  it("agrees with what the charts draw", () => {
+    const account = { color: null };
+    expect(colorField(account, 5).value).toBe(colorFor(account, 5));
   });
 });
 

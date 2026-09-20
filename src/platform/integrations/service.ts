@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
+import { UNIQUE_VIOLATION, hasPgError } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
 import {
@@ -75,16 +76,7 @@ function keyRing(): KeyRing {
 
 /** True for the unique violation of one named constraint, wherever drizzle wrapped it. */
 export function isUniqueViolation(error: unknown, constraint: string): boolean {
-  // Walks the causes rather than asking `instanceof DrizzleQueryError`: the production bundle can
-  // hold more than one copy of drizzle-orm, and an error thrown by one copy is not an instance of
-  // the other's class. That is how, on 2026-09-18, a second Wallet group reaching an already linked
-  // local group was never recognised as `link_conflict` and failed every transactions pass.
-  for (let cause: unknown = error; typeof cause === "object" && cause !== null;) {
-    const { code, constraint: violated } = cause as { code?: unknown; constraint?: unknown };
-    if (code === "23505" && violated === constraint) return true;
-    cause = (cause as { cause?: unknown }).cause;
-  }
-  return false;
+  return hasPgError(error, UNIQUE_VIOLATION, constraint);
 }
 
 async function requireConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<Connection> {
@@ -343,6 +335,44 @@ export async function linkExternal(
     }
     throw error;
   }
+}
+
+/**
+ * The other direction of {@link resolveExternal}: local entities mapped to the provider's own ids
+ * (`entity_id` → `external_id`), for a caller that holds a local row and has to name it to the
+ * provider — F4's interest posting, which files its Wallet record under the *provider's* id of the
+ * category the rule was given (spec §7.6, §9.1).
+ *
+ * An entity with no link is simply absent from the map: "this local row has no counterpart at the
+ * provider" is an answer, never an error, and never a reason to invent one.
+ */
+export async function externalIdsOf(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  entityType: string,
+  entityIds: readonly string[],
+): Promise<Map<string, string>> {
+  const type = entityTypeSchema.safeParse(entityType);
+  if (!type.success) throw new IntegrationError("invalid_link");
+  const wanted = [...new Set(entityIds)];
+  if (wanted.length === 0) return new Map();
+  const rows = await getDb()
+    .select({ entityId: providerLinks.entityId, externalId: providerLinks.externalId })
+    .from(providerLinks)
+    .where(
+      and(
+        userScoped(ctx).owns(providerLinks),
+        eq(providerLinks.provider, provider),
+        eq(providerLinks.entityType, type.data),
+        inArray(providerLinks.entityId, wanted),
+      ),
+    )
+    .orderBy(asc(providerLinks.entityId), asc(providerLinks.externalId));
+  // One local entity holds at most one link per provider and type (`provider_links_entity_uq`),
+  // so the first row per entity is the only row; the order makes even a violated key deterministic.
+  const found = new Map<string, string>();
+  for (const row of rows) if (!found.has(row.entityId)) found.set(row.entityId, row.externalId);
+  return found;
 }
 
 /** A provider's own ids, mapped to the local entities they stand for (`external_id` → `entity_id`). */

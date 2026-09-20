@@ -11,6 +11,7 @@ import { Checkbox, Input, Select } from "@/ui/input";
 import { SettingsSection } from "@/ui/section";
 import { notify } from "@/ui/toast";
 import { removeAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
+import { colorField } from "./display";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "../rules";
 
 export interface SettingsValues {
@@ -41,7 +42,16 @@ export interface SettingsValues {
  * what the account counts towards, and archiving. A synced account keeps the provider's type and
  * currency, so those two controls are read-only rather than merely ignored on save.
  */
-export function AccountSettingsForm({ account, today }: { account: SettingsValues; today: string }) {
+export function AccountSettingsForm({
+  account,
+  index,
+  today,
+}: {
+  account: SettingsValues;
+  /** The account's place in the list, the one `colorFor` colours it by. */
+  index: number;
+  today: string;
+}) {
   const t = useTranslations("accounts.settings");
   const types = useTranslations("accounts.types");
   const common = useTranslations("common");
@@ -49,6 +59,10 @@ export function AccountSettingsForm({ account, today }: { account: SettingsValue
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const synced = account.origin === "synced";
+  const colour = colorField(account, index);
+  // Checked, the account has no colour of its own and keeps none: the swatch beside it shows the
+  // palette colour it is drawn with, and the save writes `null` rather than freezing that colour in.
+  const [automatic, setAutomatic] = useState(colour.automatic);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +74,7 @@ export function AccountSettingsForm({ account, today }: { account: SettingsValue
           name: text("name"),
           type: text("type"),
           currency: text("currency") || "EUR",
-          color: text("color") || null,
+          color: automatic ? null : text("color") || null,
           reference: text("reference"),
           purpose: text("purpose"),
           openedOn: text("openedOn") || null,
@@ -145,14 +159,22 @@ export function AccountSettingsForm({ account, today }: { account: SettingsValue
               className="font-mono"
             />
           </Field>
-          <Field label={t("general.color")} htmlFor="color">
-            <Input
-              id="color"
-              name="color"
-              type="color"
-              defaultValue={account.color ?? "#2563eb"}
-              className="p-1"
-            />
+          <Field label={t("general.color")} htmlFor="color" hint={t("general.colorHint")}>
+            <div className="flex items-center gap-3">
+              <Input
+                id="color"
+                name="color"
+                type="color"
+                defaultValue={colour.value}
+                disabled={automatic}
+                className="p-1"
+              />
+              <Checkbox
+                label={t("general.automaticColor")}
+                checked={automatic}
+                onChange={(event) => setAutomatic(event.target.checked)}
+              />
+            </div>
           </Field>
           <Field
             label={t("general.currency")}
