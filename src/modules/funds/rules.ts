@@ -19,7 +19,7 @@ export interface DepositLike {
 }
 
 export interface FundMetrics {
-  /** What left the bank: the deposits as debited. */
+  /** What left the bank: the deposits as debited, to today. */
   paidInCents: Cents;
   /** The fees known. */
   feesCents: Cents;
@@ -27,9 +27,21 @@ export interface FundMetrics {
   investedCents: Cents;
   investedPartial: boolean;
   valueCents: Cents | null;
-  /** Value − paid in (plan F4 §3.6.5): the fees are a cost of the plan. */
+  /** Value − paid in **by the value's own date** (plan F4 §3.6.5): the fees are a cost of the plan. */
   gainCents: Cents | null;
   gainFraction: number | null;
+  /**
+   * What the gain is measured against: the deposits up to the day the value was recorded.
+   *
+   * The two halves of a PAC arrive by different roads. The debit is picked up on its own, hour by
+   * hour, from the bank; the value only moves when a valuation is recorded by hand. Measuring a
+   * value read on the 1st against money that left on the 17th shows a loss the size of that
+   * deposit, which is not a loss at all — it is a deposit the valuation has not seen yet (owner,
+   * 2026-09-20).
+   */
+  gainBasisCents: Cents;
+  /** Paid in after the value was recorded: outside the gain, and worth saying so. */
+  paidInAfterValueCents: Cents;
 }
 
 /** A fraction of two amounts as a number, from integers: exact to a millionth, no float on the way in. */
@@ -37,21 +49,34 @@ function ratio(part: Cents, whole: Cents): number {
   return Number((part * 1_000_000_000n) / whole) / 1_000_000_000;
 }
 
-/** Spec §7.7 PAC metrics: paid in, value, gain and cumulative %, with the fees apart. */
-export function fundMetrics(deposits: readonly DepositLike[], valueCents: Cents | null): FundMetrics {
+/**
+ * Spec §7.7 PAC metrics: paid in, value, gain and cumulative %, with the fees apart.
+ *
+ * `valueOn` is the day the value was recorded. Every percentage on the page is measured against
+ * what had been paid in by then ({@link FundMetrics.gainBasisCents}) — never against money that
+ * left the bank after the last valuation, which no valuation has had the chance to count yet.
+ * Without a date, every deposit counts, which is what a fund with no value asks for anyway.
+ */
+export function fundMetrics(
+  deposits: readonly DepositLike[],
+  valueCents: Cents | null,
+  valueOn: CivilDate | null = null,
+): FundMetrics {
   let paidIn = 0n;
   let fees = 0n;
   let invested = 0n;
   let partial = false;
+  let basis = 0n;
   for (const deposit of deposits) {
     paidIn += deposit.chargedCents;
+    if (valueOn === null || deposit.on <= valueOn) basis += deposit.chargedCents;
     if (deposit.feeCents === null) partial = true;
     else {
       fees += deposit.feeCents;
       invested += deposit.chargedCents - deposit.feeCents;
     }
   }
-  const gain = valueCents === null ? null : valueCents - paidIn;
+  const gain = valueCents === null ? null : valueCents - basis;
   return {
     paidInCents: paidIn,
     feesCents: fees,
@@ -59,7 +84,9 @@ export function fundMetrics(deposits: readonly DepositLike[], valueCents: Cents 
     investedPartial: partial,
     valueCents,
     gainCents: gain,
-    gainFraction: gain === null || paidIn === 0n ? null : ratio(gain, paidIn),
+    gainFraction: gain === null || basis === 0n ? null : ratio(gain, basis),
+    gainBasisCents: basis,
+    paidInAfterValueCents: paidIn - basis,
   };
 }
 

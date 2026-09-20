@@ -9,6 +9,10 @@ import { sessionState } from "./env";
 
 test.use({ storageState: sessionState("cometa") });
 test.describe.configure({ mode: "serial" });
+// Twelve payslips, an operations export and a statement, each read by the server after its upload:
+// the whole journey does not fit Playwright's thirty seconds, and the step timeouts below are what
+// actually guard each wait (2026-09-20).
+test.setTimeout(180_000);
 
 async function importDocuments(page: Page, files: { name: string; mimeType: string; buffer: Buffer }[]) {
   await page.getByRole("button", { name: "Import documents" }).first().click();

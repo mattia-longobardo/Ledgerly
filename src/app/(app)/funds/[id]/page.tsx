@@ -436,10 +436,17 @@ export default async function FundPage({ params, searchParams }: PageProps<"/fun
           </span>
           {lastValuation && (
             <span className="text-muted">
+              {/* The paid-in the gain beside it was measured against — the deposits the valuation
+                  could see — never the whole of it (owner, 2026-09-20). */}
               {t("detail.asOf", {
-                paidIn: money(metrics.paidInCents),
+                paidIn: money(metrics.gainBasisCents),
                 date: formatDate(lastValuation.on, "long", ctx.locale),
               })}
+            </span>
+          )}
+          {metrics.paidInAfterValueCents > 0n && (
+            <span className="text-faint">
+              {t("detail.afterValue", { amount: money(metrics.paidInAfterValueCents) })}
             </span>
           )}
         </p>

@@ -1675,6 +1675,7 @@
       "kind": "Accumulation plan (PAC)",
       "since": "since {date}",
       "asOf": "{paidIn} paid in · as of {date}",
+      "afterValue": "{amount} paid in since, which no valuation has counted yet",
       "cumulative": "cumulative",
       "noValue": "No valuation yet",
       "tabs": {

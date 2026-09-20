@@ -1675,6 +1675,7 @@
       "kind": "Piano di accumulo (PAC)",
       "since": "dal {date}",
       "asOf": "{paidIn} versati · al {date}",
+      "afterValue": "{amount} versati dopo, che nessuna valutazione ha ancora contato",
       "cumulative": "cumulato",
       "noValue": "Ancora nessuna valorizzazione",
       "tabs": {
