@@ -105,6 +105,12 @@ export interface RegisterCells {
   values: Record<SummedField, string>;
   vacationLeft: string;
   rolLeft: string;
+  /**
+   * How many things this payslip still asks a person to look at (spec §7.8). Only while it waits:
+   * applying a payslip **is** the decision, so a payslip already in the register is not nagged
+   * about again — its warnings stay on its own page, where they are read in context.
+   */
+  warnings: number;
 }
 
 export interface RegisterGroup {
@@ -141,6 +147,7 @@ function rowCells(row: RegisterRow, format: Format): RegisterCells {
     values: moneyCells(values, format),
     vacationLeft: hours(row.leaveLeft.vacation, format),
     rolLeft: hours(row.leaveLeft.rol, format),
+    warnings: payslip.active ? 0 : payslip.warnings.length,
   };
 }
 

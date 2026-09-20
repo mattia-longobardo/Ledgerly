@@ -15,6 +15,10 @@ export const userPreferences = pgTable(
     timeZone: text("time_zone").notNull(),
     locale: text("locale", { enum: ["en", "it"] }).notNull(),
     numberFormat: text("number_format", { enum: ["it-IT", "en-US", "fr-FR"] }).notNull(),
+    // Null on both: follow whatever the chosen number format does, which is how every row written
+    // before these two settings existed keeps formatting exactly as it did.
+    decimalSeparator: text("decimal_separator", { enum: [".", ","] }),
+    currencyPosition: text("currency_position", { enum: ["before", "after"] }),
     weekStart: smallint("week_start").notNull(),
     theme: text("theme", { enum: ["system", "light", "dark"] }).notNull(),
     defaultRange: text("default_range", { enum: ["this_month", "last_30_days", "year_to_date"] }).notNull(),
@@ -34,6 +38,14 @@ export const userPreferences = pgTable(
     check("user_preferences_patron_ck", sql`(${table.patronMonth} is null) = (${table.patronDay} is null)`),
     check("user_preferences_locale_ck", sql`${table.locale} in ('en', 'it')`),
     check("user_preferences_number_format_ck", sql`${table.numberFormat} in ('it-IT', 'en-US', 'fr-FR')`),
+    check(
+      "user_preferences_decimal_separator_ck",
+      sql`${table.decimalSeparator} is null or ${table.decimalSeparator} in ('.', ',')`,
+    ),
+    check(
+      "user_preferences_currency_position_ck",
+      sql`${table.currencyPosition} is null or ${table.currencyPosition} in ('before', 'after')`,
+    ),
     check("user_preferences_theme_ck", sql`${table.theme} in ('system', 'light', 'dark')`),
     check(
       "user_preferences_default_range_ck",

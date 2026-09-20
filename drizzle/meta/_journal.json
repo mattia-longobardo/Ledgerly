@@ -85,6 +85,27 @@
       "when": 1789848842033,
       "tag": "0011_imports_payroll",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789854573454,
+      "tag": "0012_pension_cometa",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789895850971,
+      "tag": "0013_preferences_and_interest_hour",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789909985854,
+      "tag": "0014_interest_category_and_wallet_names",
+      "breakpoints": true
     }
   ]
 }

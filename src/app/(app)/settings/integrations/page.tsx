@@ -21,7 +21,21 @@ export async function generateMetadata(): Promise<Metadata> {
 const RUNS_LIMIT = 20;
 
 /** The counts a run may report, in the order they read best. Absent keys are simply not shown. */
-const COUNT_KEYS = ["created", "updated", "skipped", "removed"] as const;
+const COUNT_KEYS = [
+  "created",
+  "updated",
+  "skipped",
+  "removed",
+  // The two-way category sync of F6 (`platform/integrations/wallet/categories.ts`), which rides
+  // along with the movements pass: what it adopted from Wallet, what it wrote there, what it
+  // created there, and how many categories it has something to say about.
+  "categoriesAdded",
+  "categoriesAdopted",
+  "categoriesPushed",
+  "categoriesCreated",
+  "categoriesReported",
+  "categoriesRetyped",
+] as const;
 
 const RUN_TONE = {
   running: "accent",
@@ -77,7 +91,7 @@ export default async function SettingsIntegrationsPage() {
         <WalletCard state={state} lastSync={lastSync} history={backfillDepth(job?.cursor)} />
       </SettingsSection>
 
-      <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false} wide>
+      <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false}>
         {runs.length === 0 ? (
           <p className="p-4 text-muted">{t("runs.empty")}</p>
         ) : (

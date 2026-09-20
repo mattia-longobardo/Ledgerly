@@ -105,6 +105,78 @@ export function accrueDay(input: {
   return { status: "accrued", grossFixed, netCents, carryAfter: total - netCents * FIXED_SCALE };
 }
 
+/**
+ * What a settlement's `posting_error` says when the record reached Wallet *without* the rule's
+ * category, because that category is not linked to a Wallet one (`provider_links`, entity type
+ * `category`). The posting itself succeeded — a missing category never fails it and never invents
+ * one — so this is a note on a posted settlement, not a failure, and the rule's page translates it.
+ */
+export const CATEGORY_NOT_LINKED = "category_not_linked";
+
+/**
+ * How old the last provider reading of a synced account may be before its daily balances are
+ * treated as out of date (spec §7.6, §10.2): one hour, the sync tier's own interval, so a reading
+ * older than that means the pass that should have brought it never landed.
+ *
+ * It matters because a synced account's day balances are *reconstructed from its latest reading*
+ * and its movements (`dailySeries` in the accounts module, mode `movements`): a reading an hour
+ * stale does not make one wrong day, it moves every day of the window. Accruing on that is the
+ * silent wrong number this guard exists to refuse.
+ */
+export const FRESH_READING_MS = 60 * 60 * 1000;
+
+/**
+ * Whether a synced account's last reading is recent enough to accrue on. A `null` — an account
+ * never read — is never fresh: no reading at all is the strongest form of out of date.
+ */
+export function isFreshReading(
+  lastSyncedAt: Date | null,
+  now: Date,
+  maxAgeMs: number = FRESH_READING_MS,
+): boolean {
+  if (lastSyncedAt === null) return false;
+  const age = now.getTime() - lastSyncedAt.getTime();
+  // A reading stamped slightly ahead of `now` (a pass that started after this one) is fresh, not
+  // suspicious: the clock the two are measured against is the same.
+  return age <= maxAgeMs;
+}
+
+/**
+ * The hour a rule with no hour of its own accrues at: noon, where the job ran for everyone when it
+ * was a daily one (spec §10.2).
+ */
+export const DEFAULT_RUN_HOUR = 12;
+
+/** The hours a rule may be set to run at, for the dialog's selector. */
+export const RUN_HOURS: readonly number[] = Array.from({ length: 24 }, (_, hour) => hour);
+
+/** A run hour as the dialog writes it: "00:00" … "23:00", the same in every locale. */
+export function formatRunHour(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+/**
+ * The wall-clock hour (0–23) an instant shows in `timeZone` — never the server's own clock. The
+ * zone's offset at that instant is what decides it, so a day that changed offset overnight and a
+ * zone half an hour off the hour both come out right.
+ */
+export function hourIn(instant: Date, timeZone: string): number {
+  const hour = new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, hour: "2-digit" })
+    .formatToParts(instant)
+    .find((part) => part.type === "hour")?.value;
+  // `hour12: false` renders midnight as "24" in this locale (see `platform/dates.ts`).
+  return Number(hour) % 24;
+}
+
+/**
+ * Whether the hourly pass at `instant` is the one a rule set to `runHour` accrues in: its hour —
+ * `null` being {@link DEFAULT_RUN_HOUR} — read on the clock of the user who owns it. One pass a
+ * day matches, so a rule still accrues once a day; accrual itself is idempotent per day anyway.
+ */
+export function runsAt(runHour: number | null, instant: Date, timeZone: string): boolean {
+  return hourIn(instant, timeZone) === (runHour ?? DEFAULT_RUN_HOUR);
+}
+
 const QUARTER_START = [1, 1, 1, 4, 4, 4, 7, 7, 7, 10, 10, 10];
 
 /** The calendar period of a frequency that contains `on`. */

@@ -17,7 +17,6 @@
     },
     "overview": "Panoramica",
     "settings": "Impostazioni",
-    "components": "Componenti",
     "more": "Altro",
     "accounts": "Conti",
     "expenses": "Spese",
@@ -192,7 +191,13 @@
         "created": "{count} nuovi",
         "updated": "{count} aggiornati",
         "skipped": "{count} invariati",
-        "removed": "{count} spariti"
+        "removed": "{count} spariti",
+        "categoriesAdded": "{count} categorie acquisite",
+        "categoriesAdopted": "{count} categorie rinominate qui",
+        "categoriesPushed": "{count} categorie rinominate su Wallet",
+        "categoriesCreated": "{count} categorie aggiunte a Wallet",
+        "categoriesReported": "{count} categorie da guardare",
+        "categoriesRetyped": "{count} categorie con il tipo corretto"
       },
       "toasts": {
         "connected": "Wallet collegato",
@@ -327,6 +332,18 @@
         "en-US": "€1,234.56 (en-US)",
         "fr-FR": "1 234,56 € (fr-FR)"
       },
+      "decimalSeparator": "Separatore decimale",
+      "decimalSeparators": {
+        "auto": "Come il formato dei numeri",
+        "dot": "Punto (1,234.56)",
+        "comma": "Virgola (1.234,56)"
+      },
+      "currencyPosition": "Simbolo dell'euro",
+      "currencyPositions": {
+        "auto": "Come il formato dei numeri",
+        "before": "Prima dell'importo (€ 1.234,56)",
+        "after": "Dopo l'importo (1.234,56 €)"
+      },
       "weekStart": "Primo giorno della settimana",
       "weekStarts": {
         "monday": "Lunedì",
@@ -446,6 +463,16 @@
       "removed": "Fallback LLM rimosso",
       "configured": "Configurato: {model}, chiave che finisce con {hint}.",
       "notConfigured": "Non configurato: nessun testo di cedolino viene mai inviato.",
+      "test": {
+        "action": "Prova la connessione",
+        "running": "Prova in corso…",
+        "ok": "Funziona: OpenAI ha risposto per {model}.",
+        "keyRejected": "OpenAI ha rifiutato la chiave salvata.",
+        "modelMissing": "OpenAI non ha questo modello, o questa chiave non può usarlo.",
+        "rateLimited": "OpenAI ha rifiutato: quota o limite di frequenza raggiunto.",
+        "notConfigured": "Non c'è ancora nulla di salvato: salva prima un modello e una chiave.",
+        "unreachable": "Non si raggiunge OpenAI: rete o timeout."
+      },
       "errors": {
         "invalid": "Controlla il modello e la chiave (sk-…).",
         "forbidden": "Solo gli admin possono cambiarlo."
@@ -538,7 +565,8 @@
       "setCategory": "Imposta categoria",
       "hide": "Nascondi",
       "restore": "Ripristina",
-      "clear": "Deseleziona"
+      "clear": "Deseleziona",
+      "delete": "Elimina"
     },
     "row": {
       "editCategory": "Modifica categoria",
@@ -590,7 +618,8 @@
       "hidden": "{count, plural, one {# movimento nascosto} other {# movimenti nascosti}}",
       "restored": "{count, plural, one {# movimento ripristinato} other {# movimenti ripristinati}}",
       "noteSaved": "Nota salvata",
-      "labelsSaved": "Etichette salvate"
+      "labelsSaved": "Etichette salvate",
+      "deleted": "{count, plural, one {# movimento eliminato} other {# movimenti eliminati}}"
     },
     "errors": {
       "notFound": "Questo movimento non esiste più.",
@@ -619,6 +648,11 @@
         "day": "Giorno"
       },
       "summary": "Spese dell'intervallo per gruppo di categorie, {total} in tutto."
+    },
+    "deleteHidden": {
+      "title": "Eliminare questo movimento?",
+      "description": "Viene rimosso definitivamente, e se arriva dalla sincronizzazione non viene più importato.",
+      "cancel": "Annulla"
     }
   },
   "overview": {
@@ -827,7 +861,9 @@
         "invalid": "Controlla i campi segnalati e riprova.",
         "futureDate": "Un saldo non può avere una data futura.",
         "failed": "Non è stato possibile creare il conto. Riprova."
-      }
+      },
+      "automaticColor": "Colore automatico",
+      "colorHint": "Automatico segue la posizione del conto nell'elenco; il riquadro mostra il colore che avrà."
     },
     "detail": {
       "tabs": {
@@ -899,7 +935,8 @@
       "errors": {
         "invalid": "Controlla la data e l'importo, poi riprova.",
         "futureDate": "Un saldo non può avere una data futura.",
-        "failed": "Non è stato possibile salvare il saldo. Riprova."
+        "failed": "Non è stato possibile salvare il saldo. Riprova.",
+        "notFound": "Questo saldo non è modificabile."
       },
       "add": {
         "title": "Aggiungi saldo",
@@ -908,7 +945,9 @@
         "date": "Data",
         "balance": "Saldo",
         "note": "Nota",
-        "submit": "Salva saldo"
+        "submit": "Salva saldo",
+        "available": "Disponibile",
+        "availableHint": "Facoltativo: quanto era spendibile quel giorno."
       },
       "list": {
         "title": "Saldi",
@@ -920,7 +959,8 @@
         "note": "Nota",
         "source": "Origine",
         "actions": "Azioni",
-        "delete": "Elimina"
+        "delete": "Elimina",
+        "edit": "Modifica"
       },
       "sources": {
         "manual": "Manuale",
@@ -928,6 +968,13 @@
         "system": "Snapshot",
         "import": "Importazione",
         "derived": "Ricostruito"
+      },
+      "updated": "Saldo aggiornato",
+      "edit": {
+        "title": "Modifica saldo",
+        "description": "Si possono modificare solo i saldi inseriti a mano.",
+        "cancel": "Annulla",
+        "submit": "Salva modifiche"
       }
     },
     "settings": {
@@ -949,7 +996,9 @@
         "reference": "IBAN o riferimento",
         "color": "Colore",
         "currency": "Valuta",
-        "openedOn": "Aperto il"
+        "openedOn": "Aperto il",
+        "automaticColor": "Colore automatico",
+        "colorHint": "Automatico segue la posizione del conto nell'elenco; il riquadro mostra il colore in uso."
       },
       "source": {
         "title": "Origine dei dati",
@@ -1457,10 +1506,18 @@
       "tax": "Imposta sugli interessi",
       "basis": "Base giorni",
       "payout": "Liquidazione",
+      "runHour": "Ora di maturazione",
+      "runHourDefault": "Predefinita · {time}",
+      "runHourHint": "Ogni giorno a quest'ora, nel tuo fuso orario.",
       "match": "L'interesse pagato si riconosce da",
       "matchHint": "Testo nel beneficiario o nella categoria del pagamento degli interessi della banca, es. \"interessi\". Vuoto per non controllare.",
       "publish": "Pubblica ogni liquidazione su Wallet",
       "publishHint": "Solo per un conto sincronizzato. Spenta, la regola analizza soltanto.",
+      "category": "Categoria su Wallet",
+      "categoryHint": "La categoria con cui la liquidazione viene registrata su Wallet. Deve essere una categoria che Wallet conosce: una che non conosce viene pubblicata senza categoria, e la liquidazione lo dice.",
+      "noCategory": "Nessuna categoria",
+      "categorySearch": "Cerca una categoria",
+      "categoryNoMatch": "Nessuna categoria trovata",
       "active": "Regola attiva",
       "cancel": "Annulla",
       "save": "Salva regola"
@@ -1476,6 +1533,7 @@
       "invalid_account": "Scegli uno dei tuoi conti aperti.",
       "invalid_tiers": "Le soglie devono crescere e solo l'ultimo scaglione è aperto.",
       "not_synced": "Si pubblica su Wallet solo da un conto sincronizzato.",
+      "invalid_category": "Scegli una delle tue categorie attive.",
       "failed": "Salvataggio non riuscito. Riprova."
     },
     "detail": {
@@ -1488,6 +1546,11 @@
       "modes": {
         "analyze_only": "Solo analisi",
         "post_to_provider": "Pubblicata su Wallet"
+      },
+      "noCategory": "Nessuna categoria",
+      "balance": {
+        "stale": "Maturazione in pausa: l'ultima lettura del saldo è del {when}. Riprende appena la sincronizzazione con Wallet va a buon fine — nessun interesse viene calcolato su un saldo vecchio.",
+        "never": "Maturazione in pausa: questo conto non ha ancora nessuna lettura del saldo da Wallet."
       },
       "pause": "Metti in pausa",
       "resume": "Riprendi",
@@ -1537,6 +1600,8 @@
         "retry": "Riprova",
         "markPosted": "Segna come pubblicata",
         "unsureHint": "La pubblicazione potrebbe essere arrivata o no a Wallet. Controlla Wallet, poi riprova o segnala come pubblicata.",
+        "categoryNotLinked": "Senza categoria",
+        "categoryNotLinkedHint": "Il movimento è su Wallet, ma senza categoria: la categoria della regola non è collegata a nessuna categoria di Wallet. Non è stata inventata nessuna categoria e la pubblicazione non è fallita.",
         "toasts": {
           "posted": "Pubblicata su Wallet",
           "indeterminate": "Esito incerto: controlla Wallet",
@@ -1653,6 +1718,69 @@
         "all": "Tutti i versamenti"
       }
     },
+    "forecast": {
+      "title": "Dove sta andando",
+      "description": "Se continuano a entrare {monthly} al mese e il fondo cresce al tasso di ogni colonna. Una proiezione, non una promessa: nessun tasso qui è quello del fondo, salvo l'ultima colonna quando c'è.",
+      "noRhythm": "Negli ultimi dodici mesi non è entrato nulla, quindi non c'è un ritmo da proiettare.",
+      "horizon": "Orizzonte",
+      "years": "Fra {years, plural, one {# anno} other {# anni}}",
+      "paidIn": "Versato",
+      "rate": "al {rate}",
+      "ownRate": "al suo {rate}",
+      "ownRateNote": "L'ultima colonna è il tasso annuo del fondo stesso, misurato sui dodici mesi del grafico qui sopra.",
+      "noOwnRate": "Il tasso del fondo richiede dodici mesi misurati: fino ad allora si disegnano solo le ipotesi.",
+      "noValue": "Nessuna valutazione registrata, quindi si può dire solo quanto sarà stato versato."
+    },
+    "returns": {
+      "title": "Rendimento fra valutazioni",
+      "details": "Dettaglio",
+      "empty": "Servono due valutazioni perché un rendimento si possa misurare. Registrane una e qui compare.",
+      "since": "su {days, plural, one {# giorno} other {# giorni}}",
+      "hover": "{gain} di guadagno · {paidIn} versati",
+      "best": "Tratto migliore",
+      "worst": "Tratto peggiore",
+      "positive": "Positivi",
+      "positiveValue": "{positive} / {counted}",
+      "page": {
+        "title": "Rendimento",
+        "description": "Quello che il fondo ha fatto fra una valutazione documentata e la successiva, mai annualizzato. Il versato del tratto viene sottratto prima di leggere il guadagno (Simple Dietz).",
+        "from": "Da",
+        "to": "A",
+        "days": "Giorni",
+        "start": "Valore all'inizio",
+        "end": "Valore alla fine",
+        "flows": "Versato",
+        "gain": "Guadagno",
+        "rate": "Rendimento",
+        "compounded": "Composto",
+        "annualised": "All'anno",
+        "noAnnualised": "serve un anno di storia",
+        "back": "Torna al fondo"
+      }
+    },
+    "detect": {
+      "button": "Trova questo addebito ovunque",
+      "title": "Trova questo addebito ovunque",
+      "description": "Scegli un addebito del fondo. L'app legge ciò che lo rende riconoscibile — il creditore della domiciliazione, il suo mandato, o il beneficiario — e trova tutti gli altri addebiti che portano lo stesso nome.",
+      "movement": "Un addebito di questo fondo",
+      "pick": "Scegli un addebito…",
+      "hint": "Non viene salvato nulla finché non premi «Usa questo».",
+      "looking": "Cerco…",
+      "nothing": "Questo addebito non porta nulla per riconoscerlo. Scegline un altro, oppure scrivi il testo a mano nelle impostazioni.",
+      "kinds": {
+        "creditor": "Creditore della domiciliazione",
+        "mandate": "Riferimento del mandato",
+        "payee": "Beneficiario"
+      },
+      "charges": "Trovati",
+      "chargesValue": "{count, plural, one {# addebito} other {# addebiti}} · {from} → {to}",
+      "usual": "Di solito",
+      "every": "ogni {days, plural, one {# giorno} other {# giorni}}",
+      "use": "Usa questo",
+      "cancel": "Annulla",
+      "saved": "{count, plural, one {# addebito acquisito} other {# addebiti acquisiti}}; i prossimi seguiranno da soli.",
+      "failed": "Non è riuscito. Riprova."
+    },
     "deposits": {
       "title": "Versamenti",
       "hint": "{count, plural, one {# versamento} other {# versamenti}}",
@@ -1699,17 +1827,16 @@
       "value": "Valore",
       "paidIn": "Versato",
       "gain": "Guadagno",
-      "units": "Quote",
       "note": "Nota",
       "edit": "Modifica",
       "delete": "Elimina",
+      "editTitle": "Modifica valorizzazione",
       "empty": "Ancora nessuna valorizzazione.",
       "form": {
         "title": "Registra valorizzazione · {name}",
         "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo; i rendimenti mensili si calcolano da lì.",
         "date": "Data valorizzazione",
         "value": "Valore attuale (€)",
-        "units": "Quote · facoltativo",
         "note": "Nota",
         "last": "Ultima registrata: {value} · {date}",
         "cancel": "Annulla",
@@ -1719,12 +1846,18 @@
     "settings": {
       "general": {
         "title": "Generale",
-        "description": "Nome, gestore e identificativi.",
+        "description": "Nome, gestore e come il fondo è classificato nel patrimonio.",
         "name": "Nome",
         "provider": "Gestore",
         "compartment": "Tipo / comparto",
+        "kind": "Tipo di fondo",
+        "kindPac": "Piano di accumulo (PAC)",
+        "kindPension": "Fondo pensione",
+        "kindHelp": "Il PAC riceve un versamento mensile da un tuo conto, con una commissione su ognuno; il fondo pensione riceve le competenze dei cedolini e i documenti del fondo.",
+        "kindFixed": "Il tipo si sceglie alla creazione del fondo: un PAC tiene i versamenti, un fondo pensione tiene contributi e operazioni, quindi non si può cambiare dopo.",
         "isin": "ISIN",
-        "start": "Data di inizio"
+        "start": "Data di inizio",
+        "memberSince": "Iscritto dal"
       },
       "plan": {
         "title": "Versamenti",
@@ -1762,7 +1895,7 @@
     },
     "form": {
       "newTitle": "Nuovo fondo",
-      "description": "Un piano mensile in un fondo. Il valore sta su un conto suo, così il patrimonio lo conta una volta sola.",
+      "description": "Scegli il tipo, poi compila quello che serve. Il valore sta su un conto suo, così il patrimonio lo conta una volta sola.",
       "valuationAccount": "Il valore sta su",
       "newAccount": "Un conto nuovo con il nome del fondo",
       "initial": "Capitale iniziale (€)",
@@ -1774,6 +1907,7 @@
       "archived": "Fondo archiviato: storia conservata",
       "restored": "Fondo ripristinato",
       "valuation": "Valorizzazione registrata",
+      "valuationUpdated": "Valorizzazione aggiornata",
       "valuationDeleted": "Valorizzazione eliminata",
       "deposit": "Versamento salvato",
       "depositDeleted": "Versamento eliminato",
@@ -1791,6 +1925,423 @@
     },
     "account": {
       "label": "Fondo"
+    },
+    "pension": {
+      "kind": "Fondo pensione",
+      "notAnnualised": "guadagno / versato, non annualizzato",
+      "tabs": {
+        "overview": "Riepilogo",
+        "contributions": "Contributi",
+        "valuations": "Valorizzazioni",
+        "settings": "Impostazioni"
+      },
+      "header": {
+        "paidIn": "{paidIn} versati · valore al {date}",
+        "accrued": "Maturato nei cedolini"
+      },
+      "kpis": {
+        "value": "Valore posizione",
+        "valueNote": "al {date}",
+        "noValue": "nessun riepilogo importato",
+        "paidIn": "Versato al fondo",
+        "paidInNote": "comprese {enrollment} di quote d'iscrizione",
+        "gain": "Guadagno dall'inizio",
+        "gainNote": "{percent} sul versato, non annualizzato",
+        "pending": "Da accreditare",
+        "pendingNote": "maturato nei cedolini, versamento previsto il {date}",
+        "pendingNone": "ogni trimestre scaduto è stato versato"
+      },
+      "gainReasons": {
+        "no_value": "nessun riepilogo: il valore non è noto",
+        "nothing_paid": "nessun versamento finora",
+        "outflows_unknown": "un'uscita non è documentata"
+      },
+      "notice": {
+        "pending": "{amount} maturati nei cedolini di {quarter} non sono ancora nel fondo · versamento aziendale previsto il {date}.",
+        "dated": "Valore al {date} — non è un ritardo."
+      },
+      "chart": {
+        "title": "Valore e versato",
+        "hint": "Solo punti documentati: le valutazioni che registri.",
+        "steps": "I gradini sono accrediti trimestrali, non rendimenti; fra due documenti non si disegna nulla.",
+        "summary": "{name}: valore e versato a fine di ogni mese; {value} all'ultimo riepilogo.",
+        "hoverPaidIn": "{paidIn} versati"
+      },
+      "operations": {
+        "title": "Operazioni del fondo",
+        "hint": "{count, plural, one {# operazione} other {# operazioni}}",
+        "empty": "Nessuna operazione importata.",
+        "competence": "Competenza",
+        "date": "Data operazione",
+        "worker": "Aderente",
+        "employer": "Azienda",
+        "tfr": "TFR",
+        "fees": "Spese",
+        "net": "Netto investito",
+        "total": "Totale",
+        "remove": "Elimina",
+        "removed": "Operazione eliminata"
+      },
+      "classes": {
+        "contribution": "Contributo",
+        "enrollment": "Iscrizione",
+        "voluntary": "Versamento volontario",
+        "transfer_in": "Trasferimento in ingresso",
+        "switch": "Cambio comparto",
+        "withdrawal": "Uscita",
+        "other": "Altro"
+      },
+      "bridge": {
+        "title": "Perché i numeri differiscono?",
+        "noValue": "Serve un riepilogo della posizione per raccordare le cifre.",
+        "note": "Guadagno / versato non è annualizzato ed è al netto delle sole spese esplicite, non della tassazione all'erogazione.",
+        "lines": {
+          "accrued": "Maturato nei cedolini",
+          "pending": "Non ancora nel fondo",
+          "enrollment": "Quote d'iscrizione",
+          "voluntary": "Versamenti volontari",
+          "other": "Altre differenze",
+          "paidIn": "Versato al fondo",
+          "fees": "Spese esplicite",
+          "invested": "Investito",
+          "market": "Variazione di valore",
+          "value": "Valore posizione"
+        }
+      },
+      "position": {
+        "title": "Posizione",
+        "fees": "Spese esplicite",
+        "feesSplit": "{enrollment} iscrizione · {association} associativa",
+        "management": "Commissione di gestione",
+        "managementNote": "già dedotta dal valore · informativa",
+        "rule": "Regola contributiva",
+        "noRule": "nessuna regola registrata",
+        "covered": "Competenze coperte fino a",
+        "coveredNote": "l'ultimo trimestre accreditato dal fondo"
+      },
+      "months": {
+        "title": "Maturato nei cedolini",
+        "hint": "quote d'iscrizione escluse",
+        "empty": "Nessun cedolino applicato.",
+        "period": "Mese del cedolino",
+        "quarter": "Trimestre",
+        "worker": "Lavoratore",
+        "employer": "Azienda",
+        "tfr": "TFR",
+        "total": "Totale",
+        "status": "Stato",
+        "totalRow": "Totale",
+        "thirteenth": "13ª",
+        "openPayslip": "Apri il cedolino"
+      },
+      "payslipTypes": {
+        "ordinary": "Ordinario",
+        "thirteenth": "Tredicesima",
+        "fourteenth": "Quattordicesima",
+        "bonus": "Premio",
+        "settlement": "Conguaglio"
+      },
+      "quarters": {
+        "title": "Versamenti aziendali",
+        "hint": "Trimestrali · {days} giorni di tolleranza prima di segnalare un accredito mancante",
+        "empty": "Niente di maturato o accreditato.",
+        "due": "scadenza {date}",
+        "credited": "accreditato il {date}",
+        "credited2": "nel fondo",
+        "accrued": "maturato",
+        "difference": "differenza",
+        "accept": "Accetta differenza",
+        "clear": "Riapri",
+        "missing": "Manca il cedolino di {months}."
+      },
+      "components": {
+        "worker": "Lavoratore",
+        "employer": "Azienda",
+        "tfr": "TFR",
+        "enrollment": "Iscrizione"
+      },
+      "statuses": {
+        "accrued_not_due": "Maturato, non scaduto",
+        "transferred": "Versato",
+        "to_verify": "Da verificare dopo la scadenza",
+        "present": "Presente nel fondo",
+        "invested": "Investito",
+        "reconciled": "Riconciliato",
+        "discrepancy": "Discrepanza",
+        "incomplete": "Dati incompleti"
+      },
+      "reasons": {
+        "missing_payslip": "manca un cedolino",
+        "stale_export": "l'export è anteriore alla scadenza"
+      },
+      "reconciliation": {
+        "accepted": "Differenza accettata",
+        "accept": {
+          "title": "Accetta la differenza · {component}",
+          "description": "La differenza di {difference} resta registrata con la tua nota; nessun importo viene inventato per far quadrare i conti.",
+          "note": "Perché la accetti",
+          "submit": "Accetta",
+          "cancel": "Annulla"
+        }
+      },
+      "voluntary": {
+        "title": "Versamento volontario",
+        "description": "I versamenti diretti al fondo, fuori dal cedolino, sono un flusso a sé e si possono collegare al movimento che li ha pagati.",
+        "add": "Aggiungi versamento",
+        "date": "Data",
+        "amount": "Importo (€)",
+        "fee": "Spese (€)",
+        "movement": "Movimento collegato",
+        "noMovement": "Nessun movimento",
+        "note": "Nota",
+        "submit": "Aggiungi",
+        "cancel": "Annulla",
+        "added": "Versamento aggiunto"
+      },
+      "tax": {
+        "title": "Deducibilità per anno",
+        "empty": "Nessun contributo accreditato.",
+        "year": "Anno",
+        "worker": "Lavoratore",
+        "employer": "Azienda",
+        "total": "Totale",
+        "limit": "Limite",
+        "note": "Solo contributi lavoratore e azienda, TFR escluso, per data dell'operazione: l'anno fiscale certificato può differire."
+      },
+      "statements": {
+        "title": "Riepiloghi della posizione",
+        "empty": "Nessun riepilogo importato.",
+        "date": "Data valorizzazione",
+        "value": "Valore",
+        "worker": "Aderente",
+        "employer": "Azienda",
+        "tfr": "TFR",
+        "inflows": "Totale entrate",
+        "outflows": "Totale uscite",
+        "gain": "Rendimento riportato"
+      },
+      "documents": {
+        "title": "Documenti Cometa",
+        "import": "Importa documenti",
+        "empty": "Nessun documento.",
+        "file": "File",
+        "kind": "Tipo",
+        "received": "Ricevuto",
+        "state": "Stato",
+        "kinds": {
+          "cometa_operations": "Dettaglio operazioni",
+          "cometa_position": "Riepilogo posizione"
+        }
+      },
+      "documentStates": {
+        "received": "Ricevuto",
+        "scanning": "Scansione",
+        "extracting": "In lettura",
+        "needs_review": "Da rivedere",
+        "needs_ocr": "Serve OCR",
+        "verified": "Verificato",
+        "applied": "Applicato",
+        "superseded": "Sostituito",
+        "rejected": "Messo da parte",
+        "failed": "Non riuscito"
+      },
+      "import": {
+        "title": "Importa documenti Cometa",
+        "description": "Il dettaglio operazioni e il riepilogo della posizione. Il tipo di ogni file si riconosce dal contenuto.",
+        "choose": "Scegli i file",
+        "drop": "oppure trascinali qui · PDF, tabella XLS o XLSX, fino a 10 MB ciascuno",
+        "submit": "Carica",
+        "cancel": "Annulla",
+        "uploaded": "{count, plural, one {# documento caricato} other {# documenti caricati}}",
+        "duplicates": "{count, plural, one {# file era già stato importato} other {# file erano già stati importati}}",
+        "refused": "{name} è stato rifiutato"
+      },
+      "review": {
+        "title": "Revisione documento",
+        "back": "Fondo",
+        "subtitle": "{file} · ricevuto il {date}",
+        "values": "Valori letti",
+        "confirm": "Conferma",
+        "correct": "Correggi",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "saved": "Salvato",
+        "originalValue": "letto come {value}",
+        "apply": "Applica",
+        "applied": "Applicato al fondo",
+        "retry": "Riprova",
+        "delete": "Elimina documento",
+        "deleted": "Documento eliminato",
+        "verification": {
+          "unverified": "Da controllare",
+          "confirmed": "Confermato",
+          "corrected": "Corretto"
+        },
+        "viewer": {
+          "page": "Pagina {page} di {pages}",
+          "previous": "Pagina precedente",
+          "next": "Pagina successiva",
+          "zoomIn": "Ingrandisci",
+          "zoomOut": "Riduci",
+          "open": "Apri l'originale",
+          "loading": "Caricamento del documento…",
+          "failed": "Non è stato possibile mostrare il documento.",
+          "deleted": "L'originale è stato eliminato a fine conservazione; i dati letti restano."
+        },
+        "fields": {
+          "valuationDate": "Data valorizzazione",
+          "value": "Valore posizione",
+          "tfr": "TFR",
+          "worker": "Aderente",
+          "employer": "Azienda",
+          "transfersIn": "Trasferimenti",
+          "inflows": "Totale entrate",
+          "advances": "Anticipi",
+          "redemptions": "Riscatti",
+          "rita": "Rate R.I.T.A.",
+          "outflows": "Totale uscite",
+          "reportedGain": "Rendimento riportato"
+        },
+        "preview": {
+          "title": "Operazioni in questo export",
+          "hint": "{count, plural, one {# operazione} other {# operazioni}} · {added} nuove",
+          "state": {
+            "new": "Nuova",
+            "known": "Già nel fondo",
+            "changed": "Aggiornata"
+          },
+          "competence": "Competenza",
+          "date": "Data operazione",
+          "type": "Come nell'export",
+          "worker": "Aderente",
+          "employer": "Azienda",
+          "tfr": "TFR",
+          "fees": "Spese",
+          "net": "Netto",
+          "units": "Quote",
+          "empty": "Questo export non contiene operazioni.",
+          "enrollmentNote": "Un contributo con netto zero che non ha acquistato quote è la quota d'iscrizione."
+        },
+        "states": {
+          "reading": "Il documento è in lettura.",
+          "failed": "Non è stato possibile leggere il documento: {error}.",
+          "applied": "Applicato al fondo.",
+          "rejected": "Messo da parte."
+        }
+      },
+      "create": {
+        "created": "Fondo creato",
+        "published": "{count, plural, one {# cedolino pubblicato} other {# cedolini pubblicati}} nel fondo"
+      },
+      "settings": {
+        "general": "Generale",
+        "generalDescription": "Nome, fondo e comparto.",
+        "name": "Nome visualizzato",
+        "provider": "Fondo",
+        "compartment": "Comparto",
+        "start": "Iscritto dal",
+        "save": "Salva",
+        "saved": "Salvato",
+        "payroll": "Origine: cedolini",
+        "payrollDescription": "Quali codici del cedolino alimentano ogni componente, e se questo fondo li riceve. Specifico del tracciato Reply / TeamSystem.",
+        "payrollOn": "Questo fondo riceve i contributi di ogni cedolino applicato.",
+        "payrollOff": "I contributi dei cedolini vanno a un altro fondo.",
+        "codes": "I codici di ogni componente sono quelli della mappa dei codici, in Impostazioni › Dati.",
+        "takePayroll": "Ricevi i contributi dei cedolini",
+        "rebuild": "Ricostruisci dai cedolini",
+        "rebuilt": "{count, plural, one {# cedolino riletto} other {# cedolini riletti}}",
+        "transfers": "Versamenti aziendali",
+        "transfersDescription": "Quando le competenze sono attese nel fondo. Calcolato automaticamente, nessuna conferma richiesta.",
+        "schedule": "Scadenze il {dates} del mese successivo al trimestre.",
+        "source": "Fonte: {source} · verificata il {date}",
+        "tolerance": "Tolleranza di visualizzazione (giorni)",
+        "toleranceHint": "Per quanto tempo dopo la scadenza un accredito mancante è ancora mostrato come in arrivo.",
+        "rules": "Regole contributive",
+        "rulesDescription": "Facoltativa. Serve solo a confrontare quello che il contratto prevede con quello che il cedolino trattiene; non entra in nessun calcolo.",
+        "from": "Dal",
+        "ccnl": "CCNL",
+        "worker": "% lavoratore",
+        "employer": "% azienda",
+        "tfrShare": "% TFR",
+        "sourceColumn": "Fonte",
+        "removeRule": "Elimina regola",
+        "addRule": "Aggiungi regola",
+        "ruleAdded": "Regola aggiunta",
+        "validFrom": "Valida dal",
+        "validTo": "Valida fino al",
+        "base": "Base di calcolo",
+        "workerPct": "% lavoratore",
+        "employerPct": "% azienda",
+        "tfrPct": "% TFR",
+        "verifiedOn": "Verificata il",
+        "sourceHint": "La pagina o il documento da cui viene la regola.",
+        "valuationAccount": "Conto di valorizzazione",
+        "valuationDescription": "Il conto su cui si scrive il valore del fondo.",
+        "openAccount": "Apri {account}",
+        "danger": "Zona pericolosa",
+        "dangerDescription": "L'archiviazione nasconde il fondo ma ne conserva la storia.",
+        "codesTitle": "Codici che alimentano ogni componente",
+        "codeGroups": {
+          "worker": "Contributo lavoratore",
+          "employer": "Contributo azienda",
+          "tfr": "Contributo TFR",
+          "enrollment": "Quote di iscrizione",
+          "adjustment": "Rettifiche"
+        },
+        "openCodeMap": "Apri Impostazioni › Dati",
+        "frequency": "Frequenza",
+        "frequencies": {
+          "quarterly": "Trimestrale",
+          "monthly": "Mensile",
+          "custom": "Personalizzata"
+        },
+        "dueDay": "Giorno di scadenza del mese successivo",
+        "noSchedule": "Nessuna regola di versamento registrata per questo fondo.",
+        "ruleOnly": "Frequenza e giorno di scadenza vengono dalla regola versionata, non da un'impostazione: qui si cambia solo la tolleranza qui sotto.",
+        "fees": "Spese",
+        "feesDescription": "Le spese esplicite vengono dalle operazioni importate; il tariffario serve solo a spiegare e a stimare.",
+        "feeItems": {
+          "enrollmentWorker": "Iscrizione · lavoratore",
+          "enrollmentEmployer": "Iscrizione · azienda",
+          "association": "Quota associativa",
+          "management": "Commissione di gestione"
+        },
+        "feeUnits": {
+          "once": "una tantum",
+          "year": "all'anno, addebitata per trimestri",
+          "yearOfAssets": "all'anno sul patrimonio"
+        },
+        "tariffFrom": "Tariffario pubblico di {provider}, in vigore dal {date}.",
+        "feesActual": "Quello che ti è stato addebitato viene dalle spese delle operazioni importate, mai da questo tariffario.",
+        "noTariff": "Nessun tariffario caricato per questo gestore.",
+        "saveRule": "Salva regola"
+      },
+      "errors": {
+        "failed": "Qualcosa è andato storto. Riprova.",
+        "invalid": "Controlla i valori inseriti.",
+        "not_found": "Non trovato.",
+        "linked": "Un'operazione che viene da un documento non si elimina.",
+        "duplicate_name": "Esiste già un fondo con questo nome.",
+        "empty": "Il file è vuoto.",
+        "too_large": "Il file supera i 10 MB.",
+        "too_many": "Troppi file in una volta.",
+        "unsupported_format": "Questo file non è né un PDF né una tabella di operazioni.",
+        "invalid_state": "Il documento non è nello stato giusto.",
+        "no_table": "Nel file non c'è nessuna tabella di operazioni. Carica il «Dettaglio operazioni» esportato dal portale Cometa (la tabella .xls o un .xlsx).",
+        "missing_columns": "Alla tabella mancano colonne necessarie alla lettura.",
+        "bad_value": "Un valore della tabella non è leggibile.",
+        "binary_xls": "Questo è un vecchio XLS binario: esportalo in XLSX o HTML.",
+        "storage_failed": "Non è stato possibile archiviare il file.",
+        "not_an_export": "Questo foglio non è il «Dettaglio operazioni» di Cometa: non contiene la tabella delle operazioni, quella con la colonna «Tipo Operazione». Scarica il dettaglio operazioni dal portale Cometa e carica quello; questo documento si può eliminare.",
+        "extraction_failed": "Non è stato possibile leggere il documento. Riprova; se continua a fallire, il file non è di un tipo che il lettore conosce.",
+        "parse_failed": "Non è stato possibile leggere il documento fino in fondo.",
+        "original_missing": "L'originale non è più in archivio, quindi non si può rileggere.",
+        "unreadable_pdf": "Questo PDF non si è potuto aprire. Riscarica il riepilogo della posizione dal portale Cometa."
+      },
+      "kpiReasons": {
+        "cometa_operations": "nessun dettaglio operazioni importato",
+        "cometa_position": "nessun riepilogo posizione importato"
+      }
     }
   },
   "payroll": {
@@ -1845,7 +2396,9 @@
       "fourteenth": "14ª",
       "bonus": "Premio",
       "settlement": "Competenze finali",
-      "notApplied": "Fuori dai totali finché non lo applichi"
+      "notApplied": "Fuori dai totali finché non lo applichi",
+      "warningsBadge": "{count, plural, one {# da controllare} other {# da controllare}}",
+      "warningsHint": "Apri il cedolino: qualcosa è stato letto ma vuole un occhio — una rettifica tenuta da parte, un codice che nessuno conosce."
     },
     "inbox": {
       "title": "Documenti",

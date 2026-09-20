@@ -68,7 +68,7 @@ export default async function SettingsDataPage() {
 
       <TaxonomyPanels />
 
-      <SettingsSection title={codes("title")} description={codes("description")} padded={false} wide>
+      <SettingsSection title={codes("title")} description={codes("description")} padded={false}>
         <CodeMapCard
           entries={codeMap.map((entry) => ({
             code: entry.code,

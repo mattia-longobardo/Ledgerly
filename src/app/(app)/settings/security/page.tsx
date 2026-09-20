@@ -38,12 +38,7 @@ export default async function SecurityPage() {
 
   return (
     <SettingsGrid>
-      <SettingsSection
-        title={t("sessions.title")}
-        description={t("sessions.description")}
-        padded={false}
-        wide
-      >
+      <SettingsSection title={t("sessions.title")} description={t("sessions.description")} padded={false}>
         <SessionsList sessions={rows} />
       </SettingsSection>
     </SettingsGrid>

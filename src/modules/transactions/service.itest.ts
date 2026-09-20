@@ -20,10 +20,12 @@ import type { IncomingTransaction } from "./rules";
 import {
   TransactionError,
   clearRemovedUpstream,
+  deleteHiddenTransactions,
   hideTransaction,
   hideTransactions,
   linkOwnTransfers,
   markRemovedUpstream,
+  purgeRemovedUpstream,
   restoreTransactions,
   setCategory,
   updateTransaction,
@@ -1021,5 +1023,86 @@ describe("linkOwnTransfers (F2.5)", () => {
       unpairedTransferCount: 0,
     });
     expect(await linkOwnTransfers(ctx)).toBe(0);
+  });
+});
+
+describe("deleting for good", () => {
+  it("deletes hidden rows only, and a deleted synced movement is not imported again", async () => {
+    await upsertFromProvider(ctx, accountId, [
+      movement(),
+      movement({ externalId: "w-2", payee: "Bar", occurredAt: new Date("2026-03-12T09:00:00Z") }),
+    ]);
+    const rows = await listTransactions(ctx, {});
+    const bar = rows.find((row) => row.payee === "Bar")!;
+    const shop = rows.find((row) => row.payee === "Esselunga")!;
+    // A visible row is not deleted, whatever is asked.
+    expect(await deleteHiddenTransactions(ctx, [shop.id])).toBe(0);
+    await hideTransactions(ctx, [bar.id]);
+    expect(await deleteHiddenTransactions(ctx, [bar.id])).toBe(1);
+    expect((await listTransactions(ctx, { includeHidden: true })).map((row) => row.payee)).toEqual([
+      "Esselunga",
+    ]);
+
+    // Wallet keeps sending it: the link left behind says it was deleted on purpose.
+    const again = await upsertFromProvider(ctx, accountId, [
+      movement(),
+      movement({ externalId: "w-2", payee: "Bar", occurredAt: new Date("2026-03-12T09:00:00Z") }),
+    ]);
+    expect(again.created).toBe(0);
+    expect(await countAllTransactions(ctx)).toBe(1);
+  });
+
+  it("deletes the movements gone from the provider with their links, so a return is a new movement", async () => {
+    const gone = movement({
+      externalId: "w-2",
+      payee: "Vanished",
+      occurredAt: new Date("2026-03-20T09:00:00Z"),
+    });
+    await upsertFromProvider(ctx, accountId, [movement(), gone]);
+    await upsertFromProvider(ctx, accountId, [movement()], { window: MARCH });
+    expect(await purgeRemovedUpstream(ctx)).toBe(1);
+    expect((await listTransactions(ctx, { includeHidden: true })).map((row) => row.payee)).toEqual([
+      "Esselunga",
+    ]);
+    expect((await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-2"])).size).toBe(0);
+    expect(await purgeRemovedUpstream(ctx)).toBe(0);
+
+    const back = await upsertFromProvider(ctx, accountId, [movement(), gone], { window: MARCH });
+    expect(back.created).toBe(1);
+    expect((await listTransactions(ctx, {})).map((row) => row.payee).sort()).toEqual([
+      "Esselunga",
+      "Vanished",
+    ]);
+  });
+
+  it("unpairs the other leg of a transfer whose leg is deleted, and touches no one else's rows", async () => {
+    const savings = await anAccount(ctx, "Conto Deposito");
+    await upsertFromProvider(ctx, accountId, [
+      movement({
+        externalId: "t-out",
+        type: "transfer",
+        amountCents: -10_000n,
+        counterpartExternalId: "t-in",
+      }),
+    ]);
+    await upsertFromProvider(ctx, savings, [
+      movement({
+        externalId: "t-in",
+        type: "transfer",
+        amountCents: 10_000n,
+        counterpartExternalId: "t-out",
+      }),
+    ]);
+    const legs = await listTransactions(ctx, { includeHidden: true });
+    expect(legs.every((row) => row.transferGroupId !== null)).toBe(true);
+    const out = legs.find((row) => row.amountCents < 0n)!;
+    await hideTransactions(ctx, [out.id]);
+
+    const other = await newContext();
+    expect(await deleteHiddenTransactions(other, [out.id])).toBe(0);
+
+    expect(await deleteHiddenTransactions(ctx, [out.id])).toBe(1);
+    const [left] = await listTransactions(ctx, { includeHidden: true });
+    expect(left.transferGroupId).toBeNull();
   });
 });

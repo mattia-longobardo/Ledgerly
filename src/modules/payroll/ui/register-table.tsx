@@ -129,7 +129,17 @@ export function RegisterTable({ groups }: { groups: RegisterGroup[] }) {
                       )}
                     </Td>
                     <Td>
-                      <Badge tone={STATE_TONE[row.state]}>{t(`states.${row.state}`)}</Badge>
+                      <span className="inline-flex items-center gap-1.5">
+  <span className="inline-flex items-center gap-1.5">
+                        <Badge tone={STATE_TONE[row.state]}>{t(`states.${row.state}`)}</Badge>
+                        {row.warnings > 0 && <Badge tone="warn">{t("register.warningsBadge", { count: row.warnings })}</Badge>}
+                      </span>
+                        {row.warnings > 0 && (
+                          <span title={t("register.warningsHint")}>
+                            <Badge tone="warn">{t("register.warningsBadge", { count: row.warnings })}</Badge>
+                          </span>
+                        )}
+                      </span>
                     </Td>
                     <Td align="right">
                       <Link

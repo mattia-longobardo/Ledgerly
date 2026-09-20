@@ -10,6 +10,7 @@ import { Card } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
+import { Segmented } from "@/ui/segmented";
 import { notify } from "@/ui/toast";
 import {
   type ActionResult,
@@ -22,7 +23,10 @@ import {
   saveDepositRuleAction,
   setFundStateAction,
   updateFundAction,
+  updateValuationAction,
+  type ValuationFormInput,
 } from "../actions";
+import { type FundKind, fundFormFields } from "./present";
 
 const KNOWN = [
   "invalid",
@@ -64,8 +68,55 @@ type Accounts = readonly { id: string; name: string }[];
 /** The fund's fields, as the person types them; the dialog adds where the value lives. */
 export type FundDraft = FundFormInput;
 
-function FundFields({ draft, accounts, id }: { draft: FundDraft; accounts: Accounts; id: string }) {
+/**
+ * The design's "Fund kind" (Settings › General, and the same control in "New fund"): a segmented
+ * control with a line underneath saying what the choice means. `onChange` missing means an
+ * existing fund, whose kind is settled: the other option is disabled and the line says why.
+ */
+/**
+ * The design's «Fund kind» (Settings › General): a two-option segmented control. Without
+ * `onChange` it is the read-only form the pension fund's own settings show — the kind is chosen
+ * when the fund is created, because the two keep different data.
+ */
+export function KindField({ kind, onChange }: { kind: FundKind; onChange?: (kind: FundKind) => void }) {
+  const t = useTranslations("funds.settings.general");
+  const locked = onChange === undefined;
+  return (
+    <div className="col-span-full flex flex-col gap-1.5">
+      <span className="text-sm font-medium">{t("kind")}</span>
+      <Segmented
+        label={t("kind")}
+        value={kind}
+        onChange={onChange ?? (() => {})}
+        options={[
+          { value: "pac", label: t("kindPac"), disabled: locked && kind !== "pac" },
+          { value: "pension", label: t("kindPension"), disabled: locked && kind !== "pension" },
+        ]}
+      />
+      <p className="text-sm text-muted">{t(locked ? "kindFixed" : "kindHelp")}</p>
+    </div>
+  );
+}
+
+/**
+ * The fund's fields for the kind it is (`fundFormFields`): a PAC's whole plan, or a pension fund's
+ * four — a pension fund's money comes from the payslips, not from a monthly debit of its own.
+ */
+function FundFields({
+  draft,
+  accounts,
+  id,
+  kind,
+  onKindChange,
+}: {
+  draft: FundDraft;
+  accounts: Accounts;
+  id: string;
+  kind: FundKind;
+  onKindChange?: (kind: FundKind) => void;
+}) {
   const t = useTranslations("funds.settings");
+  const shows = fundFormFields(kind);
   return (
     <>
       <div className="col-span-full">
@@ -79,36 +130,61 @@ function FundFields({ draft, accounts, id }: { draft: FundDraft; accounts: Accou
       <Field label={t("general.compartment")} htmlFor={`${id}-compartment`}>
         <Input id={`${id}-compartment`} name="compartment" maxLength={80} defaultValue={draft.compartment} />
       </Field>
-      <Field label={t("general.isin")} htmlFor={`${id}-isin`}>
-        <Input id={`${id}-isin`} name="isin" maxLength={12} className="font-mono" defaultValue={draft.isin} />
-      </Field>
-      <Field label={t("general.start")} htmlFor={`${id}-start`}>
+      <KindField kind={kind} onChange={onKindChange} />
+      {shows.has("isin") && (
+        <Field label={t("general.isin")} htmlFor={`${id}-isin`}>
+          <Input
+            id={`${id}-isin`}
+            name="isin"
+            maxLength={12}
+            className="font-mono"
+            defaultValue={draft.isin}
+          />
+        </Field>
+      )}
+      <Field label={t(kind === "pension" ? "general.memberSince" : "general.start")} htmlFor={`${id}-start`}>
         <Input id={`${id}-start`} name="start" type="date" required defaultValue={draft.startOn} />
       </Field>
-      <Field label={t("plan.monthly")} htmlFor={`${id}-monthly`}>
-        <Input id={`${id}-monthly`} name="monthly" inputMode="decimal" numeric defaultValue={draft.monthly} />
-      </Field>
-      <Field label={t("plan.fee")} htmlFor={`${id}-fee`}>
-        <Input id={`${id}-fee`} name="fee" inputMode="decimal" numeric defaultValue={draft.fee} />
-      </Field>
-      <Field label={t("plan.debitAccount")} htmlFor={`${id}-debit`}>
-        <Select id={`${id}-debit`} name="debit" defaultValue={draft.debitAccountId}>
-          <option value="">{t("plan.noAccount")}</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Field label={t("plan.debitDay")} htmlFor={`${id}-day`}>
-        <Input id={`${id}-day`} name="day" type="number" min={1} max={31} defaultValue={draft.debitDay} />
-      </Field>
-      <Field label={t("plan.ter")} htmlFor={`${id}-ter`}>
-        <InputGroup suffix="%">
-          <Input id={`${id}-ter`} name="ter" inputMode="decimal" numeric defaultValue={draft.ter} />
-        </InputGroup>
-      </Field>
+      {shows.has("monthly") && (
+        <Field label={t("plan.monthly")} htmlFor={`${id}-monthly`}>
+          <Input
+            id={`${id}-monthly`}
+            name="monthly"
+            inputMode="decimal"
+            numeric
+            defaultValue={draft.monthly}
+          />
+        </Field>
+      )}
+      {shows.has("fee") && (
+        <Field label={t("plan.fee")} htmlFor={`${id}-fee`}>
+          <Input id={`${id}-fee`} name="fee" inputMode="decimal" numeric defaultValue={draft.fee} />
+        </Field>
+      )}
+      {shows.has("debit") && (
+        <Field label={t("plan.debitAccount")} htmlFor={`${id}-debit`}>
+          <Select id={`${id}-debit`} name="debit" defaultValue={draft.debitAccountId}>
+            <option value="">{t("plan.noAccount")}</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+      {shows.has("day") && (
+        <Field label={t("plan.debitDay")} htmlFor={`${id}-day`}>
+          <Input id={`${id}-day`} name="day" type="number" min={1} max={31} defaultValue={draft.debitDay} />
+        </Field>
+      )}
+      {shows.has("ter") && (
+        <Field label={t("plan.ter")} htmlFor={`${id}-ter`}>
+          <InputGroup suffix="%">
+            <Input id={`${id}-ter`} name="ter" inputMode="decimal" numeric defaultValue={draft.ter} />
+          </InputGroup>
+        </Field>
+      )}
     </>
   );
 }
@@ -129,37 +205,70 @@ function readFund(data: FormData): FundFormInput {
   };
 }
 
-/** "Add fund" (design: the Fund settings modal in "New fund" mode). */
+/**
+ * Creating a pension fund needs both modules at once, so the action lives in the app layer
+ * (`app/(app)/funds/pension-setup.ts`) and reaches the dialog as a prop: `count` is how many
+ * already-applied payslips it published to the new fund.
+ */
+export type CreatePensionFund = (input: {
+  name: string;
+  provider: string;
+  compartment: string;
+  startOn: string;
+}) => Promise<{ ok: true; id?: string; count?: number } | { ok: false; error: string }>;
+
+/**
+ * "Add fund" (design: the Fund settings modal in "New fund" mode). One button for both kinds: the
+ * design's "Fund kind" chooses which, the fields follow it, and so does the action that saves.
+ */
 export function NewFundButton({
   draft,
   accounts,
   valuationAccounts,
+  createPension,
   label,
   size = "sm",
 }: {
   draft: FundDraft;
   accounts: Accounts;
   valuationAccounts: Accounts;
+  createPension: CreatePensionFund;
   label: string;
   size?: "sm" | "md";
 }) {
   const t = useTranslations("funds");
+  const tp = useTranslations("funds.pension.create");
   const id = useId();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<FundKind>("pac");
   const [pending, startTransition] = useTransition();
   const { error, setError, ok } = useResult();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const input = {
-      ...readFund(data),
-      valuationAccountId: String(data.get("valuation") ?? ""),
-      initial: String(data.get("initial") ?? ""),
-    };
+    const fund = readFund(data);
     startTransition(async () => {
-      const result = await createFundAction(input);
+      if (kind === "pension") {
+        const result = await createPension({
+          name: fund.name,
+          provider: fund.provider,
+          compartment: fund.compartment,
+          startOn: fund.startOn,
+        });
+        if (!ok(result)) return;
+        notify(result.ok && result.count ? tp("published", { count: result.count }) : tp("created"));
+        setOpen(false);
+        if (result.ok && result.id) router.push(`/funds/${result.id}`);
+        else router.refresh();
+        return;
+      }
+      const result = await createFundAction({
+        ...fund,
+        valuationAccountId: String(data.get("valuation") ?? ""),
+        initial: String(data.get("initial") ?? ""),
+      });
       if (!ok(result)) return;
       notify(t("toasts.saved"));
       setOpen(false);
@@ -169,7 +278,7 @@ export function NewFundButton({
 
   return (
     <>
-      <Button variant="primary" size={size} onClick={() => (setError(null), setOpen(true))}>
+      <Button variant="primary" size={size} onClick={() => (setError(null), setKind("pac"), setOpen(true))}>
         {label}
       </Button>
       <Modal
@@ -180,20 +289,24 @@ export function NewFundButton({
         width={520}
       >
         <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-          <FundFields draft={draft} accounts={accounts} id={id} />
-          <Field label={t("form.valuationAccount")} htmlFor={`${id}-valuation`}>
-            <Select id={`${id}-valuation`} name="valuation" defaultValue="">
-              <option value="">{t("form.newAccount")}</option>
-              {valuationAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t("form.initial")} htmlFor={`${id}-initial`}>
-            <Input id={`${id}-initial`} name="initial" inputMode="decimal" numeric />
-          </Field>
+          <FundFields draft={draft} accounts={accounts} id={id} kind={kind} onKindChange={setKind} />
+          {kind === "pac" && (
+            <>
+              <Field label={t("form.valuationAccount")} htmlFor={`${id}-valuation`}>
+                <Select id={`${id}-valuation`} name="valuation" defaultValue="">
+                  <option value="">{t("form.newAccount")}</option>
+                  {valuationAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label={t("form.initial")} htmlFor={`${id}-initial`}>
+                <Input id={`${id}-initial`} name="initial" inputMode="decimal" numeric />
+              </Field>
+            </>
+          )}
           <ErrorLine error={error} />
           <div className="col-span-full flex justify-end gap-2">
             <Button onClick={() => setOpen(false)}>{t("form.cancel")}</Button>
@@ -207,15 +320,21 @@ export function NewFundButton({
   );
 }
 
-/** Settings › General and Contributions of an existing fund, saved together. */
+/**
+ * Settings › General and Contributions of an existing fund, saved together. The kind is shown but
+ * not editable: a PAC has deposits, a pension fund has competences and operations, so there
+ * is nothing honest to turn one into the other — it is chosen when the fund is created.
+ */
 export function FundSettingsForm({
   fundId,
   draft,
   accounts,
+  kind = "pac",
 }: {
   fundId: string;
   draft: FundDraft;
   accounts: Accounts;
+  kind?: FundKind;
 }) {
   const t = useTranslations("funds");
   const id = useId();
@@ -230,7 +349,7 @@ export function FundSettingsForm({
   }
   return (
     <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-      <FundFields draft={draft} accounts={accounts} id={id} />
+      <FundFields draft={draft} accounts={accounts} id={id} kind={kind} />
       <ErrorLine error={error} />
       <div className="col-span-full flex justify-end">
         <Button type="submit" variant="primary" disabled={pending}>
@@ -241,23 +360,77 @@ export function FundSettingsForm({
   );
 }
 
-/** "Record valuation" (design modal): the day, the value, units and a note. */
+/**
+ * Where a valuation command sits, and so which button it is: the page header's call to action, a
+ * card header beside the other command of that card, or a table row.
+ */
+export type TriggerPlace = "page" | "card" | "row";
+
+/** One trigger, so "Record valuation" carries the same weight wherever it is offered. */
+function Trigger({ place, label, onClick }: { place: TriggerPlace; label: string; onClick: () => void }) {
+  if (place === "row")
+    return (
+      <Button size="xs" variant="ghost" onClick={onClick}>
+        {label}
+      </Button>
+    );
+  return (
+    <Button variant={place === "page" ? "primary" : "secondary"} size="sm" onClick={onClick}>
+      {label}
+    </Button>
+  );
+}
+
+export interface ValuationDraft extends ValuationFormInput {
+  id: string;
+}
+
+/** The valuation fields, shared by "Record valuation" and "Edit" so the two agree. */
+function ValuationFields({ id, today, draft }: { id: string; today: string; draft?: ValuationDraft }) {
+  const t = useTranslations("funds.valuations.form");
+  return (
+    <>
+      <Field label={t("date")} htmlFor={`${id}-on`}>
+        <Input id={`${id}-on`} name="on" type="date" max={today} defaultValue={draft?.on ?? today} required />
+      </Field>
+      <Field label={t("value")} htmlFor={`${id}-value`}>
+        <Input
+          id={`${id}-value`}
+          name="value"
+          inputMode="decimal"
+          numeric
+          required
+          autoFocus
+          defaultValue={draft?.value ?? ""}
+        />
+      </Field>
+      <Field label={t("note")} htmlFor={`${id}-note`}>
+        <Input id={`${id}-note`} name="note" maxLength={200} defaultValue={draft?.note ?? ""} />
+      </Field>
+    </>
+  );
+}
+
+function readValuation(data: FormData): ValuationFormInput {
+  const text = (key: string) => String(data.get(key) ?? "").trim();
+  return { on: text("on"), value: text("value"), note: text("note") };
+}
+
+/** "Record valuation" (design modal): the day, the value and a note. */
 export function ValuationButton({
   fundId,
   fundName,
   today,
   lastLine,
   label,
-  variant = "primary",
-  size = "sm",
+  place = "page",
 }: {
   fundId: string;
   fundName: string;
   today: string;
   lastLine: string | null;
   label: string;
-  variant?: "primary" | "secondary" | "ghost";
-  size?: "xs" | "sm";
+  place?: TriggerPlace;
 }) {
   const t = useTranslations("funds");
   const id = useId();
@@ -266,25 +439,16 @@ export function ValuationButton({
   const { error, setError, ok } = useResult();
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const text = (key: string) => String(data.get(key) ?? "").trim();
+    const input = readValuation(new FormData(event.currentTarget));
     startTransition(async () => {
-      const result = await recordValuationAction(fundId, {
-        on: text("on"),
-        value: text("value"),
-        units: text("units"),
-        note: text("note"),
-      });
-      if (!ok(result)) return;
+      if (!ok(await recordValuationAction(fundId, input))) return;
       notify(t("toasts.valuation"));
       setOpen(false);
     });
   }
   return (
     <>
-      <Button variant={variant} size={size} onClick={() => (setError(null), setOpen(true))}>
-        {label}
-      </Button>
+      <Trigger place={place} label={label} onClick={() => (setError(null), setOpen(true))} />
       <Modal
         open={open}
         onOpenChange={setOpen}
@@ -292,19 +456,58 @@ export function ValuationButton({
         description={t("valuations.form.description")}
       >
         <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3">
-          <Field label={t("valuations.form.date")} htmlFor={`${id}-on`}>
-            <Input id={`${id}-on`} name="on" type="date" max={today} defaultValue={today} required />
-          </Field>
-          <Field label={t("valuations.form.value")} htmlFor={`${id}-value`}>
-            <Input id={`${id}-value`} name="value" inputMode="decimal" numeric required autoFocus />
-          </Field>
-          <Field label={t("valuations.form.units")} htmlFor={`${id}-units`}>
-            <Input id={`${id}-units`} name="units" inputMode="decimal" numeric />
-          </Field>
-          <Field label={t("valuations.form.note")} htmlFor={`${id}-note`}>
-            <Input id={`${id}-note`} name="note" maxLength={200} />
-          </Field>
+          <ValuationFields id={id} today={today} />
           {lastLine && <p className="col-span-full text-sm text-muted">{lastLine}</p>}
+          <ErrorLine error={error} />
+          <div className="col-span-full flex justify-end gap-2">
+            <Button onClick={() => setOpen(false)}>{t("valuations.form.cancel")}</Button>
+            <Button type="submit" variant="primary" disabled={pending}>
+              {t("valuations.form.save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
+/**
+ * "Edit" on a valuation row: the same four fields, already filled. A new day moves the value to
+ * that day (service `updateValuation`), it never leaves a second row behind.
+ */
+export function EditValuationButton({
+  fundId,
+  draft,
+  today,
+  label,
+}: {
+  fundId: string;
+  draft: ValuationDraft;
+  today: string;
+  label: string;
+}) {
+  const t = useTranslations("funds");
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const { error, setError, ok } = useResult();
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const input = readValuation(new FormData(event.currentTarget));
+    startTransition(async () => {
+      if (!ok(await updateValuationAction(fundId, draft.id, input))) return;
+      notify(t("toasts.valuationUpdated"));
+      setOpen(false);
+    });
+  }
+  return (
+    <>
+      <Button size="xs" variant="ghost" onClick={() => (setError(null), setOpen(true))}>
+        {label}
+      </Button>
+      <Modal open={open} onOpenChange={setOpen} title={t("valuations.editTitle")}>
+        <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3">
+          <ValuationFields id={id} today={today} draft={draft} />
           <ErrorLine error={error} />
           <div className="col-span-full flex justify-end gap-2">
             <Button onClick={() => setOpen(false)}>{t("valuations.form.cancel")}</Button>

@@ -27,11 +27,14 @@ export async function BudgetsOverviewCard({
     .slice(0, SHOWN);
 
   return (
-    <Card padded={false} data-testid="budgets-card">
+    <Card padded={false} className="@container" data-testid="budgets-card">
       <CardHeader
         title={t("overview.title", { month: formatDate(month, "month", ctx.locale) })}
         actions={
-          <Link href="/budgets" className="focus-ring rounded-[2px] text-accent hover:underline">
+          <Link
+            href="/budgets"
+            className="focus-ring inline-flex h-6 items-center rounded-[2px] text-accent hover:underline"
+          >
             {t("overview.viewAll")}
           </Link>
         }
@@ -39,7 +42,14 @@ export async function BudgetsOverviewCard({
       {top.length === 0 ? (
         <p className="px-4 pb-4 text-sm text-muted">{t("overview.empty")}</p>
       ) : (
-        <ul className="flex flex-col gap-3 px-4 pb-4">
+        /*
+          The card takes the page's whole width, so past a card of 56 rem the five budgets share it
+          two at a time instead of standing in one narrow column with the rest of the row empty
+          (spec §8.2: the grid answers to the column, hence the card's own `@container`). Each row
+          keeps its three tracks — name, bar, remainder — so a wider card lengthens the bars rather
+          than the empty space. One column below that, unchanged at 400 px.
+        */
+        <ul className="grid gap-x-8 gap-y-3 px-4 pb-4 @4xl:grid-cols-2">
           {top.map((row) => {
             const left = row.limitCents - row.spentCents;
             return (

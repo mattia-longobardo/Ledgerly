@@ -6,6 +6,7 @@ import {
   type IncomingTransaction,
   isHidden,
   isLocallyEdited,
+  markCategoryEdited,
   markLocallyEdited,
   pairTransfers,
   payeeKeyOf,
@@ -375,6 +376,16 @@ describe("markLocallyEdited", () => {
   it("answers for one field at a time too", () => {
     expect(isLocallyEdited(["note"], "note")).toBe(true);
     expect(isLocallyEdited(["note"], "payee")).toBe(false);
+  });
+});
+
+describe("markCategoryEdited", () => {
+  it("marks a category's own fields the same way, and never loses one", () => {
+    expect(markCategoryEdited([], ["name"])).toEqual(["name"]);
+    expect(markCategoryEdited(["type"], ["name"])).toEqual(["name", "type"]);
+    // Nothing changed: the list comes back as it was, so an idle save does not churn the column.
+    expect(markCategoryEdited(["name"], [])).toEqual(["name"]);
+    expect(markCategoryEdited(["name"], ["name"])).toEqual(["name"]);
   });
 });
 

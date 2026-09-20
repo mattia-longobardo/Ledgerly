@@ -119,6 +119,13 @@ export function addDays(date: CivilDate, days: number): CivilDate {
   return fromUtcMillis(Date.UTC(year, month - 1, day + days));
 }
 
+/** Whole days from one civil date to another, the first excluded and the last included. */
+export function daysBetween(from: CivilDate, to: CivilDate): number {
+  const [fy, fm, fd] = parts(from);
+  const [ty, tm, td] = parts(to);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
+}
+
 export function addMonths(month: MonthKey, months: number): MonthKey {
   const [year, m] = parts(month);
   return fromUtcMillis(Date.UTC(year, m - 1 + months, 1));

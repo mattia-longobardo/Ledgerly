@@ -7,7 +7,8 @@ import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
-import { removeLlmFallbackAction, saveLlmFallbackAction } from "./actions";
+import type { LlmProbeResult } from "@/platform/settings/llm-probe";
+import { removeLlmFallbackAction, saveLlmFallbackAction, testLlmFallbackAction } from "./actions";
 
 /**
  * The OpenAI fallback (spec D12, D18): the model and the API key. The key is write-only — the page
@@ -19,6 +20,8 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [tested, setTested] = useState<{ message: string; ok: boolean } | null>(null);
+  const [testing, setTesting] = useState(false);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,6 +37,7 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
         return;
       }
       setError(null);
+      setTested(null);
       (form.elements.namedItem("apiKey") as HTMLInputElement).value = "";
       notify(t("saved"));
       router.refresh();
@@ -43,8 +47,26 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
   function onRemove() {
     startTransition(async () => {
       await removeLlmFallbackAction();
+      setTested(null);
       notify(t("removed"));
       router.refresh();
+    });
+  }
+
+  /**
+   * Tries what is *saved*, not what is typed: the key never leaves the server, so the check is a
+   * Server Action, and its verdict is a message key — never the key, never OpenAI's own words.
+   */
+  function onTest() {
+    setTesting(true);
+    startTransition(async () => {
+      const result: LlmProbeResult = await testLlmFallbackAction();
+      setTesting(false);
+      setTested({
+        message:
+          result.outcome === "ok" ? t("test.ok", { model: result.model }) : t(`test.${result.outcome}`),
+        ok: result.outcome === "ok",
+      });
     });
   }
 
@@ -76,7 +98,19 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
           {error}
         </p>
       )}
+      {tested && (
+        <p
+          role="status"
+          data-testid="llm-test-result"
+          className={tested.ok ? "text-sm text-pos" : "text-sm text-neg"}
+        >
+          {tested.message}
+        </p>
+      )}
       <div className="flex justify-end gap-2">
+        <Button onClick={onTest} disabled={pending || !current} className="mr-auto">
+          {testing ? t("test.running") : t("test.action")}
+        </Button>
         {current && (
           <Button variant="danger" onClick={onRemove} disabled={pending}>
             {t("remove")}

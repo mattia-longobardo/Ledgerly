@@ -11,6 +11,7 @@ import {
 } from "@/modules/accounts/service";
 import { chargeCandidates } from "@/modules/transactions/queries";
 import { payeeKeyOf } from "@/modules/transactions/rules";
+import { carriesKey, type Detection, recurrenceKeyOf, summarise } from "./detect";
 import type { Ctx } from "@/platform/context";
 import { isCivilDate, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -72,7 +73,7 @@ const depositSchema = z.object({
   note: optionalText(200),
 });
 
-async function requireFund(ctx: Pick<Ctx, "userId">, id: string): Promise<Fund> {
+export async function requireFund(ctx: Pick<Ctx, "userId">, id: string): Promise<Fund> {
   const [row] = await getDb()
     .select()
     .from(funds)
@@ -95,7 +96,7 @@ async function requireAccount(ctx: Pick<Ctx, "userId">, id: string | null) {
   return account;
 }
 
-function duplicateName<T>(write: Promise<T>): Promise<T> {
+export function duplicateName<T>(write: Promise<T>): Promise<T> {
   return write.catch((error: unknown) => {
     if (hasPgError(error, UNIQUE_VIOLATION, "funds_user_name_uq")) throw new FundError("duplicate_name");
     if (hasPgError(error, UNIQUE_VIOLATION, "funds_valuation_account_uq"))
@@ -187,6 +188,25 @@ export async function setFundState(
     .where(and(eq(funds.id, id), userScoped(ctx).owns(funds)));
 }
 
+export interface ValuationInput {
+  on: string;
+  cents: Cents;
+  units?: string | null;
+  note?: string | null;
+}
+
+/** A valuation's day (never in the future) and the two fields the balance has no place for. */
+function valuationFields(
+  ctx: Pick<Ctx, "timeZone">,
+  input: ValuationInput,
+): { units: string | null; note: string | null } {
+  if (!isCivilDate(input.on)) throw new FundError("invalid");
+  if (isFutureDate(input.on, today(ctx.timeZone))) throw new FundError("future_date");
+  const units = input.units === undefined || input.units === null || input.units === "" ? null : input.units;
+  if (units !== null && !/^\d+(\.\d{1,6})?$/.test(units)) throw new FundError("invalid");
+  return { units, note: input.note?.trim() ? input.note.trim().slice(0, 200) : null };
+}
+
 /**
  * A valuation (spec §7.7): a `manual` balance on the valuation account on that day — the value's one
  * home, which net worth reads — and the units and note beside it. A second valuation on the same
@@ -195,14 +215,10 @@ export async function setFundState(
 export async function recordValuation(
   ctx: Ctx,
   fundId: string,
-  input: { on: string; cents: Cents; units?: string | null; note?: string | null },
+  input: ValuationInput,
 ): Promise<FundValuation> {
   const fund = await requireOpenFund(ctx, fundId);
-  if (!isCivilDate(input.on)) throw new FundError("invalid");
-  if (isFutureDate(input.on, today(ctx.timeZone))) throw new FundError("future_date");
-  const units = input.units === undefined || input.units === null || input.units === "" ? null : input.units;
-  if (units !== null && !/^\d+(\.\d{1,6})?$/.test(units)) throw new FundError("invalid");
-  const note = input.note?.trim() ? input.note.trim().slice(0, 200) : null;
+  const { units, note } = valuationFields(ctx, input);
   const entry = await saveBalanceEntry(ctx, fund.valuationAccountId, {
     on: input.on,
     cents: input.cents,
@@ -218,16 +234,67 @@ export async function recordValuation(
   return row;
 }
 
+async function requireValuation(ctx: Pick<Ctx, "userId">, valuationId: string): Promise<FundValuation> {
+  const [row] = await getDb()
+    .select()
+    .from(fundValuations)
+    .where(and(eq(fundValuations.id, valuationId), userScoped(ctx).owns(fundValuations)));
+  if (!row) throw new FundError("not_found");
+  return row;
+}
+
+/**
+ * A valuation corrected by hand (day, value, units, note). The value's one home is the `manual`
+ * balance of the valuation account, so a new day **moves** that balance instead of adding a second:
+ * the value is written on the new day, the valuation row follows it inside one transaction — taking
+ * with it any valuation that already sat there, which is what «one value per day» means — and only
+ * then is the balance of the old day dropped, with nothing left pointing at it. A valuation read
+ * from a statement (`import`) is not edited here: its value belongs to the document that carries it.
+ */
+export async function updateValuation(
+  ctx: Ctx,
+  valuationId: string,
+  input: ValuationInput,
+): Promise<FundValuation> {
+  const current = await requireValuation(ctx, valuationId);
+  if (current.source !== "manual") throw new FundError("invalid");
+  const fund = await requireOpenFund(ctx, current.fundId);
+  const { units, note } = valuationFields(ctx, input);
+  const previousEntryId = current.balanceEntryId;
+  const entry = await saveBalanceEntry(ctx, fund.valuationAccountId, {
+    on: input.on,
+    cents: input.cents,
+    note: note ?? "",
+  });
+  if (entry.id === previousEntryId) {
+    const [row] = await getDb()
+      .update(fundValuations)
+      .set({ units, note })
+      .where(and(eq(fundValuations.id, valuationId), userScoped(ctx).owns(fundValuations)))
+      .returning();
+    return row;
+  }
+  const row = await getDb().transaction(async (tx) => {
+    await tx
+      .delete(fundValuations)
+      .where(and(eq(fundValuations.balanceEntryId, entry.id), userScoped(ctx).owns(fundValuations)));
+    const [moved] = await tx
+      .update(fundValuations)
+      .set({ balanceEntryId: entry.id, units, note })
+      .where(and(eq(fundValuations.id, valuationId), userScoped(ctx).owns(fundValuations)))
+      .returning();
+    return moved;
+  });
+  await deleteBalanceEntry(ctx, previousEntryId);
+  return row;
+}
+
 /** Deleting a valuation deletes its balance; the valuation row goes with it (cascade). */
 export async function deleteValuation(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   valuationId: string,
 ): Promise<void> {
-  const [row] = await getDb()
-    .select({ balanceEntryId: fundValuations.balanceEntryId })
-    .from(fundValuations)
-    .where(and(eq(fundValuations.id, valuationId), userScoped(ctx).owns(fundValuations)));
-  if (!row) throw new FundError("not_found");
+  const row = await requireValuation(ctx, valuationId);
   await deleteBalanceEntry(ctx, row.balanceEntryId);
 }
 
@@ -288,6 +355,11 @@ export async function deleteDeposit(ctx: Pick<Ctx, "userId">, id: string): Promi
 }
 
 /** The deposit rule of a fund (spec §7.7): payee text, account (any if none), on or off. */
+/** An identifier without the spaces or dots a bank may print inside it (`detect.ts`). */
+function compactKey(value: string): string {
+  return value.replace(/[\s.]+/g, "").toUpperCase();
+}
+
 export async function saveDepositRule(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   fundId: string,
@@ -334,6 +406,11 @@ export async function matchDeposits(
   for (const { rule, fund } of rules) {
     const needle = payeeKeyOf(rule.payeeMatch);
     if (needle === null) continue;
+    // A rule's text may be a payee or the creditor identifier of the direct debit that pays the
+    // fund (`detect.ts`). The first lives in the payee, the second in the bank's own text, so both
+    // are looked at: a rule made from an identifier would otherwise match nothing (owner,
+    // 2026-09-20).
+    const identifier = compactKey(rule.payeeMatch);
     const candidates = (
       await chargeCandidates(ctx, {
         accountId: rule.accountId,
@@ -341,7 +418,11 @@ export async function matchDeposits(
         to: todayOn,
         types: ["expense", "transfer"],
       })
-    ).filter((candidate) => (payeeKeyOf(candidate.payee) ?? "").includes(needle));
+    ).filter(
+      (candidate) =>
+        (payeeKeyOf(candidate.payee) ?? "").includes(needle) ||
+        compactKey(`${candidate.payee ?? ""} ${candidate.note ?? ""}`).includes(identifier),
+    );
     if (candidates.length === 0) continue;
     const rows = await getDb()
       .insert(fundDeposits)
@@ -365,4 +446,41 @@ export async function matchDeposits(
     written += rows.length;
   }
   return { written };
+}
+
+/**
+ * "Find this charge everywhere" (owner, 2026-09-20): from one movement of a PAC's debit, the most
+ * durable name it carries — the creditor identifier of the direct debit, its mandate reference, or
+ * failing both its payee (`detect.ts`) — and every other charge that carries the same name.
+ *
+ * It only reads. What it returns is a proposal the person sees before anything is written: how
+ * many charges were found, from when, what they usually cost and how far apart they fall. Saving
+ * the rule is a second, deliberate step ({@link saveDepositRule}), and that is what brings the past
+ * ones in as deposits and keeps the future ones coming.
+ */
+export async function proposeDepositRule(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  fundId: string,
+  transactionId: string,
+): Promise<Detection | null> {
+  const fund = await requireFund(ctx, fundId);
+  const todayOn = today(ctx.timeZone);
+  // Every outgoing movement since the fund started, on the debit account when it has one. The
+  // chosen movement is looked for among them, so a movement of somebody else's is simply not there.
+  const candidates = await chargeCandidates(ctx, {
+    accountId: fund.debitAccountId,
+    from: fund.startOn,
+    to: todayOn,
+    types: ["expense", "transfer"],
+  });
+  const chosen = candidates.find((candidate) => candidate.id === transactionId);
+  if (!chosen) return null;
+  const key = recurrenceKeyOf(chosen);
+  if (key === null) return null;
+  return summarise(
+    key,
+    candidates
+      .filter((candidate) => carriesKey(candidate, key))
+      .map((candidate) => ({ on: candidate.on, cents: candidate.cents })),
+  );
 }

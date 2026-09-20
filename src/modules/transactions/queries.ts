@@ -575,6 +575,8 @@ export interface ChargeCandidate {
   on: CivilDate;
   cents: Cents;
   payee: string | null;
+  /** The bank's own text, where a direct debit prints its creditor and its mandate (F4, owner). */
+  note: string | null;
 }
 
 /**
@@ -599,6 +601,7 @@ export async function chargeCandidates(
       occurredAt: transactions.occurredAt,
       amountCents: transactions.amountCents,
       payee: transactions.payee,
+      note: transactions.note,
     })
     .from(transactions)
     .where(
@@ -619,6 +622,7 @@ export async function chargeCandidates(
     on: civilDateIn(row.occurredAt, ctx.timeZone),
     cents: -row.amountCents,
     payee: row.payee,
+    note: row.note,
   }));
 }
 

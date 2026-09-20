@@ -85,6 +85,38 @@ describe("createRecord (F4)", () => {
     }
   });
 
+  it("files the record under the provider's own category id when it is given one (F4)", async () => {
+    const { wallet, calls } = client([
+      { status: 201, body: JSON.stringify({ records: [{ id: "wr-new" }] }) },
+    ]);
+    await wallet.createRecord({
+      accountId: "wa-saving",
+      amountCents: 3_107n,
+      on: "2026-02-01",
+      note: "ledgerly-interest:e-1",
+      categoryId: "wc-interest",
+    });
+    expect(calls[0].body).toBe(
+      '[{"accountId":"wa-saving","amount":31.07,"recordDate":"2026-02-01","note":"ledgerly-interest:e-1","categoryId":"wc-interest"}]',
+    );
+  });
+
+  it("leaves the field out entirely when there is no category, rather than sending a null", async () => {
+    for (const categoryId of [undefined, null]) {
+      const { wallet, calls } = client([
+        { status: 201, body: JSON.stringify({ records: [{ id: "wr-new" }] }) },
+      ]);
+      await wallet.createRecord({
+        accountId: "wa-saving",
+        amountCents: 1n,
+        on: "2026-02-01",
+        note: "x",
+        categoryId,
+      });
+      expect(calls[0].body).not.toContain("categoryId");
+    }
+  });
+
   it("never tries a write twice, even on an answer a read would retry", async () => {
     const { wallet, calls } = client([{ status: 503, body: "{}" }]);
     await expect(

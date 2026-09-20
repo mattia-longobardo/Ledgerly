@@ -139,6 +139,18 @@ export const walletCategorySchema = z.object({
   group: z.object({ id: z.string().nullish(), name: z.string().nullish() }).nullish(),
   color: z.string().nullish(),
   systemId: z.string().nullish(),
+  /**
+   * Wallet's own three levels, which the two-way category sync needs and the read-only one did
+   * not: an envelope `group`, the **base** categories inside it (`customCategory: false`, each
+   * with a `systemId`), and the custom subcategories a user adds under a base one (`parentId`).
+   * `POST /categories/custom` takes a **base** category's id as its `parentId`, so telling the two
+   * apart is what makes creating a category in Wallet possible at all (`categories.ts`).
+   * Both stay optional: they are absent from the 91 rows measured at the collaudo of 2026-09-17,
+   * and a category that does not say is treated as neither custom nor archived.
+   */
+  customCategory: z.boolean().nullish(),
+  parentId: z.string().nullish(),
+  archived: z.boolean().nullish(),
 });
 export type WalletCategoryPayload = z.infer<typeof walletCategorySchema>;
 
@@ -261,6 +273,15 @@ export interface WalletCategory {
   groupExternalId: string | null;
   groupName: string | null;
   systemId: string | null;
+  /**
+   * A subcategory a user added under a base category, rather than one of Wallet's own. Only a
+   * **base** category can be the `parentId` of a new one, so this is what `categories.ts` picks a
+   * parent by. `false` when Wallet does not say, which is how the read-only sync always saw it.
+   */
+  custom: boolean;
+  /** The base category this custom one hangs from, `null` for a base category. */
+  parentExternalId: string | null;
+  archived: boolean;
 }
 
 /**
@@ -451,6 +472,9 @@ export function mapWalletCategory(raw: WalletCategoryPayload): WalletCategory {
     groupExternalId: optionalText(raw.group?.id),
     groupName: optionalText(raw.group?.name),
     systemId: optionalText(raw.systemId),
+    custom: raw.customCategory ?? false,
+    parentExternalId: optionalText(raw.parentId),
+    archived: raw.archived ?? false,
   };
 }
 

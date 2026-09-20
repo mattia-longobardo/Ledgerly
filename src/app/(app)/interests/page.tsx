@@ -2,6 +2,7 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { listAccounts } from "@/modules/accounts/queries";
+import { categoryOptions } from "@/modules/transactions/taxonomy";
 import { interestsView } from "@/modules/interests/queries";
 import { draftOf, formatRate, newDraft, tierChips } from "@/modules/interests/ui/present";
 import { RuleButton } from "@/modules/interests/ui/rule-dialog";
@@ -23,10 +24,17 @@ export default async function InterestsPage() {
   const ctx = await requireSession();
   const t = await getTranslations("interests");
   const todayOn = today(ctx.timeZone);
-  const [rows, accounts] = await Promise.all([interestsView(ctx), listAccounts(ctx)]);
+  const [rows, accounts, categories] = await Promise.all([
+    interestsView(ctx),
+    listAccounts(ctx),
+    // An interest payout is income: those are the categories a published settlement is filed under.
+    categoryOptions(ctx, "income"),
+  ]);
   const open = accounts.map((account) => ({ id: account.id, name: account.name }));
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
-  const add = (label: string) => <RuleButton draft={newDraft(open, todayOn)} accounts={open} label={label} />;
+  const add = (label: string) => (
+    <RuleButton draft={newDraft(open, todayOn)} accounts={open} categories={categories} label={label} />
+  );
   const labels = {
     upTo: (amount: string) => t("tier.upTo", { amount }),
     to: (amount: string) => t("tier.to", { amount }),
@@ -126,6 +134,7 @@ export default async function InterestsPage() {
                         <RuleButton
                           draft={draftOf(row, ctx.numberFormat)}
                           accounts={open}
+                          categories={categories}
                           label={t("columns.edit")}
                           variant="ghost"
                           size="xs"

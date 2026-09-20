@@ -23,6 +23,7 @@ import {
   saveProviderBalance,
   snapshotMonthFor,
   updateAccountSettings,
+  updateBalanceEntry,
 } from "./service";
 
 function contextFor(userId: string): Ctx {
@@ -142,6 +143,105 @@ describe("balance entries", () => {
     await deleteBalanceEntry(ctx, manual!.id);
     const left = await listBalanceEntries(ctx, account.id);
     expect(left.map((entry) => entry.source)).toEqual(["system"]);
+  });
+
+  it("corrects the amount, what was available and the note of a manual balance", async () => {
+    const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
+    const entry = await saveBalanceEntry(ctx, account.id, {
+      on: "2026-02-10",
+      cents: 100_00n,
+      note: "first",
+    });
+
+    await updateBalanceEntry(ctx, entry.id, {
+      on: "2026-02-10",
+      cents: 175_50n,
+      availableCents: 150_00n,
+      note: "corrected",
+    });
+
+    const entries = await listBalanceEntries(ctx, account.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      id: entry.id,
+      on: "2026-02-10",
+      balanceCents: 175_50n,
+      availableCents: 150_00n,
+      note: "corrected",
+    });
+  });
+
+  it("moves a manual balance to another day instead of leaving one on each", async () => {
+    const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
+    const entry = await saveBalanceEntry(ctx, account.id, {
+      on: "2026-02-10",
+      cents: 100_00n,
+      note: "wrong day",
+    });
+
+    await updateBalanceEntry(ctx, entry.id, { on: "2026-02-20", cents: 100_00n, note: "wrong day" });
+
+    const entries = await listBalanceEntries(ctx, account.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ on: "2026-02-20", balanceCents: 100_00n });
+  });
+
+  it("updates the manual balance already standing on the day it is moved to", async () => {
+    const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
+    await saveBalanceEntry(ctx, account.id, { on: "2026-02-20", cents: 200_00n, note: "kept day" });
+    const moved = await saveBalanceEntry(ctx, account.id, {
+      on: "2026-02-10",
+      cents: 100_00n,
+      note: "moved",
+    });
+
+    await updateBalanceEntry(ctx, moved.id, { on: "2026-02-20", cents: 100_00n, note: "moved" });
+
+    const entries = await listBalanceEntries(ctx, account.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ on: "2026-02-20", balanceCents: 100_00n, note: "moved" });
+  });
+
+  it("refuses to edit a balance that is not a manual one", async () => {
+    const account = await createAccount(ctx, {
+      ...CHECKING,
+      openingBalance: { on: "2026-01-15", cents: 100_00n },
+    });
+    await runSnapshot(ctx, "2026-01-01");
+    const system = (await listBalanceEntries(ctx, account.id)).find((entry) => entry.source === "system");
+    expect(system).toBeDefined();
+
+    await expect(
+      updateBalanceEntry(ctx, system!.id, { on: "2026-01-31", cents: 1n, note: "" }),
+    ).rejects.toThrow(AccountError);
+    const left = await listBalanceEntries(ctx, account.id);
+    expect(left.find((entry) => entry.source === "system")).toMatchObject({ balanceCents: 100_00n });
+  });
+
+  it("refuses to move a balance into the future", async () => {
+    const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
+    const entry = await saveBalanceEntry(ctx, account.id, { on: "2026-02-10", cents: 100_00n, note: "" });
+    // Tomorrow in the user's own zone, as in the test above (spec §4.3).
+    const future = addDays(today(ctx.timeZone), 1);
+
+    await expect(updateBalanceEntry(ctx, entry.id, { on: future, cents: 1n, note: "" })).rejects.toThrow(
+      AccountError,
+    );
+    expect((await listBalanceEntries(ctx, account.id))[0]).toMatchObject({ on: "2026-02-10" });
+  });
+
+  it("refuses to edit another user's balance", async () => {
+    const account = await createAccount(ctx, {
+      ...CHECKING,
+      openingBalance: { on: "2026-01-15", cents: 100_00n },
+    });
+    const [entry] = await listBalanceEntries(ctx, account.id);
+    const other = await newContext();
+
+    await expect(
+      updateBalanceEntry(other, entry.id, { on: "2026-01-16", cents: 999_00n, note: "theirs" }),
+    ).rejects.toThrow(AccountError);
+    expect(await listBalanceEntries(ctx, account.id)).toEqual([entry]);
   });
 
   it("refuses to touch another user's balance", async () => {

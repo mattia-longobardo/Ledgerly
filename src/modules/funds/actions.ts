@@ -15,10 +15,12 @@ import {
   deleteValuation,
   FundError,
   recordValuation,
+  proposeDepositRule,
   saveDepositRule,
   setFundState,
   updateDeposit,
   updateFund,
+  updateValuation,
 } from "./service";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
@@ -119,17 +121,47 @@ export async function setFundStateAction(id: string, state: "active" | "archived
 
 export async function recordValuationAction(
   fundId: string,
-  input: { on: string; value: string; units: string; note: string },
+  input: ValuationFormInput,
 ): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    const units = input.units.trim() === "" ? null : input.units.trim().replace(",", ".");
-    await recordValuation(ctx, fundId, {
-      on: input.on,
-      cents: amount(input.value, ctx),
-      units,
-      note: input.note,
-    });
+    await recordValuation(ctx, fundId, valuationInput(input, ctx));
+    revalidate(fundId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export interface ValuationFormInput {
+  on: string;
+  value: string;
+  note: string;
+}
+
+/**
+ * A valuation is a day, an amount and a note. Units are not asked for any more: they are a
+ * quantity only the fund's own documents can state, and this app does not ask for those
+ * (owner, 2026-09-20). A valuation recorded before still keeps the units it was saved with.
+ */
+function valuationInput(input: ValuationFormInput, ctx: Ctx) {
+  return {
+    on: input.on,
+    cents: amount(input.value, ctx),
+    units: null,
+    note: input.note,
+  };
+}
+
+/** "Edit" on a valuation row: a new day moves the value, it never leaves a second one behind. */
+export async function updateValuationAction(
+  fundId: string,
+  valuationId: string,
+  input: ValuationFormInput,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await updateValuation(ctx, valuationId, valuationInput(input, ctx));
     revalidate(fundId);
     return { ok: true };
   } catch (error) {
@@ -188,6 +220,51 @@ export async function deleteDepositAction(fundId: string, depositId: string): Pr
     return { ok: true };
   } catch (error) {
     return failed(error);
+  }
+}
+
+/**
+ * "Find this charge everywhere": what the app would match on, and what it already finds, before
+ * anything is saved (owner, 2026-09-20). Read-only — the rule is saved by
+ * {@link saveDepositRuleAction}, with the text this answered.
+ */
+export async function proposeDepositRuleAction(
+  fundId: string,
+  transactionId: string,
+): Promise<
+  | {
+      ok: true;
+      found: {
+        kind: "creditor" | "mandate" | "payee";
+        text: string;
+        count: number;
+        first: string | null;
+        last: string | null;
+        medianCents: string | null;
+        intervalDays: number | null;
+      } | null;
+    }
+  | { ok: false; error: string }
+> {
+  const ctx = await requireSession();
+  try {
+    const detection = await proposeDepositRule(ctx, fundId, transactionId);
+    if (detection === null) return { ok: true, found: null };
+    return {
+      ok: true,
+      found: {
+        kind: detection.key.kind,
+        text: detection.key.text,
+        count: detection.charges.length,
+        first: detection.first,
+        last: detection.last,
+        // Cents cross to the browser as text: a bigint is not serialisable (spec §4.3).
+        medianCents: detection.medianCents === null ? null : detection.medianCents.toString(),
+        intervalDays: detection.intervalDays,
+      },
+    };
+  } catch (error) {
+    return failed(error) as { ok: false; error: string };
   }
 }
 

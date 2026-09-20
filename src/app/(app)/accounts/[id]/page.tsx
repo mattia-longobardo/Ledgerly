@@ -29,7 +29,7 @@ import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
 import { lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
 import { AreaLine, Bars } from "@/ui/chart";
@@ -181,6 +181,9 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
       {tab === "settings" && (
         <AccountSettingsForm
           today={today(ctx.timeZone, now)}
+          // The place the account holds in the list, so the colour control shows the colour the
+          // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
+          index={index}
           account={{
             id: account.id,
             name: account.name,
@@ -505,6 +508,9 @@ async function entryRows(ctx: Ctx, accountId: string): Promise<EntryRow[]> {
       changeSign: change.cents === null ? 0 : Number(change.cents),
       note: entry.note,
       source: entry.source,
+      // What the correction form puts back in its fields, written the way the person types amounts.
+      amountInput: formatAmountInput(entry.balanceCents, ctx.numberFormat),
+      availableInput: formatAmountInput(entry.availableCents, ctx.numberFormat),
     };
   });
 }

@@ -9,7 +9,14 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { EntityType } from "@/platform/integrations/rules";
 import { IntegrationError, linkExternal, resolveExternal } from "@/platform/integrations/service";
-import { CATEGORY_TYPES, type CategoryType, markLocallyEdited, NAME_MAX, treeOrder } from "./rules";
+import {
+  CATEGORY_TYPES,
+  type CategoryType,
+  markCategoryEdited,
+  markLocallyEdited,
+  NAME_MAX,
+  treeOrder,
+} from "./rules";
 import { categories, labels, transactionLabels, transactions } from "./schema";
 
 export type Category = typeof categories.$inferSelect;
@@ -169,6 +176,112 @@ export async function categoryOptions(
   }));
 }
 
+/* What a category is for, learned from what is filed under it (owner, 2026-09-20) */
+
+/** A category with fewer than this many movements has not said anything yet. */
+export const TYPE_EVIDENCE_MIN = 3;
+/** How much of the evidence has to agree before the type is moved. */
+export const TYPE_EVIDENCE_SHARE = 0.8;
+
+/**
+ * The verdict of the movements filed under one category: the type that carries enough of them, or
+ * `null` when they are too few or too divided to say. Pure, so the threshold is testable on its
+ * own.
+ *
+ * Not "all of them": Wallet lets a refund be filed under an income category, and one stray
+ * movement out of seventy-eight is noise, not a disagreement. Four out of ten is a disagreement,
+ * and then nothing is decided.
+ */
+export function typeFromMovements(counts: Readonly<Record<CategoryType, number>>): CategoryType | null {
+  const total = CATEGORY_TYPES.reduce((sum, type) => sum + (counts[type] ?? 0), 0);
+  if (total < TYPE_EVIDENCE_MIN) return null;
+  for (const type of CATEGORY_TYPES) {
+    if ((counts[type] ?? 0) / total >= TYPE_EVIDENCE_SHARE) return type;
+  }
+  return null;
+}
+
+/**
+ * Moves each category to the type its own movements say it is (spec §7.2).
+ *
+ * Wallet publishes no type on a category — the OpenAPI has none — so every category adopted from
+ * it was born an expense, salary and interest included. The movements know better: they carry
+ * their own type, and a category under which thirty-two income movements are filed is an income
+ * category. Until this ran, the owner's "Interest, dividends" was an expense and so could not be
+ * offered as the category an interest payout is filed under (owner, 2026-09-20).
+ *
+ * What it will not do:
+ * - override a type set by hand here — that is what the `type` marker in `locally_edited` is for;
+ * - decide on thin or divided evidence ({@link typeFromMovements});
+ * - move a sub-category whose own movements disagree with its group: it keeps its own evidence.
+ *
+ * A group that moves takes with it the children that have no evidence of their own, because a
+ * category in a group is of the group's type (F2.5) and those children have nothing else to say.
+ */
+export async function alignCategoryTypesToMovements(ctx: Pick<Ctx, "userId">): Promise<number> {
+  const rows = await getDb()
+    .select({
+      id: categories.id,
+      parentId: categories.parentId,
+      type: categories.type,
+      locallyEdited: categories.locallyEdited,
+    })
+    .from(categories)
+    .where(userScoped(ctx).owns(categories));
+  if (rows.length === 0) return 0;
+
+  const tally = await getDb()
+    .select({
+      categoryId: transactions.categoryId,
+      type: transactions.type,
+      count: count(),
+    })
+    .from(transactions)
+    .where(userScoped(ctx).owns(transactions))
+    .groupBy(transactions.categoryId, transactions.type);
+
+  const evidence = new Map<string, Record<CategoryType, number>>();
+  for (const row of tally) {
+    if (row.categoryId === null) continue;
+    const own = evidence.get(row.categoryId) ?? { income: 0, expense: 0, transfer: 0 };
+    // A movement's type and a category's type share their three names (spec §7.2).
+    if (row.type === "income" || row.type === "expense" || row.type === "transfer") {
+      own[row.type] += Number(row.count);
+    }
+    evidence.set(row.categoryId, own);
+  }
+
+  const settled = (id: string, type: CategoryType) =>
+    rows.find((row) => row.id === id)?.locallyEdited.includes("type") === true ||
+    rows.find((row) => row.id === id)?.type === type;
+
+  const moves = new Map<string, CategoryType>();
+  for (const row of rows) {
+    const verdict = typeFromMovements(evidence.get(row.id) ?? { income: 0, expense: 0, transfer: 0 });
+    if (verdict === null || settled(row.id, verdict)) continue;
+    moves.set(row.id, verdict);
+  }
+  // The silent children of a group that moved.
+  for (const [id, type] of [...moves]) {
+    if (rows.find((row) => row.id === id)?.parentId !== null) continue;
+    for (const child of rows) {
+      if (child.parentId !== id || evidence.has(child.id) || settled(child.id, type)) continue;
+      moves.set(child.id, type);
+    }
+  }
+  if (moves.size === 0) return 0;
+
+  await getDb().transaction(async (tx) => {
+    for (const [id, type] of moves) {
+      await tx
+        .update(categories)
+        .set({ type })
+        .where(and(eq(categories.id, id), userScoped(ctx).owns(categories)));
+    }
+  });
+  return moves.size;
+}
+
 /**
  * The Settings › Data table. The join carries the user's scope too: a movement of another user
  * could only reach this category through a forged reference, and it would not be counted here.
@@ -293,17 +406,30 @@ export async function updateCategory(
   // Choosing the group by hand — into one, out of one, or into another — is a local edit the sync
   // must not undo (spec §7.2); a rename that leaves the group alone is not that choice.
   const parentSetLocally = current.parentSetLocally || current.parentId !== values.parentId;
+  // A name or a type changed *here* is marked the way §7.2 marks a movement's fields. For the name
+  // that is not only "never overwrite it": the next Wallet pass writes it to Wallet and clears the
+  // marker (`platform/integrations/wallet/categories.ts`), which is what makes the two-way sync
+  // settle instead of swinging between the two names. The baseline is deliberately left alone:
+  // it still holds the name Wallet last published, which is how the pass tells a rename that only
+  // happened here from one that happened on both sides.
+  const edited = [
+    ...(values.name === current.name ? [] : (["name"] as const)),
+    ...(type === current.type ? [] : (["type"] as const)),
+  ];
+  const locallyEdited = markCategoryEdited(current.locallyEdited, edited);
   let row: Category | undefined;
   try {
     row = await getDb().transaction(async (tx) => {
       const [updated] = await tx
         .update(categories)
-        .set({ ...values, type, parentSetLocally })
+        .set({ ...values, type, parentSetLocally, locallyEdited })
         .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)))
         .returning();
       if (updated?.parentId === null) {
         await tx
           .update(categories)
+          // The children's type follows their group by rule (F2.5), so it is not a choice made on
+          // each of them: only the group carries the `type` marker.
           .set({ type })
           .where(
             and(
@@ -500,7 +626,7 @@ async function createGroup(
 ): Promise<Category> {
   const [row] = await getDb()
     .insert(categories)
-    .values(userScoped(ctx).stamp({ name: group.name, ...(type ? { type } : {}) }))
+    .values(userScoped(ctx).stamp({ name: group.name, providerName: group.name, ...(type ? { type } : {}) }))
     .onConflictDoNothing()
     .returning();
   // Two syncs met on the same new group: the other one won, so take its row.
@@ -562,7 +688,16 @@ async function insertAdoptedCategory(
 ): Promise<Category> {
   const [row] = await getDb()
     .insert(categories)
-    .values(userScoped(ctx).stamp({ name, ...(parent ? { parentId: parent.id, type: parent.type } : {}) }))
+    // `providerName` starts life equal to the name, because that is exactly what it means: the
+    // name the provider published when the two sides last agreed. Without it a category created
+    // by the sync would look, on the very next pass, like one whose baseline is unknown.
+    .values(
+      userScoped(ctx).stamp({
+        name,
+        providerName: name,
+        ...(parent ? { parentId: parent.id, type: parent.type } : {}),
+      }),
+    )
     .onConflictDoNothing()
     .returning();
   if (row) return row;

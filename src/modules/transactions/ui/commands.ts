@@ -9,6 +9,7 @@
 import {
   type ActionResult,
   type CountResult,
+  deleteHiddenTransactionsAction,
   hideTransactionsAction,
   restoreTransactionsAction,
   setTransactionCategoryAction,
@@ -36,6 +37,11 @@ export function hide(ids: readonly string[]): Promise<CommandResult> {
 /** What "Show hidden" is for: bringing a hidden row back into the totals (spec §7.2). */
 export function restore(ids: readonly string[]): Promise<CommandResult> {
   return restoreTransactionsAction([...ids]);
+}
+
+/** "Delete" under "Restore": only for hidden rows, and for good. */
+export function removeHidden(ids: readonly string[]): Promise<CommandResult> {
+  return deleteHiddenTransactionsAction([...ids]);
 }
 
 /** One row at a time, and no count to report: what the details panel saves. */

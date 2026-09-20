@@ -24,6 +24,7 @@ export const USERS = {
   interests: { email: "interests@example.test", password: "interests-password-123", name: "Interests" },
   funds: { email: "funds@example.test", password: "funds-password-123", name: "Funds" },
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
+  cometa: { email: "cometa@example.test", password: "cometa-password-123", name: "Cometa" },
 } as const;
 
 /** The only addresses the seed may create or delete. */
@@ -43,6 +44,7 @@ export const SESSIONS = {
   interests: { user: "interests", file: "interests-session.json" },
   funds: { user: "funds", file: "funds-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
+  cometa: { user: "cometa", file: "cometa-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;

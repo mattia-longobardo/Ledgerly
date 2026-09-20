@@ -25,7 +25,6 @@ describe("navFor", () => {
       "pockets",
       "subscriptions",
       "payroll",
-      "components",
       "settings",
     ]);
   });

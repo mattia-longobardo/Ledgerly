@@ -90,7 +90,8 @@ export function Checkbox({
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
   const field = useFieldState();
   return (
-    <label className={cn("inline-flex items-center gap-1.5 text-sm", className)}>
+    // The whole row is the target — the box is 14 px by design, the label around it is 24 px tall.
+    <label className={cn("inline-flex min-h-6 items-center gap-1.5 text-sm", className)}>
       <input
         type="checkbox"
         className="focus-ring m-0 size-3.5 accent-primary"

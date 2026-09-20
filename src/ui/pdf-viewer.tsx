@@ -4,6 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "./button";
 import { cn } from "./cn";
+import { PDF_ASSETS } from "./pdf-assets";
 
 /** A box on a page to draw attention to: fractions of the page, origin top left (spec §7.8). */
 export interface Highlight {
@@ -67,11 +68,13 @@ export function PdfViewer({
     (async () => {
       try {
         const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
+        pdfjs.GlobalWorkerOptions.workerSrc = PDF_ASSETS.worker;
         const loading = pdfjs.getDocument({
           url,
           withCredentials: true,
-          standardFontDataUrl: "/pdfjs/standard_fonts/",
+          standardFontDataUrl: PDF_ASSETS.standardFonts,
+          // Without it the JBIG2 and JPEG 2000 images of a document are dropped (spec §8.3).
+          wasmUrl: PDF_ASSETS.wasm,
         });
         task = loading;
         if (cancelled) return void loading.destroy().catch(() => undefined);

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   accrueDay,
+  DEFAULT_RUN_HOUR,
+  FRESH_READING_MS,
+  isFreshReading,
+  formatRunHour,
+  hourIn,
+  runsAt,
   fixedFromDecimal,
   fixedToDecimal,
   grossOfDay,
@@ -211,5 +217,77 @@ describe("assignPayments", () => {
         ["feb", ["c"]],
       ]),
     );
+  });
+});
+
+describe("the hour a rule runs at (spec §10.2, the hourly pass)", () => {
+  // The instants below are UTC; what each assertion states is the wall clock of the zone named.
+  const winter = new Date("2026-01-15T11:00:00Z"); // 12:00 in Rome (UTC+1)
+  const summer = new Date("2026-07-15T10:00:00Z"); // 12:00 in Rome (UTC+2)
+
+  it("reads the hour on the user's clock, in standard time and in summer time", () => {
+    expect(hourIn(winter, "Europe/Rome")).toBe(12);
+    expect(hourIn(summer, "Europe/Rome")).toBe(12);
+    // The day the zone springs forward (29 March 2026, 02:00 → 03:00) is noon all the same.
+    expect(hourIn(new Date("2026-03-29T10:00:00Z"), "Europe/Rome")).toBe(12);
+    // And the day it falls back (25 October 2026), where 02:00 happens twice.
+    expect(hourIn(new Date("2026-10-25T00:00:00Z"), "Europe/Rome")).toBe(2); // the first 02:00, CEST
+    expect(hourIn(new Date("2026-10-25T01:00:00Z"), "Europe/Rome")).toBe(2); // the second, CET
+  });
+
+  it("never reads the server's clock: another zone is another hour", () => {
+    expect(hourIn(winter, "UTC")).toBe(11);
+    expect(hourIn(winter, "America/New_York")).toBe(6);
+    expect(hourIn(winter, "Pacific/Auckland")).toBe(24 % 24); // 00:00 the next day, not 24
+    // A zone half an hour off the hour still belongs to the hour its clock shows.
+    expect(hourIn(winter, "Asia/Kolkata")).toBe(16); // 16:30
+    expect(hourIn(new Date("2026-01-15T18:45:00Z"), "Asia/Kathmandu")).toBe(0); // 00:30, next day
+  });
+
+  it("runs a rule with no hour of its own at noon, where the daily job ran", () => {
+    expect(DEFAULT_RUN_HOUR).toBe(12);
+    expect(runsAt(null, winter, "Europe/Rome")).toBe(true);
+    expect(runsAt(null, summer, "Europe/Rome")).toBe(true);
+    // Any other pass of the day leaves it alone: one pass a day is its pass.
+    expect(runsAt(null, new Date("2026-01-15T10:00:00Z"), "Europe/Rome")).toBe(false);
+    expect(runsAt(null, new Date("2026-01-15T12:00:00Z"), "Europe/Rome")).toBe(false);
+    // Noon in Rome is not noon in New York: there the same instant is no one's hour but 6.
+    expect(runsAt(null, winter, "America/New_York")).toBe(false);
+    expect(runsAt(6, winter, "America/New_York")).toBe(true);
+  });
+
+  it("runs a rule with an hour set at that hour, midnight included", () => {
+    expect(runsAt(9, new Date("2026-01-15T08:00:00Z"), "Europe/Rome")).toBe(true);
+    expect(runsAt(9, new Date("2026-07-15T08:00:00Z"), "Europe/Rome")).toBe(false); // 10:00 CEST
+    expect(runsAt(9, new Date("2026-07-15T07:00:00Z"), "Europe/Rome")).toBe(true);
+    expect(runsAt(0, new Date("2026-01-14T23:00:00Z"), "Europe/Rome")).toBe(true); // 00:00, not 24
+    expect(runsAt(23, new Date("2026-01-15T22:00:00Z"), "Europe/Rome")).toBe(true);
+  });
+
+  it("writes an hour the way the dialog shows it", () => {
+    expect([formatRunHour(0), formatRunHour(9), formatRunHour(23)]).toEqual(["00:00", "09:00", "23:00"]);
+  });
+});
+
+describe("a balance fresh enough to accrue on (spec §7.6)", () => {
+  const now = new Date("2026-01-15T12:00:00Z");
+
+  it("takes a reading of this hour and refuses one older than the sync interval", () => {
+    expect(FRESH_READING_MS).toBe(60 * 60 * 1000);
+    expect(isFreshReading(now, now)).toBe(true);
+    expect(isFreshReading(new Date("2026-01-15T11:30:00Z"), now)).toBe(true);
+    // Exactly the interval is still in; one second past it is a pass that never landed.
+    expect(isFreshReading(new Date("2026-01-15T11:00:00Z"), now)).toBe(true);
+    expect(isFreshReading(new Date("2026-01-15T10:59:59Z"), now)).toBe(false);
+    expect(isFreshReading(new Date("2026-01-14T12:00:00Z"), now)).toBe(false);
+  });
+
+  it("never calls an account that was never read fresh", () => {
+    expect(isFreshReading(null, now)).toBe(false);
+    expect(isFreshReading(null, now, 10 * 60 * 60 * 1000)).toBe(false);
+  });
+
+  it("accepts a reading stamped by a pass that started after this one", () => {
+    expect(isFreshReading(new Date("2026-01-15T12:00:30Z"), now)).toBe(true);
   });
 });

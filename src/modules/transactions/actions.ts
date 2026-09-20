@@ -9,6 +9,7 @@ import { requireSession } from "@/platform/auth/session";
 import { searchPayees } from "./queries";
 import {
   TransactionError,
+  deleteHiddenTransactions,
   hideTransactions,
   restoreTransactions,
   setCategory,
@@ -87,6 +88,19 @@ export async function restoreTransactionsAction(ids: string[]): Promise<CountRes
   const ctx = await requireSession();
   try {
     const count = await restoreTransactions(ctx, idsSchema.parse(ids));
+    revalidatePath("/expenses");
+    revalidatePath("/");
+    return { ok: true, count };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** "Delete" on hidden rows: gone for good, and a synced one is never imported again. */
+export async function deleteHiddenTransactionsAction(ids: string[]): Promise<CountResult> {
+  const ctx = await requireSession();
+  try {
+    const count = await deleteHiddenTransactions(ctx, idsSchema.parse(ids));
     revalidatePath("/expenses");
     revalidatePath("/");
     return { ok: true, count };

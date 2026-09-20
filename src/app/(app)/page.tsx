@@ -129,56 +129,94 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
       </div>
 
       {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}
-      <div className="grid items-start gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      {/* `minmax(0,1fr)` also in one column: an auto track takes the widest child's min-content
+          width — a table's — and the cards would then reach past the page (400 px). */}
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <NetWorthCard ctx={ctx} query={query} path="/" now={now} />
 
         <Card padded={false}>
           <CardHeader
             title={ta("title")}
             actions={
-              <Link href="/accounts" className="focus-ring rounded-[2px] text-accent hover:underline">
+              <Link
+                href="/accounts"
+                className="focus-ring inline-flex h-6 items-center rounded-[2px] text-accent hover:underline"
+              >
                 {t("manageAccounts")}
               </Link>
             }
           />
-          <Table>
-            <THead>
-              <Th>{ta("columns.name")}</Th>
-              <Th>{ta("columns.type")}</Th>
-              <Th align="right">{ta("columns.balance")}</Th>
-              <Th align="right">{ta("columns.monthlyChange")}</Th>
-            </THead>
-            <TBody>
-              {view.rows.map((row) => {
-                const change = changeBetween(row.balance, row.previous);
-                return (
-                  <Tr key={row.account.id}>
-                    <Td>
-                      <Link
-                        href={`/accounts/${row.account.id}`}
-                        className="focus-ring rounded-[2px] font-medium hover:underline"
-                      >
-                        {row.account.name}
-                      </Link>
-                    </Td>
-                    <Td muted>{ta(`types.${row.account.type}`)}</Td>
-                    <Td align="right">{formatMoney(row.balance, ctx.numberFormat)}</Td>
-                    <Td align="right" className={TONE_TEXT[toneOfSign(change.cents)]}>
-                      {change.cents === null
-                        ? NULL_DISPLAY
-                        : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </TBody>
-          </Table>
+          <div className="overflow-x-auto max-md:hidden">
+            <Table>
+              <THead>
+                <Th>{ta("columns.name")}</Th>
+                <Th>{ta("columns.type")}</Th>
+                <Th align="right">{ta("columns.balance")}</Th>
+                <Th align="right">{ta("columns.monthlyChange")}</Th>
+              </THead>
+              <TBody>
+                {view.rows.map((row) => {
+                  const change = changeBetween(row.balance, row.previous);
+                  return (
+                    <Tr key={row.account.id}>
+                      <Td>
+                        <Link
+                          href={`/accounts/${row.account.id}`}
+                          className="focus-ring inline-flex h-6 items-center rounded-[2px] font-medium hover:underline"
+                        >
+                          {row.account.name}
+                        </Link>
+                      </Td>
+                      <Td muted>{ta(`types.${row.account.type}`)}</Td>
+                      <Td align="right">{formatMoney(row.balance, ctx.numberFormat)}</Td>
+                      <Td align="right" className={TONE_TEXT[toneOfSign(change.cents)]}>
+                        {change.cents === null
+                          ? NULL_DISPLAY
+                          : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </div>
+          {/* A phone gets the same rows as a list: a four-column table cannot fit 400 px. */}
+          <ul className="flex flex-col md:hidden">
+            {view.rows.map((row) => {
+              const change = changeBetween(row.balance, row.previous);
+              return (
+                <li
+                  key={row.account.id}
+                  data-testid="overview-account-item"
+                  className="border-b border-border last:border-0"
+                >
+                  <Link
+                    href={`/accounts/${row.account.id}`}
+                    className="flex items-center justify-between gap-2 px-4 py-3"
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate font-medium">{row.account.name}</span>
+                      <span className="text-sm text-muted">{ta(`types.${row.account.type}`)}</span>
+                    </span>
+                    <span className="flex flex-col items-end tabular-nums">
+                      <span className="font-semibold">{formatMoney(row.balance, ctx.numberFormat)}</span>
+                      <span className={cn("text-sm", TONE_TEXT[toneOfSign(change.cents)])}>
+                        {change.cents === null
+                          ? NULL_DISPLAY
+                          : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </Card>
       </div>
 
-      <div className="grid items-start gap-4 @4xl:grid-cols-2">
-        <BudgetsOverviewCard ctx={ctx} month={thisMonth} />
-      </div>
+      {/* The card spans the page's whole column: it lays its budgets out in one or two columns
+          itself, by its own width (spec §8.2). */}
+      <BudgetsOverviewCard ctx={ctx} month={thisMonth} />
     </Page>
   );
 }

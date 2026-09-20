@@ -112,3 +112,30 @@ export const MARCH_UNKNOWN_CODE: TwinPayslip = {
   printedOn: "29/03/31",
   lines: [...MARCH.lines, { code: "5555", description: "VOCE SCONOSCIUTA", statistical: "1.00" }],
 };
+
+/**
+ * January 2031: March's month plus the enrolment of the pension fund — 5,16 withheld from the
+ * worker (7053) and 5,16 charged to the employer (7052). Net = 1511.00 − 5.16 = 1505.84.
+ */
+export const JANUARY: TwinPayslip = {
+  ...MARCH,
+  period: "GENNAIO 2031",
+  printedOn: "27/01/31",
+  lines: [
+    ...MARCH.lines,
+    { code: "7053", description: "QUOTA ISCRIZIONE DIPEND.", deductions: "5.16" },
+    { code: "7052", description: "QUOTA ISCRIZIONE AZIENDA", statistical: "5.16" },
+  ],
+  bodyDeductions: "40.16",
+  totalDeductions: "494.59",
+  net: "1505.84",
+  progressives: undefined,
+};
+
+/** February 2031: an ordinary month exactly like March, so a whole quarter is covered. */
+export const FEBRUARY: TwinPayslip = {
+  ...MARCH,
+  period: "FEBBRAIO 2031",
+  printedOn: "27/02/31",
+  progressives: undefined,
+};

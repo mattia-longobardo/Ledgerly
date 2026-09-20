@@ -21,6 +21,11 @@ test("a PAC is created, fed by its debits, valued and measured", async ({ page }
     await expect(page.getByRole("heading", { name: "No investment funds" })).toBeVisible();
     await page.getByRole("button", { name: "Add fund" }).first().click();
     const dialog = page.getByRole("dialog", { name: "New fund" });
+    // One dialog for both kinds: it opens on the accumulation plan, with the whole monthly plan.
+    await expect(dialog.getByRole("button", { name: "Accumulation plan (PAC)" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await dialog.getByLabel("Name").fill("Fideuram Piano Accumulo");
     await dialog.getByLabel("Provider").fill("Fideuram");
     await dialog.getByLabel("Start date").fill(start);

@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { listAccounts } from "@/modules/accounts/queries";
 import { incomeCandidates } from "@/modules/transactions/queries";
+import { listCategories } from "@/modules/transactions/taxonomy";
 import { payeeKeyOf } from "@/modules/transactions/rules";
 import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, today } from "@/platform/dates";
@@ -11,6 +12,7 @@ import type { Cents } from "@/platform/money";
 import {
   assignPayments,
   fixedFromDecimal,
+  isFreshReading,
   paymentWindow,
   periodOf,
   reconcile,
@@ -102,10 +104,25 @@ export interface SettlementRow {
   status: ReconciliationStatus;
 }
 
+/**
+ * Where the rule's balance stands (spec §7.6): a synced account whose last reading is too old is
+ * one the accrual job refuses to accrue on, so the page says the accrual is on hold instead of
+ * leaving the person to wonder why the days stopped. Read here rather than stored: the moment a
+ * pass brings a reading, the warning is gone and the next tick catches the days up.
+ */
+export interface BalanceState {
+  synced: boolean;
+  lastSyncedAt: Date | null;
+  stale: boolean;
+}
+
 export interface RuleDetail {
   rule: InterestRule;
   tiers: Tier[];
   accountName: string;
+  /** The category each published settlement is filed under in Wallet; `null` for none. */
+  categoryName: string | null;
+  balance: BalanceState;
   settlements: SettlementRow[];
   /** The latest days, newest first, skipped ones included. */
   days: InterestAccrual[];
@@ -130,9 +147,10 @@ export async function ruleDetail(
     .from(interestRules)
     .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
   if (!rule) throw new InterestError("not_found");
-  const [tiers, accounts, entries, days, counts, pending] = await Promise.all([
+  const [tiers, accounts, categories, entries, days, counts, pending] = await Promise.all([
     tiersOf(ctx, [id]),
     listAccounts(ctx, { includeArchived: true }),
+    listCategories(ctx, { includeArchived: true }),
     getDb()
       .select()
       .from(interestEntries)
@@ -226,10 +244,21 @@ export async function ruleDetail(
     };
   });
 
+  const account = accounts.find((one) => one.id === rule.accountId) ?? null;
+  const synced = account?.origin === "synced" && account.providerAccountId !== null;
   return {
     rule,
     tiers: tiers.get(id) ?? [],
-    accountName: accounts.find((account) => account.id === rule.accountId)?.name ?? "",
+    accountName: account?.name ?? "",
+    categoryName:
+      rule.postingCategoryId === null
+        ? null
+        : (categories.find((one) => one.id === rule.postingCategoryId)?.name ?? null),
+    balance: {
+      synced,
+      lastSyncedAt: account?.lastSyncedAt ?? null,
+      stale: synced && !isFreshReading(account?.lastSyncedAt ?? null, now),
+    },
     settlements,
     days,
     pendingCents: BigInt(pending[0]?.net ?? "0"),

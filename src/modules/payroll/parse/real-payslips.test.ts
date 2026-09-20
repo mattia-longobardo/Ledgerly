@@ -194,11 +194,15 @@ describe.skipIf(!present)("the owner's twelve payslips (owner's spec L184–250)
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("gives the 13th no leave events, and flags its employer fund adjustment for review (acceptance 6, L147)", () => {
+  it("gives the 13th no leave events, keeps its employer fund adjustment apart, and says nothing about it (acceptance 6, L147)", () => {
     const thirteenth = [...byKey.values()].find((read) => read.parsed.identity?.type === "thirteenth")!;
     expect(thirteenth.assembled.events).toEqual([]);
+    // Never summed into a month's employer contribution — and, on an extra month, never a remark
+    // either: that is how a 13th is written, so there is nothing for the owner to review.
     expect(thirteenth.assembled.values.employerFundEffective).toBeNull();
-    expect(thirteenth.assembled.warnings.map((warning) => warning.code)).toContain("employer_fund_adjustment_only");
+    expect(thirteenth.assembled.warnings.map((warning) => warning.code)).not.toContain(
+      "employer_fund_adjustment_only",
+    );
     // The employee side: regular quota and adjustment, and their sum (L145).
     const regular = moneyOf(thirteenth.assembled.values, "employeeFundRegular")!;
     const adjustment = moneyOf(thirteenth.assembled.values, "employeeFundAdjustments")!;

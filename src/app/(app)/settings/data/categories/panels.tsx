@@ -40,12 +40,7 @@ export async function TaxonomyPanels() {
 
   return (
     <>
-      <SettingsSection
-        title={t("categories.title")}
-        description={t("categories.description")}
-        padded={false}
-        wide
-      >
+      <SettingsSection title={t("categories.title")} description={t("categories.description")} padded={false}>
         <CategoriesCard rows={categoryRows} />
       </SettingsSection>
       <SettingsSection title={t("labels.title")} description={t("labels.description")} padded={false}>

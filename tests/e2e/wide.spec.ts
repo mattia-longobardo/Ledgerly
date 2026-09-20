@@ -122,18 +122,35 @@ test("Overview puts the chart and the accounts side by side only past the wide t
   expect(narrowAccounts.y).toBeGreaterThan(narrowChart.y + 200);
 });
 
-test("Settings uses the width: two sections side by side only past the wide threshold", async ({ page }) => {
+/**
+ * Settings, at every width: one section to a row — its title and description in the left column,
+ * its card taking all the rest of the row — and never two sections beside each other, which would
+ * halve the room each card has (owner, 2026-09-20).
+ */
+test("Settings gives each section the whole row, its card against the right edge", async ({ page }) => {
   const account = page.getByRole("heading", { name: "Account", level: 2 });
   const signIn = page.getByRole("heading", { name: "Sign-in", level: 2 });
 
-  await openAt(page, 2560, "expanded", "/settings/profile");
-  const tabs = await box(page, page.getByRole("heading", { name: "Settings", level: 1 }).locator(".."));
-  expect(tabs.width).toBeGreaterThan(1600);
-  const [wideAccount, wideSignIn] = [await box(page, account), await box(page, signIn)];
-  expect(wideSignIn.x).toBeGreaterThan(wideAccount.x + 500);
-  expect(Math.abs(wideSignIn.y - wideAccount.y)).toBeLessThan(40);
+  for (const width of [2560, 1280] as const) {
+    await openAt(page, width, "expanded", "/settings/profile");
+    const [first, second] = [await box(page, account), await box(page, signIn)];
+    // One under the other, never side by side.
+    expect(second.y, `at ${width}px`).toBeGreaterThan(first.y + 100);
+    expect(Math.round(second.x), `at ${width}px`).toBe(Math.round(first.x));
 
-  await openAt(page, 1280, "expanded", "/settings/profile");
-  const [narrowAccount, narrowSignIn] = [await box(page, account), await box(page, signIn)];
-  expect(narrowSignIn.y).toBeGreaterThan(narrowAccount.y + 100);
+    // The card of the first section starts to the right of its title and ends where the column
+    // ends: the gap on its right is the page's own padding, nothing more.
+    const gap = await page.evaluate(() => {
+      const section = document.querySelector("main section")!;
+      const title = section.querySelector("h2")!;
+      const card = section.lastElementChild!.lastElementChild!;
+      const main = document.querySelector("main")!;
+      return {
+        beside: Math.round(card.getBoundingClientRect().left - title.getBoundingClientRect().right),
+        right: Math.round(main.getBoundingClientRect().right - card.getBoundingClientRect().right),
+      };
+    });
+    expect(gap.beside, `title beside the card at ${width}px`).toBeGreaterThan(0);
+    expect(gap.right, `card reaching the right edge at ${width}px`).toBeLessThanOrEqual(32);
+  }
 });

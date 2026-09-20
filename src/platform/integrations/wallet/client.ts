@@ -170,12 +170,18 @@ export interface WalletClient {
    * F4: one new record (spec §7.6, §9.1), **one attempt** (`WRITE_ATTEMPTS`): a 5xx after Wallet
    * stored it must not store it twice. The answer's id is `null` when the body carries none that
    * can be read — the record may well exist; the caller treats that as unsure, never as done.
+   *
+   * `categoryId` is Wallet's *own* id of the category the record is filed under, resolved by the
+   * caller from the `category` links of `provider_links`; left out (or `null`), the record is
+   * posted with no category at all, which is what Wallet does with a body that omits the field.
+   * This client never looks a category up by name and never creates one.
    */
   createRecord(input: {
     accountId: string;
     amountCents: Cents;
     on: CivilDate;
     note: string;
+    categoryId?: string | null;
   }): Promise<{ id: string | null }>;
 }
 
@@ -678,10 +684,14 @@ export function createWalletClient(token: string, options: WalletClientOptions =
         return { id: record.externalId, amountCents: record.amountCents, note: record.note };
       });
     },
-    async createRecord({ accountId, amountCents, on, note }) {
+    async createRecord({ accountId, amountCents, on, note, categoryId = null }) {
       if (!isCivilDate(on)) throw new RangeError(`Not a civil date: "${on}"`);
+      // The field is omitted rather than sent as `null` when there is no category: an explicit
+      // null is a value Wallet has never been asked to accept, and an unfiled record is exactly
+      // what the absent field means.
+      const category = categoryId === null ? "" : `,"categoryId":${JSON.stringify(categoryId)}`;
       // Written by hand so the amount reaches the wire as its exact decimal, never through a float.
-      const body = `[{"accountId":${JSON.stringify(accountId)},"amount":${centsToDecimal(amountCents)},"recordDate":${JSON.stringify(on)},"note":${JSON.stringify(note)}}]`;
+      const body = `[{"accountId":${JSON.stringify(accountId)},"amount":${centsToDecimal(amountCents)},"recordDate":${JSON.stringify(on)},"note":${JSON.stringify(note)}${category}}]`;
       const created = await withRetry(() => attempt("/records", createdRecordsSchema, body), WRITE_ATTEMPTS);
       return { id: created[0]?.id ?? null };
     },
