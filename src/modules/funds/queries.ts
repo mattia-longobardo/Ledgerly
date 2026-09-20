@@ -301,6 +301,10 @@ export async function fundsView(
                 value === null || basis === 0n
                   ? null
                   : Number(((value - basis) * 1_000_000_000n) / basis) / 1_000_000_000,
+              // A pension fund has no PAC deposits, so `base` would leave these at zero: they are
+              // the fund's own inflows, up to the day of its value.
+              gainBasisCents: basis,
+              paidInAfterValueCents: paidIn - basis,
             }
           : base,
       lastValuation: entryDates.get(fund.id) ?? null,
@@ -328,14 +332,20 @@ export async function fundsView(
       .flat()
       .map((flow) => ({ on: flow.on, chargedCents: flow.chargedCents, feeCents: flow.feeCents })),
   ];
-  const basisCents = rows.reduce((sum, row) => sum + row.metrics.gainBasisCents, 0n);
+  /*
+    The total is the column above it, added up — not the combined value less a combined paid-in.
+    Each fund measures its gain against what *its own* last valuation could see, and a total worked
+    out from two sums cannot say that: it once read +2.418,59 € under two rows worth +225,53 €
+    (owner, 2026-09-20). A fund with no value contributes nothing, exactly as its row shows nothing.
+  */
+  const gained = rows.filter((row) => row.metrics.gainCents !== null);
   return {
     rows,
     archived: all.filter((fund) => fund.state === "archived"),
     valueCents,
     paidInCents,
-    // Measured the same way as each row's: only what had been paid in by each fund's own value.
-    gainCents: valueCents === null ? null : valueCents - basisCents,
+    gainCents:
+      gained.length === 0 ? null : gained.reduce((sum, row) => sum + (row.metrics.gainCents ?? 0n), 0n),
     monthlyCents: open.reduce((sum, fund) => sum + (fund.monthlyCents ?? 0n), 0n),
     months: chart.months,
     valueSeries,

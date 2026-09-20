@@ -433,3 +433,21 @@ Due cose trovate lungo la strada:
   sta più. Il budget del test è ora di tre minuti; i timeout dei singoli passi, che sono quelli che
   davvero verificano qualcosa, restano invariati. Verificato che falliva anche sul codice committato,
   prima di questa modifica.
+
+### 11.1 Il totale è la colonna sopra, sommata (2026-09-20)
+
+La riga «Totale» di `/funds` leggeva **+2.418,59 €** sotto due righe che valevano +57,99 € e
++167,54 €. Due errori miei, della modifica qui sopra:
+
+- la riga di un fondo pensione portava ancora il `gainBasisCents` calcolato sui versamenti di un PAC
+  — che un fondo pensione non ha —, quindi **zero**;
+- il totale era ricavato da due somme (valore complessivo meno versato complessivo), e così non può
+  tornare: ogni fondo misura il proprio guadagno su quello che la **sua** ultima valutazione poteva
+  vedere, e due somme non sanno dirlo.
+
+Il totale è ora la somma dei guadagni delle righe, quindi non può discordare da ciò che sta scritto
+sopra; un fondo senza valore non contribuisce, esattamente come la sua riga non mostra nulla. La riga
+del fondo pensione porta i propri `gainBasisCents` e `paidInAfterValueCents`.
+
+Verificato a schermo nella forma che l'aveva rotto — un fondo pensione accanto a un PAC:
++40,00 € e +200,00 € danno +240,00 €.

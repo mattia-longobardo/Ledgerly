@@ -342,6 +342,35 @@ describe("deposits from movements (spec §7.7)", () => {
 });
 
 describe("isolation between users (spec §4.4, §11)", () => {
+  /*
+    The totals row is the column above it, added up. Worked out instead from a combined value less
+    a combined paid-in, it read +2.418,59 € under two rows worth +225,53 € — because a fund whose
+    gain stands on its own last valuation cannot be re-derived from two sums (owner, 2026-09-20).
+  */
+  it("adds the gains of the rows into the total, and leaves a fund with no value out", async () => {
+    const first = await createFund(ctx, input({ name: "Fideuram", initialCents: 500_000n }));
+    await recordValuation(ctx, first.id, { on: "2026-03-31", cents: 560_000n });
+    // A deposit after that valuation: outside its gain, and outside the total's.
+    await addDeposit(ctx, first.id, {
+      on: "2026-04-05",
+      chargedCents: 25_100n,
+      feeCents: 100n,
+      note: null,
+    });
+    const second = await createFund(ctx, input({ name: "Anima", initialCents: 100_000n }));
+    await recordValuation(ctx, second.id, { on: "2026-03-31", cents: 90_000n });
+    // A third with nothing recorded: it has no gain to add.
+    await createFund(ctx, input({ name: "Senza valore", initialCents: 300_000n }));
+
+    const view = await fundsView(ctx);
+    // By name, as the list orders them: Anima, Fideuram, Senza valore.
+    const gains = view.rows.map((row) => row.metrics.gainCents);
+    expect(gains).toEqual([-10_000n, 60_000n, null]);
+    expect(view.gainCents).toBe(50_000n);
+    // The paid-in stays what really left the bank, the April deposit included.
+    expect(view.paidInCents).toBe(925_100n);
+  });
+
   it("never reads, values, deposits into or builds on another user's fund or account", async () => {
     const fund = await createFund(ctx, input());
     const valuation = await recordValuation(ctx, fund.id, { on: "2026-02-28", cents: 530_000n });
