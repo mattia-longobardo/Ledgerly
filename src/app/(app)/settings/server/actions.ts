@@ -5,12 +5,22 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/platform/auth/session";
 import type { LlmProbeResult } from "@/platform/settings/llm-probe";
+import type { OidcInput } from "@/platform/settings/oidc";
+import type { OidcProbeOutcome } from "@/platform/settings/oidc-probe";
 import {
+  type MailProbeResult,
   removeLlmFallback,
+  removeOidc,
+  removeSmtp,
   saveLlmFallback,
+  saveOidc,
+  saveSmtp,
+  sendTestEmail,
   SettingsError,
   testLlmFallback,
+  testOidc,
 } from "@/platform/settings/service";
+import type { SmtpInput } from "@/platform/settings/smtp";
 
 export type ServerActionResult = { ok: true } | { ok: false; error: "invalid" | "forbidden" };
 
@@ -41,4 +51,65 @@ export async function removeLlmFallbackAction(): Promise<ServerActionResult> {
   await removeLlmFallback(ctx);
   revalidatePath("/settings/server");
   return { ok: true };
+}
+
+/* Authentik and SMTP (spec §5.1, §9.4) — plan F8 P0. */
+
+export type OidcSaveResult =
+  { ok: true; signedEveryoneOut: boolean } | { ok: false; error: "invalid" | "forbidden" };
+
+export async function saveOidcAction(input: OidcInput): Promise<OidcSaveResult> {
+  const ctx = await requireAdmin();
+  let signedEveryoneOut: boolean;
+  try {
+    ({ signedEveryoneOut } = await saveOidc(ctx, input));
+  } catch (error) {
+    if (error instanceof SettingsError) return { ok: false, error: error.code };
+    throw error;
+  }
+  revalidatePath("/settings/server");
+  return { ok: true, signedEveryoneOut };
+}
+
+/**
+ * Reads the discovery document of the saved provider and records the verdict. Nothing the provider
+ * answered comes back — only a message key (spec §5.4).
+ */
+export async function testOidcAction(): Promise<OidcProbeOutcome> {
+  const ctx = await requireAdmin();
+  const result = await testOidc(ctx);
+  revalidatePath("/settings/server");
+  return result.outcome;
+}
+
+export async function removeOidcAction(): Promise<ServerActionResult> {
+  const ctx = await requireAdmin();
+  await removeOidc(ctx);
+  revalidatePath("/settings/server");
+  return { ok: true };
+}
+
+export async function saveSmtpAction(input: SmtpInput): Promise<ServerActionResult> {
+  const ctx = await requireAdmin();
+  try {
+    await saveSmtp(ctx, input);
+  } catch (error) {
+    if (error instanceof SettingsError) return { ok: false, error: error.code };
+    throw error;
+  }
+  revalidatePath("/settings/server");
+  return { ok: true };
+}
+
+export async function removeSmtpAction(): Promise<ServerActionResult> {
+  const ctx = await requireAdmin();
+  await removeSmtp(ctx);
+  revalidatePath("/settings/server");
+  return { ok: true };
+}
+
+/** Sends one email to the admin who asked, through the transport exactly as it is saved. */
+export async function sendTestEmailAction(): Promise<MailProbeResult> {
+  const ctx = await requireAdmin();
+  return await sendTestEmail(ctx);
 }

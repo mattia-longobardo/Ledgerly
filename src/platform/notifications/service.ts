@@ -3,6 +3,8 @@ import { and, eq, lt } from "drizzle-orm";
 import { redactForLog } from "@/platform/auth/logger";
 import { getDb } from "@/platform/db/client";
 import { type Mail, sendMail } from "@/platform/mail";
+import { mailAllowed } from "@/platform/settings/config";
+import type { MailCategory } from "@/platform/settings/smtp";
 import { notificationsLog } from "./schema";
 
 export interface Notification {
@@ -12,6 +14,12 @@ export interface Notification {
   key: string;
   cooldownHours: number;
   mail: Mail;
+  /**
+   * The switch in Admin › Server that governs this whole class of mail, when one does. A category
+   * that is switched off is not sent *and not recorded*: the log is what stops a repeat, and a
+   * message that never left must not stop the one that follows the switch being turned back on.
+   */
+  category?: MailCategory;
 }
 
 /**
@@ -23,6 +31,7 @@ export interface Notification {
  * thrown — a job must not stop because an SMTP server is down.
  */
 export async function notifyOnce(notification: Notification, now: Date = new Date()): Promise<boolean> {
+  if (notification.category && !(await mailAllowed(notification.category))) return false;
   const cutoff = new Date(now.getTime() - notification.cooldownHours * 3_600_000);
   const claimed = await getDb()
     .insert(notificationsLog)

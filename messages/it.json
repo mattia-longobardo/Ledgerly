@@ -60,6 +60,10 @@
       "subject": "Reimposta la password di Ledgerly",
       "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non hai richiesto tu il reset, ignora questa email.\n"
     },
+    "test": {
+      "subject": "Email di prova di Ledgerly",
+      "body": "Questa è l'email di prova di Admin › Server.\n\nSe la stai leggendo, le impostazioni SMTP funzionano.\n"
+    },
     "lowBalance": {
       "subject": "{account} è sotto la soglia",
       "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Ledgerly per controllare."
@@ -494,6 +498,75 @@
       },
       "errors": {
         "invalid": "Controlla il modello e la chiave (sk-…).",
+        "forbidden": "Solo gli admin possono cambiarlo."
+      }
+    },
+    "oidc": {
+      "title": "Authentik (OIDC)",
+      "description": "Provider di accesso unico. Cambiare l'issuer disconnette tutti.",
+      "issuer": "URL dell'issuer",
+      "issuerHint": "Lo mostra la pagina del provider su Authentik; da lì si legge il discovery document.",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "clientSecretKeep": "Lascia vuoto per tenere il secret salvato.",
+      "adminGroup": "Gruppo admin",
+      "adminGroupHint": "Chi appartiene a questo gruppo Authentik diventa admin a ogni accesso.",
+      "fromEnv": "Non ancora salvato: questi sono i valori del file d'ambiente.",
+      "save": "Salva",
+      "saved": "Provider di identità salvato",
+      "savedSignedOut": "Provider di identità salvato: l'issuer è cambiato, quindi sono stati disconnessi tutti.",
+      "remove": "Rimuovi",
+      "removed": "Provider di identità rimosso: decide di nuovo il file d'ambiente.",
+      "originWarning": "Questo issuer sta su {origin}, che non è l'origine del file d'ambiente. Aggiorna anche OIDC_DISCOVERY_URL lì, altrimenti la policy di sicurezza non permetterà ai form di raggiungerlo.",
+      "lastCheck": "Ultimo controllo {time}",
+      "notChecked": "Mai controllato.",
+      "test": {
+        "action": "Prova la connessione",
+        "running": "Prova in corso…",
+        "ok": "Discovery document raggiungibile.",
+        "invalidDocument": "Ha risposto, ma il documento non è una configurazione OpenID.",
+        "issuerMismatch": "Il documento dichiara un issuer diverso da quello salvato.",
+        "unreachable": "Non si riesce a leggere il discovery document: rete, timeout o URL sbagliato."
+      },
+      "errors": {
+        "invalid": "Controlla l'URL dell'issuer, il client id e il gruppo admin.",
+        "forbidden": "Solo gli admin possono cambiarlo."
+      }
+    },
+    "smtp": {
+      "title": "Posta in uscita (SMTP)",
+      "description": "La usa il server per scrivere agli utenti: inviti, reimpostazioni della password, riepiloghi mensili e avvisi di sincronizzazione.",
+      "host": "Host SMTP",
+      "port": "Porta",
+      "encryption": "Cifratura",
+      "encryptions": {
+        "ssl": "SSL/TLS",
+        "starttls": "STARTTLS",
+        "none": "Nessuna"
+      },
+      "user": "Utente",
+      "password": "Password",
+      "passwordKeep": "Lascia vuoto per tenere la password salvata.",
+      "from": "Indirizzo mittente",
+      "fromEnv": "Non ancora salvato: questi sono i valori del file d'ambiente.",
+      "policy": "Che cosa può mandare il server",
+      "invitations": "Inviti e reimpostazioni",
+      "invitationsWarning": "Spento, non parte nemmeno il link di reimpostazione della password: nessuno può più rientrare da solo.",
+      "syncAlerts": "Sincronizzazioni fallite",
+      "monthlySummary": "Riepilogo mensile",
+      "save": "Salva",
+      "saved": "Posta in uscita salvata",
+      "remove": "Rimuovi",
+      "removed": "Posta in uscita rimossa: decide di nuovo il file d'ambiente.",
+      "test": {
+        "action": "Manda un'email di prova",
+        "running": "Invio in corso…",
+        "ok": "Inviata a {to}.",
+        "noAddress": "Questo account non ha un indirizzo email.",
+        "failed": "Il server l'ha rifiutata: {reason}."
+      },
+      "errors": {
+        "invalid": "Controlla host e porta e, se c'è un utente, cifratura e password.",
         "forbidden": "Solo gli admin possono cambiarlo."
       }
     },
@@ -1536,8 +1609,8 @@
       "any": "qualunque saldo"
     },
     "basis": {
-      "365": "365 giorni",
-      "360": "360 giorni"
+      "360": "360 giorni",
+      "365": "365 giorni"
     },
     "settlement": {
       "daily": "Giornaliera",

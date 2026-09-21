@@ -60,6 +60,10 @@
       "subject": "Reset your Ledgerly password",
       "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
     },
+    "test": {
+      "subject": "Ledgerly test email",
+      "body": "This is the test email from Admin › Server.\n\nIf you are reading it, the SMTP settings work.\n"
+    },
     "lowBalance": {
       "subject": "{account} is below its threshold",
       "body": "{account} is at {balance}, below the {threshold} you set.\n\nOpen Ledgerly to check it."
@@ -494,6 +498,75 @@
       },
       "errors": {
         "invalid": "Check the model and the key (sk-…).",
+        "forbidden": "Only admins can change this."
+      }
+    },
+    "oidc": {
+      "title": "Authentik (OIDC)",
+      "description": "Single sign-on provider. Changing the issuer signs every user out.",
+      "issuer": "Issuer URL",
+      "issuerHint": "Authentik's provider page shows it; the discovery document is read from it.",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "clientSecretKeep": "Leave empty to keep the saved secret.",
+      "adminGroup": "Admin group",
+      "adminGroupHint": "Members of this Authentik group become admins at every sign-in.",
+      "fromEnv": "Not saved yet: these are the values from the environment file.",
+      "save": "Save",
+      "saved": "Identity provider saved",
+      "savedSignedOut": "Identity provider saved: the issuer changed, so everyone was signed out.",
+      "remove": "Remove",
+      "removed": "Identity provider removed: the environment file decides again.",
+      "originWarning": "This issuer is on {origin}, which is not the origin in the environment file. Update OIDC_DISCOVERY_URL there too, or the security policy will not allow forms to reach it.",
+      "lastCheck": "Last check {time}",
+      "notChecked": "Never checked.",
+      "test": {
+        "action": "Test connection",
+        "running": "Testing…",
+        "ok": "Discovery document reachable.",
+        "invalidDocument": "Answered, but the document is not an OpenID configuration.",
+        "issuerMismatch": "The document names a different issuer than the one saved.",
+        "unreachable": "The discovery document could not be read: network, timeout or wrong URL."
+      },
+      "errors": {
+        "invalid": "Check the issuer URL, the client id and the admin group.",
+        "forbidden": "Only admins can change this."
+      }
+    },
+    "smtp": {
+      "title": "Outgoing email (SMTP)",
+      "description": "Used by the server to message users: invitations, password resets, monthly summaries and sync alerts.",
+      "host": "SMTP host",
+      "port": "Port",
+      "encryption": "Encryption",
+      "encryptions": {
+        "ssl": "SSL/TLS",
+        "starttls": "STARTTLS",
+        "none": "None"
+      },
+      "user": "Username",
+      "password": "Password",
+      "passwordKeep": "Leave empty to keep the saved password.",
+      "from": "From address",
+      "fromEnv": "Not saved yet: these are the values from the environment file.",
+      "policy": "What the server may send",
+      "invitations": "Invitations & resets",
+      "invitationsWarning": "Off, the password reset link is not sent either: nobody can let themselves back in.",
+      "syncAlerts": "Sync failures",
+      "monthlySummary": "Monthly summary",
+      "save": "Save",
+      "saved": "Outgoing email saved",
+      "remove": "Remove",
+      "removed": "Outgoing email removed: the environment file decides again.",
+      "test": {
+        "action": "Send test email",
+        "running": "Sending…",
+        "ok": "Sent to {to}.",
+        "noAddress": "This account has no email address.",
+        "failed": "The server refused it: {reason}."
+      },
+      "errors": {
+        "invalid": "Check the host, the port and, with a username, the encryption and password.",
         "forbidden": "Only admins can change this."
       }
     },
@@ -1536,8 +1609,8 @@
       "any": "any balance"
     },
     "basis": {
-      "365": "365 days",
-      "360": "360 days"
+      "360": "360 days",
+      "365": "365 days"
     },
     "settlement": {
       "daily": "Daily",

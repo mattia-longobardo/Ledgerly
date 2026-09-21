@@ -11,6 +11,15 @@ import { getDb } from "@/platform/db/client";
 import * as tables from "@/platform/db/tables";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
+import {
+  mailAllowed,
+  OIDC_PROVIDER,
+  type OidcConfig,
+  oidcConfig,
+  oidcFromEnv,
+  SETTINGS_REVALIDATE_MS,
+  settingsStamp,
+} from "@/platform/settings/config";
 import { hasPasswordAccount, hasSsoAccount } from "./accounts";
 import { passwordResetEmail } from "./emails";
 import { authLogger, redactForLog } from "./logger";
@@ -39,7 +48,9 @@ export async function applyOidcRole(account: {
   idToken?: string | null;
 }) {
   if (account.providerId !== OIDC_PROVIDER_ID || !account.idToken) return;
-  const role = roleFromIdToken(account.idToken, readEnv().OIDC_ADMIN_GROUP);
+  // The group is read fresh, not captured when the instance was built: an admin who corrects it
+  // in Admin › Server means the next sign-in, not the next worker restart.
+  const role = roleFromIdToken(account.idToken, (await oidcConfig()).adminGroup);
   if (role) await getDb().update(users).set({ role }).where(eq(users.id, account.userId));
 }
 
@@ -49,6 +60,9 @@ export async function applyOidcRole(account: {
  * Nothing is logged when no email goes out, so the logs do not tell the two cases apart either.
  */
 async function sendPasswordResetEmail(user: { id: string; email: string }, url: string): Promise<void> {
+  // "Invitations & resets", off, means the reset link does not leave either (plan F8 §3.4.6):
+  // it is the one switch that can lock a person out, and the SMTP card says so beside it.
+  if (!(await mailAllowed("invitations"))) return;
   if (!(await hasPasswordAccount(user.id))) return;
   const { locale } = await getPreferences({ userId: user.id });
   const hours = RESET_PASSWORD_TOKEN_TTL_SECONDS / 3600;
@@ -87,7 +101,19 @@ function withDiscoveryDeadline(plugin: OidcPlugin): OidcPlugin {
   };
 }
 
-export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
+/**
+ * `oidc` is the *effective* identity provider (`oidcConfig()`): the saved settings when an admin
+ * has filled Admin › Server, the environment otherwise. It is passed in rather than read here so
+ * that this function stays synchronous and the scripts can build an instance without a settings
+ * row (plan F8 §3.4.3).
+ */
+export function createAuth({
+  withNextCookies,
+  oidc = oidcFromEnv(),
+}: {
+  withNextCookies: boolean;
+  oidc?: OidcConfig;
+}) {
   const env = readEnv();
   return betterAuth({
     appName: "Ledgerly",
@@ -208,9 +234,9 @@ export function createAuth({ withNextCookies }: { withNextCookies: boolean }) {
             {
               providerId: OIDC_PROVIDER_ID,
               name: "Authentik",
-              clientId: env.OIDC_CLIENT_ID,
-              clientSecret: env.OIDC_CLIENT_SECRET,
-              discoveryUrl: env.OIDC_DISCOVERY_URL,
+              clientId: oidc.clientId,
+              clientSecret: oidc.clientSecret,
+              discoveryUrl: oidc.discoveryUrl,
               scopes: ["openid", "profile", "email"],
               pkce: true,
               requireIdTokenVerification: true,
@@ -238,22 +264,53 @@ interface CachedAuth {
   failures: number;
   /** Set when this instance lacks the SSO provider: the first call after it builds a new one. */
   retryAt: number | null;
+  /** `app_settings.oidc.provider`'s `updated_at` this instance was built from; null: the env. */
+  stamp: number | null;
+  /** When that stamp was last re-read (see {@link settingsStamp}). */
+  checkedAt: number;
 }
 
 const cache = globalThis as unknown as { ledgerlyAuth?: CachedAuth };
 
 /**
+ * Whether the saved provider has moved under this instance. Checked at most once every 30 s, and
+ * the window is charged to the cached entry itself, so one busy worker does not read the row on
+ * every request (plan F8 §3.4.4).
+ */
+async function providerChanged(cached: CachedAuth): Promise<boolean> {
+  const now = Date.now();
+  if (now - cached.checkedAt < SETTINGS_REVALIDATE_MS) return false;
+  cached.checkedAt = now;
+  return (await settingsStamp(OIDC_PROVIDER)) !== cached.stamp;
+}
+
+/** Drops the memoized instance, for the worker that has just saved the provider itself. */
+export function invalidateAuth(): void {
+  delete cache.ledgerlyAuth;
+}
+
+/**
  * The app-wide instance. `nextCookies()` lets Server Actions set the session cookie. An instance
  * whose identity-provider discovery failed still serves password sign-in, and is replaced after a
- * backoff (5 s, doubling, at most 5 min) so SSO recovers without a restart.
+ * backoff (5 s, doubling, at most 5 min) so SSO recovers without a restart. It is also replaced
+ * when Admin › Server saved a different provider, which every worker notices within 30 s.
  */
-export function getAuth(): Auth {
+export async function getAuth(): Promise<Auth> {
   const cached = cache.ledgerlyAuth;
-  if (cached && (cached.retryAt === null || Date.now() < cached.retryAt)) return cached.auth;
+  if (
+    cached &&
+    (cached.retryAt === null || Date.now() < cached.retryAt) &&
+    !(await providerChanged(cached))
+  ) {
+    return cached.auth;
+  }
+  const oidc = await oidcConfig();
   const entry: CachedAuth = {
-    auth: createAuth({ withNextCookies: true }),
+    auth: createAuth({ withNextCookies: true, oidc }),
     failures: cached?.failures ?? 0,
     retryAt: null,
+    stamp: oidc.updatedAt?.getTime() ?? null,
+    checkedAt: Date.now(),
   };
   cache.ledgerlyAuth = entry;
   const degraded = () => {

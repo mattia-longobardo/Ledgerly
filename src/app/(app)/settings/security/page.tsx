@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SecurityPage() {
   const ctx = await requireSession();
   const [current, sessions] = await Promise.all([
-    getAuth().api.getSession({ headers: await headers() }),
+    (await getAuth()).api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
   ]);
   const t = await getTranslations("settings");

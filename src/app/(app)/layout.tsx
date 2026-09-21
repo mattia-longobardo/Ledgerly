@@ -17,7 +17,7 @@ import { navFor } from "./navigation";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const viaSso = await hasSsoAccount(ctx.userId);
   const t = await getTranslations();
 
