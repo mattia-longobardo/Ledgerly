@@ -361,6 +361,52 @@ job fuori dal registro; 2 465 chiavi di messaggio in parità perfetta fra le due
 Query per pagina (una `EXPLAIN` sulle tre viste più larghe), N+1 nei servizi che iterano sugli
 utenti, peso della build, e la misura di §3.6.3. Si corregge solo ciò che una misura mostra.
 
+### P4.1 — Le misure (2026-09-21)
+
+Tre misure, due strumenti nuovi, **nessuna correzione**: è l'esito che §4 P4 prevede quando una
+misura non mostra niente, e i numeri sono qui perché chi riapre il piano fra sei mesi possa
+rifarli invece di crederci.
+
+**1. Le pagine, sul sito pubblicato**, con l'utente `layout` che ha dati su ogni schermata
+(`performance.getEntriesByType("navigation")`, mediana di tre caricamenti):
+
+| Pagina | mediana | TTFB | peso trasferito |
+|---|---|---|---|
+| Overview | 235 ms | 8 ms | 45 KiB |
+| Accounts | 171 ms | 8 ms | 46 KiB |
+| Expenses | 185 ms | 6 ms | 49 KiB |
+| Budgets | 142 ms | 8 ms | 42 KiB |
+| Subscriptions | 144 ms | 9 ms | 44 KiB |
+| Time off | 255 ms | 6 ms | 49 KiB |
+
+**2. Le viste più larghe, su dati pesanti** — `npm run perf` (`scripts/perf-probe.ts`), che costruisce
+in `ledgerly_test` un utente con dodici conti, **sessantamila movimenti** su tre anni e
+quattordicimila righe di saldo, misura cinque volte e prende la mediana:
+
+| Vista | mediana |
+|---|---|
+| `expensesView`, mese corrente | **47 ms** |
+| `expensesView`, tre anni interi | **66 ms** |
+| `accountsView`, dodici mesi | **28 ms** |
+
+**3. I piani, su quegli stessi dati.** La lista dei movimenti di un mese — lo statement più largo
+dell'applicazione — legge **1 650 righe in 7 ms** con un bitmap index scan e un top-N heapsort di
+200: nessun sequential scan, nessun ordinamento su disco. L'ultimo saldo noto di ogni conto è
+l'unico piano che *non* usa un indice: con 14 400 righe in 237 pagine il pianificatore preferisce
+leggere tutto e ordinare piuttosto che fare dodici sonde sull'indice, che è la scelta giusta a
+quella taglia e che cambierà da sola quando la tabella crescerà. Il tempo che `EXPLAIN ANALYZE`
+riporta per quel piano (87 ms) è gonfiato dalla strumentazione riga per riga: la stessa query dentro
+`accountsView` contribuisce a un totale di 28 ms.
+
+**4. Il peso della build.** Immagine 389 MB; `.next` 24,2 MB di cui **3,2 MB di statici** in 57
+chunk; fra i 42 e i 49 KiB trasferiti per pagina, JavaScript compreso.
+
+**Gli N+1 che ci sono, e perché restano.** Nove cicli del branch fanno una query per elemento:
+sui conti di una persona, sulle sue regole di interesse, sui suoi fondi. Sono limitati da quante
+cose possiede una famiglia — cifre a una cifra — e le misure qui sopra li contengono già tutti.
+Riscriverli in query aggregate costerebbe leggibilità per guadagnare millisecondi che nessuno
+aspetta. Se un giorno una di queste pagine rallenta, `npm run perf` lo dirà prima di chiunque altro.
+
 ### P5 — Documentazione
 `README` (le tre sezioni mancanti di §3.6.1, più la procedura di rilascio di §13), `CLAUDE.md`
 allineato a com'è davvero il repository dopo nove fasi, e un `docs/RELEASE.md` che sia la checklist
