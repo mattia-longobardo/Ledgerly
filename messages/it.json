@@ -125,6 +125,7 @@
       "security": "Sicurezza",
       "integrations": "Integrazioni",
       "data": "Dati",
+      "users": "Utenti",
       "server": "Server"
     },
     "integrations": {
@@ -432,6 +433,73 @@
       "since": "dal {date}",
       "errors": {
         "failed": "Impossibile disconnettere la sessione. Riprova."
+      }
+    },
+    "people": {
+      "title": "Utenti",
+      "description": "Due ruoli: Utente vede e modifica i propri dati; Admin gestisce anche utenti e server. Un utente nuovo nasce al primo accesso con Authentik o da un invito.",
+      "columns": {
+        "user": "Utente",
+        "email": "Email",
+        "method": "Accesso",
+        "role": "Ruolo",
+        "lastSignIn": "Ultimo accesso",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "methods": {
+        "password": "Password",
+        "sso": "Authentik",
+        "both": "Authentik · password",
+        "none": "Nessun metodo",
+        "invited": "Invitato"
+      },
+      "roles": {
+        "admin": "Admin",
+        "user": "Utente"
+      },
+      "statuses": {
+        "active": "Attivo",
+        "blocked": "Bloccato",
+        "pending": "In attesa",
+        "expired": "Scaduto"
+      },
+      "invitedPerson": "Invito",
+      "roleFor": "Ruolo di {name}",
+      "roleSaved": "Ruolo cambiato",
+      "invite": "Invita un utente",
+      "inviteHint": "Un link monouso, valido sette giorni. Sceglierà Authentik o una password.",
+      "sendInvitation": "Manda l'invito",
+      "invitation": {
+        "sent": "Invito inviato",
+        "mail_off": "Invito creato, ma non è partita nessuna email: «Inviti e reimpostazioni» è spento in Admin › Server.",
+        "mail_failed": "Invito creato, ma il server di posta l’ha rifiutato. Il link è valido: passalo in un altro modo, oppure sistema l’SMTP e reinvita."
+      },
+      "revokeInvitation": "Revoca",
+      "invitationRevoked": "Invito revocato",
+      "resetPassword": "Reimposta la password",
+      "reset": {
+        "sent": "Link di reimpostazione inviato",
+        "sso_only": "Non è partito nulla: questo account accede solo con Authentik.",
+        "mail_off": "Non è partito nulla: «Inviti e reimpostazioni» è spento in Admin › Server."
+      },
+      "block": "Blocca",
+      "unblock": "Sblocca",
+      "blockedNow": "Bloccato, e disconnesso ovunque",
+      "unblocked": "Sbloccato",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovere questo utente?",
+      "removeWarning": "{email} e tutto quello che possiede verranno cancellati.",
+      "removeDetail": "Se ne vanno conti, transazioni, documenti e gli originali. Non si può tornare indietro.",
+      "removed": "{email} rimosso",
+      "cancel": "Annulla",
+      "errors": {
+        "forbidden": "Solo gli admin possono farlo.",
+        "not_found": "Questa persona non c'è più.",
+        "invalid": "Controlla l'indirizzo email.",
+        "email_taken": "Qualcuno accede già con questo indirizzo.",
+        "self": "Non puoi farlo al tuo stesso account.",
+        "last_admin": "È l'ultimo admin: l'istanza resterebbe senza nessuno che la amministra."
       }
     },
     "snapshots": {

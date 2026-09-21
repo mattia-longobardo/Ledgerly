@@ -8,9 +8,22 @@ import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { redactForLog } from "@/platform/auth/logger";
 import { nameSchema } from "@/platform/auth/name-policy";
-import { requireSession } from "@/platform/auth/session";
+import { requireAdmin, requireSession } from "@/platform/auth/session";
+import type { Role } from "@/platform/context";
 import { LOCALE_COOKIE } from "@/platform/i18n/locales";
 import { parseTheme, THEME_COOKIE, type ThemePreference } from "@/platform/theme";
+import {
+  AdminError,
+  type AdminErrorCode,
+  invitePerson,
+  type InviteOutcome,
+  removePerson,
+  type ResetOutcome,
+  revokeInvitation,
+  sendPersonReset,
+  setPersonBlocked,
+  setPersonRole,
+} from "./admin";
 import type { Preferences } from "./rules";
 import { findSessionToken, getPreferences, updatePreferences } from "./service";
 
@@ -88,4 +101,92 @@ export async function revokeOtherSessionsAction(): Promise<ActionResult> {
 function revocationFailed(error: unknown): ActionResult {
   console.error("[users] session revocation failed", redactForLog(error));
   return { ok: false, error: "failed" };
+}
+
+/* Admin › Users (spec §7.10) — plan F8 P1. Admins only; every service re-checks that for itself. */
+
+/**
+ * What an admin action answers. `error` is a message key under the page's own `next-intl`
+ * namespace; `outcome` is the service's own answer for the actions that have more than one way
+ * of succeeding (an invitation whose email the SMTP switches held back, for instance).
+ */
+export type AdminActionResult<T = never> = { ok: true; outcome: T } | { ok: false; error: AdminErrorCode };
+
+/** The answer of an action that either works or explains why not. */
+const DONE = { ok: true, outcome: undefined } as AdminActionResult<undefined>;
+
+function adminFailure(error: unknown): { ok: false; error: AdminErrorCode } {
+  if (error instanceof AdminError) return { ok: false, error: error.code };
+  throw error;
+}
+
+export async function invitePersonAction(
+  email: string,
+  role: Role,
+): Promise<AdminActionResult<InviteOutcome>> {
+  const ctx = await requireAdmin();
+  try {
+    const outcome = await invitePerson(ctx, { email, role });
+    revalidatePath("/settings/users");
+    return { ok: true, outcome };
+  } catch (error) {
+    return adminFailure(error);
+  }
+}
+
+export async function revokeInvitationAction(id: string): Promise<AdminActionResult<undefined>> {
+  const ctx = await requireAdmin();
+  try {
+    await revokeInvitation(ctx, id);
+    revalidatePath("/settings/users");
+    return DONE;
+  } catch (error) {
+    return adminFailure(error);
+  }
+}
+
+export async function setPersonRoleAction(userId: string, role: Role): Promise<AdminActionResult<undefined>> {
+  const ctx = await requireAdmin();
+  try {
+    await setPersonRole(ctx, userId, role);
+    revalidatePath("/settings/users");
+    return DONE;
+  } catch (error) {
+    return adminFailure(error);
+  }
+}
+
+export async function setPersonBlockedAction(
+  userId: string,
+  blocked: boolean,
+): Promise<AdminActionResult<undefined>> {
+  const ctx = await requireAdmin();
+  try {
+    await setPersonBlocked(ctx, userId, blocked);
+    revalidatePath("/settings/users");
+    return DONE;
+  } catch (error) {
+    return adminFailure(error);
+  }
+}
+
+export async function sendPersonResetAction(userId: string): Promise<AdminActionResult<ResetOutcome>> {
+  const ctx = await requireAdmin();
+  try {
+    return { ok: true, outcome: await sendPersonReset(ctx, userId) };
+  } catch (error) {
+    return adminFailure(error);
+  }
+}
+
+/** Deletes the person and everything they own: the confirmation is the dialog's job, not this. */
+export async function removePersonAction(userId: string): Promise<AdminActionResult<undefined>> {
+  const ctx = await requireAdmin();
+  try {
+    await removePerson(ctx, userId);
+    revalidatePath("/settings/users");
+    return DONE;
+  } catch (error) {
+    return adminFailure(error);
+  }
 }

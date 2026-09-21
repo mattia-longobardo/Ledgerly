@@ -12,8 +12,14 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
     { href: "/settings/security", label: t("tabs.security") },
     { href: "/settings/integrations", label: t("tabs.integrations") },
     { href: "/settings/data", label: t("tabs.data") },
-    // Admin › Server (spec §7.10): only admins see it, and its page answers 404 to anyone else.
-    ...(ctx.role === "admin" ? [{ href: "/settings/server" as Route, label: t("tabs.server") }] : []),
+    // Admin › Users and Admin › Server (spec §7.10): only admins see them, and their pages
+    // answer 404 to anyone else.
+    ...(ctx.role === "admin"
+      ? [
+          { href: "/settings/users" as Route, label: t("tabs.users") },
+          { href: "/settings/server" as Route, label: t("tabs.server") },
+        ]
+      : []),
   ];
   return (
     <Page title={<SettingsTitle tabs={tabs} />} parent={{ href: "/settings/profile", label: t("title") }}>
