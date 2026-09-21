@@ -121,7 +121,7 @@ export function RegisterTable({ groups }: { groups: RegisterGroup[] }) {
                     )}
                     <Td className="max-w-56 truncate">
                       {row.originalHref ? (
-                        <a href={row.originalHref} target="_blank" rel="noopener" className="text-sm text-accent hover:underline">
+                        <a href={row.originalHref} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent hover:underline">
                           {row.fileName}
                         </a>
                       ) : (

@@ -264,78 +264,137 @@ export async function PensionView({
         {detail.operations.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted">{t("operations.empty")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <THead>
-                <Th>{t("operations.competence")}</Th>
-                <Th>{t("operations.date")}</Th>
-                <Th align="right">{t("operations.worker")}</Th>
-                <Th align="right">{t("operations.employer")}</Th>
-                <Th align="right">{t("operations.tfr")}</Th>
-                <Th align="right">{t("operations.fees")}</Th>
-                <Th align="right">{t("operations.net")}</Th>
-                <Th align="right">
-                  <span className="sr-only">{t("operations.remove")}</span>
-                </Th>
-              </THead>
-              <TBody>
-                {detail.operations.map((operation) => {
-                  return (
-                    <Tr key={operation.id} data-testid="operation-row">
-                      <Td>
-                        <span className="flex flex-col">
-                          <span className="font-medium">
-                            {operation.competenceYear && operation.competenceQuarter
-                              ? quarterLabel(operation.competenceYear, operation.competenceQuarter)
-                              : t(`classes.${operation.classification}`)}
+          <>
+            {/* Eight columns do not fit a phone: below `md` the same operations are a list, with the
+              same figures and the same "Remove" (plan F9 §3.3). */}
+            <div className="overflow-x-auto max-md:hidden">
+              <Table>
+                <THead>
+                  <Th>{t("operations.competence")}</Th>
+                  <Th>{t("operations.date")}</Th>
+                  <Th align="right">{t("operations.worker")}</Th>
+                  <Th align="right">{t("operations.employer")}</Th>
+                  <Th align="right">{t("operations.tfr")}</Th>
+                  <Th align="right">{t("operations.fees")}</Th>
+                  <Th align="right">{t("operations.net")}</Th>
+                  <Th align="right">
+                    <span className="sr-only">{t("operations.remove")}</span>
+                  </Th>
+                </THead>
+                <TBody>
+                  {detail.operations.map((operation) => {
+                    return (
+                      <Tr key={operation.id} data-testid="operation-row">
+                        <Td>
+                          <span className="flex flex-col">
+                            <span className="font-medium">
+                              {operation.competenceYear && operation.competenceQuarter
+                                ? quarterLabel(operation.competenceYear, operation.competenceQuarter)
+                                : t(`classes.${operation.classification}`)}
+                            </span>
+                            <span className="text-sm text-muted">
+                              {operation.originalType}
+                              {operation.originalState ? ` · ${operation.originalState}` : ""}
+                            </span>
                           </span>
-                          <span className="text-sm text-muted">
-                            {operation.originalType}
-                            {operation.originalState ? ` · ${operation.originalState}` : ""}
-                          </span>
-                        </span>
-                      </Td>
-                      <Td muted>{date(operation.operationDate)}</Td>
-                      <Td align="right">{money(operation.workerCents)}</Td>
-                      <Td align="right">{money(operation.employerCents)}</Td>
-                      <Td align="right">{money(operation.tfrCents)}</Td>
-                      <Td align="right" className="text-neg">
-                        {operation.feesCents === 0n ? NULL_DISPLAY : money(-operation.feesCents)}
-                      </Td>
-                      <Td align="right" className="font-semibold">
-                        {money(operation.netCents)}
-                      </Td>
-                      <Td align="right">
-                        {operation.source === "manual" && (
-                          <span className="flex justify-end gap-1">
-                            <DeleteOperationButton
-                              fundId={fund.id}
-                              operationId={operation.id}
-                              label={t("operations.remove")}
-                              toast={t("operations.removed")}
-                            />
-                          </span>
-                        )}
-                      </Td>
-                    </Tr>
-                  );
-                })}
-                <TotalRow label={t("operations.total")}>
-                  <Td />
-                  <Td align="right">{money(sum(detail.operations, (one) => one.workerCents))}</Td>
-                  <Td align="right">{money(sum(detail.operations, (one) => one.employerCents))}</Td>
-                  <Td align="right">{money(sum(detail.operations, (one) => one.tfrCents))}</Td>
-                  <Td align="right" className="text-neg">
-                    {money(-metrics.feesCents)}
-                  </Td>
-                  <Td align="right">{money(metrics.investedCents)}</Td>
-                  <Td align="right">{metrics.units ?? NULL_DISPLAY}</Td>
-                  <Td />
-                  <Td />
-                </TotalRow>
-              </TBody>
-            </Table>
-          </div>
+                        </Td>
+                        <Td muted>{date(operation.operationDate)}</Td>
+                        <Td align="right">{money(operation.workerCents)}</Td>
+                        <Td align="right">{money(operation.employerCents)}</Td>
+                        <Td align="right">{money(operation.tfrCents)}</Td>
+                        <Td align="right" className="text-neg">
+                          {operation.feesCents === 0n ? NULL_DISPLAY : money(-operation.feesCents)}
+                        </Td>
+                        <Td align="right" className="font-semibold">
+                          {money(operation.netCents)}
+                        </Td>
+                        <Td align="right">
+                          {operation.source === "manual" && (
+                            <span className="flex justify-end gap-1">
+                              <DeleteOperationButton
+                                fundId={fund.id}
+                                operationId={operation.id}
+                                label={t("operations.remove")}
+                                toast={t("operations.removed")}
+                              />
+                            </span>
+                          )}
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                  <TotalRow label={t("operations.total")}>
+                    <Td />
+                    <Td align="right">{money(sum(detail.operations, (one) => one.workerCents))}</Td>
+                    <Td align="right">{money(sum(detail.operations, (one) => one.employerCents))}</Td>
+                    <Td align="right">{money(sum(detail.operations, (one) => one.tfrCents))}</Td>
+                    <Td align="right" className="text-neg">
+                      {money(-metrics.feesCents)}
+                    </Td>
+                    <Td align="right">{money(metrics.investedCents)}</Td>
+                    <Td align="right">{metrics.units ?? NULL_DISPLAY}</Td>
+                    <Td />
+                    <Td />
+                  </TotalRow>
+                </TBody>
+              </Table>
+            </div>
+
+            <ul className="flex flex-col md:hidden">
+              {detail.operations.map((operation) => (
+                <li
+                  key={operation.id}
+                  data-testid="operation-item"
+                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-medium">
+                        {operation.competenceYear && operation.competenceQuarter
+                          ? quarterLabel(operation.competenceYear, operation.competenceQuarter)
+                          : t(`classes.${operation.classification}`)}
+                      </span>
+                      <span className="text-sm text-muted">
+                        {operation.originalType}
+                        {operation.originalState ? ` · ${operation.originalState}` : ""} ·{" "}
+                        {date(operation.operationDate)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums">{money(operation.netCents)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                    <span>
+                      {t("operations.worker")} {money(operation.workerCents)}
+                    </span>
+                    <span>
+                      {t("operations.employer")} {money(operation.employerCents)}
+                    </span>
+                    <span>
+                      {t("operations.tfr")} {money(operation.tfrCents)}
+                    </span>
+                    <span className="text-neg">
+                      {t("operations.fees")}{" "}
+                      {operation.feesCents === 0n ? NULL_DISPLAY : money(-operation.feesCents)}
+                    </span>
+                  </div>
+                  {operation.source === "manual" && (
+                    <div className="flex">
+                      <DeleteOperationButton
+                        fundId={fund.id}
+                        operationId={operation.id}
+                        label={t("operations.remove")}
+                        toast={t("operations.removed")}
+                      />
+                    </div>
+                  )}
+                </li>
+              ))}
+              <li className="flex items-center justify-between gap-2 px-4 py-3 font-medium">
+                <span>{t("operations.total")}</span>
+                <span className="tabular-nums">{money(metrics.investedCents)}</span>
+              </li>
+            </ul>
+          </>
         )}
       </Card>
 
@@ -556,8 +615,10 @@ export async function PensionView({
         )}
       </Card>
 
-      <div className="grid gap-4 @4xl:grid-cols-2">
-        <Card className="flex h-full flex-col items-start gap-3" data-testid="pension-voluntary">
+      {/* `min-w-0` everywhere: below `@4xl` this is one `auto` track, and a table's min-content
+          would size it — which is how the deductibility card pushed the row 9 px past a phone. */}
+      <div className="grid min-w-0 gap-4 @4xl:grid-cols-2">
+        <Card className="flex h-full min-w-0 flex-col items-start gap-3" data-testid="pension-voluntary">
           <h2 className="text-lg font-semibold">{t("voluntary.title")}</h2>
           <p className="text-sm text-muted">{t("voluntary.description")}</p>
           <AddVoluntaryButton
@@ -568,35 +629,59 @@ export async function PensionView({
           />
         </Card>
 
-        <Card className="flex h-full flex-col gap-3" data-testid="pension-tax">
+        <Card className="flex h-full min-w-0 flex-col gap-3" data-testid="pension-tax">
           <h2 className="text-lg font-semibold">{t("tax.title")}</h2>
           {detail.taxYears.length === 0 ? (
             <p className="text-sm text-muted">{t("tax.empty")}</p>
           ) : (
-            <Table>
-              <THead>
-                <Th>{t("tax.year")}</Th>
-                <Th align="right">{t("tax.worker")}</Th>
-                <Th align="right">{t("tax.employer")}</Th>
-                <Th align="right">{t("tax.total")}</Th>
-                <Th align="right">{t("tax.limit")}</Th>
-              </THead>
-              <TBody>
+            <>
+              {/* Five columns of money are 9 px too wide for a phone: below `md`, a list. */}
+              <Table className="max-md:hidden">
+                <THead>
+                  <Th>{t("tax.year")}</Th>
+                  <Th align="right">{t("tax.worker")}</Th>
+                  <Th align="right">{t("tax.employer")}</Th>
+                  <Th align="right">{t("tax.total")}</Th>
+                  <Th align="right">{t("tax.limit")}</Th>
+                </THead>
+                <TBody>
+                  {detail.taxYears.map((year) => (
+                    <Tr key={year.year}>
+                      <Td>{year.year}</Td>
+                      <Td align="right">{money(year.workerCents)}</Td>
+                      <Td align="right">{money(year.employerCents)}</Td>
+                      <Td align="right" className="font-semibold">
+                        {money(year.totalCents)}
+                      </Td>
+                      <Td align="right" muted>
+                        {money(year.limitCents)}
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </Table>
+              <ul className="flex flex-col gap-2 md:hidden">
                 {detail.taxYears.map((year) => (
-                  <Tr key={year.year}>
-                    <Td>{year.year}</Td>
-                    <Td align="right">{money(year.workerCents)}</Td>
-                    <Td align="right">{money(year.employerCents)}</Td>
-                    <Td align="right" className="font-semibold">
-                      {money(year.totalCents)}
-                    </Td>
-                    <Td align="right" muted>
-                      {money(year.limitCents)}
-                    </Td>
-                  </Tr>
+                  <li key={year.year} className="flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-medium">{year.year}</span>
+                      <span className="font-semibold tabular-nums">{money(year.totalCents)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                      <span>
+                        {t("tax.worker")} {money(year.workerCents)}
+                      </span>
+                      <span>
+                        {t("tax.employer")} {money(year.employerCents)}
+                      </span>
+                      <span className="text-muted">
+                        {t("tax.limit")} {money(year.limitCents)}
+                      </span>
+                    </div>
+                  </li>
                 ))}
-              </TBody>
-            </Table>
+              </ul>
+            </>
           )}
           <p className="text-sm text-muted">{t("tax.note")}</p>
         </Card>
@@ -670,38 +755,77 @@ export async function PensionView({
         {detail.snapshots.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted">{t("statements.empty")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <THead>
-                <Th>{t("statements.date")}</Th>
-                <Th align="right">{t("statements.value")}</Th>
-                <Th align="right">{t("statements.worker")}</Th>
-                <Th align="right">{t("statements.employer")}</Th>
-                <Th align="right">{t("statements.tfr")}</Th>
-                <Th align="right">{t("statements.inflows")}</Th>
-                <Th align="right">{t("statements.outflows")}</Th>
-                <Th align="right">{t("statements.gain")}</Th>
-              </THead>
-              <TBody>
-                {detail.snapshots.map((snapshot) => (
-                  <Tr key={snapshot.id} data-testid="statement-row">
-                    <Td muted>{date(snapshot.valuationDate)}</Td>
-                    <Td align="right" className="font-semibold">
-                      {money(snapshot.valueCents)}
-                    </Td>
-                    <Td align="right">{money(snapshot.workerCents)}</Td>
-                    <Td align="right">{money(snapshot.employerCents)}</Td>
-                    <Td align="right">{money(snapshot.tfrCents)}</Td>
-                    <Td align="right">{money(snapshot.inflowsCents)}</Td>
-                    <Td align="right">{money(snapshot.outflowsCents)}</Td>
-                    <Td align="right" className={TONE_TEXT[toneOfSign(snapshot.reportedGainCents)]}>
-                      {signed(snapshot.reportedGainCents)}
-                    </Td>
-                  </Tr>
-                ))}
-              </TBody>
-            </Table>
-          </div>
+          <>
+            {/* Eight columns of money do not fit a phone: below `md` the same statements are a list
+              carrying all eight figures (plan F9 §3.3). */}
+            <div className="overflow-x-auto max-md:hidden">
+              <Table>
+                <THead>
+                  <Th>{t("statements.date")}</Th>
+                  <Th align="right">{t("statements.value")}</Th>
+                  <Th align="right">{t("statements.worker")}</Th>
+                  <Th align="right">{t("statements.employer")}</Th>
+                  <Th align="right">{t("statements.tfr")}</Th>
+                  <Th align="right">{t("statements.inflows")}</Th>
+                  <Th align="right">{t("statements.outflows")}</Th>
+                  <Th align="right">{t("statements.gain")}</Th>
+                </THead>
+                <TBody>
+                  {detail.snapshots.map((snapshot) => (
+                    <Tr key={snapshot.id} data-testid="statement-row">
+                      <Td muted>{date(snapshot.valuationDate)}</Td>
+                      <Td align="right" className="font-semibold">
+                        {money(snapshot.valueCents)}
+                      </Td>
+                      <Td align="right">{money(snapshot.workerCents)}</Td>
+                      <Td align="right">{money(snapshot.employerCents)}</Td>
+                      <Td align="right">{money(snapshot.tfrCents)}</Td>
+                      <Td align="right">{money(snapshot.inflowsCents)}</Td>
+                      <Td align="right">{money(snapshot.outflowsCents)}</Td>
+                      <Td align="right" className={TONE_TEXT[toneOfSign(snapshot.reportedGainCents)]}>
+                        {signed(snapshot.reportedGainCents)}
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+
+            <ul className="flex flex-col md:hidden">
+              {detail.snapshots.map((snapshot) => (
+                <li
+                  key={snapshot.id}
+                  data-testid="statement-item"
+                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-muted">{date(snapshot.valuationDate)}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">{money(snapshot.valueCents)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                    <span>
+                      {t("statements.worker")} {money(snapshot.workerCents)}
+                    </span>
+                    <span>
+                      {t("statements.employer")} {money(snapshot.employerCents)}
+                    </span>
+                    <span>
+                      {t("statements.tfr")} {money(snapshot.tfrCents)}
+                    </span>
+                    <span>
+                      {t("statements.inflows")} {money(snapshot.inflowsCents)}
+                    </span>
+                    <span>
+                      {t("statements.outflows")} {money(snapshot.outflowsCents)}
+                    </span>
+                    <span className={TONE_TEXT[toneOfSign(snapshot.reportedGainCents)]}>
+                      {t("statements.gain")} {signed(snapshot.reportedGainCents)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Card>
 
@@ -713,31 +837,64 @@ export async function PensionView({
         {detail.documents.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted">{t("documents.empty")}</p>
         ) : (
-          <Table>
-            <THead>
-              <Th>{t("documents.file")}</Th>
-              <Th>{t("documents.kind")}</Th>
-              <Th>{t("documents.received")}</Th>
-              <Th>{t("documents.state")}</Th>
-            </THead>
-            <TBody>
+          <>
+            {/* A file name and three columns do not fit a phone: below `md`, the same list. */}
+            <Table className="max-md:hidden">
+              <THead>
+                <Th>{t("documents.file")}</Th>
+                <Th>{t("documents.kind")}</Th>
+                <Th>{t("documents.received")}</Th>
+                <Th>{t("documents.state")}</Th>
+              </THead>
+              <TBody>
+                {detail.documents.map((document) => (
+                  <Tr key={document.id} data-testid="document-row">
+                    <Td>
+                      <Link
+                        href={`${base}/documents/${document.id}` as Route}
+                        className="focus-ring inline-flex min-h-6 items-center rounded-[2px] font-medium hover:underline"
+                      >
+                        {document.fileName}
+                      </Link>
+                    </Td>
+                    <Td muted>
+                      {t(`documents.kinds.${document.kind}` as "documents.kinds.cometa_operations")}
+                    </Td>
+                    <Td muted>
+                      {formatDate(document.receivedAt.toISOString().slice(0, 10), "long", ctx.locale)}
+                    </Td>
+                    <Td>
+                      <Badge
+                        tone={
+                          document.state === "applied"
+                            ? "pos"
+                            : document.state === "failed"
+                              ? "neg"
+                              : "neutral"
+                        }
+                      >
+                        {t(`documentStates.${document.state}` as "documentStates.applied")}
+                      </Badge>
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
+
+            <ul className="flex flex-col md:hidden">
               {detail.documents.map((document) => (
-                <Tr key={document.id} data-testid="document-row">
-                  <Td>
+                <li
+                  key={document.id}
+                  data-testid="document-item"
+                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+                >
+                  <div className="flex items-start justify-between gap-2">
                     <Link
                       href={`${base}/documents/${document.id}` as Route}
-                      className="font-medium hover:underline"
+                      className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[2px] font-medium break-all hover:underline"
                     >
                       {document.fileName}
                     </Link>
-                  </Td>
-                  <Td muted>
-                    {t(`documents.kinds.${document.kind}` as "documents.kinds.cometa_operations")}
-                  </Td>
-                  <Td muted>
-                    {formatDate(document.receivedAt.toISOString().slice(0, 10), "long", ctx.locale)}
-                  </Td>
-                  <Td>
                     <Badge
                       tone={
                         document.state === "applied" ? "pos" : document.state === "failed" ? "neg" : "neutral"
@@ -745,11 +902,15 @@ export async function PensionView({
                     >
                       {t(`documentStates.${document.state}` as "documentStates.applied")}
                     </Badge>
-                  </Td>
-                </Tr>
+                  </div>
+                  <span className="text-sm text-muted">
+                    {t(`documents.kinds.${document.kind}` as "documents.kinds.cometa_operations")} ·{" "}
+                    {formatDate(document.receivedAt.toISOString().slice(0, 10), "long", ctx.locale)}
+                  </span>
+                </li>
               ))}
-            </TBody>
-          </Table>
+            </ul>
+          </>
         )}
       </Card>
     </>

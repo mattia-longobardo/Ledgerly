@@ -137,64 +137,122 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
         {detail.settlements.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted">{t("detail.settlements.empty")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <THead>
-                <Th>{t("detail.settlements.period")}</Th>
-                <Th>{t("detail.settlements.days")}</Th>
-                <Th align="right">{t("detail.settlements.gross")}</Th>
-                <Th align="right">{t("detail.settlements.tax")}</Th>
-                <Th align="right">{t("detail.settlements.net")}</Th>
-                <Th align="right">{t("detail.settlements.paid")}</Th>
-                <Th>{t("detail.settlements.status")}</Th>
-                {rule.mode === "post_to_provider" && <Th>{t("detail.settlements.posting")}</Th>}
-              </THead>
-              <TBody>
-                {detail.settlements.slice(0, 90).map((row) => (
-                  <Tr key={row.entry.id} data-testid="settlement-row">
-                    <Td>
+          <>
+            {/* Seven columns do not fit a phone: below `md` the same settlements are a list, and
+              nothing they carry is dropped (plan F9 §3.3). */}
+            <div className="overflow-x-auto max-md:hidden">
+              <Table>
+                <THead>
+                  <Th>{t("detail.settlements.period")}</Th>
+                  <Th>{t("detail.settlements.days")}</Th>
+                  <Th align="right">{t("detail.settlements.gross")}</Th>
+                  <Th align="right">{t("detail.settlements.tax")}</Th>
+                  <Th align="right">{t("detail.settlements.net")}</Th>
+                  <Th align="right">{t("detail.settlements.paid")}</Th>
+                  <Th>{t("detail.settlements.status")}</Th>
+                  {rule.mode === "post_to_provider" && <Th>{t("detail.settlements.posting")}</Th>}
+                </THead>
+                <TBody>
+                  {detail.settlements.slice(0, 90).map((row) => (
+                    <Tr key={row.entry.id} data-testid="settlement-row">
+                      <Td>
+                        {formatDate(row.entry.periodFrom, "dayMonth", ctx.locale)} –{" "}
+                        {formatDate(row.entry.periodTo, "long", ctx.locale)}
+                      </Td>
+                      <Td muted className="text-sm">
+                        {t("detail.settlements.daysValue", {
+                          accrued: row.accruedDays,
+                          skipped: row.skippedDays,
+                        })}
+                      </Td>
+                      <Td align="right">{money(row.entry.grossCents)}</Td>
+                      <Td align="right" muted>
+                        {money(row.entry.taxCents)}
+                      </Td>
+                      <Td align="right" className="font-semibold">
+                        {money(row.entry.netCents)}
+                      </Td>
+                      <Td align="right">{row.paidCents === null ? NULL_DISPLAY : money(row.paidCents)}</Td>
+                      <Td>
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs font-medium",
+                            STATUS_TONE[row.status],
+                          )}
+                        >
+                          {t(`detail.reconciliation.${row.status}`)}
+                        </span>
+                      </Td>
+                      {rule.mode === "post_to_provider" && (
+                        <Td>
+                          <PostingCell
+                            ruleId={rule.id}
+                            entryId={row.entry.id}
+                            posting={row.entry.posting}
+                            error={row.entry.postingError}
+                          />
+                        </Td>
+                      )}
+                    </Tr>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+
+            <ul className="flex flex-col md:hidden">
+              {detail.settlements.slice(0, 90).map((row) => (
+                <li
+                  key={row.entry.id}
+                  data-testid="settlement-row"
+                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 font-medium">
                       {formatDate(row.entry.periodFrom, "dayMonth", ctx.locale)} –{" "}
                       {formatDate(row.entry.periodTo, "long", ctx.locale)}
-                    </Td>
-                    <Td muted className="text-sm">
-                      {t("detail.settlements.daysValue", {
-                        accrued: row.accruedDays,
-                        skipped: row.skippedDays,
-                      })}
-                    </Td>
-                    <Td align="right">{money(row.entry.grossCents)}</Td>
-                    <Td align="right" muted>
-                      {money(row.entry.taxCents)}
-                    </Td>
-                    <Td align="right" className="font-semibold">
-                      {money(row.entry.netCents)}
-                    </Td>
-                    <Td align="right">{row.paidCents === null ? NULL_DISPLAY : money(row.paidCents)}</Td>
-                    <Td>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
-                          STATUS_TONE[row.status],
-                        )}
-                      >
-                        {t(`detail.reconciliation.${row.status}`)}
-                      </span>
-                    </Td>
-                    {rule.mode === "post_to_provider" && (
-                      <Td>
-                        <PostingCell
-                          ruleId={rule.id}
-                          entryId={row.entry.id}
-                          posting={row.entry.posting}
-                          error={row.entry.postingError}
-                        />
-                      </Td>
-                    )}
-                  </Tr>
-                ))}
-              </TBody>
-            </Table>
-          </div>
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+                        STATUS_TONE[row.status],
+                      )}
+                    >
+                      {t(`detail.reconciliation.${row.status}`)}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted">
+                    {t("detail.settlements.daysValue", {
+                      accrued: row.accruedDays,
+                      skipped: row.skippedDays,
+                    })}
+                  </span>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                    <span>
+                      {t("detail.settlements.gross")} {money(row.entry.grossCents)}
+                    </span>
+                    <span className="text-muted">
+                      {t("detail.settlements.tax")} {money(row.entry.taxCents)}
+                    </span>
+                    <span className="font-semibold">
+                      {t("detail.settlements.net")} {money(row.entry.netCents)}
+                    </span>
+                    <span>
+                      {t("detail.settlements.paid")}{" "}
+                      {row.paidCents === null ? NULL_DISPLAY : money(row.paidCents)}
+                    </span>
+                  </div>
+                  {rule.mode === "post_to_provider" && (
+                    <PostingCell
+                      ruleId={rule.id}
+                      entryId={row.entry.id}
+                      posting={row.entry.posting}
+                      error={row.entry.postingError}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Card>
 
@@ -210,7 +268,14 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
         {detail.days.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted">{t("detail.days.empty")}</p>
         ) : (
-          <div className="max-h-[420px] overflow-y-auto">
+          // A region that scrolls has to be reachable by keyboard, and it needs a name to be worth
+          // reaching (axe `scrollable-region-focusable`, plan F9 P2).
+          <div
+            tabIndex={0}
+            role="region"
+            aria-label={t("detail.days.title")}
+            className="focus-ring max-h-[420px] overflow-y-auto"
+          >
             <Table>
               <THead>
                 <Th>{t("detail.days.date")}</Th>

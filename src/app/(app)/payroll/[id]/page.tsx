@@ -167,7 +167,7 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
         />
       )}
       {view.evidence.length === 0 && document.storageKey && !IN_FLIGHT.includes(document.state) && (
-        <a href={`/payroll/${document.id}/original`} target="_blank" rel="noopener" className="text-sm text-accent hover:underline">
+        <a href={`/payroll/${document.id}/original`} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent hover:underline">
           {t("review.viewer.open")}
         </a>
       )}
@@ -200,8 +200,11 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
       )}
 
       {view.lines.length > 0 && (
-        <Card padded={false} className="overflow-x-auto">
+        <Card padded={false}>
           <h2 className="px-4 pt-3 pb-2 font-semibold">{t("review.lines.title")}</h2>
+          {/* Seven columns of a payslip's raw lines do not fit a phone: below `md` the same lines
+              are a list, and none of their figures is dropped (plan F9 §3.3). */}
+          <div className="overflow-x-auto max-md:hidden">
           <Table>
             <THead>
               <Th>{t("review.lines.code")}</Th>
@@ -230,6 +233,46 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
               ))}
             </TBody>
           </Table>
+          </div>
+
+          <ul className="flex flex-col md:hidden">
+            {view.lines.map((line) => (
+              <li
+                key={line.position}
+                className="flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="tabular-nums text-muted">{line.code}</span> {line.description}
+                  </span>
+                  <Badge tone={line.role === "other" ? "warn" : "neutral"}>{t(`roles.${line.role}`)}</Badge>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                  {line.quantity && (
+                    <span className="text-muted">
+                      {t("review.lines.quantity")} {line.quantity}
+                    </span>
+                  )}
+                  {line.earningsCents !== null && (
+                    <span>
+                      {t("review.lines.earnings")} {formatMoney(line.earningsCents, ctx.numberFormat)}
+                    </span>
+                  )}
+                  {line.deductionsCents !== null && (
+                    <span>
+                      {t("review.lines.deductions")} {formatMoney(line.deductionsCents, ctx.numberFormat)}
+                    </span>
+                  )}
+                  {line.statisticalCents !== null && (
+                    <span className="text-muted">
+                      {t("review.lines.statistical")}{" "}
+                      {formatMoney(line.statisticalCents, ctx.numberFormat)}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
     </Page>

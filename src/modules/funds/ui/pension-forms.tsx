@@ -395,7 +395,7 @@ function PositionFieldRow({
           type="button"
           onClick={onSelect}
           aria-pressed={selected}
-          className="focus-ring min-w-0 flex-1 truncate rounded-[3px] text-left font-medium"
+          className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center truncate rounded-[3px] text-left font-medium"
         >
           {field.label}
         </button>

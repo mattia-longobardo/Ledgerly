@@ -90,8 +90,12 @@ export function Checkbox({
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
   const field = useFieldState();
   return (
-    // The whole row is the target — the box is 14 px by design, the label around it is 24 px tall.
-    <label className={cn("inline-flex min-h-6 items-center gap-1.5 text-sm", className)}>
+    // The whole row is the target — the box is 14 px by design, the label around it is 24 px each
+    // way. `min-w-6` matters where the label carries no text, as the select-row boxes of a table
+    // do: there the label is as narrow as the box, and 14 px wide is no target (plan F9 §3.4).
+    <label
+      className={cn("inline-flex min-h-6 min-w-6 items-center justify-center gap-1.5 text-sm", className)}
+    >
       <input
         type="checkbox"
         className="focus-ring m-0 size-3.5 accent-primary"

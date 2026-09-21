@@ -88,7 +88,7 @@ function LimitCell({ row, month }: { row: BudgetRowView; month: string }) {
       aria-label={`${t("editLimit")}: ${row.name}, ${row.limit}`}
       disabled={pending}
       onClick={() => setEditing(true)}
-      className="focus-ring rounded-[5px] px-1.5 py-0.5 tabular-nums hover:bg-hover"
+      className="focus-ring inline-flex min-h-6 items-center rounded-[5px] px-1.5 py-0.5 tabular-nums hover:bg-hover"
     >
       {row.limit}
     </button>

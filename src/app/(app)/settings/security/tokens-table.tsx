@@ -43,47 +43,74 @@ export function TokensTable({ tokens }: { tokens: TokenRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <THead>
-          <Th>{t("columns.name")}</Th>
-          <Th>{t("columns.token")}</Th>
-          <Th>{t("columns.scopes")}</Th>
-          <Th>{t("columns.expires")}</Th>
-          <Th>{t("columns.lastUsed")}</Th>
-          <Th>{t("columns.status")}</Th>
-          <Th align="right">
-            <span className="sr-only">{t("columns.actions")}</span>
-          </Th>
-        </THead>
-        <TBody>
-          {tokens.map((token) => (
-            <Tr key={token.id}>
-              <Td className="font-medium">{token.name}</Td>
-              <Td muted className="font-mono text-sm">
-                {`pat_${token.prefix}…`}
-              </Td>
-              <Td className="text-sm">{token.scopes.map((scope) => t(`scopes.${scope}`)).join(" · ")}</Td>
-              <Td muted className="text-sm">
-                {token.expires}
-              </Td>
-              <Td muted className="text-sm">
-                {token.lastUsed}
-              </Td>
-              <Td>
-                <Badge tone={STATE_TONE[token.state]}>{t(`states.${token.state}`)}</Badge>
-              </Td>
-              <Td align="right">
-                {token.state === "active" && (
-                  <Button size="xs" variant="danger" disabled={pending} onClick={() => onRevoke(token)}>
-                    {t("revoke")}
-                  </Button>
-                )}
-              </Td>
-            </Tr>
-          ))}
-        </TBody>
-      </Table>
-    </div>
+    <>
+      {/* Seven columns do not fit a phone: below `md` the same tokens are a list, with the same
+          "Revoke" beside each active one (plan F9 §3.3). */}
+      <div className="overflow-x-auto max-md:hidden">
+        <Table>
+          <THead>
+            <Th>{t("columns.name")}</Th>
+            <Th>{t("columns.token")}</Th>
+            <Th>{t("columns.scopes")}</Th>
+            <Th>{t("columns.expires")}</Th>
+            <Th>{t("columns.lastUsed")}</Th>
+            <Th>{t("columns.status")}</Th>
+            <Th align="right">
+              <span className="sr-only">{t("columns.actions")}</span>
+            </Th>
+          </THead>
+          <TBody>
+            {tokens.map((token) => (
+              <Tr key={token.id}>
+                <Td className="font-medium">{token.name}</Td>
+                <Td muted className="font-mono text-sm">
+                  {`pat_${token.prefix}…`}
+                </Td>
+                <Td className="text-sm">{token.scopes.map((scope) => t(`scopes.${scope}`)).join(" · ")}</Td>
+                <Td muted className="text-sm">
+                  {token.expires}
+                </Td>
+                <Td muted className="text-sm">
+                  {token.lastUsed}
+                </Td>
+                <Td>
+                  <Badge tone={STATE_TONE[token.state]}>{t(`states.${token.state}`)}</Badge>
+                </Td>
+                <Td align="right">
+                  {token.state === "active" && (
+                    <Button size="xs" variant="danger" disabled={pending} onClick={() => onRevoke(token)}>
+                      {t("revoke")}
+                    </Button>
+                  )}
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      </div>
+
+      <ul className="flex flex-col md:hidden">
+        {tokens.map((token) => (
+          <li key={token.id} className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0">
+            <div className="flex items-start justify-between gap-2">
+              <span className="min-w-0 font-medium break-words">{token.name}</span>
+              <Badge tone={STATE_TONE[token.state]}>{t(`states.${token.state}`)}</Badge>
+            </div>
+            <span className="font-mono text-sm text-muted">{`pat_${token.prefix}…`}</span>
+            <span className="text-sm">{token.scopes.map((scope) => t(`scopes.${scope}`)).join(" · ")}</span>
+            <span className="text-sm text-muted">
+              {t("columns.expires")} {token.expires} · {t("columns.lastUsed")} {token.lastUsed}
+            </span>
+            {token.state === "active" && (
+              <div>
+                <Button size="xs" variant="danger" disabled={pending} onClick={() => onRevoke(token)}>
+                  {t("revoke")}
+                </Button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

@@ -46,6 +46,29 @@ async function settled(page: Page): Promise<void> {
     .catch(() => undefined);
 }
 
+/**
+ * An overlay fades and slides in: colours read while its popup is half transparent are the
+ * colours of whatever is behind it, and axe reports contrast that the finished dialog does not
+ * have. Waits for the popup to come to rest.
+ */
+async function settledDialog(page: Page): Promise<void> {
+  await expect(page.getByRole("dialog").first()).toBeVisible();
+  await page
+    .waitForFunction(
+      () => {
+        const popup = document.querySelector('[role="dialog"]');
+        if (!popup) return false;
+        const style = getComputedStyle(popup);
+        return style.opacity === "1" && (style.transform === "none" || !style.transform.includes("matrix("));
+      },
+      null,
+      { timeout: 5_000 },
+    )
+    .catch(() => undefined);
+  // Base UI animates with CSS: one more frame after opacity lands, so nothing is still moving.
+  await page.waitForTimeout(250);
+}
+
 /** Goes to a list and follows the first link on it named `name`: detail ids are never written down. */
 async function follow(page: Page, from: string, name: string | RegExp): Promise<void> {
   await page.goto(from);
@@ -193,7 +216,7 @@ const OVERLAYS: Screen[] = [
       await page.goto("/");
       await settled(page);
       await page.keyboard.press("Control+k");
-      await expect(page.getByRole("dialog")).toBeVisible();
+      await settledDialog(page);
     },
   },
   {
@@ -215,7 +238,7 @@ const OVERLAYS: Screen[] = [
       await page.goto("/");
       await settled(page);
       await page.getByRole("button", { name: /More|Altro/ }).click();
-      await expect(page.getByRole("dialog")).toBeVisible();
+      await settledDialog(page);
     },
   },
   {
@@ -229,7 +252,7 @@ const OVERLAYS: Screen[] = [
         .getByRole("button", { name: /Add pocket|New pocket|Aggiungi/ })
         .first()
         .click();
-      await expect(page.getByRole("dialog")).toBeVisible();
+      await settledDialog(page);
     },
   },
 ];

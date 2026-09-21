@@ -110,7 +110,7 @@ export default async function PayrollPage() {
                       <Badge tone={STATE_TONE[document.state]}>{t(`states.${document.state}`)}</Badge>
                       <Link
                         href={`/payroll/${document.id}` as Route}
-                        className="text-sm font-medium text-accent hover:underline"
+                        className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
                       >
                         {t("inbox.open")}
                       </Link>
