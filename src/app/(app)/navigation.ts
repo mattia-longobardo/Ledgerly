@@ -107,7 +107,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
     labelKey: "timeoff",
     icon: "timeoff",
     group: "work",
-    mobile: true,
+    // Not a tab: the bar's fifth cell is More, and a fifth tab pushed it into a clipped row.
+    mobile: false,
     adminOnly: false,
   },
   {
