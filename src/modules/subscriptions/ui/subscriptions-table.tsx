@@ -16,6 +16,12 @@ export interface SubscriptionView {
   draft: SubscriptionDraft & { id: string };
   name: string;
   categoryName: string | null;
+  /** The category's colour — its group's when it has one (spec §7.2). */
+  categoryColor: string | null;
+  /** When in its cycle it falls due, in the cycle's own unit (`presentDue`). */
+  due: string;
+  /** The exact next charge, for the cell's title: the column says the unit, not the date. */
+  dueOn: string;
   utility: number;
   price: string;
   priceCents: bigint;
@@ -144,8 +150,9 @@ export function SubscriptionsTable({
             <col className="w-[120px]" />
             <col className="w-[92px]" />
             <col className="w-[92px]" />
+            <col className="w-[104px]" />
             <col className="w-[92px]" />
-            <col className="w-[100px]" />
+            <col className="w-[92px]" />
             <col className="w-[136px]" />
             <col className="w-[60px]" />
           </colgroup>
@@ -154,6 +161,7 @@ export function SubscriptionsTable({
             {header("utility", t("columns.utility"))}
             {header("price", t("columns.price"), "right")}
             {header("billing", t("columns.billing"))}
+            <Th>{t("columns.due")}</Th>
             {header("monthly", t("columns.monthly"), "right")}
             {header("yearly", t("columns.yearly"), "right")}
             <Th>{t("columns.status")}</Th>
@@ -172,7 +180,16 @@ export function SubscriptionsTable({
                       {row.name}
                     </span>
                     <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
-                      {row.categoryName && <Tag>{row.categoryName}</Tag>}
+                      {row.categoryName && (
+                        <Tag>
+                          <span
+                            aria-hidden
+                            className="mr-1 inline-block size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: row.categoryColor ?? undefined }}
+                          />
+                          {row.categoryName}
+                        </Tag>
+                      )}
                       <span className="truncate" title={`${t("columns.paidFrom")}: ${row.accountName}`}>
                         {row.accountName}
                       </span>
@@ -195,6 +212,9 @@ export function SubscriptionsTable({
                   >
                     {t(`cycles.${row.cycle}`)}
                   </span>
+                </Td>
+                <Td className="truncate" title={t("columns.dueOn", { date: row.dueOn })}>
+                  {row.due}
                 </Td>
                 <Td align="right">{row.monthly}</Td>
                 <Td align="right" className="font-semibold">

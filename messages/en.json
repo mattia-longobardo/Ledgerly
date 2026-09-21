@@ -128,6 +128,7 @@
       "profile": "Profile",
       "security": "Security",
       "integrations": "Integrations",
+      "categories": "Categories",
       "data": "Data",
       "users": "Users",
       "server": "Server"
@@ -257,6 +258,91 @@
         "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
       }
     },
+    "categories": {
+      "title": "Categories",
+      "description": "The transactions' categories, in groups. A group has a colour and every sub-category is drawn in it. A synced category is matched by name before a new one is created, and its Wallet group becomes its group.",
+      "add": "Add category",
+      "name": "Name",
+      "group": "Group",
+      "type": "Type",
+      "color": "Colour",
+      "noColor": "No colour",
+      "noGroup": "No group",
+      "types": {
+        "income": "Income",
+        "expense": "Expense",
+        "transfer": "Transfer"
+      },
+      "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
+      "rename": "Rename",
+      "edit": "Edit category",
+      "archive": "Archive",
+      "restore": "Restore",
+      "archived": "Archived",
+      "showArchived": "Show archived",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No categories yet. They also appear on their own as transactions sync.",
+      "saved": "Category saved",
+      "archivedToast": "Category archived",
+      "restoredToast": "Category restored",
+      "errors": {
+        "duplicate": "A category with this name already exists.",
+        "invalid": "Enter a name between 1 and {max} characters.",
+        "notFound": "That category no longer exists.",
+        "failed": "Couldn't save. Try again.",
+        "invalidParent": "Pick an active group that is not inside another one. A category with sub-categories cannot go into a group."
+      },
+      "hasChildren": "It has sub-categories, so it stays a group.",
+      "typeFromGroup": "A category in a group has the group's type.",
+      "colorFromGroup": "It is drawn in {group}'s colour.",
+      "addGroup": "New group",
+      "addChild": "Add sub-category",
+      "delete": "Delete",
+      "colorHint": "Chosen automatically; pick another one and it stays.",
+      "autoColor": "Automatic",
+      "deleteTitle": "Delete this category?",
+      "deleteWarning": "{name} is removed for good. This cannot be undone.",
+      "deleteMovements": "{count, plural, =0 {No transaction uses it.} one {# transaction loses its category.} other {# transactions lose their category.}}",
+      "deleteBudgets": "Budgets set on it are deleted; subscriptions and interest rules lose it.",
+      "deleteChildren": "Its sub-categories are deleted with it.",
+      "deleteWallet": "It is deleted in Wallet too, if it came from there.",
+      "deletedToast": "{name} deleted · {count, plural, =0 {no transaction touched} one {# transaction uncategorised} other {# transactions uncategorised}}",
+      "wallet": {
+        "deleted": "{count, plural, one {# category deleted in Wallet too} other {# categories deleted in Wallet too}}",
+        "refused": "Wallet did not delete it: {reason}",
+        "failed": "Wallet could not be reached: {reason}"
+      }
+    },
+    "labels": {
+      "title": "Labels",
+      "description": "Free-form labels you can put on a transaction. Synced labels are matched by name.",
+      "add": "Add label",
+      "name": "Name",
+      "color": "Colour",
+      "noColor": "No colour",
+      "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
+      "rename": "Rename",
+      "edit": "Edit label",
+      "remove": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No labels yet.",
+      "saved": "Label saved",
+      "removedToast": "Label deleted",
+      "remove_confirm": {
+        "title": "Delete this label?",
+        "description": "It is removed from {count, plural, one {# transaction} other {# transactions}}. Nothing else changes.",
+        "confirm": "Delete",
+        "cancel": "Keep it"
+      },
+      "errors": {
+        "duplicate": "A label with this name already exists.",
+        "invalid": "Enter a name between 1 and {max} characters.",
+        "notFound": "That label no longer exists.",
+        "failed": "Couldn't save. Try again."
+      }
+    },
     "jobs": {
       "title": "Scheduled jobs",
       "description": "What the cron sidecar runs, and when it last ran. “Run now” takes the job's lock, so a job already running is skipped rather than started twice.",
@@ -283,76 +369,6 @@
       "runNow": "Run now",
       "started": "{job} started: this table says how it went once it is done.",
       "failed": "It could not be started."
-    },
-    "data": {
-      "categories": {
-        "title": "Categories",
-        "description": "Categories of the transactions in Expenses, in groups. A synced category is matched by name before a new one is created, and its Wallet group becomes its group.",
-        "add": "Add category",
-        "name": "Name",
-        "group": "Group",
-        "type": "Type",
-        "color": "Colour",
-        "noColor": "No colour",
-        "noGroup": "No group",
-        "types": {
-          "income": "Income",
-          "expense": "Expense",
-          "transfer": "Transfer"
-        },
-        "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
-        "rename": "Rename",
-        "edit": "Edit category",
-        "archive": "Archive",
-        "restore": "Restore",
-        "archived": "Archived",
-        "showArchived": "Show archived",
-        "save": "Save",
-        "cancel": "Cancel",
-        "empty": "No categories yet. They also appear on their own as transactions sync.",
-        "saved": "Category saved",
-        "archivedToast": "Category archived",
-        "restoredToast": "Category restored",
-        "errors": {
-          "duplicate": "A category with this name already exists.",
-          "invalid": "Enter a name between 1 and {max} characters.",
-          "notFound": "That category no longer exists.",
-          "failed": "Couldn't save. Try again.",
-          "invalidParent": "Pick an active group that is not inside another one. A category with sub-categories cannot go into a group."
-        },
-        "hasChildren": "It has sub-categories, so it stays a group.",
-        "typeFromGroup": "A category in a group has the group's type.",
-        "colorFromGroup": "A category in a group has the group's colour."
-      },
-      "labels": {
-        "title": "Labels",
-        "description": "Free-form labels you can put on a transaction. Synced labels are matched by name.",
-        "add": "Add label",
-        "name": "Name",
-        "color": "Colour",
-        "noColor": "No colour",
-        "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
-        "rename": "Rename",
-        "edit": "Edit label",
-        "remove": "Delete",
-        "save": "Save",
-        "cancel": "Cancel",
-        "empty": "No labels yet.",
-        "saved": "Label saved",
-        "removedToast": "Label deleted",
-        "remove_confirm": {
-          "title": "Delete this label?",
-          "description": "It is removed from {count, plural, one {# transaction} other {# transactions}}. Nothing else changes.",
-          "confirm": "Delete",
-          "cancel": "Keep it"
-        },
-        "errors": {
-          "duplicate": "A label with this name already exists.",
-          "invalid": "Enter a name between 1 and {max} characters.",
-          "notFound": "That label no longer exists.",
-          "failed": "Couldn't save. Try again."
-        }
-      }
     },
     "account": {
       "title": "Account",
@@ -1632,11 +1648,17 @@
       "utility": "Utility",
       "price": "Price",
       "billing": "Billing",
+      "due": "Due",
+      "dueOn": "Next charge: {date}",
       "paidFrom": "Paid from",
       "monthly": "Monthly",
       "yearly": "Yearly",
       "status": "Paid this period",
       "edit": "Edit"
+    },
+    "due": {
+      "day": "Day {day}",
+      "quarter": "Q{quarter}"
     },
     "cycles": {
       "weekly": "Weekly",

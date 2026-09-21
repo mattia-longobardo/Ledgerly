@@ -196,6 +196,57 @@ export function excludeHidden<T extends Visibility>(rows: readonly T[]): T[] {
 /* Categories */
 
 /**
+ * The colours a group of categories is drawn with (spec §8.3, the design's category dots). Eight,
+ * because a legend with more than that stops being read as a legend.
+ */
+export const CATEGORY_COLORS = [
+  "#2563eb",
+  "#0ea5e9",
+  "#10b981",
+  "#84cc16",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#64748b",
+] as const;
+
+/**
+ * The colour of a group that has not been given one, from its own id.
+ *
+ * Derived rather than written: a colour nobody chose is not a decision worth storing, and deriving
+ * it means the rows that existed before this rule get one too, without a migration and without a
+ * read that quietly writes. The moment somebody picks a colour it is stored, and the stored one
+ * wins for ever after — which is exactly what "assigned automatically, and changeable" means.
+ *
+ * The hash is FNV-1a over the id: small, stable across processes and versions, and with no reason
+ * to be anything cleverer — the only property that matters is that the same id always lands on the
+ * same colour.
+ */
+export function autoCategoryColor(id: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < id.length; i += 1) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
+}
+
+/**
+ * What colour a category is drawn in, anywhere it is drawn.
+ *
+ * A sub-category has no colour of its own (spec §7.2, F2.5): it is its group's, so that a legend,
+ * a chart and a table all say the same thing about the same money. A group falls back to
+ * {@link autoCategoryColor}, so nothing is ever colourless.
+ */
+export function categoryColor(
+  category: { id: string; parentId: string | null; color: string | null },
+  groupColor?: string | null,
+): string {
+  if (category.parentId !== null) return groupColor ?? autoCategoryColor(category.parentId);
+  return category.color ?? autoCategoryColor(category.id);
+}
+
+/**
  * Categories in the order of their tree (spec §7.2, F2.5): each group followed by its
  * sub-categories, with the depth a list indents them by. The order *within* each level is the one
  * the rows arrive in — the query's deterministic `ORDER BY` — so this only moves children under

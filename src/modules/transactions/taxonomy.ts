@@ -8,9 +8,17 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { EntityType } from "@/platform/integrations/rules";
-import { IntegrationError, linkExternal, resolveExternal } from "@/platform/integrations/service";
+import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import {
+  externalIdsOf,
+  IntegrationError,
+  linkExternal,
+  resolveExternal,
+  unlinkEntities,
+} from "@/platform/integrations/service";
 import {
   CATEGORY_TYPES,
+  categoryColor,
   type CategoryType,
   markCategoryEdited,
   markLocallyEdited,
@@ -159,19 +167,32 @@ export async function listCategories(
 }
 
 /**
+ * The colour a category is drawn in: its own when it is a group and somebody chose one, its
+ * group's when it is a sub-category, and otherwise the one derived from the id (`categoryColor`).
+ * Nothing is ever colourless, and a group and its children always agree.
+ */
+export function colorOfCategory(
+  category: Pick<Category, "id" | "parentId" | "color">,
+  groups: ReadonlyMap<string, Pick<Category, "id" | "parentId" | "color">>,
+): string {
+  const group = category.parentId === null ? null : groups.get(category.parentId);
+  return categoryColor(category, group ? categoryColor(group) : null);
+}
+
+/**
  * The open categories of one type as a picker offers them (F3): tree order, a sub-category in its
- * group's colour (spec §7.2, F2.5), grey for a category with no colour at all.
+ * group's colour (spec §7.2, F2.5).
  */
 export async function categoryOptions(
   ctx: Pick<Ctx, "userId">,
   type: CategoryType,
 ): Promise<{ id: string; name: string; color: string; depth: 0 | 1 }[]> {
   const tree = (await listCategories(ctx)).filter((category) => category.type === type);
-  const colorOf = new Map(tree.map((category) => [category.id, category.color]));
+  const groups = new Map(tree.filter((one) => one.parentId === null).map((one) => [one.id, one]));
   return tree.map((category) => ({
     id: category.id,
     name: category.name,
-    color: (category.parentId === null ? category.color : colorOf.get(category.parentId)) ?? "#8a8f98",
+    color: colorOfCategory(category, groups),
     depth: category.depth,
   }));
 }
@@ -499,6 +520,84 @@ export async function restoreCategory(ctx: Pick<Ctx, "userId">, id: string): Pro
   await setArchived(ctx, id, null);
 }
 
+/** What a deletion took with it, so the screen can say it rather than guess. */
+export interface CategoryDeletion {
+  /** The category asked for, and its sub-categories: all of them go together. */
+  removed: { id: string; name: string; parentId: string | null }[];
+  /** The provider's own ids for those categories, for whoever propagates the deletion. */
+  externalIds: string[];
+  /** Movements that were filed under one of them and are now uncategorised. */
+  uncategorised: number;
+}
+
+/**
+ * Deletes a category for good, with its sub-categories (owner, 2026-09-21).
+ *
+ * This is deliberately **not** what spec §7.2 wrote — a category was archived and never deleted —
+ * and the owner asked for the other thing, twice and in as many words. What archiving bought was
+ * that history kept its labels; what it cost was a list that only ever grew. So both exist: the
+ * screen offers archiving as the reversible move and this as the irreversible one, and says which
+ * is which.
+ *
+ * What goes with it is decided by the foreign keys that were already there: a movement and a
+ * subscription lose their category (`set null`), a budget on it is deleted (`cascade`), an interest
+ * rule stops publishing under it (`set null`). The sub-categories go first because the self key
+ * carries a generated column and so can have no `ON DELETE` action of its own.
+ *
+ * The provider's ids are read **before** the rows go and handed back rather than used: the network
+ * call that would spend them has no business inside this transaction (spec §4.3), and the caller
+ * is the one that knows whether the person asked for it.
+ */
+export async function deleteCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<CategoryDeletion> {
+  const categoryId = parsed(idSchema, id);
+  const category = await categoryById(ctx, categoryId);
+  if (!category) throw new TaxonomyError("not_found");
+  const children = await getDb()
+    .select()
+    .from(categories)
+    .where(and(eq(categories.parentId, categoryId), userScoped(ctx).owns(categories)))
+    .orderBy(...CATEGORY_ORDER);
+  const doomed = [category, ...children];
+  const ids = doomed.map((one) => one.id);
+
+  const [links, groupLinks, [counted]] = await Promise.all([
+    externalIdsOf(ctx, WALLET_PROVIDER, CATEGORY_ENTITY, ids),
+    externalIdsOf(ctx, WALLET_PROVIDER, GROUP_ENTITY, ids),
+    getDb()
+      .select({ n: count() })
+      .from(transactions)
+      .where(and(inArray(transactions.categoryId, ids), userScoped(ctx).owns(transactions))),
+  ]);
+
+  await getDb().transaction(async (tx) => {
+    if (children.length > 0) {
+      await tx.delete(categories).where(
+        and(
+          inArray(
+            categories.id,
+            children.map((one) => one.id),
+          ),
+          userScoped(ctx).owns(categories),
+        ),
+      );
+    }
+    await tx.delete(categories).where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)));
+  });
+
+  // The links outlive their rows — `provider_links` points at an id, with no key to cascade — so
+  // they are cleared here. A link left behind would make the next pass adopt a category that is
+  // gone and file movements under nothing.
+  for (const entity of [CATEGORY_ENTITY, GROUP_ENTITY]) {
+    await unlinkEntities(ctx, WALLET_PROVIDER, entity, ids);
+  }
+
+  return {
+    removed: doomed.map((one) => ({ id: one.id, name: one.name, parentId: one.parentId })),
+    externalIds: [...new Set([...links.values(), ...groupLinks.values()])],
+    uncategorised: Number(counted?.n ?? 0),
+  };
+}
+
 /**
  * Spec §9.1, in this order: the provider's own link, then a local category with that **exact**
  * name, then a new one. Steps 2 and 3 file the link, so the next sync stops at step 1 and follows
@@ -819,7 +918,7 @@ export async function deleteLabel(ctx: Pick<Ctx, "userId">, id: string): Promise
     const byMarkers = new Map<string, { markers: string[]; ids: string[] }>();
     for (const row of carrying) {
       const markers = markLocallyEdited(row.locallyEdited, ["labels"]);
-      const key = markers.join(" ");
+      const key = markers.join("\u0000");
       const group = byMarkers.get(key);
       if (group) group.ids.push(row.id);
       else byMarkers.set(key, { markers, ids: [row.id] });

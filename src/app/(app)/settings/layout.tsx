@@ -11,6 +11,7 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
     { href: "/settings/profile", label: t("tabs.profile") },
     { href: "/settings/security", label: t("tabs.security") },
     { href: "/settings/integrations", label: t("tabs.integrations") },
+    { href: "/settings/categories", label: t("tabs.categories") },
     { href: "/settings/data", label: t("tabs.data") },
     // Admin › Users and Admin › Server (spec §7.10): only admins see them, and their pages
     // answer 404 to anyone else.

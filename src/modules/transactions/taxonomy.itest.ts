@@ -15,6 +15,7 @@ import {
   archiveCategory,
   createCategory,
   createLabel,
+  deleteCategory,
   deleteLabel,
   getCategory,
   listCategories,
@@ -869,5 +870,99 @@ describe("the type a category's movements say it is", () => {
     expect((await getCategory(ctx, group.id))?.type).toBe("income");
     expect((await getCategory(ctx, silent.id))?.type).toBe("income");
     expect((await getCategory(ctx, byHand.id))?.type).toBe("expense");
+  });
+});
+
+describe("deleteCategory", () => {
+  it("removes it for good and leaves its movements without a category", async () => {
+    const ctx = await newContext();
+    const accountId = await anAccount(ctx);
+    const category = await createCategory(ctx, GROCERIES);
+    const movement = await addTransaction(ctx, accountId, category.id);
+
+    const deletion = await deleteCategory(ctx, category.id);
+
+    expect(deletion.removed.map((one) => one.name)).toEqual(["Groceries"]);
+    expect(deletion.uncategorised).toBe(1);
+    await expect(getCategory(ctx, category.id)).rejects.toMatchObject({ code: "not_found" });
+    const [row] = await getDb()
+      .select({ categoryId: transactions.categoryId })
+      .from(transactions)
+      .where(eq(transactions.id, movement));
+    expect(row.categoryId).toBeNull();
+  });
+
+  it("takes its sub-categories with it, because a child cannot outlive its group", async () => {
+    const ctx = await newContext();
+    const group = await aGroup(ctx);
+    const child = await createCategory(ctx, { name: "Rent", type: "expense", parentId: group.id });
+    const other = await createCategory(ctx, { name: "Water", type: "expense", parentId: group.id });
+
+    const deletion = await deleteCategory(ctx, group.id);
+
+    expect(deletion.removed.map((one) => one.id).sort()).toEqual([group.id, child.id, other.id].sort());
+    expect(await listCategories(ctx, { includeArchived: true })).toEqual([]);
+  });
+
+  it("hands back the provider's own ids and then forgets the links", async () => {
+    const ctx = await newContext();
+    const group = await aGroup(ctx);
+    const child = await createCategory(ctx, { name: "Rent", type: "expense", parentId: group.id });
+    await linkExternal(ctx, {
+      provider: WALLET_PROVIDER,
+      entityType: "category",
+      entityId: child.id,
+      externalId: "w-child",
+    });
+    await linkExternal(ctx, {
+      provider: WALLET_PROVIDER,
+      entityType: "category_group",
+      entityId: group.id,
+      externalId: "w-group",
+    });
+
+    const deletion = await deleteCategory(ctx, group.id);
+
+    expect(deletion.externalIds.sort()).toEqual(["w-child", "w-group"]);
+    // A link left behind would make the next pass adopt a category that no longer exists.
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "category", ["w-child"])).toEqual(new Map());
+    expect(await resolveExternal(ctx, WALLET_PROVIDER, "category_group", ["w-group"])).toEqual(new Map());
+  });
+
+  it("says there is nothing to tell Wallet about a category it never knew", async () => {
+    const ctx = await newContext();
+    const category = await createCategory(ctx, GROCERIES);
+    expect((await deleteCategory(ctx, category.id)).externalIds).toEqual([]);
+  });
+
+  it("refuses an id that is not this user's, and touches nothing", async () => {
+    const mine = await newContext();
+    const theirs = await newContext();
+    const category = await createCategory(theirs, GROCERIES);
+    await expect(deleteCategory(mine, category.id)).rejects.toMatchObject({ code: "not_found" });
+    expect((await getCategory(theirs, category.id)).name).toBe("Groceries");
+  });
+
+  it("counts only this user's movements as uncategorised", async () => {
+    const mine = await newContext();
+    const theirs = await newContext();
+    const account = await anAccount(mine);
+    const theirAccount = await anAccount(theirs);
+    const category = await createCategory(mine, GROCERIES);
+    const theirCategory = await createCategory(theirs, GROCERIES);
+    await addTransaction(mine, account, category.id);
+    await addTransaction(theirs, theirAccount, theirCategory.id);
+    expect((await deleteCategory(mine, category.id)).uncategorised).toBe(1);
+  });
+
+  it("is the irreversible move beside archiving, which stays reversible", async () => {
+    const ctx = await newContext();
+    const kept = await createCategory(ctx, GROCERIES);
+    await archiveCategory(ctx, kept.id);
+    await restoreCategory(ctx, kept.id);
+    expect((await getCategory(ctx, kept.id)).archivedAt).toBeNull();
+
+    await deleteCategory(ctx, kept.id);
+    await expect(getCategory(ctx, kept.id)).rejects.toMatchObject({ code: "not_found" });
   });
 });

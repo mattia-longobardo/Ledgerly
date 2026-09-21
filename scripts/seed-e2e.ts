@@ -264,9 +264,13 @@ async function seedSubscriptions(): Promise<void> {
     walletMovement("e2e-sub-tx-5", addDays(on, -30), -2990n, "FitActive", "Sport"),
   ]);
   await refreshRecurrences(ctx);
+  // The two streaming ones carry the category the movements created, so the table has a category
+  // tag with a colour in it to check (F8.1); Amazon Prime deliberately keeps none.
+  const streaming = (await listCategories(ctx)).find((one) => one.name === "Streaming");
   const base = { categoryId: null, paymentAccountId: accountId, tolerance: "0.05" };
   await createSubscription(ctx, {
     ...base,
+    categoryId: streaming?.id ?? null,
     name: "Netflix",
     utility: 8,
     priceCents: 1299n,
@@ -276,6 +280,7 @@ async function seedSubscriptions(): Promise<void> {
   });
   await createSubscription(ctx, {
     ...base,
+    categoryId: streaming?.id ?? null,
     name: "Spotify",
     utility: 9,
     priceCents: 1099n,

@@ -145,6 +145,8 @@ interface FakeWallet extends WalletCategoryWriter {
   categories: WalletCategory[];
   renames: { externalId: string; name: string }[][];
   creates: { name: string; parentExternalId: string }[];
+  /** Every id a caller asked to delete: a pass must never put anything in here. */
+  removals: string[];
 }
 
 /** A Wallet that really changes: what the writer sends it is what the next pass reads back. */
@@ -154,6 +156,15 @@ function fakeWallet(categories: WalletCategory[], refuse: ReadonlySet<string> = 
     categories,
     renames: [],
     creates: [],
+    removals: [],
+    async remove(externalIds) {
+      this.removals.push(...externalIds);
+      return externalIds.map((externalId) => {
+        const at = categories.findIndex((category) => category.externalId === externalId);
+        if (at >= 0) categories.splice(at, 1);
+        return { externalId, ok: at >= 0, error: at >= 0 ? null : "not found" };
+      });
+    },
     async rename(items) {
       expect(items.length).toBeLessThanOrEqual(RENAME_BATCH);
       this.renames.push(items.map((item) => ({ ...item })));

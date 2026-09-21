@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { payeeKeyOf, RECURRENCE_BANDS } from "@/modules/transactions/rules";
-import { addDays, type CivilDate, isCivilDate, lastDayOfMonth, monthKey } from "@/platform/dates";
+import { addDays, type CivilDate, dayOfWeek, isCivilDate, lastDayOfMonth, monthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
 
 export const CYCLES = ["weekly", "monthly", "quarterly", "yearly"] as const;
@@ -119,6 +119,35 @@ export function nextCharge(
 
 const PARTS_PER_UNIT = 1_000_000n;
 
+/**
+ * When in its cycle a subscription falls due — the unit that identifies the moment, which is not
+ * the same unit for every cycle (owner, 2026-09-21).
+ *
+ * A monthly subscription is "the 15th": the month is every month, so only the day says anything.
+ * A quarterly one is "Q3": the day inside the quarter is detail, the quarter is the news. A yearly
+ * one is "September". A weekly one is a weekday. The exact date is still there — the cell carries
+ * it as its title — but the column says the thing a person is actually scanning for.
+ */
+export type DueMoment =
+  | { kind: "weekday"; weekday: number }
+  | { kind: "day"; day: number }
+  | { kind: "quarter"; quarter: 1 | 2 | 3 | 4 }
+  | { kind: "month"; month: number };
+
+export function dueMoment(cycle: Cycle, on: CivilDate): DueMoment {
+  const [, month, day] = on.split("-").map(Number);
+  switch (cycle) {
+    case "weekly":
+      return { kind: "weekday", weekday: dayOfWeek(on) };
+    case "monthly":
+      return { kind: "day", day };
+    case "quarterly":
+      return { kind: "quarter", quarter: (Math.floor((month - 1) / 3) + 1) as 1 | 2 | 3 | 4 };
+    case "yearly":
+      return { kind: "month", month };
+  }
+}
+
 /** A stored `numeric(10,6)` fraction as millionths, read from its text: no float on the way. */
 export function toleranceParts(fraction: string): bigint {
   const [whole, decimals = ""] = fraction.trim().split(".");
@@ -201,7 +230,7 @@ export function planCharges(
   );
 
   const taken = new Set<string>();
-  const planned = slots.map(({ subscription, dueOn, period }): PlannedCharge => {
+  const planned = slots.map(({ subscription, dueOn, period }): PlannedCharge & { claimed: boolean } => {
     const expectedCents = subscription.expected.get(dueOn) ?? subscription.priceCents;
     const needle = payeeKeyOf(subscription.payeeMatch) ?? "";
     const found = candidates
@@ -240,16 +269,37 @@ export function planCharges(
       expectedCents,
       actualCents: found?.cents ?? null,
       state,
+      // A charge whose day fell before the subscription existed here is a *look-back*, not a
+      // claim: worth checking, because the person may well have paid it days before adding the
+      // plan, but never worth announcing as owed. Nobody can be behind on a charge from before
+      // they said the subscription existed.
+      //
+      // The anchor is the exception, and it is the person's own words: "the next charge is the
+      // 2nd" names that charge, even when they say it on the 20th. So that one is always claimed.
+      claimed: dueOn >= subscription.createdOn || dueOn === subscription.anchor,
     };
   });
-  return planned.sort((a, b) =>
-    a.subscriptionId < b.subscriptionId
-      ? -1
-      : a.subscriptionId > b.subscriptionId
-        ? 1
-        : a.dueOn < b.dueOn
+  return (
+    planned
+      // Reported 2026-09-21: a rental added on 21 September with its next charge on 15 October
+      // announced "expected on 15 Sep 2026 · not found yet" — September's charge, invented by the
+      // look-back and then held against a plan that had never been asked about it. The look-back
+      // stays, because a charge paid earlier in the month one adds a subscription should still show
+      // as paid; what goes is the accusation when it finds nothing.
+      .filter((charge) => charge.claimed || charge.transactionId !== null)
+      .map(({ claimed, ...charge }) => {
+        void claimed;
+        return charge;
+      })
+      .sort((a, b) =>
+        a.subscriptionId < b.subscriptionId
           ? -1
-          : 1,
+          : a.subscriptionId > b.subscriptionId
+            ? 1
+            : a.dueOn < b.dueOn
+              ? -1
+              : 1,
+      )
   );
 }
 

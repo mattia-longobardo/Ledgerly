@@ -1,4 +1,4 @@
-// src/app/(app)/settings/data/categories/actions.ts — Settings › Data, the categories and labels
+// src/app/(app)/settings/categories/actions.ts — Settings › Categories, the categories and labels
 // of spec §7.2: validate → service → revalidate, as in `modules/accounts/actions.ts`.
 "use server";
 
@@ -7,6 +7,7 @@ import {
   archiveCategory,
   createCategory,
   createLabel,
+  deleteCategory,
   deleteLabel,
   restoreCategory,
   TaxonomyError,
@@ -14,6 +15,10 @@ import {
   updateLabel,
 } from "@/modules/transactions/taxonomy";
 import { requireSession } from "@/platform/auth/session";
+import {
+  deleteWalletCategories,
+  type WalletDeletionOutcome,
+} from "@/platform/integrations/wallet/categories";
 
 /**
  * The cards call these inside a transition with no error boundary, so a refusal comes back as a
@@ -34,10 +39,15 @@ export interface LabelFormInput {
   color: string | null;
 }
 
-/** Both lists feed Expenses too: its filters and its category card read the same rows. */
+/**
+ * Both lists feed half the application: the Expenses filters, the Budgets rows, the Subscriptions
+ * table and every category picker read the same categories, and all of them show their colour.
+ */
 function revalidate(): void {
-  revalidatePath("/settings/data");
+  revalidatePath("/settings/categories");
   revalidatePath("/expenses");
+  revalidatePath("/budgets");
+  revalidatePath("/subscriptions");
 }
 
 async function run(work: () => Promise<unknown>): Promise<TaxonomyActionResult> {
@@ -87,4 +97,40 @@ export async function saveLabelAction(id: string, input: LabelFormInput): Promis
 export async function deleteLabelAction(id: string): Promise<TaxonomyActionResult> {
   const ctx = await requireSession();
   return run(() => deleteLabel(ctx, id));
+}
+
+/**
+ * Deletes a category for good, here **and on Wallet** (owner, 2026-09-21).
+ *
+ * The two steps are orchestrated here rather than inside either service, and on purpose: the
+ * taxonomy is a module and Wallet is a platform integration that already depends on that module,
+ * so a service calling the other way round would close a circle. The action is the one place that
+ * legitimately knows about both.
+ *
+ * The local delete goes first. If it fails, nothing has been destroyed anywhere; if Wallet then
+ * refuses — its own records may still reference the category — the answer says so and the person
+ * can finish the job there. The other order would let Wallet lose a category for a deletion that
+ * never happened here.
+ */
+export async function deleteCategoryAction(
+  id: string,
+): Promise<
+  | { ok: true; removed: number; uncategorised: number; wallet: WalletDeletionOutcome }
+  | { ok: false; error: string }
+> {
+  const ctx = await requireSession();
+  try {
+    const deletion = await deleteCategory(ctx, id);
+    const wallet = await deleteWalletCategories(ctx, deletion.externalIds);
+    revalidate();
+    return {
+      ok: true,
+      removed: deletion.removed.length,
+      uncategorised: deletion.uncategorised,
+      wallet,
+    };
+  } catch (error) {
+    if (error instanceof TaxonomyError) return { ok: false, error: error.code };
+    throw error;
+  }
 }
