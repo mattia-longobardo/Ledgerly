@@ -16,6 +16,7 @@
     "test": "vitest run --project 'unit-*'",
     "test:watch": "vitest --project 'unit-*'",
     "test:integration": "sh scripts/test-integration.sh",
+    "perf": "sh scripts/perf-on-test.sh",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "user:create-admin": "sh scripts/on-homelab.sh scripts/create-admin.ts"
