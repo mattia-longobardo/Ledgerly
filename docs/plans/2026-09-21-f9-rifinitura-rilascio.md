@@ -412,6 +412,30 @@ aspetta. Se un giorno una di queste pagine rallenta, `npm run perf` lo dirà pri
 allineato a com'è davvero il repository dopo nove fasi, e un `docs/RELEASE.md` che sia la checklist
 di §13 eseguibile da chi non ha scritto il codice.
 
+### P5.1 — Fatto (2026-09-21)
+
+- **`README`**: le tre sezioni che mancavano — **F5** (la pipeline di importazione, il parser a
+  coordinate, l'LLM come ripiego mai come lettore, i controlli, la sostituzione di un cedolino
+  ristampato), **F6** (le sei grandezze mai sommate, i due documenti Cometa, la riconciliazione per
+  trimestre con la sua scadenza, le tariffe con la data in cui sono state verificate) e **F7**
+  (ferie e ROL contati a parte, il residuo che viene dal cedolino e non da un conto nostro, Trek
+  che non cancella mai un giorno per sbaglio). Più una sezione **«On a phone»** e **sedici
+  screenshot**, tutti dell'utente `layout`: nessuna immagine nel repository mostra i soldi di una
+  persona vera, e `npm run docs:shots` le rifà.
+- **`CLAUDE.md`**: una sezione nuova, «What a screen has to be», che scrive le regole che F9 ha
+  trovato invece di lasciarle nel piano — le cinque del controllo, la forma tabella/elenco, il
+  `min-w-0` sulle celle di griglia che possono contenere una tabella, i 24 px che sono quasi sempre
+  un'altezza, i token di colore che si cambiano **in coppia** (è così che il tema scuro è rimasto
+  rotto dopo F7), e che un'azione distruttiva chiede prima e dice dopo quale delle cose che poteva
+  fare ha fatto.
+- **`docs/RELEASE.md`**: la checklist di §13 eseguibile, che dichiara in apertura che cosa di §13
+  non ha più oggetto e perché (§P6.1 qui sotto).
+- **`LICENSE`**: PolyForm Noncommercial 1.0.0, presa dal testo ufficiale e non riscritta a memoria.
+  Uso personale, studio, progetti amatoriali, più enti di beneficenza, istruzione, ricerca
+  pubblica, sicurezza, ambiente e pubblica amministrazione. L'uso commerciale non è concesso qui.
+- **`.env.example`**: `S3_KEY_PREFIX`, che l'applicazione legge e il file non nominava (rilievo F1
+  della revisione).
+
 ### P6 — Rilascio (§13)
 Nell'ordine della specifica: backup di `dashboard`; recupero dei valori d'ambiente da `docker
 inspect dashboard-app`; `docker-compose.yml` di produzione (`dashboard-app`, `dashboard-cron`,

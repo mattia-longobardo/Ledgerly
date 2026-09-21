@@ -4,6 +4,12 @@ Personal finance and household-admin dashboard. Version 0.1 is a from-scratch re
 [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md) and each phase has its
 plan in [`docs/plans/`](docs/plans/).
 
+![Overview](docs/screenshots/overview.png)
+
+Every screenshot in this README is of the seeded test user, whose accounts, payslips and pension
+fund are invented from end to end (`scripts/seed-e2e.ts`): none of them shows a real person's
+money. `npm run docs:shots` takes them again.
+
 ## Develop
 
 Prerequisites: Node.js `^22.13.0 || >=24` and Docker, on the homelab host. There is no local
@@ -22,6 +28,8 @@ password — SSO-only — do not see that form).
 
 **Overview** is the net worth over time; **Accounts** lists the accounts behind it and each one has
 its own page with Overview, Transactions (from F2), Balance entries and Settings tabs.
+
+![Accounts](docs/screenshots/accounts.png)
 
 - **Balances are dated observations.** An account's worth on a day is its last balance on or before
   it, held forward; a month before an account's first balance is unknown (`—`), never zero, and a
@@ -45,6 +53,8 @@ its own page with Overview, Transactions (from F2), Balance entries and Settings
 
 **Settings → Integrations** links a Budget Makers Wallet account; **Expenses** is what the sync
 brings in.
+
+![Expenses](docs/screenshots/expenses.png)
 
 - **The token is sealed, not stored.** A credential is encrypted with AES-256-GCM under
   `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
@@ -120,6 +130,86 @@ brings in.
 - A pocket's "Interest earned on backing" is now the account's last 12 months of interest × the
   pocket's share of the balance, as an estimate.
 
+![A PAC and its returns](docs/screenshots/fund.png)
+
+## Payslips and imports (F5)
+
+Every document this app reads — a payslip, a Cometa export, a Cometa statement — goes through one
+pipeline: **upload → read → review → verify → apply**. The original is stored under
+`payslips/<user>/<year>/` or `cometa/<user>/<year>/` in S3 and is never overwritten; the file's
+fingerprint makes a second upload of the same document a duplicate rather than a second copy.
+
+![A payslip under review](docs/screenshots/payroll-review.png)
+
+- **Reading is deterministic first.** A Reply/TeamSystem payslip is parsed from the PDF's **text
+  coordinates**, not from a regular expression over a flattened page: a label finds the box beside
+  it, and every value it yields carries its **evidence** — the page, the rectangle on it and the
+  raw text it came from. The review screen shows the PDF beside the fields, and clicking a field
+  draws its box on the document. A PDF with too little text to parse waits in `needs_ocr`; OCR
+  itself is out of 0.1 (D11).
+- **The LLM is a fallback, never the reader.** Only when a field the catalogue requires is missing
+  does the page offer to ask OpenAI for that field alone, and the answer arrives marked `inferred`:
+  **a person must confirm or correct every inferred value before the payslip can be verified.**
+  OpenAI is the only provider (D18); with no key configured the fallback simply is not offered.
+- **The checks** run on every reading and each says pass, fail or not applicable with its reason:
+  IRPEF gross − deductions = withheld, net reconciled to the cent, body deductions equal
+  `TRATTENUTE CORPO`, `TOTALE TRATTENUTE` adds up, substitute tax counted once, holiday and ROL
+  balances (previous + accrued − used = remaining), net and gross in line with recent months. A
+  failed check cannot be waved through: verifying a payslip with one asks for an explicit
+  acknowledgement.
+- **Applying** is the only step that changes the register. The payslip with the same logical key
+  (employer, employee, year, period, type) is **superseded**, never summed — a reprint replaces the
+  original — and what the payslip accrued for the pension fund and for leave is published to F6 and
+  F7 from there.
+- **Unknown codes** are yours to teach: Settings → Data holds the code map, so a line the profile
+  does not know can be given a role once and is known from then on.
+- `payslips-sweep` (hourly) picks up a reading that was interrupted; `documents-retention` (daily
+  at 12:00) deletes originals past their retention while keeping the numbers read out of them.
+
+## Pension fund — Cometa (F6)
+
+A pension fund is a fund like a PAC, with one difference that shapes the whole screen: **six
+quantities that are not the same number and are never added together** — accrued in your payslips,
+credited by the fund, invested in units, the value at its own date, the gain after the costs that
+can be observed, and what is still to be reconciled with the date it is due by.
+
+![A pension fund](docs/screenshots/cometa.png)
+
+- **The payslips are the source of what was accrued.** Applying a payslip records its quarter's
+  competences on the fund that receives payroll; a fund created after the payslips picks up what
+  they already accrued.
+- **Two documents come from Cometa.** The operations export (an `.xls` that is really HTML) becomes
+  one operation per row with its unit movements, previewed row by row — new, known, changed —
+  before anything is applied; the position summary (a PDF) gives the value at its date, read from
+  its coordinates like a payslip and with the same box-on-the-page review. An operation already
+  known is updated, never added twice.
+- **Reconciliation is by quarter**, within a tolerance in days: what the payslips accrued for that
+  quarter against what the fund credited for it. A difference you have explained stays explained.
+  Money accrued and not yet credited is shown with the date the fund's own transfer schedule says
+  it is due by, so "not credited yet" and "late" are two different things.
+- **Costs** are the fund's published tariff — enrolment, association, management for the compartment
+  — kept as a table with the date it was verified, so a figure in the app can be traced to a page of
+  the fund's own documents.
+- `cometa-sweep` (hourly) finishes a reading that was interrupted.
+
+## Time off, and Trek (F7)
+
+**Time off** answers, for the year you choose: how much you have accrued, how much you have taken,
+how much you have planned, and how much is left — with **where each number comes from** beside it.
+
+![Time off](docs/screenshots/timeoff.png)
+
+- **Two kinds, counted apart**: holiday and ROL. A day is whole or half, and only a working day can
+  be booked: the calendar knows the weekends and the public holidays, and a company calendar can be
+  subscribed to on top (`holidays-refresh`, daily).
+- **The residual comes from the payslip, not from arithmetic.** What the payslip says is left at its
+  date is the starting point; the days booked here move it from there. So the number on the screen
+  is the employer's number, not a second opinion, and the screen says which payslip it read.
+- **Trek** is the leave calendar it syncs with (`trek-sync`, hourly). The rule that shapes it:
+  **it never deletes a day by mistake.** A day this app does not know about is not assumed to be
+  gone — it is brought in; a removal is only ever a removal you made here. A Trek that is busy is
+  skipped and tried again next hour, never half-applied.
+
 ## Settings, Admin and the API (F8)
 
 - **Admin › Users** (`/settings/users`, admins only): the list with the invitations still pending,
@@ -162,6 +252,19 @@ brings in.
   and its last run, and an admin can press "Run now" (it takes the job's lock, so a job already
   running is skipped rather than started twice).
 
+## On a phone
+
+Every screen holds together at 400 px: where a table does not fit, the same rows are a list with
+the same controls — nothing a wide screen offers is hidden on a narrow one.
+
+| Overview                                                     | Accounts                                                     | Expenses                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Overview on a phone](docs/screenshots/mobile-overview.png) | ![Accounts on a phone](docs/screenshots/mobile-accounts.png) | ![Expenses on a phone](docs/screenshots/mobile-expenses.png) |
+
+Both themes are checked for contrast on every screen, not only the light one:
+
+![The dark theme](docs/screenshots/overview-dark.png)
+
 ## Check
 
 ```bash
@@ -177,9 +280,20 @@ npm run e2e
   and against Silo, in the app's bucket under `tests/` only. Create the database once, as the
   Postgres superuser: `CREATE DATABASE ledgerly_test OWNER ledgerly;`.
 - **End-to-end** (`npm run e2e`) drives the deployed site. Before the run the seed
-  (`scripts/seed-e2e.ts`, through `scripts/on-homelab.sh`) creates four users on `@example.test`
+  (`scripts/seed-e2e.ts`, through `scripts/on-homelab.sh`) creates sixteen users on `@example.test`
   with their sample data; after it, it deletes them and everything they own. It never touches
   anyone else's data. Nothing that needs a real mailbox or an Authentik login is tested end to end.
+  One of those users, `layout`, is seeded with something on **every** page — accounts, movements,
+  budgets, pockets, subscriptions, an interest rule, a PAC, a pension fund with its documents, five
+  applied payslips — because `tests/e2e/a11y.spec.ts` measures all thirty-six screens at 1440 and
+  400 px in both themes, and a layout check run against an empty state measures an empty state.
+  `tests/e2e/keyboard.spec.ts` crosses the same application without a mouse.
+- **Performance** (`npm run perf`, on demand) builds a deliberately heavy user in `ledgerly_test`
+  — twelve accounts, sixty thousand movements, fourteen thousand balance entries — and times the
+  widest views against it, then prints their query plans. The numbers of the last run are in
+  [`docs/plans/2026-09-21-f9-rifinitura-rilascio.md`](docs/plans/2026-09-21-f9-rifinitura-rilascio.md).
+- **Screenshots** (`npm run docs:shots`, on demand) takes the pictures in this README again, of the
+  same seeded user.
 
 ## Docker
 
@@ -315,7 +429,22 @@ machine. Keep a copy off the host.
   token reads fine — and the only symptom is an hourly "Wallet sync failed: Unknown key id" email,
   which reads like a fault at the provider rather than at the key.
 
+## Releasing
+
+The checklist, written so somebody who did not write the code can run it:
+[`docs/RELEASE.md`](docs/RELEASE.md). It covers the backup that is the rollback plan, the build,
+the checks from outside, the first admin, connecting Wallet and Trek, bringing your own payslips
+and Cometa documents in, and what to do when it goes wrong.
+
+## Licence
+
+[PolyForm Noncommercial 1.0.0](LICENSE): use it, change it and share it freely for any
+**noncommercial** purpose — personal use, study, hobby projects — and charitable, educational,
+public-research, public-safety, environmental and government organisations count as noncommercial
+whatever funds them. Commercial use is not licensed here.
+
 ## Documentation
 
 The full design and every binding decision: [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md).
 Phase-by-phase implementation plans: [`docs/plans/`](docs/plans/).
+Reviews: [`docs/reviews/`](docs/reviews/).
