@@ -20,7 +20,7 @@ import { subscriptionCharges, subscriptions } from "./schema";
 export type Subscription = typeof subscriptions.$inferSelect;
 export type SubscriptionCharge = typeof subscriptionCharges.$inferSelect;
 
-export type SubscriptionErrorCode = "not_found" | "invalid_account" | "invalid_category";
+export type SubscriptionErrorCode = "not_found" | "invalid_account" | "invalid_category" | "not_cancelled";
 
 export class SubscriptionError extends Error {
   constructor(readonly code: SubscriptionErrorCode) {
@@ -109,6 +109,25 @@ export async function setSubscriptionState(
     .set({ state, cancelledAt: state === "cancelled" ? new Date() : null })
     .where(and(eq(subscriptions.id, id), userScoped(ctx).owns(subscriptions)));
   await checkSubscriptions(ctx, { ids: [id] });
+}
+
+/**
+ * Deletes a subscription for good, with the charges it has collected (`ON DELETE cascade`).
+ *
+ * Only a **cancelled** one (owner, 2026-09-21). Cancelling is the reversible move and deleting the
+ * irreversible one, so the two are deliberately two steps: a list nobody can tidy grows for ever,
+ * and a button that throws away a payment history from the same row that pauses it is a button
+ * somebody presses by accident.
+ *
+ * The movements themselves are untouched — a subscription is a plan laid over them, never their
+ * owner — so what goes is the plan and the periods it had checked.
+ */
+export async function deleteSubscription(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
+  const row = await requireSubscription(ctx, id);
+  if (row.state !== "cancelled") throw new SubscriptionError("not_cancelled");
+  await getDb()
+    .delete(subscriptions)
+    .where(and(eq(subscriptions.id, id), userScoped(ctx).owns(subscriptions)));
 }
 
 /**

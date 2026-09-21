@@ -17,6 +17,7 @@ import { subscriptions } from "./schema";
 import {
   checkSubscriptions,
   createSubscription,
+  deleteSubscription,
   setSubscriptionState,
   setUtility,
   SubscriptionError,
@@ -247,5 +248,42 @@ describe("isolation between users (spec §4.4, §11)", () => {
     expect((await subscriptionsView(other)).rows[0].current?.state).toBe("due");
     expect((await rowOf(sub.id)).current?.state).toBe("paid");
     expect(theirs.userId).toBe(other.userId);
+  });
+});
+
+describe("deleteSubscription (owner, 2026-09-21)", () => {
+  it("throws away a cancelled subscription and the periods it had checked", async () => {
+    await upsertFromProvider(ctx, accountId, [
+      movement({ payee: "NETFLIX.COM", amountCents: -1_299n, occurredAt: noon(todayOn) }),
+    ]);
+    const sub = await createSubscription(ctx, input());
+    await checkSubscriptions(ctx);
+    expect((await subscriptionsView(ctx)).rows).toHaveLength(1);
+
+    await setSubscriptionState(ctx, sub.id, "cancelled");
+    await deleteSubscription(ctx, sub.id);
+
+    const view = await subscriptionsView(ctx);
+    expect(view.rows).toHaveLength(0);
+    expect(view.inactive).toHaveLength(0);
+    // The charges go with it (`ON DELETE cascade`), and the movement itself does not.
+    expect(await getDb().select().from(subscriptions)).toHaveLength(0);
+    expect(await listTransactions(ctx, {})).toHaveLength(1);
+  });
+
+  it("refuses one that is merely paused: cancelling is the step before deleting", async () => {
+    const sub = await createSubscription(ctx, input());
+    await expect(deleteSubscription(ctx, sub.id)).rejects.toMatchObject({ code: "not_cancelled" });
+    await setSubscriptionState(ctx, sub.id, "paused");
+    await expect(deleteSubscription(ctx, sub.id)).rejects.toMatchObject({ code: "not_cancelled" });
+    expect((await subscriptionsView(ctx)).inactive).toHaveLength(1);
+  });
+
+  it("refuses somebody else's, and leaves it where it is", async () => {
+    const sub = await createSubscription(ctx, input());
+    await setSubscriptionState(ctx, sub.id, "cancelled");
+    const other = await newContext();
+    await expect(deleteSubscription(other, sub.id)).rejects.toMatchObject({ code: "not_found" });
+    expect((await subscriptionsView(ctx)).inactive).toHaveLength(1);
   });
 });

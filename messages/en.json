@@ -1689,7 +1689,15 @@
     "inactive": {
       "title": "{count, plural, one {# paused or cancelled} other {# paused or cancelled}}",
       "paused": "Paused",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "pausedTitle": "{count, plural, one {# paused} other {# paused}}",
+      "cancelledTitle": "{count, plural, one {# cancelled} other {# cancelled}}",
+      "delete": "Delete",
+      "deleteTitle": "Delete this subscription?",
+      "deleteWarning": "{name} and the payments it had checked are removed for good. This cannot be undone.",
+      "deleteDetail": "The transactions themselves are untouched: a subscription is a plan laid over them, never their owner.",
+      "deletedToast": "{name} deleted",
+      "cancelDelete": "Keep it"
     },
     "alerts": {
       "not_found": "no expense matching \"{match}\" found on {account} in {period} ({price} expected).",
@@ -1766,7 +1774,8 @@
       "not_found": "That subscription no longer exists.",
       "invalid_account": "Pick one of your open accounts.",
       "invalid_category": "Pick one of your spending categories.",
-      "failed": "Couldn't save. Try again."
+      "failed": "Couldn't save. Try again.",
+      "not_cancelled": "It is not cancelled: cancel it first, then it can be deleted."
     },
     "empty": {
       "title": "No subscriptions",

@@ -182,6 +182,12 @@ export interface Candidate {
   /** Positive. */
   cents: Cents;
   payee: string | null;
+  /**
+   * The bank's own text. A direct debit prints its creditor and its mandate number there and
+   * leaves the payee to whatever the bank calls the counterpart, so a subscription paid by SDD is
+   * recognisable only here (reported 2026-09-21). The funds module has read both since F4.
+   */
+  note: string | null;
 }
 
 export interface PlannedCharge {
@@ -196,12 +202,24 @@ export interface PlannedCharge {
 }
 
 /**
+ * The text a subscription's match is looked for in: the payee and the bank's own description,
+ * together, normalised the way §7.2 normalises a payee — no spaces, no case.
+ *
+ * Both, because the field is labelled "the expense description contains" in both languages and a
+ * direct debit puts the only recognisable thing it has — the mandate number — in the description.
+ * Reading only the payee made that promise false for every SDD (reported 2026-09-21).
+ */
+function matchKeyOf(candidate: Candidate): string {
+  return payeeKeyOf(`${candidate.payee ?? ""} ${candidate.note ?? ""}`) ?? "";
+}
+
+/**
  * The payment check of spec §7.5 (plan F3 §3.4.4), for every period of every subscription given:
  * the charges from the period under way when the subscription was created up to a week from today,
  * at most the latest {@link MAX_CHECKED_PERIODS}.
  *
  * A period is paid by a movement in its window, on the paying account (any account when none is
- * set), whose payee contains the match text — both without spaces or case. Among several, the
+ * set), whose payee **or description** contains the match text — all without spaces or case. Among several, the
  * amount closest to the expected one wins, then the date closest to the charge, then the id. A
  * movement pays one charge only, across subscriptions, taken in date order and then by
  * subscription id, so the answer never depends on the order the rows came in.
@@ -241,7 +259,7 @@ export function planCharges(
           candidate.on <= period.to &&
           (subscription.paymentAccountId === null || candidate.accountId === subscription.paymentAccountId) &&
           needle !== "" &&
-          (payeeKeyOf(candidate.payee) ?? "").includes(needle),
+          matchKeyOf(candidate).includes(needle),
       )
       .sort((a, b) => {
         const byAmount = Number(

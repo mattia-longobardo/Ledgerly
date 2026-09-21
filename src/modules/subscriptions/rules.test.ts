@@ -93,12 +93,20 @@ describe("planCharges (spec §7.5)", () => {
     createdOn: "2026-07-20",
     expected: new Map(),
   };
-  const charge = (id: string, on: string, cents: bigint, payee = "Netflix.com", accountId = "acc-1") => ({
+  const charge = (
+    id: string,
+    on: string,
+    cents: bigint,
+    payee = "Netflix.com",
+    accountId = "acc-1",
+    note: string | null = null,
+  ) => ({
     id,
     accountId,
     on,
     cents,
     payee,
+    note,
   });
 
   it("checks from the period under way at creation to a week ahead", () => {
@@ -125,6 +133,36 @@ describe("planCharges (spec §7.5)", () => {
       ["2026-08-02", "paid", "t-2", 1_310n],
       ["2026-09-02", "due", null, null],
     ]);
+  });
+
+  it("matches the bank's own text as well as the payee, which is what the field promises", () => {
+    // Reported 2026-09-21: a car rental paid by direct debit. The payee is whatever the bank calls
+    // the counterpart; the number that names the mandate is in the description, and the field is
+    // labelled "the expense description contains". It was only ever read against the payee.
+    const rental = {
+      ...netflix,
+      id: "s-roc",
+      priceCents: 58_438n,
+      payeeMatch: "2868921",
+      createdOn: "2026-09-01",
+      anchor: "2026-09-15",
+    };
+    const sdd = charge(
+      "t-1",
+      "2026-09-15",
+      58_438n,
+      "ADDEBITO SDD",
+      "acc-1",
+      "NOLEGGIO T-ROC - MANDATO 2868921",
+    );
+    expect(planCharges([rental], [sdd], "2026-09-20").map((row) => [row.dueOn, row.state])).toEqual([
+      ["2026-09-15", "paid"],
+    ]);
+  });
+
+  it("still matches a payee when the description says nothing", () => {
+    const plan = planCharges([netflix], [charge("t-1", "2026-09-02", 1_299n)], "2026-09-19");
+    expect(plan.map((row) => [row.dueOn, row.state])).toContainEqual(["2026-09-02", "paid"]);
   });
 
   it("flags an amount outside the tolerance and prefers the closest amount among candidates", () => {
