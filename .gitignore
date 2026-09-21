@@ -1,3 +1,8 @@
+# Screenshots and files dropped in the working copy while talking about a change: they are not
+# part of the repository. The README's own pictures live in `docs/screenshots/`.
+/image.png
+/*.png
+
 # Environment
 .env
 .env.*
