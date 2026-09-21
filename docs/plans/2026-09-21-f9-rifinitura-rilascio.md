@@ -444,6 +444,51 @@ build, migrazioni, avvio, `/api/health`; primo accesso admin; collegamento di Wa
 caricamento di cedolini e documenti Cometa. Rollback documentato: immagine precedente e database
 `dashboard`.
 
+### P6.1 — Il rilascio, fatto (2026-09-21)
+
+**La decisione.** §13 e D15 dicono di rilasciare su un database **nuovo** `finance` con un bucket
+`finance-dashboard`, lasciando intatto `dashboard` per il rollback. Verificato sul homelab: non
+esiste nessun container `dashboard-app` e nessun database `dashboard` — Ledgerly **è già** su
+`dash.longobardo.me`, sul database `ledgerly` e sul bucket `ledgerly`, con Authentik già puntato
+lì. Quei nomi erano stati scelti per non collidere con un'applicazione che non c'è più, quindi
+rinominarli adesso sarebbe una migrazione di dati vivi senza guadagno. **Il proprietario ha deciso
+il 2026-09-21: database e bucket restano `ledgerly`.** I passi 2, 3 e 4 di §13 non hanno più
+oggetto, e `docs/RELEASE.md` lo dichiara in apertura invece di lasciarlo scoprire a chi legge.
+
+**Che cosa è stato fatto, nell'ordine.**
+
+1. **I dati di prova cancellati, quelli dell'utente intatti** (richiesta del proprietario). Nessun
+   utente `@example.test` era rimasto nel database. Nel bucket invece sì: accanto alle due cartelle
+   dell'unico utente vero — **12 cedolini (2,66 MiB) e 1 documento Cometa** — c'erano **49 cartelle
+   orfane** sotto `cometa/`, di utenti di prova cancellati durante F6 e F7 quando il seme non
+   ripuliva ancora S3, più **3 oggetti sotto `tests/`** lasciati dai test di integrazione. Cancellate
+   controllando l'esistenza del proprietario di *ogni* cartella prima di toccarla: **96 oggetti
+   rimossi, 13 tenuti**. Contato dopo: `tests/` 0, `payslips/` 12, `cometa/` 1, `exports/` 0,
+   `avatars/` 0.
+2. **Il backup che è il piano di rollback** (§13 passo 1): il giro giornaliero lanciato a mano dal
+   container cron — così `CRON_SECRET` non esce da lì — ha chiuso tutti e cinque i job con
+   `success`, `database-backup` compreso. Il dump è `backups/2026-09-21t14-36-21-009z.dump`,
+   377 KiB, formato `pg_dump -Fc`. Questo chiude anche il §7.3 di F8: il percorso di backup non è
+   più «verificato contro `ledgerly_test`», è **eseguito in produzione**.
+3. **Build e avvio** (§13 passo 5): `docker compose build && up -d` per `ledgerly` e
+   `ledgerly-cron`, migrazioni applicate dall'entrypoint, `/api/health` → `{"status":"ok","db":"up"}`.
+   `npm run db:generate` → *«No schema changes, nothing to migrate»*: codice e migrazioni non sono
+   divergenti. Immagine precedente per il rollback annotata prima della build.
+4. **La verifica da fuori**: **129 test end-to-end verdi** sul sito pubblicato, che comprendono le
+   72 misure di layout e accessibilità su ogni schermata nei due temi e le 5 di tastiera.
+
+**Che cosa resta al proprietario** — non perché sia difficile, ma perché richiede credenziali e
+documenti che solo lui ha: collegare Wallet e Trek se i token sono cambiati, e caricare i cedolini
+e i documenti Cometa che mancano. I 12 cedolini e il documento Cometa già caricati sono suoi e non
+sono stati toccati. `docs/RELEASE.md` §6 e §7 spiegano i due passi.
+
+**Una cosa notata e non corretta** (fuori perimetro: sarebbe una funzione nuova). Le 49 cartelle
+orfane non si sono create da sole: fino a F6 la cancellazione di un utente non portava via le sue
+cartelle in S3. Oggi lo fa — `removePerson` e il seme cancellano `payslips/`, `cometa/` ed
+`exports/` — quindi non se ne accumulano di nuove. Ma **nessun job spazza gli orfani**, e se un
+giorno una cancellazione fallisse a metà nessuno se ne accorgerebbe. Una passata dentro
+`housekeeping` sarebbe il posto giusto, in una fase che possa aggiungere funzioni.
+
 ### P7 — Pulizia finale (obbligatoria, ultimo passo)
 1. i test sulle fixture reali passano un'ultima volta e i gemelli sintetici coprono gli stessi casi;
 2. si eliminano `Fondo Cometa/`, `Payroll/`, `UI Recreation and branding decisions/` e le loro righe
