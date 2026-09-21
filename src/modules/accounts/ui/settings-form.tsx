@@ -8,6 +8,7 @@ import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
+import { Modal } from "@/ui/modal";
 import { SettingsSection } from "@/ui/section";
 import { notify } from "@/ui/toast";
 import { removeAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
@@ -58,6 +59,7 @@ export function AccountSettingsForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const synced = account.origin === "synced";
   const colour = colorField(account, index);
   // Checked, the account has no colour of its own and keeps none: the swatch beside it shows the
@@ -99,13 +101,26 @@ export function AccountSettingsForm({
     });
   }
 
+  /**
+   * §7.1 does two different things here — archive when something rests on the account, delete when
+   * nothing does — and until F9 the screen said "Archive account" and did neither out loud: one
+   * click, no confirmation, and an account with all its movements was gone for good (rilievo E1).
+   * Now the dialog says what may happen and the toast says what did.
+   */
   function onRemove() {
+    setConfirming(false);
     startTransition(async () => {
       const result = await removeAccountAction(account.id);
       if (!result.ok) {
         setError(t("errors.failed"));
         return;
       }
+      notify(
+        t(result.outcome === "deleted" ? "danger.deletedToast" : "danger.archivedToast", {
+          name: account.name,
+        }),
+        result.outcome === "deleted" ? "error" : "success",
+      );
       router.push("/accounts" as Route);
     });
   }
@@ -275,12 +290,31 @@ export function AccountSettingsForm({
               {t("danger.restore")}
             </Button>
           ) : (
-            <Button variant="danger" size="sm" onClick={onRemove} disabled={pending}>
+            <Button variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
               {t("danger.archive")}
             </Button>
           )}
         </div>
       </SettingsSection>
+
+      <Modal
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("danger.confirmTitle")}
+        width={460}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setConfirming(false)} disabled={pending}>
+              {t("danger.cancel")}
+            </Button>
+            <Button variant="danger" onClick={onRemove} disabled={pending}>
+              {t("danger.confirm")}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted">{t("danger.confirmBody", { name: account.name })}</p>
+      </Modal>
     </form>
   );
 }

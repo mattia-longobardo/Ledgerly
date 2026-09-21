@@ -5,7 +5,7 @@
 // removal are exercised is `disposable@example.test`, which exists for this spec and nothing else.
 // Admin › Server is read only here on purpose: saving SMTP or the identity provider would
 // reconfigure the live instance, and a spec that half-succeeds would leave it reconfigured.
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { sessionState, USERS } from "./env";
 
 test.use({ storageState: sessionState("admin") });
@@ -31,18 +31,34 @@ test("an admin invites someone and withdraws the invitation", async ({ page }) =
   await expect(page.getByRole("row").filter({ hasText: invited })).toHaveCount(0);
 });
 
+/**
+ * A Server Action posts to the page's own URL. Reloading without waiting for that answer races it:
+ * this spec failed about one full run in two, and never on its own (F9 P3, rilievo C1).
+ */
+async function afterAction(page: Page, act: () => Promise<unknown>): Promise<void> {
+  await Promise.all([
+    page.waitForResponse(
+      (response) => response.request().method() === "POST" && response.url().includes("/settings/users"),
+      { timeout: 15_000 },
+    ),
+    act(),
+  ]);
+}
+
 test("an admin changes a role, blocks, unblocks and finally removes a user", async ({ page }) => {
   await page.goto("/settings/users");
   const row = page.getByRole("row").filter({ hasText: DISPOSABLE });
   await expect(row).toBeVisible();
 
   const role = row.getByRole("combobox");
-  await role.selectOption("admin");
+  await afterAction(page, () => role.selectOption("admin"));
   await page.reload();
   await expect(page.getByRole("row").filter({ hasText: DISPOSABLE }).getByRole("combobox")).toHaveValue(
     "admin",
   );
-  await page.getByRole("row").filter({ hasText: DISPOSABLE }).getByRole("combobox").selectOption("user");
+  await afterAction(page, () =>
+    page.getByRole("row").filter({ hasText: DISPOSABLE }).getByRole("combobox").selectOption("user"),
+  );
   await page.reload();
 
   const again = page.getByRole("row").filter({ hasText: DISPOSABLE });

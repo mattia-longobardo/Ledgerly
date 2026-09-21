@@ -150,3 +150,44 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(2);
   });
 });
+
+/**
+ * The Danger zone (spec §7.1). Until F9 its only button said "Archive account" and called the
+ * action that **removes** one: one click, no confirmation, and an account with every movement and
+ * balance it held was gone for good — verified on the deployed site, 2026-09-21 (rilievo E1).
+ * It now asks first and says which of the two things it did.
+ */
+test("removing an account asks first, and says whether it was deleted or archived", async ({ page }) => {
+  await page.goto("/accounts/new");
+  await page.getByLabel("Name").fill("Conto di prova F9");
+  await page
+    .getByRole("button", { name: /Save|Create|Add/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}/);
+  const url = page.url().split("?")[0];
+
+  await page.goto(`${url}?tab=settings`);
+  await page.getByRole("button", { name: "Remove account" }).first().click();
+
+  // The dialog says what may happen, and closing it leaves the account alone.
+  const dialog = page.getByRole("dialog", { name: "Remove this account?" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("deleted for good");
+  await dialog.getByRole("button", { name: "Keep it" }).click();
+  await expect(dialog).toBeHidden();
+  expect((await page.goto(url))?.status()).toBe(200);
+
+  // Confirming removes it, and the message says which of the two happened.
+  await page.goto(`${url}?tab=settings`);
+  await page.getByRole("button", { name: "Remove account" }).first().click();
+  await page
+    .getByRole("dialog", { name: "Remove this account?" })
+    .getByRole("button", { name: "Remove account" })
+    .click();
+  await expect(page).toHaveURL(/\/accounts$/);
+  const toast = page.getByRole("region", { name: "Notifications" });
+  await expect(toast).toContainText("Conto di prova F9");
+  await expect(toast).toContainText(/deleted|archived/);
+  expect((await page.goto(url))?.status()).toBe(404);
+});

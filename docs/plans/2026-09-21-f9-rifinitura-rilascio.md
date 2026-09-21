@@ -331,6 +331,32 @@ Due cose che il metro ha segnalato e che **non erano difetti dell'applicazione**
 ### P3 — Revisione dell'intero branch per aree
 §3.5. Il documento va in `docs/reviews/2026-09-2X-f9-revisione-finale.md`.
 
+### P3.1 — Esito (2026-09-21)
+
+Il documento è `docs/reviews/2026-09-21-f9-revisione-finale.md`. Tre rilievi correggibili, tutti e
+tre corretti in un lotto solo; tre note e una conferma.
+
+- **E1 [verificato, riprodotto sul sito]** — `/accounts/[id]?tab=settings`: il bottone si chiamava
+  «Archive account» e chiamava `removeAccountAction`, che **cancella** il conto quando niente vi si
+  appoggia; e `transactions.account_id` è `on delete cascade`. Un clic, **nessuna conferma**, e un
+  conto con tutti i suoi movimenti spariva per sempre. Riprodotto: dialoghi di conferma 0, la
+  pagina del conto 404, il conto fuori dall'elenco. Era l'**unica** azione distruttiva
+  dell'applicazione senza conferma — «Remove person» ce l'ha. Ora il dialogo dice quali sono le due
+  cose che possono succedere, l'etichetta è «Rimuovi il conto», e l'avviso a cose fatte dice quale
+  delle due è successa, in rosso quando è stata la cancellazione. `accounts.spec.ts` lo controlla.
+- **A1 [verificato]** — la card dei documenti di un fondo pensione rendeva la data di arrivo in UTC
+  mentre ogni altra schermata usa `civilDateIn(…, ctx.timeZone)`: a Roma, un documento caricato dopo
+  mezzanotte portava due date diverse a due clic di distanza. Unica violazione della regola delle
+  date in tutto il branch.
+- **C1 [verificato]** — `admin.spec.ts` ricaricava la pagina senza aspettare la Server Action:
+  falliva una passata intera su due e mai da solo. Ora aspetta la risposta.
+
+E quello che **non** c'era, che è il risultato più utile: su 99 statement e 55 tabelle nessuna query
+su dati di un utente senza il suo filtro; nessuna Server Action senza sessione salvo quella che non
+può averne una; nessuna chiamata di rete dentro una transazione; nessun importo trattato come
+`float`; nessun segreto nei log, negli argomenti di un processo o in un messaggio d'errore; nessun
+job fuori dal registro; 2 465 chiavi di messaggio in parità perfetta fra le due lingue.
+
 ### P4 — Prestazioni
 Query per pagina (una `EXPLAIN` sulle tre viste più larghe), N+1 nei servizi che iterano sugli
 utenti, peso della build, e la misura di §3.6.3. Si corregge solo ciò che una misura mostra.
