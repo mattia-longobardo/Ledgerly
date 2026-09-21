@@ -139,7 +139,7 @@ for (const { width, height, name } of WIDTHS) {
  * anybody else both pages answer 404, which is the point of them.
  */
 test.describe("the admin pages", () => {
-  test.use({ storageState: sessionState("owner") });
+  test.use({ storageState: sessionState("admin") });
 
   for (const path of ["/settings/users", "/settings/server"] as const) {
     for (const { width, height, name } of WIDTHS) {

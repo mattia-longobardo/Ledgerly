@@ -8,7 +8,7 @@
 import { expect, test } from "@playwright/test";
 import { sessionState, USERS } from "./env";
 
-test.use({ storageState: sessionState("owner") });
+test.use({ storageState: sessionState("admin") });
 
 const DISPOSABLE = USERS.disposable.email;
 
@@ -56,7 +56,8 @@ test("an admin changes a role, blocks, unblocks and finally removes a user", asy
   await expect(page.getByRole("row").filter({ hasText: DISPOSABLE }).getByText("Active")).toBeVisible();
 
   await page.getByRole("row").filter({ hasText: DISPOSABLE }).getByRole("button", { name: "Remove" }).click();
-  const dialog = page.getByRole("dialog");
+  // A toast is a `dialog` too: name the one that was opened.
+  const dialog = page.getByRole("dialog", { name: "Remove this user?" });
   await expect(dialog).toContainText(DISPOSABLE);
   await dialog.getByRole("button", { name: "Remove" }).click();
   await expect(page.getByRole("row").filter({ hasText: DISPOSABLE })).toHaveCount(0);
@@ -64,7 +65,7 @@ test("an admin changes a role, blocks, unblocks and finally removes a user", asy
 
 test("an admin's own row offers no way to lock themselves out", async ({ page }) => {
   await page.goto("/settings/users");
-  const mine = page.getByRole("row").filter({ hasText: USERS.owner.email });
+  const mine = page.getByRole("row").filter({ hasText: USERS.admin.email });
   await expect(mine).toBeVisible();
   await expect(mine.getByRole("button", { name: "Reset password" })).toBeVisible();
   await expect(mine.getByRole("button", { name: "Block", exact: true })).toHaveCount(0);

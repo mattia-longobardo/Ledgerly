@@ -55,12 +55,13 @@ await removeTestUsers();
 if (mode === "remove") process.exit(0);
 
 const auth = createAuth({ withNextCookies: false });
-// The site already has its admin, so these are ordinary users — except `owner`, promoted below:
-// Admin › Users and Admin › Server (F8) have no journey without one.
+// The site already has its admin, so these are ordinary users — except `admin@example.test`,
+// promoted below: Admin › Users and Admin › Server (F8) have no journey without one, and giving
+// it its own user leaves every spec that signs in as an ordinary one saying what it means.
 for (const user of Object.values(USERS)) {
   await auth.api.createUser({ body: user });
 }
-await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.owner.email));
+await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
 mkdirSync(STATE_DIR, { recursive: true });
 
 /**

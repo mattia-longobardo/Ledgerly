@@ -42,6 +42,77 @@ const STATUS_TONE = {
   expired: "neutral",
 } as const;
 
+/** The row's role selector, in the table and in the list below it. */
+function RoleSelect({
+  person,
+  pending,
+  onChange,
+}: {
+  person: PersonView;
+  pending: boolean;
+  onChange: (person: PersonView, role: Role) => void;
+}) {
+  const t = useTranslations("settings.people");
+  return (
+    <Select
+      aria-label={t("roleFor", { name: person.name || person.email })}
+      className="h-6 w-auto text-sm"
+      defaultValue={person.role}
+      disabled={pending}
+      onChange={(event) => onChange(person, event.currentTarget.value as Role)}
+    >
+      <option value="admin">{t("roles.admin")}</option>
+      <option value="user">{t("roles.user")}</option>
+    </Select>
+  );
+}
+
+/**
+ * What a row offers. An invitation can only be withdrawn; a person can be sent a reset link, and —
+ * unless they are the admin reading the page — blocked and removed (plan F8 §3.4.1).
+ */
+function RowActions({
+  person,
+  pending,
+  onReset,
+  onBlock,
+  onRevoke,
+  onRemove,
+}: {
+  person: PersonView;
+  pending: boolean;
+  onReset: (person: PersonView) => void;
+  onBlock: (person: PersonView) => void;
+  onRevoke: (person: PersonView) => void;
+  onRemove: (person: PersonView) => void;
+}) {
+  const t = useTranslations("settings.people");
+  if (person.kind === "invitation") {
+    return (
+      <Button size="xs" variant="danger" disabled={pending} onClick={() => onRevoke(person)}>
+        {t("revokeInvitation")}
+      </Button>
+    );
+  }
+  return (
+    <>
+      <Button size="xs" disabled={pending} onClick={() => onReset(person)}>
+        {t("resetPassword")}
+      </Button>
+      {!person.self && (
+        <Button size="xs" disabled={pending} onClick={() => onBlock(person)}>
+          {person.status === "blocked" ? t("unblock") : t("block")}
+        </Button>
+      )}
+      {!person.self && (
+        <Button size="xs" variant="danger" disabled={pending} onClick={() => onRemove(person)}>
+          {t("remove")}
+        </Button>
+      )}
+    </>
+  );
+}
+
 /** Admin › Users (spec §7.10, design rows 870–877). */
 export function PeopleTable({ people }: { people: PersonView[] }) {
   const t = useTranslations("settings.people");
@@ -53,6 +124,21 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
       const result = await action();
       notify(result.ok ? success : t(`errors.${result.error}`), result.ok ? "success" : "error");
     });
+  }
+
+  function onRole(person: PersonView, role: Role) {
+    run(() => setPersonRoleAction(person.id, role), t("roleSaved"));
+  }
+
+  function onBlock(person: PersonView) {
+    run(
+      () => setPersonBlockedAction(person.id, person.status !== "blocked"),
+      person.status === "blocked" ? t("unblocked") : t("blockedNow"),
+    );
+  }
+
+  function onRevoke(person: PersonView) {
+    run(() => revokeInvitationAction(person.id), t("invitationRevoked"));
   }
 
   function onReset(person: PersonView) {
@@ -68,9 +154,9 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
 
   return (
     <>
-      {/* The design's own container scrolls sideways: seven columns do not fit a phone, and a
-          table that hides its actions is worse than one that has to be dragged. */}
-      <div className="overflow-x-auto">
+      {/* Seven columns do not fit a phone at any font size, so below `md` the same rows are a
+          list instead — the shape `funds` already uses for its own wide table. */}
+      <div data-testid="people-table" className="overflow-x-auto max-md:hidden">
         <Table>
           <THead>
             <Th>{t("columns.user")}</Th>
@@ -90,16 +176,16 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
                   <div className="flex items-center gap-2">
                     <span
                       aria-hidden
-                      className="grid size-[22px] place-items-center rounded-full bg-soft text-micro font-semibold text-accent"
+                      className="grid size-[22px] shrink-0 place-items-center rounded-full bg-soft text-micro font-semibold text-accent"
                     >
                       {person.initials}
                     </span>
-                    <span className="font-medium">
+                    <span className="max-w-44 truncate font-medium">
                       {person.kind === "user" ? person.name : t("invitedPerson")}
                     </span>
                   </div>
                 </Td>
-                <Td muted className="text-sm">
+                <Td muted className="max-w-56 truncate text-sm" title={person.email}>
                   {person.email}
                 </Td>
                 <Td muted className="text-sm">
@@ -107,21 +193,7 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
                 </Td>
                 <Td>
                   {person.kind === "user" ? (
-                    <Select
-                      aria-label={t("roleFor", { name: person.name || person.email })}
-                      className="h-6 w-auto text-sm"
-                      defaultValue={person.role}
-                      disabled={pending}
-                      onChange={(event) =>
-                        run(
-                          () => setPersonRoleAction(person.id, event.currentTarget.value as Role),
-                          t("roleSaved"),
-                        )
-                      }
-                    >
-                      <option value="admin">{t("roles.admin")}</option>
-                      <option value="user">{t("roles.user")}</option>
-                    </Select>
+                    <RoleSelect person={person} pending={pending} onChange={onRole} />
                   ) : (
                     <span className="text-sm text-muted">{t(`roles.${person.role}`)}</span>
                   )}
@@ -133,47 +205,18 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
                   <Badge tone={STATUS_TONE[person.status]}>{t(`statuses.${person.status}`)}</Badge>
                 </Td>
                 <Td align="right">
-                  <div className="inline-flex gap-1.5 whitespace-nowrap">
-                    {person.kind === "invitation" ? (
-                      <Button
-                        size="xs"
-                        variant="danger"
-                        disabled={pending}
-                        onClick={() => run(() => revokeInvitationAction(person.id), t("invitationRevoked"))}
-                      >
-                        {t("revokeInvitation")}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button size="xs" disabled={pending} onClick={() => onReset(person)}>
-                          {t("resetPassword")}
-                        </Button>
-                        {!person.self && (
-                          <Button
-                            size="xs"
-                            disabled={pending}
-                            onClick={() =>
-                              run(
-                                () => setPersonBlockedAction(person.id, person.status !== "blocked"),
-                                person.status === "blocked" ? t("unblocked") : t("blockedNow"),
-                              )
-                            }
-                          >
-                            {person.status === "blocked" ? t("unblock") : t("block")}
-                          </Button>
-                        )}
-                        {!person.self && (
-                          <Button
-                            size="xs"
-                            variant="danger"
-                            disabled={pending}
-                            onClick={() => setRemoving(person)}
-                          >
-                            {t("remove")}
-                          </Button>
-                        )}
-                      </>
-                    )}
+                  {/* Wraps rather than widening the table: three buttons side by side are wider
+                      than the column has, and a row that grows a line taller is better than a
+                      table that reaches past the window. */}
+                  <div className="inline-flex flex-wrap justify-end gap-1 whitespace-normal">
+                    <RowActions
+                      person={person}
+                      pending={pending}
+                      onReset={onReset}
+                      onBlock={onBlock}
+                      onRevoke={onRevoke}
+                      onRemove={setRemoving}
+                    />
                   </div>
                 </Td>
               </Tr>
@@ -181,6 +224,55 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
           </TBody>
         </Table>
       </div>
+
+      {/* The same rows on a phone: the name with its address under it, the status beside it, and
+          the very same controls — nothing is hidden here that a wider screen offers. */}
+      <ul data-testid="people-list" className="flex flex-col md:hidden">
+        {people.map((person) => (
+          <li
+            key={`${person.kind}-${person.id}`}
+            className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  aria-hidden
+                  className="grid size-[22px] shrink-0 place-items-center rounded-full bg-soft text-micro font-semibold text-accent"
+                >
+                  {person.initials}
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate font-medium">
+                    {person.kind === "user" ? person.name : t("invitedPerson")}
+                  </span>
+                  <span className="truncate text-sm text-muted">{person.email}</span>
+                </span>
+              </div>
+              <Badge tone={STATUS_TONE[person.status]}>{t(`statuses.${person.status}`)}</Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted">
+                {t(`methods.${person.method}`)} · {person.lastSignIn}
+              </span>
+              {person.kind === "user" ? (
+                <RoleSelect person={person} pending={pending} onChange={onRole} />
+              ) : (
+                <span className="text-sm text-muted">{t(`roles.${person.role}`)}</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <RowActions
+                person={person}
+                pending={pending}
+                onReset={onReset}
+                onBlock={onBlock}
+                onRevoke={onRevoke}
+                onRemove={setRemoving}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
       <Modal
         open={removing !== null}
         onOpenChange={(next) => !next && setRemoving(null)}
