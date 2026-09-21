@@ -10,6 +10,21 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { eq, like } from "drizzle-orm";
 import { applyProviderAccounts, createAccount, saveBalanceEntry } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
+import { createFund, addDeposit, recordValuation } from "../src/modules/funds/service";
+import { createPensionFund } from "../src/modules/funds/pension/service";
+import {
+  applyOperations,
+  applyPosition,
+  processCometaDocument,
+  uploadCometaDocument,
+} from "../src/modules/funds/pension/imports";
+import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../src/modules/payroll/service";
+import { createRule } from "../src/modules/interests/service";
+import { createToken } from "../src/platform/tokens/service";
+import { EXPORT_AUGUST, POSITION_AUGUST } from "../tests/fixtures/cometa/samples";
+import { twinOperationsHtml, twinPositionPdf } from "../tests/fixtures/cometa/twin";
+import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/payroll/samples";
+import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addToPocket, createPocket, recordWithdrawal } from "../src/modules/pockets/service";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
@@ -369,6 +384,220 @@ function workingDay(from: string, delta: number): string {
   return date;
 }
 
+/**
+ * The layout and accessibility check (tests/e2e/a11y.spec.ts) opens every screen of the app, and a
+ * screen opened on an empty state measures an empty state: the fault the check is looking for —
+ * a table reaching past a phone's window, a figure spilling out of its card — only appears once
+ * there is something to lay out. So this one user is given something on every page.
+ *
+ * The module journeys keep their own users, which start empty because their first step says so
+ * ("No accounts yet", "No investment funds", "No payslips yet"): filling those would break them,
+ * which is why the data lives here instead, on a user nothing else drives.
+ *
+ * Everything is written through the services, like the rest of this seed: a row no service would
+ * write lays out a screen that does not exist.
+ */
+async function seedLayout(): Promise<void> {
+  const ctx = await contextOf(USERS.layout.email);
+  const on = today(ctx.timeZone);
+  const thisMonth = thisMonthOf(ctx);
+  const lastMonth = lastMonthOf(ctx);
+
+  // ——— Accounts, movements and categories: Overview, Accounts, Expenses, Categories ———
+  const current = await syncedAccount(ctx, "e2e-layout-1", "ING Conto Arancio");
+  await saveBalanceEntry(ctx, current, { on, cents: 412_350n });
+  await upsertFromProvider(ctx, current, [
+    walletMovement("e2e-layout-tx-1", `${thisMonth}-02`, -1299n, "Netflix", "Abbonamenti"),
+    walletMovement("e2e-layout-tx-2", `${thisMonth}-03`, -8750n, "Esselunga Superstore", "Spesa"),
+    walletMovement("e2e-layout-tx-3", `${thisMonth}-05`, -2100n, "Trenitalia", "Trasporti"),
+    walletMovement("e2e-layout-tx-4", `${thisMonth}-07`, -4800n, "Ristorante Da Mario", "Ristoranti"),
+    walletMovement("e2e-layout-tx-5", `${thisMonth}-09`, -6500n, "Farmacia Comunale 3", "Salute"),
+    walletMovement("e2e-layout-tx-6", `${thisMonth}-11`, 210_000n, "Stipendio", null),
+    walletMovement("e2e-layout-tx-7", `${thisMonth}-14`, -3490n, "Amazon Marketplace", "Casa"),
+    walletMovement("e2e-layout-tx-8", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
+    walletMovement("e2e-layout-tx-9", `${lastMonth}-18`, -9120n, "Esselunga Superstore", "Spesa"),
+    // An unpaired giroconto leg: flagged in the list and counted in no total (F2.5).
+    walletMovement("e2e-layout-tx-10", `${lastMonth}-22`, -50_000n, "Revolut", null, "e2e-layout-tx-11"),
+  ]);
+
+  const savings = await createAccount(ctx, {
+    name: "Revolut Saving",
+    type: "savings",
+    currency: "EUR",
+    color: null,
+    reference: "",
+    purpose: "Emergenze",
+    openedOn: null,
+    notes: "",
+    openingBalance: { on: addDays(addMonths(monthKey(on), -1), -1), cents: 1_000_000n },
+  });
+
+  // ——— Budgets ———
+  const byName = new Map((await listCategories(ctx)).map((category) => [category.name, category.id]));
+  for (const [name, cents] of [
+    ["Spesa", 15_000n],
+    ["Ristoranti", 5_000n],
+    ["Trasporti", 2_000n],
+    ["Salute", 8_000n],
+  ] as const) {
+    const categoryId = byName.get(name);
+    if (categoryId) {
+      await setLimit(ctx, { categoryId, accountId: null, month: `${thisMonth}-01`, cents });
+    }
+  }
+
+  // ——— Pockets ———
+  const startMonth = `${thisMonth}-01`;
+  const holidays = await createPocket(ctx, {
+    name: "Holidays",
+    color: null,
+    backingAccountId: savings.id,
+    targetCents: 400_000n,
+    monthlyCents: 25_000n,
+    startMonth,
+  });
+  await addToPocket(ctx, holidays.id, { cents: 385_000n, on });
+  await recordWithdrawal(ctx, holidays.id, { cents: 85_000n, on, reason: "Ischia — hotel e traghetto" });
+  await createPocket(ctx, {
+    name: "Gifts",
+    color: null,
+    backingAccountId: null,
+    targetCents: null,
+    monthlyCents: 5_000n,
+    startMonth,
+  });
+
+  // ——— Subscriptions ———
+  await upsertFromProvider(ctx, current, [
+    walletMovement("e2e-layout-sub-1", addDays(on, -90), -2990n, "FitActive", "Sport"),
+    walletMovement("e2e-layout-sub-2", addDays(on, -60), -2990n, "FitActive", "Sport"),
+    walletMovement("e2e-layout-sub-3", addDays(on, -30), -2990n, "FitActive", "Sport"),
+  ]);
+  await refreshRecurrences(ctx);
+  const streaming = (await listCategories(ctx)).find((one) => one.name === "Abbonamenti");
+  const plan = { categoryId: streaming?.id ?? null, paymentAccountId: current, tolerance: "0.05" };
+  await createSubscription(ctx, {
+    ...plan,
+    name: "Netflix",
+    utility: 8,
+    priceCents: 1299n,
+    cycle: "monthly",
+    nextChargeOn: addDays(on, 12),
+    payeeMatch: "netflix",
+  });
+  await createSubscription(ctx, {
+    ...plan,
+    name: "Spotify Premium Family",
+    utility: 9,
+    priceCents: 1799n,
+    cycle: "monthly",
+    nextChargeOn: addDays(on, 4),
+    payeeMatch: "spotify",
+  });
+  await createSubscription(ctx, {
+    ...plan,
+    categoryId: null,
+    name: "Amazon Prime",
+    utility: 4,
+    priceCents: 4990n,
+    cycle: "yearly",
+    nextChargeOn: addDays(on, 3),
+    payeeMatch: "amazon",
+  });
+
+  // ——— Interests: a rule on the savings account, accrued and settled up to today ———
+  await createRule(ctx, {
+    accountId: savings.id,
+    taxRate: "0.26",
+    dayBasis: "365",
+    settlement: "monthly",
+    validFrom: addDays(addMonths(monthKey(on), -1), -1),
+    mode: "analyze_only",
+    tiers: [{ upToCents: null, annualRate: "0.0365" }],
+  });
+
+  // ——— An investment PAC with its deposits and valuations ———
+  const pac = await createFund(ctx, {
+    name: "Fideuram Master Selection",
+    provider: "Fideuram",
+    isin: "IT0005247157",
+    compartment: "Bilanciato",
+    debitAccountId: current,
+    debitDay: 5,
+    ter: "0.0185",
+    startOn: `${addMonths(monthKey(on), -6).slice(0, 7)}-05`,
+    monthlyCents: 25_100n,
+    depositFeeCents: 100n,
+    valuationAccountId: null,
+  });
+  for (const back of [5, 4, 3, 2, 1]) {
+    await addDeposit(ctx, pac.id, {
+      on: `${addMonths(monthKey(on), -back).slice(0, 7)}-05`,
+      chargedCents: 25_100n,
+      feeCents: 100n,
+      note: null,
+    });
+  }
+  for (const [back, cents] of [
+    [4, 50_400n],
+    [3, 76_100n],
+    [2, 99_800n],
+    [1, 128_200n],
+    [0, 153_900n],
+  ] as const) {
+    await recordValuation(ctx, pac.id, {
+      // The 28th of each month, except this one's, which is valued today: a valuation in the
+      // future is refused, and on the 21st the 28th has not happened yet.
+      on: back === 0 ? on : `${addMonths(monthKey(on), -back).slice(0, 7)}-28`,
+      cents,
+      units: null,
+      note: null,
+    });
+  }
+
+  // ——— Payroll: the synthetic twins of a whole year, read, verified and applied ———
+  for (const twin of [JANUARY, FEBRUARY, MARCH, APRIL, THIRTEENTH]) {
+    const { document } = await uploadPayslip(ctx, {
+      name: `${twin.period.replace(/\s+/g, "-").toLowerCase()}.pdf`,
+      bytes: await twinPdf(twin),
+    });
+    await processPayslip(ctx, document.id);
+    await verifyPayslip(ctx, document.id);
+    await applyPayslip(ctx, document.id);
+  }
+
+  // ——— The pension fund, its operations export and its statement ———
+  const pension = await createPensionFund(ctx, {
+    name: "Cometa",
+    provider: "Cometa",
+    compartment: "Crescita",
+    startOn: "2031-01-01",
+    receivesPayroll: true,
+  });
+  const operations = await uploadCometaDocument(ctx, "cometa_operations", {
+    name: "DettaglioOperazioni.xls",
+    bytes: twinOperationsHtml(EXPORT_AUGUST),
+  });
+  await processCometaDocument(ctx, operations.document.id);
+  await applyOperations(ctx, pension.id, operations.document.id);
+  const position = await uploadCometaDocument(ctx, "cometa_position", {
+    name: "riepilogo_posizione.pdf",
+    bytes: await twinPositionPdf(POSITION_AUGUST),
+  });
+  await processCometaDocument(ctx, position.document.id);
+  await applyPosition(ctx, pension.id, position.document.id);
+
+  // ——— Time off ———
+  const year = Number(on.slice(0, 4));
+  await saveAllowance(ctx, year, { vacationDays: 26, rolDays: 4, note: "CCNL Metalmeccanici" });
+  await saveLeaveDay(ctx, { from: workingDay(on, -14), kind: "vacation", fraction: 1 });
+  await saveLeaveDay(ctx, { from: workingDay(on, -7), kind: "rol", fraction: 0.5 });
+  await saveLeaveDay(ctx, { from: workingDay(on, 21), kind: "vacation", fraction: 1 });
+
+  // ——— A personal access token, so Settings › Data has a row rather than its empty state ———
+  await createToken(ctx, { name: "Home Assistant", scopes: ["read"], expiresInDays: 365 });
+}
+
 await seedExpenses();
 await seedBudgets();
 await seedPockets();
@@ -376,6 +605,7 @@ await seedSubscriptions();
 await seedInterests();
 await seedFunds();
 await seedTimeOff();
+await seedLayout();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 
 process.exit(0);

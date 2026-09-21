@@ -169,6 +169,95 @@ navigazione mobile — ciascuno con la sessione che ha i dati e, dove serve, **d
 la quinta regola (§3.3) e l'eccezione dei link inline (§3.4). Si chiude con l'elenco dei difetti,
 scritto nel piano: è il lavoro di P1 e P2.
 
+### P0.1 — L'elenco, misurato (2026-09-21)
+
+Il metro è costruito. Che cosa è cambiato rispetto a com'era scritto qui sopra:
+
+1. **Il seme non riempie gli utenti dei percorsi, ne riempie uno nuovo.** §3.2 diceva «ogni utente ha
+   la sua pagina piena», ma `accounts`, `interests`, `funds` e `payroll` aprono i loro percorsi
+   **sullo stato vuoto** («No accounts yet», «No interest rules», «No investment funds», «No
+   payslips yet»): riempirli avrebbe rotto quattro specifiche per far vedere qualcosa a una quinta.
+   Il seme crea invece un utente `layout` che ha tutto — conti con saldi e movimenti, budget,
+   pockets, abbonamenti, una regola di interessi, un PAC con cinque versamenti e cinque
+   valorizzazioni, un fondo pensione con l'export delle operazioni e il riepilogo di posizione,
+   cinque cedolini applicati, ferie e un token — costruito **attraverso i servizi**, come §3.2
+   chiedeva. Le specifiche dei moduli restano dove sono, vuote all'inizio.
+2. **Le schede contano come schermate.** `?tab=` non è un dettaglio della stessa pagina: le tabelle
+   più larghe dell'applicazione stanno lì. Il controllo apre le tre schede di `/accounts/[id]` e le
+   tre di un fondo pensione.
+3. **Una sola asserzione per schermata**, non quattro in fila: una pagina bocciata dal layout non
+   sarebbe mai finita davanti ad axe, e la passata avrebbe raccontato metà di quello che ha misurato.
+4. **Axe si restringe all'overlay** quando la schermata è un overlay: altrimenti un dialogo paga
+   per i difetti della pagina che ha dietro.
+
+Il controllo guarda ora **36 schermate** (23 pagine, le sei schede, due pagine da non autenticati,
+gli overlay) a 1440 e a 400 px, **nei due temi**, con cinque regole. Passata del 2026-09-21:
+**221 bersagli sotto i 24 px**, **163 nodi oltre il bordo della finestra**, **52 violazioni di
+contrasto (tutte e sole nel tema scuro)**, **10 `scrollable-region-focusable`**, **4
+`aria-prohibited-attr`**. La quinta regola — il testo che trabocca dal contenitore — non ha trovato
+**niente**: il difetto che il proprietario descriveva a parole non esiste più o non è mai stato
+questo.
+
+| Schermata | Sessione | 1440 px | 400 px |
+|---|---|---|---|
+| `/` | layout | axe color-contrast/dark ×1 | axe color-contrast/dark ×1 |
+| `/accounts` | layout | bersagli: 1× a 116×19, 1× a 90×19, 1× a 166×19, 1× a 49×19; axe color-contrast/dark ×1 | 36 nodi oltre il bordo; bersagli: 1× a 116×19, 1× a 90×19, 1× a 166×19, 1× a 49×19; axe color-contrast/dark ×1 |
+| `/accounts/new` | layout | axe color-contrast/dark ×1 | — |
+| `/accounts/[id]` | layout | bersagli: 1× a 46×17; axe color-contrast/dark ×1 | bersagli: 1× a 46×17; axe color-contrast/dark ×1 |
+| `/accounts/[id]?tab=transactions` | layout | axe color-contrast/dark ×1 | — |
+| `/accounts/[id]?tab=entries` | layout | axe color-contrast/dark ×1 | 15 nodi oltre il bordo |
+| `/accounts/[id]?tab=settings` | layout | axe color-contrast/dark ×1 | — |
+| `/expenses` | layout | bersagli: 8× input 14×24, 1× button 40×17, 1× button 36×17, 1× button 48×17; axe aria-prohibited-attr/dark ×1; axe color-contrast/dark ×1; axe aria-prohibited-attr/light ×1 | bersagli: 7× input 14×24, 1× button 56×22, 1× button 110×22, 1× button 63×22; axe aria-prohibited-attr/dark ×1; axe color-contrast/dark ×1; axe aria-prohibited-attr/light ×1 |
+| `/budgets` | layout | bersagli: 3× button 40×23, 1× button 48×23; axe color-contrast/dark ×1 | bersagli: 3× button 39×21, 1× button 47×21 |
+| `/pockets` | layout | axe color-contrast/dark ×1 | axe color-contrast/dark ×1 |
+| `/subscriptions` | layout | bersagli: 3× button 36×17, 2× a 94×17, 2× button 34×17, 1× button 33×17; axe color-contrast/dark ×1 | bersagli: 2× a 94×17, 1× button 148×19, 1× button 41×19, 1× button 90×19; axe color-contrast/dark ×1 |
+| `/interests` | layout | axe color-contrast/dark ×1 | axe color-contrast/dark ×1 |
+| `/interests/[id]` | layout | axe color-contrast/dark ×1; axe scrollable-region-focusable/dark ×1; axe scrollable-region-focusable/light ×1 | 9 nodi oltre il bordo; axe scrollable-region-focusable/dark ×1; axe scrollable-region-focusable/light ×1 |
+| `/funds` | layout | bersagli: 1× a 94×17; axe color-contrast/dark ×1 | bersagli: 1× a 94×17; axe color-contrast/dark ×1 |
+| `/funds/[id] (PAC)` | layout | bersagli: 1× a 64×17; axe color-contrast/dark ×1 | bersagli: 1× a 64×17; axe color-contrast/dark ×1 |
+| `/funds/[id]/returns` | layout | axe color-contrast/dark ×1 | axe color-contrast/dark ×1 |
+| `/funds/[id] (pension)` | layout | axe color-contrast/dark ×1 | 27 nodi oltre il bordo; axe color-contrast/dark ×1; axe scrollable-region-focusable/dark ×1; axe scrollable-region-focusable/light ×1 |
+| `/funds/[id] (pension)?tab=contributions` | layout | axe color-contrast/dark ×1 | 2 nodi oltre il bordo |
+| `/funds/[id] (pension)?tab=valuations` | layout | bersagli: 1× a 144×16, 1× a 141×16; axe color-contrast/dark ×1 | 14 nodi oltre il bordo; bersagli: 1× a 144×16, 1× a 141×16; axe scrollable-region-focusable/dark ×1; axe scrollable-region-focusable/light ×1 |
+| `/funds/[id] (pension)?tab=settings` | layout | axe color-contrast/dark ×1 | — |
+| `/funds/[id]/documents/[docId]` | layout | bersagli: 5× button 376×19, 5× button 392×19, 1× button 352×19, 1× button 384×19; axe color-contrast/dark ×1 | bersagli: 5× button 271×19, 5× button 287×19, 1× button 247×19, 1× button 279×19 |
+| `/payroll` | layout | bersagli: 1× a 126×15, 1× a 93×15, 1× a 98×15, 1× a 108×15; axe color-contrast/dark ×1 | axe color-contrast/dark ×1 |
+| `/payroll/[id]` | layout | bersagli: 25× button 418×19, 12× button 376×19, 5× button 392×19, 5× button 385×19; axe color-contrast/dark ×1 | 20 nodi oltre il bordo; bersagli: 25× button 313×19, 12× button 271×19, 5× button 287×19, 5× button 280×19; axe scrollable-region-focusable/dark ×1; axe scrollable-region-focusable/light ×1 |
+| `/timeoff` | layout | axe color-contrast/dark ×1 | axe color-contrast/dark ×1 |
+| `/settings/profile` | layout | axe color-contrast/dark ×1 | — |
+| `/settings/security` | layout | axe color-contrast/dark ×1 | 6 nodi oltre il bordo |
+| `/settings/categories` | layout | axe color-contrast/dark ×1 | — |
+| `/settings/data` | layout | axe color-contrast/dark ×1 | — |
+| `/settings/integrations` | layout | axe color-contrast/dark ×1 | — |
+| `/settings/users (admin)` | admin | axe color-contrast/dark ×1 | — |
+| `/settings/server (admin)` | admin | axe color-contrast/dark ×1 | — |
+| `/settings/integrations (admin)` | admin | axe color-contrast/dark ×1 | 34 nodi oltre il bordo |
+| `signed out › /sign-in` | signed out | bersagli: 1× a 294×17; axe color-contrast/dark ×1 | bersagli: 1× a 294×17; axe color-contrast/dark ×1 |
+| `signed out › /forgot-password` | signed out | bersagli: 1× a 294×17; axe color-contrast/dark ×1 | bersagli: 1× a 294×17; axe color-contrast/dark ×1 |
+| `the command palette` | layout | bersagli: 1× input 466×20; axe color-contrast/dark ×1 | bersagli: 1× input 274×20; axe color-contrast/dark ×1 |
+| `the mobile More sheet` | layout | — | axe color-contrast/dark ×1 |
+
+Quello che l'elenco dice, in breve:
+
+- **Il tema chiaro non ha una sola violazione di contrasto; il tema scuro ne ha una su quasi ogni
+  schermata**, sempre la stessa: `--faint: #6c727b` su `--card: #16181b` sta a **3,64:1**, sotto il
+  4,5:1 che AA chiede al testo piccolo. In F7 il `--faint` chiaro era stato scurito a 4,75:1 e
+  quello scuro non è mai stato guardato. È una riga di CSS, e risolve 52 rilievi su 52. → P2
+- **Le tabelle larghe escono dalla finestra a 400 px**: `/settings/integrations` da admin (34 nodi),
+  `/accounts` (36), un fondo pensione (27 sulla panoramica, 14 sulle valorizzazioni, 2 sui
+  contributi), `/payroll/[id]` (20), `/accounts/[id]?tab=entries` (15), `/interests/[id]` (9),
+  `/settings/security` (6). Sette schermate, la stessa forma. → P1
+- **I bersagli sotto i 24 px si concentrano in pochi componenti**, non in pochi punti: le
+  intestazioni ordinabili e i link di riga (17–19 px), i chip di categoria e i bottoni degli importi
+  rapidi (21–23 px), le caselle di `/expenses` (14×24), i bottoni di campo della revisione di un
+  cedolino (19 px, 47 per schermata). Si risolvono nei componenti condivisi. → P2
+- **`aria-prohibited-attr`** è la barra di avanzamento di `/expenses`: `aria-label="89%"` su uno
+  `<span>` senza ruolo. → P2
+- **`scrollable-region-focusable`** è un contenitore che scorre senza essere raggiungibile da
+  tastiera; compare dove c'è una tabella dentro `overflow-x-auto` o un elenco dentro
+  `max-h-[420px] overflow-y-auto`. Sparisce da solo dove P1 sostituisce la tabella con un elenco, e
+  dove resta vuole un `tabindex=0` con un nome. → P1 e P2
+
 ### P1 — Layout mobile
 Correggere ogni sporgenza e ogni traboccamento dell'elenco di P0, a partire da
 `/settings/integrations` (§2.2). La forma è quella di §3.3: tabella sopra `md`, elenco sotto, stessi
