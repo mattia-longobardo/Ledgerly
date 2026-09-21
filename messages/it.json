@@ -25,7 +25,8 @@
     "subscriptions": "Abbonamenti",
     "funds": "Fondi",
     "interests": "Interessi",
-    "payroll": "Buste paga"
+    "payroll": "Buste paga",
+    "timeoff": "Ferie"
   },
   "shell": {
     "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
@@ -59,9 +60,17 @@
       "subject": "Reimposta la password di Ledgerly",
       "body": "È stato chiesto di reimpostare la password di questo account.\n\nScegli una nuova password entro {hours, plural, one {# ora} other {# ore}}:\n{url}\n\nSe non hai richiesto tu il reset, ignora questa email.\n"
     },
+    "test": {
+      "subject": "Email di prova di Ledgerly",
+      "body": "Questa è l'email di prova di Admin › Server.\n\nSe la stai leggendo, le impostazioni SMTP funzionano.\n"
+    },
     "lowBalance": {
       "subject": "{account} è sotto la soglia",
       "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Ledgerly per controllare."
+    },
+    "monthlySummary": {
+      "subject": "Ledgerly · {month}",
+      "body": "{month} in numeri.\n\nPatrimonio a fine mese: {netWorth}\nEntrate: {income}\nUscite: {expense}\nSaldo: {net}\nMovimenti: {transactions}\n\nApri Ledgerly per guardare più da vicino. Puoi spegnere questa email in Impostazioni › Profilo.\n"
     }
   },
   "auth": {
@@ -120,6 +129,7 @@
       "security": "Sicurezza",
       "integrations": "Integrazioni",
       "data": "Dati",
+      "users": "Utenti",
       "server": "Server"
     },
     "integrations": {
@@ -129,6 +139,10 @@
         "wallet": {
           "name": "Budget Makers Wallet",
           "role": "Conti, saldi e movimenti"
+        },
+        "trek": {
+          "name": "Trek",
+          "role": "Giorni di ferie"
         }
       },
       "states": {
@@ -179,7 +193,8 @@
       },
       "kinds": {
         "accounts": "Conti e saldi",
-        "transactions": "Movimenti"
+        "transactions": "Movimenti",
+        "leave": "Giorni di ferie"
       },
       "runStates": {
         "running": "In corso",
@@ -227,7 +242,47 @@
         "months": "{count, plural, one {# mese} other {# mesi}}",
         "action": "Scarica di nuovo",
         "hint": "Importa soltanto: non toglie mai nulla di ciò che c'è già."
+      },
+      "trek": {
+        "notLinked": "Non collegato. Le giornate restano in Ledgerly finché Trek non è collegato.",
+        "pending": "{count, plural, one {# giornata da inviare a Trek} other {# giornate da inviare a Trek}}",
+        "connectTitle": "Collega Trek",
+        "connectDescription": "Un machine client (senza login nel browser) con gli scope vacay:read e vacay:write: Trek → Impostazioni → Integrazioni → MCP → Client OAuth 2.1 → Nuovo client.",
+        "baseUrl": "Indirizzo di Trek",
+        "baseUrlHint": "L'indirizzo del sito, senza /mcp: viene aggiunto da solo.",
+        "disconnectDescription": "Le giornate già prenotate restano qui. Le rimozioni ancora in sospeso vengono chiuse subito, perché dopo non ci sarebbe più nessuno a cui chiederle.",
+        "clientId": "ID del client",
+        "clientIdHint": "Quello del machine client creato su Trek.",
+        "clientSecret": "Segreto del client",
+        "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
       }
+    },
+    "jobs": {
+      "title": "Job pianificati",
+      "description": "Quello che esegue il sidecar cron, e quando è andato l'ultima volta. «Esegui adesso» prende il lock del job, quindi un job già in corso viene saltato invece che avviato due volte.",
+      "columns": {
+        "job": "Job",
+        "tier": "Esecuzione",
+        "lastRun": "Ultima esecuzione",
+        "result": "Esito",
+        "actions": "Azioni"
+      },
+      "tiers": {
+        "hourly": "Ogni ora",
+        "daily": "Ogni giorno",
+        "monthly": "Ogni mese",
+        "manual": "Solo a mano"
+      },
+      "states": {
+        "running": "In corso",
+        "success": "Riuscito",
+        "failed": "Fallito",
+        "skipped": "Saltato"
+      },
+      "never": "Mai",
+      "runNow": "Esegui adesso",
+      "started": "{job} avviato: questa tabella dirà com'è andata quando avrà finito.",
+      "failed": "Non si è potuto avviare."
     },
     "data": {
       "categories": {
@@ -385,6 +440,58 @@
       "ssoDetail": "Nome ed email arrivano da Authentik.",
       "manage": "Gestisci in Authentik"
     },
+    "tokens": {
+      "title": "Token di accesso",
+      "description": "Token personali per l'API in sola lettura usata da Home Assistant e dagli script. I token si salvano come hash; il valore intero si vede una volta sola.",
+      "columns": {
+        "name": "Nome",
+        "token": "Token",
+        "scopes": "Scopi",
+        "expires": "Scadenza",
+        "lastUsed": "Ultimo uso",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "scopes": {
+        "read": "lettura",
+        "write": "scrittura",
+        "imports": "importazioni"
+      },
+      "scopeHints": {
+        "read": "conti, saldi, transazioni e riepilogo",
+        "write": "registrare la lettura di un saldo",
+        "imports": "caricare cedolini e documenti Cometa"
+      },
+      "states": {
+        "active": "Attivo",
+        "expired": "Scaduto",
+        "revoked": "Revocato"
+      },
+      "expiry": {
+        "30": "30 giorni",
+        "90": "90 giorni",
+        "365": "1 anno",
+        "never": "Nessuna scadenza"
+      },
+      "empty": "Nessun token.",
+      "new": "Nuovo token",
+      "create": "Crea il token",
+      "cancel": "Annulla",
+      "nameHint": "A che cosa serve, così saprai quale revocare.",
+      "mintedTitle": "Il tuo nuovo token",
+      "mintedWarning": "Copialo adesso: è l'unica volta che si vede e non è più recuperabile.",
+      "copy": "Copia",
+      "copied": "Copiato",
+      "copyFailed": "Non si è potuto copiare: seleziona il valore e copialo a mano.",
+      "done": "Fatto",
+      "revoke": "Revoca",
+      "revoked": "{name} revocato",
+      "errors": {
+        "invalid": "Dagli un nome e almeno uno scopo.",
+        "not_found": "Questo token non c'è più.",
+        "failed": "Non si è potuto revocare."
+      }
+    },
     "password": {
       "current": "Password attuale",
       "new": "Nuova password",
@@ -409,6 +516,73 @@
       "since": "dal {date}",
       "errors": {
         "failed": "Impossibile disconnettere la sessione. Riprova."
+      }
+    },
+    "people": {
+      "title": "Utenti",
+      "description": "Due ruoli: Utente vede e modifica i propri dati; Admin gestisce anche utenti e server. Un utente nuovo nasce al primo accesso con Authentik o da un invito.",
+      "columns": {
+        "user": "Utente",
+        "email": "Email",
+        "method": "Accesso",
+        "role": "Ruolo",
+        "lastSignIn": "Ultimo accesso",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "methods": {
+        "password": "Password",
+        "sso": "Authentik",
+        "both": "Authentik · password",
+        "none": "Nessun metodo",
+        "invited": "Invitato"
+      },
+      "roles": {
+        "admin": "Admin",
+        "user": "Utente"
+      },
+      "statuses": {
+        "active": "Attivo",
+        "blocked": "Bloccato",
+        "pending": "In attesa",
+        "expired": "Scaduto"
+      },
+      "invitedPerson": "Invito",
+      "roleFor": "Ruolo di {name}",
+      "roleSaved": "Ruolo cambiato",
+      "invite": "Invita un utente",
+      "inviteHint": "Un link monouso, valido sette giorni. Sceglierà Authentik o una password.",
+      "sendInvitation": "Manda l'invito",
+      "invitation": {
+        "sent": "Invito inviato",
+        "mail_off": "Invito creato, ma non è partita nessuna email: «Inviti e reimpostazioni» è spento in Admin › Server.",
+        "mail_failed": "Invito creato, ma il server di posta l’ha rifiutato. Il link è valido: passalo in un altro modo, oppure sistema l’SMTP e reinvita."
+      },
+      "revokeInvitation": "Revoca",
+      "invitationRevoked": "Invito revocato",
+      "resetPassword": "Reimposta la password",
+      "reset": {
+        "sent": "Link di reimpostazione inviato",
+        "sso_only": "Non è partito nulla: questo account accede solo con Authentik.",
+        "mail_off": "Non è partito nulla: «Inviti e reimpostazioni» è spento in Admin › Server."
+      },
+      "block": "Blocca",
+      "unblock": "Sblocca",
+      "blockedNow": "Bloccato, e disconnesso ovunque",
+      "unblocked": "Sbloccato",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovere questo utente?",
+      "removeWarning": "{email} e tutto quello che possiede verranno cancellati.",
+      "removeDetail": "Se ne vanno conti, transazioni, documenti e gli originali. Non si può tornare indietro.",
+      "removed": "{email} rimosso",
+      "cancel": "Annulla",
+      "errors": {
+        "forbidden": "Solo gli admin possono farlo.",
+        "not_found": "Questa persona non c'è più.",
+        "invalid": "Controlla l'indirizzo email.",
+        "email_taken": "Qualcuno accede già con questo indirizzo.",
+        "self": "Non puoi farlo al tuo stesso account.",
+        "last_admin": "È l'ultimo admin: l'istanza resterebbe senza nessuno che la amministra."
       }
     },
     "snapshots": {
@@ -476,6 +650,154 @@
       "errors": {
         "invalid": "Controlla il modello e la chiave (sk-…).",
         "forbidden": "Solo gli admin possono cambiarlo."
+      }
+    },
+    "maintenance": {
+      "title": "Manutenzione",
+      "description": "Backup del database, conservazione e versione.",
+      "lastBackup": "Ultimo backup",
+      "backupDetail": "{at} · {size}",
+      "schedule": "Pianificazione dei backup",
+      "scheduleDetail": "Ogni giorno alle 12:00 · se ne tengono {kept}",
+      "retention": "Conservazione",
+      "retentionDetail": "Documenti 10 anni · registri dei job e delle sincronizzazioni 90 giorni · transazioni illimitate",
+      "version": "Versione",
+      "backupNow": "Fai un backup adesso",
+      "backupRunning": "Backup in corso…",
+      "backupDone": "Backup scritto.",
+      "exportRunning": "Avvio…",
+      "lastExport": "Ultima esportazione completa",
+      "exportDetail": "{at} · {users} utenti · {size}",
+      "never": "Mai",
+      "exportAll": "Esporta tutti i dati",
+      "exportStarted": "Esportazione avviata: il registro dei job dirà com'è andata.",
+      "errors": {
+        "failed": "Non si è potuta avviare.",
+        "dump_failed": "pg_dump non è arrivato in fondo: controlla il log del server.",
+        "too_large": "Il dump è più grande di quanto questo container possa tenere in memoria.",
+        "upload_failed": "Il dump è stato fatto ma non si è potuto salvare.",
+        "forbidden": "Solo gli admin possono farlo."
+      }
+    },
+    "exportMine": {
+      "title": "I tuoi dati",
+      "description": "Tutto quello che possiedi, in uno ZIP: ogni tabella come CSV, le stesse righe come un JSON, e i tuoi documenti originali.",
+      "download": "Esporta i miei dati",
+      "hint": "Il download parte subito e con molti documenti può metterci un po'."
+    },
+    "oidc": {
+      "title": "Authentik (OIDC)",
+      "description": "Provider di accesso unico. Cambiare l'issuer disconnette tutti.",
+      "issuer": "URL dell'issuer",
+      "issuerHint": "Lo mostra la pagina del provider su Authentik; da lì si legge il discovery document.",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "clientSecretKeep": "Lascia vuoto per tenere il secret salvato.",
+      "adminGroup": "Gruppo admin",
+      "adminGroupHint": "Chi appartiene a questo gruppo Authentik diventa admin a ogni accesso.",
+      "fromEnv": "Non ancora salvato: questi sono i valori del file d'ambiente.",
+      "save": "Salva",
+      "saved": "Provider di identità salvato",
+      "savedSignedOut": "Provider di identità salvato: l'issuer è cambiato, quindi sono stati disconnessi tutti.",
+      "remove": "Rimuovi",
+      "removed": "Provider di identità rimosso: decide di nuovo il file d'ambiente.",
+      "originWarning": "Questo issuer sta su {origin}, che non è l'origine del file d'ambiente. Aggiorna anche OIDC_DISCOVERY_URL lì, altrimenti la policy di sicurezza non permetterà ai form di raggiungerlo.",
+      "lastCheck": "Ultimo controllo {time}",
+      "notChecked": "Mai controllato.",
+      "test": {
+        "action": "Prova la connessione",
+        "running": "Prova in corso…",
+        "ok": "Discovery document raggiungibile.",
+        "invalidDocument": "Ha risposto, ma il documento non è una configurazione OpenID.",
+        "issuerMismatch": "Il documento dichiara un issuer diverso da quello salvato.",
+        "unreachable": "Non si riesce a leggere il discovery document: rete, timeout o URL sbagliato."
+      },
+      "errors": {
+        "invalid": "Controlla l'URL dell'issuer, il client id e il gruppo admin.",
+        "forbidden": "Solo gli admin possono cambiarlo."
+      }
+    },
+    "smtp": {
+      "title": "Posta in uscita (SMTP)",
+      "description": "La usa il server per scrivere agli utenti: inviti, reimpostazioni della password, riepiloghi mensili e avvisi di sincronizzazione.",
+      "host": "Host SMTP",
+      "port": "Porta",
+      "encryption": "Cifratura",
+      "encryptions": {
+        "ssl": "SSL/TLS",
+        "starttls": "STARTTLS",
+        "none": "Nessuna"
+      },
+      "user": "Utente",
+      "password": "Password",
+      "passwordKeep": "Lascia vuoto per tenere la password salvata.",
+      "from": "Indirizzo mittente",
+      "fromEnv": "Non ancora salvato: questi sono i valori del file d'ambiente.",
+      "policy": "Che cosa può mandare il server",
+      "invitations": "Inviti e reimpostazioni",
+      "invitationsWarning": "Spento, non parte nemmeno il link di reimpostazione della password: nessuno può più rientrare da solo.",
+      "syncAlerts": "Sincronizzazioni fallite",
+      "monthlySummary": "Riepilogo mensile",
+      "save": "Salva",
+      "saved": "Posta in uscita salvata",
+      "remove": "Rimuovi",
+      "removed": "Posta in uscita rimossa: decide di nuovo il file d'ambiente.",
+      "test": {
+        "action": "Manda un'email di prova",
+        "running": "Invio in corso…",
+        "ok": "Inviata a {to}.",
+        "noAddress": "Questo account non ha un indirizzo email.",
+        "failed": "Il server l'ha rifiutata: {reason}."
+      },
+      "errors": {
+        "invalid": "Controlla host e porta e, se c'è un utente, cifratura e password.",
+        "forbidden": "Solo gli admin possono cambiarlo."
+      }
+    },
+    "holidays": {
+      "title": "Festività",
+      "description": "I calendari su cui si misurano le tue giornate. Tienine quanti ti servono: vengono presi dalla loro fonte e aggiornati ogni giorno.",
+      "empty": "Ancora nessun calendario. Finché non ne aggiungi uno valgono le festività italiane, più il santo patrono indicato qui sopra.",
+      "meta": "{days} giorni nel {year} · {source}",
+      "never": "Mai aggiornato",
+      "updated": "Aggiornato il {when}",
+      "lastFailed": "L'ultimo aggiornamento non è riuscito: {error}",
+      "sources": {
+        "openholidays": "OpenHolidays",
+        "nager": "Nager.Date"
+      },
+      "actions": {
+        "add": "Aggiungi un calendario",
+        "refresh": "Aggiorna ora",
+        "remove": "Elimina",
+        "confirmRemove": "Eliminare {label}?"
+      },
+      "add": {
+        "title": "Aggiungi un calendario",
+        "description": "Scegli il paese e, dove c'è, il luogo dentro al paese: è da lì che arrivano le feste locali.",
+        "country": "Paese",
+        "countryHint": "Un centinaio, da due servizi.",
+        "choose": "Scegli un paese",
+        "loading": "Caricamento…",
+        "place": "Regione o provincia",
+        "placeHint": "Lascia tutto il paese per le sole festività nazionali.",
+        "wholeCountry": "Tutto il paese",
+        "countryOnly": "Per questo paese è disponibile solo il livello nazionale.",
+        "cancel": "Annulla",
+        "submit": "Aggiungi"
+      },
+      "toasts": {
+        "added": "Calendario aggiunto",
+        "removed": "Calendario eliminato",
+        "refreshed": "Calendario aggiornato"
+      },
+      "errors": {
+        "unreachable": "Il servizio delle festività non risponde. Riprova fra poco.",
+        "duplicate": "Quel calendario è già nell'elenco.",
+        "tooMany": "Più calendari di così non se ne tengono.",
+        "notFound": "Quel calendario non c'è più.",
+        "invalid": "Controlla le scelte e riprova.",
+        "failed": "Non ha funzionato. Riprova."
       }
     }
   },
@@ -1471,8 +1793,8 @@
       "any": "qualunque saldo"
     },
     "basis": {
-      "365": "365 giorni",
-      "360": "360 giorni"
+      "360": "360 giorni",
+      "365": "365 giorni"
     },
     "settlement": {
       "daily": "Giornaliera",
@@ -2679,5 +3001,170 @@
       "rolUsed": "ROL, goduti",
       "rolRemaining": "ROL, residui"
     }
+  },
+  "timeoff": {
+    "title": "Ferie",
+    "heading": "Lavoro e ferie",
+    "header": {
+      "vacationDays": "{amount} giorni di ferie",
+      "rolHours": "{amount} di ROL",
+      "carried": "{days} riportati dal cedolino",
+      "noAllowance": "Nessuna dotazione indicata per quest'anno",
+      "yearLabel": "Anno",
+      "previousYear": "Anno precedente",
+      "nextYear": "Anno successivo",
+      "thisYear": "Quest'anno"
+    },
+    "units": {
+      "days": "{amount} gg",
+      "hours": "{amount} h"
+    },
+    "basis": {
+      "payslip": "Residuo esposto nel cedolino di {payslip}; utilizzi contabilizzati fino a {through}",
+      "allowance": "Dotazione e riporto del cedolino, meno i giorni presi e pianificati",
+      "unknown": "Per quest'anno non c'è ancora né un cedolino né una dotazione",
+      "allowanceOnly": "Dotazione, meno quello che è goduto e pianificato"
+    },
+    "cards": {
+      "vacation": "Ferie",
+      "rol": "ROL",
+      "perYear": "{amount} / anno",
+      "daysRemaining": "giorni rimanenti",
+      "hoursRemaining": "h rimanenti",
+      "taken": "{amount} goduti",
+      "planned": "{amount} pianificati",
+      "daysTaken": "giorni",
+      "ofTotal": "su {total} concessi",
+      "noTotal": "nessun totale indicato",
+      "split": "{taken} contabilizzati · {planned} pianificati",
+      "takenTitle": "Giornate prese nel {year}"
+    },
+    "bars": {
+      "title": "Per mese",
+      "label": "{month}: {taken} goduti, {planned} pianificati"
+    },
+    "calendar": {
+      "title": "Calendario {year}",
+      "planned": "Pianificato",
+      "holiday": "Festivo",
+      "dayLabel": "{date}: {kinds}",
+      "bookLabel": "Prenota il {date}",
+      "howTo": "Clicca un giorno per segnarlo come ferie, clicca ancora per farlo ROL. Tienilo premuto per farlo mezza giornata, e premi ancora per tornare a una intera. Tieni premuto il tasto destro per farlo mezze ferie e mezzo ROL. Tasto destro per toglierlo (o Canc); Alt+clic per una nota o un altro tipo.",
+      "counted": "Contabilizzato"
+    },
+    "kinds": {
+      "vacation": "Ferie",
+      "rol": "ROL",
+      "comp": "Recupero",
+      "sick": "Malattia",
+      "other": "Altro",
+      "permit": "Permesso"
+    },
+    "table": {
+      "title": "Giornate",
+      "date": "Data",
+      "type": "Tipo",
+      "duration": "Durata",
+      "note": "Nota",
+      "status": "Stato",
+      "actions": "Azioni",
+      "empty": "Niente da mostrare con questo filtro.",
+      "fromPayslip": "Dal cedolino di {month}",
+      "payroll": "Cedolino",
+      "fromTrek": "Da Trek",
+      "filters": {
+        "all": "Tutte",
+        "taken": "Godute",
+        "planned": "Pianificate"
+      },
+      "statuses": {
+        "taken": "Goduta",
+        "planned": "Pianificata"
+      },
+      "pending": {
+        "upsert": "Da inviare",
+        "delete": "Da togliere"
+      },
+      "monthPayroll": "Cedolino: {vacation} ferie · {rol} ROL",
+      "monthNoPayroll": "Cedolino non ancora arrivato",
+      "monthRecorded": "Qui: {vacation} ferie · {rol} ROL",
+      "monthPlanned": "{amount} pianificati",
+      "monthEmpty": "Niente",
+      "monthMissing": "{amount} non segnati"
+    },
+    "empty": {
+      "title": "Ancora nessuna ferie",
+      "description": "Aggiungi una giornata, o indica la dotazione dell'anno: comparirà qui e nel calendario."
+    },
+    "actions": {
+      "add": "Aggiungi",
+      "allowance": "Dotazione",
+      "edit": "Modifica",
+      "remove": "Elimina",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "confirmDelete": "Eliminare la giornata del {date}?"
+    },
+    "dialog": {
+      "addTitle": "Aggiungi giornata",
+      "editTitle": "Modifica giornata",
+      "description": "Sabato, domenica e festivi non si prenotano.",
+      "kind": "Tipo",
+      "date": "Data",
+      "from": "Dal",
+      "to": "Al",
+      "toHint": "Lascia vuoto per un solo giorno. I weekend e i festivi in mezzo vengono saltati.",
+      "workingDaysOnly": "Solo giorni lavorativi.",
+      "hours": "Ore",
+      "duration": "Durata",
+      "wholeDay": "Giornata intera",
+      "halfDay": "Mezza giornata",
+      "note": "Nota",
+      "noteHint": "Per esempio mattina o pomeriggio: resta qui e non arriva mai a Trek.",
+      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie.",
+      "rolLocal": "Il ROL resta qui: non viene mai inviato a Trek."
+    },
+    "allowance": {
+      "title": "Dotazione {year}",
+      "description": "Quello che il contratto concede quest'anno. Lascia vuoto un campo per non dichiarare nulla; il residuo dell'anno scorso arriva dal cedolino.",
+      "vacationDays": "Giorni di ferie",
+      "rolDays": "Giorni di ROL",
+      "rolHint": "In giorni, come le ferie: tutta la schermata conta in giorni.",
+      "totalDays": "Giorni concessi in totale",
+      "totalDaysHint": "Ferie e ROL insieme, come li indica il contratto."
+    },
+    "toasts": {
+      "saved": "Giornata salvata",
+      "removed": "Giornata eliminata",
+      "allowanceSaved": "Dotazione salvata",
+      "removalPending": "Tolta qui; a Trek lo si dice al prossimo passaggio"
+    },
+    "errors": {
+      "invalid": "Controlla i valori e riprova.",
+      "invalid_input": "Controlla i valori e riprova.",
+      "not_found": "Quella giornata non c'è più.",
+      "not_bookable": "Quella data non si può prenotare.",
+      "range_too_long": "L'intervallo è troppo lungo per essere aggiunto in una volta.",
+      "weekend": "Il {date} è sabato o domenica.",
+      "holiday": "Il {date} è un giorno festivo.",
+      "failed": "Non ha funzionato. Riprova.",
+      "not_cyclable": "Quel giorno porta qualcosa su cui un clic non può decidere. Usa Modifica nella tabella."
+    },
+    "trekCheck": "Trek dice: {total} giorni, {used} usati, {remaining} residui",
+    "unrecorded": {
+      "title": "{count, plural, one {Un mese ha giornate godute che qui non risultano} other {# mesi hanno giornate godute che qui non risultano}}",
+      "row": "{month}: il cedolino conta {payroll} di {kind}, qui ne risultano {recorded} — ne mancano {missing}",
+      "hint": "Clicca i giorni sul calendario per segnarli. Il cedolino è il conteggio dell'azienda, e arriva con un mese di ritardo."
+    },
+    "overdrawn": {
+      "title": "{count, plural, one {Un saldo è sforato} other {# saldi sono sforati}}",
+      "payslip": "{kind}: {amount} oltre il residuo esposto nel cedolino di {month}",
+      "allowance": "{kind}: {amount} oltre la dotazione indicata per l'anno",
+      "byDate": "{kind}: {amount} in più di quanto avrai maturato entro il {date}",
+      "allowanceByDate": "{kind}: {amount} in più di quanto l'anno avrà concesso entro il {date}"
+    },
+    "mismatch": "Le due parti non tornano col totale concesso: {amount} {direction}.",
+    "mismatchOver": "in più",
+    "mismatchUnder": "in meno"
   }
 }

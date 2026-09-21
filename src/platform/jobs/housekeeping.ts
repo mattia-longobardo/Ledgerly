@@ -1,9 +1,11 @@
 import "server-only";
 import { lt, sql } from "drizzle-orm";
 import { deleteExpiredInvitations } from "@/platform/auth/invitations";
+import { pruneBackups } from "@/platform/backup/service";
 import { getDb } from "@/platform/db/client";
 import { deleteOldSyncRuns } from "@/platform/integrations/service";
 import { deleteOldNotifications } from "@/platform/notifications/service";
+import { deleteStaleTokens } from "@/platform/tokens/service";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "./schema";
 
@@ -26,6 +28,19 @@ export const housekeepingJob: JobDefinition = {
     const syncRunsDeleted = await deleteOldSyncRuns(cutoff);
     const invitationsDeleted = await deleteExpiredInvitations(cutoff);
     const notificationsDeleted = await deleteOldNotifications(cutoff);
-    return { jobRunsDeleted: runs.length, syncRunsDeleted, invitationsDeleted, notificationsDeleted };
+    // A personal access token revoked or expired three months ago is no longer evidence of
+    // anything: its `last_used_at` has aged out with the rest (spec §10.2).
+    const tokensDeleted = await deleteStaleTokens(cutoff);
+    // Thirty dumps, not ninety days: a backup's worth is measured in how far back it reaches, and
+    // thirty daily ones is what spec §10.2 asks for.
+    const backupsDeleted = await pruneBackups();
+    return {
+      jobRunsDeleted: runs.length,
+      syncRunsDeleted,
+      invitationsDeleted,
+      notificationsDeleted,
+      tokensDeleted,
+      backupsDeleted,
+    };
   },
 };

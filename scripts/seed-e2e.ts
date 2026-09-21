@@ -12,6 +12,7 @@ import { applyProviderAccounts, createAccount, saveBalanceEntry } from "../src/m
 import { createSubscription } from "../src/modules/subscriptions/service";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addToPocket, createPocket, recordWithdrawal } from "../src/modules/pockets/service";
+import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
 import { setLimit } from "../src/modules/budgets/service";
 import { upsertFromProvider } from "../src/modules/transactions/service";
@@ -23,6 +24,7 @@ import type { Ctx } from "../src/platform/context";
 import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
 import { getDb } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
+import { isBookable } from "../src/platform/holidays/rules";
 import { deleteFolder } from "../src/platform/storage";
 import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
 import { BASE_URL, SESSIONS, STATE_DIR, TEST_EMAIL_DOMAIN, USERS, sessionState } from "../tests/e2e/env";
@@ -38,8 +40,13 @@ async function removeTestUsers(): Promise<void> {
     .delete(users)
     .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`))
     .returning({ id: users.id, email: users.email });
-  // Their documents' originals are in S3, where no cascade reaches.
-  for (const user of removed) await deleteFolder(`payslips/${user.id}/`);
+  // What they own outside the database, where no cascade reaches: the same three folders
+  // `removePerson` clears (src/modules/users/admin.ts).
+  for (const user of removed) {
+    for (const folder of ["payslips", "cometa", "exports"]) {
+      await deleteFolder(`${folder}/${user.id}/`);
+    }
+  }
   console.log(`e2e: removed ${removed.length} test users`);
   rmSync(STATE_DIR, { recursive: true, force: true });
 }
@@ -48,10 +55,13 @@ await removeTestUsers();
 if (mode === "remove") process.exit(0);
 
 const auth = createAuth({ withNextCookies: false });
-// The site already has its admin, so these are ordinary users.
+// The site already has its admin, so these are ordinary users — except `admin@example.test`,
+// promoted below: Admin › Users and Admin › Server (F8) have no journey without one, and giving
+// it its own user leaves every spec that signs in as an ordinary one saying what it means.
 for (const user of Object.values(USERS)) {
   await auth.api.createUser({ body: user });
 }
+await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
 mkdirSync(STATE_DIR, { recursive: true });
 
 /**
@@ -329,12 +339,38 @@ async function seedFunds(): Promise<void> {
   ]);
 }
 
+/**
+ * Time off (F7): the year's allowance and three days off in it — one taken, one planned, and half
+ * a day of ROL — so the cards, the calendar and both table filters all have something to show.
+ * The dates are worked out from today so the seed does not go stale, and only working days are
+ * booked: the service refuses anything else.
+ */
+async function seedTimeOff(): Promise<void> {
+  const ctx = await contextOf(USERS.timeoff.email);
+  const on = today(ctx.timeZone);
+  const year = Number(on.slice(0, 4));
+  // Days for both kinds since N9, and no carry-over to state: that one comes from the payslip.
+  await saveAllowance(ctx, year, { vacationDays: 26, rolDays: 4, note: "CCNL" });
+  await saveLeaveDay(ctx, { from: workingDay(on, -14), kind: "vacation", fraction: 1 });
+  await saveLeaveDay(ctx, { from: workingDay(on, 21), kind: "vacation", fraction: 1 });
+  await saveLeaveDay(ctx, { from: workingDay(on, -7), kind: "rol", fraction: 0.5 });
+}
+
+/** The first bookable day at least `delta` days from `from`, walking the same way as `delta`. */
+function workingDay(from: string, delta: number): string {
+  const step = delta >= 0 ? 1 : -1;
+  let date = addDays(from, delta);
+  while (!isBookable(date)) date = addDays(date, step);
+  return date;
+}
+
 await seedExpenses();
 await seedBudgets();
 await seedPockets();
 await seedSubscriptions();
 await seedInterests();
 await seedFunds();
+await seedTimeOff();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 
 process.exit(0);

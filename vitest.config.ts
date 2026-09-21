@@ -29,6 +29,11 @@ export default defineConfig({
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
           setupFiles: ["./test/setup-dom.ts"],
+          // A `userEvent` interaction is several real timer ticks, and the whole suite runs its
+          // files in parallel: with the 5 s default, the longest component tests time out on a
+          // busy machine while passing on their own. The headroom is for the scheduler, not for
+          // slow assertions — nothing here waits on anything but the DOM.
+          testTimeout: 20_000,
         },
       },
       {

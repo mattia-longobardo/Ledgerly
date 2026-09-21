@@ -31,7 +31,7 @@ import { alignCategoryTypesToMovements } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { civilDateIn, startOfDayIn, today } from "@/platform/dates";
 import { withJobLock } from "@/platform/jobs/lock";
-import { SYNC_KINDS, type SyncKind, WALLET_PROVIDER } from "../rules";
+import { KINDS_OF, type SyncKind, WALLET_PROVIDER } from "../rules";
 import {
   type Connection,
   IntegrationError,
@@ -663,6 +663,9 @@ export async function syncWalletNow(
   return outcome.value;
 }
 
+/** The kinds this engine passes through, in order: the accounts first, so the movements pass knows which accounts were proven present. */
+const WALLET_KINDS = KINDS_OF[WALLET_PROVIDER];
+
 /** One pass, with the lock already held. */
 async function walletPass(
   ctx: Ctx,
@@ -674,7 +677,7 @@ async function walletPass(
   const result: WalletSyncResult = { accounts: {}, transactions: {}, refused: null };
 
   if (connection.state === "revoked") {
-    for (const kind of SYNC_KINDS) await skipKind(ctx, connectionId, kind, REVOKED_REASON, now);
+    for (const kind of WALLET_KINDS) await skipKind(ctx, connectionId, kind, REVOKED_REASON, now);
     return { ...result, refused: "revoked" };
   }
 
@@ -694,7 +697,7 @@ async function walletPass(
   // judge. It stays `undefined` if that pass failed or was skipped: nothing was proven.
   let covered: ReadonlySet<string> | undefined;
 
-  for (const kind of SYNC_KINDS) {
+  for (const kind of WALLET_KINDS) {
     if (refused) {
       await skipKind(ctx, connectionId, kind, REVOKED_REASON, now);
       continue;

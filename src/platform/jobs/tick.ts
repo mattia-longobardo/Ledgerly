@@ -1,10 +1,11 @@
 import "server-only";
 import { eq } from "drizzle-orm";
+import { alertAdmins } from "@/platform/alerts/gotify";
 import { redactForLog } from "@/platform/auth/logger";
 import { getDb } from "@/platform/db/client";
 import { touchHeartbeat } from "./heartbeat";
 import { withJobLock } from "./lock";
-import { JOBS, type JobDefinition, type Tier } from "./registry";
+import { JOBS, type JobDefinition, type ScheduledTier, type Tier } from "./registry";
 import { jobRuns } from "./schema";
 
 type Status = "success" | "failed" | "skipped";
@@ -59,16 +60,25 @@ async function runAndRecord(job: JobDefinition, tier: Tier): Promise<Status> {
     }
     return "success";
   } catch (error) {
+    const reason = describeError(error);
     if (runId !== undefined) {
       try {
         await getDb()
           .update(jobRuns)
-          .set({ status: "failed", finishedAt: new Date(), error: describeError(error) })
+          .set({ status: "failed", finishedAt: new Date(), error: reason })
           .where(eq(jobRuns.id, runId));
       } catch (updateError) {
         console.error("[jobs] failed to record a failed run", redactForLog(updateError));
       }
     }
+    // The admins hear about it (spec §10.4). `alertAdmins` never throws and does nothing at all
+    // when Gotify is not configured, so this cannot turn one failure into two. The reason is the
+    // message already redacted for `job_runs` — never a credential (spec §5.4).
+    await alertAdmins({
+      title: `Ledgerly: ${job.name} failed`,
+      message: `The ${tier} job "${job.name}" failed.\n\n${reason}`,
+      priority: 7,
+    });
     return "failed";
   }
 }
@@ -81,7 +91,10 @@ async function runAndRecord(job: JobDefinition, tier: Tier): Promise<Status> {
  * the caller (the cron sidecar) must never see a failure that would make it retry the tier and
  * re-run jobs that already succeeded.
  */
-export async function runTier(tier: Tier, jobs: readonly JobDefinition[] = JOBS): Promise<Outcome[]> {
+export async function runTier(
+  tier: ScheduledTier,
+  jobs: readonly JobDefinition[] = JOBS,
+): Promise<Outcome[]> {
   const outcomes: Outcome[] = [];
   try {
     for (const job of jobs.filter((j) => j.tier === tier)) {
@@ -97,4 +110,22 @@ export async function runTier(tier: Tier, jobs: readonly JobDefinition[] = JOBS)
     await touchHeartbeat();
   }
   return outcomes;
+}
+
+/**
+ * One job, because an admin asked for it (spec §10.3). The same lock and the same bookkeeping as a
+ * tick, so a job already running is skipped rather than run twice — the run is recorded under the
+ * tier `manual`, which is who asked rather than when.
+ */
+export async function runJobByHand(name: string): Promise<Outcome | null> {
+  const job = JOBS.find((one) => one.name === name);
+  if (!job) return null;
+  try {
+    const locked = await withJobLock(`job:${job.name}`, () => runAndRecord(job, "manual"));
+    if (locked.ran) return { job: job.name, status: locked.value };
+    await recordSkipped(job, "manual");
+    return { job: job.name, status: "skipped" };
+  } finally {
+    await touchHeartbeat();
+  }
 }

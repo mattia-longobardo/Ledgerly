@@ -25,7 +25,8 @@
     "subscriptions": "Subscriptions",
     "funds": "Funds",
     "interests": "Interests",
-    "payroll": "Payroll"
+    "payroll": "Payroll",
+    "timeoff": "Time off"
   },
   "shell": {
     "toggleSidebar": "Toggle sidebar (⌘\\)",
@@ -59,9 +60,17 @@
       "subject": "Reset your Ledgerly password",
       "body": "Someone asked to reset the password of this account.\n\nChoose a new password within {hours, plural, one {# hour} other {# hours}}:\n{url}\n\nIf it was not you, ignore this email.\n"
     },
+    "test": {
+      "subject": "Ledgerly test email",
+      "body": "This is the test email from Admin › Server.\n\nIf you are reading it, the SMTP settings work.\n"
+    },
     "lowBalance": {
       "subject": "{account} is below its threshold",
       "body": "{account} is at {balance}, below the {threshold} you set.\n\nOpen Ledgerly to check it."
+    },
+    "monthlySummary": {
+      "subject": "Ledgerly · {month}",
+      "body": "{month} in numbers.\n\nNet worth at the end of the month: {netWorth}\nIncome: {income}\nSpending: {expense}\nNet: {net}\nMovements: {transactions}\n\nOpen Ledgerly to look closer. You can switch this email off in Settings › Profile.\n"
     }
   },
   "auth": {
@@ -120,6 +129,7 @@
       "security": "Security",
       "integrations": "Integrations",
       "data": "Data",
+      "users": "Users",
       "server": "Server"
     },
     "integrations": {
@@ -129,6 +139,10 @@
         "wallet": {
           "name": "Budget Makers Wallet",
           "role": "Accounts, balances and transactions"
+        },
+        "trek": {
+          "name": "Trek",
+          "role": "Leave days"
         }
       },
       "states": {
@@ -179,7 +193,8 @@
       },
       "kinds": {
         "accounts": "Accounts and balances",
-        "transactions": "Transactions"
+        "transactions": "Transactions",
+        "leave": "Leave days"
       },
       "runStates": {
         "running": "Running",
@@ -227,7 +242,47 @@
         "months": "{count, plural, one {# month} other {# months}}",
         "action": "Download again",
         "hint": "It only imports: nothing already here is ever removed by it."
+      },
+      "trek": {
+        "notLinked": "Not linked. Leave days stay in Ledgerly until Trek is connected.",
+        "pending": "{count, plural, one {# day waiting to reach Trek} other {# days waiting to reach Trek}}",
+        "connectTitle": "Connect Trek",
+        "connectDescription": "A machine client (no browser login) with the vacay:read and vacay:write scopes: Trek → Settings → Integrations → MCP → OAuth 2.1 Clients → New Client.",
+        "baseUrl": "Trek address",
+        "baseUrlHint": "The site's address, without /mcp — that is added for you.",
+        "disconnectDescription": "The days already booked stay here. Any removal still waiting to reach Trek is completed straight away, because afterwards there is nobody left to ask.",
+        "clientId": "Client ID",
+        "clientIdHint": "From the machine client you created in Trek.",
+        "clientSecret": "Client secret",
+        "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
       }
+    },
+    "jobs": {
+      "title": "Scheduled jobs",
+      "description": "What the cron sidecar runs, and when it last ran. “Run now” takes the job's lock, so a job already running is skipped rather than started twice.",
+      "columns": {
+        "job": "Job",
+        "tier": "Runs",
+        "lastRun": "Last run",
+        "result": "Result",
+        "actions": "Actions"
+      },
+      "tiers": {
+        "hourly": "Hourly",
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "manual": "By hand only"
+      },
+      "states": {
+        "running": "Running",
+        "success": "Success",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      },
+      "never": "Never",
+      "runNow": "Run now",
+      "started": "{job} started: this table says how it went once it is done.",
+      "failed": "It could not be started."
     },
     "data": {
       "categories": {
@@ -385,6 +440,58 @@
       "ssoDetail": "Your name and email come from Authentik.",
       "manage": "Manage in Authentik"
     },
+    "tokens": {
+      "title": "Access tokens",
+      "description": "Personal access tokens for the read-only API used by Home Assistant and scripts. Tokens are hashed at rest; the full value is shown once.",
+      "columns": {
+        "name": "Name",
+        "token": "Token",
+        "scopes": "Scopes",
+        "expires": "Expires",
+        "lastUsed": "Last used",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "scopes": {
+        "read": "read",
+        "write": "write",
+        "imports": "imports"
+      },
+      "scopeHints": {
+        "read": "accounts, balances, transactions and the summary",
+        "write": "record a balance reading",
+        "imports": "upload payslips and Cometa documents"
+      },
+      "states": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "expiry": {
+        "30": "30 days",
+        "90": "90 days",
+        "365": "1 year",
+        "never": "No expiry"
+      },
+      "empty": "No tokens yet.",
+      "new": "New token",
+      "create": "Create token",
+      "cancel": "Cancel",
+      "nameHint": "What it is for, so you know which one to revoke later.",
+      "mintedTitle": "Your new token",
+      "mintedWarning": "Copy it now: this is the only time it is shown, and it cannot be recovered.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy: select the value and copy it by hand.",
+      "done": "Done",
+      "revoke": "Revoke",
+      "revoked": "{name} revoked",
+      "errors": {
+        "invalid": "Give it a name and at least one scope.",
+        "not_found": "That token is already gone.",
+        "failed": "It could not be revoked."
+      }
+    },
     "password": {
       "current": "Current password",
       "new": "New password",
@@ -409,6 +516,73 @@
       "since": "since {date}",
       "errors": {
         "failed": "Couldn't sign out. Try again."
+      }
+    },
+    "people": {
+      "title": "Users",
+      "description": "Two roles: User sees and edits their own data; Admin also manages users and the server. New users are created on first Authentik sign-in or by invitation.",
+      "columns": {
+        "user": "User",
+        "email": "Email",
+        "method": "Sign-in",
+        "role": "Role",
+        "lastSignIn": "Last sign-in",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "methods": {
+        "password": "Password",
+        "sso": "Authentik",
+        "both": "Authentik · password",
+        "none": "No method yet",
+        "invited": "Invited"
+      },
+      "roles": {
+        "admin": "Admin",
+        "user": "User"
+      },
+      "statuses": {
+        "active": "Active",
+        "blocked": "Blocked",
+        "pending": "Pending",
+        "expired": "Expired"
+      },
+      "invitedPerson": "Invitation",
+      "roleFor": "Role of {name}",
+      "roleSaved": "Role changed",
+      "invite": "Invite user",
+      "inviteHint": "A single-use link, good for seven days. They choose Authentik or a password.",
+      "sendInvitation": "Send invitation",
+      "invitation": {
+        "sent": "Invitation sent",
+        "mail_off": "Invitation created, but no email left: “Invitations & resets” is off in Admin › Server.",
+        "mail_failed": "Invitation created, but the mail server refused it. The link is live: hand it over another way, or fix SMTP and invite again."
+      },
+      "revokeInvitation": "Revoke",
+      "invitationRevoked": "Invitation revoked",
+      "resetPassword": "Reset password",
+      "reset": {
+        "sent": "Password reset link sent",
+        "sso_only": "Nothing sent: this account signs in with Authentik only.",
+        "mail_off": "Nothing sent: “Invitations & resets” is off in Admin › Server."
+      },
+      "block": "Block",
+      "unblock": "Unblock",
+      "blockedNow": "Blocked, and signed out everywhere",
+      "unblocked": "Unblocked",
+      "remove": "Remove",
+      "removeTitle": "Remove this user?",
+      "removeWarning": "{email} and everything they own will be deleted.",
+      "removeDetail": "Accounts, transactions, documents and their originals go with them. This cannot be undone.",
+      "removed": "{email} removed",
+      "cancel": "Cancel",
+      "errors": {
+        "forbidden": "Only admins can do this.",
+        "not_found": "That person is no longer here.",
+        "invalid": "Check the email address.",
+        "email_taken": "Someone already signs in with that address.",
+        "self": "You cannot do that to your own account.",
+        "last_admin": "This is the last admin: the instance would have nobody to administer it."
       }
     },
     "snapshots": {
@@ -476,6 +650,154 @@
       "errors": {
         "invalid": "Check the model and the key (sk-…).",
         "forbidden": "Only admins can change this."
+      }
+    },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Database backups, retention and version.",
+      "lastBackup": "Last backup",
+      "backupDetail": "{at} · {size}",
+      "schedule": "Backup schedule",
+      "scheduleDetail": "Daily 12:00 · keep {kept}",
+      "retention": "Retention",
+      "retentionDetail": "Documents 10 years · job and sync logs 90 days · transactions unlimited",
+      "version": "Version",
+      "backupNow": "Back up now",
+      "backupRunning": "Backing up…",
+      "backupDone": "Backup written.",
+      "exportRunning": "Starting…",
+      "lastExport": "Last full export",
+      "exportDetail": "{at} · {users} users · {size}",
+      "never": "Never",
+      "exportAll": "Export all data",
+      "exportStarted": "Export started: the job log will say how it went.",
+      "errors": {
+        "failed": "It could not be started.",
+        "dump_failed": "pg_dump did not finish: check the server log.",
+        "too_large": "The dump is larger than this container may hold in memory.",
+        "upload_failed": "The dump was taken but could not be stored.",
+        "forbidden": "Only admins can do this."
+      }
+    },
+    "exportMine": {
+      "title": "Your data",
+      "description": "Everything you own, as one ZIP: every table as a CSV, the same rows as one JSON, and your original documents.",
+      "download": "Export my data",
+      "hint": "The download starts straight away and can take a while with many documents."
+    },
+    "oidc": {
+      "title": "Authentik (OIDC)",
+      "description": "Single sign-on provider. Changing the issuer signs every user out.",
+      "issuer": "Issuer URL",
+      "issuerHint": "Authentik's provider page shows it; the discovery document is read from it.",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "clientSecretKeep": "Leave empty to keep the saved secret.",
+      "adminGroup": "Admin group",
+      "adminGroupHint": "Members of this Authentik group become admins at every sign-in.",
+      "fromEnv": "Not saved yet: these are the values from the environment file.",
+      "save": "Save",
+      "saved": "Identity provider saved",
+      "savedSignedOut": "Identity provider saved: the issuer changed, so everyone was signed out.",
+      "remove": "Remove",
+      "removed": "Identity provider removed: the environment file decides again.",
+      "originWarning": "This issuer is on {origin}, which is not the origin in the environment file. Update OIDC_DISCOVERY_URL there too, or the security policy will not allow forms to reach it.",
+      "lastCheck": "Last check {time}",
+      "notChecked": "Never checked.",
+      "test": {
+        "action": "Test connection",
+        "running": "Testing…",
+        "ok": "Discovery document reachable.",
+        "invalidDocument": "Answered, but the document is not an OpenID configuration.",
+        "issuerMismatch": "The document names a different issuer than the one saved.",
+        "unreachable": "The discovery document could not be read: network, timeout or wrong URL."
+      },
+      "errors": {
+        "invalid": "Check the issuer URL, the client id and the admin group.",
+        "forbidden": "Only admins can change this."
+      }
+    },
+    "smtp": {
+      "title": "Outgoing email (SMTP)",
+      "description": "Used by the server to message users: invitations, password resets, monthly summaries and sync alerts.",
+      "host": "SMTP host",
+      "port": "Port",
+      "encryption": "Encryption",
+      "encryptions": {
+        "ssl": "SSL/TLS",
+        "starttls": "STARTTLS",
+        "none": "None"
+      },
+      "user": "Username",
+      "password": "Password",
+      "passwordKeep": "Leave empty to keep the saved password.",
+      "from": "From address",
+      "fromEnv": "Not saved yet: these are the values from the environment file.",
+      "policy": "What the server may send",
+      "invitations": "Invitations & resets",
+      "invitationsWarning": "Off, the password reset link is not sent either: nobody can let themselves back in.",
+      "syncAlerts": "Sync failures",
+      "monthlySummary": "Monthly summary",
+      "save": "Save",
+      "saved": "Outgoing email saved",
+      "remove": "Remove",
+      "removed": "Outgoing email removed: the environment file decides again.",
+      "test": {
+        "action": "Send test email",
+        "running": "Sending…",
+        "ok": "Sent to {to}.",
+        "noAddress": "This account has no email address.",
+        "failed": "The server refused it: {reason}."
+      },
+      "errors": {
+        "invalid": "Check the host, the port and, with a username, the encryption and password.",
+        "forbidden": "Only admins can change this."
+      }
+    },
+    "holidays": {
+      "title": "Public holidays",
+      "description": "The calendars your days off are measured against. Keep as many as you need — they are fetched from their source and refreshed every day.",
+      "empty": "No calendar yet. Until you add one, the Italian public holidays are used, plus the patron saint set above.",
+      "meta": "{days} days in {year} · {source}",
+      "never": "Never updated",
+      "updated": "Updated {when}",
+      "lastFailed": "Last update failed: {error}",
+      "sources": {
+        "openholidays": "OpenHolidays",
+        "nager": "Nager.Date"
+      },
+      "actions": {
+        "add": "Add a calendar",
+        "refresh": "Update now",
+        "remove": "Remove",
+        "confirmRemove": "Remove {label}?"
+      },
+      "add": {
+        "title": "Add a holiday calendar",
+        "description": "Pick a country, and a place inside it when there is one — that is where the local feasts come from.",
+        "country": "Country",
+        "countryHint": "About a hundred and ten, from two services.",
+        "choose": "Choose a country",
+        "loading": "Loading…",
+        "place": "Region or province",
+        "placeHint": "Leave on the whole country for national holidays only.",
+        "wholeCountry": "The whole country",
+        "countryOnly": "This country is only available at national level.",
+        "cancel": "Cancel",
+        "submit": "Add"
+      },
+      "toasts": {
+        "added": "Calendar added",
+        "removed": "Calendar removed",
+        "refreshed": "Calendar updated"
+      },
+      "errors": {
+        "unreachable": "The holiday service could not be reached. Try again in a moment.",
+        "duplicate": "That calendar is already in the list.",
+        "tooMany": "That is as many calendars as one account keeps.",
+        "notFound": "That calendar is no longer there.",
+        "invalid": "Check the choices and try again.",
+        "failed": "It did not work. Try again."
       }
     }
   },
@@ -1471,8 +1793,8 @@
       "any": "any balance"
     },
     "basis": {
-      "365": "365 days",
-      "360": "360 days"
+      "360": "360 days",
+      "365": "365 days"
     },
     "settlement": {
       "daily": "Daily",
@@ -2679,5 +3001,170 @@
       "rolUsed": "ROL, used",
       "rolRemaining": "ROL, remaining"
     }
+  },
+  "timeoff": {
+    "title": "Time off",
+    "heading": "Work & Time off",
+    "header": {
+      "vacationDays": "{amount} days vacation",
+      "rolHours": "{amount} ROL",
+      "carried": "{days} carried over from your payslip",
+      "noAllowance": "No allowance stated for this year",
+      "yearLabel": "Year",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "thisYear": "This year"
+    },
+    "units": {
+      "days": "{amount} d",
+      "hours": "{amount} h"
+    },
+    "basis": {
+      "payslip": "Remaining as printed on the {payslip} payslip; use counted through {through}",
+      "allowance": "Allowance and the payslip's carry-over, less the days taken and planned",
+      "unknown": "No payslip and no allowance for this year yet",
+      "allowanceOnly": "Allowance, less what is taken and planned"
+    },
+    "cards": {
+      "vacation": "Vacation (ferie)",
+      "rol": "ROL",
+      "perYear": "{amount} / year",
+      "daysRemaining": "days remaining",
+      "hoursRemaining": "h remaining",
+      "taken": "{amount} taken",
+      "planned": "{amount} planned",
+      "daysTaken": "days",
+      "ofTotal": "of {total} granted",
+      "noTotal": "no total stated",
+      "split": "{taken} counted · {planned} planned",
+      "takenTitle": "Days off in {year}"
+    },
+    "bars": {
+      "title": "By month",
+      "label": "{month}: {taken} taken, {planned} planned"
+    },
+    "calendar": {
+      "title": "{year} calendar",
+      "planned": "Planned",
+      "holiday": "Public holiday",
+      "dayLabel": "{date}: {kinds}",
+      "bookLabel": "Book {date}",
+      "howTo": "Click a day to book it as vacation, click it again to make it ROL. Hold it down to make it half a day, and hold again for a whole one. Hold the right button instead for half vacation and half ROL. Right-click to clear it (or press Delete); Alt-click for a note or another kind.",
+      "counted": "Counted"
+    },
+    "kinds": {
+      "vacation": "Vacation",
+      "rol": "ROL",
+      "comp": "Time off in lieu",
+      "sick": "Sick leave",
+      "other": "Other",
+      "permit": "Permit"
+    },
+    "table": {
+      "title": "Leave days",
+      "date": "Date",
+      "type": "Type",
+      "duration": "Duration",
+      "note": "Note",
+      "status": "Status",
+      "actions": "Actions",
+      "empty": "Nothing to show for this filter.",
+      "fromPayslip": "From the {month} payslip",
+      "payroll": "Payslip",
+      "fromTrek": "From Trek",
+      "filters": {
+        "all": "All",
+        "taken": "Taken",
+        "planned": "Planned"
+      },
+      "statuses": {
+        "taken": "Taken",
+        "planned": "Planned"
+      },
+      "pending": {
+        "upsert": "To send",
+        "delete": "To remove"
+      },
+      "monthPayroll": "Payslip: {vacation} vacation · {rol} ROL",
+      "monthNoPayroll": "No payslip for this month yet",
+      "monthRecorded": "Here: {vacation} vacation · {rol} ROL",
+      "monthPlanned": "{amount} planned",
+      "monthEmpty": "Nothing",
+      "monthMissing": "{amount} not recorded"
+    },
+    "empty": {
+      "title": "No time off yet",
+      "description": "Add a day off, or state this year's allowance, and it will show up here and in the calendar."
+    },
+    "actions": {
+      "add": "Add leave",
+      "allowance": "Allowance",
+      "edit": "Edit",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "confirmDelete": "Remove the leave on {date}?"
+    },
+    "dialog": {
+      "addTitle": "Add leave",
+      "editTitle": "Edit leave",
+      "description": "Weekends and public holidays cannot be booked.",
+      "kind": "Type",
+      "date": "Date",
+      "from": "From",
+      "to": "To",
+      "toHint": "Leave empty for a single day. Weekends and holidays in between are skipped.",
+      "workingDaysOnly": "Working days only.",
+      "hours": "Hours",
+      "duration": "Duration",
+      "wholeDay": "Whole day",
+      "halfDay": "Half day",
+      "note": "Note",
+      "noteHint": "Morning or afternoon, for instance — this stays here and never goes to Trek.",
+      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance.",
+      "rolLocal": "ROL stays here: it is never sent to Trek."
+    },
+    "allowance": {
+      "title": "Allowance for {year}",
+      "description": "What the contract grants this year. Leave a field empty to state nothing; what last year left over comes from your payslip.",
+      "vacationDays": "Vacation days",
+      "rolDays": "ROL days",
+      "rolHint": "Days, like vacation: the screen counts in days throughout.",
+      "totalDays": "Days granted in total",
+      "totalDaysHint": "Vacation and ROL together, as the contract states it."
+    },
+    "toasts": {
+      "saved": "Leave saved",
+      "removed": "Leave removed",
+      "allowanceSaved": "Allowance saved",
+      "removalPending": "Removed here; Trek will be told at the next pass"
+    },
+    "errors": {
+      "invalid": "Check the values and try again.",
+      "invalid_input": "Check the values and try again.",
+      "not_found": "That day is no longer there.",
+      "not_bookable": "That date cannot be booked.",
+      "range_too_long": "That range is too long to add in one go.",
+      "weekend": "{date} is a weekend.",
+      "holiday": "{date} is a public holiday.",
+      "failed": "It did not work. Try again.",
+      "not_cyclable": "That day carries something a click cannot decide about. Use Edit in the table."
+    },
+    "trekCheck": "Trek says: {total} days, {used} used, {remaining} left",
+    "unrecorded": {
+      "title": "{count, plural, one {One month has leave that is not recorded here} other {# months have leave that is not recorded here}}",
+      "row": "{month}: the payslip counts {payroll} of {kind}, this calendar holds {recorded} — {missing} missing",
+      "hint": "Click the days in the calendar to record them. The payslip is the employer's own count, and it arrives a month late."
+    },
+    "overdrawn": {
+      "title": "{count, plural, one {One balance is overdrawn} other {# balances are overdrawn}}",
+      "payslip": "{kind}: {amount} past the residual the {month} payslip printed",
+      "allowance": "{kind}: {amount} past the allowance stated for the year",
+      "byDate": "{kind}: {amount} more than you will have accrued by {date}",
+      "allowanceByDate": "{kind}: {amount} more than the year will have granted by {date}"
+    },
+    "mismatch": "The parts do not add up to the total granted: {amount} {direction}.",
+    "mismatchOver": "more",
+    "mismatchUnder": "less"
   }
 }

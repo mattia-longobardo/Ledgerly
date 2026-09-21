@@ -25,6 +25,20 @@ export const USERS = {
   funds: { email: "funds@example.test", password: "funds-password-123", name: "Funds" },
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
   cometa: { email: "cometa@example.test", password: "cometa-password-123", name: "Cometa" },
+  timeoff: { email: "timeoff@example.test", password: "timeoff-password-123", name: "Timeoff" },
+  // F8: the admin journey. Its own user rather than a promoted `owner`, so every spec that signs
+  // in as an ordinary one keeps meaning what it says.
+  admin: { email: "admin@example.test", password: "admin-password-123", name: "Admin" },
+  // F8: personal access tokens and "Export my data", which need nobody else's data.
+  tokens: { email: "tokens@example.test", password: "tokens-password-123", name: "Tokens" },
+  // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
+  // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
+  // the instance's real users too, and a spec must never touch one.
+  disposable: {
+    email: "disposable@example.test",
+    password: "disposable-password-123",
+    name: "Disposable",
+  },
 } as const;
 
 /** The only addresses the seed may create or delete. */
@@ -45,6 +59,10 @@ export const SESSIONS = {
   funds: { user: "funds", file: "funds-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
   cometa: { user: "cometa", file: "cometa-session.json" },
+  timeoff: { user: "timeoff", file: "timeoff-session.json" },
+  // The seed promotes this one, so Admin › Users and Admin › Server have a journey (F8).
+  admin: { user: "admin", file: "admin-session.json" },
+  tokens: { user: "tokens", file: "tokens-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;

@@ -120,6 +120,48 @@ brings in.
 - A pocket's "Interest earned on backing" is now the account's last 12 months of interest × the
   pocket's share of the balance, as an estimate.
 
+## Settings, Admin and the API (F8)
+
+- **Admin › Users** (`/settings/users`, admins only): the list with the invitations still pending,
+  "Invite user" (a single-use link, seven days), the role selector, block/unblock, "Reset password"
+  and "Remove". The last admin cannot be demoted, blocked or removed, and nobody blocks or removes
+  themselves — an instance nobody can administer is repaired only from the container. Removing a
+  user deletes their row first (the foreign keys take the rest) and then their `payslips/`,
+  `cometa/` and `exports/` folders in S3.
+- **Admin › Server** (`/settings/server`): Authentik (issuer, client id, secret, admin group, "Test
+  connection") and outgoing mail (host, port, encryption, credentials, from address, "Send test
+  email"), both saved in `app_settings` with the secret sealed. `.env.homelab` stays the initial
+  value and a saved setting wins over it, so a fresh instance runs on the environment file alone.
+  Better Auth and the mail transport notice a change within 30 seconds; **changing the issuer signs
+  every user out**. Three switches decide what the server may send at all: invitations and resets,
+  sync failures, the monthly summary — with "invitations & resets" off the password reset link does
+  not go out either.
+- **Personal access tokens** (`/settings/security`): `pat_<prefix>.<secret>`, shown once, kept as a
+  SHA-256 digest with scopes `read`, `write`, `imports`, an optional expiry and revocation.
+- **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
+  `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
+  `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
+  user and never beyond them; there is no administrative route at all. Amounts travel as decimal
+  strings, never as JSON numbers. 120 calls a minute per token, per worker.
+
+  ```bash
+  curl -sS -H "Authorization: Bearer pat_…" https://dash.longobardo.me/api/v1/summary
+  ```
+
+- **Export.** "Export my data" (Settings › Data) streams a ZIP of every table as CSV, the same rows
+  as one JSON, and the original documents. "Export all data" (Admin › Server) is the `export-all`
+  job, which writes one archive per person under `exports/<userId>/`.
+- **Backups.** `database-backup` runs daily: `pg_dump -Fc` (from `postgresql18-client`, in the
+  image) held in memory — the container's filesystem is read only — and uploaded to `backups/`,
+  thirty kept, pruned by `housekeeping`. The dump is not encrypted: a backup that only opens with
+  the application's own key ring cannot help when the application is what was lost.
+- **Alerts.** A job that fails tells the admins through Gotify, if `GOTIFY_URL` and `GOTIFY_TOKEN`
+  are set; without them nothing is sent and nothing is logged about it. `monthly-summary` emails
+  whoever asked for it in their preferences, on the 1st, about the month just ended.
+- **Running a job by hand**: Settings › Integrations lists every registered job with its schedule
+  and its last run, and an admin can press "Run now" (it takes the job's lock, so a job already
+  running is skipped rather than started twice).
+
 ## Check
 
 ```bash

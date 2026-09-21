@@ -88,6 +88,11 @@ describe("jobs", () => {
         { job: "housekeeping", status: "success" },
         { job: "accounts-alerts", status: "success" },
         { job: "documents-retention", status: "success" },
+        { job: "holidays-refresh", status: "success" },
+        // The real daily backup, which genuinely fails here: `pg_dump` is in the *application*
+        // image (Dockerfile) and not in the bare `node:22-bookworm-slim` this suite runs in. That
+        // it is recorded as failed rather than stopping the tier is the point of the assertion.
+        { job: "database-backup", status: "failed" },
       ],
     });
   });

@@ -1,13 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { subscriptionsView } from "@/modules/subscriptions/queries";
 import { requireSession } from "@/platform/auth/session";
+import { csvDocument } from "@/platform/export/csv";
 import { formatAmountInput } from "@/platform/format";
-
-/** One CSV field: quoted when it holds a separator, a quote or a line break (RFC 4180). */
-function field(value: string | number): string {
-  const text = String(value);
-  return /[";\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
 
 /**
  * "Export CSV" of Subscriptions (plan F3 §3.6.10; not wired in the design, and §8.4.2 wants every
@@ -32,24 +27,20 @@ export async function GET(): Promise<Response> {
     t("csv.state"),
     t("csv.status"),
   ];
-  const lines = [...view.rows, ...view.inactive].map((row) =>
-    [
-      row.subscription.name,
-      row.categoryName ?? "",
-      row.subscription.utility,
-      amount(row.subscription.priceCents),
-      t(`cycles.${row.subscription.cycle}`),
-      row.accountName ?? "",
-      amount(row.monthlyCents),
-      amount(row.yearlyCents),
-      row.nextChargeOn,
-      row.subscription.state,
-      row.current?.state ?? "",
-    ]
-      .map(field)
-      .join(";"),
-  );
-  return new Response(`﻿${[header.map(field).join(";"), ...lines].join("\r\n")}\r\n`, {
+  const rows = [...view.rows, ...view.inactive].map((row) => [
+    row.subscription.name,
+    row.categoryName ?? "",
+    row.subscription.utility,
+    amount(row.subscription.priceCents),
+    t(`cycles.${row.subscription.cycle}`),
+    row.accountName ?? "",
+    amount(row.monthlyCents),
+    amount(row.yearlyCents),
+    row.nextChargeOn,
+    row.subscription.state,
+    row.current?.state ?? "",
+  ]);
+  return new Response(csvDocument(header, rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": 'attachment; filename="subscriptions.csv"',

@@ -8,7 +8,7 @@ import { completeInvitationWithSso } from "@/platform/auth/invitations";
  * signed-in user, or goes back to it with the reason it could not be applied.
  */
 export async function GET(_request: Request, { params }: RouteContext<"/invite/[token]/complete">) {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
   const { token } = await params;
   const outcome = await completeInvitationWithSso(token, {
