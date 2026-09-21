@@ -10,6 +10,7 @@ import {
   fixedFromDecimal,
   fixedToDecimal,
   grossOfDay,
+  settlementNote,
   periodOf,
   reconcile,
   settlementPeriods,
@@ -289,5 +290,110 @@ describe("a balance fresh enough to accrue on (spec §7.6)", () => {
 
   it("accepts a reading stamped by a pass that started after this one", () => {
     expect(isFreshReading(new Date("2026-01-15T12:00:30Z"), now)).toBe(true);
+  });
+});
+
+describe("the note a published settlement carries (spec §7.6, §9.1)", () => {
+  const flat = [{ upToCents: null, annualRate: "0.022500" }];
+
+  it("says the rule's rate, the rate after tax, the tax and the balance it was worked out on", () => {
+    expect(
+      settlementNote({
+        tiers: flat,
+        taxRate: "0.26",
+        basis: 365,
+        balances: [1_171_329n, 1_171_329n, 1_171_329n],
+        grossCents: 217n,
+      }),
+    ).toBe("auto-interest 2.25%/y (net 1.665%, -26% tax) on 11713.29");
+  });
+
+  it("averages the balance over the days it has, and rounds the average half-up", () => {
+    // 100,00 and 101,01 average to 100,505 → 100,51, never 100,50.
+    expect(
+      settlementNote({
+        tiers: flat,
+        taxRate: "0.26",
+        basis: 365,
+        balances: [10_000n, 10_101n],
+        grossCents: 1n,
+      }),
+    ).toContain("on 100.51");
+  });
+
+  it("trims the zeros a rate does not need, and keeps the digits it does", () => {
+    expect(
+      settlementNote({
+        tiers: [{ upToCents: null, annualRate: "0.030000" }],
+        taxRate: "0.20",
+        basis: 365,
+        balances: [100_000n],
+        grossCents: 8n,
+      }),
+    ).toBe("auto-interest 3%/y (net 2.4%, -20% tax) on 1000.00");
+  });
+
+  it("takes the tax rate from the rule, never 26% by habit", () => {
+    expect(
+      settlementNote({ tiers: flat, taxRate: "0.125", basis: 365, balances: [100_000n], grossCents: 6n }),
+    ).toContain("(net 1.96875%, -12.5% tax)");
+  });
+
+  /**
+   * With tiers there is no single rate the rule promises, so printing one would be a lie: the note
+   * says the rate the period actually earned, and marks it as such.
+   */
+  it("gives the effective rate of the period, marked, when the rule has more than one tier", () => {
+    // 200.000,00 for a year at 2% on the first 100.000,00 and 1% above it: 3.000,00 gross → 1,5%.
+    expect(
+      settlementNote({
+        tiers: [
+          { upToCents: 10_000_000n, annualRate: "0.02" },
+          { upToCents: null, annualRate: "0.01" },
+        ],
+        taxRate: "0.26",
+        basis: 365,
+        balances: Array.from({ length: 365 }, () => 20_000_000n),
+        grossCents: 300_000n,
+      }),
+    ).toBe("auto-interest ≈1.5%/y (net 1.11%, -26% tax) on 200000.00");
+  });
+
+  it("says nothing about tax when none is withheld: the net would be the rate again", () => {
+    expect(
+      settlementNote({ tiers: flat, taxRate: "0", basis: 365, balances: [1_000_000n], grossCents: 3_100n }),
+    ).toBe("auto-interest 2.25%/y on 10000.00");
+  });
+
+  it("drops the balance when no day accrued, and the rate too when it cannot be worked out", () => {
+    expect(settlementNote({ tiers: flat, taxRate: "0.26", basis: 365, balances: [], grossCents: 0n })).toBe(
+      "auto-interest 2.25%/y (net 1.665%, -26% tax)",
+    );
+    expect(
+      settlementNote({
+        tiers: [
+          { upToCents: 10_000n, annualRate: "0.02" },
+          { upToCents: null, annualRate: "0.01" },
+        ],
+        taxRate: "0.26",
+        basis: 365,
+        balances: [],
+        grossCents: 0n,
+      }),
+    ).toBe("auto-interest (-26% tax)");
+  });
+
+  it("keeps a long effective rate readable, at four decimals", () => {
+    const note = settlementNote({
+      tiers: [
+        { upToCents: 10_000n, annualRate: "0.02" },
+        { upToCents: null, annualRate: "0.01" },
+      ],
+      taxRate: "0.26",
+      basis: 365,
+      balances: [123_456n],
+      grossCents: 7n,
+    });
+    expect(note).toMatch(/^auto-interest ≈\d+(\.\d{1,4})?%\/y /);
   });
 });

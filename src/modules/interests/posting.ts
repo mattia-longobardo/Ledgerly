@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { getAccount } from "@/modules/accounts/queries";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
@@ -13,10 +13,9 @@ import {
   readCredentials,
 } from "@/platform/integrations/service";
 import { createWalletClient, type WalletClient } from "@/platform/integrations/wallet/client";
-import { centsToDecimal } from "@/platform/money";
-import { CATEGORY_NOT_LINKED, type PostingState } from "./rules";
-import { interestEntries, interestRules } from "./schema";
-import { InterestError } from "./service";
+import { CATEGORY_NOT_LINKED, type PostingState, settlementNote } from "./rules";
+import { interestAccruals, interestEntries, interestRules } from "./schema";
+import { InterestError, tiersOf } from "./service";
 
 /** The part of the Wallet client posting needs; a test hands in a fake. */
 export type PostingClient = Pick<WalletClient, "recordsWithNote" | "createRecord">;
@@ -69,6 +68,37 @@ async function setPosting(
     .update(interestEntries)
     .set({ posting, postingError: error, postedAt: posting === "posted" ? new Date() : null })
     .where(and(eq(interestEntries.id, entryId), userScoped(ctx).owns(interestEntries)));
+}
+
+/**
+ * What the published record says about itself. The sentence is `settlementNote`'s; the rest is
+ * fetching what it needs — the rule's tiers, and the balance of every day this settlement actually
+ * accrued on. Reads only, outside any transaction (spec §4.3).
+ */
+async function noteFor(
+  ctx: Pick<Ctx, "userId">,
+  rule: typeof interestRules.$inferSelect,
+  entry: typeof interestEntries.$inferSelect,
+): Promise<string> {
+  const tiers = (await tiersOf(ctx, [rule.id])).get(rule.id) ?? [];
+  const days = await getDb()
+    .select({ balanceCents: interestAccruals.balanceCents })
+    .from(interestAccruals)
+    .where(
+      and(
+        eq(interestAccruals.entryId, entry.id),
+        userScoped(ctx).owns(interestAccruals),
+        eq(interestAccruals.status, "accrued"),
+      ),
+    )
+    .orderBy(asc(interestAccruals.on));
+  return settlementNote({
+    tiers,
+    taxRate: rule.taxRate,
+    basis: rule.dayBasis === "360" ? 360 : 365,
+    balances: days.flatMap((day) => (day.balanceCents === null ? [] : [day.balanceCents])),
+    grossCents: entry.grossCents,
+  });
 }
 
 /**
@@ -148,7 +178,7 @@ export async function postEntry(
         accountId: providerId,
         amountCents: entry.netCents,
         on: entry.settleOn,
-        note: `${marker} · ${entry.periodFrom}…${entry.periodTo} · net ${centsToDecimal(entry.netCents)}`,
+        note: `${marker} · ${await noteFor(ctx, rule, entry)}`,
         categoryId: category,
       });
       recordId = created.id;

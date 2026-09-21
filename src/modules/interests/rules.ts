@@ -1,5 +1,5 @@
 import { addDays, type CivilDate, lastDayOfMonth, monthKey } from "@/platform/dates";
-import type { Cents } from "@/platform/money";
+import { type Cents, centsToDecimal } from "@/platform/money";
 
 export const DAY_BASES = ["365", "360"] as const;
 export const SETTLEMENTS = ["daily", "monthly", "quarterly", "annual"] as const;
@@ -334,4 +334,87 @@ export function assignPayments(
     );
   }
   return result;
+}
+
+// ——— The note a published settlement carries (spec §7.6, §9.1) ———————————————————————————————
+
+/** A fixed value as a decimal string with its useless zeros gone: `2.250000…` reads `2.25`. */
+function trimmed(value: Fixed, maxDecimals = DIGITS): string {
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  const unit = 10n ** BigInt(DIGITS - maxDecimals);
+  // Half-up at `maxDecimals`, then split; `unit` is 1 when nothing is being rounded away.
+  const rounded = unit === 1n ? abs : (abs + unit / 2n) / unit;
+  const scale = 10n ** BigInt(maxDecimals);
+  const fraction = (rounded % scale).toString().padStart(maxDecimals, "0").replace(/0+$/, "");
+  return `${negative ? "-" : ""}${rounded / scale}${fraction === "" ? "" : `.${fraction}`}`;
+}
+
+/** A rate as a percentage: the fraction times a hundred. */
+const asPercent = (rate: Fixed, maxDecimals?: number) => trimmed(rate * 100n, maxDecimals);
+
+export interface SettlementNoteInput {
+  /** The rule's tiers, in order. One tier is one rate the rule promises; several are not. */
+  tiers: readonly Tier[];
+  /** The rule's tax rate as its column stores it ("0.26"). */
+  taxRate: string;
+  /** 365 or 360, the rule's day basis. */
+  basis: number;
+  /** The balance of every day that actually accrued. A skipped day is not in here. */
+  balances: readonly Cents[];
+  /** What the settlement came to before tax. */
+  grossCents: Cents;
+}
+
+/**
+ * What a settlement says about itself on the record published to Wallet (owner, 2026-09-21):
+ *
+ *     auto-interest 2.25%/y (net 1.665%, -26% tax) on 11713.29
+ *
+ * The three numbers are not decoration — together they let a reader check the arithmetic, because
+ * the balance printed is the **average of the days that accrued** and gross ≈ balance × rate ×
+ * days ÷ basis holds against it. A day that was skipped (no balance, or a negative one) is not in
+ * that average: counting it would make the average smaller and the sum stop adding up.
+ *
+ * With **one tier** the rate is the one the rule promises, printed exactly. With **several** no
+ * single rate is the rule's, so printing one would be a lie: the note gives the rate the period
+ * actually earned, rounded to four decimals and marked `≈`. Where there is nothing to work it out
+ * from, the clause is left out rather than guessed.
+ *
+ * Plain decimals, no thousands separator, no currency: this is read by whoever opens the record in
+ * Wallet, and by the next version of this code, not by a screen with a locale.
+ */
+export function settlementNote(input: SettlementNoteInput): string {
+  const taxFixed = fixedFromDecimal(input.taxRate);
+  const afterTax = FIXED_SCALE - taxFixed;
+  const total = input.balances.reduce<Cents>((sum, balance) => sum + balance, 0n);
+
+  let rate: Fixed | null = null;
+  let approximate = false;
+  if (input.tiers.length === 1) {
+    rate = fixedFromDecimal(input.tiers[0].annualRate);
+  } else if (total > 0n) {
+    // gross = Σ balance × rate ÷ basis, so the rate the period earned is gross × basis ÷ Σ balance.
+    rate = (input.grossCents * BigInt(input.basis) * FIXED_SCALE) / total;
+    approximate = true;
+  }
+
+  const parts: string[] = ["auto-interest"];
+  // With no tax withheld the net is the rate again and the tax is nothing: saying either would be
+  // noise, so the clause is left out entirely.
+  const taxed = taxFixed !== 0n;
+  if (rate !== null) {
+    const decimals = approximate ? 4 : undefined;
+    const net = (rate * afterTax) / FIXED_SCALE;
+    parts.push(`${approximate ? "≈" : ""}${asPercent(rate, decimals)}%/y`);
+    if (taxed) parts.push(`(net ${asPercent(net, decimals)}%, -${asPercent(taxFixed)}% tax)`);
+  } else if (taxed) {
+    parts.push(`(-${asPercent(taxFixed)}% tax)`);
+  }
+  if (input.balances.length > 0) {
+    const days = BigInt(input.balances.length);
+    // Half-up, so an average of 100,505 reads 100,51 and not 100,50.
+    parts.push(`on ${centsToDecimal((total * 2n + days) / (days * 2n))}`);
+  }
+  return parts.join(" ");
 }
