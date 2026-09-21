@@ -44,6 +44,8 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
   const empty = newDraft(todayOn, defaultTolerance);
   const rows = view.rows.map((row) => presentRow(row, t, format));
   const inactive = view.inactive.map((row) => presentRow(row, t, format));
+  const paused = inactive.filter((row) => row.draft.state === "paused");
+  const cancelled = inactive.filter((row) => row.draft.state === "cancelled");
 
   const suggest = (
     <SuggestionsButton
@@ -173,13 +175,19 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
               }}
             />
           </Card>
-          {inactive.length > 0 && (
-            <InactiveSubscriptions
-              rows={inactive}
-              options={options}
-              title={t("inactive.title", { count: inactive.length })}
-            />
-          )}
+          {/* Two sections, not one list: a paused plan is waiting to come back, a cancelled one is
+              over — and only the second offers to be thrown away (owner, 2026-09-21). */}
+          <InactiveSubscriptions
+            rows={paused}
+            options={options}
+            title={t("inactive.pausedTitle", { count: paused.length })}
+          />
+          <InactiveSubscriptions
+            rows={cancelled}
+            options={options}
+            title={t("inactive.cancelledTitle", { count: cancelled.length })}
+            deletable
+          />
         </div>
 
         {/* Beside the table only past the wide threshold; below it they share a row under it. */}

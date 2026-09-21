@@ -1689,7 +1689,15 @@
     "inactive": {
       "title": "{count, plural, one {# in pausa o annullato} other {# in pausa o annullati}}",
       "paused": "In pausa",
-      "cancelled": "Annullato"
+      "cancelled": "Annullato",
+      "pausedTitle": "{count, plural, one {# in pausa} other {# in pausa}}",
+      "cancelledTitle": "{count, plural, one {# annullato} other {# annullati}}",
+      "delete": "Elimina",
+      "deleteTitle": "Eliminare questo abbonamento?",
+      "deleteWarning": "{name} e i pagamenti che aveva verificato spariscono per sempre. Non si può tornare indietro.",
+      "deleteDetail": "Le transazioni non si toccano: un abbonamento è un piano steso sopra di loro, mai il loro proprietario.",
+      "deletedToast": "{name} eliminato",
+      "cancelDelete": "Tienilo"
     },
     "alerts": {
       "not_found": "nessuna spesa con \"{match}\" trovata su {account} in {period} ({price} attesi).",
@@ -1766,7 +1774,8 @@
       "not_found": "Quell'abbonamento non esiste più.",
       "invalid_account": "Scegli uno dei tuoi conti aperti.",
       "invalid_category": "Scegli una delle tue categorie di spesa.",
-      "failed": "Salvataggio non riuscito. Riprova."
+      "failed": "Salvataggio non riuscito. Riprova.",
+      "not_cancelled": "Non è annullato: prima annullalo, poi si può eliminare."
     },
     "empty": {
       "title": "Nessun abbonamento",

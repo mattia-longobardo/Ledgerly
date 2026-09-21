@@ -88,7 +88,21 @@ test("subscriptions are checked against the movements, projected and suggested",
       .getByRole("button", { name: "Cancel subscription" })
       .click();
     await expect(page.getByTestId("subscription-row")).toHaveCount(3);
-    await expect(page.getByText("1 paused or cancelled")).toBeVisible();
+    // Paused and cancelled are two folded sections now, not one list (F8.1).
+    await expect(page.getByText("1 cancelled")).toBeVisible();
+  });
+
+  await test.step("a cancelled subscription can be thrown away for good", async () => {
+    await page.getByText("1 cancelled").click();
+    const cancelled = page.getByTestId("inactive-row").filter({ hasText: "FitActive" });
+    await expect(cancelled).toBeVisible();
+    await cancelled.getByRole("button", { name: "Delete" }).click();
+    const confirm = page.getByRole("dialog", { name: "Delete this subscription?" });
+    await expect(confirm).toContainText("cannot be undone");
+    await confirm.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText("1 cancelled")).toHaveCount(0);
+    // The movements it was laid over are still there: only the plan went.
+    await expect(page.getByTestId("subscription-row")).toHaveCount(3);
   });
 
   await test.step("the projection reads a month or a year of charges", async () => {
