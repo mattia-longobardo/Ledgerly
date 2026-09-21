@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { type DragEvent, type FormEvent, useId, useState, useTransition } from "react";
 import { Badge } from "@/ui/badge";
 import { Button, IconButton } from "@/ui/button";
-import { Card } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
 import { Input, Select } from "@/ui/input";
@@ -852,16 +851,6 @@ export function ReceivesPayrollButton({
       </Button>
       <ErrorLine error={error} />
     </span>
-  );
-}
-
-/** A card the pension settings reuse for its short forms. */
-export function FormCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {children}
-    </Card>
   );
 }
 

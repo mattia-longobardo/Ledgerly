@@ -333,31 +333,5 @@ export interface PensionSummary {
   valueOn: CivilDate | null;
 }
 
-export async function pensionSummary(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  fundId: string,
-  now: Date = new Date(),
-): Promise<PensionSummary> {
-  const detail = await pensionDetail(ctx, fundId, now);
-  const sum = (pick: (operation: Operation) => Cents) =>
-    detail.operations
-      .filter((operation) => operation.classification !== "switch")
-      .reduce<Cents>((total, operation) => total + pick(operation), 0n);
-  return {
-    fundId,
-    workerCents: sum((operation) => operation.workerCents),
-    employerCents: sum((operation) => operation.employerCents),
-    tfrCents: sum((operation) => operation.tfrCents),
-    paidInCents: detail.metrics.paidInCents,
-    pendingCents: detail.metrics.pendingCents,
-    valueOn: detail.metrics.value?.on ?? null,
-  };
-}
-
-/** The quarters of the design's "Employer transfers" card: newest first. */
-export function transferRows(quarters: readonly QuarterStatus[]): QuarterStatus[] {
-  return [...quarters].sort((a, b) => b.year - a.year || b.quarter - a.quarter);
-}
-
 export { DEDUCTIBILITY_LIMITS, lastDayOfMonth };
 export type { Quarter };

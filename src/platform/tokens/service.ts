@@ -8,7 +8,6 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { numberStyle } from "@/platform/format";
 import {
-  allows,
   type ExpiryChoice,
   expiryFrom,
   MAX_TOKEN_NAME,
@@ -215,11 +214,6 @@ export async function touchToken(id: string, now: Date = new Date()): Promise<vo
         or(isNull(personalAccessTokens.lastUsedAt), lt(personalAccessTokens.lastUsedAt, cutoff)),
       ),
     );
-}
-
-/** Whether an authenticated token carries the scope a route needs (plan F8 §3.4.8). */
-export function tokenAllows(identity: TokenIdentity, needed: Scope): boolean {
-  return allows(identity.scopes, needed);
 }
 
 /** Drops tokens revoked or expired long ago, for the daily housekeeping job. */

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, eq, gt, isNull, max, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, isNull, max, sql } from "drizzle-orm";
 import { z } from "zod";
 import { hasPasswordAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
@@ -305,24 +305,4 @@ export async function removePerson(ctx: Pick<Ctx, "role" | "userId">, userId: st
       console.error("[users] could not clear storage of a removed user", redactForLog(error));
     }
   }
-}
-
-/** Whether anyone else could still administer the instance, for the confirmation dialogs. */
-export async function otherAdminExists(ctx: Pick<Ctx, "role" | "userId">): Promise<boolean> {
-  requireAdminCtx(ctx);
-  const [row] = await getDb()
-    .select({ n: count() })
-    .from(users)
-    .where(and(eq(users.role, "admin"), ne(users.id, ctx.userId)));
-  return (row?.n ?? 0) > 0;
-}
-
-/** Invitations that have not been accepted and have not run out, for the page's counters. */
-export async function pendingInvitationCount(ctx: Pick<Ctx, "role">): Promise<number> {
-  requireAdminCtx(ctx);
-  const [row] = await getDb()
-    .select({ n: count() })
-    .from(invitations)
-    .where(and(isNull(invitations.acceptedAt), gt(invitations.expiresAt, new Date())));
-  return row?.n ?? 0;
 }
