@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 import { and, asc, eq, inArray, max, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
@@ -12,7 +13,7 @@ import {
   today,
 } from "@/platform/dates";
 import { getDb, type Tx } from "@/platform/db/client";
-import { FOREIGN_KEY_VIOLATION, hasPgError } from "@/platform/db/errors";
+import { FOREIGN_KEY_VIOLATION, hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { PROVIDERS } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
@@ -26,6 +27,7 @@ import {
   type BalanceEntryInput,
   balanceEntrySchema,
   canDelete,
+  CONNECTION_CHANNELS,
   dailySeries,
   DEFAULT_STALE_AFTER_HOURS,
   deriveMonthEnds,
@@ -36,10 +38,11 @@ import {
   settingsForSynced,
 } from "./rules";
 import { type Account, type BalanceEntry, balancesOn, listAccounts, observedDays } from "./queries";
-import { accounts, balanceEntries, snapshotRuns } from "./schema";
+import { accountConnections, accounts, balanceEntries, snapshotRuns } from "./schema";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
-export type AccountErrorCode = "not_found" | "future_date" | "synced_locked" | "duplicate_name";
+export type AccountErrorCode =
+  "not_found" | "future_date" | "synced_locked" | "duplicate_name" | "duplicate_connection" | "invalid";
 
 export class AccountError extends Error {
   constructor(readonly code: AccountErrorCode) {
@@ -651,4 +654,115 @@ export async function applyProviderAccounts(
       }
     }
   });
+}
+
+// ——— What hangs off an account (spec §7.1; owner, 2026-09-21) ———————————————————————————————————
+
+export type AccountConnection = typeof accountConnections.$inferSelect;
+
+const connectionSchema = z.object({
+  channel: z.enum(CONNECTION_CHANNELS),
+  name: z.string().trim().min(1).max(60),
+  note: z
+    .string()
+    .trim()
+    .max(120)
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .default(null),
+});
+export type ConnectionInput = z.input<typeof connectionSchema>;
+
+/** The unique key is case-insensitive, so "Paypal" twice on one channel is one connection. */
+function connectionWrite<T>(write: Promise<T>): Promise<T> {
+  return write.catch((error: unknown) => {
+    if (hasPgError(error, UNIQUE_VIOLATION, "account_connections_uq")) {
+      throw new AccountError("duplicate_connection");
+    }
+    throw error;
+  });
+}
+
+/**
+ * Everything hanging off one account, the IBAN's before the card's and alphabetical inside each:
+ * the order a person reads a list in, and one a second query cannot shuffle.
+ */
+export async function connectionsOf(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<AccountConnection[]> {
+  return getDb()
+    .select()
+    .from(accountConnections)
+    .where(and(eq(accountConnections.accountId, accountId), userScoped(ctx).owns(accountConnections)))
+    .orderBy(
+      asc(accountConnections.channel),
+      asc(sql`lower(${accountConnections.name})`),
+      asc(accountConnections.id),
+    );
+}
+
+/** The same, for several accounts at once: the list page draws them all and asks once. */
+export async function connectionsByAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, AccountConnection[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select()
+    .from(accountConnections)
+    .where(
+      and(userScoped(ctx).owns(accountConnections), inArray(accountConnections.accountId, [...accountIds])),
+    )
+    .orderBy(
+      asc(accountConnections.channel),
+      asc(sql`lower(${accountConnections.name})`),
+      asc(accountConnections.id),
+    );
+  const byAccount = new Map<string, AccountConnection[]>();
+  for (const row of rows) byAccount.set(row.accountId, [...(byAccount.get(row.accountId) ?? []), row]);
+  return byAccount;
+}
+
+export async function addConnection(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  input: ConnectionInput,
+): Promise<AccountConnection> {
+  await requireAccount(ctx, accountId);
+  const parsed = connectionSchema.safeParse(input);
+  if (!parsed.success) throw new AccountError("invalid");
+  const [row] = await connectionWrite(
+    getDb()
+      .insert(accountConnections)
+      .values(userScoped(ctx).stamp({ accountId, ...parsed.data }))
+      .returning(),
+  );
+  return row;
+}
+
+export async function updateConnection(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  input: ConnectionInput,
+): Promise<AccountConnection> {
+  const parsed = connectionSchema.safeParse(input);
+  if (!parsed.success) throw new AccountError("invalid");
+  const [row] = await connectionWrite(
+    getDb()
+      .update(accountConnections)
+      .set(parsed.data)
+      .where(and(eq(accountConnections.id, id), userScoped(ctx).owns(accountConnections)))
+      .returning(),
+  );
+  if (!row) throw new AccountError("not_found");
+  return row;
+}
+
+export async function removeConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
+  const removed = await getDb()
+    .delete(accountConnections)
+    .where(and(eq(accountConnections.id, id), userScoped(ctx).owns(accountConnections)))
+    .returning({ id: accountConnections.id });
+  if (removed.length === 0) throw new AccountError("not_found");
 }

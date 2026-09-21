@@ -1410,6 +1410,35 @@
     "estimated": {
       "short": "stimato",
       "note": "I mesi tratteggiati sono ricostruiti dai movimenti sincronizzati, prima del primo saldo letto da Wallet."
+    },
+    "connections": {
+      "title": "Collegamenti",
+      "description": "Che cosa si appoggia a questo conto: le domiciliazioni e i bonifici ricorrenti sul suo IBAN, e quello che viene addebitato sulla sua carta. Nessuno te lo può dire al posto tuo, quindi si scrive a mano e non si indovina.",
+      "channels": {
+        "iban": "IBAN",
+        "card": "Carta"
+      },
+      "add": "Aggiungi",
+      "addTitle": "Aggiungi un collegamento",
+      "editTitle": "Modifica il collegamento",
+      "edit": "Modifica {name}",
+      "remove": "Rimuovi",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "name": "Nome",
+      "channel": "Arriva al conto tramite",
+      "note": "Nota",
+      "noteHint": "Facoltativa: a che serve, quanto, quando scade.",
+      "empty": "Ancora niente.",
+      "added": "{name} aggiunto",
+      "saved": "{name} salvato",
+      "removed": "{name} rimosso",
+      "errors": {
+        "duplicate": "Questo nome c'è già su questo canale.",
+        "invalid": "Il nome è obbligatorio, fino a {max} caratteri.",
+        "notFound": "Questo collegamento non c'è più.",
+        "failed": "Non è stato salvato. Riprova."
+      }
     }
   },
   "budgets": {

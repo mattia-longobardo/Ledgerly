@@ -35,7 +35,10 @@ export function SettingsSection({
   children: ReactNode;
 }) {
   return (
-    <section className="@container min-w-0">
+    // `aria-label`: a <section> is a landmark only once it has a name, and a named one is how
+    // somebody on a screen reader jumps between the parts of a settings page instead of walking
+    // the whole of it. The name is the heading beside it, so nothing new is invented.
+    <section aria-label={title} className="@container min-w-0">
       <div className="grid grid-cols-1 items-start gap-3 @2xl:grid-cols-[240px_minmax(0,1fr)] @2xl:gap-6">
         <div className="flex flex-col gap-2">
           <h2 className="text-lg font-semibold">{title}</h2>

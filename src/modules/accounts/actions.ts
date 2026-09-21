@@ -11,6 +11,8 @@ import { linkOwnTransfers } from "@/modules/transactions/service";
 import { parseAmount } from "./rules";
 import {
   AccountError,
+  addConnection,
+  type ConnectionInput,
   createAccount,
   deleteBalanceEntry,
   removeAccount,
@@ -18,8 +20,10 @@ import {
   runSnapshot,
   saveBalanceEntry,
   snapshotMonthFor,
+  removeConnection,
   updateAccountSettings,
   updateBalanceEntry,
+  updateConnection,
 } from "./service";
 
 /**
@@ -216,6 +220,51 @@ export async function runSnapshotNowAction(month?: string): Promise<ActionResult
     revalidatePath("/settings/data");
     revalidatePath("/accounts");
     revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+// ——— What hangs off an account (owner, 2026-09-21) ———————————————————————————————————————————
+
+/** Both tabs of the account's page show them, and Overview shows the same list read-only. */
+function revalidateConnections(accountId: string): void {
+  revalidatePath(`/accounts/${accountId}`);
+  revalidatePath("/accounts");
+}
+
+export async function addConnectionAction(accountId: string, input: ConnectionInput): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await addConnection(ctx, accountId, input);
+    revalidateConnections(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function updateConnectionAction(
+  accountId: string,
+  id: string,
+  input: ConnectionInput,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await updateConnection(ctx, id, input);
+    revalidateConnections(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function removeConnectionAction(accountId: string, id: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await removeConnection(ctx, id);
+    revalidateConnections(accountId);
     return { ok: true };
   } catch (error) {
     return failed(error);
