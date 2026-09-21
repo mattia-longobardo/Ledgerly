@@ -141,6 +141,13 @@
       "when": 1789972414096,
       "tag": "0019_clammy_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789977804394,
+      "tag": "0020_personal_access_tokens",
+      "breakpoints": true
     }
   ]
 }

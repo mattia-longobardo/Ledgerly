@@ -409,6 +409,58 @@
       "ssoDetail": "Your name and email come from Authentik.",
       "manage": "Manage in Authentik"
     },
+    "tokens": {
+      "title": "Access tokens",
+      "description": "Personal access tokens for the read-only API used by Home Assistant and scripts. Tokens are hashed at rest; the full value is shown once.",
+      "columns": {
+        "name": "Name",
+        "token": "Token",
+        "scopes": "Scopes",
+        "expires": "Expires",
+        "lastUsed": "Last used",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "scopes": {
+        "read": "read",
+        "write": "write",
+        "imports": "imports"
+      },
+      "scopeHints": {
+        "read": "accounts, balances, transactions and the summary",
+        "write": "record a balance reading",
+        "imports": "upload payslips and Cometa documents"
+      },
+      "states": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "expiry": {
+        "30": "30 days",
+        "90": "90 days",
+        "365": "1 year",
+        "never": "No expiry"
+      },
+      "empty": "No tokens yet.",
+      "new": "New token",
+      "create": "Create token",
+      "cancel": "Cancel",
+      "nameHint": "What it is for, so you know which one to revoke later.",
+      "mintedTitle": "Your new token",
+      "mintedWarning": "Copy it now: this is the only time it is shown, and it cannot be recovered.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy: select the value and copy it by hand.",
+      "done": "Done",
+      "revoke": "Revoke",
+      "revoked": "{name} revoked",
+      "errors": {
+        "invalid": "Give it a name and at least one scope.",
+        "not_found": "That token is already gone.",
+        "failed": "It could not be revoked."
+      }
+    },
     "password": {
       "current": "Current password",
       "new": "New password",
