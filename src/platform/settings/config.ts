@@ -22,6 +22,10 @@ export const OIDC_PROVIDER = "oidc.provider";
 /** The last "Test connection" verdict, kept apart so recording it does not restart Better Auth. */
 export const OIDC_PROBE = "oidc.probe";
 export const SMTP_TRANSPORT = "smtp.transport";
+/** When "Export all data" last ran, and how much it wrote (design row 891). */
+export const EXPORT_LAST = "export.last";
+/** The last database backup: its key in S3, its size and when it was taken (design row 887). */
+export const BACKUP_LAST = "backup.last";
 
 let ring: KeyRing | undefined;
 

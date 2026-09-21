@@ -621,6 +621,39 @@
         "forbidden": "Only admins can change this."
       }
     },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Database backups, retention and version.",
+      "lastBackup": "Last backup",
+      "backupDetail": "{at} · {size}",
+      "schedule": "Backup schedule",
+      "scheduleDetail": "Daily 12:00 · keep {kept}",
+      "retention": "Retention",
+      "retentionDetail": "Documents 10 years · job and sync logs 90 days · transactions unlimited",
+      "version": "Version",
+      "backupNow": "Back up now",
+      "backupRunning": "Backing up…",
+      "backupDone": "Backup written.",
+      "exportRunning": "Starting…",
+      "lastExport": "Last full export",
+      "exportDetail": "{at} · {users} users · {size}",
+      "never": "Never",
+      "exportAll": "Export all data",
+      "exportStarted": "Export started: the job log will say how it went.",
+      "errors": {
+        "failed": "It could not be started.",
+        "dump_failed": "pg_dump did not finish: check the server log.",
+        "too_large": "The dump is larger than this container may hold in memory.",
+        "upload_failed": "The dump was taken but could not be stored.",
+        "forbidden": "Only admins can do this."
+      }
+    },
+    "exportMine": {
+      "title": "Your data",
+      "description": "Everything you own, as one ZIP: every table as a CSV, the same rows as one JSON, and your original documents.",
+      "download": "Export my data",
+      "hint": "The download starts straight away and can take a while with many documents."
+    },
     "oidc": {
       "title": "Authentik (OIDC)",
       "description": "Single sign-on provider. Changing the issuer signs every user out.",

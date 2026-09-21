@@ -56,6 +56,8 @@ describe("housekeepingJob", () => {
     const detail = await housekeepingJob.run();
     expect(detail).toEqual({
       jobRunsDeleted: 2,
+      tokensDeleted: 0,
+      backupsDeleted: 0,
       syncRunsDeleted: 0,
       invitationsDeleted: 2,
       notificationsDeleted: 0,

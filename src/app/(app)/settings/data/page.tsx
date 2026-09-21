@@ -7,6 +7,7 @@ import { REPLY_TEAMSYSTEM_CODES } from "@/modules/payroll/rules";
 import { requireSession } from "@/platform/auth/session";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
+import { buttonClassName } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TaxonomyPanels } from "./categories/panels";
@@ -20,6 +21,7 @@ export default async function SettingsDataPage() {
   const ctx = await requireSession();
   const t = await getTranslations("settings.snapshots");
   const codes = await getTranslations("settings.codeMap");
+  const mine = await getTranslations("settings.exportMine");
   const [runs, codeMap] = await Promise.all([listSnapshotRuns(ctx), codeMapView(ctx)]);
   const seeded = new Set(REPLY_TEAMSYSTEM_CODES.map((entry) => entry.code));
 
@@ -67,6 +69,17 @@ export default async function SettingsDataPage() {
       </SettingsSection>
 
       <TaxonomyPanels />
+
+      <SettingsSection title={mine("title")} description={mine("description")}>
+        {/* A plain link and not a button: the response *is* the file, so the browser downloads it
+            without a round trip through a Server Action that would have to buffer it first. */}
+        <div className="flex flex-col gap-2">
+          <a href="/settings/data/export.zip" download className={buttonClassName("secondary", "md")}>
+            {mine("download")}
+          </a>
+          <p className="text-sm text-muted">{mine("hint")}</p>
+        </div>
+      </SettingsSection>
 
       <SettingsSection title={codes("title")} description={codes("description")} padded={false}>
         <CodeMapCard
