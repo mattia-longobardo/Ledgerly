@@ -646,12 +646,6 @@ export async function hideTransaction(ctx: Pick<Ctx, "userId">, id: string): Pro
   await hideTransactions(ctx, [transactionId]);
 }
 
-export async function restoreTransaction(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
-  const transactionId = parseId(id);
-  await requireTransaction(ctx, transactionId);
-  await restoreTransactions(ctx, [transactionId]);
-}
-
 /** "Hide" over a selection; already hidden rows keep the moment they were hidden. */
 export async function hideTransactions(
   ctx: Pick<Ctx, "userId">,

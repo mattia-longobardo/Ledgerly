@@ -1,5 +1,3 @@
-import { formatDate, formatMoney, type NumberFormat, NULL_DISPLAY, type UiLocale } from "@/platform/format";
-import type { Cents } from "@/platform/money";
 import type { Status } from "../pension/reconcile";
 
 /** How each reconciliation state reads (design, GC §11): a colour never carries it alone. */
@@ -19,16 +17,6 @@ export const STATUS_TONE: Record<Status, "pos" | "neg" | "warn" | "accent" | "ne
 /** "II 2026" — the quarter as the fund's own documents write it. */
 export function quarterLabel(year: number, quarter: number): string {
   return `${["I", "II", "III", "IV"][quarter - 1]} ${year}`;
-}
-
-/** An amount, or "—" with no pretence that an unknown is a zero (spec §8.4.7). */
-export function amountOrDash(cents: Cents | null, format: NumberFormat): string {
-  return cents === null ? NULL_DISPLAY : formatMoney(cents, format);
-}
-
-/** A date as the person reads dates, or "—". */
-export function dateOrDash(on: string | null, locale: UiLocale): string {
-  return on === null ? NULL_DISPLAY : formatDate(on, "long", locale);
 }
 
 /** The two Cometa documents the fund is fed from (spec §9.3, GC §8.4): nothing else is imported. */

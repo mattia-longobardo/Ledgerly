@@ -425,22 +425,3 @@ export async function decideEvidence(
     .returning();
   return row ?? null;
 }
-
-/** Documents waiting for a person, for the "N to review" pill (spec §7.8). */
-export async function countAwaiting(
-  ctx: Pick<Ctx, "userId">,
-  kinds: readonly DocumentKind[],
-  states: readonly DocumentState[],
-): Promise<number> {
-  const [row] = await getDb()
-    .select({ count: sql<number>`count(*)::int` })
-    .from(documents)
-    .where(
-      and(
-        userScoped(ctx).owns(documents),
-        inArray(documents.kind, [...kinds]),
-        inArray(documents.state, [...states]),
-      ),
-    );
-  return row?.count ?? 0;
-}

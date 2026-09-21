@@ -1,5 +1,5 @@
 // The synthetic twins (spec §11) through the same code the owner's payslips go through: they keep
-// the parser tested once `Payroll/` is deleted.
+// the parser tested now that `Payroll/` is gone (F9 P7).
 import { beforeAll, describe, expect, it } from "vitest";
 import { readPdfText } from "@/modules/imports/pdf/text";
 import {

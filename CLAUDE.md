@@ -1,8 +1,10 @@
 # Repository conventions
 
 - The design and every binding decision: `docs/specs/2026-09-13-dev-0.1-design.md`. Phase plans: `docs/plans/`.
-- `Fondo Cometa/`, `Payroll/` and `UI Recreation and branding decisions/` are the owner's local reference
-  material: read-only, never committed, deleted at the end of development.
+- The owner's reference folders — `Fondo Cometa/`, `Payroll/`, `UI Recreation and branding
+decisions/` — **were deleted in F9 P7**, as spec §13 requires. They are not coming back: the
+  parsers are covered by the synthetic twins in `tests/fixtures/`, which exist for exactly that
+  (D14). Do not write code, tests or documentation that reads from them.
 - Layout: `src/app` routes, `src/modules/<name>` domain modules, `src/platform` shared services, `src/ui` design system.
 - Money is `bigint` cents, unknown is `null`, dates go through `src/platform/dates.ts`, services take `(ctx, input)`.
 - Before committing: `npm run format && npm run lint && npm run typecheck && npm run format:check && npm test`.

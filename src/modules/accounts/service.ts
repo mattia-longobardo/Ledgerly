@@ -35,15 +35,8 @@ import {
   reconcileProviderAccounts,
   settingsForSynced,
 } from "./rules";
-import {
-  type Account,
-  type AccountGroup,
-  type BalanceEntry,
-  balancesOn,
-  listAccounts,
-  observedDays,
-} from "./queries";
-import { accountGroups, accounts, balanceEntries, snapshotRuns } from "./schema";
+import { type Account, type BalanceEntry, balancesOn, listAccounts, observedDays } from "./queries";
+import { accounts, balanceEntries, snapshotRuns } from "./schema";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type AccountErrorCode = "not_found" | "future_date" | "synced_locked" | "duplicate_name";
@@ -70,14 +63,6 @@ async function nextSortOrder(ctx: Pick<Ctx, "userId">): Promise<number> {
     .from(accounts)
     .where(userScoped(ctx).owns(accounts));
   return (row?.highest ?? -1) + 1;
-}
-
-export async function listGroups(ctx: Pick<Ctx, "userId">): Promise<AccountGroup[]> {
-  return getDb()
-    .select()
-    .from(accountGroups)
-    .where(userScoped(ctx).owns(accountGroups))
-    .orderBy(asc(accountGroups.sortOrder), asc(accountGroups.id));
 }
 
 /**
@@ -387,19 +372,6 @@ export async function saveImportBalance(
     })
     .returning();
   return row;
-}
-
-/** Removes an `import` balance (its statement was taken back), inside the caller's transaction. */
-export async function deleteImportBalance(ctx: Pick<Ctx, "userId">, id: string, tx: Tx): Promise<void> {
-  await tx
-    .delete(balanceEntries)
-    .where(
-      and(
-        eq(balanceEntries.id, id),
-        eq(balanceEntries.source, "import"),
-        userScoped(ctx).owns(balanceEntries),
-      ),
-    );
 }
 
 export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, id: string): Promise<void> {

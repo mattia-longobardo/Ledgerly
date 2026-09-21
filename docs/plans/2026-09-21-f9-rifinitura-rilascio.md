@@ -496,6 +496,46 @@ giorno una cancellazione fallisse a metà nessuno se ne accorgerebbe. Una passat
 3. si controlla che non restino file inutilizzati, riferimenti a quelle cartelle o documentazione
    non allineata.
 
+### P7.1 — Fatto (2026-09-21)
+
+**1. I test sulle fixture reali, un'ultima volta.** `real-payslips.test.ts` e `real-cometa.test.ts`
+sono stati eseguiti prima di toccare qualsiasi cosa: **27 test verdi** — 12 sui dodici cedolini veri
+contro `SPECIFICA-ESTRAZIONE-PAYROLL.md`, 15 sul caso Cometa contro la guida del proprietario. I
+gemelli sintetici coprono gli stessi comportamenti: identità, caselle e coordinate, boxes IRPEF del
+mese e non i progressivi, ferie e ROL, tredicesima, tutti i controlli bloccanti, codici sconosciuti,
+colonne dell'export in qualunque ordine, trimestre diviso su due comparti, iscrizione, chiavi
+idempotenti, riepilogo di posizione, metriche e riconciliazione (11 + 12 test dedicati). **I due
+file dei dati veri sono stati cancellati**: un test che non può più girare marcisce, ed è
+esattamente per sopravvivere a questo momento che D14 ha fatto esistere i gemelli.
+
+**2. Le tre cartelle cancellate**, come §13 impone, con la conferma esplicita del proprietario:
+`Fondo Cometa/` (3 file), `Payroll/` (13 file, 2,7 MiB di buste paga vere), `UI Recreation and
+branding decisions/`. Le loro tre righe in `.gitignore` sono sparite con loro, e l'intestazione
+rimasta orfana sopra di esse pure.
+
+**3. Niente di inutilizzato, niente di disallineato.**
+
+- **19 export morti** rimossi — funzioni e costanti che nessun file del repository nominava, test e
+  script compresi: `listGroups`, `deleteImportBalance`, `pensionSummary`, `transferRows`,
+  `creditedTotal`, `FormCard`, `amountOrDash`, `dateOrDash`, `countAwaiting`, `HOURS_FIELDS`,
+  `totalHours`, `rawLinesOf`, `durationOf`, `restoreTransaction`, `otherAdminExists`,
+  `pendingInvitationCount`, `SCOPES`, `syncTrek`, `tokenAllows`. Con loro sono andati via tredici
+  import rimasti senza uso. **I 1 286 test unitari passano identici**: era davvero codice morto.
+  Fra questi i due del rilievo B1 della revisione — `tokenAllows` e `SCOPES` — che non erano un
+  buco nei permessi (`withToken` controlla lo scope in linea) ma due funzioni che nessuno chiamava.
+- **File mai importati: zero.** Gli otto che un controllo ingenuo segnala (`global.d.ts`,
+  `i18n/request.ts`, `proxy.ts`, i quattro di `test/` e i due `global-*.ts` degli e2e) sono
+  nominati dalle configurazioni, non dagli import.
+- **Riferimenti alle cartelle nei documenti vivi**: uno solo, in `CLAUDE.md`, e dice che sono state
+  cancellate e che non si deve scrivere codice che le legga. Nei **piani di fase** e nella
+  **specifica** i riferimenti restano, con una nota datata in cima alla gerarchia delle fonti: sono
+  il racconto di come 0.1 è stata scritta, e riscriverli per fingere che quelle cartelle non siano
+  mai esistite falsificherebbe il registro invece di allinearlo.
+
+**Il cancello, dopo tutto questo:** `format:check`, `lint`, `typecheck` puliti; **1 286** test
+unitari; **575** di integrazione; `db:generate` senza differenze; build e `docker compose up -d`;
+`/api/health` ok; **129** end-to-end verdi sul sito pubblicato.
+
 ## 5. Cancello
 
 `npm run format && npm run lint && npm run typecheck && npm run format:check && npm test`, poi

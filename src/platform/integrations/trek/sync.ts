@@ -420,12 +420,3 @@ export async function syncTrekNow(ctx: Ctx, options: TrekSyncOptions = {}): Prom
   if (!outcome.ran) throw new TrekBusyError();
   return outcome.value;
 }
-
-/** One named year, for a caller that knows which one it wants. */
-export function syncTrek(
-  ctx: Ctx,
-  input: { year: number } & TrekSyncOptions,
-): Promise<TrekSyncResult | null> {
-  const { year, ...options } = input;
-  return syncTrekNow(ctx, { ...options, years: [year] });
-}

@@ -1,4 +1,3 @@
-import { centsToDecimal } from "@/platform/money";
 import { type LeaveKind, leaveField } from "../fields";
 import type { PayslipType } from "../rules";
 import type { Warning } from "./checks";
@@ -86,9 +85,4 @@ function confirmedBy(
     if (difference <= 1n) return kind;
   }
   return null;
-}
-
-/** Hours summed from drafts, as a decimal string. */
-export function totalHours(events: readonly LeaveEventDraft[], kind: LeaveKind): string {
-  return centsToDecimal(events.filter((event) => event.kind === kind).reduce((sum, event) => sum + BigInt(Math.round(Number(event.hours) * 100)), 0n));
 }

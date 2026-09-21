@@ -308,13 +308,6 @@ export function accruedTotal(quarter: QuarterStatus): Cents | null {
   return sum(main.map((one) => one.accruedCents));
 }
 
-/** A quarter's credited total, the three main components. */
-export function creditedTotal(quarter: QuarterStatus): Cents | null {
-  const main = quarter.components.filter((one) => MAIN.includes(one.component));
-  if (main.every((one) => one.creditedCents === null)) return null;
-  return sum(main.map((one) => one.creditedCents));
-}
-
 /** True while nothing was credited for the quarter yet: its accrued amount is still to come. */
 export function awaitingCredit(quarter: QuarterStatus): boolean {
   return quarter.components
