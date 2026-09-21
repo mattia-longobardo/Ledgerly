@@ -31,6 +31,12 @@ export const USERS = {
   admin: { email: "admin@example.test", password: "admin-password-123", name: "Admin" },
   // F8: personal access tokens and "Export my data", which need nobody else's data.
   tokens: { email: "tokens@example.test", password: "tokens-password-123", name: "Tokens" },
+  // F9: the one user every screen is measured on (tests/e2e/a11y.spec.ts). It is seeded with
+  // something on every page — accounts, movements, budgets, pockets, subscriptions, an interest
+  // rule, a PAC, a pension fund and an applied payslip — because a layout check run against an
+  // empty state measures an empty state. The module journeys keep their own users, which start
+  // empty on purpose, so filling this one breaks none of them.
+  layout: { email: "layout@example.test", password: "layout-password-123", name: "Layout" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
   // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
   // the instance's real users too, and a spec must never touch one.
@@ -63,6 +69,8 @@ export const SESSIONS = {
   // The seed promotes this one, so Admin › Users and Admin › Server have a journey (F8).
   admin: { user: "admin", file: "admin-session.json" },
   tokens: { user: "tokens", file: "tokens-session.json" },
+  // F9: the layout and accessibility check (tests/e2e/a11y.spec.ts).
+  layout: { user: "layout", file: "layout-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;
