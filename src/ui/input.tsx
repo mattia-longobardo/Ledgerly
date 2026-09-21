@@ -93,9 +93,11 @@ export function Checkbox({
     // The whole row is the target — the box is 14 px by design, the label around it is 24 px each
     // way. `min-w-6` matters where the label carries no text, as the select-row boxes of a table
     // do: there the label is as narrow as the box, and 14 px wide is no target (plan F9 §3.4).
-    <label
-      className={cn("inline-flex min-h-6 min-w-6 items-center justify-center gap-1.5 text-sm", className)}
-    >
+    // No `justify-center`: as a flex item in a column this label is stretched to the full width of
+    // the card, and centring then pushed the labelled ones — "Include in net worth" and its
+    // neighbours — into the middle of it. The box stays at the start; the 24 px floor is what the
+    // rule asks for, not where the box sits inside it.
+    <label className={cn("inline-flex min-h-6 min-w-6 items-center gap-1.5 text-sm", className)}>
       <input
         type="checkbox"
         className="focus-ring m-0 size-3.5 accent-primary"
