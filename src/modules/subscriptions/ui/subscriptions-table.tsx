@@ -138,7 +138,7 @@ export function SubscriptionsTable({
       title={t("setUtility")}
       aria-label={`${t("setUtility")}: ${row.name}, ${t("utilityOf", { value: row.utility })}`}
       onClick={() => setEditing(row.draft)}
-      className="focus-ring rounded-[4px] px-1 text-sm tabular-nums hover:bg-hover"
+      className="focus-ring inline-flex min-h-6 items-center rounded-[4px] px-1 text-sm tabular-nums hover:bg-hover"
     >
       {t("utilityOf", { value: row.utility })}
     </button>
@@ -256,7 +256,7 @@ export function SubscriptionsTable({
               <button
                 type="button"
                 onClick={() => setEditing(row.draft)}
-                className="focus-ring min-w-0 truncate text-left font-semibold"
+                className="focus-ring inline-flex min-h-6 min-w-0 items-center truncate rounded-[2px] text-left font-semibold"
               >
                 {row.name}
               </button>

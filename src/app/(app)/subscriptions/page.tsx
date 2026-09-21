@@ -128,7 +128,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
                 </p>
                 <Link
                   href="/expenses"
-                  className="focus-ring shrink-0 rounded-[2px] font-medium text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] font-medium text-accent hover:underline"
                 >
                   {t("alerts.checkExpenses")}
                 </Link>

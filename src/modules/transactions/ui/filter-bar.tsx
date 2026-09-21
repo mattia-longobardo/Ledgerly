@@ -257,7 +257,7 @@ export async function FilterBar({
       {query.filtered && (
         <Link
           href={withParams(path, query.clearedParams, {})}
-          className="focus-ring rounded-[2px] px-1 font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 items-center rounded-[2px] px-1 font-medium text-accent hover:underline"
         >
           {t("clear")}
         </Link>

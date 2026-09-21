@@ -78,7 +78,7 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
         </Button>
         <Link
           href="/forgot-password"
-          className="focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
         >
           {t("signIn.forgot")}
         </Link>

@@ -36,7 +36,9 @@ function Row({
           {bar.name}
         </span>
       </span>
-      <span className="h-1 rounded-full bg-track" aria-label={shareLabel}>
+      {/* `role="img"`: an `aria-label` on a bare `<span>` is prohibited (axe
+          `aria-prohibited-attr`), and this bar is a picture whose description is the share. */}
+      <span role="img" aria-label={shareLabel} className="h-1 rounded-full bg-track">
         <span
           className="block h-full rounded-full opacity-80"
           style={{ width: `${(bar.width * 100).toFixed(1)}%`, background: bar.color }}

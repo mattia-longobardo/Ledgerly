@@ -135,7 +135,9 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       </div>
 
       <Card padded={false}>
-        <div className="overflow-x-auto">
+        {/* Eight columns do not fit a phone at any font size: below `md` the same accounts are a
+            list, carrying every figure the table carries (plan F9 §3.3). */}
+        <div className="overflow-x-auto max-md:hidden">
           <Table>
             <THead>
               <Th>{t("columns.name")}</Th>
@@ -159,7 +161,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                       />
                       <Link
                         href={`/accounts/${row.account.id}`}
-                        className="focus-ring rounded-[2px] font-medium hover:underline"
+                        className="focus-ring inline-flex min-h-6 items-center rounded-[2px] font-medium hover:underline"
                       >
                         {row.account.name}
                       </Link>
@@ -208,6 +210,66 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
             </TBody>
           </Table>
         </div>
+
+        <ul className="flex flex-col md:hidden">
+          {rows.map((row) => (
+            <li
+              key={row.account.id}
+              className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ background: row.color }}
+                  />
+                  <Link
+                    href={`/accounts/${row.account.id}`}
+                    className="focus-ring inline-flex min-h-6 items-center rounded-[2px] font-medium hover:underline"
+                  >
+                    {row.account.name}
+                  </Link>
+                </span>
+                <span className="shrink-0 font-medium tabular-nums">
+                  {formatMoney(row.balance, ctx.numberFormat)}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                <span>{t(`types.${row.account.type}`)}</span>
+                <span aria-hidden>·</span>
+                <span>
+                  {row.account.origin === "manual"
+                    ? t("origins.manual")
+                    : row.synced.unit === "never"
+                      ? t("synced.never")
+                      : t(`synced.${row.synced.unit}`, { count: row.synced.count })}
+                </span>
+                {row.account.state === "unavailable" && <Badge tone="warn">{t("states.unavailable")}</Badge>}
+                {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
+                <span className={TONE_TEXT[toneOfSign(row.change.cents)]}>
+                  {t("columns.monthlyChange")}{" "}
+                  {row.change.cents === null
+                    ? NULL_DISPLAY
+                    : formatMoney(row.change.cents, ctx.numberFormat, { signed: true })}
+                </span>
+                <span className={TONE_TEXT[toneOfSign(row.yoy.cents)]}>
+                  {t("columns.yoy")} {formatPercent(row.yoy.fraction, ctx.numberFormat, { signed: true })}
+                </span>
+                <span className="text-muted">
+                  {t("columns.share")} {formatPercent(row.share, ctx.numberFormat)}
+                </span>
+              </div>
+              <Sparkline values={asNumbers(row.series)} tone={row.color} />
+            </li>
+          ))}
+          <li className="flex items-center justify-between gap-2 px-4 py-3 font-medium">
+            <span>{t("total")}</span>
+            <span className="tabular-nums">{formatMoney(view.total, ctx.numberFormat)}</span>
+          </li>
+        </ul>
       </Card>
 
       {view.totalPartial && <p className="text-sm text-warn">{t("partial")}</p>}

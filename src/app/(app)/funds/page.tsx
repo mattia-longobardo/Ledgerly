@@ -113,7 +113,10 @@ export default async function FundsPage() {
                   amount: money(row.fund.monthlyCents),
                 })}
               </p>
-              <Link href="/expenses" className="shrink-0 font-medium text-accent hover:underline">
+              <Link
+                href="/expenses"
+                className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] font-medium text-accent hover:underline"
+              >
                 {t("alert.cta")}
               </Link>
             </div>

@@ -42,7 +42,11 @@
   --border2: #353941;
   --fg: #e8e9ec;
   --muted: #9da3ab;
-  --faint: #6c727b;
+  /* The dark twin of the note above: #6c727b read at 3,64:1 on `--card`, under the 4,5:1 AA asks
+     of small text, and F7 lightened only the light theme. Raised to 5,31:1 on `--card` and 4,93:1
+     on `--hover`, the tightest background faint text actually sits on, while staying clearly
+     fainter than `--muted` at 7:1 (F9 P2, measured 2026-09-21). */
+  --faint: #868d96;
   --accent: #5fcbe0;
   --primary: #0e7490;
   --primary-fg: #ffffff;

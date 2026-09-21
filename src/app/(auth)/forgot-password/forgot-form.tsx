@@ -37,7 +37,7 @@ export function ForgotForm() {
       </Button>
       <Link
         href="/sign-in"
-        className="focus-ring rounded-[2px] text-sm font-medium text-accent hover:underline"
+        className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
       >
         {t("forgot.back")}
       </Link>

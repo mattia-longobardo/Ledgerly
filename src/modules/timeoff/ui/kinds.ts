@@ -39,8 +39,13 @@ export const KIND_BORDER: Record<LeaveDayKind, string> = {
   other: "border-faint",
 };
 
+/**
+ * `text-accent` for vacation, not `text-primary`: `--primary` is a button's fill and stays the
+ * same teal in the dark theme, where it read at under 4,5:1 as text on a card (F9 P2). In the
+ * light theme the two tokens are the same colour, so nothing moves there.
+ */
 export const KIND_TEXT: Record<LeaveDayKind, string> = {
-  vacation: "text-primary",
+  vacation: "text-accent",
   rol: "text-warn",
   comp: "text-accent",
   sick: "text-neg",

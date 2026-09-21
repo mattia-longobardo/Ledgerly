@@ -470,7 +470,7 @@ async function OverviewTab({
                 <span className="truncate">{ruleText === "" ? ti("account.none") : ruleText}</span>
                 <Link
                   href={(rules.length === 1 ? `/interests/${rules[0].id}` : "/interests") as Route}
-                  className="focus-ring shrink-0 rounded-[2px] text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] text-accent hover:underline"
                 >
                   {ti("account.manage")}
                 </Link>

@@ -269,6 +269,65 @@ violazione axe; attraversamento da tastiera di dialoghi, menu, tavolozza e tabel
 focus sempre visibile; contrasto nei due temi. Le intestazioni ordinabili (17 px) si risolvono una
 volta in `src/ui/table.tsx`, non pagina per pagina.
 
+### P1.1 e P2.1 — Che cosa è stato corretto (2026-09-21)
+
+Passata finale sul sito pubblicato: **72 misure di layout e accessibilità verdi su 72**, più cinque
+di tastiera; la suite end-to-end intera passa a **128 test** (erano 66).
+
+| | prima | dopo |
+|---|---|---|
+| bersagli sotto i 24 px | 221 | **0** |
+| nodi oltre il bordo a 400 px | 163 | **0** |
+| violazioni di contrasto (tema scuro) | 52 | **0** |
+| `scrollable-region-focusable` | 10 | **0** |
+| `aria-prohibited-attr` | 4 | **0** |
+| testo fuori dal contenitore | 0 | 0 |
+
+**P1 — nove pannelli, due cause.** Sette tabelle hanno preso la forma di §3.3, tabella da `md` in su
+ed elenco sotto con gli stessi comandi: i job di `/settings/integrations`, i conti di `/accounts`, i
+token di `/settings/security`, i conguagli di `/interests/[id]`, le operazioni e i riepiloghi di un
+fondo pensione, le voci di un cedolino, i saldi di `/accounts/[id]`, i documenti Cometa. Gli altri
+due erano la **stessa causa, non una tabella**: sotto il punto di rottura una griglia `@4xl:` è una
+sola traccia `auto`, e il minimo automatico di una traccia `auto` è il `min-content` della cella più
+larga — cioè, quando dentro c'è una tabella, la tabella intera. La griglia dei saldi spingeva il
+modulo accanto 77 px fuori dallo schermo, quella della deducibilità 9. `min-w-0` sulle celle, e
+basta: una riga per griglia, non un ripensamento del layout.
+
+**P2 — quasi tutto in pochi componenti.**
+
+1. **Contrasto:** `--faint` nel tema scuro era `#6c727b`, 3,64:1 su `--card`. F7 aveva schiarito solo
+   il gemello chiaro. Portato a `#868d96` — 5,31:1 su `--card`, 4,93:1 su `--hover`, il fondo più
+   stretto su cui quel testo si appoggia davvero, e ancora chiaramente più tenue di `--muted` a 7:1.
+   **Una riga di CSS, 52 rilievi su 52.** Il tema chiaro non ne aveva nemmeno uno.
+2. Il numero di un giorno di **ferie pianificate** usava `text-primary`: `--primary` è il riempimento
+   di un bottone e nel tema scuro resta lo stesso teal scuro. Passato a `text-accent`, che nel tema
+   chiaro è **lo stesso colore**, quindi lì non si muove niente.
+3. **I 24 px** erano quasi sempre l'*altezza*, mai la larghezza: le parole sono alte 17 px e il
+   bersaglio era alto quanto le parole. Risolti nei componenti condivisi — l'intestazione ordinabile
+   in `src/ui/table.tsx`, il chip di categoria, la casella di selezione di una riga (14 px di scatola
+   con l'etichetta larga uguale: ora l'etichetta ha un pavimento di 24 px in **tutte e due** le
+   direzioni), il bottone di campo della revisione di un cedolino e quello di un documento Cometa,
+   il limite rapido di `/budgets`, l'utilità di `/subscriptions`, il campo della tavolozza — e con
+   `inline-flex min-h-6 items-center` su tredici link di riga.
+4. **`aria-prohibited-attr`:** la barra di `/expenses` portava `aria-label` su uno `<span>` nudo, che
+   è vietato. Ora è `role="img"`: quella barra è un'immagine e la sua descrizione è la quota.
+5. **`scrollable-region-focusable`:** il riquadro degli accrediti giornalieri scorre e non si poteva
+   raggiungere da tastiera. `tabIndex={0}`, `role="region"` e un nome. Gli altri sono spariti da soli
+   dove P1 ha tolto la tabella.
+6. **Tastiera:** `tests/e2e/keyboard.spec.ts`, nuovo. Tavolozza (apre, filtra, si muove, va, chiude),
+   dialogo (prende il focus, lo tiene, lo restituisce a chi l'ha aperto), menu di riga, tabella
+   ordinabile, e la traversata dall'alto con il **focus sempre disegnato**. Il primo giro ha
+   segnalato la trappola del focus come rotta: non lo era — Base UI avvolge il popup in sentinelle
+   `data-base-ui-focus-guard`, e il focus ci passa sopra per rientrare. Il test lo dice adesso.
+
+Due cose che il metro ha segnalato e che **non erano difetti dell'applicazione**:
+
+- il contrasto della tendina mobile, misurato a metà dell'animazione di apertura: axe leggeva i
+  colori di quello che stava dietro. Il controllo ora aspetta che il popup sia fermo;
+- `admin.spec.ts` ha fallito **una volta su due** passate intere, e mai da solo: la Server Action che
+  cambia il ruolo e il `page.reload()` che la verifica corrono. È una fragilità del test, non del
+  prodotto, ed è un rilievo per P3.
+
 ### P3 — Revisione dell'intero branch per aree
 §3.5. Il documento va in `docs/reviews/2026-09-2X-f9-revisione-finale.md`.
 

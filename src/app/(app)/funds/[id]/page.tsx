@@ -531,7 +531,10 @@ export default async function FundPage({ params, searchParams }: PageProps<"/fun
               <CardHeader
                 title={t("detail.recent.title")}
                 actions={
-                  <Link href={`${base}?tab=deposits` as Route} className="text-accent hover:underline">
+                  <Link
+                    href={`${base}?tab=deposits` as Route}
+                    className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent hover:underline"
+                  >
                     {t("detail.recent.all")}
                   </Link>
                 }
