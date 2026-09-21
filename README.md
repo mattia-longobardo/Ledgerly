@@ -1,155 +1,450 @@
-# Finance Dashboard
+# Ledgerly
 
-A personal finance and household-admin dashboard: net worth across accounts,
-expenses, interest accrual, funds, budgets, payroll ingestion and time off.
-Single-tenant (one owner, OIDC-gated), built as a modular, API-first,
-PostgreSQL-canonical platform.
+Personal finance and household-admin dashboard. Version 0.1 is a from-scratch rebuild; the design is in
+[`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md) and each phase has its
+plan in [`docs/plans/`](docs/plans/).
 
-It was rebuilt in phases from a working single-file app. See
-[the design spec](docs/superpowers/specs/2026-09-02-finance-company-platform-design.md)
-for the target architecture and the phase plan, and
-[`docs/superpowers/handoff/`](docs/superpowers/handoff/) for the checkpoint of
-each phase.
+![Overview](docs/screenshots/overview.png)
 
-## Status: Phases 0–9 implemented; Phase 6 is what is deployed
+Every screenshot in this README is of the seeded test user, whose accounts, payslips and pension
+fund are invented from end to end (`scripts/seed-e2e.ts`): none of them shows a real person's
+money. `npm run docs:shots` takes them again.
 
-- **Phase 0** — platform foundations: `Principal`/permissions, RLS-scoped
-  Postgres access, a Hono REST API at `/api/v1` (error envelope, idempotency,
-  optimistic concurrency, rate limiting, audit, generated OpenAPI with a drift
-  test), a job registry behind a single tiered `/api/jobs/tick` endpoint, and
-  capability-driven navigation.
-- **Phase 1** — `accounts`: manual accounts, the Budget Makers Wallet adapter,
-  account groups, net-worth series, and the retirement of the Teable Allocation
-  table.
-- **Phase 2** — the integration framework: encrypted credentials, the sync
-  engine and queue, inbound webhooks, Settings › Integrations.
-- **Phase 3** — `expenses` and `interests`.
-- **Phase 4** — `payroll`: the payslip upload/ingest/review/apply pipeline,
-  document originals in an S3-compatible store, Company Overview and Earnings.
-- **Phase 5** — `funds`: plans, effective schedules, signed contributions,
-  reconciliation.
-- **Phase 6** — `budgets`: versioned initial amounts, virtual allocations,
-  derived usage. **This is the deployed build.**
-- **Phase 7 (reduced)** — `timeoff`: types, payroll-derived balances, booked
-  days, the Trek two-way sync, and the drop of every remaining legacy table.
-- **Phase 8 (reduced)** — personal access tokens: Bearer authentication for the
-  API, managed from Settings › Security.
-- **Phase 9 (reduced)** — session-level job locking, a retention job, inbound
-  webhook replay protection and rate limiting, and the management operations
-  (categories, labels, payroll mapping rules, reconciliation issues, sync-job
-  toggles) as API and server actions.
+## Develop
 
-Phases 7–9 were executed in reduced form: the UI is deliberately bare where a
-page exists at all, because it is being redesigned.
-[`docs/superpowers/DEFERRED.md`](docs/superpowers/DEFERRED.md) is the list of
-what was postponed and where each item is specified in full.
-
-## Stack
-
-- Next.js 16.3 (App Router, `output: standalone`), React 19, TypeScript,
-  Tailwind 4, Base UI, uPlot.
-- Hono + `@hono/zod-openapi` mounted inside Next.js for the REST API.
-- Drizzle ORM 0.45 + drizzle-kit over Postgres 18, with Postgres row-level
-  security as the tenancy boundary.
-- Auth.js v5 (beta), single OIDC provider (Authentik), plus personal access
-  tokens for scripts.
-- `dashboard-cron` — a supercronic sidecar that calls `/api/jobs/tick` on
-  three schedules (hourly, daily, monthly).
-- Vitest (unit + Postgres-backed integration), Playwright (e2e).
-
-See [`docs/architecture/overview.md`](docs/architecture/overview.md) for the
-module layout and the conventions this stack is organized around.
-
-## Running it
-
-The app is deployed via Docker Compose (`docker-compose.yml` at the repo
-root): the `dashboard-app` service (image `dashboard:latest`, migrations
-applied at boot by `entrypoint.sh`) plus the `dashboard-cron` sidecar, both on
-the shared `db_internal`/`proxy_public` networks alongside the shared
-Postgres 18 container (`postgres`, database `dashboard`).
+Prerequisites: Node.js `^22.13.0 || >=24` and Docker, on the homelab host. There is no local
+development server: every change is built and deployed to `https://dash.longobardo.me`
+(`docker compose build && docker compose up -d`, see Docker below) and checked there.
 
 ```bash
-cp .env.example .env   # fill in secrets — see the comments in the file
-docker compose build
-docker compose up -d
-```
-
-`docker compose ps` should show `dashboard-app` healthy
-(`GET /api/health`) within about a minute. For an actual release — rather than
-a first local bring-up — follow [`docs/deploy/README.md`](docs/deploy/README.md)
-instead of a bare `up -d`: it has the ordered sequence including the backup,
-the migration step and the post-deploy checks, and the release notes for the
-current change.
-
-## Developing
-
-All application code lives in `dashboard-app/`; work from there.
-
-```bash
-cd dashboard-app
 npm install
-npm run dev          # http://localhost:3000
+cp .env.example .env.homelab   # then replace every value (README, Operations)
 ```
 
-`npm run dev` and `npm run build && npx next start` both need the full
-environment `src/lib/env.ts` validates at boot (`DATABASE_URL`, `AUTH_*`,
-`OIDC_*`, `AUTHORIZED_SUB`, `APP_ENCRYPTION_KEY`, `CRON_SECRET`,
-`WEBHOOK_SECRET`) — [`docs/deploy/README.md`](docs/deploy/README.md) has the
-full matrix with defaults and what each one is for. `npx next start`, not
-`npm run start`: that script is `node server.js`, the standalone entry point
-the Docker image builds, and it does not exist in a source checkout.
+Users change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
+password — SSO-only — do not see that form).
 
-### Testing
+## Accounts and Overview (F1)
+
+**Overview** is the net worth over time; **Accounts** lists the accounts behind it and each one has
+its own page with Overview, Transactions (from F2), Balance entries and Settings tabs.
+
+![Accounts](docs/screenshots/accounts.png)
+
+- **Balances are dated observations.** An account's worth on a day is its last balance on or before
+  it, held forward; a month before an account's first balance is unknown (`—`), never zero, and a
+  total that is missing an account says so rather than passing itself off as complete. An account
+  set to **interpolate** has a straight line drawn between its known months in its own charts only —
+  totals are always held.
+- **Manual and synced accounts.** Balances are added, corrected and deleted by hand from the
+  Balance entries tab. From F2 an account can also come from a provider; a balance typed here then
+  counts as a correction and wins for that date. A synced account keeps the provider's type and
+  currency, follows its renames only until the name is changed here, and becomes `unavailable`
+  rather than disappearing when the provider stops sending it.
+- **Monthly snapshot.** On the 1st at 00:05 (`accounts-snapshot`) every account included in it gets
+  a `system` balance dated the last day of the month just ended, copied from the last balance
+  actually observed up to that day. Accounts with no data are skipped, running it again changes
+  nothing, and each run is listed under **Settings → Data**, where it can also be run at once.
+- **Alerts.** Daily at 12:00 (`accounts-alerts`) a balance under its account's threshold and a sync
+  older than its account's limit (36 h by default) send one email a week while the condition lasts;
+  an account that recovers is reported again straight away.
+
+## Integrations, Wallet and Expenses (F2)
+
+**Settings → Integrations** links a Budget Makers Wallet account; **Expenses** is what the sync
+brings in.
+
+![Expenses](docs/screenshots/expenses.png)
+
+- **The token is sealed, not stored.** A credential is encrypted with AES-256-GCM under
+  `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
+  key can be rotated by prepending a new one) before it is ever written, and it is never returned
+  to the browser afterwards: the field on the card only ever _replaces_ it.
+- **What a sync does.** Hourly at minute 07 (`wallet-sync`), per user: accounts and balances first,
+  then transactions. The first pass after linking fetches **12 months** in monthly windows; every
+  pass after that re-reads the **last 7 days**. A page that comes back full splits its window
+  instead of failing, reads are retried five times honouring `Retry-After`, and a 401 or 403 stops
+  at once, marks the link revoked and says the token was rejected. Every attempt is a row in the
+  sync log on that page, skipped ones included.
+- **Local edits win.** Payee, amount and date belong to the provider; category, labels, note and
+  visibility belong to you, and each field you actually change is recorded so no later sync
+  overwrites it — submitting the provider's own value claims nothing. **Hide** (the design's
+  "Delete") keeps a movement out of the totals and can be undone; a movement the provider stops
+  returning inside the re-read window is marked as gone and treated the same way.
+- **Transfers and recurrences.** Two movements are paired only by the reference Wallet gives them,
+  never by amount and date, so a pair forms whichever sync each leg arrives in. A payee becomes a
+  recurrence after three occurrences whose gaps all fall in one band (weekly through yearly) and
+  whose amounts are all within 10% of the median.
+- **Categories and labels** live under **Settings → Data**. A synced category is matched to an
+  existing link, then to a local name exactly, and only then created. Categories are archived,
+  never deleted.
+- **Without a token** the client and the engine run against the synthetic fixtures in
+  `tests/fixtures/wallet/`; the first real link and its 12-month backfill still have to be done by
+  hand.
+
+## Budgets, Pockets and Subscriptions (F3)
+
+- **Budgets** are monthly limits on a spending category, an account, or both, versioned by month: a limit set or edited
+  in a month applies from that month on (and replaces the ones set for later months); "Remove from
+  this month" ends it there. Spent is the month's expenses of the category in your own time zone —
+  never a giroconto, never a hidden movement — on that account or on all of them, and a group's spent
+  includes its sub-categories. A budget inside another adds nothing to the total limit, and each
+  movement counts once in the total spent.
+  Over the limit is **Over**, from 85 % **Near limit**. The five closest to their limit are on
+  Overview.
+- **Pockets** earmark money without moving it. A pocket may rest on an account or stand alone, and
+  target and monthly accrual are both optional. On the 1st at 00:05 (`pockets-accrual`) every active
+  pocket gets its month's accrual — once, whatever runs twice — and a new or resumed pocket gets
+  the current month's at once; months in the past are never back-filled. **Free** is what the
+  backing accounts hold beyond their pockets, unknown (`—`) while one of them has no balance. The
+  share of the account's interest stays unknown until the interest rules of F4 exist.
+- **Subscriptions** are entered by hand or accepted from the recurring payments already detected
+  in Expenses. Hourly, right after the Wallet pass (`subscriptions-check`), each active one with a
+  text to look for is checked against the paying account's expenses: **Paid**, **Amount differs**
+  (outside its tolerance, 5 % by default), **Due** (within seven days and not found yet) or **Not
+  found** (the month of the charge closed without it). A movement pays one charge only. The banners
+  at the top of the page are the alerts; there are no emails for them. **Projection by account** is
+  today's balance minus the charges due in the next 30 days or 12 months; **Export CSV** downloads
+  the table.
+- An account a pocket or a subscription points at is archived instead of deleted.
+
+## Interests and PAC funds (F4)
+
+- **Interests.** A rule per account: rate tiers (the first rate up to its threshold, the next on
+  the part above), tax withheld, 365 or 360 days, a daily, monthly, quarterly or yearly payout, a validity.
+  Every day at 12:00 (`interests-accrual`) each active rule accrues up to yesterday on the account's
+  daily balance, in fixed point with the remainder of the day before, missed days caught up in order;
+  a negative or unknown balance is a skipped day, shown. Each closed period becomes a payout, checked
+  against what the bank paid (income whose payee or category contains the rule's text, each payment
+  counted for one payout only) as matched,
+  missing, awaited, anomalous or no data. Editing a rule recomputes only what has not been paid out.
+- **Posting to Wallet** is off unless a rule asks for it (synced accounts only). A payout is claimed
+  first, a record with its marker is looked for, then posted once; a failure after sending is
+  _unsure_ and never retried by itself — the rule's page has "Retry" and "Mark as posted".
+- **Funds (PAC).** A fund's value lives on its own account (created with it, or an existing manual
+  one), so net worth counts it once; "Record valuation" writes that account's balance. Deposits are
+  entered by hand or matched hourly (`funds-deposits`) from the paying account's debits whose payee
+  contains the rule's text, less the fund's fee per deposit. Gain is value − paid in; the monthly
+  return is Simple Dietz between two month-end values. A missing debit three days after the charge
+  day is an in-app alert.
+- A pocket's "Interest earned on backing" is now the account's last 12 months of interest × the
+  pocket's share of the balance, as an estimate.
+
+![A PAC and its returns](docs/screenshots/fund.png)
+
+## Payslips and imports (F5)
+
+Every document this app reads — a payslip, a Cometa export, a Cometa statement — goes through one
+pipeline: **upload → read → review → verify → apply**. The original is stored under
+`payslips/<user>/<year>/` or `cometa/<user>/<year>/` in S3 and is never overwritten; the file's
+fingerprint makes a second upload of the same document a duplicate rather than a second copy.
+
+![A payslip under review](docs/screenshots/payroll-review.png)
+
+- **Reading is deterministic first.** A Reply/TeamSystem payslip is parsed from the PDF's **text
+  coordinates**, not from a regular expression over a flattened page: a label finds the box beside
+  it, and every value it yields carries its **evidence** — the page, the rectangle on it and the
+  raw text it came from. The review screen shows the PDF beside the fields, and clicking a field
+  draws its box on the document. A PDF with too little text to parse waits in `needs_ocr`; OCR
+  itself is out of 0.1 (D11).
+- **The LLM is a fallback, never the reader.** Only when a field the catalogue requires is missing
+  does the page offer to ask OpenAI for that field alone, and the answer arrives marked `inferred`:
+  **a person must confirm or correct every inferred value before the payslip can be verified.**
+  OpenAI is the only provider (D18); with no key configured the fallback simply is not offered.
+- **The checks** run on every reading and each says pass, fail or not applicable with its reason:
+  IRPEF gross − deductions = withheld, net reconciled to the cent, body deductions equal
+  `TRATTENUTE CORPO`, `TOTALE TRATTENUTE` adds up, substitute tax counted once, holiday and ROL
+  balances (previous + accrued − used = remaining), net and gross in line with recent months. A
+  failed check cannot be waved through: verifying a payslip with one asks for an explicit
+  acknowledgement.
+- **Applying** is the only step that changes the register. The payslip with the same logical key
+  (employer, employee, year, period, type) is **superseded**, never summed — a reprint replaces the
+  original — and what the payslip accrued for the pension fund and for leave is published to F6 and
+  F7 from there.
+- **Unknown codes** are yours to teach: Settings → Data holds the code map, so a line the profile
+  does not know can be given a role once and is known from then on.
+- `payslips-sweep` (hourly) picks up a reading that was interrupted; `documents-retention` (daily
+  at 12:00) deletes originals past their retention while keeping the numbers read out of them.
+
+## Pension fund — Cometa (F6)
+
+A pension fund is a fund like a PAC, with one difference that shapes the whole screen: **six
+quantities that are not the same number and are never added together** — accrued in your payslips,
+credited by the fund, invested in units, the value at its own date, the gain after the costs that
+can be observed, and what is still to be reconciled with the date it is due by.
+
+![A pension fund](docs/screenshots/cometa.png)
+
+- **The payslips are the source of what was accrued.** Applying a payslip records its quarter's
+  competences on the fund that receives payroll; a fund created after the payslips picks up what
+  they already accrued.
+- **Two documents come from Cometa.** The operations export (an `.xls` that is really HTML) becomes
+  one operation per row with its unit movements, previewed row by row — new, known, changed —
+  before anything is applied; the position summary (a PDF) gives the value at its date, read from
+  its coordinates like a payslip and with the same box-on-the-page review. An operation already
+  known is updated, never added twice.
+- **Reconciliation is by quarter**, within a tolerance in days: what the payslips accrued for that
+  quarter against what the fund credited for it. A difference you have explained stays explained.
+  Money accrued and not yet credited is shown with the date the fund's own transfer schedule says
+  it is due by, so "not credited yet" and "late" are two different things.
+- **Costs** are the fund's published tariff — enrolment, association, management for the compartment
+  — kept as a table with the date it was verified, so a figure in the app can be traced to a page of
+  the fund's own documents.
+- `cometa-sweep` (hourly) finishes a reading that was interrupted.
+
+## Time off, and Trek (F7)
+
+**Time off** answers, for the year you choose: how much you have accrued, how much you have taken,
+how much you have planned, and how much is left — with **where each number comes from** beside it.
+
+![Time off](docs/screenshots/timeoff.png)
+
+- **Two kinds, counted apart**: holiday and ROL. A day is whole or half, and only a working day can
+  be booked: the calendar knows the weekends and the public holidays, and a company calendar can be
+  subscribed to on top (`holidays-refresh`, daily).
+- **The residual comes from the payslip, not from arithmetic.** What the payslip says is left at its
+  date is the starting point; the days booked here move it from there. So the number on the screen
+  is the employer's number, not a second opinion, and the screen says which payslip it read.
+- **Trek** is the leave calendar it syncs with (`trek-sync`, hourly). The rule that shapes it:
+  **it never deletes a day by mistake.** A day this app does not know about is not assumed to be
+  gone — it is brought in; a removal is only ever a removal you made here. A Trek that is busy is
+  skipped and tried again next hour, never half-applied.
+
+## Settings, Admin and the API (F8)
+
+- **Admin › Users** (`/settings/users`, admins only): the list with the invitations still pending,
+  "Invite user" (a single-use link, seven days), the role selector, block/unblock, "Reset password"
+  and "Remove". The last admin cannot be demoted, blocked or removed, and nobody blocks or removes
+  themselves — an instance nobody can administer is repaired only from the container. Removing a
+  user deletes their row first (the foreign keys take the rest) and then their `payslips/`,
+  `cometa/` and `exports/` folders in S3.
+- **Admin › Server** (`/settings/server`): Authentik (issuer, client id, secret, admin group, "Test
+  connection") and outgoing mail (host, port, encryption, credentials, from address, "Send test
+  email"), both saved in `app_settings` with the secret sealed. `.env.homelab` stays the initial
+  value and a saved setting wins over it, so a fresh instance runs on the environment file alone.
+  Better Auth and the mail transport notice a change within 30 seconds; **changing the issuer signs
+  every user out**. Three switches decide what the server may send at all: invitations and resets,
+  sync failures, the monthly summary — with "invitations & resets" off the password reset link does
+  not go out either.
+- **Personal access tokens** (`/settings/security`): `pat_<prefix>.<secret>`, shown once, kept as a
+  SHA-256 digest with scopes `read`, `write`, `imports`, an optional expiry and revocation.
+- **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
+  `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
+  `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
+  user and never beyond them; there is no administrative route at all. Amounts travel as decimal
+  strings, never as JSON numbers. 120 calls a minute per token, per worker.
+
+  ```bash
+  curl -sS -H "Authorization: Bearer pat_…" https://dash.longobardo.me/api/v1/summary
+  ```
+
+- **Export.** "Export my data" (Settings › Data) streams a ZIP of every table as CSV, the same rows
+  as one JSON, and the original documents. "Export all data" (Admin › Server) is the `export-all`
+  job, which writes one archive per person under `exports/<userId>/`.
+- **Backups.** `database-backup` runs daily: `pg_dump -Fc` (from `postgresql18-client`, in the
+  image) held in memory — the container's filesystem is read only — and uploaded to `backups/`,
+  thirty kept, pruned by `housekeeping`. The dump is not encrypted: a backup that only opens with
+  the application's own key ring cannot help when the application is what was lost.
+- **Alerts.** A job that fails tells the admins through Gotify, if `GOTIFY_URL` and `GOTIFY_TOKEN`
+  are set; without them nothing is sent and nothing is logged about it. `monthly-summary` emails
+  whoever asked for it in their preferences, on the 1st, about the month just ended.
+- **Running a job by hand**: Settings › Integrations lists every registered job with its schedule
+  and its last run, and an admin can press "Run now" (it takes the job's lock, so a job already
+  running is skipped rather than started twice).
+
+## On a phone
+
+Every screen holds together at 400 px: where a table does not fit, the same rows are a list with
+the same controls — nothing a wide screen offers is hidden on a narrow one.
+
+| Overview                                                     | Accounts                                                     | Expenses                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Overview on a phone](docs/screenshots/mobile-overview.png) | ![Accounts on a phone](docs/screenshots/mobile-accounts.png) | ![Expenses on a phone](docs/screenshots/mobile-expenses.png) |
+
+Both themes are checked for contrast on every screen, not only the light one:
+
+![The dark theme](docs/screenshots/overview-dark.png)
+
+## Check
 
 ```bash
-npm test              # unit tests (vitest run) — no database needed
-npm run typecheck     # tsc --noEmit
+npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:integration
+docker compose build && docker compose up -d   # deploy, then:
+npm run e2e
 ```
 
-Integration tests exercise real Postgres RLS policies and need the
-throwaway test database:
+- **Unit** (`npm test`) needs nothing but Node.
+- **Integration** (`npm run test:integration`, `scripts/test-integration.sh`) runs in a throwaway
+  Node container on `db_internal`, against the separate `ledgerly_test` database of the homelab
+  Postgres — its schemas are dropped and recreated on every run, so it must never be `ledgerly` —
+  and against Silo, in the app's bucket under `tests/` only. Create the database once, as the
+  Postgres superuser: `CREATE DATABASE ledgerly_test OWNER ledgerly;`.
+- **End-to-end** (`npm run e2e`) drives the deployed site. Before the run the seed
+  (`scripts/seed-e2e.ts`, through `scripts/on-homelab.sh`) creates sixteen users on `@example.test`
+  with their sample data; after it, it deletes them and everything they own. It never touches
+  anyone else's data. Nothing that needs a real mailbox or an Authentik login is tested end to end.
+  One of those users, `layout`, is seeded with something on **every** page — accounts, movements,
+  budgets, pockets, subscriptions, an interest rule, a PAC, a pension fund with its documents, five
+  applied payslips — because `tests/e2e/a11y.spec.ts` measures all thirty-six screens at 1440 and
+  400 px in both themes, and a layout check run against an empty state measures an empty state.
+  `tests/e2e/keyboard.spec.ts` crosses the same application without a mouse.
+- **Performance** (`npm run perf`, on demand) builds a deliberately heavy user in `ledgerly_test`
+  — twelve accounts, sixty thousand movements, fourteen thousand balance entries — and times the
+  widest views against it, then prints their query plans. The numbers of the last run are in
+  [`docs/plans/2026-09-21-f9-rifinitura-rilascio.md`](docs/plans/2026-09-21-f9-rifinitura-rilascio.md).
+- **Screenshots** (`npm run docs:shots`, on demand) takes the pictures in this README again, of the
+  same seeded user.
+
+## Docker
+
+`docker-compose.yml` is the homelab deployment: the `ledgerly` app behind Traefik on
+`proxy_public`, and the `ledgerly-cron` sidecar beside it on `db_internal`. Both read
+`.env.homelab`, and both are discovered by
+`projects/stack.sh`, so `./stack.sh up` starts them along with the other projects.
 
 ```bash
-npm run test:db:up          # docker compose -f docker-compose.test.yml up -d --wait
-npm run test:integration    # vitest run --config vitest.integration.config.ts
-npm run test:db:down        # tear it down when done
+docker compose build          # or: docker compose up -d --build
 ```
 
-(`npm run test:all` runs both `test` and `test:integration` in sequence,
-still assuming `test:db:up` has already been run.)
+Being on `db_internal` is what lets the app reach `postgres:5432` and `silo:9000` by name; those
+are internal-only and unreachable from a workstation, which is why the scripts that need them
+(`scripts/on-homelab.sh`, `scripts/test-integration.sh`) run in a container on that network.
+`dash.longobardo.me` is reachable from the public internet, but through one door only (spec D20).
+Two Traefik routers serve it and they are not interchangeable: `ledgerly-router` on the `web`
+entrypoint is what the Cloudflare tunnel hits, and it carries no IP filter; `ledgerly-secure-router`
+on `websecure` is the direct 443 — the only port the home router forwards — and it keeps
+`lan-only@file`, so nobody reaches the app from the internet without passing Cloudflare. Port 80 is
+not forwarded, which is what makes the tunnel the sole public entrance. Nothing guards that entrance
+except the app's own sign-in (Better Auth, sign-up disabled), so the blackbox probes in
+`db/prometheus/prometheus.yml` still leave it alone: a probe would only ever see the login page.
 
-End-to-end tests drive a real running instance with Playwright. They never
-sign in — Authentik owns that — so they cover the unauthenticated surface and,
-with a personal access token in `E2E_TOKEN`, the REST API.
-[`dashboard-app/tests/e2e/README.md`](dashboard-app/tests/e2e/README.md) has
-the exact environment to export and how to mint the token:
+The app image applies pending migrations on boot, then serves the standalone Next.js server; it
+also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
+start if any check fails, so a misconfigured deployment fails loudly instead of on the first
+request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
+`http://ledgerly:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
+`X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
+and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `wallet-sync` then
+`subscriptions-check` and `funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
+`interests-accrual` daily, `accounts-snapshot` and `pockets-accrual` monthly) for that tier, in that order; touching the heartbeat file is a side
+effect of every tick, not a job of its own.
 
-```bash
-npm run e2e   # E2E_BASE_URL defaults to http://localhost:3000
-```
+## Operations
 
-`npm run lint` is currently broken and is not a merge gate.
+- **Bootstrap the owner account**, before the app is reachable by anyone else, either by:
+  - running `ADMIN_PASSWORD=<12-128 chars> npm run user:create-admin -- <email> "<name>"`
+    (`scripts/create-admin.ts`) on the homelab host — it is not built into the Docker image, and
+    runs through `scripts/on-homelab.sh` with the deployment's `.env.homelab`; or
+  - binding the Authentik application to a group and letting the first person sign in with
+    **Continue with Authentik**. Sign-up is closed, so nobody can create a password account by
+    signing in — the first user _created_ by either path is granted the admin role automatically
+    (the `user.create` database hook in `src/platform/auth/auth.ts`).
+- **SSO never demotes admins:** removing someone from the Authentik admin group stops new sign-ins
+  from granting the admin role, but does not revoke an admin role already held in the app. F0 has
+  no Admin › Users screen (it arrives in a later phase); demote a user by calling Better Auth's
+  admin API as a signed-in admin:
+  ```bash
+  curl -X POST https://dash.longobardo.me/api/auth/admin/set-role \
+    -H "Content-Type: application/json" \
+    -H "Cookie: <the admin's session cookie>" \
+    -d '{"userId": "<user id>", "role": "user"}'
+  ```
+- **Password reset only reaches password accounts:** an SSO-only account (no stored password) never
+  gets a reset-link email — creating one would be a way around Authentik's own sign-in policy (such
+  as 2FA). That account signs in with **Continue with Authentik** instead.
+- **Reverse proxy:** set `TRUSTED_PROXY_IPS` to the address of the Traefik (or tunnel) hop in front
+  of the app on its Docker network, **and** configure Traefik with
+  `--entrypoints.web.forwardedHeaders.trustedIPs=<the same address>` — an owner action outside this
+  repo, so Traefik itself discards any `X-Forwarded-For` a client tries to inject before setting
+  its own. Only with both set does the app trust `X-Forwarded-For` from that one hop and give each
+  client its own sign-in rate-limit bucket; left unset, `TRUSTED_PROXY_IPS` defaults to empty and
+  every request shares one bucket. Never publish port 3000 on the host: Traefik must stay the only
+  way in (spec D20). Note that Traefik's `web` entrypoint currently sets no
+  `forwardedHeaders.trustedIPs`, so it overwrites `X-Forwarded-For` with the tunnel hop's address
+  and every visitor arriving from the internet lands in the **same** sign-in rate-limit bucket
+  (5 attempts per minute on `/sign-in/email`) — one bot hammering the login locks the owner out
+  from outside too. Preserving the real client address means adding
+  `--entrypoints.web.forwardedHeaders.trustedIPs=<the cloudflared hop>` to Traefik, which is an
+  owner action in `network/docker-compose.yml`, outside this repo.
+- **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
+  inside the same Docker network as the app (its compose service name, `ledgerly`), for
+  example:
+  ```yaml
+  scrape_configs:
+    - job_name: ledgerly
+      metrics_path: /api/metrics
+      authorization:
+        credentials: <METRICS_TOKEN>
+      static_configs:
+        - targets: ["ledgerly:3000"]
+  ```
+- **Homelab services** (`/home/mattia/docker`, conventions in its `AGENTS.md`). Ledgerly reuses the
+  shared tier rather than running its own copies; `.env.homelab` holds the matching values, and no
+  value in it may contain a `$` — Compose interpolates `env_file` contents, so a `$` in a secret
+  silently reaches the container truncated.
+  - **Postgres** (`db/`, published on the host as `5432`): one database and one role per app.
+    ```sql
+    CREATE ROLE ledgerly LOGIN PASSWORD '<the DATABASE_URL password>';
+    CREATE DATABASE ledgerly OWNER ledgerly;
+    ```
+  - **Authentik** (`security/`, `auth.longobardo.me`): the OAuth2/OIDC provider and application
+    `Ledgerly` (slug `ledgerly`, confidential, implicit-consent authorization flow, the four default
+    OpenID scope mappings). Its redirect URIs are
+    `<BETTER_AUTH_URL>/api/auth/callback/authentik`. That path is the **social** callback, not the generic-OAuth one
+    (`/api/auth/oauth2/callback/…`): the sign-in button calls `authClient.signIn.social`
+    (`src/app/(auth)/authentik.ts`), and `authentik` is `OIDC_PROVIDER_ID`. Register the wrong one
+    and Authentik answers `redirect_uri_no_match`. The `profile` scope mapping is what puts
+    `groups` in the id token, which is how `OIDC_ADMIN_GROUP` (the `Ledgerly` group) grants the
+    admin role on sign-in.
+  - **Stalwart** (`network/`, `mx.longobardo.me`): send as `no-reply@longobardo.me` over implicit
+    TLS on 465, with that mailbox's password in `SMTP_PASSWORD`.
+  - **Silo** (`db/`, S3): one bucket per application, named after it — `ledgerly`, with areas as
+    folders inside it (`payslips/`, `cometa/`, `avatars/`, …), never split buckets. Its S3 API
+    listens on `db_internal` only, so a copy of the app running on a workstation cannot reach it;
+    in production the app sits on that network and `http://silo:9000` resolves. Through F2 nothing
+    in the running app touches S3 — only the storage integration tests do, under `tests/`.
+- **Production requirements** (`src/platform/env.ts`, checked at boot by
+  `src/instrumentation.ts` — the process refuses to start if any check fails): `BETTER_AUTH_URL`
+  and `OIDC_DISCOVERY_URL` must be `https` (loopback `http` is accepted in production too — nothing
+  here is checked outside production); generate every secret — `BETTER_AUTH_SECRET`, `CRON_SECRET`
+  (32+ characters), `METRICS_TOKEN`, `APP_ENCRYPTION_KEY`, the OIDC client secret, and the S3
+  access/secret key — the
+  `.env.example` placeholder values for `BETTER_AUTH_SECRET`, `CRON_SECRET`, `METRICS_TOKEN` and
+  `APP_ENCRYPTION_KEY` are rejected outright; and when `SMTP_USER` is set, `SMTP_SECURE` or `SMTP_REQUIRE_TLS` must be
+  enabled so credentials never travel in plaintext.
+
+### Keep `APP_ENCRYPTION_KEY` somewhere else too
+
+It is the only value in the deployment whose loss cannot be recovered from anything else on the
+machine. Keep a copy off the host.
+
+- **What is actually lost with it**: the Budget Makers Wallet API token, and nothing more — it is
+  the only encrypted column in the database (`integration_connections.credentials`). Accounts,
+  balances, transactions, categories, labels and recurrences are all in clear. Pasting a new token
+  in Settings › Integrations _is_ the recovery, and it keeps the sync log.
+- **Rotating**: _prepend_ the new key and leave the old one in place
+  (`APP_ENCRYPTION_KEY=k2:<new>,k1:<old>`). The first key seals from then on and every key still
+  opens. **Replacing** a key instead of prepending it starts the app perfectly — everything but the
+  token reads fine — and the only symptom is an hourly "Wallet sync failed: Unknown key id" email,
+  which reads like a fault at the provider rather than at the key.
+
+## Releasing
+
+The checklist, written so somebody who did not write the code can run it:
+[`docs/RELEASE.md`](docs/RELEASE.md). It covers the backup that is the rollback plan, the build,
+the checks from outside, the first admin, connecting Wallet and Trek, bringing your own payslips
+and Cometa documents in, and what to do when it goes wrong.
+
+## Licence
+
+[PolyForm Noncommercial 1.0.0](LICENSE): use it, change it and share it freely for any
+**noncommercial** purpose — personal use, study, hobby projects — and charitable, educational,
+public-research, public-safety, environmental and government organisations count as noncommercial
+whatever funds them. Commercial use is not licensed here.
 
 ## Documentation
 
-- [`docs/architecture/overview.md`](docs/architecture/overview.md) — module
-  layout, the use-case rule, RLS context, authentication, job tiers, API
-  conventions, known deviations.
-- [`docs/api/README.md`](docs/api/README.md) — how to authenticate, the error
-  envelope, pagination, idempotency, optimistic concurrency, one example per
-  module, how to regenerate the OpenAPI document.
-- [`docs/api/openapi.json`](docs/api/openapi.json) — the generated OpenAPI
-  document, kept in sync with the code by a drift test.
-- [`docs/deploy/README.md`](docs/deploy/README.md) — the release procedure, the
-  environment matrix, job tiers, backup and rollback, and the notes for the
-  release now pending.
-- [`docs/integrations/README.md`](docs/integrations/README.md) — the provider
-  framework and how to add one.
-- [`docs/migration/README.md`](docs/migration/README.md) — what the Teable →
-  Postgres migration did, for the record.
-- [`docs/superpowers/DEFERRED.md`](docs/superpowers/DEFERRED.md) — everything
-  the reduced phases postponed, and where each item is specified.
-- [`docs/superpowers/specs/2026-09-02-finance-company-platform-design.md`](docs/superpowers/specs/2026-09-02-finance-company-platform-design.md)
-  — the full design and phased plan.
-- [`BRAND.md`](BRAND.md) — the visual identity. Note that the UI built in
-  Phases 7–9 deliberately does not follow it; it is being redesigned.
+The full design and every binding decision: [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md).
+Phase-by-phase implementation plans: [`docs/plans/`](docs/plans/).
+Reviews: [`docs/reviews/`](docs/reviews/).

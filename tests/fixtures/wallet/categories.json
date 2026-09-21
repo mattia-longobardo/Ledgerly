@@ -1,0 +1,26 @@
+{
+  "categories": [
+    {
+      "id": "wc-groceries",
+      "name": "  Spesa  ",
+      "group": {
+        "id": "wcg-casa",
+        "name": "Casa"
+      },
+      "color": "#3B82F6"
+    },
+    {
+      "id": "wc-salary",
+      "name": "Stipendio",
+      "group": null,
+      "color": "#22C55E"
+    },
+    {
+      "id": "wc-unsorted",
+      "name": "Da classificare",
+      "group": null
+    }
+  ],
+  "limit": 200,
+  "offset": 0
+}

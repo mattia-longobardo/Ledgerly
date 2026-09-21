@@ -1,0 +1,28 @@
+{
+  "records": [
+    {
+      "id": "wr-1002",
+      "accountId": "wa-general",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": 1900,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "Datore di lavoro",
+      "labels": [],
+      "note": null,
+      "recordDate": "2026-01-20T23:40:00.000Z",
+      "recordState": "cleared",
+      "recordType": "INCOME",
+      "source": "bank",
+      "transfer": null,
+      "createdAt": "2026-01-20T23:41:00.000Z"
+    }
+  ],
+  "limit": 2,
+  "offset": 0,
+  "nextOffset": null,
+  "appliedRecordDateFilters": ["gte.2026-01-17T00:00:00.000Z", "lt.2026-01-25T00:00:00.000Z"]
+}

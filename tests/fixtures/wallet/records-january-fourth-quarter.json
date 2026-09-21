@@ -1,0 +1,34 @@
+{
+  "records": [
+    {
+      "id": "wr-1003",
+      "accountId": "wa-general",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -250,
+        "currencyCode": "EUR"
+      },
+      "category": null,
+      "counterParty": "   ",
+      "labels": ["giroconto"],
+      "note": null,
+      "recordDate": "2026-01-28",
+      "recordState": "cleared",
+      "recordType": "transfer",
+      "source": "manual",
+      "transfer": {
+        "type": "withdrawal",
+        "transferId": "wt-9001",
+        "mirrorRecord": {
+          "id": " wr-2003 ",
+          "accountId": "wa-savings"
+        }
+      }
+    }
+  ],
+  "limit": 2,
+  "offset": 0,
+  "nextOffset": null,
+  "appliedRecordDateFilters": ["gte.2026-01-25T00:00:00.000Z", "lt.2026-02-01T00:00:00.000Z"]
+}

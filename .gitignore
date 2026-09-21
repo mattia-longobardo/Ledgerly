@@ -1,117 +1,29 @@
-# ---------------------------------------------------------------------------
-# Segreti e configurazione d'ambiente
-# ---------------------------------------------------------------------------
+# Screenshots and files dropped in the working copy while talking about a change: they are not
+# part of the repository. The README's own pictures live in `docs/screenshots/`.
+/image.png
+/*.png
+
+# Environment
 .env
 .env.*
 !.env.example
-secrets/
-*.pem
-*.key
-*.p12
-*_token
-*.credentials.json
 
-# ---------------------------------------------------------------------------
-# Dati personali / documenti finanziari (non devono mai finire nel repo)
-# ---------------------------------------------------------------------------
-*.pdf
-.work/
-# Teable exports: real balances, written by scripts/migrate-teable.ts
-docs/migration/*.json
-# Reconciliation report: also embeds real net-worth figures, written by scripts/validate-teable-migration.ts
-docs/migration/teable-reconciliation.md
-
-# ---------------------------------------------------------------------------
-# Dipendenze
-# ---------------------------------------------------------------------------
-node_modules/
-.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/releases
-!.yarn/versions
-
-# ---------------------------------------------------------------------------
-# Build / output Next.js
-# ---------------------------------------------------------------------------
+# Dependencies and build output
+node_modules
 .next/
 out/
-build/
-dist/
-*.tsbuildinfo
 next-env.d.ts
-.vercel/
-.turbo/
-.swc/
+/public/pdfjs/
+*.tsbuildinfo
 
-# ---------------------------------------------------------------------------
-# Test (Playwright, Vitest)
-# ---------------------------------------------------------------------------
+# Test output
+coverage/
 test-results/
 playwright-report/
-playwright/.cache/
-blob-report/
-coverage/
-.nyc_output/
+tests/e2e/.state/
 
-# ---------------------------------------------------------------------------
-# Log e file temporanei
-# ---------------------------------------------------------------------------
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-*.pid
-*.seed
-*.tmp
-tmp/
-
-# ---------------------------------------------------------------------------
-# Database locali / dump
-# ---------------------------------------------------------------------------
-*.sqlite
-*.sqlite3
-*.db
-*.dump
-*.sql.gz
-pgdata/
-
-# ---------------------------------------------------------------------------
-# Tooling agenti: si versiona la config condivisa, non lo stato locale
-# ---------------------------------------------------------------------------
-.claude/settings.local.json
-.claude/*.local.json
-.claude/state/
-.claude/jobs/
-.codex/*.local.json
-
-# graphify: il grafo si versiona, cache e path assoluti della macchina no
-graphify-out/cache/
-graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
-graphify-out/*.sig
-graphify-out/cost.json
-graphify-out/.graphify_root
-graphify-out/.graphify_python
-
-# ---------------------------------------------------------------------------
-# Sistema operativo ed editor
-# ---------------------------------------------------------------------------
+# Tooling
+graphify-out/
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-Thumbs.db
-ehthumbs.db
-desktop.ini
-.idea/
-.vscode/*
-!.vscode/extensions.json
-*.swp
-*.swo
-*~
-
-# superpowers SDD scratch (ledgers, briefs, review packages)
+.vitest/
 .superpowers/

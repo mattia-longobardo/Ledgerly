@@ -1,0 +1,2 @@
+ALTER TABLE "interest_rules" DROP CONSTRAINT "interest_rules_settlement_ck";--> statement-breakpoint
+ALTER TABLE "interest_rules" ADD CONSTRAINT "interest_rules_settlement_ck" CHECK ("interest_rules"."settlement" in ('daily', 'monthly', 'quarterly', 'annual'));

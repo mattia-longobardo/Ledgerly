@@ -1,0 +1,2 @@
+ALTER TABLE "job_runs" DROP CONSTRAINT "job_runs_tier_ck";--> statement-breakpoint
+ALTER TABLE "job_runs" ADD CONSTRAINT "job_runs_tier_ck" CHECK ("job_runs"."tier" in ('hourly', 'daily', 'monthly', 'manual'));
