@@ -25,7 +25,8 @@
     "subscriptions": "Subscriptions",
     "funds": "Funds",
     "interests": "Interests",
-    "payroll": "Payroll"
+    "payroll": "Payroll",
+    "timeoff": "Time off"
   },
   "shell": {
     "toggleSidebar": "Toggle sidebar (⌘\\)",
@@ -129,6 +130,10 @@
         "wallet": {
           "name": "Budget Makers Wallet",
           "role": "Accounts, balances and transactions"
+        },
+        "trek": {
+          "name": "Trek",
+          "role": "Leave days"
         }
       },
       "states": {
@@ -179,7 +184,8 @@
       },
       "kinds": {
         "accounts": "Accounts and balances",
-        "transactions": "Transactions"
+        "transactions": "Transactions",
+        "leave": "Leave days"
       },
       "runStates": {
         "running": "Running",
@@ -227,6 +233,19 @@
         "months": "{count, plural, one {# month} other {# months}}",
         "action": "Download again",
         "hint": "It only imports: nothing already here is ever removed by it."
+      },
+      "trek": {
+        "notLinked": "Not linked. Leave days stay in Ledgerly until Trek is connected.",
+        "pending": "{count, plural, one {# day waiting to reach Trek} other {# days waiting to reach Trek}}",
+        "connectTitle": "Connect Trek",
+        "connectDescription": "A machine client (no browser login) with the vacay:read and vacay:write scopes: Trek → Settings → Integrations → MCP → OAuth 2.1 Clients → New Client.",
+        "baseUrl": "Trek address",
+        "baseUrlHint": "The site's address, without /mcp — that is added for you.",
+        "disconnectDescription": "The days already booked stay here. Any removal still waiting to reach Trek is completed straight away, because afterwards there is nobody left to ask.",
+        "clientId": "Client ID",
+        "clientIdHint": "From the machine client you created in Trek.",
+        "clientSecret": "Client secret",
+        "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
       }
     },
     "data": {
@@ -476,6 +495,52 @@
       "errors": {
         "invalid": "Check the model and the key (sk-…).",
         "forbidden": "Only admins can change this."
+      }
+    },
+    "holidays": {
+      "title": "Public holidays",
+      "description": "The calendars your days off are measured against. Keep as many as you need — they are fetched from their source and refreshed every day.",
+      "empty": "No calendar yet. Until you add one, the Italian public holidays are used, plus the patron saint set above.",
+      "meta": "{days} days in {year} · {source}",
+      "never": "Never updated",
+      "updated": "Updated {when}",
+      "lastFailed": "Last update failed: {error}",
+      "sources": {
+        "openholidays": "OpenHolidays",
+        "nager": "Nager.Date"
+      },
+      "actions": {
+        "add": "Add a calendar",
+        "refresh": "Update now",
+        "remove": "Remove",
+        "confirmRemove": "Remove {label}?"
+      },
+      "add": {
+        "title": "Add a holiday calendar",
+        "description": "Pick a country, and a place inside it when there is one — that is where the local feasts come from.",
+        "country": "Country",
+        "countryHint": "About a hundred and ten, from two services.",
+        "choose": "Choose a country",
+        "loading": "Loading…",
+        "place": "Region or province",
+        "placeHint": "Leave on the whole country for national holidays only.",
+        "wholeCountry": "The whole country",
+        "countryOnly": "This country is only available at national level.",
+        "cancel": "Cancel",
+        "submit": "Add"
+      },
+      "toasts": {
+        "added": "Calendar added",
+        "removed": "Calendar removed",
+        "refreshed": "Calendar updated"
+      },
+      "errors": {
+        "unreachable": "The holiday service could not be reached. Try again in a moment.",
+        "duplicate": "That calendar is already in the list.",
+        "tooMany": "That is as many calendars as one account keeps.",
+        "notFound": "That calendar is no longer there.",
+        "invalid": "Check the choices and try again.",
+        "failed": "It did not work. Try again."
       }
     }
   },
@@ -2679,5 +2744,170 @@
       "rolUsed": "ROL, used",
       "rolRemaining": "ROL, remaining"
     }
+  },
+  "timeoff": {
+    "title": "Time off",
+    "heading": "Work & Time off",
+    "header": {
+      "vacationDays": "{amount} days vacation",
+      "rolHours": "{amount} ROL",
+      "carried": "{days} carried over from your payslip",
+      "noAllowance": "No allowance stated for this year",
+      "yearLabel": "Year",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "thisYear": "This year"
+    },
+    "units": {
+      "days": "{amount} d",
+      "hours": "{amount} h"
+    },
+    "basis": {
+      "payslip": "Remaining as printed on the {payslip} payslip; use counted through {through}",
+      "allowance": "Allowance and the payslip's carry-over, less the days taken and planned",
+      "unknown": "No payslip and no allowance for this year yet",
+      "allowanceOnly": "Allowance, less what is taken and planned"
+    },
+    "cards": {
+      "vacation": "Vacation (ferie)",
+      "rol": "ROL",
+      "perYear": "{amount} / year",
+      "daysRemaining": "days remaining",
+      "hoursRemaining": "h remaining",
+      "taken": "{amount} taken",
+      "planned": "{amount} planned",
+      "daysTaken": "days",
+      "ofTotal": "of {total} granted",
+      "noTotal": "no total stated",
+      "split": "{taken} counted · {planned} planned",
+      "takenTitle": "Days off in {year}"
+    },
+    "bars": {
+      "title": "By month",
+      "label": "{month}: {taken} taken, {planned} planned"
+    },
+    "calendar": {
+      "title": "{year} calendar",
+      "planned": "Planned",
+      "holiday": "Public holiday",
+      "dayLabel": "{date}: {kinds}",
+      "bookLabel": "Book {date}",
+      "howTo": "Click a day to book it as vacation, click it again to make it ROL. Hold it down to make it half a day, and hold again for a whole one. Hold the right button instead for half vacation and half ROL. Right-click to clear it (or press Delete); Alt-click for a note or another kind.",
+      "counted": "Counted"
+    },
+    "kinds": {
+      "vacation": "Vacation",
+      "rol": "ROL",
+      "comp": "Time off in lieu",
+      "sick": "Sick leave",
+      "other": "Other",
+      "permit": "Permit"
+    },
+    "table": {
+      "title": "Leave days",
+      "date": "Date",
+      "type": "Type",
+      "duration": "Duration",
+      "note": "Note",
+      "status": "Status",
+      "actions": "Actions",
+      "empty": "Nothing to show for this filter.",
+      "fromPayslip": "From the {month} payslip",
+      "payroll": "Payslip",
+      "fromTrek": "From Trek",
+      "filters": {
+        "all": "All",
+        "taken": "Taken",
+        "planned": "Planned"
+      },
+      "statuses": {
+        "taken": "Taken",
+        "planned": "Planned"
+      },
+      "pending": {
+        "upsert": "To send",
+        "delete": "To remove"
+      },
+      "monthPayroll": "Payslip: {vacation} vacation · {rol} ROL",
+      "monthNoPayroll": "No payslip for this month yet",
+      "monthRecorded": "Here: {vacation} vacation · {rol} ROL",
+      "monthPlanned": "{amount} planned",
+      "monthEmpty": "Nothing",
+      "monthMissing": "{amount} not recorded"
+    },
+    "empty": {
+      "title": "No time off yet",
+      "description": "Add a day off, or state this year's allowance, and it will show up here and in the calendar."
+    },
+    "actions": {
+      "add": "Add leave",
+      "allowance": "Allowance",
+      "edit": "Edit",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "confirmDelete": "Remove the leave on {date}?"
+    },
+    "dialog": {
+      "addTitle": "Add leave",
+      "editTitle": "Edit leave",
+      "description": "Weekends and public holidays cannot be booked.",
+      "kind": "Type",
+      "date": "Date",
+      "from": "From",
+      "to": "To",
+      "toHint": "Leave empty for a single day. Weekends and holidays in between are skipped.",
+      "workingDaysOnly": "Working days only.",
+      "hours": "Hours",
+      "duration": "Duration",
+      "wholeDay": "Whole day",
+      "halfDay": "Half day",
+      "note": "Note",
+      "noteHint": "Morning or afternoon, for instance — this stays here and never goes to Trek.",
+      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance.",
+      "rolLocal": "ROL stays here: it is never sent to Trek."
+    },
+    "allowance": {
+      "title": "Allowance for {year}",
+      "description": "What the contract grants this year. Leave a field empty to state nothing; what last year left over comes from your payslip.",
+      "vacationDays": "Vacation days",
+      "rolDays": "ROL days",
+      "rolHint": "Days, like vacation: the screen counts in days throughout.",
+      "totalDays": "Days granted in total",
+      "totalDaysHint": "Vacation and ROL together, as the contract states it."
+    },
+    "toasts": {
+      "saved": "Leave saved",
+      "removed": "Leave removed",
+      "allowanceSaved": "Allowance saved",
+      "removalPending": "Removed here; Trek will be told at the next pass"
+    },
+    "errors": {
+      "invalid": "Check the values and try again.",
+      "invalid_input": "Check the values and try again.",
+      "not_found": "That day is no longer there.",
+      "not_bookable": "That date cannot be booked.",
+      "range_too_long": "That range is too long to add in one go.",
+      "weekend": "{date} is a weekend.",
+      "holiday": "{date} is a public holiday.",
+      "failed": "It did not work. Try again.",
+      "not_cyclable": "That day carries something a click cannot decide about. Use Edit in the table."
+    },
+    "trekCheck": "Trek says: {total} days, {used} used, {remaining} left",
+    "unrecorded": {
+      "title": "{count, plural, one {One month has leave that is not recorded here} other {# months have leave that is not recorded here}}",
+      "row": "{month}: the payslip counts {payroll} of {kind}, this calendar holds {recorded} — {missing} missing",
+      "hint": "Click the days in the calendar to record them. The payslip is the employer's own count, and it arrives a month late."
+    },
+    "overdrawn": {
+      "title": "{count, plural, one {One balance is overdrawn} other {# balances are overdrawn}}",
+      "payslip": "{kind}: {amount} past the residual the {month} payslip printed",
+      "allowance": "{kind}: {amount} past the allowance stated for the year",
+      "byDate": "{kind}: {amount} more than you will have accrued by {date}",
+      "allowanceByDate": "{kind}: {amount} more than the year will have granted by {date}"
+    },
+    "mismatch": "The parts do not add up to the total granted: {amount} {direction}.",
+    "mismatchOver": "more",
+    "mismatchUnder": "less"
   }
 }

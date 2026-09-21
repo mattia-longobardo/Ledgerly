@@ -25,7 +25,8 @@
     "subscriptions": "Abbonamenti",
     "funds": "Fondi",
     "interests": "Interessi",
-    "payroll": "Buste paga"
+    "payroll": "Buste paga",
+    "timeoff": "Ferie"
   },
   "shell": {
     "toggleSidebar": "Mostra/nascondi barra laterale (⌘\\)",
@@ -129,6 +130,10 @@
         "wallet": {
           "name": "Budget Makers Wallet",
           "role": "Conti, saldi e movimenti"
+        },
+        "trek": {
+          "name": "Trek",
+          "role": "Giorni di ferie"
         }
       },
       "states": {
@@ -179,7 +184,8 @@
       },
       "kinds": {
         "accounts": "Conti e saldi",
-        "transactions": "Movimenti"
+        "transactions": "Movimenti",
+        "leave": "Giorni di ferie"
       },
       "runStates": {
         "running": "In corso",
@@ -227,6 +233,19 @@
         "months": "{count, plural, one {# mese} other {# mesi}}",
         "action": "Scarica di nuovo",
         "hint": "Importa soltanto: non toglie mai nulla di ciò che c'è già."
+      },
+      "trek": {
+        "notLinked": "Non collegato. Le giornate restano in Ledgerly finché Trek non è collegato.",
+        "pending": "{count, plural, one {# giornata da inviare a Trek} other {# giornate da inviare a Trek}}",
+        "connectTitle": "Collega Trek",
+        "connectDescription": "Un machine client (senza login nel browser) con gli scope vacay:read e vacay:write: Trek → Impostazioni → Integrazioni → MCP → Client OAuth 2.1 → Nuovo client.",
+        "baseUrl": "Indirizzo di Trek",
+        "baseUrlHint": "L'indirizzo del sito, senza /mcp: viene aggiunto da solo.",
+        "disconnectDescription": "Le giornate già prenotate restano qui. Le rimozioni ancora in sospeso vengono chiuse subito, perché dopo non ci sarebbe più nessuno a cui chiederle.",
+        "clientId": "ID del client",
+        "clientIdHint": "Quello del machine client creato su Trek.",
+        "clientSecret": "Segreto del client",
+        "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
       }
     },
     "data": {
@@ -476,6 +495,52 @@
       "errors": {
         "invalid": "Controlla il modello e la chiave (sk-…).",
         "forbidden": "Solo gli admin possono cambiarlo."
+      }
+    },
+    "holidays": {
+      "title": "Festività",
+      "description": "I calendari su cui si misurano le tue giornate. Tienine quanti ti servono: vengono presi dalla loro fonte e aggiornati ogni giorno.",
+      "empty": "Ancora nessun calendario. Finché non ne aggiungi uno valgono le festività italiane, più il santo patrono indicato qui sopra.",
+      "meta": "{days} giorni nel {year} · {source}",
+      "never": "Mai aggiornato",
+      "updated": "Aggiornato il {when}",
+      "lastFailed": "L'ultimo aggiornamento non è riuscito: {error}",
+      "sources": {
+        "openholidays": "OpenHolidays",
+        "nager": "Nager.Date"
+      },
+      "actions": {
+        "add": "Aggiungi un calendario",
+        "refresh": "Aggiorna ora",
+        "remove": "Elimina",
+        "confirmRemove": "Eliminare {label}?"
+      },
+      "add": {
+        "title": "Aggiungi un calendario",
+        "description": "Scegli il paese e, dove c'è, il luogo dentro al paese: è da lì che arrivano le feste locali.",
+        "country": "Paese",
+        "countryHint": "Un centinaio, da due servizi.",
+        "choose": "Scegli un paese",
+        "loading": "Caricamento…",
+        "place": "Regione o provincia",
+        "placeHint": "Lascia tutto il paese per le sole festività nazionali.",
+        "wholeCountry": "Tutto il paese",
+        "countryOnly": "Per questo paese è disponibile solo il livello nazionale.",
+        "cancel": "Annulla",
+        "submit": "Aggiungi"
+      },
+      "toasts": {
+        "added": "Calendario aggiunto",
+        "removed": "Calendario eliminato",
+        "refreshed": "Calendario aggiornato"
+      },
+      "errors": {
+        "unreachable": "Il servizio delle festività non risponde. Riprova fra poco.",
+        "duplicate": "Quel calendario è già nell'elenco.",
+        "tooMany": "Più calendari di così non se ne tengono.",
+        "notFound": "Quel calendario non c'è più.",
+        "invalid": "Controlla le scelte e riprova.",
+        "failed": "Non ha funzionato. Riprova."
       }
     }
   },
@@ -2679,5 +2744,170 @@
       "rolUsed": "ROL, goduti",
       "rolRemaining": "ROL, residui"
     }
+  },
+  "timeoff": {
+    "title": "Ferie",
+    "heading": "Lavoro e ferie",
+    "header": {
+      "vacationDays": "{amount} giorni di ferie",
+      "rolHours": "{amount} di ROL",
+      "carried": "{days} riportati dal cedolino",
+      "noAllowance": "Nessuna dotazione indicata per quest'anno",
+      "yearLabel": "Anno",
+      "previousYear": "Anno precedente",
+      "nextYear": "Anno successivo",
+      "thisYear": "Quest'anno"
+    },
+    "units": {
+      "days": "{amount} gg",
+      "hours": "{amount} h"
+    },
+    "basis": {
+      "payslip": "Residuo esposto nel cedolino di {payslip}; utilizzi contabilizzati fino a {through}",
+      "allowance": "Dotazione e riporto del cedolino, meno i giorni presi e pianificati",
+      "unknown": "Per quest'anno non c'è ancora né un cedolino né una dotazione",
+      "allowanceOnly": "Dotazione, meno quello che è goduto e pianificato"
+    },
+    "cards": {
+      "vacation": "Ferie",
+      "rol": "ROL",
+      "perYear": "{amount} / anno",
+      "daysRemaining": "giorni rimanenti",
+      "hoursRemaining": "h rimanenti",
+      "taken": "{amount} goduti",
+      "planned": "{amount} pianificati",
+      "daysTaken": "giorni",
+      "ofTotal": "su {total} concessi",
+      "noTotal": "nessun totale indicato",
+      "split": "{taken} contabilizzati · {planned} pianificati",
+      "takenTitle": "Giornate prese nel {year}"
+    },
+    "bars": {
+      "title": "Per mese",
+      "label": "{month}: {taken} goduti, {planned} pianificati"
+    },
+    "calendar": {
+      "title": "Calendario {year}",
+      "planned": "Pianificato",
+      "holiday": "Festivo",
+      "dayLabel": "{date}: {kinds}",
+      "bookLabel": "Prenota il {date}",
+      "howTo": "Clicca un giorno per segnarlo come ferie, clicca ancora per farlo ROL. Tienilo premuto per farlo mezza giornata, e premi ancora per tornare a una intera. Tieni premuto il tasto destro per farlo mezze ferie e mezzo ROL. Tasto destro per toglierlo (o Canc); Alt+clic per una nota o un altro tipo.",
+      "counted": "Contabilizzato"
+    },
+    "kinds": {
+      "vacation": "Ferie",
+      "rol": "ROL",
+      "comp": "Recupero",
+      "sick": "Malattia",
+      "other": "Altro",
+      "permit": "Permesso"
+    },
+    "table": {
+      "title": "Giornate",
+      "date": "Data",
+      "type": "Tipo",
+      "duration": "Durata",
+      "note": "Nota",
+      "status": "Stato",
+      "actions": "Azioni",
+      "empty": "Niente da mostrare con questo filtro.",
+      "fromPayslip": "Dal cedolino di {month}",
+      "payroll": "Cedolino",
+      "fromTrek": "Da Trek",
+      "filters": {
+        "all": "Tutte",
+        "taken": "Godute",
+        "planned": "Pianificate"
+      },
+      "statuses": {
+        "taken": "Goduta",
+        "planned": "Pianificata"
+      },
+      "pending": {
+        "upsert": "Da inviare",
+        "delete": "Da togliere"
+      },
+      "monthPayroll": "Cedolino: {vacation} ferie · {rol} ROL",
+      "monthNoPayroll": "Cedolino non ancora arrivato",
+      "monthRecorded": "Qui: {vacation} ferie · {rol} ROL",
+      "monthPlanned": "{amount} pianificati",
+      "monthEmpty": "Niente",
+      "monthMissing": "{amount} non segnati"
+    },
+    "empty": {
+      "title": "Ancora nessuna ferie",
+      "description": "Aggiungi una giornata, o indica la dotazione dell'anno: comparirà qui e nel calendario."
+    },
+    "actions": {
+      "add": "Aggiungi",
+      "allowance": "Dotazione",
+      "edit": "Modifica",
+      "remove": "Elimina",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "confirmDelete": "Eliminare la giornata del {date}?"
+    },
+    "dialog": {
+      "addTitle": "Aggiungi giornata",
+      "editTitle": "Modifica giornata",
+      "description": "Sabato, domenica e festivi non si prenotano.",
+      "kind": "Tipo",
+      "date": "Data",
+      "from": "Dal",
+      "to": "Al",
+      "toHint": "Lascia vuoto per un solo giorno. I weekend e i festivi in mezzo vengono saltati.",
+      "workingDaysOnly": "Solo giorni lavorativi.",
+      "hours": "Ore",
+      "duration": "Durata",
+      "wholeDay": "Giornata intera",
+      "halfDay": "Mezza giornata",
+      "note": "Nota",
+      "noteHint": "Per esempio mattina o pomeriggio: resta qui e non arriva mai a Trek.",
+      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie.",
+      "rolLocal": "Il ROL resta qui: non viene mai inviato a Trek."
+    },
+    "allowance": {
+      "title": "Dotazione {year}",
+      "description": "Quello che il contratto concede quest'anno. Lascia vuoto un campo per non dichiarare nulla; il residuo dell'anno scorso arriva dal cedolino.",
+      "vacationDays": "Giorni di ferie",
+      "rolDays": "Giorni di ROL",
+      "rolHint": "In giorni, come le ferie: tutta la schermata conta in giorni.",
+      "totalDays": "Giorni concessi in totale",
+      "totalDaysHint": "Ferie e ROL insieme, come li indica il contratto."
+    },
+    "toasts": {
+      "saved": "Giornata salvata",
+      "removed": "Giornata eliminata",
+      "allowanceSaved": "Dotazione salvata",
+      "removalPending": "Tolta qui; a Trek lo si dice al prossimo passaggio"
+    },
+    "errors": {
+      "invalid": "Controlla i valori e riprova.",
+      "invalid_input": "Controlla i valori e riprova.",
+      "not_found": "Quella giornata non c'è più.",
+      "not_bookable": "Quella data non si può prenotare.",
+      "range_too_long": "L'intervallo è troppo lungo per essere aggiunto in una volta.",
+      "weekend": "Il {date} è sabato o domenica.",
+      "holiday": "Il {date} è un giorno festivo.",
+      "failed": "Non ha funzionato. Riprova.",
+      "not_cyclable": "Quel giorno porta qualcosa su cui un clic non può decidere. Usa Modifica nella tabella."
+    },
+    "trekCheck": "Trek dice: {total} giorni, {used} usati, {remaining} residui",
+    "unrecorded": {
+      "title": "{count, plural, one {Un mese ha giornate godute che qui non risultano} other {# mesi hanno giornate godute che qui non risultano}}",
+      "row": "{month}: il cedolino conta {payroll} di {kind}, qui ne risultano {recorded} — ne mancano {missing}",
+      "hint": "Clicca i giorni sul calendario per segnarli. Il cedolino è il conteggio dell'azienda, e arriva con un mese di ritardo."
+    },
+    "overdrawn": {
+      "title": "{count, plural, one {Un saldo è sforato} other {# saldi sono sforati}}",
+      "payslip": "{kind}: {amount} oltre il residuo esposto nel cedolino di {month}",
+      "allowance": "{kind}: {amount} oltre la dotazione indicata per l'anno",
+      "byDate": "{kind}: {amount} in più di quanto avrai maturato entro il {date}",
+      "allowanceByDate": "{kind}: {amount} in più di quanto l'anno avrà concesso entro il {date}"
+    },
+    "mismatch": "Le due parti non tornano col totale concesso: {amount} {direction}.",
+    "mismatchOver": "in più",
+    "mismatchUnder": "in meno"
   }
 }

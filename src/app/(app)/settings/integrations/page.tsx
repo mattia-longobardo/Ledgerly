@@ -4,12 +4,14 @@ import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY } from "@/platform/format";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { listConnections, listRuns, readSyncJob, type SyncRun } from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
+import { pendingCount } from "@/modules/timeoff/service";
 import { Badge } from "@/ui/badge";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { TrekCard, type TrekCardState } from "./trek-card";
 import { WalletCard, type WalletCardState } from "./wallet-card";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -85,10 +87,17 @@ export default async function SettingsIntegrationsPage() {
   const lastSync = wallet?.lastOkAt ? formatInstant(wallet.lastOkAt, ctx) : null;
   const job = wallet ? await readSyncJob(ctx, wallet.id, "transactions") : null;
 
+  const trek = connections.find((connection) => connection.provider === TREK_PROVIDER) ?? null;
+  const trekState: TrekCardState = trek?.state ?? "absent";
+  const trekLastSync = trek?.lastOkAt ? formatInstant(trek.lastOkAt, ctx) : null;
+  const waiting = trek ? await pendingCount(ctx) : 0;
+
   return (
     <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
         <WalletCard state={state} lastSync={lastSync} history={backfillDepth(job?.cursor)} />
+        <div className="border-t border-border" />
+        <TrekCard state={trekState} lastSync={trekLastSync} pending={waiting} />
       </SettingsSection>
 
       <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false}>

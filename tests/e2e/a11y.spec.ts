@@ -13,7 +13,7 @@ const AXE = require.resolve("axe-core/axe.min.js");
 
 test.use({ storageState: sessionState("funds") });
 
-const PAGES = ["/", "/funds", "/budgets", "/interests"] as const;
+const PAGES = ["/", "/funds", "/budgets", "/interests", "/settings/integrations"] as const;
 const WIDTHS = [
   { width: 1440, height: 900, name: "desktop" },
   { width: 400, height: 860, name: "phone" },
@@ -126,3 +126,22 @@ for (const { width, height, name } of WIDTHS) {
     }
   });
 }
+
+/**
+ * Time off (F7) has its own block because it needs its own user: the page is a calendar, a chart
+ * and a table, and checking it while empty would check none of them. The seeded `timeoff` user has
+ * an allowance, days taken and planned, and half a day of ROL.
+ */
+test.describe("time off", () => {
+  test.use({ storageState: sessionState("timeoff") });
+
+  for (const { width, height, name } of WIDTHS) {
+    test(`/timeoff has no accessibility or layout fault at ${name} width`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/timeoff");
+      await settled(page);
+      expect(await layoutFaults(page), `layout of /timeoff at ${width}px`).toEqual([]);
+      expect(await violationsOf(page), `WCAG on /timeoff at ${width}px`).toEqual([]);
+    });
+  }
+});

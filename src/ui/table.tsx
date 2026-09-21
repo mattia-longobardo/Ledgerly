@@ -19,10 +19,13 @@ export function Th({
   children,
   align = "left",
   sort,
+  className,
 }: {
   children: ReactNode;
   align?: Align;
   sort?: { direction: "asc" | "desc" | null; onSort: () => void };
+  /** For a column that steps aside at a narrow width, like `Td`'s. */
+  className?: string;
 }) {
   const ariaSort =
     sort?.direction === "asc" ? "ascending" : sort?.direction === "desc" ? "descending" : undefined;
@@ -33,6 +36,7 @@ export function Th({
       className={cn(
         "h-8 px-2 text-sm font-medium whitespace-nowrap text-muted first:pl-4 last:pr-4",
         align === "right" ? "text-right" : "text-left",
+        className,
       )}
     >
       {sort ? (

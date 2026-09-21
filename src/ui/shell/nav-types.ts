@@ -10,6 +10,7 @@ export type IconName =
   | "pockets"
   | "subscriptions"
   | "payroll"
+  | "timeoff"
   | "settings";
 
 export interface NavLink {

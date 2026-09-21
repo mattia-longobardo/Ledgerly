@@ -1,5 +1,6 @@
-// src/app/(app)/settings/integrations/actions.ts — Settings › Integrations, the Wallet link of
-// spec §9.1: save the token, prove it works, sync on demand, disconnect.
+// src/app/(app)/settings/integrations/actions.ts — Settings › Integrations: the Wallet link of
+// spec §9.1 and the Trek link of §9.2. Both offer the same four: save the credential, prove it
+// works, sync on demand, disconnect.
 //
 // Every one of these is the *user's own* connection (spec §10.3: "Sync now" is per user). None of
 // them takes a connection id from the browser — the id is resolved from the session, so a pasted
@@ -13,7 +14,7 @@ import { matchDeposits } from "@/modules/funds/service";
 import { checkSubscriptions } from "@/modules/subscriptions/service";
 import { refreshRecurrences } from "@/modules/transactions/jobs";
 import { linkOwnTransfers } from "@/modules/transactions/service";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
 import { isSyncBusy, requestWalletBackfill, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import {
@@ -31,6 +32,13 @@ import {
   isUsableToken,
   WalletError,
 } from "@/platform/integrations/wallet/client";
+import {
+  createTrekClient,
+  isTokenRejected as isTrekTokenRejected,
+  TrekError,
+} from "@/platform/integrations/trek/client";
+import { isTrekBusy, syncTrekNow } from "@/platform/integrations/trek/sync";
+import { closePendingDeletes } from "@/modules/timeoff/service";
 
 /**
  * Why an action refused, as one of the `settings.integrations.errors.*` keys. A code, not a
@@ -205,5 +213,126 @@ export async function disconnectWalletAction(): Promise<IntegrationActionResult>
     throw error;
   }
   revalidate();
+  return { ok: true };
+}
+
+/* Trek — the leave calendar (spec §9.2, plan F7 L4) */
+
+/** The signed-in user's Trek connection, or `null` when nothing has ever been saved. */
+async function trekConnectionOf(ctx: Ctx): Promise<Connection | null> {
+  const connections = await listConnections(ctx);
+  return connections.find((connection) => connection.provider === TREK_PROVIDER) ?? null;
+}
+
+/** A Trek failure as the card names it, with the same three senses the Wallet mapping has. */
+function trekFailure(error: unknown): { code: IntegrationActionError; detail: string } {
+  if (error instanceof TrekError) {
+    const code: IntegrationActionError = isTrekTokenRejected(error)
+      ? "rejected"
+      : error.kind === "network" || error.kind === "timeout"
+        ? "unreachable"
+        : "provider";
+    return { code, detail: error.message };
+  }
+  return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
+}
+
+/**
+ * Stores the Trek URL and token. Like Wallet's, saving and proving are separate: a Trek that is
+ * down must not stop a correct token being kept, and "Test connection" is the button that asks.
+ */
+export async function connectTrekAction(
+  baseUrl: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const url = baseUrl.trim().replace(/\/+$/, "");
+  const id = clientId.trim();
+  const secret = clientSecret.trim();
+  if (url === "" || id === "" || secret === "") return { ok: false, error: "empty" };
+  // A header value is all either may be: a line break pasted out of a wrapped page would otherwise
+  // be quoted verbatim into a log and a page (the check Wallet's own token gets).
+  if (!isUsableToken(id) || !isUsableToken(secret)) return { ok: false, error: "empty" };
+  if (!/^https:\/\/[^\s]+$/.test(url)) return { ok: false, error: "provider" };
+
+  try {
+    await saveConnection(ctx, {
+      provider: TREK_PROVIDER,
+      credentials: { baseUrl: url, clientId: id, clientSecret: secret },
+    });
+  } catch (error) {
+    if (error instanceof IntegrationError) return { ok: false, error: "provider" };
+    throw error;
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/** Asks Trek for this year, which proves the token without writing anything. */
+export async function testTrekAction(): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await trekConnectionOf(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    const bag = await readCredentials(ctx, connection.id);
+    const client = createTrekClient({
+      baseUrl: bag.baseUrl ?? "",
+      clientId: bag.clientId ?? "",
+      clientSecret: bag.clientSecret ?? "",
+    });
+    await client.getEntries(new Date().getUTCFullYear());
+  } catch (error) {
+    const { code, detail } = trekFailure(error);
+    await markConnection(ctx, connection.id, code === "rejected" ? "revoked" : "error", detail);
+    revalidate();
+    return { ok: false, error: code };
+  }
+  await markConnection(ctx, connection.id, "active");
+  revalidate();
+  return { ok: true };
+}
+
+/** "Sync now" for Trek (spec §10.3). A pass already running is reported, never doubled. */
+export async function syncTrekNowAction(): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await trekConnectionOf(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    await syncTrekNow(ctx);
+  } catch (error) {
+    if (isTrekBusy(error)) return { ok: false, error: "busy" };
+    const { code } = trekFailure(error);
+    revalidate();
+    return { ok: false, error: code };
+  }
+  revalidate();
+  revalidatePath("/timeoff");
+  return { ok: true };
+}
+
+/**
+ * Drops the Trek token — and, with it, every removal still waiting to be sent.
+ *
+ * A row marked `pending = 'delete'` is a day the app has already taken away from the person's
+ * view and is only keeping so it can tell Trek to drop it too. Once the link is gone there is
+ * nobody left to tell, so keeping it would leave a day nobody can see and nobody can remove
+ * (plan F7 §3.4.10). The days themselves stay, as the confirmation says.
+ */
+export async function disconnectTrekAction(): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await trekConnectionOf(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    await deleteConnection(ctx, connection.id);
+    await closePendingDeletes(ctx);
+  } catch (error) {
+    if (error instanceof IntegrationError) {
+      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
+    }
+    throw error;
+  }
+  revalidate();
+  revalidatePath("/timeoff");
   return { ok: true };
 }

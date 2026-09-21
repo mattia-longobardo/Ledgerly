@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { easterSunday, isBookable, isHoliday, isWeekend, italianHolidays } from "./holidays";
+import { easterSunday, isBookable, isHoliday, isWeekend, italianHolidays } from "./rules";
 
 describe("easterSunday", () => {
   it.each([

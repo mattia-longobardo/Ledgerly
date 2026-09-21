@@ -21,6 +21,8 @@ describe("JOBS", () => {
       ["documents-retention", "daily"],
       ["payslips-sweep", "hourly"],
       ["cometa-sweep", "hourly"],
+      ["trek-sync", "hourly"],
+      ["holidays-refresh", "daily"],
     ]);
   });
 

@@ -106,6 +106,41 @@
       "when": 1789909985854,
       "tag": "0014_interest_category_and_wallet_names",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1789935027106,
+      "tag": "0015_timeoff_trek",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789942652192,
+      "tag": "0016_holiday_calendars",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789946129308,
+      "tag": "0017_rol_in_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789972408669,
+      "tag": "0018_windy_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789972414096,
+      "tag": "0019_clammy_white_queen",
+      "breakpoints": true
     }
   ]
 }

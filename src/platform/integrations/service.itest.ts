@@ -119,7 +119,7 @@ describe("saveConnection", () => {
   });
 
   it("refuses an unknown provider and an unusable credential bag, writing nothing", async () => {
-    await expect(saveConnection(ctx, { provider: "trek", credentials: CREDENTIALS })).rejects.toThrow(
+    await expect(saveConnection(ctx, { provider: "monzo", credentials: CREDENTIALS })).rejects.toThrow(
       IntegrationError,
     );
     await expect(
