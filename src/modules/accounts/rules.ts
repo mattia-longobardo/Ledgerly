@@ -22,6 +22,13 @@ export const ACCOUNT_TYPES = [
   "other",
 ] as const;
 export const ACCOUNT_STATES = ["active", "unavailable", "archived"] as const;
+/**
+ * What hangs off an account and how it reaches it: a direct debit or a standing order on the
+ * **IBAN**, or something charged to the **card** — the two lists the owner kept by hand before
+ * this existed. It is a fact you know about your bank, not something a sync can tell you, so it
+ * is typed in and never guessed.
+ */
+export const CONNECTION_CHANNELS = ["iban", "card"] as const;
 export const ACCOUNT_ORIGINS = ["manual", "synced"] as const;
 /**
  * `derived` (F2.5) is a month end rebuilt from the movements (`deriveMonthEnds`): it loses to every
@@ -34,6 +41,7 @@ export const SNAPSHOT_STATES = ["success", "warning", "failed"] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export type AccountState = (typeof ACCOUNT_STATES)[number];
+export type ConnectionChannel = (typeof CONNECTION_CHANNELS)[number];
 export type AccountOrigin = (typeof ACCOUNT_ORIGINS)[number];
 export type BalanceSource = (typeof BALANCE_SOURCES)[number];
 export type Reminder = (typeof REMINDERS)[number];

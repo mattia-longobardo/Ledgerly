@@ -191,3 +191,70 @@ test("removing an account asks first, and says whether it was deleted or archive
   await expect(toast).toContainText(/deleted|archived/);
   expect((await page.goto(url))?.status()).toBe(404);
 });
+
+/**
+ * Connections (owner, 2026-09-21): the table the owner kept outside the app, brought inside. The
+ * journey is the one that matters — add one, see it where you consult it, rename it, move it to
+ * the other channel, remove it — and that the app refuses the same name twice on one channel.
+ */
+test("what hangs off an account is added, read on Overview, changed and removed", async ({ page }) => {
+  await page.goto("/accounts/new");
+  await page.getByLabel("Name").fill("Conto collegamenti");
+  await page
+    .getByRole("button", { name: /Save|Create|Add/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}/);
+  const url = page.url().split("?")[0];
+
+  await test.step("a connection is added on the IBAN", async () => {
+    await page.goto(`${url}?tab=settings`);
+    const section = page.getByRole("region", { name: "Connections" });
+    await expect(section).toContainText("Nothing yet.");
+    await section.getByRole("button", { name: "Add" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Add a connection" });
+    await dialog.getByLabel("Name").fill("Paypal");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(section.getByRole("button", { name: "Paypal" })).toBeVisible();
+  });
+
+  await test.step("the same name on the same channel is refused, and on the other is not", async () => {
+    const section = page.getByRole("region", { name: "Connections" });
+    await section.getByRole("button", { name: "Add" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Add a connection" });
+    await dialog.getByLabel("Name").fill("paypal");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog.getByRole("alert")).toContainText("already on this channel");
+    // The card is a different way to the same account, so the name is free there.
+    await dialog.getByLabel("Reaches the account through").selectOption("card");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  await test.step("Overview shows both lists without opening Settings", async () => {
+    await page.goto(url);
+    const details = page.getByRole("main");
+    await expect(details).toContainText("Paypal");
+    await expect(details.getByText("Card", { exact: true })).toBeVisible();
+  });
+
+  await test.step("a connection is renamed and then removed", async () => {
+    await page.goto(`${url}?tab=settings`);
+    const section = page.getByRole("region", { name: "Connections" });
+    await section.getByRole("button", { name: "Paypal", exact: true }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Edit connection" });
+    await dialog.getByLabel("Name").fill("PayPal Europe");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(section.getByRole("button", { name: "PayPal Europe" })).toBeVisible();
+
+    // The dialog by its name, not `getByRole("dialog")`: the toast that confirms the removal is a
+    // dialog to the accessibility tree too, and the two would be ambiguous for a moment.
+    await section.getByRole("button", { name: "PayPal Europe" }).click();
+    const editing = page.getByRole("dialog", { name: "Edit connection" });
+    await editing.getByRole("button", { name: "Remove" }).click();
+    await expect(editing).toBeHidden();
+    await expect(section.getByRole("button", { name: "PayPal Europe" })).toBeHidden();
+  });
+});

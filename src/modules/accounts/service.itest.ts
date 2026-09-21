@@ -11,19 +11,24 @@ import type { IncomingTransaction } from "@/modules/transactions/rules";
 import type { RemoteAccount } from "./rules";
 import {
   AccountError,
+  addConnection,
   applyProviderAccounts,
+  connectionsByAccount,
+  connectionsOf,
   createAccount,
   accountDailyBalances,
   dailyBalancesOf,
   deleteBalanceEntry,
   rebuildDerivedBalances,
   removeAccount,
+  removeConnection,
   runSnapshot,
   saveBalanceEntry,
   saveProviderBalance,
   snapshotMonthFor,
   updateAccountSettings,
   updateBalanceEntry,
+  updateConnection,
 } from "./service";
 
 function contextFor(userId: string): Ctx {
@@ -728,5 +733,106 @@ describe("rebuildDerivedBalances", () => {
     await aSyncedAccount();
     const other = await newContext();
     expect(await rebuildDerivedBalances(other)).toEqual({ written: 0 });
+  });
+});
+
+/**
+ * What hangs off an account (owner, 2026-09-21): the direct debits on its IBAN and what is charged
+ * to its card. The table this replaced was kept by hand outside the app, so what matters is that a
+ * name cannot be filed twice and that a connection cannot outlive its account or its owner.
+ */
+describe("account connections", () => {
+  async function account(name = "Revolut") {
+    return createAccount(ctx, { ...CHECKING, name, openingBalance: null });
+  }
+
+  it("keeps the two channels apart and reads them IBAN first, then alphabetically", async () => {
+    const { id } = await account();
+    for (const [channel, connectionName] of [
+      ["card", "Uber"],
+      ["card", "Amazon"],
+      ["iban", "Satispay"],
+      ["iban", "Paypal"],
+    ] as const) {
+      await addConnection(ctx, id, { channel, name: connectionName });
+    }
+    expect((await connectionsOf(ctx, id)).map((row) => `${row.channel}:${row.name}`)).toEqual([
+      "card:Amazon",
+      "card:Uber",
+      "iban:Paypal",
+      "iban:Satispay",
+    ]);
+  });
+
+  it("refuses the same name twice on one channel, whatever the case, and allows it on the other", async () => {
+    const { id } = await account();
+    await addConnection(ctx, id, { channel: "iban", name: "Paypal" });
+    await expect(addConnection(ctx, id, { channel: "iban", name: "  payPAL " })).rejects.toMatchObject({
+      code: "duplicate_connection",
+    });
+    // The same name on the card is a different fact: the money reaches the account another way.
+    await expect(addConnection(ctx, id, { channel: "card", name: "Paypal" })).resolves.toMatchObject({
+      channel: "card",
+    });
+  });
+
+  it("refuses a blank name and one past sixty characters", async () => {
+    const { id } = await account();
+    for (const name of ["   ", "x".repeat(61)]) {
+      await expect(addConnection(ctx, id, { channel: "iban", name })).rejects.toMatchObject({
+        code: "invalid",
+      });
+    }
+  });
+
+  it("renames one, moves it to the other channel, and keeps its note", async () => {
+    const { id } = await account();
+    const row = await addConnection(ctx, id, { channel: "iban", name: "Volkwagen", note: "rata auto" });
+    const moved = await updateConnection(ctx, row.id, {
+      channel: "card",
+      name: "Volkswagen",
+      note: "rata auto",
+    });
+    expect(moved).toMatchObject({ channel: "card", name: "Volkswagen", note: "rata auto" });
+    expect(await connectionsOf(ctx, id)).toHaveLength(1);
+  });
+
+  it("removes one, and says so when it is no longer there", async () => {
+    const { id } = await account();
+    const row = await addConnection(ctx, id, { channel: "card", name: "AWS" });
+    await removeConnection(ctx, row.id);
+    expect(await connectionsOf(ctx, id)).toEqual([]);
+    await expect(removeConnection(ctx, row.id)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("belongs to its account: deleting the account takes it with it", async () => {
+    const { id } = await account();
+    await addConnection(ctx, id, { channel: "iban", name: "Reply" });
+    await removeAccount(ctx, id);
+    expect(await connectionsOf(ctx, id)).toEqual([]);
+  });
+
+  it("is nobody else's: another user neither reads it nor removes it", async () => {
+    const { id } = await account();
+    const row = await addConnection(ctx, id, { channel: "iban", name: "Satispay" });
+    const stranger = await newContext();
+    expect(await connectionsOf(stranger, id)).toEqual([]);
+    await expect(removeConnection(stranger, row.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(addConnection(stranger, id, { channel: "iban", name: "X" })).rejects.toMatchObject({
+      code: "not_found",
+    });
+    // And it is still there for its owner.
+    expect(await connectionsOf(ctx, id)).toHaveLength(1);
+  });
+
+  it("reads several accounts at once, each with its own", async () => {
+    const first = await account("Revolut");
+    const second = await account("ING");
+    await addConnection(ctx, first.id, { channel: "iban", name: "Paypal" });
+    await addConnection(ctx, second.id, { channel: "card", name: "Google Pay" });
+    const byAccount = await connectionsByAccount(ctx, [first.id, second.id]);
+    expect(byAccount.get(first.id)?.map((row) => row.name)).toEqual(["Paypal"]);
+    expect(byAccount.get(second.id)?.map((row) => row.name)).toEqual(["Google Pay"]);
+    expect(await connectionsByAccount(ctx, [])).toEqual(new Map());
   });
 });

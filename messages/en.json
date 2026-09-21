@@ -1410,6 +1410,35 @@
     "estimated": {
       "short": "estimated",
       "note": "Dashed months are rebuilt from the synced movements, before the first balance Wallet reported."
+    },
+    "connections": {
+      "title": "Connections",
+      "description": "What hangs off this account: the direct debits and standing orders on its IBAN, and what is charged to its card. Nobody can tell you this but you, so it is typed in and never guessed.",
+      "channels": {
+        "iban": "IBAN",
+        "card": "Card"
+      },
+      "add": "Add",
+      "addTitle": "Add a connection",
+      "editTitle": "Edit connection",
+      "edit": "Edit {name}",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "name": "Name",
+      "channel": "Reaches the account through",
+      "note": "Note",
+      "noteHint": "Optional: what it is for, how much, when it falls due.",
+      "empty": "Nothing yet.",
+      "added": "{name} added",
+      "saved": "{name} saved",
+      "removed": "{name} removed",
+      "errors": {
+        "duplicate": "That name is already on this channel.",
+        "invalid": "A name is required, up to {max} characters.",
+        "notFound": "That connection is no longer there.",
+        "failed": "Couldn't save. Try again."
+      }
     }
   },
   "budgets": {

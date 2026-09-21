@@ -8,7 +8,12 @@
 // data are never read or written here.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { eq, like } from "drizzle-orm";
-import { applyProviderAccounts, createAccount, saveBalanceEntry } from "../src/modules/accounts/service";
+import {
+  addConnection,
+  applyProviderAccounts,
+  createAccount,
+  saveBalanceEntry,
+} from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
 import { createFund, addDeposit, recordValuation } from "../src/modules/funds/service";
 import { createPensionFund } from "../src/modules/funds/pension/service";
@@ -431,6 +436,18 @@ async function seedLayout(): Promise<void> {
     notes: "",
     openingBalance: { on: addDays(addMonths(monthKey(on), -1), -1), cents: 1_000_000n },
   });
+
+  // ——— What hangs off the accounts: the section replaces a table the owner kept by hand ———
+  for (const [channel, name] of [
+    ["iban", "Paypal"],
+    ["iban", "Satispay"],
+    ["iban", "Bollo Regione Lombardia"],
+    ["card", "Google Pay"],
+    ["card", "Amazon"],
+  ] as const) {
+    await addConnection(ctx, current, { channel, name });
+  }
+  await addConnection(ctx, savings.id, { channel: "iban", name: "Stipendio", note: "accredito mensile" });
 
   // ——— Budgets ———
   const byName = new Map((await listCategories(ctx)).map((category) => [category.name, category.id]));
