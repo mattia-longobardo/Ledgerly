@@ -13,6 +13,7 @@ export * from "@/modules/subscriptions/schema";
 export * from "@/modules/interests/schema";
 export * from "@/modules/funds/schema";
 export * from "@/platform/settings/schema";
+export * from "@/platform/tokens/schema";
 export * from "@/modules/imports/schema";
 export * from "@/modules/payroll/schema";
 export * from "@/modules/timeoff/schema";

@@ -409,6 +409,58 @@
       "ssoDetail": "Nome ed email arrivano da Authentik.",
       "manage": "Gestisci in Authentik"
     },
+    "tokens": {
+      "title": "Token di accesso",
+      "description": "Token personali per l'API in sola lettura usata da Home Assistant e dagli script. I token si salvano come hash; il valore intero si vede una volta sola.",
+      "columns": {
+        "name": "Nome",
+        "token": "Token",
+        "scopes": "Scopi",
+        "expires": "Scadenza",
+        "lastUsed": "Ultimo uso",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "scopes": {
+        "read": "lettura",
+        "write": "scrittura",
+        "imports": "importazioni"
+      },
+      "scopeHints": {
+        "read": "conti, saldi, transazioni e riepilogo",
+        "write": "registrare la lettura di un saldo",
+        "imports": "caricare cedolini e documenti Cometa"
+      },
+      "states": {
+        "active": "Attivo",
+        "expired": "Scaduto",
+        "revoked": "Revocato"
+      },
+      "expiry": {
+        "30": "30 giorni",
+        "90": "90 giorni",
+        "365": "1 anno",
+        "never": "Nessuna scadenza"
+      },
+      "empty": "Nessun token.",
+      "new": "Nuovo token",
+      "create": "Crea il token",
+      "cancel": "Annulla",
+      "nameHint": "A che cosa serve, così saprai quale revocare.",
+      "mintedTitle": "Il tuo nuovo token",
+      "mintedWarning": "Copialo adesso: è l'unica volta che si vede e non è più recuperabile.",
+      "copy": "Copia",
+      "copied": "Copiato",
+      "copyFailed": "Non si è potuto copiare: seleziona il valore e copialo a mano.",
+      "done": "Fatto",
+      "revoke": "Revoca",
+      "revoked": "{name} revocato",
+      "errors": {
+        "invalid": "Dagli un nome e almeno uno scopo.",
+        "not_found": "Questo token non c'è più.",
+        "failed": "Non si è potuto revocare."
+      }
+    },
     "password": {
       "current": "Password attuale",
       "new": "Nuova password",
