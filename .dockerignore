@@ -1,0 +1,20 @@
+.git
+node_modules
+.next
+.vitest
+coverage
+test-results
+playwright-report
+docs
+dev
+cron
+.env
+.env.*
+!.env.example
+Fondo Cometa
+Payroll
+UI Recreation and branding decisions
+.superpowers
+tests/e2e/.state
+graphify-out
+*.tsbuildinfo

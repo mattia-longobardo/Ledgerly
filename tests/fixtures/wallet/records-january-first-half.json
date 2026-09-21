@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "id": "wr-1001",
+      "accountId": "wa-general",
+      "accountName": "Conto corrente",
+      "accountIsBankSync": false,
+      "amount": {
+        "value": -8.615,
+        "currencyCode": "EUR"
+      },
+      "category": {
+        "id": "wc-groceries",
+        "name": "  Spesa  ",
+        "group": {
+          "id": "wcg-casa",
+          "name": "Casa"
+        },
+        "color": "#3B82F6"
+      },
+      "counterParty": " Panificio Rossi ",
+      "labels": ["spesa", " spesa ", ""],
+      "note": "  pane e latte  ",
+      "recordDate": "2026-01-05",
+      "recordState": "Cleared",
+      "recordType": "Expense",
+      "source": "manual",
+      "transfer": null,
+      "createdAt": "2026-01-05T19:00:00.000Z",
+      "updatedAt": "2026-01-05T19:02:00.000Z"
+    }
+  ],
+  "limit": 2,
+  "offset": 0,
+  "nextOffset": null,
+  "appliedRecordDateFilters": ["gte.2026-01-01T00:00:00.000Z", "lt.2026-01-17T00:00:00.000Z"]
+}

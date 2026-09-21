@@ -1,0 +1,2 @@
+ALTER TABLE "provider_links" DROP CONSTRAINT "provider_links_entity_type_ck";--> statement-breakpoint
+ALTER TABLE "provider_links" ADD CONSTRAINT "provider_links_entity_type_ck" CHECK ("provider_links"."entity_type" in ('account', 'transaction', 'category', 'category_group', 'interest_entry'));
