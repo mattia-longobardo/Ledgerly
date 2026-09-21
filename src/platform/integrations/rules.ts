@@ -6,7 +6,11 @@
 import { z } from "zod";
 
 export const CONNECTION_STATES = ["active", "error", "revoked"] as const;
-export const SYNC_KINDS = ["accounts", "transactions"] as const;
+/**
+ * Every kind of pass any provider can make. A provider makes only its own (`KINDS_OF`): this list
+ * is the column's vocabulary, not a to-do list anybody works through.
+ */
+export const SYNC_KINDS = ["accounts", "transactions", "leave"] as const;
 export const SYNC_STATES = ["running", "success", "failed", "skipped"] as const;
 /** `category_group` is a Wallet category group, filed as the local parent category (F2.5). */
 export const ENTITY_TYPES = [
@@ -22,16 +26,28 @@ export type SyncKind = (typeof SYNC_KINDS)[number];
 export type SyncState = (typeof SYNC_STATES)[number];
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
-/** The only provider F2 speaks to. Later phases add their own (spec §9.2). */
+/** The provider F2 speaks to: accounts and movements. */
 export const WALLET_PROVIDER = "wallet";
+/** The provider F7 speaks to (spec §9.2): the leave calendar, over MCP. */
+export const TREK_PROVIDER = "trek";
 
 /** The providers a connection may be created for: one entry per provider the app can speak to. */
-export const PROVIDERS = [WALLET_PROVIDER] as const;
+export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
 export function isKnownProvider(provider: string): provider is Provider {
   return (PROVIDERS as readonly string[]).includes(provider);
 }
+
+/**
+ * Which kinds each provider syncs, in the order its pass runs them. A provider's engine iterates
+ * its own entry rather than `SYNC_KINDS`: adding a kind for one provider must not make another
+ * provider record a run for a pass it never makes.
+ */
+export const KINDS_OF = {
+  [WALLET_PROVIDER]: ["accounts", "transactions"],
+  [TREK_PROVIDER]: ["leave"],
+} as const satisfies Record<Provider, readonly SyncKind[]>;
 
 export const entityTypeSchema = z.enum(ENTITY_TYPES);
 

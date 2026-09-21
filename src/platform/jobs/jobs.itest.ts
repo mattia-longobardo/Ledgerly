@@ -88,6 +88,7 @@ describe("jobs", () => {
         { job: "housekeeping", status: "success" },
         { job: "accounts-alerts", status: "success" },
         { job: "documents-retention", status: "success" },
+        { job: "holidays-refresh", status: "success" },
       ],
     });
   });

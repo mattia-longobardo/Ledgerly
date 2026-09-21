@@ -162,3 +162,46 @@ test.describe("funds on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 });
+
+/**
+ * Time off at 400 px (plan F7 L2, §11). The screen is a chart, twelve calendars and a table, and
+ * the table has six columns — the width worth checking is this one, not the desktop's.
+ */
+test.describe("time off on a phone", () => {
+  test.use({ storageState: sessionState("timeoff") });
+
+  test("shows the cards, the calendar and the table without scrolling sideways", async ({ page }) => {
+    await page.goto("/timeoff");
+    await expect(page.getByRole("heading", { name: "Work & Time off", level: 1 })).toBeVisible();
+
+    // Time off is a bottom tab, in the Work group.
+    const tabs = page
+      .getByRole("navigation", { name: "Primary" })
+      .filter({ has: page.getByRole("button", { name: "More" }) });
+    await expect(tabs.getByRole("link", { name: "Time off" })).toBeVisible();
+
+    // Both cards in the same unit since N5 — days, ROL included — and the provenance of each.
+    await expect(page.getByTestId("vacation-card")).toContainText("days remaining");
+    await expect(page.getByTestId("rol-card")).toContainText("days remaining");
+    await expect(page.getByTestId("vacation-card")).toContainText("Allowance");
+    // And the card that counts the whole year, which a phone has to fit too.
+    await expect(page.getByTestId("taken-card")).toContainText("2.5");
+
+    // The twelve calendars are there, and the seeded days are marked.
+    await expect(page.getByTestId("leave-cell")).toHaveCount(3);
+
+    // The note and status columns step aside at this width; the status still shows under the date.
+    await expect(page.getByRole("columnheader", { name: "Note" })).toBeHidden();
+    // A day's own row, not the month heading above it: only a day carries an Edit button.
+    const dayRow = page
+      .getByRole("row")
+      .filter({ has: page.getByRole("button", { name: "Edit" }) })
+      .first();
+    await expect(dayRow).toContainText(/Taken|Planned/);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});

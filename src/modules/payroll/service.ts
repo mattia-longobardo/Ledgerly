@@ -33,6 +33,7 @@ import {
   isDerived,
   isFieldName,
   LEAVE_COLUMNS,
+  type LeaveKind,
   LEAVE_KINDS,
   leaveField,
   MONEY_FIELDS,
@@ -689,4 +690,102 @@ export async function payslipsOf(ctx: Pick<Ctx, "userId">, documentIds?: readonl
 /** The body lines of a document, with today's roles. */
 export async function rawLinesOf(ctx: Pick<Ctx, "userId">, documentId: string): Promise<RawLine[]> {
   return withRoles(await linesOf(ctx, documentId), await codeMapOf(ctx));
+}
+
+/* What time off reads from here (plan F7 §3.1) */
+
+/**
+ * A leave balance as one applied payslip printed it. `timeoff` reads these through this function
+ * rather than the table: the dependency runs one way, and payroll does not know time off exists.
+ */
+export interface LeaveSnapshot {
+  kind: LeaveKind;
+  /** The payslip's own month. */
+  period: string;
+  previousYearHours: number | null;
+  accruedHours: number | null;
+  usedHours: number | null;
+  remainingHours: number | null;
+}
+
+/** Leave taken, as an applied payslip accounted for it, in the month it was used. */
+export interface LeaveEvent {
+  kind: LeaveKind;
+  hours: number;
+  /** The payslip's own month. */
+  payrollPeriod: string;
+  /** The month the hours were used in: the payslip's month minus one (spec §7.8). */
+  usagePeriod: string;
+}
+
+const hoursOf = (value: string | null): number | null => (value === null ? null : Number(value));
+
+/**
+ * Every leave snapshot an **applied** payslip of `year` printed, oldest first (spec §7.8).
+ *
+ * Only active payslips count: a superseded one and the rectification that replaced it would
+ * otherwise both offer a snapshot for the same month, and the residual would pick whichever came
+ * out of the database first. The order is deterministic so the caller can take the last one.
+ */
+export async function leaveSnapshotsOf(ctx: Pick<Ctx, "userId">, year: number): Promise<LeaveSnapshot[]> {
+  const rows = await getDb()
+    .select({
+      kind: leaveBalanceSnapshots.kind,
+      period: leaveBalanceSnapshots.period,
+      previousYear: leaveBalanceSnapshots.previousYear,
+      accrued: leaveBalanceSnapshots.accrued,
+      used: leaveBalanceSnapshots.used,
+      remaining: leaveBalanceSnapshots.remaining,
+    })
+    .from(leaveBalanceSnapshots)
+    .innerJoin(payslips, eq(payslips.id, leaveBalanceSnapshots.payslipId))
+    .where(
+      and(
+        userScoped(ctx).owns(leaveBalanceSnapshots),
+        eq(payslips.active, true),
+        sql`extract(year from ${leaveBalanceSnapshots.period}) = ${year}`,
+      ),
+    )
+    .orderBy(asc(leaveBalanceSnapshots.period), asc(leaveBalanceSnapshots.kind));
+
+  return rows.map((row) => ({
+    kind: row.kind,
+    period: row.period,
+    previousYearHours: hoursOf(row.previousYear),
+    accruedHours: hoursOf(row.accrued),
+    usedHours: hoursOf(row.used),
+    remainingHours: hoursOf(row.remaining),
+  }));
+}
+
+/**
+ * Every leave event of `year`, by the month the hours were **used** in, oldest first — which is
+ * the year the interface shows them under, not the year of the payslip that reported them. A
+ * January payslip reports December, and December belongs to the year before.
+ */
+export async function leaveEventsOf(ctx: Pick<Ctx, "userId">, year: number): Promise<LeaveEvent[]> {
+  const rows = await getDb()
+    .select({
+      kind: payrollLeaveEvents.kind,
+      hours: payrollLeaveEvents.hours,
+      payrollPeriod: payrollLeaveEvents.payrollPeriod,
+      usagePeriod: payrollLeaveEvents.usagePeriod,
+    })
+    .from(payrollLeaveEvents)
+    .innerJoin(payslips, eq(payslips.id, payrollLeaveEvents.payslipId))
+    .where(
+      and(
+        userScoped(ctx).owns(payrollLeaveEvents),
+        eq(payslips.active, true),
+        sql`extract(year from ${payrollLeaveEvents.usagePeriod}) = ${year}`,
+      ),
+    )
+    .orderBy(asc(payrollLeaveEvents.usagePeriod), asc(payrollLeaveEvents.kind));
+
+  return rows.map((row) => ({
+    kind: row.kind,
+    hours: Number(row.hours),
+    payrollPeriod: row.payrollPeriod,
+    usagePeriod: row.usagePeriod,
+  }));
 }

@@ -9,6 +9,7 @@ import {
   outcomeState,
   providerLinkSchema,
   syncErrorText,
+  TREK_PROVIDER,
   WALLET_PROVIDER,
 } from "./rules";
 
@@ -17,9 +18,10 @@ const NOW = new Date("2026-03-10T08:00:00Z");
 const hoursAgo = (hours: number) => new Date(NOW.getTime() - hours * 3_600_000);
 
 describe("isKnownProvider", () => {
-  it("accepts the provider F2 speaks to and nothing else", () => {
+  it("accepts the providers the app speaks to and nothing else", () => {
     expect(isKnownProvider(WALLET_PROVIDER)).toBe(true);
-    expect(isKnownProvider("trek")).toBe(false);
+    expect(isKnownProvider(TREK_PROVIDER)).toBe(true);
+    expect(isKnownProvider("monzo")).toBe(false);
     expect(isKnownProvider("")).toBe(false);
   });
 });
@@ -62,7 +64,7 @@ describe("providerLinkSchema", () => {
   });
 
   it("refuses an unknown provider, an unknown entity type and a non-uuid entity", () => {
-    expect(providerLinkSchema.safeParse({ ...link, provider: "trek" }).success).toBe(false);
+    expect(providerLinkSchema.safeParse({ ...link, provider: "monzo" }).success).toBe(false);
     expect(providerLinkSchema.safeParse({ ...link, entityType: "payslip" }).success).toBe(false);
     expect(providerLinkSchema.safeParse({ ...link, entityId: "42" }).success).toBe(false);
     expect(providerLinkSchema.safeParse({ ...link, externalId: "   " }).success).toBe(false);

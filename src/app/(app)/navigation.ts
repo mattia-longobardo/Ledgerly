@@ -13,6 +13,7 @@ export interface NavItem extends Omit<NavLink, "label"> {
     | "pockets"
     | "subscriptions"
     | "payroll"
+    | "timeoff"
     | "settings";
   adminOnly: boolean;
 }
@@ -96,6 +97,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     href: "/payroll" as Route,
     labelKey: "payroll",
     icon: "payroll",
+    group: "work",
+    mobile: true,
+    adminOnly: false,
+  },
+  {
+    id: "timeoff",
+    href: "/timeoff" as Route,
+    labelKey: "timeoff",
+    icon: "timeoff",
     group: "work",
     mobile: true,
     adminOnly: false,

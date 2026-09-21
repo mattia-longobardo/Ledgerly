@@ -5,7 +5,9 @@ import { interestsAccrualJob } from "@/modules/interests/jobs";
 import { payslipsSweepJob } from "@/modules/payroll/jobs";
 import { pocketsAccrualJob } from "@/modules/pockets/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
+import { trekSyncJob } from "@/modules/timeoff/jobs";
 import { walletSyncJob } from "@/modules/transactions/jobs";
+import { holidaysRefreshJob } from "@/platform/holidays/jobs";
 import { housekeepingJob } from "./housekeeping";
 import type { JobDetail } from "./schema";
 
@@ -33,4 +35,8 @@ export const JOBS: readonly JobDefinition[] = [
   documentsRetentionJob,
   payslipsSweepJob,
   cometaSweepJob,
+  // The leave calendar (spec §9.2): its own provider, its own lock, and no mail of its own.
+  trekSyncJob,
+  // The subscribed holiday calendars, kept current from their sources (M3).
+  holidaysRefreshJob,
 ];

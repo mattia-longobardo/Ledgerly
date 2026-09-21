@@ -1,5 +1,6 @@
 import {
   Banknote,
+  CalendarDays,
   ChartPie,
   Landmark,
   LayoutDashboard,
@@ -24,5 +25,6 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   pockets: WalletCards,
   subscriptions: Repeat,
   payroll: Banknote,
+  timeoff: CalendarDays,
   settings: Settings,
 };
