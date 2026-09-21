@@ -12,7 +12,7 @@ export const jobRuns = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     job: text("job").notNull(),
-    tier: text("tier", { enum: ["hourly", "daily", "monthly"] }).notNull(),
+    tier: text("tier", { enum: ["hourly", "daily", "monthly", "manual"] }).notNull(),
     status: text("status", { enum: ["running", "success", "failed", "skipped"] }).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -26,7 +26,7 @@ export const jobRuns = pgTable(
   },
   (table) => [
     index("job_runs_job_started_idx").on(table.job, table.startedAt.desc()),
-    check("job_runs_tier_ck", sql`${table.tier} in ('hourly', 'daily', 'monthly')`),
+    check("job_runs_tier_ck", sql`${table.tier} in ('hourly', 'daily', 'monthly', 'manual')`),
     check("job_runs_status_ck", sql`${table.status} in ('running', 'success', 'failed', 'skipped')`),
   ],
 );

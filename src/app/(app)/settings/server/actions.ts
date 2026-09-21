@@ -3,7 +3,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { redactForLog } from "@/platform/auth/logger";
 import { requireAdmin } from "@/platform/auth/session";
+import { BackupError, type BackupErrorCode, backupNow } from "@/platform/backup/service";
+import { JOBS } from "@/platform/jobs/registry";
+import { runJobByHand } from "@/platform/jobs/tick";
 import type { LlmProbeResult } from "@/platform/settings/llm-probe";
 import type { OidcInput } from "@/platform/settings/oidc";
 import type { OidcProbeOutcome } from "@/platform/settings/oidc-probe";
@@ -112,4 +117,41 @@ export async function removeSmtpAction(): Promise<ServerActionResult> {
 export async function sendTestEmailAction(): Promise<MailProbeResult> {
   const ctx = await requireAdmin();
   return await sendTestEmail(ctx);
+}
+
+/* Maintenance (design rows 886–891) — plan F8 P4/P5. */
+
+/** "Back up now" (design row 890): the real `pg_dump`, awaited, because an admin wants the size. */
+export async function backupNowAction(): Promise<
+  { ok: true; size: number } | { ok: false; error: BackupErrorCode }
+> {
+  const ctx = await requireAdmin();
+  try {
+    const result = await backupNow(ctx);
+    revalidatePath("/settings/server");
+    return { ok: true, size: result.bytes };
+  } catch (error) {
+    if (error instanceof BackupError) return { ok: false, error: error.code };
+    console.error("[settings] the backup failed", redactForLog(error));
+    return { ok: false, error: "dump_failed" };
+  }
+}
+
+/**
+ * Starts one job because an admin asked (spec §10.3). It answers as soon as the job has been
+ * *started*, not when it finishes: "Export all data" gathers everybody's documents and a Server
+ * Action that waited for it would time out. How it went is in `job_runs`, which is the record of
+ * every run whoever asked for it.
+ */
+export async function runJobAction(name: string): Promise<ServerActionResult> {
+  await requireAdmin();
+  if (!JOBS.some((job) => job.name === name)) return { ok: false, error: "invalid" };
+  after(async () => {
+    try {
+      await runJobByHand(name);
+    } catch (error) {
+      console.error(`[settings] the ${name} job failed`, redactForLog(error));
+    }
+  });
+  return { ok: true };
 }

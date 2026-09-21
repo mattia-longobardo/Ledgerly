@@ -77,6 +77,38 @@ export async function deleteObject(key: string): Promise<void> {
  * Deletes every object under a folder of the app's (`payslips/<userId>/`): what a removed user
  * leaves behind. The folder must be a valid key followed by `/`, so nothing wider can be named.
  */
+export interface StoredObject {
+  key: string;
+  size: number;
+  lastModified: Date | null;
+}
+
+/**
+ * The objects under a folder of the app's, oldest first. Keys come back as the application names
+ * them — without `S3_KEY_PREFIX` — so a caller can hand one straight back to {@link deleteObject}.
+ */
+export async function listFolder(folder: string): Promise<StoredObject[]> {
+  if (!folder.endsWith("/")) throw new RangeError("A folder ends with /");
+  const prefix = objectKey(folder.slice(0, -1)) + "/";
+  const own = readEnv().S3_KEY_PREFIX ?? "";
+  const Bucket = readEnv().S3_BUCKET;
+  const found: StoredObject[] = [];
+  let ContinuationToken: string | undefined;
+  do {
+    const page = await s3().send(new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken }));
+    for (const object of page.Contents ?? []) {
+      if (!object.Key) continue;
+      found.push({
+        key: object.Key.startsWith(own) ? object.Key.slice(own.length) : object.Key,
+        size: object.Size ?? 0,
+        lastModified: object.LastModified ?? null,
+      });
+    }
+    ContinuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (ContinuationToken);
+  return found.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+}
+
 export async function deleteFolder(folder: string): Promise<number> {
   if (!folder.endsWith("/")) throw new RangeError("A folder ends with /");
   const Prefix = objectKey(folder.slice(0, -1)) + "/";

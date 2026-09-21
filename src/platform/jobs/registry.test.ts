@@ -23,7 +23,18 @@ describe("JOBS", () => {
       ["cometa-sweep", "hourly"],
       ["trek-sync", "hourly"],
       ["holidays-refresh", "daily"],
+      ["database-backup", "daily"],
+      // No tick ever asks for `manual`: this one runs only from "Export all data" (spec §10.3).
+      ["export-all", "manual"],
     ]);
+  });
+
+  it("gives every scheduled job a tier supercronic actually calls", () => {
+    const called = new Set(["hourly", "daily", "monthly"]);
+    for (const job of JOBS) {
+      if (job.tier === "manual") continue;
+      expect(called.has(job.tier), job.name).toBe(true);
+    }
   });
 
   it("names each job once: two entries with one name would both answer to it", () => {

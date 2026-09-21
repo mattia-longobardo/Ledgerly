@@ -7,11 +7,22 @@ import { pocketsAccrualJob } from "@/modules/pockets/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
 import { trekSyncJob } from "@/modules/timeoff/jobs";
 import { walletSyncJob } from "@/modules/transactions/jobs";
+import { backupJob } from "@/platform/backup/jobs";
+import { exportAllJob } from "@/platform/export/jobs";
 import { holidaysRefreshJob } from "@/platform/holidays/jobs";
 import { housekeepingJob } from "./housekeeping";
 import type { JobDetail } from "./schema";
 
-export type Tier = "hourly" | "daily" | "monthly";
+/**
+ * When a job runs. `manual` is the odd one out: no tick ever asks for that tier, so such a job only
+ * ever runs because an admin pressed "Run now" (spec §10.3). It is a tier and not a flag because
+ * `job_runs.tier` has to record what asked for the run, and "nobody asked, a person did" is the
+ * honest answer for those.
+ */
+export type Tier = "hourly" | "daily" | "monthly" | "manual";
+
+/** The tiers the cron sidecar may ask for. */
+export type ScheduledTier = Exclude<Tier, "manual">;
 
 export interface JobDefinition {
   name: string;
@@ -39,4 +50,8 @@ export const JOBS: readonly JobDefinition[] = [
   trekSyncJob,
   // The subscribed holiday calendars, kept current from their sources (M3).
   holidaysRefreshJob,
+  // Every day with the rest of the daily tier (spec §10.2); its retention is in `housekeeping`.
+  backupJob,
+  // No tier asks for this one: it runs when an admin presses "Export all data" (spec §10.3).
+  exportAllJob,
 ];

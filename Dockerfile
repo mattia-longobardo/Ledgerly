@@ -17,7 +17,11 @@ RUN ./node_modules/.bin/esbuild scripts/migrate.ts --bundle --platform=node --fo
       --outfile=migrate.mjs
 
 FROM node:22-alpine AS runner
-RUN apk add --no-cache wget
+# `wget` for the healthcheck; `postgresql18-client` for the daily backup (spec §10.2), which runs
+# `pg_dump -Fc` inside this container. The client may not be older than the server, and the
+# homelab's server is Postgres 18 (`pgvector/pgvector:pg18`): on Alpine 3.24 this package is
+# exactly 18.x, which is why no other base image and no extra container are needed.
+RUN apk add --no-cache wget postgresql18-client
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=builder --chown=1000:1000 /app/.next/standalone ./

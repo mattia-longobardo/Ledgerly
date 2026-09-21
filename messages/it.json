@@ -621,6 +621,39 @@
         "forbidden": "Solo gli admin possono cambiarlo."
       }
     },
+    "maintenance": {
+      "title": "Manutenzione",
+      "description": "Backup del database, conservazione e versione.",
+      "lastBackup": "Ultimo backup",
+      "backupDetail": "{at} · {size}",
+      "schedule": "Pianificazione dei backup",
+      "scheduleDetail": "Ogni giorno alle 12:00 · se ne tengono {kept}",
+      "retention": "Conservazione",
+      "retentionDetail": "Documenti 10 anni · registri dei job e delle sincronizzazioni 90 giorni · transazioni illimitate",
+      "version": "Versione",
+      "backupNow": "Fai un backup adesso",
+      "backupRunning": "Backup in corso…",
+      "backupDone": "Backup scritto.",
+      "exportRunning": "Avvio…",
+      "lastExport": "Ultima esportazione completa",
+      "exportDetail": "{at} · {users} utenti · {size}",
+      "never": "Mai",
+      "exportAll": "Esporta tutti i dati",
+      "exportStarted": "Esportazione avviata: il registro dei job dirà com'è andata.",
+      "errors": {
+        "failed": "Non si è potuta avviare.",
+        "dump_failed": "pg_dump non è arrivato in fondo: controlla il log del server.",
+        "too_large": "Il dump è più grande di quanto questo container possa tenere in memoria.",
+        "upload_failed": "Il dump è stato fatto ma non si è potuto salvare.",
+        "forbidden": "Solo gli admin possono farlo."
+      }
+    },
+    "exportMine": {
+      "title": "I tuoi dati",
+      "description": "Tutto quello che possiedi, in uno ZIP: ogni tabella come CSV, le stesse righe come un JSON, e i tuoi documenti originali.",
+      "download": "Esporta i miei dati",
+      "hint": "Il download parte subito e con molti documenti può metterci un po'."
+    },
     "oidc": {
       "title": "Authentik (OIDC)",
       "description": "Provider di accesso unico. Cambiare l'issuer disconnette tutti.",
