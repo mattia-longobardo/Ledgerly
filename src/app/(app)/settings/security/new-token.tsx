@@ -85,7 +85,10 @@ export function NewToken() {
       >
         {minted ? (
           <div className="flex flex-col gap-3">
-            <code className="rounded-ctl border border-border bg-hover px-2.5 py-2 font-mono text-sm break-all">
+            <code
+              data-testid="minted-token"
+              className="rounded-ctl border border-border bg-hover px-2.5 py-2 font-mono text-sm break-all"
+            >
               {minted}
             </code>
             <div className="flex justify-end gap-2">

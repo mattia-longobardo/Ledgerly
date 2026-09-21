@@ -7,10 +7,12 @@ import { formatDate, NULL_DISPLAY } from "@/platform/format";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { listConnections, listRuns, readSyncJob, type SyncRun } from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
+import { jobStatuses } from "@/platform/jobs/queries";
 import { pendingCount } from "@/modules/timeoff/service";
 import { Badge } from "@/ui/badge";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { type JobRow, JobsCard } from "./jobs-card";
 import { TrekCard, type TrekCardState } from "./trek-card";
 import { WalletCard, type WalletCardState } from "./wallet-card";
 
@@ -69,13 +71,12 @@ function durationSeconds(run: SyncRun): number | null {
 }
 
 /**
- * Settings › Integrations (spec §9.1 and §10.3): the Wallet link, and the log of what it did.
+ * Settings › Integrations (spec §9.1, §7.10 and §10.3): the Wallet link, the log of what it did,
+ * and — for an admin — every scheduled job with "Run now".
  *
  * The connection is read through `listConnections`, which cannot carry credentials — the sealed
  * column is only ever opened by `readCredentials`, and only inside a Server Action. Nothing on
  * this page knows the token, so nothing on this page can send it to the browser.
- *
- * The admin side of §10.3 — running any job by hand — is a separate card and not part of F2.
  */
 export default async function SettingsIntegrationsPage() {
   const ctx = await requireSession();
@@ -92,6 +93,19 @@ export default async function SettingsIntegrationsPage() {
   const trekLastSync = trek?.lastOkAt ? formatInstant(trek.lastOkAt, ctx) : null;
   const waiting = trek ? await pendingCount(ctx) : 0;
 
+  // §10.3: only an admin may run a job by hand, and only an admin sees that this is possible.
+  const tJobs = await getTranslations("settings.jobs");
+  const jobs: JobRow[] =
+    ctx.role === "admin"
+      ? (await jobStatuses(ctx)).map((job) => ({
+          name: job.name,
+          tier: job.tier,
+          lastRun: job.lastRun ? formatInstant(job.lastRun.startedAt, ctx) : null,
+          status: job.lastRun?.status ?? null,
+          error: job.lastRun?.error ?? null,
+        }))
+      : [];
+
   return (
     <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
@@ -99,6 +113,12 @@ export default async function SettingsIntegrationsPage() {
         <div className="border-t border-border" />
         <TrekCard state={trekState} lastSync={trekLastSync} pending={waiting} />
       </SettingsSection>
+
+      {ctx.role === "admin" && (
+        <SettingsSection title={tJobs("title")} description={tJobs("description")} padded={false}>
+          <JobsCard jobs={jobs} />
+        </SettingsSection>
+      )}
 
       <SettingsSection title={t("runs.title")} description={t("runs.description")} padded={false}>
         {runs.length === 0 ? (

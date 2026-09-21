@@ -13,7 +13,14 @@ const AXE = require.resolve("axe-core/axe.min.js");
 
 test.use({ storageState: sessionState("funds") });
 
-const PAGES = ["/", "/funds", "/budgets", "/interests", "/settings/integrations"] as const;
+const PAGES = [
+  "/",
+  "/funds",
+  "/budgets",
+  "/interests",
+  "/settings/integrations",
+  "/settings/security",
+] as const;
 const WIDTHS = [
   { width: 1440, height: 900, name: "desktop" },
   { width: 400, height: 860, name: "phone" },
@@ -126,6 +133,26 @@ for (const { width, height, name } of WIDTHS) {
     }
   });
 }
+
+/**
+ * Admin › Users and Admin › Server (F8) have their own block because they need an admin: for
+ * anybody else both pages answer 404, which is the point of them.
+ */
+test.describe("the admin pages", () => {
+  test.use({ storageState: sessionState("owner") });
+
+  for (const path of ["/settings/users", "/settings/server"] as const) {
+    for (const { width, height, name } of WIDTHS) {
+      test(`${path} has no accessibility or layout fault at ${name} width`, async ({ page }) => {
+        await page.setViewportSize({ width, height });
+        await page.goto(path);
+        await settled(page);
+        expect(await layoutFaults(page), `layout of ${path} at ${width}px`).toEqual([]);
+        expect(await violationsOf(page), `WCAG on ${path} at ${width}px`).toEqual([]);
+      });
+    }
+  }
+});
 
 /**
  * Time off (F7) has its own block because it needs its own user: the page is a calendar, a chart
