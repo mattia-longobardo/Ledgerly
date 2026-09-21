@@ -125,6 +125,7 @@
       "security": "Security",
       "integrations": "Integrations",
       "data": "Data",
+      "users": "Users",
       "server": "Server"
     },
     "integrations": {
@@ -432,6 +433,73 @@
       "since": "since {date}",
       "errors": {
         "failed": "Couldn't sign out. Try again."
+      }
+    },
+    "people": {
+      "title": "Users",
+      "description": "Two roles: User sees and edits their own data; Admin also manages users and the server. New users are created on first Authentik sign-in or by invitation.",
+      "columns": {
+        "user": "User",
+        "email": "Email",
+        "method": "Sign-in",
+        "role": "Role",
+        "lastSignIn": "Last sign-in",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "methods": {
+        "password": "Password",
+        "sso": "Authentik",
+        "both": "Authentik · password",
+        "none": "No method yet",
+        "invited": "Invited"
+      },
+      "roles": {
+        "admin": "Admin",
+        "user": "User"
+      },
+      "statuses": {
+        "active": "Active",
+        "blocked": "Blocked",
+        "pending": "Pending",
+        "expired": "Expired"
+      },
+      "invitedPerson": "Invitation",
+      "roleFor": "Role of {name}",
+      "roleSaved": "Role changed",
+      "invite": "Invite user",
+      "inviteHint": "A single-use link, good for seven days. They choose Authentik or a password.",
+      "sendInvitation": "Send invitation",
+      "invitation": {
+        "sent": "Invitation sent",
+        "mail_off": "Invitation created, but no email left: “Invitations & resets” is off in Admin › Server.",
+        "mail_failed": "Invitation created, but the mail server refused it. The link is live: hand it over another way, or fix SMTP and invite again."
+      },
+      "revokeInvitation": "Revoke",
+      "invitationRevoked": "Invitation revoked",
+      "resetPassword": "Reset password",
+      "reset": {
+        "sent": "Password reset link sent",
+        "sso_only": "Nothing sent: this account signs in with Authentik only.",
+        "mail_off": "Nothing sent: “Invitations & resets” is off in Admin › Server."
+      },
+      "block": "Block",
+      "unblock": "Unblock",
+      "blockedNow": "Blocked, and signed out everywhere",
+      "unblocked": "Unblocked",
+      "remove": "Remove",
+      "removeTitle": "Remove this user?",
+      "removeWarning": "{email} and everything they own will be deleted.",
+      "removeDetail": "Accounts, transactions, documents and their originals go with them. This cannot be undone.",
+      "removed": "{email} removed",
+      "cancel": "Cancel",
+      "errors": {
+        "forbidden": "Only admins can do this.",
+        "not_found": "That person is no longer here.",
+        "invalid": "Check the email address.",
+        "email_taken": "Someone already signs in with that address.",
+        "self": "You cannot do that to your own account.",
+        "last_admin": "This is the last admin: the instance would have nobody to administer it."
       }
     },
     "snapshots": {

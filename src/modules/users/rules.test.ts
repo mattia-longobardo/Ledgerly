@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PREFERENCES, describeUserAgent, preferencesInputSchema } from "./rules";
+import {
+  DEFAULT_PREFERENCES,
+  describeUserAgent,
+  initialsOf,
+  personActionRefusal,
+  preferencesInputSchema,
+} from "./rules";
 
 describe("preferencesInputSchema", () => {
   it("accepts a complete, valid preference set", () => {
@@ -93,5 +99,53 @@ describe("describeUserAgent", () => {
     [null, { browser: null, os: null }],
   ])("describes %s", (ua, expected) => {
     expect(describeUserAgent(ua)).toEqual(expected);
+  });
+});
+
+describe("personActionRefusal", () => {
+  const other = { actorId: "a", targetId: "b", targetRole: "user" as const, adminCount: 2 };
+
+  it("allows an ordinary change to someone else", () => {
+    expect(personActionRefusal("remove", other)).toBeNull();
+    expect(personActionRefusal("block", other)).toBeNull();
+    expect(personActionRefusal("demote", { ...other, targetRole: "admin" })).toBeNull();
+  });
+
+  it("refuses to touch the last admin, whoever is asking", () => {
+    const last = { ...other, targetRole: "admin" as const, adminCount: 1 };
+    expect(personActionRefusal("demote", last)).toBe("last_admin");
+    expect(personActionRefusal("block", last)).toBe("last_admin");
+    expect(personActionRefusal("remove", last)).toBe("last_admin");
+  });
+
+  it("refuses to block or remove yourself, even with other admins around", () => {
+    const self = { ...other, targetId: "a" };
+    expect(personActionRefusal("block", self)).toBe("self");
+    expect(personActionRefusal("remove", self)).toBe("self");
+  });
+
+  it("lets an admin hand back their own role while another admin remains", () => {
+    expect(personActionRefusal("demote", { ...other, targetId: "a", targetRole: "admin" })).toBeNull();
+  });
+
+  it("refuses an admin handing back the last role, which is the same lockout", () => {
+    expect(
+      personActionRefusal("demote", { ...other, targetId: "a", targetRole: "admin", adminCount: 1 }),
+    ).toBe("last_admin");
+  });
+});
+
+describe("initialsOf", () => {
+  it("takes the first and last word of a name", () => {
+    expect(initialsOf("Mattia Longobardo", "m@example.test")).toBe("ML");
+  });
+
+  it("takes two letters of a single word", () => {
+    expect(initialsOf("Ada", "ada@example.test")).toBe("AD");
+  });
+
+  it("falls back to the address when there is no name yet", () => {
+    expect(initialsOf("", "invited@example.test")).toBe("IN");
+    expect(initialsOf("   ", "z@example.test")).toBe("Z");
   });
 });
