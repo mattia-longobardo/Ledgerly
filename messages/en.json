@@ -1131,7 +1131,8 @@
     "partial": "Some accounts have no balance yet, so these totals are incomplete.",
     "empty": {
       "title": "No accounts yet",
-      "description": "Add an account by hand, or connect a provider once integrations arrive."
+      "description": "Add an account by hand, or connect a provider once integrations arrive.",
+      "archived": "Nothing open right now. {count, plural, one {# archived account} other {# archived accounts}} still here, with all their history."
     },
     "columns": {
       "name": "Name",
@@ -1371,16 +1372,17 @@
       "danger": {
         "title": "Danger zone",
         "description": "Archiving hides the account and keeps its history in past snapshots.",
-        "explain": "Remove this account: it is archived if anything rests on it, and deleted outright — with every movement and balance it holds — if nothing does.",
+        "explain": "Archive it to take it off the list and keep everything, or remove it: removing deletes it outright when nothing rests on it, and archives it when something does.",
         "archived": "This account is archived. Its balances are still counted in past months.",
-        "archive": "Remove account",
+        "archive": "Archive account",
         "restore": "Restore account",
         "confirmTitle": "Remove this account?",
         "confirmBody": "If no pocket, subscription, interest rule or fund rests on {name}, it is deleted for good, and so is every movement and balance entry it holds. If something does, it is archived instead and its history stays.",
         "confirm": "Remove account",
         "cancel": "Keep it",
         "deletedToast": "{name} deleted, with its movements and balances.",
-        "archivedToast": "{name} archived. Its history stays in past months."
+        "archivedToast": "{name} archived. Its history stays in past months.",
+        "remove": "Remove account"
       }
     },
     "period": {
@@ -1439,7 +1441,8 @@
         "notFound": "That connection is no longer there.",
         "failed": "Couldn't save. Try again."
       }
-    }
+    },
+    "showArchived": "Show archived"
   },
   "budgets": {
     "title": "Budgets",

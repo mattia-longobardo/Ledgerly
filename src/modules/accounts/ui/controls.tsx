@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/ui/cn";
 import { type Params, withParams } from "@/ui/url";
 
@@ -149,4 +149,45 @@ export function spanMonths(span: SpanKey | undefined, month: number): number {
     default:
       return 12;
   }
+}
+
+/**
+ * A checkbox that is really a link, the shape the Expenses filter bar already uses: a server
+ * component cannot hold state, so the query string is the state and the glyph draws it.
+ */
+export function ToggleLink({
+  label,
+  path,
+  params,
+  name,
+  on,
+}: {
+  label: string;
+  path: string;
+  params: Params;
+  /** The query parameter it turns on and off; `"1"` means on. */
+  name: string;
+  on: boolean;
+}) {
+  return (
+    <Link
+      href={withParams(path, params, { [name]: on ? "" : "1" })}
+      aria-current={on ? "true" : undefined}
+      className={cn(
+        "focus-ring inline-flex h-[30px] items-center gap-1.5 rounded-ctl border bg-card px-2.5 text-sm font-medium hover:bg-hover",
+        on ? "border-accent" : "border-border",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "grid size-3.5 shrink-0 place-items-center rounded-[4px] border",
+          on ? "border-primary bg-primary text-primary-fg" : "border-border2",
+        )}
+      >
+        {on && <Check className="size-2.5" />}
+      </span>
+      {label}
+    </Link>
+  );
 }
