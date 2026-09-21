@@ -687,11 +687,6 @@ export async function payslipsOf(ctx: Pick<Ctx, "userId">, documentIds?: readonl
     .orderBy(desc(payslips.year), sql`${payslips.period} desc nulls first`, asc(payslips.id));
 }
 
-/** The body lines of a document, with today's roles. */
-export async function rawLinesOf(ctx: Pick<Ctx, "userId">, documentId: string): Promise<RawLine[]> {
-  return withRoles(await linesOf(ctx, documentId), await codeMapOf(ctx));
-}
-
 /* What time off reads from here (plan F7 §3.1) */
 
 /**

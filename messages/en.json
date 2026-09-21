@@ -128,6 +128,7 @@
       "profile": "Profile",
       "security": "Security",
       "integrations": "Integrations",
+      "categories": "Categories",
       "data": "Data",
       "users": "Users",
       "server": "Server"
@@ -257,6 +258,91 @@
         "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
       }
     },
+    "categories": {
+      "title": "Categories",
+      "description": "The transactions' categories, in groups. A group has a colour and every sub-category is drawn in it. A synced category is matched by name before a new one is created, and its Wallet group becomes its group.",
+      "add": "Add category",
+      "name": "Name",
+      "group": "Group",
+      "type": "Type",
+      "color": "Colour",
+      "noColor": "No colour",
+      "noGroup": "No group",
+      "types": {
+        "income": "Income",
+        "expense": "Expense",
+        "transfer": "Transfer"
+      },
+      "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
+      "rename": "Rename",
+      "edit": "Edit category",
+      "archive": "Archive",
+      "restore": "Restore",
+      "archived": "Archived",
+      "showArchived": "Show archived",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No categories yet. They also appear on their own as transactions sync.",
+      "saved": "Category saved",
+      "archivedToast": "Category archived",
+      "restoredToast": "Category restored",
+      "errors": {
+        "duplicate": "A category with this name already exists.",
+        "invalid": "Enter a name between 1 and {max} characters.",
+        "notFound": "That category no longer exists.",
+        "failed": "Couldn't save. Try again.",
+        "invalidParent": "Pick an active group that is not inside another one. A category with sub-categories cannot go into a group."
+      },
+      "hasChildren": "It has sub-categories, so it stays a group.",
+      "typeFromGroup": "A category in a group has the group's type.",
+      "colorFromGroup": "It is drawn in {group}'s colour.",
+      "addGroup": "New group",
+      "addChild": "Add sub-category",
+      "delete": "Delete",
+      "colorHint": "Chosen automatically; pick another one and it stays.",
+      "autoColor": "Automatic",
+      "deleteTitle": "Delete this category?",
+      "deleteWarning": "{name} is removed for good. This cannot be undone.",
+      "deleteMovements": "{count, plural, =0 {No transaction uses it.} one {# transaction loses its category.} other {# transactions lose their category.}}",
+      "deleteBudgets": "Budgets set on it are deleted; subscriptions and interest rules lose it.",
+      "deleteChildren": "Its sub-categories are deleted with it.",
+      "deleteWallet": "It is deleted in Wallet too, if it came from there.",
+      "deletedToast": "{name} deleted · {count, plural, =0 {no transaction touched} one {# transaction uncategorised} other {# transactions uncategorised}}",
+      "wallet": {
+        "deleted": "{count, plural, one {# category deleted in Wallet too} other {# categories deleted in Wallet too}}",
+        "refused": "Wallet did not delete it: {reason}",
+        "failed": "Wallet could not be reached: {reason}"
+      }
+    },
+    "labels": {
+      "title": "Labels",
+      "description": "Free-form labels you can put on a transaction. Synced labels are matched by name.",
+      "add": "Add label",
+      "name": "Name",
+      "color": "Colour",
+      "noColor": "No colour",
+      "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
+      "rename": "Rename",
+      "edit": "Edit label",
+      "remove": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty": "No labels yet.",
+      "saved": "Label saved",
+      "removedToast": "Label deleted",
+      "remove_confirm": {
+        "title": "Delete this label?",
+        "description": "It is removed from {count, plural, one {# transaction} other {# transactions}}. Nothing else changes.",
+        "confirm": "Delete",
+        "cancel": "Keep it"
+      },
+      "errors": {
+        "duplicate": "A label with this name already exists.",
+        "invalid": "Enter a name between 1 and {max} characters.",
+        "notFound": "That label no longer exists.",
+        "failed": "Couldn't save. Try again."
+      }
+    },
     "jobs": {
       "title": "Scheduled jobs",
       "description": "What the cron sidecar runs, and when it last ran. “Run now” takes the job's lock, so a job already running is skipped rather than started twice.",
@@ -283,76 +369,6 @@
       "runNow": "Run now",
       "started": "{job} started: this table says how it went once it is done.",
       "failed": "It could not be started."
-    },
-    "data": {
-      "categories": {
-        "title": "Categories",
-        "description": "Categories of the transactions in Expenses, in groups. A synced category is matched by name before a new one is created, and its Wallet group becomes its group.",
-        "add": "Add category",
-        "name": "Name",
-        "group": "Group",
-        "type": "Type",
-        "color": "Colour",
-        "noColor": "No colour",
-        "noGroup": "No group",
-        "types": {
-          "income": "Income",
-          "expense": "Expense",
-          "transfer": "Transfer"
-        },
-        "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
-        "rename": "Rename",
-        "edit": "Edit category",
-        "archive": "Archive",
-        "restore": "Restore",
-        "archived": "Archived",
-        "showArchived": "Show archived",
-        "save": "Save",
-        "cancel": "Cancel",
-        "empty": "No categories yet. They also appear on their own as transactions sync.",
-        "saved": "Category saved",
-        "archivedToast": "Category archived",
-        "restoredToast": "Category restored",
-        "errors": {
-          "duplicate": "A category with this name already exists.",
-          "invalid": "Enter a name between 1 and {max} characters.",
-          "notFound": "That category no longer exists.",
-          "failed": "Couldn't save. Try again.",
-          "invalidParent": "Pick an active group that is not inside another one. A category with sub-categories cannot go into a group."
-        },
-        "hasChildren": "It has sub-categories, so it stays a group.",
-        "typeFromGroup": "A category in a group has the group's type.",
-        "colorFromGroup": "A category in a group has the group's colour."
-      },
-      "labels": {
-        "title": "Labels",
-        "description": "Free-form labels you can put on a transaction. Synced labels are matched by name.",
-        "add": "Add label",
-        "name": "Name",
-        "color": "Colour",
-        "noColor": "No colour",
-        "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
-        "rename": "Rename",
-        "edit": "Edit label",
-        "remove": "Delete",
-        "save": "Save",
-        "cancel": "Cancel",
-        "empty": "No labels yet.",
-        "saved": "Label saved",
-        "removedToast": "Label deleted",
-        "remove_confirm": {
-          "title": "Delete this label?",
-          "description": "It is removed from {count, plural, one {# transaction} other {# transactions}}. Nothing else changes.",
-          "confirm": "Delete",
-          "cancel": "Keep it"
-        },
-        "errors": {
-          "duplicate": "A label with this name already exists.",
-          "invalid": "Enter a name between 1 and {max} characters.",
-          "notFound": "That label no longer exists.",
-          "failed": "Couldn't save. Try again."
-        }
-      }
     },
     "account": {
       "title": "Account",
@@ -1115,7 +1131,8 @@
     "partial": "Some accounts have no balance yet, so these totals are incomplete.",
     "empty": {
       "title": "No accounts yet",
-      "description": "Add an account by hand, or connect a provider once integrations arrive."
+      "description": "Add an account by hand, or connect a provider once integrations arrive.",
+      "archived": "Nothing open right now. {count, plural, one {# archived account} other {# archived accounts}} still here, with all their history."
     },
     "columns": {
       "name": "Name",
@@ -1355,10 +1372,17 @@
       "danger": {
         "title": "Danger zone",
         "description": "Archiving hides the account and keeps its history in past snapshots.",
-        "explain": "Archive this account, or delete it outright when nothing depends on it.",
+        "explain": "Archive it to take it off the list and keep everything, or remove it: removing deletes it outright when nothing rests on it, and archives it when something does.",
         "archived": "This account is archived. Its balances are still counted in past months.",
         "archive": "Archive account",
-        "restore": "Restore account"
+        "restore": "Restore account",
+        "confirmTitle": "Remove this account?",
+        "confirmBody": "If no pocket, subscription, interest rule or fund rests on {name}, it is deleted for good, and so is every movement and balance entry it holds. If something does, it is archived instead and its history stays.",
+        "confirm": "Remove account",
+        "cancel": "Keep it",
+        "deletedToast": "{name} deleted, with its movements and balances.",
+        "archivedToast": "{name} archived. Its history stays in past months.",
+        "remove": "Remove account"
       }
     },
     "period": {
@@ -1388,7 +1412,37 @@
     "estimated": {
       "short": "estimated",
       "note": "Dashed months are rebuilt from the synced movements, before the first balance Wallet reported."
-    }
+    },
+    "connections": {
+      "title": "Connections",
+      "description": "What hangs off this account: the direct debits and standing orders on its IBAN, and what is charged to its card. Nobody can tell you this but you, so it is typed in and never guessed.",
+      "channels": {
+        "iban": "IBAN",
+        "card": "Card"
+      },
+      "add": "Add",
+      "addTitle": "Add a connection",
+      "editTitle": "Edit connection",
+      "edit": "Edit {name}",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "name": "Name",
+      "channel": "Reaches the account through",
+      "note": "Note",
+      "noteHint": "Optional: what it is for, how much, when it falls due.",
+      "empty": "Nothing yet.",
+      "added": "{name} added",
+      "saved": "{name} saved",
+      "removed": "{name} removed",
+      "errors": {
+        "duplicate": "That name is already on this channel.",
+        "invalid": "A name is required, up to {max} characters.",
+        "notFound": "That connection is no longer there.",
+        "failed": "Couldn't save. Try again."
+      }
+    },
+    "showArchived": "Show archived"
   },
   "budgets": {
     "title": "Budgets",
@@ -1632,11 +1686,17 @@
       "utility": "Utility",
       "price": "Price",
       "billing": "Billing",
+      "due": "Due",
+      "dueOn": "Next charge: {date}",
       "paidFrom": "Paid from",
       "monthly": "Monthly",
       "yearly": "Yearly",
       "status": "Paid this period",
       "edit": "Edit"
+    },
+    "due": {
+      "day": "Day {day}",
+      "quarter": "Q{quarter}"
     },
     "cycles": {
       "weekly": "Weekly",
@@ -1667,7 +1727,15 @@
     "inactive": {
       "title": "{count, plural, one {# paused or cancelled} other {# paused or cancelled}}",
       "paused": "Paused",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "pausedTitle": "{count, plural, one {# paused} other {# paused}}",
+      "cancelledTitle": "{count, plural, one {# cancelled} other {# cancelled}}",
+      "delete": "Delete",
+      "deleteTitle": "Delete this subscription?",
+      "deleteWarning": "{name} and the payments it had checked are removed for good. This cannot be undone.",
+      "deleteDetail": "The transactions themselves are untouched: a subscription is a plan laid over them, never their owner.",
+      "deletedToast": "{name} deleted",
+      "cancelDelete": "Keep it"
     },
     "alerts": {
       "not_found": "no expense matching \"{match}\" found on {account} in {period} ({price} expected).",
@@ -1744,7 +1812,8 @@
       "not_found": "That subscription no longer exists.",
       "invalid_account": "Pick one of your open accounts.",
       "invalid_category": "Pick one of your spending categories.",
-      "failed": "Couldn't save. Try again."
+      "failed": "Couldn't save. Try again.",
+      "not_cancelled": "It is not cancelled: cancel it first, then it can be deleted."
     },
     "empty": {
       "title": "No subscriptions",

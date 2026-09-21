@@ -1,7 +1,7 @@
-# Support material: local only, deleted at the end of development (spec §13)
-/Fondo Cometa/
-/Payroll/
-/UI Recreation and branding decisions/
+# Screenshots and files dropped in the working copy while talking about a change: they are not
+# part of the repository. The README's own pictures live in `docs/screenshots/`.
+/image.png
+/*.png
 
 # Environment
 .env

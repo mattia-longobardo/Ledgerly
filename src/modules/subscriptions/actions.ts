@@ -10,6 +10,7 @@ import type { Ctx } from "@/platform/context";
 import { CYCLES } from "./rules";
 import {
   createSubscription,
+  deleteSubscription,
   setSubscriptionState,
   setUtility,
   SubscriptionError,
@@ -109,6 +110,18 @@ export async function setSubscriptionStateAction(
   const ctx = await requireSession();
   try {
     await setSubscriptionState(ctx, id, z.enum(["active", "paused", "cancelled"]).parse(state));
+    revalidate();
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** Throws away a cancelled subscription and the charges it had checked (service: cancelled only). */
+export async function deleteSubscriptionAction(id: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await deleteSubscription(ctx, id);
     revalidate();
     return { ok: true };
   } catch (error) {

@@ -11,7 +11,9 @@ import { linkOwnTransfers } from "@/modules/transactions/service";
 import { parseAmount } from "./rules";
 import {
   AccountError,
+  addConnection,
   archiveAccount,
+  type ConnectionInput,
   createAccount,
   deleteBalanceEntry,
   removeAccount,
@@ -19,8 +21,10 @@ import {
   runSnapshot,
   saveBalanceEntry,
   snapshotMonthFor,
+  removeConnection,
   updateAccountSettings,
   updateBalanceEntry,
+  updateConnection,
 } from "./service";
 
 /**
@@ -176,18 +180,12 @@ export async function deleteBalanceEntryAction(accountId: string, entryId: strin
 }
 
 /** Archives when something depends on the account, deletes when nothing does (spec §7.1). */
-export async function removeAccountAction(id: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await removeAccount(ctx, id);
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
+/**
+ * Archiving is the reversible half of §7.1, and it has its own button because "keep it, but out of
+ * my way" is a different intention from "remove it": `removeAccount` deletes when nothing depends
+ * on the account, and somebody who only wants it off the list should never have to risk that.
+ * `restoreAccountAction` is the way back.
+ */
 export async function archiveAccountAction(id: string): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
@@ -196,6 +194,25 @@ export async function archiveAccountAction(id: string): Promise<ActionResult> {
     revalidatePath("/accounts");
     revalidatePath("/");
     return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/**
+ * The two outcomes of §7.1 are not the same thing and the screen has to be able to say which
+ * happened: an archived account keeps its history, a deleted one takes every movement and balance
+ * with it (F9 P3, rilievo E1).
+ */
+export type RemoveResult = { ok: true; outcome: "deleted" | "archived" } | { ok: false; error: string };
+
+export async function removeAccountAction(id: string): Promise<RemoveResult> {
+  const ctx = await requireSession();
+  try {
+    const outcome = await removeAccount(ctx, id);
+    revalidatePath("/accounts");
+    revalidatePath("/");
+    return { ok: true, outcome };
   } catch (error) {
     return failed(error);
   }
@@ -223,6 +240,51 @@ export async function runSnapshotNowAction(month?: string): Promise<ActionResult
     revalidatePath("/settings/data");
     revalidatePath("/accounts");
     revalidatePath("/");
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+// ——— What hangs off an account (owner, 2026-09-21) ———————————————————————————————————————————
+
+/** Both tabs of the account's page show them, and Overview shows the same list read-only. */
+function revalidateConnections(accountId: string): void {
+  revalidatePath(`/accounts/${accountId}`);
+  revalidatePath("/accounts");
+}
+
+export async function addConnectionAction(accountId: string, input: ConnectionInput): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await addConnection(ctx, accountId, input);
+    revalidateConnections(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function updateConnectionAction(
+  accountId: string,
+  id: string,
+  input: ConnectionInput,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await updateConnection(ctx, id, input);
+    revalidateConnections(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function removeConnectionAction(accountId: string, id: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await removeConnection(ctx, id);
+    revalidateConnections(accountId);
     return { ok: true };
   } catch (error) {
     return failed(error);

@@ -12,6 +12,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "../../platform/auth/schema";
@@ -20,6 +21,7 @@ import {
   ACCOUNT_STATES,
   ACCOUNT_TYPES,
   BALANCE_SOURCES,
+  CONNECTION_CHANNELS,
   REMINDERS,
   SNAPSHOT_STATES,
   TRENDS,
@@ -166,5 +168,47 @@ export const snapshotRuns = pgTable(
     index("snapshot_runs_user_month_idx").on(table.userId, table.month.desc()),
     check("snapshot_runs_state_ck", sql`${table.state} in (${sql.raw(inList(SNAPSHOT_STATES))})`),
     check("snapshot_runs_month_ck", sql`extract(day from ${table.month}) = 1`),
+  ],
+);
+
+/**
+ * What hangs off an account: the direct debits and standing orders on its IBAN, and what is
+ * charged to its card (spec §7.1, owner 2026-09-21). One row per thing, so the list can be
+ * ordered, searched and — one day — tied to a subscription; a comma-separated memo could be none
+ * of those.
+ *
+ * `ON DELETE CASCADE` on the account: a connection is a fact *about* that account and means
+ * nothing without it. The unique key is case-insensitive on the name, so "Paypal" and "PayPal"
+ * are the same connection on the same channel and the second one is refused rather than filed.
+ */
+export const accountConnections = pgTable(
+  "account_connections",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    channel: text("channel", { enum: CONNECTION_CHANNELS }).notNull(),
+    name: text("name").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("account_connections_uq").on(table.accountId, table.channel, sql`lower(${table.name})`),
+    index("account_connections_user_idx").on(table.userId, table.accountId),
+    check(
+      "account_connections_channel_ck",
+      sql`${table.channel} in (${sql.raw(inList(CONNECTION_CHANNELS))})`,
+    ),
+    check("account_connections_name_ck", sql`length(btrim(${table.name})) between 1 and 60`),
   ],
 );

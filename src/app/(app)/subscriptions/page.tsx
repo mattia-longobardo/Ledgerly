@@ -44,6 +44,8 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
   const empty = newDraft(todayOn, defaultTolerance);
   const rows = view.rows.map((row) => presentRow(row, t, format));
   const inactive = view.inactive.map((row) => presentRow(row, t, format));
+  const paused = inactive.filter((row) => row.draft.state === "paused");
+  const cancelled = inactive.filter((row) => row.draft.state === "cancelled");
 
   const suggest = (
     <SuggestionsButton
@@ -126,7 +128,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
                 </p>
                 <Link
                   href="/expenses"
-                  className="focus-ring shrink-0 rounded-[2px] font-medium text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] font-medium text-accent hover:underline"
                 >
                   {t("alerts.checkExpenses")}
                 </Link>
@@ -173,13 +175,19 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
               }}
             />
           </Card>
-          {inactive.length > 0 && (
-            <InactiveSubscriptions
-              rows={inactive}
-              options={options}
-              title={t("inactive.title", { count: inactive.length })}
-            />
-          )}
+          {/* Two sections, not one list: a paused plan is waiting to come back, a cancelled one is
+              over — and only the second offers to be thrown away (owner, 2026-09-21). */}
+          <InactiveSubscriptions
+            rows={paused}
+            options={options}
+            title={t("inactive.pausedTitle", { count: paused.length })}
+          />
+          <InactiveSubscriptions
+            rows={cancelled}
+            options={options}
+            title={t("inactive.cancelledTitle", { count: cancelled.length })}
+            deletable
+          />
         </div>
 
         {/* Beside the table only past the wide threshold; below it they share a row under it. */}
@@ -262,10 +270,18 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
                   key={entry.groupId ?? "none"}
                   className="grid grid-cols-[90px_1fr_84px] items-center gap-2 text-sm"
                 >
-                  <span className="truncate">{entry.name ?? t("byCategory.uncategorised")}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="inline-block size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: entry.color ?? undefined }}
+                    />
+                    <span className="truncate">{entry.name ?? t("byCategory.uncategorised")}</span>
+                  </span>
                   <ProgressBar
                     value={largest === 0n ? 0 : Number((entry.yearlyCents * 1000n) / largest) / 1000}
                     label={entry.name ?? t("byCategory.uncategorised")}
+                    color={entry.color ?? undefined}
                   />
                   <span className="text-right tabular-nums">{money(entry.yearlyCents)}</span>
                 </li>

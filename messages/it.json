@@ -128,6 +128,7 @@
       "profile": "Profilo",
       "security": "Sicurezza",
       "integrations": "Integrazioni",
+      "categories": "Categorie",
       "data": "Dati",
       "users": "Utenti",
       "server": "Server"
@@ -257,6 +258,91 @@
         "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
       }
     },
+    "categories": {
+      "title": "Categorie",
+      "description": "Le categorie delle transazioni, raccolte in gruppi. Un gruppo ha un colore e ogni sottocategoria viene disegnata con quello. Una categoria sincronizzata viene riconosciuta dal nome prima di crearne una nuova, e il suo gruppo di Wallet diventa il suo gruppo.",
+      "add": "Aggiungi categoria",
+      "name": "Nome",
+      "group": "Gruppo",
+      "type": "Tipo",
+      "color": "Colore",
+      "noColor": "Nessun colore",
+      "noGroup": "Nessun gruppo",
+      "types": {
+        "income": "Entrata",
+        "expense": "Spesa",
+        "transfer": "Giroconto"
+      },
+      "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
+      "rename": "Rinomina",
+      "edit": "Modifica categoria",
+      "archive": "Archivia",
+      "restore": "Ripristina",
+      "archived": "Archiviata",
+      "showArchived": "Mostra le archiviate",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "empty": "Ancora nessuna categoria. Compaiono anche da sole man mano che i movimenti si sincronizzano.",
+      "saved": "Categoria salvata",
+      "archivedToast": "Categoria archiviata",
+      "restoredToast": "Categoria ripristinata",
+      "errors": {
+        "duplicate": "Esiste già una categoria con questo nome.",
+        "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
+        "notFound": "Questa categoria non esiste più.",
+        "failed": "Non è stato possibile salvare. Riprova.",
+        "invalidParent": "Scegli un gruppo attivo che non stia dentro un altro. Una categoria con sottocategorie non può entrare in un gruppo."
+      },
+      "hasChildren": "Ha delle sottocategorie, quindi resta un gruppo.",
+      "typeFromGroup": "Una categoria in un gruppo ha il tipo del gruppo.",
+      "colorFromGroup": "Viene disegnata con il colore di {group}.",
+      "addGroup": "Nuovo gruppo",
+      "addChild": "Aggiungi sottocategoria",
+      "delete": "Elimina",
+      "colorHint": "Scelto in automatico; se ne prendi un altro resta quello.",
+      "autoColor": "Automatico",
+      "deleteTitle": "Eliminare questa categoria?",
+      "deleteWarning": "{name} viene rimossa per sempre. Non si può tornare indietro.",
+      "deleteMovements": "{count, plural, =0 {Nessuna transazione la usa.} one {# transazione resta senza categoria.} other {# transazioni restano senza categoria.}}",
+      "deleteBudgets": "I budget impostati su di lei vengono cancellati; abbonamenti e regole di interesse la perdono.",
+      "deleteChildren": "Le sue sottocategorie vengono eliminate con lei.",
+      "deleteWallet": "Viene eliminata anche su Wallet, se viene da lì.",
+      "deletedToast": "{name} eliminata · {count, plural, =0 {nessuna transazione toccata} one {# transazione senza categoria} other {# transazioni senza categoria}}",
+      "wallet": {
+        "deleted": "{count, plural, one {# categoria eliminata anche su Wallet} other {# categorie eliminate anche su Wallet}}",
+        "refused": "Wallet non l'ha eliminata: {reason}",
+        "failed": "Non si raggiunge Wallet: {reason}"
+      }
+    },
+    "labels": {
+      "title": "Etichette",
+      "description": "Etichette libere da mettere su un movimento. Quelle sincronizzate vengono abbinate per nome.",
+      "add": "Aggiungi etichetta",
+      "name": "Nome",
+      "color": "Colore",
+      "noColor": "Nessun colore",
+      "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
+      "rename": "Rinomina",
+      "edit": "Modifica etichetta",
+      "remove": "Elimina",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "empty": "Ancora nessuna etichetta.",
+      "saved": "Etichetta salvata",
+      "removedToast": "Etichetta eliminata",
+      "remove_confirm": {
+        "title": "Eliminare questa etichetta?",
+        "description": "Viene rimossa da {count, plural, one {# movimento} other {# movimenti}}. Non cambia nient'altro.",
+        "confirm": "Elimina",
+        "cancel": "Tienila"
+      },
+      "errors": {
+        "duplicate": "Esiste già un'etichetta con questo nome.",
+        "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
+        "notFound": "Questa etichetta non esiste più.",
+        "failed": "Non è stato possibile salvare. Riprova."
+      }
+    },
     "jobs": {
       "title": "Job pianificati",
       "description": "Quello che esegue il sidecar cron, e quando è andato l'ultima volta. «Esegui adesso» prende il lock del job, quindi un job già in corso viene saltato invece che avviato due volte.",
@@ -283,76 +369,6 @@
       "runNow": "Esegui adesso",
       "started": "{job} avviato: questa tabella dirà com'è andata quando avrà finito.",
       "failed": "Non si è potuto avviare."
-    },
-    "data": {
-      "categories": {
-        "title": "Categorie",
-        "description": "Le categorie dei movimenti in Spese, a gruppi. Una categoria sincronizzata viene abbinata per nome prima di crearne una nuova, e il suo gruppo di Wallet diventa il suo gruppo.",
-        "add": "Aggiungi categoria",
-        "name": "Nome",
-        "group": "Gruppo",
-        "type": "Tipo",
-        "color": "Colore",
-        "noColor": "Nessun colore",
-        "noGroup": "Nessun gruppo",
-        "types": {
-          "income": "Entrata",
-          "expense": "Spesa",
-          "transfer": "Giroconto"
-        },
-        "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
-        "rename": "Rinomina",
-        "edit": "Modifica categoria",
-        "archive": "Archivia",
-        "restore": "Ripristina",
-        "archived": "Archiviata",
-        "showArchived": "Mostra le archiviate",
-        "save": "Salva",
-        "cancel": "Annulla",
-        "empty": "Ancora nessuna categoria. Compaiono anche da sole man mano che i movimenti si sincronizzano.",
-        "saved": "Categoria salvata",
-        "archivedToast": "Categoria archiviata",
-        "restoredToast": "Categoria ripristinata",
-        "errors": {
-          "duplicate": "Esiste già una categoria con questo nome.",
-          "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
-          "notFound": "Questa categoria non esiste più.",
-          "failed": "Non è stato possibile salvare. Riprova.",
-          "invalidParent": "Scegli un gruppo attivo che non stia dentro un altro. Una categoria con sottocategorie non può entrare in un gruppo."
-        },
-        "hasChildren": "Ha delle sottocategorie, quindi resta un gruppo.",
-        "typeFromGroup": "Una categoria in un gruppo ha il tipo del gruppo.",
-        "colorFromGroup": "Una categoria in un gruppo ha il colore del gruppo."
-      },
-      "labels": {
-        "title": "Etichette",
-        "description": "Etichette libere da mettere su un movimento. Quelle sincronizzate vengono abbinate per nome.",
-        "add": "Aggiungi etichetta",
-        "name": "Nome",
-        "color": "Colore",
-        "noColor": "Nessun colore",
-        "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
-        "rename": "Rinomina",
-        "edit": "Modifica etichetta",
-        "remove": "Elimina",
-        "save": "Salva",
-        "cancel": "Annulla",
-        "empty": "Ancora nessuna etichetta.",
-        "saved": "Etichetta salvata",
-        "removedToast": "Etichetta eliminata",
-        "remove_confirm": {
-          "title": "Eliminare questa etichetta?",
-          "description": "Viene rimossa da {count, plural, one {# movimento} other {# movimenti}}. Non cambia nient'altro.",
-          "confirm": "Elimina",
-          "cancel": "Tienila"
-        },
-        "errors": {
-          "duplicate": "Esiste già un'etichetta con questo nome.",
-          "invalid": "Inserisci un nome tra 1 e {max} caratteri.",
-          "notFound": "Questa etichetta non esiste più.",
-          "failed": "Non è stato possibile salvare. Riprova."
-        }
-      }
     },
     "account": {
       "title": "Account",
@@ -1115,7 +1131,8 @@
     "partial": "Alcuni conti non hanno ancora un saldo: questi totali sono incompleti.",
     "empty": {
       "title": "Ancora nessun conto",
-      "description": "Aggiungi un conto a mano, o collega un provider quando arriveranno le integrazioni."
+      "description": "Aggiungi un conto a mano, o collega un provider quando arriveranno le integrazioni.",
+      "archived": "Nessun conto aperto in questo momento. {count, plural, one {# conto archiviato} other {# conti archiviati}} sono ancora qui, con tutta la loro storia."
     },
     "columns": {
       "name": "Nome",
@@ -1355,10 +1372,17 @@
       "danger": {
         "title": "Zona pericolosa",
         "description": "L'archiviazione nasconde il conto e ne conserva lo storico negli snapshot passati.",
-        "explain": "Archivia questo conto, oppure eliminalo se non dipende nulla da lui.",
+        "explain": "Archivialo per toglierlo dall'elenco tenendo tutto, oppure rimuovilo: rimuovere lo cancella del tutto quando niente vi si appoggia, e lo archivia quando qualcosa vi si appoggia.",
         "archived": "Questo conto è archiviato. I suoi saldi contano ancora nei mesi passati.",
-        "archive": "Archivia conto",
-        "restore": "Ripristina conto"
+        "archive": "Archivia il conto",
+        "restore": "Ripristina conto",
+        "confirmTitle": "Rimuovere questo conto?",
+        "confirmBody": "Se nessun salvadanaio, abbonamento, regola di interessi o fondo si appoggia a {name}, il conto viene cancellato per sempre, e con lui ogni movimento e ogni saldo che contiene. Se invece qualcosa vi si appoggia, viene archiviato e la sua storia resta.",
+        "confirm": "Rimuovi il conto",
+        "cancel": "Lascialo dov'è",
+        "deletedToast": "{name} cancellato, con i suoi movimenti e i suoi saldi.",
+        "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati.",
+        "remove": "Rimuovi il conto"
       }
     },
     "period": {
@@ -1388,7 +1412,37 @@
     "estimated": {
       "short": "stimato",
       "note": "I mesi tratteggiati sono ricostruiti dai movimenti sincronizzati, prima del primo saldo letto da Wallet."
-    }
+    },
+    "connections": {
+      "title": "Collegamenti",
+      "description": "Che cosa si appoggia a questo conto: le domiciliazioni e i bonifici ricorrenti sul suo IBAN, e quello che viene addebitato sulla sua carta. Nessuno te lo può dire al posto tuo, quindi si scrive a mano e non si indovina.",
+      "channels": {
+        "iban": "IBAN",
+        "card": "Carta"
+      },
+      "add": "Aggiungi",
+      "addTitle": "Aggiungi un collegamento",
+      "editTitle": "Modifica il collegamento",
+      "edit": "Modifica {name}",
+      "remove": "Rimuovi",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "name": "Nome",
+      "channel": "Arriva al conto tramite",
+      "note": "Nota",
+      "noteHint": "Facoltativa: a che serve, quanto, quando scade.",
+      "empty": "Ancora niente.",
+      "added": "{name} aggiunto",
+      "saved": "{name} salvato",
+      "removed": "{name} rimosso",
+      "errors": {
+        "duplicate": "Questo nome c'è già su questo canale.",
+        "invalid": "Il nome è obbligatorio, fino a {max} caratteri.",
+        "notFound": "Questo collegamento non c'è più.",
+        "failed": "Non è stato salvato. Riprova."
+      }
+    },
+    "showArchived": "Mostra archiviati"
   },
   "budgets": {
     "title": "Budget",
@@ -1632,11 +1686,17 @@
       "utility": "Utilità",
       "price": "Prezzo",
       "billing": "Addebito",
+      "due": "Quando",
+      "dueOn": "Prossimo addebito: {date}",
       "paidFrom": "Pagato da",
       "monthly": "Mensile",
       "yearly": "Annuo",
       "status": "Pagato nel periodo",
       "edit": "Modifica"
+    },
+    "due": {
+      "day": "Giorno {day}",
+      "quarter": "T{quarter}"
     },
     "cycles": {
       "weekly": "Settimanale",
@@ -1667,7 +1727,15 @@
     "inactive": {
       "title": "{count, plural, one {# in pausa o annullato} other {# in pausa o annullati}}",
       "paused": "In pausa",
-      "cancelled": "Annullato"
+      "cancelled": "Annullato",
+      "pausedTitle": "{count, plural, one {# in pausa} other {# in pausa}}",
+      "cancelledTitle": "{count, plural, one {# annullato} other {# annullati}}",
+      "delete": "Elimina",
+      "deleteTitle": "Eliminare questo abbonamento?",
+      "deleteWarning": "{name} e i pagamenti che aveva verificato spariscono per sempre. Non si può tornare indietro.",
+      "deleteDetail": "Le transazioni non si toccano: un abbonamento è un piano steso sopra di loro, mai il loro proprietario.",
+      "deletedToast": "{name} eliminato",
+      "cancelDelete": "Tienilo"
     },
     "alerts": {
       "not_found": "nessuna spesa con \"{match}\" trovata su {account} in {period} ({price} attesi).",
@@ -1744,7 +1812,8 @@
       "not_found": "Quell'abbonamento non esiste più.",
       "invalid_account": "Scegli uno dei tuoi conti aperti.",
       "invalid_category": "Scegli una delle tue categorie di spesa.",
-      "failed": "Salvataggio non riuscito. Riprova."
+      "failed": "Salvataggio non riuscito. Riprova.",
+      "not_cancelled": "Non è annullato: prima annullalo, poi si può eliminare."
     },
     "empty": {
       "title": "Nessun abbonamento",

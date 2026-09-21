@@ -146,7 +146,7 @@ function FieldRow({
           onClick={onSelect}
           aria-pressed={selected}
           title={field.bbox || field.derivedFrom.length > 0 ? t("review.show") : t("review.noBox")}
-          className="focus-ring min-w-0 flex-1 truncate rounded-[3px] text-left font-medium"
+          className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center truncate rounded-[3px] text-left font-medium"
         >
           {t(`fields.${field.field}`)}
         </button>

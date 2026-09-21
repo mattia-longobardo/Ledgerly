@@ -50,6 +50,22 @@ async function postingOf(id: string) {
   return row;
 }
 
+/** The same account and balance, another month, with tax withheld. */
+async function taxedRule(): Promise<string> {
+  const [account] = await listAccounts(ctx);
+  const rule = await createRule(ctx, {
+    accountId: account.id,
+    taxRate: "0.26",
+    dayBasis: "365",
+    settlement: "monthly",
+    validFrom: "2026-03-01",
+    validTo: "2026-03-31",
+    mode: "post_to_provider",
+    tiers: [{ upToCents: null, annualRate: "0.0365" }],
+  });
+  return (await ruleDetail(ctx, rule.id)).settlements[0].entry.id;
+}
+
 /** The fixture's rule again, on the same account and period, with a category to publish under. */
 async function ruleWithCategory(categoryId: string | null): Promise<string> {
   const [account] = await listAccounts(ctx);
@@ -98,13 +114,25 @@ beforeEach(async () => {
 afterAll(closeDatabase);
 
 describe("publishing a settlement to Wallet (spec §7.6)", () => {
+  it("says the rate, the rate after tax, the tax and the balance it was worked out on", async () => {
+    const wallet = fakeWallet();
+    const id = await taxedRule();
+    expect(await postEntry(ctx, id, { client: wallet.client })).toBe("posted");
+    // 3,65 % of 10.000,00 is 1,00 a day; 26 % of it is withheld, so 3,65 × 0,74 = 2,701 % net.
+    expect(wallet.posts[0].note).toBe(
+      `ledgerly-interest:${id} · auto-interest 3.65%/y (net 2.701%, -26% tax) on 10000.00`,
+    );
+  });
+
   it("posts the net on the settlement day, with the marker, and links the record", async () => {
     const wallet = fakeWallet();
     expect(await postEntry(ctx, entryId, { client: wallet.client })).toBe("posted");
     expect(wallet.posts).toEqual([
       expect.objectContaining({ accountId: "wa-saving", amountCents: 3_100n, on: "2026-02-01" }),
     ]);
-    expect(wallet.posts[0].note).toContain(`ledgerly-interest:${entryId}`);
+    // The marker first — it is what makes a second pass find this record instead of making another
+    // — then the sentence a reader can check: 10.000,00 at 3,65% for 31 days is 31,00.
+    expect(wallet.posts[0].note).toBe(`ledgerly-interest:${entryId} · auto-interest 3.65%/y on 10000.00`);
     const links = await resolveExternal(ctx, WALLET_PROVIDER, "interest_entry", ["wr-1"]);
     expect(links.get("wr-1")).toBe(entryId);
     // Posted is posted: a second pass sends nothing.

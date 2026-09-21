@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { balancesOn, listAccounts } from "@/modules/accounts/queries";
 import { listRecurringPatterns, payeeSamples, transactionsByIds } from "@/modules/transactions/queries";
-import { listCategories } from "@/modules/transactions/taxonomy";
+import { colorOfCategory, listCategories } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, civilDateIn, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -173,7 +173,7 @@ export async function subscriptionsView(
     return {
       subscription,
       categoryName: cat?.name ?? null,
-      categoryColor: (parent ?? cat)?.color ?? null,
+      categoryColor: cat ? colorOfCategory(cat, category) : null,
       groupId: (parent ?? cat)?.id ?? null,
       groupName: (parent ?? cat)?.name ?? null,
       accountName: subscription.paymentAccountId

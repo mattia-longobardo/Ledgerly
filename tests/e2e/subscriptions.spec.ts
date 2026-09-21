@@ -27,6 +27,18 @@ test("subscriptions are checked against the movements, projected and suggested",
     await expect(page.getByText("337,66 €").first()).toBeVisible();
   });
 
+  await test.step("the due column says the unit of each cycle, and the category carries its colour", async () => {
+    // A monthly subscription is identified by its day, a yearly one by its month (owner, F8.1).
+    await expect(row(page, "Netflix")).toContainText(/Day \d{1,2}/);
+    await expect(row(page, "Amazon Prime")).toContainText(
+      /January|February|March|April|May|June|July|August|September|October|November|December/,
+    );
+    // The category tag is drawn in the category's own colour, which is never absent.
+    const dot = row(page, "Netflix").locator("span[style*='background-color']").first();
+    await expect(dot).toBeVisible();
+    expect(await dot.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
   await test.step("the table sorts on a header", async () => {
     await page.getByRole("button", { name: "Name" }).click();
     await expect(page.getByTestId("subscription-row").first()).toContainText("Spotify");
@@ -76,7 +88,21 @@ test("subscriptions are checked against the movements, projected and suggested",
       .getByRole("button", { name: "Cancel subscription" })
       .click();
     await expect(page.getByTestId("subscription-row")).toHaveCount(3);
-    await expect(page.getByText("1 paused or cancelled")).toBeVisible();
+    // Paused and cancelled are two folded sections now, not one list (F8.1).
+    await expect(page.getByText("1 cancelled")).toBeVisible();
+  });
+
+  await test.step("a cancelled subscription can be thrown away for good", async () => {
+    await page.getByText("1 cancelled").click();
+    const cancelled = page.getByTestId("inactive-row").filter({ hasText: "FitActive" });
+    await expect(cancelled).toBeVisible();
+    await cancelled.getByRole("button", { name: "Delete" }).click();
+    const confirm = page.getByRole("dialog", { name: "Delete this subscription?" });
+    await expect(confirm).toContainText("cannot be undone");
+    await confirm.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText("1 cancelled")).toHaveCount(0);
+    // The movements it was laid over are still there: only the plan went.
+    await expect(page.getByTestId("subscription-row")).toHaveCount(3);
   });
 
   await test.step("the projection reads a month or a year of charges", async () => {

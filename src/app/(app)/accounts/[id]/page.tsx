@@ -16,8 +16,13 @@ import {
   symmetricAxisLabels,
 } from "@/modules/accounts/ui/display";
 import { BalanceEntries, type EntryRow } from "@/modules/accounts/ui/balance-entries";
+import {
+  ConnectionsSection,
+  ConnectionsSummary,
+  type ConnectionRow,
+} from "@/modules/accounts/ui/connections";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
-import { accountDailyBalances } from "@/modules/accounts/service";
+import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
 import { LinkTabs, type SpanKey, SPAN_OPTIONS, spanMonths } from "@/modules/accounts/ui/controls";
 import { MonthRangePicker } from "@/modules/accounts/ui/month-range-picker";
 import { monthRange } from "@/modules/accounts/ui/range";
@@ -72,12 +77,27 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   // The header and the KPIs speak of today whatever window the chart shows (spec §7.1, F2.5): one
   // reading for both used to put the balance at the end of a past range under "this month", and
   // left "Year over year" blank on any span shorter than thirteen months.
-  const view = await accountsView(ctx, { now });
+  // `includeArchived`: an archived account still has a page — that is the whole point of
+  // archiving rather than removing — and without this the lookup below answered 404 for it, so
+  // "Restore account" sat on a screen nobody could reach.
+  const view = await accountsView(ctx, { now, includeArchived: true });
+  // What hangs off this account, for the Settings tab and for the read-only line on Overview.
+  const connections: ConnectionRow[] = (await connectionsOf(ctx, id)).map((row) => ({
+    id: row.id,
+    channel: row.channel,
+    name: row.name,
+    note: row.note,
+  }));
   const index = view.rows.findIndex((row) => row.account.id === id);
   if (index < 0) notFound();
   const row = view.rows[index];
   const account = row.account;
-  const window = await accountsView(ctx, { now, months: width, through: custom?.to ?? thisMonth });
+  const window = await accountsView(ctx, {
+    now,
+    months: width,
+    through: custom?.to ?? thisMonth,
+    includeArchived: true,
+  });
   const windowRow = window.rows.find((one) => one.account.id === id) ?? row;
 
   const requested = query.tab;
@@ -162,6 +182,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           color={color}
           id={id}
           chart={chart}
+          connections={connections}
         />
       )}
 
@@ -177,6 +198,8 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           entries={await entryRows(ctx, id)}
         />
       )}
+
+      {tab === "settings" && <ConnectionsSection accountId={id} rows={connections} />}
 
       {tab === "settings" && (
         <AccountSettingsForm
@@ -226,6 +249,7 @@ async function OverviewTab({
   color,
   id,
   chart,
+  connections,
 }: {
   ctx: Ctx;
   /** The account today: the KPIs and the details. */
@@ -233,6 +257,8 @@ async function OverviewTab({
   /** The same account over the chart's window: the chart and the month-end table. */
   windowRow: Row;
   months: string[];
+  /** What hangs off the account, read-only here: it is consulted far more often than edited. */
+  connections: ConnectionRow[];
   /** The window day by day, when the chart's grain is the day (F2.5). */
   daily: Awaited<ReturnType<typeof accountDailyBalances>> | null;
   /** The range the picker wrote, or `null` when a span decides the window. */
@@ -470,7 +496,7 @@ async function OverviewTab({
                 <span className="truncate">{ruleText === "" ? ti("account.none") : ruleText}</span>
                 <Link
                   href={(rules.length === 1 ? `/interests/${rules[0].id}` : "/interests") as Route}
-                  className="focus-ring shrink-0 rounded-[2px] text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] text-accent hover:underline"
                 >
                   {ti("account.manage")}
                 </Link>
@@ -485,6 +511,7 @@ async function OverviewTab({
                     })}
               </dd>
             </dl>
+            <ConnectionsSummary rows={connections} />
             <span aria-hidden className="h-1 rounded-full" style={{ background: color }} />
           </Card>
         </div>

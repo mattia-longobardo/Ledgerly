@@ -18,8 +18,17 @@
  * What Wallet has no way to accept is written down once, here, so nobody looks for it again: there
  * is no income/expense/transfer on a category at all (the type stays this app's own, spec §7.2),
  * colour is an enum of sixteen names rather than the hex this app stores, and a group cannot be
- * created or renamed. Deletion exists (`DELETE /v1/api/{type}`) and is deliberately never used:
- * a category can carry movements, so a disappearance is reported and nothing else.
+ * created or renamed.
+ *
+ * A third write joined them on 2026-09-21, at the owner's explicit request:
+ *
+ * - `DELETE /v1/api/categories` — `{ ids }`, at most ten, answering `200`/`207`/`400` with one
+ *   result per id. **The hourly pass never calls it.** A category that has merely disappeared from
+ *   one side is still only reported, exactly as before, because a sync deciding on its own to
+ *   destroy data on the other side is how people lose years of history. It is called from one
+ *   place only: a person pressing "delete" in Settings › Categories, having been told in the
+ *   dialog that Wallet is included. Wallet refuses an id its own records still reference, and that
+ *   refusal comes back verbatim rather than being retried around.
  *
  * The HTTP is written here rather than in `client.ts` because that file's own request helper is a
  * closure that only speaks GET and POST. The policy is copied, not invented: one attempt for a
@@ -40,6 +49,7 @@ import {
 } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { WALLET_PROVIDER } from "../rules";
+import { listConnections, readCredentials } from "../service";
 import {
   backoffDelayMs,
   isUsableToken,
@@ -55,6 +65,8 @@ import { WALLET_TRANSFER_CATEGORY, type WalletCategory } from "./mapping";
 export const WALLET_CATEGORY_NAME_MAX = 80;
 /** `PATCH /categories` takes at most ten items per request. */
 export const RENAME_BATCH = 10;
+/** `DELETE /{type}` takes at most ten ids per request (`DeleteRequest.ids`, maxItems 10). */
+export const DELETE_BATCH = 10;
 /**
  * What one pass may write, so an hourly sync cannot eat the 300-requests-an-hour budget the
  * movements pass also draws on. What is left over is reported as `deferred` and taken by the next
@@ -89,6 +101,12 @@ export interface WalletCategoryWriter {
    * unsure rather than as done, exactly as the record writer does (spec §9.1).
    */
   create(input: { name: string; parentExternalId: string }): Promise<{ externalId: string | null }>;
+  /**
+   * Deletes categories in Wallet, at most {@link DELETE_BATCH} per call. Never called by a pass:
+   * see this file's own note. A refusal of a single item comes back in its result, because Wallet
+   * answers `207` for a batch where some ids went and others did not.
+   */
+  remove(externalIds: readonly string[]): Promise<CategoryWriteResult[]>;
 }
 
 const patchAnswerSchema = z.object({
@@ -171,7 +189,7 @@ export function createWalletCategoryWriter(
 
   async function attempt<T>(
     path: string,
-    method: "PATCH" | "POST",
+    method: "PATCH" | "POST" | "DELETE",
     body: string,
     schema: z.ZodType<T>,
   ): Promise<T> {
@@ -282,6 +300,26 @@ export function createWalletCategoryWriter(
         const ok = result?.success ?? false;
         return {
           externalId: item.externalId,
+          ok,
+          error: ok ? null : (result?.error ?? "Wallet did not answer for this category"),
+        };
+      });
+    },
+    async remove(externalIds) {
+      if (externalIds.length === 0) return [];
+      if (externalIds.length > DELETE_BATCH) {
+        throw new Error(`remove: at most ${DELETE_BATCH} categories per request, got ${externalIds.length}`);
+      }
+      const body = JSON.stringify({ ids: [...externalIds] });
+      const answer = await withRetry(() => attempt("/categories", "DELETE", body, patchAnswerSchema));
+      return externalIds.map((externalId, index) => {
+        const result =
+          answer.results.find((row) => row.inputIndex === index) ??
+          answer.results.find((row) => row.id === externalId) ??
+          answer.results[index];
+        const ok = result?.success ?? false;
+        return {
+          externalId,
           ok,
           error: ok ? null : (result?.error ?? "Wallet did not answer for this category"),
         };
@@ -794,4 +832,61 @@ export async function syncWalletCategories(
 
   counts[REPORTED] = cases.length;
   return { counts, cases };
+}
+
+/* Deleting on request (owner, 2026-09-21) */
+
+/** What became of a deletion Wallet was asked to mirror; never thrown, always reported. */
+export type WalletDeletionOutcome =
+  /** No Wallet connection, or none of the categories was ever linked to one: nothing to do. */
+  | { state: "not_linked" }
+  | { state: "deleted"; count: number }
+  /** Wallet refused at least one id — usually because its own records still reference it. */
+  | { state: "refused"; reasons: string[] }
+  /** The call never landed: network, timeout, or a token Wallet would not take. */
+  | { state: "failed"; reason: string };
+
+/**
+ * Mirrors a deletion the person asked for onto Wallet.
+ *
+ * Called from Settings › Categories and from nowhere else — not from a pass, not from a job. It
+ * never throws: the categories are already gone here, so a Wallet that refuses or cannot be
+ * reached is news to deliver, not a reason to fail an action that has already succeeded.
+ *
+ * Wallet's own error text is passed through because it is the only thing that says *why* — "still
+ * referenced by 3 records" is the whole answer — and a category's name carries no secret. The token
+ * never appears in any of it: `WalletError` is built by the writer, which redacts it.
+ */
+export async function deleteWalletCategories(
+  ctx: Pick<Ctx, "userId">,
+  externalIds: readonly string[],
+  deps: { writer?: WalletCategoryWriter; options?: WalletClientOptions } = {},
+): Promise<WalletDeletionOutcome> {
+  if (externalIds.length === 0) return { state: "not_linked" };
+  let writer = deps.writer;
+  if (!writer) {
+    const connection = (await listConnections(ctx)).find((one) => one.provider === WALLET_PROVIDER);
+    if (!connection) return { state: "not_linked" };
+    const { token } = await readCredentials(ctx, connection.id);
+    if (!token || token.trim() === "") return { state: "failed", reason: "invalid_credentials" };
+    writer = createWalletCategoryWriter(token, deps.options ?? {});
+  }
+  const refused: string[] = [];
+  let deleted = 0;
+  for (let at = 0; at < externalIds.length; at += DELETE_BATCH) {
+    const batch = externalIds.slice(at, at + DELETE_BATCH);
+    let results: CategoryWriteResult[];
+    try {
+      results = await writer.remove(batch);
+    } catch (error) {
+      // `WalletError` extends `Error`, and its message is already redacted by the writer.
+      return { state: "failed", reason: error instanceof Error ? error.message : String(error) };
+    }
+    for (const result of results) {
+      if (result.ok) deleted += 1;
+      else if (result.error) refused.push(result.error);
+    }
+  }
+  if (refused.length > 0) return { state: "refused", reasons: [...new Set(refused)] };
+  return { state: "deleted", count: deleted };
 }

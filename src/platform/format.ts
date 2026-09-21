@@ -168,7 +168,8 @@ export function formatPercent(
 
 const MONTH_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
 
-function monthName(date: CivilDate, locale: UiLocale, width: "short" | "long"): string {
+/** A month's name in the reader's language, built from the parts so no local Date is involved. */
+export function monthName(date: CivilDate, locale: UiLocale, width: "short" | "long"): string {
   const [year, month] = date.split("-").map(Number);
   return new Intl.DateTimeFormat(MONTH_LOCALE[locale], { month: width, timeZone: "UTC" }).format(
     new Date(Date.UTC(year, month - 1, 1)),

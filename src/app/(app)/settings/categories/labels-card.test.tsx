@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
-import messages from "../../../../../../messages/en.json";
+import messages from "../../../../../messages/en.json";
 import { LabelsCard, type LabelRow } from "./labels-card";
 
 const create = vi.fn();
@@ -39,7 +39,7 @@ describe("LabelsCard", () => {
 
   it("says so when there is nothing to show", () => {
     renderCard([]);
-    expect(screen.getByText(messages.settings.data.labels.empty)).toBeInTheDocument();
+    expect(screen.getByText(messages.settings.labels.empty)).toBeInTheDocument();
   });
 
   it("creates a label with the name and colour chosen", async () => {
@@ -73,7 +73,7 @@ describe("LabelsCard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Holiday" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
-    const dialog = screen.getByRole("dialog", { name: messages.settings.data.labels.remove_confirm.title });
+    const dialog = screen.getByRole("dialog", { name: messages.settings.labels.remove_confirm.title });
     expect(dialog).toHaveTextContent("It is removed from 3 transactions.");
     expect(remove).not.toHaveBeenCalled();
 
@@ -98,9 +98,7 @@ describe("LabelsCard", () => {
     await userEvent.type(screen.getByLabelText("Name"), "Holiday");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      messages.settings.data.labels.errors.duplicate,
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.labels.errors.duplicate);
   });
 
   it("shows a catalogued error instead of crashing when the action rejects", async () => {
@@ -110,6 +108,6 @@ describe("LabelsCard", () => {
     await userEvent.type(screen.getByLabelText("Name"), "Work");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.data.labels.errors.failed);
+    expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.labels.errors.failed);
   });
 });

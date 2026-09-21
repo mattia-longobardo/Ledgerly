@@ -1,11 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Tag } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
+import { Modal } from "@/ui/modal";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
+import { notify } from "@/ui/toast";
+import { deleteSubscriptionAction } from "../actions";
 import type { Cycle } from "../rules";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";
 
@@ -16,6 +19,12 @@ export interface SubscriptionView {
   draft: SubscriptionDraft & { id: string };
   name: string;
   categoryName: string | null;
+  /** The category's colour — its group's when it has one (spec §7.2). */
+  categoryColor: string | null;
+  /** When in its cycle it falls due, in the cycle's own unit (`presentDue`). */
+  due: string;
+  /** The exact next charge, for the cell's title: the column says the unit, not the date. */
+  dueOn: string;
   utility: number;
   price: string;
   priceCents: bigint;
@@ -129,7 +138,7 @@ export function SubscriptionsTable({
       title={t("setUtility")}
       aria-label={`${t("setUtility")}: ${row.name}, ${t("utilityOf", { value: row.utility })}`}
       onClick={() => setEditing(row.draft)}
-      className="focus-ring rounded-[4px] px-1 text-sm tabular-nums hover:bg-hover"
+      className="focus-ring inline-flex min-h-6 items-center rounded-[4px] px-1 text-sm tabular-nums hover:bg-hover"
     >
       {t("utilityOf", { value: row.utility })}
     </button>
@@ -144,8 +153,9 @@ export function SubscriptionsTable({
             <col className="w-[120px]" />
             <col className="w-[92px]" />
             <col className="w-[92px]" />
+            <col className="w-[104px]" />
             <col className="w-[92px]" />
-            <col className="w-[100px]" />
+            <col className="w-[92px]" />
             <col className="w-[136px]" />
             <col className="w-[60px]" />
           </colgroup>
@@ -154,6 +164,7 @@ export function SubscriptionsTable({
             {header("utility", t("columns.utility"))}
             {header("price", t("columns.price"), "right")}
             {header("billing", t("columns.billing"))}
+            <Th>{t("columns.due")}</Th>
             {header("monthly", t("columns.monthly"), "right")}
             {header("yearly", t("columns.yearly"), "right")}
             <Th>{t("columns.status")}</Th>
@@ -172,7 +183,16 @@ export function SubscriptionsTable({
                       {row.name}
                     </span>
                     <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
-                      {row.categoryName && <Tag>{row.categoryName}</Tag>}
+                      {row.categoryName && (
+                        <Tag>
+                          <span
+                            aria-hidden
+                            className="mr-1 inline-block size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: row.categoryColor ?? undefined }}
+                          />
+                          {row.categoryName}
+                        </Tag>
+                      )}
                       <span className="truncate" title={`${t("columns.paidFrom")}: ${row.accountName}`}>
                         {row.accountName}
                       </span>
@@ -195,6 +215,9 @@ export function SubscriptionsTable({
                   >
                     {t(`cycles.${row.cycle}`)}
                   </span>
+                </Td>
+                <Td className="truncate" title={t("columns.dueOn", { date: row.dueOn })}>
+                  {row.due}
                 </Td>
                 <Td align="right">{row.monthly}</Td>
                 <Td align="right" className="font-semibold">
@@ -233,7 +256,7 @@ export function SubscriptionsTable({
               <button
                 type="button"
                 onClick={() => setEditing(row.draft)}
-                className="focus-ring min-w-0 truncate text-left font-semibold"
+                className="focus-ring inline-flex min-h-6 min-w-0 items-center truncate rounded-[2px] text-left font-semibold"
               >
                 {row.name}
               </button>
@@ -254,38 +277,137 @@ export function SubscriptionsTable({
   );
 }
 
-/** The paused and the cancelled, folded under the table; a click opens the dialog to resume them. */
+/**
+ * The plans that are not running, folded under the table — the paused and the cancelled in **two**
+ * sections rather than one list (owner, 2026-09-21), because they are two different things: one is
+ * a plan waiting to come back, the other a plan that is over. Each opens on a click and each is a
+ * real table, so a name is not the only thing a person can see before deciding.
+ *
+ * `deletable` is set only for the cancelled: deleting is offered where it cannot be reached by
+ * accident from a row that merely pauses (`deleteSubscription` refuses anything else anyway).
+ */
 export function InactiveSubscriptions({
   rows,
   options,
   title,
+  deletable = false,
 }: {
   rows: readonly SubscriptionView[];
   options: DialogOptions;
   title: string;
+  deletable?: boolean;
 }) {
   const t = useTranslations("subscriptions");
   const [editing, setEditing] = useState<SubscriptionDraft | null>(null);
+  const [removing, setRemoving] = useState<SubscriptionView | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function onDelete(row: SubscriptionView) {
+    setRemoving(null);
+    startTransition(async () => {
+      const result = await deleteSubscriptionAction(row.draft.id);
+      if (result.ok) {
+        notify(t("inactive.deletedToast", { name: row.name }));
+        return;
+      }
+      // A service code, spelled out one branch at a time so the catalogue keys stay literal.
+      notify(
+        result.error === "not_cancelled"
+          ? t("errors.not_cancelled")
+          : result.error === "not_found"
+            ? t("errors.not_found")
+            : t("errors.failed"),
+        "error",
+      );
+    });
+  }
+
+  if (rows.length === 0) return null;
   return (
-    <details className="text-sm">
-      <summary className="cursor-pointer text-muted">{title}</summary>
-      <ul className="mt-2 flex flex-col gap-1">
-        {rows.map((row) => (
-          <li key={row.draft.id} className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              className="focus-ring truncate hover:underline"
-              onClick={() => setEditing(row.draft)}
-            >
-              {row.name}
-            </button>
-            <span className="text-muted">
-              {t(`inactive.${row.draft.state === "paused" ? "paused" : "cancelled"}`)} · {row.price}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <details className="rounded-card border border-border bg-card">
+      <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-muted marker:content-none">
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="transition-transform">
+            ▸
+          </span>
+          {title}
+        </span>
+      </summary>
+      <div className="overflow-x-auto border-t border-border">
+        <Table>
+          <THead>
+            <Th>{t("columns.name")}</Th>
+            <Th>{t("columns.billing")}</Th>
+            <Th align="right">{t("columns.price")}</Th>
+            <Th>{t("columns.paidFrom")}</Th>
+            <Th align="right">
+              <span className="sr-only">{t("columns.edit")}</span>
+            </Th>
+          </THead>
+          <TBody>
+            {rows.map((row) => (
+              <Tr key={row.draft.id} data-testid="inactive-row">
+                <Td className="font-medium">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {row.categoryName && (
+                      <span
+                        aria-hidden
+                        className="inline-block size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: row.categoryColor ?? undefined }}
+                      />
+                    )}
+                    <span className="truncate">{row.name}</span>
+                  </span>
+                </Td>
+                <Td muted className="text-sm">
+                  {t(`cycles.${row.cycle}`)}
+                </Td>
+                <Td align="right">{row.price}</Td>
+                <Td muted className="truncate text-sm">
+                  {row.accountName}
+                </Td>
+                <Td align="right">
+                  <span className="inline-flex flex-wrap justify-end gap-1 whitespace-normal">
+                    <Button size="xs" variant="ghost" onClick={() => setEditing(row.draft)}>
+                      {t("columns.edit")}
+                    </Button>
+                    {deletable && (
+                      <Button size="xs" variant="danger" disabled={pending} onClick={() => setRemoving(row)}>
+                        {t("inactive.delete")}
+                      </Button>
+                    )}
+                  </span>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      </div>
       {editing && <SubscriptionDialog draft={editing} options={options} onClose={() => setEditing(null)} />}
+      <Modal
+        open={removing !== null}
+        onOpenChange={(next) => !next && setRemoving(null)}
+        title={t("inactive.deleteTitle")}
+        description={removing ? t("inactive.deleteWarning", { name: removing.name }) : undefined}
+        width={440}
+        footer={
+          <>
+            <Button size="sm" onClick={() => setRemoving(null)}>
+              {t("inactive.cancelDelete")}
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={pending}
+              onClick={() => removing && onDelete(removing)}
+            >
+              {t("inactive.delete")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-muted">{t("inactive.deleteDetail")}</p>
+      </Modal>
     </details>
   );
 }

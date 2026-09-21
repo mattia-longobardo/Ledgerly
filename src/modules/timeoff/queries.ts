@@ -18,7 +18,6 @@ import {
   calendar,
   dayStatus,
   daysToMinutes,
-  minuteWeight,
   allowanceMismatchDays,
   monthBars,
   monthGroups,
@@ -303,15 +302,4 @@ function byDateThenKind(a: LeaveRow, b: LeaveRow): number {
 export function yearsOffered(shown: number, stated: readonly number[]): number[] {
   const current = Number(new Date().toISOString().slice(0, 4));
   return [...new Set([current, shown, ...stated])].sort((a, b) => a - b);
-}
-
-/** What one row's duration amounts to, in both units; the table prints whichever the kind uses. */
-export function durationOf(row: LeaveRow, minutesPerDay: number): { days: number; minutes: number } {
-  const minutes =
-    row.source === "payroll"
-      ? Math.round(row.hours * 60)
-      : minuteWeight({ on: row.on, kind: row.kind, fraction: row.fraction }, minutesPerDay);
-  // A plain division, not `minutesToDays`: a day row holds whole or half days, so this is exact,
-  // and rounding a payslip's hours to the half day would print a duration it never stated.
-  return { days: minutes / minutesPerDay, minutes };
 }

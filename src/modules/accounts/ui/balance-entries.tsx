@@ -205,8 +205,11 @@ export function BalanceEntries({
   }
 
   return (
+    // `min-w-0` on both cells: below `@4xl` this is one `auto` track, whose automatic minimum is
+    // the widest card's min-content — and a table's min-content is the whole table, which pushed
+    // the form beside it 77 px past a phone's screen (plan F9 §3.3).
     <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <Card className="flex flex-col gap-3">
+      <Card className="flex min-w-0 flex-col gap-3">
         <h2 className="text-lg font-semibold">{t("add.title")}</h2>
         <p className="text-sm text-muted">{synced ? t("add.syncedNote") : t("add.manualNote")}</p>
         <form ref={form} onSubmit={onSubmit} className="flex flex-col gap-3">
@@ -222,7 +225,7 @@ export function BalanceEntries({
         </form>
       </Card>
 
-      <Card padded={false}>
+      <Card padded={false} className="min-w-0">
         <CardHeader
           title={t("list.title")}
           actions={<span className="text-muted">{t("list.count", { count: entries.length })}</span>}
@@ -230,67 +233,106 @@ export function BalanceEntries({
         {entries.length === 0 ? (
           <p className="px-4 pb-4 text-muted">{t("list.empty")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <THead>
-                <Th>{t("list.date")}</Th>
-                <Th align="right">{t("list.balance")}</Th>
-                <Th align="right">{t("list.change")}</Th>
-                <Th>{t("list.note")}</Th>
-                <Th>{t("list.source")}</Th>
-                <Th>
-                  <span className="sr-only">{t("list.actions")}</span>
-                </Th>
-              </THead>
-              <TBody>
-                {entries.map((entry) => (
-                  <Tr key={entry.id}>
-                    <Td>{entry.onLabel}</Td>
-                    <Td align="right">{entry.balance}</Td>
-                    <Td align="right" className={TONE_TEXT[toneOfSign(entry.changeSign)]}>
-                      {entry.change}
-                    </Td>
-                    <Td muted>{entry.note ?? "—"}</Td>
-                    <Td>
-                      <Badge
-                        tone={
-                          entry.source === "manual"
-                            ? "accent"
-                            : entry.source === "derived"
-                              ? "warn"
-                              : "neutral"
-                        }
-                      >
-                        {t(`sources.${entry.source}`)}
-                      </Badge>
-                    </Td>
-                    <Td align="right">
-                      {entry.source === "manual" && (
-                        <span className="flex justify-end gap-1">
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => setEditing(entry)}
-                            disabled={pending}
-                          >
-                            {t("list.edit")}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => onDelete(entry.id)}
-                            disabled={pending}
-                          >
-                            {t("list.delete")}
-                          </Button>
-                        </span>
-                      )}
-                    </Td>
-                  </Tr>
-                ))}
-              </TBody>
-            </Table>
-          </div>
+          <>
+            {/* Six columns and two buttons do not fit a phone: below `md` the same entries are a
+              list, with the same Edit and Delete on the manual ones (plan F9 §3.3). */}
+            <div className="overflow-x-auto max-md:hidden">
+              <Table>
+                <THead>
+                  <Th>{t("list.date")}</Th>
+                  <Th align="right">{t("list.balance")}</Th>
+                  <Th align="right">{t("list.change")}</Th>
+                  <Th>{t("list.note")}</Th>
+                  <Th>{t("list.source")}</Th>
+                  <Th>
+                    <span className="sr-only">{t("list.actions")}</span>
+                  </Th>
+                </THead>
+                <TBody>
+                  {entries.map((entry) => (
+                    <Tr key={entry.id}>
+                      <Td>{entry.onLabel}</Td>
+                      <Td align="right">{entry.balance}</Td>
+                      <Td align="right" className={TONE_TEXT[toneOfSign(entry.changeSign)]}>
+                        {entry.change}
+                      </Td>
+                      <Td muted>{entry.note ?? "—"}</Td>
+                      <Td>
+                        <Badge
+                          tone={
+                            entry.source === "manual"
+                              ? "accent"
+                              : entry.source === "derived"
+                                ? "warn"
+                                : "neutral"
+                          }
+                        >
+                          {t(`sources.${entry.source}`)}
+                        </Badge>
+                      </Td>
+                      <Td align="right">
+                        {entry.source === "manual" && (
+                          <span className="flex justify-end gap-1">
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => setEditing(entry)}
+                              disabled={pending}
+                            >
+                              {t("list.edit")}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => onDelete(entry.id)}
+                              disabled={pending}
+                            >
+                              {t("list.delete")}
+                            </Button>
+                          </span>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+
+            <ul className="flex flex-col md:hidden">
+              {entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium">{entry.onLabel}</span>
+                    <span className="shrink-0 tabular-nums">{entry.balance}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span className={TONE_TEXT[toneOfSign(entry.changeSign)]}>{entry.change}</span>
+                    <Badge
+                      tone={
+                        entry.source === "manual" ? "accent" : entry.source === "derived" ? "warn" : "neutral"
+                      }
+                    >
+                      {t(`sources.${entry.source}`)}
+                    </Badge>
+                  </div>
+                  {entry.note && <span className="text-sm break-words text-muted">{entry.note}</span>}
+                  {entry.source === "manual" && (
+                    <div className="flex gap-1">
+                      <Button size="xs" variant="ghost" onClick={() => setEditing(entry)} disabled={pending}>
+                        {t("list.edit")}
+                      </Button>
+                      <Button size="xs" variant="ghost" onClick={() => onDelete(entry.id)} disabled={pending}>
+                        {t("list.delete")}
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Card>
 

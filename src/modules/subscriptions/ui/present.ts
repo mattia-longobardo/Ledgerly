@@ -4,11 +4,12 @@ import {
   formatAmountInput,
   formatDate,
   formatMoney,
+  monthName,
   type NumberFormat,
   type UiLocale,
 } from "@/platform/format";
 import type { SubscriptionRow } from "../queries";
-import { type Suggestion, toleranceParts } from "../rules";
+import { dueMoment, type Suggestion, toleranceParts } from "../rules";
 import type { SubscriptionDraft } from "./subscription-dialog";
 import type { SubscriptionView } from "./subscriptions-table";
 import type { SuggestionView } from "./suggestions-dialog";
@@ -95,12 +96,42 @@ function statusOf(
   }
 }
 
+const WEEKDAY_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
+
+/**
+ * When in its cycle a subscription falls due, in the unit that identifies it (owner, 2026-09-21):
+ * the day for a monthly one, the quarter for a quarterly one, the month for a yearly one, the
+ * weekday for a weekly one. The exact date is still there — the cell carries it as its title.
+ *
+ * The weekday is built from a fixed UTC Sunday plus the index, so no local `Date` is involved and
+ * no civil date is parsed twice.
+ */
+export function presentDue(row: SubscriptionRow, t: T, format: Format): string {
+  const moment = dueMoment(row.subscription.cycle, row.nextChargeOn);
+  switch (moment.kind) {
+    case "day":
+      return t("due.day", { day: moment.day });
+    case "quarter":
+      return t("due.quarter", { quarter: moment.quarter });
+    case "month":
+      return monthName(row.nextChargeOn, format.locale, "long");
+    case "weekday":
+      return new Intl.DateTimeFormat(WEEKDAY_LOCALE[format.locale], {
+        weekday: "long",
+        timeZone: "UTC",
+      }).format(new Date(Date.UTC(2024, 0, 7 + moment.weekday)));
+  }
+}
+
 export function presentRow(row: SubscriptionRow, t: T, format: Format): SubscriptionView {
   const money = (cents: bigint) => formatMoney(cents, format.numberFormat);
   return {
     draft: draftOf(row, t, format),
     name: row.subscription.name,
     categoryName: row.categoryName,
+    categoryColor: row.categoryColor,
+    due: presentDue(row, t, format),
+    dueOn: formatDate(row.nextChargeOn, "long", format.locale),
     utility: row.subscription.utility,
     price: money(row.subscription.priceCents),
     priceCents: row.subscription.priceCents,

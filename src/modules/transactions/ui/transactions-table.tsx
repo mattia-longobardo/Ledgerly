@@ -43,7 +43,8 @@ const COLUMNS: readonly { name: SortKey; align: "left" | "right" }[] = [
 /** Seven cells: the checkbox, the five columns, the row menu. */
 const COLUMN_COUNT = COLUMNS.length + 2;
 
-const CHIP = "focus-ring inline-flex h-[22px] items-center gap-1.5 rounded-[4px] px-1.5 text-sm";
+// 24 px, not 22: the category chip is a button, and a button is a target (plan F9 §3.4).
+const CHIP = "focus-ring inline-flex h-6 items-center gap-1.5 rounded-[4px] px-1.5 text-sm";
 
 /**
  * What the shortcuts keep their hands off. Fields and popups are the obvious ones; every kind of

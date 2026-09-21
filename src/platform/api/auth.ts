@@ -2,7 +2,7 @@ import "server-only";
 import type { MiddlewareHandler } from "hono";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
-import { type Scope, TOKEN_SCOPES } from "@/platform/tokens/rules";
+import { type Scope } from "@/platform/tokens/rules";
 import { authenticateToken, type TokenIdentity, touchToken } from "@/platform/tokens/service";
 import { fail } from "./errors";
 import { MAX_PER_WINDOW, takeSlot } from "./rate-limit";
@@ -56,6 +56,3 @@ export function withToken(scope: Scope): MiddlewareHandler<ApiEnv> {
     await next();
   };
 }
-
-/** The catalogue, so a caller can be told what it may ask for without reading the source. */
-export const SCOPES: readonly Scope[] = TOKEN_SCOPES;

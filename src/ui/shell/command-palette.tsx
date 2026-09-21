@@ -158,7 +158,9 @@ export function CommandPalette({
                 if (event.key === "ArrowDown") setCursor((c) => Math.min(c + 1, options.length - 1));
                 if (event.key === "ArrowUp") setCursor((c) => Math.max(c - 1, 0));
               }}
-              className="flex-1 bg-transparent text-md outline-none placeholder:text-faint"
+              // `h-6`: the field sits in an 44 px row, but the input itself was 20 px tall and a
+              // field is a target like any other (plan F9 §3.4).
+              className="h-6 flex-1 bg-transparent text-md outline-none placeholder:text-faint"
             />
             <Kbd>{labels.palette.escape}</Kbd>
           </div>

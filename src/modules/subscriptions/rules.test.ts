@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  dueMoment,
   addCycles,
   cadenceOf,
   type CheckedSubscription,
@@ -92,12 +93,20 @@ describe("planCharges (spec §7.5)", () => {
     createdOn: "2026-07-20",
     expected: new Map(),
   };
-  const charge = (id: string, on: string, cents: bigint, payee = "Netflix.com", accountId = "acc-1") => ({
+  const charge = (
+    id: string,
+    on: string,
+    cents: bigint,
+    payee = "Netflix.com",
+    accountId = "acc-1",
+    note: string | null = null,
+  ) => ({
     id,
     accountId,
     on,
     cents,
     payee,
+    note,
   });
 
   it("checks from the period under way at creation to a week ahead", () => {
@@ -126,6 +135,36 @@ describe("planCharges (spec §7.5)", () => {
     ]);
   });
 
+  it("matches the bank's own text as well as the payee, which is what the field promises", () => {
+    // Reported 2026-09-21: a car rental paid by direct debit. The payee is whatever the bank calls
+    // the counterpart; the number that names the mandate is in the description, and the field is
+    // labelled "the expense description contains". It was only ever read against the payee.
+    const rental = {
+      ...netflix,
+      id: "s-roc",
+      priceCents: 58_438n,
+      payeeMatch: "2868921",
+      createdOn: "2026-09-01",
+      anchor: "2026-09-15",
+    };
+    const sdd = charge(
+      "t-1",
+      "2026-09-15",
+      58_438n,
+      "ADDEBITO SDD",
+      "acc-1",
+      "NOLEGGIO T-ROC - MANDATO 2868921",
+    );
+    expect(planCharges([rental], [sdd], "2026-09-20").map((row) => [row.dueOn, row.state])).toEqual([
+      ["2026-09-15", "paid"],
+    ]);
+  });
+
+  it("still matches a payee when the description says nothing", () => {
+    const plan = planCharges([netflix], [charge("t-1", "2026-09-02", 1_299n)], "2026-09-19");
+    expect(plan.map((row) => [row.dueOn, row.state])).toContainEqual(["2026-09-02", "paid"]);
+  });
+
   it("flags an amount outside the tolerance and prefers the closest amount among candidates", () => {
     const plan = planCharges(
       [{ ...netflix, createdOn: "2026-09-19", anchor: "2026-09-02" }],
@@ -149,6 +188,51 @@ describe("planCharges (spec §7.5)", () => {
       ["2026-09-26", "due"],
     ]);
     expect(planCharges([sub], [], "2026-09-18")).toEqual([]);
+  });
+
+  it("checks a charge from before the subscription existed, but never claims it", () => {
+    // Reported 2026-09-21: a car rental added on 21 September with its next charge on 15 October
+    // announced "expected on 15 Sep 2026 · not found yet" — a charge invented by the look-back,
+    // from a month the plan had never been asked about, and then held against it.
+    const rental = {
+      ...netflix,
+      id: "s-roc",
+      priceCents: 58_438n,
+      payeeMatch: "T-Roc",
+      createdOn: "2026-09-21",
+      anchor: "2026-10-15",
+    };
+    expect(planCharges([rental], [], "2026-09-21")).toEqual([]);
+    // The look-back itself stays: the same charge, once a movement matches it, is reported paid.
+    const paid = planCharges([rental], [charge("t-1", "2026-09-15", 58_438n, "T-Roc")], "2026-09-21");
+    expect(paid.map((row) => [row.dueOn, row.state])).toEqual([["2026-09-15", "paid"]]);
+    // And once the horizon reaches it, the charge that shows up is October's.
+    expect(planCharges([rental], [], "2026-10-10").map((row) => [row.dueOn, row.state])).toEqual([
+      ["2026-10-15", "due"],
+    ]);
+  });
+
+  it("claims the anchor itself even when it is older than the subscription here", () => {
+    // "The next charge is the 2nd", said on the 20th, names that charge: it is the person's own
+    // statement, so it is owed and reported, unlike the months the look-back merely reached. Its
+    // July window is still open on the 20th, so it reads `due`; what matters is that it is there.
+    const sub = { ...netflix, createdOn: "2026-07-20", anchor: "2026-07-02" };
+    expect(planCharges([sub], [], "2026-07-20").map((row) => [row.dueOn, row.state])).toEqual([
+      ["2026-07-02", "due"],
+    ]);
+    // Once July has closed it becomes the missing charge it really is.
+    expect(planCharges([sub], [], "2026-08-05").map((row) => [row.dueOn, row.state])).toContainEqual([
+      "2026-07-02",
+      "not_found",
+    ]);
+  });
+
+  it("still looks back over the period under way when the subscription was created", () => {
+    // The look-back exists for this: an anchor in the past, and a charge already paid earlier in
+    // the month the subscription was added. Clamping to the anchor must not take that away.
+    const sub = { ...netflix, createdOn: "2026-09-19", anchor: "2026-09-02" };
+    const plan = planCharges([sub], [charge("t-1", "2026-09-02", 1_299n)], "2026-09-19");
+    expect(plan.map((row) => [row.dueOn, row.state])).toEqual([["2026-09-02", "paid"]]);
   });
 
   it("does not hold a yearly plan added today to last year's renewal", () => {
@@ -240,5 +324,28 @@ describe("suggestions (spec §7.5)", () => {
         occurrences: 4,
       },
     ]);
+  });
+});
+
+describe("dueMoment", () => {
+  it("is the day of the month for a monthly subscription: the month is every month", () => {
+    expect(dueMoment("monthly", "2026-09-15")).toEqual({ kind: "day", day: 15 });
+  });
+
+  it("is the quarter for a quarterly one, whatever day inside it falls", () => {
+    expect(dueMoment("quarterly", "2026-01-31")).toEqual({ kind: "quarter", quarter: 1 });
+    expect(dueMoment("quarterly", "2026-04-01")).toEqual({ kind: "quarter", quarter: 2 });
+    expect(dueMoment("quarterly", "2026-09-15")).toEqual({ kind: "quarter", quarter: 3 });
+    expect(dueMoment("quarterly", "2026-12-31")).toEqual({ kind: "quarter", quarter: 4 });
+  });
+
+  it("is the month for a yearly one", () => {
+    expect(dueMoment("yearly", "2026-09-15")).toEqual({ kind: "month", month: 9 });
+  });
+
+  it("is the weekday for a weekly one, Sunday being 0", () => {
+    // 2026-09-21 is a Monday.
+    expect(dueMoment("weekly", "2026-09-21")).toEqual({ kind: "weekday", weekday: 1 });
+    expect(dueMoment("weekly", "2026-09-20")).toEqual({ kind: "weekday", weekday: 0 });
   });
 });
