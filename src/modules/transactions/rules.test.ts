@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  autoCategoryColor,
+  CATEGORY_COLORS,
+  categoryColor,
   detectRecurrences,
   displayPayee,
   excludeHidden,
@@ -756,5 +759,52 @@ describe("planIbanTransfers", () => {
     const plan = planIbanTransfers(own, rows);
     expect(plan).toContainEqual({ id: "t3", transferGroupId: "t1" });
     expect(plan.some((one) => one.id === "t2")).toBe(false);
+  });
+});
+
+describe("autoCategoryColor", () => {
+  it("always gives the same id the same colour", () => {
+    const id = "0199a1b2-c3d4-7890-abcd-ef1234567890";
+    expect(autoCategoryColor(id)).toBe(autoCategoryColor(id));
+  });
+
+  it("only ever answers with a colour from the palette", () => {
+    for (let i = 0; i < 200; i += 1) {
+      expect(CATEGORY_COLORS).toContain(
+        autoCategoryColor(`0199a1b2-c3d4-7890-abcd-${String(i).padStart(12, "0")}`),
+      );
+    }
+  });
+
+  it("spreads ids across the whole palette rather than favouring one", () => {
+    const seen = new Set(
+      Array.from({ length: 400 }, (_, i) =>
+        autoCategoryColor(`0199a1b2-c3d4-7890-abcd-${String(i).padStart(12, "0")}`),
+      ),
+    );
+    expect(seen.size).toBe(CATEGORY_COLORS.length);
+  });
+});
+
+describe("categoryColor", () => {
+  const group = { id: "g1", parentId: null, color: "#2563eb" };
+
+  it("is a group's own colour when somebody chose one", () => {
+    expect(categoryColor(group)).toBe("#2563eb");
+  });
+
+  it("falls back to the automatic one for a group nobody coloured", () => {
+    const plain = { id: "g2", parentId: null, color: null };
+    expect(categoryColor(plain)).toBe(autoCategoryColor("g2"));
+  });
+
+  it("is the group's colour for a sub-category, whatever colour it carries itself", () => {
+    const child = { id: "c1", parentId: "g1", color: "#ef4444" };
+    expect(categoryColor(child, "#2563eb")).toBe("#2563eb");
+  });
+
+  it("derives the group's colour from the parent's id when it was not handed one", () => {
+    const child = { id: "c1", parentId: "g1", color: "#ef4444" };
+    expect(categoryColor(child)).toBe(autoCategoryColor("g1"));
   });
 });

@@ -10,7 +10,6 @@ import { Badge } from "@/ui/badge";
 import { buttonClassName } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { TaxonomyPanels } from "./categories/panels";
 import { CodeMapCard } from "./code-map-card";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -67,8 +66,6 @@ export default async function SettingsDataPage() {
           </Table>
         )}
       </SettingsSection>
-
-      <TaxonomyPanels />
 
       <SettingsSection title={mine("title")} description={mine("description")}>
         {/* A plain link and not a button: the response *is* the file, so the browser downloads it

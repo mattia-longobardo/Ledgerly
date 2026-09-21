@@ -27,6 +27,18 @@ test("subscriptions are checked against the movements, projected and suggested",
     await expect(page.getByText("337,66 €").first()).toBeVisible();
   });
 
+  await test.step("the due column says the unit of each cycle, and the category carries its colour", async () => {
+    // A monthly subscription is identified by its day, a yearly one by its month (owner, F8.1).
+    await expect(row(page, "Netflix")).toContainText(/Day \d{1,2}/);
+    await expect(row(page, "Amazon Prime")).toContainText(
+      /January|February|March|April|May|June|July|August|September|October|November|December/,
+    );
+    // The category tag is drawn in the category's own colour, which is never absent.
+    const dot = row(page, "Netflix").locator("span[style*='background-color']").first();
+    await expect(dot).toBeVisible();
+    expect(await dot.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
   await test.step("the table sorts on a header", async () => {
     await page.getByRole("button", { name: "Name" }).click();
     await expect(page.getByTestId("subscription-row").first()).toContainText("Spotify");

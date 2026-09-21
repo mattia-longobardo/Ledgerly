@@ -37,7 +37,7 @@ const FORM_ID = "label-form";
  * so the confirmation says how many movements lose it first.
  */
 export function LabelsCard({ rows }: { rows: LabelRow[] }) {
-  const t = useTranslations("settings.data.labels");
+  const t = useTranslations("settings.labels");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [removing, setRemoving] = useState<LabelRow | null>(null);
   const [error, setError] = useState<string | null>(null);

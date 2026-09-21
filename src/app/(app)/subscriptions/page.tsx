@@ -262,10 +262,18 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
                   key={entry.groupId ?? "none"}
                   className="grid grid-cols-[90px_1fr_84px] items-center gap-2 text-sm"
                 >
-                  <span className="truncate">{entry.name ?? t("byCategory.uncategorised")}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="inline-block size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: entry.color ?? undefined }}
+                    />
+                    <span className="truncate">{entry.name ?? t("byCategory.uncategorised")}</span>
+                  </span>
                   <ProgressBar
                     value={largest === 0n ? 0 : Number((entry.yearlyCents * 1000n) / largest) / 1000}
                     label={entry.name ?? t("byCategory.uncategorised")}
+                    color={entry.color ?? undefined}
                   />
                   <span className="text-right tabular-nums">{money(entry.yearlyCents)}</span>
                 </li>
