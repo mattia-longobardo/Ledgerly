@@ -250,7 +250,7 @@ function emptyBuckets(): BucketTotals {
  */
 export async function accountsView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  options: { months?: number; now?: Date; through?: MonthKey } = {},
+  options: { months?: number; now?: Date; through?: MonthKey; includeArchived?: boolean } = {},
 ): Promise<AccountsView> {
   const now = options.now ?? new Date();
   const span = options.months ?? WINDOW_MONTHS;
@@ -262,8 +262,12 @@ export async function accountsView(
   const on = end >= thisMonth ? todayOn : lastDayOfMonth(end);
   const months = monthsBetween(addMonths(end, -(span - 1)), end);
 
+  // An archived account is off the list unless it is asked for. It never joins the totals either
+  // way (see `counted` below): the net worth of today is what you have today, and a closed account
+  // is not part of it — its balances stay counted in the months it was open, which is what the
+  // series already does.
   const [open, points, snapshots] = await Promise.all([
-    listAccounts(ctx),
+    listAccounts(ctx, { includeArchived: options.includeArchived ?? false }),
     monthlyPoints(ctx, on),
     listSnapshotRuns(ctx, 1),
   ]);
@@ -286,10 +290,13 @@ export async function accountsView(
     series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
     estimated: estimatedMonths(points.get(account.id) ?? [], months),
     held: monthEndSeries(points.get(account.id) ?? [], months, "hold"),
-    stale: account.origin === "synced" && isStale(account.lastSyncedAt, account.staleAfterHours, now),
+    stale:
+      account.state !== "archived" &&
+      account.origin === "synced" &&
+      isStale(account.lastSyncedAt, account.staleAfterHours, now),
   }));
 
-  const counted = rows.filter((row) => row.account.inNetWorth);
+  const counted = rows.filter((row) => row.account.inNetWorth && row.account.state !== "archived");
   const netWorth = totalSeries(
     counted.map((row) => row.held),
     months.length,
@@ -305,7 +312,10 @@ export async function accountsView(
     else bucket.total = (bucket.total ?? 0n) + row.balance;
   }
 
-  const alerts = rows.flatMap((row) => alertsFor(row.account, row.balance, now));
+  // Nothing to warn about on an account you closed: no low balance, no reading gone stale.
+  const alerts = rows
+    .filter((row) => row.account.state !== "archived")
+    .flatMap((row) => alertsFor(row.account, row.balance, now));
 
   return {
     months,

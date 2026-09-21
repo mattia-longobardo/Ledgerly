@@ -1131,7 +1131,8 @@
     "partial": "Alcuni conti non hanno ancora un saldo: questi totali sono incompleti.",
     "empty": {
       "title": "Ancora nessun conto",
-      "description": "Aggiungi un conto a mano, o collega un provider quando arriveranno le integrazioni."
+      "description": "Aggiungi un conto a mano, o collega un provider quando arriveranno le integrazioni.",
+      "archived": "Nessun conto aperto in questo momento. {count, plural, one {# conto archiviato} other {# conti archiviati}} sono ancora qui, con tutta la loro storia."
     },
     "columns": {
       "name": "Nome",
@@ -1371,16 +1372,17 @@
       "danger": {
         "title": "Zona pericolosa",
         "description": "L'archiviazione nasconde il conto e ne conserva lo storico negli snapshot passati.",
-        "explain": "Rimuovi questo conto: viene archiviato se qualcosa vi si appoggia, e cancellato del tutto — con ogni movimento e ogni saldo che contiene — se non vi si appoggia niente.",
+        "explain": "Archivialo per toglierlo dall'elenco tenendo tutto, oppure rimuovilo: rimuovere lo cancella del tutto quando niente vi si appoggia, e lo archivia quando qualcosa vi si appoggia.",
         "archived": "Questo conto è archiviato. I suoi saldi contano ancora nei mesi passati.",
-        "archive": "Rimuovi il conto",
+        "archive": "Archivia il conto",
         "restore": "Ripristina conto",
         "confirmTitle": "Rimuovere questo conto?",
         "confirmBody": "Se nessun salvadanaio, abbonamento, regola di interessi o fondo si appoggia a {name}, il conto viene cancellato per sempre, e con lui ogni movimento e ogni saldo che contiene. Se invece qualcosa vi si appoggia, viene archiviato e la sua storia resta.",
         "confirm": "Rimuovi il conto",
         "cancel": "Lascialo dov'è",
         "deletedToast": "{name} cancellato, con i suoi movimenti e i suoi saldi.",
-        "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati."
+        "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati.",
+        "remove": "Rimuovi il conto"
       }
     },
     "period": {
@@ -1439,7 +1441,8 @@
         "notFound": "Questo collegamento non c'è più.",
         "failed": "Non è stato salvato. Riprova."
       }
-    }
+    },
+    "showArchived": "Mostra archiviati"
   },
   "budgets": {
     "title": "Budget",

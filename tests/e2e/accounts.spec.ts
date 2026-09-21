@@ -258,3 +258,60 @@ test("what hangs off an account is added, read on Overview, changed and removed"
     await expect(section.getByRole("button", { name: "PayPal Europe" })).toBeHidden();
   });
 });
+
+/**
+ * Archiving (owner, 2026-09-21): an account you stopped using leaves the list without taking its
+ * history with it. The point of the journey is the number: the total must be the same whether the
+ * archived account is shown or hidden, or the page would give two net worths for one day.
+ */
+test("an account is archived, found again behind a checkbox, and restored", async ({ page }) => {
+  // The list is drawn twice — a table from `md` up, cards below — so only the shown copy counts.
+  const rowFor = (name: string) => page.getByRole("link", { name }).filter({ visible: true }).first();
+
+  await page.goto("/accounts/new");
+  await page.getByLabel("Name").fill("Conto da archiviare");
+  await page.getByLabel("Type").selectOption("checking");
+  await page.getByLabel("Opening balance").fill("2.000,00");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}$/);
+  const url = page.url().split("?")[0];
+
+  await page.goto("/accounts");
+  // The headline by its test id, not by a pattern: its wording changes with the count ("no
+  // accounts", "1 account"), and a regex that misses is a timeout rather than a failure.
+  const headline = page.getByTestId("accounts-summary");
+  await expect(rowFor("Conto da archiviare")).toBeVisible();
+  // `toHaveText` below and not `textContent()`: the first retries while the page settles, the
+  // second reads once and turns any wait into a failure.
+  const withIt = (await headline.textContent()) ?? "";
+
+  await test.step("archiving takes it off the list, and off the total", async () => {
+    await page.goto(`${url}?tab=settings`);
+    await page.getByRole("button", { name: "Archive account" }).click();
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Conto da archiviare");
+    await page.goto("/accounts");
+    await expect(page.getByRole("link", { name: "Conto da archiviare" })).toHaveCount(0);
+    await expect(headline, "the total did not drop when it was archived").not.toHaveText(withIt);
+  });
+
+  await test.step("the checkbox brings it back into view, and the total stays put", async () => {
+    const without = (await headline.textContent()) ?? "";
+    await page.getByRole("link", { name: "Show archived" }).click();
+    await expect(page).toHaveURL(/archived=1/);
+    await expect(rowFor("Conto da archiviare")).toBeVisible();
+    // It is marked, it is out of the total, and the headline still counts only the live ones.
+    await expect(page.getByRole("main")).toContainText("Archived");
+    await expect(headline, "showing an archived account moved the total").toHaveText(without);
+  });
+
+  await test.step("restoring gives it back, balance and all", async () => {
+    await page.goto(`${url}?tab=settings`);
+    await page.getByRole("button", { name: "Restore account" }).click();
+    // Wait for the action to say it is done, as the archive step does: navigating on the click
+    // races the Server Action, and the list is then read from before it landed.
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Account restored");
+    await page.goto("/accounts");
+    await expect(rowFor("Conto da archiviare")).toBeVisible();
+    await expect(headline).toHaveText(withIt);
+  });
+});

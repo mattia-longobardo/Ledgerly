@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { accountsView } from "@/modules/accounts/queries";
+import { accountsView, listAccounts } from "@/modules/accounts/queries";
 import { asNumbers, changeBetween, colorFor, shareOf, since } from "@/modules/accounts/ui/display";
-import { LinkTabs, PeriodStepper } from "@/modules/accounts/ui/controls";
+import { LinkTabs, PeriodStepper, ToggleLink } from "@/modules/accounts/ui/controls";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { type Grain, periodEnd } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
@@ -18,6 +18,7 @@ import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { withParams } from "@/ui/url";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("accounts"))("title") };
@@ -31,14 +32,21 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
   const query = await searchParams;
   const grain: Grain = query.grain === "year" ? "year" : "month";
   const offset = Math.max(0, Number(query.off ?? 0) || 0);
-  const params = { grain: grain === "month" ? undefined : grain, off: offset ? String(offset) : undefined };
+  // An archived account is off the list until it is asked for, and it stays out of the totals even
+  // then: the same page must not give two different net worths depending on a checkbox.
+  const showArchived = query.archived === "1";
+  const params = {
+    grain: grain === "month" ? undefined : grain,
+    off: offset ? String(offset) : undefined,
+    archived: showArchived ? "1" : undefined,
+  };
   const end = periodEnd(grain, offset, today(ctx.timeZone, now));
   const periodShort = grain === "year" ? end.slice(0, 4) : formatDate(end, "monthShort", ctx.locale);
   const periodLong =
     (grain === "year" ? end.slice(0, 4) : formatDate(end, "monthYear", ctx.locale)) +
     (offset === 0 ? ` · ${grain === "year" ? t("period.ytd") : t("period.today")}` : "");
 
-  const view = await accountsView(ctx, { now, through: end });
+  const view = await accountsView(ctx, { now, through: end, includeArchived: showArchived });
 
   const add = (
     <ButtonLink href="/accounts/new" variant="primary" size="sm">
@@ -47,16 +55,33 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
   );
 
   if (view.rows.length === 0) {
+    // Somebody who archived their last account has not stopped having accounts, and the empty
+    // state must not tell them they have: without this, archiving the only one left them looking
+    // at "No accounts yet" with no checkbox anywhere to find it again.
+    const archived = showArchived
+      ? []
+      : (await listAccounts(ctx, { includeArchived: true })).filter(
+          (account) => account.state === "archived",
+        );
     return (
       <Page title={t("title")} actions={add}>
         <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
         <EmptyState
           title={t("empty.title")}
-          description={t("empty.description")}
+          description={
+            archived.length > 0 ? t("empty.archived", { count: archived.length }) : t("empty.description")
+          }
           actions={
-            <ButtonLink href="/accounts/new" variant="primary">
-              {t("add")}
-            </ButtonLink>
+            <>
+              <ButtonLink href="/accounts/new" variant="primary">
+                {t("add")}
+              </ButtonLink>
+              {archived.length > 0 && (
+                <ButtonLink href={withParams("/accounts", {}, { archived: "1" })}>
+                  {t("showArchived")}
+                </ButtonLink>
+              )}
+            </>
           }
         />
       </Page>
@@ -70,13 +95,22 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       color: colorFor(row.account, index),
       change: changeBetween(row.balance, row.previous),
       yoy: changeBetween(row.balance, yearAgo),
-      share: shareOf(row.balance, view.total),
+      // No share for an archived account: the total it would be a share of leaves it out, and a
+      // percentage of a number you are not part of is a wrong number, not a missing one.
+      share: row.account.state === "archived" ? null : shareOf(row.balance, view.total),
       synced: since(row.account.lastSyncedAt, now),
     };
   });
 
+  // The headline counts what the headline's total is made of, so the two never disagree.
+  const liveCount = view.rows.filter((row) => row.account.state !== "archived").length;
+
   const kpis = [
-    { key: "total" as const, total: view.total, count: view.rows.length },
+    {
+      key: "total" as const,
+      total: view.total,
+      count: liveCount,
+    },
     { key: "cash" as const, total: view.buckets.cash.total, count: view.buckets.cash.count },
     { key: "savings" as const, total: view.buckets.savings.total, count: view.buckets.savings.count },
     {
@@ -91,10 +125,10 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
     <Page title={t("title")} actions={add}>
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
-        <p className="text-muted">
+        <p data-testid="accounts-summary" className="text-muted">
           {t("summary", {
             total: formatMoney(view.total, ctx.numberFormat),
-            count: view.rows.length,
+            count: liveCount,
           })}
         </p>
       </div>
@@ -111,6 +145,15 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
             { value: "year", label: t("period.grains.year") },
           ]}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleLink
+            label={t("showArchived")}
+            path="/accounts"
+            params={params}
+            name="archived"
+            on={showArchived}
+          />
+        </div>
         <PeriodStepper
           label={t("period.label")}
           path="/accounts"
@@ -167,6 +210,9 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                       </Link>
                       {row.account.state === "unavailable" && (
                         <Badge tone="warn">{t("states.unavailable")}</Badge>
+                      )}
+                      {row.account.state === "archived" && (
+                        <Badge tone="neutral">{t("states.archived")}</Badge>
                       )}
                       {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
                     </div>
@@ -246,6 +292,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                       : t(`synced.${row.synced.unit}`, { count: row.synced.count })}
                 </span>
                 {row.account.state === "unavailable" && <Badge tone="warn">{t("states.unavailable")}</Badge>}
+                {row.account.state === "archived" && <Badge tone="neutral">{t("states.archived")}</Badge>}
                 {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">

@@ -13,6 +13,7 @@ import {
   AccountError,
   addConnection,
   applyProviderAccounts,
+  archiveAccount,
   connectionsByAccount,
   connectionsOf,
   createAccount,
@@ -22,6 +23,7 @@ import {
   rebuildDerivedBalances,
   removeAccount,
   removeConnection,
+  restoreAccount,
   runSnapshot,
   saveBalanceEntry,
   saveProviderBalance,
@@ -834,5 +836,62 @@ describe("account connections", () => {
     expect(byAccount.get(first.id)?.map((row) => row.name)).toEqual(["Paypal"]);
     expect(byAccount.get(second.id)?.map((row) => row.name)).toEqual(["Google Pay"]);
     expect(await connectionsByAccount(ctx, [])).toEqual(new Map());
+  });
+});
+
+/**
+ * Archiving is how an account you no longer use leaves the list without taking its history with it
+ * (owner, 2026-09-21). The rule that matters: it is off the totals **whether or not** it is shown,
+ * because the same page must not give two different net worths depending on a checkbox.
+ */
+describe("archived accounts in accountsView", () => {
+  async function twoAccounts() {
+    const live = await createAccount(ctx, { ...CHECKING, name: "Revolut", openingBalance: null });
+    const closed = await createAccount(ctx, { ...CHECKING, name: "ING", openingBalance: null });
+    const on = today(ctx.timeZone);
+    await saveBalanceEntry(ctx, live.id, { on, cents: 100_000n });
+    await saveBalanceEntry(ctx, closed.id, { on, cents: 700_000n });
+    return { live, closed };
+  }
+
+  it("leaves an archived account off the list, and off the total", async () => {
+    const { closed } = await twoAccounts();
+    const before = await accountsView(ctx);
+    expect(before.rows).toHaveLength(2);
+    expect(before.total).toBe(800_000n);
+
+    await archiveAccount(ctx, closed.id);
+    const after = await accountsView(ctx);
+    expect(after.rows.map((row) => row.account.name)).toEqual(["Revolut"]);
+    expect(after.total).toBe(100_000n);
+  });
+
+  it("shows it when asked, and the total does not move", async () => {
+    const { closed } = await twoAccounts();
+    await archiveAccount(ctx, closed.id);
+    const shown = await accountsView(ctx, { includeArchived: true });
+    expect(shown.rows.map((row) => row.account.name).sort()).toEqual(["ING", "Revolut"]);
+    // The row is there with its balance; the total is the same 100.000 as when it was hidden.
+    expect(shown.rows.find((row) => row.account.name === "ING")?.balance).toBe(700_000n);
+    expect(shown.total).toBe(100_000n);
+    expect(shown.buckets.cash.count).toBe(1);
+  });
+
+  it("warns about nothing once archived", async () => {
+    const { closed } = await twoAccounts();
+    // "Warn below 9.000,00" on an account holding 7.000,00: the alert fires while it is open.
+    await updateAccountSettings(ctx, closed.id, { ...SETTINGS, lowBalanceCents: 900_000n });
+    expect((await accountsView(ctx)).alerts.length).toBeGreaterThan(0);
+    await archiveAccount(ctx, closed.id);
+    expect((await accountsView(ctx, { includeArchived: true })).alerts).toEqual([]);
+  });
+
+  it("comes back with everything it had", async () => {
+    const { closed } = await twoAccounts();
+    await archiveAccount(ctx, closed.id);
+    await restoreAccount(ctx, closed.id);
+    const view = await accountsView(ctx);
+    expect(view.rows).toHaveLength(2);
+    expect(view.total).toBe(800_000n);
   });
 });

@@ -77,7 +77,10 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   // The header and the KPIs speak of today whatever window the chart shows (spec §7.1, F2.5): one
   // reading for both used to put the balance at the end of a past range under "this month", and
   // left "Year over year" blank on any span shorter than thirteen months.
-  const view = await accountsView(ctx, { now });
+  // `includeArchived`: an archived account still has a page — that is the whole point of
+  // archiving rather than removing — and without this the lookup below answered 404 for it, so
+  // "Restore account" sat on a screen nobody could reach.
+  const view = await accountsView(ctx, { now, includeArchived: true });
   // What hangs off this account, for the Settings tab and for the read-only line on Overview.
   const connections: ConnectionRow[] = (await connectionsOf(ctx, id)).map((row) => ({
     id: row.id,
@@ -89,7 +92,12 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   if (index < 0) notFound();
   const row = view.rows[index];
   const account = row.account;
-  const window = await accountsView(ctx, { now, months: width, through: custom?.to ?? thisMonth });
+  const window = await accountsView(ctx, {
+    now,
+    months: width,
+    through: custom?.to ?? thisMonth,
+    includeArchived: true,
+  });
   const windowRow = window.rows.find((one) => one.account.id === id) ?? row;
 
   const requested = query.tab;

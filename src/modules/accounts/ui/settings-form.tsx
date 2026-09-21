@@ -11,7 +11,12 @@ import { Checkbox, Input, Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { SettingsSection } from "@/ui/section";
 import { notify } from "@/ui/toast";
-import { removeAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
+import {
+  archiveAccountAction,
+  removeAccountAction,
+  restoreAccountAction,
+  saveAccountSettingsAction,
+} from "../actions";
 import { colorField } from "./display";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "../rules";
 
@@ -122,6 +127,18 @@ export function AccountSettingsForm({
         result.outcome === "deleted" ? "error" : "success",
       );
       router.push("/accounts" as Route);
+    });
+  }
+
+  /** Archiving is the safe half: it never deletes, and `onRestore` undoes it. */
+  function onArchive() {
+    startTransition(async () => {
+      const result = await archiveAccountAction(account.id);
+      if (!result.ok) {
+        setError(t("errors.failed"));
+        return;
+      }
+      notify(t("danger.archivedToast", { name: account.name }));
     });
   }
 
@@ -290,9 +307,16 @@ export function AccountSettingsForm({
               {t("danger.restore")}
             </Button>
           ) : (
-            <Button variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
-              {t("danger.archive")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {/* Two intentions, two buttons: archiving keeps everything and can be undone, and
+                  removing may delete. Offering only the second made the first unreachable. */}
+              <Button size="sm" onClick={onArchive} disabled={pending}>
+                {t("danger.archive")}
+              </Button>
+              <Button variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
+                {t("danger.remove")}
+              </Button>
+            </div>
           )}
         </div>
       </SettingsSection>
