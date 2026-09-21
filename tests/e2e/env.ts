@@ -26,6 +26,16 @@ export const USERS = {
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
   cometa: { email: "cometa@example.test", password: "cometa-password-123", name: "Cometa" },
   timeoff: { email: "timeoff@example.test", password: "timeoff-password-123", name: "Timeoff" },
+  // F8: personal access tokens and "Export my data", which need nobody else's data.
+  tokens: { email: "tokens@example.test", password: "tokens-password-123", name: "Tokens" },
+  // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
+  // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
+  // the instance's real users too, and a spec must never touch one.
+  disposable: {
+    email: "disposable@example.test",
+    password: "disposable-password-123",
+    name: "Disposable",
+  },
 } as const;
 
 /** The only addresses the seed may create or delete. */
@@ -47,6 +57,9 @@ export const SESSIONS = {
   payroll: { user: "payroll", file: "payroll-session.json" },
   cometa: { user: "cometa", file: "cometa-session.json" },
   timeoff: { user: "timeoff", file: "timeoff-session.json" },
+  // The seed makes `owner` an admin, so Admin › Users and Admin › Server have a journey (F8).
+  owner: { user: "owner", file: "owner-session.json" },
+  tokens: { user: "tokens", file: "tokens-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;

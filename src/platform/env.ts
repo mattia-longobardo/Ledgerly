@@ -81,6 +81,10 @@ export const envSchema = z
           });
         }
       }),
+    // Gotify (spec §9.4): the homelab's push channel for admin alerts. Both optional — without
+    // them `alertAdmins` does nothing at all (plan F8 §3.4.15).
+    GOTIFY_URL: z.preprocess(blankAsUndefined, z.url().optional()),
+    GOTIFY_TOKEN: z.preprocess(blankAsUndefined, z.string().min(1).optional()),
     CRON_SECRET: z.string().min(32),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/ledgerly-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),

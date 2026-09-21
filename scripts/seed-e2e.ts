@@ -40,8 +40,13 @@ async function removeTestUsers(): Promise<void> {
     .delete(users)
     .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`))
     .returning({ id: users.id, email: users.email });
-  // Their documents' originals are in S3, where no cascade reaches.
-  for (const user of removed) await deleteFolder(`payslips/${user.id}/`);
+  // What they own outside the database, where no cascade reaches: the same three folders
+  // `removePerson` clears (src/modules/users/admin.ts).
+  for (const user of removed) {
+    for (const folder of ["payslips", "cometa", "exports"]) {
+      await deleteFolder(`${folder}/${user.id}/`);
+    }
+  }
   console.log(`e2e: removed ${removed.length} test users`);
   rmSync(STATE_DIR, { recursive: true, force: true });
 }
@@ -50,10 +55,12 @@ await removeTestUsers();
 if (mode === "remove") process.exit(0);
 
 const auth = createAuth({ withNextCookies: false });
-// The site already has its admin, so these are ordinary users.
+// The site already has its admin, so these are ordinary users — except `owner`, promoted below:
+// Admin › Users and Admin › Server (F8) have no journey without one.
 for (const user of Object.values(USERS)) {
   await auth.api.createUser({ body: user });
 }
+await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.owner.email));
 mkdirSync(STATE_DIR, { recursive: true });
 
 /**

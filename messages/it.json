@@ -67,6 +67,10 @@
     "lowBalance": {
       "subject": "{account} è sotto la soglia",
       "body": "{account} è a {balance}, sotto i {threshold} che hai impostato.\n\nApri Ledgerly per controllare."
+    },
+    "monthlySummary": {
+      "subject": "Ledgerly · {month}",
+      "body": "{month} in numeri.\n\nPatrimonio a fine mese: {netWorth}\nEntrate: {income}\nUscite: {expense}\nSaldo: {net}\nMovimenti: {transactions}\n\nApri Ledgerly per guardare più da vicino. Puoi spegnere questa email in Impostazioni › Profilo.\n"
     }
   },
   "auth": {
@@ -252,6 +256,33 @@
         "clientSecret": "Segreto del client",
         "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
       }
+    },
+    "jobs": {
+      "title": "Job pianificati",
+      "description": "Quello che esegue il sidecar cron, e quando è andato l'ultima volta. «Esegui adesso» prende il lock del job, quindi un job già in corso viene saltato invece che avviato due volte.",
+      "columns": {
+        "job": "Job",
+        "tier": "Esecuzione",
+        "lastRun": "Ultima esecuzione",
+        "result": "Esito",
+        "actions": "Azioni"
+      },
+      "tiers": {
+        "hourly": "Ogni ora",
+        "daily": "Ogni giorno",
+        "monthly": "Ogni mese",
+        "manual": "Solo a mano"
+      },
+      "states": {
+        "running": "In corso",
+        "success": "Riuscito",
+        "failed": "Fallito",
+        "skipped": "Saltato"
+      },
+      "never": "Mai",
+      "runNow": "Esegui adesso",
+      "started": "{job} avviato: questa tabella dirà com'è andata quando avrà finito.",
+      "failed": "Non si è potuto avviare."
     },
     "data": {
       "categories": {

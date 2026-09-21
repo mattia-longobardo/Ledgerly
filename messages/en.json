@@ -67,6 +67,10 @@
     "lowBalance": {
       "subject": "{account} is below its threshold",
       "body": "{account} is at {balance}, below the {threshold} you set.\n\nOpen Ledgerly to check it."
+    },
+    "monthlySummary": {
+      "subject": "Ledgerly · {month}",
+      "body": "{month} in numbers.\n\nNet worth at the end of the month: {netWorth}\nIncome: {income}\nSpending: {expense}\nNet: {net}\nMovements: {transactions}\n\nOpen Ledgerly to look closer. You can switch this email off in Settings › Profile.\n"
     }
   },
   "auth": {
@@ -252,6 +256,33 @@
         "clientSecret": "Client secret",
         "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
       }
+    },
+    "jobs": {
+      "title": "Scheduled jobs",
+      "description": "What the cron sidecar runs, and when it last ran. “Run now” takes the job's lock, so a job already running is skipped rather than started twice.",
+      "columns": {
+        "job": "Job",
+        "tier": "Runs",
+        "lastRun": "Last run",
+        "result": "Result",
+        "actions": "Actions"
+      },
+      "tiers": {
+        "hourly": "Hourly",
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "manual": "By hand only"
+      },
+      "states": {
+        "running": "Running",
+        "success": "Success",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      },
+      "never": "Never",
+      "runNow": "Run now",
+      "started": "{job} started: this table says how it went once it is done.",
+      "failed": "It could not be started."
     },
     "data": {
       "categories": {

@@ -1,5 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
+import { alertAdmins } from "@/platform/alerts/gotify";
 import { redactForLog } from "@/platform/auth/logger";
 import { getDb } from "@/platform/db/client";
 import { touchHeartbeat } from "./heartbeat";
@@ -59,16 +60,25 @@ async function runAndRecord(job: JobDefinition, tier: Tier): Promise<Status> {
     }
     return "success";
   } catch (error) {
+    const reason = describeError(error);
     if (runId !== undefined) {
       try {
         await getDb()
           .update(jobRuns)
-          .set({ status: "failed", finishedAt: new Date(), error: describeError(error) })
+          .set({ status: "failed", finishedAt: new Date(), error: reason })
           .where(eq(jobRuns.id, runId));
       } catch (updateError) {
         console.error("[jobs] failed to record a failed run", redactForLog(updateError));
       }
     }
+    // The admins hear about it (spec §10.4). `alertAdmins` never throws and does nothing at all
+    // when Gotify is not configured, so this cannot turn one failure into two. The reason is the
+    // message already redacted for `job_runs` — never a credential (spec §5.4).
+    await alertAdmins({
+      title: `Ledgerly: ${job.name} failed`,
+      message: `The ${tier} job "${job.name}" failed.\n\n${reason}`,
+      priority: 7,
+    });
     return "failed";
   }
 }

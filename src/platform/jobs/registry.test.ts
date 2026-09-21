@@ -24,6 +24,7 @@ describe("JOBS", () => {
       ["trek-sync", "hourly"],
       ["holidays-refresh", "daily"],
       ["database-backup", "daily"],
+      ["monthly-summary", "monthly"],
       // No tick ever asks for `manual`: this one runs only from "Export all data" (spec §10.3).
       ["export-all", "manual"],
     ]);
