@@ -27,13 +27,13 @@ export async function acceptInviteAction(
   if (password !== confirm) return { error: "mismatch" };
   let email: string;
   try {
-    ({ email } = await acceptInvitation(getAuth(), parsed.data));
+    ({ email } = await acceptInvitation(await getAuth(), parsed.data));
   } catch (error) {
     if (error instanceof InvitationError) return { error: error.reason };
     throw error;
   }
   try {
-    await getAuth().api.signInEmail({ body: { email, password }, headers: await headers() });
+    await (await getAuth()).api.signInEmail({ body: { email, password }, headers: await headers() });
   } catch {
     // The account exists; only the automatic sign-in failed (for example, rate limited).
     redirect("/sign-in");

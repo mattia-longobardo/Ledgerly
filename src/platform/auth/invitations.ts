@@ -6,6 +6,7 @@ import type { Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { readEnv } from "@/platform/env";
 import { sendMail } from "@/platform/mail";
+import { mailAllowed } from "@/platform/settings/config";
 import type { Auth } from "./auth";
 import { invitationEmail } from "./emails";
 import { isPasswordLengthValid } from "./password-policy";
@@ -59,11 +60,24 @@ export async function findInvitation(token: string, now: Date = new Date()) {
   return row ?? null;
 }
 
-export async function sendInvitationEmail({ email, token }: { email: string; token: string }): Promise<void> {
+/**
+ * Sends the invitation link, unless "Invitations & resets" is off in Admin › Server: the answer
+ * says which of the two happened, so the admin's screen can tell them the link was not sent
+ * rather than claiming it was (plan F8 §3.4.6).
+ */
+export async function sendInvitationEmail({
+  email,
+  token,
+}: {
+  email: string;
+  token: string;
+}): Promise<"sent" | "mail_off"> {
+  if (!(await mailAllowed("invitations"))) return "mail_off";
   await sendMail({
     to: email,
     ...invitationEmail(`${readEnv().BETTER_AUTH_URL}/invite/${token}`, INVITATION_TTL_DAYS),
   });
+  return "sent";
 }
 
 /**

@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ProfilePage() {
   const ctx = await requireSession();
   const [session, sso, password, preferences, calendars] = await Promise.all([
-    getAuth().api.getSession({ headers: await headers() }),
+    (await getAuth()).api.getSession({ headers: await headers() }),
     hasSsoAccount(ctx.userId),
     hasPasswordAccount(ctx.userId),
     getPreferences(ctx),

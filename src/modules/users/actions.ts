@@ -53,7 +53,7 @@ export async function updateNameAction(name: string): Promise<ActionResult> {
   if (await hasSsoAccount(ctx.userId)) return { ok: false, error: "sso" };
   const parsed = nameSchema.safeParse(name);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  await getAuth().api.updateUser({ body: { name: parsed.data }, headers: await headers() });
+  await (await getAuth()).api.updateUser({ body: { name: parsed.data }, headers: await headers() });
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -66,7 +66,7 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
   try {
     const token = await findSessionToken(ctx, parsed.data);
     if (!token) return { ok: true };
-    await getAuth().api.revokeSession({ body: { token }, headers: await headers() });
+    await (await getAuth()).api.revokeSession({ body: { token }, headers: await headers() });
     revalidatePath("/settings/security");
     return { ok: true };
   } catch (error) {
@@ -77,7 +77,7 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
 export async function revokeOtherSessionsAction(): Promise<ActionResult> {
   await requireSession();
   try {
-    await getAuth().api.revokeOtherSessions({ headers: await headers() });
+    await (await getAuth()).api.revokeOtherSessions({ headers: await headers() });
     revalidatePath("/settings/security");
     return { ok: true };
   } catch (error) {

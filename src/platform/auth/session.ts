@@ -24,7 +24,7 @@ const getSignedIn = cache(async () => {
   // Headers first: it marks the render as dynamic before Better Auth (and its env) is touched, so
   // pages Next.js tries to prerender at build time (e.g. /_not-found) never reach it.
   const requestHeaders = await headers();
-  const session = await getAuth().api.getSession({ headers: requestHeaders });
+  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
   if (!session) return null;
   return { user: session.user, preferences: await getPreferences({ userId: session.user.id }) };
 });

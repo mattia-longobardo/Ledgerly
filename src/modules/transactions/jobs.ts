@@ -230,6 +230,7 @@ async function reportSync(
         kind: FAILED,
         key: connection.id,
         cooldownHours: NOTIFY_COOLDOWN_HOURS,
+        category: "syncAlerts",
         mail: {
           to: person.email,
           ...syncMail("failed", ctx.locale, {
@@ -250,6 +251,7 @@ async function reportSync(
         kind: STALE,
         key: connection.id,
         cooldownHours: NOTIFY_COOLDOWN_HOURS,
+        category: "syncAlerts",
         mail: {
           to: person.email,
           // No successful sync at all yet: the honest "since" is when the connection was saved.
