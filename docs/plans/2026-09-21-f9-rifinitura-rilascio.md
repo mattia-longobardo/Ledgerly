@@ -556,15 +556,49 @@ che resta del proprietario.
   intatto come rollback.
 - Le tre cartelle di supporto non esistono più, e niente nel repository le nomina.
 
+## 6.1 Fatto quando — la verifica, voce per voce (2026-09-21)
+
+| §6 chiedeva | Esito |
+|---|---|
+| Nessuna schermata a 400 px esce dalla finestra, scorre di lato o lascia un testo fuori dal contenitore — e il test guarda tutte e ventitré, con dei dati dentro | **Sì**, e ne guarda **trentasei**: le ventitré pagine, sei schede, i dettagli, gli overlay e le due pagine da non autenticati. 163 nodi oltre il bordo → 0. La regola del testo che trabocca non ha mai trovato niente. |
+| Nessuna violazione axe WCAG 2.1 A/AA su nessuna schermata, in tutti e due i temi | **Sì**. 52 violazioni di contrasto nel tema scuro → 0; 10 `scrollable-region-focusable` → 0; 4 `aria-prohibited-attr` → 0. Il tema chiaro non ne aveva nemmeno una. |
+| Ogni bersaglio almeno 24×24 px, salvo i link dentro una frase | **Sì**. 221 → 0, con l'eccezione scritta nel controllo e non lasciata al giudizio di chi legge. |
+| La revisione per aree chiusa e i suoi lotti applicati | **Sì**: `docs/reviews/2026-09-21-f9-revisione-finale.md`, tre rilievi correggibili tutti corretti, tre note e una conferma. |
+| `README`, `CLAUDE.md` e `docs/RELEASE.md` raccontano il repository che esiste | **Sì**, con sedici screenshot e una `LICENSE`. |
+| L'applicazione gira sul database `finance` con il bucket `finance-dashboard`, e `dashboard` resta intatto come rollback | **Adattato, e per iscritto.** Non esiste né un container `dashboard-app` né un database `dashboard`: Ledgerly era già su `dash.longobardo.me`. Il proprietario ha deciso che database e bucket restano `ledgerly`; il rollback è il dump preso prima della build, e `docs/RELEASE.md` lo dichiara in apertura. |
+| Le tre cartelle di supporto non esistono più, e niente nel repository le nomina | **Sì**, con una eccezione voluta: `CLAUDE.md` le nomina per dire che sono state cancellate e che non si deve scrivere codice che le legga. Nei piani e nella specifica restano come registro storico, con una nota datata. |
+
+Il cancello di §5, per intero: `format:check`, `lint`, `typecheck` puliti · **1 286** test unitari ·
+**575** di integrazione · `db:generate` senza differenze · build e `docker compose up -d` ·
+`/api/health` `{"status":"ok","db":"up"}` · **129** end-to-end verdi sul sito pubblicato.
+
+Resta il confronto a schermo con il design, che §11 assegna al proprietario e che nessun test
+sostituisce.
+
 ## 7. Resta al proprietario
 
-1. **Chiudere i §7 aperti dalle fasi precedenti**, che F9 raccoglie qui: `GOTIFY_URL`/`GOTIFY_TOKEN`
-   in `.env.homelab` (F8 §7.1); il backup **in chiaro** nel bucket privato, applicato come proposto
-   (F8 §3.6.2) e da confermare; «Back up now» premuto una volta sul sito (F8 §7.3 — il percorso di
-   `pg_dump` è già stato verificato a mano il 2026-09-21 contro `ledgerly_test`, dall'immagine vera,
-   con un dump `PGDMP` da 190 KB, quindi resta solo la conferma dalla schermata).
-2. Decidere su §3.4: l'eccezione dei link dentro una frase, o i 24 px senza eccezioni.
-3. Decidere su §3.6.5: l'avatar entra in F9 o resta fuori dalla 0.1.
-4. Il confronto visivo con il design (§11), schermata per schermata.
-5. Le credenziali e le decisioni di §13 che solo chi ha accesso al homelab può prendere: il momento
-   del rilascio, il nome del database e del bucket, la voce in Authentik.
+Aggiornato il 2026-09-21, a fase chiusa. **Chiuso** quello che F9 ha potuto chiudere:
+
+- ~~L'eccezione dei link dentro una frase (§3.4)~~ — **decisa: adottata**, e scritta nel controllo.
+- ~~L'avatar (§3.6.5)~~ — **deciso: fuori dalla 0.1.** §12 non lo nomina ed è una funzione, non una
+  rifinitura.
+- ~~Il nome del database e del bucket (§13)~~ — **deciso: restano `ledgerly`** (§P6.1).
+- ~~«Back up now» premuto una volta (F8 §7.3)~~ — **eseguito in produzione**, non più solo
+  verificato contro `ledgerly_test`: `backups/2026-09-21t14-36-21-009z.dump`, 377 KiB.
+
+**Resta aperto**, e resta suo:
+
+1. `GOTIFY_URL` e `GOTIFY_TOKEN` in `.env.homelab` (F8 §7.1). Misurato: non ci sono, quindi gli
+   avvisi ai manutentori sono spenti. Non è un errore — il codice le tratta come facoltative — ma è
+   una scelta da fare sapendo di farla.
+2. Il backup **in chiaro** nel bucket privato, applicato come proposto (F8 §3.6.2) e da confermare.
+3. **Il confronto visivo con il design** (§11), schermata per schermata. È l'unica cosa che nessun
+   test di questa fase sostituisce, e ora che il design non c'è più va fatta a memoria o contro gli
+   screenshot del `README`.
+4. Collegare Wallet e Trek se i token sono cambiati, e caricare i cedolini e i documenti Cometa che
+   mancano: `docs/RELEASE.md` §6 e §7. I 12 cedolini e il documento Cometa già caricati sono suoi e
+   non sono stati toccati.
+5. **Una cosa che F9 ha notato e non ha corretto** perché sarebbe una funzione nuova: nessun job
+   spazza le cartelle S3 rimaste senza proprietario. Oggi non se ne creano più — `removePerson` e
+   il seme le cancellano — ma se una cancellazione fallisse a metà nessuno se ne accorgerebbe. Una
+   passata dentro `housekeeping` sarebbe il posto giusto, in una fase che possa aggiungere funzioni.
