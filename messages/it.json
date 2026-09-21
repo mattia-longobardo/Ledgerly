@@ -1371,10 +1371,16 @@
       "danger": {
         "title": "Zona pericolosa",
         "description": "L'archiviazione nasconde il conto e ne conserva lo storico negli snapshot passati.",
-        "explain": "Archivia questo conto, oppure eliminalo se non dipende nulla da lui.",
+        "explain": "Rimuovi questo conto: viene archiviato se qualcosa vi si appoggia, e cancellato del tutto — con ogni movimento e ogni saldo che contiene — se non vi si appoggia niente.",
         "archived": "Questo conto è archiviato. I suoi saldi contano ancora nei mesi passati.",
-        "archive": "Archivia conto",
-        "restore": "Ripristina conto"
+        "archive": "Rimuovi il conto",
+        "restore": "Ripristina conto",
+        "confirmTitle": "Rimuovere questo conto?",
+        "confirmBody": "Se nessun salvadanaio, abbonamento, regola di interessi o fondo si appoggia a {name}, il conto viene cancellato per sempre, e con lui ogni movimento e ogni saldo che contiene. Se invece qualcosa vi si appoggia, viene archiviato e la sua storia resta.",
+        "confirm": "Rimuovi il conto",
+        "cancel": "Lascialo dov'è",
+        "deletedToast": "{name} cancellato, con i suoi movimenti e i suoi saldi.",
+        "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati."
       }
     },
     "period": {

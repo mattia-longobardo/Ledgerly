@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/display";
 import type { Ctx } from "@/platform/context";
-import type { MonthKey } from "@/platform/dates";
+import { civilDateIn, type MonthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
@@ -861,7 +861,7 @@ export async function PensionView({
                       {t(`documents.kinds.${document.kind}` as "documents.kinds.cometa_operations")}
                     </Td>
                     <Td muted>
-                      {formatDate(document.receivedAt.toISOString().slice(0, 10), "long", ctx.locale)}
+                      {formatDate(civilDateIn(document.receivedAt, ctx.timeZone), "long", ctx.locale)}
                     </Td>
                     <Td>
                       <Badge
@@ -905,7 +905,7 @@ export async function PensionView({
                   </div>
                   <span className="text-sm text-muted">
                     {t(`documents.kinds.${document.kind}` as "documents.kinds.cometa_operations")} ·{" "}
-                    {formatDate(document.receivedAt.toISOString().slice(0, 10), "long", ctx.locale)}
+                    {formatDate(civilDateIn(document.receivedAt, ctx.timeZone), "long", ctx.locale)}
                   </span>
                 </li>
               ))}
