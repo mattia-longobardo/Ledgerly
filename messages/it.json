@@ -1902,7 +1902,7 @@
       "runHourDefault": "Predefinita · {time}",
       "runHourHint": "Ogni giorno a quest'ora, nel tuo fuso orario.",
       "match": "L'interesse pagato si riconosce da",
-      "matchHint": "Testo nel beneficiario o nella categoria del pagamento degli interessi della banca, es. \"interessi\". Vuoto per non controllare.",
+      "matchHint": "Testo nel beneficiario, nella categoria o nella nota del pagamento degli interessi della banca, es. \"interessi\". Vuoto per non controllare.",
       "publish": "Pubblica ogni liquidazione su Wallet",
       "publishHint": "Solo per un conto sincronizzato. Spenta, la regola analizza soltanto.",
       "category": "Categoria su Wallet",

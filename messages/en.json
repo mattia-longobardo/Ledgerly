@@ -1902,7 +1902,7 @@
       "runHourDefault": "Default · {time}",
       "runHourHint": "Each day at this hour, in your timezone.",
       "match": "Paid interest is recognised by",
-      "matchHint": "Text in the payee or category of the bank's interest payment, e.g. \"interessi\". Leave empty to skip the check.",
+      "matchHint": "Text in the payee, category or note of the bank's interest payment, e.g. \"interessi\". Leave empty to skip the check.",
       "publish": "Post each payout to Wallet",
       "publishHint": "Only for a synced account. Off, the rule only analyses.",
       "category": "Wallet category",
