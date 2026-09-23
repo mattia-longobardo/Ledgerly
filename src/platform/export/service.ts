@@ -3,6 +3,7 @@ import { balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts
 import { budgetsView } from "@/modules/budgets/queries";
 import { fundsView } from "@/modules/funds/queries";
 import { interestsView } from "@/modules/interests/queries";
+import { investmentsView } from "@/modules/investments/queries";
 import { DOCUMENT_KINDS } from "@/modules/imports/rules";
 import { listDocuments, readOriginal } from "@/modules/imports/service";
 import { pocketsView } from "@/modules/pockets/queries";
@@ -87,18 +88,29 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     }
   }
 
-  const [transactions, subscriptions, pockets, budgets, funds, interests, allowances, leave, payroll] =
-    await Promise.all([
-      allTransactions(ctx),
-      subscriptionsView(ctx, now),
-      pocketsView(ctx, now),
-      budgetsView(ctx, month),
-      fundsView(ctx, now),
-      interestsView(ctx, now),
-      listAllowances(ctx),
-      listLeaveDays(ctx, LEAVE_WINDOW),
-      registerView(ctx),
-    ]);
+  const [
+    transactions,
+    subscriptions,
+    pockets,
+    budgets,
+    funds,
+    interests,
+    allowances,
+    leave,
+    payroll,
+    investments,
+  ] = await Promise.all([
+    allTransactions(ctx),
+    subscriptionsView(ctx, now),
+    pocketsView(ctx, now),
+    budgetsView(ctx, month),
+    fundsView(ctx, now),
+    interestsView(ctx, now),
+    listAllowances(ctx),
+    listLeaveDays(ctx, LEAVE_WINDOW),
+    registerView(ctx),
+    investmentsView(ctx, {}, now),
+  ]);
 
   return [
     {
@@ -231,6 +243,32 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
           state: fund.state,
         })),
       ],
+    },
+    {
+      name: "investment-platforms",
+      columns: ["name", "url", "deposited", "withdrawn", "value", "valuedOn", "gain"],
+      rows: investments.platforms.map((row) => ({
+        name: row.platform.name,
+        url: row.platform.url,
+        deposited: amount(row.stats.depositedCents),
+        withdrawn: amount(row.stats.withdrawnCents),
+        value: amount(row.stats.valueCents),
+        valuedOn: row.stats.valuedOn,
+        gain: amount(row.stats.gainCents),
+      })),
+    },
+    {
+      name: "investment-movements",
+      columns: ["on", "platform", "kind", "amount", "linkedPayee", "linkedAccount", "note"],
+      rows: investments.movements.map((row) => ({
+        on: row.movement.on,
+        platform: row.platformName,
+        kind: row.movement.kind,
+        amount: amount(row.movement.amountCents),
+        linkedPayee: row.linked?.payee ?? null,
+        linkedAccount: row.linked?.accountName ?? null,
+        note: row.movement.note,
+      })),
     },
     {
       name: "timeoff-allowances",

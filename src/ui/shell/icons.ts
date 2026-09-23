@@ -1,6 +1,7 @@
 import {
   Banknote,
   CalendarDays,
+  ChartCandlestick,
   ChartPie,
   Landmark,
   LayoutDashboard,
@@ -21,6 +22,7 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   expenses: Receipt,
   budgets: ChartPie,
   funds: TrendingUp,
+  investments: ChartCandlestick,
   interests: Percent,
   pockets: WalletCards,
   subscriptions: Repeat,

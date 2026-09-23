@@ -24,6 +24,7 @@
     "pockets": "Pocket",
     "subscriptions": "Abbonamenti",
     "funds": "Fondi",
+    "investments": "Investimenti",
     "interests": "Interessi",
     "payroll": "Buste paga",
     "timeoff": "Ferie"
@@ -2734,6 +2735,153 @@
         "cometa_operations": "nessun dettaglio operazioni importato",
         "cometa_position": "nessun riepilogo posizione importato"
       }
+    }
+  },
+  "investments": {
+    "title": "Investimenti",
+    "subtitle": "Il denaro sulle piattaforme di trading: cosa hai versato, cosa hai ritirato e quanto vale oggi. Nessun saldo dei conti cambia.",
+    "empty": {
+      "title": "Nessuna piattaforma",
+      "description": "Aggiungi la prima piattaforma di trading, poi registra i suoi depositi e ritiri."
+    },
+    "filter": {
+      "label": "Piattaforme",
+      "all": "Tutte"
+    },
+    "kpis": {
+      "value": "Valore attuale",
+      "valueMissing": "{count, plural, one {manca il valore di # piattaforma} other {manca il valore di # piattaforme}}",
+      "valueEstimated": "stima dal valore del {date}",
+      "valuedOn": "al {date}",
+      "net": "Investito netto",
+      "netNote": "{deposited} versati · {withdrawn} ritirati",
+      "gain": "Guadagno",
+      "gainNote": "valore + ritirato − versato",
+      "movements": "Movimenti",
+      "platforms": "{count, plural, one {# piattaforma} other {# piattaforme}}"
+    },
+    "partial": "Senza valore: {names}. Aggiorna il valore dal menu della piattaforma per avere il totale e il guadagno.",
+    "chart": {
+      "title": "Storico",
+      "value": "Valore",
+      "invested": "Investito netto",
+      "empty": "Ancora nessun movimento.",
+      "hoverInvested": "investito netto {amount}",
+      "summary": "Valore oggi {value}, investito netto {invested}."
+    },
+    "composition": {
+      "title": "Composizione",
+      "unknown": "La composizione appare quando ogni piattaforma ha un valore."
+    },
+    "platforms": {
+      "title": "Piattaforme",
+      "name": "Piattaforma",
+      "deposited": "Versato",
+      "withdrawn": "Ritirato",
+      "net": "Netto",
+      "value": "Valore",
+      "gain": "Guadagno",
+      "return": "Rendimento",
+      "share": "Quota",
+      "actions": "Azioni",
+      "open": "Apri {name} (nuova scheda)",
+      "openShort": "Apri {name}",
+      "noUrl": "Nessun link alla piattaforma",
+      "noValue": "nessun valore",
+      "estimated": "stima"
+    },
+    "valuations": {
+      "title": "Valori registrati",
+      "empty": "Nessun valore ancora: usa «Aggiorna valore» dal menu."
+    },
+    "movements": {
+      "title": "Movimenti",
+      "count": "{count, plural, one {# movimento} other {# movimenti}}",
+      "empty": "Ancora nessun deposito o ritiro.",
+      "date": "Data",
+      "platform": "Piattaforma",
+      "kind": "Tipo",
+      "amount": "Importo",
+      "linked": "Movimento del conto",
+      "note": "Nota",
+      "notLinked": "non collegato"
+    },
+    "kinds": {
+      "deposit": "Deposito",
+      "withdrawal": "Ritiro"
+    },
+    "form": {
+      "cancel": "Annulla",
+      "save": "Salva"
+    },
+    "platformForm": {
+      "newTitle": "Nuova piattaforma",
+      "editTitle": "Modifica piattaforma",
+      "description": "Una piattaforma di trading su cui tieni denaro. Il link ti porta al suo sito.",
+      "name": "Nome",
+      "namePlaceholder": "es. eToro",
+      "url": "Link",
+      "urlHint": "Facoltativo: l'indirizzo del sito o dell'app web della piattaforma."
+    },
+    "movementForm": {
+      "newTitle": "Nuovo movimento",
+      "editTitle": "Modifica movimento",
+      "description": "Un deposito sulla piattaforma o un ritiro dalla piattaforma. Nessun saldo dei conti cambia.",
+      "kind": "Tipo di movimento",
+      "platform": "Piattaforma",
+      "amount": "Importo",
+      "date": "Data",
+      "note": "Nota",
+      "linkOut": "Uscita dal conto collegata",
+      "linkIn": "Entrata sul conto collegata",
+      "linkHint": "Facoltativo: il movimento bancario corrispondente. Serve solo come riferimento.",
+      "noLink": "Nessun collegamento"
+    },
+    "valuationForm": {
+      "title": "Aggiorna valore · {name}",
+      "description": "Quanto vale la piattaforma, come lo leggi sulla piattaforma stessa, a fine giornata.",
+      "value": "Valore",
+      "date": "Data"
+    },
+    "confirm": {
+      "platformTitle": "Eliminare {name}?",
+      "platformDescription": "{count, plural, =0 {La piattaforma non ha movimenti. Verranno eliminati anche i suoi valori registrati.} one {Verranno eliminati anche # movimento e i valori registrati. Non si può annullare.} other {Verranno eliminati anche # movimenti e i valori registrati. Non si può annullare.}}",
+      "movementTitle": "Eliminare il movimento?",
+      "movementDescription": "{kind, select, deposit {Deposito} other {Ritiro}} di {amount} del {date}. Il movimento del conto collegato, se c'è, resta com'è.",
+      "valuationTitle": "Eliminare il valore?",
+      "valuationDescription": "Il valore di {name} del {date} ({value})."
+    },
+    "actions": {
+      "newMovement": "Nuovo movimento",
+      "newPlatform": "Nuova piattaforma",
+      "platformMenu": "Azioni per {name}",
+      "updateValue": "Aggiorna valore",
+      "editPlatform": "Modifica piattaforma",
+      "deletePlatform": "Elimina piattaforma",
+      "movementMenu": "Azioni del movimento",
+      "editMovement": "Modifica",
+      "deleteMovement": "Elimina movimento",
+      "deleteValuation": "Elimina"
+    },
+    "toasts": {
+      "platformCreated": "{name} aggiunta",
+      "platformSaved": "{name} salvata",
+      "deposited": "Deposito registrato",
+      "withdrawn": "Ritiro registrato",
+      "movementSaved": "Movimento salvato",
+      "valued": "Valore di {name} aggiornato",
+      "platformDeleted": "{name} eliminata con {count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
+      "movementDeleted": "Movimento eliminato",
+      "valuationDeleted": "Valore eliminato"
+    },
+    "errors": {
+      "invalid": "Controlla i campi: un importo, una data o un link non sono validi.",
+      "not_found": "Non trovato: forse è stato eliminato.",
+      "duplicate_name": "Esiste già una piattaforma con questo nome.",
+      "future_date": "La data non può essere nel futuro.",
+      "invalid_transaction": "Quel movimento del conto non va nella direzione giusta.",
+      "already_linked": "Quel movimento del conto è già collegato a un altro movimento.",
+      "failed": "Qualcosa è andato storto. Riprova."
     }
   },
   "payroll": {

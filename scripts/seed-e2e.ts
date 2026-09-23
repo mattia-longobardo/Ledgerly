@@ -32,6 +32,8 @@ import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/p
 import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addToPocket, createPocket, recordWithdrawal } from "../src/modules/pockets/service";
+import { createMovement, createPlatform, setValuation } from "../src/modules/investments/service";
+import { linkCandidates } from "../src/modules/transactions/queries";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
 import { setLimit } from "../src/modules/budgets/service";
@@ -266,6 +268,22 @@ async function seedPockets(): Promise<void> {
 }
 
 /**
+ * Investments: no platform yet — the journey creates them — and the two bank movements its
+ * deposit and withdrawal get linked to: 2.000 € sent to eToro ten days ago, 2.401,58 € back five
+ * days ago, on a synced account.
+ */
+async function seedInvestments(): Promise<void> {
+  const ctx = await contextOf(USERS.investments.email);
+  const on = today(ctx.timeZone);
+  const account = await syncedAccount(ctx, "e2e-investments-1", "ING Conto Arancio");
+  await saveBalanceEntry(ctx, account, { on, cents: 500_000n });
+  await upsertFromProvider(ctx, account, [
+    walletMovement("e2e-investments-tx-1", addDays(on, -10), -200_000n, "Bonifico eToro", null),
+    walletMovement("e2e-investments-tx-2", addDays(on, -5), 240_158n, "Accredito eToro", null),
+  ]);
+}
+
+/**
  * Subscriptions (F3): three plans paid from one synced account holding 1.500 € — Netflix found at
  * its price today, Spotify found at 12,99 € against a plan of 10,99 € (amount differs), Amazon
  * Prime due in three days and not found yet — and a gym charged monthly for three months that no
@@ -484,6 +502,56 @@ async function seedLayout(): Promise<void> {
     startMonth,
   });
 
+  // ——— Investments: one platform valued and linked, one closed at a gain ———
+  const binance = await createPlatform(ctx, { name: "Binance", url: "https://www.binance.com" });
+  const etoro = await createPlatform(ctx, { name: "eToro", url: "https://www.etoro.com" });
+  // The unpaired giroconto of last month (500 €) is the bank side of one Binance deposit.
+  const transfer = (await linkCandidates(ctx, { direction: "out", from: `${lastMonth}-01`, to: on })).find(
+    (candidate) => candidate.payee === "Revolut",
+  );
+  if (!transfer) throw new Error("e2e: the layout user's giroconto is missing");
+  await createMovement(ctx, {
+    platformId: binance.id,
+    kind: "deposit",
+    amountCents: 280_000n,
+    on: addDays(on, -270),
+  });
+  await createMovement(ctx, {
+    platformId: binance.id,
+    kind: "deposit",
+    amountCents: 70_000n,
+    on: addDays(on, -260),
+  });
+  await createMovement(ctx, {
+    platformId: binance.id,
+    kind: "withdrawal",
+    amountCents: 186_110n,
+    on: addDays(on, -120),
+    note: "Presa di profitto",
+  });
+  await createMovement(ctx, {
+    platformId: binance.id,
+    kind: "deposit",
+    amountCents: transfer.cents,
+    on: transfer.on,
+    transactionId: transfer.id,
+  });
+  await setValuation(ctx, binance.id, { valueCents: 245_000n, on: addDays(on, -60) });
+  await setValuation(ctx, binance.id, { valueCents: 262_300n, on });
+  await createMovement(ctx, {
+    platformId: etoro.id,
+    kind: "deposit",
+    amountCents: 200_000n,
+    on: addDays(on, -100),
+  });
+  await createMovement(ctx, {
+    platformId: etoro.id,
+    kind: "withdrawal",
+    amountCents: 240_158n,
+    on: addDays(on, -95),
+  });
+  await setValuation(ctx, etoro.id, { valueCents: 0n, on: addDays(on, -95) });
+
   // ——— Subscriptions ———
   await upsertFromProvider(ctx, current, [
     walletMovement("e2e-layout-sub-1", addDays(on, -90), -2990n, "FitActive", "Sport"),
@@ -621,6 +689,7 @@ await seedPockets();
 await seedSubscriptions();
 await seedInterests();
 await seedFunds();
+await seedInvestments();
 await seedTimeOff();
 await seedLayout();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);

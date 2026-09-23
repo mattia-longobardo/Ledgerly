@@ -6,6 +6,7 @@ export type IconName =
   | "expenses"
   | "budgets"
   | "funds"
+  | "investments"
   | "interests"
   | "pockets"
   | "subscriptions"
