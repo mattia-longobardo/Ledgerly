@@ -9,6 +9,7 @@ export interface NavItem extends Omit<NavLink, "label"> {
     | "expenses"
     | "budgets"
     | "funds"
+    | "investments"
     | "interests"
     | "pockets"
     | "subscriptions"
@@ -61,6 +62,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     href: "/funds" as Route,
     labelKey: "funds",
     icon: "funds",
+    group: "finance",
+    mobile: false,
+    adminOnly: false,
+  },
+  {
+    id: "investments",
+    href: "/investments" as Route,
+    labelKey: "investments",
+    icon: "investments",
     group: "finance",
     mobile: false,
     adminOnly: false,

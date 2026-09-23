@@ -24,6 +24,7 @@
     "pockets": "Pockets",
     "subscriptions": "Subscriptions",
     "funds": "Funds",
+    "investments": "Investments",
     "interests": "Interests",
     "payroll": "Payroll",
     "timeoff": "Time off"
@@ -2734,6 +2735,165 @@
         "cometa_operations": "no operations export imported yet",
         "cometa_position": "no position summary imported yet"
       }
+    }
+  },
+  "investments": {
+    "title": "Investments",
+    "subtitle": "The money on trading platforms: what you put in, what you took out and what it is worth today. No account balance changes.",
+    "empty": {
+      "title": "No platforms",
+      "description": "Add your first trading platform, or import your investments CSV sheet."
+    },
+    "filter": {
+      "label": "Platforms",
+      "all": "All"
+    },
+    "kpis": {
+      "value": "Current value",
+      "valueMissing": "{count, plural, one {# platform has no value} other {# platforms have no value}}",
+      "valueEstimated": "estimated from the value of {date}",
+      "valuedOn": "as of {date}",
+      "net": "Net invested",
+      "netNote": "{deposited} in · {withdrawn} out",
+      "gain": "Gain",
+      "gainNote": "value + withdrawn − deposited",
+      "movements": "Movements",
+      "platforms": "{count, plural, one {# platform} other {# platforms}}"
+    },
+    "partial": "No value: {names}. Update the value from the platform's menu to see the total and the gain.",
+    "chart": {
+      "title": "History",
+      "value": "Value",
+      "invested": "Net invested",
+      "empty": "No movements yet.",
+      "hoverInvested": "net invested {amount}",
+      "summary": "Value today {value}, net invested {invested}."
+    },
+    "composition": {
+      "title": "Composition",
+      "unknown": "The composition appears once every platform has a value."
+    },
+    "platforms": {
+      "title": "Platforms",
+      "name": "Platform",
+      "deposited": "Deposited",
+      "withdrawn": "Withdrawn",
+      "net": "Net",
+      "value": "Value",
+      "gain": "Gain",
+      "return": "Return",
+      "share": "Share",
+      "actions": "Actions",
+      "open": "Open {name} (new tab)",
+      "openShort": "Open {name}",
+      "noUrl": "No link to the platform",
+      "noValue": "no value",
+      "estimated": "estimate"
+    },
+    "valuations": {
+      "title": "Recorded values",
+      "empty": "No value yet: use “Update value” from the menu."
+    },
+    "movements": {
+      "title": "Movements",
+      "count": "{count, plural, one {# movement} other {# movements}}",
+      "empty": "No deposits or withdrawals yet.",
+      "date": "Date",
+      "platform": "Platform",
+      "kind": "Type",
+      "amount": "Amount",
+      "linked": "Account movement",
+      "note": "Note",
+      "notLinked": "not linked"
+    },
+    "kinds": {
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal"
+    },
+    "form": {
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "platformForm": {
+      "newTitle": "New platform",
+      "editTitle": "Edit platform",
+      "description": "A trading platform you keep money on. The link takes you to its site.",
+      "name": "Name",
+      "namePlaceholder": "e.g. eToro",
+      "url": "Link",
+      "urlHint": "Optional: the address of the platform's site or web app."
+    },
+    "movementForm": {
+      "newTitle": "New movement",
+      "editTitle": "Edit movement",
+      "description": "A deposit to the platform or a withdrawal from it. No account balance changes.",
+      "kind": "Movement type",
+      "platform": "Platform",
+      "amount": "Amount",
+      "date": "Date",
+      "note": "Note",
+      "linkOut": "Linked account expense",
+      "linkIn": "Linked account income",
+      "linkHint": "Optional: the matching bank movement. It is a reference only.",
+      "noLink": "No link"
+    },
+    "valuationForm": {
+      "title": "Update value · {name}",
+      "description": "What the platform is worth, as the platform itself shows it, at the end of the day.",
+      "value": "Value",
+      "date": "Date"
+    },
+    "confirm": {
+      "platformTitle": "Delete {name}?",
+      "platformDescription": "{count, plural, =0 {The platform has no movements. Its recorded values go too.} one {# movement and the recorded values go too. This cannot be undone.} other {# movements and the recorded values go too. This cannot be undone.}}",
+      "movementTitle": "Delete the movement?",
+      "movementDescription": "{kind, select, deposit {Deposit} other {Withdrawal}} of {amount} on {date}. The linked account movement, if any, stays as it is.",
+      "valuationTitle": "Delete the value?",
+      "valuationDescription": "The value of {name} on {date} ({value})."
+    },
+    "import": {
+      "title": "Import CSV",
+      "description": "The investments sheet: one row per movement. Missing platforms are created; rows already imported are skipped.",
+      "choose": "Choose a CSV file",
+      "columns": "Columns: Date, Platform, Type (Deposit/Withdrawal), Amount",
+      "submit": "Import"
+    },
+    "actions": {
+      "import": "Import CSV",
+      "newMovement": "New movement",
+      "newPlatform": "New platform",
+      "platformMenu": "Actions for {name}",
+      "updateValue": "Update value",
+      "editPlatform": "Edit platform",
+      "deletePlatform": "Delete platform",
+      "movementMenu": "Movement actions",
+      "editMovement": "Edit",
+      "deleteMovement": "Delete movement",
+      "deleteValuation": "Delete"
+    },
+    "toasts": {
+      "platformCreated": "{name} added",
+      "platformSaved": "{name} saved",
+      "deposited": "Deposit recorded",
+      "withdrawn": "Withdrawal recorded",
+      "movementSaved": "Movement saved",
+      "valued": "Value of {name} updated",
+      "imported": "{imported, plural, one {# movement imported} other {# movements imported}}, {skipped} already there, {platforms, plural, one {# platform created} other {# platforms created}}",
+      "importSkippedLines": "Lines not read: {lines}. {future, plural, =0 {} one {# future-dated row skipped.} other {# future-dated rows skipped.}}",
+      "platformDeleted": "{name} deleted with {count, plural, =0 {no movements} one {# movement} other {# movements}}",
+      "movementDeleted": "Movement deleted",
+      "valuationDeleted": "Value deleted"
+    },
+    "errors": {
+      "invalid": "Check the fields: an amount, a date or a link is not valid.",
+      "not_found": "Not found: it may have been deleted.",
+      "duplicate_name": "A platform with this name already exists.",
+      "future_date": "The date cannot be in the future.",
+      "invalid_transaction": "That account movement goes the wrong way.",
+      "already_linked": "That account movement is already linked to another movement.",
+      "empty_sheet": "The file has no readable rows (it needs the Date, Platform, Type and Amount columns).",
+      "too_large": "The file is too large.",
+      "failed": "Something went wrong. Try again."
     }
   },
   "payroll": {
