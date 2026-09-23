@@ -662,6 +662,42 @@ export async function incomeCandidates(
 }
 
 /**
+ * What a movement on an investment platform may be linked to (the investments page): every visible
+ * bank movement of the window going the given way — `out` for money sent to a platform, `in` for
+ * money that came back — giroconti included, since a transfer to a broker is often booked as one.
+ * The amount comes back positive and the day is the user's own; newest first.
+ */
+export async function linkCandidates(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  input: { direction: "in" | "out"; from: CivilDate; to: CivilDate; limit?: number },
+): Promise<{ id: string; accountId: string; on: CivilDate; cents: Cents; payee: string | null }[]> {
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      amountCents: transactions.amountCents,
+      payee: transactions.payee,
+    })
+    .from(transactions)
+    .where(
+      and(
+        conditions(ctx, { from: input.from, to: input.to }),
+        input.direction === "out" ? lt(transactions.amountCents, 0n) : sql`${transactions.amountCents} > 0`,
+      ),
+    )
+    .orderBy(desc(transactions.occurredAt), desc(transactions.id))
+    .limit(input.limit ?? 300);
+  return rows.map((row) => ({
+    id: row.id,
+    accountId: row.accountId,
+    on: civilDateIn(row.occurredAt, ctx.timeZone),
+    cents: row.amountCents < 0n ? -row.amountCents : row.amountCents,
+    payee: row.payee,
+  }));
+}
+
+/**
  * For each payee key, the most recent visible movement that is not a giroconto: the name, account
  * and category "Suggest from recurring payments" proposes (spec §7.5), since `recurring_patterns`
  * keeps only the key.
