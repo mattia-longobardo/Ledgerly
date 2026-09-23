@@ -368,7 +368,10 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
       </div>
 
       <Card padded={false} className="min-w-0">
-        <CardHeader title={t("platforms.title")} actions={<NewPlatformButton size="xs" variant="ghost" />} />
+        <CardHeader
+          title={t("platforms.title")}
+          actions={<NewPlatformButton size="sm" variant="primary" />}
+        />
         <div className="overflow-x-auto max-md:hidden">
           <Table>
             <THead>
