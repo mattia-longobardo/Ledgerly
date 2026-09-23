@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { parseAmount } from "@/modules/accounts/rules";
-import { daysBetween } from "@/platform/dates";
+import { daysBetween, isCivilDate } from "@/platform/dates";
 import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Button } from "@/ui/button";
@@ -190,8 +190,13 @@ function linkLabel(choice: LinkChoice, context: DialogContext): string {
     .join(" · ");
 }
 
-function daysApart(a: string, b: string): number {
-  return Math.abs(daysBetween(a, b));
+/**
+ * How far a bank movement is from the date being typed. Half-way through typing a year the field
+ * holds "0002-06-11" or nothing at all, which is no date: the list then keeps the newest first
+ * instead of failing the whole page.
+ */
+function daysApart(choice: string, on: string): number {
+  return isCivilDate(on) ? Math.abs(daysBetween(choice, on)) : 0;
 }
 
 /**
@@ -208,7 +213,11 @@ function rankedChoices(
     .sort((a, b) => {
       const sameA = cents !== null && a.cents === cents ? 0 : 1;
       const sameB = cents !== null && b.cents === cents ? 0 : 1;
-      return sameA - sameB || daysApart(a.on, on) - daysApart(b.on, on) || (a.id < b.id ? -1 : 1);
+      return (
+        sameA - sameB ||
+        daysApart(a.on, on) - daysApart(b.on, on) ||
+        (a.on > b.on ? -1 : a.on < b.on ? 1 : a.id < b.id ? -1 : 1)
+      );
     })
     .slice(0, 40);
   return keep && !ranked.some((choice) => choice.id === keep.id) ? [keep, ...ranked] : ranked;
