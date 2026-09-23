@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { isFutureDate } from "@/modules/accounts/rules";
 import { getTransaction } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
@@ -12,7 +12,6 @@ import {
   type MovementInput,
   movementInputSchema,
   type MovementKind,
-  parseInvestmentSheet,
   type PlatformInput,
   platformInputSchema,
   valuationInputSchema,
@@ -24,7 +23,7 @@ export type Movement = typeof investmentMovements.$inferSelect;
 export type Valuation = typeof investmentValuations.$inferSelect;
 
 export type InvestmentErrorCode =
-  "not_found" | "duplicate_name" | "future_date" | "invalid_transaction" | "already_linked" | "empty_sheet";
+  "not_found" | "duplicate_name" | "future_date" | "invalid_transaction" | "already_linked";
 
 export class InvestmentError extends Error {
   constructor(readonly code: InvestmentErrorCode) {
@@ -194,75 +193,4 @@ export async function deleteValuation(ctx: Pick<Ctx, "userId">, id: string): Pro
     .where(and(eq(investmentValuations.id, id), userScoped(ctx).owns(investmentValuations)))
     .returning({ id: investmentValuations.id });
   if (!row) throw new InvestmentError("not_found");
-}
-
-// ——— The spreadsheet —————————————————————————————————————————————————————————————————————————
-
-export interface SheetImport {
-  imported: number;
-  /** Rows already imported by an earlier run of the same file. */
-  skipped: number;
-  /** Line numbers that could not be read. */
-  invalid: number[];
-  /** Rows dated after today, left out. */
-  future: number;
-  platformsCreated: number;
-}
-
-/**
- * Imports the owner's spreadsheet: platforms are matched by name (case aside) and created when
- * missing; each row remembers where it came from, so a second import of the same file, or of the
- * same file with new rows at the bottom, adds only what is new.
- */
-export async function importSheet(ctx: Pick<Ctx, "userId" | "timeZone">, text: string): Promise<SheetImport> {
-  const { rows, invalid } = parseInvestmentSheet(text);
-  if (rows.length === 0) throw new InvestmentError("empty_sheet");
-  const todayOn = today(ctx.timeZone);
-  const usable = rows.filter((row) => !isFutureDate(row.on, todayOn));
-  const future = rows.length - usable.length;
-  return getDb().transaction(async (tx) => {
-    const existing = await tx
-      .select({ id: investmentPlatforms.id, name: investmentPlatforms.name })
-      .from(investmentPlatforms)
-      .where(userScoped(ctx).owns(investmentPlatforms))
-      .orderBy(asc(investmentPlatforms.name), asc(investmentPlatforms.id));
-    const byName = new Map(existing.map((platform) => [platform.name.toLocaleLowerCase(), platform.id]));
-    const missing = [
-      ...new Map(usable.map((row) => [row.platform.toLocaleLowerCase(), row.platform])).entries(),
-    ]
-      .filter(([key]) => !byName.has(key))
-      .map(([, name]) => name);
-    if (missing.length > 0) {
-      const created = await tx
-        .insert(investmentPlatforms)
-        .values(missing.map((name) => userScoped(ctx).stamp({ name, url: null })))
-        .returning({ id: investmentPlatforms.id, name: investmentPlatforms.name });
-      for (const platform of created) byName.set(platform.name.toLocaleLowerCase(), platform.id);
-    }
-    const written =
-      usable.length === 0
-        ? []
-        : await tx
-            .insert(investmentMovements)
-            .values(
-              usable.map((row) =>
-                userScoped(ctx).stamp({
-                  platformId: byName.get(row.platform.toLocaleLowerCase()) as string,
-                  kind: row.kind,
-                  amountCents: row.amountCents,
-                  on: row.on,
-                  sheetKey: row.key,
-                }),
-              ),
-            )
-            .onConflictDoNothing({ target: [investmentMovements.userId, investmentMovements.sheetKey] })
-            .returning({ id: investmentMovements.id });
-    return {
-      imported: written.length,
-      skipped: usable.length - written.length,
-      invalid,
-      future,
-      platformsCreated: missing.length,
-    };
-  });
 }

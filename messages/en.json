@@ -2742,7 +2742,7 @@
     "subtitle": "The money on trading platforms: what you put in, what you took out and what it is worth today. No account balance changes.",
     "empty": {
       "title": "No platforms",
-      "description": "Add your first trading platform, or import your investments CSV sheet."
+      "description": "Add your first trading platform, then record its deposits and withdrawals."
     },
     "filter": {
       "label": "Platforms",
@@ -2851,15 +2851,7 @@
       "valuationTitle": "Delete the value?",
       "valuationDescription": "The value of {name} on {date} ({value})."
     },
-    "import": {
-      "title": "Import CSV",
-      "description": "The investments sheet: one row per movement. Missing platforms are created; rows already imported are skipped.",
-      "choose": "Choose a CSV file",
-      "columns": "Columns: Date, Platform, Type (Deposit/Withdrawal), Amount",
-      "submit": "Import"
-    },
     "actions": {
-      "import": "Import CSV",
       "newMovement": "New movement",
       "newPlatform": "New platform",
       "platformMenu": "Actions for {name}",
@@ -2878,8 +2870,6 @@
       "withdrawn": "Withdrawal recorded",
       "movementSaved": "Movement saved",
       "valued": "Value of {name} updated",
-      "imported": "{imported, plural, one {# movement imported} other {# movements imported}}, {skipped} already there, {platforms, plural, one {# platform created} other {# platforms created}}",
-      "importSkippedLines": "Lines not read: {lines}. {future, plural, =0 {} one {# future-dated row skipped.} other {# future-dated rows skipped.}}",
       "platformDeleted": "{name} deleted with {count, plural, =0 {no movements} one {# movement} other {# movements}}",
       "movementDeleted": "Movement deleted",
       "valuationDeleted": "Value deleted"
@@ -2891,8 +2881,6 @@
       "future_date": "The date cannot be in the future.",
       "invalid_transaction": "That account movement goes the wrong way.",
       "already_linked": "That account movement is already linked to another movement.",
-      "empty_sheet": "The file has no readable rows (it needs the Date, Platform, Type and Amount columns).",
-      "too_large": "The file is too large.",
       "failed": "Something went wrong. Try again."
     }
   },

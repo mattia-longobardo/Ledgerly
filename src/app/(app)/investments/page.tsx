@@ -7,7 +7,6 @@ import { investmentsView, type MovementView, type PlatformView } from "@/modules
 import {
   DeleteValuationButton,
   type DialogContext,
-  ImportButton,
   MovementMenu,
   type MovementSummary,
   NewMovementButton,
@@ -78,12 +77,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
     linked: row.linked,
   });
 
-  const actions = (
-    <>
-      <ImportButton />
-      <NewMovementButton context={context} platformId={view.selected?.id ?? null} />
-    </>
-  );
+  const actions = <NewMovementButton context={context} platformId={view.selected?.id ?? null} />;
 
   if (view.platforms.length === 0) {
     return (
@@ -92,12 +86,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         <EmptyState
           title={t("empty.title")}
           description={t("empty.description")}
-          actions={
-            <>
-              <NewPlatformButton variant="primary" size="md" />
-              <ImportButton size="md" />
-            </>
-          }
+          actions={<NewPlatformButton variant="primary" size="md" />}
         />
       </Page>
     );

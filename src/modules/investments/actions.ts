@@ -12,9 +12,7 @@ import {
   deleteMovement,
   deletePlatform,
   deleteValuation,
-  importSheet,
   InvestmentError,
-  type SheetImport,
   setValuation,
   updateMovement,
   updatePlatform,
@@ -127,25 +125,6 @@ export async function deleteValuationAction(id: string): Promise<ActionResult> {
     await deleteValuation(ctx, id);
     revalidate();
     return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/** A spreadsheet is a few kilobytes; anything past this is not the file the page asked for. */
-const MAX_SHEET_BYTES = 1_000_000;
-
-export async function importSheetAction(
-  data: FormData,
-): Promise<({ ok: true } & SheetImport) | { ok: false; error: string }> {
-  const ctx = await requireSession();
-  const file = data.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "empty_sheet" };
-  if (file.size > MAX_SHEET_BYTES) return { ok: false, error: "too_large" };
-  try {
-    const result = await importSheet(ctx, await file.text());
-    revalidate();
-    return { ok: true, ...result };
   } catch (error) {
     return failed(error);
   }

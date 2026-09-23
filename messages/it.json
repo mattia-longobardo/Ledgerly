@@ -2742,7 +2742,7 @@
     "subtitle": "Il denaro sulle piattaforme di trading: cosa hai versato, cosa hai ritirato e quanto vale oggi. Nessun saldo dei conti cambia.",
     "empty": {
       "title": "Nessuna piattaforma",
-      "description": "Aggiungi la prima piattaforma di trading, oppure importa il tuo foglio CSV degli investimenti."
+      "description": "Aggiungi la prima piattaforma di trading, poi registra i suoi depositi e ritiri."
     },
     "filter": {
       "label": "Piattaforme",
@@ -2851,15 +2851,7 @@
       "valuationTitle": "Eliminare il valore?",
       "valuationDescription": "Il valore di {name} del {date} ({value})."
     },
-    "import": {
-      "title": "Importa CSV",
-      "description": "Il foglio degli investimenti: una riga per movimento. Le piattaforme mancanti vengono create; le righe già importate vengono saltate.",
-      "choose": "Scegli un file CSV",
-      "columns": "Colonne: Date, Platform, Type (Deposit/Withdrawal), Amount",
-      "submit": "Importa"
-    },
     "actions": {
-      "import": "Importa CSV",
       "newMovement": "Nuovo movimento",
       "newPlatform": "Nuova piattaforma",
       "platformMenu": "Azioni per {name}",
@@ -2878,8 +2870,6 @@
       "withdrawn": "Ritiro registrato",
       "movementSaved": "Movimento salvato",
       "valued": "Valore di {name} aggiornato",
-      "imported": "{imported, plural, one {# movimento importato} other {# movimenti importati}}, {skipped, plural, one {# già presente} other {# già presenti}}, {platforms, plural, one {# piattaforma creata} other {# piattaforme create}}",
-      "importSkippedLines": "Righe non lette: {lines}. {future, plural, =0 {} one {# riga con data futura saltata.} other {# righe con data futura saltate.}}",
       "platformDeleted": "{name} eliminata con {count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
       "movementDeleted": "Movimento eliminato",
       "valuationDeleted": "Valore eliminato"
@@ -2891,8 +2881,6 @@
       "future_date": "La data non può essere nel futuro.",
       "invalid_transaction": "Quel movimento del conto non va nella direzione giusta.",
       "already_linked": "Quel movimento del conto è già collegato a un altro movimento.",
-      "empty_sheet": "Il file non contiene righe leggibili (servono le colonne Date, Platform, Type e Amount).",
-      "too_large": "Il file è troppo grande.",
       "failed": "Qualcosa è andato storto. Riprova."
     }
   },

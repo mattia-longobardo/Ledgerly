@@ -1,18 +1,16 @@
 // tests/e2e/investments.spec.ts — the Investments journey at 1440 px: platforms with their link,
 // deposits and withdrawals linked (or not) to an account movement, a value and the gain it gives,
-// the spreadsheet import, and the deletions that ask first.
+// and the deletion that asks first.
 import { expect, test } from "@playwright/test";
 import { sessionState } from "./env";
 
 // Its own user: no platform yet, and two bank movements to link (scripts/seed-e2e.ts).
 test.use({ storageState: sessionState("investments") });
 
-const SHEET = "tests/fixtures/investments/sheet.csv";
-
 test("a platform keeps its money's history, and linking it to the bank moves no balance", async ({
   page,
 }) => {
-  await test.step("an empty page offers a platform or an import", async () => {
+  await test.step("an empty page offers a new platform", async () => {
     await page.goto("/investments");
     await expect(page.getByRole("heading", { name: "No platforms" })).toBeVisible();
   });
@@ -70,30 +68,14 @@ test("a platform keeps its money's history, and linking it to the bank moves no 
     await expect(page.getByTestId("platform-row")).toContainText(/\+20,1\s%/);
   });
 
-  await test.step("the spreadsheet imports once, creating the platforms it names", async () => {
-    await page.goto("/investments");
-    await page.getByRole("button", { name: "Import CSV" }).first().click();
-    const dialog = page.getByRole("dialog", { name: "Import CSV" });
-    await dialog.locator('input[type="file"]').setInputFiles(SHEET);
-    await dialog.getByRole("button", { name: "Import" }).click();
-    await expect(page.getByText("5 movements imported, 0 already there, 2 platforms created")).toBeVisible();
-    await expect(page.getByTestId("platform-row")).toHaveCount(3);
-
-    await page.getByRole("button", { name: "Import CSV" }).first().click();
-    await dialog.locator('input[type="file"]').setInputFiles(SHEET);
-    await dialog.getByRole("button", { name: "Import" }).click();
-    await expect(page.getByText("0 movements imported, 5 already there, 0 platforms created")).toBeVisible();
-    await expect(page.getByTestId("movement-row")).toHaveCount(7);
-  });
-
   await test.step("deleting a platform asks first, and says what went with it", async () => {
-    await page.getByRole("button", { name: "Actions for Beta Exchange" }).first().click();
+    await page.getByRole("button", { name: "Actions for eToro" }).first().click();
     await page.getByRole("menuitem", { name: "Delete platform" }).click();
-    const dialog = page.getByRole("dialog", { name: "Delete Beta Exchange?" });
+    const dialog = page.getByRole("dialog", { name: "Delete eToro?" });
     await expect(dialog).toContainText("2 movements and the recorded values go too.");
     await dialog.getByRole("button", { name: "Delete platform" }).click();
-    await expect(page.getByText("Beta Exchange deleted with 2 movements")).toBeVisible();
-    await expect(page.getByTestId("platform-row")).toHaveCount(2);
+    await expect(page.getByText("eToro deleted with 2 movements")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "No platforms" })).toBeVisible();
   });
 
   await test.step("the account's balance did not move", async () => {

@@ -1,6 +1,5 @@
 "use client";
 
-import { FileUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
@@ -20,7 +19,6 @@ import {
   deleteMovementAction,
   deletePlatformAction,
   deleteValuationAction,
-  importSheetAction,
   saveMovementAction,
   savePlatformAction,
   setValuationAction,
@@ -71,8 +69,6 @@ const KNOWN_ERRORS = [
   "future_date",
   "invalid_transaction",
   "already_linked",
-  "empty_sheet",
-  "too_large",
 ];
 
 function useErrors() {
@@ -481,92 +477,6 @@ function ConfirmDialog({
     >
       {null}
     </Modal>
-  );
-}
-
-// ——— Import ———————————————————————————————————————————————————————————————————————————————
-
-export function ImportButton({ size = "sm" }: { size?: "sm" | "md" }) {
-  const t = useTranslations("investments");
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [pending, startTransition] = useTransition();
-  const { error, clear, report } = useErrors();
-
-  function reset(next: boolean) {
-    clear();
-    setFile(null);
-    setOpen(next);
-  }
-
-  function onSubmit() {
-    if (!file) return;
-    const data = new FormData();
-    data.set("file", file);
-    startTransition(async () => {
-      const result = await importSheetAction(data);
-      if (!report(result) || !result.ok) return;
-      notify(
-        t("toasts.imported", {
-          imported: result.imported,
-          skipped: result.skipped,
-          platforms: result.platformsCreated,
-        }),
-      );
-      if (result.invalid.length > 0 || result.future > 0) {
-        notify(
-          t("toasts.importSkippedLines", {
-            lines: result.invalid.join(", ") || "—",
-            future: result.future,
-          }),
-          "error",
-        );
-      }
-      reset(false);
-    });
-  }
-
-  return (
-    <>
-      <Button size={size} onClick={() => reset(true)} icon={<FileUp aria-hidden className="size-3.5" />}>
-        {t("actions.import")}
-      </Button>
-      {open && (
-        <Modal
-          open
-          onOpenChange={reset}
-          title={t("import.title")}
-          description={t("import.description")}
-          width={520}
-          footer={
-            <>
-              <Button onClick={() => reset(false)}>{t("form.cancel")}</Button>
-              <Button variant="primary" onClick={onSubmit} disabled={pending || file === null}>
-                {t("import.submit")}
-              </Button>
-            </>
-          }
-        >
-          <label
-            htmlFor={`${id}-file`}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-card border border-dashed border-border px-4 py-8 text-center hover:bg-hover"
-          >
-            <FileUp size={20} className="text-muted" aria-hidden />
-            <span className="font-medium text-accent">{t("import.choose")}</span>
-            <span className="text-sm text-muted">{file ? file.name : t("import.columns")}</span>
-            <input
-              id={`${id}-file`}
-              type="file"
-              accept=".csv,text/csv"
-              className="sr-only"
-              onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}
-            />
-          </label>
-          <ErrorLine error={error} />
-        </Modal>
-      )}
-    </>
   );
 }
 

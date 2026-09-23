@@ -1,18 +1,12 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   monthlyHistory,
   type MovementLike,
-  parseCsv,
-  parseInvestmentSheet,
-  parseSheetAmount,
   platformInputSchema,
   platformStats,
   portfolioStats,
   valueOn,
 } from "./rules";
-
-const SHEET = readFileSync(new URL("../../../tests/fixtures/investments/sheet.csv", import.meta.url), "utf8");
 
 const A = "platform-a";
 const B = "platform-b";
@@ -156,44 +150,5 @@ describe("platformInputSchema", () => {
   it("refuses anything that is not http(s)", () => {
     expect(() => platformInputSchema.parse({ name: "x", url: "javascript:alert(1)" })).toThrow();
     expect(() => platformInputSchema.parse({ name: "x", url: "ftp://example.com" })).toThrow();
-  });
-});
-
-describe("parseCsv", () => {
-  it("reads quoted fields with commas and doubled quotes", () => {
-    expect(parseCsv('a,"b,c","d ""e"""\r\n1,2,3\n')).toEqual([
-      ["a", "b,c", 'd "e"'],
-      ["1", "2", "3"],
-    ]);
-  });
-});
-
-describe("parseSheetAmount", () => {
-  it("reads the spreadsheet's amounts in either format", () => {
-    expect(parseSheetAmount("€2,800.00")).toBe(280_000n);
-    expect(parseSheetAmount("€700.00")).toBe(70_000n);
-    expect(parseSheetAmount("2.800,50 €")).toBe(280_050n);
-    expect(parseSheetAmount("-1861.10")).toBe(186_110n);
-    expect(parseSheetAmount("1,000")).toBe(100_000n);
-  });
-});
-
-describe("parseInvestmentSheet", () => {
-  it("reads the owner's sheet, and names the lines it cannot read", () => {
-    const { rows, invalid } = parseInvestmentSheet(SHEET);
-    expect(rows).toHaveLength(5);
-    expect(rows[0]).toEqual({
-      key: "sheet:2025-11-02 09:15|alpha broker|deposit|150000",
-      on: "2025-11-02",
-      platform: "Alpha Broker",
-      kind: "deposit",
-      amountCents: 150_000n,
-    });
-    expect(rows[4]).toMatchObject({ platform: "Beta Exchange", kind: "withdrawal", amountCents: 321_075n });
-    expect(invalid).toEqual([7, 8]);
-  });
-
-  it("reads nothing from a file without the columns it needs", () => {
-    expect(parseInvestmentSheet("Foo,Bar\n1,2\n")).toEqual({ rows: [], invalid: [2] });
   });
 });

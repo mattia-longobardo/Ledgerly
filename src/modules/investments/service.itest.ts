@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { balancesOn } from "@/modules/accounts/queries";
 import { saveBalanceEntry } from "@/modules/accounts/service";
@@ -18,13 +17,10 @@ import {
   createPlatform,
   deleteMovement,
   deletePlatform,
-  importSheet,
   InvestmentError,
   setValuation,
   updateMovement,
 } from "./service";
-
-const SHEET = readFileSync(new URL("../../../tests/fixtures/investments/sheet.csv", import.meta.url), "utf8");
 
 let ctx: Ctx;
 let todayOn: string;
@@ -216,31 +212,5 @@ describe("linking to an account movement", () => {
     ]);
     await deleteMovement(ctx, deposit.id);
     expect((await investmentsView(ctx)).movements).toEqual([]);
-  });
-});
-
-describe("the spreadsheet import", () => {
-  it("creates the platforms, imports the rows once, and names the lines it could not read", async () => {
-    await createPlatform(ctx, { name: "alpha broker", url: "https://alpha.example" });
-    const first = await importSheet(ctx, SHEET);
-    expect(first).toEqual({ imported: 5, skipped: 0, invalid: [7, 8], future: 0, platformsCreated: 1 });
-    const second = await importSheet(ctx, SHEET);
-    expect(second).toMatchObject({ imported: 0, skipped: 5, platformsCreated: 0 });
-
-    const view = await investmentsView(ctx);
-    expect(view.platforms.map((one) => [one.platform.name, one.movementCount])).toEqual([
-      ["alpha broker", 3],
-      ["Beta Exchange", 2],
-    ]);
-    const beta = view.platforms.find((one) => one.platform.name === "Beta Exchange");
-    expect(beta?.stats).toMatchObject({
-      depositedCents: 300_000n,
-      withdrawnCents: 321_075n,
-      netCents: -21_075n,
-    });
-  });
-
-  it("refuses a file with nothing it can read", async () => {
-    await expect(importSheet(ctx, "Foo,Bar\n1,2\n")).rejects.toMatchObject({ code: "empty_sheet" });
   });
 });

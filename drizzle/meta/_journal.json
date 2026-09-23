@@ -169,6 +169,13 @@
       "when": 1790158781187,
       "tag": "0023_investments",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790160958599,
+      "tag": "0024_investments_no_sheet",
+      "breakpoints": true
     }
   ]
 }

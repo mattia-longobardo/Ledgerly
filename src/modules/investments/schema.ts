@@ -42,8 +42,7 @@ export const investmentPlatforms = pgTable(
  * Money that went into a platform or came out of it. The amount is positive; the kind gives the
  * direction. `transaction_id` optionally points at the bank movement that paid it or received it:
  * a note of provenance that moves no balance, and one bank movement documents one platform movement
- * at most. `sheet_key` is the row of the owner's spreadsheet it was imported from, so importing the
- * same file twice adds nothing.
+ * at most.
  */
 export const investmentMovements = pgTable(
   "investment_movements",
@@ -62,7 +61,6 @@ export const investmentMovements = pgTable(
     on: date("on").notNull(),
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     note: text("note"),
-    sheetKey: text("sheet_key"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -73,7 +71,6 @@ export const investmentMovements = pgTable(
     index("investment_movements_user_on_idx").on(table.userId, table.on),
     index("investment_movements_platform_idx").on(table.platformId),
     unique("investment_movements_transaction_uq").on(table.transactionId),
-    unique("investment_movements_sheet_uq").on(table.userId, table.sheetKey),
     check("investment_movements_kind_ck", sql`${table.kind} in (${sql.raw(inList(MOVEMENT_KINDS))})`),
     check("investment_movements_amount_ck", sql`${table.amountCents} > 0`),
     check(
