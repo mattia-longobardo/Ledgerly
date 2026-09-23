@@ -27,3 +27,13 @@ graphify-out/
 .DS_Store
 .vitest/
 .superpowers/
+
+# Editor settings and AI assistant files: they stay on the machine that uses them.
+.vscode/
+.idea/
+.claude/
+.cursor/
+.codex/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
