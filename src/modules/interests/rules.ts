@@ -1,4 +1,5 @@
 import { addDays, type CivilDate, lastDayOfMonth, monthKey } from "@/platform/dates";
+import { payeeKeyOf } from "@/modules/transactions/rules";
 import { type Cents, centsToDecimal } from "@/platform/money";
 
 export const DAY_BASES = ["365", "360"] as const;
@@ -295,16 +296,32 @@ export function fractionToPercent(fraction: string): string {
 }
 
 /**
- * Where the bank's payment of a settlement is looked for (plan F4 §3.4.5): from the day after the
- * period for 10 days; for a daily payout, from the day itself to two days after, since a bank that
- * pays every day may date it on the day or the next.
+ * Where the bank's payment of a settlement is looked for (plan F4 §3.4.5): from the period's last
+ * day to 10 days after it settles, since many banks date the credit on the last day of the period
+ * (value date 31/12) and not the day after; for a daily payout, from the day itself to two days
+ * after, since a bank that pays every day may date it on the day or the next.
  */
 export function paymentWindow(
   frequency: Settlement,
   period: { to: CivilDate; settleOn: CivilDate },
 ): { from: CivilDate; to: CivilDate } {
   if (frequency === "daily") return { from: period.to, to: addDays(period.to, 2) };
-  return { from: period.settleOn, to: addDays(period.settleOn, 10) };
+  return { from: period.to, to: addDays(period.settleOn, 10) };
+}
+
+/**
+ * Whether an income is the bank paying interest: the rule's match text, without spaces or case,
+ * inside its payee, its category or its note. A synced movement often has no payee at all and the
+ * bank's own words ("Interessi creditori", "Competenze") in the note, where the match was not looked
+ * for and found nothing (owner, 2026-09-23). `false` when the rule has no match text.
+ */
+export function paysInterest(
+  match: string | null,
+  row: { payee: string | null; categoryName: string | null; note: string | null },
+): boolean {
+  const needle = payeeKeyOf(match);
+  if (needle === null) return false;
+  return [row.payee, row.categoryName, row.note].some((text) => (payeeKeyOf(text) ?? "").includes(needle));
 }
 
 /**

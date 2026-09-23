@@ -14,6 +14,7 @@ import {
   fixedFromDecimal,
   isFreshReading,
   paymentWindow,
+  paysInterest,
   periodOf,
   reconcile,
   type ReconciliationStatus,
@@ -133,8 +134,8 @@ export interface RuleDetail {
 /**
  * One rule's page (plan F4 §3.6.12): its settlements, each reconciled with what was really paid
  * (spec §7.6), and its day ledger. In `post_to_provider` the paid amount is the posted settlement;
- * otherwise it is the account's income in the payment window whose payee or category contains the
- * rule's match text (plan F4 §3.6.1).
+ * otherwise it is the account's income in the payment window whose payee, category or note contains
+ * the rule's match text (plan F4 §3.6.1).
  */
 export async function ruleDetail(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -203,11 +204,7 @@ export async function ruleDetail(
             ),
             to: todayOn,
           })
-        ).filter(
-          (row) =>
-            (payeeKeyOf(row.payee) ?? "").includes(needle) ||
-            (payeeKeyOf(row.categoryName) ?? "").includes(needle),
-        );
+        ).filter((row) => paysInterest(rule.payeeMatch, row));
   const assigned = assignPayments(
     rule.settlement,
     entries.map((entry) => ({ id: entry.id, to: entry.periodTo, settleOn: entry.settleOn })),

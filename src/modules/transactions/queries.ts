@@ -627,20 +627,30 @@ export async function chargeCandidates(
 }
 
 /**
- * The income of an account in a window, with payee and category name (F4): where the interest the
+ * The income of an account in a window, with payee, note and category name (F4): where the interest the
  * bank really paid is looked for (plan F4 §3.6.1). Visible rows only, never a giroconto; the amount
  * is positive and the day the user's own.
  */
 export async function incomeCandidates(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   input: { accountId: string; from: CivilDate; to: CivilDate },
-): Promise<{ id: string; on: CivilDate; cents: Cents; payee: string | null; categoryName: string | null }[]> {
+): Promise<
+  {
+    id: string;
+    on: CivilDate;
+    cents: Cents;
+    payee: string | null;
+    note: string | null;
+    categoryName: string | null;
+  }[]
+> {
   const rows = await getDb()
     .select({
       id: transactions.id,
       occurredAt: transactions.occurredAt,
       amountCents: transactions.amountCents,
       payee: transactions.payee,
+      note: transactions.note,
       categoryName: categories.name,
     })
     .from(transactions)
@@ -657,6 +667,7 @@ export async function incomeCandidates(
     on: civilDateIn(row.occurredAt, ctx.timeZone),
     cents: row.amountCents,
     payee: row.payee,
+    note: row.note,
     categoryName: row.categoryName,
   }));
 }

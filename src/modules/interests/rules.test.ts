@@ -16,6 +16,8 @@ import {
   settlementPeriods,
   validateTiers,
   assignPayments,
+  paymentWindow,
+  paysInterest,
   percentToFraction,
   fractionToPercent,
 } from "./rules";
@@ -218,6 +220,33 @@ describe("assignPayments", () => {
         ["feb", ["c"]],
       ]),
     );
+  });
+});
+
+describe("finding the bank's payment", () => {
+  it("looks from the period's last day, where many banks date the credit", () => {
+    expect(paymentWindow("monthly", { to: "2026-08-31", settleOn: "2026-09-01" })).toEqual({
+      from: "2026-08-31",
+      to: "2026-09-11",
+    });
+    expect(
+      assignPayments(
+        "quarterly",
+        [{ id: "q3", to: "2026-09-30", settleOn: "2026-10-01" }],
+        [{ id: "value-dated", on: "2026-09-30" }],
+      ),
+    ).toEqual(new Map([["q3", ["value-dated"]]]));
+  });
+
+  it("matches the text in the payee, the category or the note, without spaces or case", () => {
+    const row = { payee: null, categoryName: null, note: null };
+    expect(paysInterest("interessi", { ...row, note: "ACCREDITO INTERESSI CREDITORI" })).toBe(true);
+    expect(paysInterest("Interessi", { ...row, payee: "Interessi attivi" })).toBe(true);
+    expect(paysInterest("interessi", { ...row, categoryName: "Interessi" })).toBe(true);
+    expect(paysInterest("interessi creditori", { ...row, note: "InteressiCreditori 3T" })).toBe(true);
+    expect(paysInterest("interessi", { ...row, note: "Bonifico da Mario" })).toBe(false);
+    expect(paysInterest(null, { ...row, note: "interessi" })).toBe(false);
+    expect(paysInterest("  ", { ...row, note: "interessi" })).toBe(false);
   });
 });
 
