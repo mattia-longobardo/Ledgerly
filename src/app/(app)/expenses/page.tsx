@@ -31,7 +31,8 @@ import type {
 } from "@/modules/transactions/ui/view";
 import { requireSession } from "@/platform/auth/session";
 import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import { walletEditableIds } from "@/platform/integrations/wallet/records";
 import type { Cents } from "@/platform/money";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -111,6 +112,11 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     .filter((account) => account.count > 0 || query.accountSelection.includes(account.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // The movements whose type, amount, payee and note the panel may write to Wallet.
+  const walletIds = await walletEditableIds(ctx, [
+    ...new Set([...view.rows, ...view.months.flatMap((month) => month.rows)].map((row) => row.id)),
+  ]);
+
   function toRow(row: QueryRow): RowView {
     return {
       id: row.id,
@@ -127,6 +133,15 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
       note: row.note,
       labels: row.labels.map((label) => label.name),
       labelIds: row.labels.map((label) => label.id),
+      wallet: walletIds.has(row.id)
+        ? {
+            type: row.type,
+            amount: formatAmountInput(
+              row.amountCents < 0n ? -row.amountCents : row.amountCents,
+              ctx.numberFormat,
+            ),
+          }
+        : null,
     };
   }
 

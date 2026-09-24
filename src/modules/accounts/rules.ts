@@ -129,14 +129,16 @@ export const balanceEntrySchema = z.object({
 export type BalanceEntryInput = z.infer<typeof balanceEntrySchema>;
 
 /**
- * A synced account keeps the type and the currency the provider gave it (spec §7.1); only the
- * fields a person owns may be edited. Applied here, not only hidden in the form.
+ * A synced account keeps the currency the provider gave it (spec §7.1); applied here, not only
+ * hidden in the form. The type may be changed (owner, 2026-09-24): Wallet's API publishes no way
+ * to write an account's type back (`PatchAccountItem` has no `accountType`), so the change stays
+ * here and the sync stops following Wallet's type from then on — the rule the name already has.
  */
 export function settingsForSynced(
   input: AccountSettingsInput,
   current: { type: AccountType; currency: string },
 ): AccountSettingsInput {
-  return { ...input, type: current.type, currency: current.currency };
+  return { ...input, currency: current.currency };
 }
 
 /** Manual balances are never in the future: "today" is the user's own civil date. */
@@ -408,6 +410,8 @@ export interface LocalAccount {
   provider: string | null;
   providerAccountId: string | null;
   renamedLocally: boolean;
+  type: AccountType;
+  retypedLocally: boolean;
 }
 
 export interface RemoteAccount {
@@ -422,6 +426,7 @@ export type ReconcileStep =
   | { action: "create"; remote: RemoteAccount }
   | { action: "adopt"; id: string; remote: RemoteAccount }
   | { action: "rename"; id: string; name: string }
+  | { action: "retype"; id: string; type: AccountType }
   | { action: "reappear"; id: string }
   | { action: "unavailable"; id: string };
 
@@ -429,7 +434,8 @@ export type ReconcileStep =
  * The lifecycle of a provider's accounts (spec §7.1), as a list of steps the service applies.
  *
  * A manual account with the same name is adopted once, comparing names without spaces or case; a
- * provider's rename is followed only while the local name has not been changed by hand; an account
+ * provider's rename — and its type — is followed only while the local one has not been changed by
+ * hand; an account
  * archived locally stays archived; and an account the provider stopped sending becomes
  * `unavailable`, never deleted.
  */
@@ -463,6 +469,9 @@ export function reconcileProviderAccounts(
       if (known.state === "unavailable") steps.push({ action: "reappear", id: known.id });
       if (!known.renamedLocally && known.name !== incoming.name) {
         steps.push({ action: "rename", id: known.id, name: incoming.name });
+      }
+      if (!known.retypedLocally && known.type !== incoming.type) {
+        steps.push({ action: "retype", id: known.id, type: incoming.type });
       }
       continue;
     }

@@ -7,6 +7,7 @@
 import type { RowBadge } from "./display";
 import type { Tone } from "@/ui/tone";
 import type { CategoryOption } from "@/ui/category-picker";
+import type { TransactionType } from "../rules";
 
 export type { CategoryOption };
 
@@ -32,6 +33,18 @@ export interface RowView {
   labels: readonly string[];
   /** The ids, for the details panel: what it prefills and what it submits. */
   labelIds: readonly string[];
+  /**
+   * Present when the movement came from Wallet and the integration is connected: the panel then
+   * edits type, amount, payee and note, and saves them to Wallet (owner, 2026-09-24).
+   */
+  wallet?: WalletFieldsView | null;
+}
+
+/** What the panel prefills for a Wallet movement. */
+export interface WalletFieldsView {
+  type: TransactionType;
+  /** The size of the amount, in the user's number format, ready to be typed over. */
+  amount: string;
 }
 
 /**

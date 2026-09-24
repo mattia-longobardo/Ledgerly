@@ -181,11 +181,11 @@ describe("canDelete", () => {
 });
 
 describe("settingsForSynced", () => {
-  it("keeps the provider's type and currency whatever the form sent", () => {
+  it("keeps the provider's currency whatever the form sent, and lets the type be chosen", () => {
     const input = { name: "Mine", type: "cash", currency: "USD" } as never;
     expect(settingsForSynced(input, { type: "investment", currency: "EUR" })).toMatchObject({
       name: "Mine",
-      type: "investment",
+      type: "cash",
       currency: "EUR",
     });
   });
@@ -239,6 +239,8 @@ describe("reconcileProviderAccounts", () => {
     provider: null,
     providerAccountId: null,
     renamedLocally: false,
+    type: "checking",
+    retypedLocally: false,
     ...over,
   });
 
@@ -285,6 +287,24 @@ describe("reconcileProviderAccounts", () => {
     expect(reconcileProviderAccounts([renamed], [remote({ name: "Revolut Personal" })], "wallet")).toEqual(
       [],
     );
+  });
+
+  it("follows the provider's type while the local type has not been changed by hand", () => {
+    const linked = local({ origin: "synced", provider: "wallet", providerAccountId: "r1", type: "other" });
+    expect(reconcileProviderAccounts([linked], [remote({ type: "savings" })], "wallet")).toEqual([
+      { action: "retype", id: "l1", type: "savings" },
+    ]);
+  });
+
+  it("keeps a locally chosen type even when the provider's differs", () => {
+    const retyped = local({
+      origin: "synced",
+      provider: "wallet",
+      providerAccountId: "r1",
+      type: "cash",
+      retypedLocally: true,
+    });
+    expect(reconcileProviderAccounts([retyped], [remote({ type: "savings" })], "wallet")).toEqual([]);
   });
 
   it("leaves an account archived locally alone and creates the provider's one beside it", () => {

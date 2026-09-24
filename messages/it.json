@@ -992,6 +992,27 @@
       "title": "Eliminare questo movimento?",
       "description": "Viene rimosso definitivamente, e se arriva dalla sincronizzazione non viene più importato.",
       "cancel": "Annulla"
+    },
+    "wallet": {
+      "hint": "Arriva da Wallet: tipo, importo, beneficiario e nota si salvano anche su Wallet. Le etichette restano qui.",
+      "type": "Tipo",
+      "types": {
+        "expense": "Spesa",
+        "income": "Entrata",
+        "transfer": "Giroconto"
+      },
+      "amountHint": "Senza segno: lo decide il tipo.",
+      "saved": "Salvato qui e su Wallet",
+      "unchanged": "Wallet aveva già questi valori",
+      "said": "Wallet: «{reason}»",
+      "errors": {
+        "invalid": "Controlla i campi: qualcosa non è valido.",
+        "amount": "Scrivi un importo diverso da zero.",
+        "notLinked": "Questo movimento non è collegato a Wallet, o Wallet non è più collegato.",
+        "noTransferCategory": "Wallet non ha restituito la sua categoria Trasferimento: il giroconto non si può impostare da qui.",
+        "refused": "Wallet ha rifiutato la modifica: qui non è cambiato niente.",
+        "failed": "Wallet non ha risposto: qui non è cambiato niente. Riprova tra un minuto."
+      }
     }
   },
   "overview": {
@@ -1332,6 +1353,7 @@
         "manualProvider": "I conti manuali non hanno un provider.",
         "type": "Tipo",
         "locked": "Deciso dal provider.",
+        "typeSynced": "Arriva da Wallet e lo segue finché non lo cambi qui. Wallet non accetta modifiche al tipo di conto dalla sua API: una modifica fatta qui resta qui.",
         "purpose": "Scopo",
         "reference": "IBAN o riferimento",
         "color": "Colore",

@@ -132,3 +132,72 @@ describe("createRecord (F4)", () => {
     ).rejects.toMatchObject({ kind: "payload" });
   });
 });
+
+describe("record and patchRecord (2026-09-24)", () => {
+  it("reads one record by its id and says whether Wallet holds it as a transfer", async () => {
+    const transfer = {
+      ...record("wr-1", -20, "to savings"),
+      transfer: { type: "unpaired", transferId: "t-1" },
+    };
+    const { wallet, calls } = client([{ body: JSON.stringify({ records: [transfer] }) }]);
+    const found = await wallet.record("wr-1");
+    expect(found?.isTransfer).toBe(true);
+    expect(found?.movement.amountCents).toBe(-2_000n);
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("id")).toBe("wr-1");
+    expect(calls[0].method).toBe("GET");
+  });
+
+  it("answers null for an id Wallet has no record for", async () => {
+    const { wallet } = client([{ body: JSON.stringify({ records: [] }) }]);
+    expect(await wallet.record("wr-gone")).toBeNull();
+  });
+
+  it("patches with the exact decimal, the documented $clear and one attempt", async () => {
+    const saved = record("wr-1", -12.3, "lunch");
+    const { wallet, calls } = client([
+      {
+        body: JSON.stringify({
+          summary: {},
+          results: [{ inputIndex: 0, id: "wr-1", success: true, record: saved }],
+        }),
+      },
+    ]);
+    const answer = await wallet.patchRecord({
+      id: "wr-1",
+      amountCents: -1_230n,
+      counterParty: "Bistro",
+      clear: ["note", "transfer"],
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("PATCH");
+    expect(calls[0].body).toBe(
+      '[{"id":"wr-1","amount":{"value":-12.30},"counterParty":"Bistro","$clear":["note","transfer"]}]',
+    );
+    expect(answer).toMatchObject({ ok: true, record: { isTransfer: false } });
+  });
+
+  it("returns Wallet's own words when it refuses the item, never retrying", async () => {
+    const { wallet, calls } = client([
+      {
+        status: 400,
+        body: JSON.stringify({
+          summary: { total: 1, succeeded: 0, clientErrors: 1 },
+          results: [
+            { inputIndex: 0, success: false, error: "amount must not be zero", errorType: "client_error" },
+          ],
+        }),
+      },
+    ]);
+    const answer = await wallet.patchRecord({ id: "wr-1", note: "x" });
+    expect(calls).toHaveLength(1);
+    expect(answer.ok).toBe(false);
+    expect(answer.ok ? "" : answer.error).toContain("amount must not be zero");
+  });
+
+  it("refuses to send a zero amount at all", async () => {
+    const { wallet, calls } = client([{ body: "{}" }]);
+    await expect(wallet.patchRecord({ id: "wr-1", amountCents: 0n })).rejects.toThrow(RangeError);
+    expect(calls).toHaveLength(0);
+  });
+});

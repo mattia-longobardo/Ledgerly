@@ -15,6 +15,9 @@ import {
   setTransactionCategoryAction,
   setTransactionLabelsAction,
   setTransactionNoteAction,
+  type WalletEditInput,
+  type WalletEditResult,
+  editWalletTransactionAction,
 } from "@/modules/transactions/actions";
 
 /**
@@ -55,4 +58,14 @@ export function setNote(id: string, note: string): Promise<FieldResult> {
 /** Spec §7.2: the labels are the user's too, and the whole set is submitted at once. */
 export function setLabels(id: string, labelIds: readonly string[]): Promise<FieldResult> {
   return setTransactionLabelsAction(id, [...labelIds]);
+}
+
+export type { WalletEditInput, WalletEditResult };
+
+/**
+ * A Wallet movement's type, amount, payee and note, saved to Wallet first and then here (owner,
+ * 2026-09-24). Only offered when the row carries `wallet`, i.e. the integration is connected.
+ */
+export function editInWallet(id: string, input: WalletEditInput): Promise<WalletEditResult> {
+  return editWalletTransactionAction(id, input);
 }

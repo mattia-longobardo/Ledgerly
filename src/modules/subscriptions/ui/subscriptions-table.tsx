@@ -234,7 +234,7 @@ export function SubscriptionsTable({
           </TBody>
           <tfoot>
             <TotalRow label={t("total")}>
-              <td colSpan={3} className="px-2 text-sm font-normal text-muted">
+              <td colSpan={4} className="px-2 text-sm font-normal text-muted">
                 {totals.count}
               </td>
               <td className="px-2 text-right tabular-nums">{totals.monthly}</td>
