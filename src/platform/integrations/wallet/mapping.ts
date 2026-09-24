@@ -293,18 +293,30 @@ export interface WalletCategory {
 export const WALLET_TRANSFER_CATEGORY = "system_categories__transfer";
 
 /**
- * Wallet's own type vocabulary (spec §9.1), lower-cased so a casing change upstream is not a
- * silent demotion to `other`. Both `saving` and `savings` are listed because both occur.
+ * Wallet's own type vocabulary (spec §9.1), lower-cased and with spaces removed so a casing or
+ * spacing change upstream is not a silent demotion to `other`.
+ *
+ * The Wallet API 2.0.0 enum (`Account.accountType`) is `General`, `Cash`, `CurrentAccount`,
+ * `CreditCard`, `SavingAccount`, `Bonus`, `Insurance`, `Investment`, `Loan`, `Mortgage` and
+ * `Overdraft`; until 2026-09-24 only the older words below it were listed, so a current account
+ * or a savings account came through as `other`. Loans, mortgages and overdrafts are money owed,
+ * which is what `credit` means here. `Bonus` and `Insurance` have no counterpart and stay `other`.
  */
 const TYPE_BY_WALLET_TYPE: Record<string, AccountType> = {
-  cash: "cash",
   general: "checking",
+  cash: "cash",
+  currentaccount: "checking",
+  creditcard: "credit",
+  savingaccount: "savings",
+  investment: "investment",
+  loan: "credit",
+  mortgage: "credit",
+  overdraft: "credit",
+  // The words seen before the 2.0.0 enum, kept for any account still answering with them.
   checking: "checking",
   current: "checking",
   saving: "savings",
   savings: "savings",
-  investment: "investment",
-  "credit card": "credit",
   crypto: "crypto",
 };
 
@@ -316,7 +328,7 @@ export function walletAccountType(raw: {
   accountType?: string | null;
   isInvestmentAccount?: boolean | null;
 }): AccountType {
-  const named = TYPE_BY_WALLET_TYPE[(raw.accountType ?? "").trim().toLowerCase()];
+  const named = TYPE_BY_WALLET_TYPE[(raw.accountType ?? "").replace(/\s+/g, "").toLowerCase()];
   if (named) return named;
   return raw.isInvestmentAccount === true ? "investment" : "other";
 }

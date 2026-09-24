@@ -114,7 +114,10 @@ export async function createAccount(ctx: Ctx, input: unknown): Promise<Account> 
   });
 }
 
-/** The Settings tab. A synced account keeps the provider's type and currency (spec §7.1). */
+/**
+ * The Settings tab. A synced account keeps the provider's currency (spec §7.1); its type may be
+ * changed here, and from then on the sync stops following the provider's (`retyped_locally`).
+ */
 export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown): Promise<Account> {
   const current = await requireAccount(ctx, id);
   const parsed: AccountSettingsInput = accountSettingsSchema.parse(input);
@@ -140,6 +143,8 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
       betweenEntries: settings.betweenEntries,
       // A provider rename is followed only until the name is changed here (spec §7.1).
       renamedLocally: current.renamedLocally || settings.name !== current.name,
+      retypedLocally:
+        current.retypedLocally || (current.origin === "synced" && settings.type !== current.type),
     })
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)))
     .returning();
@@ -631,6 +636,12 @@ export async function applyProviderAccounts(
               currency: step.remote.currency,
               lastSyncedAt: now,
             })
+            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
+          break;
+        case "retype":
+          await tx
+            .update(accounts)
+            .set({ type: step.type, lastSyncedAt: now })
             .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
           break;
         case "rename":

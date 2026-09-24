@@ -176,6 +176,13 @@
       "when": 1790160958599,
       "tag": "0024_investments_no_sheet",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790235975793,
+      "tag": "0025_account_retyped_locally",
+      "breakpoints": true
     }
   ]
 }

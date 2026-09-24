@@ -80,6 +80,8 @@ export const accounts = pgTable(
     reminder: text("reminder", { enum: REMINDERS }).notNull().default("never"),
     betweenEntries: text("between_entries", { enum: TRENDS }).notNull().default("hold"),
     renamedLocally: boolean("renamed_locally").notNull().default(false),
+    /** The provider's type is followed until the type is changed here, like the name. */
+    retypedLocally: boolean("retyped_locally").notNull().default(false),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     notes: text("notes"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),

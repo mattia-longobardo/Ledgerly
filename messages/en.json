@@ -992,6 +992,27 @@
       "title": "Delete this transaction?",
       "description": "It is removed for good, and a synced one is not imported again.",
       "cancel": "Cancel"
+    },
+    "wallet": {
+      "hint": "From Wallet: type, amount, payee and note are saved to Wallet too. Labels stay here.",
+      "type": "Type",
+      "types": {
+        "expense": "Expense",
+        "income": "Income",
+        "transfer": "Transfer"
+      },
+      "amountHint": "No sign: the type decides it.",
+      "saved": "Saved here and in Wallet",
+      "unchanged": "Wallet already had these values",
+      "said": "Wallet: “{reason}”",
+      "errors": {
+        "invalid": "Check the fields: something is not valid.",
+        "amount": "Enter an amount other than zero.",
+        "notLinked": "This movement is not linked to Wallet, or Wallet is no longer connected.",
+        "noTransferCategory": "Wallet did not return its Transfer category, so the transfer cannot be set from here.",
+        "refused": "Wallet refused the change: nothing changed here.",
+        "failed": "Wallet did not answer: nothing changed here. Try again in a minute."
+      }
     }
   },
   "overview": {
@@ -1332,6 +1353,7 @@
         "manualProvider": "Manual accounts have no provider.",
         "type": "Type",
         "locked": "Set by the provider.",
+        "typeSynced": "Comes from Wallet and follows it until you change it here. Wallet's API does not accept changes to an account's type, so a change made here stays here.",
         "purpose": "Purpose",
         "reference": "IBAN or reference",
         "color": "Colour",

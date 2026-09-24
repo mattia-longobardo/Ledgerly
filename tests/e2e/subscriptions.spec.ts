@@ -25,6 +25,20 @@ test("subscriptions are checked against the movements, projected and suggested",
     // 12,99 + 10,99 + 49,90 / 12 a month; 12 × 12,99 + 12 × 10,99 + 49,90 a year.
     await expect(page.getByText("28,14 €").first()).toBeVisible();
     await expect(page.getByText("337,66 €").first()).toBeVisible();
+    // The grand total sits under its own columns, not one to the left.
+    const right = async (cell: ReturnType<Page["locator"]>) => {
+      const box = (await cell.boundingBox())!;
+      return Math.round(box.x + box.width);
+    };
+    const footer = page.locator("tfoot td");
+    for (const [label, total] of [
+      ["Monthly", "28,14 €"],
+      ["Yearly", "337,66 €"],
+    ] as const) {
+      const cell = footer.filter({ hasText: total });
+      await expect(cell).toHaveCount(1);
+      expect(await right(cell)).toBe(await right(page.getByRole("columnheader", { name: label })));
+    }
   });
 
   await test.step("the due column says the unit of each cycle, and the category carries its colour", async () => {

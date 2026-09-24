@@ -5,10 +5,11 @@ import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
-import { Checkbox, Textarea } from "@/ui/input";
+import { Checkbox, Input, Select, Textarea } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { setLabels, setNote } from "./commands";
+import { TRANSACTION_TYPES } from "../rules";
+import { editInWallet, setLabels, setNote } from "./commands";
 import type { LabelOption, RowView } from "./view";
 
 const FORM_ID = "transaction-details";
@@ -28,6 +29,10 @@ function sameLabels(current: readonly string[], next: readonly string[]): boolea
  * `updateTransaction` refuses a patch that carries them (`provider_owned`). A field the person
  * did not touch is not submitted at all, so an unchanged panel claims nothing in
  * `locally_edited` — the movement keeps following Wallet until they really disagree with it.
+ *
+ * A movement that came from Wallet, with the integration connected (`row.wallet`), is the
+ * exception (owner, 2026-09-24): type, amount, payee and note become fields, and saving writes
+ * them **to Wallet** first — nothing changes here unless Wallet accepts them. Labels stay local.
  */
 export function TransactionDetails({
   row,
@@ -45,10 +50,21 @@ export function TransactionDetails({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const wallet = row.wallet ?? null;
+  const [type, setType] = useState(wallet?.type ?? "expense");
+
   function messageFor(code: string): string {
     if (code === "not_found") return t("errors.notFound");
     if (code === "provider_owned") return t("errors.providerOwned");
     return t("errors.failed");
+  }
+
+  function walletMessage(code: string, reason?: string): string {
+    const key = ["invalid", "amount", "notLinked", "noTransferCategory", "refused", "failed"].includes(code)
+      ? code
+      : "failed";
+    const message = t(`wallet.errors.${key}` as "wallet.errors.failed");
+    return reason ? `${message} ${t("wallet.said", { reason })}` : message;
   }
 
   function toggle(id: string) {
@@ -57,17 +73,30 @@ export function TransactionDetails({
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const note = String(new FormData(event.currentTarget).get("note") ?? "").trim();
+    const data = new FormData(event.currentTarget);
+    const note = String(data.get("note") ?? "").trim();
     const noteChanged = note !== (row.note ?? "");
     const labelsChanged = !sameLabels(row.labelIds, chosen);
-    if (!noteChanged && !labelsChanged) {
+    const amount = String(data.get("amount") ?? "").trim();
+    const payee = String(data.get("payee") ?? "").trim();
+    const walletChanged =
+      wallet !== null &&
+      (noteChanged || type !== wallet.type || amount !== wallet.amount || payee !== (row.payee ?? ""));
+    if (!noteChanged && !labelsChanged && !walletChanged) {
       onOpenChange(false);
       return;
     }
 
     startTransition(async () => {
       try {
-        if (noteChanged) {
+        if (walletChanged) {
+          const result = await editInWallet(row.id, { type, amount, payee, note });
+          if (!result.ok) {
+            setError(walletMessage(result.error, result.reason));
+            return;
+          }
+          notify(t(result.state === "saved" ? "wallet.saved" : "wallet.unchanged"));
+        } else if (noteChanged) {
           const result = await setNote(row.id, note);
           if (!result.ok) {
             setError(messageFor(result.error));
@@ -91,12 +120,17 @@ export function TransactionDetails({
     });
   }
 
-  const context: { term: string; value: string }[] = [
-    { term: t("columns.payee"), value: row.payee ?? t("row.noPayee") },
-    { term: t("columns.date"), value: row.date },
-    { term: t("columns.account"), value: row.account },
-    { term: t("columns.amount"), value: row.amount },
-  ];
+  const context: { term: string; value: string }[] = wallet
+    ? [
+        { term: t("columns.date"), value: row.date },
+        { term: t("columns.account"), value: row.account },
+      ]
+    : [
+        { term: t("columns.payee"), value: row.payee ?? t("row.noPayee") },
+        { term: t("columns.date"), value: row.date },
+        { term: t("columns.account"), value: row.account },
+        { term: t("columns.amount"), value: row.amount },
+      ];
 
   return (
     <Modal
@@ -132,9 +166,59 @@ export function TransactionDetails({
           ))}
         </dl>
 
+        {wallet && (
+          <>
+            <p className="text-sm text-muted">{t("wallet.hint")}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label={t("wallet.type")} htmlFor="transaction-type">
+                <Select
+                  id="transaction-type"
+                  name="type"
+                  value={type}
+                  onChange={(event) => setType(event.currentTarget.value as typeof type)}
+                  autoFocus
+                >
+                  {TRANSACTION_TYPES.map((one) => (
+                    <option key={one} value={one}>
+                      {t(`wallet.types.${one}`)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label={t("columns.amount")} htmlFor="transaction-amount" hint={t("wallet.amountHint")}>
+                <Input
+                  id="transaction-amount"
+                  name="amount"
+                  defaultValue={wallet.amount}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  required
+                  numeric
+                />
+              </Field>
+            </div>
+            <Field label={t("columns.payee")} htmlFor="transaction-payee">
+              <Input
+                id="transaction-payee"
+                name="payee"
+                defaultValue={row.payee ?? ""}
+                maxLength={255}
+                autoComplete="off"
+              />
+            </Field>
+          </>
+        )}
+
         <Field label={t("row.note")} htmlFor="transaction-note">
           {/* A note is often a sentence or two, or a bank's whole remittance line: room to read it. */}
-          <Textarea id="transaction-note" name="note" defaultValue={row.note ?? ""} rows={6} autoFocus />
+          <Textarea
+            id="transaction-note"
+            name="note"
+            defaultValue={row.note ?? ""}
+            rows={wallet ? 4 : 6}
+            maxLength={wallet ? 255 : undefined}
+            autoFocus={!wallet}
+          />
         </Field>
 
         <fieldset className="flex flex-col gap-1.5">
