@@ -131,7 +131,8 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
       {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}
       {/* `minmax(0,1fr)` also in one column: an auto track takes the widest child's min-content
           width — a table's — and the cards would then reach past the page (400 px). */}
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      {/* The cells stretch, so the accounts card ends where the net-worth card does. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <NetWorthCard ctx={ctx} query={query} path="/" now={now} />
 
         <Card padded={false}>
@@ -214,8 +215,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
         </Card>
       </div>
 
-      {/* The card spans the page's whole column: it lays its budgets out in one or two columns
-          itself, by its own width (spec §8.2). */}
+      {/* The card spans the page's whole column, and so do its rows' bars (spec §8.2). */}
       <BudgetsOverviewCard ctx={ctx} month={thisMonth} />
     </Page>
   );
