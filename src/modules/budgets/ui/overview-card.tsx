@@ -27,7 +27,7 @@ export async function BudgetsOverviewCard({
     .slice(0, SHOWN);
 
   return (
-    <Card padded={false} className="@container" data-testid="budgets-card">
+    <Card padded={false} data-testid="budgets-card">
       <CardHeader
         title={t("overview.title", { month: formatDate(month, "month", ctx.locale) })}
         actions={
@@ -43,20 +43,15 @@ export async function BudgetsOverviewCard({
         <p className="px-4 pb-4 text-sm text-muted">{t("overview.empty")}</p>
       ) : (
         /*
-          The card takes the page's whole width, so past a card of 56 rem the five budgets share it
-          two at a time instead of standing in one narrow column with the rest of the row empty
-          (spec §8.2: the grid answers to the column, hence the card's own `@container`). Each row
-          keeps its three tracks — name, bar, remainder — so a wider card lengthens the bars rather
-          than the empty space. One column below that, unchanged at 400 px.
+          One column across the card's whole width: the rows share their tracks (subgrid), so the
+          names take the width of the longest one (up to 40 % of the row, so a phone keeps a bar),
+          the remainders line up on the right, and every bar fills what is left between them.
         */
-        <ul className="grid gap-x-8 gap-y-3 px-4 pb-4 @4xl:grid-cols-2">
+        <ul className="grid grid-cols-[fit-content(40%)_minmax(0,1fr)_auto] gap-x-4 gap-y-3 px-4 pb-4">
           {top.map((row) => {
             const left = row.limitCents - row.spentCents;
             return (
-              <li
-                key={row.key}
-                className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm"
-              >
+              <li key={row.key} className="col-span-3 grid grid-cols-subgrid items-center text-sm">
                 <span className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden

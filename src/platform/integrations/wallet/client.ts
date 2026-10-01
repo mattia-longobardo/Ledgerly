@@ -183,6 +183,43 @@ export interface WalletClient {
     note: string;
     categoryId?: string | null;
   }): Promise<{ id: string | null }>;
+  /**
+   * One record by its id, `null` when Wallet has none by that id — what an edit reads before it
+   * decides how to express itself (is the record a transfer, is it in the Transfer category).
+   */
+  record(id: string): Promise<WalletRecordView | null>;
+  /**
+   * Edits one record (`PATCH /records`, Wallet API 2.0.0), **one attempt** like every write. A
+   * refusal of the item comes back as `{ ok: false }` with Wallet's own words rather than as a
+   * throw: it is the answer to a person's edit, to be shown to them. On success `record` is the
+   * record as Wallet now holds it, or `null` when the answer carried none that could be read.
+   */
+  patchRecord(
+    patch: WalletRecordPatch,
+  ): Promise<{ ok: true; record: WalletRecordView | null } | { ok: false; error: string }>;
+}
+
+/** A record as an edit needs it: the movement, and whether Wallet holds it as a transfer. */
+export interface WalletRecordView {
+  movement: WalletTransaction;
+  /** A `transfer` block is present: paired or not, `$clear: ["transfer"]` is what undoes it. */
+  isTransfer: boolean;
+}
+
+/**
+ * What `PatchRecordItem` accepts, in this app's words. Only the keys present are sent; `clear`
+ * becomes Wallet's `$clear`, which is also how "transfer" is undone (Wallet then files the record
+ * under Unknown). There is no way to *make* a record a transfer by patching it: `transfer` exists
+ * on the create only, so a giroconto is expressed through the built-in Transfer category.
+ */
+export interface WalletRecordPatch {
+  id: string;
+  /** Signed: negative is an expense. Wallet refuses zero and derives `recordType` from the sign. */
+  amountCents?: Cents;
+  note?: string;
+  counterParty?: string;
+  categoryId?: string;
+  clear?: readonly ("note" | "counterParty" | "categoryId" | "transfer")[];
 }
 
 /** A record found by the duplicate check: enough to tell whether it is the one we would post. */
@@ -265,7 +302,18 @@ function errorFieldOf(body: string): string | null {
   }
   if (typeof parsed !== "object" || parsed === null) return null;
   const field = (parsed as { error?: unknown }).error;
-  return typeof field === "string" && field.trim() !== "" ? field.trim() : null;
+  if (typeof field === "string" && field.trim() !== "") return field.trim();
+  // A write answers with the batch envelope instead (`{ summary, results: [{ error }] }`): a 400
+  // that refused every item says why item by item, and nowhere else.
+  const results = (parsed as { results?: unknown }).results;
+  if (!Array.isArray(results)) return null;
+  const reasons = results
+    .map((row: unknown) =>
+      row !== null && typeof row === "object" ? (row as { error?: unknown }).error : null,
+    )
+    .filter((said): said is string => typeof said === "string" && said.trim() !== "")
+    .map((said) => said.trim());
+  return reasons.length === 0 ? null : [...new Set(reasons)].join("; ");
 }
 
 /** An error body, bounded: a provider that answers with an HTML page must not fill a log with it. */
@@ -437,6 +485,39 @@ function byDateThenId(left: WalletTransaction, right: WalletTransaction): number
 const noteRecordsSchema = z.object({ records: z.array(walletRecordSchema) });
 
 /**
+ * `PatchRecordsResponse`: one result per item, the full record on success. Parsed like every read
+ * (numbers kept as their source text, for the record's amount), so `inputIndex` arrives as text.
+ */
+const patchedRecordsSchema = z.object({
+  results: z.array(
+    z.object({
+      inputIndex: z.union([z.number(), z.string()]).transform(Number).nullish(),
+      success: z.boolean().nullish(),
+      error: z.string().nullish(),
+      record: walletRecordSchema.nullish(),
+    }),
+  ),
+});
+
+function recordView(raw: WalletRecordPayload): WalletRecordView {
+  return { movement: mapWalletRecord(raw), isTransfer: raw.transfer !== null && raw.transfer !== undefined };
+}
+
+/** The body of a one-item `PATCH /records`, with the amount written as its exact decimal. */
+export function walletRecordPatchBody(patch: WalletRecordPatch): string {
+  const fields: string[] = [`"id":${JSON.stringify(patch.id)}`];
+  if (patch.amountCents !== undefined) {
+    if (patch.amountCents === 0n) throw new RangeError("Wallet refuses a zero amount");
+    fields.push(`"amount":{"value":${centsToDecimal(patch.amountCents)}}`);
+  }
+  if (patch.note !== undefined) fields.push(`"note":${JSON.stringify(patch.note)}`);
+  if (patch.counterParty !== undefined) fields.push(`"counterParty":${JSON.stringify(patch.counterParty)}`);
+  if (patch.categoryId !== undefined) fields.push(`"categoryId":${JSON.stringify(patch.categoryId)}`);
+  if (patch.clear && patch.clear.length > 0) fields.push(`"$clear":${JSON.stringify([...patch.clear])}`);
+  return `[{${fields.join(",")}}]`;
+}
+
+/**
  * What a POST of records answers — never verified against the live API (plan F4 §3.5): wrapped like
  * every read (`{ records: [...] }`) or a bare array. Anything else fails as `payload`, which the
  * caller records as unsure.
@@ -499,7 +580,12 @@ export function createWalletClient(token: string, options: WalletClientOptions =
   }
 
   /** One HTTP attempt: fetch, classify the answer, validate the payload. */
-  async function attempt<T>(path: string, schema: ZodType<T>, body?: string): Promise<T> {
+  async function attempt<T>(
+    path: string,
+    schema: ZodType<T>,
+    body?: string,
+    method: "GET" | "POST" | "PATCH" = body === undefined ? "GET" : "POST",
+  ): Promise<T> {
     const headers = requestHeaders();
     if (body !== undefined) headers.set("content-type", "application/json");
     const controller = new AbortController();
@@ -512,7 +598,7 @@ export function createWalletClient(token: string, options: WalletClientOptions =
     let response: Response;
     try {
       response = await call(`${baseUrl}${path}`, {
-        method: body === undefined ? "GET" : "POST",
+        method,
         headers,
         body,
         signal: controller.signal,
@@ -694,6 +780,33 @@ export function createWalletClient(token: string, options: WalletClientOptions =
       const body = `[{"accountId":${JSON.stringify(accountId)},"amount":${centsToDecimal(amountCents)},"recordDate":${JSON.stringify(on)},"note":${JSON.stringify(note)}${category}}]`;
       const created = await withRetry(() => attempt("/records", createdRecordsSchema, body), WRITE_ATTEMPTS);
       return { id: created[0]?.id ?? null };
+    },
+    async record(id) {
+      const query = new URLSearchParams({ id, limit: "1" });
+      const page = await read(`/records?${query.toString()}`, noteRecordsSchema);
+      const raw = page.records.find((one) => one.id === id);
+      return raw ? recordView(raw) : null;
+    },
+    async patchRecord(patch) {
+      const body = walletRecordPatchBody(patch);
+      let answer: z.infer<typeof patchedRecordsSchema>;
+      try {
+        answer = await withRetry(
+          () => attempt("/records", patchedRecordsSchema, body, "PATCH"),
+          WRITE_ATTEMPTS,
+        );
+      } catch (error) {
+        // A 400 is Wallet refusing this edit, and its reason is already in the message.
+        if (error instanceof WalletError && error.kind === "http" && error.status === 400) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
+      }
+      const result = answer.results.find((row) => row.inputIndex === 0) ?? answer.results[0];
+      if (!result?.success) {
+        return { ok: false, error: result?.error ?? "Wallet did not answer for this record" };
+      }
+      return { ok: true, record: result.record ? recordView(result.record) : null };
     },
     async categories() {
       const categories = await read(`/categories?limit=${CATEGORIES_LIMIT}`, walletCategoriesPayloadSchema);

@@ -134,18 +134,18 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <LinkTabs
-          label={t("period.grain")}
-          path="/accounts"
-          params={params}
-          name="grain"
-          current={grain}
-          options={[
-            { value: "month", label: t("period.grains.month") },
-            { value: "year", label: t("period.grains.year") },
-          ]}
-        />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <LinkTabs
+            label={t("period.grain")}
+            path="/accounts"
+            params={params}
+            name="grain"
+            current={grain}
+            options={[
+              { value: "month", label: t("period.grains.month") },
+              { value: "year", label: t("period.grains.year") },
+            ]}
+          />
           <ToggleLink
             label={t("showArchived")}
             path="/accounts"
@@ -334,9 +334,13 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
               color: row.color,
             }))}
           />
-          <ul className="flex flex-col gap-2 text-sm">
+          {/* One grid for every row, so the percentages and the amounts each keep one column. */}
+          <ul className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-sm">
             {rows.map((row) => (
-              <li key={row.account.id} className="flex items-center justify-between gap-3">
+              <li
+                key={row.account.id}
+                className="col-span-3 grid min-h-9 grid-cols-subgrid items-center border-b border-border last:border-0"
+              >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span
                     aria-hidden
@@ -345,14 +349,14 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                   />
                   <span className="truncate">{row.account.name}</span>
                 </span>
-                <span className="shrink-0 tabular-nums text-muted">
+                <span className="text-right tabular-nums text-muted">
                   {formatPercent(row.share, ctx.numberFormat)}
                 </span>
-                <span className="shrink-0 tabular-nums">{formatMoney(row.balance, ctx.numberFormat)}</span>
+                <span className="text-right tabular-nums">{formatMoney(row.balance, ctx.numberFormat)}</span>
               </li>
             ))}
           </ul>
-          <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+          <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
             <div>
               <dt className="text-muted">{t("composition.liquid")}</dt>
               <dd className="font-medium tabular-nums">

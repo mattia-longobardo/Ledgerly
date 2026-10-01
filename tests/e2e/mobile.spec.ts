@@ -174,11 +174,19 @@ test.describe("time off on a phone", () => {
     await page.goto("/timeoff");
     await expect(page.getByRole("heading", { name: "Work & Time off", level: 1 })).toBeVisible();
 
-    // Time off is a bottom tab, in the Work group.
+    // Time off is not a bottom tab: the bar's fifth cell is More (spec §8.2), so it lives in the
+    // sheet, under Work. A fifth tab used to take that cell and clip More onto a second row.
     const tabs = page
       .getByRole("navigation", { name: "Primary" })
       .filter({ has: page.getByRole("button", { name: "More" }) });
-    await expect(tabs.getByRole("link", { name: "Time off" })).toBeVisible();
+    await expect(tabs.getByRole("link", { name: "Time off" })).toBeHidden();
+    await tabs.getByRole("button", { name: "More" }).click();
+    const sheet = page.getByRole("dialog", { name: "More" });
+    await expect(
+      sheet.getByRole("group", { name: "Work" }).getByRole("link", { name: "Time off" }),
+    ).toHaveAttribute("aria-current", "page");
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
 
     // Both cards in the same unit since N5 — days, ROL included — and the provenance of each.
     await expect(page.getByTestId("vacation-card")).toContainText("days remaining");

@@ -58,6 +58,13 @@ describe("walletAccountType", () => {
     ["investment", "investment"],
     ["Credit Card", "credit"],
     ["crypto", "crypto"],
+    ["CurrentAccount", "checking"],
+    ["SavingAccount", "savings"],
+    ["CreditCard", "credit"],
+    ["General", "checking"],
+    ["Loan", "credit"],
+    ["Mortgage", "credit"],
+    ["Overdraft", "credit"],
   ])("maps %s to %s", (accountType, expected) => {
     expect(walletAccountType({ accountType })).toBe(expected);
   });

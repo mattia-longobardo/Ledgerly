@@ -1,11 +1,15 @@
 // src/modules/transactions/actions.ts — the Expenses Server Actions (spec §4.2): validate →
 // service → revalidate, and nothing else. Only the fields §7.2 calls local travel through here;
-// payee, amount and date have no action at all because the provider owns them.
+// payee, amount and date have no action of their own; with Wallet connected they travel together
+// through `editWalletTransactionAction`, which writes them to Wallet before writing them here.
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { parseAmount } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
+import { WALLET_RECORD_TEXT_MAX, editWalletTransaction } from "@/platform/integrations/wallet/records";
+import { TRANSACTION_TYPES } from "./rules";
 import { searchPayees } from "./queries";
 import {
   TransactionError,
@@ -121,4 +125,60 @@ export async function searchPayeesAction(
   const term = z.string().max(200).safeParse(query);
   if (!term.success) return [];
   return searchPayees(ctx, term.data, limit);
+}
+
+const editSchema = z.object({
+  type: z.enum(TRANSACTION_TYPES),
+  amount: z.string().max(40),
+  payee: z.string().max(WALLET_RECORD_TEXT_MAX),
+  note: z.string().max(WALLET_RECORD_TEXT_MAX),
+});
+
+export type WalletEditInput = z.input<typeof editSchema>;
+
+/**
+ * `error` is a message key under `expenses.wallet.errors`; `reason` is Wallet's own words when it
+ * refused or could not be reached, shown under the key because it is the only thing that says why.
+ */
+export type WalletEditResult =
+  { ok: true; state: "saved" | "unchanged" } | { ok: false; error: string; reason?: string };
+
+/** Type, amount, payee and note of a Wallet movement, written to Wallet first and then here. */
+export async function editWalletTransactionAction(
+  id: string,
+  input: WalletEditInput,
+): Promise<WalletEditResult> {
+  const ctx = await requireSession();
+  const parsed = editSchema.safeParse(input);
+  if (!z.uuid().safeParse(id).success || !parsed.success) return { ok: false, error: "invalid" };
+
+  let amountCents: bigint;
+  try {
+    amountCents = parseAmount(parsed.data.amount, ctx.numberFormat);
+  } catch {
+    return { ok: false, error: "amount" };
+  }
+  if (amountCents === 0n) return { ok: false, error: "amount" };
+
+  const outcome = await editWalletTransaction(ctx, id, {
+    type: parsed.data.type,
+    amountCents,
+    payee: parsed.data.payee,
+    note: parsed.data.note,
+  });
+  switch (outcome.state) {
+    case "saved":
+      revalidatePath("/expenses");
+      revalidatePath("/");
+      return { ok: true, state: "saved" };
+    case "unchanged":
+      return { ok: true, state: "unchanged" };
+    case "not_linked":
+      return { ok: false, error: "notLinked" };
+    case "refused":
+      if (outcome.reason === "no_transfer_category") return { ok: false, error: "noTransferCategory" };
+      return { ok: false, error: "refused", reason: outcome.reason };
+    case "failed":
+      return { ok: false, error: "failed", reason: outcome.reason };
+  }
 }

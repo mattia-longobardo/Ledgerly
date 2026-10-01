@@ -173,6 +173,12 @@ const PAGES: Screen[] = [
       await followLink(page, '[data-testid="pension-documents"] a[href*="/documents/"]');
     },
   },
+  { name: "/investments", session: "layout", open: go("/investments") },
+  {
+    name: "/investments?platform=",
+    session: "layout",
+    open: (page) => follow(page, "/investments", "Binance"),
+  },
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
     name: "/payroll/[id]",
@@ -252,6 +258,17 @@ const OVERLAYS: Screen[] = [
         .getByRole("button", { name: /Add pocket|New pocket|Aggiungi/ })
         .first()
         .click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the new investment movement dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/investments");
+      await settled(page);
+      await page.getByRole("button", { name: "New movement" }).first().click();
       await settledDialog(page);
     },
   },

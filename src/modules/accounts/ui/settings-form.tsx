@@ -45,8 +45,9 @@ export interface SettingsValues {
 
 /**
  * Account detail › Settings: the General card of the earlier design (spec §8.4.8), the data source,
- * what the account counts towards, and archiving. A synced account keeps the provider's type and
- * currency, so those two controls are read-only rather than merely ignored on save.
+ * what the account counts towards, and archiving. A synced account keeps the provider's currency,
+ * so that control is read-only rather than merely ignored on save; its type follows the provider
+ * until it is changed here, and the hint says the change stays here (Wallet cannot take it).
  */
 export function AccountSettingsForm({
   account,
@@ -170,8 +171,8 @@ export function AccountSettingsForm({
           >
             <Input id="provider" name="provider" value={account.provider ?? "—"} readOnly />
           </Field>
-          <Field label={t("general.type")} htmlFor="type" hint={synced ? t("general.locked") : undefined}>
-            <Select id="type" name="type" defaultValue={account.type} disabled={synced}>
+          <Field label={t("general.type")} htmlFor="type" hint={synced ? t("general.typeSynced") : undefined}>
+            <Select id="type" name="type" defaultValue={account.type}>
               {ACCOUNT_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {types(type)}

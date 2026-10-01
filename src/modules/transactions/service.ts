@@ -26,6 +26,7 @@ import {
   type CategoryType,
   NAME_MAX,
   type IncomingTransaction,
+  type MergeableField,
   PROVIDER_OWNED_FIELDS,
   type ProviderResolution,
   type TransactionPatch,
@@ -608,6 +609,26 @@ export async function updateTransaction(
     await applyPatch(tx, ctx, transactionId, plan.patch, plan.locallyEdited);
   });
   return requireTransaction(ctx, transactionId);
+}
+
+/**
+ * Hands fields back to the provider (owner, 2026-09-24): called after a person's edit has been
+ * written **to Wallet** and accepted there, so the two sides agree again and the field goes on
+ * following Wallet — a marker left behind would freeze it at this value for good. The only place
+ * a `locally_edited` marker is ever removed, and only for fields the provider now holds.
+ */
+export async function releaseLocalEdits(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  fields: readonly MergeableField[],
+): Promise<void> {
+  const current = await requireTransaction(ctx, parseId(id));
+  const kept = current.locallyEdited.filter((field) => !fields.includes(field as MergeableField));
+  if (kept.length === current.locallyEdited.length) return;
+  await getDb()
+    .update(transactions)
+    .set({ locallyEdited: kept })
+    .where(and(eq(transactions.id, current.id), userScoped(ctx).owns(transactions)));
 }
 
 /**

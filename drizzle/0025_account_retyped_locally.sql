@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "retyped_locally" boolean DEFAULT false NOT NULL;

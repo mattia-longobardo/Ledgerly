@@ -627,20 +627,30 @@ export async function chargeCandidates(
 }
 
 /**
- * The income of an account in a window, with payee and category name (F4): where the interest the
+ * The income of an account in a window, with payee, note and category name (F4): where the interest the
  * bank really paid is looked for (plan F4 §3.6.1). Visible rows only, never a giroconto; the amount
  * is positive and the day the user's own.
  */
 export async function incomeCandidates(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   input: { accountId: string; from: CivilDate; to: CivilDate },
-): Promise<{ id: string; on: CivilDate; cents: Cents; payee: string | null; categoryName: string | null }[]> {
+): Promise<
+  {
+    id: string;
+    on: CivilDate;
+    cents: Cents;
+    payee: string | null;
+    note: string | null;
+    categoryName: string | null;
+  }[]
+> {
   const rows = await getDb()
     .select({
       id: transactions.id,
       occurredAt: transactions.occurredAt,
       amountCents: transactions.amountCents,
       payee: transactions.payee,
+      note: transactions.note,
       categoryName: categories.name,
     })
     .from(transactions)
@@ -657,7 +667,44 @@ export async function incomeCandidates(
     on: civilDateIn(row.occurredAt, ctx.timeZone),
     cents: row.amountCents,
     payee: row.payee,
+    note: row.note,
     categoryName: row.categoryName,
+  }));
+}
+
+/**
+ * What a movement on an investment platform may be linked to (the investments page): every visible
+ * bank movement of the window going the given way — `out` for money sent to a platform, `in` for
+ * money that came back — giroconti included, since a transfer to a broker is often booked as one.
+ * The amount comes back positive and the day is the user's own; newest first.
+ */
+export async function linkCandidates(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  input: { direction: "in" | "out"; from: CivilDate; to: CivilDate; limit?: number },
+): Promise<{ id: string; accountId: string; on: CivilDate; cents: Cents; payee: string | null }[]> {
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      amountCents: transactions.amountCents,
+      payee: transactions.payee,
+    })
+    .from(transactions)
+    .where(
+      and(
+        conditions(ctx, { from: input.from, to: input.to }),
+        input.direction === "out" ? lt(transactions.amountCents, 0n) : sql`${transactions.amountCents} > 0`,
+      ),
+    )
+    .orderBy(desc(transactions.occurredAt), desc(transactions.id))
+    .limit(input.limit ?? 300);
+  return rows.map((row) => ({
+    id: row.id,
+    accountId: row.accountId,
+    on: civilDateIn(row.occurredAt, ctx.timeZone),
+    cents: row.amountCents < 0n ? -row.amountCents : row.amountCents,
+    payee: row.payee,
   }));
 }
 

@@ -448,7 +448,7 @@ describe("updateAccountSettings", () => {
     });
   });
 
-  it("keeps a synced account's type and currency whatever is submitted", async () => {
+  it("keeps a synced account's currency, takes a new type and stops following the provider's", async () => {
     const remote: RemoteAccount = {
       provider: "wallet",
       providerAccountId: "r1",
@@ -465,7 +465,24 @@ describe("updateAccountSettings", () => {
       type: "cash",
       currency: "USD",
     });
-    expect(saved).toMatchObject({ type: "investment", currency: "EUR" });
+    expect(saved).toMatchObject({ type: "cash", currency: "EUR", retypedLocally: true });
+
+    // Wallet's type changes afterwards: the one chosen here stays.
+    await applyProviderAccounts(ctx, "wallet", [{ ...remote, type: "savings" }]);
+    expect((await accountsView(ctx)).rows[0].account.type).toBe("cash");
+  });
+
+  it("follows the provider's type while it has not been changed here", async () => {
+    const remote: RemoteAccount = {
+      provider: "wallet",
+      providerAccountId: "r1",
+      name: "Conto",
+      type: "other",
+      currency: "EUR",
+    };
+    await applyProviderAccounts(ctx, "wallet", [remote]);
+    await applyProviderAccounts(ctx, "wallet", [{ ...remote, type: "checking" }]);
+    expect((await accountsView(ctx)).rows[0].account.type).toBe("checking");
   });
 
   it("refuses another user's account", async () => {

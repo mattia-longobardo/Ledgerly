@@ -9,6 +9,7 @@ export interface NavItem extends Omit<NavLink, "label"> {
     | "expenses"
     | "budgets"
     | "funds"
+    | "investments"
     | "interests"
     | "pockets"
     | "subscriptions"
@@ -66,6 +67,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     adminOnly: false,
   },
   {
+    id: "investments",
+    href: "/investments" as Route,
+    labelKey: "investments",
+    icon: "investments",
+    group: "finance",
+    mobile: false,
+    adminOnly: false,
+  },
+  {
     id: "interests",
     href: "/interests" as Route,
     labelKey: "interests",
@@ -107,7 +117,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
     labelKey: "timeoff",
     icon: "timeoff",
     group: "work",
-    mobile: true,
+    // Not a tab: the bar's fifth cell is More, and a fifth tab pushed it into a clipped row.
+    mobile: false,
     adminOnly: false,
   },
   {
