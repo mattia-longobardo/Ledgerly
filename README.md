@@ -1,8 +1,6 @@
 # Ledgerly
 
-Personal finance and household-admin dashboard. Version 0.1 is a from-scratch rebuild; the design is in
-[`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md) and each phase has its
-plan in [`docs/plans/`](docs/plans/).
+Personal finance and household-admin dashboard. Version 0.1 is a from-scratch rebuild.
 
 ![Overview](docs/screenshots/overview.png)
 
@@ -290,8 +288,7 @@ npm run e2e
   `tests/e2e/keyboard.spec.ts` crosses the same application without a mouse.
 - **Performance** (`npm run perf`, on demand) builds a deliberately heavy user in `ledgerly_test`
   — twelve accounts, sixty thousand movements, fourteen thousand balance entries — and times the
-  widest views against it, then prints their query plans. The numbers of the last run are in
-  [`docs/plans/2026-09-21-f9-rifinitura-rilascio.md`](docs/plans/2026-09-21-f9-rifinitura-rilascio.md).
+  widest views against it, then prints their query plans.
 - **Screenshots** (`npm run docs:shots`, on demand) takes the pictures in this README again, of the
   same seeded user.
 
@@ -445,6 +442,4 @@ whatever funds them. Commercial use is not licensed here.
 
 ## Documentation
 
-The full design and every binding decision: [`docs/specs/2026-09-13-dev-0.1-design.md`](docs/specs/2026-09-13-dev-0.1-design.md).
-Phase-by-phase implementation plans: [`docs/plans/`](docs/plans/).
-Reviews: [`docs/reviews/`](docs/reviews/).
+Releasing: [`docs/RELEASE.md`](docs/RELEASE.md).
