@@ -79,7 +79,13 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
             })}
           </p>
         </div>
-        <ReviewActions documentId={document.id} state={document.state} blocking={view.blocking} llm={llm} />
+        <ReviewActions
+          documentId={document.id}
+          fileName={document.fileName}
+          state={document.state}
+          blocking={view.blocking}
+          llm={llm}
+        />
       </div>
 
       {banner && (
