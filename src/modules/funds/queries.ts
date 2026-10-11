@@ -23,7 +23,16 @@ import {
   periodReturns,
   periodStats,
 } from "./rules";
-import { COMETA_SCHEDULE, dueDate, parseSchedule, type Quarter, type ScheduleEntry } from "./pension/rules";
+import {
+  COMETA_SCHEDULE,
+  dueDate,
+  netOfFees,
+  NO_FEES,
+  parseSchedule,
+  type PensionFees,
+  type Quarter,
+  type ScheduleEntry,
+} from "./pension/rules";
 import {
   fundDeposits,
   fundDepositRules,
@@ -97,32 +106,62 @@ async function pensionInflows(
       worker: pensionCompetences.workerCents,
       employer: pensionCompetences.employerCents,
       tfr: pensionCompetences.tfrCents,
+      workerEnrollment: pensionCompetences.workerEnrollmentCents,
+      employerEnrollment: pensionCompetences.employerEnrollmentCents,
     })
     .from(pensionCompetences)
     .where(and(userScoped(ctx).owns(pensionCompetences), inArray(pensionCompetences.fundId, [...bare])))
     .orderBy(asc(pensionCompetences.year), asc(pensionCompetences.quarter), asc(pensionCompetences.id));
+  // Quarter by quarter, as the fund detail adds them up: worker + employer + TFR with the enrolment
+  // quotas, gross, and the fees Settings records as the estimate of what was taken off.
+  const byQuarter = new Map<
+    string,
+    { fundId: string; due: CivilDate; contribution: Cents; enrollment: Cents }
+  >();
   for (const row of accrued) {
-    // Worker + employer + TFR, enrolment apart, exactly as the fund detail adds them up (GC §8.2).
-    const cents = (row.worker ?? 0n) + (row.employer ?? 0n) + (row.tfr ?? 0n);
-    if (cents === 0n) continue;
     // The money leaves on its quarter's deadline, whatever month the payslip was: a quarter still
     // running has accrued something and paid in nothing.
-    const due = dueDate(row.year, row.quarter as Quarter, schedules.get(row.fundId) ?? COMETA_SCHEDULE);
+    const due = dueDate(
+      row.year,
+      row.quarter as Quarter,
+      schedules.get(row.fundId)?.schedule ?? COMETA_SCHEDULE,
+    );
     if (due === null || due > todayOn) continue;
-    add(row.fundId, { on: due, chargedCents: cents, feeCents: 0n });
+    const key = `${row.fundId}:${row.year}-${row.quarter}`;
+    const quarter = byQuarter.get(key) ?? { fundId: row.fundId, due, contribution: 0n, enrollment: 0n };
+    quarter.contribution += (row.worker ?? 0n) + (row.employer ?? 0n) + (row.tfr ?? 0n);
+    quarter.enrollment += (row.workerEnrollment ?? 0n) + (row.employerEnrollment ?? 0n);
+    byQuarter.set(key, quarter);
+  }
+  for (const quarter of byQuarter.values()) {
+    if (quarter.contribution === 0n) continue;
+    const flow = netOfFees(
+      quarter.contribution,
+      quarter.enrollment,
+      schedules.get(quarter.fundId)?.fees ?? NO_FEES,
+    );
+    add(quarter.fundId, { on: quarter.due, chargedCents: flow.grossCents, feeCents: flow.feesCents });
   }
   // A fund whose quarters are all still running has simply paid in nothing yet.
   for (const id of bare) if (!flows.has(id)) flows.set(id, []);
   return flows;
 }
 
-/** The transfer schedule in force for each fund, the provider's own when none is recorded. */
+/**
+ * The transfer schedule in force for each fund with its fees, the provider's own schedule when
+ * none is recorded.
+ */
 async function paymentSchedules(
   ctx: Pick<Ctx, "userId">,
   fundIds: readonly string[],
-): Promise<Map<string, ScheduleEntry[]>> {
+): Promise<Map<string, { schedule: ScheduleEntry[]; fees: PensionFees }>> {
   const rows = await getDb()
-    .select({ fundId: pensionRules.fundId, schedule: pensionRules.schedule })
+    .select({
+      fundId: pensionRules.fundId,
+      schedule: pensionRules.schedule,
+      enrollmentFee: pensionRules.enrollmentFeeCents,
+      quarterFee: pensionRules.quarterFeeCents,
+    })
     .from(pensionRules)
     .where(
       and(
@@ -132,13 +171,16 @@ async function paymentSchedules(
       ),
     )
     .orderBy(asc(pensionRules.fundId), desc(pensionRules.validFrom), asc(pensionRules.id));
-  const out = new Map<string, ScheduleEntry[]>();
+  const out = new Map<string, { schedule: ScheduleEntry[]; fees: PensionFees }>();
   // Ordered newest first per fund: the first row of each is the one in force. A row that stores
   // nothing readable is no schedule at all, and the provider's own is used instead.
   for (const row of rows) {
     if (out.has(row.fundId)) continue;
     const schedule = parseSchedule(row.schedule);
-    if (schedule.length > 0) out.set(row.fundId, schedule);
+    out.set(row.fundId, {
+      schedule: schedule.length > 0 ? schedule : [...COMETA_SCHEDULE],
+      fees: { enrollmentCents: row.enrollmentFee, quarterCents: row.quarterFee },
+    });
   }
   return out;
 }

@@ -19,6 +19,7 @@ import {
 import { duplicateName, type Fund, FundError, requireFund } from "../service";
 import type { Cents } from "@/platform/money";
 import {
+  COMETA_FEES,
   COMETA_SCHEDULE,
   COMETA_SOURCES,
   COMETA_TARIFF,
@@ -29,6 +30,7 @@ import {
   type Decision,
   DEFAULT_TOLERANCE_DAYS,
   isQuarter,
+  type PensionFees,
 } from "./rules";
 
 export type PensionRule = typeof pensionRules.$inferSelect;
@@ -149,6 +151,8 @@ export async function createPensionFund(ctx: Ctx, input: PensionFundInput): Prom
           validFrom: parsed.startOn,
           schedule: [...COMETA_SCHEDULE],
           toleranceDays: DEFAULT_TOLERANCE_DAYS,
+          enrollmentFeeCents: COMETA_FEES.enrollmentCents,
+          quarterFeeCents: COMETA_FEES.quarterCents,
           source: COMETA_SOURCES.schedule,
           verifiedOn: COMETA_SOURCES.verifiedOn,
         }),
@@ -207,6 +211,26 @@ export async function saveTolerance(ctx: Pick<Ctx, "userId">, fundId: string, da
   await getDb()
     .update(pensionRules)
     .set({ toleranceDays: days })
+    .where(
+      and(
+        eq(pensionRules.fundId, fundId),
+        eq(pensionRules.kind, "payment_schedule"),
+        userScoped(ctx).owns(pensionRules),
+      ),
+    );
+}
+
+/**
+ * The fees of the schedule in force (GC §6.1): the one-off enrolment fee and the one taken off
+ * each quarter. They make the payslips' figures net while no export says what was charged.
+ */
+export async function saveFees(ctx: Pick<Ctx, "userId">, fundId: string, fees: PensionFees): Promise<void> {
+  await requirePensionFund(ctx, fundId);
+  const valid = (cents: Cents) => cents >= 0n && cents <= 100_000n;
+  if (!valid(fees.enrollmentCents) || !valid(fees.quarterCents)) throw new FundError("invalid");
+  await getDb()
+    .update(pensionRules)
+    .set({ enrollmentFeeCents: fees.enrollmentCents, quarterFeeCents: fees.quarterCents })
     .where(
       and(
         eq(pensionRules.fundId, fundId),

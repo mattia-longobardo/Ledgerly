@@ -24,6 +24,7 @@ import {
   deleteContributionRuleAction,
   retryCometaDocumentAction,
   saveContributionRuleAction,
+  saveFeesAction,
   saveToleranceAction,
   setReceivesPayrollAction,
   uploadCometaDocumentsAction,
@@ -708,6 +709,75 @@ export function ToleranceForm({ fundId, days }: { fundId: string; days: number }
       </Field>
       <ErrorLine error={error} />
       <div>
+        <Button type="submit" variant="primary" size="sm" disabled={pending}>
+          {t("save")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Settings › Fees: what the fund takes off each transfer, as its tariff says (GC §6.1). Paid in is
+ * net of them; an imported export's own charges take their place.
+ */
+export function FeesForm({
+  fundId,
+  enrollment,
+  quarter,
+}: {
+  fundId: string;
+  /** The amounts as the inputs show them, already formatted. */
+  enrollment: string;
+  quarter: string;
+}) {
+  const t = useTranslations("funds.pension.settings");
+  const id = useId();
+  const router = useRouter();
+  const { error, ok } = useResult();
+  const [pending, startTransition] = useTransition();
+  return (
+    <form
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(async () => {
+          if (
+            ok(
+              await saveFeesAction(fundId, {
+                enrollment: String(data.get("enrollment") ?? ""),
+                quarter: String(data.get("quarter") ?? ""),
+              }),
+            )
+          ) {
+            notify(t("saved"));
+            router.refresh();
+          }
+        });
+      }}
+      className="grid grid-cols-2 gap-3"
+    >
+      <Field label={t("enrollmentFee")} htmlFor={`${id}-enrollment`} hint={t("enrollmentFeeHint")}>
+        <Input
+          id={`${id}-enrollment`}
+          name="enrollment"
+          inputMode="decimal"
+          // Left like the other settings fields: `numeric` right-aligns, for amounts in a column.
+          className="tabular-nums"
+          defaultValue={enrollment}
+        />
+      </Field>
+      <Field label={t("quarterFee")} htmlFor={`${id}-quarter`} hint={t("quarterFeeHint")}>
+        <Input
+          id={`${id}-quarter`}
+          name="quarter"
+          inputMode="decimal"
+          className="tabular-nums"
+          defaultValue={quarter}
+        />
+      </Field>
+      <ErrorLine error={error} />
+      <div className="col-span-2">
         <Button type="submit" variant="primary" size="sm" disabled={pending}>
           {t("save")}
         </Button>

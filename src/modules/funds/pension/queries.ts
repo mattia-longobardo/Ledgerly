@@ -51,7 +51,9 @@ import {
   type Component,
   DEDUCTIBILITY_LIMITS,
   deductibilityLimit,
+  NO_FEES,
   parseSchedule,
+  type PensionFees,
   type Quarter,
 } from "./rules";
 import {
@@ -196,6 +198,9 @@ export async function pensionDetail(
   );
 
   const schedule = rules.find((rule) => rule.kind === "payment_schedule") ?? null;
+  const fees: PensionFees = schedule
+    ? { enrollmentCents: schedule.enrollmentFeeCents, quarterCents: schedule.quarterFeeCents }
+    : NO_FEES;
   const freshness =
     documents
       .filter((document) => document.kind === "cometa_operations" && document.state === "applied")
@@ -235,7 +240,13 @@ export async function pensionDetail(
     unitPrice: movement.unitPrice,
     unitPriceDate: movement.unitPriceDate,
   }));
-  const metrics = pensionMetrics({ value, operations: asOperations, movements: movementLikes, quarters });
+  const metrics = pensionMetrics({
+    value,
+    operations: asOperations,
+    movements: movementLikes,
+    quarters,
+    fees,
+  });
 
   const byQuarter = new Map(quarters.map((quarter) => [`${quarter.year}-${quarter.quarter}`, quarter]));
   const months: MonthRow[] = competences.map((competence) => ({
@@ -262,7 +273,7 @@ export async function pensionDetail(
 
   // Simple Dietz over the last twelve months: thirteen month ends, the first being the end of the
   // month before the window, and the money that went in during each month.
-  const inflows = paidInFlows(asOperations, quarters).map((flow) => ({ ...flow, feeCents: null }));
+  const inflows = paidInFlows(asOperations, quarters, fees).map((flow) => ({ ...flow, feeCents: null }));
   const points = valuePoints(
     entries.map((entry) => ({ on: entry.on, cents: entry.balanceCents })),
     movementLikes,
@@ -302,7 +313,7 @@ export async function pensionDetail(
     chart: {
       months: chartMonths,
       value: heldAt(points, chartMonths),
-      paidIn: paidInAt(asOperations, chartMonths, quarters),
+      paidIn: paidInAt(asOperations, chartMonths, quarters, fees),
     },
     valuations: await recordedValuationsOf(ctx, fund.id, entries, (on) =>
       inflows.filter((flow) => flow.on <= on).reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n),
