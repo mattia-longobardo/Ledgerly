@@ -7,7 +7,7 @@ import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/displa
 import type { Ctx } from "@/platform/context";
 import { civilDateIn, type MonthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { MultiLine } from "@/ui/chart";
@@ -25,6 +25,7 @@ import {
   ContributionRuleForm,
   DeleteOperationButton,
   DeleteRuleButton,
+  FeesForm,
   ImportCometaButton,
   ReceivesPayrollButton,
   ToleranceForm,
@@ -1048,6 +1049,11 @@ export async function PensionView({
           </>
         )}
         <p className="text-sm text-muted">{t("settings.feesActual")}</p>
+        <FeesForm
+          fundId={fund.id}
+          enrollment={formatAmountInput(detail.schedule?.enrollmentFeeCents ?? 0n, ctx.numberFormat)}
+          quarter={formatAmountInput(detail.schedule?.quarterFeeCents ?? 0n, ctx.numberFormat)}
+        />
       </SettingsSection>
 
       <SettingsSection title={t("settings.rules")} description={t("settings.rulesDescription")}>

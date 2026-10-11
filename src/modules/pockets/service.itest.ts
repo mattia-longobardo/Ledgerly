@@ -7,17 +7,22 @@ import type { Ctx } from "@/platform/context";
 import { addDays, addMonths, monthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
-import { anAccount, newContext } from "../../../test/fixtures";
+import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { createRule } from "@/modules/interests/service";
+import { hideTransaction, upsertFromProvider } from "@/modules/transactions/service";
 import { pocketsAccrualJob } from "./jobs";
-import { pocketsOnAccount, pocketsTotal, pocketsView } from "./queries";
+import { expenseLinkCandidates, pocketsOnAccount, pocketsTotal, pocketsView } from "./queries";
 import {
   accrueMonth,
+  addPlannedExpense,
   addToPocket,
   createPocket,
+  linkExpense,
   PocketError,
-  recordWithdrawal,
+  purgeExpiredPlanned,
+  removePlannedExpense,
   setPocketState,
+  unlinkExpense,
   updatePocket,
 } from "./service";
 
@@ -35,6 +40,26 @@ function pocketInput(overrides: Record<string, unknown> = {}) {
     startMonth: thisMonth,
     ...overrides,
   };
+}
+
+const noon = (on: string) => new Date(`${on}T11:00:00Z`);
+
+/** The ids of an account's movements, newest first, as the pocket's page lists them. */
+async function spend(
+  account: string,
+  rows: { cents: bigint; on: string; type?: "expense" | "income" | "transfer" }[],
+) {
+  await upsertFromProvider(
+    ctx,
+    account,
+    rows.map((row) =>
+      movement({
+        amountCents: row.type === "income" ? row.cents : -row.cents,
+        occurredAt: noon(row.on),
+        type: row.type ?? "expense",
+      }),
+    ),
+  );
 }
 
 async function balanceOf(id: string): Promise<bigint | undefined> {
@@ -87,26 +112,12 @@ describe("accruals (spec §7.4)", () => {
 });
 
 describe("moves", () => {
-  it("records a withdrawal with its reason and refuses one past the balance", async () => {
-    const pocket = await createPocket(ctx, pocketInput());
-    await addToPocket(ctx, pocket.id, { cents: 50_000n, on: todayOn });
-    await recordWithdrawal(ctx, pocket.id, { cents: 60_000n, on: todayOn, reason: "Hotel" });
-    await expect(
-      recordWithdrawal(ctx, pocket.id, { cents: 15_001n, on: todayOn, reason: "Ferry" }),
-    ).rejects.toMatchObject({ code: "insufficient" });
-    const view = (await pocketsView(ctx)).pockets[0];
-    expect(view.balanceCents).toBe(15_000n);
-    expect(view.withdrawnCents).toBe(-60_000n);
-    expect(view.withdrawals.map((movement) => movement.reason)).toEqual(["Hotel"]);
-  });
-
-  it("refuses a date in the future, a withdrawal without a reason and a move on an archived pocket", async () => {
+  it("refuses a date in the future and a move on an archived pocket", async () => {
     const pocket = await createPocket(ctx, pocketInput());
     const tomorrow = new Date(Date.now() + 36 * 3_600_000).toISOString().slice(0, 10);
     await expect(addToPocket(ctx, pocket.id, { cents: 1n, on: tomorrow })).rejects.toMatchObject({
       code: "future_date",
     });
-    await expect(recordWithdrawal(ctx, pocket.id, { cents: 1n, on: todayOn, reason: " " })).rejects.toThrow();
     await setPocketState(ctx, pocket.id, "archived");
     await expect(addToPocket(ctx, pocket.id, { cents: 1n, on: todayOn })).rejects.toMatchObject({
       code: "archived",
@@ -117,6 +128,97 @@ describe("moves", () => {
   it("refuses a second pocket with the same name", async () => {
     await createPocket(ctx, pocketInput());
     await expect(createPocket(ctx, pocketInput())).rejects.toMatchObject({ code: "duplicate_name" });
+  });
+});
+
+describe("expenses (the budget they come off)", () => {
+  it("takes every expense of the backing account since the start month, and no transfer or income", async () => {
+    const account = await anAccount(ctx);
+    const lastMonth = addMonths(thisMonth, -1);
+    const pocket = await createPocket(ctx, pocketInput({ backingAccountId: account, startMonth: lastMonth }));
+    await accrueMonth(ctx, lastMonth, [pocket.id]);
+    await spend(account, [
+      { cents: 10_000n, on: todayOn },
+      { cents: 7_000n, on: lastMonth },
+      { cents: 5_000n, on: addDays(lastMonth, -1) },
+      { cents: 30_000n, on: todayOn, type: "income" },
+    ]);
+    const view = (await pocketsView(ctx)).pockets[0];
+    // Two accruals of 250 € make the budget; the two expenses since the start come off it.
+    expect(view).toMatchObject({ budgetCents: 50_000n, spentCents: -17_000n, balanceCents: 33_000n });
+    expect(view.expenses.map((row) => row.cents)).toEqual([10_000n, 7_000n]);
+    // The budget left carries over: last month ended at 250 − 70.
+    expect(view.history.at(-2)).toBe(18_000n);
+    expect(await expenseLinkCandidates(ctx)).toEqual([]);
+  });
+
+  it("lets a standalone pocket take the expenses linked to it, once, and give them back", async () => {
+    const account = await anAccount(ctx);
+    const pocket = await createPocket(ctx, pocketInput());
+    await spend(account, [
+      { cents: 4_000n, on: todayOn },
+      { cents: 9_000n, on: todayOn, type: "income" },
+    ]);
+    const candidates = await expenseLinkCandidates(ctx);
+    expect(candidates.map((row) => row.cents)).toEqual([4_000n]);
+    await linkExpense(ctx, pocket.id, candidates[0].id);
+    expect(await balanceOf(pocket.id)).toBe(21_000n);
+    expect(await expenseLinkCandidates(ctx)).toEqual([]);
+
+    const other = await createPocket(ctx, pocketInput({ name: "Other" }));
+    await expect(linkExpense(ctx, other.id, candidates[0].id)).rejects.toMatchObject({
+      code: "already_linked",
+    });
+
+    // Hidden, it no longer counts.
+    await hideTransaction(ctx, candidates[0].id);
+    expect(await balanceOf(pocket.id)).toBe(25_000n);
+
+    await unlinkExpense(ctx, pocket.id, candidates[0].id);
+    await expect(unlinkExpense(ctx, pocket.id, candidates[0].id)).rejects.toMatchObject({
+      code: "not_found",
+    });
+  });
+
+  it("refuses a link on a pocket with an account, an income, and an expense of a backing account", async () => {
+    const backing = await anAccount(ctx, "Saving");
+    const plain = await anAccount(ctx, "Main");
+    const backed = await createPocket(ctx, pocketInput({ backingAccountId: backing }));
+    const standalone = await createPocket(ctx, pocketInput({ name: "Gifts" }));
+    await spend(backing, [{ cents: 1_000n, on: todayOn }]);
+    await spend(plain, [{ cents: 2_000n, on: todayOn, type: "income" }]);
+    const rows = (await pocketsView(ctx)).pockets.find((one) => one.pocket.id === backed.id)!.expenses;
+    await expect(linkExpense(ctx, backed.id, rows[0].id)).rejects.toMatchObject({ code: "backed" });
+    await expect(linkExpense(ctx, standalone.id, rows[0].id)).rejects.toMatchObject({ code: "backed" });
+  });
+});
+
+describe("planned expenses", () => {
+  it("lowers what would be left, stays a week past its day, and can be removed", async () => {
+    const pocket = await createPocket(ctx, pocketInput());
+    await addPlannedExpense(ctx, pocket.id, {
+      cents: 6_000n,
+      dueOn: addDays(todayOn, 3),
+      description: "Ferry",
+    });
+    await expect(
+      addPlannedExpense(ctx, pocket.id, { cents: 1n, dueOn: addDays(todayOn, -1), description: "Late" }),
+    ).rejects.toMatchObject({ code: "past_date" });
+    let view = (await pocketsView(ctx)).pockets[0];
+    expect(view).toMatchObject({ balanceCents: 25_000n, plannedCents: 6_000n, projectedCents: 19_000n });
+
+    // Seven days past its day it is still there; eight days past, gone from the page and the table.
+    const later = (days: number) => new Date(Date.now() + days * 86_400_000);
+    view = (await pocketsView(ctx, later(10))).pockets[0];
+    expect(view.planned).toMatchObject([{ description: "Ferry", overdue: true }]);
+    expect((await pocketsView(ctx, later(12))).pockets[0].planned).toEqual([]);
+    expect(await purgeExpiredPlanned(ctx, addDays(todayOn, 10))).toBe(0);
+    expect(await purgeExpiredPlanned(ctx, addDays(todayOn, 11))).toBe(1);
+
+    await addPlannedExpense(ctx, pocket.id, { cents: 1_000n, dueOn: todayOn, description: "Taxi" });
+    const [taxi] = (await pocketsView(ctx)).pockets[0].planned;
+    await removePlannedExpense(ctx, taxi.id);
+    expect((await pocketsView(ctx)).pockets[0].planned).toEqual([]);
   });
 });
 
@@ -214,7 +316,7 @@ describe("isolation between users (spec §4.4, §11)", () => {
     });
     for (const attempt of [
       () => addToPocket(other, pocket.id, { cents: 1n, on: todayOn }),
-      () => recordWithdrawal(other, pocket.id, { cents: 1n, on: todayOn, reason: "x" }),
+      () => addPlannedExpense(other, pocket.id, { cents: 1n, dueOn: todayOn, description: "x" }),
       () => setPocketState(other, pocket.id, "archived"),
       () => updatePocket(other, pocket.id, pocketInput()),
     ]) {

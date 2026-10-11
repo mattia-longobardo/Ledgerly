@@ -164,7 +164,8 @@ export function PreferencesForm({
       <Field label={t("hoursPerDay")} htmlFor="hoursPerDay">
         <Input
           id="hoursPerDay"
-          numeric
+          // Left like the selects around it: `numeric` right-aligns, for amounts in a column.
+          className="tabular-nums"
           type="number"
           min={1}
           max={12}

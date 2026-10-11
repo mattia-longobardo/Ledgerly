@@ -5,7 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { parseAmount } from "@/modules/accounts/rules";
-import { deleteDocument, ImportError } from "@/modules/imports/service";
+import { ImportError } from "@/modules/imports/service";
 import { MAX_DOCUMENT_BYTES } from "@/modules/imports/rules";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
@@ -15,9 +15,12 @@ import { fillWithLlm } from "./llm";
 import {
   applyPayslip,
   decideField,
+  deletePayslip,
   PayrollError,
   processPayslip,
   rejectPayslip,
+  renamePayslip,
+  reopenPayslip,
   resetCode,
   retryPayslip,
   setCodeRole,
@@ -151,10 +154,40 @@ export async function retryPayslipAction(documentId: string): Promise<ActionResu
   }
 }
 
-export async function deletePayslipDocumentAction(documentId: string): Promise<ActionResult> {
+/** Deletes a payslip; an applied one leaves the register first. Says which of the two it did. */
+export async function deletePayslipDocumentAction(
+  documentId: string,
+): Promise<{ ok: true; unapplied: boolean; restored: boolean } | { ok: false; error: string }> {
   const ctx = await requireSession();
   try {
-    await deleteDocument(ctx, documentId);
+    const result = await deletePayslip(ctx, documentId);
+    revalidate(documentId);
+    if (result.unapplied) revalidatePath("/");
+    return { ok: true, ...result };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** Takes an applied payslip back to review; says whether the version it had replaced came back. */
+export async function reopenPayslipAction(
+  documentId: string,
+): Promise<{ ok: true; restored: boolean } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  try {
+    const { restored } = await reopenPayslip(ctx, documentId);
+    revalidate(documentId);
+    revalidatePath("/");
+    return { ok: true, restored };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function renamePayslipAction(documentId: string, name: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await renamePayslip(ctx, documentId, name);
     revalidate(documentId);
     return { ok: true };
   } catch (error) {

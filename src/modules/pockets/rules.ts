@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type CivilDate, isCivilDate, lastDayOfMonth, type MonthKey } from "@/platform/dates";
+import { addDays, type CivilDate, isCivilDate, lastDayOfMonth, type MonthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
 
 export const POCKET_STATES = ["active", "paused", "archived"] as const;
@@ -12,6 +12,44 @@ export interface MovementLike {
   kind: MovementKind;
   amountCents: Cents;
   on: CivilDate;
+}
+
+/**
+ * An expense counted against a pocket: every `expense` of its backing account since the start
+ * month, or the expenses linked to a standalone one by hand. The amount is positive.
+ */
+export interface PocketSpend {
+  on: CivilDate;
+  cents: Cents;
+}
+
+/**
+ * A pocket's ledger: its own movements and its expenses, the expenses as the negative movements
+ * they are. The monthly accrual raises a budget, it is not money put aside — so what is left is the
+ * budget accrued (plus anything added by hand) minus what was spent, and it carries over from one
+ * month to the next.
+ */
+export function pocketLedger(
+  movements: readonly MovementLike[],
+  spends: readonly PocketSpend[],
+): MovementLike[] {
+  return [
+    ...movements,
+    ...spends.map((spend) => ({ kind: "withdrawal" as const, amountCents: -spend.cents, on: spend.on })),
+  ];
+}
+
+/** The budget a pocket has been given: its accruals, deposits and adjustments, nothing spent. */
+export function pocketBudget(movements: readonly MovementLike[]): Cents {
+  return pocketBalance(movements.filter((movement) => movement.kind !== "withdrawal"));
+}
+
+/** How long a planned expense stays on the page after its day, unless removed sooner. */
+export const PLANNED_GRACE_DAYS = 7;
+
+/** Whether a planned expense is still shown and counted: up to a week past its day. */
+export function plannedVisible(dueOn: CivilDate, todayOn: CivilDate): boolean {
+  return addDays(dueOn, PLANNED_GRACE_DAYS) >= todayOn;
 }
 
 /** Spec §7.4: a pocket's balance is the sum of its movements. */
@@ -64,11 +102,6 @@ export function monthEndBalances(
   });
 }
 
-/** What was withdrawn on or after `from`, as the negative amount it is. */
-export function withdrawnSince(movements: readonly MovementLike[], from: CivilDate): Cents {
-  return pocketBalance(movements.filter((movement) => movement.kind === "withdrawal" && movement.on >= from));
-}
-
 const civilDate = z.string().refine(isCivilDate, "Not a civil date");
 const monthKey = civilDate.refine((value) => value.endsWith("-01"), "Not a month");
 const positive = z.bigint().positive();
@@ -100,4 +133,8 @@ export const moveSchema = z.object({
     .default(null),
 });
 
-export const withdrawalSchema = moveSchema.extend({ reason: z.string().trim().min(1).max(200) });
+export const plannedSchema = z.object({
+  cents: positive,
+  dueOn: civilDate,
+  description: z.string().trim().min(1).max(200),
+});

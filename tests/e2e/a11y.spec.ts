@@ -129,6 +129,16 @@ const PAGES: Screen[] = [
   { name: "/expenses", session: "layout", open: go("/expenses") },
   { name: "/budgets", session: "layout", open: go("/budgets") },
   { name: "/pockets", session: "layout", open: go("/pockets") },
+  {
+    name: "/pockets/[id] (on an account)",
+    session: "layout",
+    open: (page) => follow(page, "/pockets", "Holidays"),
+  },
+  {
+    name: "/pockets/[id] (standalone)",
+    session: "layout",
+    open: (page) => follow(page, "/pockets", "Gifts"),
+  },
   { name: "/subscriptions", session: "layout", open: go("/subscriptions") },
   { name: "/interests", session: "layout", open: go("/interests") },
   {
@@ -258,6 +268,18 @@ const OVERLAYS: Screen[] = [
         .getByRole("button", { name: /Add pocket|New pocket|Aggiungi/ })
         .first()
         .click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the rename payslip dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/payroll");
+      await settled(page);
+      await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"])');
+      await page.getByRole("button", { name: /^(Rename|Rinomina)$/ }).click();
       await settledDialog(page);
     },
   },

@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import {
   claimForExtraction,
   decideEvidence,
+  deleteDocument,
   type Document,
   type EvidenceInput,
   failExtraction,
@@ -10,6 +11,7 @@ import {
   ImportError,
   listEvidence,
   readOriginal,
+  renameDocument,
   requireDocument,
   transition,
   upsertEvidence,
@@ -564,40 +566,110 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
         .where(and(eq(payslips.id, payslip.id), userScoped(ctx).owns(payslips)))
         .returning();
       await writeLeave(ctx, applied, tx);
-      // The pension sink (spec §7.8): what this payslip accrued for the fund taking payroll.
-      const competence = pensionCompetenceOf(
-        applied,
-        await fundLineIds(ctx, applied.documentId, await codeMapOf(ctx), tx),
-      );
-      if (competence) await recordCompetence(ctx, competence, tx);
+      await recordPension(ctx, applied, tx);
       if (!(await transition(ctx, documentId, "applied", {}, tx))) throw new PayrollError("conflict");
-
-      // The next month's payslip, if applied, confirms its permits against this one.
-      if (identity.type === "ordinary" && identity.period) {
-        const [next] = await tx
-          .select()
-          .from(payslips)
-          .where(
-            and(
-              userScoped(ctx).owns(payslips),
-              eq(payslips.active, true),
-              eq(payslips.type, "ordinary"),
-              eq(payslips.employerKey, identity.employerKey),
-              eq(payslips.employeeKey, identity.employeeKey),
-              eq(payslips.period, addMonths(identity.period, 1)),
-            ),
-          );
-        if (next) {
-          await recompute(ctx, next.documentId, tx);
-          await writeLeave(ctx, next, tx);
-        }
-      }
+      await rereadNext(ctx, applied, tx);
       return applied;
     });
   } catch (error) {
     if (hasPgError(error, UNIQUE_VIOLATION, "payslips_active_key_uq")) throw new PayrollError("conflict");
     throw error;
   }
+}
+
+/** The pension sink (spec §7.8): what an applied payslip accrued for the fund taking payroll. */
+async function recordPension(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
+  const competence = pensionCompetenceOf(payslip, await fundLineIds(ctx, payslip.documentId, await codeMapOf(ctx), tx));
+  if (competence) await recordCompetence(ctx, competence, tx);
+}
+
+/** The next month's payslip, if applied, confirms its permits against this one: read them again. */
+async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
+  if (payslip.type !== "ordinary" || payslip.period === null) return;
+  const [next] = await tx
+    .select()
+    .from(payslips)
+    .where(
+      and(
+        userScoped(ctx).owns(payslips),
+        eq(payslips.active, true),
+        eq(payslips.type, "ordinary"),
+        eq(payslips.employerKey, payslip.employerKey),
+        eq(payslips.employeeKey, payslip.employeeKey),
+        eq(payslips.period, addMonths(payslip.period, 1)),
+      ),
+    );
+  if (next) {
+    await recompute(ctx, next.documentId, tx);
+    await writeLeave(ctx, next, tx);
+  }
+}
+
+/**
+ * Takes an applied payslip back to review so its values can be changed — `applyPayslip` undone, in
+ * one transaction: it leaves the register with its leave and its pension competence, the payslip it
+ * had replaced (a rectification) is applied again, and the next month's permits are read again.
+ * Applying it once more after the review puts everything back. Returns whether a replaced payslip
+ * was restored.
+ */
+export async function reopenPayslip(ctx: Pick<Ctx, "userId">, documentId: string): Promise<{ restored: boolean }> {
+  const document = await requireDocumentOf(ctx, documentId);
+  if (document.state !== "applied") throw new PayrollError("invalid_state");
+  return getDb().transaction(async (tx) => {
+    const [payslip] = await tx
+      .select()
+      .from(payslips)
+      .where(and(eq(payslips.documentId, documentId), userScoped(ctx).owns(payslips), eq(payslips.active, true)));
+    if (!payslip) throw new PayrollError("conflict");
+    await clearLeave(ctx, payslip.id, tx);
+    await dropCompetence(ctx, payslip.id, tx);
+    const [reopened] = await tx
+      .update(payslips)
+      .set({ active: false, appliedAt: null })
+      .where(and(eq(payslips.id, payslip.id), userScoped(ctx).owns(payslips)))
+      .returning();
+    if (!(await transition(ctx, documentId, "needs_review", {}, tx))) throw new PayrollError("conflict");
+
+    const [replaced] = await tx
+      .select()
+      .from(payslips)
+      .where(and(eq(payslips.supersededBy, payslip.id), userScoped(ctx).owns(payslips)))
+      .orderBy(desc(payslips.appliedAt), desc(payslips.id))
+      .limit(1);
+    if (replaced) {
+      const [restored] = await tx
+        .update(payslips)
+        .set({ active: true, supersededBy: null })
+        .where(and(eq(payslips.id, replaced.id), userScoped(ctx).owns(payslips)))
+        .returning();
+      if (!(await transition(ctx, restored.documentId, "applied", {}, tx))) throw new PayrollError("conflict");
+      await writeLeave(ctx, restored, tx);
+      await recordPension(ctx, restored, tx);
+    }
+    await rereadNext(ctx, reopened, tx);
+    return { restored: replaced !== undefined };
+  });
+}
+
+/**
+ * Deletes a payslip's document with its original. An applied one is reopened first, so it leaves
+ * the register as `reopenPayslip` takes it out — its leave and pension with it, the payslip it had
+ * replaced applied again — and only then is deleted. Says what it did.
+ */
+export async function deletePayslip(
+  ctx: Pick<Ctx, "userId">,
+  documentId: string,
+): Promise<{ unapplied: boolean; restored: boolean }> {
+  const document = await requireDocumentOf(ctx, documentId);
+  const { restored } = document.state === "applied" ? await reopenPayslip(ctx, documentId) : { restored: false };
+  await deleteDocument(ctx, documentId);
+  return { unapplied: document.state === "applied", restored };
+}
+
+/** Renames a payslip's document, whatever its state: the name the register and the review show. */
+export async function renamePayslip(ctx: Pick<Ctx, "userId">, documentId: string, name: string): Promise<Document> {
+  await requireDocumentOf(ctx, documentId);
+  return renameDocument(ctx, documentId, name);
 }
 
 async function clearLeave(ctx: Pick<Ctx, "userId">, payslipId: string, tx: Tx): Promise<void> {

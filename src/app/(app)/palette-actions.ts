@@ -26,7 +26,7 @@ export async function searchRecordsAction(query: string): Promise<RecordMatch[]>
       id: `pocket:${pocket.id}`,
       label: pocket.name,
       hint: t("pocket"),
-      href: `/pockets?pocket=${pocket.id}` as Route,
+      href: `/pockets/${pocket.id}` as Route,
     })),
     ...funds.map((fund) => ({
       id: `fund:${fund.id}`,

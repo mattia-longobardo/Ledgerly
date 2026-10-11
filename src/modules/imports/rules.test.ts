@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canTransition,
   cleanFileName,
+  documentName,
   DOCUMENT_STATES,
   retentionEnd,
   sniffFormat,
@@ -12,7 +13,7 @@ import {
 const bytes = (text: string) => new TextEncoder().encode(text);
 
 describe("the document states (spec §7.8)", () => {
-  it("allows the pipeline's path and Retry, and nothing out of a final state", () => {
+  it("allows the pipeline's path, Retry, and reopening an applied document", () => {
     expect(canTransition("received", "scanning")).toBe(true);
     expect(canTransition("scanning", "extracting")).toBe(true);
     expect(canTransition("extracting", "needs_review")).toBe(true);
@@ -22,16 +23,21 @@ describe("the document states (spec §7.8)", () => {
     expect(canTransition("applied", "superseded")).toBe(true);
     expect(canTransition("failed", "extracting")).toBe(true);
     expect(canTransition("rejected", "extracting")).toBe(true);
+    expect(canTransition("applied", "needs_review")).toBe(true);
+    expect(canTransition("superseded", "applied")).toBe(true);
 
     expect(canTransition("received", "applied")).toBe(false);
     expect(canTransition("needs_review", "applied")).toBe(false);
     expect(canTransition("applied", "rejected")).toBe(false);
     expect(canTransition("applied", "extracting")).toBe(false);
-    for (const to of DOCUMENT_STATES) expect(canTransition("superseded", to)).toBe(false);
+    for (const to of DOCUMENT_STATES.filter((state) => state !== "applied")) {
+      expect(canTransition("superseded", to)).toBe(false);
+    }
   });
 
   it("lists the states a move may start from", () => {
-    expect(sourcesOf("applied")).toEqual(["verified"]);
+    expect(sourcesOf("applied")).toEqual(["verified", "superseded"]);
+    expect(sourcesOf("needs_review")).toEqual(["extracting", "verified", "applied"]);
     expect(sourcesOf("superseded")).toEqual(["applied"]);
   });
 });
@@ -74,5 +80,14 @@ describe("cleanFileName", () => {
     expect(cleanFileName('../../evil"\n.pdf')).toBe("evil.pdf");
     expect(cleanFileName("   ")).toBe("document");
     expect(cleanFileName("a".repeat(300))).toHaveLength(200);
+  });
+});
+
+describe("documentName", () => {
+  it("cleans a name a person typed, and refuses one with nothing left in it", () => {
+    expect(documentName("  Cedolino marzo  ")).toBe("Cedolino marzo");
+    expect(documentName("marzo/aprile")).toBe("marzo-aprile");
+    expect(documentName("   ")).toBeNull();
+    expect(documentName('"\n')).toBeNull();
   });
 });

@@ -87,6 +87,8 @@ describe("jobs", () => {
       outcomes: [
         { job: "housekeeping", status: "success" },
         { job: "accounts-alerts", status: "success" },
+        { job: "interests-rematch", status: "success" },
+        { job: "pockets-planned-cleanup", status: "success" },
         { job: "documents-retention", status: "success" },
         { job: "holidays-refresh", status: "success" },
         // The real daily backup, which genuinely fails here: `pg_dump` is in the *application*

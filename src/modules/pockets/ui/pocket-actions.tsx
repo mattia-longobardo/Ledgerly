@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { parseAmount } from "@/modules/accounts/rules";
-import { formatMoney, type NumberFormat } from "@/platform/format";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
@@ -14,12 +14,16 @@ import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
 import {
   type ActionResult,
+  addPlannedExpenseAction,
   addToPocketAction,
   createPocketAction,
-  recordWithdrawalAction,
+  linkExpenseAction,
+  removePlannedExpenseAction,
   setPocketStateAction,
+  unlinkExpenseAction,
   updatePocketAction,
 } from "../actions";
+import type { LinkCandidate } from "../queries";
 
 /** A pocket as the dialogs need it; amounts stay cents so the dialogs can add to them. */
 export interface PocketSummary {
@@ -40,8 +44,11 @@ export interface PocketSummary {
 export interface DialogContext {
   accounts: readonly { id: string; name: string }[];
   numberFormat: NumberFormat;
+  locale: UiLocale;
   today: string;
   thisMonth: string;
+  /** What "Link an expense" offers; only a standalone pocket's page reads them. */
+  candidates?: readonly LinkCandidate[];
 }
 
 function useErrors() {
@@ -54,7 +61,10 @@ function useErrors() {
     "duplicate_name",
     "archived",
     "future_date",
-    "insufficient",
+    "past_date",
+    "backed",
+    "not_expense",
+    "already_linked",
   ];
   return {
     error,
@@ -111,7 +121,7 @@ export function PocketDialog({
       if (!report(result)) return;
       notify(t("toasts.saved"));
       onOpenChange(false);
-      if (!pocket && result.ok && "id" in result) router.push(`/pockets?pocket=${result.id}`);
+      if (!pocket && result.ok && "id" in result) router.push(`/pockets/${result.id}`);
     });
   }
 
@@ -298,8 +308,8 @@ export function AddToPocketDialog({
   );
 }
 
-/** "Record withdrawal" (design): money spent from the pocket, with its purpose. */
-export function WithdrawalDialog({
+/** "Plan an expense": one expected on a day to come, which only lowers what the pocket would have left. */
+export function PlannedExpenseDialog({
   open,
   onOpenChange,
   pocket,
@@ -320,13 +330,13 @@ export function WithdrawalDialog({
     const data = new FormData(event.currentTarget);
     const text = (key: string) => String(data.get(key) ?? "").trim();
     startTransition(async () => {
-      const result = await recordWithdrawalAction(pocket.id, {
+      const result = await addPlannedExpenseAction(pocket.id, {
         amount: text("amount"),
-        on: text("on"),
-        reason: text("reason"),
+        dueOn: text("due"),
+        description: text("description"),
       });
       if (!report(result)) return;
-      notify(t("toasts.withdrawn"));
+      notify(t("toasts.planned"));
       onOpenChange(false);
     });
   }
@@ -338,39 +348,43 @@ export function WithdrawalDialog({
         clear();
         onOpenChange(next);
       }}
-      title={t("withdraw.title")}
-      description={t("withdraw.description", { name: pocket.name })}
+      title={t("plan.title")}
+      description={t("plan.description", { name: pocket.name })}
     >
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
+        <Field label={t("plan.what")} htmlFor={`${id}-description`}>
+          <Input
+            id={`${id}-description`}
+            name="description"
+            required
+            maxLength={200}
+            autoFocus
+            placeholder={t("plan.whatPlaceholder")}
+          />
+        </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t("withdraw.amount")} htmlFor={`${id}-amount`}>
-            <Input id={`${id}-amount`} name="amount" inputMode="decimal" numeric autoFocus required />
+          <Field label={t("plan.amount")} htmlFor={`${id}-amount`}>
+            <InputGroup suffix="€">
+              <Input id={`${id}-amount`} name="amount" inputMode="decimal" numeric required />
+            </InputGroup>
           </Field>
-          <Field label={t("withdraw.date")} htmlFor={`${id}-on`}>
+          <Field label={t("plan.due")} htmlFor={`${id}-due`}>
             <Input
-              id={`${id}-on`}
-              name="on"
+              id={`${id}-due`}
+              name="due"
               type="date"
-              max={context.today}
+              min={context.today}
               defaultValue={context.today}
               required
             />
           </Field>
         </div>
-        <Field label={t("withdraw.purpose")} htmlFor={`${id}-reason`}>
-          <Input
-            id={`${id}-reason`}
-            name="reason"
-            required
-            maxLength={200}
-            placeholder={t("withdraw.purposePlaceholder")}
-          />
-        </Field>
+        <p className="text-sm text-muted">{t("plan.note")}</p>
         <ErrorLine error={error} />
         <div className="flex justify-end gap-2">
           <Button onClick={() => onOpenChange(false)}>{t("form.cancel")}</Button>
           <Button type="submit" variant="primary" disabled={pending}>
-            {t("withdraw.submit")}
+            {t("plan.submit")}
           </Button>
         </div>
       </form>
@@ -378,12 +392,207 @@ export function WithdrawalDialog({
   );
 }
 
-type Dialog = "add" | "withdraw" | "edit" | "new" | null;
+/** "Link an expense": files one of the recent expenses under a standalone pocket. */
+export function LinkExpenseDialog({
+  open,
+  onOpenChange,
+  pocket,
+  context,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  pocket: PocketSummary;
+  context: DialogContext;
+}) {
+  const t = useTranslations("pockets");
+  const id = useId();
+  const [pending, startTransition] = useTransition();
+  const { error, clear, report } = useErrors();
+  const candidates = context.candidates ?? [];
+  const money = (cents: Cents) => formatMoney(-cents, context.numberFormat);
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const transactionId = String(new FormData(event.currentTarget).get("expense") ?? "");
+    startTransition(async () => {
+      if (!report(await linkExpenseAction(pocket.id, transactionId))) return;
+      notify(t("toasts.linked"));
+      onOpenChange(false);
+    });
+  }
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={(next) => {
+        clear();
+        onOpenChange(next);
+      }}
+      title={t("link.title")}
+      description={t("link.description", { name: pocket.name })}
+      width={520}
+    >
+      {candidates.length === 0 ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted">{t("link.empty")}</p>
+          <div className="flex justify-end">
+            <Button onClick={() => onOpenChange(false)}>{t("form.cancel")}</Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
+          <Field label={t("link.expense")} htmlFor={`${id}-expense`}>
+            <Select id={`${id}-expense`} name="expense" required defaultValue={candidates[0].id}>
+              {candidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {[
+                    formatDate(candidate.on, "dayMonth", context.locale),
+                    candidate.payee ?? t("expenses.noPayee"),
+                    money(candidate.cents),
+                    candidate.accountName,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <ErrorLine error={error} />
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => onOpenChange(false)}>{t("form.cancel")}</Button>
+            <Button type="submit" variant="primary" disabled={pending}>
+              {t("link.submit")}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
+/** Asks before something goes, and says afterwards that it went. */
+function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirm,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  confirm: string;
+  onConfirm: () => Promise<boolean>;
+}) {
+  const t = useTranslations("pockets");
+  const [pending, startTransition] = useTransition();
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      width={420}
+      footer={
+        <>
+          <Button onClick={() => onOpenChange(false)}>{t("form.cancel")}</Button>
+          <Button
+            variant="danger"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                if (await onConfirm()) onOpenChange(false);
+              })
+            }
+          >
+            {confirm}
+          </Button>
+        </>
+      }
+    >
+      {null}
+    </Modal>
+  );
+}
+
+/** "Remove" on a planned expense. */
+export function RemovePlannedButton({ id, description }: { id: string; description: string }) {
+  const t = useTranslations("pockets");
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
+        {t("planned.remove")}
+        <span className="sr-only"> {description}</span>
+      </Button>
+      {open && (
+        <ConfirmDialog
+          open
+          onOpenChange={setOpen}
+          title={t("planned.confirmTitle")}
+          description={t("planned.confirmDescription", { description })}
+          confirm={t("planned.remove")}
+          onConfirm={async () => {
+            const result = await removePlannedExpenseAction(id);
+            notify(
+              result.ok ? t("toasts.plannedRemoved", { description }) : t("errors.failed"),
+              result.ok ? "success" : "error",
+            );
+            return result.ok;
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/** "Unlink" on an expense filed under a standalone pocket by hand. */
+export function UnlinkExpenseButton({
+  pocketId,
+  transactionId,
+  label,
+}: {
+  pocketId: string;
+  transactionId: string;
+  label: string;
+}) {
+  const t = useTranslations("pockets");
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
+        {t("expenses.unlink")}
+        <span className="sr-only"> {label}</span>
+      </Button>
+      {open && (
+        <ConfirmDialog
+          open
+          onOpenChange={setOpen}
+          title={t("expenses.confirmTitle")}
+          description={t("expenses.confirmDescription", { label })}
+          confirm={t("expenses.unlink")}
+          onConfirm={async () => {
+            const result = await unlinkExpenseAction(pocketId, transactionId);
+            notify(
+              result.ok ? t("toasts.unlinked", { label }) : t("errors.failed"),
+              result.ok ? "success" : "error",
+            );
+            return result.ok;
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+type Dialog = "add" | "plan" | "link" | "edit" | "new" | null;
 
 /**
- * The pocket's buttons and the dialogs they open. `place` decides which: the top bar has the
- * design's primary and secondary action, the detail card all three plus the state menu, the list a
- * single "New pocket".
+ * The pocket's buttons and the dialogs they open. `place` decides which: the top bar of a pocket's
+ * page has its two main actions (of the list, "New pocket"), the detail card every action plus the
+ * state menu, the list a single "New pocket".
  */
 export function PocketActions({
   place,
@@ -395,6 +604,7 @@ export function PocketActions({
   context: DialogContext;
 }) {
   const t = useTranslations("pockets");
+  const router = useRouter();
   const [open, setOpen] = useState<Dialog>(null);
   const [, startTransition] = useTransition();
   const change = (dialog: Dialog) => (next: boolean) => setOpen(next ? dialog : null);
@@ -404,10 +614,12 @@ export function PocketActions({
     startTransition(async () => {
       const result = await setPocketStateAction(pocket.id, state);
       notify(result.ok ? toast : t("errors.failed"), result.ok ? "success" : "error");
+      if (result.ok && state === "archived") router.push("/pockets");
     });
   }
 
   const movable = pocket !== null && pocket.state !== "archived";
+  const standalone = pocket !== null && pocket.backingAccountId === null;
   return (
     <>
       {place === "new" && (
@@ -426,8 +638,8 @@ export function PocketActions({
       )}
       {place === "topbar" && movable && (
         <>
-          <Button size="sm" onClick={() => setOpen("withdraw")}>
-            {t("actions.withdraw")}
+          <Button size="sm" onClick={() => setOpen("plan")}>
+            {t("actions.plan")}
           </Button>
           <Button size="sm" variant="primary" onClick={() => setOpen("add")}>
             {t("actions.add")}
@@ -444,9 +656,14 @@ export function PocketActions({
           <Button variant="primary" size="sm" onClick={() => setOpen("add")} disabled={!movable}>
             {t("actions.add")}
           </Button>
-          <Button size="sm" onClick={() => setOpen("withdraw")} disabled={!movable}>
-            {t("actions.withdraw")}
+          <Button size="sm" onClick={() => setOpen("plan")} disabled={!movable}>
+            {t("actions.plan")}
           </Button>
+          {standalone && (
+            <Button size="sm" onClick={() => setOpen("link")} disabled={!movable}>
+              {t("actions.link")}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setOpen("edit")}>
             {t("actions.edit")}
           </Button>
@@ -477,8 +694,11 @@ export function PocketActions({
       {open === "add" && pocket && (
         <AddToPocketDialog open onOpenChange={change("add")} pocket={pocket} context={context} />
       )}
-      {open === "withdraw" && pocket && (
-        <WithdrawalDialog open onOpenChange={change("withdraw")} pocket={pocket} context={context} />
+      {open === "plan" && pocket && (
+        <PlannedExpenseDialog open onOpenChange={change("plan")} pocket={pocket} context={context} />
+      )}
+      {open === "link" && pocket && (
+        <LinkExpenseDialog open onOpenChange={change("link")} pocket={pocket} context={context} />
       )}
     </>
   );

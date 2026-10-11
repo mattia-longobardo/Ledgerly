@@ -8,7 +8,7 @@ import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
 import { interestRules } from "./schema";
 import { ensureFreshBalances, type FreshnessOptions, type StaleReason } from "./freshness";
-import { postPending } from "./posting";
+import { lookUpUnsure, postPending } from "./posting";
 import { runsAt } from "./rules";
 import { bringUpToDate } from "./service";
 
@@ -120,5 +120,22 @@ export const interestsAccrualJob: JobDefinition = {
       // nothing fresh to accrue on, without a row per rule in a job detail.
       staleReasons: reasons.size === 0 ? null : [...reasons].sort().join(", "),
     };
+  },
+};
+
+/**
+ * Every day (spec §10.2): a second look for the Wallet record of every settlement left unsure. It
+ * only looks and never posts again — a repeat could be a second record of the same money — so what
+ * it does not find stays unsure, with "Retry" on its page.
+ */
+export const interestsRematchJob: JobDefinition = {
+  name: "interests-rematch",
+  tier: "daily",
+  async run(): Promise<JobDetail> {
+    let matched = 0;
+    const counts = await forEachUser("interests-rematch", async (_person, ctx) => {
+      matched += await lookUpUnsure(ctx);
+    });
+    return { ...counts, matched };
   },
 };

@@ -8,11 +8,14 @@ import { parseAmount } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import {
+  addPlannedExpense,
   addToPocket,
   createPocket,
+  linkExpense,
   PocketError,
-  recordWithdrawal,
+  removePlannedExpense,
   setPocketState,
+  unlinkExpense,
   updatePocket,
 } from "./service";
 
@@ -26,7 +29,7 @@ function failed(error: unknown): { ok: false; error: string } {
 }
 
 function revalidate(): void {
-  revalidatePath("/pockets");
+  revalidatePath("/pockets", "layout");
   revalidatePath("/");
 }
 
@@ -105,17 +108,50 @@ export async function addToPocketAction(
   }
 }
 
-export async function recordWithdrawalAction(
+export async function linkExpenseAction(id: string, transactionId: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await linkExpense(ctx, id, z.uuid().parse(transactionId));
+    revalidate();
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function unlinkExpenseAction(id: string, transactionId: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await unlinkExpense(ctx, id, z.uuid().parse(transactionId));
+    revalidate();
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function addPlannedExpenseAction(
   id: string,
-  input: { amount: string; on: string; reason: string },
+  input: { amount: string; dueOn: string; description: string },
 ): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    await recordWithdrawal(ctx, id, {
+    await addPlannedExpense(ctx, id, {
       cents: parseAmount(input.amount, ctx.numberFormat),
-      on: input.on,
-      reason: input.reason,
+      dueOn: input.dueOn,
+      description: input.description,
     });
+    revalidate();
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function removePlannedExpenseAction(id: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await removePlannedExpense(ctx, id);
     revalidate();
     return { ok: true };
   } catch (error) {

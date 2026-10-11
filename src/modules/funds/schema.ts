@@ -234,6 +234,13 @@ export const pensionRules = pgTable(
     tfrPct: numeric("tfr_pct", { precision: 7, scale: 4 }),
     schedule: jsonb("schedule").$type<ScheduleEntry[]>(),
     toleranceDays: smallint("tolerance_days").notNull().default(15),
+    /** The fees Settings records beside the schedule (GC §6.1), for a fund with no export. */
+    enrollmentFeeCents: money("enrollment_fee_cents")
+      .notNull()
+      .default(sql`0`),
+    quarterFeeCents: money("quarter_fee_cents")
+      .notNull()
+      .default(sql`0`),
     source: text("source"),
     verifiedOn: date("verified_on"),
     ...timestamps,
@@ -246,6 +253,10 @@ export const pensionRules = pgTable(
       sql`${table.validTo} is null or ${table.validTo} >= ${table.validFrom}`,
     ),
     check("pension_rules_tolerance_ck", sql`${table.toleranceDays} between 0 and 120`),
+    check(
+      "pension_rules_fees_ck",
+      sql`${table.enrollmentFeeCents} between 0 and 100000 and ${table.quarterFeeCents} between 0 and 100000`,
+    ),
     check(
       "pension_rules_pct_ck",
       sql`coalesce(${table.workerPct}, 0) between 0 and 100 and coalesce(${table.employerPct}, 0) between 0 and 100 and coalesce(${table.tfrPct}, 0) between 0 and 100`,

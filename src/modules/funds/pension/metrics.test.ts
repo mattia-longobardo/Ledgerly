@@ -10,7 +10,7 @@ import {
   valuePoints,
 } from "./metrics";
 import { type OperationLike, reconcile } from "./reconcile";
-import { COMETA_SCHEDULE, DEFAULT_TOLERANCE_DAYS } from "./rules";
+import { COMETA_FEES, COMETA_SCHEDULE, DEFAULT_TOLERANCE_DAYS, netOfFees } from "./rules";
 
 /** The twin fund of `tests/fixtures/cometa`: invented amounts that add up like the real ones. */
 
@@ -155,7 +155,7 @@ function payslipsOnly(value: { cents: bigint; on: string; source: "statement" | 
     freshness: null,
     today: "2032-03-31",
   });
-  return pensionMetrics({ value, operations: [], movements: [], quarters });
+  return pensionMetrics({ value, operations: [], movements: [], quarters, fees: COMETA_FEES });
 }
 
 describe("the six quantities (GC §1, §9, §12)", () => {
@@ -281,13 +281,26 @@ describe("the six quantities (GC §1, §9, §12)", () => {
     it("measures the gain against what the schedule has carried by the value's date", () => {
       const metrics = payslipsOnly({ cents: 100_000n, on: "2032-01-31", source: "manual" });
       // Only I 2031 is a whole quarter here: II and IV are missing payslips of their own, so they
-      // are incomplete data and nothing says they were carried.
-      expect(metrics.transferredCents).toBe(66_000n);
+      // are incomplete data and nothing says they were carried. 660.00 with its 10.32 of enrolment
+      // quotas, gross: the fees are inside what was paid, as the provider's own site counts it.
+      expect(metrics.transferredCents).toBe(67_032n);
       expect(metrics.standsOnPayslips).toBe(true);
       expect(metrics.paidInCents).toBe(0n);
-      expect(metrics.gainBasisCents).toBe(66_000n);
-      expect(metrics.gainCents).toBe(34_000n);
-      expect(metrics.gainFraction).toBeCloseTo(34_000 / 66_000, 6);
+      expect(metrics.gainBasisCents).toBe(67_032n);
+      expect(metrics.gainCents).toBe(32_968n);
+      expect(metrics.gainFraction).toBeCloseTo(32_968 / 67_032, 6);
+    });
+
+    it("estimates the fees from Settings and closes the bridge with them", () => {
+      const metrics = payslipsOnly({ cents: 100_000n, on: "2032-01-31", source: "manual" });
+      expect(metrics.enrollmentCents).toBe(1_032n);
+      expect(metrics.feesEnrollmentCents).toBe(1_032n);
+      expect(metrics.feesAssociationCents).toBe(300n);
+      expect(metrics.feesCents).toBe(1_332n);
+      const lines = bridge(metrics)!;
+      expect(lines.find((line) => line.key === "other")).toBeUndefined();
+      expect(lines.find((line) => line.key === "paidIn")?.cents).toBe(67_032n);
+      expect(lines.find((line) => line.key === "invested")?.cents).toBe(65_700n);
     });
 
     it("draws the paid-in line stepping at each deadline, not flat at zero", () => {
@@ -301,10 +314,10 @@ describe("the six quantities (GC §1, §9, §12)", () => {
         today: "2032-03-31",
       });
       const months: MonthKey[] = ["2031-03-01", "2031-04-01", "2031-05-01"];
-      // I 2031 lands on 20 Apr 2031: nothing in March, 66 000 from April on.
-      expect(paidInAt([], months, quarters)).toEqual([0n, 66_000n, 66_000n]);
-      // With an operation of its own the fund's own figures win: `FIRST` is worth the same 66 000,
-      // so adding the stand-in on top of it would read 132 000 here.
+      // I 2031 lands on 20 Apr 2031: nothing in March, 670.32 with its enrolment from April on.
+      expect(paidInAt([], months, quarters)).toEqual([0n, 67_032n, 67_032n]);
+      // With an operation of its own the fund's own figures win: `FIRST` is worth 660.00, so
+      // adding the stand-in on top of it would read 1 330.32 here.
       expect(paidInAt([FIRST], months, quarters)).toEqual([0n, 66_000n, 66_000n]);
     });
 
@@ -312,7 +325,7 @@ describe("the six quantities (GC §1, §9, §12)", () => {
       // I 2031 falls due on 20 Apr 2031: a value dated the day before cannot contain it, so
       // nothing is known to be inside that value and it is a position, not a gain.
       const metrics = payslipsOnly({ cents: 100_000n, on: "2031-04-19", source: "manual" });
-      expect(metrics.transferredCents).toBe(66_000n);
+      expect(metrics.transferredCents).toBe(67_032n);
       expect(metrics.gainBasisCents).toBe(0n);
       expect(metrics.gainCents).toBeNull();
       expect(metrics.gainReason).toBe("nothing_paid");
@@ -338,5 +351,18 @@ describe("the six quantities (GC §1, §9, §12)", () => {
       expect(metrics.gainCents).toBeNull();
       expect(metrics.gainReason).toBe("nothing_paid");
     });
+  });
+});
+
+describe("fees off a transfer (GC §6.1)", () => {
+  it("takes the quarterly fee off a contribution and the enrolment fee off the enrolment only", () => {
+    expect(netOfFees(66_000n, 1_032n, COMETA_FEES)).toEqual({
+      grossCents: 67_032n,
+      feesCents: 1_332n,
+      netCents: 65_700n,
+    });
+    expect(netOfFees(66_000n, 0n, COMETA_FEES).netCents).toBe(65_700n);
+    // Never more enrolment fee than the enrolment quotas themselves.
+    expect(netOfFees(0n, 500n, COMETA_FEES)).toEqual({ grossCents: 500n, feesCents: 500n, netCents: 0n });
   });
 });

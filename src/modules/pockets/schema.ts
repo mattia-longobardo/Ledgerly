@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
+import { transactions } from "../transactions/schema";
 import { MOVEMENT_KINDS, POCKET_STATES } from "./rules";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
@@ -105,6 +106,71 @@ export const pocketMovements = pgTable(
     check(
       "pocket_movements_reason_ck",
       sql`${table.kind} not in ('withdrawal', 'adjustment') or length(btrim(coalesce(${table.reason}, ''))) between 1 and 200`,
+    ),
+  ],
+);
+
+/**
+ * An expense filed under a standalone pocket by hand. A pocket on an account needs none: every
+ * expense of its account counts already. One pocket per expense, enforced here; the link goes with
+ * the movement when the movement goes.
+ */
+export const pocketExpenseLinks = pgTable(
+  "pocket_expense_links",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pocketId: uuid("pocket_id")
+      .notNull()
+      .references(() => pockets.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("pocket_expense_links_transaction_uq").on(table.transactionId),
+    index("pocket_expense_links_pocket_idx").on(table.pocketId),
+    index("pocket_expense_links_user_idx").on(table.userId),
+  ],
+);
+
+/**
+ * An expense the person expects to make from a pocket, on the day they expect it. Nothing moves:
+ * it only shows what would be left. It stays a week past its day, then the daily job drops it.
+ */
+export const pocketPlannedExpenses = pgTable(
+  "pocket_planned_expenses",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pocketId: uuid("pocket_id")
+      .notNull()
+      .references(() => pockets.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
+    dueOn: date("due_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("pocket_planned_expenses_pocket_due_idx").on(table.pocketId, table.dueOn),
+    index("pocket_planned_expenses_user_idx").on(table.userId),
+    check("pocket_planned_expenses_amount_ck", sql`${table.amountCents} > 0`),
+    check(
+      "pocket_planned_expenses_description_ck",
+      sql`length(btrim(${table.description})) between 1 and 200`,
     ),
   ],
 );

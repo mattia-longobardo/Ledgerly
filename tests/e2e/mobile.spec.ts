@@ -99,20 +99,20 @@ test.describe("budgets on a phone", () => {
   });
 });
 
-/** The Pockets page at 400 px (spec §8.2, §11): list above the detail, nothing sideways. */
+/** The Pockets pages at 400 px (spec §8.2, §11): the cards, then a pocket's page, nothing sideways. */
 test.describe("pockets on a phone", () => {
   test.use({ storageState: sessionState("pockets") });
 
-  test("the list sits above the pocket and the page fits the screen", async ({ page }) => {
+  test("the cards lead to the pocket's page and both fit the screen", async ({ page }) => {
+    const overflow = () =>
+      page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     await page.goto("/pockets");
-    const card = page.getByTestId("pocket-card").first();
-    const detail = page.getByTestId("pocket-detail");
-    await expect(detail).toBeVisible();
-    expect((await card.boundingBox())!.y).toBeLessThan((await detail.boundingBox())!.y);
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
+    await expect(page.getByTestId("pocket-card").first()).toBeVisible();
+    expect(await overflow()).toBeLessThanOrEqual(0);
+    await page.getByTestId("pocket-card").filter({ hasText: "Holidays" }).click();
+    await expect(page.getByTestId("pocket-detail")).toBeVisible();
+    await expect(page.getByTestId("pocket-expenses")).toContainText("Ischia");
+    expect(await overflow()).toBeLessThanOrEqual(0);
   });
 });
 

@@ -1,7 +1,7 @@
 import { type CivilDate, lastDayOfMonth, type MonthKey, monthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
 import { accruedTotal, awaitingCredit, type OperationLike, type QuarterStatus } from "./reconcile";
-import { type Quarter } from "./rules";
+import { netOfFees, NO_FEES, type PensionFees, type Quarter } from "./rules";
 
 /**
  * The pension fund's figures (spec §7.7; GC §1, §9.1–9.3, §12; plan F6 §3.4.7): six quantities that
@@ -37,9 +37,13 @@ export interface PensionMetrics {
   value: DatedValue | null;
   /** Worker + employer + TFR of the payslips (enrolment apart). */
   accruedCents: Cents;
-  /** Gross inflows of contributions, enrolment and voluntary payments (GC §9.1), up to the value's date. */
+  /**
+   * Gross inflows of contributions, enrolment and voluntary payments (GC §9.1), fees included —
+   * what the provider's own site measures the gain against (owner, 2026-10-11) —, up to the
+   * value's date.
+   */
   paidInCents: Cents;
-  /** Of which the enrolment fees. */
+  /** Of which the enrolment quotas. */
   enrollmentCents: Cents;
   /** Of which voluntary payments. */
   voluntaryCents: Cents;
@@ -71,8 +75,9 @@ export interface PensionMetrics {
   pending: PendingQuarter[];
   /**
    * Accrued of the quarters whose transfer deadline has passed with no export to check them
-   * against (GC §1 keeps it apart from {@link PensionMetrics.paidInCents}, which only the fund's
-   * own operations feed): what the schedule in Settings says has reached the fund by now.
+   * against, their enrolment quotas included (GC §1 keeps it apart from
+   * {@link PensionMetrics.paidInCents}, which only the fund's own operations feed): what the
+   * schedule in Settings says has reached the fund by now.
    */
   transferredCents: Cents;
   /** The last month of the last quarter the fund credited (GC §12 "coperte fino a"). */
@@ -133,13 +138,25 @@ function ratio(part: Cents, whole: Cents): number {
 const gross = (operation: OperationLike) =>
   operation.workerCents + operation.employerCents + operation.tfrCents + operation.otherCents;
 
+/**
+ * A transferred quarter as the payslips tell it, with no export: worker + employer + TFR and the
+ * enrolment quotas gross, and the fees Settings records as the estimate of what was taken off.
+ */
+function transferredFlow(quarter: QuarterStatus, fees: PensionFees) {
+  const enrollment = quarter.components.find((one) => one.component === "enrollment")?.accruedCents ?? 0n;
+  return netOfFees(accruedTotal(quarter) ?? 0n, enrollment, fees);
+}
+
 export function pensionMetrics(input: {
   value: DatedValue | null;
   operations: readonly OperationLike[];
   movements: readonly MovementLike[];
   quarters: readonly QuarterStatus[];
+  /** The fees Settings records, for the quarters only the payslips know of. */
+  fees?: PensionFees;
 }): PensionMetrics {
   const { value, quarters } = input;
+  const fees = input.fees ?? NO_FEES;
   const until = value?.on ?? null;
   const counted = input.operations.filter((operation) => until === null || operation.operationDate <= until);
   const later = input.operations.filter((operation) => until !== null && operation.operationDate > until);
@@ -162,7 +179,7 @@ export function pensionMetrics(input: {
   // (GC §1 keeps it apart from what the fund's own operations say was credited).
   const transferred = quarters.filter((quarter) => quarter.status === "transferred");
   const transferredCents = transferred.reduce<Cents>(
-    (sum, quarter) => sum + (accruedTotal(quarter) ?? 0n),
+    (sum, quarter) => sum + transferredFlow(quarter, fees).grossCents,
     0n,
   );
 
@@ -177,7 +194,7 @@ export function pensionMetrics(input: {
   const basis = standsOnPayslips
     ? transferred
         .filter((quarter) => quarter.due !== null && (until === null || quarter.due <= until))
-        .reduce<Cents>((sum, quarter) => sum + (accruedTotal(quarter) ?? 0n), 0n)
+        .reduce<Cents>((sum, quarter) => sum + transferredFlow(quarter, fees).grossCents, 0n)
     : paidIn;
 
   let gainCents: Cents | null = null;
@@ -221,20 +238,40 @@ export function pensionMetrics(input: {
     .sort((a, b) => (a.unitPriceDate! < b.unitPriceDate! ? -1 : a.unitPriceDate! > b.unitPriceDate! ? 1 : 0));
   const lastPriced = priced.at(-1);
 
-  const fees = (classes: readonly string[]) =>
+  const feesOf = (classes: readonly string[]) =>
     total(byClass(classes, input.operations), (operation) => operation.feesCents);
+  // With no operation of its own, the fees are the ones Settings records, quarter by quarter.
+  const estimated = transferred.map((quarter) => {
+    const enrollment = quarter.components.find((one) => one.component === "enrollment")?.accruedCents ?? 0n;
+    const flow = transferredFlow(quarter, fees);
+    const enrollmentFee = netOfFees(0n, enrollment, fees).feesCents;
+    return { enrollment, enrollmentFee, associationFee: flow.feesCents - enrollmentFee };
+  });
+  const estimatedSum = (pick: (one: (typeof estimated)[number]) => Cents) =>
+    estimated.reduce<Cents>((sum, one) => sum + pick(one), 0n);
+  const feesEnrollmentCents = standsOnPayslips
+    ? estimatedSum((one) => one.enrollmentFee)
+    : feesOf(["enrollment"]);
+  const feesAssociationCents = standsOnPayslips
+    ? estimatedSum((one) => one.associationFee)
+    : feesOf(["contribution", "voluntary"]);
+  const feesOtherCents = feesOf(["transfer_in", "switch", "withdrawal", "other"]);
   return {
     value,
     accruedCents: quarters.reduce<Cents>((sum, quarter) => sum + (accruedTotal(quarter) ?? 0n), 0n),
     paidInCents: paidIn,
-    enrollmentCents: total(byClass(["enrollment"]), gross),
+    enrollmentCents: standsOnPayslips
+      ? estimatedSum((one) => one.enrollment)
+      : total(byClass(["enrollment"]), gross),
     voluntaryCents: total(byClass(["voluntary"]), gross),
     transfersInCents: transfersIn,
     withdrawalsCents,
-    feesCents: total(input.operations, (operation) => operation.feesCents),
-    feesEnrollmentCents: fees(["enrollment"]),
-    feesAssociationCents: fees(["contribution", "voluntary"]),
-    feesOtherCents: fees(["transfer_in", "switch", "withdrawal", "other"]),
+    feesCents: standsOnPayslips
+      ? feesEnrollmentCents + feesAssociationCents + feesOtherCents
+      : total(input.operations, (operation) => operation.feesCents),
+    feesEnrollmentCents,
+    feesAssociationCents,
+    feesOtherCents,
     investedCents: total(input.operations, (operation) => operation.netCents),
     gainCents,
     gainBasisCents: basis,
@@ -355,16 +392,16 @@ export function heldAt(
   });
 }
 
-/** What had been paid in by each month's end (gross inflows, by operation date). */
 /**
- * Every payment into the fund, with the day it landed: its own operations when it has any, and
- * otherwise what the transfer schedule has carried, each quarter at its own deadline — the same
- * figure the "Paid in" tile shows (owner, 2026-09-20). One source or the other, never both: a
- * quarter that has an operation is that operation.
+ * Every payment into the fund, gross, with the day it landed: its own operations when it has any,
+ * and otherwise what the transfer schedule has carried, each quarter at its own deadline with its
+ * enrolment quotas — the same figure the "Paid in" tile shows (owner, 2026-09-20). One source or
+ * the other, never both: a quarter that has an operation is that operation.
  */
 export function paidInFlows(
   operations: readonly OperationLike[],
   quarters: readonly QuarterStatus[] = [],
+  fees: PensionFees = NO_FEES,
 ): { on: CivilDate; chargedCents: Cents }[] {
   const inflows = operations.filter((operation) =>
     ["contribution", "enrollment", "voluntary", "transfer_in"].includes(operation.classification),
@@ -374,7 +411,7 @@ export function paidInFlows(
   }
   return quarters
     .filter((quarter) => quarter.status === "transferred" && quarter.due !== null)
-    .map((quarter) => ({ on: quarter.due!, chargedCents: accruedTotal(quarter) ?? 0n }));
+    .map((quarter) => ({ on: quarter.due!, chargedCents: transferredFlow(quarter, fees).grossCents }));
 }
 
 /** What had gone in by the end of each month: the "paid in" line of the chart. */
@@ -382,8 +419,9 @@ export function paidInAt(
   operations: readonly OperationLike[],
   months: readonly MonthKey[],
   quarters: readonly QuarterStatus[] = [],
+  fees: PensionFees = NO_FEES,
 ): Cents[] {
-  const flows = paidInFlows(operations, quarters);
+  const flows = paidInFlows(operations, quarters, fees);
   return months.map((month) => {
     const end = lastDayOfMonth(month);
     return flows.filter((flow) => flow.on <= end).reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);

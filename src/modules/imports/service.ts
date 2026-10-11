@@ -9,6 +9,7 @@ import { userScoped } from "@/platform/db/scope";
 import { deleteObject, getObject, putObject } from "@/platform/storage";
 import {
   cleanFileName,
+  documentName,
   type DocumentKind,
   type DocumentState,
   type EvidenceOrigin,
@@ -29,7 +30,13 @@ export type Evidence = typeof documentEvidence.$inferSelect;
 type Executor = Db | Tx;
 
 export type ImportErrorCode =
-  "not_found" | "empty" | "too_large" | "unsupported_format" | "storage_failed" | "invalid_state";
+  | "not_found"
+  | "empty"
+  | "too_large"
+  | "unsupported_format"
+  | "storage_failed"
+  | "invalid_state"
+  | "invalid_name";
 
 export class ImportError extends Error {
   constructor(readonly code: ImportErrorCode) {
@@ -234,6 +241,19 @@ export async function stuckDocuments(
       ),
     )
     .orderBy(asc(documents.receivedAt), asc(documents.id));
+}
+
+/** Gives a document another name, in any state: only the name shown, never the stored original's key. */
+export async function renameDocument(ctx: Pick<Ctx, "userId">, id: string, name: string): Promise<Document> {
+  const fileName = documentName(name);
+  if (fileName === null) throw new ImportError("invalid_name");
+  const [row] = await getDb()
+    .update(documents)
+    .set({ fileName })
+    .where(and(eq(documents.id, id), userScoped(ctx).owns(documents)))
+    .returning();
+  if (!row) throw new ImportError("not_found");
+  return row;
 }
 
 /** States from which a document may be deleted: nothing was applied from it. */
