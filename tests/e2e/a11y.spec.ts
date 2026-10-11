@@ -129,6 +129,16 @@ const PAGES: Screen[] = [
   { name: "/expenses", session: "layout", open: go("/expenses") },
   { name: "/budgets", session: "layout", open: go("/budgets") },
   { name: "/pockets", session: "layout", open: go("/pockets") },
+  {
+    name: "/pockets/[id] (on an account)",
+    session: "layout",
+    open: (page) => follow(page, "/pockets", "Holidays"),
+  },
+  {
+    name: "/pockets/[id] (standalone)",
+    session: "layout",
+    open: (page) => follow(page, "/pockets", "Gifts"),
+  },
   { name: "/subscriptions", session: "layout", open: go("/subscriptions") },
   { name: "/interests", session: "layout", open: go("/interests") },
   {

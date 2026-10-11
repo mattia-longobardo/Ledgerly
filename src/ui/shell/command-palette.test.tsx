@@ -102,7 +102,7 @@ describe("CommandPalette", () => {
 
   it("offers the pockets and subscriptions found by name, before the payees (spec §8.2)", async () => {
     const searchRecords = vi.fn(async () => [
-      { id: "pocket:p-1", label: "Holidays", hint: "Pocket", href: "/pockets?pocket=p-1" as Route },
+      { id: "pocket:p-1", label: "Holidays", hint: "Pocket", href: "/pockets/p-1" as Route },
     ]);
     const searchPayees = vi.fn(async () => [{ payee: "Holiday Inn", count: 2 }]);
     render(
@@ -121,7 +121,7 @@ describe("CommandPalette", () => {
       names.findIndex((name) => name?.includes("Holiday Inn")),
     );
     await userEvent.click(pocket);
-    expect(push).toHaveBeenCalledWith("/pockets?pocket=p-1");
+    expect(push).toHaveBeenCalledWith("/pockets/p-1");
   });
 
   it("asks once for the settled query, not once per keystroke", async () => {

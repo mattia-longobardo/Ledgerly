@@ -101,6 +101,33 @@ async function noteFor(
   });
 }
 
+/** The settlement is in Wallet as `recordId`: mark it posted and remember the link, together. */
+async function settlePosted(
+  ctx: Pick<Ctx, "userId">,
+  entryId: string,
+  recordId: string,
+  note: string | null,
+): Promise<void> {
+  await getDb().transaction(async (tx) => {
+    await tx
+      .update(interestEntries)
+      // `posted` with a note, not a failure: the money is in Wallet, only its filing is not.
+      .set({ posting: "posted", postedAt: new Date(), postingError: note })
+      .where(and(eq(interestEntries.id, entryId), userScoped(ctx).owns(interestEntries)));
+    await linkExternal(
+      ctx,
+      {
+        provider: WALLET_PROVIDER,
+        entityType: "interest_entry",
+        entityId: entryId,
+        externalId: recordId,
+      },
+      new Date(),
+      tx,
+    );
+  });
+}
+
 /**
  * Publishes one settlement to Wallet (spec §7.6, §9.1; plan F4 §3.4.6), with the defence against a
  * double posting:
@@ -187,24 +214,7 @@ export async function postEntry(
         return "indeterminate";
       }
     }
-    await getDb().transaction(async (tx) => {
-      await tx
-        .update(interestEntries)
-        // `posted` with a note, not a failure: the money is in Wallet, only its filing is not.
-        .set({ posting: "posted", postedAt: new Date(), postingError: note })
-        .where(and(eq(interestEntries.id, entryId), userScoped(ctx).owns(interestEntries)));
-      await linkExternal(
-        ctx,
-        {
-          provider: WALLET_PROVIDER,
-          entityType: "interest_entry",
-          entityId: entryId,
-          externalId: recordId as string,
-        },
-        new Date(),
-        tx,
-      );
-    });
+    await settlePosted(ctx, entryId, recordId as string, note);
     return "posted";
   } catch (error) {
     console.error("[interests] posting failed", redactForLog(error));
@@ -217,6 +227,71 @@ export async function postEntry(
 /** "Retry" on an unsure settlement: the same steps, starting from `indeterminate`. */
 export function retryPosting(ctx: Pick<Ctx, "userId">, entryId: string, client?: PostingClient) {
   return postEntry(ctx, entryId, { client, retry: true });
+}
+
+/**
+ * The daily second look at every unsure settlement: it **only looks** — never posts — for the
+ * Wallet record carrying the settlement's marker on its day. One with the same amount makes the
+ * settlement `posted`, exactly as "Retry" would have found it; anything else leaves it unsure, with
+ * its reason untouched, for "Retry" or "Mark as posted". Claimed first like a posting, so a "Retry"
+ * pressed at the same moment cannot run alongside it. Returns how many it found.
+ */
+export async function lookUpUnsure(ctx: Pick<Ctx, "userId">, client?: PostingClient): Promise<number> {
+  const unsure = await getDb()
+    .select({ entry: interestEntries, rule: interestRules })
+    .from(interestEntries)
+    .innerJoin(interestRules, eq(interestRules.id, interestEntries.ruleId))
+    .where(
+      and(
+        userScoped(ctx).owns(interestEntries),
+        eq(interestEntries.posting, "indeterminate"),
+        eq(interestRules.mode, "post_to_provider"),
+      ),
+    )
+    .orderBy(asc(interestEntries.settleOn), asc(interestEntries.id));
+  if (unsure.length === 0) return 0;
+  const wallet = client ?? (await walletClient(ctx));
+  if (wallet === null) return 0;
+
+  let found = 0;
+  for (const { entry, rule } of unsure) {
+    const claimed = await getDb()
+      .update(interestEntries)
+      .set({ posting: "claimed" })
+      .where(
+        and(
+          eq(interestEntries.id, entry.id),
+          userScoped(ctx).owns(interestEntries),
+          eq(interestEntries.posting, "indeterminate"),
+        ),
+      )
+      .returning({ id: interestEntries.id });
+    if (claimed.length === 0) continue;
+    try {
+      const providerId = (await getAccount(ctx, rule.accountId))?.providerAccountId ?? null;
+      const records =
+        providerId === null
+          ? []
+          : await wallet.recordsWithNote({
+              accountId: providerId,
+              on: entry.settleOn,
+              marker: postingMarker(entry.id),
+            });
+      const same = records.find((record) => record.amountCents === entry.netCents);
+      if (!same) {
+        await setPosting(ctx, entry.id, "indeterminate", entry.postingError);
+        continue;
+      }
+      const category = await providerCategoryId(ctx, rule.postingCategoryId);
+      const note = rule.postingCategoryId !== null && category === null ? CATEGORY_NOT_LINKED : null;
+      await settlePosted(ctx, entry.id, same.id, note);
+      found += 1;
+    } catch (error) {
+      console.error("[interests] looking up an unsure posting failed", redactForLog(error));
+      await setPosting(ctx, entry.id, "indeterminate", entry.postingError);
+    }
+  }
+  return found;
 }
 
 /** "Mark as posted": the person checked Wallet and the record is there. */

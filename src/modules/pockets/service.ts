@@ -1,21 +1,30 @@
 import "server-only";
-import { and, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
 import { getAccount } from "@/modules/accounts/queries";
+import { transactionsByIds } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
 import { isFutureDate } from "@/modules/accounts/rules";
-import { type MonthKey, monthKey, today } from "@/platform/dates";
+import { addDays, type CivilDate, type MonthKey, monthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
-import { moveSchema, pocketBalance, type PocketInput, pocketInputSchema, withdrawalSchema } from "./rules";
-import { pocketMovements, pockets } from "./schema";
+import { moveSchema, PLANNED_GRACE_DAYS, type PocketInput, pocketInputSchema, plannedSchema } from "./rules";
+import { pocketExpenseLinks, pocketMovements, pocketPlannedExpenses, pockets } from "./schema";
 
 export type Pocket = typeof pockets.$inferSelect;
 export type PocketMovement = typeof pocketMovements.$inferSelect;
 
 export type PocketErrorCode =
-  "not_found" | "invalid_account" | "duplicate_name" | "archived" | "future_date" | "insufficient";
+  | "not_found"
+  | "invalid_account"
+  | "duplicate_name"
+  | "archived"
+  | "future_date"
+  | "past_date"
+  | "backed"
+  | "not_expense"
+  | "already_linked";
 
 export class PocketError extends Error {
   constructor(readonly code: PocketErrorCode) {
@@ -172,38 +181,111 @@ export async function addToPocket(
 }
 
 /**
- * "Record withdrawal" (spec §7.4): money actually spent from the pocket, as a negative movement
- * with its reason. Never below zero: the pocket row is locked while the balance is read, so two
- * withdrawals at once cannot both pass the check.
+ * Files an expense under a standalone pocket. A pocket on an account takes its account's expenses
+ * on its own, so it refuses links (`backed`); an expense of an account some open pocket rests on is
+ * counted there already (`backed` too). Only a visible `expense` qualifies — never a giroconto or an
+ * income — and one pocket per expense (`already_linked`).
  */
-export async function recordWithdrawal(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  id: string,
-  input: { cents: Cents; on: string; reason: string },
+export async function linkExpense(
+  ctx: Pick<Ctx, "userId">,
+  pocketId: string,
+  transactionId: string,
 ): Promise<void> {
-  const parsed = withdrawalSchema.parse(input);
-  if (isFutureDate(parsed.on, today(ctx.timeZone))) throw new PocketError("future_date");
-  await getDb().transaction(async (tx) => {
-    const [pocket] = await tx
-      .select({ state: pockets.state })
-      .from(pockets)
-      .where(and(eq(pockets.id, id), userScoped(ctx).owns(pockets)))
-      .for("update");
-    if (!pocket) throw new PocketError("not_found");
-    if (pocket.state === "archived") throw new PocketError("archived");
-    const movements = await tx
-      .select({ amountCents: pocketMovements.amountCents })
-      .from(pocketMovements)
-      .where(and(eq(pocketMovements.pocketId, id), userScoped(ctx).owns(pocketMovements)));
-    if (pocketBalance(movements) < parsed.cents) throw new PocketError("insufficient");
-    await tx.insert(pocketMovements).values(
+  const pocket = await requirePocket(ctx, pocketId);
+  if (pocket.state === "archived") throw new PocketError("archived");
+  if (pocket.backingAccountId !== null) throw new PocketError("backed");
+  const movement = (await transactionsByIds(ctx, [transactionId])).get(transactionId);
+  if (
+    !movement ||
+    movement.type !== "expense" ||
+    movement.amountCents >= 0n ||
+    movement.hiddenAt !== null ||
+    movement.removedUpstreamAt !== null
+  ) {
+    throw new PocketError("not_expense");
+  }
+  const [backing] = await getDb()
+    .select({ id: pockets.id })
+    .from(pockets)
+    .where(
+      and(
+        userScoped(ctx).owns(pockets),
+        eq(pockets.backingAccountId, movement.accountId),
+        ne(pockets.state, "archived"),
+      ),
+    )
+    .limit(1);
+  if (backing) throw new PocketError("backed");
+  await getDb()
+    .insert(pocketExpenseLinks)
+    .values(userScoped(ctx).stamp({ pocketId, transactionId }))
+    .catch((error: unknown) => {
+      if (hasPgError(error, UNIQUE_VIOLATION, "pocket_expense_links_transaction_uq")) {
+        throw new PocketError("already_linked");
+      }
+      throw error;
+    });
+}
+
+/** Takes an expense back out of a standalone pocket. */
+export async function unlinkExpense(
+  ctx: Pick<Ctx, "userId">,
+  pocketId: string,
+  transactionId: string,
+): Promise<void> {
+  const removed = await getDb()
+    .delete(pocketExpenseLinks)
+    .where(
+      and(
+        userScoped(ctx).owns(pocketExpenseLinks),
+        eq(pocketExpenseLinks.pocketId, pocketId),
+        eq(pocketExpenseLinks.transactionId, transactionId),
+      ),
+    )
+    .returning({ id: pocketExpenseLinks.id });
+  if (removed.length === 0) throw new PocketError("not_found");
+}
+
+/** An expense expected on a day to come: today or later, never in the past. */
+export async function addPlannedExpense(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  pocketId: string,
+  input: { cents: Cents; dueOn: string; description: string },
+): Promise<void> {
+  const parsed = plannedSchema.parse(input);
+  const pocket = await requirePocket(ctx, pocketId);
+  if (pocket.state === "archived") throw new PocketError("archived");
+  if (parsed.dueOn < today(ctx.timeZone)) throw new PocketError("past_date");
+  await getDb()
+    .insert(pocketPlannedExpenses)
+    .values(
       userScoped(ctx).stamp({
-        pocketId: id,
-        kind: "withdrawal" as const,
-        amountCents: -parsed.cents,
-        on: parsed.on,
-        reason: parsed.reason,
+        pocketId,
+        description: parsed.description,
+        amountCents: parsed.cents,
+        dueOn: parsed.dueOn,
       }),
     );
-  });
+}
+
+export async function removePlannedExpense(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
+  const removed = await getDb()
+    .delete(pocketPlannedExpenses)
+    .where(and(eq(pocketPlannedExpenses.id, id), userScoped(ctx).owns(pocketPlannedExpenses)))
+    .returning({ id: pocketPlannedExpenses.id });
+  if (removed.length === 0) throw new PocketError("not_found");
+}
+
+/** The planned expenses more than a week past their day: what the daily job drops. */
+export async function purgeExpiredPlanned(ctx: Pick<Ctx, "userId">, todayOn: CivilDate): Promise<number> {
+  const removed = await getDb()
+    .delete(pocketPlannedExpenses)
+    .where(
+      and(
+        userScoped(ctx).owns(pocketPlannedExpenses),
+        lt(pocketPlannedExpenses.dueOn, addDays(todayOn, -PLANNED_GRACE_DAYS)),
+      ),
+    )
+    .returning({ id: pocketPlannedExpenses.id });
+  return removed.length;
 }

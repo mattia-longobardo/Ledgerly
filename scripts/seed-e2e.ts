@@ -31,7 +31,8 @@ import { twinOperationsHtml, twinPositionPdf } from "../tests/fixtures/cometa/tw
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/payroll/samples";
 import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
-import { addToPocket, createPocket, recordWithdrawal } from "../src/modules/pockets/service";
+import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "../src/modules/pockets/service";
+import { expenseLinkCandidates } from "../src/modules/pockets/queries";
 import { createMovement, createPlatform, setValuation } from "../src/modules/investments/service";
 import { linkCandidates } from "../src/modules/transactions/queries";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
@@ -228,35 +229,39 @@ async function seedBudgets(): Promise<void> {
 }
 
 /**
- * Pockets (F3): a savings account holding 10.000 €, a pocket with a target resting on it
- * (250 € a month + 3.850 € added − 850 € withdrawn = 3.250 €, three months to its 4.000 €), and a
- * standalone envelope with no target that has only its first 50 € accrual.
+ * Pockets (F3): a synced savings account holding 10.000 €, a pocket with a target resting on it
+ * (250 € a month + 3.850 € added − the account's 850 € expense = 3.250 €, three months to its
+ * 4.000 €) with a planned expense of 400 €, and a standalone envelope with no target holding its
+ * first 50 € accrual and nothing linked yet — a 30 € expense of another account waits to be linked.
  */
 async function seedPockets(): Promise<void> {
   const ctx = await contextOf(USERS.pockets.email);
   const on = today(ctx.timeZone);
-  const account = await createAccount(ctx, {
-    name: "Revolut Saving",
-    type: "savings",
-    currency: "EUR",
-    color: null,
-    reference: "",
-    purpose: "",
-    openedOn: null,
-    notes: "",
-    openingBalance: { on, cents: 1_000_000n },
-  });
+  const account = await syncedAccount(ctx, "e2e-pockets-1", "Revolut Saving");
+  await saveBalanceEntry(ctx, account, { on, cents: 1_000_000n });
+  await upsertFromProvider(ctx, account, [
+    walletMovement("e2e-pockets-tx-1", on, -85_000n, "Ischia — hotel + traghetto", null),
+  ]);
+  const main = await syncedAccount(ctx, "e2e-pockets-2", "Revolut Main");
+  await saveBalanceEntry(ctx, main, { on, cents: 200_000n });
+  await upsertFromProvider(ctx, main, [
+    walletMovement("e2e-pockets-tx-2", on, -3_000n, "Libreria Feltrinelli", null),
+  ]);
   const startMonth = `${thisMonthOf(ctx)}-01`;
   const holidays = await createPocket(ctx, {
     name: "Holidays",
     color: null,
-    backingAccountId: account.id,
+    backingAccountId: account,
     targetCents: 400_000n,
     monthlyCents: 25_000n,
     startMonth,
   });
   await addToPocket(ctx, holidays.id, { cents: 385_000n, on });
-  await recordWithdrawal(ctx, holidays.id, { cents: 85_000n, on, reason: "Ischia — hotel + traghetto" });
+  await addPlannedExpense(ctx, holidays.id, {
+    cents: 40_000n,
+    dueOn: addDays(on, 20),
+    description: "Hotel Roma",
+  });
   await createPocket(ctx, {
     name: "Gifts",
     color: null,
@@ -492,8 +497,12 @@ async function seedLayout(): Promise<void> {
     startMonth,
   });
   await addToPocket(ctx, holidays.id, { cents: 385_000n, on });
-  await recordWithdrawal(ctx, holidays.id, { cents: 85_000n, on, reason: "Ischia — hotel e traghetto" });
-  await createPocket(ctx, {
+  await addPlannedExpense(ctx, holidays.id, {
+    cents: 85_000n,
+    dueOn: addDays(on, 14),
+    description: "Ischia — hotel e traghetto",
+  });
+  const gifts = await createPocket(ctx, {
     name: "Gifts",
     color: null,
     backingAccountId: null,
@@ -501,6 +510,8 @@ async function seedLayout(): Promise<void> {
     monthlyCents: 5_000n,
     startMonth,
   });
+  const [gift] = await expenseLinkCandidates(ctx);
+  if (gift) await linkExpense(ctx, gifts.id, gift.id);
 
   // ——— Investments: one platform valued and linked, one closed at a gain ———
   const binance = await createPlatform(ctx, { name: "Binance", url: "https://www.binance.com" });
