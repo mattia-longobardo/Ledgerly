@@ -272,6 +272,18 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
+    name: "the rename payslip dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/payroll");
+      await settled(page);
+      await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"])');
+      await page.getByRole("button", { name: /^(Rename|Rinomina)$/ }).click();
+      await settledDialog(page);
+    },
+  },
+  {
     name: "the new investment movement dialog",
     session: "layout",
     roots: ['[role="dialog"]'],

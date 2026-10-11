@@ -3041,7 +3041,7 @@
       "needsOcr": "Questo PDF non ha testo da leggere: è una scansione. L'OCR non c'è in questa versione, quindi si può solo scartare.",
       "failed": "Il documento non si è potuto leggere ({error}). Riprova, o scartalo.",
       "rejected": "Hai scartato questo documento. \"Rileggi\" lo legge di nuovo.",
-      "applied": "Applicato al registro. I suoi valori sono definitivi; una nuova versione dello stesso cedolino lo sostituisce.",
+      "applied": "Applicato al registro. Per cambiarne i valori, riaprilo; una nuova versione dello stesso cedolino lo sostituisce.",
       "superseded": "Una versione più recente di questo cedolino lo ha sostituito.",
       "verified": "Verificato: applicalo per metterlo nel registro.",
       "groups": {
@@ -3149,7 +3149,16 @@
         "deleteTitle": "Eliminare questo documento?",
         "deleteDescription": "Si eliminano l'originale e tutto ciò che ne è stato letto. Nulla è stato applicato da questo documento.",
         "cancel": "Annulla",
-        "llm": "Completa i vuoti con OpenAI"
+        "llm": "Completa i vuoti con OpenAI",
+        "rename": "Rinomina",
+        "renameTitle": "Rinomina il cedolino",
+        "renameDescription": "Il nome mostrato nel registro e in questa pagina. Il file originale non cambia.",
+        "name": "Nome",
+        "save": "Salva",
+        "reopen": "Riapri per modificare",
+        "reopenTitle": "Riaprire il cedolino?",
+        "reopenDescription": "Esce dal registro finché non lo applichi di nuovo, con le sue ferie e permessi e i contributi al fondo pensione. Se sostituiva una versione precedente, intanto torna applicata quella.",
+        "deleteAppliedDescription": "È applicato: esce dal registro con le sue ferie e permessi e i contributi al fondo pensione, e se sostituiva una versione precedente torna applicata quella. Poi si eliminano l'originale e tutto ciò che ne è stato letto."
       },
       "toasts": {
         "verified": "Cedolino verificato",
@@ -3158,7 +3167,12 @@
         "retried": "Riletto",
         "deleted": "Documento eliminato",
         "saved": "Salvato",
-        "llm": "{filled, plural, =0 {Nessun valore dedotto} one {# valore dedotto: confermalo o correggilo} other {# valori dedotti: confermali o correggili}}"
+        "llm": "{filled, plural, =0 {Nessun valore dedotto} one {# valore dedotto: confermalo o correggilo} other {# valori dedotti: confermali o correggili}}",
+        "renamed": "Rinominato",
+        "reopened": "Cedolino riaperto: modificalo, poi verificalo e applicalo di nuovo",
+        "reopenedRestored": "Cedolino riaperto; torna applicata la versione che sostituiva",
+        "deletedUnapplied": "Cedolino tolto dal registro ed eliminato",
+        "deletedRestored": "Cedolino eliminato; torna applicata la versione che sostituiva"
       },
       "viewer": {
         "page": "Pagina {page} di {pages}",
@@ -3222,7 +3236,8 @@
       "unsupported_format": "non è un PDF",
       "storage_failed": "non salvato, riprova",
       "llm_not_configured": "Il fallback OpenAI non è configurato.",
-      "llm_failed": "La richiesta a OpenAI non è andata a buon fine; nulla è cambiato."
+      "llm_failed": "La richiesta a OpenAI non è andata a buon fine; nulla è cambiato.",
+      "invalid_name": "Dagli un nome."
     },
     "fields": {
       "periodLabel": "Mese retribuito",

@@ -33,11 +33,14 @@ import {
   codeMapOf,
   computeState,
   decideField,
+  deletePayslip,
   listCodeMap,
   PayrollError,
   payslipsOf,
   processPayslip,
   rejectPayslip,
+  renamePayslip,
+  reopenPayslip,
   resetCode,
   retryPayslip,
   setCodeRole,
@@ -299,6 +302,61 @@ describe("applying (spec §7.8 \"Applicazione\")", () => {
   });
 });
 
+describe("changing an applied payslip", () => {
+  it("reopens it for review, out of the register with its leave, and applies it again", async () => {
+    const id = await applied(MARCH);
+    expect(await reopenPayslip(ctx, id)).toEqual({ restored: false });
+    expect((await getDocument(ctx, id))?.state).toBe("needs_review");
+    expect(await payslipsOf(ctx)).toEqual([expect.objectContaining({ active: false, appliedAt: null })]);
+    expect(await getDb().select().from(payrollLeaveEvents)).toEqual([]);
+    expect(await getDb().select().from(leaveBalanceSnapshots)).toEqual([]);
+
+    await decideField(ctx, id, "netPay", "1234.56");
+    await verifyPayslip(ctx, id, { acknowledgeFailures: true });
+    await applyPayslip(ctx, id);
+    expect(await payslipsOf(ctx)).toEqual([expect.objectContaining({ active: true, netPay: 123456n })]);
+    expect(await getDb().select().from(payrollLeaveEvents)).toHaveLength(1);
+  });
+
+  it("applies the version a reopened rectification had replaced again", async () => {
+    const original = await applied(MARCH);
+    const reprint = await applied(MARCH_REPRINT);
+    expect(await reopenPayslip(ctx, reprint)).toEqual({ restored: true });
+    expect((await getDocument(ctx, original))?.state).toBe("applied");
+    const rows = await payslipsOf(ctx);
+    expect(rows.filter((row) => row.active).map((row) => row.documentId)).toEqual([original]);
+    expect(rows.find((row) => row.documentId === original)?.supersededBy).toBeNull();
+    expect(await getDb().select().from(payrollLeaveEvents)).toHaveLength(1);
+
+    // Applied once more, it replaces the original again.
+    await verifyPayslip(ctx, reprint);
+    await applyPayslip(ctx, reprint);
+    expect((await getDocument(ctx, original))?.state).toBe("superseded");
+  });
+
+  it("refuses to reopen what is not applied", async () => {
+    await rejects(reopenPayslip(ctx, await imported(MARCH)), "invalid_state");
+  });
+
+  it("deletes an applied payslip, taking it out of the register first", async () => {
+    const original = await applied(MARCH);
+    const reprint = await applied(MARCH_REPRINT);
+    expect(await deletePayslip(ctx, reprint)).toEqual({ unapplied: true, restored: true });
+    expect(await getDocument(ctx, reprint)).toBeNull();
+    expect((await getDocument(ctx, original))?.state).toBe("applied");
+    expect(await deletePayslip(ctx, original)).toEqual({ unapplied: true, restored: false });
+    expect(await payslipsOf(ctx)).toEqual([]);
+    expect(await getDb().select().from(leaveBalanceSnapshots)).toEqual([]);
+  });
+
+  it("renames a payslip in any state, and refuses an empty name", async () => {
+    const id = await applied(MARCH);
+    expect(await renamePayslip(ctx, id, "  Marzo / rettifica ")).toMatchObject({ fileName: "Marzo - rettifica" });
+    expect((await getDocument(ctx, id))?.fileName).toBe("Marzo - rettifica");
+    await rejects(renamePayslip(ctx, id, "   "), "invalid_name");
+  });
+});
+
 describe("the code map (spec §7.8 \"Mappa dei codici\")", () => {
   it("is seeded with the Reply/TeamSystem profile, and flags a code it lacks until it is mapped", async () => {
     expect((await codeMapOf(ctx)).get("7101")).toBe("employee_fund");
@@ -346,6 +404,9 @@ describe("isolation between users (spec §4.4, §11)", () => {
     await rejects(rejectPayslip(other, id), "not_found");
     await rejects(retryPayslip(other, id), "not_found");
     await rejects(deleteDocument(other, id), "not_found");
+    await rejects(deletePayslip(other, id), "not_found");
+    await rejects(reopenPayslip(other, id), "not_found");
+    await rejects(renamePayslip(other, id, "theirs"), "not_found");
     expect(await processPayslip(other, id)).toBeNull();
 
     // The same file is a document of its own for someone else.

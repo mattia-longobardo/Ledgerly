@@ -29,8 +29,9 @@ export type VerificationState = (typeof VERIFICATION_STATES)[number];
 
 /**
  * The transitions of spec §7.8, the only ones a service may ask the database for. `extracting` is
- * reachable again from every state a person can "Retry" (plan F5 §3.4.2); `applied` only ever
- * gives way to a rectification (`superseded`), and `superseded` is final.
+ * reachable again from every state a person can "Retry" (plan F5 §3.4.2); `applied` gives way to
+ * a rectification (`superseded`) or goes back to review when a person reopens it, and a
+ * `superseded` document is applied again when the one that replaced it is reopened or deleted.
  */
 const TRANSITIONS: Record<DocumentState, readonly DocumentState[]> = {
   received: ["scanning", "failed"],
@@ -39,8 +40,8 @@ const TRANSITIONS: Record<DocumentState, readonly DocumentState[]> = {
   needs_review: ["verified", "rejected", "extracting"],
   needs_ocr: ["rejected", "extracting"],
   verified: ["applied", "needs_review", "rejected", "extracting"],
-  applied: ["superseded"],
-  superseded: [],
+  applied: ["superseded", "needs_review"],
+  superseded: ["applied"],
   rejected: ["extracting"],
   failed: ["extracting", "rejected"],
 };
@@ -130,6 +131,15 @@ export function retentionEnd(receivedOn: CivilDate, years = RETENTION_YEARS): Ci
   // 29 February becomes 28 February in a year that has none, never 1 March.
   const date = target.toISOString().slice(0, 10);
   return target.getUTCMonth() === month - 1 ? date : addDays(date, -1);
+}
+
+/**
+ * A name a person typed for a document, cleaned as an uploaded file's is — a slash is part of the
+ * name here, not a path, so it becomes a dash. Null when nothing is left of it.
+ */
+export function documentName(name: string): string | null {
+  const flat = name.replace(/[\\/]/g, "-");
+  return flat.replace(/[\u0000-\u001f\u007f"]/g, "").trim() === "" ? null : cleanFileName(flat);
 }
 
 /** A file name fit to show and to put in a `Content-Disposition`: no path, no control characters. */

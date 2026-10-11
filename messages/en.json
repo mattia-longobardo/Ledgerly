@@ -3041,7 +3041,7 @@
       "needsOcr": "This PDF has no text to read: it is a scan. OCR is not available in this version, so it can only be discarded.",
       "failed": "The document could not be read ({error}). Try again, or discard it.",
       "rejected": "You discarded this document. Retry reads it again.",
-      "applied": "Applied to the register. Its values are final; a new version of the same payslip replaces it.",
+      "applied": "Applied to the register. To change its values, reopen it; a new version of the same payslip replaces it.",
       "superseded": "A newer version of this payslip replaced it.",
       "verified": "Verified: apply it to put it in the register.",
       "groups": {
@@ -3149,7 +3149,16 @@
         "deleteTitle": "Delete this document?",
         "deleteDescription": "The original and everything read from it are deleted. Nothing was applied from it.",
         "cancel": "Cancel",
-        "llm": "Fill blanks with OpenAI"
+        "llm": "Fill blanks with OpenAI",
+        "rename": "Rename",
+        "renameTitle": "Rename this payslip",
+        "renameDescription": "The name the register and this page show. The original file is not touched.",
+        "name": "Name",
+        "save": "Save",
+        "reopen": "Reopen for changes",
+        "reopenTitle": "Reopen this payslip?",
+        "reopenDescription": "It leaves the register until you apply it again, with its leave and its pension contributions. If it replaced an earlier version, that version is applied again meanwhile.",
+        "deleteAppliedDescription": "It is applied: it leaves the register with its leave and its pension contributions, and if it replaced an earlier version that version is applied again. Then the original and everything read from it are deleted."
       },
       "toasts": {
         "verified": "Payslip verified",
@@ -3158,7 +3167,12 @@
         "retried": "Read again",
         "deleted": "Document deleted",
         "saved": "Saved",
-        "llm": "{filled, plural, =0 {Nothing inferred} one {# value inferred: confirm or correct it} other {# values inferred: confirm or correct them}}"
+        "llm": "{filled, plural, =0 {Nothing inferred} one {# value inferred: confirm or correct it} other {# values inferred: confirm or correct them}}",
+        "renamed": "Renamed",
+        "reopened": "Payslip reopened: change it, then verify and apply it again",
+        "reopenedRestored": "Payslip reopened; the version it replaced is applied again",
+        "deletedUnapplied": "Payslip taken out of the register and deleted",
+        "deletedRestored": "Payslip deleted; the version it replaced is applied again"
       },
       "viewer": {
         "page": "Page {page} of {pages}",
@@ -3222,7 +3236,8 @@
       "unsupported_format": "not a PDF",
       "storage_failed": "could not be stored, try again",
       "llm_not_configured": "The OpenAI fallback is not configured.",
-      "llm_failed": "The OpenAI request failed; nothing was changed."
+      "llm_failed": "The OpenAI request failed; nothing was changed.",
+      "invalid_name": "Give it a name."
     },
     "fields": {
       "periodLabel": "Period",
