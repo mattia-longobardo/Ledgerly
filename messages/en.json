@@ -1549,9 +1549,9 @@
   },
   "pockets": {
     "title": "Pockets",
-    "subtitle": "Virtual envelopes: each month you earmark an amount without moving money, so savings keep earning interest.",
+    "subtitle": "Virtual envelopes with a budget that grows each month: what you spend from them comes off, the rest carries over.",
     "kpis": {
-      "earmarked": "Earmarked in pockets",
+      "earmarked": "Left in pockets",
       "count": "{count, plural, one {# pocket} other {# pockets}}",
       "backing": "Backing balances",
       "noBacking": "no pocket rests on an account",
@@ -1567,14 +1567,14 @@
       "noTarget": "no target",
       "perMonth": "+{amount} / month",
       "paused": "Paused",
-      "new": "New pocket"
+      "new": "New pocket",
+      "afterPlanned": "{amount} after planned expenses"
     },
     "detail": {
       "since": "since {month}",
       "onAccount": "on {account}",
       "standalone": "standalone envelope",
       "target": "Target",
-      "accruedSince": "Accrued since {month}",
       "funded": "{percent} funded",
       "toGo": "{amount} to go",
       "eta": "ETA {months, plural, one {# month} other {# months}} · {month}",
@@ -1583,36 +1583,35 @@
       "openEnded": "Open-ended pocket — no target, no limit, accrues indefinitely.",
       "monthly": "Monthly accrual",
       "manual": "Manual",
-      "withdrawn": "Withdrawn · 12 months",
       "interest": "Interest earned on backing",
       "interestUnknown": "No interest rule on the account, or no positive balance.",
       "interestStandalone": "A standalone envelope rests on no account.",
       "paused": "Paused: no monthly accrual until resumed.",
-      "interestEstimate": "Estimate: the account's interest of the last 12 months × this pocket's share."
+      "interestEstimate": "Estimate: the account's interest of the last 12 months × this pocket's share.",
+      "left": "left of the budget",
+      "noTargetLabel": "Target",
+      "budget": "Budget accrued",
+      "spent": "Spent since start",
+      "afterPlanned": "After planned expenses",
+      "howBacked": "Every expense of the account since the start month counts against this pocket; transfers and income don't.",
+      "howStandalone": "A standalone pocket counts the expenses you link to it."
     },
     "chart": {
-      "title": "Earmarked · 12 months",
+      "title": "Left · 12 months",
       "topIsTarget": "top = target",
       "noTarget": "no target",
-      "summary": "{name}: balance at the end of each month, {value} now."
-    },
-    "withdrawals": {
-      "title": "Withdrawals",
-      "count": "{count, plural, =0 {none} one {# in the last 12 months} other {# in the last 12 months}}",
-      "date": "Date",
-      "purpose": "Purpose",
-      "amount": "Amount",
-      "empty": "Nothing withdrawn yet."
+      "summary": "{name}: what was left at the end of each month, {value} now."
     },
     "actions": {
       "add": "Add to pocket",
-      "withdraw": "Record withdrawal",
       "edit": "Edit pocket",
       "pause": "Pause",
       "resume": "Resume",
       "archive": "Archive",
       "restore": "Restore",
-      "more": "More pocket actions"
+      "more": "More pocket actions",
+      "plan": "Plan an expense",
+      "link": "Link an expense"
     },
     "archived": {
       "title": "Archived pockets",
@@ -1620,22 +1619,13 @@
     },
     "move": {
       "title": "Add to {name}",
-      "descriptionAccount": "Earmarks part of {account} for this pocket. No money is moved.",
-      "descriptionStandalone": "Adds to this envelope. No money is moved.",
+      "descriptionAccount": "Raises this pocket's budget on {account}. No money is moved.",
+      "descriptionStandalone": "Raises this envelope's budget. No money is moved.",
       "amount": "Amount",
       "date": "Date",
       "free": "Free on {account}: {amount}",
       "after": "Pocket after: {amount}",
       "submit": "Add to pocket"
-    },
-    "withdraw": {
-      "title": "Record withdrawal",
-      "description": "Money you actually spent from {name}. Lowers the earmarked amount.",
-      "amount": "Amount (€)",
-      "date": "Date",
-      "purpose": "Purpose",
-      "purposePlaceholder": "e.g. Hotel + ferry",
-      "submit": "Record"
     },
     "form": {
       "newTitle": "New pocket",
@@ -1658,11 +1648,14 @@
     "toasts": {
       "saved": "Pocket saved",
       "added": "Earmarked {amount} for the pocket",
-      "withdrawn": "Withdrawal recorded",
       "paused": "Pocket paused",
       "resumed": "Pocket resumed",
       "archived": "Pocket archived",
-      "restored": "Pocket restored"
+      "restored": "Pocket restored",
+      "planned": "Planned expense added",
+      "plannedRemoved": "“{description}” removed",
+      "linked": "Expense linked",
+      "unlinked": "{label} unlinked"
     },
     "errors": {
       "invalid": "Check the values: amounts above zero, a name up to 60 characters.",
@@ -1671,8 +1664,11 @@
       "duplicate_name": "There is already a pocket with that name.",
       "archived": "An archived pocket can't be moved. Restore it first.",
       "future_date": "The date can't be in the future.",
-      "insufficient": "The pocket doesn't hold that much.",
-      "failed": "Couldn't save. Try again."
+      "failed": "Couldn't save. Try again.",
+      "past_date": "The date can't be in the past.",
+      "backed": "A pocket on an account already counts that account's expenses.",
+      "not_expense": "Only a visible expense can be linked, not a transfer or an income.",
+      "already_linked": "That expense is already in a pocket."
     },
     "empty": {
       "title": "No pockets yet",
@@ -1686,6 +1682,47 @@
     "account": {
       "label": "Pockets",
       "none": "None"
+    },
+    "expenses": {
+      "title": "Expenses",
+      "count": "{count, plural, =0 {none} one {# expense} other {# expenses}}",
+      "date": "Date",
+      "payee": "Payee",
+      "account": "Account",
+      "amount": "Amount",
+      "actions": "Actions",
+      "noPayee": "No payee",
+      "manual": "Recorded by hand",
+      "emptyBacked": "No expense on the account since the start month.",
+      "emptyStandalone": "No expense linked yet. Use “Link an expense” to file one here.",
+      "unlink": "Unlink",
+      "confirmTitle": "Unlink this expense?",
+      "confirmDescription": "{label} will no longer count against this pocket. The movement itself stays."
+    },
+    "planned": {
+      "title": "Planned expenses",
+      "empty": "Nothing planned. Plan an expense to see what would be left.",
+      "overdue": "Past due",
+      "remove": "Remove",
+      "confirmTitle": "Remove this planned expense?",
+      "confirmDescription": "“{description}” will be removed."
+    },
+    "plan": {
+      "title": "Plan an expense",
+      "description": "An expense you expect to make from {name}. Nothing moves: it only shows what would be left.",
+      "what": "What",
+      "whatPlaceholder": "e.g. Hotel in Rome",
+      "amount": "Amount",
+      "due": "Expected on",
+      "note": "It stays until a week after its date, unless you remove it sooner.",
+      "submit": "Add"
+    },
+    "link": {
+      "title": "Link an expense",
+      "description": "File one of the recent expenses under {name}: it comes off its budget.",
+      "expense": "Expense",
+      "empty": "No expense to link: the recent ones are already in a pocket, or on an account a pocket rests on.",
+      "submit": "Link"
     }
   },
   "subscriptions": {
@@ -2013,7 +2050,7 @@
         "postNow": "Post now",
         "retry": "Retry",
         "markPosted": "Mark as posted",
-        "unsureHint": "The posting may or may not have reached Wallet. Check Wallet, then retry or mark it posted.",
+        "unsureHint": "The posting may or may not have reached Wallet. Ledgerly looks for the record in Wallet again every day; you can also retry or mark it posted.",
         "categoryNotLinked": "No category",
         "categoryNotLinkedHint": "The record is in Wallet, filed under no category: the rule's category has no Wallet counterpart. Nothing was invented and nothing failed.",
         "toasts": {
