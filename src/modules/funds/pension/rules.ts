@@ -52,6 +52,42 @@ export const COMETA_SCHEDULE: readonly ScheduleEntry[] = [
   { quarter: 4, month: 1, day: 20, nextYear: true },
 ];
 
+/**
+ * The fees the fund takes off what it receives (GC §6.1), as Settings records them: the one-off
+ * enrolment fee, out of the enrolment quotas, and the fee taken off each quarter's contribution.
+ * They make the payslips' figures net when no export says what was actually charged.
+ */
+export interface PensionFees {
+  enrollmentCents: Cents;
+  quarterCents: Cents;
+}
+
+/** Cometa's, from its tariff (GC §6.1): 5,16 € + 5,16 € once, 12 € a year taken 3 € a quarter. */
+export const COMETA_FEES: PensionFees = { enrollmentCents: 1032n, quarterCents: 300n };
+
+export const NO_FEES: PensionFees = { enrollmentCents: 0n, quarterCents: 0n };
+
+/**
+ * What a quarter's transfer leaves in the fund once its fees are off: the quarterly fee out of the
+ * contribution, the enrolment fee out of the enrolment quotas — never more than those quotas.
+ */
+export function netOfFees(
+  contributionCents: Cents,
+  enrollmentCents: Cents,
+  fees: PensionFees,
+): { grossCents: Cents; feesCents: Cents; netCents: Cents } {
+  const quarterFee = contributionCents > 0n ? fees.quarterCents : 0n;
+  const enrollmentFee =
+    enrollmentCents > 0n
+      ? fees.enrollmentCents < enrollmentCents
+        ? fees.enrollmentCents
+        : enrollmentCents
+      : 0n;
+  const grossCents = contributionCents + enrollmentCents;
+  const feesCents = quarterFee + enrollmentFee;
+  return { grossCents, feesCents, netCents: grossCents - feesCents };
+}
+
 /** How long after a due date a missing credit is still shown as on its way (design; GC §11). */
 export const DEFAULT_TOLERANCE_DAYS = 15;
 

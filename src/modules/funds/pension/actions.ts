@@ -28,6 +28,7 @@ import {
   decideDifference,
   deleteContributionRule,
   deleteManualOperation,
+  saveFees,
   saveTolerance,
   setReceivesPayroll,
 } from "./service";
@@ -270,6 +271,25 @@ export async function saveToleranceAction(fundId: string, days: string): Promise
   const ctx = await requireSession();
   try {
     await saveTolerance(ctx, fundId, Number(days));
+    revalidate(fundId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** Settings › Employer transfers: the fees the fund takes, as its tariff says (GC §6.1). */
+export async function saveFeesAction(
+  fundId: string,
+  input: { enrollment: string; quarter: string },
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    const amount = (text: string) => (text.trim() === "" ? 0n : parseAmount(text, ctx.numberFormat));
+    await saveFees(ctx, fundId, {
+      enrollmentCents: amount(input.enrollment),
+      quarterCents: amount(input.quarter),
+    });
     revalidate(fundId);
     return { ok: true };
   } catch (error) {

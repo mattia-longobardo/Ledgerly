@@ -2764,9 +2764,13 @@
           "yearOfAssets": "all'anno sul patrimonio"
         },
         "tariffFrom": "Tariffario pubblico di {provider}, in vigore dal {date}.",
-        "feesActual": "Quello che ti è stato addebitato viene dalle spese delle operazioni importate, mai da questo tariffario.",
+        "feesActual": "Senza import, queste spese stimano quanto trattenuto da ogni versamento; importate le operazioni, contano le loro spese effettive.",
         "noTariff": "Nessun tariffario caricato per questo gestore.",
-        "saveRule": "Salva regola"
+        "saveRule": "Salva regola",
+        "enrollmentFee": "Quota d'iscrizione",
+        "enrollmentFeeHint": "Una tantum, dalle quote d'iscrizione.",
+        "quarterFee": "Spesa per trimestre",
+        "quarterFeeHint": "Trattenuta da ogni contributo trimestrale."
       },
       "errors": {
         "failed": "Qualcosa è andato storto. Riprova.",

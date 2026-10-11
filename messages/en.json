@@ -2764,9 +2764,13 @@
           "yearOfAssets": "per year of assets"
         },
         "tariffFrom": "Public tariff of {provider}, valid from {date}.",
-        "feesActual": "What you were actually charged comes from the fees of the imported operations, never from this tariff.",
+        "feesActual": "Without an import, these fees estimate what was taken off each transfer; once operations are imported, their own charges count instead.",
         "noTariff": "No tariff loaded for this provider.",
-        "saveRule": "Save rule"
+        "saveRule": "Save rule",
+        "enrollmentFee": "Enrolment fee",
+        "enrollmentFeeHint": "Once, out of the enrolment quotas.",
+        "quarterFee": "Fee per quarter",
+        "quarterFeeHint": "Taken off each quarter's contribution."
       },
       "errors": {
         "failed": "Something went wrong. Try again.",
