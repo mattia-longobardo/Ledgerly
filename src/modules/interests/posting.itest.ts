@@ -9,7 +9,14 @@ import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { linkExternal, resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
-import { markPosted, postEntry, postPending, type PostingClient, retryPosting } from "./posting";
+import {
+  lookUpUnsure,
+  markPosted,
+  postEntry,
+  postPending,
+  type PostingClient,
+  retryPosting,
+} from "./posting";
 import { ruleDetail } from "./queries";
 import { CATEGORY_NOT_LINKED } from "./rules";
 import { interestEntries } from "./schema";
@@ -161,6 +168,31 @@ describe("publishing a settlement to Wallet (spec §7.6)", () => {
 
     const working = fakeWallet();
     expect(await retryPosting(ctx, entryId, working.client)).toBe("posted");
+  });
+
+  it("looks for an unsure settlement again each day, never posting, and settles it when found", async () => {
+    const failing = fakeWallet({ fail: new Error("HTTP 503") });
+    expect(await postEntry(ctx, entryId, { client: failing.client })).toBe("indeterminate");
+
+    // Nothing in Wallet yet: it stays unsure, with its reason, and nothing is sent.
+    const empty = fakeWallet();
+    expect(await lookUpUnsure(ctx, empty.client)).toBe(0);
+    expect(empty.posts).toHaveLength(0);
+    expect(await postingOf(entryId)).toMatchObject({ posting: "indeterminate", error: "HTTP 503" });
+
+    // A record with another amount is not ours either.
+    const other = fakeWallet({ existing: [{ id: "wr-x", amountCents: 1n }] });
+    expect(await lookUpUnsure(ctx, other.client)).toBe(0);
+    expect((await postingOf(entryId)).posting).toBe("indeterminate");
+
+    const found = fakeWallet({ existing: [{ id: "wr-late", amountCents: 3_100n }] });
+    expect(await lookUpUnsure(ctx, found.client)).toBe(1);
+    expect(found.posts).toHaveLength(0);
+    expect(await postingOf(entryId)).toMatchObject({ posting: "posted", error: null });
+    expect((await resolveExternal(ctx, WALLET_PROVIDER, "interest_entry", ["wr-late"])).get("wr-late")).toBe(
+      entryId,
+    );
+    expect(await lookUpUnsure(ctx, found.client)).toBe(0);
   });
 
   it("calls a success without an id unsure, and lets the person mark it posted", async () => {

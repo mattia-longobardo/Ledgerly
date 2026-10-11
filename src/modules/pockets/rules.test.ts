@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { etaMonths, freeBalance, monthEndBalances, pocketBalance, withdrawnSince } from "./rules";
+import {
+  etaMonths,
+  freeBalance,
+  monthEndBalances,
+  plannedVisible,
+  pocketBalance,
+  pocketBudget,
+  pocketLedger,
+} from "./rules";
 
 const movements = [
   { kind: "accrual" as const, amountCents: 25_000n, on: "2026-01-01" },
@@ -77,9 +85,27 @@ describe("monthEndBalances", () => {
   });
 });
 
-describe("withdrawnSince", () => {
-  it("sums the withdrawals on or after the date, as a negative amount", () => {
-    expect(withdrawnSince(movements, "2026-02-14")).toBe(-8_500n);
-    expect(withdrawnSince(movements, "2026-02-15")).toBe(0n);
+describe("pocketLedger", () => {
+  it("takes the expenses off the budget, which carries over from month to month", () => {
+    const budget = movements.filter((movement) => movement.kind !== "withdrawal");
+    const ledger = pocketLedger(budget, [
+      { on: "2026-02-14", cents: 8_500n },
+      { on: "2026-03-10", cents: 60_000n },
+    ]);
+    expect(pocketBudget(ledger)).toBe(85_000n);
+    expect(pocketBalance(ledger)).toBe(16_500n);
+    expect(monthEndBalances(ledger, ["2026-02-01", "2026-03-01", "2026-04-01"])).toEqual([
+      51_500n,
+      -8_500n,
+      16_500n,
+    ]);
+  });
+});
+
+describe("plannedVisible", () => {
+  it("keeps a planned expense up to a week past its day", () => {
+    expect(plannedVisible("2026-10-20", "2026-10-11")).toBe(true);
+    expect(plannedVisible("2026-10-04", "2026-10-11")).toBe(true);
+    expect(plannedVisible("2026-10-03", "2026-10-11")).toBe(false);
   });
 });

@@ -1549,9 +1549,9 @@
   },
   "pockets": {
     "title": "Pocket",
-    "subtitle": "Buste virtuali: ogni mese accantoni una somma senza spostare denaro, così i risparmi continuano a rendere.",
+    "subtitle": "Buste virtuali con un budget che cresce ogni mese: le spese lo riducono, il resto si accumula.",
     "kpis": {
-      "earmarked": "Accantonato nei pocket",
+      "earmarked": "Disponibile nelle pocket",
       "count": "{count, plural, one {# pocket} other {# pocket}}",
       "backing": "Saldi di appoggio",
       "noBacking": "nessun pocket poggia su un conto",
@@ -1567,14 +1567,14 @@
       "noTarget": "nessun obiettivo",
       "perMonth": "+{amount} / mese",
       "paused": "In pausa",
-      "new": "Nuovo pocket"
+      "new": "Nuovo pocket",
+      "afterPlanned": "{amount} dopo le spese previste"
     },
     "detail": {
       "since": "dal {month}",
       "onAccount": "su {account}",
       "standalone": "busta autonoma",
       "target": "Obiettivo",
-      "accruedSince": "Accantonato dal {month}",
       "funded": "{percent} raggiunto",
       "toGo": "mancano {amount}",
       "eta": "ETA {months, plural, one {# mese} other {# mesi}} · {month}",
@@ -1583,36 +1583,35 @@
       "openEnded": "Pocket senza obiettivo: nessun limite, accantona senza fine.",
       "monthly": "Accantonamento mensile",
       "manual": "Manuale",
-      "withdrawn": "Prelevato · 12 mesi",
       "interest": "Interessi dal conto di appoggio",
       "interestUnknown": "Nessuna regola di interessi sul conto, o nessun saldo positivo.",
       "interestStandalone": "Una busta autonoma non poggia su nessun conto.",
       "paused": "In pausa: nessun accantonamento finché non riprende.",
-      "interestEstimate": "Stima: gli interessi del conto negli ultimi 12 mesi × la quota di questo pocket."
+      "interestEstimate": "Stima: gli interessi del conto negli ultimi 12 mesi × la quota di questo pocket.",
+      "left": "disponibile nel budget",
+      "noTargetLabel": "Obiettivo",
+      "budget": "Budget accumulato",
+      "spent": "Speso dall'inizio",
+      "afterPlanned": "Dopo le spese previste",
+      "howBacked": "Ogni spesa del conto dal mese di partenza viene scalata da questa pocket; giroconti ed entrate no.",
+      "howStandalone": "Una pocket senza conto scala le spese che le colleghi."
     },
     "chart": {
-      "title": "Accantonato · 12 mesi",
+      "title": "Disponibile · 12 mesi",
       "topIsTarget": "in alto = obiettivo",
       "noTarget": "nessun obiettivo",
-      "summary": "{name}: saldo a fine mese, {value} oggi."
-    },
-    "withdrawals": {
-      "title": "Prelievi",
-      "count": "{count, plural, =0 {nessuno} one {# negli ultimi 12 mesi} other {# negli ultimi 12 mesi}}",
-      "date": "Data",
-      "purpose": "Motivo",
-      "amount": "Importo",
-      "empty": "Ancora nessun prelievo."
+      "summary": "{name}: disponibile a fine di ogni mese, {value} ora."
     },
     "actions": {
       "add": "Aggiungi al pocket",
-      "withdraw": "Registra prelievo",
       "edit": "Modifica pocket",
       "pause": "Metti in pausa",
       "resume": "Riprendi",
       "archive": "Archivia",
       "restore": "Ripristina",
-      "more": "Altre azioni del pocket"
+      "more": "Altre azioni del pocket",
+      "plan": "Prevedi una spesa",
+      "link": "Collega una spesa"
     },
     "archived": {
       "title": "Pocket archiviati",
@@ -1620,22 +1619,13 @@
     },
     "move": {
       "title": "Aggiungi a {name}",
-      "descriptionAccount": "Accantona una parte di {account} per questo pocket. Nessun denaro viene spostato.",
-      "descriptionStandalone": "Aggiunge a questa busta. Nessun denaro viene spostato.",
+      "descriptionAccount": "Alza il budget di questa pocket su {account}. Nessun movimento di denaro.",
+      "descriptionStandalone": "Alza il budget di questa busta. Nessun movimento di denaro.",
       "amount": "Importo",
       "date": "Data",
       "free": "Libero su {account}: {amount}",
       "after": "Pocket dopo: {amount}",
       "submit": "Aggiungi al pocket"
-    },
-    "withdraw": {
-      "title": "Registra prelievo",
-      "description": "Denaro speso davvero da {name}. Riduce l'importo accantonato.",
-      "amount": "Importo (€)",
-      "date": "Data",
-      "purpose": "Motivo",
-      "purposePlaceholder": "es. Hotel + traghetto",
-      "submit": "Registra"
     },
     "form": {
       "newTitle": "Nuovo pocket",
@@ -1658,11 +1648,14 @@
     "toasts": {
       "saved": "Pocket salvato",
       "added": "Accantonati {amount} per il pocket",
-      "withdrawn": "Prelievo registrato",
       "paused": "Pocket in pausa",
       "resumed": "Pocket ripreso",
       "archived": "Pocket archiviato",
-      "restored": "Pocket ripristinato"
+      "restored": "Pocket ripristinato",
+      "planned": "Spesa prevista aggiunta",
+      "plannedRemoved": "“{description}” eliminata",
+      "linked": "Spesa collegata",
+      "unlinked": "{label} scollegata"
     },
     "errors": {
       "invalid": "Controlla i valori: importi maggiori di zero, un nome fino a 60 caratteri.",
@@ -1671,8 +1664,11 @@
       "duplicate_name": "Esiste già un pocket con quel nome.",
       "archived": "Un pocket archiviato non si muove. Ripristinalo prima.",
       "future_date": "La data non può essere nel futuro.",
-      "insufficient": "Il pocket non contiene così tanto.",
-      "failed": "Salvataggio non riuscito. Riprova."
+      "failed": "Salvataggio non riuscito. Riprova.",
+      "past_date": "La data non può essere nel passato.",
+      "backed": "Una pocket collegata a un conto conta già le spese di quel conto.",
+      "not_expense": "Si può collegare solo una spesa visibile, non un giroconto o un'entrata.",
+      "already_linked": "Quella spesa è già in una pocket."
     },
     "empty": {
       "title": "Ancora nessun pocket",
@@ -1686,6 +1682,47 @@
     "account": {
       "label": "Pocket",
       "none": "Nessuno"
+    },
+    "expenses": {
+      "title": "Spese",
+      "count": "{count, plural, =0 {nessuna} one {# spesa} other {# spese}}",
+      "date": "Data",
+      "payee": "Beneficiario",
+      "account": "Conto",
+      "amount": "Importo",
+      "actions": "Azioni",
+      "noPayee": "Senza beneficiario",
+      "manual": "Registrata a mano",
+      "emptyBacked": "Nessuna spesa sul conto dal mese di partenza.",
+      "emptyStandalone": "Nessuna spesa collegata. Usa “Collega una spesa” per aggiungerne una.",
+      "unlink": "Scollega",
+      "confirmTitle": "Scollegare questa spesa?",
+      "confirmDescription": "{label} non verrà più scalata da questa pocket. Il movimento resta."
+    },
+    "planned": {
+      "title": "Spese previste",
+      "empty": "Nessuna spesa prevista. Aggiungine una per vedere quanto resterebbe.",
+      "overdue": "Scaduta",
+      "remove": "Elimina",
+      "confirmTitle": "Eliminare questa spesa prevista?",
+      "confirmDescription": "“{description}” verrà eliminata."
+    },
+    "plan": {
+      "title": "Prevedi una spesa",
+      "description": "Una spesa che prevedi di fare da {name}. Non sposta nulla: mostra solo quanto resterebbe.",
+      "what": "Cosa",
+      "whatPlaceholder": "es. Hotel a Roma",
+      "amount": "Importo",
+      "due": "Data prevista",
+      "note": "Resta fino a una settimana dopo la data prevista, se non la elimini prima.",
+      "submit": "Aggiungi"
+    },
+    "link": {
+      "title": "Collega una spesa",
+      "description": "Collega una delle spese recenti a {name}: viene scalata dal budget.",
+      "expense": "Spesa",
+      "empty": "Nessuna spesa da collegare: quelle recenti sono già in una pocket o su un conto collegato a una pocket.",
+      "submit": "Collega"
     }
   },
   "subscriptions": {
@@ -2013,7 +2050,7 @@
         "postNow": "Pubblica ora",
         "retry": "Riprova",
         "markPosted": "Segna come pubblicata",
-        "unsureHint": "La pubblicazione potrebbe essere arrivata o no a Wallet. Controlla Wallet, poi riprova o segnala come pubblicata.",
+        "unsureHint": "La pubblicazione potrebbe essere arrivata o no a Wallet. Ogni giorno Ledgerly cerca di nuovo il movimento in Wallet; puoi anche riprovare o segnalarla come pubblicata.",
         "categoryNotLinked": "Senza categoria",
         "categoryNotLinkedHint": "Il movimento è su Wallet, ma senza categoria: la categoria della regola non è collegata a nessuna categoria di Wallet. Non è stata inventata nessuna categoria e la pubblicazione non è fallita.",
         "toasts": {
