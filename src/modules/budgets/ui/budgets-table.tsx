@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type KeyboardEvent, useState, useTransition } from "react";
 import { Badge } from "@/ui/badge";
@@ -15,6 +17,8 @@ import type { BudgetScope, BudgetStatus } from "../rules";
 /** One budget as the table draws it: every amount already formatted by the server (spec §8.5). */
 export interface BudgetRowView {
   key: string;
+  /** The budget's own page: this month, the months before and its alerts. */
+  href: string;
   scope: BudgetScope;
   /** The category ("Group › Sub" when shown on its own), or "All categories". */
   name: string;
@@ -123,7 +127,12 @@ export function BudgetsTable({
   );
   const label = (row: BudgetRowView) => (
     <span className="flex min-w-0 flex-col">
-      <span className="truncate font-medium">{row.name}</span>
+      <Link
+        href={row.href as Route}
+        className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-[2px] font-medium hover:underline"
+      >
+        <span className="truncate">{row.name}</span>
+      </Link>
       <span className="truncate text-sm text-muted">{row.detail}</span>
     </span>
   );

@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { parseAmount } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
-import type { BudgetScope } from "./rules";
-import { BudgetError, setLimit, stopLimit } from "./service";
+import { type AlertSettings, budgetSlug, type BudgetScope } from "./rules";
+import { BudgetError, saveAlerts, setLimit, stopLimit } from "./service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -48,6 +48,22 @@ export async function stopBudgetAction(scope: BudgetScope, month: string): Promi
   try {
     await stopLimit(ctx, { categoryId: scope.categoryId || null, accountId: scope.accountId || null, month });
     revalidate();
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** When a budget emails its owner: on or off, and the percentages of its limit that do. */
+export async function saveBudgetAlertsAction(
+  scope: BudgetScope,
+  settings: AlertSettings,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    const parsed = { categoryId: scope.categoryId || null, accountId: scope.accountId || null };
+    await saveAlerts(ctx, { ...parsed, enabled: settings.enabled, thresholds: settings.thresholds });
+    revalidatePath(`/budgets/${budgetSlug(parsed)}`);
     return { ok: true };
   } catch (error) {
     return failed(error);

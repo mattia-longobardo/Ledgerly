@@ -7,8 +7,14 @@ import type { MonthKey } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
-import { type BudgetScope, setLimitSchema, stopLimitSchema } from "./rules";
-import { budgetLimits } from "./schema";
+import {
+  type AlertSettings,
+  type BudgetScope,
+  saveAlertsSchema,
+  setLimitSchema,
+  stopLimitSchema,
+} from "./rules";
+import { budgetAlerts, budgetLimits } from "./schema";
 
 export type BudgetErrorCode = "not_found" | "invalid";
 
@@ -106,4 +112,31 @@ export async function stopLimit(
       }),
     );
   });
+}
+
+/**
+ * When a budget emails its owner (one row per scope, written whole). Saved for a scope that has no
+ * limit too: the setting outlives a budget stopped for a month and taken up again.
+ */
+export async function saveAlerts(
+  ctx: Pick<Ctx, "userId">,
+  input: BudgetScope & AlertSettings,
+): Promise<AlertSettings> {
+  const parsed = saveAlertsSchema.parse(input);
+  await requireScope(ctx, parsed);
+  await getDb()
+    .insert(budgetAlerts)
+    .values(
+      userScoped(ctx).stamp({
+        categoryId: parsed.categoryId,
+        accountId: parsed.accountId,
+        enabled: parsed.enabled,
+        thresholds: parsed.thresholds,
+      }),
+    )
+    .onConflictDoUpdate({
+      target: [budgetAlerts.userId, budgetAlerts.categoryId, budgetAlerts.accountId],
+      set: { enabled: parsed.enabled, thresholds: parsed.thresholds, updatedAt: new Date() },
+    });
+  return { enabled: parsed.enabled, thresholds: parsed.thresholds };
 }

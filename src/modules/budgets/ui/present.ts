@@ -1,5 +1,5 @@
 import { formatAmountInput, formatMoney, formatWholePercent, type NumberFormat } from "@/platform/format";
-import type { BudgetRow } from "../rules";
+import { type BudgetRow, budgetSlug } from "../rules";
 import type { BudgetRowView } from "./budgets-table";
 
 /** A category with no colour of its own (and no group to borrow one from) is drawn in grey. */
@@ -22,6 +22,7 @@ export function presentRows(
 ): BudgetRowView[] {
   return rows.map((row) => ({
     key: row.key,
+    href: `/budgets/${budgetSlug(row)}`,
     scope: { categoryId: row.categoryId, accountId: row.accountId },
     name: budgetName(row, labels.allCategories),
     detail: row.accountName ?? labels.allAccounts,

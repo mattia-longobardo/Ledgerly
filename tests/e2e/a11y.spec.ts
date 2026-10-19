@@ -128,6 +128,11 @@ const PAGES: Screen[] = [
   })),
   { name: "/expenses", session: "layout", open: go("/expenses") },
   { name: "/budgets", session: "layout", open: go("/budgets") },
+  {
+    name: "/budgets/[id]",
+    session: "layout",
+    open: (page) => follow(page, "/budgets", "Spesa"),
+  },
   { name: "/pockets", session: "layout", open: go("/pockets") },
   {
     name: "/pockets/[id] (on an account)",
