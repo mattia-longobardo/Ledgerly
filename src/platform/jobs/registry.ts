@@ -1,4 +1,5 @@
 import { accountAlertsJob, accountsSnapshotJob } from "@/modules/accounts/jobs";
+import { budgetAlertsJob } from "@/modules/budgets/jobs";
 import { cometaSweepJob, fundsDepositsJob } from "@/modules/funds/jobs";
 import { documentsRetentionJob } from "@/modules/imports/jobs";
 import { interestsAccrualJob, interestsRematchJob } from "@/modules/interests/jobs";
@@ -39,6 +40,9 @@ export const JOBS: readonly JobDefinition[] = [
   walletSyncJob,
   // After `wallet-sync`: `runTier` runs a tier in this order, so the check sees the new movements.
   subscriptionsCheckJob,
+  // Hourly, after `wallet-sync` too: a budget emails within the hour of the movement that passed
+  // one of its thresholds (spec §7.3).
+  budgetAlertsJob,
   // Hourly too, each rule at its own hour (spec §7.6): after `wallet-sync`, so the day it accrues
   // is worked out on the balances that sync has just brought in.
   interestsAccrualJob,

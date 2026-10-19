@@ -91,4 +91,49 @@ test("limits per category show their progress and can be edited, removed and add
     await expect(card).toContainText("Abbonamenti");
     await expect(card).toContainText("2,01 € left");
   });
+
+  await test.step("each budget has its own page, where its alerts are chosen", async () => {
+    await page.goto("/budgets");
+    await row(page, "Spesa").getByRole("link", { name: "Spesa" }).click();
+    await expect(page.getByRole("heading", { name: "Spesa", level: 1 })).toBeVisible();
+    await expect(page.getByTestId("budget-detail")).toContainText("On track");
+    await expect(page.getByTestId("budget-history").getByRole("listitem")).toHaveCount(6);
+
+    const alerts = page.getByTestId("budget-alerts");
+    await expect(alerts.getByRole("checkbox", { name: "Email me about this budget" })).toBeChecked();
+    await expect(alerts.getByRole("button", { name: /^85\s% of the limit$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(alerts.getByRole("button", { name: "Over the limit" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await alerts.getByRole("button", { name: /^85\s% of the limit$/ }).click();
+    await alerts.getByRole("button", { name: /^50\s% of the limit$/ }).click();
+    await alerts.getByLabel("Another threshold (%)").fill("120");
+    await alerts.getByRole("button", { name: "Add", exact: true }).click();
+    await alerts.getByRole("button", { name: "Save alerts" }).click();
+    await expect(page.getByText("Alerts saved")).toBeVisible();
+
+    await page.reload();
+    const saved = page.getByTestId("budget-alerts");
+    await expect(saved.getByRole("button", { name: /^50\s% of the limit$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(saved.getByRole("button", { name: /^85\s% of the limit$/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await expect(saved.getByRole("button", { name: /^120\s% of the limit$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await saved.getByRole("checkbox", { name: "Email me about this budget" }).uncheck();
+    await expect(saved.getByRole("button", { name: "Over the limit" })).toBeHidden();
+    await saved.getByRole("button", { name: "Save alerts" }).click();
+    await expect(page.getByText("Alerts saved")).toBeVisible();
+  });
 });
