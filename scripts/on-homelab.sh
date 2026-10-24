@@ -11,4 +11,4 @@ exec docker run --rm --network db_internal \
   --user "$(id -u):$(id -g)" -e HOME=/tmp \
   --env-file .env.homelab -e ADMIN_PASSWORD \
   -v "$PWD":/app -w /app \
-  node:22-bookworm-slim node --conditions=react-server --import tsx "$@"
+  node:26-bookworm-slim node --conditions=react-server --import tsx "$@"
