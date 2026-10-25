@@ -2,7 +2,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { accountsView, getAccount, listBalanceEntries } from "@/modules/accounts/queries";
 import { applyProviderAccounts, deleteBalanceEntry, removeAccount } from "@/modules/accounts/service";
 import { chargeCandidates } from "@/modules/transactions/queries";
-import { upsertFromProvider } from "@/modules/transactions/service";
+import {
+  markRemovedUpstream,
+  purgeRemovedUpstream,
+  upsertFromProvider,
+} from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { closeDatabase, resetDatabase } from "../../../test/db";
@@ -326,6 +330,40 @@ describe("deposits from movements (spec §7.7)", () => {
       ["2026-03-05", "rule"],
       ["2026-02-05", "rule"],
     ]);
+  });
+
+  /*
+    Wallet gave the debit of 19 October a new id on every pass: the old movement was purged, its
+    deposit lost the link, and the new movement made a second one — six in two days (owner,
+    2026-10-25). The new movement takes the orphan back instead.
+  */
+  it("takes an orphaned deposit back when the provider sends its debit again under a new id", async () => {
+    const bank = await anAccount(ctx, "ING Conto Arancio");
+    const fund = await createFund(ctx, input({ initialCents: null }));
+    await saveDepositRule(ctx, fund.id, { payeeMatch: "fideuram", accountId: bank, active: true });
+    const debit = (externalId: string) =>
+      movement({
+        externalId,
+        payee: "FIDEURAM",
+        amountCents: -25_100n,
+        occurredAt: new Date("2026-10-19T10:00:00Z"),
+      });
+
+    await upsertFromProvider(ctx, bank, [debit("wallet-1")]);
+    await matchDeposits(ctx);
+    const [first] = (await fundDetail(ctx, fund.id)).deposits;
+    for (const next of ["wallet-2", "wallet-3"]) {
+      await markRemovedUpstream(ctx, [(await fundDetail(ctx, fund.id)).deposits[0].transactionId!]);
+      await purgeRemovedUpstream(ctx);
+      await upsertFromProvider(ctx, bank, [debit(next)]);
+      expect(await matchDeposits(ctx)).toEqual({ written: 0 });
+    }
+
+    const deposits = (await fundDetail(ctx, fund.id)).deposits;
+    expect(deposits).toHaveLength(1);
+    expect(deposits[0].id).toBe(first.id);
+    expect(deposits[0].transactionId).not.toBeNull();
+    expect(deposits[0].transactionId).not.toBe(first.transactionId);
   });
 
   it("matches nothing while the rule is off or on another account", async () => {
