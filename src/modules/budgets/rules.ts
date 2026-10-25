@@ -208,3 +208,78 @@ export const setLimitSchema = z
 export const stopLimitSchema = z
   .object({ ...scopeSchema, month: monthKeySchema })
   .refine(onSomething, "A budget is on a category, an account or both");
+
+/**
+ * The alert thresholds a budget starts with when nobody has chosen any: the "Near limit" of
+ * {@link budgetStatus} and the moment it turns "Over".
+ */
+export const DEFAULT_ALERT_THRESHOLDS: readonly number[] = [Number(NEAR_LIMIT_PERCENT), 100];
+
+/** The thresholds the alert form offers as one-click choices; any other whole percent may be typed. */
+export const ALERT_PRESETS: readonly number[] = [50, 75, 85, 90, 100];
+
+export const MAX_ALERT_THRESHOLDS = 8;
+
+/** A budget's alert settings: on or off, and the percentages of the limit that send an email. */
+export interface AlertSettings {
+  enabled: boolean;
+  thresholds: number[];
+}
+
+export const DEFAULT_ALERT_SETTINGS: Readonly<AlertSettings> = Object.freeze({
+  enabled: true,
+  thresholds: [...DEFAULT_ALERT_THRESHOLDS],
+});
+
+/**
+ * Whether `spent` has reached `percent` of `limit`. Below 100 the threshold itself counts
+ * ("85 %" is reached at exactly 85 %); from 100 on it has to be passed, like "Over" in
+ * {@link budgetStatus}: a budget spent to the cent is not over. Integer cents, no rounding.
+ */
+export function thresholdReached(spent: Cents, limit: Cents, percent: number): boolean {
+  const scaled = limit * BigInt(percent);
+  return percent < 100 ? spent * 100n >= scaled : spent * 100n > scaled;
+}
+
+/**
+ * The highest threshold a budget has reached, `null` with none: one email says where it stands,
+ * however many thresholds the same movement walked past.
+ */
+export function reachedThreshold(spent: Cents, limit: Cents, thresholds: readonly number[]): number | null {
+  let reached: number | null = null;
+  for (const percent of thresholds) {
+    if (thresholdReached(spent, limit, percent) && (reached === null || percent > reached)) reached = percent;
+  }
+  return reached;
+}
+
+/** A budget's address: `<category|all>_<account|all>`, the two halves of its scope. */
+export function budgetSlug(scope: BudgetScope): string {
+  return `${scope.categoryId ?? "all"}_${scope.accountId ?? "all"}`;
+}
+
+const SLUG_PART = /^(all|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+
+/** The scope a {@link budgetSlug} names, `null` for anything else (never a budget on nothing). */
+export function parseBudgetSlug(slug: string): BudgetScope | null {
+  const [category, account, ...rest] = slug.split("_");
+  if (rest.length > 0 || !category || !account) return null;
+  if (!SLUG_PART.test(category) || !SLUG_PART.test(account)) return null;
+  const scope = {
+    categoryId: category === "all" ? null : category,
+    accountId: account === "all" ? null : account,
+  };
+  return onSomething(scope) ? scope : null;
+}
+
+export const saveAlertsSchema = z
+  .object({
+    ...scopeSchema,
+    enabled: z.boolean(),
+    thresholds: z
+      .array(z.number().int().min(1).max(200))
+      .max(MAX_ALERT_THRESHOLDS)
+      .transform((list) => [...new Set(list)].sort((a, b) => a - b)),
+  })
+  .refine(onSomething, "A budget is on a category, an account or both")
+  .refine((value) => !value.enabled || value.thresholds.length > 0, "Alerts on need a threshold");

@@ -15,6 +15,7 @@ describe("JOBS", () => {
       ["accounts-snapshot", "monthly"],
       ["wallet-sync", "hourly"],
       ["subscriptions-check", "hourly"],
+      ["budgets-alerts", "hourly"],
       ["interests-accrual", "hourly"],
       ["interests-rematch", "daily"],
       ["funds-deposits", "hourly"],

@@ -35,4 +35,4 @@ exec docker run --rm --network db_internal \
   -v "$PWD":/app -w /app \
   -e TEST_DATABASE_URL -e TEST_S3_ENDPOINT -e TEST_S3_REGION \
   -e TEST_S3_ACCESS_KEY_ID -e TEST_S3_SECRET_ACCESS_KEY -e TEST_S3_BUCKET \
-  node:22-bookworm-slim npx vitest run --project integration "$@"
+  node:26-bookworm-slim npx vitest run --project integration "$@"

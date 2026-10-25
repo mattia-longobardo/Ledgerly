@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { budgetRows, budgetStatus, limitFor, percentOf, setLimitSchema } from "./rules";
+import {
+  budgetRows,
+  budgetSlug,
+  budgetStatus,
+  limitFor,
+  parseBudgetSlug,
+  percentOf,
+  reachedThreshold,
+  saveAlertsSchema,
+  setLimitSchema,
+  thresholdReached,
+} from "./rules";
 
 describe("limitFor", () => {
   const versions = [
@@ -155,5 +166,55 @@ describe("the scope schema", () => {
     expect(
       setLimitSchema.safeParse({ categoryId: null, accountId: id, month: "2026-09-01", cents: 1n }).success,
     ).toBe(true);
+  });
+});
+
+describe("alert thresholds", () => {
+  it("counts a threshold under 100 % once reached, and 100 % only once passed", () => {
+    expect(thresholdReached(8_499n, 10_000n, 85)).toBe(false);
+    expect(thresholdReached(8_500n, 10_000n, 85)).toBe(true);
+    expect(thresholdReached(10_000n, 10_000n, 100)).toBe(false);
+    expect(thresholdReached(10_001n, 10_000n, 100)).toBe(true);
+    expect(thresholdReached(12_000n, 10_000n, 120)).toBe(false);
+    expect(thresholdReached(12_001n, 10_000n, 120)).toBe(true);
+  });
+
+  it("names only the highest threshold reached", () => {
+    expect(reachedThreshold(5_000n, 10_000n, [85, 100])).toBeNull();
+    expect(reachedThreshold(9_000n, 10_000n, [50, 85, 100])).toBe(85);
+    expect(reachedThreshold(11_000n, 10_000n, [100, 50, 85])).toBe(100);
+  });
+
+  it("sorts and de-duplicates the thresholds, and wants one when alerts are on", () => {
+    const scope = { categoryId: null, accountId: "01a0aba3-7a14-7ec1-9296-c9b01d414b3d" };
+    expect(
+      saveAlertsSchema.parse({ ...scope, enabled: true, thresholds: [100, 50, 100] }).thresholds,
+    ).toEqual([50, 100]);
+    expect(saveAlertsSchema.safeParse({ ...scope, enabled: true, thresholds: [] }).success).toBe(false);
+    expect(saveAlertsSchema.safeParse({ ...scope, enabled: false, thresholds: [] }).success).toBe(true);
+    expect(saveAlertsSchema.safeParse({ ...scope, enabled: true, thresholds: [0] }).success).toBe(false);
+    expect(saveAlertsSchema.safeParse({ ...scope, enabled: true, thresholds: [201] }).success).toBe(false);
+  });
+});
+
+describe("budgetSlug", () => {
+  const category = "01a0aba3-7a14-7ec1-9296-c9b01d414b3d";
+  const account = "01a0aba3-7a14-7ec1-9296-c9b01d414b3e";
+
+  it("round-trips every kind of scope", () => {
+    for (const scope of [
+      { categoryId: category, accountId: null },
+      { categoryId: null, accountId: account },
+      { categoryId: category, accountId: account },
+    ]) {
+      expect(parseBudgetSlug(budgetSlug(scope))).toEqual(scope);
+    }
+  });
+
+  it("refuses a budget on nothing and anything that is not a slug", () => {
+    expect(parseBudgetSlug("all_all")).toBeNull();
+    expect(parseBudgetSlug("nope")).toBeNull();
+    expect(parseBudgetSlug(`${category}_all_all`)).toBeNull();
+    expect(parseBudgetSlug(`${category.toUpperCase()}_all`)).toBeNull();
   });
 });

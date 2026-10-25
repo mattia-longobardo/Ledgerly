@@ -19,6 +19,7 @@ import {
   RemovalRefusedError,
   SyncBusyError,
   isSyncBusy,
+  DAILY_REREAD_MONTHS,
   requestWalletBackfill,
   syncWalletNow,
 } from "./sync";
@@ -233,6 +234,41 @@ describe("syncWalletNow", () => {
     // The next pass is back to the seven-day re-read, which is the one that judges.
     const hourly = walletStub();
     await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: hourly.options });
+    expect(recordCalls(hourly)).toHaveLength(1);
+  });
+
+  it("re-reads three months on the first pass of a new day, so an older change in Wallet arrives", async () => {
+    const december = alsoOn("2025-12-10", "wr-december");
+    await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: walletStub({ records: [...JANUARY, december] }).options,
+    });
+
+    // The next morning: the December movement was moved to another category in Wallet. Seven days
+    // would never see it again; the day's first pass reads November to January and does.
+    const nextDay = new Date(NOW.getTime() + 24 * 3_600_000);
+    const recategorised = {
+      ...december,
+      category: { id: "wc-unsorted", name: "Da classificare", group: null, color: null },
+    };
+    const deep = walletStub({ records: [...JANUARY, recategorised] });
+    const result = await syncWalletNow(ctx, connectionId, { now: nextDay, clientOptions: deep.options });
+    expect(recordCalls(deep)).toHaveLength(DAILY_REREAD_MONTHS);
+    expect(recordCalls(deep)[0]).toContain("gte.2025-11-01");
+    expect(recordCalls(deep)[2]).toContain("lte.2026-01-31");
+    expect(result.transactions).toMatchObject({ updated: 1, removed: 0 });
+    const moved = (await storedTransactions(ctx)).find((row) => row.note === "frutta");
+    expect(moved?.categoryName).toBe("Da classificare");
+    expect((await readSyncJob(ctx, connectionId, "transactions"))?.cursor).toMatchObject({
+      rereadOn: "2026-01-07",
+    });
+
+    // Once a day: the next pass of the same day is the seven-day re-read again.
+    const hourly = walletStub({ records: [...JANUARY, recategorised] });
+    await syncWalletNow(ctx, connectionId, {
+      now: new Date(nextDay.getTime() + 3_600_000),
+      clientOptions: hourly.options,
+    });
     expect(recordCalls(hourly)).toHaveLength(1);
   });
 

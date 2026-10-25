@@ -220,6 +220,15 @@ function describeDoubt(
 const BACKFILL_FROM = "backfilledFrom";
 const BACKFILL_THROUGH = "backfilledThrough";
 
+/**
+ * The day of the last deep re-read: once a day — the first pass after midnight in the user's zone —
+ * the hourly pass reads the last {@link DAILY_REREAD_MONTHS} whole months instead of seven days, so
+ * a category or a note changed in Wallet on an older movement reaches the app by the next morning
+ * (owner, 2026-10-19). A backfill counts as that day's deep re-read: it has just read more.
+ */
+const REREAD_ON = "rereadOn";
+export const DAILY_REREAD_MONTHS = 3;
+
 /* The bridge to the modules' own vocabularies */
 
 /**
@@ -459,7 +468,7 @@ async function syncAccounts(
 /**
  * The windows one pass reads (spec §9.1): the monthly windows of a backfill the first time — twelve,
  * or the depth a re-download asked for (F2.5) — oldest first, and the last seven days every hour
- * after that. Which of the two it is depends on the cursor and on nothing else — not on whether
+ * after that, except the first pass of each day, which re-reads {@link DAILY_REREAD_MONTHS} months. Which of the two it is depends on the cursor and on nothing else — not on whether
  * rows exist, which a user who deleted a connection and reconnected would make lie, and not on a
  * clock.
  *
@@ -471,9 +480,16 @@ async function syncAccounts(
 function windowsFor(
   cursor: Record<string, string> | null,
   day: string,
-): { windows: DateWindow[]; judge: boolean } {
-  if (cursor?.[BACKFILL_FROM] !== undefined) return { windows: [recentWindow(day)], judge: true };
-  return { windows: firstLinkWindows(day, backfillDepth(cursor)), judge: false };
+): { windows: DateWindow[]; judge: boolean; deep: boolean } {
+  if (cursor?.[BACKFILL_FROM] === undefined) {
+    return { windows: firstLinkWindows(day, backfillDepth(cursor)), judge: false, deep: false };
+  }
+  // The deep re-read only imports and updates, like a backfill: months of answers are not a
+  // verdict on what is gone, and the seven-day pass of the next hour judges as always.
+  if (cursor[REREAD_ON] !== day) {
+    return { windows: firstLinkWindows(day, DAILY_REREAD_MONTHS), judge: false, deep: true };
+  }
+  return { windows: [recentWindow(day)], judge: true, deep: false };
 }
 
 /**
@@ -533,7 +549,8 @@ async function syncTransactions(
   categoryWriter: WalletCategoryWriter | null,
 ): Promise<Record<string, number>> {
   const job = await readSyncJob(ctx, connectionId, "transactions");
-  const { windows, judge } = windowsFor(job?.cursor ?? null, today(ctx.timeZone, now));
+  const day = today(ctx.timeZone, now);
+  const { windows, judge, deep } = windowsFor(job?.cursor ?? null, day);
   const categories = new Map((await client.categories()).map((category) => [category.externalId, category]));
   const accounts = await linkedAccounts(ctx);
 
@@ -610,8 +627,19 @@ async function syncTransactions(
           ...job?.cursor,
           [BACKFILL_FROM]: windows[0].from,
           [BACKFILL_THROUGH]: windows[windows.length - 1].to,
+          [REREAD_ON]: day,
         },
       },
+      now,
+    );
+  } else if (deep) {
+    // Like the backfill's, written only once every window is in: a deep re-read that failed half
+    // way is attempted again by the next hour's pass.
+    await saveSyncJob(
+      ctx,
+      connectionId,
+      "transactions",
+      { cursor: { ...job?.cursor, [REREAD_ON]: day } },
       now,
     );
   }

@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, date, index, pgTable, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  pgTable,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories } from "../transactions/schema";
@@ -48,6 +59,44 @@ export const budgetLimits = pgTable(
     check(
       "budget_limits_amount_ck",
       sql`(${table.stopped} and ${table.amountCents} is null) or (not ${table.stopped} and ${table.amountCents} > 0)`,
+    ),
+  ],
+);
+
+/**
+ * When a budget emails its owner: one row per scope (category, account or both), the same scope as
+ * its limits but not versioned — an alert setting is about the budget, not about a month. No row
+ * means the defaults of `DEFAULT_ALERT_SETTINGS` (85 % and over the limit, on).
+ *
+ * `thresholds` are whole percentages of the month's limit, sorted, at most a handful. Unlike a
+ * limit, a setting cascades with its account: it must not be what keeps an account from being
+ * deleted.
+ */
+export const budgetAlerts = pgTable(
+  "budget_alerts",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(true),
+    thresholds: integer("thresholds").array().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("budget_alerts_scope_uq").on(table.userId, table.categoryId, table.accountId).nullsNotDistinct(),
+    check("budget_alerts_scope_ck", sql`${table.categoryId} is not null or ${table.accountId} is not null`),
+    check(
+      "budget_alerts_thresholds_ck",
+      sql`cardinality(${table.thresholds}) <= 8 and 1 <= all(${table.thresholds}) and 200 >= all(${table.thresholds})`,
     ),
   ],
 );

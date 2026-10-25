@@ -1,18 +1,27 @@
-import { formatAmountInput, formatMoney, type NumberFormat } from "@/platform/format";
+import { formatAmountInput, formatMoney, type NumberFormat, numberSeparators } from "@/platform/format";
 import type { RuleRow } from "../queries";
 import { fractionToPercent, type Tier } from "../rules";
 import type { RuleDraft } from "./rule-dialog";
 
-/** A stored rate as the design writes it: "2,75 %" in Italian, "2.75%" in English. */
+/**
+ * A stored rate as the design writes it: "2,75 %" in Italian, "2.75%" in English, with the decimal
+ * separator the person chose in Settings (a style, not just a format name, reaches here).
+ */
 export function formatRate(fraction: string, format: NumberFormat): string {
-  const plain = fractionToPercent(fraction);
-  return format === "en-US" ? `${plain}%` : `${plain.replace(".", ",")} %`;
+  const name = typeof format === "string" ? format : format.format;
+  const plain = rateInput(fraction, format);
+  return name === "en-US" ? `${plain}%` : `${plain} %`;
 }
 
 /** A stored rate as the person would type it back into the dialog. */
 export function rateInput(fraction: string, format: NumberFormat): string {
-  const plain = fractionToPercent(fraction);
-  return format === "en-US" ? plain : plain.replace(".", ",");
+  return fractionToPercent(fraction).replace(".", numberSeparators(format).decimal);
+}
+
+/** A typed percentage ("2,75" or "2.75", per the person's separators) in plain decimal form. */
+export function readRate(text: string, format: NumberFormat): string {
+  const { decimal, group } = numberSeparators(format);
+  return text.replace(/[\s%]/g, "").replaceAll(group, "").replace(decimal, ".");
 }
 
 /** The design's tier chips: "2,75 % up to 20.000 €", "1,50 % above", or "any balance". */

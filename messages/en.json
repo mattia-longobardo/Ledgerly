@@ -72,6 +72,14 @@
     "monthlySummary": {
       "subject": "Ledgerly · {month}",
       "body": "{month} in numbers.\n\nNet worth at the end of the month: {netWorth}\nIncome: {income}\nSpending: {expense}\nNet: {net}\nMovements: {transactions}\n\nOpen Ledgerly to look closer. You can switch this email off in Settings › Profile.\n"
+    },
+    "budgetNear": {
+      "subject": "{budget}: {percent} of the budget spent",
+      "body": "{budget} ({account}) has reached {percent} of its {month} budget: {spent} of {limit}, {left} left.\n\nYou asked to be told at {threshold}. Open the budget:\n{url}\n"
+    },
+    "budgetOver": {
+      "subject": "{budget}: budget exceeded",
+      "body": "{budget} ({account}) is over its {month} budget: {spent} of {limit}, {excess} over.\n\nOpen the budget:\n{url}\n"
     }
   },
   "auth": {
@@ -1545,7 +1553,36 @@
       "empty": "No budgets this month."
     },
     "allCategories": "All categories",
-    "allAccounts": "All accounts"
+    "allAccounts": "All accounts",
+    "detail": {
+      "thisMonth": "This month · {month}",
+      "spent": "Spent",
+      "limit": "Limit",
+      "remaining": "Remaining",
+      "over": "Over by",
+      "onAccount": "On {account}",
+      "progress": "{percent} of the limit",
+      "history": "Previous months",
+      "noLimit": "No budget",
+      "historyRow": "{month}: {spent} of {limit}"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "description": "An email to {email} when this budget reaches a threshold, once per threshold each month.",
+      "enabled": "Email me about this budget",
+      "thresholds": "Send an email at",
+      "over": "Over the limit",
+      "percent": "{percent} of the limit",
+      "custom": "Another threshold (%)",
+      "add": "Add",
+      "none": "Choose at least one threshold.",
+      "invalidCustom": "A whole percentage between 1 and 200.",
+      "tooMany": "At most {count} thresholds.",
+      "save": "Save alerts",
+      "saved": "Alerts saved",
+      "off": "Alerts are off for this budget.",
+      "hint": "Checked every hour, after the bank sync. Below 100 % a threshold counts once reached; from 100 % on it has to be passed."
+    }
   },
   "pockets": {
     "title": "Pockets",

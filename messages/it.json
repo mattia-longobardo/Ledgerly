@@ -72,6 +72,14 @@
     "monthlySummary": {
       "subject": "Ledgerly · {month}",
       "body": "{month} in numeri.\n\nPatrimonio a fine mese: {netWorth}\nEntrate: {income}\nUscite: {expense}\nSaldo: {net}\nMovimenti: {transactions}\n\nApri Ledgerly per guardare più da vicino. Puoi spegnere questa email in Impostazioni › Profilo.\n"
+    },
+    "budgetNear": {
+      "subject": "{budget}: speso il {percent} del budget",
+      "body": "{budget} ({account}) ha raggiunto il {percent} del budget di {month}: {spent} su {limit}, restano {left}.\n\nHai chiesto di essere avvisato al {threshold}. Apri il budget:\n{url}\n"
+    },
+    "budgetOver": {
+      "subject": "{budget}: budget superato",
+      "body": "{budget} ({account}) ha superato il budget di {month}: {spent} su {limit}, {excess} oltre.\n\nApri il budget:\n{url}\n"
     }
   },
   "auth": {
@@ -1545,7 +1553,36 @@
       "empty": "Nessun budget questo mese."
     },
     "allCategories": "Tutte le categorie",
-    "allAccounts": "Tutti i conti"
+    "allAccounts": "Tutti i conti",
+    "detail": {
+      "thisMonth": "Questo mese · {month}",
+      "spent": "Speso",
+      "limit": "Limite",
+      "remaining": "Rimanente",
+      "over": "Oltre di",
+      "onAccount": "Su {account}",
+      "progress": "{percent} del limite",
+      "history": "Mesi precedenti",
+      "noLimit": "Nessun budget",
+      "historyRow": "{month}: {spent} su {limit}"
+    },
+    "alerts": {
+      "title": "Avvisi",
+      "description": "Un'email a {email} quando questo budget raggiunge una soglia, una volta per soglia ogni mese.",
+      "enabled": "Avvisami via email per questo budget",
+      "thresholds": "Invia un'email al",
+      "over": "Superamento del limite",
+      "percent": "{percent} del limite",
+      "custom": "Altra soglia (%)",
+      "add": "Aggiungi",
+      "none": "Scegli almeno una soglia.",
+      "invalidCustom": "Una percentuale intera tra 1 e 200.",
+      "tooMany": "Al massimo {count} soglie.",
+      "save": "Salva avvisi",
+      "saved": "Avvisi salvati",
+      "off": "Gli avvisi sono spenti per questo budget.",
+      "hint": "Controllato ogni ora, dopo la sincronizzazione con la banca. Sotto il 100 % una soglia conta appena raggiunta; dal 100 % in su deve essere superata."
+    }
   },
   "pockets": {
     "title": "Pocket",
