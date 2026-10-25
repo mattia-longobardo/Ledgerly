@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "@/modules/accounts/queries";
 import { isFutureDate } from "@/modules/accounts/rules";
@@ -13,7 +13,7 @@ import { chargeCandidates } from "@/modules/transactions/queries";
 import { payeeKeyOf } from "@/modules/transactions/rules";
 import { carriesKey, type Detection, recurrenceKeyOf, summarise } from "./detect";
 import type { Ctx } from "@/platform/context";
-import { isCivilDate, today } from "@/platform/dates";
+import { daysBetween, isCivilDate, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
@@ -384,7 +384,14 @@ export async function saveDepositRule(
  * or case, and that no deposit holds yet. Debited = the movement; fee = the fund's fee per deposit
  * (unknown without one). Idempotent: a movement makes one deposit (unique key), and a deposit
  * edited by hand is never touched again.
+ *
+ * A deposit whose movement is gone keeps its data and loses the link (`on delete set null`). When
+ * Wallet gives the same debit a new id, the old row is purged and the new one arrives as a movement
+ * no deposit holds: it takes the orphan back — same amount, within {@link READOPT_DAYS} days —
+ * instead of making a second deposit (owner, 2026-10-25: the debit of 19 October counted six times).
  */
+const READOPT_DAYS = 3;
+
 export async function matchDeposits(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   fundIds?: readonly string[],
@@ -424,10 +431,60 @@ export async function matchDeposits(
         compactKey(`${candidate.payee ?? ""} ${candidate.note ?? ""}`).includes(identifier),
     );
     if (candidates.length === 0) continue;
+    const held = new Set(
+      (
+        await getDb()
+          .select({ id: fundDeposits.transactionId })
+          .from(fundDeposits)
+          .where(
+            and(
+              userScoped(ctx).owns(fundDeposits),
+              inArray(
+                fundDeposits.transactionId,
+                candidates.map((candidate) => candidate.id),
+              ),
+            ),
+          )
+      ).map((row) => row.id),
+    );
+    const orphans = await getDb()
+      .select({ id: fundDeposits.id, on: fundDeposits.on, chargedCents: fundDeposits.chargedCents })
+      .from(fundDeposits)
+      .where(
+        and(
+          userScoped(ctx).owns(fundDeposits),
+          eq(fundDeposits.fundId, fund.id),
+          eq(fundDeposits.source, "rule"),
+          isNull(fundDeposits.transactionId),
+        ),
+      );
+    const fresh: typeof candidates = [];
+    for (const candidate of candidates) {
+      if (held.has(candidate.id)) continue;
+      const nearest = orphans
+        .filter(
+          (orphan) =>
+            orphan.chargedCents === candidate.cents &&
+            Math.abs(daysBetween(orphan.on, candidate.on)) <= READOPT_DAYS,
+        )
+        .sort(
+          (a, b) => Math.abs(daysBetween(a.on, candidate.on)) - Math.abs(daysBetween(b.on, candidate.on)),
+        )[0];
+      if (nearest === undefined) {
+        fresh.push(candidate);
+        continue;
+      }
+      orphans.splice(orphans.indexOf(nearest), 1);
+      await getDb()
+        .update(fundDeposits)
+        .set({ transactionId: candidate.id })
+        .where(and(eq(fundDeposits.id, nearest.id), userScoped(ctx).owns(fundDeposits)));
+    }
+    if (fresh.length === 0) continue;
     const rows = await getDb()
       .insert(fundDeposits)
       .values(
-        candidates.map((candidate) =>
+        fresh.map((candidate) =>
           userScoped(ctx).stamp({
             fundId: fund.id,
             on: candidate.on,
