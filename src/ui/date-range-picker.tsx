@@ -2,11 +2,12 @@
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { addMonths, type CivilDate, type MonthKey, monthKey } from "@/platform/dates";
 import { formatDate, type UiLocale } from "@/platform/format";
 import { Button, IconButton } from "./button";
 import { cn } from "./cn";
+import { useDismiss } from "./dismissable-details";
 import { type Params, withParams } from "./url";
 
 /** What the picker picks: whole days, or whole months (spec §8.3, F2.5). */
@@ -181,10 +182,18 @@ export function DateRangePicker({
     );
   }
 
+  const details = useRef<HTMLDetailsElement>(null);
+  useDismiss(details, open, close);
+
   const hint = draft.to === null ? labels.pickEnd : describe(draft.from, draft.to);
 
   return (
-    <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="relative">
+    <details
+      ref={details}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className="relative"
+    >
       <summary
         title={labels.label}
         className="focus-ring flex h-[30px] cursor-pointer list-none items-center justify-center gap-2 rounded-ctl px-2 text-sm font-medium whitespace-nowrap hover:bg-hover [&::-webkit-details-marker]:hidden"

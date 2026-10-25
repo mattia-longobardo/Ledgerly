@@ -6,6 +6,7 @@ import { TRANSACTION_TYPES, type TransactionType } from "@/modules/transactions/
 import type { UiLocale } from "@/platform/format";
 import { IconButton } from "@/ui/button";
 import { cn } from "@/ui/cn";
+import { DismissableDetails } from "@/ui/dismissable-details";
 import { Input } from "@/ui/input";
 import { rangeLabel } from "./display";
 import { type ExpensesQuery, listParam, RANGE_PRESETS, toggle, UNCATEGORISED } from "./filters";
@@ -127,7 +128,7 @@ export async function FilterBar({
 
       <span aria-hidden className="mx-1 h-[18px] w-px bg-border max-md:hidden" />
 
-      <details className="relative">
+      <DismissableDetails className="relative">
         <summary className={cn(CONTROL, selected.length > 0 && "border-accent")}>
           <TagIcon aria-hidden className="size-3.5 text-muted" />
           {selected.length === 0 ? t("categories.all") : t("categories.some", { count: selected.length })}
@@ -169,10 +170,10 @@ export async function FilterBar({
             </Link>
           </div>
         </div>
-      </details>
+      </DismissableDetails>
 
       {/* Accounts and types are multiple choice too, like the categories. */}
-      <details className="relative">
+      <DismissableDetails className="relative">
         <summary className={cn(CONTROL, accountSelection.length > 0 && "border-accent")}>
           <Landmark aria-hidden className="size-3.5 text-muted" />
           {summaryOf(
@@ -208,9 +209,9 @@ export async function FilterBar({
             ))}
           </div>
         </div>
-      </details>
+      </DismissableDetails>
 
-      <details className="relative">
+      <DismissableDetails className="relative">
         <summary className={cn(CONTROL, typeSelection.length > 0 && "border-accent")}>
           {summaryOf(
             typeSelection.length,
@@ -243,7 +244,7 @@ export async function FilterBar({
             </Link>
           ))}
         </div>
-      </details>
+      </DismissableDetails>
 
       <Link
         href={withParams(path, carry, { hidden: query.showHidden ? "" : "1" })}
