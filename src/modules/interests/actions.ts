@@ -8,6 +8,7 @@ import { parseAmount } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { percentToFraction } from "./rules";
+import { readRate } from "./ui/present";
 import { markPosted, postEntry, retryPosting } from "./posting";
 import { createRule, InterestError, setRuleState, updateRule } from "./service";
 
@@ -25,14 +26,9 @@ function revalidate(id?: string): void {
   revalidatePath("/pockets");
 }
 
-/** A typed percentage ("2,75" in Italian, "2.75" in English) as the stored fraction. */
+/** A typed percentage, in the user's own separators, as the stored fraction. */
 function rate(text: string, ctx: Ctx): string {
-  const cleaned = text.replace(/[\s %]/g, "");
-  const plain =
-    ctx.numberFormat === "en-US"
-      ? cleaned.replaceAll(",", "")
-      : cleaned.replaceAll(".", "").replace(",", ".");
-  return percentToFraction(plain);
+  return percentToFraction(readRate(text, ctx.numberFormat));
 }
 
 export interface RuleFormInput {
