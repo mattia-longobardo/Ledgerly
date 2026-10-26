@@ -8,6 +8,7 @@ Obiettivi:
 1. Login web: utente/password locali con 2FA (TOTP + codici di recupero) oppure OIDC con Authentik.
 2. Server MCP di Ledgerly protetto con OAuth2 (MCP Authorization).
 3. `/api/v1` con OAuth2, senza interrompere l'integrazione Paperless → Ledgerly.
+4. Orario di sincronizzazione delle integrazioni scelto dall'utente (D7).
 
 ## 1. Stato attuale
 
@@ -172,7 +173,8 @@ da rinnovare). Si inverte il verso: Ledgerly diventa client dell'API di Paperles
   connessione per utente in `integration_connections` con credenziali sigillate (`sealJson`,
   `APP_ENCRYPTION_KEY`): URL Paperless + token API Paperless + mappa *tipo documento → kind*
   (`Payroll` → `payslip`; Cometa opzionale).
-- Job `paperless-sync` nel tier **hourly** (registry): legge
+- Sync `paperless` lanciato dal dispatcher delle integrazioni all'orario scelto dall'utente (D7;
+  default ogni ora, come Wallet e Trek oggi): legge
   `GET /api/documents/?document_type__id__in=…&modified__gt=<cursore>&ordering=modified`, scarica
   `GET /api/documents/{id}/download/?original=true` (stessi byte del webhook → stesso sha256) e
   chiama `uploadPayslip` / `uploadCometaDocument` + lettura come oggi. Cursore = ultimo `modified`
@@ -184,7 +186,7 @@ da rinnovare). Si inverte il verso: Ledgerly diventa client dell'API di Paperles
 
 Vantaggi: nessun segreto in ingresso su Ledgerly; un documento perso (Ledgerly giù durante un
 webhook) viene recuperato al giro successivo; l'API pubblica resta solo OAuth2.
-Costo: latenza fino a 1 h (accettabile per buste paga mensili) e codice nuovo nel modulo
+Costo: latenza pari all'intervallo scelto (D7; 1 h di default, minimo 15 min) e codice nuovo nel modulo
 integrazioni.
 
 Scartate:
@@ -235,6 +237,101 @@ Scartate:
   *Client ID Metadata Documents* (revisione MCP 2025-11-25) in `@better-auth/oauth-provider`;
   se assente, basta la DCR.
 
+### D7 — Orario di sincronizzazione delle integrazioni scelto dall'utente
+
+Requisito 4 di PERS-44: ogni utente sceglie quando si sincronizzano le sue integrazioni.
+
+**Integrazioni coinvolte**: tutte quelle con una riga in `integration_connections`, cioè i
+`PROVIDERS` di `src/platform/integrations/rules.ts`:
+
+- `wallet` (job `wallet-sync`, oggi nel tier `hourly`);
+- `trek` (job `trek-sync`, oggi nel tier `hourly`);
+- `paperless` (nuovo, D5).
+
+Non coinvolto: `holidays-refresh`, che aggiorna i calendari festivi una volta al giorno. Non è una
+connessione dell'utente e resta nel tier `daily`.
+
+**Granularità**: un orario per connessione, scelto tra tre modalità.
+
+| Modalità | Valori | Esempio |
+|---|---|---|
+| `interval` | ogni 15, 30, 60, 120, 180, 240, 360, 720 o 1440 minuti, allineato alla mezzanotte locale | ogni 6 h → 00:00, 06:00, 12:00, 18:00 |
+| `times` | da 1 a 6 orari del giorno, a passi di 15 minuti | 07:00 e 19:30 |
+| `manual` | solo "Sincronizza ora" | — |
+
+- Il minimo è 15 minuti, perché il cron batte ogni 15 minuti e il valore protegge le API a monte
+  (Wallet ha dei limiti di chiamate). Gli orari sono rispettati con uno scarto massimo di un tick
+  (≤ 15 min).
+- Scartata l'**espressione cron libera**: la validazione è complessa, la UI non è guidata e un
+  valore sbagliato può martellare un'API esterna. Le tre modalità coprono i casi reali.
+- **Timezone**: quella delle preferenze dell'utente (`preferences.timeZone`, già nel `Ctx`).
+  Gli orari sono orari locali, calcolati con `src/platform/dates.ts`. Al cambio dell'ora legale
+  "07:00" resta 07:00 locale. Se l'utente cambia timezone, il prossimo run viene ricalcolato.
+- **Default**: `interval` ogni 60 minuti per tutte e tre le integrazioni, cioè il comportamento
+  di oggi. La migrazione non cambia nulla finché l'utente non modifica l'orario.
+
+**Persistenza (migrazione Drizzle additiva)** sulla tabella `integration_connections`:
+
+- `schedule jsonb not null default '{"mode":"interval","everyMinutes":60}'`. La forma viene
+  validata con zod in `rules.ts`, e un `check` SQL ammette solo le tre modalità.
+- `next_sync_at timestamptz`: il prossimo run dovuto. Viene calcolato al salvataggio
+  dell'orario, dopo ogni run e al cambio di timezone. È `null` con `manual`.
+- Indice parziale `(next_sync_at) where state = 'active'`.
+- Il calcolo del prossimo run è una funzione pura `nextSyncAt(schedule, timeZone, after)` in
+  `rules.ts`, con test unitari su DST, fine mese e orari multipli.
+
+**Scheduler**: nessun nuovo servizio, si estende quello esistente.
+
+- Nuovo job `integrations-sync` (dispatcher) nel registry. Prende il posto di `wallet-sync` e
+  `trek-sync` come job schedulati. Restano le funzioni di sync per provider, che il dispatcher
+  chiama. A ogni passaggio legge le connessioni `active` con `next_sync_at <= now`
+  (`ORDER BY next_sync_at, id`) e per ciascuna:
+  1. prende un lock `sync:<provider>:<userId>`, lo stesso che usa "Sincronizza ora", così i due
+     non si sovrappongono;
+  2. esegue la sync;
+  3. aggiorna `next_sync_at`.
+
+  Un errore non anticipa il run successivo: lo stato `error` e i `sync_runs` funzionano come
+  oggi.
+- Nuovo tier `quarter` in `Tier`/`ScheduledTier`, che contiene solo `integrations-sync`. Il job è
+  anche **primo** nel tier `hourly`. In questo modo, al tick `:07`, i job che oggi dipendono da
+  `wallet-sync` (`subscriptions-check`, `budget-alerts`, `interests-accrual`) vedono ancora i
+  movimenti appena sincronizzati, come oggi.
+- `cron/crontab` aggiunge una riga
+  `22,37,52 * * * * … /api/jobs/tick?tier=quarter`. La riga hourly `7 * * * *` resta, quindi i
+  tick sono `:07`, `:22`, `:37`, `:52`. Le due righe non si sovrappongono mai.
+  `/api/jobs/tick` accetta il nuovo tier e usa lo stesso `CRON_SECRET`. L'heartbeat e il
+  `job:<name>` lock restano invariati.
+- **Effetto sui job dipendenti**: se Wallet si sincronizza a un orario non allineato all'ora
+  (es. 07:30), i job hourly vedono i nuovi movimenti al tick `:07` successivo. Quindi gli avvisi
+  budget arrivano fino a 1 h dopo la sync, non dopo il movimento. Questo è accettato, ed è
+  documentato nella card.
+- Admin › Jobs: "Run now" su `integrations-sync` esegue solo le connessioni dovute. Il
+  "Sincronizza ora" della card esegue la connessione dell'utente subito e non sposta
+  `next_sync_at`.
+
+**UI**: Settings › Integrazioni, nella card di ogni provider.
+
+- Un controllo "Sincronizzazione" con la modalità (radio: *Ogni…* / *Agli orari…* / *Solo
+  manuale*), la select dell'intervallo oppure fino a 6 campi orario a passi di 15 minuti.
+- Sotto: la timezone usata (link alle preferenze) e "Prossima sincronizzazione: <data ora
+  locale>".
+- Salvataggio con una Server Action nel file `actions.ts` della pagina integrazioni, validazione
+  zod lato server, testi in `messages/en.json` e `messages/it.json`.
+- La card con il nuovo controllo entra in `tests/e2e/a11y.spec.ts` (regole F9: target ≥ 24 px,
+  versione stretta senza controlli mancanti).
+
+**Effetto sulla domanda aperta 2**: il ritardo massimo del pull Paperless non è più fisso a 1 h.
+È l'intervallo scelto (minimo 15 min, default 60 min) oppure la distanza tra due orari in
+modalità `times`, più al massimo un tick (≤ 15 min). Con `manual` dipende dall'utente.
+
+**Task**: implementato in **T3**, prima del provider Paperless, così Paperless nasce già con
+l'orario configurabile. Wallet e Trek passano al dispatcher nello stesso task. Lo schema delle
+connessioni e la UI sono condivisi, quindi va fatto una volta sola. Prima del deploy: confronto dei
+`sync_runs` di Wallet e Trek su 24 h prima e dopo (stessa cadenza oraria, nessun run doppio).
+Rollback: immagine `ledgerly:pre-sync-schedule` e la riga di crontab tolta. Le colonne nuove
+possono restare: la versione precedente le ignora.
+
 ## 3. Migrazione Paperless — passi, verifica, rollback
 
 Regola: in ogni momento almeno una delle due strade (webhook PAT, pull) è attiva. La deduplica
@@ -247,7 +344,7 @@ Regola: in ogni momento almeno una delle due strade (webhook PAT, pull) è attiv
 | 2 | Configurare l'integrazione Paperless in Ledgerly (URL interno, token, `Payroll → payslip`), cursore iniziale = 90 giorni fa | Mattia | "Prova connessione" OK | disconnettere l'integrazione |
 | 3 | "Sincronizza ora" | Mattia/agente | `job_runs` ok; tutti i documenti esistenti risultano `duplicate`; numero di `documents` invariato | disconnettere |
 | 4 | Periodo parallelo: webhook **e** pull attivi. Test: modificare un campo di una busta paga in Paperless | — | webhook → `duplicate`; pull → `duplicate`; nessun documento nuovo | nessuno necessario |
-| 5 | Disattivare (non cancellare) il Workflow 1 in Paperless | Mattia | alla busta paga successiva (o con un PDF di test su utente `@example.test`) il documento arriva dal pull entro 1 h | riattivare il Workflow 1 |
+| 5 | Disattivare (non cancellare) il Workflow 1 in Paperless | Mattia | alla busta paga successiva (o con un PDF di test su utente `@example.test`) il documento arriva dal pull entro l'intervallo scelto (D7) | riattivare il Workflow 1 |
 | 6 | Dopo 1 ciclo paga / 14 giorni senza errori: revocare il PAT di Paperless in Ledgerly, cancellare Workflow 1 e webhook in Paperless | Mattia | log senza `legacy token used`; job `paperless-sync` verde | ricreare un PAT `imports` e il workflow webhook (possibile finché T5 non è deployato: per questo T5 parte solo dopo questa verifica) |
 | 7 | T5: rimozione del codice PAT e della tabella (dump prima) | agente | test + `docker compose up --wait` | immagine `ledgerly:pre-pat-removal` e restore del dump |
 
@@ -261,7 +358,7 @@ migrazioni con dump in `backups/ledgerly/`.
 | **T0** — upgrade better-auth 1.7.14 | Bump, verifica patch `withDiscoveryDeadline`, `auth.itest.ts`, login Authentik in prod | — |
 | **T1** — Login 2FA | Plugin `twoFactor` + client, pagine `/sign-in/two-factor` e attivazione forzata, Settings › Security (TOTP, codici), reset admin, rate limit, i18n en/it, a11y e2e delle nuove schermate, migrazione | T0 |
 | **T2** — OAuth2 AS + API | `jwt` + `@better-auth/oauth-provider`, metadata `.well-known`, matcher proxy, pagina consenso, `withToken` che accetta JWT (aud `/api/v1`) e PAT legacy, Client API in Settings (sostituisce la creazione PAT), README | T0 (consigliato dopo T1: il consenso eredita il 2FA) |
-| **T3** — Integrazione Paperless (pull) | Provider `paperless`, client, job hourly, card Integrazioni, test con fixture | T2 per il deploy coordinato (può essere sviluppato in parallelo) |
+| **T3** — Orari di sync (D7) + integrazione Paperless (pull) | Prima D7 (schema, dispatcher, tier `quarter`, crontab, UI orario, migrazione di Wallet e Trek), poi provider `paperless`, client, card Integrazioni, test con fixture | T2 per il deploy coordinato (può essere sviluppato in parallelo) |
 | **T4** — Server MCP | `/api/mcp` Streamable HTTP, RFC 9728, tool v1, test con MCP Inspector e connettore Claude | T2 |
 | **T5** — Fine transizione PAT | Rimozione PAT dopo il passo 6 del §3 | T3 + conferma di Mattia |
 
@@ -278,11 +375,14 @@ T1 e T2 possono procedere in parallelo dopo T0; T3 e T4 in parallelo dopo T2.
   Workflow 1 (passi 5–6).
 - Cloudflare: verificare che Bot Fight Mode / WAF non blocchino le richieste dei client MCP cloud
   su `/api/mcp`, `/api/auth/oauth2/*` e `/.well-known/*`.
+- `ledgerly-cron`: nuova riga del tier `quarter` in `cron/crontab` (D7), quindi rebuild del
+  sidecar in T3.
 - `network/`: nessuna modifica (il dominio è già pubblico via tunnel).
 
 ## 6. Domande aperte per Mattia
 
 1. 2FA **obbligatorio** per gli account password (proposta) o facoltativo?
-2. OK al **pull** da Paperless con ritardo fino a 1 h al posto del webhook?
+2. OK al **pull** da Paperless al posto del webhook? Il ritardo massimo ora è l'orario che scegli
+   tu (D7): default ogni ora, minimo ogni 15 minuti. Ti serve un default diverso per Paperless?
 3. Tool MCP in scrittura: basta `record_account_balance` in v1, o tutto in sola lettura?
 4. Durata del periodo di transizione PAT: 14 giorni / un ciclo paga va bene?
