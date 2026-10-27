@@ -29,8 +29,9 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
     const preview = dialog.getByRole("list", { name: "Next 5 syncs" });
     await expect(preview.getByRole("listitem")).toHaveCount(5);
     const items = await preview.getByRole("listitem").allTextContents();
-    expect(items.some((item) => item.includes("06:43"))).toBe(true);
-    expect(items.every((item) => /06:43|18:30/.test(item))).toBe(true);
+    // The preview speaks the person's locale: en-US writes 18:30 as 06:30 PM.
+    expect(items.some((item) => item.includes("06:43 AM"))).toBe(true);
+    expect(items.every((item) => /06:43 AM|06:30 PM/.test(item))).toBe(true);
   });
 
   await test.step("too close is refused before saving", async () => {
@@ -44,7 +45,7 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText("At 06:43 · Mon–Fri +1")).toBeVisible();
-    await expect(page.getByText(/^Next: .*(06:43|18:30)/)).toBeVisible();
+    await expect(page.getByText(/^Next: .*(6:43|6:30)/)).toBeVisible();
   });
 
   await test.step("back to manual only", async () => {
