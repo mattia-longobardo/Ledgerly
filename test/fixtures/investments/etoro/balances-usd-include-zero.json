@@ -1,0 +1,71 @@
+{
+  "request": "/api/v1/balances?displayCurrency=USD&includeZeroBalances=true",
+  "status": 200,
+  "body": {
+    "gcid": 900001,
+    "totalBalance": 0,
+    "displayCurrency": "USD",
+    "balances": [
+      {
+        "accountId": "00000000-0000-4000-8000-000000000004",
+        "accountType": "Cash",
+        "subType": null,
+        "balance": 0,
+        "currency": "EUR",
+        "displayBalance": 0,
+        "displayCurrency": "USD",
+        "exchangeRate": 1.11309
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000005",
+        "accountType": "Crypto",
+        "subType": null,
+        "balance": 0,
+        "currency": "BTC",
+        "displayBalance": 0,
+        "displayCurrency": "USD",
+        "exchangeRate": 0
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000006",
+        "accountType": "Crypto",
+        "subType": null,
+        "balance": 0,
+        "currency": "LTC",
+        "displayBalance": 0,
+        "displayCurrency": "USD",
+        "exchangeRate": 0
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000007",
+        "accountType": "Crypto",
+        "subType": null,
+        "balance": 0,
+        "currency": "BCH",
+        "displayBalance": 0,
+        "displayCurrency": "USD",
+        "exchangeRate": 0
+      },
+      {
+        "accountId": "00000000-0000-4000-8000-000000000008",
+        "accountType": "Crypto",
+        "subType": null,
+        "balance": 0,
+        "currency": "XLM",
+        "displayBalance": 0,
+        "displayCurrency": "USD",
+        "exchangeRate": 0
+      },
+      {
+        "accountId": "fixture-id-0009",
+        "accountType": "Trading",
+        "subType": null,
+        "balance": 0,
+        "currency": "USD",
+        "displayBalance": 0,
+        "displayCurrency": "USD",
+        "exchangeRate": 1
+      }
+    ]
+  }
+}

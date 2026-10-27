@@ -1,0 +1,113 @@
+{
+  "method": "fetchMyTrades(symbol, undefined, 1000)",
+  "body": [
+    {
+      "info": {
+        "symbol": "ETHUSDT",
+        "id": 900072,
+        "orderId": 900073,
+        "price": "2620.00000000",
+        "qty": "0.24346",
+        "quoteQty": "637.8652",
+        "commission": "0.6378652",
+        "commissionAsset": "USDT",
+        "time": 1730206337892,
+        "isBuyer": false,
+        "isMaker": false,
+        "isBestMatch": true
+      },
+      "timestamp": 1730206337892,
+      "datetime": "2024-10-29T12:52:17.892Z",
+      "symbol": "ETH/USDT",
+      "id": "fixture-id-0074",
+      "order": "fixture-id-0075",
+      "side": "sell",
+      "takerOrMaker": "taker",
+      "price": 2620,
+      "amount": 0.24346,
+      "cost": 637.8652,
+      "fee": {
+        "currency": "USDT",
+        "cost": 0.6378652
+      },
+      "fees": [
+        {
+          "currency": "USDT",
+          "cost": 0.6378652
+        }
+      ]
+    },
+    {
+      "info": {
+        "symbol": "ETHEUR",
+        "id": 900076,
+        "orderId": 900077,
+        "price": "2665.22000000",
+        "qty": "0.041625",
+        "quoteQty": "110.9397825",
+        "commission": "0.00010539",
+        "commissionAsset": "BNB",
+        "time": 1767480257811,
+        "isBuyer": true,
+        "isMaker": false,
+        "isBestMatch": true
+      },
+      "timestamp": 1767480257811,
+      "datetime": "2026-01-03T22:44:17.811Z",
+      "symbol": "ETH/EUR",
+      "id": "fixture-id-0078",
+      "order": "fixture-id-0079",
+      "side": "buy",
+      "takerOrMaker": "taker",
+      "price": 2665.22,
+      "amount": 0.041625,
+      "cost": 110.9397825,
+      "fee": {
+        "currency": "BNB",
+        "cost": 0.00010539
+      },
+      "fees": [
+        {
+          "currency": "BNB",
+          "cost": 0.00010539
+        }
+      ]
+    },
+    {
+      "info": {
+        "symbol": "ETHUSDT",
+        "id": 900080,
+        "orderId": 900081,
+        "price": "2778.68000000",
+        "qty": "0.00037",
+        "quoteQty": "1.0281116",
+        "commission": "0.00000129",
+        "commissionAsset": "BNB",
+        "time": 1730942120503,
+        "isBuyer": true,
+        "isMaker": true,
+        "isBestMatch": true
+      },
+      "timestamp": 1730942120503,
+      "datetime": "2024-11-07T01:15:20.503Z",
+      "symbol": "ETH/USDT",
+      "id": "fixture-id-0082",
+      "order": "fixture-id-0083",
+      "side": "buy",
+      "takerOrMaker": "maker",
+      "price": 2778.68,
+      "amount": 0.00037,
+      "cost": 1.0281116,
+      "fee": {
+        "currency": "BNB",
+        "cost": 1.29e-6
+      },
+      "fees": [
+        {
+          "currency": "BNB",
+          "cost": 1.29e-6
+        }
+      ]
+    }
+  ]
+}

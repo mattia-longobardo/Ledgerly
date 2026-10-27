@@ -1,0 +1,8 @@
+{
+  "request": "/api/v1/sub-accounts/me/accounts",
+  "status": 403,
+  "body": {
+    "errorCode": "InsufficientPermissions",
+    "errorMessage": "UserToken does not have permission to access"
+  }
+}

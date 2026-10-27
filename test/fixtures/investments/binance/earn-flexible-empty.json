@@ -1,0 +1,7 @@
+{
+  "method": "sapiGetSimpleEarnFlexiblePosition",
+  "body": {
+    "total": 0,
+    "rows": []
+  }
+}
