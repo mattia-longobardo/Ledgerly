@@ -16,7 +16,8 @@ vi.mock("@/platform/auth/client", () => ({
     },
   },
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 
 function renderForm(error: SignInErrorKey | null = null) {
   render(
@@ -32,6 +33,31 @@ describe("SignInForm", () => {
   beforeEach(() => {
     signInEmail.mockReset();
     signInSocial.mockReset();
+    push.mockReset();
+  });
+
+  async function submitPassword() {
+    await userEvent.type(screen.getByLabelText("Email"), "a@example.test");
+    await userEvent.type(screen.getByLabelText("Password"), "a-password-123");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  }
+
+  it("sends an account with TOTP to the code page, not into the app", async () => {
+    signInEmail.mockResolvedValueOnce({
+      data: { twoFactorRedirect: true, twoFactorMethods: ["totp"] },
+      error: null,
+    });
+    renderForm();
+    await submitPassword();
+    expect(push).toHaveBeenCalledWith("/sign-in/two-factor");
+    expect(push).not.toHaveBeenCalledWith("/");
+  });
+
+  it("opens the app after a password sign-in without a second step", async () => {
+    signInEmail.mockResolvedValueOnce({ data: { token: "t", user: {} }, error: null });
+    renderForm();
+    await submitPassword();
+    expect(push).toHaveBeenCalledWith("/");
   });
 
   it("offers Authentik and password sign-in", async () => {

@@ -2,7 +2,11 @@
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements } from "better-auth/plugins/admin/access";
 
-export const accessControl = createAccessControl(defaultStatements);
+export const accessControl = createAccessControl({
+  ...defaultStatements,
+  // Ledgerly's own: an admin clears a person's TOTP so they set it up again (docs/auth-design.md D2).
+  twoFactor: ["reset"],
+} as const);
 
 /**
  * An admin lists, re-roles, bans and removes users and revokes their sessions (spec §7.10).
@@ -15,6 +19,7 @@ export const roles = {
   admin: accessControl.newRole({
     user: ["list", "set-role", "ban", "delete"],
     session: ["list", "revoke"],
+    twoFactor: ["reset"],
   }),
-  user: accessControl.newRole({ user: [], session: [] }),
+  user: accessControl.newRole({ user: [], session: [], twoFactor: [] }),
 };

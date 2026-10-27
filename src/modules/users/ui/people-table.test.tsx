@@ -13,12 +13,14 @@ const setBlocked = vi.fn();
 const sendReset = vi.fn();
 const remove = vi.fn();
 const revoke = vi.fn();
+const resetTwoFactor = vi.fn();
 vi.mock("../actions", () => ({
   setPersonRoleAction: (...a: unknown[]) => setRole(...a),
   setPersonBlockedAction: (...a: unknown[]) => setBlocked(...a),
   sendPersonResetAction: (...a: unknown[]) => sendReset(...a),
   removePersonAction: (...a: unknown[]) => remove(...a),
   revokeInvitationAction: (...a: unknown[]) => revoke(...a),
+  resetPersonTwoFactorAction: (...a: unknown[]) => resetTwoFactor(...a),
 }));
 
 const ME: PersonView = {
@@ -32,6 +34,7 @@ const ME: PersonView = {
   lastSignIn: "20 Sep 2026",
   status: "active",
   self: true,
+  twoFactor: true,
 };
 
 const OTHER: PersonView = {
@@ -45,6 +48,7 @@ const OTHER: PersonView = {
   lastSignIn: "—",
   status: "active",
   self: false,
+  twoFactor: false,
 };
 
 const INVITED: PersonView = {
@@ -58,6 +62,7 @@ const INVITED: PersonView = {
   lastSignIn: "—",
   status: "pending",
   self: false,
+  twoFactor: false,
 };
 
 /**
@@ -125,6 +130,21 @@ describe("PeopleTable", () => {
       "This is the last admin: the instance would have nobody to administer it.",
       "error",
     );
+  });
+
+  it("offers a 2FA reset only for another person who has TOTP, and asks first", async () => {
+    resetTwoFactor.mockResolvedValueOnce({ ok: true, outcome: undefined });
+    const table = renderTable([
+      ME,
+      OTHER,
+      { ...OTHER, id: "totp", email: "totp@example.test", twoFactor: true },
+    ]);
+    expect(table.getAllByRole("button", { name: "Reset 2FA" })).toHaveLength(1);
+    await userEvent.click(table.getByRole("button", { name: "Reset 2FA" }));
+    expect(await screen.findByText(/totp@example.test is signed out everywhere/)).toBeInTheDocument();
+    expect(resetTwoFactor).not.toHaveBeenCalled();
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset 2FA" }).at(-1)!);
+    expect(resetTwoFactor).toHaveBeenCalledWith("totp");
   });
 
   it("offers the phone list the very same controls as the table", async () => {

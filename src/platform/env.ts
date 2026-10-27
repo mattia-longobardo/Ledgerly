@@ -36,6 +36,10 @@ export const envSchema = z
     OIDC_CLIENT_ID: z.string().min(1),
     OIDC_CLIENT_SECRET: z.string().min(1),
     OIDC_ADMIN_GROUP: z.string().min(1).default("ledgerly-admins"),
+    // Whether a password account must have TOTP before it reaches the app (docs/auth-design.md D2).
+    // `optional` leaves it to each person in Settings › Security. SSO users are never asked: their
+    // second factor is Authentik's.
+    TWO_FACTOR_POLICY: z.enum(["required", "optional"]).default("required"),
     SMTP_HOST: z.string().min(1),
     SMTP_PORT: z.coerce.number().int().positive(),
     SMTP_SECURE: z
@@ -101,6 +105,21 @@ export const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(ipOrCidr)),
+    // The Paperless servers the pull may call (comma-separated origins, PERS-49 SEC-04): a URL a
+    // person saves must be one of these, so the server never fetches an address someone typed.
+    PAPERLESS_ALLOWED_ORIGINS: z.preprocess(
+      blankAsUndefined,
+      z
+        .string()
+        .default("http://paperless-ngx:8000")
+        .transform((value) =>
+          value
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        )
+        .pipe(z.array(z.url({ protocol: /^https?$/ }))),
+    ),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;

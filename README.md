@@ -58,7 +58,14 @@ brings in.
   `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
   key can be rotated by prepending a new one) before it is ever written, and it is never returned
   to the browser afterwards: the field on the card only ever _replaces_ it.
-- **What a sync does.** Hourly at minute 07 (`wallet-sync`), per user: accounts and balances first,
+- **When it syncs.** Each link has its own schedule (`docs/scheduler.md`), set from its card: a
+  list of rules — every N minutes from HH:MM to HH:MM, chosen times, or a cron expression — each on
+  every day, chosen weekdays or chosen days of the month, to the minute and in the person's time
+  zone. Quick choices fill the editor, which previews the next five passes. No rule is manual only;
+  the default is every hour, as before. Two passes are at least 15 minutes apart. `integrations-sync`
+  runs every minute (the `minute` tier, only when a link is due) and first in the hourly tick; a
+  failure does not bring the next pass forward, and "Sync now" never moves it.
+- **What a sync does.** Per user: accounts and balances first,
   then transactions. The first pass after linking fetches **12 months** in monthly windows; every
   pass after that re-reads the **last 7 days**. A page that comes back full splits its window
   instead of failing, reads are retried five times honouring `Retry-After`, and a 401 or 403 stops
@@ -203,7 +210,7 @@ how much you have planned, and how much is left — with **where each number com
 - **The residual comes from the payslip, not from arithmetic.** What the payslip says is left at its
   date is the starting point; the days booked here move it from there. So the number on the screen
   is the employer's number, not a second opinion, and the screen says which payslip it read.
-- **Trek** is the leave calendar it syncs with (`trek-sync`, hourly). The rule that shapes it:
+- **Trek** is the leave calendar it syncs with (`integrations-sync`, on the link's own schedule). The rule that shapes it:
   **it never deletes a day by mistake.** A day this app does not know about is not assumed to be
   gone — it is brought in; a removal is only ever a removal you made here. A Trek that is busy is
   skipped and tried again next hour, never half-applied.
@@ -211,8 +218,9 @@ how much you have planned, and how much is left — with **where each number com
 ## Settings, Admin and the API (F8)
 
 - **Admin › Users** (`/settings/users`, admins only): the list with the invitations still pending,
-  "Invite user" (a single-use link, seven days), the role selector, block/unblock, "Reset password"
-  and "Remove". The last admin cannot be demoted, blocked or removed, and nobody blocks or removes
+  "Invite user" (a single-use link, seven days), the role selector, block/unblock, "Reset password",
+  "Reset 2FA" (for a person with TOTP on: secret, recovery codes, trusted devices and sessions go,
+  and the next password sign-in leads to the setup again) and "Remove". The last admin cannot be demoted, blocked or removed, and nobody blocks or removes
   themselves — an instance nobody can administer is repaired only from the container. Removing a
   user deletes their row first (the foreign keys take the rest) and then their `payslips/`,
   `cometa/` and `exports/` folders in S3.
@@ -224,17 +232,112 @@ how much you have planned, and how much is left — with **where each number com
   every user out**. Three switches decide what the server may send at all: invitations and resets,
   sync failures, the monthly summary — with "invitations & resets" off the password reset link does
   not go out either.
-- **Personal access tokens** (`/settings/security`): `pat_<prefix>.<secret>`, shown once, kept as a
-  SHA-256 digest with scopes `read`, `write`, `imports`, an optional expiry and revocation.
+- **Two-factor authentication** (TOTP, `docs/auth-design.md` D2). A password sign-in for an account
+  with TOTP opens no session: `/sign-in/two-factor` asks for the authenticator code or one of the
+  ten single-use recovery codes, with "Trust this device for 30 days". With
+  `TWO_FACTOR_POLICY=required` (the default) a password account without TOTP is held at
+  `/sign-in/two-factor/setup` — password, QR code, recovery codes, first code — and reaches nothing
+  else until it is done; `optional` leaves it to Settings › Security. Settings › Security sets TOTP
+  up, makes new recovery codes and turns it off, each with the password. Authentik sign-ins are
+  never asked: their second factor is Authentik's. The secret and the recovery codes are stored
+  encrypted with `BETTER_AUTH_SECRET` (`two_factors`). Limits: 5 requests a minute per client on
+  each `/two-factor/*` endpoint, 5 wrong codes end a challenge, 10 wrong codes in a row lock the
+  account's second factor for 15 minutes.
+- **OAuth2** (`docs/auth-design.md` D3): Ledgerly is the Authorization Server of its own API
+  (`@better-auth/oauth-provider`), issuer `https://dash.longobardo.me/api/auth`. Discovery:
+  `/.well-known/oauth-authorization-server/api/auth` (RFC 8414, also without the issuer path),
+  `/.well-known/openid-configuration` and `/.well-known/oauth-protected-resource/api/v1` (RFC
+  9728). Access tokens are JWT (`typ` `at+jwt`, EdDSA, keys in `jwks`, JWKS at
+  `/api/auth/jwks`), valid one hour, with the resource as audience (RFC 8707): a token for
+  `/api/mcp` is not good for `/api/v1`. Refresh tokens rotate, 30 days. Clients that register
+  themselves (RFC 7591, `/api/auth/oauth2/register`) may only be public (PKCE, no secret), with
+  redirect URIs on plain http loopback (`localhost`, `127.0.0.1`, `[::1]`: Claude Code, MCP
+  Inspector) or on the allowlist `DCR_REDIRECT_ALLOWLIST` in `src/platform/auth/oauth.ts`
+  (`https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback`). They
+  reach `/api/mcp` only, with `read` and `offline_access`: a self-registered client can never hold
+  a token for `/api/v1` (PERS-49 SEC-01). The person signs in (Authentik or password + TOTP) and
+  consents at `/oauth/consent`, which shows the host every redirect goes to and marks a client
+  without an owner as **unverified**. Settings › Security › Connected apps lists the consents;
+  "Revoke" deletes the consent and the app's refresh tokens (its access token ends within the
+  hour). A password reset and an admin's two-factor reset delete the person's OAuth refresh tokens
+  together with the sessions.
+- **Client API** (`/settings/security`): what replaces the personal access tokens. A confidential
+  client with the `client_credentials` grant and the scopes `read`, `write`, `imports`, owned by
+  whoever made it: its token acts as that person, and only on `/api/v1`. The secret is shown once
+  and stored hashed; deleting the client stops its tokens at once.
+
+  ```bash
+  TOKEN=$(curl -sS -u "$CLIENT_ID:$CLIENT_SECRET" https://dash.longobardo.me/api/auth/oauth2/token \
+    -d grant_type=client_credentials -d resource=https://dash.longobardo.me/api/v1 | jq -r .access_token)
+  curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/summary
+  ```
+
+- **Personal access tokens** were removed (T5, PERS-59): the code and the `personal_access_tokens`
+  table are gone (migration `0033`), and a `pat_…` value on `/api/v1` is a `401` like any invalid token.
 - **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
   `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
   `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
   user and never beyond them; there is no administrative route at all. Amounts travel as decimal
-  strings, never as JSON numbers. 120 calls a minute per token, per worker.
+  strings, never as JSON numbers. 120 calls a minute per client, per worker.
+  Without a valid token the answer is `401` with
+  `WWW-Authenticate: Bearer error="invalid_token", resource_metadata="…/.well-known/oauth-protected-resource/api/v1"`;
+  with a token that lacks the route's scope, `403` with `error="insufficient_scope", scope="<scope>"`.
+- **Paperless-ngx → Ledgerly, two ways, both OAuth2.** The Paperless workflow "Ledgerly – buste
+  paga" still posts each payslip to `POST /api/v1/imports`, but no longer with a static token: the
+  homelab Paperless image patches its webhook sender (`documents/workflows/webhooks.py`) to get a
+  `client_credentials` token from Ledgerly (client "Paperless webhook", scope `imports`, created
+  with `npm run user:create-api-client`) and send it as `Authorization: Bearer`; the client id and
+  secret are in `storage/.env` (`PAPERLESS_WEBHOOK_OAUTH2_CLIENT_ID`/`_SECRET`).
+  This webhook is the path in use (PERS-57, option A). The pull (Settings › Integrations, D5) stays
+  in the code but is not linked: when linked, Ledgerly reads the documents of the
+  named types (default `Payroll`; Cometa types optional) with the API token of a read-only Paperless
+  user, at the link's own schedule, starting from the moment the link is saved — not earlier,
+  because many payslips here were uploaded as a different PDF from the one Paperless keeps, and
+  the sha256 dedup would not recognise them. Inside the homelab the URL is `http://paperless-ngx:8000`.
+  The server calls only the origins in `PAPERLESS_ALLOWED_ORIGINS` (comma-separated, default
+  `http://paperless-ngx:8000`): another URL is refused when it is saved and again before every call,
+  the card and the sync log show a generic sentence, and the detail goes to the server log only.
+  A download stops at 11 MB, a JSON page at 4 MB. The dispatcher skips `revoked` connections and
+  banned people (PERS-49 SEC-04, SEC-08, SEC-09).
+- **MCP server** (`docs/auth-design.md` D6): `https://dash.longobardo.me/api/mcp`, Streamable HTTP,
+  stateless (POST only, no `Mcp-Session-Id`; GET and DELETE answer `405`). Code in
+  `src/platform/mcp/` (`handler.ts` for the door, `tools.ts` for the tools). Only OAuth access tokens
+  whose audience is `/api/mcp` get in: a token for `/api/v1`, an opaque one (no `resource`) or a
+  `pat_…` is a `401`. Without a token the answer is `401` with
+  `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/api/mcp"`,
+  which is where a client discovers the authorization server and starts the flow: RFC 9728 →
+  RFC 8414 → dynamic registration of a public client → authorization code + PKCE (S256) with
+  `resource=https://dash.longobardo.me/api/mcp` → sign-in (Authentik or password + TOTP) → consent.
+  A token without `read` is a `403 insufficient_scope`. Same 120 calls a minute per client as the API.
+  v1 is **read-only** — every tool needs `read`, calls the same services as `/api/v1` and answers
+  with amounts as decimal strings; each sees only the person who consented:
 
-  ```bash
-  curl -sS -H "Authorization: Bearer pat_…" https://dash.longobardo.me/api/v1/summary
-  ```
+  | Tool                                                                                                | Mirrors                              |
+  | --------------------------------------------------------------------------------------------------- | ------------------------------------ |
+  | `get_summary`                                                                                       | `GET /api/v1/summary`                |
+  | `list_accounts`                                                                                     | `GET /api/v1/accounts`               |
+  | `get_account_balances` (`account_id`, `limit`)                                                      | `GET /api/v1/accounts/{id}/balances` |
+  | `list_transactions` (`from`, `to`, `account_id`, `category_id`, `type`, `payee`, `limit`, `offset`) | `GET /api/v1/transactions`           |
+  | `list_budgets` (`month` `YYYY-MM`)                                                                  | the Budgets page                     |
+
+  A write tool (`record_account_balance`, scope `write`) is in the design and left out until the
+  owner confirms it (PERS-44, question 3).
+
+  **Connecting a client.** Nothing to configure on the server: the client registers itself.
+  - _Claude_ (claude.ai / Desktop): Settings › Connectors › Add custom connector, URL
+    `https://dash.longobardo.me/api/mcp`, no client id or secret. Claude opens the Ledgerly sign-in,
+    then the consent page; tick `read`.
+  - _Claude Code_: `claude mcp add --transport http ledgerly https://dash.longobardo.me/api/mcp`,
+    then `/mcp` › ledgerly › Authenticate.
+  - _MCP Inspector_: `npx @modelcontextprotocol/inspector`, transport "Streamable HTTP", URL as above,
+    "Open Auth Settings" › "Quick OAuth Flow", then Connect › Tools › List.
+  - _A script_, with a Client API (scope `read`) instead of a person: get the token with
+    `resource=https://dash.longobardo.me/api/mcp` (as in the curl above) and POST JSON-RPC with
+    `Accept: application/json, text/event-stream`.
+
+  There is no "connected apps" screen yet (Settings › Security lists only Client API). To cut a
+  registered client off server-side, set `disabled` on its row in `oauth_clients`: the check reads
+  the client on every call, so its access tokens stop working at once.
 
 - **Export.** "Export my data" (Settings › Data) streams a ZIP of every table as CSV, the same rows
   as one JSON, and the original documents. "Export all data" (Admin › Server) is the `export-all`
@@ -319,11 +422,12 @@ The app image applies pending migrations on boot, then serves the standalone Nex
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
 start if any check fails, so a misconfigured deployment fails loudly instead of on the first
 request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
-`http://ledgerly:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
+`http://ledgerly:3000/api/jobs/tick?tier=<quarter|hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
 and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
-tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `wallet-sync` then
-`subscriptions-check` and `funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `integrations-sync` alone at :22,
+:37 and :52, then first at :07 before `recurrences-refresh`, `subscriptions-check` and
+`funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
 `interests-accrual` daily, `accounts-snapshot` and `pockets-accrual` monthly) for that tier, in that order; touching the heartbeat file is a side
 effect of every tick, not a job of its own.
 
@@ -347,23 +451,24 @@ effect of every tick, not a job of its own.
     -H "Cookie: <the admin's session cookie>" \
     -d '{"userId": "<user id>", "role": "user"}'
   ```
+- **Two-factor policy:** `TWO_FACTOR_POLICY=required|optional` in `.env.homelab` (default
+  `required`), read at start: change it and restart the container. A person who lost both the phone
+  and the recovery codes gets "Reset 2FA" from an admin in Admin › Users; an admin who lost both runs
+  `UPDATE users SET two_factor_enabled = false WHERE email = '…'; DELETE FROM two_factors WHERE
+user_id = (SELECT id FROM users WHERE email = '…');` on the `ledgerly` database.
 - **Password reset only reaches password accounts:** an SSO-only account (no stored password) never
   gets a reset-link email — creating one would be a way around Authentik's own sign-in policy (such
   as 2FA). That account signs in with **Continue with Authentik** instead.
-- **Reverse proxy:** set `TRUSTED_PROXY_IPS` to the address of the Traefik (or tunnel) hop in front
-  of the app on its Docker network, **and** configure Traefik with
-  `--entrypoints.web.forwardedHeaders.trustedIPs=<the same address>` — an owner action outside this
-  repo, so Traefik itself discards any `X-Forwarded-For` a client tries to inject before setting
-  its own. Only with both set does the app trust `X-Forwarded-For` from that one hop and give each
-  client its own sign-in rate-limit bucket; left unset, `TRUSTED_PROXY_IPS` defaults to empty and
-  every request shares one bucket. Never publish port 3000 on the host: Traefik must stay the only
-  way in (spec D20). Note that Traefik's `web` entrypoint currently sets no
-  `forwardedHeaders.trustedIPs`, so it overwrites `X-Forwarded-For` with the tunnel hop's address
-  and every visitor arriving from the internet lands in the **same** sign-in rate-limit bucket
-  (5 attempts per minute on `/sign-in/email`) — one bot hammering the login locks the owner out
-  from outside too. Preserving the real client address means adding
-  `--entrypoints.web.forwardedHeaders.trustedIPs=<the cloudflared hop>` to Traefik, which is an
-  owner action in `network/docker-compose.yml`, outside this repo.
+- **Reverse proxy:** the app sees the real client address. cloudflared runs in host network mode
+  and reaches Traefik from the gateway of a Docker network; Traefik's `web` entrypoint trusts only
+  those gateways (`--entrypoints.web.forwardedHeaders.trustedIPs` in the homelab's
+  `network/docker-compose.yml`, PERS-58), so it keeps Cloudflare's `X-Forwarded-For` and drops one
+  forged by a LAN client. `TRUSTED_PROXY_IPS` (in `.env.homelab`) names the Traefik hop in front of
+  the app on its Docker network: the app trusts `X-Forwarded-For` from that hop only, and each
+  client gets its own sign-in rate-limit bucket (5 attempts per minute on `/sign-in/email`). Left
+  unset, it defaults to empty and every request shares one bucket. If Traefik's address or the
+  gateways change, update both. Never publish port 3000 on the host: Traefik must stay the only
+  way in (spec D20).
 - **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
   inside the same Docker network as the app (its compose service name, `ledgerly`), for
   example:

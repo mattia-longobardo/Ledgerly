@@ -35,6 +35,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ set: vi.fn() }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath }));
+vi.mock("@/platform/integrations/service", () => ({ rescheduleConnections: vi.fn(async () => 0) }));
 
 const CTX = {
   userId: "alice",

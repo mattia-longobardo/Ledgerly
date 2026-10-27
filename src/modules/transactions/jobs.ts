@@ -23,7 +23,6 @@ import { userScoped } from "@/platform/db/scope";
 import { formatDate, type UiLocale } from "@/platform/format";
 import { DEFAULT_STALE_AFTER_HOURS, isStale } from "@/modules/accounts/rules";
 import { type Connection, listConnections, listRuns } from "@/platform/integrations/service";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { isSyncBusy, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
@@ -276,84 +275,62 @@ async function reportSync(
 
 /* The job */
 
+/** What became of one Wallet pass, as the integrations dispatcher counts it. */
+export type WalletPassOutcome = SyncOutcome | "busy";
+
 /**
- * Every hour at minute 07 (spec §10.2): each user's Wallet connection, then their recurrences.
+ * One Wallet pass for one person, and the email of §10.4 that follows it. Called by the
+ * integrations dispatcher (`platform/integrations/jobs.ts`) when the connection's own schedule
+ * says it is due (docs/auth-design.md D7) — the cadence is the person's, no longer the hourly tier.
  *
- * A user with no connection is not an error and not a skipped sync — there is simply nothing to
- * read — but their recurrences are still refreshed, because they are derived from what is already
- * stored. A sync that fails is caught here: the engine has already written its own `sync_runs` row
- * and left the connection's health saying so, and the pass continues to the recurrences rather
- * than losing them to a provider's bad afternoon.
- *
- * The detail counts the four things that can become of one connection, and keeps them apart:
- * `passes` is a pass that really asked the provider something, `failures` one that asked and did
- * not get an answer it could use, `refused` a credential the provider has already rejected (no
- * call made), `skipped` a pass another one was already running.
+ * A sync that fails is caught here: the engine has already written its own `sync_runs` row and
+ * left the connection's health saying so. A pass already running on this connection — the owner
+ * pressed "Sync now" as the tick came round — is `busy`: nothing was attempted, so there is nothing
+ * to report and no email to send, and the dispatcher leaves the schedule where it was.
  */
-export const walletSyncJob: JobDefinition = {
-  name: "wallet-sync",
+export async function runWalletPass(
+  person: Person,
+  ctx: Ctx,
+  connection: Connection,
+  now: Date = new Date(),
+): Promise<WalletPassOutcome> {
+  let outcome: WalletPassOutcome = "answered";
+  try {
+    const pass = await syncWalletNow(ctx, connection.id, { now });
+    // A refused credential attempts no call at all: counting it as a pass would put a connection
+    // that was never contacted among the answered ones, and leave §10.4 with nothing but "out of
+    // date" to say about a token the provider rejected.
+    if (pass.refused !== null) outcome = "refused";
+  } catch (error) {
+    if (isSyncBusy(error)) return "busy";
+    outcome = "failed";
+    console.error("[integrations-sync] the Wallet pass failed", redactForLog(error));
+  }
+  // Re-read: `finishRun` has just written `last_ok_at` and the connection's state, and both
+  // decide which of the two conditions of §10.4 applies.
+  const after = (await listConnections(ctx)).find((one) => one.id === connection.id) ?? connection;
+  await reportSync(person, ctx, after, outcome, now);
+  return outcome;
+}
+
+/**
+ * Every hour (spec §10.2), for every user: own transfers linked, then the recurrences recomputed
+ * from what is stored. This is what was left of `wallet-sync` once the Wallet pass itself moved to
+ * the integrations dispatcher (D7): it runs right after the dispatcher in the hourly tier, so the
+ * jobs behind it (`subscriptions-check`, `budget-alerts`, `interests-accrual`) still see movements
+ * an on-the-hour sync has just brought in.
+ */
+export const recurrencesRefreshJob: JobDefinition = {
+  name: "recurrences-refresh",
   tier: "hourly",
   async run(): Promise<JobDetail> {
     const now = new Date();
-    let connections = 0;
-    let passes = 0;
-    let failures = 0;
-    let refused = 0;
-    let notified = 0;
     let patterns = 0;
-    let skipped = 0;
-
-    const counts = await forEachUser("wallet-sync", async (person, ctx) => {
-      const connection = (await listConnections(ctx)).find((one) => one.provider === WALLET_PROVIDER);
-      if (connection) {
-        connections += 1;
-        let outcome: SyncOutcome | "busy" = "answered";
-        try {
-          const pass = await syncWalletNow(ctx, connection.id, { now });
-          // A refused credential attempts no call at all: counting it as a pass would put a
-          // connection that was never contacted in `passes`, and leave §10.4 with nothing but
-          // "out of date" to say about a token the provider rejected.
-          if (pass.refused === null) {
-            passes += 1;
-          } else {
-            refused += 1;
-            outcome = "refused";
-          }
-        } catch (error) {
-          // A pass already running on this connection — the owner pressed "Sync now" as the tick
-          // came round — is not a failure: nothing was attempted, so there is nothing to report
-          // and no email to send. Counting it as one would mail "Wallet sync failed" for a pass
-          // that never happened.
-          if (isSyncBusy(error)) {
-            skipped += 1;
-            outcome = "busy";
-          } else {
-            outcome = "failed";
-            failures += 1;
-            console.error("[wallet-sync] the Wallet pass failed", redactForLog(error));
-          }
-        }
-        if (outcome !== "busy") {
-          // Re-read: `finishRun` has just written `last_ok_at` and the connection's state, and
-          // both decide which of the two conditions of §10.4 applies.
-          const after = (await listConnections(ctx)).find((one) => one.id === connection.id) ?? connection;
-          if (await reportSync(person, ctx, after, outcome, now)) notified += 1;
-        }
-      }
+    const counts = await forEachUser("recurrences-refresh", async (_person, ctx) => {
       // Before the recurrences: a giroconto found by IBAN is no longer a candidate series.
       await linkOwnTransfers(ctx);
       patterns += await refreshRecurrences(ctx, now);
     });
-
-    return {
-      ...counts,
-      connections,
-      passes,
-      failures,
-      refused,
-      skipped,
-      notified,
-      recurrences: patterns,
-    };
+    return { ...counts, recurrences: patterns };
   },
 };

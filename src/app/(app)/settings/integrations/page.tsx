@@ -4,8 +4,14 @@ import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY } from "@/platform/format";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { listConnections, listRuns, readSyncJob, type SyncRun } from "@/platform/integrations/service";
+import { PAPERLESS_PROVIDER, TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
+import {
+  type Connection,
+  listConnections,
+  listRuns,
+  readSyncJob,
+  type SyncRun,
+} from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
 import { jobStatuses } from "@/platform/jobs/queries";
 import { pendingCount } from "@/modules/timeoff/service";
@@ -13,6 +19,8 @@ import { Badge } from "@/ui/badge";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { type JobRow, JobsCard } from "./jobs-card";
+import { PaperlessCard, type PaperlessCardState } from "./paperless-card";
+import { ScheduleControl } from "./schedule-control";
 import { TrekCard, type TrekCardState } from "./trek-card";
 import { WalletCard, type WalletCardState } from "./wallet-card";
 
@@ -88,10 +96,25 @@ export default async function SettingsIntegrationsPage() {
   const lastSync = wallet?.lastOkAt ? formatInstant(wallet.lastOkAt, ctx) : null;
   const job = wallet ? await readSyncJob(ctx, wallet.id, "transactions") : null;
 
+  // The schedule control of a connection (D7); a provider with no link keeps the fixed label.
+  const scheduleOf = (connection: Connection | null) =>
+    connection && (
+      <ScheduleControl
+        provider={connection.provider}
+        schedule={connection.schedule}
+        next={connection.nextSyncAt ? formatInstant(connection.nextSyncAt, ctx) : null}
+        timeZone={ctx.timeZone}
+      />
+    );
+
   const trek = connections.find((connection) => connection.provider === TREK_PROVIDER) ?? null;
   const trekState: TrekCardState = trek?.state ?? "absent";
   const trekLastSync = trek?.lastOkAt ? formatInstant(trek.lastOkAt, ctx) : null;
   const waiting = trek ? await pendingCount(ctx) : 0;
+
+  const paperless = connections.find((connection) => connection.provider === PAPERLESS_PROVIDER) ?? null;
+  const paperlessState: PaperlessCardState = paperless?.state ?? "absent";
+  const paperlessLastSync = paperless?.lastOkAt ? formatInstant(paperless.lastOkAt, ctx) : null;
 
   // §10.3: only an admin may run a job by hand, and only an admin sees that this is possible.
   const tJobs = await getTranslations("settings.jobs");
@@ -109,9 +132,16 @@ export default async function SettingsIntegrationsPage() {
   return (
     <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
-        <WalletCard state={state} lastSync={lastSync} history={backfillDepth(job?.cursor)} />
+        <WalletCard
+          state={state}
+          lastSync={lastSync}
+          history={backfillDepth(job?.cursor)}
+          schedule={scheduleOf(wallet)}
+        />
         <div className="border-t border-border" />
-        <TrekCard state={trekState} lastSync={trekLastSync} pending={waiting} />
+        <TrekCard state={trekState} lastSync={trekLastSync} pending={waiting} schedule={scheduleOf(trek)} />
+        <div className="border-t border-border" />
+        <PaperlessCard state={paperlessState} lastSync={paperlessLastSync} schedule={scheduleOf(paperless)} />
       </SettingsSection>
 
       {ctx.role === "admin" && (

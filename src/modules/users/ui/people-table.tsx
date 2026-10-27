@@ -12,6 +12,7 @@ import { notify } from "@/ui/toast";
 import type { AdminErrorCode, PersonStatus, SignInMethod } from "../admin";
 import {
   removePersonAction,
+  resetPersonTwoFactorAction,
   revokeInvitationAction,
   sendPersonResetAction,
   setPersonBlockedAction,
@@ -31,6 +32,8 @@ export interface PersonView {
   status: PersonStatus;
   /** The admin reading the page: their own row offers no block and no remove (plan F8 §3.4.1). */
   self: boolean;
+  /** TOTP is on: the row offers "Reset 2FA" (docs/auth-design.md D2). */
+  twoFactor: boolean;
 }
 
 type ActionAnswer = { ok: true; outcome: unknown } | { ok: false; error: AdminErrorCode };
@@ -75,6 +78,7 @@ function RowActions({
   person,
   pending,
   onReset,
+  onResetTwoFactor,
   onBlock,
   onRevoke,
   onRemove,
@@ -82,6 +86,7 @@ function RowActions({
   person: PersonView;
   pending: boolean;
   onReset: (person: PersonView) => void;
+  onResetTwoFactor: (person: PersonView) => void;
   onBlock: (person: PersonView) => void;
   onRevoke: (person: PersonView) => void;
   onRemove: (person: PersonView) => void;
@@ -99,6 +104,11 @@ function RowActions({
       <Button size="xs" disabled={pending} onClick={() => onReset(person)}>
         {t("resetPassword")}
       </Button>
+      {person.twoFactor && !person.self && (
+        <Button size="xs" disabled={pending} onClick={() => onResetTwoFactor(person)}>
+          {t("resetTwoFactor")}
+        </Button>
+      )}
       {!person.self && (
         <Button size="xs" disabled={pending} onClick={() => onBlock(person)}>
           {person.status === "blocked" ? t("unblock") : t("block")}
@@ -118,6 +128,7 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
   const t = useTranslations("settings.people");
   const [pending, startTransition] = useTransition();
   const [removing, setRemoving] = useState<PersonView | null>(null);
+  const [resettingTwoFactor, setResettingTwoFactor] = useState<PersonView | null>(null);
 
   function run(action: () => Promise<ActionAnswer>, success: string) {
     startTransition(async () => {
@@ -213,6 +224,7 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
                       person={person}
                       pending={pending}
                       onReset={onReset}
+                      onResetTwoFactor={setResettingTwoFactor}
                       onBlock={onBlock}
                       onRevoke={onRevoke}
                       onRemove={setRemoving}
@@ -265,6 +277,7 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
                 person={person}
                 pending={pending}
                 onReset={onReset}
+                onResetTwoFactor={setResettingTwoFactor}
                 onBlock={onBlock}
                 onRevoke={onRevoke}
                 onRemove={setRemoving}
@@ -273,6 +286,39 @@ export function PeopleTable({ people }: { people: PersonView[] }) {
           </li>
         ))}
       </ul>
+      <Modal
+        open={resettingTwoFactor !== null}
+        onOpenChange={(next) => !next && setResettingTwoFactor(null)}
+        title={t("resetTwoFactorTitle")}
+        description={
+          resettingTwoFactor ? t("resetTwoFactorWarning", { email: resettingTwoFactor.email }) : undefined
+        }
+        width={440}
+        footer={
+          <>
+            <Button onClick={() => setResettingTwoFactor(null)} disabled={pending}>
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              disabled={pending}
+              onClick={() => {
+                const person = resettingTwoFactor;
+                if (!person) return;
+                setResettingTwoFactor(null);
+                run(
+                  () => resetPersonTwoFactorAction(person.id),
+                  t("twoFactorReset", { email: person.email }),
+                );
+              }}
+            >
+              {t("resetTwoFactor")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-muted">{t("resetTwoFactorDetail")}</p>
+      </Modal>
       <Modal
         open={removing !== null}
         onOpenChange={(next) => !next && setRemoving(null)}

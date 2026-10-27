@@ -204,6 +204,48 @@
       "when": 1792443830562,
       "tag": "0028_budget_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793058839287,
+      "tag": "0029_two_factor",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793061048992,
+      "tag": "0030_oauth_provider",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793061610155,
+      "tag": "0031_sync_schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793095017881,
+      "tag": "0032_dcr_mcp_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793108101384,
+      "tag": "0033_drop_personal_access_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793115015891,
+      "tag": "0034_sync_scheduler_v2",
+      "breakpoints": true
     }
   ]
 }

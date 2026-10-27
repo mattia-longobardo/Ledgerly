@@ -128,6 +128,68 @@
       "nameInvalid": "Inserisci nome e cognome, al massimo {max} caratteri.",
       "failed": "Impossibile creare l'account. Riprova.",
       "authentik": "Usa Authentik"
+    },
+    "twoFactor": {
+      "recoveryCodes": "Codici di recupero",
+      "download": "Scarica",
+      "copy": "Copia",
+      "copied": "Copiati",
+      "copyFailed": "Impossibile copiare. Seleziona i codici e copiali a mano.",
+      "signOut": "Esci",
+      "setup": {
+        "title": "Configura l'autenticazione a due fattori",
+        "description": "Il tuo account accede con una password, quindi serve anche un codice da un'app di autenticazione.",
+        "passwordIntro": "Inserisci la password per creare il segreto per l'app di autenticazione.",
+        "password": "Password",
+        "continue": "Continua",
+        "scanTitle": "1. Scansiona il codice QR",
+        "scanHint": "Usa un'app di autenticazione, ad esempio Aegis, 2FAS, Google Authenticator o 1Password.",
+        "qrLabel": "Codice QR per l'app di autenticazione",
+        "manual": "Non riesci a scansionarlo? Inserisci questa chiave:",
+        "codesTitle": "2. Salva i codici di recupero",
+        "codesHint": "Ogni codice vale una volta. Conservali in un posto sicuro: sono l'unico modo per entrare senza il telefono.",
+        "saved": "Ho salvato i codici di recupero",
+        "code": "3. Codice dell'app",
+        "codeHint": "Sei cifre.",
+        "confirm": "Attiva l'autenticazione a due fattori"
+      },
+      "challenge": {
+        "title": "Autenticazione a due fattori",
+        "description": "Inserisci il codice dell'app di autenticazione.",
+        "code": "Codice di autenticazione",
+        "codeHint": "Sei cifre.",
+        "recoveryCode": "Codice di recupero",
+        "recoveryHint": "Uno dei codici che hai salvato, ad esempio abcde-12345. Ognuno vale una volta.",
+        "trust": "Considera attendibile questo dispositivo per {days} giorni",
+        "submit": "Verifica",
+        "useRecovery": "Usa un codice di recupero",
+        "useApp": "Usa l'app di autenticazione",
+        "back": "Torna all'accesso"
+      },
+      "errors": {
+        "invalidCode": "Il codice non è corretto. Prova con quello attuale.",
+        "invalidBackupCode": "Il codice di recupero non è valido o è già stato usato.",
+        "tooManyAttempts": "Troppi codici errati. Accedi di nuovo.",
+        "locked": "Troppi codici errati. L'accesso a due fattori è bloccato per 15 minuti.",
+        "expired": "Questo accesso è scaduto. Accedi di nuovo.",
+        "password": "Password errata.",
+        "rateLimited": "Troppi tentativi. Attendi un minuto e riprova.",
+        "generic": "Qualcosa non ha funzionato. Riprova."
+      }
+    },
+    "consent": {
+      "title": "Consenti l'accesso",
+      "description": "{client} vuole usare i tuoi dati di Ledgerly.",
+      "invalid": "Questa richiesta di autorizzazione non è valida o è scaduta. Ricomincia dall'applicazione che ti ha mandato qui.",
+      "scopes": "Potrà:",
+      "offline": "restare collegata senza chiedertelo di nuovo (refresh token, 30 giorni)",
+      "identity": "vedere il tuo nome e il tuo indirizzo email",
+      "allow": "Consenti",
+      "deny": "Rifiuta",
+      "failed": "Non si è potuta inviare la risposta. Riprova.",
+      "redirects": "Dopo la risposta, il browser torna a:",
+      "unverified": "Client non verificato.",
+      "unverifiedHint": "Si è registrato da solo e ha scelto il proprio nome. Consenti solo se hai avviato tu questo collegamento e riconosci l'indirizzo qui sotto."
     }
   },
   "settings": {
@@ -153,6 +215,10 @@
         "trek": {
           "name": "Trek",
           "role": "Giorni di ferie"
+        },
+        "paperless": {
+          "name": "Paperless-ngx",
+          "role": "Cedolini e documenti Cometa"
         }
       },
       "states": {
@@ -166,7 +232,7 @@
         "schedule": "Pianificazione",
         "never": "Mai"
       },
-      "schedule": "Ogni ora, al minuto 07",
+      "schedule": "Ogni ora",
       "firstSync": "La prima sincronizzazione recupera 12 mesi. Dopo, ogni esecuzione rilegge gli ultimi 7 giorni.",
       "connect": {
         "title": "Collega Wallet",
@@ -204,7 +270,8 @@
       "kinds": {
         "accounts": "Conti e saldi",
         "transactions": "Movimenti",
-        "leave": "Giorni di ferie"
+        "leave": "Giorni di ferie",
+        "documents": "Documenti"
       },
       "runStates": {
         "running": "In corso",
@@ -239,7 +306,10 @@
         "empty": "Incolla prima un token.",
         "notConnected": "Wallet non è collegato.",
         "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
-        "failed": "Non è stato possibile salvare. Riprova."
+        "failed": "Non è stato possibile salvare. Riprova.",
+        "types": "Paperless non ha un tipo di documento con quel nome.",
+        "schedule": "Questo orario non è valido.",
+        "notAllowed": "Questo indirizzo Paperless non è consentito su questo server. L'admin imposta quelli consentiti in PAPERLESS_ALLOWED_ORIGINS."
       },
       "notifications": {
         "failedSubject": "Sincronizzazione Wallet fallita",
@@ -265,6 +335,107 @@
         "clientIdHint": "Quello del machine client creato su Trek.",
         "clientSecret": "Segreto del client",
         "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
+      },
+      "scheduleControl": {
+        "title": "Orario di sincronizzazione",
+        "description": "Gli orari sono nel tuo fuso orario ({timeZone}, da Impostazioni › Profilo), al minuto. Una sincronizzazione parte entro un minuto dall'orario scelto; tra due sincronizzazioni passano almeno {minutes} minuti.",
+        "presets": {
+          "label": "Scelte rapide",
+          "hourly": "Ogni ora",
+          "officeHours": "Ogni 30 min, orario d'ufficio",
+          "twiceDaily": "Due volte al giorno",
+          "weekdays8": "Giorni feriali alle 8:00",
+          "monthStart": "Il 1° del mese",
+          "manual": "Solo manuale"
+        },
+        "rule": "Regola {n}",
+        "kindLabel": "Tipo della regola {n}",
+        "kinds": {
+          "interval": "Ogni…",
+          "times": "Agli orari…",
+          "cron": "Cron (avanzato)"
+        },
+        "removeRule": "Rimuovi la regola {n}",
+        "addRule": "Aggiungi una regola",
+        "every": "Ogni",
+        "unit": "Unità",
+        "units": {
+          "minutes": "minuti",
+          "hours": "ore",
+          "minutesShort": "{n} min",
+          "hoursShort": "{n} h"
+        },
+        "from": "Dalle",
+        "until": "Alle",
+        "at": "Orari del giorno",
+        "newTime": "Nuovo orario della regola {n}",
+        "addTime": "Aggiungi",
+        "removeTime": "Rimuovi {time} dalla regola {n}",
+        "cron": "Espressione cron",
+        "cronHint": "Cinque campi: minuto ora giorno-del-mese mese giorno-della-settimana. Esempio: 43 6 * * 1-5.",
+        "days": {
+          "label": "Giorni",
+          "every": "Tutti i giorni",
+          "weekdays": "Giorni della settimana",
+          "monthDays": "Giorni del mese",
+          "weekdaysOf": "Giorni della settimana della regola {n}",
+          "monthDaysOf": "Giorni del mese della regola {n}",
+          "lastLong": "Ultimo giorno",
+          "workdays": "lun–ven",
+          "weekend": "sab–dom",
+          "last": "ultimo",
+          "ofMonth": "il giorno {days}"
+        },
+        "preview": {
+          "title": "Prossime {n} sincronizzazioni",
+          "manual": "Nessuna sincronizzazione automatica: solo “Sincronizza ora” ne avvia una.",
+          "fix": "Correggi le regole segnate in rosso per vedere le prossime sincronizzazioni."
+        },
+        "errors": {
+          "every": "L'intervallo deve essere da {minutes} minuti a 24 ore.",
+          "window": "“Alle” non può venire prima di “Dalle”.",
+          "times": "Aggiungi almeno un orario.",
+          "days": "Scegli almeno un giorno.",
+          "cron": "Questa espressione cron non è valida.",
+          "neverRuns": "Questa regola non parte mai.",
+          "tooFrequent": "Due sincronizzazioni alle {first} e alle {second}: tienile ad almeno {minutes} minuti di distanza."
+        },
+        "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Scegli una scelta rapida o aggiungi una regola.",
+        "dependentHint": "Avvisi dei budget, abbonamenti e interessi si controllano ogni ora al minuto 07: dopo una sincronizzazione a un altro orario vedono i nuovi movimenti al controllo successivo.",
+        "summary": {
+          "manual": "Solo manuale",
+          "hourly": "Ogni ora",
+          "every": "Ogni {every}",
+          "window": "{from}–{until}",
+          "times": "Alle {times}",
+          "timesMore": "Alle {times} e altri {more}",
+          "cron": "Cron {expression}",
+          "andMore": "{rule} +{more}"
+        },
+        "next": "Prossima: {when}",
+        "noNext": "Nessuna sincronizzazione automatica",
+        "change": "Cambia l'orario di sincronizzazione",
+        "changeShort": "Cambia",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "saved": "Orario salvato",
+        "invalid": "Questo orario è stato rifiutato: controlla le regole."
+      },
+      "paperless": {
+        "notLinked": "Non collegato. Ledgerly legge i cedolini archiviati da Paperless, con il token di un utente Paperless in sola lettura.",
+        "connectTitle": "Collega Paperless",
+        "connectDescription": "Il token dell'utente Paperless in sola lettura (ad esempio ledgerly-sync) e i tipi di documento da leggere.",
+        "baseUrl": "URL di Paperless",
+        "baseUrlHint": "Dentro l'homelab: http://paperless-ngx:8000.",
+        "token": "Token API",
+        "tokenHint": "Dal profilo Paperless dell'utente in sola lettura. Si salva cifrato e non si vede più.",
+        "payslipType": "Tipo di documento dei cedolini",
+        "payslipTypeHint": "Il nome del tipo di documento in Paperless, così come lo mostra Paperless.",
+        "cometaOperationsType": "Tipo di documento movimenti Cometa",
+        "cometaPositionType": "Tipo di documento posizione Cometa",
+        "optionalHint": "Facoltativo: lascia vuoto per saltarlo.",
+        "disconnectDescription": "I documenti già importati restano. Ledgerly smette di leggere Paperless.",
+        "typesMissing": "Paperless non ha un tipo di documento con uno di quei nomi. Controlla come è scritto in Paperless."
       }
     },
     "categories": {
@@ -366,7 +537,8 @@
         "hourly": "Ogni ora",
         "daily": "Ogni giorno",
         "monthly": "Ogni mese",
-        "manual": "Solo a mano"
+        "manual": "Solo a mano",
+        "minute": "Ogni minuto, e ogni ora"
       },
       "states": {
         "running": "In corso",
@@ -466,17 +638,6 @@
       "manage": "Gestisci in Authentik"
     },
     "tokens": {
-      "title": "Token di accesso",
-      "description": "Token personali per l'API in sola lettura usata da Home Assistant e dagli script. I token si salvano come hash; il valore intero si vede una volta sola.",
-      "columns": {
-        "name": "Nome",
-        "token": "Token",
-        "scopes": "Scopi",
-        "expires": "Scadenza",
-        "lastUsed": "Ultimo uso",
-        "status": "Stato",
-        "actions": "Azioni"
-      },
       "scopes": {
         "read": "lettura",
         "write": "scrittura",
@@ -487,35 +648,10 @@
         "write": "registrare la lettura di un saldo",
         "imports": "caricare cedolini e documenti Cometa"
       },
-      "states": {
-        "active": "Attivo",
-        "expired": "Scaduto",
-        "revoked": "Revocato"
-      },
-      "expiry": {
-        "30": "30 giorni",
-        "90": "90 giorni",
-        "365": "1 anno",
-        "never": "Nessuna scadenza"
-      },
-      "empty": "Nessun token.",
-      "new": "Nuovo token",
-      "create": "Crea il token",
       "cancel": "Annulla",
-      "nameHint": "A che cosa serve, così saprai quale revocare.",
-      "mintedTitle": "Il tuo nuovo token",
-      "mintedWarning": "Copialo adesso: è l'unica volta che si vede e non è più recuperabile.",
       "copy": "Copia",
-      "copied": "Copiato",
       "copyFailed": "Non si è potuto copiare: seleziona il valore e copialo a mano.",
-      "done": "Fatto",
-      "revoke": "Revoca",
-      "revoked": "{name} revocato",
-      "errors": {
-        "invalid": "Dagli un nome e almeno uno scopo.",
-        "not_found": "Questo token non c'è più.",
-        "failed": "Non si è potuto revocare."
-      }
+      "done": "Fatto"
     },
     "password": {
       "current": "Password attuale",
@@ -528,6 +664,26 @@
       "errors": {
         "generic": "Qualcosa è andato storto. Riprova."
       }
+    },
+    "twoFactor": {
+      "title": "Autenticazione a due fattori",
+      "description": "Un codice da un'app di autenticazione dopo la password. Gli accessi con Authentik usano il secondo fattore di Authentik.",
+      "on": "Attiva",
+      "off": "Non attiva",
+      "onHint": "Gli accessi con password chiedono un codice.",
+      "offHint": "Gli accessi con password chiedono solo la password.",
+      "enable": "Configura l'autenticazione a due fattori",
+      "enabled": "L'autenticazione a due fattori è attiva",
+      "newCodes": "Nuovi codici di recupero",
+      "newCodesWarning": "I codici di recupero attuali smettono di funzionare. Inserisci la password per crearne di nuovi.",
+      "generate": "Crea i codici",
+      "disable": "Disattiva",
+      "disableTitle": "Disattivare l'autenticazione a due fattori?",
+      "disableWarning": "Gli accessi con password chiederanno solo la password.",
+      "disableRequired": "Questo server richiede l'autenticazione a due fattori: la configurerai di nuovo prima di continuare.",
+      "disabled": "L'autenticazione a due fattori è disattivata",
+      "done": "Fatto",
+      "cancel": "Annulla"
     },
     "sessions": {
       "title": "Sessioni",
@@ -591,6 +747,11 @@
         "sso_only": "Non è partito nulla: questo account accede solo con Authentik.",
         "mail_off": "Non è partito nulla: «Inviti e reimpostazioni» è spento in Admin › Server."
       },
+      "resetTwoFactor": "Azzera 2FA",
+      "resetTwoFactorTitle": "Azzerare l'autenticazione a due fattori?",
+      "resetTwoFactorWarning": "{email} esce da tutti i dispositivi e perde l'app di autenticazione e i codici di recupero.",
+      "resetTwoFactorDetail": "Al prossimo accesso con password dovrà configurare di nuovo l'autenticazione a due fattori.",
+      "twoFactorReset": "Autenticazione a due fattori azzerata per {email}",
       "block": "Blocca",
       "unblock": "Sblocca",
       "blockedNow": "Bloccato, e disconnesso ovunque",
@@ -824,6 +985,60 @@
         "invalid": "Controlla le scelte e riprova.",
         "failed": "Non ha funzionato. Riprova."
       }
+    },
+    "apiClients": {
+      "title": "Client API",
+      "description": "Client OAuth2 (client credentials) per gli script e le integrazioni che chiamano /api/v1. Un client agisce come te, con gli scopi che scegli; i suoi token di accesso durano un'ora.",
+      "new": "Nuovo client",
+      "create": "Crea il client",
+      "nameHint": "A che cosa serve, così saprai quale eliminare.",
+      "columns": {
+        "name": "Nome",
+        "clientId": "Client ID",
+        "scopes": "Scopi",
+        "created": "Creato",
+        "actions": "Azioni"
+      },
+      "empty": "Nessun client.",
+      "mintedTitle": "Il tuo nuovo client",
+      "mintedWarning": "Copia il segreto adesso: è l'unica volta che si vede e non è più recuperabile.",
+      "minted": {
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "tokenEndpoint": "Token endpoint",
+        "resource": "Risorsa (parametro resource)"
+      },
+      "mintedHint": "Chiedi un token al token endpoint con grant_type=client_credentials, autenticazione HTTP Basic con ID e segreto e resource uguale al valore qui sopra; poi chiama /api/v1 con Authorization: Bearer <access_token>.",
+      "copied": "Copiato",
+      "delete": "Elimina",
+      "deleted": "{name} eliminato",
+      "confirmTitle": "Eliminare {name}?",
+      "confirmDescription": "I suoi token smettono subito di funzionare, e ciò che lo usa avrà bisogno di un nuovo client.",
+      "errors": {
+        "invalid": "Dagli un nome e almeno uno scopo.",
+        "failed": "Non si è potuto fare. Riprova.",
+        "not_found": "Questo client non c'è più."
+      }
+    },
+    "connectedApps": {
+      "title": "App collegate",
+      "description": "Le applicazioni che hai autorizzato nella schermata di consenso, per esempio un client MCP. Revoca un'app per chiuderne l'accesso: non può più rinnovare il token, e quello attuale scade entro un'ora.",
+      "empty": "Nessuna app collegata.",
+      "columns": {
+        "name": "App",
+        "hosts": "Torna a",
+        "scopes": "Accesso",
+        "since": "Autorizzata il",
+        "actions": "Azioni"
+      },
+      "unverified": "non verificato",
+      "offline": "resta collegata",
+      "revoke": "Revoca",
+      "revoked": "Accesso di {name} revocato",
+      "confirmTitle": "Revocare l'accesso di {name}?",
+      "confirmDescription": "I suoi refresh token vengono cancellati e il prossimo collegamento chiede di nuovo il tuo consenso.",
+      "cancel": "Annulla",
+      "failed": "Non è stato possibile. Riprova."
     }
   },
   "errors": {

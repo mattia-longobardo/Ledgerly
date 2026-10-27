@@ -128,6 +128,68 @@
       "nameInvalid": "Enter your full name, at most {max} characters.",
       "failed": "Couldn't create the account. Try again.",
       "authentik": "Use Authentik instead"
+    },
+    "twoFactor": {
+      "recoveryCodes": "Recovery codes",
+      "download": "Download",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Couldn't copy. Select the codes and copy them by hand.",
+      "signOut": "Sign out",
+      "setup": {
+        "title": "Set up two-factor authentication",
+        "description": "Your account signs in with a password, so it needs a code from an authenticator app too.",
+        "passwordIntro": "Enter your password to create the secret for your authenticator app.",
+        "password": "Password",
+        "continue": "Continue",
+        "scanTitle": "1. Scan the QR code",
+        "scanHint": "Use an authenticator app, such as Aegis, 2FAS, Google Authenticator or 1Password.",
+        "qrLabel": "QR code for the authenticator app",
+        "manual": "Can't scan it? Enter this key:",
+        "codesTitle": "2. Save your recovery codes",
+        "codesHint": "Each code works once. Keep them somewhere safe: they are the only way in without your phone.",
+        "saved": "I have saved my recovery codes",
+        "code": "3. Code from the app",
+        "codeHint": "Six digits.",
+        "confirm": "Turn on two-factor authentication"
+      },
+      "challenge": {
+        "title": "Two-factor authentication",
+        "description": "Enter the code from your authenticator app.",
+        "code": "Authentication code",
+        "codeHint": "Six digits.",
+        "recoveryCode": "Recovery code",
+        "recoveryHint": "One of the codes you saved, like abcde-12345. Each works once.",
+        "trust": "Trust this device for {days} days",
+        "submit": "Verify",
+        "useRecovery": "Use a recovery code",
+        "useApp": "Use the authenticator app",
+        "back": "Back to sign in"
+      },
+      "errors": {
+        "invalidCode": "That code is not right. Try the current one.",
+        "invalidBackupCode": "That recovery code is not valid or was already used.",
+        "tooManyAttempts": "Too many wrong codes. Sign in again.",
+        "locked": "Too many wrong codes. Two-factor sign-in is locked for 15 minutes.",
+        "expired": "This sign-in has expired. Sign in again.",
+        "password": "Wrong password.",
+        "rateLimited": "Too many attempts. Wait a minute and try again.",
+        "generic": "Something went wrong. Try again."
+      }
+    },
+    "consent": {
+      "title": "Allow access",
+      "description": "{client} wants to use your Ledgerly data.",
+      "invalid": "This authorization request is not valid or has expired. Start again from the application that sent you here.",
+      "scopes": "It will be able to:",
+      "offline": "stay connected without asking again (refresh token, 30 days)",
+      "identity": "see your name and email address",
+      "allow": "Allow",
+      "deny": "Deny",
+      "failed": "The answer could not be sent. Try again.",
+      "redirects": "After your answer, the browser goes back to:",
+      "unverified": "Unverified client.",
+      "unverifiedHint": "It registered itself and chose its own name. Allow it only if you started this connection and you recognise the address below."
     }
   },
   "settings": {
@@ -153,6 +215,10 @@
         "trek": {
           "name": "Trek",
           "role": "Leave days"
+        },
+        "paperless": {
+          "name": "Paperless-ngx",
+          "role": "Payslips and Cometa documents"
         }
       },
       "states": {
@@ -166,7 +232,7 @@
         "schedule": "Schedule",
         "never": "Never"
       },
-      "schedule": "Hourly, at minute 07",
+      "schedule": "Every hour",
       "firstSync": "The first sync fetches 12 months. After that each run re-reads the last 7 days.",
       "connect": {
         "title": "Connect Wallet",
@@ -204,7 +270,8 @@
       "kinds": {
         "accounts": "Accounts and balances",
         "transactions": "Transactions",
-        "leave": "Leave days"
+        "leave": "Leave days",
+        "documents": "Documents"
       },
       "runStates": {
         "running": "Running",
@@ -239,7 +306,10 @@
         "empty": "Paste a token first.",
         "notConnected": "Wallet is not connected.",
         "busy": "A sync is already running. Try again in a moment.",
-        "failed": "Couldn't save. Try again."
+        "failed": "Couldn't save. Try again.",
+        "types": "Paperless has no document type with that name.",
+        "schedule": "That schedule is not valid.",
+        "notAllowed": "This Paperless address is not allowed on this server. The admin sets the allowed ones in PAPERLESS_ALLOWED_ORIGINS."
       },
       "notifications": {
         "failedSubject": "Wallet sync failed",
@@ -265,6 +335,107 @@
         "clientIdHint": "From the machine client you created in Trek.",
         "clientSecret": "Client secret",
         "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
+      },
+      "scheduleControl": {
+        "title": "Sync schedule",
+        "description": "Times are in your time zone ({timeZone}, from Settings › Profile), to the minute. A sync starts within a minute of the time chosen; two syncs are at least {minutes} minutes apart.",
+        "presets": {
+          "label": "Quick choices",
+          "hourly": "Every hour",
+          "officeHours": "Every 30 min, office hours",
+          "twiceDaily": "Twice a day",
+          "weekdays8": "Weekdays at 8:00",
+          "monthStart": "1st of the month",
+          "manual": "Manual only"
+        },
+        "rule": "Rule {n}",
+        "kindLabel": "Kind of rule {n}",
+        "kinds": {
+          "interval": "Every…",
+          "times": "At times…",
+          "cron": "Cron (advanced)"
+        },
+        "removeRule": "Remove rule {n}",
+        "addRule": "Add a rule",
+        "every": "Every",
+        "unit": "Unit",
+        "units": {
+          "minutes": "minutes",
+          "hours": "hours",
+          "minutesShort": "{n} min",
+          "hoursShort": "{n} h"
+        },
+        "from": "From",
+        "until": "Until",
+        "at": "Times of the day",
+        "newTime": "New time for rule {n}",
+        "addTime": "Add",
+        "removeTime": "Remove {time} from rule {n}",
+        "cron": "Cron expression",
+        "cronHint": "Five fields: minute hour day-of-month month day-of-week. Example: 43 6 * * 1-5.",
+        "days": {
+          "label": "Days",
+          "every": "Every day",
+          "weekdays": "Days of the week",
+          "monthDays": "Days of the month",
+          "weekdaysOf": "Days of the week of rule {n}",
+          "monthDaysOf": "Days of the month of rule {n}",
+          "lastLong": "Last day",
+          "workdays": "Mon–Fri",
+          "weekend": "Sat–Sun",
+          "last": "last",
+          "ofMonth": "on day {days}"
+        },
+        "preview": {
+          "title": "Next {n} syncs",
+          "manual": "No automatic sync: only “Sync now” starts one.",
+          "fix": "Fix the rules marked in red to see the next syncs."
+        },
+        "errors": {
+          "every": "The interval must be from {minutes} minutes to 24 hours.",
+          "window": "“Until” must not come before “From”.",
+          "times": "Add at least one time.",
+          "days": "Pick at least one day.",
+          "cron": "This is not a valid cron expression.",
+          "neverRuns": "This rule never runs.",
+          "tooFrequent": "Two syncs at {first} and {second}: keep them at least {minutes} minutes apart."
+        },
+        "manualHint": "No rule: only “Sync now” starts a sync. Pick a quick choice or add a rule.",
+        "dependentHint": "Budget alerts, subscriptions and interest are checked every hour at minute 07: after a sync at another time they see the new movements at the next check.",
+        "summary": {
+          "manual": "Manual only",
+          "hourly": "Every hour",
+          "every": "Every {every}",
+          "window": "{from}–{until}",
+          "times": "At {times}",
+          "timesMore": "At {times} and {more} more",
+          "cron": "Cron {expression}",
+          "andMore": "{rule} +{more}"
+        },
+        "next": "Next: {when}",
+        "noNext": "No automatic sync",
+        "change": "Change the sync schedule",
+        "changeShort": "Change",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "Schedule saved",
+        "invalid": "This schedule was refused: check the rules."
+      },
+      "paperless": {
+        "notLinked": "Not linked. Ledgerly reads the payslips Paperless files, with the token of a read-only Paperless user.",
+        "connectTitle": "Link Paperless",
+        "connectDescription": "The token of the read-only Paperless user (for example ledgerly-sync) and the document types to read.",
+        "baseUrl": "Paperless URL",
+        "baseUrlHint": "Inside the homelab: http://paperless-ngx:8000.",
+        "token": "API token",
+        "tokenHint": "From the Paperless profile of the read-only user. It is stored encrypted and never shown again.",
+        "payslipType": "Payslip document type",
+        "payslipTypeHint": "The name of the Paperless document type, as Paperless shows it.",
+        "cometaOperationsType": "Cometa operations document type",
+        "cometaPositionType": "Cometa position document type",
+        "optionalHint": "Optional: leave empty to skip.",
+        "disconnectDescription": "The documents already imported stay. Ledgerly stops reading Paperless.",
+        "typesMissing": "Paperless has no document type with one of those names. Check the spelling in Paperless."
       }
     },
     "categories": {
@@ -366,7 +537,8 @@
         "hourly": "Hourly",
         "daily": "Daily",
         "monthly": "Monthly",
-        "manual": "By hand only"
+        "manual": "By hand only",
+        "minute": "Every minute, and hourly"
       },
       "states": {
         "running": "Running",
@@ -466,17 +638,6 @@
       "manage": "Manage in Authentik"
     },
     "tokens": {
-      "title": "Access tokens",
-      "description": "Personal access tokens for the read-only API used by Home Assistant and scripts. Tokens are hashed at rest; the full value is shown once.",
-      "columns": {
-        "name": "Name",
-        "token": "Token",
-        "scopes": "Scopes",
-        "expires": "Expires",
-        "lastUsed": "Last used",
-        "status": "Status",
-        "actions": "Actions"
-      },
       "scopes": {
         "read": "read",
         "write": "write",
@@ -487,35 +648,10 @@
         "write": "record a balance reading",
         "imports": "upload payslips and Cometa documents"
       },
-      "states": {
-        "active": "Active",
-        "expired": "Expired",
-        "revoked": "Revoked"
-      },
-      "expiry": {
-        "30": "30 days",
-        "90": "90 days",
-        "365": "1 year",
-        "never": "No expiry"
-      },
-      "empty": "No tokens yet.",
-      "new": "New token",
-      "create": "Create token",
       "cancel": "Cancel",
-      "nameHint": "What it is for, so you know which one to revoke later.",
-      "mintedTitle": "Your new token",
-      "mintedWarning": "Copy it now: this is the only time it is shown, and it cannot be recovered.",
       "copy": "Copy",
-      "copied": "Copied",
       "copyFailed": "Could not copy: select the value and copy it by hand.",
-      "done": "Done",
-      "revoke": "Revoke",
-      "revoked": "{name} revoked",
-      "errors": {
-        "invalid": "Give it a name and at least one scope.",
-        "not_found": "That token is already gone.",
-        "failed": "It could not be revoked."
-      }
+      "done": "Done"
     },
     "password": {
       "current": "Current password",
@@ -528,6 +664,26 @@
       "errors": {
         "generic": "Something went wrong. Try again."
       }
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "description": "A code from an authenticator app after your password. Authentik sign-ins use Authentik's own second factor.",
+      "on": "On",
+      "off": "Off",
+      "onHint": "Password sign-ins ask for a code.",
+      "offHint": "Password sign-ins ask for the password only.",
+      "enable": "Set up two-factor authentication",
+      "enabled": "Two-factor authentication is on",
+      "newCodes": "New recovery codes",
+      "newCodesWarning": "Your current recovery codes stop working. Enter your password to create new ones.",
+      "generate": "Create codes",
+      "disable": "Turn off",
+      "disableTitle": "Turn off two-factor authentication?",
+      "disableWarning": "Password sign-ins will ask for the password only.",
+      "disableRequired": "This server requires two-factor authentication: you will set it up again before you can continue.",
+      "disabled": "Two-factor authentication is off",
+      "done": "Done",
+      "cancel": "Cancel"
     },
     "sessions": {
       "title": "Sessions",
@@ -591,6 +747,11 @@
         "sso_only": "Nothing sent: this account signs in with Authentik only.",
         "mail_off": "Nothing sent: “Invitations & resets” is off in Admin › Server."
       },
+      "resetTwoFactor": "Reset 2FA",
+      "resetTwoFactorTitle": "Reset two-factor authentication?",
+      "resetTwoFactorWarning": "{email} is signed out everywhere and loses their authenticator app and recovery codes.",
+      "resetTwoFactorDetail": "Their next password sign-in asks them to set up two-factor authentication again.",
+      "twoFactorReset": "Two-factor authentication reset for {email}",
       "block": "Block",
       "unblock": "Unblock",
       "blockedNow": "Blocked, and signed out everywhere",
@@ -824,6 +985,60 @@
         "invalid": "Check the choices and try again.",
         "failed": "It did not work. Try again."
       }
+    },
+    "apiClients": {
+      "title": "Client API",
+      "description": "OAuth2 clients (client credentials) for scripts and integrations that call /api/v1. A client acts as you, with the scopes you choose; its access tokens last one hour.",
+      "new": "New client",
+      "create": "Create client",
+      "nameHint": "What it is for, so you know which one to delete later.",
+      "columns": {
+        "name": "Name",
+        "clientId": "Client ID",
+        "scopes": "Scopes",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "empty": "No clients yet.",
+      "mintedTitle": "Your new client",
+      "mintedWarning": "Copy the secret now: this is the only time it is shown, and it cannot be recovered.",
+      "minted": {
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "tokenEndpoint": "Token endpoint",
+        "resource": "Resource (resource parameter)"
+      },
+      "mintedHint": "Ask the token endpoint for a token with grant_type=client_credentials, HTTP Basic authentication with the ID and the secret, and resource set to the value above; then call /api/v1 with Authorization: Bearer <access_token>.",
+      "copied": "Copied",
+      "delete": "Delete",
+      "deleted": "{name} deleted",
+      "confirmTitle": "Delete {name}?",
+      "confirmDescription": "Its tokens stop working immediately, and whatever uses it will need a new client.",
+      "errors": {
+        "invalid": "Give it a name and at least one scope.",
+        "failed": "It could not be done. Try again.",
+        "not_found": "That client is already gone."
+      }
+    },
+    "connectedApps": {
+      "title": "Connected apps",
+      "description": "Applications you allowed on the consent screen, such as an MCP client. Revoke one to end its access: it can no longer refresh its token, and the current one expires within an hour.",
+      "empty": "No connected apps.",
+      "columns": {
+        "name": "App",
+        "hosts": "Returns to",
+        "scopes": "Access",
+        "since": "Allowed on",
+        "actions": "Actions"
+      },
+      "unverified": "unverified",
+      "offline": "stays connected",
+      "revoke": "Revoke",
+      "revoked": "Access for {name} revoked",
+      "confirmTitle": "Revoke access for {name}?",
+      "confirmDescription": "Its refresh tokens are deleted and the next connection asks for your consent again.",
+      "cancel": "Cancel",
+      "failed": "It could not be done. Try again."
     }
   },
   "errors": {

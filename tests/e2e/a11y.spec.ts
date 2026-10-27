@@ -225,10 +225,53 @@ const PAGES: Screen[] = [
   // Signed out.
   { name: "/sign-in", session: null, open: go("/sign-in") },
   { name: "/forgot-password", session: null, open: go("/forgot-password") },
+  { name: "/sign-in/two-factor", session: null, open: go("/sign-in/two-factor") },
+
+  // TOTP setup (docs/auth-design.md D2): a seeded password user who has not set it up yet.
+  { name: "/sign-in/two-factor/setup", session: "pending", open: go("/sign-in/two-factor/setup") },
 ];
 
 /** Overlays: they live in a portal, outside `<main>`, so each says what to measure. */
 const OVERLAYS: Screen[] = [
+  {
+    // The sync schedule of the layout user's Paperless link (seeded on manual only).
+    name: "the sync schedule dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/integrations");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // The same dialog with something in it: a preset, a second rule in cron, and the preview.
+    name: "the sync schedule dialog, with rules",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/integrations");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .click();
+      await settledDialog(page);
+      const dialog = page.getByRole("dialog");
+      await dialog
+        .getByRole("button", { name: /Every 30 min, office hours|Ogni 30 min, orario d'ufficio/ })
+        .click();
+      await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
+      await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
+      await dialog.getByLabel(/Kind of rule 3|Tipo della regola 3/).selectOption("cron");
+      await dialog
+        .getByLabel(/Days$|Giorni$/)
+        .nth(1)
+        .selectOption("monthDays");
+    },
+  },
   {
     name: "the command palette",
     session: "layout",

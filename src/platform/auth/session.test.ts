@@ -1,8 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
-import { ctxFrom, getOptionalPreferences, requireAdmin, requireSession } from "./session";
+import {
+  ctxFrom,
+  getOptionalCtx,
+  getOptionalPreferences,
+  requireAdmin,
+  requireSession,
+  requireTwoFactorSetup,
+  signedInDestination,
+} from "./session";
 
 const getSession = vi.hoisted(() => vi.fn());
+const hasPasswordAccount = vi.hoisted(() => vi.fn(async () => false));
+const env = vi.hoisted(() => ({ TWO_FACTOR_POLICY: "required" as "required" | "optional" }));
+
+vi.mock("./accounts", () => ({ hasPasswordAccount }));
+vi.mock("@/platform/env", () => ({ readEnv: () => env }));
 
 vi.mock("./auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
@@ -58,6 +71,62 @@ describe("requireSession", () => {
   it("redirects an anonymous visitor to /sign-in", async () => {
     getSession.mockResolvedValueOnce(null);
     await expect(requireSession()).rejects.toMatchObject({
+      digest: expect.stringMatching(/^NEXT_REDIRECT;.*;\/sign-in;/),
+    });
+  });
+});
+
+describe("the TOTP setup gate", () => {
+  beforeEach(() => {
+    getSession.mockReset();
+    hasPasswordAccount.mockReset();
+    env.TWO_FACTOR_POLICY = "required";
+  });
+
+  const passwordUser = {
+    user: { id: "u1", role: "user", email: "u1@example.test", twoFactorEnabled: false },
+  };
+
+  it("sends a password account without TOTP to the setup, not into the app", async () => {
+    getSession.mockResolvedValue(passwordUser);
+    hasPasswordAccount.mockResolvedValue(true);
+    await expect(requireSession()).rejects.toMatchObject({
+      digest: expect.stringMatching(/^NEXT_REDIRECT;.*;\/sign-in\/two-factor\/setup;/),
+    });
+    expect(await getOptionalCtx()).toBeNull();
+    expect(await signedInDestination()).toBe("/sign-in/two-factor/setup");
+    expect(await requireTwoFactorSetup()).toMatchObject({ email: "u1@example.test" });
+    // The language of the setup page still follows the person's preferences.
+    expect(await getOptionalPreferences()).not.toBeNull();
+  });
+
+  it("lets in an account with TOTP, without looking up its accounts", async () => {
+    getSession.mockResolvedValue({ user: { ...passwordUser.user, twoFactorEnabled: true } });
+    expect((await requireSession()).userId).toBe("u1");
+    expect(hasPasswordAccount).not.toHaveBeenCalled();
+    await expect(requireTwoFactorSetup()).rejects.toMatchObject({
+      digest: expect.stringMatching(/^NEXT_REDIRECT;.*;\/;/),
+    });
+  });
+
+  it("lets in an Authentik-only account: its second factor is Authentik's", async () => {
+    getSession.mockResolvedValue(passwordUser);
+    hasPasswordAccount.mockResolvedValue(false);
+    expect((await requireSession()).userId).toBe("u1");
+    expect(await signedInDestination()).toBe("/");
+  });
+
+  it("lets in a password account without TOTP when the policy is optional", async () => {
+    env.TWO_FACTOR_POLICY = "optional";
+    getSession.mockResolvedValue(passwordUser);
+    hasPasswordAccount.mockResolvedValue(true);
+    expect((await requireSession()).userId).toBe("u1");
+  });
+
+  it("sends an anonymous visitor from the setup page to /sign-in", async () => {
+    getSession.mockResolvedValue(null);
+    expect(await signedInDestination()).toBeNull();
+    await expect(requireTwoFactorSetup()).rejects.toMatchObject({
       digest: expect.stringMatching(/^NEXT_REDIRECT;.*;\/sign-in;/),
     });
   });

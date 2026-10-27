@@ -10,7 +10,7 @@ export const CONNECTION_STATES = ["active", "error", "revoked"] as const;
  * Every kind of pass any provider can make. A provider makes only its own (`KINDS_OF`): this list
  * is the column's vocabulary, not a to-do list anybody works through.
  */
-export const SYNC_KINDS = ["accounts", "transactions", "leave"] as const;
+export const SYNC_KINDS = ["accounts", "transactions", "leave", "documents"] as const;
 export const SYNC_STATES = ["running", "success", "failed", "skipped"] as const;
 /** `category_group` is a Wallet category group, filed as the local parent category (F2.5). */
 export const ENTITY_TYPES = [
@@ -30,9 +30,11 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 export const WALLET_PROVIDER = "wallet";
 /** The provider F7 speaks to (spec §9.2): the leave calendar, over MCP. */
 export const TREK_PROVIDER = "trek";
+/** Paperless-ngx, read by Ledgerly (docs/auth-design.md D5): payslips and Cometa documents. */
+export const PAPERLESS_PROVIDER = "paperless";
 
 /** The providers a connection may be created for: one entry per provider the app can speak to. */
-export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER] as const;
+export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER, PAPERLESS_PROVIDER] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
 export function isKnownProvider(provider: string): provider is Provider {
@@ -47,6 +49,7 @@ export function isKnownProvider(provider: string): provider is Provider {
 export const KINDS_OF = {
   [WALLET_PROVIDER]: ["accounts", "transactions"],
   [TREK_PROVIDER]: ["leave"],
+  [PAPERLESS_PROVIDER]: ["documents"],
 } as const satisfies Record<Provider, readonly SyncKind[]>;
 
 export const entityTypeSchema = z.enum(ENTITY_TYPES);

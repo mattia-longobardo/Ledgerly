@@ -28,22 +28,35 @@ function fromUtcMillis(millis: number): CivilDate {
   return `${pad(d.getUTCFullYear(), 4)}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
+/**
+ * One formatter per zone and shape, built once: building an `Intl.DateTimeFormat` costs far more
+ * than using one, and the sync schedule's preview resolves hundreds of wall-clock times per edit.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatterFor(
+  shape: string,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${shape}|${timeZone}`;
+  let found = formatters.get(key);
+  if (!found) {
+    found = new Intl.DateTimeFormat("en-US", { timeZone, ...options });
+    formatters.set(key, found);
+  }
+  return found;
+}
+
 /** The civil date of an instant as seen in `timeZone` (an IANA name). */
 export function civilDateIn(instant: Date, timeZone: string): CivilDate {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const formatter = formatterFor("date", timeZone, { year: "numeric", month: "2-digit", day: "2-digit" });
   const byType = Object.fromEntries(formatter.formatToParts(instant).map((p) => [p.type, p.value]));
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
 /** A zone's offset from UTC at an instant, in milliseconds; positive east of Greenwich. */
 function offsetAt(millis: number, timeZone: string): number {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
+  const full = formatterFor("full", timeZone, {
     hour12: false,
     year: "numeric",
     month: "2-digit",
@@ -52,9 +65,7 @@ function offsetAt(millis: number, timeZone: string): number {
     minute: "2-digit",
     second: "2-digit",
   });
-  const at = Object.fromEntries(
-    formatter.formatToParts(new Date(millis)).map((part) => [part.type, part.value]),
-  );
+  const at = Object.fromEntries(full.formatToParts(new Date(millis)).map((part) => [part.type, part.value]));
   // `hour12: false` renders midnight as "24" in this locale, which `Date.UTC` would carry into the
   // next day: the modulo keeps it on the day the other parts name.
   const local = Date.UTC(
@@ -93,6 +104,37 @@ export function startOfDayIn(on: CivilDate, timeZone: string): Date {
     if (civilDateIn(new Date(candidate), timeZone) === on) return new Date(candidate);
   }
   return new Date(Math.max(once, twice));
+}
+
+/** Minutes past local midnight of an instant in `timeZone`: 0 to 1439. */
+export function minutesOfDayIn(instant: Date, timeZone: string): number {
+  const at = Object.fromEntries(
+    formatterFor("clock", timeZone, { hour12: false, hour: "2-digit", minute: "2-digit" })
+      .formatToParts(instant)
+      .map((part) => [part.type, part.value]),
+  );
+  return (Number(at.hour) % 24) * 60 + Number(at.minute);
+}
+
+/**
+ * The instant a local wall-clock time happens on a civil date in `timeZone` — "07:30 on
+ * 2026-03-29 in Rome". Resolved as `Temporal`'s "compatible" disambiguation: a time the clock
+ * repeats (the autumn change) is its first occurrence, and a time the clock skips (the spring
+ * change) is moved forward by the length of the gap, so a schedule set inside it still runs that
+ * day. The offsets twelve hours either side are the two the day can have.
+ */
+export function wallClockIn(on: CivilDate, minutes: number, timeZone: string): Date {
+  const [year, month, day] = parts(on);
+  const local = Date.UTC(year, month - 1, day) + minutes * 60_000;
+  const before = local - offsetAt(local - 12 * 3_600_000, timeZone);
+  const after = local - offsetAt(local + 12 * 3_600_000, timeZone);
+  const real = [before, after]
+    .filter((candidate) => {
+      const instant = new Date(candidate);
+      return civilDateIn(instant, timeZone) === on && minutesOfDayIn(instant, timeZone) === minutes;
+    })
+    .sort((a, b) => a - b);
+  return new Date(real[0] ?? before);
 }
 
 /** A zone's offset from UTC at an instant, as "UTC+2", "UTC−3:30" or "UTC" (the timezone picker). */

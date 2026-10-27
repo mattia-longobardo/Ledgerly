@@ -1,8 +1,9 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
+import { civilDateIn } from "@/platform/dates";
 import { UNIQUE_VIOLATION, hasPgError } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
@@ -20,6 +21,16 @@ import {
   type SyncKind,
   syncErrorText,
 } from "./rules";
+import {
+  nextSyncAfterPass,
+  nextSyncAt,
+  parseSyncSchedule,
+  type ScheduleProblem,
+  scheduleProblems,
+  type SyncSchedule,
+  syncScheduleSchema,
+} from "./schedule";
+import { users } from "@/platform/auth/schema";
 import { integrationConnections, providerLinks, syncJobs, syncRuns } from "./schema";
 
 export type { ProviderLink, SyncKind } from "./rules";
@@ -29,10 +40,20 @@ export type { Tx } from "@/platform/db/client";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type IntegrationErrorCode =
-  "not_found" | "unknown_provider" | "invalid_credentials" | "invalid_link" | "link_conflict" | "run_closed";
+  | "not_found"
+  | "unknown_provider"
+  | "invalid_credentials"
+  | "invalid_link"
+  | "link_conflict"
+  | "run_closed"
+  | "invalid_schedule";
 
 export class IntegrationError extends Error {
-  constructor(readonly code: IntegrationErrorCode) {
+  /** `problems`: why an `invalid_schedule` was refused, for the form to say so. */
+  constructor(
+    readonly code: IntegrationErrorCode,
+    readonly problems: ScheduleProblem[] = [],
+  ) {
     super(code);
     this.name = "IntegrationError";
   }
@@ -48,6 +69,9 @@ export interface Connection {
   state: ConnectionState;
   lastOkAt: Date | null;
   lastError: string | null;
+  schedule: SyncSchedule;
+  /** The next pass the dispatcher owes (D7); null for a `manual` schedule. */
+  nextSyncAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +83,8 @@ const CONNECTION_COLUMNS = {
   state: integrationConnections.state,
   lastOkAt: integrationConnections.lastOkAt,
   lastError: integrationConnections.lastError,
+  schedule: integrationConnections.schedule,
+  nextSyncAt: integrationConnections.nextSyncAt,
   createdAt: integrationConnections.createdAt,
   updatedAt: integrationConnections.updatedAt,
 };
@@ -79,13 +105,18 @@ export function isUniqueViolation(error: unknown, constraint: string): boolean {
   return hasPgError(error, UNIQUE_VIOLATION, constraint);
 }
 
+/** A row as {@link Connection}: the stored schedule read back through its schema. */
+function toConnection(row: Omit<Connection, "schedule"> & { schedule: unknown }): Connection {
+  return { ...row, schedule: parseSyncSchedule(row.schedule) };
+}
+
 async function requireConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<Connection> {
   const [row] = await getDb()
     .select(CONNECTION_COLUMNS)
     .from(integrationConnections)
     .where(and(eq(integrationConnections.id, id), userScoped(ctx).owns(integrationConnections)));
   if (!row) throw new IntegrationError("not_found");
-  return row;
+  return toConnection(row);
 }
 
 /**
@@ -111,13 +142,16 @@ export async function saveConnection(
   const credentials = sealJson(keyRing(), parsed.data);
   const [row] = await getDb()
     .insert(integrationConnections)
-    .values(userScoped(ctx).stamp({ provider, credentials, state: "active" as const }))
+    // A new connection is due at once: the next tick of the dispatcher makes its first pass (D7).
+    .values(
+      userScoped(ctx).stamp({ provider, credentials, state: "active" as const, nextSyncAt: new Date() }),
+    )
     .onConflictDoUpdate({
       target: [integrationConnections.userId, integrationConnections.provider],
       set: { credentials, state: "active" as const, lastError: null, updatedAt: new Date() },
     })
     .returning(CONNECTION_COLUMNS);
-  return row;
+  return toConnection(row);
 }
 
 /**
@@ -137,11 +171,128 @@ export async function readCredentials(
 }
 
 export async function listConnections(ctx: Pick<Ctx, "userId">): Promise<Connection[]> {
-  return getDb()
+  const rows = await getDb()
     .select(CONNECTION_COLUMNS)
     .from(integrationConnections)
     .where(userScoped(ctx).owns(integrationConnections))
     .orderBy(asc(integrationConnections.provider), asc(integrationConnections.id));
+  return rows.map(toConnection);
+}
+
+/* The schedule of a connection (docs/scheduler.md) */
+
+/**
+ * Saves when a connection syncs and works out its next pass in the person's zone. The schedule
+ * comes from a form, so it is parsed here and refused as `invalid_schedule` when it is not a list
+ * of valid rules, when a rule never runs, or when two passes would come closer than the minimum
+ * gap; "Sync now" never goes through here and never moves `next_sync_at`.
+ */
+export async function saveSchedule(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  connectionId: string,
+  input: unknown,
+  now: Date = new Date(),
+): Promise<Connection> {
+  const parsed = syncScheduleSchema.safeParse(input);
+  if (!parsed.success) throw new IntegrationError("invalid_schedule");
+  const problems = scheduleProblems(parsed.data, civilDateIn(now, ctx.timeZone));
+  if (problems.length > 0) throw new IntegrationError("invalid_schedule", problems);
+  const [row] = await getDb()
+    .update(integrationConnections)
+    .set({ schedule: parsed.data, nextSyncAt: nextSyncAt(parsed.data, ctx.timeZone, now), updatedAt: now })
+    .where(and(eq(integrationConnections.id, connectionId), userScoped(ctx).owns(integrationConnections)))
+    .returning(CONNECTION_COLUMNS);
+  if (!row) throw new IntegrationError("not_found");
+  return toConnection(row);
+}
+
+/**
+ * Moves a connection's next pass on after the dispatcher has made one (or has tried to) for the
+ * slot `connection.nextSyncAt`: the first slot after `now`, never closer than the minimum gap.
+ */
+export async function advanceSchedule(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  connection: Pick<Connection, "id" | "schedule" | "nextSyncAt">,
+  now: Date = new Date(),
+): Promise<Date | null> {
+  const next = nextSyncAfterPass(connection.schedule, ctx.timeZone, connection.nextSyncAt, now);
+  await getDb()
+    .update(integrationConnections)
+    .set({ nextSyncAt: next })
+    .where(and(eq(integrationConnections.id, connection.id), userScoped(ctx).owns(integrationConnections)));
+  return next;
+}
+
+/**
+ * Recomputes every connection's next pass of one person, for when their time zone changed: the
+ * times of a schedule are local times, so "07:00" has to follow the person to their new zone.
+ */
+export async function rescheduleConnections(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  now: Date = new Date(),
+): Promise<number> {
+  const connections = await listConnections(ctx);
+  for (const connection of connections) {
+    await getDb()
+      .update(integrationConnections)
+      .set({ nextSyncAt: nextSyncAt(connection.schedule, ctx.timeZone, now) })
+      .where(and(eq(integrationConnections.id, connection.id), userScoped(ctx).owns(integrationConnections)));
+  }
+  return connections.length;
+}
+
+/** A connection the dispatcher owes a pass: whose, which provider, on what schedule, since when. */
+export interface DueConnection {
+  id: string;
+  userId: string;
+  provider: string;
+  schedule: SyncSchedule;
+  nextSyncAt: Date | null;
+}
+
+/** Which connections the dispatcher may pass: not revoked, and not of a banned person. */
+function dueWhere(now: Date) {
+  return and(
+    lte(integrationConnections.nextSyncAt, now),
+    ne(integrationConnections.state, "revoked"),
+    or(isNull(users.banned), eq(users.banned, false)),
+  );
+}
+
+/**
+ * Every connection whose next pass is due, across all users, oldest debt first. An `error`
+ * connection is included, because it must keep being retried. A `revoked` one is not, nor any
+ * connection of a banned person (PERS-49 SEC-08): a refused token waits for a new one, and a
+ * blocked account makes no outbound call. "Sync now" and a new token still reach them.
+ */
+export async function dueConnections(now: Date = new Date()): Promise<DueConnection[]> {
+  const rows = await getDb()
+    .select({
+      id: integrationConnections.id,
+      userId: integrationConnections.userId,
+      provider: integrationConnections.provider,
+      schedule: integrationConnections.schedule,
+      nextSyncAt: integrationConnections.nextSyncAt,
+    })
+    .from(integrationConnections)
+    .innerJoin(users, eq(users.id, integrationConnections.userId))
+    .where(dueWhere(now))
+    .orderBy(asc(integrationConnections.nextSyncAt), asc(integrationConnections.id));
+  return rows.map((row) => ({ ...row, schedule: parseSyncSchedule(row.schedule) }));
+}
+
+/**
+ * Whether any connection is due: the minute tick asks this first, so a minute with nothing to do
+ * writes no `job_runs` row (one index probe on `next_sync_at`).
+ */
+export async function anyConnectionDue(now: Date = new Date()): Promise<boolean> {
+  const rows = await getDb()
+    .select({ id: integrationConnections.id })
+    .from(integrationConnections)
+    .innerJoin(users, eq(users.id, integrationConnections.userId))
+    .where(dueWhere(now))
+    .limit(1);
+  return rows.length > 0;
 }
 
 /**
@@ -504,7 +655,7 @@ export async function markConnection(
     .where(and(eq(integrationConnections.id, connectionId), userScoped(ctx).owns(integrationConnections)))
     .returning(CONNECTION_COLUMNS);
   if (!row) throw new IntegrationError("not_found");
-  return row;
+  return toConnection(row);
 }
 
 const DEFAULT_RUN_PAGE = 20;

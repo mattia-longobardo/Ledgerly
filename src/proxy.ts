@@ -33,7 +33,9 @@ export const config = {
   // Matched as a family rather than listed one by one, because adding a size later and forgetting
   // this line is a silent failure — the page still renders, only the icon quietly does not.
   // Non-capturing groups: Next refuses a matcher that captures (`invalid-route-source`).
+  // `.well-known/` is the OAuth discovery (RFC 8414, RFC 9728): a client without a session reads
+  // it, and a redirect to sign-in instead of the document breaks every MCP client (D6).
   matcher: [
-    "/((?!api/|_next/static/|_next/image|favicon\\.ico$|(?:apple-)?icon\\.(?:svg|png)$|robots\\.txt$).*)",
+    "/((?!api/|\\.well-known/|_next/static/|_next/image|favicon\\.ico$|(?:apple-)?icon\\.(?:svg|png)$|robots\\.txt$).*)",
   ],
 };

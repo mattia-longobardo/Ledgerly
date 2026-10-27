@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
@@ -26,6 +26,8 @@ export interface TrekCardProps {
   lastSync: string | null;
   /** Days still waiting to reach Trek: the one number that says the two calendars disagree. */
   pending: number;
+  /** The connection's own sync schedule control (D7); the fixed label when there is no link. */
+  schedule?: ReactNode;
 }
 
 const DOT: Record<TrekCardState, string> = {
@@ -54,7 +56,7 @@ const FORM_ID = "trek-token-form";
  * unmounts on close: it is never in React state, never in a prop, and never in the DOM a moment
  * longer than the dialog is open.
  */
-export function TrekCard({ state, lastSync, pending: waiting }: TrekCardProps) {
+export function TrekCard({ state, lastSync, pending: waiting, schedule }: TrekCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -125,7 +127,7 @@ export function TrekCard({ state, lastSync, pending: waiting }: TrekCardProps) {
 
         <div className="text-sm">
           <div className="text-muted">{t("fields.schedule")}</div>
-          <div className="mt-0.5 font-medium whitespace-nowrap">{t("schedule")}</div>
+          {schedule ?? <div className="mt-0.5 font-medium whitespace-nowrap">{t("schedule")}</div>}
         </div>
 
         <div className="ml-auto flex items-center gap-2">

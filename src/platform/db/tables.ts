@@ -1,6 +1,7 @@
 // Every module's Drizzle tables, re-exported for the client and for Better Auth.
 // Each task that adds a `schema.ts` adds one `export * from` line here.
 export * from "@/platform/auth/schema";
+export * from "@/platform/auth/oauth/schema";
 export * from "@/modules/users/schema";
 export * from "@/platform/jobs/schema";
 export * from "@/platform/notifications/schema";
@@ -13,7 +14,6 @@ export * from "@/modules/subscriptions/schema";
 export * from "@/modules/interests/schema";
 export * from "@/modules/funds/schema";
 export * from "@/platform/settings/schema";
-export * from "@/platform/tokens/schema";
 export * from "@/modules/imports/schema";
 export * from "@/modules/payroll/schema";
 export * from "@/modules/timeoff/schema";
