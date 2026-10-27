@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, lte, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, min, notInArray, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
   type CivilDate,
@@ -22,6 +22,7 @@ import {
   estimatedMonths,
   isStale,
   monthEndSeries,
+  SOURCE_PRECEDENCE,
   totalSeries,
 } from "./rules";
 import { accountGroups, accounts, balanceEntries, snapshotRuns } from "./schema";
@@ -32,11 +33,12 @@ export type SnapshotRun = typeof snapshotRuns.$inferSelect;
 export type AccountGroup = typeof accountGroups.$inferSelect;
 
 /**
- * Same day, more than one source: the correction a person typed comes first (spec §7.1), and a
- * month end rebuilt from the movements comes last of all (F2.5) — every source is named, so a new
- * one cannot fall into a tie by accident.
+ * Same day, more than one source: the order of `SOURCE_PRECEDENCE` (spec §7.1) — every source is
+ * named, so a new one cannot fall into a tie by accident.
  */
-export const SOURCE_RANK = sql`case ${balanceEntries.source} when 'manual' then 0 when 'import' then 1 when 'provider' then 2 when 'system' then 3 else 4 end`;
+export const SOURCE_RANK = sql`case ${balanceEntries.source} ${sql.raw(
+  SOURCE_PRECEDENCE.map((source, rank) => `when '${source}' then ${rank}`).join(" "),
+)} else ${SOURCE_PRECEDENCE.length} end`;
 
 /** The sources that are not a reading of the account: the snapshot's copies and the rebuilt ends. */
 const NOT_OBSERVED = ["system", "derived"] as const;
@@ -329,4 +331,16 @@ export async function accountsView(
     alerts,
     lastSnapshot: snapshots[0] ?? null,
   };
+}
+
+/**
+ * The day of the user's oldest balance, of any account and source; `null` with no balance at all.
+ * The exchange-rate backfill starts there (docs/design/investments.md §1.8).
+ */
+export async function firstBalanceDay(ctx: Pick<Ctx, "userId">): Promise<CivilDate | null> {
+  const [row] = await getDb()
+    .select({ on: min(balanceEntries.on) })
+    .from(balanceEntries)
+    .where(userScoped(ctx).owns(balanceEntries));
+  return row?.on ?? null;
 }

@@ -91,6 +91,8 @@ describe("jobs", () => {
         { job: "pockets-planned-cleanup", status: "success" },
         { job: "documents-retention", status: "success" },
         { job: "holidays-refresh", status: "success" },
+        // No balance in the database, so nothing to convert: it asks Frankfurter for nothing.
+        { job: "fx-rates-refresh", status: "success" },
         // The real daily backup, which genuinely fails here: `pg_dump` is in the *application*
         // image (Dockerfile) and not in the bare `node:26-bookworm-slim` this suite runs in. That
         // it is recorded as failed rather than stopping the tier is the point of the assertion.

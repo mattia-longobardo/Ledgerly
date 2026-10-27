@@ -52,6 +52,19 @@ export const KINDS_OF = {
   [PAPERLESS_PROVIDER]: ["documents"],
 } as const satisfies Record<Provider, readonly SyncKind[]>;
 
+/**
+ * Whether a provider brings in movements, so an account of its own can have month ends rebuilt
+ * from them (`rebuildDerivedBalances`). An investment provider never does: its accounts have one
+ * writer, the `portfolio` source (docs/design/investments.md §1.7).
+ */
+export function syncsTransactions(provider: string | null): boolean {
+  return (
+    provider !== null &&
+    isKnownProvider(provider) &&
+    (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions")
+  );
+}
+
 export const entityTypeSchema = z.enum(ENTITY_TYPES);
 
 const CREDENTIAL_KEY = /^[a-z][a-z0-9_]{0,39}$/i;
