@@ -92,6 +92,7 @@ the legacy section of Settings › Security and the `personal_access_tokens` tab
    Paperless webhook → `200 duplicate`.
 
 Rollback: `docker tag ledgerly:pre-pat-removal ledgerly:latest && docker compose up -d --no-build --wait ledgerly`.
-The previous image needs the table: restore it first with
-`pg_restore -d ledgerly -t personal_access_tokens backups/ledgerly/pre-pat-removal.dump` and remove the `0033` row from
-`drizzle.__drizzle_migrations`, otherwise the next deploy does not drop it again.
+The previous image needs the table, but not its rows (the only PAT was revoked): first run
+`drizzle/0020_personal_access_tokens.sql` on `ledgerly`, and remove the `0033` row from
+`drizzle.__drizzle_migrations`, otherwise the next deploy does not drop the table again. The dump
+of step 1 is deleted after the check.
