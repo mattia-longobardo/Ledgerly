@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@/modules/users/rules";
+import { DISPLAY_CURRENCIES } from "@/platform/fx/rules";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
@@ -46,6 +47,7 @@ export function PreferencesForm({
     timeZone: "UTC",
   });
   const monthLabel = (month: number) => monthFormatter.format(new Date(Date.UTC(2023, month - 1, 1)));
+  const currencyNames = new Intl.DisplayNames(locale === "it" ? "it-IT" : "en-US", { type: "currency" });
   const days = Array.from({ length: daysInMonth(prefs.patronSaint?.month) }, (_, i) => i + 1);
 
   function onSubmit(event: FormEvent) {
@@ -127,6 +129,19 @@ export function PreferencesForm({
           <option value="">{t("currencyPositions.auto")}</option>
           <option value="before">{t("currencyPositions.before")}</option>
           <option value="after">{t("currencyPositions.after")}</option>
+        </Select>
+      </Field>
+      <Field label={t("displayCurrency")} htmlFor="displayCurrency" hint={t("displayCurrencyHint")}>
+        <Select
+          id="displayCurrency"
+          value={prefs.displayCurrency}
+          onChange={(e) => set("displayCurrency", e.target.value as Preferences["displayCurrency"])}
+        >
+          {DISPLAY_CURRENCIES.map((code) => (
+            <option key={code} value={code}>
+              {`${code} · ${currencyNames.of(code) ?? code}`}
+            </option>
+          ))}
         </Select>
       </Field>
       <Field label={t("weekStart")} htmlFor="weekStart">

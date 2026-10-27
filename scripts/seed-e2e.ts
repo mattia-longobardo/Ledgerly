@@ -195,7 +195,14 @@ for (const name of Object.keys(SESSIONS) as (keyof typeof SESSIONS)[]) {
 async function contextOf(email: string): Promise<Ctx> {
   const [user] = await getDb().select({ id: users.id }).from(users).where(eq(users.email, email));
   if (!user) throw new Error(`No user for ${email}`);
-  return { userId: user.id, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId: user.id,
+    role: "user",
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 /** A Wallet account adopted the way the sync adopts one; returns its id. */
@@ -489,6 +496,32 @@ function workingDay(from: string, delta: number): string {
  * Everything is written through the services, like the rest of this seed: a row no service would
  * write lays out a screen that does not exist.
  */
+/**
+ * The display-currency journey (docs/design/investments.md §1.8): one account in EUR and one in
+ * USD. The USD one is converted at the site's own ECB rates (`fx_rates`), so the spec checks the
+ * currency of the totals, never a converted figure.
+ */
+async function seedCurrency(): Promise<void> {
+  const ctx = await contextOf(USERS.currency.email);
+  const on = addDays(today(ctx.timeZone), -3);
+  for (const [name, type, currency] of [
+    ["Conto EUR", "checking", "EUR"],
+    ["Broker USD", "investment", "USD"],
+  ] as const) {
+    await createAccount(ctx, {
+      name,
+      type,
+      currency,
+      color: null,
+      reference: "",
+      purpose: "",
+      openedOn: null,
+      notes: "",
+      openingBalance: { on, cents: 1_000_00n },
+    });
+  }
+}
+
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
   // A Paperless link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
@@ -529,6 +562,19 @@ async function seedLayout(): Promise<void> {
     openedOn: null,
     notes: "",
     openingBalance: { on: addDays(addMonths(monthKey(on), -1), -1), cents: 1_000_000n },
+  });
+  // An account in another currency, so the screens are measured with its line in the display
+  // currency under its own value (§1.8).
+  await createAccount(ctx, {
+    name: "Interactive Brokers",
+    type: "investment",
+    currency: "USD",
+    color: null,
+    reference: "",
+    purpose: "",
+    openedOn: null,
+    notes: "",
+    openingBalance: { on: addDays(on, -3), cents: 250_000n },
   });
 
   // ——— What hangs off the accounts: the section replaces a table the owner kept by hand ———
@@ -771,6 +817,7 @@ await seedFunds();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();
+await seedCurrency();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 
 process.exit(0);

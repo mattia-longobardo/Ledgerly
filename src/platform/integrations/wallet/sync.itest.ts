@@ -123,7 +123,14 @@ function walletStub(
 const recordCalls = (stub: Stub): string[] => stub.calls.filter((path) => path.startsWith("/api/records"));
 
 function contextFor(userId: string): Ctx {
-  return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId,
+    role: "user",
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 /** Every movement, hidden and disappeared ones included: this is a sync's own bookkeeping. */

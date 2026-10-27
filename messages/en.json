@@ -590,7 +590,7 @@
         "dot": "Point (1,234.56)",
         "comma": "Comma (1.234,56)"
       },
-      "currencyPosition": "Euro sign",
+      "currencyPosition": "Currency sign",
       "currencyPositions": {
         "auto": "From the number format",
         "before": "Before the amount (€ 1,234.56)",
@@ -622,7 +622,9 @@
       "errors": {
         "invalid": "Some of these preferences are invalid. Check your inputs and try again.",
         "failed": "Couldn't save preferences. Try again."
-      }
+      },
+      "displayCurrency": "Display currency",
+      "displayCurrencyHint": "Totals across accounts are converted to it at the ECB rate of their day. Each account keeps its own currency."
     },
     "signIn": {
       "title": "Sign-in",
@@ -1689,7 +1691,8 @@
         "failed": "Couldn't save. Try again."
       }
     },
-    "showArchived": "Show archived"
+    "showArchived": "Show archived",
+    "missingRate": "No exchange rate from {currencies} to {currency}: those accounts are left out of the totals."
   },
   "budgets": {
     "title": "Budgets",

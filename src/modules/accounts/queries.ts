@@ -12,6 +12,8 @@ import {
 } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
+import { convertCents, type DisplayCurrency } from "@/platform/fx/rules";
+import { ratesOn } from "@/platform/fx/service";
 import type { Cents } from "@/platform/money";
 import {
   type AccountAlert,
@@ -215,12 +217,22 @@ export interface AccountRow {
    * draws these, so its bands add up to its total exactly.
    */
   held: (Cents | null)[];
+  /**
+   * The same figures in the display currency (docs/design/investments.md §1.8, D1), each converted
+   * at the rate of its own day: what every total sums and the stacked chart draws. Equal to the
+   * native ones when the account is in the display currency; `null` where a rate is missing.
+   */
+  display: { balance: Cents | null; previous: Cents | null; held: (Cents | null)[] };
+  /** The account has a balance today and no rate to the display currency: it is out of the totals. */
+  missingRate: boolean;
   stale: boolean;
 }
 
 export type BucketTotals = Record<Bucket, { total: Cents | null; partial: boolean; count: number }>;
 
 export interface AccountsView {
+  /** What every total below is in: the user's display currency. Each row's own fields are not. */
+  currency: DisplayCurrency;
   months: MonthKey[];
   rows: AccountRow[];
   /** The net-worth series: the accounts included in it, held (never interpolated) and summed. */
@@ -232,6 +244,8 @@ export interface AccountsView {
   previousTotal: Cents | null;
   buckets: BucketTotals;
   alerts: AccountAlert[];
+  /** The currencies of accounts counted today that have no rate to `currency`, sorted. */
+  missingRates: string[];
   lastSnapshot: SnapshotRun | null;
 }
 
@@ -249,9 +263,15 @@ function emptyBuckets(): BucketTotals {
  * §7.1: held forward, `null` before an account's first balance, and a total that is `null` only
  * when every account is unknown. An account's `interpolate` setting shapes its own chart series
  * and never the totals.
+ *
+ * Every total is in the display currency (§1.8, §2.3): each account's value is converted at the
+ * rate of the day it stands for — a month end at that month's last day, today at today — rounded to
+ * the cent, and only then summed. A value with no rate is left out and makes its total partial,
+ * exactly like an account with no balance; it is never counted 1:1. With every account in the
+ * display currency nothing is converted and no rate is read.
  */
 export async function accountsView(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   options: { months?: number; now?: Date; through?: MonthKey; includeArchived?: boolean } = {},
 ): Promise<AccountsView> {
   const now = options.now ?? new Date();
@@ -285,22 +305,49 @@ export async function accountsView(
     previousMonthEnd,
   );
 
-  const rows: AccountRow[] = open.map((account) => ({
-    account,
-    balance: latest.get(account.id) ?? null,
-    previous: previous.get(account.id) ?? null,
-    series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
-    estimated: estimatedMonths(points.get(account.id) ?? [], months),
-    held: monthEndSeries(points.get(account.id) ?? [], months, "hold"),
-    stale:
-      account.state !== "archived" &&
-      account.origin === "synced" &&
-      isStale(account.lastSyncedAt, account.staleAfterHours, now),
-  }));
+  const currency = ctx.displayCurrency;
+  // The day each month's value stands for, and so the day of its rate: today for a month still
+  // running, its last day otherwise.
+  const daysOf = months.map((month, i) => (i === months.length - 1 ? on : lastDayOfMonth(month)));
+  const firstDay = daysOf[0] < previousMonthEnd ? daysOf[0] : previousMonthEnd;
+  const rates = await ratesOn(
+    open.some((account) => account.currency !== currency)
+      ? [currency, ...open.map((account) => account.currency)]
+      : [],
+    firstDay,
+    on,
+  );
+  const convert = (cents: Cents | null, from: string, day: CivilDate): Cents | null =>
+    cents === null ? null : convertCents(cents, from, currency, day, rates);
+
+  const rows: AccountRow[] = open.map((account) => {
+    const balance = latest.get(account.id) ?? null;
+    const before = previous.get(account.id) ?? null;
+    const held = monthEndSeries(points.get(account.id) ?? [], months, "hold");
+    const display = {
+      balance: convert(balance, account.currency, on),
+      previous: convert(before, account.currency, previousMonthEnd),
+      held: held.map((cents, i) => convert(cents, account.currency, daysOf[i])),
+    };
+    return {
+      account,
+      balance,
+      previous: before,
+      series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
+      estimated: estimatedMonths(points.get(account.id) ?? [], months),
+      held,
+      display,
+      missingRate: balance !== null && display.balance === null,
+      stale:
+        account.state !== "archived" &&
+        account.origin === "synced" &&
+        isStale(account.lastSyncedAt, account.staleAfterHours, now),
+    };
+  });
 
   const counted = rows.filter((row) => row.account.inNetWorth && row.account.state !== "archived");
   const netWorth = totalSeries(
-    counted.map((row) => row.held),
+    counted.map((row) => row.display.held),
     months.length,
   );
   const current = netWorth.at(-1) ?? { total: null, partial: false };
@@ -310,8 +357,8 @@ export async function accountsView(
   for (const row of counted) {
     const bucket = buckets[bucketOf(row.account)];
     bucket.count += 1;
-    if (row.balance === null) bucket.partial = true;
-    else bucket.total = (bucket.total ?? 0n) + row.balance;
+    if (row.display.balance === null) bucket.partial = true;
+    else bucket.total = (bucket.total ?? 0n) + row.display.balance;
   }
 
   // Nothing to warn about on an account you closed: no low balance, no reading gone stale.
@@ -320,6 +367,7 @@ export async function accountsView(
     .flatMap((row) => alertsFor(row.account, row.balance, now));
 
   return {
+    currency,
     months,
     rows,
     netWorth,
@@ -329,6 +377,9 @@ export async function accountsView(
     previousTotal: netWorth.at(-2)?.total ?? null,
     buckets,
     alerts,
+    missingRates: [
+      ...new Set(counted.filter((row) => row.missingRate).map((row) => row.account.currency)),
+    ].sort(),
     lastSnapshot: snapshots[0] ?? null,
   };
 }

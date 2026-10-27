@@ -16,6 +16,11 @@ import type { Cents } from "@/platform/money";
  */
 export interface MonthlyFigures {
   month: MonthKey;
+  /**
+   * The display currency the account totals (net worth, previous net worth, cash) are in (§1.8,
+   * D1). Income, expense and net are sums of the month's transactions, as they were before D1.
+   */
+  currency: string;
   netWorthCents: Cents | null;
   /** True when an account counted has no balance yet: the total is a floor, not a fact. */
   netWorthPartial: boolean;
@@ -31,7 +36,7 @@ export interface MonthlyFigures {
 }
 
 export async function monthlyFigures(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   month: MonthKey,
   now: Date = new Date(),
 ): Promise<MonthlyFigures> {
@@ -41,6 +46,7 @@ export async function monthlyFigures(
   ]);
   return {
     month,
+    currency: accounts.currency,
     netWorthCents: accounts.total,
     netWorthPartial: accounts.totalPartial,
     previousNetWorthCents: accounts.previousTotal,

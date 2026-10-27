@@ -52,8 +52,9 @@ export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer
     { name: "ledgerly", title: "Ledgerly", version: APP_VERSION },
     {
       instructions:
-        "Ledgerly is a personal finance ledger. Amounts are decimal strings in the account's currency " +
-        "(EUR unless stated); dates are YYYY-MM-DD in the user's time zone. Every tool is read-only.",
+        "Ledgerly is a personal finance ledger. Amounts are decimal strings: an account's own balance is " +
+        "in that account's `currency`, and get_summary's totals are in the `currency` it returns (the " +
+        "user's display currency); dates are YYYY-MM-DD in the user's time zone. Every tool is read-only.",
     },
   );
   if (!scopes.includes("read")) return server;
@@ -64,13 +65,17 @@ export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer
       title: "Summary",
       description:
         "Net worth, liquid cash, and this month's income, spending and net, as GET /api/v1/summary. " +
-        "`netWorthPartial`/`cashPartial` are true when an account counted has no balance yet.",
+        "`currency` is the user's display currency, which netWorth, previousNetWorth and cash are " +
+        "converted to at the ECB rate of their day. " +
+        "`netWorthPartial`/`cashPartial` are true when an account counted has no balance yet, or no " +
+        "exchange rate to that currency.",
       annotations: READ_ONLY,
     },
     async () => {
       const figures = await monthlyFigures(ctx, monthKey(today(ctx.timeZone)));
       return json({
         month: figures.month,
+        currency: figures.currency,
         netWorth: money(figures.netWorthCents),
         netWorthPartial: figures.netWorthPartial,
         previousNetWorth: money(figures.previousNetWorthCents),

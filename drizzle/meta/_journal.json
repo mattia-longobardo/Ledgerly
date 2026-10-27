@@ -253,6 +253,13 @@
       "when": 1793141152593,
       "tag": "0035_portfolio_source_fx",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793142870231,
+      "tag": "0036_display_currency",
+      "breakpoints": true
     }
   ]
 }

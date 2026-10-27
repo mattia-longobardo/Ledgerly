@@ -14,7 +14,14 @@ import {
 } from "./service";
 
 function contextFor(userId: string, role: "admin" | "user" = "admin"): Ctx {
-  return { userId, role, locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId,
+    role,
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 const NOW = new Date("2026-09-21T12:00:00Z");

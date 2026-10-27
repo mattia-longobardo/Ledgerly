@@ -237,6 +237,7 @@ describe("MCP tools", () => {
 
     const summary = JSON.parse((await callTool(token, "get_summary")).text);
     expect(summary).toHaveProperty("netWorth");
+    expect(summary.currency).toBe("EUR");
 
     const budgets = JSON.parse((await callTool(token, "list_budgets", { month: "2026-01" })).text);
     expect(budgets).toMatchObject({ month: "2026-01-01", budgets: [] });
