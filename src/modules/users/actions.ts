@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
+import { rescheduleConnections } from "@/platform/integrations/service";
 import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { redactForLog } from "@/platform/auth/logger";
@@ -50,6 +51,9 @@ export async function savePreferencesAction(input: Preferences): Promise<ActionR
   const ctx = await requireSession();
   try {
     const saved = await updatePreferences(ctx, input);
+    // The times of an integration's schedule are local times (D7): they follow the person's zone.
+    if (saved.timeZone !== ctx.timeZone)
+      await rescheduleConnections({ userId: ctx.userId, timeZone: saved.timeZone });
     const jar = await cookies();
     jar.set(LOCALE_COOKIE, saved.locale, { path: "/", maxAge: YEAR, sameSite: "lax" });
     jar.set(THEME_COOKIE, saved.theme, { path: "/", maxAge: YEAR, sameSite: "lax" });

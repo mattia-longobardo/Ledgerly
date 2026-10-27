@@ -9,9 +9,10 @@ import { authClient } from "@/platform/auth/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input } from "@/ui/input";
+import { goTo } from "../destination";
 
 /** A code from the authenticator app, or one of the recovery codes when the phone is gone. */
-export function ChallengeForm({ trustDays }: { trustDays: number }) {
+export function ChallengeForm({ trustDays, next = "/" }: { trustDays: number; next?: string }) {
   const t = useTranslations("auth.twoFactor");
   const id = useId();
   const router = useRouter();
@@ -41,8 +42,7 @@ export function ChallengeForm({ trustDays }: { trustDays: number }) {
       setError(twoFactorErrorKey(result.error));
       return;
     }
-    router.push("/");
-    router.refresh();
+    goTo(router, next);
   }
 
   const restart = error === "expired" || error === "tooManyAttempts";

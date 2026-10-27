@@ -8,7 +8,7 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { refreshRecurrences, walletSyncJob } from "./jobs";
+import { recurrencesRefreshJob, refreshRecurrences } from "./jobs";
 import { recurringPatterns, transactions } from "./schema";
 
 const NOW = new Date("2026-01-20T08:07:00Z");
@@ -128,7 +128,7 @@ describe("refreshRecurrences", () => {
   });
 });
 
-describe("walletSyncJob", () => {
+describe("recurrencesRefreshJob", () => {
   beforeEach(async () => {
     await resetDatabase();
     const person = await createTestUser();
@@ -137,19 +137,9 @@ describe("walletSyncJob", () => {
   });
   afterAll(closeDatabase);
 
-  it("refreshes the recurrences of a user with no connection, and syncs nothing", async () => {
+  it("refreshes the recurrences of every user, connection or not", async () => {
     for (const on of ["2025-11-05", "2025-12-05", "2026-01-05"]) await movement(ctx, accountId, on);
-    expect(await walletSyncJob.run()).toMatchObject({
-      users: 1,
-      failed: 0,
-      connections: 0,
-      passes: 0,
-      recurrences: 1,
-    });
+    expect(await recurrencesRefreshJob.run()).toMatchObject({ users: 1, failed: 0, recurrences: 1 });
     expect(await patterns(ctx)).toHaveLength(1);
   });
-
-  // §10.4 lists "sync failed **or** out of date" as two conditions, and a refused credential is
-  // the first: the token was rejected, the database says so, and "out of date since <date>" would
-  // hide the only sentence the user can act on.
 });

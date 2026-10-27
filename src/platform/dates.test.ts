@@ -109,3 +109,14 @@ describe("startOfDayIn", () => {
     ).toBe("01:00");
   });
 });
+
+describe("wallClockIn", () => {
+  it("is the instant of a local time on a civil date", async () => {
+    const { wallClockIn, minutesOfDayIn } = await import("./dates");
+    expect(wallClockIn("2026-07-01", 7 * 60, "Europe/Rome")).toEqual(new Date("2026-07-01T05:00:00Z"));
+    expect(wallClockIn("2026-12-01", 0, "Europe/Rome")).toEqual(new Date("2026-11-30T23:00:00Z"));
+    // The repeated hour of the autumn change: its first occurrence.
+    expect(wallClockIn("2026-10-25", 2 * 60 + 30, "Europe/Rome")).toEqual(new Date("2026-10-25T00:30:00Z"));
+    expect(minutesOfDayIn(new Date("2026-07-01T05:15:00Z"), "Europe/Rome")).toBe(7 * 60 + 15);
+  });
+});

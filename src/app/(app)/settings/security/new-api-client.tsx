@@ -3,40 +3,32 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { type ExpiryChoice, TOKEN_SCOPES } from "@/platform/tokens/rules";
+import { TOKEN_SCOPES } from "@/platform/tokens/rules";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
+import { Checkbox, Input } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { createTokenAction } from "./actions";
-
-const EXPIRY_OPTIONS = ["30", "90", "365", "never"] as const;
-
-function expiryOf(value: string): ExpiryChoice {
-  return value === "never" ? null : (Number(value) as 30 | 90 | 365);
-}
+import { type ApiClientMinted, createApiClientAction } from "./actions";
 
 /**
- * "New token" (design row 853): the button under the section's description, the form it opens, and
- * the one moment the value exists outside the person's own clipboard. Once this dialog closes the
- * token is gone — only the prefix survives, in the table (spec §5.3).
+ * "New client" (docs/auth-design.md D3): what replaces "New token". The secret exists outside the
+ * person's clipboard only while this dialog is open; the plugin keeps a hash of it.
  */
-export function NewToken() {
-  const t = useTranslations("settings.tokens");
+export function NewApiClient() {
+  const t = useTranslations("settings.apiClients");
+  const scopesT = useTranslations("settings.tokens");
   const id = useId();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [minted, setMinted] = useState<string | null>(null);
+  const [minted, setMinted] = useState<ApiClientMinted | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function close() {
     setOpen(false);
     setMinted(null);
     setError(null);
-    setCopied(false);
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,30 +36,23 @@ export function NewToken() {
     const data = new FormData(event.currentTarget);
     const scopes = TOKEN_SCOPES.filter((scope) => data.get(scope) === "on");
     startTransition(async () => {
-      const result = await createTokenAction({
-        name: String(data.get("name") ?? ""),
-        scopes,
-        expiresInDays: expiryOf(String(data.get("expiry") ?? "never")),
-      });
+      const result = await createApiClientAction({ name: String(data.get("name") ?? ""), scopes });
       if (!result.ok) {
         setError(t(`errors.${result.error}`));
         return;
       }
       setError(null);
-      setMinted(result.token);
+      setMinted(result.client);
       router.refresh();
     });
   }
 
-  async function onCopy() {
-    if (!minted) return;
+  async function copy(value: string) {
     try {
-      await navigator.clipboard.writeText(minted);
-      setCopied(true);
+      await navigator.clipboard.writeText(value);
+      notify(t("copied"), "success");
     } catch {
-      // A browser that refuses the clipboard is not a failure worth a dialog: the value is on
-      // screen and can be selected by hand.
-      notify(t("copyFailed"), "error");
+      notify(scopesT("copyFailed"), "error");
     }
   }
 
@@ -81,20 +66,37 @@ export function NewToken() {
         onOpenChange={(next) => !next && close()}
         title={minted ? t("mintedTitle") : t("new")}
         description={minted ? t("mintedWarning") : undefined}
-        width={460}
+        width={520}
       >
         {minted ? (
           <div className="flex flex-col gap-3">
-            <code
-              data-testid="minted-token"
-              className="rounded-ctl border border-border bg-hover px-2.5 py-2 font-mono text-sm break-all"
-            >
-              {minted}
-            </code>
-            <div className="flex justify-end gap-2">
-              <Button onClick={onCopy}>{copied ? t("copied") : t("copy")}</Button>
+            {(
+              [
+                ["clientId", minted.clientId],
+                ["clientSecret", minted.clientSecret],
+                ["tokenEndpoint", minted.tokenEndpoint],
+                ["resource", minted.resource],
+              ] as const
+            ).map(([key, value]) => (
+              <div key={key} className="flex flex-col gap-1">
+                <span className="text-sm font-medium">{t(`minted.${key}`)}</span>
+                <div className="flex items-start gap-2">
+                  <code
+                    data-testid={`minted-${key}`}
+                    className="min-w-0 flex-1 rounded-ctl border border-border bg-hover px-2.5 py-2 font-mono text-sm break-all"
+                  >
+                    {value}
+                  </code>
+                  <Button size="sm" onClick={() => copy(value)}>
+                    {scopesT("copy")}
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <p className="text-sm text-muted">{t("mintedHint")}</p>
+            <div className="flex justify-end">
               <Button variant="primary" onClick={close}>
-                {t("done")}
+                {scopesT("done")}
               </Button>
             </div>
           </div>
@@ -114,23 +116,14 @@ export function NewToken() {
                 <Checkbox
                   key={scope}
                   name={scope}
-                  label={`${t(`scopes.${scope}`)} — ${t(`scopeHints.${scope}`)}`}
+                  label={`${scopesT(`scopes.${scope}`)} — ${scopesT(`scopeHints.${scope}`)}`}
                   defaultChecked={scope === "read"}
                 />
               ))}
             </fieldset>
-            <Field label={t("columns.expires")} htmlFor={`${id}-expiry`}>
-              <Select id={`${id}-expiry`} name="expiry" defaultValue="90">
-                {EXPIRY_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {t(`expiry.${option}`)}
-                  </option>
-                ))}
-              </Select>
-            </Field>
             <div className="flex justify-end gap-2">
               <Button onClick={close} disabled={pending}>
-                {t("cancel")}
+                {scopesT("cancel")}
               </Button>
               <Button type="submit" variant="primary" disabled={pending}>
                 {t("create")}

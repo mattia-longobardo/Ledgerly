@@ -6,11 +6,11 @@ import { interestsAccrualJob, interestsRematchJob } from "@/modules/interests/jo
 import { payslipsSweepJob } from "@/modules/payroll/jobs";
 import { pocketsAccrualJob, pocketsPlannedCleanupJob } from "@/modules/pockets/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
-import { trekSyncJob } from "@/modules/timeoff/jobs";
-import { walletSyncJob } from "@/modules/transactions/jobs";
+import { recurrencesRefreshJob } from "@/modules/transactions/jobs";
 import { backupJob } from "@/platform/backup/jobs";
 import { exportAllJob } from "@/platform/export/jobs";
 import { holidaysRefreshJob } from "@/platform/holidays/jobs";
+import { integrationsSyncJob } from "@/platform/integrations/jobs";
 import { monthlySummaryJob } from "@/platform/reports/jobs";
 import { housekeepingJob } from "./housekeeping";
 import type { JobDetail } from "./schema";
@@ -21,7 +21,7 @@ import type { JobDetail } from "./schema";
  * `job_runs.tier` has to record what asked for the run, and "nobody asked, a person did" is the
  * honest answer for those.
  */
-export type Tier = "hourly" | "daily" | "monthly" | "manual";
+export type Tier = "quarter" | "hourly" | "daily" | "monthly" | "manual";
 
 /** The tiers the cron sidecar may ask for. */
 export type ScheduledTier = Exclude<Tier, "manual">;
@@ -29,16 +29,27 @@ export type ScheduledTier = Exclude<Tier, "manual">;
 export interface JobDefinition {
   name: string;
   tier: Tier;
+  /** Further tiers that run the job too: `integrations-sync` is in `quarter` and `hourly` (D7). */
+  alsoIn?: readonly ScheduledTier[];
   run(): Promise<JobDetail>;
+}
+
+/** Whether a tick of `tier` runs this job. */
+export function runsIn(job: JobDefinition, tier: Tier): boolean {
+  return job.tier === tier || (job.alsoIn?.includes(tier as ScheduledTier) ?? false);
 }
 
 /** The one list of scheduled jobs. Each phase appends its jobs here. */
 export const JOBS: readonly JobDefinition[] = [
+  // First of all (D7): every connection due by its own schedule, Wallet, Trek and Paperless. In
+  // the hourly tier too, ahead of everything that reads what a sync brought in.
+  integrationsSyncJob,
   housekeepingJob,
   accountAlertsJob,
   accountsSnapshotJob,
-  walletSyncJob,
-  // After `wallet-sync`: `runTier` runs a tier in this order, so the check sees the new movements.
+  // What `wallet-sync` did besides the pass (own transfers, recurrences), still every hour.
+  recurrencesRefreshJob,
+  // After the sync: `runTier` runs a tier in this order, so the check sees the new movements.
   subscriptionsCheckJob,
   // Hourly, after `wallet-sync` too: a budget emails within the hour of the movement that passed
   // one of its thresholds (spec §7.3).
@@ -54,8 +65,6 @@ export const JOBS: readonly JobDefinition[] = [
   documentsRetentionJob,
   payslipsSweepJob,
   cometaSweepJob,
-  // The leave calendar (spec §9.2): its own provider, its own lock, and no mail of its own.
-  trekSyncJob,
   // The subscribed holiday calendars, kept current from their sources (M3).
   holidaysRefreshJob,
   // Every day with the rest of the daily tier (spec §10.2); its retention is in `housekeeping`.

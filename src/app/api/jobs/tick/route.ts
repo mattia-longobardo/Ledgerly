@@ -5,7 +5,7 @@ import { runTier } from "@/platform/jobs/tick";
 
 export const dynamic = "force-dynamic";
 
-const tierSchema = z.enum(["hourly", "daily", "monthly"]);
+const tierSchema = z.enum(["quarter", "hourly", "daily", "monthly"]);
 
 /** Called by the cron sidecar. Any failed check is a bare 404, so the endpoint reveals nothing. */
 export async function POST(request: Request) {

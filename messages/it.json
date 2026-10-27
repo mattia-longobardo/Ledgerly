@@ -176,6 +176,17 @@
         "rateLimited": "Troppi tentativi. Attendi un minuto e riprova.",
         "generic": "Qualcosa non ha funzionato. Riprova."
       }
+    },
+    "consent": {
+      "title": "Consenti l'accesso",
+      "description": "{client} vuole usare i tuoi dati di Ledgerly.",
+      "invalid": "Questa richiesta di autorizzazione non è valida o è scaduta. Ricomincia dall'applicazione che ti ha mandato qui.",
+      "scopes": "Potrà:",
+      "offline": "restare collegata senza chiedertelo di nuovo (refresh token, 30 giorni)",
+      "identity": "vedere il tuo nome e il tuo indirizzo email",
+      "allow": "Consenti",
+      "deny": "Rifiuta",
+      "failed": "Non si è potuta inviare la risposta. Riprova."
     }
   },
   "settings": {
@@ -201,6 +212,10 @@
         "trek": {
           "name": "Trek",
           "role": "Giorni di ferie"
+        },
+        "paperless": {
+          "name": "Paperless-ngx",
+          "role": "Cedolini e documenti Cometa"
         }
       },
       "states": {
@@ -214,7 +229,7 @@
         "schedule": "Pianificazione",
         "never": "Mai"
       },
-      "schedule": "Ogni ora, al minuto 07",
+      "schedule": "Ogni ora",
       "firstSync": "La prima sincronizzazione recupera 12 mesi. Dopo, ogni esecuzione rilegge gli ultimi 7 giorni.",
       "connect": {
         "title": "Collega Wallet",
@@ -252,7 +267,8 @@
       "kinds": {
         "accounts": "Conti e saldi",
         "transactions": "Movimenti",
-        "leave": "Giorni di ferie"
+        "leave": "Giorni di ferie",
+        "documents": "Documenti"
       },
       "runStates": {
         "running": "In corso",
@@ -287,7 +303,9 @@
         "empty": "Incolla prima un token.",
         "notConnected": "Wallet non è collegato.",
         "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
-        "failed": "Non è stato possibile salvare. Riprova."
+        "failed": "Non è stato possibile salvare. Riprova.",
+        "types": "Paperless non ha un tipo di documento con quel nome.",
+        "schedule": "Questo orario non è valido."
       },
       "notifications": {
         "failedSubject": "Sincronizzazione Wallet fallita",
@@ -313,6 +331,64 @@
         "clientIdHint": "Quello del machine client creato su Trek.",
         "clientSecret": "Segreto del client",
         "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
+      },
+      "scheduleControl": {
+        "title": "Orario di sincronizzazione",
+        "description": "Gli orari sono nel tuo fuso orario ({timeZone}), da Impostazioni › Profilo. Una sincronizzazione parte al massimo 15 minuti dopo l'orario scelto.",
+        "mode": "Modalità",
+        "modes": {
+          "interval": "Ogni…",
+          "times": "Agli orari…",
+          "manual": "Solo manuale"
+        },
+        "every": "Intervallo",
+        "at": "Orari del giorno",
+        "timeLabel": "Orario {n}",
+        "addTime": "Aggiungi un orario",
+        "remove": "Rimuovi",
+        "removeTime": "Rimuovi l'orario {n}",
+        "timesHint": "Fino a 6 orari, a passi di 15 minuti.",
+        "manualHint": "Solo “Sincronizza ora” avvia una sincronizzazione.",
+        "dependentHint": "Avvisi dei budget, abbonamenti e interessi si controllano ogni ora al minuto 07: dopo una sincronizzazione fuori dall'ora vedono i nuovi movimenti al controllo successivo.",
+        "intervals": {
+          "15": "Ogni 15 minuti",
+          "30": "Ogni 30 minuti",
+          "60": "Ogni ora",
+          "120": "Ogni 2 ore",
+          "180": "Ogni 3 ore",
+          "240": "Ogni 4 ore",
+          "360": "Ogni 6 ore",
+          "720": "Ogni 12 ore",
+          "1440": "Una volta al giorno (mezzanotte)"
+        },
+        "summary": {
+          "manual": "Solo manuale",
+          "times": "Alle {times}"
+        },
+        "next": "Prossima: {when}",
+        "noNext": "Nessuna sincronizzazione automatica",
+        "change": "Cambia l'orario di sincronizzazione",
+        "changeShort": "Cambia",
+        "cancel": "Annulla",
+        "save": "Salva",
+        "saved": "Orario salvato",
+        "invalid": "Questo orario non è valido: controlla gli orari."
+      },
+      "paperless": {
+        "notLinked": "Non collegato. Ledgerly legge i cedolini archiviati da Paperless, con il token di un utente Paperless in sola lettura.",
+        "connectTitle": "Collega Paperless",
+        "connectDescription": "Il token dell'utente Paperless in sola lettura (ad esempio ledgerly-sync) e i tipi di documento da leggere.",
+        "baseUrl": "URL di Paperless",
+        "baseUrlHint": "Dentro l'homelab: http://paperless-ngx:8000.",
+        "token": "Token API",
+        "tokenHint": "Dal profilo Paperless dell'utente in sola lettura. Si salva cifrato e non si vede più.",
+        "payslipType": "Tipo di documento dei cedolini",
+        "payslipTypeHint": "Il nome del tipo di documento in Paperless, così come lo mostra Paperless.",
+        "cometaOperationsType": "Tipo di documento movimenti Cometa",
+        "cometaPositionType": "Tipo di documento posizione Cometa",
+        "optionalHint": "Facoltativo: lascia vuoto per saltarlo.",
+        "disconnectDescription": "I documenti già importati restano. Ledgerly smette di leggere Paperless.",
+        "typesMissing": "Paperless non ha un tipo di documento con uno di quei nomi. Controlla come è scritto in Paperless."
       }
     },
     "categories": {
@@ -414,7 +490,8 @@
         "hourly": "Ogni ora",
         "daily": "Ogni giorno",
         "monthly": "Ogni mese",
-        "manual": "Solo a mano"
+        "manual": "Solo a mano",
+        "quarter": "Ogni 15 minuti, e ogni ora"
       },
       "states": {
         "running": "In corso",
@@ -563,7 +640,8 @@
         "invalid": "Dagli un nome e almeno uno scopo.",
         "not_found": "Questo token non c'è più.",
         "failed": "Non si è potuto revocare."
-      }
+      },
+      "legacyDescription": "I token personali funzionano ancora durante il passaggio ai Client API, ma non se ne possono più creare. Revoca ciascuno quando lo script che lo usa ha un Client API."
     },
     "password": {
       "current": "Password attuale",
@@ -896,6 +974,40 @@
         "notFound": "Quel calendario non c'è più.",
         "invalid": "Controlla le scelte e riprova.",
         "failed": "Non ha funzionato. Riprova."
+      }
+    },
+    "apiClients": {
+      "title": "Client API",
+      "description": "Client OAuth2 (client credentials) per gli script e le integrazioni che chiamano /api/v1. Un client agisce come te, con gli scopi che scegli; i suoi token di accesso durano un'ora.",
+      "new": "Nuovo client",
+      "create": "Crea il client",
+      "nameHint": "A che cosa serve, così saprai quale eliminare.",
+      "columns": {
+        "name": "Nome",
+        "clientId": "Client ID",
+        "scopes": "Scopi",
+        "created": "Creato",
+        "actions": "Azioni"
+      },
+      "empty": "Nessun client.",
+      "mintedTitle": "Il tuo nuovo client",
+      "mintedWarning": "Copia il segreto adesso: è l'unica volta che si vede e non è più recuperabile.",
+      "minted": {
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "tokenEndpoint": "Token endpoint",
+        "resource": "Risorsa (parametro resource)"
+      },
+      "mintedHint": "Chiedi un token al token endpoint con grant_type=client_credentials, autenticazione HTTP Basic con ID e segreto e resource uguale al valore qui sopra; poi chiama /api/v1 con Authorization: Bearer <access_token>.",
+      "copied": "Copiato",
+      "delete": "Elimina",
+      "deleted": "{name} eliminato",
+      "confirmTitle": "Eliminare {name}?",
+      "confirmDescription": "I suoi token smettono subito di funzionare, e ciò che lo usa avrà bisogno di un nuovo client.",
+      "errors": {
+        "invalid": "Dagli un nome e almeno uno scopo.",
+        "failed": "Non si è potuto fare. Riprova.",
+        "not_found": "Questo client non c'è più."
       }
     }
   },

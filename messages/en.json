@@ -176,6 +176,17 @@
         "rateLimited": "Too many attempts. Wait a minute and try again.",
         "generic": "Something went wrong. Try again."
       }
+    },
+    "consent": {
+      "title": "Allow access",
+      "description": "{client} wants to use your Ledgerly data.",
+      "invalid": "This authorization request is not valid or has expired. Start again from the application that sent you here.",
+      "scopes": "It will be able to:",
+      "offline": "stay connected without asking again (refresh token, 30 days)",
+      "identity": "see your name and email address",
+      "allow": "Allow",
+      "deny": "Deny",
+      "failed": "The answer could not be sent. Try again."
     }
   },
   "settings": {
@@ -201,6 +212,10 @@
         "trek": {
           "name": "Trek",
           "role": "Leave days"
+        },
+        "paperless": {
+          "name": "Paperless-ngx",
+          "role": "Payslips and Cometa documents"
         }
       },
       "states": {
@@ -214,7 +229,7 @@
         "schedule": "Schedule",
         "never": "Never"
       },
-      "schedule": "Hourly, at minute 07",
+      "schedule": "Every hour",
       "firstSync": "The first sync fetches 12 months. After that each run re-reads the last 7 days.",
       "connect": {
         "title": "Connect Wallet",
@@ -252,7 +267,8 @@
       "kinds": {
         "accounts": "Accounts and balances",
         "transactions": "Transactions",
-        "leave": "Leave days"
+        "leave": "Leave days",
+        "documents": "Documents"
       },
       "runStates": {
         "running": "Running",
@@ -287,7 +303,9 @@
         "empty": "Paste a token first.",
         "notConnected": "Wallet is not connected.",
         "busy": "A sync is already running. Try again in a moment.",
-        "failed": "Couldn't save. Try again."
+        "failed": "Couldn't save. Try again.",
+        "types": "Paperless has no document type with that name.",
+        "schedule": "That schedule is not valid."
       },
       "notifications": {
         "failedSubject": "Wallet sync failed",
@@ -313,6 +331,64 @@
         "clientIdHint": "From the machine client you created in Trek.",
         "clientSecret": "Client secret",
         "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
+      },
+      "scheduleControl": {
+        "title": "Sync schedule",
+        "description": "Times are in your time zone ({timeZone}), from Settings › Profile. A pass runs at most 15 minutes after the time you choose.",
+        "mode": "Mode",
+        "modes": {
+          "interval": "Every…",
+          "times": "At times…",
+          "manual": "Manual only"
+        },
+        "every": "Interval",
+        "at": "Times of day",
+        "timeLabel": "Time {n}",
+        "addTime": "Add a time",
+        "remove": "Remove",
+        "removeTime": "Remove time {n}",
+        "timesHint": "Up to 6 times, in steps of 15 minutes.",
+        "manualHint": "Only “Sync now” runs a pass.",
+        "dependentHint": "Budget alerts, subscriptions and interests are checked every hour at minute 07: after a sync off the hour they see the new movements at the next check.",
+        "intervals": {
+          "15": "Every 15 minutes",
+          "30": "Every 30 minutes",
+          "60": "Every hour",
+          "120": "Every 2 hours",
+          "180": "Every 3 hours",
+          "240": "Every 4 hours",
+          "360": "Every 6 hours",
+          "720": "Every 12 hours",
+          "1440": "Once a day (midnight)"
+        },
+        "summary": {
+          "manual": "Manual only",
+          "times": "At {times}"
+        },
+        "next": "Next: {when}",
+        "noNext": "No automatic sync",
+        "change": "Change the sync schedule",
+        "changeShort": "Change",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "Schedule saved",
+        "invalid": "That schedule is not valid: check the times."
+      },
+      "paperless": {
+        "notLinked": "Not linked. Ledgerly reads the payslips Paperless files, with the token of a read-only Paperless user.",
+        "connectTitle": "Link Paperless",
+        "connectDescription": "The token of the read-only Paperless user (for example ledgerly-sync) and the document types to read.",
+        "baseUrl": "Paperless URL",
+        "baseUrlHint": "Inside the homelab: http://paperless-ngx:8000.",
+        "token": "API token",
+        "tokenHint": "From the Paperless profile of the read-only user. It is stored encrypted and never shown again.",
+        "payslipType": "Payslip document type",
+        "payslipTypeHint": "The name of the Paperless document type, as Paperless shows it.",
+        "cometaOperationsType": "Cometa operations document type",
+        "cometaPositionType": "Cometa position document type",
+        "optionalHint": "Optional: leave empty to skip.",
+        "disconnectDescription": "The documents already imported stay. Ledgerly stops reading Paperless.",
+        "typesMissing": "Paperless has no document type with one of those names. Check the spelling in Paperless."
       }
     },
     "categories": {
@@ -414,7 +490,8 @@
         "hourly": "Hourly",
         "daily": "Daily",
         "monthly": "Monthly",
-        "manual": "By hand only"
+        "manual": "By hand only",
+        "quarter": "Every 15 minutes, and hourly"
       },
       "states": {
         "running": "Running",
@@ -563,7 +640,8 @@
         "invalid": "Give it a name and at least one scope.",
         "not_found": "That token is already gone.",
         "failed": "It could not be revoked."
-      }
+      },
+      "legacyDescription": "Personal access tokens still work during the move to Client API, but new ones can no longer be created. Revoke each one once the script that used it has a Client API."
     },
     "password": {
       "current": "Current password",
@@ -896,6 +974,40 @@
         "notFound": "That calendar is no longer there.",
         "invalid": "Check the choices and try again.",
         "failed": "It did not work. Try again."
+      }
+    },
+    "apiClients": {
+      "title": "Client API",
+      "description": "OAuth2 clients (client credentials) for scripts and integrations that call /api/v1. A client acts as you, with the scopes you choose; its access tokens last one hour.",
+      "new": "New client",
+      "create": "Create client",
+      "nameHint": "What it is for, so you know which one to delete later.",
+      "columns": {
+        "name": "Name",
+        "clientId": "Client ID",
+        "scopes": "Scopes",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "empty": "No clients yet.",
+      "mintedTitle": "Your new client",
+      "mintedWarning": "Copy the secret now: this is the only time it is shown, and it cannot be recovered.",
+      "minted": {
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "tokenEndpoint": "Token endpoint",
+        "resource": "Resource (resource parameter)"
+      },
+      "mintedHint": "Ask the token endpoint for a token with grant_type=client_credentials, HTTP Basic authentication with the ID and the secret, and resource set to the value above; then call /api/v1 with Authorization: Bearer <access_token>.",
+      "copied": "Copied",
+      "delete": "Delete",
+      "deleted": "{name} deleted",
+      "confirmTitle": "Delete {name}?",
+      "confirmDescription": "Its tokens stop working immediately, and whatever uses it will need a new client.",
+      "errors": {
+        "invalid": "Give it a name and at least one scope.",
+        "failed": "It could not be done. Try again.",
+        "not_found": "That client is already gone."
       }
     }
   },
