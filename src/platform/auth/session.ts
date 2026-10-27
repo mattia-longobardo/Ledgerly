@@ -19,6 +19,7 @@ export function ctxFrom(user: { id: string; role?: string | null }, prefs: Prefe
     locale: prefs.locale,
     timeZone: prefs.timeZone,
     numberFormat: numberStyle(prefs),
+    displayCurrency: prefs.displayCurrency,
   };
 }
 

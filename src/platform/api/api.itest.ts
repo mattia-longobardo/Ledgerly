@@ -23,7 +23,14 @@ const ORIGIN = "http://127.0.0.1:3000";
 const PASSWORD = "correct-horse-battery";
 
 function contextFor(userId: string): Ctx {
-  return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId,
+    role: "user",
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 /** The session of each person, which is what a Client API is created with. */
@@ -263,6 +270,8 @@ describe("GET /summary", () => {
     const body = await (await call("/summary", aliceToken)).json();
     expect(body.accounts).toBe(1);
     expect(body.netWorth).toBe("5000.00");
+    // The display currency of the totals (docs/api-changelog.md, phase 1b): EUR by default.
+    expect(body.currency).toBe("EUR");
   });
 
   it("tells B about B, whatever A owns", async () => {

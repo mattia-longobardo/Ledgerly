@@ -35,6 +35,7 @@ export async function contextFor(person: Pick<Person, "id">): Promise<Ctx> {
     locale: preferences.locale,
     timeZone: preferences.timeZone,
     numberFormat: numberStyle(preferences),
+    displayCurrency: preferences.displayCurrency,
   };
 }
 

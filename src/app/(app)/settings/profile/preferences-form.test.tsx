@@ -49,9 +49,9 @@ describe("PreferencesForm", () => {
     renderForm();
     // Left alone, both follow the number format: the first option of each select.
     expect(screen.getByLabelText("Decimal separator")).toHaveValue("");
-    expect(screen.getByLabelText("Euro sign")).toHaveValue("");
+    expect(screen.getByLabelText("Currency sign")).toHaveValue("");
     await userEvent.selectOptions(screen.getByLabelText("Decimal separator"), ".");
-    await userEvent.selectOptions(screen.getByLabelText("Euro sign"), "after");
+    await userEvent.selectOptions(screen.getByLabelText("Currency sign"), "after");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(save).toHaveBeenCalledWith({
       ...DEFAULT_PREFERENCES,
@@ -63,7 +63,19 @@ describe("PreferencesForm", () => {
   it("shows the saved overrides when they are set", () => {
     renderForm({ ...DEFAULT_PREFERENCES, decimalSeparator: ",", currencyPosition: "before" });
     expect(screen.getByLabelText("Decimal separator")).toHaveValue(",");
-    expect(screen.getByLabelText("Euro sign")).toHaveValue("before");
+    expect(screen.getByLabelText("Currency sign")).toHaveValue("before");
+  });
+
+  it("offers EUR and the ECB currencies as the display currency, and saves the one picked", async () => {
+    save.mockResolvedValueOnce({ ok: true });
+    renderForm();
+    const field = screen.getByLabelText("Display currency");
+    expect(field).toHaveValue("EUR");
+    expect(screen.getByRole("option", { name: "USD · US Dollar" })).toHaveValue("USD");
+    expect(screen.queryByRole("option", { name: /^BGN/ })).toBeNull();
+    await userEvent.selectOptions(field, "USD");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, displayCurrency: "USD" });
   });
 
   it("labels every timezone with its UTC offset", () => {

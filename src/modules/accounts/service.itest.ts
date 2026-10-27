@@ -42,6 +42,7 @@ function contextFor(userId: string): Ctx {
     locale: "en",
     timeZone: "Europe/Rome",
     numberFormat: "it-IT",
+    displayCurrency: "EUR",
   };
 }
 

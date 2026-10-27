@@ -57,14 +57,32 @@ export function asNumbers(values: readonly (Cents | null)[]): (number | null)[] 
   return values.map((value) => (value === null ? null : Number(value)));
 }
 
+/**
+ * An account's value in the display currency, for the line under its own (§1.8): `null` when the
+ * account is already in that currency, so nothing is said twice. A missing rate is the dash.
+ */
+export function counterValue(
+  row: { account: { currency: string }; display: { balance: Cents | null } },
+  currency: string,
+  format: NumberFormat,
+): string | null {
+  if (row.account.currency === currency) return null;
+  return `≈ ${formatMoney(row.display.balance, format, { currency })}`;
+}
+
 /** Four horizontal grid labels, top to bottom, over the range a series actually covers. */
-export function axisLabels(values: readonly (Cents | null)[], format: NumberFormat, steps = 4): string[] {
+export function axisLabels(
+  values: readonly (Cents | null)[],
+  format: NumberFormat,
+  steps = 4,
+  currency = "EUR",
+): string[] {
   const known = values.filter((value): value is Cents => value !== null).map(Number);
   const high = known.length === 0 ? 0 : Math.max(...known, 0);
   const low = known.length === 0 ? 0 : Math.min(...known, 0);
   return Array.from({ length: steps }, (_, index) => {
     const value = high - ((high - low) * index) / (steps - 1);
-    return formatMoney(BigInt(Math.round(value)), format, { decimals: false });
+    return formatMoney(BigInt(Math.round(value)), format, { decimals: false, currency });
   });
 }
 
@@ -74,13 +92,17 @@ export function axisLabels(values: readonly (Cents | null)[], format: NumberForm
  * `axisLabels` runs from the highest to the lowest value, which put a figure like "2.600 €" on the
  * bars' baseline.
  */
-export function symmetricAxisLabels(values: readonly (Cents | null)[], format: NumberFormat): string[] {
+export function symmetricAxisLabels(
+  values: readonly (Cents | null)[],
+  format: NumberFormat,
+  currency = "EUR",
+): string[] {
   const reach = values.reduce<Cents>((largest, value) => {
     if (value === null) return largest;
     const size = value < 0n ? -value : value;
     return size > largest ? size : largest;
   }, 0n);
-  return axisLabels([reach, -reach], format, 5);
+  return axisLabels([reach, -reach], format, 5, currency);
 }
 
 /** At most `count` month labels, evenly spread, always including the first and the last. */

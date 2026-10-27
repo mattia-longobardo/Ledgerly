@@ -5,6 +5,8 @@ import { dailyBalancesOf } from "@/modules/accounts/service";
 import type { Ctx } from "@/platform/context";
 import { addDays, lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent } from "@/platform/format";
+import { convertCents } from "@/platform/fx/rules";
+import { ratesOn } from "@/platform/fx/service";
 import type { Cents } from "@/platform/money";
 import { Card } from "@/ui/card";
 import { StackedArea } from "@/ui/chart";
@@ -32,7 +34,7 @@ export async function NetWorthCard({
   grainParam = "grain",
   now = new Date(),
 }: {
-  ctx: Pick<Ctx, "userId" | "timeZone" | "locale" | "numberFormat">;
+  ctx: Pick<Ctx, "userId" | "timeZone" | "locale" | "numberFormat" | "displayCurrency">;
   query: Query;
   path: string;
   carry?: Params;
@@ -61,12 +63,16 @@ export async function NetWorthCard({
   // Months that stand on a month end rebuilt from the movements (spec §7.1, F2.5): drawn dashed.
   const estimated = chart.netWorthEstimated.slice(from);
 
+  /** The whole card speaks the display currency (§1.8, D1): every band is converted, as the total. */
+  const currency = chart.currency;
+  const money = { currency };
+
   /**
    * The chart's bands: every account in the net worth, the largest at the end of the window at the
    * bottom of the pile, each in the colour it has everywhere else (its own, or its palette place).
    */
   const stacked = chart.rows
-    .map((row, index) => ({ row, color: colorFor(row.account, index), held: row.held.slice(from) }))
+    .map((row, index) => ({ row, color: colorFor(row.account, index), held: row.display.held.slice(from) }))
     .filter(({ row }) => row.account.inNetWorth)
     .sort((a, b) => {
       const difference = (b.held.at(-1) ?? 0n) - (a.held.at(-1) ?? 0n);
@@ -97,10 +103,20 @@ export async function NetWorthCard({
       { from: start, to: end },
     );
     const nothing = read.days.map(() => null);
+    // Each day at its own rate, like the month ends; no rate is read when nothing needs one.
+    const rates = await ratesOn(
+      stacked.some(({ row }) => row.account.currency !== currency)
+        ? [currency, ...stacked.map(({ row }) => row.account.currency)]
+        : [],
+      start,
+      end,
+    );
     const layers = stacked.map(({ row, color }) => ({
       row,
       color,
-      values: read.series.get(row.account.id)?.values ?? nothing,
+      values: (read.series.get(row.account.id)?.values ?? nothing).map((cents, index) =>
+        cents === null ? null : convertCents(cents, row.account.currency, currency, read.days[index], rates),
+      ),
       estimated: read.series.get(row.account.id)?.estimated ?? read.days.map(() => false),
     }));
     plot = {
@@ -154,12 +170,12 @@ export async function NetWorthCard({
           {/* What the window says, not what today says: the hero above already has today. */}
           <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-kpi font-semibold tracking-[-0.01em] tabular-nums">
-              {formatMoney(periodEnd, ctx.numberFormat)}
+              {formatMoney(periodEnd, ctx.numberFormat, money)}
             </span>
             <span
               className={cn("text-sm font-medium tabular-nums", TONE_TEXT[toneOfSign(periodChange.cents)])}
             >
-              {formatMoney(periodChange.cents, ctx.numberFormat, { signed: true })}
+              {formatMoney(periodChange.cents, ctx.numberFormat, { signed: true, ...money })}
               {periodChange.fraction !== null &&
                 ` (${formatPercent(periodChange.fraction, ctx.numberFormat, { signed: true })})`}
             </span>
@@ -206,7 +222,7 @@ export async function NetWorthCard({
         estimated={plot.estimated}
         hover={plot.labels.map((label, index) => ({
           label,
-          value: formatMoney(plot.total[index], ctx.numberFormat),
+          value: formatMoney(plot.total[index], ctx.numberFormat, money),
           note: plot.estimated[index] ? ta("estimated.short") : undefined,
           // Top of the pile first, as the eye reads the chart.
           rows: [...plot.layers]
@@ -214,16 +230,16 @@ export async function NetWorthCard({
             .filter(({ values }) => values[index] !== null)
             .map(({ row, color, values }) => ({
               label: row.account.name,
-              value: formatMoney(values[index], ctx.numberFormat),
+              value: formatMoney(values[index], ctx.numberFormat, money),
               color,
             })),
         }))}
-        yLabels={axisLabels([...plot.total, ...negatives], ctx.numberFormat)}
+        yLabels={axisLabels([...plot.total, ...negatives], ctx.numberFormat, 4, currency)}
         xLabels={plot.xLabels}
         summary={t("chart.summary", {
           from: formatDate(months[0], "monthYear", ctx.locale),
           to: formatDate(months[months.length - 1], "monthYear", ctx.locale),
-          value: formatMoney(periodEnd, ctx.numberFormat),
+          value: formatMoney(periodEnd, ctx.numberFormat, money),
         })}
       />
       <ul aria-label={t("chart.legend")} className="grid gap-x-6 gap-y-1.5 text-sm @3xl:grid-cols-2">
@@ -238,7 +254,9 @@ export async function NetWorthCard({
               >
                 {row.account.name}
               </Link>
-              <span className="ml-auto shrink-0 tabular-nums">{formatMoney(value, ctx.numberFormat)}</span>
+              <span className="ml-auto shrink-0 tabular-nums">
+                {formatMoney(value, ctx.numberFormat, money)}
+              </span>
               <span className="w-14 shrink-0 text-right text-muted tabular-nums">
                 {formatPercent(shareOf(value, periodEnd), ctx.numberFormat)}
               </span>

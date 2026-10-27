@@ -28,7 +28,14 @@ import {
 } from "./admin";
 
 function contextFor(userId: string, role: Role = "admin"): Ctx {
-  return { userId, role, locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId,
+    role,
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 async function person(role: Role = "user") {

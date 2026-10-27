@@ -32,7 +32,13 @@ describe("ctxFrom", () => {
       locale: "it",
       timeZone: "Europe/Rome",
       numberFormat: { format: "it-IT", decimalSeparator: null, currencyPosition: null },
+      displayCurrency: "EUR",
     });
+  });
+
+  it("carries the display currency the totals are converted to", () => {
+    const ctx = ctxFrom({ id: "u1" }, { ...DEFAULT_PREFERENCES, displayCurrency: "USD" });
+    expect(ctx.displayCurrency).toBe("USD");
   });
 
   it("carries the formatting overrides, so no formatter has to read them back", () => {
