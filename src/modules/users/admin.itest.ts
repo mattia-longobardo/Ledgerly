@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { authAccounts, invitations, sessions, users } from "@/platform/auth/schema";
+import {
+  authAccounts,
+  invitations,
+  sessions,
+  twoFactors,
+  users,
+  verifications,
+} from "@/platform/auth/schema";
 import type { Ctx, Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { getObject, putObject } from "@/platform/storage";
@@ -12,6 +19,7 @@ import {
   invitePerson,
   listPeople,
   removePerson,
+  resetPersonTwoFactor,
   revokeInvitation,
   sendPersonReset,
   setPersonBlocked,
@@ -221,5 +229,70 @@ describe("role, block and removal", () => {
     await putObject(kept, new TextEncoder().encode("keep me"), "application/pdf");
     await removePerson(contextFor(admin.id), a.id);
     expect(await getObject(kept)).not.toBeNull();
+  });
+});
+
+describe("resetPersonTwoFactor", () => {
+  async function withTotp() {
+    const target = await person();
+    await giveAccount(target.id, "credential");
+    await getDb().update(users).set({ twoFactorEnabled: true }).where(eq(users.id, target.id));
+    await getDb().insert(twoFactors).values({ userId: target.id, secret: "sealed", backupCodes: "sealed" });
+    await getDb()
+      .insert(sessions)
+      .values({
+        userId: target.id,
+        token: `session-${target.id}`,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+    // A trusted device: Better Auth's verification row whose value is the user id.
+    await getDb()
+      .insert(verifications)
+      .values({
+        identifier: "hashed-trust-device",
+        value: target.id,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+    return target;
+  }
+
+  it("clears the secret, the trusted devices and every session of the person", async () => {
+    const admin = await person("admin");
+    const target = await withTotp();
+    await resetPersonTwoFactor(contextFor(admin.id), target.id);
+    const [row] = await getDb()
+      .select({ twoFactorEnabled: users.twoFactorEnabled })
+      .from(users)
+      .where(eq(users.id, target.id));
+    expect(row.twoFactorEnabled).toBe(false);
+    expect(await getDb().select().from(twoFactors).where(eq(twoFactors.userId, target.id))).toHaveLength(0);
+    expect(await getDb().select().from(sessions).where(eq(sessions.userId, target.id))).toHaveLength(0);
+    expect(await getDb().select().from(verifications).where(eq(verifications.value, target.id))).toHaveLength(
+      0,
+    );
+  });
+
+  it("is for admins only, and not on the admin's own account", async () => {
+    const admin = await person("admin");
+    const target = await withTotp();
+    await expect(resetPersonTwoFactor(contextFor(target.id, "user"), admin.id)).rejects.toMatchObject({
+      code: "forbidden",
+    });
+    await expect(resetPersonTwoFactor(contextFor(admin.id), admin.id)).rejects.toMatchObject({
+      code: "self",
+    });
+    const [row] = await getDb()
+      .select({ twoFactorEnabled: users.twoFactorEnabled })
+      .from(users)
+      .where(eq(users.id, target.id));
+    expect(row.twoFactorEnabled).toBe(true);
+  });
+
+  it("shows which people have TOTP on", async () => {
+    const admin = await person("admin");
+    const target = await withTotp();
+    const rows = await listPeople(contextFor(admin.id));
+    expect(rows.find((row) => row.id === target.id)).toMatchObject({ twoFactor: true });
+    expect(rows.find((row) => row.id === admin.id)).toMatchObject({ twoFactor: false });
   });
 });

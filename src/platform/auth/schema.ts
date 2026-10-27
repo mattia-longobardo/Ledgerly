@@ -12,7 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-// Column sets follow Better Auth 1.7 (core + admin plugin + database rate limit).
+// Column sets follow Better Auth 1.7 (core + admin and two-factor plugins + database rate limit).
 // Better Auth validates export keys and column property names at startup, not SQL types.
 
 export const users = pgTable("users", {
@@ -27,6 +27,8 @@ export const users = pgTable("users", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires", { withTimezone: true }),
+  // Set by the two-factor plugin once a TOTP code has confirmed the secret (docs/auth-design.md D2).
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -104,6 +106,32 @@ export const verifications = pgTable(
   },
   (table) => [index("verifications_identifier_idx").on(table.identifier)],
 );
+
+/**
+ * One row per user who has started TOTP enrollment. `secret` and `backup_codes` are encrypted by
+ * Better Auth with `BETTER_AUTH_SECRET` (symmetricEncrypt), never stored in clear. `verified` is
+ * false until the first code confirms the secret; the failure counter and `locked_until` are the
+ * plugin's per-account lockout (10 failures, 15 min).
+ */
+export const twoFactors = pgTable("two_factors", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  userId: uuid("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  verified: boolean("verified").notNull().default(true),
+  failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 /**
  * The one table without `created_at`/`updated_at` (spec §6 exception): Better Auth owns its shape

@@ -32,6 +32,7 @@ export default async function SettingsUsersPage() {
       : NULL_DISPLAY,
     status: person.status,
     self: person.self,
+    twoFactor: person.twoFactor,
   }));
 
   return (

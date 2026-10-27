@@ -39,6 +39,12 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
       setError(signInErrorKey(result.error.code ?? "generic"));
       return;
     }
+    // An account with TOTP gets no session yet: the code comes first (docs/auth-design.md D2).
+    // An account that still has to set TOTP up is sent to the setup by the app itself.
+    if ("twoFactorRedirect" in result.data && result.data.twoFactorRedirect) {
+      router.push("/sign-in/two-factor");
+      return;
+    }
     router.push("/");
     router.refresh();
   }

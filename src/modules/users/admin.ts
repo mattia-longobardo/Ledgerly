@@ -5,7 +5,15 @@ import { hasPasswordAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { createInvitation, sendInvitationEmail } from "@/platform/auth/invitations";
 import { redactForLog } from "@/platform/auth/logger";
-import { authAccounts, invitations, sessions, users } from "@/platform/auth/schema";
+import { roles } from "@/platform/auth/permissions";
+import {
+  authAccounts,
+  invitations,
+  sessions,
+  twoFactors,
+  users,
+  verifications,
+} from "@/platform/auth/schema";
 import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
 import type { Ctx, Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
@@ -51,6 +59,8 @@ export interface PersonRow {
   status: PersonStatus;
   /** True for the admin reading the page: their own row offers no block and no remove. */
   self: boolean;
+  /** TOTP is on: the row offers "Reset 2FA" (docs/auth-design.md D2). */
+  twoFactor: boolean;
 }
 
 function methodOf(hasPassword: boolean, hasSso: boolean): SignInMethod {
@@ -91,6 +101,7 @@ export async function listPeople(ctx: Pick<Ctx, "role" | "userId">): Promise<Per
       email: users.email,
       role: users.role,
       banned: users.banned,
+      twoFactor: users.twoFactorEnabled,
       lastSignInAt: lastSignIn.at,
       hasSso: methods.hasSso,
       hasPassword: methods.hasPassword,
@@ -123,6 +134,7 @@ export async function listPeople(ctx: Pick<Ctx, "role" | "userId">): Promise<Per
       lastSignInAt: row.lastSignInAt ?? null,
       status: row.banned ? "blocked" : "active",
       self: row.id === ctx.userId,
+      twoFactor: row.twoFactor,
     })),
     ...pending.map((row): PersonRow => ({
       kind: "invitation",
@@ -134,6 +146,7 @@ export async function listPeople(ctx: Pick<Ctx, "role" | "userId">): Promise<Per
       lastSignInAt: null,
       status: row.expiresAt > now ? "pending" : "expired",
       self: false,
+      twoFactor: false,
     })),
   ];
 }
@@ -258,6 +271,28 @@ export async function setPersonBlocked(
     .where(eq(users.id, target.id));
   // Out of the ones they already hold, too: a blocked person with a live cookie is not blocked.
   if (blocked) await getDb().delete(sessions).where(eq(sessions.userId, target.id));
+}
+
+/**
+ * Clears a person's TOTP, for a lost phone and lost recovery codes (docs/auth-design.md D2): the
+ * secret, the recovery codes and the trusted devices go, and every session with them. With
+ * TWO_FACTOR_POLICY=required their next password sign-in leads straight to the setup again. Not on
+ * the admin's own account: Settings › Security does that, with the password.
+ */
+export async function resetPersonTwoFactor(ctx: Pick<Ctx, "role" | "userId">, userId: string): Promise<void> {
+  requireAdminCtx(ctx);
+  if (!roles[ctx.role].authorize({ twoFactor: ["reset"] }).success) throw new AdminError("forbidden");
+  const target = await requirePerson(userId);
+  if (target.id === ctx.userId) throw new AdminError("self");
+  await getDb().transaction(async (tx) => {
+    await tx.delete(twoFactors).where(eq(twoFactors.userId, target.id));
+    await tx.update(users).set({ twoFactorEnabled: false }).where(eq(users.id, target.id));
+    // Trusted devices are verification rows whose value is the user id. The identifiers are stored
+    // hashed (`storeIdentifier: "hashed"`), so they cannot be told apart from the person's pending
+    // sign-in challenges and reset links: those go too, which is what a security reset should do.
+    await tx.delete(verifications).where(eq(verifications.value, target.id));
+    await tx.delete(sessions).where(eq(sessions.userId, target.id));
+  });
 }
 
 export type ResetOutcome = "sent" | "sso_only" | "mail_off";

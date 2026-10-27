@@ -128,6 +128,54 @@
       "nameInvalid": "Inserisci nome e cognome, al massimo {max} caratteri.",
       "failed": "Impossibile creare l'account. Riprova.",
       "authentik": "Usa Authentik"
+    },
+    "twoFactor": {
+      "recoveryCodes": "Codici di recupero",
+      "download": "Scarica",
+      "copy": "Copia",
+      "copied": "Copiati",
+      "copyFailed": "Impossibile copiare. Seleziona i codici e copiali a mano.",
+      "signOut": "Esci",
+      "setup": {
+        "title": "Configura l'autenticazione a due fattori",
+        "description": "Il tuo account accede con una password, quindi serve anche un codice da un'app di autenticazione.",
+        "passwordIntro": "Inserisci la password per creare il segreto per l'app di autenticazione.",
+        "password": "Password",
+        "continue": "Continua",
+        "scanTitle": "1. Scansiona il codice QR",
+        "scanHint": "Usa un'app di autenticazione, ad esempio Aegis, 2FAS, Google Authenticator o 1Password.",
+        "qrLabel": "Codice QR per l'app di autenticazione",
+        "manual": "Non riesci a scansionarlo? Inserisci questa chiave:",
+        "codesTitle": "2. Salva i codici di recupero",
+        "codesHint": "Ogni codice vale una volta. Conservali in un posto sicuro: sono l'unico modo per entrare senza il telefono.",
+        "saved": "Ho salvato i codici di recupero",
+        "code": "3. Codice dell'app",
+        "codeHint": "Sei cifre.",
+        "confirm": "Attiva l'autenticazione a due fattori"
+      },
+      "challenge": {
+        "title": "Autenticazione a due fattori",
+        "description": "Inserisci il codice dell'app di autenticazione.",
+        "code": "Codice di autenticazione",
+        "codeHint": "Sei cifre.",
+        "recoveryCode": "Codice di recupero",
+        "recoveryHint": "Uno dei codici che hai salvato, ad esempio abcde-12345. Ognuno vale una volta.",
+        "trust": "Considera attendibile questo dispositivo per {days} giorni",
+        "submit": "Verifica",
+        "useRecovery": "Usa un codice di recupero",
+        "useApp": "Usa l'app di autenticazione",
+        "back": "Torna all'accesso"
+      },
+      "errors": {
+        "invalidCode": "Il codice non è corretto. Prova con quello attuale.",
+        "invalidBackupCode": "Il codice di recupero non è valido o è già stato usato.",
+        "tooManyAttempts": "Troppi codici errati. Accedi di nuovo.",
+        "locked": "Troppi codici errati. L'accesso a due fattori è bloccato per 15 minuti.",
+        "expired": "Questo accesso è scaduto. Accedi di nuovo.",
+        "password": "Password errata.",
+        "rateLimited": "Troppi tentativi. Attendi un minuto e riprova.",
+        "generic": "Qualcosa non ha funzionato. Riprova."
+      }
     }
   },
   "settings": {
@@ -529,6 +577,26 @@
         "generic": "Qualcosa è andato storto. Riprova."
       }
     },
+    "twoFactor": {
+      "title": "Autenticazione a due fattori",
+      "description": "Un codice da un'app di autenticazione dopo la password. Gli accessi con Authentik usano il secondo fattore di Authentik.",
+      "on": "Attiva",
+      "off": "Non attiva",
+      "onHint": "Gli accessi con password chiedono un codice.",
+      "offHint": "Gli accessi con password chiedono solo la password.",
+      "enable": "Configura l'autenticazione a due fattori",
+      "enabled": "L'autenticazione a due fattori è attiva",
+      "newCodes": "Nuovi codici di recupero",
+      "newCodesWarning": "I codici di recupero attuali smettono di funzionare. Inserisci la password per crearne di nuovi.",
+      "generate": "Crea i codici",
+      "disable": "Disattiva",
+      "disableTitle": "Disattivare l'autenticazione a due fattori?",
+      "disableWarning": "Gli accessi con password chiederanno solo la password.",
+      "disableRequired": "Questo server richiede l'autenticazione a due fattori: la configurerai di nuovo prima di continuare.",
+      "disabled": "L'autenticazione a due fattori è disattivata",
+      "done": "Fatto",
+      "cancel": "Annulla"
+    },
     "sessions": {
       "title": "Sessioni",
       "description": "Dispositivi attualmente connessi al tuo account.",
@@ -591,6 +659,11 @@
         "sso_only": "Non è partito nulla: questo account accede solo con Authentik.",
         "mail_off": "Non è partito nulla: «Inviti e reimpostazioni» è spento in Admin › Server."
       },
+      "resetTwoFactor": "Azzera 2FA",
+      "resetTwoFactorTitle": "Azzerare l'autenticazione a due fattori?",
+      "resetTwoFactorWarning": "{email} esce da tutti i dispositivi e perde l'app di autenticazione e i codici di recupero.",
+      "resetTwoFactorDetail": "Al prossimo accesso con password dovrà configurare di nuovo l'autenticazione a due fattori.",
+      "twoFactorReset": "Autenticazione a due fattori azzerata per {email}",
       "block": "Blocca",
       "unblock": "Sblocca",
       "blockedNow": "Bloccato, e disconnesso ovunque",

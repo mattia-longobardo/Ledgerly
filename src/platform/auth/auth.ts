@@ -4,7 +4,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { admin, genericOAuth } from "better-auth/plugins";
+import { admin, genericOAuth, twoFactor } from "better-auth/plugins";
 import { count, eq } from "drizzle-orm";
 import { getPreferences } from "@/modules/users/service";
 import { getDb } from "@/platform/db/client";
@@ -76,10 +76,22 @@ async function noUsersYet(): Promise<boolean> {
 
 type OidcPlugin = ReturnType<typeof genericOAuth>;
 
+/** How long "Trust this device" skips the TOTP prompt (docs/auth-design.md D2). */
+export const TRUST_DEVICE_DAYS = 30;
+
 /**
- * genericOAuth fetches the discovery document once, while Better Auth initializes, and 1.7.4
- * gives that fetch no timeout or signal. Past the deadline the provider is left out, exactly as on
- * a failed fetch, and getAuth() retries later; the abandoned fetch settles on its own.
+ * Every endpoint that checks a second factor or changes it. Five a minute per client, on top of the
+ * plugin's own limits: five wrong codes end a sign-in challenge, ten in a row lock the account's
+ * second factor for 15 minutes (Better Auth `accountLockout` defaults).
+ */
+const TWO_FACTOR_RATE_LIMIT = { window: 60, max: 5 } as const;
+
+/**
+ * genericOAuth fetches the discovery document once, while Better Auth initializes, and 1.7.14
+ * still gives that startup fetch no timeout or signal (only its per-request retry has one). Past
+ * the deadline the provider is left out and marked pending, exactly as on a failed fetch: the
+ * plugin retries discovery on the next Authentik sign-in, and getAuth() rebuilds the instance after
+ * its backoff. The abandoned fetch settles on its own.
  */
 function withDiscoveryDeadline(plugin: OidcPlugin): OidcPlugin {
   return {
@@ -89,7 +101,14 @@ function withDiscoveryDeadline(plugin: OidcPlugin): OidcPlugin {
       const deadline = new Promise<Awaited<ReturnType<OidcPlugin["init"]>>>((resolve) => {
         timer = setTimeout(() => {
           ctx.logger.error(`Discovery for "${OIDC_PROVIDER_ID}" timed out after ${DISCOVERY_TIMEOUT_MS} ms`);
-          resolve({ context: { socialProviders: ctx.socialProviders } });
+          resolve({
+            context: {
+              socialProviders: ctx.socialProviders,
+              genericOAuthPendingDiscovery: new Map(
+                plugin.options.config.map((config) => [config.providerId, { config }]),
+              ),
+            },
+          });
         }, DISCOVERY_TIMEOUT_MS);
       });
       try {
@@ -177,6 +196,11 @@ export function createAuth({
         "/sign-in/email": { window: 60, max: 5 },
         "/request-password-reset": { window: 60 * 15, max: 3 },
         "/change-password": { window: 60, max: 5 },
+        "/two-factor/verify-totp": TWO_FACTOR_RATE_LIMIT,
+        "/two-factor/verify-backup-code": TWO_FACTOR_RATE_LIMIT,
+        "/two-factor/enable": TWO_FACTOR_RATE_LIMIT,
+        "/two-factor/disable": TWO_FACTOR_RATE_LIMIT,
+        "/two-factor/generate-backup-codes": TWO_FACTOR_RATE_LIMIT,
       },
     },
     hooks: {
@@ -228,6 +252,15 @@ export function createAuth({
     },
     plugins: [
       admin({ defaultRole: "user", adminRoles: ["admin"], ac: accessControl, roles }),
+      // TOTP for password accounts only: the plugin challenges /sign-in/email, never an Authentik
+      // callback, so SSO users keep Authentik's own second factor (docs/auth-design.md D2).
+      // Secret and recovery codes are stored encrypted with BETTER_AUTH_SECRET.
+      twoFactor({
+        issuer: "Ledgerly",
+        trustDeviceMaxAge: TRUST_DEVICE_DAYS * 24 * 60 * 60,
+        backupCodeOptions: { amount: 10, storeBackupCodes: "encrypted" },
+        schema: { twoFactor: { modelName: "twoFactors" } },
+      }),
       withDiscoveryDeadline(
         genericOAuth({
           config: [

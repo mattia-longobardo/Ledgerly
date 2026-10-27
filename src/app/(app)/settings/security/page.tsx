@@ -3,15 +3,18 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { describeUserAgent } from "@/modules/users/rules";
 import { listOwnSessions } from "@/modules/users/service";
+import { hasPasswordAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY } from "@/platform/format";
+import { readEnv } from "@/platform/env";
 import { listTokens } from "@/platform/tokens/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { NewToken } from "./new-token";
 import { type SessionRow, SessionsList } from "./sessions-list";
 import { type TokenRow, TokensTable } from "./tokens-table";
+import { TwoFactorCard } from "./two-factor-card";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
@@ -20,10 +23,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const [current, sessions, tokens] = await Promise.all([
+  const [current, sessions, tokens, hasPassword] = await Promise.all([
     (await getAuth()).api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
     listTokens(ctx),
+    hasPasswordAccount(ctx.userId),
   ]);
   const t = await getTranslations("settings");
 
@@ -53,6 +57,16 @@ export default async function SecurityPage() {
 
   return (
     <SettingsGrid>
+      {/* Password accounts only: an Authentik user's second factor is configured in Authentik. */}
+      {hasPassword && current && (
+        <SettingsSection title={t("twoFactor.title")} description={t("twoFactor.description")} padded={false}>
+          <TwoFactorCard
+            enabled={current.user.twoFactorEnabled === true}
+            policy={readEnv().TWO_FACTOR_POLICY}
+            account={current.user.email}
+          />
+        </SettingsSection>
+      )}
       <SettingsSection
         title={t("tokens.title")}
         description={t("tokens.description")}
