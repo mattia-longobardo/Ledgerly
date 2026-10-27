@@ -18,6 +18,7 @@ import {
   saveBalanceEntryAction,
   updateBalanceEntryAction,
 } from "../actions";
+import type { BalanceSource } from "../rules";
 
 export interface EntryRow {
   id: string;
@@ -28,7 +29,7 @@ export interface EntryRow {
   changeSign: number;
   note: string | null;
   /** `derived` (F2.5) is a month end rebuilt from the movements: shown, never edited here. */
-  source: "manual" | "provider" | "system" | "import" | "derived";
+  source: BalanceSource;
   /** The amounts as the person would type them back, for the correction form. */
   amountInput: string;
   availableInput: string;
