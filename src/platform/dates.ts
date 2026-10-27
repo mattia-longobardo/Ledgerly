@@ -28,22 +28,35 @@ function fromUtcMillis(millis: number): CivilDate {
   return `${pad(d.getUTCFullYear(), 4)}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
+/**
+ * One formatter per zone and shape, built once: building an `Intl.DateTimeFormat` costs far more
+ * than using one, and the sync schedule's preview resolves hundreds of wall-clock times per edit.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatterFor(
+  shape: string,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${shape}|${timeZone}`;
+  let found = formatters.get(key);
+  if (!found) {
+    found = new Intl.DateTimeFormat("en-US", { timeZone, ...options });
+    formatters.set(key, found);
+  }
+  return found;
+}
+
 /** The civil date of an instant as seen in `timeZone` (an IANA name). */
 export function civilDateIn(instant: Date, timeZone: string): CivilDate {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const formatter = formatterFor("date", timeZone, { year: "numeric", month: "2-digit", day: "2-digit" });
   const byType = Object.fromEntries(formatter.formatToParts(instant).map((p) => [p.type, p.value]));
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
 /** A zone's offset from UTC at an instant, in milliseconds; positive east of Greenwich. */
 function offsetAt(millis: number, timeZone: string): number {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
+  const full = formatterFor("full", timeZone, {
     hour12: false,
     year: "numeric",
     month: "2-digit",
@@ -52,9 +65,7 @@ function offsetAt(millis: number, timeZone: string): number {
     minute: "2-digit",
     second: "2-digit",
   });
-  const at = Object.fromEntries(
-    formatter.formatToParts(new Date(millis)).map((part) => [part.type, part.value]),
-  );
+  const at = Object.fromEntries(full.formatToParts(new Date(millis)).map((part) => [part.type, part.value]));
   // `hour12: false` renders midnight as "24" in this locale, which `Date.UTC` would carry into the
   // next day: the modulo keeps it on the day the other parts name.
   const local = Date.UTC(
@@ -98,7 +109,7 @@ export function startOfDayIn(on: CivilDate, timeZone: string): Date {
 /** Minutes past local midnight of an instant in `timeZone`: 0 to 1439. */
 export function minutesOfDayIn(instant: Date, timeZone: string): number {
   const at = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, hour: "2-digit", minute: "2-digit" })
+    formatterFor("clock", timeZone, { hour12: false, hour: "2-digit", minute: "2-digit" })
       .formatToParts(instant)
       .map((part) => [part.type, part.value]),
   );

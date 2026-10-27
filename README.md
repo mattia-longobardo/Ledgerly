@@ -58,12 +58,13 @@ brings in.
   `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
   key can be rotated by prepending a new one) before it is ever written, and it is never returned
   to the browser afterwards: the field on the card only ever _replaces_ it.
-- **When it syncs.** Each link has its own schedule (`docs/auth-design.md` D7), set from its card:
-  every 15 minutes to once a day (aligned to local midnight), up to six local times of day in
-  quarter hours, or manual only. The default is every hour, as before. `integrations-sync` passes
-  every link whose next time has come, at :07 (first in the hourly tick) and at :22, :37 and :52
-  (the `quarter` tier); a failure does not bring the next pass forward, and "Sync now" never moves
-  it. Times follow the person's time zone, daylight saving included.
+- **When it syncs.** Each link has its own schedule (`docs/scheduler.md`), set from its card: a
+  list of rules — every N minutes from HH:MM to HH:MM, chosen times, or a cron expression — each on
+  every day, chosen weekdays or chosen days of the month, to the minute and in the person's time
+  zone. Quick choices fill the editor, which previews the next five passes. No rule is manual only;
+  the default is every hour, as before. Two passes are at least 15 minutes apart. `integrations-sync`
+  runs every minute (the `minute` tier, only when a link is due) and first in the hourly tick; a
+  failure does not bring the next pass forward, and "Sync now" never moves it.
 - **What a sync does.** Per user: accounts and balances first,
   then transactions. The first pass after linking fetches **12 months** in monthly windows; every
   pass after that re-reads the **last 7 days**. A page that comes back full splits its window

@@ -338,36 +338,79 @@
       },
       "scheduleControl": {
         "title": "Orario di sincronizzazione",
-        "description": "Gli orari sono nel tuo fuso orario ({timeZone}), da Impostazioni › Profilo. Una sincronizzazione parte al massimo 15 minuti dopo l'orario scelto.",
-        "mode": "Modalità",
-        "modes": {
-          "interval": "Ogni…",
-          "times": "Agli orari…",
+        "description": "Gli orari sono nel tuo fuso orario ({timeZone}, da Impostazioni › Profilo), al minuto. Una sincronizzazione parte entro un minuto dall'orario scelto; tra due sincronizzazioni passano almeno {minutes} minuti.",
+        "presets": {
+          "label": "Scelte rapide",
+          "hourly": "Ogni ora",
+          "officeHours": "Ogni 30 min, orario d'ufficio",
+          "twiceDaily": "Due volte al giorno",
+          "weekdays8": "Giorni feriali alle 8:00",
+          "monthStart": "Il 1° del mese",
           "manual": "Solo manuale"
         },
-        "every": "Intervallo",
-        "at": "Orari del giorno",
-        "timeLabel": "Orario {n}",
-        "addTime": "Aggiungi un orario",
-        "remove": "Rimuovi",
-        "removeTime": "Rimuovi l'orario {n}",
-        "timesHint": "Fino a 6 orari, a passi di 15 minuti.",
-        "manualHint": "Solo “Sincronizza ora” avvia una sincronizzazione.",
-        "dependentHint": "Avvisi dei budget, abbonamenti e interessi si controllano ogni ora al minuto 07: dopo una sincronizzazione fuori dall'ora vedono i nuovi movimenti al controllo successivo.",
-        "intervals": {
-          "15": "Ogni 15 minuti",
-          "30": "Ogni 30 minuti",
-          "60": "Ogni ora",
-          "120": "Ogni 2 ore",
-          "180": "Ogni 3 ore",
-          "240": "Ogni 4 ore",
-          "360": "Ogni 6 ore",
-          "720": "Ogni 12 ore",
-          "1440": "Una volta al giorno (mezzanotte)"
+        "rule": "Regola {n}",
+        "kindLabel": "Tipo della regola {n}",
+        "kinds": {
+          "interval": "Ogni…",
+          "times": "Agli orari…",
+          "cron": "Cron (avanzato)"
         },
+        "removeRule": "Rimuovi la regola {n}",
+        "addRule": "Aggiungi una regola",
+        "every": "Ogni",
+        "unit": "Unità",
+        "units": {
+          "minutes": "minuti",
+          "hours": "ore",
+          "minutesShort": "{n} min",
+          "hoursShort": "{n} h"
+        },
+        "from": "Dalle",
+        "until": "Alle",
+        "at": "Orari del giorno",
+        "newTime": "Nuovo orario della regola {n}",
+        "addTime": "Aggiungi",
+        "removeTime": "Rimuovi {time} dalla regola {n}",
+        "cron": "Espressione cron",
+        "cronHint": "Cinque campi: minuto ora giorno-del-mese mese giorno-della-settimana. Esempio: 43 6 * * 1-5.",
+        "days": {
+          "label": "Giorni",
+          "every": "Tutti i giorni",
+          "weekdays": "Giorni della settimana",
+          "monthDays": "Giorni del mese",
+          "weekdaysOf": "Giorni della settimana della regola {n}",
+          "monthDaysOf": "Giorni del mese della regola {n}",
+          "lastLong": "Ultimo giorno",
+          "workdays": "lun–ven",
+          "weekend": "sab–dom",
+          "last": "ultimo",
+          "ofMonth": "il giorno {days}"
+        },
+        "preview": {
+          "title": "Prossime {n} sincronizzazioni",
+          "manual": "Nessuna sincronizzazione automatica: solo “Sincronizza ora” ne avvia una.",
+          "fix": "Correggi le regole segnate in rosso per vedere le prossime sincronizzazioni."
+        },
+        "errors": {
+          "every": "L'intervallo deve essere da {minutes} minuti a 24 ore.",
+          "window": "“Alle” non può venire prima di “Dalle”.",
+          "times": "Aggiungi almeno un orario.",
+          "days": "Scegli almeno un giorno.",
+          "cron": "Questa espressione cron non è valida.",
+          "neverRuns": "Questa regola non parte mai.",
+          "tooFrequent": "Due sincronizzazioni alle {first} e alle {second}: tienile ad almeno {minutes} minuti di distanza."
+        },
+        "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Scegli una scelta rapida o aggiungi una regola.",
+        "dependentHint": "Avvisi dei budget, abbonamenti e interessi si controllano ogni ora al minuto 07: dopo una sincronizzazione a un altro orario vedono i nuovi movimenti al controllo successivo.",
         "summary": {
           "manual": "Solo manuale",
-          "times": "Alle {times}"
+          "hourly": "Ogni ora",
+          "every": "Ogni {every}",
+          "window": "{from}–{until}",
+          "times": "Alle {times}",
+          "timesMore": "Alle {times} e altri {more}",
+          "cron": "Cron {expression}",
+          "andMore": "{rule} +{more}"
         },
         "next": "Prossima: {when}",
         "noNext": "Nessuna sincronizzazione automatica",
@@ -376,7 +419,7 @@
         "cancel": "Annulla",
         "save": "Salva",
         "saved": "Orario salvato",
-        "invalid": "Questo orario non è valido: controlla gli orari."
+        "invalid": "Questo orario è stato rifiutato: controlla le regole."
       },
       "paperless": {
         "notLinked": "Non collegato. Ledgerly legge i cedolini archiviati da Paperless, con il token di un utente Paperless in sola lettura.",
@@ -495,7 +538,7 @@
         "daily": "Ogni giorno",
         "monthly": "Ogni mese",
         "manual": "Solo a mano",
-        "quarter": "Ogni 15 minuti, e ogni ora"
+        "minute": "Ogni minuto, e ogni ora"
       },
       "states": {
         "running": "In corso",

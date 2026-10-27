@@ -239,6 +239,13 @@
       "when": 1793108101384,
       "tag": "0033_drop_personal_access_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793115015891,
+      "tag": "0034_sync_scheduler_v2",
+      "breakpoints": true
     }
   ]
 }

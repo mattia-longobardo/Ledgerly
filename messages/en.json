@@ -338,36 +338,79 @@
       },
       "scheduleControl": {
         "title": "Sync schedule",
-        "description": "Times are in your time zone ({timeZone}), from Settings › Profile. A pass runs at most 15 minutes after the time you choose.",
-        "mode": "Mode",
-        "modes": {
-          "interval": "Every…",
-          "times": "At times…",
+        "description": "Times are in your time zone ({timeZone}, from Settings › Profile), to the minute. A sync starts within a minute of the time chosen; two syncs are at least {minutes} minutes apart.",
+        "presets": {
+          "label": "Quick choices",
+          "hourly": "Every hour",
+          "officeHours": "Every 30 min, office hours",
+          "twiceDaily": "Twice a day",
+          "weekdays8": "Weekdays at 8:00",
+          "monthStart": "1st of the month",
           "manual": "Manual only"
         },
-        "every": "Interval",
-        "at": "Times of day",
-        "timeLabel": "Time {n}",
-        "addTime": "Add a time",
-        "remove": "Remove",
-        "removeTime": "Remove time {n}",
-        "timesHint": "Up to 6 times, in steps of 15 minutes.",
-        "manualHint": "Only “Sync now” runs a pass.",
-        "dependentHint": "Budget alerts, subscriptions and interests are checked every hour at minute 07: after a sync off the hour they see the new movements at the next check.",
-        "intervals": {
-          "15": "Every 15 minutes",
-          "30": "Every 30 minutes",
-          "60": "Every hour",
-          "120": "Every 2 hours",
-          "180": "Every 3 hours",
-          "240": "Every 4 hours",
-          "360": "Every 6 hours",
-          "720": "Every 12 hours",
-          "1440": "Once a day (midnight)"
+        "rule": "Rule {n}",
+        "kindLabel": "Kind of rule {n}",
+        "kinds": {
+          "interval": "Every…",
+          "times": "At times…",
+          "cron": "Cron (advanced)"
         },
+        "removeRule": "Remove rule {n}",
+        "addRule": "Add a rule",
+        "every": "Every",
+        "unit": "Unit",
+        "units": {
+          "minutes": "minutes",
+          "hours": "hours",
+          "minutesShort": "{n} min",
+          "hoursShort": "{n} h"
+        },
+        "from": "From",
+        "until": "Until",
+        "at": "Times of the day",
+        "newTime": "New time for rule {n}",
+        "addTime": "Add",
+        "removeTime": "Remove {time} from rule {n}",
+        "cron": "Cron expression",
+        "cronHint": "Five fields: minute hour day-of-month month day-of-week. Example: 43 6 * * 1-5.",
+        "days": {
+          "label": "Days",
+          "every": "Every day",
+          "weekdays": "Days of the week",
+          "monthDays": "Days of the month",
+          "weekdaysOf": "Days of the week of rule {n}",
+          "monthDaysOf": "Days of the month of rule {n}",
+          "lastLong": "Last day",
+          "workdays": "Mon–Fri",
+          "weekend": "Sat–Sun",
+          "last": "last",
+          "ofMonth": "on day {days}"
+        },
+        "preview": {
+          "title": "Next {n} syncs",
+          "manual": "No automatic sync: only “Sync now” starts one.",
+          "fix": "Fix the rules marked in red to see the next syncs."
+        },
+        "errors": {
+          "every": "The interval must be from {minutes} minutes to 24 hours.",
+          "window": "“Until” must not come before “From”.",
+          "times": "Add at least one time.",
+          "days": "Pick at least one day.",
+          "cron": "This is not a valid cron expression.",
+          "neverRuns": "This rule never runs.",
+          "tooFrequent": "Two syncs at {first} and {second}: keep them at least {minutes} minutes apart."
+        },
+        "manualHint": "No rule: only “Sync now” starts a sync. Pick a quick choice or add a rule.",
+        "dependentHint": "Budget alerts, subscriptions and interest are checked every hour at minute 07: after a sync at another time they see the new movements at the next check.",
         "summary": {
           "manual": "Manual only",
-          "times": "At {times}"
+          "hourly": "Every hour",
+          "every": "Every {every}",
+          "window": "{from}–{until}",
+          "times": "At {times}",
+          "timesMore": "At {times} and {more} more",
+          "cron": "Cron {expression}",
+          "andMore": "{rule} +{more}"
         },
         "next": "Next: {when}",
         "noNext": "No automatic sync",
@@ -376,7 +419,7 @@
         "cancel": "Cancel",
         "save": "Save",
         "saved": "Schedule saved",
-        "invalid": "That schedule is not valid: check the times."
+        "invalid": "This schedule was refused: check the rules."
       },
       "paperless": {
         "notLinked": "Not linked. Ledgerly reads the payslips Paperless files, with the token of a read-only Paperless user.",
@@ -495,7 +538,7 @@
         "daily": "Daily",
         "monthly": "Monthly",
         "manual": "By hand only",
-        "quarter": "Every 15 minutes, and hourly"
+        "minute": "Every minute, and hourly"
       },
       "states": {
         "running": "Running",
