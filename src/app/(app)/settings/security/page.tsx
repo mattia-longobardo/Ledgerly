@@ -10,9 +10,11 @@ import { civilDateIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY } from "@/platform/format";
 import { readEnv } from "@/platform/env";
 import { listApiClients } from "@/platform/auth/api-clients";
+import { listConnectedApps } from "@/platform/auth/oauth-grants";
 import { listTokens } from "@/platform/tokens/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { type ApiClientRow, ApiClientsTable } from "./api-clients-table";
+import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table";
 import { NewApiClient } from "./new-api-client";
 import { type SessionRow, SessionsList } from "./sessions-list";
 import { type TokenRow, TokensTable } from "./tokens-table";
@@ -25,11 +27,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const [current, sessions, tokens, clients, hasPassword] = await Promise.all([
+  const [current, sessions, tokens, clients, apps, hasPassword] = await Promise.all([
     (await getAuth()).api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
     listTokens(ctx),
     listApiClients(ctx),
+    listConnectedApps(ctx),
     hasPasswordAccount(ctx.userId),
   ]);
   const t = await getTranslations("settings");
@@ -51,6 +54,16 @@ export default async function SecurityPage() {
     name: client.name,
     scopes: client.scopes,
     created: day(client.createdAt),
+  }));
+
+  const appRows: ConnectedAppRow[] = apps.map((app) => ({
+    clientId: app.clientId,
+    name: app.name,
+    hosts: app.hosts,
+    verified: app.verified,
+    scopes: app.scopes,
+    offline: app.offline,
+    since: day(app.createdAt),
   }));
 
   const rows: SessionRow[] = sessions.map((session) => {
@@ -84,6 +97,13 @@ export default async function SecurityPage() {
         padded={false}
       >
         <ApiClientsTable clients={clientRows} />
+      </SettingsSection>
+      <SettingsSection
+        title={t("connectedApps.title")}
+        description={t("connectedApps.description")}
+        padded={false}
+      >
+        <ConnectedAppsTable apps={appRows} />
       </SettingsSection>
       {/* D4: the personal tokens still work until T5, but no new one is minted. The section shows
           only while one exists, so it disappears by itself once the last is revoked. */}

@@ -5,6 +5,7 @@ import { hasPasswordAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { createInvitation, sendInvitationEmail } from "@/platform/auth/invitations";
 import { redactForLog } from "@/platform/auth/logger";
+import { revokeUserOAuthTokens } from "@/platform/auth/oauth-grants";
 import { roles } from "@/platform/auth/permissions";
 import {
   authAccounts,
@@ -292,6 +293,8 @@ export async function resetPersonTwoFactor(ctx: Pick<Ctx, "role" | "userId">, us
     // sign-in challenges and reset links: those go too, which is what a security reset should do.
     await tx.delete(verifications).where(eq(verifications.value, target.id));
     await tx.delete(sessions).where(eq(sessions.userId, target.id));
+    // And the OAuth refresh tokens, which outlive a session by 30 days (PERS-49 SEC-05).
+    await revokeUserOAuthTokens(target.id, tx);
   });
 }
 

@@ -186,7 +186,10 @@
       "identity": "see your name and email address",
       "allow": "Allow",
       "deny": "Deny",
-      "failed": "The answer could not be sent. Try again."
+      "failed": "The answer could not be sent. Try again.",
+      "redirects": "After your answer, the browser goes back to:",
+      "unverified": "Unverified client.",
+      "unverifiedHint": "It registered itself and chose its own name. Allow it only if you started this connection and you recognise the address below."
     }
   },
   "settings": {
@@ -305,7 +308,8 @@
         "busy": "A sync is already running. Try again in a moment.",
         "failed": "Couldn't save. Try again.",
         "types": "Paperless has no document type with that name.",
-        "schedule": "That schedule is not valid."
+        "schedule": "That schedule is not valid.",
+        "notAllowed": "This Paperless address is not allowed on this server. The admin sets the allowed ones in PAPERLESS_ALLOWED_ORIGINS."
       },
       "notifications": {
         "failedSubject": "Wallet sync failed",
@@ -1009,6 +1013,26 @@
         "failed": "It could not be done. Try again.",
         "not_found": "That client is already gone."
       }
+    },
+    "connectedApps": {
+      "title": "Connected apps",
+      "description": "Applications you allowed on the consent screen, such as an MCP client. Revoke one to end its access: it can no longer refresh its token, and the current one expires within an hour.",
+      "empty": "No connected apps.",
+      "columns": {
+        "name": "App",
+        "hosts": "Returns to",
+        "scopes": "Access",
+        "since": "Allowed on",
+        "actions": "Actions"
+      },
+      "unverified": "unverified",
+      "offline": "stays connected",
+      "revoke": "Revoke",
+      "revoked": "Access for {name} revoked",
+      "confirmTitle": "Revoke access for {name}?",
+      "confirmDescription": "Its refresh tokens are deleted and the next connection asks for your consent again.",
+      "cancel": "Cancel",
+      "failed": "It could not be done. Try again."
     }
   },
   "errors": {

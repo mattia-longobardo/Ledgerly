@@ -93,6 +93,9 @@ export async function handleMcp(request: Request): Promise<Response> {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
+    // The header check above is only the fast path: a chunked body has no Content-Length, and the
+    // transport counts the stream as it reads it (PERS-49 SEC-09).
+    maxRequestBodySize: MAX_BODY_BYTES,
   });
   try {
     await server.connect(transport);
