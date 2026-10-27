@@ -271,14 +271,13 @@ how much you have planned, and how much is left — with **where each number com
   curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/summary
   ```
 
-- **Personal access tokens** (legacy, D4): `pat_<prefix>.<secret>` tokens already made keep working
-  during the transition, and every use is logged as `[api] legacy token used (<id>)`; no new one can
-  be made. Their removal (T5) comes after 14 days without errors and the owner's go-ahead.
+- **Personal access tokens** were removed (T5, PERS-59): the code and the `personal_access_tokens`
+  table are gone (migration `0033`), and a `pat_…` value on `/api/v1` is a `401` like any invalid token.
 - **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
   `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
   `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
   user and never beyond them; there is no administrative route at all. Amounts travel as decimal
-  strings, never as JSON numbers. 120 calls a minute per client (or per legacy token), per worker.
+  strings, never as JSON numbers. 120 calls a minute per client, per worker.
   Without a valid token the answer is `401` with
   `WWW-Authenticate: Bearer error="invalid_token", resource_metadata="…/.well-known/oauth-protected-resource/api/v1"`;
   with a token that lacks the route's scope, `403` with `error="insufficient_scope", scope="<scope>"`.
@@ -459,20 +458,16 @@ user_id = (SELECT id FROM users WHERE email = '…');` on the `ledgerly` databas
 - **Password reset only reaches password accounts:** an SSO-only account (no stored password) never
   gets a reset-link email — creating one would be a way around Authentik's own sign-in policy (such
   as 2FA). That account signs in with **Continue with Authentik** instead.
-- **Reverse proxy:** set `TRUSTED_PROXY_IPS` to the address of the Traefik (or tunnel) hop in front
-  of the app on its Docker network, **and** configure Traefik with
-  `--entrypoints.web.forwardedHeaders.trustedIPs=<the same address>` — an owner action outside this
-  repo, so Traefik itself discards any `X-Forwarded-For` a client tries to inject before setting
-  its own. Only with both set does the app trust `X-Forwarded-For` from that one hop and give each
-  client its own sign-in rate-limit bucket; left unset, `TRUSTED_PROXY_IPS` defaults to empty and
-  every request shares one bucket. Never publish port 3000 on the host: Traefik must stay the only
-  way in (spec D20). Note that Traefik's `web` entrypoint currently sets no
-  `forwardedHeaders.trustedIPs`, so it overwrites `X-Forwarded-For` with the tunnel hop's address
-  and every visitor arriving from the internet lands in the **same** sign-in rate-limit bucket
-  (5 attempts per minute on `/sign-in/email`) — one bot hammering the login locks the owner out
-  from outside too. Preserving the real client address means adding
-  `--entrypoints.web.forwardedHeaders.trustedIPs=<the cloudflared hop>` to Traefik, which is an
-  owner action in `network/docker-compose.yml`, outside this repo.
+- **Reverse proxy:** the app sees the real client address. cloudflared runs in host network mode
+  and reaches Traefik from the gateway of a Docker network; Traefik's `web` entrypoint trusts only
+  those gateways (`--entrypoints.web.forwardedHeaders.trustedIPs` in the homelab's
+  `network/docker-compose.yml`, PERS-58), so it keeps Cloudflare's `X-Forwarded-For` and drops one
+  forged by a LAN client. `TRUSTED_PROXY_IPS` (in `.env.homelab`) names the Traefik hop in front of
+  the app on its Docker network: the app trusts `X-Forwarded-For` from that hop only, and each
+  client gets its own sign-in rate-limit bucket (5 attempts per minute on `/sign-in/email`). Left
+  unset, it defaults to empty and every request shares one bucket. If Traefik's address or the
+  gateways change, update both. Never publish port 3000 on the host: Traefik must stay the only
+  way in (spec D20).
 - **Prometheus:** scrape `GET /api/metrics` with `METRICS_TOKEN` as a bearer credential, from
   inside the same Docker network as the app (its compose service name, `ledgerly`), for
   example:

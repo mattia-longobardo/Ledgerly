@@ -45,8 +45,7 @@ Mattia asked to keep the existing webhook, without a static token. Done on 2026-
 
 Rollback: `docker tag paperless-ngx-homelab:pre-oauth-webhook paperless-ngx-homelab:3.2.1-responses`
 and `docker compose up -d --no-build paperless-ngx`, then put an `Authorization: Bearer pat_…`
-header back on the webhook. The Paperless PAT is revoked (PERS-57): a PAT fallback now needs a new
-token made from the database.
+header back on the webhook. There is no PAT fallback any more: the PATs were removed in T5 (below).
 
 ## Paperless pull (design §3) — cancelled
 
@@ -65,7 +64,7 @@ is kept only as the procedure for a future switch.
 | 4 | Webhook and pull both active; edit a field of a payslip in Paperless | — | webhook → `duplicate`, pull → `duplicate`, no new document |
 | 5 | Disable (not delete) Paperless Workflow 1 "Ledgerly – buste paga" | Mattia | the next payslip arrives through the pull within the chosen schedule |
 | 6 | After one pay cycle / 14 days without errors: revoke the Paperless PAT in Ledgerly, delete Workflow 1 | Mattia | no `legacy token used` in the log |
-| 7 | T5 (separate task): remove PAT code and table | agent | — |
+| 7 | T5: remove PAT code and table (done, PERS-59, see below) | agent | `pat_…` on `/api/v1` → 401 |
 
 ## Rollback
 
@@ -75,7 +74,25 @@ is kept only as the procedure for a future switch.
 - **Cron**: `docker tag ledgerly-cron:pre-sync-schedule ledgerly-cron:latest && docker compose up -d --no-build ledgerly-cron`
   (the old crontab has no `quarter` line; the old app would answer it 404 anyway).
 - **Paperless**: steps 1–5 are undone by deleting the user, disconnecting the integration and
-  re-enabling Workflow 1. Until T5, a new PAT with scope `imports` can be re-made only from the
-  database (the UI no longer creates PATs): restore the app image first if that is needed.
+  re-enabling Workflow 1. PATs no longer exist (T5): a fallback for the webhook is a Client API.
 - **Data**: nothing is converted. A full restore is `pg_restore --clean -d ledgerly
   backups/ledgerly/pre-oauth.dump`, only if a migration had to be undone by hand.
+
+## T5: PAT removal (done, PERS-59)
+
+`/api/v1` accepts only OAuth2 access tokens; a `pat_…` value is a `401 invalid_token`. The PAT code,
+the legacy section of Settings › Security and the `personal_access_tokens` table are gone
+(migration `0033_drop_personal_access_tokens`). Before: one PAT, revoked in PERS-57, last used on
+2026-10-11; no `legacy token used` in the log.
+
+1. Dump: `docker exec postgres pg_dump -U <admin> -Fc ledgerly > backups/ledgerly/pre-pat-removal.dump`.
+2. Rollback image: `docker tag ledgerly:latest ledgerly:pre-pat-removal`.
+3. `docker compose up -d --build --wait ledgerly` (the migration runs on boot).
+4. Check: `/api/health`; `pat_…` on `/api/v1/summary` → 401; a Client API token → 200; the
+   Paperless webhook → `200 duplicate`.
+
+Rollback: `docker tag ledgerly:pre-pat-removal ledgerly:latest && docker compose up -d --no-build --wait ledgerly`.
+The previous image needs the table, but not its rows (the only PAT was revoked): first run
+`drizzle/0020_personal_access_tokens.sql` on `ledgerly`, and remove the `0033` row from
+`drizzle.__drizzle_migrations`, otherwise the next deploy does not drop the table again. The dump
+of step 1 is deleted after the check.

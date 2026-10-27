@@ -1,34 +1,71 @@
+import { randomUUID } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAccount, saveBalanceEntry } from "@/modules/accounts/service";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import { upsertFromProvider } from "@/modules/transactions/service";
+import { authAccounts } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
-import { createToken } from "@/platform/tokens/service";
-import type { ExpiryChoice } from "@/platform/tokens/rules";
+import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
-import { createTestUser } from "../../../test/users";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
 // about — the upload's ownership is — so it is a no-op here, deterministically.
 vi.mock("next/server", () => ({ after: () => {} }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 const { api } = await import("./app");
 const { resetRateLimits, MAX_PER_WINDOW } = await import("./rate-limit");
+const { getAuth, invalidateAuth } = await import("@/platform/auth/auth");
+const { createApiClientWith, deleteApiClient } = await import("@/platform/auth/api-clients");
+
+const ORIGIN = "http://127.0.0.1:3000";
+const PASSWORD = "correct-horse-battery";
 
 function contextFor(userId: string): Ctx {
   return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
 }
 
+/** The session of each person, which is what a Client API is created with. */
+const sessions = new Map<string, Headers>();
+
+/** A signed-in person whose only door is SSO (the password row removed), so no TOTP is owed. */
 async function newContext(): Promise<Ctx> {
-  return contextFor((await createTestUser()).id);
+  const auth = await getAuth();
+  const email = `${randomUUID()}@example.test`;
+  const created = await auth.api.createUser({ body: { email, password: PASSWORD, name: "API" } });
+  const { headers } = await auth.api.signInEmail({ body: { email, password: PASSWORD }, returnHeaders: true });
+  await getDb()
+    .delete(authAccounts)
+    .where(and(eq(authAccounts.userId, created.user.id), eq(authAccounts.providerId, "credential")));
+  const jar = headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .filter((pair) => !pair.endsWith("="));
+  sessions.set(created.user.id, new Headers({ cookie: jar.join("; ") }));
+  return contextFor(created.user.id);
 }
 
-async function tokenFor(
-  ctx: Ctx,
-  scopes: string[] = ["read", "write", "imports"],
-  expiresInDays: ExpiryChoice = null,
-): Promise<string> {
-  const { token } = await createToken(ctx, { name: "test", scopes, expiresInDays });
+/** The id of the Client API behind each access token, so a test can delete it. */
+const clientOf = new Map<string, string>();
+
+/** An access token for `/api/v1` from a new Client API of the person (client_credentials). */
+async function tokenFor(ctx: Ctx, scopes: string[] = ["read", "write", "imports"]): Promise<string> {
+  const auth = await getAuth();
+  const minted = await createApiClientWith(auth, sessions.get(ctx.userId)!, { name: "test", scopes });
+  const response = await auth.handler(
+    new Request(`${ORIGIN}/api/auth/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from(`${minted.clientId}:${minted.clientSecret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({ grant_type: "client_credentials", resource: minted.resource }).toString(),
+    }),
+  );
+  expect(response.status).toBe(200);
+  const token = ((await response.json()) as { access_token: string }).access_token;
+  clientOf.set(token, minted.clientId);
   return token;
 }
 
@@ -87,7 +124,10 @@ let aliceAccount: string;
 
 beforeEach(async () => {
   await resetDatabase();
+  invalidateAuth();
   resetRateLimits();
+  sessions.clear();
+  clientOf.clear();
   alice = await newContext();
   bob = await newContext();
   aliceToken = await tokenFor(alice);
@@ -98,8 +138,9 @@ beforeEach(async () => {
 afterAll(closeDatabase);
 
 describe("the gate", () => {
-  it("refuses a call with no token, a malformed one and an unknown one", async () => {
-    for (const token of [null, "not-a-token", "pat_abcdefgh.nope"]) {
+  it("refuses a call with no token, a malformed one, an unknown one and a former PAT", async () => {
+    const pat = `pat_abcdefgh.${"A".repeat(43)}`;
+    for (const token of [null, "not-a-token", "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ4In0.c2ln", pat]) {
       const response = await call("/summary", token);
       expect(response.status, String(token)).toBe(401);
       expect(await response.json()).toEqual({ error: "unauthorized" });
@@ -268,11 +309,9 @@ describe("POST /imports", () => {
   });
 });
 
-describe("a revoked token", () => {
-  it("stops working on every route at once", async () => {
-    const { revokeToken, listTokens } = await import("@/platform/tokens/service");
-    const [token] = await listTokens(alice);
-    await revokeToken(alice, token.id);
+describe("a deleted Client API", () => {
+  it("stops its token on every route at once", async () => {
+    await deleteApiClient(alice, clientOf.get(aliceToken)!);
     for (const path of ["/accounts", "/transactions", "/summary"]) {
       expect((await call(path, aliceToken)).status, path).toBe(401);
     }

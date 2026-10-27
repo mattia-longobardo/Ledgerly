@@ -62,8 +62,7 @@ async function keysFor(token: string): Promise<JWTVerifyGetKey> {
 
 /**
  * Who an access token is for one resource, or null. Null covers every reason at once — bad
- * signature, wrong audience, expired, unknown or disabled client, blocked person — exactly like
- * `authenticateToken` for the personal tokens.
+ * signature, wrong audience, expired, unknown or disabled client, blocked person.
  */
 export async function authenticateAccessToken(
   token: string,

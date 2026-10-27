@@ -25,7 +25,6 @@ import {
 } from "../src/modules/funds/pension/imports";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../src/modules/payroll/service";
 import { createRule } from "../src/modules/interests/service";
-import { createToken } from "../src/platform/tokens/service";
 import { EXPORT_AUGUST, POSITION_AUGUST } from "../tests/fixtures/cometa/samples";
 import { twinOperationsHtml, twinPositionPdf } from "../tests/fixtures/cometa/twin";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/payroll/samples";
@@ -761,9 +760,6 @@ async function seedLayout(): Promise<void> {
   await saveLeaveDay(ctx, { from: workingDay(on, -14), kind: "vacation", fraction: 1 });
   await saveLeaveDay(ctx, { from: workingDay(on, -7), kind: "rol", fraction: 0.5 });
   await saveLeaveDay(ctx, { from: workingDay(on, 21), kind: "vacation", fraction: 1 });
-
-  // ——— A personal access token, so Settings › Data has a row rather than its empty state ———
-  await createToken(ctx, { name: "Home Assistant", scopes: ["read"], expiresInDays: 365 });
 }
 
 await seedExpenses();
