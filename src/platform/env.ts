@@ -105,6 +105,21 @@ export const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(ipOrCidr)),
+    // The Paperless servers the pull may call (comma-separated origins, PERS-49 SEC-04): a URL a
+    // person saves must be one of these, so the server never fetches an address someone typed.
+    PAPERLESS_ALLOWED_ORIGINS: z.preprocess(
+      blankAsUndefined,
+      z
+        .string()
+        .default("http://paperless-ngx:8000")
+        .transform((value) =>
+          value
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        )
+        .pipe(z.array(z.url({ protocol: /^https?$/ }))),
+    ),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;

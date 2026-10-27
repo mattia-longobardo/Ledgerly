@@ -36,7 +36,9 @@ import {
 import {
   isTokenRejected as isPaperlessTokenRejected,
   normalizeBaseUrl,
+  originAllowed,
   PaperlessError,
+  publicMessage as paperlessPublicMessage,
 } from "@/platform/integrations/paperless/client";
 import { DEFAULT_PAYSLIP_TYPE, resolveTypes, TYPE_KEYS } from "@/platform/integrations/paperless/mapping";
 import { isPaperlessBusy, paperlessClientOf, syncPaperlessNow } from "@/platform/integrations/paperless/sync";
@@ -53,6 +55,7 @@ import {
 } from "@/platform/integrations/trek/client";
 import { isTrekBusy, syncTrekNow } from "@/platform/integrations/trek/sync";
 import { closePendingDeletes } from "@/modules/timeoff/service";
+import { readEnv } from "@/platform/env";
 
 /**
  * Why an action refused, as one of the `settings.integrations.errors.*` keys. A code, not a
@@ -67,7 +70,8 @@ export type IntegrationActionError =
   | "busy"
   | "failed"
   | "types"
-  | "schedule";
+  | "schedule"
+  | "notAllowed";
 
 /**
  * What the card gets back. Deliberately this narrow: there is no field a token could travel in,
@@ -371,12 +375,15 @@ function paperlessFailure(error: unknown): { code: IntegrationActionError; detai
   if (error instanceof PaperlessError) {
     const code: IntegrationActionError = isPaperlessTokenRejected(error)
       ? "rejected"
-      : error.kind === "network" || error.kind === "timeout"
-        ? "unreachable"
-        : "provider";
-    return { code, detail: error.message };
+      : error.kind === "not_allowed"
+        ? "notAllowed"
+        : error.kind === "network" || error.kind === "timeout"
+          ? "unreachable"
+          : "provider";
+    // The stored detail is shown on the card: the generic sentence, never a status or a host.
+    return { code, detail: paperlessPublicMessage(error) };
   }
-  return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
+  return { code: "failed", detail: paperlessPublicMessage(error) };
 }
 
 /**
@@ -394,6 +401,7 @@ export async function connectPaperlessAction(input: {
   const url = normalizeBaseUrl(input.baseUrl);
   const token = input.token.trim();
   if (!url || token === "") return { ok: false, error: "empty" };
+  if (!originAllowed(url, readEnv().PAPERLESS_ALLOWED_ORIGINS)) return { ok: false, error: "notAllowed" };
   if (!isUsableToken(token)) return { ok: false, error: "rejected" };
   const credentials: Record<string, string> = { baseUrl: url, token };
   const types = {

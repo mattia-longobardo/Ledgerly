@@ -1,5 +1,8 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
+import { users } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
+import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
 import { integrationsSyncJob } from "./jobs";
@@ -8,6 +11,7 @@ import {
   dueConnections,
   IntegrationError,
   listConnections,
+  markConnection,
   rescheduleConnections,
   saveConnection,
   saveSchedule,
@@ -34,7 +38,7 @@ beforeEach(async () => {
   );
   await saveConnection(ctx, {
     provider: PAPERLESS_PROVIDER,
-    credentials: { baseUrl: "http://paperless.test", token: "t", payslipType: "Payroll" },
+    credentials: { baseUrl: "http://paperless-ngx:8000", token: "t", payslipType: "Payroll" },
   });
 });
 
@@ -80,6 +84,17 @@ describe("integrations-sync", () => {
     await expect(saveSchedule(other, connection.id, { mode: "manual" })).rejects.toMatchObject({
       code: "not_found",
     });
+  });
+
+  it("skips a revoked connection and every connection of a banned person (PERS-49 SEC-08)", async () => {
+    const [connection] = await listConnections(ctx);
+    expect(await dueConnections()).toHaveLength(1);
+    await markConnection(ctx, connection.id, "revoked", "Paperless refused the token");
+    expect(await dueConnections()).toHaveLength(0);
+    await markConnection(ctx, connection.id, "active");
+    await getDb().update(users).set({ banned: true }).where(eq(users.id, ctx.userId));
+    expect(await dueConnections()).toHaveLength(0);
+    expect(await integrationsSyncJob.run()).toMatchObject({ due: 0, passes: 0 });
   });
 
   it("moves the next pass with the person's time zone", async () => {
