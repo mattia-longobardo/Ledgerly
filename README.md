@@ -211,8 +211,9 @@ how much you have planned, and how much is left — with **where each number com
 ## Settings, Admin and the API (F8)
 
 - **Admin › Users** (`/settings/users`, admins only): the list with the invitations still pending,
-  "Invite user" (a single-use link, seven days), the role selector, block/unblock, "Reset password"
-  and "Remove". The last admin cannot be demoted, blocked or removed, and nobody blocks or removes
+  "Invite user" (a single-use link, seven days), the role selector, block/unblock, "Reset password",
+  "Reset 2FA" (for a person with TOTP on: secret, recovery codes, trusted devices and sessions go,
+  and the next password sign-in leads to the setup again) and "Remove". The last admin cannot be demoted, blocked or removed, and nobody blocks or removes
   themselves — an instance nobody can administer is repaired only from the container. Removing a
   user deletes their row first (the foreign keys take the rest) and then their `payslips/`,
   `cometa/` and `exports/` folders in S3.
@@ -224,6 +225,17 @@ how much you have planned, and how much is left — with **where each number com
   every user out**. Three switches decide what the server may send at all: invitations and resets,
   sync failures, the monthly summary — with "invitations & resets" off the password reset link does
   not go out either.
+- **Two-factor authentication** (TOTP, `docs/auth-design.md` D2). A password sign-in for an account
+  with TOTP opens no session: `/sign-in/two-factor` asks for the authenticator code or one of the
+  ten single-use recovery codes, with "Trust this device for 30 days". With
+  `TWO_FACTOR_POLICY=required` (the default) a password account without TOTP is held at
+  `/sign-in/two-factor/setup` — password, QR code, recovery codes, first code — and reaches nothing
+  else until it is done; `optional` leaves it to Settings › Security. Settings › Security sets TOTP
+  up, makes new recovery codes and turns it off, each with the password. Authentik sign-ins are
+  never asked: their second factor is Authentik's. The secret and the recovery codes are stored
+  encrypted with `BETTER_AUTH_SECRET` (`two_factors`). Limits: 5 requests a minute per client on
+  each `/two-factor/*` endpoint, 5 wrong codes end a challenge, 10 wrong codes in a row lock the
+  account's second factor for 15 minutes.
 - **Personal access tokens** (`/settings/security`): `pat_<prefix>.<secret>`, shown once, kept as a
   SHA-256 digest with scopes `read`, `write`, `imports`, an optional expiry and revocation.
 - **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
@@ -347,6 +359,11 @@ effect of every tick, not a job of its own.
     -H "Cookie: <the admin's session cookie>" \
     -d '{"userId": "<user id>", "role": "user"}'
   ```
+- **Two-factor policy:** `TWO_FACTOR_POLICY=required|optional` in `.env.homelab` (default
+  `required`), read at start: change it and restart the container. A person who lost both the phone
+  and the recovery codes gets "Reset 2FA" from an admin in Admin › Users; an admin who lost both runs
+  `UPDATE users SET two_factor_enabled = false WHERE email = '…'; DELETE FROM two_factors WHERE
+user_id = (SELECT id FROM users WHERE email = '…');` on the `ledgerly` database.
 - **Password reset only reaches password accounts:** an SSO-only account (no stored password) never
   gets a reset-link email — creating one would be a way around Authentik's own sign-in policy (such
   as 2FA). That account signs in with **Continue with Authentik** instead.

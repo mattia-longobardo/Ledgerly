@@ -50,7 +50,17 @@ import { userScoped } from "../src/platform/db/scope";
 import { isBookable } from "../src/platform/holidays/rules";
 import { deleteFolder } from "../src/platform/storage";
 import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
-import { BASE_URL, SESSIONS, STATE_DIR, TEST_EMAIL_DOMAIN, USERS, sessionState } from "../tests/e2e/env";
+import {
+  BASE_URL,
+  SESSIONS,
+  STATE_DIR,
+  TEST_EMAIL_DOMAIN,
+  TOTP_FILE,
+  USERS,
+  WITHOUT_TOTP,
+  sessionState,
+} from "../tests/e2e/env";
+import { totpCode } from "../tests/e2e/totp";
 
 const mode = process.argv[2];
 if (mode !== "seed" && mode !== "remove") throw new Error("usage: seed-e2e.ts seed|remove");
@@ -87,6 +97,43 @@ for (const user of Object.values(USERS)) {
 await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
 mkdirSync(STATE_DIR, { recursive: true });
 
+/** A `cookie` request header from the cookies a response set. */
+function cookieHeader(headers: Headers): Headers {
+  return new Headers({
+    cookie: headers
+      .getSetCookie()
+      .map((header) => header.split(";")[0])
+      .join("; "),
+  });
+}
+
+/**
+ * Turns TOTP on the way a person does on the setup page — password, secret, first code — so the
+ * site's TWO_FACTOR_POLICY=required lets these users in. Returns the base32 secret for the specs.
+ */
+async function setUpTotp(user: { email: string; password: string }): Promise<string> {
+  const { headers } = await auth.api.signInEmail({
+    body: { email: user.email, password: user.password },
+    returnHeaders: true,
+  });
+  const signedIn = cookieHeader(headers);
+  const enabled = await auth.api.enableTwoFactor({ body: { password: user.password }, headers: signedIn });
+  if (!("totpURI" in enabled) || !enabled.totpURI) throw new Error(`No TOTP URI for ${user.email}`);
+  const secret = new URL(enabled.totpURI).searchParams.get("secret");
+  if (!secret) throw new Error(`No TOTP secret for ${user.email}`);
+  await auth.api.verifyTOTP({ body: { code: await totpCode(secret) }, headers: signedIn });
+  return secret;
+}
+
+const totpSecrets: Record<string, string> = {};
+for (const [name, user] of Object.entries(USERS) as [
+  keyof typeof USERS,
+  (typeof USERS)[keyof typeof USERS],
+][]) {
+  if (!WITHOUT_TOTP.has(name)) totpSecrets[user.email] = await setUpTotp(user);
+}
+writeFileSync(TOTP_FILE, JSON.stringify(totpSecrets, null, 2));
+
 /**
  * A Playwright storage state holding one user's session cookie. Better Auth is called here as a
  * library rather than over HTTP, so setting these sessions up costs none of the run's rate-limited
@@ -94,10 +141,20 @@ mkdirSync(STATE_DIR, { recursive: true });
  */
 async function writeSessionState(name: keyof typeof SESSIONS): Promise<void> {
   const user = USERS[SESSIONS[name].user];
-  const { headers } = await auth.api.signInEmail({
+  const signIn = await auth.api.signInEmail({
     body: { email: user.email, password: user.password },
     returnHeaders: true,
   });
+  let headers = signIn.headers;
+  // With TOTP the password opens no session: the code does, through the challenge cookie.
+  if (signIn.response && "twoFactorRedirect" in signIn.response) {
+    const verified = await auth.api.verifyTOTP({
+      body: { code: await totpCode(totpSecrets[user.email]) },
+      headers: cookieHeader(headers),
+      returnHeaders: true,
+    });
+    headers = verified.headers;
+  }
   const cookies = headers
     .getSetCookie()
     .map((header) => header.split(";")[0].split("="))

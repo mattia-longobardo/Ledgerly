@@ -225,6 +225,10 @@ const PAGES: Screen[] = [
   // Signed out.
   { name: "/sign-in", session: null, open: go("/sign-in") },
   { name: "/forgot-password", session: null, open: go("/forgot-password") },
+  { name: "/sign-in/two-factor", session: null, open: go("/sign-in/two-factor") },
+
+  // TOTP setup (docs/auth-design.md D2): a seeded password user who has not set it up yet.
+  { name: "/sign-in/two-factor/setup", session: "pending", open: go("/sign-in/two-factor/setup") },
 ];
 
 /** Overlays: they live in a portal, outside `<main>`, so each says what to measure. */
