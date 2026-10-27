@@ -491,13 +491,13 @@ function workingDay(from: string, delta: number): string {
  */
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
-  // A Paperless link on manual only (D7): the card and its schedule control are on screen for the
+  // A Paperless link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
   // check, and the dispatcher never tries to reach the address, which does not exist.
   const paperless = await saveConnection(ctx, {
     provider: PAPERLESS_PROVIDER,
     credentials: { baseUrl: "http://paperless.invalid", token: "e2e-not-a-token", payslipType: "Payroll" },
   });
-  await saveSchedule(ctx, paperless.id, { mode: "manual" });
+  await saveSchedule(ctx, paperless.id, { rules: [] });
   const on = today(ctx.timeZone);
   const thisMonth = thisMonthOf(ctx);
   const lastMonth = lastMonthOf(ctx);

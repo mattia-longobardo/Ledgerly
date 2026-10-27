@@ -234,7 +234,7 @@ const PAGES: Screen[] = [
 /** Overlays: they live in a portal, outside `<main>`, so each says what to measure. */
 const OVERLAYS: Screen[] = [
   {
-    // D7: the sync schedule of the layout user's Paperless link (seeded on manual only).
+    // The sync schedule of the layout user's Paperless link (seeded on manual only).
     name: "the sync schedule dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
@@ -245,6 +245,31 @@ const OVERLAYS: Screen[] = [
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
         .click();
       await settledDialog(page);
+    },
+  },
+  {
+    // The same dialog with something in it: a preset, a second rule in cron, and the preview.
+    name: "the sync schedule dialog, with rules",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/integrations");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .click();
+      await settledDialog(page);
+      const dialog = page.getByRole("dialog");
+      await dialog
+        .getByRole("button", { name: /Every 30 min, office hours|Ogni 30 min, orario d'ufficio/ })
+        .click();
+      await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
+      await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
+      await dialog.getByLabel(/Kind of rule 3|Tipo della regola 3/).selectOption("cron");
+      await dialog
+        .getByLabel(/Days$|Giorni$/)
+        .nth(1)
+        .selectOption("monthDays");
     },
   },
   {

@@ -246,6 +246,10 @@ Scartate:
 
 ### D7 — Orario di sincronizzazione delle integrazioni scelto dall'utente
 
+> **Sostituita** da [`docs/scheduler.md`](scheduler.md) (PERS-60, 27/10/2026): regole libere e
+> combinabili al minuto, tier `minute` al posto di `quarter`. Il testo sotto resta come storia della
+> decisione.
+
 Requisito 4 di PERS-44: ogni utente sceglie quando si sincronizzano le sue integrazioni.
 
 **Integrazioni coinvolte**: tutte quelle con una riga in `integration_connections`, cioè i

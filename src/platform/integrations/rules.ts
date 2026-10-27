@@ -4,7 +4,6 @@
  * `modules/accounts/rules.ts`).
  */
 import { z } from "zod";
-import { addDays, civilDateIn, wallClockIn } from "@/platform/dates";
 
 export const CONNECTION_STATES = ["active", "error", "revoked"] as const;
 /**
@@ -84,84 +83,6 @@ export const providerLinkSchema = z.object({
   metadata: z.record(z.string().min(1).max(60), z.string().max(400)).nullish().default(null),
 });
 export type ProviderLink = z.input<typeof providerLinkSchema>;
-
-/* When a connection syncs (docs/auth-design.md D7) */
-
-/** The intervals a person may choose, in minutes: never below the 15-minute tick of the cron. */
-export const SYNC_INTERVALS = [15, 30, 60, 120, 180, 240, 360, 720, 1440] as const;
-export type SyncInterval = (typeof SYNC_INTERVALS)[number];
-export const MAX_SYNC_TIMES = 6;
-export const SYNC_MODES = ["interval", "times", "manual"] as const;
-
-const TIME_OF_DAY = /^([01]\d|2[0-3]):(00|15|30|45)$/;
-
-/**
- * One schedule per connection, in one of three shapes: every N minutes from local midnight, at up
- * to six times of the day (quarter hours), or only on "Sync now". A free cron expression was
- * turned down (D7): hard to check, and one typo can hammer a provider's API.
- */
-export const syncScheduleSchema = z.discriminatedUnion("mode", [
-  z.object({
-    mode: z.literal("interval"),
-    everyMinutes: z
-      .number()
-      .refine((value): value is SyncInterval => (SYNC_INTERVALS as readonly number[]).includes(value)),
-  }),
-  z.object({
-    mode: z.literal("times"),
-    times: z
-      .array(z.string().regex(TIME_OF_DAY))
-      .min(1)
-      .max(MAX_SYNC_TIMES)
-      .transform((times) => [...new Set(times)].sort()),
-  }),
-  z.object({ mode: z.literal("manual") }),
-]);
-export type SyncSchedule = z.output<typeof syncScheduleSchema>;
-
-/** Today's behaviour, and the default of every connection: once an hour (spec §10.2). */
-export const DEFAULT_SYNC_SCHEDULE: SyncSchedule = { mode: "interval", everyMinutes: 60 };
-
-/** A stored schedule read back: anything that no longer parses is the default, never a crash. */
-export function parseSyncSchedule(value: unknown): SyncSchedule {
-  const parsed = syncScheduleSchema.safeParse(value);
-  return parsed.success ? parsed.data : DEFAULT_SYNC_SCHEDULE;
-}
-
-function minutesOf(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-/** The wall-clock minutes of a day at which a schedule runs, ascending. */
-export function slotsOf(schedule: SyncSchedule): number[] {
-  if (schedule.mode === "manual") return [];
-  if (schedule.mode === "times") return schedule.times.map(minutesOf);
-  const slots: number[] = [];
-  for (let minute = 0; minute < 24 * 60; minute += schedule.everyMinutes) slots.push(minute);
-  return slots;
-}
-
-/**
- * The first instant strictly after `after` at which the schedule runs, in the person's own zone;
- * null for `manual`. Slots are local wall-clock times, so "07:00" stays 07:00 across a change of
- * daylight saving time; a time the clock skips runs as far after the jump as it was meant to. The previous and
- * the next two days are looked at so that no zone's offset can push the answer out of the window.
- */
-export function nextSyncAt(schedule: SyncSchedule, timeZone: string, after: Date): Date | null {
-  const slots = slotsOf(schedule);
-  if (slots.length === 0) return null;
-  const today = civilDateIn(after, timeZone);
-  let best: Date | null = null;
-  for (let offset = -1; offset <= 2; offset += 1) {
-    const day = addDays(today, offset);
-    for (const minutes of slots) {
-      const at = wallClockIn(day, minutes, timeZone);
-      if (at.getTime() > after.getTime() && (best === null || at.getTime() < best.getTime())) best = at;
-    }
-  }
-  return best;
-}
 
 /** How often a connection is synced (spec §10.2: the hourly tier). */
 export const SYNC_INTERVAL_HOURS = 1;

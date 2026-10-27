@@ -308,6 +308,8 @@ describe("the end of the personal access tokens (T5)", () => {
   it("refuses a well-formed `pat_…` token with 401 and the RFC 9728 challenge", async () => {
     const response = await callApi("/accounts", `pat_abcdefgh.${"A".repeat(43)}`);
     expect(response.status).toBe(401);
-    expect(response.headers.get("www-authenticate")).toMatch(/^Bearer error="invalid_token", resource_metadata=/);
+    expect(response.headers.get("www-authenticate")).toMatch(
+      /^Bearer error="invalid_token", resource_metadata=/,
+    );
   });
 });

@@ -21,7 +21,7 @@ import type { JobDetail } from "./schema";
  * `job_runs.tier` has to record what asked for the run, and "nobody asked, a person did" is the
  * honest answer for those.
  */
-export type Tier = "quarter" | "hourly" | "daily" | "monthly" | "manual";
+export type Tier = "minute" | "hourly" | "daily" | "monthly" | "manual";
 
 /** The tiers the cron sidecar may ask for. */
 export type ScheduledTier = Exclude<Tier, "manual">;
@@ -29,8 +29,14 @@ export type ScheduledTier = Exclude<Tier, "manual">;
 export interface JobDefinition {
   name: string;
   tier: Tier;
-  /** Further tiers that run the job too: `integrations-sync` is in `quarter` and `hourly` (D7). */
+  /** Further tiers that run the job too: `integrations-sync` is in `minute` and `hourly`. */
   alsoIn?: readonly ScheduledTier[];
+  /**
+   * Asked by a tick before the job runs: false means there is nothing to do, and the tick passes
+   * the job by without a lock or a `job_runs` row. A job ticked every minute uses it, or
+   * `job_runs` grows by 1,440 rows a day that say nothing. "Run now" does not ask.
+   */
+  hasWork?(): Promise<boolean>;
   run(): Promise<JobDetail>;
 }
 
@@ -41,8 +47,8 @@ export function runsIn(job: JobDefinition, tier: Tier): boolean {
 
 /** The one list of scheduled jobs. Each phase appends its jobs here. */
 export const JOBS: readonly JobDefinition[] = [
-  // First of all (D7): every connection due by its own schedule, Wallet, Trek and Paperless. In
-  // the hourly tier too, ahead of everything that reads what a sync brought in.
+  // First of all (docs/scheduler.md): every connection due by its own schedule, Wallet, Trek and
+  // Paperless, every minute. In the hourly tier too, ahead of everything that reads its result.
   integrationsSyncJob,
   housekeepingJob,
   accountAlertsJob,

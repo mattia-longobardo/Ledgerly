@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, isNull, lte, lt, ne, or, sql } from "drizz
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
+import { civilDateIn } from "@/platform/dates";
 import { UNIQUE_VIOLATION, hasPgError } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
@@ -13,17 +14,22 @@ import {
   entityTypeSchema,
   isKnownProvider,
   nextRunAt,
-  nextSyncAt,
   normalizeCounts,
   outcomeState,
-  parseSyncSchedule,
   type ProviderLink,
   providerLinkSchema,
   type SyncKind,
-  type SyncSchedule,
   syncErrorText,
-  syncScheduleSchema,
 } from "./rules";
+import {
+  nextSyncAfterPass,
+  nextSyncAt,
+  parseSyncSchedule,
+  type ScheduleProblem,
+  scheduleProblems,
+  type SyncSchedule,
+  syncScheduleSchema,
+} from "./schedule";
 import { users } from "@/platform/auth/schema";
 import { integrationConnections, providerLinks, syncJobs, syncRuns } from "./schema";
 
@@ -43,7 +49,11 @@ export type IntegrationErrorCode =
   | "invalid_schedule";
 
 export class IntegrationError extends Error {
-  constructor(readonly code: IntegrationErrorCode) {
+  /** `problems`: why an `invalid_schedule` was refused, for the form to say so. */
+  constructor(
+    readonly code: IntegrationErrorCode,
+    readonly problems: ScheduleProblem[] = [],
+  ) {
     super(code);
     this.name = "IntegrationError";
   }
@@ -169,12 +179,13 @@ export async function listConnections(ctx: Pick<Ctx, "userId">): Promise<Connect
   return rows.map(toConnection);
 }
 
-/* The schedule of a connection (docs/auth-design.md D7) */
+/* The schedule of a connection (docs/scheduler.md) */
 
 /**
  * Saves when a connection syncs and works out its next pass in the person's zone. The schedule
- * comes from a form, so it is parsed here and refused as `invalid_schedule` when it is not one of
- * the three shapes; "Sync now" never goes through here and never moves `next_sync_at`.
+ * comes from a form, so it is parsed here and refused as `invalid_schedule` when it is not a list
+ * of valid rules, when a rule never runs, or when two passes would come closer than the minimum
+ * gap; "Sync now" never goes through here and never moves `next_sync_at`.
  */
 export async function saveSchedule(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -184,6 +195,8 @@ export async function saveSchedule(
 ): Promise<Connection> {
   const parsed = syncScheduleSchema.safeParse(input);
   if (!parsed.success) throw new IntegrationError("invalid_schedule");
+  const problems = scheduleProblems(parsed.data, civilDateIn(now, ctx.timeZone));
+  if (problems.length > 0) throw new IntegrationError("invalid_schedule", problems);
   const [row] = await getDb()
     .update(integrationConnections)
     .set({ schedule: parsed.data, nextSyncAt: nextSyncAt(parsed.data, ctx.timeZone, now), updatedAt: now })
@@ -193,13 +206,16 @@ export async function saveSchedule(
   return toConnection(row);
 }
 
-/** Moves a connection's next pass on after the dispatcher has made one (or has tried to). */
+/**
+ * Moves a connection's next pass on after the dispatcher has made one (or has tried to) for the
+ * slot `connection.nextSyncAt`: the first slot after `now`, never closer than the minimum gap.
+ */
 export async function advanceSchedule(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  connection: Pick<Connection, "id" | "schedule">,
+  connection: Pick<Connection, "id" | "schedule" | "nextSyncAt">,
   now: Date = new Date(),
 ): Promise<Date | null> {
-  const next = nextSyncAt(connection.schedule, ctx.timeZone, now);
+  const next = nextSyncAfterPass(connection.schedule, ctx.timeZone, connection.nextSyncAt, now);
   await getDb()
     .update(integrationConnections)
     .set({ nextSyncAt: next })
@@ -216,20 +232,35 @@ export async function rescheduleConnections(
   now: Date = new Date(),
 ): Promise<number> {
   const connections = await listConnections(ctx);
-  for (const connection of connections) await advanceSchedule(ctx, connection, now);
+  for (const connection of connections) {
+    await getDb()
+      .update(integrationConnections)
+      .set({ nextSyncAt: nextSyncAt(connection.schedule, ctx.timeZone, now) })
+      .where(and(eq(integrationConnections.id, connection.id), userScoped(ctx).owns(integrationConnections)));
+  }
   return connections.length;
 }
 
-/** A connection the dispatcher owes a pass: whose, which provider, and on what schedule. */
+/** A connection the dispatcher owes a pass: whose, which provider, on what schedule, since when. */
 export interface DueConnection {
   id: string;
   userId: string;
   provider: string;
   schedule: SyncSchedule;
+  nextSyncAt: Date | null;
+}
+
+/** Which connections the dispatcher may pass: not revoked, and not of a banned person. */
+function dueWhere(now: Date) {
+  return and(
+    lte(integrationConnections.nextSyncAt, now),
+    ne(integrationConnections.state, "revoked"),
+    or(isNull(users.banned), eq(users.banned, false)),
+  );
 }
 
 /**
- * Every connection whose next pass is due, across all users, oldest debt first (D7). An `error`
+ * Every connection whose next pass is due, across all users, oldest debt first. An `error`
  * connection is included, because it must keep being retried. A `revoked` one is not, nor any
  * connection of a banned person (PERS-49 SEC-08): a refused token waits for a new one, and a
  * blocked account makes no outbound call. "Sync now" and a new token still reach them.
@@ -241,18 +272,27 @@ export async function dueConnections(now: Date = new Date()): Promise<DueConnect
       userId: integrationConnections.userId,
       provider: integrationConnections.provider,
       schedule: integrationConnections.schedule,
+      nextSyncAt: integrationConnections.nextSyncAt,
     })
     .from(integrationConnections)
     .innerJoin(users, eq(users.id, integrationConnections.userId))
-    .where(
-      and(
-        lte(integrationConnections.nextSyncAt, now),
-        ne(integrationConnections.state, "revoked"),
-        or(isNull(users.banned), eq(users.banned, false)),
-      ),
-    )
+    .where(dueWhere(now))
     .orderBy(asc(integrationConnections.nextSyncAt), asc(integrationConnections.id));
   return rows.map((row) => ({ ...row, schedule: parseSyncSchedule(row.schedule) }));
+}
+
+/**
+ * Whether any connection is due: the minute tick asks this first, so a minute with nothing to do
+ * writes no `job_runs` row (one index probe on `next_sync_at`).
+ */
+export async function anyConnectionDue(now: Date = new Date()): Promise<boolean> {
+  const rows = await getDb()
+    .select({ id: integrationConnections.id })
+    .from(integrationConnections)
+    .innerJoin(users, eq(users.id, integrationConnections.userId))
+    .where(dueWhere(now))
+    .limit(1);
+  return rows.length > 0;
 }
 
 /**
