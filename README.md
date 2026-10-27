@@ -288,7 +288,8 @@ how much you have planned, and how much is left — with **where each number com
   `client_credentials` token from Ledgerly (client "Paperless webhook", scope `imports`, created
   with `npm run user:create-api-client`) and send it as `Authorization: Bearer`; the client id and
   secret are in `storage/.env` (`PAPERLESS_WEBHOOK_OAUTH2_CLIENT_ID`/`_SECRET`).
-  The pull (Settings › Integrations, D5) stays available as well: Ledgerly reads the documents of the
+  This webhook is the path in use (PERS-57, option A). The pull (Settings › Integrations, D5) stays
+  in the code but is not linked: when linked, Ledgerly reads the documents of the
   named types (default `Payroll`; Cometa types optional) with the API token of a read-only Paperless
   user, at the link's own schedule, starting from the moment the link is saved — not earlier,
   because many payslips here were uploaded as a different PDF from the one Paperless keeps, and
