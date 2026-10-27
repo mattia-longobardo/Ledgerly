@@ -1,28 +1,51 @@
-// src/app/(app)/settings/security/actions.ts — personal access tokens (spec §5.3). They are
-// managed only with a session: nothing under /api/v1 can mint or revoke one.
+// src/app/(app)/settings/security/actions.ts — the Client API (docs/auth-design.md D3) and the
+// personal access tokens it replaces (spec §5.3, D4). Both are managed only with a session:
+// nothing under /api/v1 can mint or revoke one, and no new PAT is minted during the transition.
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  ApiClientError,
+  createApiClient,
+  deleteApiClient,
+  type MintedClient,
+} from "@/platform/auth/api-clients";
 import { requireSession } from "@/platform/auth/session";
-import type { ExpiryChoice } from "@/platform/tokens/rules";
-import { createToken, revokeToken, TokenError } from "@/platform/tokens/service";
+import { revokeToken, TokenError } from "@/platform/tokens/service";
 
-export type TokenActionResult =
-  { ok: true; token: string; prefix: string } | { ok: false; error: "invalid" | "not_found" };
+export type ApiClientMinted = MintedClient;
 
-/** Mints a token and hands its value back **once**: it is not stored and cannot be shown again. */
-export async function createTokenAction(input: {
+export type ApiClientActionResult =
+  { ok: true; client: ApiClientMinted } | { ok: false; error: "invalid" | "failed" };
+
+/** Creates a Client API and hands its secret back **once**: only its hash is kept. */
+export async function createApiClientAction(input: {
   name: string;
   scopes: string[];
-  expiresInDays: ExpiryChoice;
-}): Promise<TokenActionResult> {
+}): Promise<ApiClientActionResult> {
+  await requireSession();
+  try {
+    const client = await createApiClient(input);
+    revalidatePath("/settings/security");
+    return { ok: true, client };
+  } catch (error) {
+    if (error instanceof ApiClientError) return { ok: false, error: "invalid" };
+    console.error("[security] could not create a Client API", error instanceof Error ? error.name : "error");
+    return { ok: false, error: "failed" };
+  }
+}
+
+/** Deletes one of the person's own clients; its tokens stop working at once. */
+export async function deleteApiClientAction(
+  clientId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await requireSession();
   try {
-    const { view, token } = await createToken(ctx, input);
+    await deleteApiClient(ctx, clientId);
     revalidatePath("/settings/security");
-    return { ok: true, token, prefix: view.prefix };
+    return { ok: true };
   } catch (error) {
-    if (error instanceof TokenError) return { ok: false, error: error.code };
+    if (error instanceof ApiClientError) return { ok: false, error: error.code };
     throw error;
   }
 }

@@ -176,6 +176,17 @@
         "rateLimited": "Too many attempts. Wait a minute and try again.",
         "generic": "Something went wrong. Try again."
       }
+    },
+    "consent": {
+      "title": "Allow access",
+      "description": "{client} wants to use your Ledgerly data.",
+      "invalid": "This authorization request is not valid or has expired. Start again from the application that sent you here.",
+      "scopes": "It will be able to:",
+      "offline": "stay connected without asking again (refresh token, 30 days)",
+      "identity": "see your name and email address",
+      "allow": "Allow",
+      "deny": "Deny",
+      "failed": "The answer could not be sent. Try again."
     }
   },
   "settings": {
@@ -563,7 +574,8 @@
         "invalid": "Give it a name and at least one scope.",
         "not_found": "That token is already gone.",
         "failed": "It could not be revoked."
-      }
+      },
+      "legacyDescription": "Personal access tokens still work during the move to Client API, but new ones can no longer be created. Revoke each one once the script that used it has a Client API."
     },
     "password": {
       "current": "Current password",
@@ -896,6 +908,40 @@
         "notFound": "That calendar is no longer there.",
         "invalid": "Check the choices and try again.",
         "failed": "It did not work. Try again."
+      }
+    },
+    "apiClients": {
+      "title": "Client API",
+      "description": "OAuth2 clients (client credentials) for scripts and integrations that call /api/v1. A client acts as you, with the scopes you choose; its access tokens last one hour.",
+      "new": "New client",
+      "create": "Create client",
+      "nameHint": "What it is for, so you know which one to delete later.",
+      "columns": {
+        "name": "Name",
+        "clientId": "Client ID",
+        "scopes": "Scopes",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "empty": "No clients yet.",
+      "mintedTitle": "Your new client",
+      "mintedWarning": "Copy the secret now: this is the only time it is shown, and it cannot be recovered.",
+      "minted": {
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "tokenEndpoint": "Token endpoint",
+        "resource": "Resource (resource parameter)"
+      },
+      "mintedHint": "Ask the token endpoint for a token with grant_type=client_credentials, HTTP Basic authentication with the ID and the secret, and resource set to the value above; then call /api/v1 with Authorization: Bearer <access_token>.",
+      "copied": "Copied",
+      "delete": "Delete",
+      "deleted": "{name} deleted",
+      "confirmTitle": "Delete {name}?",
+      "confirmDescription": "Its tokens stop working immediately, and whatever uses it will need a new client.",
+      "errors": {
+        "invalid": "Give it a name and at least one scope.",
+        "failed": "It could not be done. Try again.",
+        "not_found": "That client is already gone."
       }
     }
   },

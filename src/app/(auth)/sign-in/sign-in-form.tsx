@@ -10,9 +10,20 @@ import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { startAuthentikSignIn } from "../authentik";
+import { goTo } from "./destination";
 import { type SignInErrorKey, signInErrorKey } from "./errors";
 
-export function SignInForm({ initialError }: { initialError: SignInErrorKey | null }) {
+/**
+ * `next` is where a successful sign-in goes: the app, or back to the OAuth authorize endpoint that
+ * sent the person here (already checked by `safeNext` on the server).
+ */
+export function SignInForm({
+  initialError,
+  next = "/",
+}: {
+  initialError: SignInErrorKey | null;
+  next?: string;
+}) {
   const t = useTranslations("auth");
   const common = useTranslations("common");
   const router = useRouter();
@@ -42,11 +53,12 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
     // An account with TOTP gets no session yet: the code comes first (docs/auth-design.md D2).
     // An account that still has to set TOTP up is sent to the setup by the app itself.
     if ("twoFactorRedirect" in result.data && result.data.twoFactorRedirect) {
-      router.push("/sign-in/two-factor");
+      router.push(
+        next === "/" ? "/sign-in/two-factor" : `/sign-in/two-factor?next=${encodeURIComponent(next)}`,
+      );
       return;
     }
-    router.push("/");
-    router.refresh();
+    goTo(router, next);
   }
 
   return (
@@ -62,7 +74,7 @@ export function SignInForm({ initialError }: { initialError: SignInErrorKey | nu
         className="w-full"
         icon={<KeyRound aria-hidden className="size-4" />}
         onClick={async () => {
-          if (!(await startAuthentikSignIn("/"))) setError("oidc");
+          if (!(await startAuthentikSignIn(next))) setError("oidc");
         }}
       >
         {t("signIn.authentik")}

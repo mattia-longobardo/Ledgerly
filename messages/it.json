@@ -176,6 +176,17 @@
         "rateLimited": "Troppi tentativi. Attendi un minuto e riprova.",
         "generic": "Qualcosa non ha funzionato. Riprova."
       }
+    },
+    "consent": {
+      "title": "Consenti l'accesso",
+      "description": "{client} vuole usare i tuoi dati di Ledgerly.",
+      "invalid": "Questa richiesta di autorizzazione non è valida o è scaduta. Ricomincia dall'applicazione che ti ha mandato qui.",
+      "scopes": "Potrà:",
+      "offline": "restare collegata senza chiedertelo di nuovo (refresh token, 30 giorni)",
+      "identity": "vedere il tuo nome e il tuo indirizzo email",
+      "allow": "Consenti",
+      "deny": "Rifiuta",
+      "failed": "Non si è potuta inviare la risposta. Riprova."
     }
   },
   "settings": {
@@ -563,7 +574,8 @@
         "invalid": "Dagli un nome e almeno uno scopo.",
         "not_found": "Questo token non c'è più.",
         "failed": "Non si è potuto revocare."
-      }
+      },
+      "legacyDescription": "I token personali funzionano ancora durante il passaggio ai Client API, ma non se ne possono più creare. Revoca ciascuno quando lo script che lo usa ha un Client API."
     },
     "password": {
       "current": "Password attuale",
@@ -896,6 +908,40 @@
         "notFound": "Quel calendario non c'è più.",
         "invalid": "Controlla le scelte e riprova.",
         "failed": "Non ha funzionato. Riprova."
+      }
+    },
+    "apiClients": {
+      "title": "Client API",
+      "description": "Client OAuth2 (client credentials) per gli script e le integrazioni che chiamano /api/v1. Un client agisce come te, con gli scopi che scegli; i suoi token di accesso durano un'ora.",
+      "new": "Nuovo client",
+      "create": "Crea il client",
+      "nameHint": "A che cosa serve, così saprai quale eliminare.",
+      "columns": {
+        "name": "Nome",
+        "clientId": "Client ID",
+        "scopes": "Scopi",
+        "created": "Creato",
+        "actions": "Azioni"
+      },
+      "empty": "Nessun client.",
+      "mintedTitle": "Il tuo nuovo client",
+      "mintedWarning": "Copia il segreto adesso: è l'unica volta che si vede e non è più recuperabile.",
+      "minted": {
+        "clientId": "Client ID",
+        "clientSecret": "Client secret",
+        "tokenEndpoint": "Token endpoint",
+        "resource": "Risorsa (parametro resource)"
+      },
+      "mintedHint": "Chiedi un token al token endpoint con grant_type=client_credentials, autenticazione HTTP Basic con ID e segreto e resource uguale al valore qui sopra; poi chiama /api/v1 con Authorization: Bearer <access_token>.",
+      "copied": "Copiato",
+      "delete": "Elimina",
+      "deleted": "{name} eliminato",
+      "confirmTitle": "Eliminare {name}?",
+      "confirmDescription": "I suoi token smettono subito di funzionare, e ciò che lo usa avrà bisogno di un nuovo client.",
+      "errors": {
+        "invalid": "Dagli un nome e almeno uno scopo.",
+        "failed": "Non si è potuto fare. Riprova.",
+        "not_found": "Questo client non c'è più."
       }
     }
   },
