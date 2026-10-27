@@ -50,7 +50,15 @@ export const USERS = {
     password: "disposable-password-123",
     name: "Disposable",
   },
+  // TOTP (docs/auth-design.md D2). The seed turns TOTP on for every user above, as the site's
+  // TWO_FACTOR_POLICY=required would make them; these two are left without it on purpose:
+  // `enroll` walks through the forced setup, `pending` keeps the setup page open for the a11y check.
+  enroll: { email: "enroll@example.test", password: "enroll-password-123", name: "Enroll" },
+  pending: { email: "pending@example.test", password: "pending-password-123", name: "Pending" },
 } as const;
+
+/** The users the seed leaves without TOTP. */
+export const WITHOUT_TOTP: ReadonlySet<keyof typeof USERS> = new Set(["enroll", "pending"]);
 
 /** The only addresses the seed may create or delete. */
 export const TEST_EMAIL_DOMAIN = "@example.test";
@@ -77,8 +85,14 @@ export const SESSIONS = {
   tokens: { user: "tokens", file: "tokens-session.json" },
   // F9: the layout and accessibility check (tests/e2e/a11y.spec.ts).
   layout: { user: "layout", file: "layout-session.json" },
+  // TOTP: sessions of users who still have to set it up, so they land on the setup page.
+  enroll: { user: "enroll", file: "enroll-session.json" },
+  pending: { user: "pending", file: "pending-session.json" },
 } as const;
 
 export const sessionState = (name: keyof typeof SESSIONS) => `${STATE_DIR}/${SESSIONS[name].file}`;
 
 export const STATE_DIR = "tests/e2e/.state";
+
+/** Each TOTP user's base32 secret, written by the seed, read by the specs that sign in by hand. */
+export const TOTP_FILE = `${STATE_DIR}/totp.json`;

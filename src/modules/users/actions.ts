@@ -18,6 +18,7 @@ import {
   invitePerson,
   type InviteOutcome,
   removePerson,
+  resetPersonTwoFactor,
   type ResetOutcome,
   revokeInvitation,
   sendPersonReset,
@@ -174,6 +175,17 @@ export async function sendPersonResetAction(userId: string): Promise<AdminAction
   const ctx = await requireAdmin();
   try {
     return { ok: true, outcome: await sendPersonReset(ctx, userId) };
+  } catch (error) {
+    return adminFailure(error);
+  }
+}
+
+export async function resetPersonTwoFactorAction(userId: string): Promise<AdminActionResult<undefined>> {
+  const ctx = await requireAdmin();
+  try {
+    await resetPersonTwoFactor(ctx, userId);
+    revalidatePath("/settings/users");
+    return DONE;
   } catch (error) {
     return adminFailure(error);
   }

@@ -128,6 +128,54 @@
       "nameInvalid": "Enter your full name, at most {max} characters.",
       "failed": "Couldn't create the account. Try again.",
       "authentik": "Use Authentik instead"
+    },
+    "twoFactor": {
+      "recoveryCodes": "Recovery codes",
+      "download": "Download",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Couldn't copy. Select the codes and copy them by hand.",
+      "signOut": "Sign out",
+      "setup": {
+        "title": "Set up two-factor authentication",
+        "description": "Your account signs in with a password, so it needs a code from an authenticator app too.",
+        "passwordIntro": "Enter your password to create the secret for your authenticator app.",
+        "password": "Password",
+        "continue": "Continue",
+        "scanTitle": "1. Scan the QR code",
+        "scanHint": "Use an authenticator app, such as Aegis, 2FAS, Google Authenticator or 1Password.",
+        "qrLabel": "QR code for the authenticator app",
+        "manual": "Can't scan it? Enter this key:",
+        "codesTitle": "2. Save your recovery codes",
+        "codesHint": "Each code works once. Keep them somewhere safe: they are the only way in without your phone.",
+        "saved": "I have saved my recovery codes",
+        "code": "3. Code from the app",
+        "codeHint": "Six digits.",
+        "confirm": "Turn on two-factor authentication"
+      },
+      "challenge": {
+        "title": "Two-factor authentication",
+        "description": "Enter the code from your authenticator app.",
+        "code": "Authentication code",
+        "codeHint": "Six digits.",
+        "recoveryCode": "Recovery code",
+        "recoveryHint": "One of the codes you saved, like abcde-12345. Each works once.",
+        "trust": "Trust this device for {days} days",
+        "submit": "Verify",
+        "useRecovery": "Use a recovery code",
+        "useApp": "Use the authenticator app",
+        "back": "Back to sign in"
+      },
+      "errors": {
+        "invalidCode": "That code is not right. Try the current one.",
+        "invalidBackupCode": "That recovery code is not valid or was already used.",
+        "tooManyAttempts": "Too many wrong codes. Sign in again.",
+        "locked": "Too many wrong codes. Two-factor sign-in is locked for 15 minutes.",
+        "expired": "This sign-in has expired. Sign in again.",
+        "password": "Wrong password.",
+        "rateLimited": "Too many attempts. Wait a minute and try again.",
+        "generic": "Something went wrong. Try again."
+      }
     }
   },
   "settings": {
@@ -529,6 +577,26 @@
         "generic": "Something went wrong. Try again."
       }
     },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "description": "A code from an authenticator app after your password. Authentik sign-ins use Authentik's own second factor.",
+      "on": "On",
+      "off": "Off",
+      "onHint": "Password sign-ins ask for a code.",
+      "offHint": "Password sign-ins ask for the password only.",
+      "enable": "Set up two-factor authentication",
+      "enabled": "Two-factor authentication is on",
+      "newCodes": "New recovery codes",
+      "newCodesWarning": "Your current recovery codes stop working. Enter your password to create new ones.",
+      "generate": "Create codes",
+      "disable": "Turn off",
+      "disableTitle": "Turn off two-factor authentication?",
+      "disableWarning": "Password sign-ins will ask for the password only.",
+      "disableRequired": "This server requires two-factor authentication: you will set it up again before you can continue.",
+      "disabled": "Two-factor authentication is off",
+      "done": "Done",
+      "cancel": "Cancel"
+    },
     "sessions": {
       "title": "Sessions",
       "description": "Devices currently signed in to your account.",
@@ -591,6 +659,11 @@
         "sso_only": "Nothing sent: this account signs in with Authentik only.",
         "mail_off": "Nothing sent: “Invitations & resets” is off in Admin › Server."
       },
+      "resetTwoFactor": "Reset 2FA",
+      "resetTwoFactorTitle": "Reset two-factor authentication?",
+      "resetTwoFactorWarning": "{email} is signed out everywhere and loses their authenticator app and recovery codes.",
+      "resetTwoFactorDetail": "Their next password sign-in asks them to set up two-factor authentication again.",
+      "twoFactorReset": "Two-factor authentication reset for {email}",
       "block": "Block",
       "unblock": "Unblock",
       "blockedNow": "Blocked, and signed out everywhere",

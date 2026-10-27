@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { getOptionalCtx } from "@/platform/auth/session";
+import { signedInDestination } from "@/platform/auth/session";
 import { AuthCard } from "../auth-card";
 import { signInErrorKey } from "./errors";
 import { SignInForm } from "./sign-in-form";
@@ -11,7 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
-  if (await getOptionalCtx()) redirect("/");
+  const destination = await signedInDestination();
+  if (destination) redirect(destination);
   const { error } = await searchParams;
   const t = await getTranslations("auth.signIn");
   return (
