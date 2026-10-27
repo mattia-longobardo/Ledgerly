@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { monthsBetween } from "@/platform/dates";
 import {
   alertsFor,
+  BALANCE_SOURCES,
   bucketOf,
   canDelete,
   dailySeries,
@@ -18,6 +19,7 @@ import {
   reconcileProviderAccounts,
   type RemoteAccount,
   settingsForSynced,
+  SOURCE_PRECEDENCE,
   totalSeries,
 } from "./rules";
 
@@ -501,5 +503,15 @@ describe("dailySeries", () => {
       null,
       null,
     ]);
+  });
+});
+
+describe("SOURCE_PRECEDENCE", () => {
+  it("ranks every balance source exactly once", () => {
+    expect([...SOURCE_PRECEDENCE].sort()).toEqual([...BALANCE_SOURCES].sort());
+  });
+
+  it("puts portfolio after a person's correction and an import, ahead of the provider (investments.md §1.7)", () => {
+    expect(SOURCE_PRECEDENCE).toEqual(["manual", "import", "portfolio", "provider", "system", "derived"]);
   });
 });

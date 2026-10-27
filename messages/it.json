@@ -1551,7 +1551,8 @@
         "provider": "Provider",
         "system": "Snapshot",
         "import": "Importazione",
-        "derived": "Ricostruito"
+        "derived": "Ricostruito",
+        "portfolio": "Portafoglio"
       },
       "updated": "Saldo aggiornato",
       "edit": {

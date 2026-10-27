@@ -18,4 +18,5 @@ export * from "@/modules/imports/schema";
 export * from "@/modules/payroll/schema";
 export * from "@/modules/timeoff/schema";
 export * from "@/platform/holidays/schema";
+export * from "@/platform/fx/schema";
 export * from "@/modules/investments/schema";

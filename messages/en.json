@@ -1551,7 +1551,8 @@
         "provider": "Provider",
         "system": "Snapshot",
         "import": "Import",
-        "derived": "Rebuilt"
+        "derived": "Rebuilt",
+        "portfolio": "Portfolio"
       },
       "updated": "Balance updated",
       "edit": {

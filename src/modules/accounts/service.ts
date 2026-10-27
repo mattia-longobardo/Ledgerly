@@ -15,7 +15,7 @@ import {
 import { getDb, type Tx } from "@/platform/db/client";
 import { FOREIGN_KEY_VIOLATION, hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
-import { PROVIDERS } from "@/platform/integrations/rules";
+import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
 import { dailyNetByAccount, transactionIdsOfAccount } from "@/modules/transactions/queries";
@@ -452,7 +452,8 @@ export async function accountDailyBalances(
  * from scratch: every `derived` row of those accounts goes, and `deriveMonthEnds` writes the ones
  * the current readings and movements support, in one transaction — so running it twice changes
  * nothing, and a reading or a correction added since simply moves what gets rebuilt. A manual
- * account has no movements, so there is nothing to rebuild it from.
+ * account has no movements, so there is nothing to rebuild it from, and neither has the account of a
+ * provider that syncs no movements (`syncsTransactions`: an investment provider).
  *
  * Reads first, writes after, and no network anywhere (spec §4.3): the sync calls it once its own
  * reads are over.
@@ -462,7 +463,10 @@ export async function rebuildDerivedBalances(
   accountIds?: readonly string[],
 ): Promise<{ written: number }> {
   const synced = (await listAccounts(ctx, { includeArchived: true })).filter(
-    (account) => account.origin === "synced" && (accountIds === undefined || accountIds.includes(account.id)),
+    (account) =>
+      account.origin === "synced" &&
+      syncsTransactions(account.provider) &&
+      (accountIds === undefined || accountIds.includes(account.id)),
   );
   if (synced.length === 0) return { written: 0 };
   const ids = synced.map((account) => account.id);

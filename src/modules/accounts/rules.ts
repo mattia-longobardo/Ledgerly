@@ -33,8 +33,10 @@ export const ACCOUNT_ORIGINS = ["manual", "synced"] as const;
 /**
  * `derived` (F2.5) is a month end rebuilt from the movements (`deriveMonthEnds`): it loses to every
  * other source, and is rewritten from scratch whenever the readings or the movements change.
+ * `portfolio` is the daily value Investments writes for the accounts it manages
+ * (docs/design/investments.md §1.7): there it is the only source from `managed_since` on.
  */
-export const BALANCE_SOURCES = ["manual", "provider", "system", "import", "derived"] as const;
+export const BALANCE_SOURCES = ["manual", "provider", "system", "import", "derived", "portfolio"] as const;
 export const REMINDERS = ["monthly", "quarterly", "never"] as const;
 export const TRENDS = ["hold", "interpolate"] as const;
 export const SNAPSHOT_STATES = ["success", "warning", "failed"] as const;
@@ -44,6 +46,20 @@ export type AccountState = (typeof ACCOUNT_STATES)[number];
 export type ConnectionChannel = (typeof CONNECTION_CHANNELS)[number];
 export type AccountOrigin = (typeof ACCOUNT_ORIGINS)[number];
 export type BalanceSource = (typeof BALANCE_SOURCES)[number];
+
+/**
+ * Same day, more than one source: which one counts, first to last (spec §7.1; investments.md §1.7).
+ * The correction a person typed comes first, a month end rebuilt from the movements last of all.
+ * `SOURCE_RANK` in `queries.ts` is built from this list, so a new source has to be placed here.
+ */
+export const SOURCE_PRECEDENCE = [
+  "manual",
+  "import",
+  "portfolio",
+  "provider",
+  "system",
+  "derived",
+] as const satisfies readonly BalanceSource[];
 export type Reminder = (typeof REMINDERS)[number];
 export type Trend = (typeof TRENDS)[number];
 

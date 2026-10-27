@@ -6,7 +6,9 @@ import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { accountsView, listBalanceEntries, listSnapshotRuns } from "./queries";
+import { getDb } from "@/platform/db/client";
+import { accountsView, balancesOn, listBalanceEntries, listSnapshotRuns } from "./queries";
+import { balanceEntries } from "./schema";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import type { RemoteAccount } from "./rules";
 import {
@@ -752,6 +754,45 @@ describe("rebuildDerivedBalances", () => {
     await aSyncedAccount();
     const other = await newContext();
     expect(await rebuildDerivedBalances(other)).toEqual({ written: 0 });
+  });
+
+  it("leaves the account of a provider with no movements alone (investments.md §1.7)", async () => {
+    const walletId = await aSyncedAccount();
+    await applyProviderAccounts(ctx, "ccxt:binance", [
+      {
+        provider: "ccxt:binance",
+        providerAccountId: "spot",
+        name: "Binance",
+        type: "crypto",
+        currency: "EUR",
+      },
+    ]);
+    const binance = (await accountsView(ctx)).rows.find((row) => row.account.provider === "ccxt:binance");
+    await saveProviderBalance(ctx, binance!.account.id, { on: "2026-09-16", cents: 100_000n });
+    await upsertFromProvider(ctx, binance!.account.id, [spent("b-1", "2026-07-03", -10_000n)]);
+
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
+    expect(await rebuilt(binance!.account.id)).toEqual([]);
+    expect(await rebuilt(walletId)).toHaveLength(3);
+  });
+});
+
+/** investments.md §1.7: `portfolio` loses to a person and an import, and wins over a provider. */
+describe("SOURCE_RANK with portfolio", () => {
+  it("picks portfolio over provider and system on the same day, and manual over portfolio", async () => {
+    const account = await createAccount(ctx, CHECKING);
+    const on = "2026-09-16";
+    const write = (source: "portfolio" | "provider" | "system" | "manual", cents: bigint) =>
+      getDb()
+        .insert(balanceEntries)
+        .values({ userId: ctx.userId, accountId: account.id, on, balanceCents: cents, source });
+    await write("provider", 1n);
+    await write("system", 2n);
+    await write("portfolio", 3n);
+    expect((await balancesOn(ctx, [account.id], on)).get(account.id)).toBe(3n);
+
+    await write("manual", 4n);
+    expect((await balancesOn(ctx, [account.id], on)).get(account.id)).toBe(4n);
   });
 });
 

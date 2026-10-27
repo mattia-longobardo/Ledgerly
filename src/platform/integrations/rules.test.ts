@@ -6,9 +6,11 @@ import {
   isKnownProvider,
   nextRunAt,
   normalizeCounts,
+  PAPERLESS_PROVIDER,
   outcomeState,
   providerLinkSchema,
   syncErrorText,
+  syncsTransactions,
   TREK_PROVIDER,
   WALLET_PROVIDER,
 } from "./rules";
@@ -128,5 +130,15 @@ describe("normalizeCounts", () => {
       c: 3,
       d: 0,
     });
+  });
+});
+
+describe("syncsTransactions", () => {
+  it("is true only for a known provider that brings in movements", () => {
+    expect(syncsTransactions(WALLET_PROVIDER)).toBe(true);
+    expect(syncsTransactions(TREK_PROVIDER)).toBe(false);
+    expect(syncsTransactions(PAPERLESS_PROVIDER)).toBe(false);
+    expect(syncsTransactions("ccxt:binance")).toBe(false);
+    expect(syncsTransactions(null)).toBe(false);
   });
 });
