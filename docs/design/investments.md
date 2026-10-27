@@ -2,7 +2,9 @@
 
 PERS-71 (27/10/2026), fase di pianificazione dell'epica PERS-68. Revisione PERS-74 (27/10/2026) con
 l'esito della review avversariale (PERS-72, obiezioni `A1`–`A10`) e della security review (PERS-73,
-rischi `SEC-01`–`SEC-09`): la sezione 9 dice dove è stata recepita ogni obiezione.
+rischi `SEC-01`–`SEC-09`): la sezione 9 dice dove è stata recepita ogni obiezione. Revisione PERS-76
+(27/10/2026) con le 16 decisioni di Mattia (sezione 8), tra cui la valuta di visualizzazione (1.8,
+fase 1b).
 **Solo design**: nessun codice, nessuna migrazione e nessun deploy prima dell'approvazione di Mattia.
 
 Input:
@@ -13,8 +15,7 @@ Input:
 - ricerca provider (PERS-69) e fatti eToro già verificati in Pluto (Hindsight `progetto:pluto`);
 - review PERS-72 e PERS-73.
 
-Le scelte marcate **[D<n>]** sono raccomandazioni che dipendono da una decisione aperta (sezione 8).
-Il resto del documento le dà per accettate.
+Le scelte marcate **[D<n>]** applicano una decisione presa da Mattia il 27/10/2026 (sezione 8).
 
 ## 0. Principi
 
@@ -32,9 +33,12 @@ Il resto del documento le dà per accettate.
 4. **Storico riproducibile.** Ogni valore dipende solo da eventi datati e conservati: operazioni,
    letture, eventi di riconciliazione e di modo, prezzi e cambi salvati. Un ricalcolo da un giorno `d`
    lascia invariati tutti i giorni prima di `d`.
-5. **Valori in EUR nei saldi** [D1]. La valuta originale, il prezzo e il percorso di conversione
-   restano nelle tabelle del modulo. Nessun totale somma valute diverse (V7). Un prezzo o un cambio
-   mancante dà un valore parziale e segnalato, mai uno zero silenzioso.
+5. **Valuta nativa nei saldi, valuta di visualizzazione nei totali** [D1]. Ogni conto tiene i saldi
+   nella sua valuta (`accounts.currency`). Ogni totale su più conti converte nella valuta di
+   visualizzazione dell'utente (default EUR) al cambio BCE del giorno (1.8). Nessun totale somma valute
+   diverse senza conversione (V7). Il prezzo e il percorso di conversione restano nelle tabelle del
+   modulo. Un prezzo o un cambio mancante dà un valore parziale e segnalato, mai uno zero silenzioso
+   né una parità 1:1.
 6. **Sola lettura verso l'esterno.** Ledgerly non fa mai trading né prelievi. Una chiave è accettata
    solo se l'unico permesso attivo è la lettura (allowlist), verificato a ogni pass dove l'API lo
    permette (sezione 5.2).
@@ -58,7 +62,7 @@ Statico nel codice, non in tabella [D12]: `INVESTMENT_PROVIDERS` in `src/modules
 | `url` | `https://www.etoro.com` | link diretto al servizio |
 | `credentialFields` | `["api_key", "user_key"]` | chiavi piatte (V5). Generano lo schema `z.strictObject` del provider: un campo in più è rifiutato (SEC-03) |
 | `readOnlyCheck` | `api` \| `declared` | se i permessi si verificano via API (sezione 5.2) |
-| `ipWhitelist` | `required` \| `unsupported` | IP whitelist obbligatoria per i provider `declared` che la supportano (SEC-02) |
+| `ipWhitelist` | `supported` \| `unsupported` | se il servizio supporta l'IP whitelist: il dialog la suggerisce come opzione, mai obbligatoria [D7] |
 | `ccxtId` | `binance` | solo per ccxt: id dell'exchange, mai preso dall'input (SEC-03) |
 | `products` | `["spot", "funding"]` | prodotti che l'adapter sa leggere: il perimetro massimo delle letture (A1) |
 | `revokeUrl` | URL della pagina delle API key | per i passi di revoca (SEC-07) |
@@ -70,8 +74,10 @@ Prima versione del catalogo:
 | Conti | Conto manuale (Directa, Fineco, conto deposito, BTP, fondi…) | manuale |
 | Online Broker | eToro | API key read-only |
 | Online Broker | Interactive Brokers (Flex Web Service), Degiro, Trade Republic, Scalable | `planned` / manuale |
-| Crypto | Binance, Kraken, Coinbase, Bitvavo, Crypto.com (via ccxt) [D5] | API key read-only |
-| Crypto | Bitpanda, Young Platform | manuale (adapter custom fuori perimetro) [D6] |
+| Crypto | Binance, Kraken (via ccxt) [D5] | API key read-only |
+| Crypto | Coinbase, Bitvavo, Crypto.com (via ccxt) | `planned`: solo voce di catalogo e test di mapping quando servono |
+
+Gli exchange esclusi in [D6] non hanno voce nel catalogo, nemmeno manuale.
 
 ### 1.2 Connessioni
 
@@ -87,7 +93,7 @@ Si riusa `integration_connections` così com'è (E1, V4).
 - Nuovi `ENTITY_TYPES` per `provider_links` (E4): `investment_event`, `investment_holding`. Il
   collegamento esterno è sull'**evento**, non sulla singola operazione (A6, sezione 1.5).
 
-`investment_key_checks` (SEC-01, SEC-02, SEC-07): stato non segreto della chiave, una riga per
+`investment_key_checks` (SEC-01, SEC-07, [D7]): stato non segreto della chiave, una riga per
 verifica. `integration_connections` non ha un campo adatto.
 
 | Colonna | Tipo | Note |
@@ -97,7 +103,8 @@ verifica. `integration_connections` non ha un campo adatto.
 | `result` | `read-only` \| `write` \| `unknown-flag` \| `unverifiable` \| `error` | |
 | `permissions` | jsonb | solo nomi e valori booleani dei flag letti dall'API, mai la chiave |
 | `ip_restricted` | bool null | Binance `ipRestrict`; null se l'API non lo dice |
-| `attested_read_only_at`, `attested_ip_at` | timestamptz null | conferme dell'utente per i provider `declared` |
+| `attested_read_only_at` | timestamptz null | conferma "solo lettura" dell'utente, obbligatoria per i provider `declared` |
+| `attested_ip_at` | timestamptz null | conferma facoltativa "IP limitato", se l'utente ha seguito il suggerimento del dialog |
 | `attestation_text_version` | text null | versione del testo mostrato nel dialog |
 | `revoked_at_provider_at` | timestamptz null | conferma "chiave revocata presso il provider" dopo disconnessione o sostituzione |
 
@@ -115,11 +122,14 @@ Un servizio collegato o manuale è un `accounts` di tipo `investment` (broker e 
 | `account_id` | uuid FK `accounts`, unique | il conto di valutazione, come `funds.valuation_account_id` |
 | `category` | `accounts` \| `broker` \| `crypto` | |
 | `provider` | text | id del catalogo; `manual` per i conti manuali |
-| `native_currency` | `^[A-Z]{3}$` | valuta del servizio (USD per eToro). Il saldo è sempre EUR |
 | `managed_since` | date | giorno da cui Investments è l'unico scrittore del conto (A4) |
 | `url` | text null | override del link del catalogo |
 | `opened_on`, `closed_on` | date | |
 | `created_at`, `updated_at` | timestamptz | |
+
+La valuta del servizio è `accounts.currency` [D1]: la valuta nativa del servizio (es. USD per eToro,
+EUR per un conto Binance in EUR), scelta al collegamento con default dal catalogo. Saldi, letture e
+operazioni del conto sono in quella valuta. Non c'è una colonna `native_currency` separata.
 
 **Modo e origine nel tempo (A3).** Il modo (`assets` \| `total`) e l'origine (`manual` \| `synced`)
 non sono colonne correnti: sono intervalli in `investment_account_periods` (`investment_account_id`,
@@ -210,7 +220,7 @@ ledger) o un'azione manuale. `provider_links` (E4) punta qui con `entity_type = 
 | `occurred_at` | timestamptz | ora del provider o dell'inserimento |
 | `on` | date | giorno civile (`src/platform/dates.ts`) |
 | `seq` | bigint | ordine deterministico nello stesso giorno: `(on, occurred_at, seq)` (A2) |
-| `origin` | `manual` \| `provider` \| `import` \| `conversion` | `conversion`: aperture create da una conversione (2.5) |
+| `origin` | `manual` \| `provider` \| `conversion` | `conversion`: aperture create da una conversione (2.5) |
 | `transfer_group_id` | uuid null | lega le due gambe di un trasferimento tra conti di Mattia (A10) |
 | `transaction_id` | uuid null, unique | collegamento al movimento bancario, come oggi (`schema.ts:73`) |
 | `note` | text null | |
@@ -228,9 +238,9 @@ ledger) o un'azione manuale. `provider_links` (E4) punta qui con `entity_type = 
 | `price_currency` | text null | |
 | `native_amount` | `numeric(30,12)` null | importo nella valuta nativa |
 | `native_currency` | text null | |
-| `fx_rate` | `numeric(20,10)` null | EUR per 1 unità nativa usato per `amount_cents`, salvato all'inserimento |
+| `fx_rate` | `numeric(20,10)` null | unità della valuta del conto per 1 unità nativa, usato per `amount_cents`, salvato all'inserimento |
 | `fx_source` | text null | `ecb:<data>`, `exchange:<coppia>@<timestamp>`, `manual` (A5) |
-| `amount_cents` | bigint | importo in EUR, segno per tipo (sotto) |
+| `amount_cents` | bigint | importo nella valuta del conto, segno per tipo (sotto) |
 | `valid_until` | date null | solo per `adjustment` |
 | `quantity_basis` | `reported` \| `reconstructed` \| `inferred` | vedi 3.2 (A6) |
 
@@ -269,7 +279,7 @@ precedente in `investment_operation_revisions` (`operation_id`, `changed_at`, `b
 | `on` | date | una lettura per conto e giorno: l'ultima del giorno sostituisce le precedenti |
 | `observed_at` | timestamptz | ora della lettura; se il provider non dà il timestamp, ora della risposta |
 | `status` | `complete` \| `partial` \| `confirmed_zero` \| `pending_zero` | (A8) |
-| `total_cents` | bigint | valore totale in EUR riportato o calcolato (R1) |
+| `total_cents` | bigint | valore totale nella valuta del conto, riportato o calcolato (R1) |
 | `cash_cents` | bigint null | |
 | `native_total` | `numeric(30,12)` null | |
 | `fx_rate`, `fx_source` | | percorso di conversione del totale (A5) |
@@ -282,7 +292,7 @@ prodotto in conflitto; il totale resta `total_cents` (R1).
 
 `investment_sync_coverage` (A7): `connection_id`, `kind` (`flows`), `stream` (es. `deposits`,
 `withdrawals`, `trades:BTC/EUR`, `ledger`), `from_at`, `to_at`, `status` (`complete` \| `partial` \|
-`gap`), `reason` (es. `api_limit_24m`, `pair_not_discovered`, `csv_imported`). La UI e il rendimento
+`gap`), `reason` (es. `api_limit_24m`, `api_limit_12m`, `pair_not_discovered`). La UI e il rendimento
 leggono questa tabella, non l'esito della sync.
 
 ### 1.7 Valore nel tempo
@@ -306,17 +316,48 @@ leggono questa tabella, non l'esito della sync.
 
 ### 1.8 Valute e cambio
 
-[D1] I saldi dei conti di investimento sono sempre in EUR (`accounts.currency = 'EUR'`).
-La conversione avviene alla fonte, nell'ordine (A5):
+[D1] Due livelli, sempre distinti:
 
-1. il provider dà già EUR (eToro `/api/v1/balances?displayCurrency=EUR`);
-2. coppia `X/EUR` sull'exchange (ccxt);
-3. coppia `X/USDT` (o `X/USDC`) sull'exchange, poi `USDT/EUR` sull'exchange; se manca, `USDT/USD`
-   sull'exchange × USD→EUR BCE. **Mai parità implicita** tra stablecoin e USD;
+- **Valuta del conto** (`accounts.currency`, valuta nativa del servizio). Ogni `balance_entry`, lettura
+  e operazione è in questa valuta. Un saldo salvato non viene mai convertito né riscritto per un
+  cambio.
+- **Valuta di visualizzazione** (`user_preferences.display_currency`, default `EUR`, scelta in
+  Settings → Profilo). Tutti i totali su più conti (home, patrimonio netto, bucket, Overview, home e
+  KPI di Investments, snapshot, report mensile, `/api/v1/summary`, MCP `get_summary`) convertono ogni
+  conto in questa valuta **al momento della lettura**. La pagina di un singolo conto o servizio mostra
+  il valore nella valuta del conto e il controvalore nella valuta di visualizzazione.
+
+**Dal prezzo dell'asset alla valuta del conto `K`** (letture ccxt e asset manuali), nell'ordine (A5):
+
+1. il provider dà già il totale in `K` (eToro `/api/v1/balances?displayCurrency=<K>`; lo spike
+   verifica i valori ammessi);
+2. coppia `X/K` sull'exchange (ccxt);
+3. coppia `X/USDT` (o `X/USDC`) sull'exchange, poi `USDT/K` sull'exchange; se manca, `USDT/USD`
+   sull'exchange × cambio BCE USD→`K`. **Mai parità implicita** tra stablecoin e USD;
 4. cambio BCE per le valute fiat.
 
 Se nessun percorso dà un prezzo, la posizione ha `value_cents = null`, la lettura è `partial` e il
 valore della posizione resta l'ultimo noto, con avviso "prezzo mancante dal …". Mai zero.
+
+**Dalla valuta del conto alla valuta di visualizzazione `D`** (solo totali e controvalori):
+
+```
+Totale(d) = Σ conti  arrotonda( V(A,d) × Cambio(K_A → D, d) )
+Cambio(K → D, d) = eur_per_unit(K, d') / eur_per_unit(D, d')   con d' = ultimo fixing ≤ d; EUR = 1
+```
+
+- Il cambio di un punto è quello del suo giorno: il valore di fine mese di marzo usa il cambio del
+  31/03 (o dell'ultimo fixing prima), il valore di oggi l'ultimo fixing disponibile.
+- `K = D` non richiede cambi: con tutti i conti in EUR e `D = EUR` i totali sono identici a oggi.
+- Arrotondamento al centesimo per conto, poi somma (metà lontano da zero, come `src/platform/money.ts`).
+- Cambio mancante (valuta fuori dalla lista BCE, `fx_rates` vuota per quel giorno): il conto resta
+  fuori dalla somma e il totale è `partial`, con la stessa semantica di un conto senza saldo
+  (`sumCents`). Mai 1:1.
+- La valuta di visualizzazione deve essere `EUR` o una valuta pubblicata dalla BCE (lista
+  Frankfurter `/currencies`). La valuta di un conto è libera (`^[A-Z]{3}$`, come oggi); fuori dalla
+  lista BCE il conto compare nei totali come mancante, con avviso.
+- La valuta di un conto con almeno una entry non si cambia più dalle impostazioni: cambiarla
+  reinterpreterebbe tutto lo storico (oggi `settingsForSynced` la blocca solo per i conti sincronizzati).
 
 `fx_rates` (dato di mercato, non personale, quindi senza `user_id`):
 
@@ -328,19 +369,25 @@ valore della posizione resta l'ultimo noto, con avviso "prezzo mancante dal …"
 | `source` | `ecb` |
 | `fetched_at` | timestamptz |
 
-PK `(on, currency)`. Fonte: Frankfurter (dati BCE), un job giornaliero nel tier `daily`. Nei giorni
-senza fixing (weekend, festivi) si usa l'ultimo cambio ≤ giorno. Le righe sono **immutabili**: un
-ricalcolo non cambia un cambio già usato (A5).
+PK `(on, currency)`. Base sempre EUR; i cambi tra due valute non EUR passano da EUR (formula sopra).
+Fonte: Frankfurter (dati BCE), un job giornaliero nel tier `daily` per tutte le valute BCE, più un
+backfill una tantum dal primo `balance_entries.on` dell'istanza (serie storica Frankfurter), così
+anche i punti passati hanno il cambio del loro giorno. Nei giorni senza fixing (weekend, festivi) si
+usa l'ultimo cambio ≤ giorno. Le righe sono **immutabili**: un ricalcolo non cambia un cambio già
+usato (A5).
 
-**Costo e valore (A5).** Il costo in EUR di un acquisto usa il cambio del giorno dell'acquisto,
-salvato sull'operazione. Il valore corrente usa il cambio del giorno della valutazione: per gli asset
-manuali in valuta estera è il cambio `fx_rates` del giorno `d`, salvato sul punto. P/L = valore − costo,
-entrambi in EUR, con la parte dovuta al cambio mostrata a parte.
+**Costo e valore (A5).** Il costo di un acquisto nella valuta del conto usa il cambio del giorno
+dell'acquisto, salvato sull'operazione. Il valore corrente usa il cambio del giorno della valutazione:
+per gli asset manuali in una valuta diversa da quella del conto è il cambio `fx_rates` del giorno `d`,
+salvato sul punto. P/L = valore − costo, entrambi nella valuta del conto, con la parte dovuta al
+cambio mostrata a parte. Il controvalore nella valuta di visualizzazione è solo una conversione per la
+lettura, non un secondo P/L.
 
 ## 2. Regole di valorizzazione
 
-Notazione per il conto `A` al giorno `d`: `V(A,d)` è il valore scritto in `balance_entries`. Ogni
-termine usa gli eventi con `on ≤ d`, ordinati per `(on, occurred_at, seq)` (A2).
+Notazione per il conto `A` al giorno `d`: `V(A,d)` è il valore scritto in `balance_entries`, nella
+valuta del conto (1.8). Ogni termine usa gli eventi con `on ≤ d`, ordinati per `(on, occurred_at,
+seq)` (A2). La conversione nella valuta di visualizzazione avviene dopo, solo nei totali.
 
 ### 2.1 Conto manuale
 
@@ -361,7 +408,7 @@ UltimoPrezzo     = prezzo dell'ultimo buy / sell / valuation / opening_position 
 - Una posizione chiusa vale 0 dal giorno di chiusura; il ricavato è già in cassa.
 - Cassa negativa: consentita (dati incompleti), con un avviso nella pagina del servizio.
 
-Esempio (conto Directa, manuale, modo `assets`):
+Esempio (conto Directa in EUR, manuale, modo `assets`):
 
 | Giorno | Operazione | Cassa | Asset | V |
 |---|---|---|---|---|
@@ -398,8 +445,8 @@ V(A,d) = P(A,d) − C(A,d) + M(A,d) + R(A,d)
   Su un conto sincronizzato depositi e prelievi manuali non toccano il valore: il provider li vede già
   nella sua cassa. Contano solo per il rendimento.
 - **R3 · R = rettifiche datate.** Somma degli `adjustment` con `on ≤ d` e (`valid_until` null o
-  `valid_until ≥ d`). Una rettifica è un delta in EUR con motivo obbligatorio. Senza `valid_until` vale
-  per sempre: la pagina segnala le rettifiche aperte da più di 30 giorni.
+  `valid_until ≥ d`). Una rettifica è un delta nella valuta del conto con motivo obbligatorio. Senza
+  `valid_until` vale per sempre: la pagina segnala le rettifiche aperte da più di 30 giorni.
 - **R4 · Conflitto di perimetro, senza salti silenziosi (A1).** Un conflitto nasce quando una lettura
   copre il prodotto `p` (1.4) e una posizione manuale aperta ha lo stesso asset e lo stesso `p`, senza
   una riconciliazione. Finché il conflitto è aperto:
@@ -430,18 +477,20 @@ V(A,d) = P(A,d) − C(A,d) + M(A,d) + R(A,d)
 
 Esempi numerici:
 
-**Esempio 1 · Solo provider (eToro).**
+**Esempio 1 · Solo provider (eToro, conto in USD).** Valuta di visualizzazione EUR; cambio BCE
+dell'esempio: 1 USD = 0,92 € il 10/11, 0,93 € l'11/11 e il 12/11.
 
-| Giorno | Lettura eToro (EUR) | M | R | V |
-|---|---|---|---|---|
-| 10/11 | 12.340 | 0 | 0 | **12.340** |
-| 11/11 | nessuna (errore API) | 0 | 0 | **12.340** (R5, hold) |
-| 12/11 | 12.410 | 0 | 0 | **12.410** |
+| Giorno | Lettura eToro (USD) | M | R | V (USD, saldo) | Nei totali (EUR) |
+|---|---|---|---|---|---|
+| 10/11 | 12.340 | 0 | 0 | **12.340** | 11.352,80 |
+| 11/11 | nessuna (errore API) | 0 | 0 | **12.340** (R5, hold) | 11.476,20 |
+| 12/11 | 12.410 | 0 | 0 | **12.410** | 11.541,30 |
 
-Un deposito manuale di 1.000 € registrato il 12/11 entra nel rendimento, non in V: eToro lo include
+L'11/11 il saldo non cambia ma il controvalore sì: è l'effetto del cambio, mostrato come tale.
+Un deposito manuale di 1.000 $ registrato il 12/11 entra nel rendimento, non in V: eToro lo include
 già nei 12.410.
 
-**Esempio 2 · Provider + asset manuale in un altro prodotto (Binance spot + Simple Earn).**
+**Esempio 2 · Provider + asset manuale in un altro prodotto (Binance in EUR, spot + Simple Earn).**
 L'adapter legge `spot` e `funding` (PERS-69: Earn non è in `fetchBalance`). Mattia aggiunge a mano
 0,5 ETH con `product = earn`.
 
@@ -463,9 +512,9 @@ Dal 20/12 l'adapter legge anche `earn` e riporta 0,5 ETH Earn = 1.310 €. Total
 Con "Ne copre una parte" (0,3 ETH coperti) resta in M lo 0,2 ETH manuale.
 
 **Esempio 3 · Provider + rettifica (bonifico in transito).**
-Il 05/11 Mattia invia 500 € a eToro; eToro li accredita il 07/11.
+Il 05/11 Mattia invia 500 € a Kraken (conto in EUR); Kraken li accredita il 07/11.
 
-| Giorno | Lettura eToro | Rettifica | V |
+| Giorno | Lettura Kraken | Rettifica | V |
 |---|---|---|---|
 | 05/11 | 10.000 | +500 (05/11 → 06/11, "bonifico in transito") | **10.500** |
 | 06/11 | 10.020 | +500 | **10.520** |
@@ -474,7 +523,7 @@ Il 05/11 Mattia invia 500 € a eToro; eToro li accredita il 07/11.
 Senza `valid_until` la rettifica il 07/11 avrebbe contato 500 € due volte: per questo la UI propone
 sempre una data di fine e segnala quelle aperte.
 
-**Esempio 4 · Rettifica permanente (valuta).**
+**Esempio 4 · Rettifica permanente (cambio sbagliato del provider, conto in EUR).**
 Il provider sopravvaluta di 37 € una posizione per un cambio sbagliato: rettifica −37 € dal 03/10
 senza fine. V = P − 37 finché la rettifica esiste. Dopo 30 giorni la pagina chiede di chiuderla.
 
@@ -488,17 +537,43 @@ alla conferma.
 
 - Il valore entra in patrimonio netto, Overview, snapshot, MCP e API tramite `accountsView` e
   `balancesOn` (V1). Nessuna somma calcolata a parte.
+- **Valuta (D1, fase 1b).** `balancesOn` resta nella valuta di ogni conto. `accountsView` (serie del
+  patrimonio netto, bucket, totale corrente e precedente) converte ogni conto nella valuta di
+  visualizzazione con la regola di 1.8 prima di `totalSeries` e della somma dei bucket. Oggi la somma
+  ignora la valuta (`queries.ts:300-311`): i conti Wallet possono già avere una valuta diversa da EUR
+  (`settingsForSynced`), quindi la fase 1b chiude anche un limite esistente di Accounts F1.
+- Snapshot mensile: `snapshot_runs.total_cents` è salvato nella valuta di visualizzazione del
+  momento, con la nuova colonna `total_currency`. Uno snapshot passato non viene riconvertito se la
+  valuta cambia: la UI mostra il suo valore con la sua valuta.
 - Il tile "Investments" della home resta il bucket `investments` di `bucketOf` (investment, pension,
   crypto): ora comprende anche i conti collegati, perché sono `accounts` di quei tipi.
 - I flag `in_net_worth`, `in_snapshot`, `counts_as_liquid` dei conti restano validi. Default per i
   conti di investimento: `in_net_worth = true`, `in_snapshot = true`, `counts_as_liquid = false`.
 - Lo snapshot mensile legge `balancesOn(..., observed: true)`: `portfolio` è una fonte osservata, non
   è nell'elenco `NOT_OBSERVED` (`queries.ts:42`).
-- MCP e API (V13): `balance` mantiene il significato "valore del conto", `source` può valere anche
-  `portfolio`. È un valore nuovo di un campo esistente: va scritto nel changelog dell'API.
-- **Doppio conteggio di oggi** (PERS-70 §3, limite 2): le 2 piattaforme diventano conti (fase 2)
-  con la **mappatura esplicita** verso il conto `investment` manuale che le rappresenta [D4], con il
-  passaggio di autorità di 1.3 (A4).
+- MCP e API (V13): `balance` mantiene il significato "valore del conto" nella valuta del conto
+  (campo `currency`, già presente), `source` può valere anche `portfolio`. I totali di
+  `/api/v1/summary` e `get_summary` sono nella valuta di visualizzazione, con il nuovo campo
+  `currency`. Sono valori e campi nuovi additivi: vanno scritti nel changelog dell'API.
+- **Conti esistenti e piattaforme legacy [D4].** Ogni conto esistente di tipo `investment` o `crypto`
+  diventa un servizio della sezione (conto manuale, modo `total`, periodo da `managed_since`). Ogni
+  piattaforma legacy si unisce al conto che la rappresenta, con il passaggio di autorità di 1.3
+  (A4): i suoi movimenti e le sue valutazioni diventano eventi di quel conto e il valore conta una
+  sola volta. Una piattaforma senza conto corrispondente diventa un conto nuovo. La fase 0 produce
+  l'elenco proposto `conto ↔ piattaforma`; Mattia conferma solo gli abbinamenti ambigui. Note sui
+  dati del 27/10/2026 (lettura di sola lettura del DB):
+  - l'unico conto `investment` (Fideuram) è già `valuation_account_id` di un fondo. Per il vincolo di
+    1.3 non può diventare un servizio: avrebbe due scrittori (`funds` e `portfolio`). Proposta: resta
+    nel modulo `funds` e compare nella sezione "Fondi" della home Investments. Spostarlo in
+    Investments richiede prima di sciogliere il fondo: decisione da confermare in fase 0;
+  - nessun conto `crypto` esiste, e nessun conto rappresenta le 2 piattaforme legacy (Binance,
+    eToro). Diventano 2 conti nuovi (`crypto` e `investment`) e nessuna unione serve. Oggi il loro
+    valore è fuori dal patrimonio netto (PERS-70: le valutazioni legacy alimentano solo l'export):
+    dopo la fase 2 il patrimonio netto sale del loro valore, con un marker "migrazione" nel grafico;
+  - i conti `pension` (Cometa) non sono conti di investimento ai fini di questa regola: restano in
+    `funds`.
+  Quando Mattia collegherà Binance o eToro, sceglierà "Usa il conto esistente" su questi conti: è la
+  conversione manuale → sincronizzato (2.5).
 - Fondi pensione e PAC restano in `funds`: non compaiono nel catalogo Investments. La home
   Investments li mostra in sola lettura come "Fondi" con link alla loro pagina.
 
@@ -506,6 +581,10 @@ alla conferma.
 
 Per conto e per portafoglio [D8] (A10):
 
+- **Valuta.** Il rendimento di un conto è nella valuta del conto. Quello del portafoglio è nella
+  valuta di visualizzazione: ogni flusso è convertito al cambio del giorno del flusso, il valore
+  finale al cambio del giorno finale (1.8). Il rendimento del portafoglio comprende quindi l'effetto
+  cambio, e la UI lo dice.
 - **Periodo.** Inizia dal primo periodo con dati: il valore di apertura (`opening_cash` +
   `opening_position`, o la prima lettura del provider) è il primo flusso in entrata.
 - **Flussi esterni.** `deposit` e `withdrawal` senza `transfer_group_id`. Un trasferimento tra due
@@ -518,7 +597,8 @@ Per conto e per portafoglio [D8] (A10):
 - **Guadagno** = V − valore di apertura − depositi + prelievi.
 - **Rendimento semplice** = guadagno / (valore di apertura + depositi).
 - **XIRR** money-weighted sugli stessi flussi e sul valore finale.
-- **Completezza.** Guadagno, rendimento semplice e XIRR si mostrano solo se `investment_sync_coverage`
+- **Completezza.** Guadagno, rendimento semplice e XIRR si mostrano solo con lo storico completo:
+  se `investment_sync_coverage`
   dice `complete` per i flussi del periodo, o se il conto è manuale. Altrimenti la UI mostra solo il
   valore e "dati attendibili dal <data>" (prima data da cui la copertura è completa). eToro non
   espone depositi e prelievi: il rendimento è attendibile solo dopo il collegamento ai movimenti
@@ -567,7 +647,8 @@ client (stesso schema `client.ts` / `sync.ts` / `mapping.ts`, E3):
 interface InvestmentSource {
   verifyReadOnly(credentials): Promise<KeyCheck>;   // read-only | write | unknown-flag | unverifiable
   fetchHoldings(credentials, now): Promise<HoldingsSnapshot>;
-  // conti esterni, perimetro letto (prodotti, complete), cassa, posizioni con prezzo e fonte, totale EUR
+  // conti esterni, perimetro letto (prodotti, complete), cassa, posizioni con prezzo e fonte,
+  // totale nella valuta del conto
   fetchFlows(credentials, cursor): Promise<{
     events: ProviderEvent[];      // eventi con gambe, id esterno stabile
     cursor: FlowCursor;           // per stream: { stream, until, lastIds }
@@ -614,7 +695,7 @@ Dati letti:
 | Dato | Metodo ccxt | Note |
 |---|---|---|
 | Saldi | `fetchBalance()` per ogni prodotto in `products` | Binance: `spot` e `{ type: "funding" }`. Earn non incluso: fuori perimetro finché l'adapter non lo legge (R4) |
-| Prezzi | `fetchTickers()` delle coppie `X/EUR`, poi `X/USDT` + `USDT/EUR` | regola 1.8, prezzo e timestamp salvati per posizione |
+| Prezzi | `fetchTickers()` delle coppie `X/K` (`K` = valuta del conto), poi `X/USDT` + `USDT/K` | regola 1.8, prezzo e timestamp salvati per posizione |
 | Flussi | `fetchLedger` (Kraken, Coinbase, Bitvavo, Crypto.com) | cursore per stream (sotto) |
 | Flussi Binance | `fetchDeposits` / `fetchWithdrawals` a finestre di 90 giorni, `fetchMyTrades` per simbolo | scoperta dei simboli: sotto |
 
@@ -626,8 +707,8 @@ Dati letti:
 - Scoperta delle coppie per `fetchMyTrades` (Binance): asset con saldo, asset presenti in depositi,
   prelievi e `income` della finestra, più le coppie con quote EUR, USDT, USDC, BTC di quegli asset.
   Un mercato comprato e venduto per intero senza depositi né prelievi non è scopribile: lo stream
-  `trades` di Binance resta `partial` con motivo `pair_not_discovered`, finché un import CSV non copre
-  il periodo [D16].
+  `trades` di Binance resta `partial` con motivo `pair_not_discovered`. È una lacuna dichiarata:
+  nessun import di file la colma [D16].
 - Lo storico oltre il limite dell'API (24 mesi [D11]) è una lacuna dichiarata (`api_limit_24m`), non
   un periodo vuoto.
 
@@ -642,11 +723,11 @@ Mappatura sugli eventi:
 
 | Evento ccxt | Evento e gambe |
 |---|---|
-| deposito fiat | `deposit` EUR (gamba `main`) |
+| deposito fiat | `deposit` nella valuta del deposito (gamba `main`), convertito nella valuta del conto se diversa |
 | deposito crypto da wallet esterno | `deposit` (gamba `main`, valorizzato al cambio del giorno); proposta di `transfer_group_id` se un altro conto di Mattia ha un prelievo uguale (2.4) |
 | prelievo fiat o crypto | `withdrawal` (gamba `main`) |
 | trade `BTC/EUR` buy | `buy` BTC (`base`) + uscita EUR (`quote`) |
-| trade `ETH/BTC` buy | `buy` ETH (`base`) + `sell` BTC (`quote`), controvalore EUR al prezzo del trade |
+| trade `ETH/BTC` buy | `buy` ETH (`base`) + `sell` BTC (`quote`), controvalore nella valuta del conto al prezzo del trade |
 | commissione del trade | gamba `fee` con asset e quantità della commissione (es. BNB) |
 | ledger `reward`, `staking`, `interest` | `income` con quantità dell'asset |
 | ledger `transfer` interno (spot ↔ earn) | ignorato solo se entrambi i prodotti sono nel perimetro dell'adapter; altrimenti `withdrawal`/`deposit` interni con `transfer_group_id` verso la posizione manuale del prodotto |
@@ -671,7 +752,7 @@ password (rifiutato), e come si revoca l'accesso (PERS-73).
 
 | Dato | Endpoint |
 |---|---|
-| Totale in EUR | `GET /api/v1/balances?displayCurrency=EUR` |
+| Totale nella valuta del conto (USD di default) | `GET /api/v1/balances?displayCurrency=<valuta del conto>` |
 | Posizioni | `GET /api/v1/trading/info/portfolio` |
 | Trade chiusi | `GET /api/v1/trading/info/trade/history?minDate=…` (finestre < 1 anno) |
 | Storico (solo al primo collegamento) | `GET /api/v1/balances/{accountType}/{accountId}/history` (12 mesi) |
@@ -684,18 +765,13 @@ password (rifiutato), e come si revoca l'accesso (PERS-73).
 - Dividendi: nessun endpoint, già inclusi nel valore. Non si creano `income`.
 - L'API è beta e cambia spesso: il client valida le risposte con zod e fallisce in modo esplicito,
   senza scrivere letture parziali. Il messaggio salvato è quello fisso di 5.1, mai il dettaglio zod.
+- Storico iniziale: 12 mesi, il limite dell'API [D11]. Prima di quella data la copertura è una
+  lacuna dichiarata (`api_limit_12m`) e il rendimento è "attendibile dal …".
 - Termini eToro: Ledgerly salva una lettura al giorno per lo storico del valore [D10]. Il marchio
   eToro accompagna i dati nella pagina del servizio.
 
 Prossimo broker dopo eToro: IBKR Flex Web Service (token read-only, IP restrict), fuori da questo
 piano.
-
-### 3.4 Import CSV (A7, [D16])
-
-Import degli export ufficiali (Binance "Transaction History", Kraken "Ledgers") per colmare le
-lacune di copertura. Ogni riga diventa un evento `origin = import` con id esterno dell'export, quindi
-la deduplica con l'API funziona. Dopo l'import lo stream del periodo passa a `complete` con motivo
-`csv_imported`. Serve anche se l'API cambia o la chiave viene revocata.
 
 ## 4. UI
 
@@ -705,12 +781,13 @@ target ≥ 24 px, voci in `navigation.ts` e `icons.ts`, presenza in `tests/e2e/a
 
 ### 4.1 Home Investments (`/investments`)
 
-- KPI: valore totale, versato netto, guadagno, XIRR. Guadagno e XIRR solo dove la copertura è
-  completa; altrimenti "dati attendibili dal <data>" (2.4).
+- KPI: valore totale, versato netto, guadagno, XIRR, nella valuta di visualizzazione (1.8). Guadagno
+  e XIRR solo dove la copertura è completa; altrimenti "dati attendibili dal <data>" (2.4).
 - Grafico valore vs versato (36 mesi, come oggi), da `balance_entries` dei conti di investimento.
   Le conversioni e i collegamenti sono marker, non guadagni.
 - Tabella dei servizi: nome, categoria, origine (manuale / sincronizzato), stato sync, ultimo
-  aggiornamento, valore, variazione 30 giorni, peso. Avvisi: conflitto R4 aperto, `pending_zero`,
+  aggiornamento, valore nella valuta del conto e controvalore nella valuta di visualizzazione,
+  variazione 30 giorni, peso (sul controvalore). Avvisi: conflitto R4 aperto, `pending_zero`,
   prezzi mancanti, chiave da verificare. Ogni riga apre la pagina del servizio.
 - Allocazione per classe di asset (stock, etf, crypto, …) e per servizio.
 - Sezione "Fondi" in sola lettura con link a `funds`.
@@ -722,10 +799,12 @@ target ≥ 24 px, voci in `navigation.ts` e `icons.ts`, presenza in `tests/e2e/a
 - Card per provider: nome, stato (collegato / disponibile / in arrivo), link "Apri sito" (URL del
   catalogo), azione:
   - `apikey` → dialog "Collega": guida passo passo per creare una chiave **read-only** sul servizio
-    (permessi esatti da lasciare spenti per provider, 5.2), IP pubblico di uscita dell'homelab da
-    inserire nella whitelist, campi write-only, **conto di destinazione** ("Crea un conto nuovo" o
-    "Usa il conto esistente X", 1.3), verifica permessi, primo sync;
-  - `manual` → dialog "Crea conto manuale" (nome, categoria, modo `assets`/`total`, URL);
+    (permessi esatti da lasciare spenti per provider, 5.2), suggerimento facoltativo dell'IP whitelist
+    con l'IP pubblico di uscita dell'homelab dove il servizio la supporta [D7], campi write-only,
+    **conto di destinazione** ("Crea un conto nuovo", con la valuta del conto, oppure "Usa il conto
+    esistente X", 1.3), verifica permessi, primo sync;
+  - `manual` → dialog "Crea conto manuale" (nome, categoria, valuta del conto, modo
+    `assets`/`total`, URL);
   - già collegato → "Apri" (pagina del servizio).
 - Le card delle integrazioni di investimento non compaiono più in Settings → Integrazioni come card
   dedicate: Settings mostra la connessione nell'elenco con link al catalogo (E7). Schedule, test e
@@ -734,7 +813,8 @@ target ≥ 24 px, voci in `navigation.ts` e `icons.ts`, presenza in `tests/e2e/a
 
 ### 4.3 Pagina del servizio (`/investments/[accountId]`)
 
-- Header: nome, provider, stato sync e ultima lettura (con perimetro letto), valore attuale, link
+- Header: nome, provider, stato sync e ultima lettura (con perimetro letto), valore attuale nella
+  valuta del conto con il controvalore nella valuta di visualizzazione se diversa, link
   "Apri servizio", "Sincronizza ora" (cooldown 60 s).
 - KPI: valore, versato netto, prelievi, guadagno, rendimento semplice e XIRR, con la regola di
   completezza di 2.4.
@@ -746,7 +826,7 @@ target ≥ 24 px, voci in `navigation.ts` e `icons.ts`, presenza in `tests/e2e/a
 - **Operazioni**: tabella filtrabile per tipo e periodo, raggruppata per evento con le sue gambe;
   collegamento ai movimenti bancari e ai trasferimenti tra conti; cronologia delle revisioni.
 - **Letture, copertura e rettifiche** (solo sincronizzati): ultime letture con stato, copertura per
-  stream con lacune, "Importa CSV", rettifiche aperte con scadenza, "Aggiungi rettifica" (delta, dal,
+  stream con lacune dichiarate, rettifiche aperte con scadenza, "Aggiungi rettifica" (delta, dal,
   al, motivo).
 - **Impostazioni**: modo con conversione esplicita (2.5), flag del conto, stato della chiave
   (ultima verifica, `ip_restricted`, conferme), sostituzione chiave (5.3), disconnessione.
@@ -762,7 +842,8 @@ Dialog "Aggiungi asset" (solo in modo `assets`, 2.1):
 2. Prodotto (default `custody` per i conti manuali; sui conti sincronizzati la lista mostra quali
    prodotti il provider copre già, per evitare conflitti R4).
 3. Acquisto: data, quantità e prezzo unitario **oppure** importo totale (per BTP e fondi),
-   commissioni, valuta (cambio BCE proposto, modificabile, salvato con la fonte).
+   commissioni, valuta (cambio BCE verso la valuta del conto proposto, modificabile, salvato con la
+   fonte).
 4. Salvataggio: evento `buy` con le sue gambe + punti `portfolio` ricalcolati.
 
 Valutazione intermedia (opzionale): data + prezzo unitario o controvalore. Chiusura: data + prezzo o
@@ -773,7 +854,11 @@ ricavato + commissioni.
 **Rischio residuo (PERS-73).** Le credenziali sono sigillate a riposo (dump e backup). Il processo
 `ledgerly` che parla con ccxt ed eToro ha in memoria `APP_ENCRYPTION_KEY`, `DATABASE_URL` e i segreti
 OIDC: un'esecuzione di codice nell'app legge tutte le chiavi. Per questo i controlli che contano sono
-5.2 (una chiave rubata può solo leggere) e 5.4 (supply chain) [D15].
+5.2 (una chiave rubata può solo leggere) e 5.4 (supply chain). Mattia ha accettato questo rischio
+residuo e scartato il worker separato [D15]. Effetto combinato con [D7]: per i provider
+`unverifiable` senza IP whitelist, se una chiave è creata per errore con permessi di scrittura, chi la
+ruba può usarla da qualsiasi IP. La conferma "solo lettura" è l'unico vincolo: rischio accettato da
+Mattia il 27/10/2026.
 
 ### 5.1 Regole
 
@@ -818,15 +903,22 @@ se l'unico permesso attivo è la lettura. Un flag sconosciuto o nuovo è un rifi
 - I due endpoint di Binance e Coinbase e i nomi dei flag vanno verificati nello spike (fase 0) con
   una chiamata reale e una chiave read-only, prima di scrivere il codice. Se non esistono più, il
   provider passa a `unverifiable`.
-- **`unverifiable` [D7], accettate con condizioni (SEC-02):**
-  1. IP whitelist obbligatoria sull'IP pubblico di uscita dell'homelab dove il servizio la supporta
-     (`ipWhitelist = required`). Il dialog mostra l'IP da inserire;
-  2. il dialog mostra i permessi esatti da lasciare accesi e spenti (Kraken: Query Funds e Query
+- **`unverifiable` [D7], accettate con la conferma "solo lettura", senza IP whitelist obbligatoria:**
+  1. il dialog mostra i permessi esatti da lasciare accesi e spenti (Kraken: Query Funds e Query
      Ledger Entries accesi; Deposit, Withdraw, Trade spenti; eToro: Read, niente Trade);
-  3. due conferme separate: "solo lettura" e "IP limitato", salvate con data e versione del testo in
-     `investment_key_checks`;
+  2. conferma obbligatoria "solo lettura", salvata con data e versione del testo in
+     `investment_key_checks` (`attested_read_only_at`). Senza conferma il collegamento non parte;
+  3. dove il servizio la supporta (`ipWhitelist = supported`), il dialog **suggerisce** l'IP whitelist
+     sull'IP pubblico di uscita dell'homelab come opzione consigliata. Se l'utente la imposta, può
+     confermarlo (`attested_ip_at`); se non la imposta, il collegamento procede;
   4. Ledgerly non prova mai una chiamata di scrittura per testare i permessi, nemmeno "validate-only"
      (es. `AddOrder validate=true` di Kraken).
+
+  **Rischio accettato da Mattia (27/10/2026, supera la raccomandazione SEC-02 di PERS-73).** Senza
+  whitelist obbligatoria, una chiave `unverifiable` creata per errore con permessi di scrittura e poi
+  rubata è usabile da qualsiasi IP. Restano le altre misure di questa sezione: allowlist con verifica
+  a ogni pass dove l'API lo permette (Binance, Coinbase), permessi esatti nel dialog, conferma salvata,
+  nessuna chiamata di scrittura di prova, revoca guidata (5.3).
 
 ### 5.3 Rotazione e revoca
 
@@ -846,8 +938,9 @@ se l'unico permesso attivo è la lettura. Un flag sconosciuto o nuovo è un rifi
 - Aggiornamento solo dopo almeno 7 giorni dalla release e dopo la lettura del changelog. Niente
   aggiornamenti automatici senza review.
 - Import della sola classe dell'exchange dove il packaging lo permette (3.2).
-- Opzione documentata, non in questo piano [D15]: worker di sync separato, senza segreti OIDC e auth,
-  che riceve solo le credenziali della connessione.
+- ccxt gira nel processo di Ledgerly [D15]. Il worker di sync separato (senza segreti OIDC e auth,
+  con le sole credenziali della connessione) è scartato da Mattia; il rischio residuo descritto
+  all'inizio della sezione 5 è accettato.
 
 ### 5.5 Esposizione via MCP e API (SEC-08)
 
@@ -858,7 +951,7 @@ se l'unico permesso attivo è la lettura. Un flag sconosciuto o nuovo è un rifi
 
 ## 6. Aggiornamento automatico dei prezzi (nice to have)
 
-**Proposta: rinviare a una fase 6 separata, e farla solo per ciò che si può fare bene.** Le fasi 1–5
+**Decisione [D9]: fase 6 separata, fatta solo per ciò che si può fare bene.** Le fasi 1–5
 funzionano senza prezzi automatici. Motivi:
 
 - Per i conti sincronizzati i prezzi arrivano già dal provider (eToro, ticker degli exchange).
@@ -869,8 +962,8 @@ Quando si fa (fase 6):
 
 | Classe | Fonte | Note |
 |---|---|---|
-| Cambi | Frankfurter (BCE) | già in fase 1 per la conversione |
-| Crypto | CoinGecko Demo | prezzo EUR giornaliero, attribuzione obbligatoria nella UI |
+| Cambi | Frankfurter (BCE) | già in fase 1 (`fx_rates`) e usato dalla fase 1b |
+| Crypto | CoinGecko Demo | prezzo giornaliero in EUR, portato nella valuta del conto con 1.8; attribuzione obbligatoria nella UI |
 | Azioni ed ETF | EODHD | Free (20 chiamate/giorno) se bastano; €19,99/mese solo dopo un test con gli ISIN reali |
 | Fondi, BTP | manuale | nessuna fonte gratuita con licenza chiara |
 
@@ -902,69 +995,47 @@ typecheck && npm run format:check && npm test`, `npm run test:integration`, `npm
 
 | Fase | Perimetro | Migrazioni | Test | Rollback |
 |---|---|---|---|---|
-| **0 · Spike** | Script usa e getta fuori dal repo, chiavi read-only reali di eToro, Binance, Kraken. Verifica: endpoint e flag dei permessi (5.2), perimetro e prodotti, risposta a conto vuoto, paginazione, prezzi mancanti, identità dei conti esterni, import per singolo exchange di ccxt. Output: fixture anonimizzate e note nel doc della fase 3/4. Mappatura conti esistenti ↔ piattaforme [D4] | nessuna | — | niente da ripristinare (nessun deploy) |
-| **1 · Fondamenta** | Registro dei pass al posto dell'`if/else` (stesso comportamento); fonte `portfolio` in `BALANCE_SOURCES` e `SOURCE_RANK`; filtro di `rebuildDerivedBalances`; tabella `fx_rates` + job Frankfurter giornaliero; `serverExternalPackages` pronto | `0035_portfolio_source_fx`: CHECK di `balance_entries.source`, tabella `fx_rates` | unit: registro, `SOURCE_RANK` con `portfolio`; itest: `jobs.itest.ts` invariato per Wallet/Trek/Paperless, `rebuildDerivedBalances` esclude i conti non Wallet; job FX con risposta finta | SQL inverso: drop `fx_rates`, CHECK originale (nessuna riga `portfolio` esiste ancora) |
-| **2 · Motore, conti manuali e UI** (un solo deploy, A9) | Tabelle 1.3–1.6; motore puro completo (sezione 2, comprese R4 con perimetro, R5, conversioni 2.5, stato a data, revisioni); passaggio di autorità (1.3); Server Action; home, catalogo (solo provider manuali), pagina del servizio, dialog asset/valutazione/chiusura/rettifica/conversione/riconcilia; migrazione dati delle 2 piattaforme con la mappatura esplicita dello spike; rimozione della UI vecchia; tabelle legacy in sola lettura | `0036_investments_v2`: tabelle nuove; trasformazione SQL delle piattaforme in `accounts` + `investment_accounts` (periodo `total`); `investment_movements` → eventi `deposit`/`withdrawal`, `investment_valuations` → `account_valuation`; archivio `investment_superseded_entries`; trigger di sola lettura sulle tabelle legacy | unit: tutte le formule ed esempi numerici della sezione 2 come casi, compresi 2b e 5; ricalcolo da `d` lascia invariati i giorni < `d`; ordinamento intragiornaliero; conversioni con invariante V prima = V dopo. itest: migrazione dati su copia seed, idempotenza dei punti `portfolio`, patrimonio netto senza doppi conteggi, uguaglianza servizio/Accounts/patrimonio al giorno di passaggio. e2e: flusso conto manuale completo; a11y e keyboard sulle schermate nuove | Retag dell'immagine + script inverso: le scritture nuove rappresentabili nel modello vecchio (eventi `deposit`/`withdrawal`, `account_valuation`) vengono copiate nelle tabelle legacy; drop del trigger; le tabelle nuove **restano** (additive) e conservano le scritture non rappresentabili (asset); le entry archiviate tornano in `balance_entries` e i punti `portfolio` vengono cancellati |
-| **3 · eToro** | Adapter `etoro`, catalogo attivo, `connectInvestmentProvider`, dialog di collegamento con conto di destinazione, conferme `unverifiable` e IP whitelist, storico 12 mesi, letture con perimetro e stato, esiti separati `holdings`/`flows`, copertura, mappatura errori a allowlist, cooldown e backoff, revoca guidata | `0037_investment_sync`: `holdings`, `flows` in `SYNC_KINDS`, nuovi `ENTITY_TYPES`, `investment_key_checks`, `investment_sync_coverage` | unit: mapping eToro con le fixture dello spike; errori → messaggi fissi. itest: pass con client finto, lock, `revoked` su 401, `refused` su 429, conto vuoto `confirmed_zero`/`pending_zero`, flows falliti con holdings aggiornato; canary su tutti i rami d'errore; test di architettura su `saveConnection` | disabilitare la voce di catalogo, revocare la chiave su eToro, retag; tabelle 0037 lasciate (additive), SQL inverso dei kind solo se nessuna connessione li usa |
-| **4 · ccxt** | Adapter `ccxt:binance`, `ccxt:kraken`; schema strict e opzioni esplicite; verifica allowlist a ogni pass per Binance; prezzi EUR con stablecoin reali; eventi con gambe e fee in asset; cursori con sovrapposizione; scoperta delle coppie; quantità `reported`/`inferred`; import CSV [D16] | nessuna (tabelle già presenti) | unit: mapping per exchange con fixture dello spike, percorso di conversione 1.8 (USDT ≠ USD), conservazione delle quantità, idempotenza del trade completo, `httpsProxy` nelle credenziali → `invalid_credentials`, flag sconosciuto → rifiuto. itest: pass con exchange finto, finestre 90 gg Binance, eventi nello stesso millisecondo, commit atomico dati + cursore, verifica `write` durante un pass → `refused` senza lettura. build: dimensione immagine e `mem_limit`; `npm audit signatures` | rimuovere le voci di catalogo; le connessioni restano ma non hanno pass; retag |
-| **5 · Esposizione e rendimento** | Rendimento con completezza e XIRR (2.4), trasferimenti interni, tool MCP `list_investments` e `get_investment_holdings`, endpoint `/api/v1/investments`, scope `investments:read`, export aggiornato, drop delle tabelle legacy | `0038_drop_legacy_investments` (dopo dump, almeno 30 giorni dopo la fase 2) | itest MCP/API: scope `investments:read` obbligatorio, nessun segreto né id esterno nelle risposte; unit XIRR (nessuna soluzione, più soluzioni) | restore delle tabelle legacy dal dump `pre-5` |
-| **6 · Prezzi automatici (opzionale)** | Sezione 6, dopo il test di copertura | `0039_asset_prices` | unit: priorità manuale > market, stale; itest con fonte finta | disattivare `price_source = market`, drop tabella |
+| **0 · Spike** | Script usa e getta fuori dal repo, chiavi read-only reali di eToro, Binance, Kraken. Verifica: endpoint e flag dei permessi (5.2), perimetro e prodotti, risposta a conto vuoto, paginazione, prezzi mancanti, identità dei conti esterni, import per singolo exchange di ccxt, valori ammessi da `displayCurrency` di eToro (1.8). Output: fixture anonimizzate e note nel doc della fase 3/4. Elenco proposto `conto ↔ servizio/piattaforma` [D4] (2.3), con conferma di Mattia solo sugli abbinamenti ambigui (es. Fideuram, conto di un fondo) | nessuna | — | niente da ripristinare (nessun deploy) |
+| **1 · Fondamenta** | Registro dei pass al posto dell'`if/else` (stesso comportamento); fonte `portfolio` in `BALANCE_SOURCES` e `SOURCE_RANK`; filtro di `rebuildDerivedBalances`; tabella `fx_rates` + job Frankfurter giornaliero per tutte le valute BCE + backfill dal primo `balance_entries.on`; `serverExternalPackages` pronto | `0035_portfolio_source_fx`: CHECK di `balance_entries.source`, tabella `fx_rates` | unit: registro, `SOURCE_RANK` con `portfolio`; itest: `jobs.itest.ts` invariato per Wallet/Trek/Paperless, `rebuildDerivedBalances` esclude i conti non Wallet; job FX e backfill con risposta finta, righe immutabili (un secondo fetch non cambia un cambio salvato) | SQL inverso: drop `fx_rates`, CHECK originale (nessuna riga `portfolio` esiste ancora) |
+| **1b · Valuta di visualizzazione** [D1] (Accounts F1) | `display_currency` nelle preferenze (Settings → Profilo, default EUR, solo EUR o valute BCE); funzione pura `convertCents(cents, from, to, on, rates)` e lettura `ratesOn` da `fx_rates` (1.8); conversione per conto prima della somma in `accountsView` (serie del patrimonio netto, bucket, totale corrente e precedente), report mensile, snapshot, `/api/v1/summary`, MCP `get_summary` e home; cambio mancante → totale `partial`, mai 1:1; formattazione con la valuta al posto del simbolo `€` fisso (`src/platform/format.ts:33`, `:66`); pagina Accounts e dettaglio conto con valore nativo e controvalore; valuta di un conto con entry non più modificabile; changelog API. Nessun dato di saldo convertito o riscritto | `0036_display_currency`: `user_preferences.display_currency text not null default 'EUR'` con CHECK `^[A-Z]{3}$`; `snapshot_runs.total_currency text not null default 'EUR'` con lo stesso CHECK. Solo colonne con default, nessuna riscrittura di righe | unit: `convertCents` (identità senza cambio, cross via EUR, ultimo fixing ≤ d nel weekend, cambio mancante → `partial`, arrotondamento per conto prima della somma); formattazione per EUR, USD, GBP, CHF in `en` e `it`. itest: **non regressione**: con tutti i conti in EUR e valuta EUR, `accountsView`, bucket, snapshot, report e summary danno gli stessi valori di prima sul seed (golden); conti misti EUR + USD con valuta EUR e USD, serie mensile al cambio di fine mese; snapshot salva `total_currency`; summary API/MCP con `currency`; cambio di valuta di un conto con entry → rifiuto. e2e: cambio della valuta in Settings, home e Accounts nella nuova valuta; a11y e keyboard sul campo nuovo | retag dell'immagine; SQL inverso: drop delle due colonne (contengono solo la preferenza e la valuta dello snapshot, nessun saldo). `fx_rates` resta (fase 1). Se si torna indietro con conti non EUR, i totali tornano alla somma senza conversione di oggi |
+| **2 · Motore, conti manuali e UI** (un solo deploy, A9) | Tabelle 1.3–1.6; motore puro completo (sezione 2, comprese R4 con perimetro, R5, conversioni 2.5, stato a data, revisioni); passaggio di autorità (1.3); Server Action; home, catalogo (solo provider manuali), pagina del servizio, dialog asset/valutazione/chiusura/rettifica/conversione/riconcilia; migrazione dei conti `investment`/`crypto` esistenti e delle 2 piattaforme con l'elenco confermato in fase 0 [D4]; rimozione della UI vecchia; tabelle legacy in sola lettura | `0037_investments_v2`: tabelle nuove; `investment_accounts` (periodo `total`) per i conti esistenti; ogni piattaforma unita al conto abbinato o trasformata in un `accounts` nuovo; `investment_movements` → eventi `deposit`/`withdrawal`, `investment_valuations` → `account_valuation`; archivio `investment_superseded_entries`; trigger di sola lettura sulle tabelle legacy | unit: tutte le formule ed esempi numerici della sezione 2 come casi, compresi 2b e 5; ricalcolo da `d` lascia invariati i giorni < `d`; ordinamento intragiornaliero; conversioni con invariante V prima = V dopo. itest: migrazione dati su copia seed, idempotenza dei punti `portfolio`, patrimonio netto senza doppi conteggi, uguaglianza servizio/Accounts/patrimonio al giorno di passaggio. e2e: flusso conto manuale completo; a11y e keyboard sulle schermate nuove | Retag dell'immagine + script inverso: le scritture nuove rappresentabili nel modello vecchio (eventi `deposit`/`withdrawal`, `account_valuation`) vengono copiate nelle tabelle legacy; drop del trigger; le tabelle nuove **restano** (additive) e conservano le scritture non rappresentabili (asset); le entry archiviate tornano in `balance_entries` e i punti `portfolio` vengono cancellati |
+| **3 · eToro** | Adapter `etoro`, catalogo attivo, `connectInvestmentProvider`, dialog di collegamento con conto di destinazione e valuta del conto (USD di default), conferma "solo lettura" per `unverifiable` e IP whitelist suggerita, non obbligatoria [D7], una lettura al giorno salvata [D10], storico 12 mesi [D11], letture con perimetro e stato, esiti separati `holdings`/`flows`, copertura, mappatura errori a allowlist, cooldown e backoff, revoca guidata | `0038_investment_sync`: `holdings`, `flows` in `SYNC_KINDS`, nuovi `ENTITY_TYPES`, `investment_key_checks`, `investment_sync_coverage` | unit: mapping eToro con le fixture dello spike; errori → messaggi fissi. itest: pass con client finto, lock, `revoked` su 401, `refused` su 429, conto vuoto `confirmed_zero`/`pending_zero`, flows falliti con holdings aggiornato; canary su tutti i rami d'errore; test di architettura su `saveConnection` | disabilitare la voce di catalogo, revocare la chiave su eToro, retag; tabelle 0038 lasciate (additive), SQL inverso dei kind solo se nessuna connessione li usa |
+| **4 · ccxt** | Adapter `ccxt:binance`, `ccxt:kraken`; schema strict e opzioni esplicite; verifica allowlist a ogni pass per Binance; prezzi nella valuta del conto con stablecoin reali; eventi con gambe e fee in asset; cursori con sovrapposizione; scoperta delle coppie; storico 24 mesi con lacune dichiarate [D11]; quantità `reported`/`inferred` | nessuna (tabelle già presenti) | unit: mapping per exchange con fixture dello spike, percorso di conversione 1.8 (USDT ≠ USD), conservazione delle quantità, idempotenza del trade completo, `httpsProxy` nelle credenziali → `invalid_credentials`, flag sconosciuto → rifiuto. itest: pass con exchange finto, finestre 90 gg Binance, eventi nello stesso millisecondo, commit atomico dati + cursore, verifica `write` durante un pass → `refused` senza lettura. build: dimensione immagine e `mem_limit`; `npm audit signatures` | rimuovere le voci di catalogo; le connessioni restano ma non hanno pass; retag |
+| **5 · Esposizione e rendimento** | Rendimento con completezza e XIRR (2.4), trasferimenti interni, tool MCP `list_investments` e `get_investment_holdings`, endpoint `/api/v1/investments`, scope `investments:read`, export aggiornato, drop delle tabelle legacy | `0039_drop_legacy_investments` (dopo dump, almeno 30 giorni dopo la fase 2) | itest MCP/API: scope `investments:read` obbligatorio, nessun segreto né id esterno nelle risposte; unit XIRR (nessuna soluzione, più soluzioni) | restore delle tabelle legacy dal dump `pre-5` |
+| **6 · Prezzi automatici** [D9] | Sezione 6, solo se il test copre ≥ 90% del valore degli asset manuali | `0040_asset_prices` | unit: priorità manuale > market, stale; itest con fonte finta | disattivare `price_source = market`, drop tabella |
 
 Ogni fase è una PR separata, rilasciabile da sola. La fase 2 non dipende dai provider: Mattia può
 usare i conti manuali con gli asset prima di eToro e ccxt.
 
-## 8. Decisioni aperte per Mattia
+**Perché la fase 1b sta tra la fase 1 e la fase 2.** Ha bisogno di `fx_rates` (fase 1) e deve esserci
+prima che esista il primo conto in una valuta diversa da EUR: la fase 2 crea il conto eToro legacy
+(USD) e la fase 3 i conti eToro sincronizzati. Oggi tutti i conti sono in EUR, quindi con valuta EUR
+la fase 1b non cambia nessun numero: il test golden lo dimostra e il rischio del deploy è basso. È
+una fase di Accounts F1, indipendente da Investments: si può rilasciare e tornare indietro da sola.
 
-1. **Valuta dei saldi (D1).** (a) Conti di investimento sempre in EUR, conversione alla fonte e
-   valuta nativa nel modulo; (b) FX generale in Accounts (tabella cambi applicata a tutti i totali).
-   **Raccomandazione: (a).** Non tocca F1 e non rompe i totali. (b) è un progetto a sé.
-2. **Più exchange (D2).** (a) Un provider per exchange (`ccxt:binance`); (b) togliere l'unique
-   `(user, provider)` e aggiungere un'etichetta. **Raccomandazione: (a).** Nessuna migrazione dei
-   vincoli. Limite: un solo account per exchange.
-3. **Fonte del valore (D3).** (a) Nuova fonte `portfolio`, unico scrittore dal giorno
-   `managed_since` con passaggio di autorità esplicito; (b) riuso di `manual`/`provider` come fa
-   `funds`. **Raccomandazione: (a).** Con (b) una lettura `provider` del giorno dopo nasconderebbe
-   asset e rettifiche, e una `manual` vecchia potrebbe vincere.
-4. **Piattaforme esistenti (D4).** (a) Migrarle in conti in modo `total` con la mappatura esplicita
-   verso il conto `investment` manuale che rappresenta la stessa piattaforma; (b) tenerle come
-   registro separato. **Raccomandazione: (a).** Elimina il doppio conteggio di oggi. Serve la tua
-   mappatura: quale conto manuale corrisponde a quale piattaforma, e quali conti F1 rappresentano già
-   Binance, eToro o altri servizi che collegherai.
-5. **Exchange iniziali (D5).** Quali exchange usi davvero? **Raccomandazione:** Binance e Kraken in
-   fase 4, gli altri su richiesta.
-6. **Bitpanda e Young Platform (D6).** (a) Conto manuale; (b) adapter custom con le loro API
-   read-only. **Raccomandazione: (a)** finché non li usi in modo rilevante.
-7. **Chiavi con permessi non verificabili (D7).** (a) Accettarle con IP whitelist obbligatoria dove
-   supportata e due conferme salvate (5.2); (b) rifiutarle; (c) accettarle con la sola conferma.
-   **Raccomandazione: (a).** Con (b) Kraken ed eToro non si collegano; (c) non ha un vincolo che
-   compensa un errore nella creazione della chiave (SEC-02).
-8. **Rendimento (D8).** (a) Semplice + XIRR con la regola di completezza; (b) anche TWR.
-   **Raccomandazione: (a).** Il TWR richiede valori giornalieri esatti a ogni flusso, che eToro e i
-   conti manuali non danno.
-9. **Prezzi automatici (sezione 6).** (a) Fase 6 dopo il test di copertura; (b) mai.
-   **Raccomandazione: (a)**, con soglia del 90% del valore coperto.
-10. **Termini eToro sul caching (D10).** Ledgerly salva una lettura al giorno per lo storico.
-    (a) Accetti l'interpretazione "ragionevolmente necessario"; (b) solo valore attuale, senza
-    storico. **Raccomandazione: (a).** Senza storico non c'è andamento oltre 12 mesi.
-11. **Storico iniziale (D11).** (a) eToro 12 mesi (limite API), ccxt 24 mesi, con lacune dichiarate e
-    rendimento "attendibile dal …"; (b) solo da oggi. **Raccomandazione: (a).**
-12. **Catalogo provider (D12).** (a) Statico nel codice; (b) tabella modificabile dalla UI.
-    **Raccomandazione: (a).** Un provider nuovo richiede comunque codice.
-13. **Tipo di conto (D13).** (a) `investment` per broker e conti, `crypto` per exchange; (b) nuovo tipo
-    `broker` con migrazione del CHECK. **Raccomandazione: (a).** Le categorie del catalogo bastano.
-14. **Asset manuali di un servizio sincronizzato (D14, A1).** (a) Nello stesso conto, con prodotto e
-    riconciliazione di perimetro (R4); (b) sempre in un conto manuale separato (es. "Binance Earn"),
-    così il conto sincronizzato ha solo `P + R`. **Raccomandazione: (a)**, perché è il requisito di
-    PERS-68 ("conti sincronizzati con asset inseriti a mano"). (b) è più semplice e si può adottare in
-    ogni momento senza migrazione.
-15. **ccxt nel processo esposto (D15, SEC-06).** (a) Accettare il rischio residuo con le mitigazioni
-    di 5.2 e 5.4; (b) worker di sync separato, senza segreti OIDC e auth, prima della fase 4.
-    **Raccomandazione: (a).** Con chiavi read-only verificate il danno massimo di un furto è la
-    lettura; (b) è un cambio d'architettura da valutare se si aggiungono provider con chiavi non
-    verificabili.
-16. **Import CSV (D16, A7).** (a) In fase 4 per Binance e Kraken, per colmare le lacune di copertura;
-    (b) rinviato, con copertura dichiarata `partial`. **Raccomandazione: (a)** se hai trade su Binance
-    prima del collegamento; altrimenti (b).
+## 8. Decisioni prese
+
+Mattia ha risposto alle 16 decisioni aperte nei commenti di PERS-68 il 27/10/2026. Il documento le
+applica tutte.
+
+| # | Decisione | Data | Sezioni |
+|---|---|---|---|
+| D1 | **Valuta nativa per conto, totali nella valuta di visualizzazione** scelta in Settings (default EUR), al cambio BCE del giorno (`fx_rates`, Frankfurter). Supera la raccomandazione "saldi sempre in EUR". Tocca Accounts F1: fase 1b | 27/10/2026 | 0.5, 1.3, 1.5, 1.6, 1.8, 2, 2.3, 2.4, 4, 7 |
+| D2 | Un provider per exchange (`ccxt:binance`, `ccxt:kraken`). Limite: un solo account per exchange | 27/10/2026 | 1.2 |
+| D3 | Fonte `portfolio`, unico scrittore del conto da `managed_since`, con passaggio di autorità esplicito | 27/10/2026 | 0.2, 1.3, 1.7 |
+| D4 | Ogni conto esistente `investment`/`crypto` diventa un servizio; le 2 piattaforme legacy si uniscono al conto che le rappresenta, senza doppio conteggio. La fase 0 produce l'elenco proposto, Mattia conferma solo gli abbinamenti ambigui. **Nota tecnica:** l'unico conto `investment` di oggi è il conto di valutazione di un fondo e non può diventare un servizio senza sciogliere il fondo; nessun conto rappresenta le 2 piattaforme, che diventano conti nuovi (2.3) | 27/10/2026 | 2.3, 7 (fasi 0 e 2) |
+| D5 | Exchange iniziali: Binance e Kraken (fase 4). Coinbase, Bitvavo, Crypto.com restano `planned` | 27/10/2026 | 1.1, 3.2 |
+| D6 | Bitpanda e Young Platform rimossi dal catalogo, nemmeno come voce manuale | 27/10/2026 | 1.1 |
+| D7 | Chiavi non verificabili (Kraken, eToro…) accettate con la conferma "solo lettura" salvata in `investment_key_checks`, **senza IP whitelist obbligatoria**; il dialog la suggerisce come opzione. Rischio accettato da Mattia, supera SEC-02. Restano le altre misure di 5.2 | 27/10/2026 | 1.1, 1.2, 4.2, 5, 5.2 |
+| D8 | Rendimento semplice + XIRR, mostrati solo con storico completo; niente TWR | 27/10/2026 | 2.4 |
+| D9 | Prezzi automatici in fase 6, solo con copertura ≥ 90% del valore degli asset manuali | 27/10/2026 | 6, 7 |
+| D10 | eToro: una lettura al giorno salvata per lo storico | 27/10/2026 | 3.3 |
+| D11 | Storico iniziale: eToro 12 mesi (limite API), ccxt 24 mesi, lacune dichiarate | 27/10/2026 | 1.6, 3.2, 3.3 |
+| D12 | Catalogo dei provider statico nel codice | 27/10/2026 | 1.1 |
+| D13 | Tipi di conto `investment` (broker e conti) e `crypto` (exchange), nessun tipo nuovo | 27/10/2026 | 1.3 |
+| D14 | Asset manuali nello stesso conto sincronizzato, con prodotto e riconciliazione di perimetro (R4) | 27/10/2026 | 1.4, 2.2 |
+| D15 | ccxt nel processo di Ledgerly con le mitigazioni di 5.4; rischio residuo accettato, worker separato scartato | 27/10/2026 | 5, 5.4 |
+| D16 | Niente import CSV: bastano i 24 mesi scaricati in automatico; le lacune restano dichiarate | 27/10/2026 | 1.5, 1.6, 3.2, 4.3, 7 |
 
 ## 9. Esito delle review (PERS-74)
 
@@ -976,23 +1047,23 @@ usare i conti manuali con gli asset prima di eToro e ccxt.
 | A4 · Adozione per nome | Alta | Accolta: mappatura esplicita, conti già sincronizzati esclusi, passaggio di autorità atomico con archivio delle entry | 0.2, 1.3, 1.7, 2.3, 4.2, D3, D4 |
 | A5 · Conversione e stablecoin | Alta | Accolta: niente parità USDT=USD, provenienza di prezzo e cambio per posizione, `fx_rates` immutabile, prezzo mancante = parziale, costo vs valore | 0.5, 1.4, 1.5, 1.6, 1.8 |
 | A6 · Trade, fee, quantità | Alta | Accolta: eventi con gambe stabili, fee come gamba con asset, quantità `reported`/`reconstructed`/`inferred` con aperture | 1.2, 1.5, 3.2 |
-| A7 · Completezza dei flussi | Alta | Accolta: copertura per stream, cursori con sovrapposizione e commit atomico, scoperta delle coppie, import CSV | 1.6, 3.1, 3.2, 3.4, D11, D16 |
+| A7 · Completezza dei flussi | Alta | Accolta: copertura per stream, cursori con sovrapposizione e commit atomico, scoperta delle coppie, lacune dichiarate (import di file scartato, D16) | 1.6, 3.1, 3.2, D11, D16 |
 | A8 · Risposte vuote | Alta | Accolta: esiti errore/parziale/zero, `confirmed_zero` vs `pending_zero`, esiti separati holdings/flows | 1.2, 1.6, 2.2 R5, es. 5, 3.1 |
 | A9 · Fasi e rollback | Alta | Accolta: fase 0 spike, fase 2 unica (motore + UI + legacy in sola lettura), tutte le regole prima del primo provider, migrazioni additive, rollback che conserva le scritture | 7 |
 | A10 · Rendimenti | Media | Accolta: valore di apertura, trasferimenti interni, deduplica, guadagno nascosto senza copertura, XIRR non calcolabile | 1.5, 2.4, 4.1 |
 | SEC-01 · Read-only solo al collegamento | Alta | Accolta: allowlist, verifica a ogni pass, `refused` + Gotify, avviso `ipRestrict` | 0.6, 1.2, 3.1, 5.2 |
-| SEC-02 · Chiavi `unverifiable` | Alta | Accolta: IP whitelist obbligatoria dove supportata, permessi esatti, due conferme in `investment_key_checks`, mai chiamate di scrittura | 1.1, 1.2, 5.2, D7 |
+| SEC-02 · Chiavi `unverifiable` | Alta | Accolta in parte: permessi esatti, conferma "solo lettura" in `investment_key_checks`, mai chiamate di scrittura. IP whitelist solo suggerita, non obbligatoria: rischio accettato da Mattia (D7, PERS-76) | 1.1, 1.2, 4.2, 5.2, D7 |
 | SEC-03 · Opzioni ccxt dalle credenziali | Media | Accolta: schema strict, opzioni esplicite, `ccxtId` dal catalogo, test `httpsProxy` | 1.1, 3.2, fase 4 |
 | SEC-04 · Redazione degli errori | Media | Accolta: frase di 5.1 corretta, mappatura a allowlist, test canary | 3.1, 5.1, fase 3 |
 | SEC-05 · Verifica solo nella UI | Media | Accolta: `connectInvestmentProvider` unico punto di scrittura, test di architettura | 4.2, 5.1, 5.3 |
-| SEC-06 · ccxt nel processo esposto | Media | Accolta per pin, `npm ci`, audit, attesa di 7 giorni, import per exchange; worker separato rinviato a decisione | 3.2, 5.4, D15 |
+| SEC-06 · ccxt nel processo esposto | Media | Accolta per pin, `npm ci`, audit, attesa di 7 giorni, import per exchange; worker separato scartato da Mattia, rischio residuo accettato (D15) | 3.2, 5, 5.4, D15 |
 | SEC-07 · Chiave valida dopo la disconnessione | Bassa | Accolta: passi di revoca e conferma, promemoria 90 giorni per tutti | 1.1, 1.2, 4.3, 5.3 |
 | SEC-08 · Scope MCP/API | Bassa | Accolta: scope `investments:read`, niente id esterni né stato chiave nelle risposte | 5.5, fase 5 |
 | SEC-09 · Cooldown | Bassa | Accolta: cooldown 60 s, backoff su `429`/`418` con `Retry-After` | 3.1, 4.3 |
 
 Alternative di PERS-72: "primo rilascio solo manuale + snapshot provider" è coperta dalla regola di
 completezza (2.4) e dall'ordine delle fasi; "asset esterni in un conto separato" è la D14 (b);
-"CSV per lo storico" è la 3.4 / D16.
+"import di file per lo storico" è scartata (D16).
 
 Fuori perimetro del design, segnalati da PERS-73: `ledgerly-cron` riceve tutto `.env.homelab`
 (gli serve solo `CRON_SECRET`); `seal` non lega il blob alla riga (AAD senza `user_id` /
