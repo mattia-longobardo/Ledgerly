@@ -218,6 +218,13 @@
       "when": 1793061048992,
       "tag": "0030_oauth_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793061610155,
+      "tag": "0031_sync_schedule",
+      "breakpoints": true
     }
   ]
 }

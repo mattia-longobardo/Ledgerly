@@ -1,5 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { JOBS } from "./registry";
+import { JOBS, runsIn } from "./registry";
+
+/** The tiers `cron/crontab` really asks for: the file supercronic runs, not a copy of it. */
+function crontabTiers(): Set<string> {
+  const crontab = readFileSync(new URL("../../../cron/crontab", import.meta.url), "utf8");
+  return new Set([...crontab.matchAll(/^[^#].*tier=([a-z]+)/gm)].map((match) => match[1]));
+}
 
 /**
  * The registry is one line per phase and nothing else asserts its contents: `jobs.itest.ts` proves
@@ -10,10 +17,12 @@ import { JOBS } from "./registry";
 describe("JOBS", () => {
   it("schedules every job each phase registered, under the tier spec §10.2 gives it", () => {
     expect(JOBS.map((job) => [job.name, job.tier])).toEqual([
+      // Every connection by its own schedule (docs/auth-design.md D7); in `hourly` too, first.
+      ["integrations-sync", "quarter"],
       ["housekeeping", "daily"],
       ["accounts-alerts", "daily"],
       ["accounts-snapshot", "monthly"],
-      ["wallet-sync", "hourly"],
+      ["recurrences-refresh", "hourly"],
       ["subscriptions-check", "hourly"],
       ["budgets-alerts", "hourly"],
       ["interests-accrual", "hourly"],
@@ -24,7 +33,6 @@ describe("JOBS", () => {
       ["documents-retention", "daily"],
       ["payslips-sweep", "hourly"],
       ["cometa-sweep", "hourly"],
-      ["trek-sync", "hourly"],
       ["holidays-refresh", "daily"],
       ["database-backup", "daily"],
       ["monthly-summary", "monthly"],
@@ -34,11 +42,22 @@ describe("JOBS", () => {
   });
 
   it("gives every scheduled job a tier supercronic actually calls", () => {
-    const called = new Set(["hourly", "daily", "monthly"]);
+    const called = crontabTiers();
+    expect([...called].sort()).toEqual(["daily", "hourly", "monthly", "quarter"]);
     for (const job of JOBS) {
       if (job.tier === "manual") continue;
       expect(called.has(job.tier), job.name).toBe(true);
+      for (const tier of job.alsoIn ?? []) expect(called.has(tier), job.name).toBe(true);
     }
+  });
+
+  it("runs the integrations dispatcher first in the hourly tier, before what reads its result", () => {
+    const hourly = JOBS.filter((job) => runsIn(job, "hourly")).map((job) => job.name);
+    expect(hourly[0]).toBe("integrations-sync");
+    expect(hourly.indexOf("recurrences-refresh")).toBeLessThan(hourly.indexOf("subscriptions-check"));
+    expect(JOBS.filter((job) => runsIn(job, "quarter")).map((job) => job.name)).toEqual([
+      "integrations-sync",
+    ]);
   });
 
   it("names each job once: two entries with one name would both answer to it", () => {
