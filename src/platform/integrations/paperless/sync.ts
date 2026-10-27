@@ -5,6 +5,7 @@ import { ImportError } from "@/modules/imports/service";
 import { processPayslip, uploadPayslip } from "@/modules/payroll/service";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
+import { readEnv } from "@/platform/env";
 import { withJobLock } from "@/platform/jobs/lock";
 import { PAPERLESS_PROVIDER } from "../rules";
 import {
@@ -18,7 +19,13 @@ import {
   saveSyncJob,
   skipRun,
 } from "../service";
-import { createPaperlessClient, isTokenRejected, type PaperlessClient } from "./client";
+import {
+  createPaperlessClient,
+  isTokenRejected,
+  type PaperlessClient,
+  PaperlessError,
+  publicMessage,
+} from "./client";
 import { MAX_DOCUMENTS_PER_PASS, resolveTypes, startCursor, storedName } from "./mapping";
 
 /**
@@ -65,7 +72,11 @@ export async function paperlessClientOf(
 ): Promise<{ client: PaperlessClient; credentials: Record<string, string> }> {
   const credentials = await readCredentials(ctx, connectionId);
   return {
-    client: createPaperlessClient({ baseUrl: credentials.baseUrl ?? "", token: credentials.token ?? "" }),
+    client: createPaperlessClient({
+      baseUrl: credentials.baseUrl ?? "",
+      token: credentials.token ?? "",
+      allowedOrigins: readEnv().PAPERLESS_ALLOWED_ORIGINS,
+    }),
     credentials,
   };
 }
@@ -76,7 +87,14 @@ async function importOne(
   document: { id: number; originalFileName: string | null },
   kind: "payslip" | "cometa_operations" | "cometa_position",
 ): Promise<"created" | "duplicate" | "rejected"> {
-  const file = await client.download(document.id);
+  let file: Awaited<ReturnType<PaperlessClient["download"]>>;
+  try {
+    file = await client.download(document.id);
+  } catch (error) {
+    // Too large to read: skipped like any other file the pipeline would refuse.
+    if (error instanceof PaperlessError && error.kind === "too_large") return "rejected";
+    throw error;
+  }
   if (file.bytes.byteLength > MAX_DOCUMENT_BYTES) return "rejected";
   const upload = {
     name: storedName({ header: file.name, original: document.originalFileName, id: document.id }),
@@ -133,7 +151,16 @@ async function paperlessPass(ctx: Ctx, connection: Connection, now: Date): Promi
     await finishRun(ctx, run.id, { counts }, now);
     return { counts, refused: null };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
+    // The run log and the card are read by the person: an answer from Paperless becomes the
+    // generic sentence, the server log keeps the detail (PERS-49 SEC-04). Ledgerly's own findings
+    // ("no document type named …") carry nothing about the network and stay as they are.
+    const message =
+      error instanceof PaperlessError
+        ? publicMessage(error)
+        : error instanceof Error
+          ? error.message
+          : "unknown error";
+    console.error("[paperless] sync failed", redactForLog(error));
     await finishRun(ctx, run.id, { counts, error: message }, now);
     if (isTokenRejected(error)) await markConnection(ctx, connection.id, "revoked", message, now);
     throw error;

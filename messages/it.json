@@ -186,7 +186,10 @@
       "identity": "vedere il tuo nome e il tuo indirizzo email",
       "allow": "Consenti",
       "deny": "Rifiuta",
-      "failed": "Non si è potuta inviare la risposta. Riprova."
+      "failed": "Non si è potuta inviare la risposta. Riprova.",
+      "redirects": "Dopo la risposta, il browser torna a:",
+      "unverified": "Client non verificato.",
+      "unverifiedHint": "Si è registrato da solo e ha scelto il proprio nome. Consenti solo se hai avviato tu questo collegamento e riconosci l'indirizzo qui sotto."
     }
   },
   "settings": {
@@ -305,7 +308,8 @@
         "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
         "failed": "Non è stato possibile salvare. Riprova.",
         "types": "Paperless non ha un tipo di documento con quel nome.",
-        "schedule": "Questo orario non è valido."
+        "schedule": "Questo orario non è valido.",
+        "notAllowed": "Questo indirizzo Paperless non è consentito su questo server. L'admin imposta quelli consentiti in PAPERLESS_ALLOWED_ORIGINS."
       },
       "notifications": {
         "failedSubject": "Sincronizzazione Wallet fallita",
@@ -1009,6 +1013,26 @@
         "failed": "Non si è potuto fare. Riprova.",
         "not_found": "Questo client non c'è più."
       }
+    },
+    "connectedApps": {
+      "title": "App collegate",
+      "description": "Le applicazioni che hai autorizzato nella schermata di consenso, per esempio un client MCP. Revoca un'app per chiuderne l'accesso: non può più rinnovare il token, e quello attuale scade entro un'ora.",
+      "empty": "Nessuna app collegata.",
+      "columns": {
+        "name": "App",
+        "hosts": "Torna a",
+        "scopes": "Accesso",
+        "since": "Autorizzata il",
+        "actions": "Azioni"
+      },
+      "unverified": "non verificato",
+      "offline": "resta collegata",
+      "revoke": "Revoca",
+      "revoked": "Accesso di {name} revocato",
+      "confirmTitle": "Revocare l'accesso di {name}?",
+      "confirmDescription": "I suoi refresh token vengono cancellati e il prossimo collegamento chiede di nuovo il tuo consenso.",
+      "cancel": "Annulla",
+      "failed": "Non è stato possibile. Riprova."
     }
   },
   "errors": {

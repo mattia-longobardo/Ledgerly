@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, lte, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -24,6 +24,7 @@ import {
   syncErrorText,
   syncScheduleSchema,
 } from "./rules";
+import { users } from "@/platform/auth/schema";
 import { integrationConnections, providerLinks, syncJobs, syncRuns } from "./schema";
 
 export type { ProviderLink, SyncKind } from "./rules";
@@ -228,9 +229,10 @@ export interface DueConnection {
 }
 
 /**
- * Every connection whose next pass is due, across all users, oldest debt first (D7). Every state
- * is included: an `error` connection must keep being retried, and a `revoked` one is handed to
- * its provider, which records the skip and tells the person — exactly what the hourly jobs did.
+ * Every connection whose next pass is due, across all users, oldest debt first (D7). An `error`
+ * connection is included, because it must keep being retried. A `revoked` one is not, nor any
+ * connection of a banned person (PERS-49 SEC-08): a refused token waits for a new one, and a
+ * blocked account makes no outbound call. "Sync now" and a new token still reach them.
  */
 export async function dueConnections(now: Date = new Date()): Promise<DueConnection[]> {
   const rows = await getDb()
@@ -241,7 +243,14 @@ export async function dueConnections(now: Date = new Date()): Promise<DueConnect
       schedule: integrationConnections.schedule,
     })
     .from(integrationConnections)
-    .where(lte(integrationConnections.nextSyncAt, now))
+    .innerJoin(users, eq(users.id, integrationConnections.userId))
+    .where(
+      and(
+        lte(integrationConnections.nextSyncAt, now),
+        ne(integrationConnections.state, "revoked"),
+        or(isNull(users.banned), eq(users.banned, false)),
+      ),
+    )
     .orderBy(asc(integrationConnections.nextSyncAt), asc(integrationConnections.id));
   return rows.map((row) => ({ ...row, schedule: parseSyncSchedule(row.schedule) }));
 }

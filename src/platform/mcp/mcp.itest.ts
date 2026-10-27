@@ -149,6 +149,32 @@ describe("MCP authorization", () => {
     }
   });
 
+  it("refuses a body over 1 MB even without a Content-Length (PERS-49 SEC-09)", async () => {
+    const person = await ssoPerson();
+    requestHeaders = person.headers;
+    const token = await tokenFor(["read"]);
+    const chunk = new TextEncoder().encode(" ".repeat(64 * 1024));
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"x":"'),
+        );
+        for (let i = 0; i < 20; i += 1) controller.enqueue(chunk);
+        controller.enqueue(new TextEncoder().encode('"}}'));
+        controller.close();
+      },
+    });
+    const response = await handleMcp(
+      new Request(MCP, {
+        method: "POST",
+        headers: { accept: ACCEPT, "content-type": "application/json", authorization: `Bearer ${token}` },
+        body,
+        duplex: "half",
+      } as RequestInit),
+    );
+    expect(response.status).toBe(413);
+  });
+
   it("answers the CORS preflight without a token", async () => {
     const response = await handleMcp(new Request(MCP, { method: "OPTIONS" }));
     expect(response.status).toBe(204);

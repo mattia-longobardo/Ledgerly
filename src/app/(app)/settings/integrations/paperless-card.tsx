@@ -71,6 +71,7 @@ export function PaperlessCard({ state, lastSync, schedule }: PaperlessCardProps)
     if (code === "busy") return t("errors.busy");
     if (code === "provider") return t("errors.provider");
     if (code === "types") return t("paperless.typesMissing");
+    if (code === "notAllowed") return t("errors.notAllowed");
     return t("errors.failed");
   }
 

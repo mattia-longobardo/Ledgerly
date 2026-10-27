@@ -49,12 +49,21 @@ export function resourceMetadataUrl(baseUrl: string, key: ResourceKey): string {
   return `${originOf(baseUrl)}/.well-known/oauth-protected-resource${RESOURCE_PATHS[key]}`;
 }
 
+/**
+ * What a self-registered (DCR) client may hold: the read-only MCP and a refresh token, nothing on
+ * `/api/v1` (PERS-49 SEC-01). Write access stays with the Client API a person makes in Settings.
+ */
+export const DCR_SCOPES = ["read", "offline_access"] as const;
+
+/** The domain scopes each resource advertises (RFC 9728): the MCP is read-only. */
+const RESOURCE_SCOPES: Record<ResourceKey, readonly ApiScope[]> = { api: API_SCOPES, mcp: ["read"] };
+
 /** The protected-resource metadata document of RFC 9728 for one resource. */
 export function protectedResourceMetadata(baseUrl: string, key: ResourceKey) {
   return {
     resource: resourceFor(baseUrl, key),
     authorization_servers: [issuerFor(baseUrl)],
-    scopes_supported: [...API_SCOPES],
+    scopes_supported: [...RESOURCE_SCOPES[key]],
     bearer_methods_supported: ["header"],
     resource_name: key === "api" ? "Ledgerly API" : "Ledgerly MCP",
   };
@@ -92,6 +101,59 @@ export function safeNext(value: string | null | undefined): string {
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**
+ * The https redirect URIs a self-registering client may use, besides plain http on a loopback host
+ * (Claude Code, MCP Inspector). Anything else is refused at registration (PERS-49 SEC-01): an
+ * attacker's client could otherwise send the authorization code to a host of its own choosing.
+ */
+export const DCR_REDIRECT_ALLOWLIST: readonly string[] = [
+  "https://claude.ai/api/mcp/auth_callback",
+  "https://claude.com/api/mcp/auth_callback",
+];
+
+function isLoopbackHttp(uri: string): boolean {
+  try {
+    const url = new URL(uri);
+    return url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether every redirect URI of a registration is a loopback one or on the allowlist. */
+export function registrationRedirectsAllowed(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const uris = (body as Record<string, unknown>).redirect_uris;
+  if (!Array.isArray(uris) || uris.length === 0) return false;
+  return uris.every(
+    (uri) => typeof uri === "string" && (isLoopbackHttp(uri) || DCR_REDIRECT_ALLOWLIST.includes(uri)),
+  );
+}
+
+/**
+ * The `scope` a registration is stored with: what it asked for, narrowed to {@link DCR_SCOPES}.
+ * MCP clients send one scope union to every server; narrowing it keeps them working where a refusal
+ * would break the connection, and the plugin then never lets the client ask for more.
+ */
+export function registrationScope(body: unknown): string {
+  const asked = body && typeof body === "object" ? (body as Record<string, unknown>).scope : undefined;
+  const requested = typeof asked === "string" ? asked.split(" ").filter(Boolean) : [];
+  const kept = DCR_SCOPES.filter((scope) => requested.includes(scope));
+  return (kept.length > 0 ? kept : ["read"]).join(" ");
+}
+
+/** The hosts a client's redirect URIs point at, for the consent screen; unparsable ones as given. */
+export function redirectHosts(uris: readonly string[]): string[] {
+  const hosts = uris.map((uri) => {
+    try {
+      return new URL(uri).host;
+    } catch {
+      return uri;
+    }
+  });
+  return [...new Set(hosts)];
+}
+
+/**
  * The `application_type` a self-registering client gets when it names none (D3: redirect URIs
  * https or loopback). OpenID DCR defaults to `web`, and the plugin refuses a loopback redirect for
  * a `web` client — yet `http://localhost:<port>/callback` is exactly what desktop MCP clients
@@ -102,14 +164,5 @@ export function registrationApplicationType(body: unknown): "native" | undefined
   if (!body || typeof body !== "object") return undefined;
   const { application_type: type, redirect_uris: uris } = body as Record<string, unknown>;
   if (type !== undefined || !Array.isArray(uris) || uris.length === 0) return undefined;
-  const loopback = uris.every((uri) => {
-    if (typeof uri !== "string") return false;
-    try {
-      const url = new URL(uri);
-      return url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname);
-    } catch {
-      return false;
-    }
-  });
-  return loopback ? "native" : undefined;
+  return uris.every((uri) => typeof uri === "string" && isLoopbackHttp(uri)) ? "native" : undefined;
 }

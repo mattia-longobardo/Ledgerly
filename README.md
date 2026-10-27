@@ -249,8 +249,17 @@ how much you have planned, and how much is left — with **where each number com
   9728). Access tokens are JWT (`typ` `at+jwt`, EdDSA, keys in `jwks`, JWKS at
   `/api/auth/jwks`), valid one hour, with the resource as audience (RFC 8707): a token for
   `/api/mcp` is not good for `/api/v1`. Refresh tokens rotate, 30 days. Clients that register
-  themselves (RFC 7591, `/api/auth/oauth2/register`) may only be public (PKCE, no secret); the
-  person signs in (Authentik or password + TOTP) and consents at `/oauth/consent`.
+  themselves (RFC 7591, `/api/auth/oauth2/register`) may only be public (PKCE, no secret), with
+  redirect URIs on plain http loopback (`localhost`, `127.0.0.1`, `[::1]`: Claude Code, MCP
+  Inspector) or on the allowlist `DCR_REDIRECT_ALLOWLIST` in `src/platform/auth/oauth.ts`
+  (`https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback`). They
+  reach `/api/mcp` only, with `read` and `offline_access`: a self-registered client can never hold
+  a token for `/api/v1` (PERS-49 SEC-01). The person signs in (Authentik or password + TOTP) and
+  consents at `/oauth/consent`, which shows the host every redirect goes to and marks a client
+  without an owner as **unverified**. Settings › Security › Connected apps lists the consents;
+  "Revoke" deletes the consent and the app's refresh tokens (its access token ends within the
+  hour). A password reset and an admin's two-factor reset delete the person's OAuth refresh tokens
+  together with the sessions.
 - **Client API** (`/settings/security`): what replaces the personal access tokens. A confidential
   client with the `client_credentials` grant and the scopes `read`, `write`, `imports`, owned by
   whoever made it: its token acts as that person, and only on `/api/v1`. The secret is shown once
@@ -284,6 +293,11 @@ how much you have planned, and how much is left — with **where each number com
   user, at the link's own schedule, starting from the moment the link is saved — not earlier,
   because many payslips here were uploaded as a different PDF from the one Paperless keeps, and
   the sha256 dedup would not recognise them. Inside the homelab the URL is `http://paperless-ngx:8000`.
+  The server calls only the origins in `PAPERLESS_ALLOWED_ORIGINS` (comma-separated, default
+  `http://paperless-ngx:8000`): another URL is refused when it is saved and again before every call,
+  the card and the sync log show a generic sentence, and the detail goes to the server log only.
+  A download stops at 11 MB, a JSON page at 4 MB. The dispatcher skips `revoked` connections and
+  banned people (PERS-49 SEC-04, SEC-08, SEC-09).
 - **MCP server** (`docs/auth-design.md` D6): `https://dash.longobardo.me/api/mcp`, Streamable HTTP,
   stateless (POST only, no `Mcp-Session-Id`; GET and DELETE answer `405`). Code in
   `src/platform/mcp/` (`handler.ts` for the door, `tools.ts` for the tools). Only OAuth access tokens

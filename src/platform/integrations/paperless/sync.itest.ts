@@ -15,7 +15,8 @@ import { isPaperlessBusy, syncPaperlessNow } from "./sync";
 // itself played by a fake `fetch`: a payslip arrives, the cursor moves, a document the webhook
 // already delivered comes back `duplicate`, and a refused token stops the next pass.
 
-const BASE = "http://paperless.test";
+// The default of PAPERLESS_ALLOWED_ORIGINS: the sync only calls an allowlisted Paperless.
+const BASE = "http://paperless-ngx:8000";
 let ctx: Ctx;
 
 const PDF = new TextEncoder().encode("%PDF-1.4\n% paperless payslip\n%%EOF\n");

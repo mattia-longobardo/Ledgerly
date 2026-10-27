@@ -12,8 +12,13 @@
 const API_VERSION = 9;
 const DEFAULT_TIMEOUT_MS = 30_000;
 const PAGE_SIZE = 100;
+/** One megabyte over the largest document an import takes: what is bigger is refused unread. */
+export const MAX_DOWNLOAD_BYTES = 11 * 1024 * 1024;
+/** A JSON page of 100 documents is a few tens of kilobytes; this is far above it. */
+const MAX_JSON_BYTES = 4 * 1024 * 1024;
 
-export type PaperlessErrorKind = "network" | "timeout" | "token_rejected" | "http" | "shape";
+export type PaperlessErrorKind =
+  "network" | "timeout" | "token_rejected" | "http" | "shape" | "not_allowed" | "too_large";
 
 export class PaperlessError extends Error {
   constructor(
@@ -23,6 +28,28 @@ export class PaperlessError extends Error {
   ) {
     super(message);
     this.name = "PaperlessError";
+  }
+}
+
+/**
+ * What a person is told, whatever went wrong: one sentence per kind, with no status code, host or
+ * path. The detail goes to the server log; the UI would otherwise answer "what is listening on
+ * this address" for anyone allowed to save a URL (PERS-49 SEC-04).
+ */
+export function publicMessage(error: unknown): string {
+  if (!(error instanceof PaperlessError)) return "The Paperless sync failed";
+  switch (error.kind) {
+    case "network":
+    case "timeout":
+      return "Paperless could not be reached";
+    case "token_rejected":
+      return "Paperless refused the token";
+    case "not_allowed":
+      return "This Paperless address is not allowed";
+    case "too_large":
+      return "Paperless sent a file that is too large";
+    default:
+      return "Paperless sent an answer this app could not use";
   }
 }
 
@@ -68,6 +95,51 @@ export function normalizeBaseUrl(value: string): string | null {
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 
+/**
+ * Whether a Paperless URL is on the operator's list (`PAPERLESS_ALLOWED_ORIGINS`): the server only
+ * ever calls the Paperless it was told about, never an address a user typed (PERS-49 SEC-04).
+ */
+export function originAllowed(baseUrl: string, allowedOrigins: readonly string[]): boolean {
+  const base = normalizeBaseUrl(baseUrl);
+  if (!base) return false;
+  const origin = new URL(base).origin;
+  return allowedOrigins.some((allowed) => URL.canParse(allowed) && new URL(allowed).origin === origin);
+}
+
+/**
+ * The body of a response, refused as soon as it passes `maxBytes` (PERS-49 SEC-09): a declared
+ * length is checked before reading, and the stream is counted as it comes, so neither a lying
+ * header nor a chunked body can fill the memory.
+ */
+export async function readCapped(response: Response, maxBytes: number): Promise<Uint8Array> {
+  const declared = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await response.body?.cancel().catch(() => {});
+    throw new PaperlessError("too_large", `Paperless sent more than ${maxBytes} bytes`);
+  }
+  if (!response.body) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw new PaperlessError("too_large", `Paperless sent more than ${maxBytes} bytes`);
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 /** `filename*=UTF-8''…` or `filename="…"`, whichever Paperless sent. */
 export function fileNameOf(disposition: string | null): string | null {
   if (!disposition) return null;
@@ -97,13 +169,18 @@ function asDocument(raw: unknown): PaperlessDocument | null {
 }
 
 export function createPaperlessClient(
-  input: { baseUrl: string; token: string },
+  input: { baseUrl: string; token: string; allowedOrigins: readonly string[] },
   options: { fetch?: Fetch; timeoutMs?: number } = {},
 ): PaperlessClient {
   const doFetch = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const base = normalizeBaseUrl(input.baseUrl);
   if (!base) throw new PaperlessError("shape", "The Paperless URL is not valid");
+  // Checked again here, not only when the URL is saved: a connection saved before the list, or
+  // after the list changed, must not be called either.
+  if (!originAllowed(base, input.allowedOrigins)) {
+    throw new PaperlessError("not_allowed", `${new URL(base).origin} is not in PAPERLESS_ALLOWED_ORIGINS`);
+  }
   const basePath = new URL(base).pathname.replace(/\/+$/, "");
 
   async function call(path: string, accept: string): Promise<Response> {
@@ -143,8 +220,9 @@ export function createPaperlessClient(
 
   async function json(path: string): Promise<Record<string, unknown>> {
     const response = await call(path, "json");
+    const body = await readCapped(response, MAX_JSON_BYTES);
     try {
-      return (await response.json()) as Record<string, unknown>;
+      return JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
     } catch {
       throw new PaperlessError("shape", "Paperless sent something that is not JSON");
     }
@@ -196,7 +274,7 @@ export function createPaperlessClient(
 
     async download(id) {
       const response = await call(`/api/documents/${id}/download/?original=true`, "file");
-      const bytes = new Uint8Array(await response.arrayBuffer());
+      const bytes = await readCapped(response, MAX_DOWNLOAD_BYTES);
       return { name: fileNameOf(response.headers.get("content-disposition")), bytes };
     },
   };
