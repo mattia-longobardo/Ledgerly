@@ -116,7 +116,7 @@ async function paperlessPass(ctx: Ctx, connection: Connection, now: Date): Promi
     const job = await readSyncJob(ctx, connection.id, KIND);
     const documents = await client.documents({
       typeIds: [...byType.keys()],
-      modifiedAfter: startCursor(job?.cursor, now),
+      modifiedAfter: startCursor(job?.cursor, connection.createdAt),
       limit: MAX_DOCUMENTS_PER_PASS,
     });
     let cursor: string | null = null;

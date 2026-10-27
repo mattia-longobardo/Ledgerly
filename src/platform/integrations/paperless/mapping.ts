@@ -15,9 +15,6 @@ export const TYPE_KEYS = {
 
 export const DEFAULT_PAYSLIP_TYPE = "Payroll";
 
-/** The first pass reads back this far (design §3 step 2): old payslips come back as duplicates. */
-export const INITIAL_LOOKBACK_DAYS = 90;
-
 /** At most this many documents per pass: a first pass over a big archive finishes on the next. */
 export const MAX_DOCUMENTS_PER_PASS = 200;
 
@@ -42,11 +39,17 @@ export function resolveTypes(
   return { byType, missing };
 }
 
-/** Where a pass starts: the stored cursor, or the lookback window on the very first pass. */
-export function startCursor(stored: Record<string, string> | null | undefined, now: Date): string {
+/**
+ * Where a pass starts: the stored cursor, or — on the very first pass — the moment the link was
+ * saved. Not a window in the past (the design's 90 days): many payslips already in Ledgerly were
+ * uploaded by hand as a different PDF from the one Paperless keeps, so their sha256 differs and a
+ * look back would import each of them a second time (found in PERS-47). What was filed before the
+ * link is already here; the pull is for what comes after.
+ */
+export function startCursor(stored: Record<string, string> | null | undefined, linkedAt: Date): string {
   const modified = stored?.modified;
   if (modified && !Number.isNaN(Date.parse(modified))) return modified;
-  return new Date(now.getTime() - INITIAL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  return linkedAt.toISOString();
 }
 
 /** A file name to store: Paperless's own, else its original name, else one made from the id. */

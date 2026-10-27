@@ -29,14 +29,32 @@ No new environment variable. The JWKS signing keys are generated on the first to
    `.well-known` documents, a PAT call → 200 and `[api] legacy token used` in the log, the next
    `integrations-sync` run in Admin › Jobs.
 
-## Paperless migration (design §3)
+## Paperless webhook on OAuth2 (done, PERS-47)
+
+Mattia asked to keep the existing webhook, without a static token. Done on 2026-10-27:
+
+1. `npm run user:create-api-client -- <owner email> "Paperless webhook" imports /app/.paperless-oauth.env PAPERLESS_WEBHOOK_OAUTH2`,
+   then the two lines appended to `storage/.env` (never printed).
+2. Paperless image: `storage/paperless-ngx/homelab/Dockerfile.homelab` overlays
+   `src/documents/workflows/webhooks.py`: for URLs under `PAPERLESS_WEBHOOK_OAUTH2_URL_PREFIX` it
+   gets a client_credentials token (`resource` = `/api/v1`, scope `imports`), caches it until
+   60 s before expiry, replaces any static `Authorization`, and drops the cache on a 401.
+3. `Authorization` removed from the headers of Workflow 1's webhook.
+4. Check: the real `send_webhook` with an already imported payslip → `200 duplicate`, Bearer, no
+   `legacy token used` in Ledgerly's log.
+
+Rollback: `docker tag paperless-ngx-homelab:pre-oauth-webhook paperless-ngx-homelab:3.2.1-responses`
+and `docker compose up -d --no-build paperless-ngx`, then put an `Authorization: Bearer pat_…`
+header back on the webhook (the Paperless PAT is still valid until T5).
+
+## Paperless pull (design §3)
 
 | # | Step | Who | Check |
 |---|---|---|---|
 | 0 | Deploy above (webhook PAT still accepted, Paperless provider not linked) | agent | PAT import of an already imported PDF → `200 duplicate` |
 | 1 | In Paperless: user `ledgerly-sync`, no admin, **view** permission on the `Payroll` documents (owner or group permission), and an API token for it (Profile › API Auth Token) | Mattia | `GET /api/documents/?document_type__id=48` with that token lists the payslips |
-| 2 | Settings › Integrations › Paperless-ngx › Configure: URL `http://paperless-ngx:8000`, the token, type `Payroll` | Mattia | "Test connection" OK |
-| 3 | "Sync now" | Mattia/agent | sync log `Documents` success; every old payslip counted as skipped (duplicate); number of documents unchanged |
+| 2 | Settings › Integrations › Paperless-ngx › Configure: URL `http://paperless-ngx:8000`, the token, type `Payroll`. The first pass starts at the link time (not 90 days back: hand-uploaded payslips have a different sha256) | Mattia | "Test connection" OK |
+| 3 | "Sync now" | Mattia/agent | sync log `Documents` success; nothing imported; number of documents unchanged |
 | 4 | Webhook and pull both active; edit a field of a payslip in Paperless | — | webhook → `duplicate`, pull → `duplicate`, no new document |
 | 5 | Disable (not delete) Paperless Workflow 1 "Ledgerly – buste paga" | Mattia | the next payslip arrives through the pull within the chosen schedule |
 | 6 | After one pay cycle / 14 days without errors: revoke the Paperless PAT in Ledgerly, delete Workflow 1 | Mattia | no `legacy token used` in the log |

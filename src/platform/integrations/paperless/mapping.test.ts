@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INITIAL_LOOKBACK_DAYS, resolveTypes, startCursor, storedName } from "./mapping";
+import { resolveTypes, startCursor, storedName } from "./mapping";
 
 const TYPES = [
   { id: 48, name: "Payroll" },
@@ -27,12 +27,13 @@ describe("resolveTypes", () => {
 });
 
 describe("startCursor", () => {
-  it("resumes from the stored cursor, or looks back on the first pass", () => {
-    const now = new Date("2026-10-27T00:00:00Z");
-    expect(startCursor({ modified: "2026-10-11T10:00:00+02:00" }, now)).toBe("2026-10-11T10:00:00+02:00");
-    const first = new Date(startCursor(null, now));
-    expect((now.getTime() - first.getTime()) / 86_400_000).toBe(INITIAL_LOOKBACK_DAYS);
-    expect(startCursor({ modified: "garbage" }, now)).toBe(first.toISOString());
+  it("resumes from the stored cursor, or starts when the link was saved", () => {
+    const linkedAt = new Date("2026-10-27T00:00:00Z");
+    expect(startCursor({ modified: "2026-10-11T10:00:00+02:00" }, linkedAt)).toBe(
+      "2026-10-11T10:00:00+02:00",
+    );
+    expect(startCursor(null, linkedAt)).toBe("2026-10-27T00:00:00.000Z");
+    expect(startCursor({ modified: "garbage" }, linkedAt)).toBe("2026-10-27T00:00:00.000Z");
   });
 });
 

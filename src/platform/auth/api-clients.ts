@@ -7,7 +7,7 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
 import { MAX_TOKEN_NAME, parseScopes, TOKEN_SCOPES } from "@/platform/tokens/rules";
-import { getAuth } from "./auth";
+import { type Auth, getAuth } from "./auth";
 import { type ApiScope, issuerFor, resourceFor } from "./oauth";
 import { oauthClients } from "./oauth/schema";
 
@@ -79,15 +79,25 @@ export async function createApiClient(input: {
   name: string;
   scopes: readonly string[];
 }): Promise<MintedClient> {
+  return createApiClientWith(await getAuth(), await headers(), input);
+}
+
+/**
+ * The same, for a given instance and the headers of a session: what `scripts/create-api-client.ts`
+ * uses to make the Paperless webhook's client for its owner without a browser.
+ */
+export async function createApiClientWith(
+  auth: Auth,
+  sessionHeaders: Headers,
+  input: { name: string; scopes: readonly string[] },
+): Promise<MintedClient> {
   const parsed = createInput.safeParse(input);
   if (!parsed.success) throw new ApiClientError("invalid");
   const scopes = parseScopes(parsed.data.scopes);
   if (!scopes) throw new ApiClientError("invalid");
   const baseUrl = readEnv().BETTER_AUTH_URL;
-  const created = await (
-    await getAuth()
-  ).api.adminCreateOAuthClient({
-    headers: await headers(),
+  const created = await auth.api.adminCreateOAuthClient({
+    headers: sessionHeaders,
     body: {
       client_name: parsed.data.name,
       grant_types: ["client_credentials"],

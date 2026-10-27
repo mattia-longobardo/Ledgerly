@@ -20,7 +20,8 @@
     "e2e": "playwright test",
     "docs:shots": "playwright test --config playwright.shots.config.ts",
     "db:generate": "drizzle-kit generate",
-    "user:create-admin": "sh scripts/on-homelab.sh scripts/create-admin.ts"
+    "user:create-admin": "sh scripts/on-homelab.sh scripts/create-admin.ts",
+    "user:create-api-client": "sh scripts/on-homelab.sh scripts/create-api-client.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1131.0",

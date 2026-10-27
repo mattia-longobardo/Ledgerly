@@ -83,35 +83,44 @@ async function cursor() {
 describe("syncPaperlessNow", () => {
   it("imports a payslip of the configured type, and only that, and moves the cursor", async () => {
     const paperless = fakePaperless([
-      { id: 7, document_type: 48, modified: "2026-10-11T10:00:00+02:00" },
-      { id: 8, document_type: 49, modified: "2026-10-12T10:00:00+02:00" },
+      { id: 7, document_type: 48, modified: "2030-01-11T10:00:00+01:00" },
+      { id: 8, document_type: 49, modified: "2030-01-12T10:00:00+01:00" },
     ]);
     const result = await syncPaperlessNow(ctx, new Date("2026-10-27T00:00:00Z"));
     expect(result).toMatchObject({ refused: null, counts: { created: 1, skipped: 0 } });
     const documents = await allDocuments(ctx.userId);
     expect(documents).toHaveLength(1);
     expect(documents[0]).toMatchObject({ kind: "payslip", fileName: "busta-7.pdf" });
-    expect(await cursor()).toEqual({ modified: "2026-10-11T10:00:00+02:00" });
-    // The first pass looks back 90 days, and asks only for the Payroll type.
+    expect(await cursor()).toEqual({ modified: "2030-01-11T10:00:00+01:00" });
+    // The first pass starts when the link was saved, and asks only for the Payroll type.
     const list = paperless.calls.find((call) => call.startsWith("/api/documents/?")) ?? "";
     expect(new URLSearchParams(list.split("?")[1]).get("document_type__id__in")).toBe("48");
-    expect(new URLSearchParams(list.split("?")[1]).get("modified__gt")).toBe("2026-07-29T00:00:00.000Z");
+    const [connection] = await listConnections(ctx);
+    expect(new URLSearchParams(list.split("?")[1]).get("modified__gt")).toBe(
+      connection.createdAt.toISOString(),
+    );
     // The token went in the header, the Paperless way, and nowhere else.
     expect(paperless.calls.every((call) => !call.includes("paperless_test_token"))).toBe(true);
     const [run] = await listRuns(ctx);
     expect(run).toMatchObject({ kind: "documents", state: "success" });
   });
 
+  it("does not import what Paperless filed before the link was saved", async () => {
+    fakePaperless([{ id: 5, document_type: 48, modified: "2026-01-11T10:00:00+01:00" }]);
+    expect((await syncPaperlessNow(ctx))?.counts).toMatchObject({ created: 0, skipped: 0 });
+    expect(await allDocuments(ctx.userId)).toHaveLength(0);
+  });
+
   it("answers duplicate for a payslip the webhook already delivered, and creates nothing", async () => {
     await uploadPayslip(ctx, { name: "from-webhook.pdf", bytes: PDF });
-    fakePaperless([{ id: 7, document_type: 48, modified: "2026-10-11T10:00:00+02:00" }]);
+    fakePaperless([{ id: 7, document_type: 48, modified: "2030-01-11T10:00:00+01:00" }]);
     const result = await syncPaperlessNow(ctx, new Date("2026-10-27T00:00:00Z"));
     expect(result?.counts).toMatchObject({ created: 0, skipped: 1 });
     expect(await allDocuments(ctx.userId)).toHaveLength(1);
   });
 
   it("resumes after the cursor: a document seen once is not downloaded again", async () => {
-    const paperless = fakePaperless([{ id: 7, document_type: 48, modified: "2026-10-11T10:00:00+02:00" }]);
+    const paperless = fakePaperless([{ id: 7, document_type: 48, modified: "2030-01-11T10:00:00+01:00" }]);
     await syncPaperlessNow(ctx, new Date("2026-10-27T00:00:00Z"));
     paperless.calls.length = 0;
     const again = await syncPaperlessNow(ctx, new Date("2026-10-27T01:00:00Z"));
@@ -133,7 +142,7 @@ describe("syncPaperlessNow", () => {
       provider: PAPERLESS_PROVIDER,
       credentials: { baseUrl: BASE, token: "paperless_test_token", payslipType: "Buste paga" },
     });
-    fakePaperless([{ id: 7, document_type: 48, modified: "2026-10-11T10:00:00+02:00" }]);
+    fakePaperless([{ id: 7, document_type: 48, modified: "2030-01-11T10:00:00+01:00" }]);
     await expect(syncPaperlessNow(ctx)).rejects.toThrow(/no document type named Buste paga/);
     expect(await allDocuments(ctx.userId)).toHaveLength(0);
     const [run] = await listRuns(ctx);

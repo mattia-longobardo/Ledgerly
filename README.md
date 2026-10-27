@@ -273,12 +273,17 @@ how much you have planned, and how much is left — with **where each number com
   Without a valid token the answer is `401` with
   `WWW-Authenticate: Bearer error="invalid_token", resource_metadata="…/.well-known/oauth-protected-resource/api/v1"`;
   with a token that lacks the route's scope, `403` with `error="insufficient_scope", scope="<scope>"`.
-- **Paperless-ngx** (Settings › Integrations, D5): Ledgerly reads the payslips Paperless files —
-  `GET /api/documents/?document_type__id__in=…&modified__gt=<cursor>` and the original of each —
-  with the API token of a read-only Paperless user (`ledgerly-sync`), at the link's own schedule.
-  The document types are named on the card (default `Payroll`; Cometa types optional); the first
-  pass looks back 90 days. A file already imported (the old webhook, an upload) answers
-  `duplicate` and nothing happens twice. Inside the homelab the URL is `http://paperless-ngx:8000`.
+- **Paperless-ngx → Ledgerly, two ways, both OAuth2.** The Paperless workflow "Ledgerly – buste
+  paga" still posts each payslip to `POST /api/v1/imports`, but no longer with a static token: the
+  homelab Paperless image patches its webhook sender (`documents/workflows/webhooks.py`) to get a
+  `client_credentials` token from Ledgerly (client "Paperless webhook", scope `imports`, created
+  with `npm run user:create-api-client`) and send it as `Authorization: Bearer`; the client id and
+  secret are in `storage/.env` (`PAPERLESS_WEBHOOK_OAUTH2_CLIENT_ID`/`_SECRET`).
+  The pull (Settings › Integrations, D5) stays available as well: Ledgerly reads the documents of the
+  named types (default `Payroll`; Cometa types optional) with the API token of a read-only Paperless
+  user, at the link's own schedule, starting from the moment the link is saved — not earlier,
+  because many payslips here were uploaded as a different PDF from the one Paperless keeps, and
+  the sha256 dedup would not recognise them. Inside the homelab the URL is `http://paperless-ngx:8000`.
 
 - **Export.** "Export my data" (Settings › Data) streams a ZIP of every table as CSV, the same rows
   as one JSON, and the original documents. "Export all data" (Admin › Server) is the `export-all`
