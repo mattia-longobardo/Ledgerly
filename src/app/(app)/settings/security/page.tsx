@@ -9,9 +9,11 @@ import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY } from "@/platform/format";
 import { readEnv } from "@/platform/env";
+import { listApiClients } from "@/platform/auth/api-clients";
 import { listTokens } from "@/platform/tokens/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
-import { NewToken } from "./new-token";
+import { type ApiClientRow, ApiClientsTable } from "./api-clients-table";
+import { NewApiClient } from "./new-api-client";
 import { type SessionRow, SessionsList } from "./sessions-list";
 import { type TokenRow, TokensTable } from "./tokens-table";
 import { TwoFactorCard } from "./two-factor-card";
@@ -23,10 +25,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const [current, sessions, tokens, hasPassword] = await Promise.all([
+  const [current, sessions, tokens, clients, hasPassword] = await Promise.all([
     (await getAuth()).api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
     listTokens(ctx),
+    listApiClients(ctx),
     hasPasswordAccount(ctx.userId),
   ]);
   const t = await getTranslations("settings");
@@ -41,6 +44,13 @@ export default async function SecurityPage() {
     expires: token.expiresAt ? day(token.expiresAt) : t("tokens.expiry.never"),
     lastUsed: token.lastUsedAt ? day(token.lastUsedAt) : NULL_DISPLAY,
     state: token.state,
+  }));
+
+  const clientRows: ApiClientRow[] = clients.map((client) => ({
+    clientId: client.clientId,
+    name: client.name,
+    scopes: client.scopes,
+    created: day(client.createdAt),
   }));
 
   const rows: SessionRow[] = sessions.map((session) => {
@@ -68,13 +78,20 @@ export default async function SecurityPage() {
         </SettingsSection>
       )}
       <SettingsSection
-        title={t("tokens.title")}
-        description={t("tokens.description")}
-        action={<NewToken />}
+        title={t("apiClients.title")}
+        description={t("apiClients.description")}
+        action={<NewApiClient />}
         padded={false}
       >
-        <TokensTable tokens={tokenRows} />
+        <ApiClientsTable clients={clientRows} />
       </SettingsSection>
+      {/* D4: the personal tokens still work until T5, but no new one is minted. The section shows
+          only while one exists, so it disappears by itself once the last is revoked. */}
+      {tokenRows.length > 0 && (
+        <SettingsSection title={t("tokens.title")} description={t("tokens.legacyDescription")} padded={false}>
+          <TokensTable tokens={tokenRows} />
+        </SettingsSection>
+      )}
       <SettingsSection title={t("sessions.title")} description={t("sessions.description")} padded={false}>
         <SessionsList sessions={rows} />
       </SettingsSection>

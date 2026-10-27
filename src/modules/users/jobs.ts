@@ -1,5 +1,5 @@
 import "server-only";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { redactForLog } from "@/platform/auth/logger";
 import { users } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
@@ -15,6 +15,15 @@ export interface Person {
 
 async function everyone(): Promise<Person[]> {
   return getDb().select({ id: users.id, email: users.email }).from(users).orderBy(asc(users.id));
+}
+
+/** One user as a job meets them, or null when the row is gone (the integrations dispatcher). */
+export async function personById(id: string): Promise<Person | null> {
+  const [row] = await getDb()
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(eq(users.id, id));
+  return row ?? null;
 }
 
 /** The context a job acts in for one user: their own language, zone and number format. */

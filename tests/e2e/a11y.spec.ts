@@ -234,6 +234,20 @@ const PAGES: Screen[] = [
 /** Overlays: they live in a portal, outside `<main>`, so each says what to measure. */
 const OVERLAYS: Screen[] = [
   {
+    // D7: the sync schedule of the layout user's Paperless link (seeded on manual only).
+    name: "the sync schedule dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/integrations");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .click();
+      await settledDialog(page);
+    },
+  },
+  {
     name: "the command palette",
     session: "layout",
     roots: ['[role="dialog"]'],

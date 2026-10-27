@@ -95,6 +95,37 @@ export function startOfDayIn(on: CivilDate, timeZone: string): Date {
   return new Date(Math.max(once, twice));
 }
 
+/** Minutes past local midnight of an instant in `timeZone`: 0 to 1439. */
+export function minutesOfDayIn(instant: Date, timeZone: string): number {
+  const at = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, hour: "2-digit", minute: "2-digit" })
+      .formatToParts(instant)
+      .map((part) => [part.type, part.value]),
+  );
+  return (Number(at.hour) % 24) * 60 + Number(at.minute);
+}
+
+/**
+ * The instant a local wall-clock time happens on a civil date in `timeZone` — "07:30 on
+ * 2026-03-29 in Rome". Resolved as `Temporal`'s "compatible" disambiguation: a time the clock
+ * repeats (the autumn change) is its first occurrence, and a time the clock skips (the spring
+ * change) is moved forward by the length of the gap, so a schedule set inside it still runs that
+ * day. The offsets twelve hours either side are the two the day can have.
+ */
+export function wallClockIn(on: CivilDate, minutes: number, timeZone: string): Date {
+  const [year, month, day] = parts(on);
+  const local = Date.UTC(year, month - 1, day) + minutes * 60_000;
+  const before = local - offsetAt(local - 12 * 3_600_000, timeZone);
+  const after = local - offsetAt(local + 12 * 3_600_000, timeZone);
+  const real = [before, after]
+    .filter((candidate) => {
+      const instant = new Date(candidate);
+      return civilDateIn(instant, timeZone) === on && minutesOfDayIn(instant, timeZone) === minutes;
+    })
+    .sort((a, b) => a - b);
+  return new Date(real[0] ?? before);
+}
+
 /** A zone's offset from UTC at an instant, as "UTC+2", "UTC−3:30" or "UTC" (the timezone picker). */
 export function utcOffsetLabel(timeZone: string, instant: Date): string {
   const name = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })

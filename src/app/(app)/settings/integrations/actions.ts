@@ -1,6 +1,7 @@
 // src/app/(app)/settings/integrations/actions.ts — Settings › Integrations: the Wallet link of
-// spec §9.1 and the Trek link of §9.2. Both offer the same four: save the credential, prove it
-// works, sync on demand, disconnect.
+// spec §9.1, the Trek link of §9.2 and the Paperless link of docs/auth-design.md D5. All offer the
+// same four: save the credential, prove it works, sync on demand, disconnect; and each has its own
+// sync schedule (D7).
 //
 // Every one of these is the *user's own* connection (spec §10.3: "Sync now" is per user). None of
 // them takes a connection id from the browser — the id is resolved from the session, so a pasted
@@ -14,7 +15,12 @@ import { matchDeposits } from "@/modules/funds/service";
 import { checkSubscriptions } from "@/modules/subscriptions/service";
 import { refreshRecurrences } from "@/modules/transactions/jobs";
 import { linkOwnTransfers } from "@/modules/transactions/service";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
+import {
+  isKnownProvider,
+  PAPERLESS_PROVIDER,
+  TREK_PROVIDER,
+  WALLET_PROVIDER,
+} from "@/platform/integrations/rules";
 import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
 import { isSyncBusy, requestWalletBackfill, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import {
@@ -25,7 +31,15 @@ import {
   markConnection,
   readCredentials,
   saveConnection,
+  saveSchedule,
 } from "@/platform/integrations/service";
+import {
+  isTokenRejected as isPaperlessTokenRejected,
+  normalizeBaseUrl,
+  PaperlessError,
+} from "@/platform/integrations/paperless/client";
+import { DEFAULT_PAYSLIP_TYPE, resolveTypes, TYPE_KEYS } from "@/platform/integrations/paperless/mapping";
+import { isPaperlessBusy, paperlessClientOf, syncPaperlessNow } from "@/platform/integrations/paperless/sync";
 import {
   createWalletClient,
   isTokenRejected,
@@ -45,7 +59,15 @@ import { closePendingDeletes } from "@/modules/timeoff/service";
  * sentence: the card turns it into a catalogued message, so no English text is built here.
  */
 export type IntegrationActionError =
-  "rejected" | "unreachable" | "provider" | "empty" | "notConnected" | "busy" | "failed";
+  | "rejected"
+  | "unreachable"
+  | "provider"
+  | "empty"
+  | "notConnected"
+  | "busy"
+  | "failed"
+  | "types"
+  | "schedule";
 
 /**
  * What the card gets back. Deliberately this narrow: there is no field a token could travel in,
@@ -334,5 +356,146 @@ export async function disconnectTrekAction(): Promise<IntegrationActionResult> {
   }
   revalidate();
   revalidatePath("/timeoff");
+  return { ok: true };
+}
+
+/* Paperless — documents pulled from Paperless-ngx (docs/auth-design.md D5) */
+
+async function paperlessConnectionOf(ctx: Ctx): Promise<Connection | null> {
+  const connections = await listConnections(ctx);
+  return connections.find((connection) => connection.provider === PAPERLESS_PROVIDER) ?? null;
+}
+
+/** A Paperless failure as the card names it, with the same senses as Wallet's and Trek's. */
+function paperlessFailure(error: unknown): { code: IntegrationActionError; detail: string } {
+  if (error instanceof PaperlessError) {
+    const code: IntegrationActionError = isPaperlessTokenRejected(error)
+      ? "rejected"
+      : error.kind === "network" || error.kind === "timeout"
+        ? "unreachable"
+        : "provider";
+    return { code, detail: error.message };
+  }
+  return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
+}
+
+/**
+ * Stores the Paperless URL, the token of its read-only user and which document types to read.
+ * Saving and proving are separate, as for Wallet and Trek: "Test connection" is the one that asks.
+ */
+export async function connectPaperlessAction(input: {
+  baseUrl: string;
+  token: string;
+  payslipType: string;
+  cometaOperationsType: string;
+  cometaPositionType: string;
+}): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const url = normalizeBaseUrl(input.baseUrl);
+  const token = input.token.trim();
+  if (!url || token === "") return { ok: false, error: "empty" };
+  if (!isUsableToken(token)) return { ok: false, error: "rejected" };
+  const credentials: Record<string, string> = { baseUrl: url, token };
+  const types = {
+    [TYPE_KEYS.payslip]: input.payslipType.trim() || DEFAULT_PAYSLIP_TYPE,
+    [TYPE_KEYS.cometa_operations]: input.cometaOperationsType.trim(),
+    [TYPE_KEYS.cometa_position]: input.cometaPositionType.trim(),
+  };
+  for (const [key, value] of Object.entries(types)) {
+    if (value === "") continue;
+    if (value.length > 128) return { ok: false, error: "types" };
+    credentials[key] = value;
+  }
+  try {
+    await saveConnection(ctx, { provider: PAPERLESS_PROVIDER, credentials });
+  } catch (error) {
+    if (error instanceof IntegrationError) return { ok: false, error: "failed" };
+    throw error;
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/** Asks Paperless for its document types: proves the token and that the named types exist. */
+export async function testPaperlessAction(): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await paperlessConnectionOf(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    const { client, credentials } = await paperlessClientOf(ctx, connection.id);
+    const { missing } = resolveTypes(credentials, await client.documentTypes());
+    if (missing.length > 0) {
+      await markConnection(
+        ctx,
+        connection.id,
+        "error",
+        `Paperless has no document type named ${missing.join(", ")}`,
+      );
+      revalidate();
+      return { ok: false, error: "types" };
+    }
+  } catch (error) {
+    const { code, detail } = paperlessFailure(error);
+    await markConnection(ctx, connection.id, code === "rejected" ? "revoked" : "error", detail);
+    revalidate();
+    return { ok: false, error: code };
+  }
+  await markConnection(ctx, connection.id, "active");
+  revalidate();
+  return { ok: true };
+}
+
+/** "Sync now" for Paperless. Does not move the schedule's next pass (D7). */
+export async function syncPaperlessNowAction(): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await paperlessConnectionOf(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    await syncPaperlessNow(ctx);
+  } catch (error) {
+    revalidate();
+    if (isPaperlessBusy(error)) return { ok: false, error: "busy" };
+    return { ok: false, error: paperlessFailure(error).code };
+  }
+  revalidate();
+  revalidatePath("/payroll");
+  return { ok: true };
+}
+
+/** Drops the Paperless link. The documents already imported stay, as the confirmation says. */
+export async function disconnectPaperlessAction(): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await paperlessConnectionOf(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    await deleteConnection(ctx, connection.id);
+  } catch (error) {
+    if (error instanceof IntegrationError) {
+      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
+    }
+    throw error;
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/* The schedule of any connection (D7) */
+
+/** Saves when one of the person's own connections syncs; the provider names which one. */
+export async function saveScheduleAction(
+  provider: string,
+  schedule: unknown,
+): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  if (!isKnownProvider(provider)) return { ok: false, error: "notConnected" };
+  const connection = (await listConnections(ctx)).find((one) => one.provider === provider);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    await saveSchedule(ctx, connection.id, schedule);
+  } catch (error) {
+    if (error instanceof IntegrationError) return { ok: false, error: "schedule" };
+    throw error;
+  }
+  revalidate();
   return { ok: true };
 }

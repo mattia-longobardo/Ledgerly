@@ -5,7 +5,7 @@ import { redactForLog } from "@/platform/auth/logger";
 import { getDb } from "@/platform/db/client";
 import { touchHeartbeat } from "./heartbeat";
 import { withJobLock } from "./lock";
-import { JOBS, type JobDefinition, type ScheduledTier, type Tier } from "./registry";
+import { JOBS, type JobDefinition, runsIn, type ScheduledTier, type Tier } from "./registry";
 import { jobRuns } from "./schema";
 
 type Status = "success" | "failed" | "skipped";
@@ -97,7 +97,7 @@ export async function runTier(
 ): Promise<Outcome[]> {
   const outcomes: Outcome[] = [];
   try {
-    for (const job of jobs.filter((j) => j.tier === tier)) {
+    for (const job of jobs.filter((j) => runsIn(j, tier))) {
       const locked = await withJobLock(`job:${job.name}`, () => runAndRecord(job, tier));
       if (locked.ran) {
         outcomes.push({ job: job.name, status: locked.value });

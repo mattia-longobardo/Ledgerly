@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
@@ -35,6 +35,8 @@ export interface WalletCardProps {
   lastSync: string | null;
   /** How many months the last (or next) backfill reads (F2.5): what the history picker starts on. */
   history: number;
+  /** The connection's own sync schedule control (D7); the fixed label when there is no link. */
+  schedule?: ReactNode;
 }
 
 const DOT: Record<WalletCardState, string> = {
@@ -63,7 +65,7 @@ const FORM_ID = "wallet-token-form";
  * unmounts on close — so the secret is never in React state, never in a prop and never in the DOM
  * a moment longer than the dialog is open.
  */
-export function WalletCard({ state, lastSync, history }: WalletCardProps) {
+export function WalletCard({ state, lastSync, history, schedule }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
   const [months, setMonths] = useState(history);
   const [connecting, setConnecting] = useState(false);
@@ -132,7 +134,7 @@ export function WalletCard({ state, lastSync, history }: WalletCardProps) {
 
         <div className="text-sm">
           <div className="text-muted">{t("fields.schedule")}</div>
-          <div className="mt-0.5 font-medium whitespace-nowrap">{t("schedule")}</div>
+          {schedule ?? <div className="mt-0.5 font-medium whitespace-nowrap">{t("schedule")}</div>}
         </div>
 
         <div className="ml-auto flex items-center gap-2">

@@ -49,7 +49,8 @@ import { getDb } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
 import { isBookable } from "../src/platform/holidays/rules";
 import { deleteFolder } from "../src/platform/storage";
-import { WALLET_PROVIDER } from "../src/platform/integrations/rules";
+import { PAPERLESS_PROVIDER, WALLET_PROVIDER } from "../src/platform/integrations/rules";
+import { saveConnection, saveSchedule } from "../src/platform/integrations/service";
 import {
   BASE_URL,
   SESSIONS,
@@ -484,6 +485,13 @@ function workingDay(from: string, delta: number): string {
  */
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
+  // A Paperless link on manual only (D7): the card and its schedule control are on screen for the
+  // check, and the dispatcher never tries to reach the address, which does not exist.
+  const paperless = await saveConnection(ctx, {
+    provider: PAPERLESS_PROVIDER,
+    credentials: { baseUrl: "http://paperless.invalid", token: "e2e-not-a-token", payslipType: "Payroll" },
+  });
+  await saveSchedule(ctx, paperless.id, { mode: "manual" });
   const on = today(ctx.timeZone);
   const thisMonth = thisMonthOf(ctx);
   const lastMonth = lastMonthOf(ctx);
