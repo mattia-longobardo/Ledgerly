@@ -202,6 +202,27 @@ describe("the doors that stay closed", () => {
     expect(client.client_secret).toBeUndefined();
   });
 
+  it("registers a desktop client with a loopback http redirect as a native one (RFC 8252)", async () => {
+    const response = await authFetch("/oauth2/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_name: "MCP Inspector",
+        redirect_uris: ["http://localhost:6274/oauth/callback"],
+        token_endpoint_auth_method: "none",
+      }),
+    });
+    expect(response.status, await response.clone().text()).toBe(201);
+    expect(await response.json()).toMatchObject({ application_type: "native" });
+    // Plain http elsewhere is still refused.
+    const remote = await authFetch("/oauth2/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ redirect_uris: ["http://example.com/cb"], token_endpoint_auth_method: "none" }),
+    });
+    expect(remote.status).toBe(400);
+  });
+
   it("publishes the authorization server metadata under the issuer", async () => {
     const { oauthProviderAuthServerMetadata } = await import("@better-auth/oauth-provider");
     const metadata = (await (

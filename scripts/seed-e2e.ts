@@ -7,7 +7,7 @@
 // Both touch only users whose address ends in `@example.test`: the site's real users and their
 // data are never read or written here.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { eq, like } from "drizzle-orm";
+import { and, eq, isNull, like } from "drizzle-orm";
 import {
   addConnection,
   applyProviderAccounts,
@@ -42,6 +42,7 @@ import { upsertFromProvider } from "../src/modules/transactions/service";
 import { listCategories } from "../src/modules/transactions/taxonomy";
 import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { createAuth } from "../src/platform/auth/auth";
+import { oauthClients } from "../src/platform/auth/oauth/schema";
 import { users } from "../src/platform/auth/schema";
 import type { Ctx } from "../src/platform/context";
 import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
@@ -53,6 +54,7 @@ import { PAPERLESS_PROVIDER, WALLET_PROVIDER } from "../src/platform/integration
 import { saveConnection, saveSchedule } from "../src/platform/integrations/service";
 import {
   BASE_URL,
+  E2E_MCP_CLIENT_NAME,
   SESSIONS,
   STATE_DIR,
   TEST_EMAIL_DOMAIN,
@@ -82,6 +84,11 @@ async function removeTestUsers(): Promise<void> {
     }
   }
   console.log(`e2e: removed ${removed.length} test users`);
+  // The MCP spec registers a public client the way Claude would: it has no owner, so no cascade
+  // reaches it. Only that exact name, and only without an owner.
+  await getDb()
+    .delete(oauthClients)
+    .where(and(eq(oauthClients.name, E2E_MCP_CLIENT_NAME), isNull(oauthClients.userId)));
   rmSync(STATE_DIR, { recursive: true, force: true });
 }
 

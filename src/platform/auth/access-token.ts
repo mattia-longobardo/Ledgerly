@@ -14,7 +14,7 @@ import { users } from "./schema";
 
 /**
  * The resource server of D3: turns an OAuth access token into the same `Ctx` a session would be.
- * `/api/v1` uses it today and `/api/mcp` will (T4) — the only difference is the audience.
+ * `/api/v1` and `/api/mcp` both use it — the only difference is the audience.
  *
  * Validation is local: the JWKS comes from this process's own Better Auth, so the API does not
  * depend on Authentik or on a network call per request. The client row is read on every call, on
