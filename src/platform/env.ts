@@ -36,6 +36,10 @@ export const envSchema = z
     OIDC_CLIENT_ID: z.string().min(1),
     OIDC_CLIENT_SECRET: z.string().min(1),
     OIDC_ADMIN_GROUP: z.string().min(1).default("ledgerly-admins"),
+    // Whether a password account must have TOTP before it reaches the app (docs/auth-design.md D2).
+    // `optional` leaves it to each person in Settings › Security. SSO users are never asked: their
+    // second factor is Authentik's.
+    TWO_FACTOR_POLICY: z.enum(["required", "optional"]).default("required"),
     SMTP_HOST: z.string().min(1),
     SMTP_PORT: z.coerce.number().int().positive(),
     SMTP_SECURE: z
