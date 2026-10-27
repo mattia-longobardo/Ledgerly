@@ -1,5 +1,5 @@
-// RFC 9728 protected-resource metadata: `/.well-known/oauth-protected-resource/api/v1` (and
-// `/api/mcp`, for T4). The 401 of each resource points here in `WWW-Authenticate`.
+// RFC 9728 protected-resource metadata: `/.well-known/oauth-protected-resource/api/v1` and
+// `/api/mcp`. The 401 of each resource points here in `WWW-Authenticate`.
 import { protectedResourceMetadata, RESOURCE_PATHS, type ResourceKey } from "@/platform/auth/oauth";
 import { readEnv } from "@/platform/env";
 

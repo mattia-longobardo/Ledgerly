@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUTHORIZE_PATH,
   authorizeContinuation,
+  registrationApplicationType,
   issuerFor,
   protectedResourceMetadata,
   resourceFor,
@@ -52,5 +53,36 @@ describe("safeNext", () => {
     expect(safeNext(`${AUTHORIZE_PATH}`)).toBe("/");
     expect(safeNext(`${AUTHORIZE_PATH}?a=\\evil`)).toBe("/");
     expect(safeNext(null)).toBe("/");
+  });
+});
+
+describe("registrationApplicationType", () => {
+  it("makes a client with only loopback http redirects a native one", () => {
+    expect(registrationApplicationType({ redirect_uris: ["http://localhost:6274/oauth/callback"] })).toBe(
+      "native",
+    );
+    expect(
+      registrationApplicationType({
+        redirect_uris: ["http://127.0.0.1:33418/callback", "http://[::1]:9/cb"],
+      }),
+    ).toBe("native");
+  });
+
+  it("leaves everything else as it came", () => {
+    expect(registrationApplicationType({ redirect_uris: ["https://claude.ai/api/mcp/auth_callback"] })).toBe(
+      undefined,
+    );
+    // Mixed: the plugin judges it as a web client, as it would without this rule.
+    expect(
+      registrationApplicationType({ redirect_uris: ["http://localhost/cb", "https://example.com/cb"] }),
+    ).toBe(undefined);
+    expect(registrationApplicationType({ redirect_uris: ["http://localhost.evil.test/cb"] })).toBe(undefined);
+    expect(registrationApplicationType({ redirect_uris: ["https://localhost/cb"] })).toBe(undefined);
+    expect(
+      registrationApplicationType({ application_type: "web", redirect_uris: ["http://localhost/cb"] }),
+    ).toBe(undefined);
+    expect(registrationApplicationType({ redirect_uris: [] })).toBe(undefined);
+    expect(registrationApplicationType({ redirect_uris: ["not a url"] })).toBe(undefined);
+    expect(registrationApplicationType(undefined)).toBe(undefined);
   });
 });

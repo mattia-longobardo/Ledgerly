@@ -284,6 +284,45 @@ how much you have planned, and how much is left — with **where each number com
   user, at the link's own schedule, starting from the moment the link is saved — not earlier,
   because many payslips here were uploaded as a different PDF from the one Paperless keeps, and
   the sha256 dedup would not recognise them. Inside the homelab the URL is `http://paperless-ngx:8000`.
+- **MCP server** (`docs/auth-design.md` D6): `https://dash.longobardo.me/api/mcp`, Streamable HTTP,
+  stateless (POST only, no `Mcp-Session-Id`; GET and DELETE answer `405`). Code in
+  `src/platform/mcp/` (`handler.ts` for the door, `tools.ts` for the tools). Only OAuth access tokens
+  whose audience is `/api/mcp` get in: a token for `/api/v1`, an opaque one (no `resource`) or a
+  `pat_…` is a `401`. Without a token the answer is `401` with
+  `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/api/mcp"`,
+  which is where a client discovers the authorization server and starts the flow: RFC 9728 →
+  RFC 8414 → dynamic registration of a public client → authorization code + PKCE (S256) with
+  `resource=https://dash.longobardo.me/api/mcp` → sign-in (Authentik or password + TOTP) → consent.
+  A token without `read` is a `403 insufficient_scope`. Same 120 calls a minute per client as the API.
+  v1 is **read-only** — every tool needs `read`, calls the same services as `/api/v1` and answers
+  with amounts as decimal strings; each sees only the person who consented:
+
+  | Tool                                                                                                | Mirrors                              |
+  | --------------------------------------------------------------------------------------------------- | ------------------------------------ |
+  | `get_summary`                                                                                       | `GET /api/v1/summary`                |
+  | `list_accounts`                                                                                     | `GET /api/v1/accounts`               |
+  | `get_account_balances` (`account_id`, `limit`)                                                      | `GET /api/v1/accounts/{id}/balances` |
+  | `list_transactions` (`from`, `to`, `account_id`, `category_id`, `type`, `payee`, `limit`, `offset`) | `GET /api/v1/transactions`           |
+  | `list_budgets` (`month` `YYYY-MM`)                                                                  | the Budgets page                     |
+
+  A write tool (`record_account_balance`, scope `write`) is in the design and left out until the
+  owner confirms it (PERS-44, question 3).
+
+  **Connecting a client.** Nothing to configure on the server: the client registers itself.
+  - _Claude_ (claude.ai / Desktop): Settings › Connectors › Add custom connector, URL
+    `https://dash.longobardo.me/api/mcp`, no client id or secret. Claude opens the Ledgerly sign-in,
+    then the consent page; tick `read`.
+  - _Claude Code_: `claude mcp add --transport http ledgerly https://dash.longobardo.me/api/mcp`,
+    then `/mcp` › ledgerly › Authenticate.
+  - _MCP Inspector_: `npx @modelcontextprotocol/inspector`, transport "Streamable HTTP", URL as above,
+    "Open Auth Settings" › "Quick OAuth Flow", then Connect › Tools › List.
+  - _A script_, with a Client API (scope `read`) instead of a person: get the token with
+    `resource=https://dash.longobardo.me/api/mcp` (as in the curl above) and POST JSON-RPC with
+    `Accept: application/json, text/event-stream`.
+
+  There is no "connected apps" screen yet (Settings › Security lists only Client API). To cut a
+  registered client off server-side, set `disabled` on its row in `oauth_clients`: the check reads
+  the client on every call, so its access tokens stop working at once.
 
 - **Export.** "Export my data" (Settings › Data) streams a ZIP of every table as CSV, the same rows
   as one JSON, and the original documents. "Export all data" (Admin › Server) is the `export-all`

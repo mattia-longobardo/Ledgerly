@@ -88,3 +88,28 @@ export function safeNext(value: string | null | undefined): string {
   if (value.startsWith(`${AUTHORIZE_PATH}?`) && !value.includes("\\") && !/[\r\n]/.test(value)) return value;
   return "/";
 }
+
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * The `application_type` a self-registering client gets when it names none (D3: redirect URIs
+ * https or loopback). OpenID DCR defaults to `web`, and the plugin refuses a loopback redirect for
+ * a `web` client — yet `http://localhost:<port>/callback` is exactly what desktop MCP clients
+ * (Claude Code, MCP Inspector) register, RFC 8252 §7.3. So a client whose every redirect is plain
+ * http on a loopback host is a `native` one; anything else is left as it came.
+ */
+export function registrationApplicationType(body: unknown): "native" | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const { application_type: type, redirect_uris: uris } = body as Record<string, unknown>;
+  if (type !== undefined || !Array.isArray(uris) || uris.length === 0) return undefined;
+  const loopback = uris.every((uri) => {
+    if (typeof uri !== "string") return false;
+    try {
+      const url = new URL(uri);
+      return url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname);
+    } catch {
+      return false;
+    }
+  });
+  return loopback ? "native" : undefined;
+}

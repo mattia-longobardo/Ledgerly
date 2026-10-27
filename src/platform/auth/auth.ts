@@ -33,6 +33,7 @@ import {
   LOGIN_PAGE,
   OAUTH_SCOPES,
   REFRESH_TOKEN_TTL_SECONDS,
+  registrationApplicationType,
   resourceFor,
 } from "./oauth";
 import { accessControl, roles } from "./permissions";
@@ -265,6 +266,9 @@ export function createAuth({
               error_description: "Only public clients (token_endpoint_auth_method=none) may register.",
             });
           }
+          const applicationType = registrationApplicationType(ctx.body);
+          if (applicationType)
+            return { context: { body: { ...ctx.body, application_type: applicationType } } };
         }
         // A session still owing its TOTP setup opens nothing but the setup page (D2), and the
         // authorize endpoint is no exception: otherwise a token would be the way around it.
