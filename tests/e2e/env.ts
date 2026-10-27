@@ -96,3 +96,6 @@ export const STATE_DIR = "tests/e2e/.state";
 
 /** Each TOTP user's base32 secret, written by the seed, read by the specs that sign in by hand. */
 export const TOTP_FILE = `${STATE_DIR}/totp.json`;
+
+/** The name the MCP spec registers its client under; the seed's remove deletes it (no owner, no cascade). */
+export const E2E_MCP_CLIENT_NAME = "Ledgerly e2e MCP";
