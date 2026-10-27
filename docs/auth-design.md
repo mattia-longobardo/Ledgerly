@@ -166,6 +166,11 @@ Parametri:
 
 ### D5 — Integrazione Paperless: **Ledgerly legge da Paperless (pull)**
 
+> **Superata (PERS-47, PERS-57).** Mattia ha scelto l'opzione A il 27/10/2026: resta il webhook del
+> Workflow 1, con un token OAuth2 `client_credentials` ottenuto dalla patch del fork Paperless
+> (`docs/runbooks/oauth-paperless-migration.md`). Il provider pull resta nel codice, non collegato;
+> non c'è l'utente `ledgerly-sync`. Il testo sotto resta come storia della decisione.
+
 Il webhook di Paperless manda solo header statici: non può fare `client_credentials` (token di 1 h
 da rinnovare). Si inverte il verso: Ledgerly diventa client dell'API di Paperless.
 

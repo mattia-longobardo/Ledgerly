@@ -1,4 +1,4 @@
-# OAuth2 API and Paperless pull — deploy, migration, rollback
+# OAuth2 API and Paperless webhook on OAuth2 — deploy, migration, rollback
 
 Runbook for T2 + T3 of `docs/auth-design.md` (§3 and §4): OAuth2 on `/api/v1`, the per-connection
 sync schedule (D7) and the Paperless provider (D5). Secrets are never written here: only where they
@@ -45,9 +45,16 @@ Mattia asked to keep the existing webhook, without a static token. Done on 2026-
 
 Rollback: `docker tag paperless-ngx-homelab:pre-oauth-webhook paperless-ngx-homelab:3.2.1-responses`
 and `docker compose up -d --no-build paperless-ngx`, then put an `Authorization: Bearer pat_…`
-header back on the webhook (the Paperless PAT is still valid until T5).
+header back on the webhook. The Paperless PAT is revoked (PERS-57): a PAT fallback now needs a new
+token made from the database.
 
-## Paperless pull (design §3)
+## Paperless pull (design §3) — cancelled
+
+**Not the target any more.** Mattia chose option A on 2026-10-27 (PERS-44, PERS-57): the webhook of
+Workflow 1 on OAuth2 `client_credentials` (section above) is the final path. The fork patch, the
+`PAPERLESS_WEBHOOK_OAUTH2_*` variables in `storage/` and the Client API "Paperless webhook" stay.
+There is no `ledgerly-sync` user. The pull provider stays in the code, not linked. The table below
+is kept only as the procedure for a future switch.
 
 | # | Step | Who | Check |
 |---|---|---|---|
