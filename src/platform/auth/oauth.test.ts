@@ -5,6 +5,9 @@ import {
   registrationApplicationType,
   issuerFor,
   protectedResourceMetadata,
+  redirectHosts,
+  registrationRedirectsAllowed,
+  registrationScope,
   resourceFor,
   resourceMetadataUrl,
   safeNext,
@@ -22,6 +25,43 @@ describe("OAuth addresses", () => {
       authorization_servers: [`${BASE}/api/auth`],
       scopes_supported: ["read", "write", "imports"],
     });
+    // The MCP is read-only: a client that asks for what the metadata offers asks for `read`.
+    expect(protectedResourceMetadata(BASE, "mcp").scopes_supported).toEqual(["read"]);
+  });
+});
+
+describe("dynamic registration (PERS-49 SEC-01)", () => {
+  it("accepts loopback http and the allowlisted callbacks, and nothing else", () => {
+    const ok = (uris: unknown) => registrationRedirectsAllowed({ redirect_uris: uris });
+    expect(ok(["http://localhost:6274/oauth/callback"])).toBe(true);
+    expect(ok(["http://127.0.0.1:33418/callback", "http://[::1]:9/cb"])).toBe(true);
+    expect(ok(["https://claude.ai/api/mcp/auth_callback"])).toBe(true);
+    expect(ok(["https://claude.com/api/mcp/auth_callback"])).toBe(true);
+    expect(ok(["https://evil.example/cb"])).toBe(false);
+    expect(ok(["https://claude.ai/api/mcp/auth_callback/../evil"])).toBe(false);
+    expect(ok(["https://claude.ai.evil.example/api/mcp/auth_callback"])).toBe(false);
+    expect(ok(["http://localhost:1/cb", "https://evil.example/cb"])).toBe(false);
+    expect(ok(["https://localhost/cb"])).toBe(false);
+    expect(ok([])).toBe(false);
+    expect(ok(undefined)).toBe(false);
+    expect(registrationRedirectsAllowed(null)).toBe(false);
+  });
+
+  it("narrows the requested scope to read and offline_access", () => {
+    expect(registrationScope({ scope: "read write imports offline_access" })).toBe("read offline_access");
+    expect(registrationScope({ scope: "write" })).toBe("read");
+    expect(registrationScope({})).toBe("read");
+    expect(registrationScope({ scope: "offline_access" })).toBe("offline_access");
+  });
+
+  it("names the hosts a client's redirects go to, once each", () => {
+    expect(
+      redirectHosts([
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://claude.ai/x",
+        "http://localhost:6274/cb",
+      ]),
+    ).toEqual(["claude.ai", "localhost:6274"]);
   });
 });
 

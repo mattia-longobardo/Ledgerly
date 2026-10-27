@@ -29,13 +29,17 @@ import {
   ACCESS_TOKEN_TTL_SECONDS,
   API_SCOPES,
   CONSENT_PAGE,
+  DCR_SCOPES,
   issuerFor,
   LOGIN_PAGE,
   OAUTH_SCOPES,
   REFRESH_TOKEN_TTL_SECONDS,
   registrationApplicationType,
+  registrationRedirectsAllowed,
+  registrationScope,
   resourceFor,
 } from "./oauth";
+import { revokeUserOAuthTokens } from "./oauth-grants";
 import { accessControl, roles } from "./permissions";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "./password-policy";
 import { OIDC_PROVIDER_ID } from "./provider";
@@ -219,6 +223,9 @@ export function createAuth({
       maxPasswordLength: MAX_PASSWORD_LENGTH,
       autoSignIn: true,
       revokeSessionsOnPasswordReset: true,
+      // The OAuth refresh tokens go with the sessions (PERS-49 SEC-05): a stolen password reset
+      // must not leave a connected app holding a 30-day way back in.
+      onPasswordReset: async ({ user }) => revokeUserOAuthTokens(user.id),
       password: {
         hash: (password) => hash(password, ARGON2),
         verify: ({ hash: stored, password }) => verify(stored, password),
@@ -266,9 +273,24 @@ export function createAuth({
               error_description: "Only public clients (token_endpoint_auth_method=none) may register.",
             });
           }
+          // Loopback or allowlisted redirects only, and never more than the read-only MCP
+          // (PERS-49 SEC-01): the consent screen is the last line, not the only one.
+          if (!registrationRedirectsAllowed(ctx.body)) {
+            throw new APIError("BAD_REQUEST", {
+              error: "invalid_redirect_uri",
+              error_description: "Only loopback http redirect URIs or an allowlisted callback may register.",
+            });
+          }
           const applicationType = registrationApplicationType(ctx.body);
-          if (applicationType)
-            return { context: { body: { ...ctx.body, application_type: applicationType } } };
+          return {
+            context: {
+              body: {
+                ...ctx.body,
+                scope: registrationScope(ctx.body),
+                ...(applicationType ? { application_type: applicationType } : {}),
+              },
+            },
+          };
         }
         // A session still owing its TOTP setup opens nothing but the setup page (D2), and the
         // authorize endpoint is no exception: otherwise a token would be the way around it.
@@ -369,18 +391,13 @@ export function createAuth({
         refreshTokenExpiresIn: REFRESH_TOKEN_TTL_SECONDS,
         allowDynamicClientRegistration: true,
         allowUnauthenticatedClientRegistration: true,
-        // A registered client is linked to both resources (the plugin enforces the link per
-        // client); what it may actually do is still what the person consents to.
-        clientRegistrationDefaultResources: [
-          resourceFor(env.BETTER_AUTH_URL, "api"),
-          resourceFor(env.BETTER_AUTH_URL, "mcp"),
-        ],
-        clientRegistrationAllowedResources: [
-          resourceFor(env.BETTER_AUTH_URL, "api"),
-          resourceFor(env.BETTER_AUTH_URL, "mcp"),
-        ],
+        // Every client is linked to the MCP (the plugin enforces the link per client); a
+        // self-registered one to nothing else, so a token it gets can never carry `aud=/api/v1`
+        // (PERS-49 SEC-01). A Client API names `/api/v1` itself (api-clients.ts).
+        clientRegistrationDefaultResources: [resourceFor(env.BETTER_AUTH_URL, "mcp")],
+        clientRegistrationAllowedResources: [resourceFor(env.BETTER_AUTH_URL, "mcp")],
         clientRegistrationDefaultScopes: ["read"],
-        clientRegistrationAllowedScopes: [...API_SCOPES, "offline_access"],
+        clientRegistrationAllowedScopes: [...DCR_SCOPES],
         storeClientSecret: "hashed",
         storeTokens: "hashed",
         // Reached only through `auth.api` (the hook above refuses HTTP), by a person who is past

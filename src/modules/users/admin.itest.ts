@@ -9,6 +9,7 @@ import {
   users,
   verifications,
 } from "@/platform/auth/schema";
+import { oauthClients, oauthRefreshTokens } from "@/platform/auth/oauth/schema";
 import type { Ctx, Role } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { getObject, putObject } from "@/platform/storage";
@@ -245,6 +246,19 @@ describe("resetPersonTwoFactor", () => {
         token: `session-${target.id}`,
         expiresAt: new Date(Date.now() + 86_400_000),
       });
+    // An OAuth refresh token from a connected app (PERS-49 SEC-05).
+    await getDb()
+      .insert(oauthClients)
+      .values({ clientId: `dcr-${target.id}`, redirectUris: ["http://localhost:1/cb"] });
+    await getDb()
+      .insert(oauthRefreshTokens)
+      .values({
+        token: `refresh-${target.id}`,
+        clientId: `dcr-${target.id}`,
+        userId: target.id,
+        scopes: ["read"],
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
     // A trusted device: Better Auth's verification row whose value is the user id.
     await getDb()
       .insert(verifications)
@@ -267,6 +281,9 @@ describe("resetPersonTwoFactor", () => {
     expect(row.twoFactorEnabled).toBe(false);
     expect(await getDb().select().from(twoFactors).where(eq(twoFactors.userId, target.id))).toHaveLength(0);
     expect(await getDb().select().from(sessions).where(eq(sessions.userId, target.id))).toHaveLength(0);
+    expect(
+      await getDb().select().from(oauthRefreshTokens).where(eq(oauthRefreshTokens.userId, target.id)),
+    ).toHaveLength(0);
     expect(await getDb().select().from(verifications).where(eq(verifications.value, target.id))).toHaveLength(
       0,
     );

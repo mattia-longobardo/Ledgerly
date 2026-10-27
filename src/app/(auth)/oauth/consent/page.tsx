@@ -1,9 +1,8 @@
 import { verifyOAuthQueryParams } from "@better-auth/oauth-provider";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { getAuth } from "@/platform/auth/auth";
 import { API_SCOPES, type ApiScope } from "@/platform/auth/oauth";
+import { consentClient } from "@/platform/auth/oauth-grants";
 import { requireSession } from "@/platform/auth/session";
 import { readEnv } from "@/platform/env";
 import { AuthCard } from "../../auth-card";
@@ -38,16 +37,10 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
     );
   }
 
-  let clientName: string | null = null;
-  try {
-    const client = await (
-      await getAuth()
-    ).api.getOAuthClientPublic({
-      query: { client_id: clientId },
-      headers: await headers(),
-    });
-    clientName = client.client_name ?? null;
-  } catch {
+  // Read from the table, not the public endpoint: the screen has to say where the code goes and
+  // whether anyone vouches for the client (PERS-49 SEC-01).
+  const client = await consentClient(clientId);
+  if (!client) {
     return (
       <AuthCard title={t("title")} description={t("invalid")}>
         {null}
@@ -60,8 +53,14 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
   const offline = requested.includes("offline_access");
 
   return (
-    <AuthCard title={t("title")} description={t("description", { client: clientName ?? clientId })}>
-      <ConsentForm oauthQuery={signed} scopes={scopes} offline={offline} />
+    <AuthCard title={t("title")} description={t("description", { client: client.name ?? clientId })}>
+      <ConsentForm
+        oauthQuery={signed}
+        scopes={scopes}
+        offline={offline}
+        hosts={client.hosts}
+        verified={client.verified}
+      />
     </AuthCard>
   );
 }

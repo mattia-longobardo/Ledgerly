@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
+import { oauthClientResources } from "./oauth/schema";
 import { authAccounts } from "./schema";
 
 // Ledgerly as Authorization Server for /api/v1 (docs/auth-design.md D3, D4), against the real
@@ -221,6 +222,72 @@ describe("the doors that stay closed", () => {
       body: JSON.stringify({ redirect_uris: ["http://example.com/cb"], token_endpoint_auth_method: "none" }),
     });
     expect(remote.status).toBe(400);
+  });
+
+  it("refuses a self-registration whose redirect is neither loopback nor allowlisted (SEC-01)", async () => {
+    const response = await authFetch("/oauth2/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_name: "Claude",
+        redirect_uris: ["https://evil.example/cb"],
+        token_endpoint_auth_method: "none",
+      }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "invalid_redirect_uri" });
+  });
+
+  it("never links a self-registered client to /api/v1, nor gives it more than read (SEC-01)", async () => {
+    const register = (body: Record<string, unknown>) =>
+      authFetch("/oauth2/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          redirect_uris: ["http://localhost:6274/oauth/callback"],
+          token_endpoint_auth_method: "none",
+          ...body,
+        }),
+      });
+    expect((await register({ resources: [API] })).status).toBe(400);
+
+    // What MCP clients send everywhere: the union of scopes. It is narrowed, not refused.
+    const response = await register({ scope: "read write imports offline_access" });
+    expect(response.status, await response.clone().text()).toBe(201);
+    const client = (await response.json()) as { client_id: string; scope: string };
+    expect(client.scope.split(" ").sort()).toEqual(["offline_access", "read"]);
+    const links = await getDb()
+      .select({ resource: oauthClientResources.resourceId })
+      .from(oauthClientResources)
+      .where(eq(oauthClientResources.clientId, client.client_id));
+    expect(links.map((link) => link.resource)).toEqual([MCP]);
+
+    // And the authorize endpoint will not start a flow for /api/v1 with it.
+    const person = await ssoPerson();
+    const query = new URLSearchParams({
+      response_type: "code",
+      client_id: client.client_id,
+      redirect_uri: "http://localhost:6274/oauth/callback",
+      scope: "read",
+      state: "s",
+      code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+      code_challenge_method: "S256",
+      resource: API,
+    });
+    const authorize = await authFetch(`/oauth2/authorize?${query.toString()}`, {
+      headers: person.headers,
+      redirect: "manual",
+    });
+    const location = authorize.headers.get("location") ?? "";
+    expect(location).not.toContain("/oauth/consent");
+    expect(location.includes("error=invalid_target") || authorize.status === 400).toBe(true);
+    query.set("scope", "read write");
+    query.set("resource", MCP);
+    const wider = await authFetch(`/oauth2/authorize?${query.toString()}`, {
+      headers: person.headers,
+      redirect: "manual",
+    });
+    expect(wider.headers.get("location") ?? "").toMatch(/error=invalid_scope/);
   });
 
   it("publishes the authorization server metadata under the issuer", async () => {

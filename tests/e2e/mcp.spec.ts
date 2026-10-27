@@ -88,6 +88,9 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
   await page.goto(authorize.href);
   await expect(page).toHaveURL(/\/oauth\/consent/);
   await expect(page.getByText(E2E_MCP_CLIENT_NAME)).toBeVisible();
+  // PERS-49 SEC-01: where the code goes, and that nobody vouches for the name.
+  await expect(page.getByText("127.0.0.1:33418")).toBeVisible();
+  await expect(page.getByText("Unverified client.")).toBeVisible();
   await page.getByRole("button", { name: "Allow" }).click();
   await expect.poll(() => code).not.toBeNull();
 
@@ -119,5 +122,35 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
     headers: { authorization: `Bearer ${provider.saved!.access_token}` },
   });
   expect(api.status()).toBe(401);
+
+  // 5. Connected apps (PERS-49 SEC-05): the consent is listed, and "Revoke" ends the refresh token.
+  await page.goto("/settings/security");
+  const apps = page.getByRole("region", { name: "Connected apps" });
+  await expect(apps.getByText(E2E_MCP_CLIENT_NAME).first()).toBeVisible();
+  await apps.getByRole("button", { name: "Revoke" }).first().click();
+  await page.getByRole("dialog").getByRole("button", { name: "Revoke" }).click();
+  await expect(page.getByText(`Access for ${E2E_MCP_CLIENT_NAME} revoked`)).toBeVisible();
+  const refreshed = await script.post("/api/auth/oauth2/token", {
+    form: {
+      grant_type: "refresh_token",
+      refresh_token: provider.saved!.refresh_token ?? "none",
+      client_id: provider.info!.client_id,
+    },
+  });
+  expect(refreshed.status()).toBeGreaterThanOrEqual(400);
+  await script.dispose();
+});
+
+test("a self-registration with a redirect outside the allowlist is refused (PERS-49 SEC-01)", async () => {
+  const script = await http.newContext({ baseURL: BASE_URL, storageState: { cookies: [], origins: [] } });
+  const response = await script.post("/api/auth/oauth2/register", {
+    data: {
+      client_name: E2E_MCP_CLIENT_NAME,
+      redirect_uris: ["https://evil.example/cb"],
+      token_endpoint_auth_method: "none",
+    },
+  });
+  expect(response.status()).toBe(400);
+  expect(await response.json()).toMatchObject({ error: "invalid_redirect_uri" });
   await script.dispose();
 });

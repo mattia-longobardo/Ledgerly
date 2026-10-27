@@ -10,6 +10,7 @@ import {
   deleteApiClient,
   type MintedClient,
 } from "@/platform/auth/api-clients";
+import { GrantError, revokeConnectedApp } from "@/platform/auth/oauth-grants";
 import { requireSession } from "@/platform/auth/session";
 import { revokeToken, TokenError } from "@/platform/tokens/service";
 
@@ -46,6 +47,21 @@ export async function deleteApiClientAction(
     return { ok: true };
   } catch (error) {
     if (error instanceof ApiClientError) return { ok: false, error: error.code };
+    throw error;
+  }
+}
+
+/** Takes back a consent: the app's refresh tokens go, and the next authorize asks again. */
+export async function revokeConnectedAppAction(
+  clientId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  try {
+    await revokeConnectedApp(ctx, clientId);
+    revalidatePath("/settings/security");
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof GrantError) return { ok: false, error: error.code };
     throw error;
   }
 }

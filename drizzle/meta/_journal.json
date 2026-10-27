@@ -225,6 +225,13 @@
       "when": 1793061610155,
       "tag": "0031_sync_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793095017881,
+      "tag": "0032_dcr_mcp_only",
+      "breakpoints": true
     }
   ]
 }
