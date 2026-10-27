@@ -58,7 +58,13 @@ brings in.
   `APP_ENCRYPTION_KEY` (`id:base64[,older…]`, the first key seals and every key still opens, so a
   key can be rotated by prepending a new one) before it is ever written, and it is never returned
   to the browser afterwards: the field on the card only ever _replaces_ it.
-- **What a sync does.** Hourly at minute 07 (`wallet-sync`), per user: accounts and balances first,
+- **When it syncs.** Each link has its own schedule (`docs/auth-design.md` D7), set from its card:
+  every 15 minutes to once a day (aligned to local midnight), up to six local times of day in
+  quarter hours, or manual only. The default is every hour, as before. `integrations-sync` passes
+  every link whose next time has come, at :07 (first in the hourly tick) and at :22, :37 and :52
+  (the `quarter` tier); a failure does not bring the next pass forward, and "Sync now" never moves
+  it. Times follow the person's time zone, daylight saving included.
+- **What a sync does.** Per user: accounts and balances first,
   then transactions. The first pass after linking fetches **12 months** in monthly windows; every
   pass after that re-reads the **last 7 days**. A page that comes back full splits its window
   instead of failing, reads are retried five times honouring `Retry-After`, and a 401 or 403 stops
@@ -203,7 +209,7 @@ how much you have planned, and how much is left — with **where each number com
 - **The residual comes from the payslip, not from arithmetic.** What the payslip says is left at its
   date is the starting point; the days booked here move it from there. So the number on the screen
   is the employer's number, not a second opinion, and the screen says which payslip it read.
-- **Trek** is the leave calendar it syncs with (`trek-sync`, hourly). The rule that shapes it:
+- **Trek** is the leave calendar it syncs with (`integrations-sync`, on the link's own schedule). The rule that shapes it:
   **it never deletes a day by mistake.** A day this app does not know about is not assumed to be
   gone — it is brought in; a removal is only ever a removal you made here. A Trek that is busy is
   skipped and tried again next hour, never half-applied.
@@ -236,17 +242,43 @@ how much you have planned, and how much is left — with **where each number com
   encrypted with `BETTER_AUTH_SECRET` (`two_factors`). Limits: 5 requests a minute per client on
   each `/two-factor/*` endpoint, 5 wrong codes end a challenge, 10 wrong codes in a row lock the
   account's second factor for 15 minutes.
-- **Personal access tokens** (`/settings/security`): `pat_<prefix>.<secret>`, shown once, kept as a
-  SHA-256 digest with scopes `read`, `write`, `imports`, an optional expiry and revocation.
+- **OAuth2** (`docs/auth-design.md` D3): Ledgerly is the Authorization Server of its own API
+  (`@better-auth/oauth-provider`), issuer `https://dash.longobardo.me/api/auth`. Discovery:
+  `/.well-known/oauth-authorization-server/api/auth` (RFC 8414, also without the issuer path),
+  `/.well-known/openid-configuration` and `/.well-known/oauth-protected-resource/api/v1` (RFC
+  9728). Access tokens are JWT (`typ` `at+jwt`, EdDSA, keys in `jwks`, JWKS at
+  `/api/auth/jwks`), valid one hour, with the resource as audience (RFC 8707): a token for
+  `/api/mcp` is not good for `/api/v1`. Refresh tokens rotate, 30 days. Clients that register
+  themselves (RFC 7591, `/api/auth/oauth2/register`) may only be public (PKCE, no secret); the
+  person signs in (Authentik or password + TOTP) and consents at `/oauth/consent`.
+- **Client API** (`/settings/security`): what replaces the personal access tokens. A confidential
+  client with the `client_credentials` grant and the scopes `read`, `write`, `imports`, owned by
+  whoever made it: its token acts as that person, and only on `/api/v1`. The secret is shown once
+  and stored hashed; deleting the client stops its tokens at once.
+
+  ```bash
+  TOKEN=$(curl -sS -u "$CLIENT_ID:$CLIENT_SECRET" https://dash.longobardo.me/api/auth/oauth2/token \
+    -d grant_type=client_credentials -d resource=https://dash.longobardo.me/api/v1 | jq -r .access_token)
+  curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/summary
+  ```
+
+- **Personal access tokens** (legacy, D4): `pat_<prefix>.<secret>` tokens already made keep working
+  during the transition, and every use is logged as `[api] legacy token used (<id>)`; no new one can
+  be made. Their removal (T5) comes after 14 days without errors and the owner's go-ahead.
 - **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
   `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
   `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
   user and never beyond them; there is no administrative route at all. Amounts travel as decimal
-  strings, never as JSON numbers. 120 calls a minute per token, per worker.
-
-  ```bash
-  curl -sS -H "Authorization: Bearer pat_…" https://dash.longobardo.me/api/v1/summary
-  ```
+  strings, never as JSON numbers. 120 calls a minute per client (or per legacy token), per worker.
+  Without a valid token the answer is `401` with
+  `WWW-Authenticate: Bearer error="invalid_token", resource_metadata="…/.well-known/oauth-protected-resource/api/v1"`;
+  with a token that lacks the route's scope, `403` with `error="insufficient_scope", scope="<scope>"`.
+- **Paperless-ngx** (Settings › Integrations, D5): Ledgerly reads the payslips Paperless files —
+  `GET /api/documents/?document_type__id__in=…&modified__gt=<cursor>` and the original of each —
+  with the API token of a read-only Paperless user (`ledgerly-sync`), at the link's own schedule.
+  The document types are named on the card (default `Payroll`; Cometa types optional); the first
+  pass looks back 90 days. A file already imported (the old webhook, an upload) answers
+  `duplicate` and nothing happens twice. Inside the homelab the URL is `http://paperless-ngx:8000`.
 
 - **Export.** "Export my data" (Settings › Data) streams a ZIP of every table as CSV, the same rows
   as one JSON, and the original documents. "Export all data" (Admin › Server) is the `export-all`
@@ -331,11 +363,12 @@ The app image applies pending migrations on boot, then serves the standalone Nex
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
 start if any check fails, so a misconfigured deployment fails loudly instead of on the first
 request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
-`http://ledgerly:3000/api/jobs/tick?tier=<hourly|daily|monthly>` with `CRON_SECRET` as the
+`http://ledgerly:3000/api/jobs/tick?tier=<quarter|hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
 and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
-tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `wallet-sync` then
-`subscriptions-check` and `funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `integrations-sync` alone at :22,
+:37 and :52, then first at :07 before `recurrences-refresh`, `subscriptions-check` and
+`funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
 `interests-accrual` daily, `accounts-snapshot` and `pockets-accrual` monthly) for that tier, in that order; touching the heartbeat file is a side
 effect of every tick, not a job of its own.
 
