@@ -89,6 +89,41 @@ describe("formatMoney", () => {
   });
 });
 
+describe("formatMoney with a currency", () => {
+  const cents = 123_456n;
+
+  it("writes EUR exactly as an amount without a currency", () => {
+    for (const format of ["it-IT", "en-US", "fr-FR"] as const) {
+      expect(formatMoney(cents, format, { currency: "EUR" })).toBe(formatMoney(cents, format));
+    }
+  });
+
+  it("uses the sign of each currency in English (en-US)", () => {
+    expect(plain(formatMoney(cents, "en-US", { currency: "EUR" }))).toBe("€1,234.56");
+    expect(plain(formatMoney(cents, "en-US", { currency: "USD" }))).toBe("$1,234.56");
+    expect(plain(formatMoney(cents, "en-US", { currency: "GBP" }))).toBe("£1,234.56");
+    expect(plain(formatMoney(cents, "en-US", { currency: "CHF" }))).toBe("CHF 1,234.56");
+  });
+
+  it("uses the sign of each currency in Italian (it-IT)", () => {
+    expect(plain(formatMoney(cents, "it-IT", { currency: "EUR" }))).toBe("1.234,56 €");
+    expect(plain(formatMoney(cents, "it-IT", { currency: "USD" }))).toBe("1.234,56 USD");
+    expect(plain(formatMoney(cents, "it-IT", { currency: "GBP" }))).toBe("1.234,56 £");
+    expect(plain(formatMoney(cents, "it-IT", { currency: "CHF" }))).toBe("1.234,56 CHF");
+  });
+
+  it("keeps the sign, the dash and the user's overrides with any currency", () => {
+    expect(plain(formatMoney(-cents, "en-US", { currency: "USD", signed: true }))).toBe("−$1,234.56");
+    expect(formatMoney(null, "en-US", { currency: "USD" })).toBe("—");
+    expect(plain(formatMoney(cents, style({ currencyPosition: "before" }), { currency: "CHF" }))).toBe(
+      "CHF 1.234,56",
+    );
+    expect(
+      plain(formatMoney(cents, style({ format: "en-US", currencyPosition: "after" }), { currency: "USD" })),
+    ).toBe("1,234.56 $");
+  });
+});
+
 describe("formatPercent", () => {
   it("puts a space before % outside en-US and signs on request", () => {
     expect(plain(formatPercent(0.016, "it-IT", { signed: true }))).toBe("+1,6 %");

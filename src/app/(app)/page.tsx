@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { accountsView } from "@/modules/accounts/queries";
 import { BudgetsOverviewCard } from "@/modules/budgets/ui/overview-card";
 import { pocketsTotal } from "@/modules/pockets/queries";
-import { changeBetween } from "@/modules/accounts/ui/display";
+import { changeBetween, counterValue } from "@/modules/accounts/ui/display";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@/platform/dates";
@@ -56,6 +56,8 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
 
   const pockets = await pocketsTotal(ctx);
   const tp = await getTranslations("pockets");
+  /** Every total on the page is in the display currency (§1.8, D1); each account row in its own. */
+  const total = { currency: view.currency };
   const kpis = [
     { key: "cash", bucket: view.buckets.cash },
     { key: "savings", bucket: view.buckets.savings },
@@ -77,11 +79,11 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
             {t("netWorth.on", { date: formatDate(today(ctx.timeZone, now), "long", ctx.locale) })}
           </h1>
           <p className="text-hero font-semibold tracking-[-0.02em]">
-            {formatMoney(view.total, ctx.numberFormat)}
+            {formatMoney(view.total, ctx.numberFormat, total)}
           </p>
           <p className="flex flex-wrap items-center gap-2 text-sm">
             <span className={cn("font-medium", TONE_TEXT[toneOfSign(monthly.cents)])}>
-              {formatMoney(monthly.cents, ctx.numberFormat, { signed: true })}
+              {formatMoney(monthly.cents, ctx.numberFormat, { signed: true, ...total })}
               {monthly.fraction !== null &&
                 ` (${formatPercent(monthly.fraction, ctx.numberFormat, { signed: true })})`}
             </span>
@@ -91,7 +93,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
             </span>
             <span className="text-muted">
               {t("netWorth.ytd", {
-                value: formatMoney(ytd.cents, ctx.numberFormat, { signed: true }),
+                value: formatMoney(ytd.cents, ctx.numberFormat, { signed: true, ...total }),
               })}
             </span>
           </p>
@@ -106,13 +108,18 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
       </div>
 
       {view.totalPartial && <p className="text-sm text-warn">{t("partial")}</p>}
+      {view.missingRates.length > 0 && (
+        <p className="text-sm text-warn">
+          {ta("missingRate", { currencies: view.missingRates.join(", "), currency: view.currency })}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
         {kpis.map(({ key, bucket }) => (
           <KpiTile
             key={key}
             label={t(`kpis.${key}`)}
-            value={formatMoney(bucket.total, ctx.numberFormat)}
+            value={formatMoney(bucket.total, ctx.numberFormat, total)}
             note={ta("countAccounts", { count: bucket.count })}
           />
         ))}
@@ -158,6 +165,8 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
               <TBody>
                 {view.rows.map((row) => {
                   const change = changeBetween(row.balance, row.previous);
+                  const own = { currency: row.account.currency };
+                  const counter = counterValue(row, view.currency, ctx.numberFormat);
                   return (
                     <Tr key={row.account.id}>
                       <Td>
@@ -169,11 +178,14 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                         </Link>
                       </Td>
                       <Td muted>{ta(`types.${row.account.type}`)}</Td>
-                      <Td align="right">{formatMoney(row.balance, ctx.numberFormat)}</Td>
+                      <Td align="right">
+                        {formatMoney(row.balance, ctx.numberFormat, own)}
+                        {counter && <span className="block text-sm text-muted">{counter}</span>}
+                      </Td>
                       <Td align="right" className={TONE_TEXT[toneOfSign(change.cents)]}>
                         {change.cents === null
                           ? NULL_DISPLAY
-                          : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
+                          : formatMoney(change.cents, ctx.numberFormat, { signed: true, ...own })}
                       </Td>
                     </Tr>
                   );
@@ -185,6 +197,8 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           <ul className="flex flex-col md:hidden">
             {view.rows.map((row) => {
               const change = changeBetween(row.balance, row.previous);
+              const own = { currency: row.account.currency };
+              const counter = counterValue(row, view.currency, ctx.numberFormat);
               return (
                 <li
                   key={row.account.id}
@@ -200,11 +214,12 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                       <span className="text-sm text-muted">{ta(`types.${row.account.type}`)}</span>
                     </span>
                     <span className="flex flex-col items-end tabular-nums">
-                      <span className="font-semibold">{formatMoney(row.balance, ctx.numberFormat)}</span>
+                      <span className="font-semibold">{formatMoney(row.balance, ctx.numberFormat, own)}</span>
+                      {counter && <span className="text-sm text-muted">{counter}</span>}
                       <span className={cn("text-sm", TONE_TEXT[toneOfSign(change.cents)])}>
                         {change.cents === null
                           ? NULL_DISPLAY
-                          : formatMoney(change.cents, ctx.numberFormat, { signed: true })}
+                          : formatMoney(change.cents, ctx.numberFormat, { signed: true, ...own })}
                       </span>
                     </span>
                   </Link>

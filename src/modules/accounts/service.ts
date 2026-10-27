@@ -15,6 +15,8 @@ import {
 import { getDb, type Tx } from "@/platform/db/client";
 import { FOREIGN_KEY_VIOLATION, hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
+import { convertCents } from "@/platform/fx/rules";
+import { ratesOn } from "@/platform/fx/service";
 import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
@@ -42,13 +44,28 @@ import { accountConnections, accounts, balanceEntries, snapshotRuns } from "./sc
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type AccountErrorCode =
-  "not_found" | "future_date" | "synced_locked" | "duplicate_name" | "duplicate_connection" | "invalid";
+  | "not_found"
+  | "future_date"
+  | "synced_locked"
+  | "currency_locked"
+  | "duplicate_name"
+  | "duplicate_connection"
+  | "invalid";
 
 export class AccountError extends Error {
   constructor(readonly code: AccountErrorCode) {
     super(code);
     this.name = "AccountError";
   }
+}
+
+async function hasBalanceEntries(ctx: Pick<Ctx, "userId">, accountId: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: balanceEntries.id })
+    .from(balanceEntries)
+    .where(and(eq(balanceEntries.accountId, accountId), userScoped(ctx).owns(balanceEntries)))
+    .limit(1);
+  return row !== undefined;
 }
 
 async function requireAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Account> {
@@ -117,11 +134,17 @@ export async function createAccount(ctx: Ctx, input: unknown): Promise<Account> 
 /**
  * The Settings tab. A synced account keeps the provider's currency (spec §7.1); its type may be
  * changed here, and from then on the sync stops following the provider's (`retyped_locally`).
+ *
+ * An account with a balance keeps its currency (docs/design/investments.md §1.8): a new one would
+ * reinterpret every amount already recorded, so the change is refused with `currency_locked`.
  */
 export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown): Promise<Account> {
   const current = await requireAccount(ctx, id);
   const parsed: AccountSettingsInput = accountSettingsSchema.parse(input);
   const settings = current.origin === "synced" ? settingsForSynced(parsed, current) : parsed;
+  if (settings.currency !== current.currency && (await hasBalanceEntries(ctx, id))) {
+    throw new AccountError("currency_locked");
+  }
   const [row] = await getDb()
     .update(accounts)
     .set({
@@ -502,7 +525,9 @@ export interface SnapshotOutcome {
   month: MonthKey;
   written: number;
   skipped: number;
+  /** In `currency`, the display currency of the day it ran: each account converted, then summed. */
   total: Cents | null;
+  currency: string;
   warnings: string[];
 }
 
@@ -511,9 +536,14 @@ export interface SnapshotOutcome {
  * last day of `month`, copied from the last balance known up to that day. Accounts with no data
  * are skipped, and running it twice changes nothing — both the balances and the `snapshot_runs`
  * row are upserts, so a retry after a partial failure is safe.
+ *
+ * Each `system` balance is a copy in the account's own currency. The run's total is in the display
+ * currency (docs/design/investments.md §2.3): every balance converted at the month end's rate, then
+ * summed, and saved with `total_currency`, so a later change of the preference never rewrites it.
+ * A balance with no rate stays out of the total, never counted 1:1.
  */
 export async function runSnapshot(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "displayCurrency">,
   month: MonthKey,
   now: Date = new Date(),
 ): Promise<SnapshotOutcome> {
@@ -563,12 +593,30 @@ export async function runSnapshot(
       });
   }
 
-  const { total } = sumCents(values.map((value) => value.balanceCents as Cents));
+  const currency = ctx.displayCurrency;
+  const currencyOf = new Map(open.map((account) => [account.id, account.currency]));
+  const rates = await ratesOn(
+    open.some((account) => account.currency !== currency) ? [currency, ...currencyOf.values()] : [],
+    on,
+    on,
+  );
+  const { total } = sumCents(
+    values.map((value) =>
+      convertCents(
+        value.balanceCents as Cents,
+        currencyOf.get(value.accountId) ?? currency,
+        currency,
+        on,
+        rates,
+      ),
+    ),
+  );
   const outcome: SnapshotOutcome = {
     month: monthKey(month),
     written: values.length,
     skipped: open.length - values.length,
     total,
+    currency,
     warnings,
   };
   const row = {
@@ -576,6 +624,7 @@ export async function runSnapshot(
     accountsWritten: outcome.written,
     accountsSkipped: outcome.skipped,
     totalCents: total,
+    totalCurrency: currency,
     warnings,
     ranAt: now,
   };

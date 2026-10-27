@@ -278,7 +278,9 @@ how much you have planned, and how much is left — with **where each number com
   `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
   `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
   user and never beyond them; there is no administrative route at all. Amounts travel as decimal
-  strings, never as JSON numbers. 120 calls a minute per client, per worker.
+  strings, never as JSON numbers: an account's balance in its own `currency`, the totals of
+  `/summary` in the user's display currency (field `currency`). Changes: `docs/api-changelog.md`.
+  120 calls a minute per client, per worker.
   Without a valid token the answer is `401` with
   `WWW-Authenticate: Bearer error="invalid_token", resource_metadata="…/.well-known/oauth-protected-resource/api/v1"`;
   with a token that lacks the route's scope, `403` with `error="insufficient_scope", scope="<scope>"`.

@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, eq, gte, max, min } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, lte, max, min } from "drizzle-orm";
 import type { CivilDate } from "../dates";
 import { getDb } from "../db/client";
-import type { FxRate } from "./rules";
+import { type FxRate, NO_RATES, type RateTable, rateTable } from "./rules";
 import { fxRates } from "./schema";
 
 /** Postgres takes at most 65,535 parameters a statement; five columns a row stays well below. */
@@ -43,4 +43,33 @@ export async function listRates(currency: string, from: CivilDate = "1999-01-01"
     .from(fxRates)
     .where(and(eq(fxRates.currency, currency), gte(fxRates.on, from)))
     .orderBy(asc(fxRates.on));
+}
+
+/**
+ * The rates a reader needs to convert values dated between `from` and `to` (§1.8): every stored
+ * rate of `currencies` in that window, plus the last one before `from`, so the first days of the
+ * window (a weekend, a holiday) still have the fixing before them. EUR needs no row and is skipped;
+ * with nothing left to convert there is no query at all, which is the all-EUR case.
+ */
+export async function ratesOn(
+  currencies: Iterable<string>,
+  from: CivilDate,
+  to: CivilDate,
+): Promise<RateTable> {
+  const wanted = [...new Set(currencies)].filter((currency) => currency !== "EUR").sort();
+  if (wanted.length === 0) return NO_RATES;
+  const columns = { on: fxRates.on, currency: fxRates.currency, eurPerUnit: fxRates.eurPerUnit };
+  const [before, inside] = await Promise.all([
+    getDb()
+      .selectDistinctOn([fxRates.currency], columns)
+      .from(fxRates)
+      .where(and(inArray(fxRates.currency, wanted), lt(fxRates.on, from)))
+      .orderBy(asc(fxRates.currency), desc(fxRates.on)),
+    getDb()
+      .select(columns)
+      .from(fxRates)
+      .where(and(inArray(fxRates.currency, wanted), gte(fxRates.on, from), lte(fxRates.on, to)))
+      .orderBy(asc(fxRates.currency), asc(fxRates.on)),
+  ]);
+  return rateTable([...before, ...inside]);
 }

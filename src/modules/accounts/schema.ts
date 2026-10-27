@@ -157,6 +157,9 @@ export const snapshotRuns = pgTable(
     accountsWritten: integer("accounts_written").notNull().default(0),
     accountsSkipped: integer("accounts_skipped").notNull().default(0),
     totalCents: bigint("total_cents", { mode: "bigint" }),
+    // The display currency `total_cents` was summed in (§2.3): a past snapshot keeps its own, and is
+    // never converted again when the preference changes.
+    totalCurrency: text("total_currency").notNull().default("EUR"),
     warnings: jsonb("warnings").$type<string[]>(),
     ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -170,6 +173,7 @@ export const snapshotRuns = pgTable(
     index("snapshot_runs_user_month_idx").on(table.userId, table.month.desc()),
     check("snapshot_runs_state_ck", sql`${table.state} in (${sql.raw(inList(SNAPSHOT_STATES))})`),
     check("snapshot_runs_month_ck", sql`extract(day from ${table.month}) = 1`),
+    check("snapshot_runs_total_currency_ck", sql`${table.totalCurrency} ~ '^[A-Z]{3}$'`),
   ],
 );
 

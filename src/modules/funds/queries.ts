@@ -247,7 +247,7 @@ async function depositsOf(
 
 /** The Funds list (spec §7.7, design): KPIs, the combined chart, one row per fund, the totals. */
 export async function fundsView(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   now: Date = new Date(),
 ): Promise<FundsView> {
   const todayOn = today(ctx.timeZone, now);
@@ -428,7 +428,7 @@ export interface FundDetail {
 
 /** One fund's page (spec §7.7, design): the four tabs read once. `span` is the chart's months. */
 export async function fundDetail(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   id: string,
   span = 12,
   now: Date = new Date(),

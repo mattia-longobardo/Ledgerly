@@ -4,6 +4,7 @@ import { sessions } from "@/platform/auth/schema";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Ctx } from "@/platform/context";
+import { DEFAULT_DISPLAY_CURRENCY, isDisplayCurrency } from "@/platform/fx/rules";
 import { DEFAULT_PREFERENCES, type Preferences, preferencesInputSchema } from "./rules";
 import { userPreferences } from "./schema";
 
@@ -16,6 +17,7 @@ function fromRow(row: Row): Preferences {
     numberFormat: row.numberFormat,
     decimalSeparator: row.decimalSeparator,
     currencyPosition: row.currencyPosition,
+    displayCurrency: isDisplayCurrency(row.displayCurrency) ? row.displayCurrency : DEFAULT_DISPLAY_CURRENCY,
     weekStart: row.weekStart === 0 ? 0 : 1,
     theme: row.theme,
     defaultRange: row.defaultRange,
@@ -41,6 +43,7 @@ export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown
     numberFormat: prefs.numberFormat,
     decimalSeparator: prefs.decimalSeparator,
     currencyPosition: prefs.currencyPosition,
+    displayCurrency: prefs.displayCurrency,
     weekStart: prefs.weekStart,
     theme: prefs.theme,
     defaultRange: prefs.defaultRange,

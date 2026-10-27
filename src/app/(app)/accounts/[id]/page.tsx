@@ -14,6 +14,7 @@ import {
   shareOf,
   since,
   symmetricAxisLabels,
+  counterValue,
 } from "@/modules/accounts/ui/display";
 import { BalanceEntries, type EntryRow } from "@/modules/accounts/ui/balance-entries";
 import {
@@ -121,7 +122,9 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
 
   const change = changeBetween(row.balance, row.previous);
   const yoy = changeBetween(row.balance, row.series.at(-13) ?? null);
-  const share = shareOf(row.balance, view.total);
+  // The share is of the net worth, so both sides are in the display currency (§1.8, D1).
+  const share = shareOf(row.display.balance, view.total);
+  const counter = counterValue(row, view.currency, ctx.numberFormat);
   const synced = since(account.lastSyncedAt, now);
   const color = colorFor(account, index);
 
@@ -153,12 +156,16 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
         <h1 className="text-title font-semibold tracking-[-0.02em]">{account.name}</h1>
         <p className="flex flex-wrap items-baseline gap-3">
           <span className="text-hero-sm font-semibold tracking-[-0.02em]">
-            {formatMoney(row.balance, ctx.numberFormat)}
+            {formatMoney(row.balance, ctx.numberFormat, { currency: account.currency })}
           </span>
+          {counter && <span className="text-sm text-muted">{counter}</span>}
           <span className={`text-sm font-medium ${TONE_TEXT[toneOfSign(change.cents)]}`}>
             {change.cents === null
               ? NULL_DISPLAY
-              : formatMoney(change.cents, ctx.numberFormat, { signed: true })}{" "}
+              : formatMoney(change.cents, ctx.numberFormat, {
+                  signed: true,
+                  currency: account.currency,
+                })}{" "}
             {td("thisMonth")}
           </span>
           <span className="text-sm text-muted">
@@ -195,7 +202,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           accountId={id}
           today={today(ctx.timeZone, now)}
           synced={account.origin === "synced"}
-          entries={await entryRows(ctx, id)}
+          entries={await entryRows(ctx, id, account.currency)}
         />
       )}
 
@@ -269,6 +276,8 @@ async function OverviewTab({
   id: string;
   chart: { mode: "line" | "bars"; grain: "month" | "day"; span: SpanKey; custom: boolean };
 }) {
+  /** Everything on this tab is the account's own value, in its own currency. */
+  const own = { currency: row.account.currency };
   const t = await getTranslations("accounts.detail");
   const ta = await getTranslations("accounts");
   const tp = await getTranslations("pockets.account");
@@ -332,7 +341,7 @@ async function OverviewTab({
       <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
         <KpiTile
           label={t("kpis.balance")}
-          value={formatMoney(row.balance, ctx.numberFormat)}
+          value={formatMoney(row.balance, ctx.numberFormat, own)}
           note={ta(`types.${row.account.type}`)}
         />
         <KpiTile
@@ -400,7 +409,7 @@ async function OverviewTab({
           {chart.mode === "bars" ? (
             <Bars
               values={steps.map((step) => (step === null ? null : Number(step)))}
-              yLabels={symmetricAxisLabels(steps, ctx.numberFormat)}
+              yLabels={symmetricAxisLabels(steps, ctx.numberFormat, own.currency)}
               xLabels={plot.xLabels}
               summary={t(daily ? "chart.dayBarsSummary" : "chart.barsSummary", { name: row.account.name })}
             />
@@ -408,12 +417,12 @@ async function OverviewTab({
             <AreaLine
               hover={plot.labels.map((label, i) => ({
                 label,
-                value: formatMoney(plot.values[i], ctx.numberFormat),
+                value: formatMoney(plot.values[i], ctx.numberFormat, own),
                 note:
                   [
                     steps[i] === null
                       ? null
-                      : `${formatMoney(steps[i], ctx.numberFormat, { signed: true })} ${t("chart.change")}`,
+                      : `${formatMoney(steps[i], ctx.numberFormat, { signed: true, ...own })} ${t("chart.change")}`,
                     // Rebuilt from the movements rather than read (spec §7.1, F2.5).
                     plot.estimated[i] ? ta("estimated.short") : null,
                   ]
@@ -422,11 +431,11 @@ async function OverviewTab({
               }))}
               estimated={plot.estimated}
               values={asNumbers(plot.values)}
-              yLabels={axisLabels(plot.values, ctx.numberFormat)}
+              yLabels={axisLabels(plot.values, ctx.numberFormat, 4, own.currency)}
               xLabels={plot.xLabels}
               summary={t("chart.summary", {
                 name: row.account.name,
-                value: formatMoney(plot.values[plot.values.length - 1] ?? null, ctx.numberFormat),
+                value: formatMoney(plot.values[plot.values.length - 1] ?? null, ctx.numberFormat, own),
               })}
             />
           )}
@@ -450,11 +459,11 @@ async function OverviewTab({
                   {monthRows.map((entry) => (
                     <Tr key={entry.month}>
                       <Td>{formatDate(entry.month, "monthYear", ctx.locale)}</Td>
-                      <Td align="right">{formatMoney(entry.value, ctx.numberFormat)}</Td>
+                      <Td align="right">{formatMoney(entry.value, ctx.numberFormat, own)}</Td>
                       <Td align="right" className={TONE_TEXT[toneOfSign(entry.change.cents)]}>
                         {entry.change.cents === null
                           ? NULL_DISPLAY
-                          : formatMoney(entry.change.cents, ctx.numberFormat, { signed: true })}
+                          : formatMoney(entry.change.cents, ctx.numberFormat, { signed: true, ...own })}
                       </Td>
                       <Td align="right" className={TONE_TEXT[toneOfSign(entry.change.cents)]}>
                         {formatPercent(entry.change.fraction, ctx.numberFormat, { signed: true })}
@@ -520,8 +529,9 @@ async function OverviewTab({
   );
 }
 
-async function entryRows(ctx: Ctx, accountId: string): Promise<EntryRow[]> {
+async function entryRows(ctx: Ctx, accountId: string, currency: string): Promise<EntryRow[]> {
   const entries = await listBalanceEntries(ctx, accountId);
+  const own = { currency };
   return entries.map((entry, index) => {
     const earlier = entries[index + 1]?.balanceCents ?? null;
     const change = changeBetween(entry.balanceCents, earlier);
@@ -529,9 +539,11 @@ async function entryRows(ctx: Ctx, accountId: string): Promise<EntryRow[]> {
       id: entry.id,
       on: entry.on,
       onLabel: formatDate(entry.on, "long", ctx.locale),
-      balance: formatMoney(entry.balanceCents, ctx.numberFormat),
+      balance: formatMoney(entry.balanceCents, ctx.numberFormat, own),
       change:
-        change.cents === null ? NULL_DISPLAY : formatMoney(change.cents, ctx.numberFormat, { signed: true }),
+        change.cents === null
+          ? NULL_DISPLAY
+          : formatMoney(change.cents, ctx.numberFormat, { signed: true, ...own }),
       changeSign: change.cents === null ? 0 : Number(change.cents),
       note: entry.note,
       source: entry.source,

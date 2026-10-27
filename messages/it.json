@@ -590,7 +590,7 @@
         "dot": "Punto (1,234.56)",
         "comma": "Virgola (1.234,56)"
       },
-      "currencyPosition": "Simbolo dell'euro",
+      "currencyPosition": "Simbolo della valuta",
       "currencyPositions": {
         "auto": "Come il formato dei numeri",
         "before": "Prima dell'importo (€ 1.234,56)",
@@ -622,7 +622,9 @@
       "errors": {
         "invalid": "Alcune di queste preferenze non sono valide. Controlla i valori e riprova.",
         "failed": "Impossibile salvare le preferenze. Riprova."
-      }
+      },
+      "displayCurrency": "Valuta di visualizzazione",
+      "displayCurrencyHint": "I totali su più conti sono convertiti in questa valuta al cambio BCE del loro giorno. Ogni conto mantiene la sua valuta."
     },
     "signIn": {
       "title": "Accesso",
@@ -1689,7 +1691,8 @@
         "failed": "Non è stato salvato. Riprova."
       }
     },
-    "showArchived": "Mostra archiviati"
+    "showArchived": "Mostra archiviati",
+    "missingRate": "Nessun cambio da {currencies} a {currency}: quei conti restano fuori dai totali."
   },
   "budgets": {
     "title": "Budget",

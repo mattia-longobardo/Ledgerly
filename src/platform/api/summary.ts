@@ -20,6 +20,8 @@ summaryApi.get("/summary", withToken("read"), async (c) => {
   const figures = await monthlyFigures(ctx, monthKey(today(ctx.timeZone)));
   return c.json({
     month: figures.month,
+    // The display currency of netWorth, previousNetWorth and cash (docs/api-changelog.md).
+    currency: figures.currency,
     netWorth: money(figures.netWorthCents),
     // True when an account counted has no balance yet: the total is a floor, not a fact.
     netWorthPartial: figures.netWorthPartial,
