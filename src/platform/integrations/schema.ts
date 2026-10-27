@@ -1,15 +1,8 @@
 import { sql } from "drizzle-orm";
 import { check, customType, index, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { users } from "../auth/schema";
-import {
-  CONNECTION_STATES,
-  DEFAULT_SYNC_SCHEDULE,
-  ENTITY_TYPES,
-  SYNC_KINDS,
-  SYNC_MODES,
-  SYNC_STATES,
-  type SyncSchedule,
-} from "./rules";
+import { CONNECTION_STATES, ENTITY_TYPES, SYNC_KINDS, SYNC_STATES } from "./rules";
+import { DEFAULT_SYNC_SCHEDULE, type SyncSchedule } from "./schedule";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
@@ -36,8 +29,9 @@ export const integrationConnections = pgTable(
     state: text("state", { enum: CONNECTION_STATES }).notNull().default("active"),
     lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
     lastError: text("last_error"),
-    // When the dispatcher syncs this connection (docs/auth-design.md D7): the shape is checked by
-    // `syncScheduleSchema`, the mode by the constraint below; `next_sync_at` is null for `manual`.
+    // When the dispatcher syncs this connection (docs/scheduler.md): a list of rules, checked by
+    // `syncScheduleSchema` and, as a list, by the constraint below; `next_sync_at` is null when
+    // there is no rule (manual only).
     schedule: jsonb("schedule").$type<SyncSchedule>().notNull().default(DEFAULT_SYNC_SCHEDULE),
     nextSyncAt: timestamp("next_sync_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -51,8 +45,8 @@ export const integrationConnections = pgTable(
     check("integration_connections_state_ck", sql`${table.state} in (${sql.raw(inList(CONNECTION_STATES))})`),
     check("integration_connections_provider_ck", sql`length(btrim(${table.provider})) between 1 and 40`),
     check(
-      "integration_connections_schedule_mode_ck",
-      sql`${table.schedule}->>'mode' in (${sql.raw(inList(SYNC_MODES))})`,
+      "integration_connections_schedule_rules_ck",
+      sql`jsonb_typeof(${table.schedule}->'rules') = 'array'`,
     ),
     index("integration_connections_next_sync_idx")
       .on(table.nextSyncAt)

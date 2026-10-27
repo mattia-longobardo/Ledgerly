@@ -17,8 +17,8 @@ function crontabTiers(): Set<string> {
 describe("JOBS", () => {
   it("schedules every job each phase registered, under the tier spec §10.2 gives it", () => {
     expect(JOBS.map((job) => [job.name, job.tier])).toEqual([
-      // Every connection by its own schedule (docs/auth-design.md D7); in `hourly` too, first.
-      ["integrations-sync", "quarter"],
+      // Every connection by its own schedule (docs/scheduler.md); in `hourly` too, first.
+      ["integrations-sync", "minute"],
       ["housekeeping", "daily"],
       ["accounts-alerts", "daily"],
       ["accounts-snapshot", "monthly"],
@@ -43,7 +43,7 @@ describe("JOBS", () => {
 
   it("gives every scheduled job a tier supercronic actually calls", () => {
     const called = crontabTiers();
-    expect([...called].sort()).toEqual(["daily", "hourly", "monthly", "quarter"]);
+    expect([...called].sort()).toEqual(["daily", "hourly", "minute", "monthly"]);
     for (const job of JOBS) {
       if (job.tier === "manual") continue;
       expect(called.has(job.tier), job.name).toBe(true);
@@ -55,9 +55,7 @@ describe("JOBS", () => {
     const hourly = JOBS.filter((job) => runsIn(job, "hourly")).map((job) => job.name);
     expect(hourly[0]).toBe("integrations-sync");
     expect(hourly.indexOf("recurrences-refresh")).toBeLessThan(hourly.indexOf("subscriptions-check"));
-    expect(JOBS.filter((job) => runsIn(job, "quarter")).map((job) => job.name)).toEqual([
-      "integrations-sync",
-    ]);
+    expect(JOBS.filter((job) => runsIn(job, "minute")).map((job) => job.name)).toEqual(["integrations-sync"]);
   });
 
   it("names each job once: two entries with one name would both answer to it", () => {

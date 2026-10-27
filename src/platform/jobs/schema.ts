@@ -12,7 +12,9 @@ export const jobRuns = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     job: text("job").notNull(),
-    tier: text("tier", { enum: ["quarter", "hourly", "daily", "monthly", "manual"] }).notNull(),
+    // `quarter` is the tier `integrations-sync` ran in before the minute tick: kept for the rows
+    // it wrote, never asked for again.
+    tier: text("tier", { enum: ["minute", "hourly", "daily", "monthly", "manual", "quarter"] }).notNull(),
     status: text("status", { enum: ["running", "success", "failed", "skipped"] }).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -26,7 +28,10 @@ export const jobRuns = pgTable(
   },
   (table) => [
     index("job_runs_job_started_idx").on(table.job, table.startedAt.desc()),
-    check("job_runs_tier_ck", sql`${table.tier} in ('quarter', 'hourly', 'daily', 'monthly', 'manual')`),
+    check(
+      "job_runs_tier_ck",
+      sql`${table.tier} in ('minute', 'hourly', 'daily', 'monthly', 'manual', 'quarter')`,
+    ),
     check("job_runs_status_ck", sql`${table.status} in ('running', 'success', 'failed', 'skipped')`),
   ],
 );

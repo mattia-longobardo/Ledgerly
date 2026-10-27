@@ -34,7 +34,10 @@ async function newContext(): Promise<Ctx> {
   const auth = await getAuth();
   const email = `${randomUUID()}@example.test`;
   const created = await auth.api.createUser({ body: { email, password: PASSWORD, name: "API" } });
-  const { headers } = await auth.api.signInEmail({ body: { email, password: PASSWORD }, returnHeaders: true });
+  const { headers } = await auth.api.signInEmail({
+    body: { email, password: PASSWORD },
+    returnHeaders: true,
+  });
   await getDb()
     .delete(authAccounts)
     .where(and(eq(authAccounts.userId, created.user.id), eq(authAccounts.providerId, "credential")));

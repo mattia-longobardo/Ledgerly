@@ -98,6 +98,7 @@ export async function runTier(
   const outcomes: Outcome[] = [];
   try {
     for (const job of jobs.filter((j) => runsIn(j, tier))) {
+      if (job.hasWork && !(await job.hasWork())) continue;
       const locked = await withJobLock(`job:${job.name}`, () => runAndRecord(job, tier));
       if (locked.ran) {
         outcomes.push({ job: job.name, status: locked.value });
