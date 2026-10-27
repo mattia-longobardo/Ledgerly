@@ -4,20 +4,22 @@ import { type AccessIdentity, authenticateAccessToken } from "@/platform/auth/ac
 import { bearerChallenge, looksLikeJwt } from "@/platform/auth/access-token-rules";
 import { redactForLog } from "@/platform/auth/logger";
 import { resourceMetadataUrl } from "@/platform/auth/oauth";
+import type { Scope } from "@/platform/auth/scopes";
 import type { Ctx } from "@/platform/context";
 import { readEnv } from "@/platform/env";
-import { type Scope } from "@/platform/tokens/rules";
-import { authenticateToken, type TokenIdentity, touchToken } from "@/platform/tokens/service";
 import { fail } from "./errors";
 import { MAX_PER_WINDOW, takeSlot } from "./rate-limit";
 
 /**
- * Who called, whichever credential they used: an OAuth access token (`kind: "oauth"`, the way in
- * from now on) or a personal access token kept for the transition (`kind: "pat"`, D4).
+ * Who called: an OAuth access token with `aud` = `/api/v1`, the only credential accepted since the
+ * personal access tokens were removed (docs/auth-design.md T5).
  */
-export type ApiIdentity =
-  | { kind: "oauth"; ctx: Ctx; scopes: Scope[]; clientId: string }
-  | { kind: "pat"; ctx: Ctx; scopes: Scope[]; tokenId: string };
+export interface ApiIdentity {
+  kind: "oauth";
+  ctx: Ctx;
+  scopes: Scope[];
+  clientId: string;
+}
 
 /** What every `/api/v1` handler can read off the context once the token has been accepted. */
 export interface ApiEnv {
@@ -25,7 +27,6 @@ export interface ApiEnv {
 }
 
 const BEARER = /^Bearer\s+(\S+)$/i;
-const PAT_PREFIX = "pat_";
 
 function challenge(c: Context, failure?: Parameters<typeof bearerChallenge>[1]): void {
   c.header(
@@ -35,13 +36,7 @@ function challenge(c: Context, failure?: Parameters<typeof bearerChallenge>[1]):
 }
 
 async function identify(value: string): Promise<ApiIdentity | null> {
-  if (value.startsWith(PAT_PREFIX)) {
-    const pat: TokenIdentity | null = await authenticateToken(value);
-    if (!pat) return null;
-    // D4: every use is logged, so the end of the transition (T5) is decided on evidence.
-    console.info(`[api] legacy token used (${pat.tokenId})`);
-    return { kind: "pat", ctx: pat.ctx, scopes: pat.scopes, tokenId: pat.tokenId };
-  }
+  // A former personal access token (`pat_…`) is not a JWT: it ends here, as an invalid token.
   if (!looksLikeJwt(value)) return null;
   const oauth: AccessIdentity | null = await authenticateAccessToken(value, "api");
   return oauth && { kind: "oauth", ctx: oauth.ctx, scopes: oauth.scopes, clientId: oauth.clientId };
@@ -77,8 +72,8 @@ export function withToken(scope: Scope): MiddlewareHandler<ApiEnv> {
       return fail(c, "unauthorized");
     }
 
-    // One budget per credential: a token for a PAT, the client for OAuth (D6: key = client_id).
-    const verdict = takeSlot(identity.kind === "pat" ? identity.tokenId : `client:${identity.clientId}`);
+    // One budget per client (D6: key = client_id).
+    const verdict = takeSlot(`client:${identity.clientId}`);
     c.header("X-RateLimit-Limit", String(MAX_PER_WINDOW));
     c.header("X-RateLimit-Remaining", String(verdict.remaining));
     if (!verdict.allowed) {
@@ -92,15 +87,6 @@ export function withToken(scope: Scope): MiddlewareHandler<ApiEnv> {
 
     c.set("identity", identity);
     c.set("ctx", identity.ctx);
-    if (identity.kind === "pat") {
-      // At most one write a minute, and a store that refuses must not fail the call it is only
-      // recording (spec §5.3).
-      try {
-        await touchToken(identity.tokenId);
-      } catch (error) {
-        console.error("[api] could not record the token's use", redactForLog(error));
-      }
-    }
     await next();
   };
 }

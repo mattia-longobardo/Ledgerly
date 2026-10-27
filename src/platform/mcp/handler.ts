@@ -14,8 +14,8 @@ import { buildMcpServer } from "./tools";
  *
  * - No token, or one that is not ours for this audience → 401 with the RFC 9728 challenge, which is
  *   how a client (Claude, MCP Inspector) discovers the authorization server and starts the flow.
- * - Only OAuth access tokens: a personal access token (`pat_…`) is refused here, it was never an
- *   MCP credential and the transition of D4 is for `/api/v1` alone.
+ * - Only OAuth access tokens, as on `/api/v1`: the personal access tokens (`pat_…`) were removed
+ *   in T5 and are refused as invalid.
  * - Stateless: a server and a transport per POST, no `Mcp-Session-Id`, so nothing lives between
  *   requests and any worker can answer. GET (the server-to-client stream) and DELETE (ending a
  *   session) have nothing to serve: 405.

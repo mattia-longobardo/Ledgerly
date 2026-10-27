@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import type { Scope } from "@/platform/tokens/rules";
+import type { Scope } from "@/platform/auth/scopes";
 import { Button } from "@/ui/button";
 import { Modal } from "@/ui/modal";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";

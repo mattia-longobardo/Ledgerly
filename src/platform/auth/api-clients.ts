@@ -6,10 +6,10 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
-import { MAX_TOKEN_NAME, parseScopes, TOKEN_SCOPES } from "@/platform/tokens/rules";
 import { type Auth, getAuth } from "./auth";
 import { type ApiScope, issuerFor, resourceFor } from "./oauth";
 import { oauthClients } from "./oauth/schema";
+import { API_SCOPES, MAX_CLIENT_NAME, parseScopes } from "./scopes";
 
 /**
  * "Client API" (docs/auth-design.md D3): what replaces the personal access token. A confidential
@@ -51,15 +51,15 @@ export async function listApiClients(ctx: Pick<Ctx, "userId">): Promise<ApiClien
   return rows.map((row) => ({
     clientId: row.clientId,
     name: row.name ?? row.clientId,
-    scopes: TOKEN_SCOPES.filter((scope) => row.scopes?.includes(scope)),
+    scopes: API_SCOPES.filter((scope) => row.scopes?.includes(scope)),
     createdAt: row.createdAt,
     disabled: row.disabled === true,
   }));
 }
 
 const createInput = z.object({
-  name: z.string().trim().min(1).max(MAX_TOKEN_NAME),
-  scopes: z.array(z.enum(TOKEN_SCOPES)).min(1),
+  name: z.string().trim().min(1).max(MAX_CLIENT_NAME),
+  scopes: z.array(z.enum(API_SCOPES)).min(1),
 });
 
 /** What the person needs to use the client, shown once: the secret is not kept in the clear. */
