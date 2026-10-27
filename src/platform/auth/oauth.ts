@@ -4,13 +4,12 @@
  * the resource server (`platform/api/auth.ts`, and the MCP route after it) and the unit tests can
  * import it freely.
  */
-import { TOKEN_SCOPES } from "@/platform/tokens/rules";
+import { API_SCOPES } from "./scopes";
 
 /** Better Auth's own mount point: the issuer is `<origin>/api/auth`. */
 export const AUTH_BASE_PATH = "/api/auth";
 
-/** The domain scopes, the same three names the personal access tokens had. */
-export const API_SCOPES = TOKEN_SCOPES;
+export { API_SCOPES };
 export type ApiScope = (typeof API_SCOPES)[number];
 
 /** Every scope the server knows: the domain ones plus the OpenID Connect ones. */

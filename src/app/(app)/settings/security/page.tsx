@@ -7,17 +7,15 @@ import { hasPasswordAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
-import { formatDate, NULL_DISPLAY } from "@/platform/format";
+import { formatDate } from "@/platform/format";
 import { readEnv } from "@/platform/env";
 import { listApiClients } from "@/platform/auth/api-clients";
 import { listConnectedApps } from "@/platform/auth/oauth-grants";
-import { listTokens } from "@/platform/tokens/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { type ApiClientRow, ApiClientsTable } from "./api-clients-table";
 import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table";
 import { NewApiClient } from "./new-api-client";
 import { type SessionRow, SessionsList } from "./sessions-list";
-import { type TokenRow, TokensTable } from "./tokens-table";
 import { TwoFactorCard } from "./two-factor-card";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -27,10 +25,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const [current, sessions, tokens, clients, apps, hasPassword] = await Promise.all([
+  const [current, sessions, clients, apps, hasPassword] = await Promise.all([
     (await getAuth()).api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
-    listTokens(ctx),
     listApiClients(ctx),
     listConnectedApps(ctx),
     hasPasswordAccount(ctx.userId),
@@ -38,16 +35,6 @@ export default async function SecurityPage() {
   const t = await getTranslations("settings");
 
   const day = (at: Date) => formatDate(civilDateIn(at, ctx.timeZone), "long", ctx.locale);
-
-  const tokenRows: TokenRow[] = tokens.map((token) => ({
-    id: token.id,
-    name: token.name,
-    prefix: token.prefix,
-    scopes: token.scopes,
-    expires: token.expiresAt ? day(token.expiresAt) : t("tokens.expiry.never"),
-    lastUsed: token.lastUsedAt ? day(token.lastUsedAt) : NULL_DISPLAY,
-    state: token.state,
-  }));
 
   const clientRows: ApiClientRow[] = clients.map((client) => ({
     clientId: client.clientId,
@@ -105,13 +92,6 @@ export default async function SecurityPage() {
       >
         <ConnectedAppsTable apps={appRows} />
       </SettingsSection>
-      {/* D4: the personal tokens still work until T5, but no new one is minted. The section shows
-          only while one exists, so it disappears by itself once the last is revoked. */}
-      {tokenRows.length > 0 && (
-        <SettingsSection title={t("tokens.title")} description={t("tokens.legacyDescription")} padded={false}>
-          <TokensTable tokens={tokenRows} />
-        </SettingsSection>
-      )}
       <SettingsSection title={t("sessions.title")} description={t("sessions.description")} padded={false}>
         <SessionsList sessions={rows} />
       </SettingsSection>

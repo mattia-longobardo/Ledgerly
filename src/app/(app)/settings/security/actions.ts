@@ -1,6 +1,5 @@
 // src/app/(app)/settings/security/actions.ts — the Client API (docs/auth-design.md D3) and the
-// personal access tokens it replaces (spec §5.3, D4). Both are managed only with a session:
-// nothing under /api/v1 can mint or revoke one, and no new PAT is minted during the transition.
+// connected apps. Both are managed only with a session: nothing under /api/v1 can mint or revoke one.
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -12,7 +11,6 @@ import {
 } from "@/platform/auth/api-clients";
 import { GrantError, revokeConnectedApp } from "@/platform/auth/oauth-grants";
 import { requireSession } from "@/platform/auth/session";
-import { revokeToken, TokenError } from "@/platform/tokens/service";
 
 export type ApiClientMinted = MintedClient;
 
@@ -62,18 +60,6 @@ export async function revokeConnectedAppAction(
     return { ok: true };
   } catch (error) {
     if (error instanceof GrantError) return { ok: false, error: error.code };
-    throw error;
-  }
-}
-
-export async function revokeTokenAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const ctx = await requireSession();
-  try {
-    await revokeToken(ctx, id);
-    revalidatePath("/settings/security");
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof TokenError) return { ok: false, error: error.code };
     throw error;
   }
 }

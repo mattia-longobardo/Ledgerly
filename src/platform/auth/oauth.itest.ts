@@ -7,7 +7,7 @@ import { authAccounts } from "./schema";
 
 // Ledgerly as Authorization Server for /api/v1 (docs/auth-design.md D3, D4), against the real
 // plugin and database: a Client API, its client_credentials token, the audience and scope checks,
-// deletion taking effect at once, the PAT transition, and the doors that stay closed.
+// deletion taking effect at once, the end of the PATs (T5), and the doors that stay closed.
 
 let requestHeaders = new Headers();
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
@@ -17,7 +17,6 @@ const { getAuth, invalidateAuth } = await import("./auth");
 const { createApiClient, deleteApiClient, listApiClients, ApiClientError } = await import("./api-clients");
 const { api } = await import("@/platform/api/app");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
-const { createToken } = await import("@/platform/tokens/service");
 
 const ORIGIN = "http://127.0.0.1:3000";
 const API = `${ORIGIN}/api/v1`;
@@ -305,17 +304,10 @@ describe("the doors that stay closed", () => {
   });
 });
 
-describe("the PAT transition (D4)", () => {
-  it("keeps accepting a personal access token, and says so in the log", async () => {
-    const person = await ssoPerson();
-    const { token } = await createToken(
-      { userId: person.userId },
-      { name: "paperless", scopes: ["read"], expiresInDays: null },
-    );
-    const info = vi.spyOn(console, "info").mockImplementation(() => {});
-    const response = await callApi("/accounts", token);
-    expect(response.status).toBe(200);
-    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\[api\] legacy token used/));
-    info.mockRestore();
+describe("the end of the personal access tokens (T5)", () => {
+  it("refuses a well-formed `pat_…` token with 401 and the RFC 9728 challenge", async () => {
+    const response = await callApi("/accounts", `pat_abcdefgh.${"A".repeat(43)}`);
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toMatch(/^Bearer error="invalid_token", resource_metadata=/);
   });
 });

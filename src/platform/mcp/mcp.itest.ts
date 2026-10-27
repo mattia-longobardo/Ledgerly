@@ -16,7 +16,6 @@ vi.mock("next/server", () => ({ after: () => {} }));
 const { getAuth, invalidateAuth } = await import("../auth/auth");
 const { createApiClient } = await import("../auth/api-clients");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
-const { createToken } = await import("@/platform/tokens/service");
 const { saveBalanceEntry } = await import("@/modules/accounts/service");
 const { handleMcp } = await import("./handler");
 
@@ -121,12 +120,7 @@ describe("MCP authorization", () => {
     const forApi = await tokenFor(["read"], API);
     expect((await rpc(forApi, "initialize")).status).toBe(401);
 
-    const pat = await createToken(contextFor(person.userId), {
-      name: "legacy",
-      scopes: ["read"],
-      expiresInDays: 30,
-    });
-    expect((await rpc(pat.token, "initialize")).status).toBe(401);
+    expect((await rpc(`pat_abcdefgh.${"A".repeat(43)}`, "initialize")).status).toBe(401);
   });
 
   it("answers 403 insufficient_scope to a token that cannot read", async () => {

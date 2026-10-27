@@ -163,6 +163,8 @@ Parametri:
 - Il middleware distingue per formato: `pat_…` → percorso legacy, altrimenti JWT. Log di ogni uso
   PAT (`[api] legacy token used`) per sapere quando è davvero inutilizzato.
 - Scartato: "taglio netto" (romperebbe Paperless) e "PAT per sempre" (non soddisfa l'obiettivo 3).
+- **Eseguito (T5, PERS-59)**: codice PAT e tabella `personal_access_tokens` rimossi (migrazione
+  `0033`); `/api/v1` accetta solo JWT OAuth2.
 
 ### D5 — Integrazione Paperless: **Ledgerly legge da Paperless (pull)**
 

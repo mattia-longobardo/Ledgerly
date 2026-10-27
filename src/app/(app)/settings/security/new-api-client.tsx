@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { TOKEN_SCOPES } from "@/platform/tokens/rules";
+import { API_SCOPES } from "@/platform/auth/scopes";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input } from "@/ui/input";
@@ -34,7 +34,7 @@ export function NewApiClient() {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const scopes = TOKEN_SCOPES.filter((scope) => data.get(scope) === "on");
+    const scopes = API_SCOPES.filter((scope) => data.get(scope) === "on");
     startTransition(async () => {
       const result = await createApiClientAction({ name: String(data.get("name") ?? ""), scopes });
       if (!result.ok) {
@@ -112,7 +112,7 @@ export function NewApiClient() {
             </Field>
             <fieldset className="flex flex-col gap-1.5">
               <legend className="pb-1 text-sm font-medium">{t("columns.scopes")}</legend>
-              {TOKEN_SCOPES.map((scope) => (
+              {API_SCOPES.map((scope) => (
                 <Checkbox
                   key={scope}
                   name={scope}
