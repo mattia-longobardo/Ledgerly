@@ -4,7 +4,8 @@ PERS-71 (27/10/2026), fase di pianificazione dell'epica PERS-68. Revisione PERS-
 l'esito della review avversariale (PERS-72, obiezioni `A1`–`A10`) e della security review (PERS-73,
 rischi `SEC-01`–`SEC-09`): la sezione 9 dice dove è stata recepita ogni obiezione. Revisione PERS-76
 (27/10/2026) con le 16 decisioni di Mattia (sezione 8), tra cui la valuta di visualizzazione (1.8,
-fase 1b).
+fase 1b). Revisione PERS-84 (28/10/2026) con le proposte dello spike (`investments-spike.md`, E1–E9 per
+eToro e B1–B7 per Binance) approvate da Mattia: D17 e D18.
 **Solo design**: nessun codice, nessuna migrazione e nessun deploy prima dell'approvazione di Mattia.
 
 Input:
@@ -292,7 +293,8 @@ prodotto in conflitto; il totale resta `total_cents` (R1).
 
 `investment_sync_coverage` (A7): `connection_id`, `kind` (`flows`), `stream` (es. `deposits`,
 `withdrawals`, `trades:BTC/EUR`, `ledger`), `from_at`, `to_at`, `status` (`complete` \| `partial` \|
-`gap`), `reason` (es. `api_limit_24m`, `api_limit_12m`, `pair_not_discovered`). La UI e il rendimento
+`gap`), `reason` (es. `api_limit_24m`, `api_limit_12m` solo per lo storico dei saldi eToro [D11],
+`pair_not_discovered`, `before_first_movement` per i depositi eToro [D17]). La UI e il rendimento
 leggono questa tabella, non l'esito della sync.
 
 ### 1.7 Valore nel tempo
@@ -600,9 +602,9 @@ Per conto e per portafoglio [D8] (A10):
 - **Completezza.** Guadagno, rendimento semplice e XIRR si mostrano solo con lo storico completo:
   se `investment_sync_coverage`
   dice `complete` per i flussi del periodo, o se il conto è manuale. Altrimenti la UI mostra solo il
-  valore e "dati attendibili dal <data>" (prima data da cui la copertura è completa). eToro non
-  espone depositi e prelievi: il rendimento è attendibile solo dopo il collegamento ai movimenti
-  bancari.
+  valore e "dati attendibili dal <data>" (prima data da cui la copertura è completa). eToro espone
+  solo i movimenti passati da eToro Money [D17 · E5]: prima del primo movimento il rendimento è
+  attendibile solo dopo il collegamento ai movimenti bancari.
 - XIRR senza soluzione o con più soluzioni nell'intervallo [−99%, +1000%]: "non calcolabile".
 
 ### 2.5 Conversioni di modo e di origine (A3)
@@ -694,18 +696,22 @@ Dati letti:
 
 | Dato | Metodo ccxt | Note |
 |---|---|---|
-| Saldi | `fetchBalance()` per ogni prodotto in `products` | Binance: `spot` e `{ type: "funding" }`. Earn non incluso: fuori perimetro finché l'adapter non lo legge (R4) |
+| Saldi | `fetchBalance()` per ogni prodotto in `products` | Binance: `spot`, `{ type: "funding" }` ed Earn (`sapiGetSimpleEarnFlexiblePosition`, `sapiGetSimpleEarnLockedPosition`) [D18 · B4]. Solo le quantità > 0: `fetchBalance` riempie tutte le valute a 0 (B6) |
+| Perimetro | `sapiGetAssetWalletBalance` | valore in BTC di ogni wallet (Spot, Funding, Margin, Futures, Earn, Options, Trading Bots, Copy Trading): un wallet non letto con valore > 0 rende la lettura `partial` e la pagina dice quale manca [D18 · B4] |
 | Prezzi | `fetchTickers()` delle coppie `X/K` (`K` = valuta del conto), poi `X/USDT` + `USDT/K` | regola 1.8, prezzo e timestamp salvati per posizione |
 | Flussi | `fetchLedger` (Kraken, Coinbase, Bitvavo, Crypto.com) | cursore per stream (sotto) |
-| Flussi Binance | `fetchDeposits` / `fetchWithdrawals` a finestre di 90 giorni, `fetchMyTrades` per simbolo | scoperta dei simboli: sotto |
+| Flussi Binance | `fetchDeposits` / `fetchWithdrawals` a finestre di 90 giorni (senza `since` si legge solo l'ultima), `fetchMyTrades` per simbolo (`since`, `limit` 1000, `fromId`) | scoperta dei simboli: sotto [D18 · B7] |
+| Flussi Binance, altri stream [D18 · B2] | `sapiGetFiatOrders` (`transactionType` 0/1), `sapiGetFiatPayments` (`transactionType` 0), `sapiGetConvertTradeFlow` (finestre ≤ 30 gg), `sapiGetAssetAssetDividend` (finestre ≤ 180 gg) | stream `fiat_orders`, `fiat_payments`, `convert`, `dividends`; `timeout` ccxt ≥ 35 s per le chiamate fiat. Senza questi stream la conservazione delle quantità (A6) fallisce |
+| Identità | `GET /api/v3/account` → `uid` | id del conto esterno [D18 · B7]. `canTrade`/`canWithdraw` sono capacità del conto, non permessi della chiave: mai usarli per 5.2 |
 
 **Cursori e completezza (A7).**
 
 - Ogni stream ha un cursore `{ until, lastIds }`. Ogni pass rilegge una finestra di sovrapposizione
   (24 h) prima di `until` e scarta gli id già visti: eventi nello stesso millisecondo o arrivati in
   ritardo non si perdono. La deduplica è sull'id esterno dell'evento.
-- Scoperta delle coppie per `fetchMyTrades` (Binance): asset con saldo, asset presenti in depositi,
-  prelievi e `income` della finestra, più le coppie con quote EUR, USDT, USDC, BTC di quegli asset.
+- Scoperta delle coppie per `fetchMyTrades` (Binance): asset con saldo e asset di **tutti** gli stream
+  (depositi, prelievi, dividend, convert, fiat payment) [D18 · B3], più le coppie con quote EUR, USDT,
+  USDC, BTC di quegli asset.
   Un mercato comprato e venduto per intero senza depositi né prelievi non è scopribile: lo stream
   `trades` di Binance resta `partial` con motivo `pair_not_discovered`. È una lacuna dichiarata:
   nessun import di file la colma [D16].
@@ -730,10 +736,21 @@ Mappatura sugli eventi:
 | trade `ETH/BTC` buy | `buy` ETH (`base`) + `sell` BTC (`quote`), controvalore nella valuta del conto al prezzo del trade |
 | commissione del trade | gamba `fee` con asset e quantità della commissione (es. BNB) |
 | ledger `reward`, `staking`, `interest` | `income` con quantità dell'asset |
+| Binance fiat order (`fiat_orders`) | `deposit` / `withdrawal` in EUR [D18 · B2] |
+| Binance fiat payment (`fiat_payments`) | `buy` dell'asset (`base`) + gamba `quote` in EUR |
+| Binance Convert (`convert`) | evento come un trade: `buy` dell'asset ricevuto + `sell` dell'asset ceduto |
+| Binance dividend (`dividends`: reward, staking, airdrop, Launchpool) | `income` con quantità dell'asset |
 | ledger `transfer` interno (spot ↔ earn) | ignorato solo se entrambi i prodotti sono nel perimetro dell'adapter; altrimenti `withdrawal`/`deposit` interni con `transfer_group_id` verso la posizione manuale del prodotto |
 
 Idempotenza: un trade è un solo evento con id esterno = id del trade; un retry riscrive tutte le
 gambe o nessuna.
+
+**Prezzi Binance [D18 · B5].** `USDT/EUR` non esiste: al passo 3 di 1.8 si usa la coppia inversa
+`EUR/USDT` (prezzo = 1 / ticker). Un asset senza mercato (es. `ETHW`) ha `value_cents = null`. Polvere:
+una posizione con valore stimato < 1 centesimo all'ultimo prezzo noto, o senza alcun mercato e con
+quantità < 0,001, resta visibile ma non rende la lettura `partial`. I ticker Binance hanno `timestamp`.
+
+**Conto vuoto Binance [D18 · B6].** Con sola polvere la lettura non è `confirmed_zero`.
 
 ### 3.3 Online Broker: eToro
 
@@ -748,25 +765,56 @@ password (rifiutato), e come si revoca l'accesso (PERS-73).
 - Chiave **propria di Ledgerly**, Real + Read: il rate limit è per chiave e non va condiviso con Pluto.
   In pratica la stessa coppia di chiavi funziona su demo e real e cambia solo il path `/demo/`
   (verificato in Pluto): l'adapter usa solo path real fissi, mai `/demo/`.
-- Lettura per pass (≤ 4 chiamate, sotto 60/min):
+- **Permessi verificabili [D17 · E1].** `GET /api/v1/me` restituisce `gcid`, `realCid` e gli scope
+  OAuth della chiave: eToro ha `readOnlyCheck = api` e la verifica gira a ogni pass (5.2). La conferma
+  "solo lettura" del dialog non serve.
+- Lettura per pass (`holdings`, sotto 60/min):
 
 | Dato | Endpoint |
 |---|---|
-| Totale nella valuta del conto (USD di default) | `GET /api/v1/balances?displayCurrency=<valuta del conto>` |
-| Posizioni | `GET /api/v1/trading/info/portfolio` |
-| Trade chiusi | `GET /api/v1/trading/info/trade/history?minDate=…` (finestre < 1 anno) |
-| Storico (solo al primo collegamento) | `GET /api/v1/balances/{accountType}/{accountId}/history` (12 mesi) |
+| Permessi e identità | `GET /api/v1/me` |
+| Totale e conti nella valuta del conto (USD di default) | `GET /api/v1/balances?displayCurrency=<valuta del conto>&includeZeroBalances=true` [D17 · E7, E8] |
+| Posizioni e copy trading | `GET /api/v1/trading/info/portfolio` (`positions[]`, `mirrors[]`) [D17 · E3] |
 
-- Perimetro: un conto esterno, prodotto `custody`. Le letture sono `complete` solo se totale e
-  posizioni hanno risposto entrambi.
-- Depositi e prelievi: l'API non li espone. Fonti: collegamento ai movimenti bancari (il
-  `transaction_id` di oggi) o inserimento manuale. Lo stream `deposits` resta `partial` finché
-  mancano, e il rendimento lo dice (2.4).
+- Flussi (`flows`):
+
+| Stream | Endpoint | Paginazione |
+|---|---|---|
+| `trades` | `GET /api/v1/trading/info/trade/history?minDate=…` | `page`/`pageSize` ≤ 500 fino a una pagina vuota o più corta di `pageSize`; `minDate` obbligatorio; nessun limite di 1 anno [D17 · E4] |
+| `deposits` | `GET /api/v1/money/accounts/cash/{accountId}/transactions` (eToro Money) | cursore `pageToken`, `pageSize` ≤ 500, `hasNext` [D17 · E5] |
+| `balance_history` (solo al primo collegamento) | `GET /api/v1/balances/{accountType}/{accountId}/history` | ≤ 365 giorni per chiamata, retention 12 mesi, snapshot giornalieri fino a ieri [D11] |
+
+- **Perimetro [D17 · E2, E6].** Un conto esterno per utente con chiave `gcid` (mai l'`accountId`, che
+  cambia tra endpoint per il conto Cash). Prodotti per `accountType`: `trading` (USD), `cash` (eToro
+  Money), `crypto` (un conto per coin) e `copy` (i mirror). I tipi che l'adapter non legge in
+  dettaglio (`Options`, `MoneyFarm`, `Spaceship`, `Plaee`, …) entrano nel totale ma con perimetro
+  `complete = false`. Le letture sono `complete` solo se totale e posizioni hanno risposto entrambi.
+- **Copy trading [D17 · E3].** Le posizioni dei mirror si leggono da `mirrors[]` come prodotto `copy`;
+  i trade figli (`socialTradeId`, `parentPositionId`) entrano nello storico come trade normali.
+- **Depositi e prelievi in parte esposti [D17 · E5].** Lo stream `deposits` legge i movimenti di eToro
+  Money: i bonifici in entrata e in uscita sono eventi `deposit`/`withdrawal`; i trasferimenti con la
+  piattaforma di trading (`counterparty.name` = `eToro Trading Platform DPT`/`WDL`) sono trasferimenti
+  interni tra i prodotti `cash` e `trading`. I depositi fatti direttamente sul conto Trading non ci
+  sono: prima del primo movimento la copertura è `partial` (`before_first_movement`), e per quel
+  periodo restano il collegamento ai movimenti bancari (il `transaction_id` di oggi) o l'inserimento
+  manuale (2.4).
+- **Conto vuoto [D17 · E7].** Sempre `includeZeroBalances=true`: senza, un conto vuoto e un conto
+  senza conti attivi danno la stessa risposta. Lettura zero (R5) quando tutti i conti elencati hanno
+  `balance = 0` e il portfolio è vuoto.
+- **Valuta [D17 · E8].** `displayCurrency` accetta EUR, USD, GBP, CHF: il dialog propone solo queste
+  come valuta del conto. Un codice sconosciuto dà 400 `UNSUPPORTED_DISPLAY_CURRENCY`, mappato su un
+  errore fisso (5.1). Il conto eToro legacy della fase 2 è in EUR: eToro restituisce il totale in EUR
+  senza conversioni lato Ledgerly.
+- **Endpoint instabili e rate limit [D17 · E9].** L'adapter non usa
+  `/api/v1/data/positions/closed-events/history` (503 dopo 15 s) né `/api/v1/sub-accounts/me/accounts`
+  (403 con una chiave Read). Gli header `ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset`
+  guidano il backoff (SEC-09).
 - Dividendi: nessun endpoint, già inclusi nel valore. Non si creano `income`.
 - L'API è beta e cambia spesso: il client valida le risposte con zod e fallisce in modo esplicito,
   senza scrivere letture parziali. Il messaggio salvato è quello fisso di 5.1, mai il dettaglio zod.
-- Storico iniziale: 12 mesi, il limite dell'API [D11]. Prima di quella data la copertura è una
-  lacuna dichiarata (`api_limit_12m`) e il rendimento è "attendibile dal …".
+- Storico iniziale [D11, aggiornata da D17 · E4]: lo storico dei **trade** è completo (nessuna
+  lacuna). Il limite di 12 mesi vale solo per lo **storico dei saldi**: prima di quella data i punti di
+  valore non esistono e la copertura è una lacuna dichiarata (`api_limit_12m`).
 - Termini eToro: Ledgerly salva una lettura al giorno per lo storico del valore [D10]. Il marchio
   eToro accompagna i dati nella pagina del servizio.
 
@@ -856,9 +904,9 @@ ricavato + commissioni.
 OIDC: un'esecuzione di codice nell'app legge tutte le chiavi. Per questo i controlli che contano sono
 5.2 (una chiave rubata può solo leggere) e 5.4 (supply chain). Mattia ha accettato questo rischio
 residuo e scartato il worker separato [D15]. Effetto combinato con [D7]: per i provider
-`unverifiable` senza IP whitelist, se una chiave è creata per errore con permessi di scrittura, chi la
-ruba può usarla da qualsiasi IP. La conferma "solo lettura" è l'unico vincolo: rischio accettato da
-Mattia il 27/10/2026.
+`unverifiable` senza IP whitelist (Kraken, Bitvavo, Crypto.com; eToro non più, D17), se una chiave è
+creata per errore con permessi di scrittura, chi la ruba può usarla da qualsiasi IP. La conferma
+"solo lettura" è l'unico vincolo: rischio accettato da Mattia il 27/10/2026.
 
 ### 5.1 Regole
 
@@ -894,18 +942,19 @@ se l'unico permesso attivo è la lettura. Un flag sconosciuto o nuovo è un rifi
 
 | Provider | Verifica | Accettata solo se |
 |---|---|---|
-| Binance | `GET /sapi/v1/account/apiRestrictions` | `enableReading = true` e tutti gli altri flag `enable*`/`permits*` `false` (es. `enableSpotAndMarginTrading`, `enableWithdrawals`, `enableFutures`, `enableMargin`, `enableInternalTransfer`, `permitsUniversalTransfer`). `ipRestrict = false` → avviso |
+| Binance [D18 · B1] | `GET /sapi/v1/account/apiRestrictions` | `enableReading = true`; `enableFixReadOnly` può essere `true` (è un permesso di lettura); i 9 flag noti di trading, prelievo e trasferimento `false` (`enableSpotAndMarginTrading`, `enableWithdrawals`, `enableFutures`, `enableMargin`, `enableInternalTransfer`, `permitsUniversalTransfer`, `enableVanillaOptions`, `enablePortfolioMarginTrading`, `enableFixApiTrade`). Un flag `enable*`/`permits*` sconosciuto `true` → `unknown-flag`; `false` → accettato e registrato nel log. `ipRestrict = false` → avviso. Mai `canTrade`/`canWithdraw` di `GET /api/v3/account` (capacità del conto, `true` anche con una chiave read-only) |
 | Coinbase (CDP) | `GET /api/v3/brokerage/key_permissions` | `can_view = true`, `can_trade`, `can_transfer`, `can_receive` `false` |
-| Kraken, Bitvavo, Crypto.com, eToro | nessun endpoint noto per leggere i permessi | `unverifiable`: regole sotto |
+| eToro [D17 · E1] | `GET /api/v1/me` → `scopes[]` | ogni scope finisce con `:read`. Uno scope `:write` → `write`; ogni altro suffisso (es. `etoro-public:money:transfer`) → `write` anch'esso: nella fase 3 tutto ciò che non finisce con `:read` è trattato come scrittura. Lista vuota → `unknown-flag` |
+| Kraken, Bitvavo, Crypto.com | nessun endpoint noto per leggere i permessi | `unverifiable`: regole sotto |
 
 - Se una verifica durante un pass dà `write` o `unknown-flag`: connessione `refused`, nessuna lettura
   salvata, notifica Gotify con il permesso trovato. Si sblocca solo con una nuova verifica riuscita.
-- I due endpoint di Binance e Coinbase e i nomi dei flag vanno verificati nello spike (fase 0) con
-  una chiamata reale e una chiave read-only, prima di scrivere il codice. Se non esistono più, il
-  provider passa a `unverifiable`.
+- Gli endpoint e i nomi dei flag sono verificati nello spike (fase 0, `investments-spike.md`) per
+  Binance ed eToro con una chiamata reale e una chiave read-only; Coinbase va verificato quando
+  diventa `available`. Se un endpoint non esiste più, il provider passa a `unverifiable`.
 - **`unverifiable` [D7], accettate con la conferma "solo lettura", senza IP whitelist obbligatoria:**
   1. il dialog mostra i permessi esatti da lasciare accesi e spenti (Kraken: Query Funds e Query
-     Ledger Entries accesi; Deposit, Withdraw, Trade spenti; eToro: Read, niente Trade);
+     Ledger Entries accesi; Deposit, Withdraw, Trade spenti);
   2. conferma obbligatoria "solo lettura", salvata con data e versione del testo in
      `investment_key_checks` (`attested_read_only_at`). Senza conferma il collegamento non parte;
   3. dove il servizio la supporta (`ipWhitelist = supported`), il dialog **suggerisce** l'IP whitelist
@@ -917,7 +966,7 @@ se l'unico permesso attivo è la lettura. Un flag sconosciuto o nuovo è un rifi
   **Rischio accettato da Mattia (27/10/2026, supera la raccomandazione SEC-02 di PERS-73).** Senza
   whitelist obbligatoria, una chiave `unverifiable` creata per errore con permessi di scrittura e poi
   rubata è usabile da qualsiasi IP. Restano le altre misure di questa sezione: allowlist con verifica
-  a ogni pass dove l'API lo permette (Binance, Coinbase), permessi esatti nel dialog, conferma salvata,
+  a ogni pass dove l'API lo permette (Binance, Coinbase, eToro), permessi esatti nel dialog, conferma salvata,
   nessuna chiamata di scrittura di prova, revoca guidata (5.3).
 
 ### 5.3 Rotazione e revoca
@@ -999,8 +1048,8 @@ typecheck && npm run format:check && npm test`, `npm run test:integration`, `npm
 | **1 · Fondamenta** | Registro dei pass al posto dell'`if/else` (stesso comportamento); fonte `portfolio` in `BALANCE_SOURCES` e `SOURCE_RANK`; filtro di `rebuildDerivedBalances`; tabella `fx_rates` + job Frankfurter giornaliero per tutte le valute BCE + backfill dal primo `balance_entries.on`; `serverExternalPackages` pronto | `0035_portfolio_source_fx`: CHECK di `balance_entries.source`, tabella `fx_rates` | unit: registro, `SOURCE_RANK` con `portfolio`; itest: `jobs.itest.ts` invariato per Wallet/Trek/Paperless, `rebuildDerivedBalances` esclude i conti non Wallet; job FX e backfill con risposta finta, righe immutabili (un secondo fetch non cambia un cambio salvato) | SQL inverso: drop `fx_rates`, CHECK originale (nessuna riga `portfolio` esiste ancora) |
 | **1b · Valuta di visualizzazione** [D1] (Accounts F1) | `display_currency` nelle preferenze (Settings → Profilo, default EUR, solo EUR o valute BCE); funzione pura `convertCents(cents, from, to, on, rates)` e lettura `ratesOn` da `fx_rates` (1.8); conversione per conto prima della somma in `accountsView` (serie del patrimonio netto, bucket, totale corrente e precedente), report mensile, snapshot, `/api/v1/summary`, MCP `get_summary` e home; cambio mancante → totale `partial`, mai 1:1; formattazione con la valuta al posto del simbolo `€` fisso (`src/platform/format.ts:33`, `:66`); pagina Accounts e dettaglio conto con valore nativo e controvalore; valuta di un conto con entry non più modificabile; changelog API. Nessun dato di saldo convertito o riscritto | `0036_display_currency`: `user_preferences.display_currency text not null default 'EUR'` con CHECK `^[A-Z]{3}$`; `snapshot_runs.total_currency text not null default 'EUR'` con lo stesso CHECK. Solo colonne con default, nessuna riscrittura di righe | unit: `convertCents` (identità senza cambio, cross via EUR, ultimo fixing ≤ d nel weekend, cambio mancante → `partial`, arrotondamento per conto prima della somma); formattazione per EUR, USD, GBP, CHF in `en` e `it`. itest: **non regressione**: con tutti i conti in EUR e valuta EUR, `accountsView`, bucket, snapshot, report e summary danno gli stessi valori di prima sul seed (golden); conti misti EUR + USD con valuta EUR e USD, serie mensile al cambio di fine mese; snapshot salva `total_currency`; summary API/MCP con `currency`; cambio di valuta di un conto con entry → rifiuto. e2e: cambio della valuta in Settings, home e Accounts nella nuova valuta; a11y e keyboard sul campo nuovo | retag dell'immagine; SQL inverso: drop delle due colonne (contengono solo la preferenza e la valuta dello snapshot, nessun saldo). `fx_rates` resta (fase 1). Se si torna indietro con conti non EUR, i totali tornano alla somma senza conversione di oggi |
 | **2 · Motore, conti manuali e UI** (un solo deploy, A9) | Tabelle 1.3–1.6; motore puro completo (sezione 2, comprese R4 con perimetro, R5, conversioni 2.5, stato a data, revisioni); passaggio di autorità (1.3); Server Action; home, catalogo (solo provider manuali), pagina del servizio, dialog asset/valutazione/chiusura/rettifica/conversione/riconcilia; migrazione dei conti `investment`/`crypto` esistenti e delle 2 piattaforme con l'elenco confermato in fase 0 [D4]; rimozione della UI vecchia; tabelle legacy in sola lettura | `0037_investments_v2`: tabelle nuove; `investment_accounts` (periodo `total`) per i conti esistenti; ogni piattaforma unita al conto abbinato o trasformata in un `accounts` nuovo; `investment_movements` → eventi `deposit`/`withdrawal`, `investment_valuations` → `account_valuation`; archivio `investment_superseded_entries`; trigger di sola lettura sulle tabelle legacy | unit: tutte le formule ed esempi numerici della sezione 2 come casi, compresi 2b e 5; ricalcolo da `d` lascia invariati i giorni < `d`; ordinamento intragiornaliero; conversioni con invariante V prima = V dopo. itest: migrazione dati su copia seed, idempotenza dei punti `portfolio`, patrimonio netto senza doppi conteggi, uguaglianza servizio/Accounts/patrimonio al giorno di passaggio. e2e: flusso conto manuale completo; a11y e keyboard sulle schermate nuove | Retag dell'immagine + script inverso: le scritture nuove rappresentabili nel modello vecchio (eventi `deposit`/`withdrawal`, `account_valuation`) vengono copiate nelle tabelle legacy; drop del trigger; le tabelle nuove **restano** (additive) e conservano le scritture non rappresentabili (asset); le entry archiviate tornano in `balance_entries` e i punti `portfolio` vengono cancellati |
-| **3 · eToro** | Adapter `etoro`, catalogo attivo, `connectInvestmentProvider`, dialog di collegamento con conto di destinazione e valuta del conto (USD di default), conferma "solo lettura" per `unverifiable` e IP whitelist suggerita, non obbligatoria [D7], una lettura al giorno salvata [D10], storico 12 mesi [D11], letture con perimetro e stato, esiti separati `holdings`/`flows`, copertura, mappatura errori a allowlist, cooldown e backoff, revoca guidata | `0038_investment_sync`: `holdings`, `flows` in `SYNC_KINDS`, nuovi `ENTITY_TYPES`, `investment_key_checks`, `investment_sync_coverage` | unit: mapping eToro con le fixture dello spike; errori → messaggi fissi. itest: pass con client finto, lock, `revoked` su 401, `refused` su 429, conto vuoto `confirmed_zero`/`pending_zero`, flows falliti con holdings aggiornato; canary su tutti i rami d'errore; test di architettura su `saveConnection` | disabilitare la voce di catalogo, revocare la chiave su eToro, retag; tabelle 0038 lasciate (additive), SQL inverso dei kind solo se nessuna connessione li usa |
-| **4 · ccxt** | Adapter `ccxt:binance`, `ccxt:kraken`; schema strict e opzioni esplicite; verifica allowlist a ogni pass per Binance; prezzi nella valuta del conto con stablecoin reali; eventi con gambe e fee in asset; cursori con sovrapposizione; scoperta delle coppie; storico 24 mesi con lacune dichiarate [D11]; quantità `reported`/`inferred` | nessuna (tabelle già presenti) | unit: mapping per exchange con fixture dello spike, percorso di conversione 1.8 (USDT ≠ USD), conservazione delle quantità, idempotenza del trade completo, `httpsProxy` nelle credenziali → `invalid_credentials`, flag sconosciuto → rifiuto. itest: pass con exchange finto, finestre 90 gg Binance, eventi nello stesso millisecondo, commit atomico dati + cursore, verifica `write` durante un pass → `refused` senza lettura. build: dimensione immagine e `mem_limit`; `npm audit signatures` | rimuovere le voci di catalogo; le connessioni restano ma non hanno pass; retag |
+| **3 · eToro** | Adapter `etoro` (3.3, D17 prevale sul testo precedente), catalogo attivo, `connectInvestmentProvider`, dialog di collegamento con conto di destinazione e valuta del conto (USD di default; EUR, USD, GBP, CHF), verifica degli scope a ogni pass (`readOnlyCheck = api`, nessuna conferma "solo lettura" per eToro) e IP whitelist suggerita, non obbligatoria [D7], una lettura al giorno salvata [D10], storico dei saldi 12 mesi e dei trade completo [D11, D17], depositi da eToro Money, copy trading, letture con perimetro (`gcid`, prodotti per `accountType`) e stato, esiti separati `holdings`/`flows`, copertura, mappatura errori a allowlist, cooldown e backoff, revoca guidata | `0038_investment_sync`: `holdings`, `flows` in `SYNC_KINDS`, nuovi `ENTITY_TYPES`, `investment_key_checks`, `investment_sync_coverage` | unit: mapping eToro con le fixture dello spike; allowlist degli scope; errori → messaggi fissi. itest: pass con client finto, lock, `revoked` su 401, `refused` su 429, conto vuoto `confirmed_zero`/`pending_zero`, flows falliti con holdings aggiornato; canary su tutti i rami d'errore; test di architettura su `saveConnection` | disabilitare la voce di catalogo, revocare la chiave su eToro, retag; tabelle 0038 lasciate (additive), SQL inverso dei kind solo se nessuna connessione li usa |
+| **4 · ccxt** | Adapter `ccxt:binance` (Kraken escluso: Mattia non ha un conto); schema strict e opzioni esplicite; verifica allowlist a ogni pass per Binance (B1); stream fiat, convert e dividend (B2); scoperta delle coppie da tutti gli stream (B3); Spot, Funding ed Earn nel perimetro con `sapiGetAssetWalletBalance` (B4); soglia della polvere (B5); prezzi nella valuta del conto con stablecoin reali; eventi con gambe e fee in asset; cursori con sovrapposizione; scoperta delle coppie; storico 24 mesi con lacune dichiarate [D11]; quantità `reported`/`inferred` | nessuna (tabelle già presenti) | unit: mapping per exchange con fixture dello spike, percorso di conversione 1.8 (USDT ≠ USD), conservazione delle quantità, idempotenza del trade completo, `httpsProxy` nelle credenziali → `invalid_credentials`, flag sconosciuto → rifiuto. itest: pass con exchange finto, finestre 90 gg Binance, eventi nello stesso millisecondo, commit atomico dati + cursore, verifica `write` durante un pass → `refused` senza lettura. build: dimensione immagine e `mem_limit`; `npm audit signatures` | rimuovere le voci di catalogo; le connessioni restano ma non hanno pass; retag |
 | **5 · Esposizione e rendimento** | Rendimento con completezza e XIRR (2.4), trasferimenti interni, tool MCP `list_investments` e `get_investment_holdings`, endpoint `/api/v1/investments`, scope `investments:read`, export aggiornato, drop delle tabelle legacy | `0039_drop_legacy_investments` (dopo dump, almeno 30 giorni dopo la fase 2) | itest MCP/API: scope `investments:read` obbligatorio, nessun segreto né id esterno nelle risposte; unit XIRR (nessuna soluzione, più soluzioni) | restore delle tabelle legacy dal dump `pre-5` |
 | **6 · Prezzi automatici** [D9] | Sezione 6, solo se il test copre ≥ 90% del valore degli asset manuali | `0040_asset_prices` | unit: priorità manuale > market, stale; itest con fonte finta | disattivare `price_source = market`, drop tabella |
 
@@ -1015,8 +1064,9 @@ una fase di Accounts F1, indipendente da Investments: si può rilasciare e torna
 
 ## 8. Decisioni prese
 
-Mattia ha risposto alle 16 decisioni aperte nei commenti di PERS-68 il 27/10/2026. Il documento le
-applica tutte.
+Mattia ha risposto alle 16 decisioni aperte nei commenti di PERS-68 il 27/10/2026 e ha approvato le
+proposte dello spike (E1–E9, B1–B7 di `investments-spike.md`) nei commenti di PERS-79 il 28/10/2026
+(D17, D18). Il documento le applica tutte.
 
 | # | Decisione | Data | Sezioni |
 |---|---|---|---|
@@ -1030,12 +1080,14 @@ applica tutte.
 | D8 | Rendimento semplice + XIRR, mostrati solo con storico completo; niente TWR | 27/10/2026 | 2.4 |
 | D9 | Prezzi automatici in fase 6, solo con copertura ≥ 90% del valore degli asset manuali | 27/10/2026 | 6, 7 |
 | D10 | eToro: una lettura al giorno salvata per lo storico | 27/10/2026 | 3.3 |
-| D11 | Storico iniziale: eToro 12 mesi (limite API), ccxt 24 mesi, lacune dichiarate | 27/10/2026 | 1.6, 3.2, 3.3 |
+| D11 | Storico iniziale: eToro 12 mesi (limite API), ccxt 24 mesi, lacune dichiarate. **Aggiornata da D17 (E4, 28/10/2026):** il limite di 12 mesi resta solo per lo storico dei saldi eToro; lo storico dei trade eToro è completo | 27/10/2026, 28/10/2026 | 1.6, 3.2, 3.3 |
 | D12 | Catalogo dei provider statico nel codice | 27/10/2026 | 1.1 |
 | D13 | Tipi di conto `investment` (broker e conti) e `crypto` (exchange), nessun tipo nuovo | 27/10/2026 | 1.3 |
 | D14 | Asset manuali nello stesso conto sincronizzato, con prodotto e riconciliazione di perimetro (R4) | 27/10/2026 | 1.4, 2.2 |
 | D15 | ccxt nel processo di Ledgerly con le mitigazioni di 5.4; rischio residuo accettato, worker separato scartato | 27/10/2026 | 5, 5.4 |
 | D16 | Niente import CSV: bastano i 24 mesi scaricati in automatico; le lacune restano dichiarate | 27/10/2026 | 1.5, 1.6, 3.2, 4.3, 7 |
+| D17 | Proposte eToro dello spike E1–E9: scope verificabili via `/api/v1/me` (`readOnlyCheck = api`, ogni scope non `:read` è scrittura, niente conferma "solo lettura"); un conto esterno per `gcid` con prodotti `trading`/`cash`/`crypto`/`copy`, gli altri tipi `complete = false`; copy trading da `mirrors[]`; storico dei trade completo con paginazione per pagina; depositi da eToro Money con copertura `partial` prima del primo movimento; `includeZeroBalances=true` sempre; valute EUR/USD/GBP/CHF; niente endpoint instabili, backoff dagli header `ratelimit-*` | 28/10/2026 | 1.6, 2.4, 3.3, 5, 5.2, 7 |
+| D18 | Proposte Binance dello spike B1–B7: allowlist esplicita dei flag (`enableFixReadOnly` ammesso, flag sconosciuto `true` → rifiuto); stream `fiat_orders`, `fiat_payments`, `convert`, `dividends`; scoperta delle coppie da tutti gli stream; perimetro Spot, Funding, Earn con `sapiGetAssetWalletBalance`; coppia inversa `EUR/USDT` e soglia della polvere; filtro delle quantità > 0; finestre di 90 gg, `fromId`, id esterno = `uid` | 28/10/2026 | 3.2, 5.2, 7 |
 
 ## 9. Esito delle review (PERS-74)
 

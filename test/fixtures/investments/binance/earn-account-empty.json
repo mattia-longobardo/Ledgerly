@@ -1,0 +1,11 @@
+{
+  "method": "sapiGetSimpleEarnAccount",
+  "body": {
+    "totalAmountInBTC": "0",
+    "totalAmountInUSDT": "0",
+    "totalFlexibleAmountInBTC": "0",
+    "totalFlexibleAmountInUSDT": "0",
+    "totalLockedInBTC": "0",
+    "totalLockedInUSDT": "0"
+  }
+}

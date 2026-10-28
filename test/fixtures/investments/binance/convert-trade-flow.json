@@ -1,0 +1,39 @@
+{
+  "method": "sapiGetConvertTradeFlow (finestre di 30 giorni)",
+  "note": "2 righe su 11 in 24 mesi",
+  "body": {
+    "list": [
+      {
+        "quoteId": "fixture-id-0056",
+        "orderId": "fixture-id-0057",
+        "orderStatus": "SUCCESS",
+        "fromAsset": "SUI",
+        "fromAmount": "1.12629721",
+        "toAsset": "USDC",
+        "toAmount": "3.57414244",
+        "ratio": "3.17336",
+        "inverseRatio": "0.315124",
+        "createTime": "1758916435617",
+        "orderType": "MARKET",
+        "side": "SELL",
+        "walletType": "SPOT"
+      },
+      {
+        "quoteId": "fixture-id-0058",
+        "orderId": "fixture-id-0059",
+        "orderStatus": "SUCCESS",
+        "fromAsset": "BNB",
+        "fromAmount": "0.073097",
+        "toAsset": "ATOM",
+        "toAmount": "9.70002548",
+        "ratio": "132.701",
+        "inverseRatio": "0.00753575",
+        "createTime": "1740139163160",
+        "orderType": "MARKET",
+        "side": "BUY",
+        "walletType": "SPOT"
+      }
+    ],
+    "moreData": false
+  }
+}

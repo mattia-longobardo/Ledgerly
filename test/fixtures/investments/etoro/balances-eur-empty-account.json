@@ -1,0 +1,10 @@
+{
+  "request": "/api/v1/balances?displayCurrency=EUR",
+  "status": 200,
+  "body": {
+    "gcid": 900001,
+    "totalBalance": 0,
+    "displayCurrency": "EUR",
+    "balances": []
+  }
+}
