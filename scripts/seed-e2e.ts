@@ -32,7 +32,15 @@ import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "../src/modules/pockets/service";
 import { expenseLinkCandidates } from "../src/modules/pockets/queries";
-import { createMovement, createPlatform, setValuation } from "../src/modules/investments/service";
+import {
+  addAsset,
+  createManualService,
+  ensureAssetSeed,
+  listAssets,
+  recordOperation,
+} from "../src/modules/investments/service";
+import { serviceDetail } from "../src/modules/investments/queries";
+import { parseDecimal, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "../src/modules/investments/rules";
 import { linkCandidates } from "../src/modules/transactions/queries";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
@@ -344,8 +352,8 @@ async function seedPockets(): Promise<void> {
 }
 
 /**
- * Investments: no platform yet — the journey creates them — and the two bank movements its
- * deposit and withdrawal get linked to: 2.000 € sent to eToro ten days ago, 2.401,58 € back five
+ * Investments: no service yet — the journey creates its manual account — and the two bank movements
+ * a deposit and a withdrawal can be linked to: 2.000 € sent to eToro ten days ago, 2.401,58 € back five
  * days ago, on a synced account.
  */
 async function seedInvestments(): Promise<void> {
@@ -630,55 +638,69 @@ async function seedLayout(): Promise<void> {
   const [gift] = await expenseLinkCandidates(ctx);
   if (gift) await linkExpense(ctx, gifts.id, gift.id);
 
-  // ——— Investments: one platform valued and linked, one closed at a gain ———
-  const binance = await createPlatform(ctx, { name: "Binance", url: "https://www.binance.com" });
-  const etoro = await createPlatform(ctx, { name: "eToro", url: "https://www.etoro.com" });
-  // The unpaired giroconto of last month (500 €) is the bank side of one Binance deposit.
+  // ——— Investments (docs/design/investments.md §4): a manual account per asset with a position in
+  // EUR and one in USD, its cash and a valuation, and a manual account kept as a total. A service
+  // starts today, so every operation is dated today. (No synced account: phase 2 has no provider.)
   const transfer = (await linkCandidates(ctx, { direction: "out", from: `${lastMonth}-01`, to: on })).find(
     (candidate) => candidate.payee === "Revolut",
   );
   if (!transfer) throw new Error("e2e: the layout user's giroconto is missing");
-  await createMovement(ctx, {
-    platformId: binance.id,
-    kind: "deposit",
-    amountCents: 280_000n,
-    on: addDays(on, -270),
+  const directa = await createManualService(ctx, {
+    target: "new",
+    name: "Directa",
+    category: "broker",
+    currency: "EUR",
+    mode: "assets",
+    url: "https://www.directa.it",
   });
-  await createMovement(ctx, {
-    platformId: binance.id,
+  await recordOperation(ctx, directa.accountId, { kind: "deposit", on, amountCents: 1_000_000n });
+  await recordOperation(ctx, directa.accountId, {
     kind: "deposit",
-    amountCents: 70_000n,
-    on: addDays(on, -260),
-  });
-  await createMovement(ctx, {
-    platformId: binance.id,
-    kind: "withdrawal",
-    amountCents: 186_110n,
-    on: addDays(on, -120),
-    note: "Presa di profitto",
-  });
-  await createMovement(ctx, {
-    platformId: binance.id,
-    kind: "deposit",
-    amountCents: transfer.cents,
-    on: transfer.on,
+    on,
+    amountCents: transfer.cents < 0n ? -transfer.cents : transfer.cents,
     transactionId: transfer.id,
   });
-  await setValuation(ctx, binance.id, { valueCents: 245_000n, on: addDays(on, -60) });
-  await setValuation(ctx, binance.id, { valueCents: 262_300n, on });
-  await createMovement(ctx, {
-    platformId: etoro.id,
-    kind: "deposit",
-    amountCents: 200_000n,
-    on: addDays(on, -100),
+  await ensureAssetSeed(ctx);
+  const seeded = await listAssets(ctx);
+  const assetOf = (symbol: string) => {
+    const asset = seeded.find((one) => one.symbol === symbol);
+    if (!asset) throw new Error(`e2e: the asset seed has no ${symbol}`);
+    return asset.id;
+  };
+  await addAsset(ctx, directa.accountId, {
+    asset: { id: assetOf("VWCE") },
+    on,
+    quantity: parseDecimal("100", QUANTITY_SCALE),
+    unitPrice: parseDecimal("60", PRICE_SCALE),
+    feeCents: 200n,
   });
-  await createMovement(ctx, {
-    platformId: etoro.id,
-    kind: "withdrawal",
-    amountCents: 240_158n,
-    on: addDays(on, -95),
+  await addAsset(ctx, directa.accountId, {
+    asset: { id: assetOf("CSPX") },
+    on,
+    quantity: parseDecimal("5", QUANTITY_SCALE),
+    unitPrice: parseDecimal("550.25", PRICE_SCALE),
+    fxRate: parseDecimal("0.92", RATE_SCALE),
   });
-  await setValuation(ctx, etoro.id, { valueCents: 0n, on: addDays(on, -95) });
+  const vwce = (await serviceDetail(ctx, directa.accountId))?.holdings.find(
+    (holding) => holding.asset.id === assetOf("VWCE"),
+  )?.id;
+  if (!vwce) throw new Error("e2e: the VWCE position is missing");
+  await recordOperation(ctx, directa.accountId, {
+    kind: "valuation",
+    holdingId: vwce,
+    on,
+    unitPrice: parseDecimal("65", PRICE_SCALE),
+  });
+  const fineco = await createManualService(ctx, {
+    target: "new",
+    name: "Fineco Conto Deposito",
+    category: "accounts",
+    currency: "EUR",
+    mode: "total",
+    url: null,
+  });
+  await recordOperation(ctx, fineco.accountId, { kind: "deposit", on, amountCents: 500_000n });
+  await recordOperation(ctx, fineco.accountId, { kind: "account_valuation", on, amountCents: 512_340n });
 
   // ——— Subscriptions ———
   await upsertFromProvider(ctx, current, [
