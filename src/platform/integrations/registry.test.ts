@@ -25,7 +25,7 @@ describe("passFor", () => {
   });
 
   it("is null for a provider nobody passes", () => {
-    expect(passFor("ccxt:binance")).toBeNull();
+    expect(passFor("ccxt:kraken")).toBeNull();
     expect(passFor("")).toBeNull();
   });
 

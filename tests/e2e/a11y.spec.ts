@@ -205,6 +205,11 @@ const PAGES: Screen[] = [
     session: "layout",
     open: (page) => follow(page, "/investments", "eToro"),
   },
+  {
+    name: "/investments/[accountId] synced with Binance",
+    session: "layout",
+    open: (page) => follow(page, "/investments", "Binance"),
+  },
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
     name: "/payroll/[id]",
@@ -400,6 +405,21 @@ const OVERLAYS: Screen[] = [
       await page.goto("/investments/catalog");
       await settled(page);
       await page.getByRole("button", { name: "Connect", exact: true }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the connect Binance dialog",
+    session: "admin",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/investments/catalog");
+      await settled(page);
+      await page
+        .getByTestId("catalog-card")
+        .filter({ hasText: "Binance" })
+        .getByRole("button", { name: "Connect", exact: true })
+        .click();
       await settledDialog(page);
     },
   },

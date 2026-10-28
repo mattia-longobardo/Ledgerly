@@ -752,6 +752,10 @@ quantità < 0,001, resta visibile ma non rende la lettura `partial`. I ticker Bi
 
 **Conto vuoto Binance [D18 · B6].** Con sola polvere la lettura non è `confirmed_zero`.
 
+**Fase 4 (PERS-85).** Le scelte d'implementazione dove questa sezione non decide (SEPA e carta in una
+sola richiesta, trade per `fromId`, valore delle gambe alla chiusura giornaliera, stream `quantities`
+per il controllo di A6) sono in `investments-phase-4.md`.
+
 ### 3.3 Online Broker: eToro
 
 PERS-69 non trova un aggregatore adatto a un singolo utente in UE: si parte da eToro con l'API

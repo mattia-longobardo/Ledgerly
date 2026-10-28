@@ -41,9 +41,17 @@ export const PAPERLESS_PROVIDER = "paperless";
 
 /** eToro, the first online broker of Investments (docs/design/investments.md §3.3). */
 export const ETORO_PROVIDER = "etoro";
+/** Binance through ccxt (§3.2): one provider per exchange (D2). */
+export const BINANCE_PROVIDER = "ccxt:binance";
 
 /** The providers a connection may be created for: one entry per provider the app can speak to. */
-export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER, PAPERLESS_PROVIDER, ETORO_PROVIDER] as const;
+export const PROVIDERS = [
+  WALLET_PROVIDER,
+  TREK_PROVIDER,
+  PAPERLESS_PROVIDER,
+  ETORO_PROVIDER,
+  BINANCE_PROVIDER,
+] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
 export function isKnownProvider(provider: string): provider is Provider {
@@ -61,6 +69,7 @@ export const KINDS_OF = {
   [PAPERLESS_PROVIDER]: ["documents"],
   // Holdings and flows have outcomes of their own (A8): a failed history never stops the value.
   [ETORO_PROVIDER]: ["holdings", "flows"],
+  [BINANCE_PROVIDER]: ["holdings", "flows"],
 } as const satisfies Record<Provider, readonly SyncKind[]>;
 
 /**

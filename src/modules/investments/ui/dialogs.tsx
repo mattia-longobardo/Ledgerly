@@ -1822,6 +1822,9 @@ export function ConfirmZeroButton({
 export interface ConnectableProvider {
   id: string;
   name: string;
+  /** The account type its service is (D13): an exchange is `crypto`, a broker `investment`. */
+  accountType: "investment" | "crypto";
+  ipWhitelist: "supported" | "unsupported" | null;
   credentialFields: readonly string[];
   currencies: readonly string[] | null;
   defaultCurrency: string;
@@ -1903,7 +1906,9 @@ function ConnectDialog({
   const { error, clear, report } = useErrors();
   const [target, setTarget] = useState<"new" | "existing">("new");
   const currencies = provider.currencies ?? [provider.defaultCurrency];
-  const choices = existing.filter((one) => one.type === "investment");
+  const choices = existing.filter((one) => one.type === provider.accountType);
+  // Message keys cannot hold a colon: `ccxt:binance` → `ccxt_binance`.
+  const slug = provider.id.replace(/[^a-z0-9]/g, "_");
   const usable = (one: ExistingChoice) =>
     (one.reason === null || one.manualService) && currencies.includes(one.currency);
   const [accountId, setAccountId] = useState(choices.find(usable)?.id ?? "");
@@ -1944,10 +1949,15 @@ function ConnectDialog({
     >
       <ol className="col-span-full flex list-decimal flex-col gap-1 pl-5 text-sm">
         {(["1", "2", "3", "4"] as const).map((step) => (
-          <li key={step}>{t(`connect.steps.${provider.id}.${step}` as "connect.steps.etoro.1")}</li>
+          <li key={step}>{t(`connect.steps.${slug}.${step}` as "connect.steps.etoro.1")}</li>
         ))}
       </ol>
-      <p className="col-span-full text-sm text-muted">{t("connect.readOnlyNote")}</p>
+      <p className="col-span-full text-sm text-muted">
+        {t("connect.readOnlyNote")}{" "}
+        {t(provider.ipWhitelist === "supported" ? "connect.ipSuggested" : "connect.ipUnsupported", {
+          name: provider.name,
+        })}
+      </p>
       <KeyFields provider={provider} id={id} />
       <div className="col-span-full">
         <Segmented
@@ -1965,7 +1975,11 @@ function ConnectDialog({
           <Field label={t("manualForm.name")} htmlFor={`${id}-name`}>
             <Input id={`${id}-name`} name="name" required maxLength={80} defaultValue={provider.name} />
           </Field>
-          <Field label={t("manualForm.currency")} htmlFor={`${id}-currency`} hint={t("connect.currencyHint")}>
+          <Field
+            label={t("manualForm.currency")}
+            htmlFor={`${id}-currency`}
+            hint={t("connect.currencyHint", { name: provider.name })}
+          >
             <Select id={`${id}-currency`} name="currency" defaultValue={provider.defaultCurrency}>
               {currencies.map((currency) => (
                 <option key={currency} value={currency}>
@@ -1977,7 +1991,11 @@ function ConnectDialog({
         </>
       ) : (
         <div className="col-span-full">
-          <Field label={t("manualForm.existing")} htmlFor={`${id}-account`} hint={t("connect.existingHint")}>
+          <Field
+            label={t("manualForm.existing")}
+            htmlFor={`${id}-account`}
+            hint={t("connect.existingHint", { name: provider.name })}
+          >
             {choices.length === 0 ? (
               <p className="text-sm text-muted">{t("manualForm.noExisting")}</p>
             ) : (

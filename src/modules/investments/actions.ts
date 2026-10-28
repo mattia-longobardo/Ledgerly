@@ -4,6 +4,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { AccountError } from "@/modules/accounts/service";
 import { parseAmount } from "@/modules/accounts/rules";
@@ -334,7 +335,15 @@ export async function connectProviderAction(
 ): Promise<{ ok: true; accountId: string } | { ok: false; error: string }> {
   const ctx = await requireSession();
   try {
-    const { accountId } = await connectInvestmentProvider(ctx, provider, credentials, target);
+    // The first flows run after the answer: 24 months of an exchange take minutes (§3.2).
+    const { accountId } = await connectInvestmentProvider(
+      ctx,
+      provider,
+      credentials,
+      target,
+      new Date(),
+      (work) => after(work),
+    );
     revalidate(accountId);
     revalidatePath("/settings/integrations");
     return { ok: true, accountId };
@@ -346,7 +355,7 @@ export async function connectProviderAction(
 export async function syncNowAction(accountId: string): Promise<ActionResult & { outcome?: string }> {
   const ctx = await requireSession();
   try {
-    const outcome = await syncNow(ctx, accountId);
+    const outcome = await syncNow(ctx, accountId, new Date(), (work) => after(work));
     revalidate(accountId);
     return outcome === "answered" ? { ok: true, outcome } : { ok: false, error: `sync_${outcome}` };
   } catch (error) {
