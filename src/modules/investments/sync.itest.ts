@@ -3,6 +3,8 @@
 // `revoked` on 401, `refused` with backoff on 429, the empty answers, holdings and flows with
 // outcomes of their own, the key's checks, and canary keys on every branch of failure.
 import { and, asc, eq } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listBalanceEntries } from "@/modules/accounts/queries";
 import { createAccount } from "@/modules/accounts/service";
@@ -19,10 +21,12 @@ import {
 } from "@/platform/integrations/investments/source";
 import { integrationConnections, providerLinks, syncRuns } from "@/platform/integrations/schema";
 import { listConnections, listRuns, saveSyncJob } from "@/platform/integrations/service";
+import { type EtoroTrade, tradeSchema } from "@/platform/integrations/etoro/client";
+import { tradeEventsOf } from "@/platform/integrations/etoro/mapping";
 import { withJobLock } from "@/platform/jobs/lock";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { serviceDetail } from "./queries";
+import { investmentsPnl, serviceDetail } from "./queries";
 import {
   investmentAccountPeriods,
   investmentAccounts,
@@ -747,5 +751,71 @@ describe("the key on the service page (§4.3, §5.3)", () => {
       cursor: { backoff_until: new Date(Date.now() + 3_600_000).toISOString() },
     });
     expect(await syncNow(ctx, accountId)).toBe("refused");
+  });
+});
+
+describe("the P&L of a period on eToro's trades (docs/design/investments-ux.md §4.4, U1)", () => {
+  it("realizes each closed position against its own opening, by positionId, not the average", async () => {
+    const fixture = JSON.parse(
+      readFileSync(join(process.cwd(), "test/fixtures/investments/etoro/trade-history.json"), "utf8"),
+    ) as { body: unknown[] };
+    const trades: EtoroTrade[] = fixture.body.map((row) => tradeSchema.parse(row));
+    const spacex = trades.find((trade) => trade.positionId === 900015)!;
+    expect(spacex.closeTimestamp >= "2026-06-10").toBe(true);
+    // Two more positions of the same instrument, open at the same time: their average is not theirs.
+    const more = (
+      positionId: number,
+      open: string,
+      close: string,
+      investment: number,
+      netProfit: number,
+    ) => ({
+      ...spacex,
+      positionId,
+      openTimestamp: open,
+      closeTimestamp: close,
+      investment,
+      netProfit,
+    });
+    trades.push(
+      more(990001, "2026-07-01T10:00:00Z", "2026-08-03T10:00:00Z", 100, 10),
+      more(990002, "2026-07-15T10:00:00Z", "2026-09-01T10:00:00Z", 300, -30),
+    );
+    behaviour.flows = async () => ({ events: tradeEventsOf(trades, new Map()) });
+    const { accountId } = await connectNew("USD");
+
+    const { portfolio } = await investmentsPnl(ctx, { from: "2026-06-10", to: todayOn });
+    const pnl = portfolio.services.find((one) => one.accountId === accountId)!;
+    // The deposits are covered from 10 June (eToro Money): the period starts there.
+    expect(pnl.from).toBe("2026-06-10");
+    const closes = pnl.exits.filter((exit) => exit.kind === "close");
+    const closed = trades
+      .filter((trade) => trade.closeTimestamp >= "2026-06-10")
+      .sort((a, b) => (a.closeTimestamp < b.closeTimestamp ? -1 : 1));
+    expect(closed.map((trade) => trade.positionId)).toContain(990002);
+    expect(closes.map((exit) => exit.matched)).toEqual(closed.map(() => "position"));
+    // eToro's own netProfit, fees included, to the cent of the rounding of its two amounts.
+    closes.forEach((exit, index) => {
+      expect(Math.abs(Number(exit.realizedCents) - closed[index].netProfit * 100)).toBeLessThanOrEqual(1);
+      expect(exit.costCents).toBe(BigInt(Math.round(closed[index].investment * 100)));
+    });
+    expect(pnl.local?.realizedCents).toBe(closes.reduce((sum, exit) => sum + exit.realizedCents!, 0n));
+    // No cost of the open positions yet (U4): the rest of the P&L is in "Other", additive.
+    const parts = pnl.local!;
+    expect(parts.unrealizedChangeCents).toBeNull();
+    expect(
+      parts.realizedCents +
+        parts.incomeCents +
+        parts.feesCents +
+        parts.correctionsCents +
+        parts.unattributedCents,
+    ).toBe(parts.pnlCents);
+  });
+
+  it("leaves 2025 out: no deposit of it is covered, so no reliable P&L, never a zero", async () => {
+    const { accountId } = await connectNew("USD");
+    const { portfolio } = await investmentsPnl(ctx, { period: "2025" });
+    expect(portfolio.excluded.map((one) => one.accountId)).toEqual([accountId]);
+    expect(portfolio).toMatchObject({ status: "undetermined", parts: null });
   });
 });

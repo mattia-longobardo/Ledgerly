@@ -5,11 +5,12 @@ import { dailyBalancesOf } from "@/modules/accounts/service";
 import { fundsView } from "@/modules/funds/queries";
 import { linkCandidates, transactionsByIds } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
-import { addDays, type CivilDate, type MonthKey, today } from "@/platform/dates";
+import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { convertCents, NO_RATES, type RateTable } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
+import { externalIdsOf } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
 import { INVESTMENT_PROVIDERS, type InvestmentProvider, providerOf } from "./catalog";
 import {
@@ -50,6 +51,16 @@ import {
   ratesFor,
   transferLegs,
 } from "./service";
+import {
+  type CoverageWindow,
+  type PeriodParams,
+  periodOf,
+  type PnlPeriod,
+  pnlOf,
+  type PnlService,
+  portfolioPnl,
+  type PortfolioPnl,
+} from "./pnl";
 import { type SyncStatus, syncStatus } from "./sync";
 import { type ChartGrain, type ChartWindow, chartDays } from "./window";
 import { type Xirr, xirr } from "./xirr";
@@ -1047,4 +1058,98 @@ export async function investmentOperationsExport(ctx: Pick<Ctx, "userId" | "time
         }));
     });
   });
+}
+
+// ——— Profit and loss of a period (docs/design/investments-ux.md §4, U1) ——————————————————————————
+
+export interface InvestmentsPnl {
+  period: PnlPeriod;
+  todayOn: CivilDate;
+  currency: string;
+  /** Every live service with its own P&L, and the portfolio's (§4.6, §4.8). */
+  portfolio: PortfolioPnl;
+}
+
+/**
+ * The flows a provider's coverage says it holds, by day (§4.6): the `flows` windows but the
+ * `quantities` stream, which says whether the quantities add up and nothing about the flows.
+ */
+function coverageOf(sync: SyncStatus, timeZone: string): { windows: CoverageWindow[]; mismatch: boolean } {
+  const flows = sync.coverage.filter((row) => row.kind === "flows");
+  return {
+    windows: flows
+      .filter((row) => row.stream !== "quantities")
+      .map((row) => ({
+        stream: row.stream,
+        fromOn: civilDateIn(row.fromAt, timeZone),
+        toOn: civilDateIn(row.toAt, timeZone),
+        complete: row.status === "complete",
+      })),
+    // `quantity_mismatch` or `negative_opening` (A6): either way the quantities do not add up.
+    mismatch: flows.some((row) => row.stream === "quantities" && row.status !== "complete"),
+  };
+}
+
+/**
+ * The P&L of the period (§4) of every live service and of the portfolio, in the display currency:
+ * the engine of `pnl.ts` on each book, with its coverage, its provider ids (eToro's `positionId`)
+ * and the rates from the earliest day measured. Nothing is shown with it yet (U2–U5).
+ */
+export async function investmentsPnl(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<InvestmentsPnl> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const currency = ctx.displayCurrency;
+  const { loaded } = await loadAll(ctx, todayOn);
+  const live = loaded.filter((one) => one.account.state !== "archived");
+
+  const services: PnlService[] = [];
+  for (const one of live) {
+    const synced = one.investment.provider !== "manual" && one.sync !== null;
+    const coverage = synced ? coverageOf(one.sync!, ctx.timeZone) : null;
+    const externalIds = synced
+      ? await externalIdsOf(
+          ctx,
+          one.investment.provider,
+          "investment_event",
+          one.book.events.map((event) => event.id),
+        )
+      : new Map<string, string>();
+    services.push({
+      accountId: one.account.id,
+      currency: one.account.currency,
+      book: one.book,
+      rates: one.rates,
+      coverage: coverage?.windows ?? null,
+      quantityMismatch: coverage?.mismatch ?? false,
+      externalIds,
+    });
+  }
+
+  const firsts = live.flatMap((one) => [
+    ...one.book.periods.map((p) => p.fromOn),
+    ...one.book.events.map((event) => event.on),
+  ]);
+  const earliest = period.from ?? (firsts.length === 0 ? todayOn : firsts.reduce((a, b) => (a < b ? a : b)));
+  const converts = live.some((one) => one.account.currency !== currency);
+  const rates = converts
+    ? await ratesOn(
+        new Set([currency, ...live.map((one) => one.account.currency)]),
+        addDays(earliest, -8),
+        period.to,
+      )
+    : NO_RATES;
+  const display = { currency, rates };
+  return {
+    period,
+    todayOn,
+    currency,
+    portfolio: portfolioPnl(
+      services.map((one) => pnlOf(one, period.from, period.to, display)),
+      currency,
+    ),
+  };
 }
