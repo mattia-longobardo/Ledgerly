@@ -1,93 +1,122 @@
-// tests/e2e/investments.spec.ts — the Investments journey at 1440 px: platforms with their link,
-// deposits and withdrawals linked (or not) to an account movement, a value and the gain it gives,
-// and the deletion that asks first.
-import { expect, test } from "@playwright/test";
+// tests/e2e/investments.spec.ts — the manual account journey at 1440 px (docs/design/investments.md
+// §4, phase 2): a manual account from the catalog, its deposits (one linked to the bank movement it
+// came from), a position bought with its fee, valued, closed — the value the engine gives at every
+// step (§2.1, the Directa example) — the same value in Accounts, and a deletion that asks first.
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
 
-// Its own user: no platform yet, and two bank movements to link (scripts/seed-e2e.ts).
+// Its own user: no service yet, and two bank movements to link (scripts/seed-e2e.ts).
 test.use({ storageState: sessionState("investments") });
 
-test("a platform keeps its money's history, and linking it to the bank moves no balance", async ({
-  page,
-}) => {
-  await test.step("an empty page offers a new platform", async () => {
+const value = (page: Page) => page.getByTestId("service-value");
+
+test("a manual account follows its operations, and Accounts shows the same value", async ({ page }) => {
+  await test.step("an empty section sends to the catalog", async () => {
     await page.goto("/investments");
-    await expect(page.getByRole("heading", { name: "No platforms" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "No services yet" })).toBeVisible();
+    await page.getByRole("link", { name: "Add service" }).first().click();
+    await expect(page).toHaveURL(/\/investments\/catalog$/);
+    // The providers still to connect are listed, with no way to connect them yet.
+    await expect(page.getByTestId("catalog-card").filter({ hasText: "eToro" })).toContainText("Coming soon");
   });
 
-  await test.step("a new platform carries a link that opens it in a new tab", async () => {
-    await page.getByRole("button", { name: "New platform" }).first().click();
-    const dialog = page.getByRole("dialog", { name: "New platform" });
-    await dialog.getByLabel("Name").fill("eToro");
-    await dialog.getByLabel("Link").fill("www.etoro.com");
+  await test.step("a manual account per asset, in euro", async () => {
+    await page.getByRole("button", { name: "Create manual account" }).click();
+    const dialog = page.getByRole("dialog", { name: "Create manual account" });
+    await dialog.getByLabel("Name").fill("Directa");
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
+    await expect(value(page)).toHaveText(/^0,00\s€$/);
+  });
+
+  await test.step("two deposits, one linked to the money that left the bank", async () => {
+    await page.getByRole("button", { name: "Deposit", exact: true }).first().click();
+    let dialog = page.getByRole("dialog", { name: "Deposit" });
+    await dialog.getByLabel("Amount").fill("8000");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page).toHaveURL(/platform=/);
-    const open = page.getByTestId("platform-detail").getByRole("link", { name: "Open eToro" });
-    await expect(open).toHaveAttribute("href", "https://www.etoro.com");
-    await expect(open).toHaveAttribute("target", "_blank");
-  });
 
-  await test.step("a deposit linked to the money that left the account", async () => {
-    await page.getByRole("button", { name: "New movement" }).first().click();
-    const dialog = page.getByRole("dialog", { name: "New movement" });
+    await page.getByRole("button", { name: "Deposit", exact: true }).first().click();
+    dialog = page.getByRole("dialog", { name: "Deposit" });
     await dialog.getByLabel("Amount").fill("2000");
     const link = dialog.getByLabel("Linked account expense");
     await link.selectOption({ label: await optionLabel(link, "Bonifico eToro") });
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("movement-row").first()).toContainText(
-      "Bonifico eToro · ING Conto Arancio",
-    );
+    await expect(value(page)).toHaveText(/^10\.000,00\s€$/);
+    await expect(page.getByTestId("operation-row").first()).toContainText("Bonifico eToro");
   });
 
-  await test.step("a withdrawal linked to the money that came back", async () => {
-    await page.getByRole("button", { name: "New movement" }).first().click();
-    const dialog = page.getByRole("dialog", { name: "New movement" });
-    await dialog.getByRole("button", { name: "Withdrawal" }).click();
-    await dialog.getByLabel("Amount").fill("2401,58");
-    const link = dialog.getByLabel("Linked account income");
-    // Only money coming in is offered for a withdrawal.
-    await expect(link.locator("option", { hasText: "Bonifico eToro" })).toHaveCount(0);
-    await link.selectOption({ label: await optionLabel(link, "Accredito eToro") });
+  await test.step("100 VWCE at 60 € with a 2 € fee: 9.998 €", async () => {
+    await page.getByRole("button", { name: "Add asset" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Add asset" });
+    await dialog.getByLabel("Search by name, ISIN or symbol").fill("VWCE");
+    await dialog.getByLabel("Quantity").fill("100");
+    await dialog.getByLabel("Unit price").fill("60");
+    await dialog.getByLabel("Fee").fill("2");
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(value(page)).toHaveText(/^9\.998,00\s€$/);
+    await expect(page.getByTestId("holding-row")).toContainText("Vanguard FTSE All-World");
+  });
+
+  await test.step("valued at 65 €: 10.498 €", async () => {
+    await holdingAction(page, "Value");
+    const dialog = page.getByRole("dialog", { name: /^Value · Vanguard/ });
+    await dialog.getByLabel("Unit price").fill("65");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("movement-row")).toHaveCount(2);
+    await expect(value(page)).toHaveText(/^10\.498,00\s€$/);
   });
 
-  await test.step("with its value known, the platform shows what it gained", async () => {
-    // Nobody has valued it yet: the value and the gain are unknown, never zero.
-    await expect(page.getByText("eToro. Update the value")).toBeVisible();
-    await page.getByRole("button", { name: "Actions for eToro" }).first().click();
-    await page.getByRole("menuitem", { name: "Update value" }).click();
-    const dialog = page.getByRole("dialog", { name: "Update value · eToro" });
-    await dialog.getByLabel("Value").fill("0");
+  await test.step("closed at 70 € with a 2 € fee: 10.996 €, all in cash", async () => {
+    await holdingAction(page, "Close");
+    const dialog = page.getByRole("dialog", { name: /^Close · Vanguard/ });
+    await expect(dialog.getByLabel("Quantity")).toHaveValue("100");
+    await dialog.getByLabel("Unit price").fill("70");
+    await dialog.getByLabel("Fee").fill("2");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("platform-row")).toContainText(/\+401,58\s€/);
-    await expect(page.getByTestId("platform-row")).toContainText(/\+20,1\s%/);
+    await expect(value(page)).toHaveText(/^10\.996,00\s€$/);
+    await expect(page.getByTestId("holding-row")).toHaveCount(0);
   });
 
-  await test.step("deleting a platform asks first, and says what went with it", async () => {
-    await page.getByRole("button", { name: "Actions for eToro" }).first().click();
-    await page.getByRole("menuitem", { name: "Delete platform" }).click();
-    const dialog = page.getByRole("dialog", { name: "Delete eToro?" });
-    await expect(dialog).toContainText("2 movements and the recorded values go too.");
-    await dialog.getByRole("button", { name: "Delete platform" }).click();
-    await expect(page.getByText("eToro deleted with 2 movements")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "No platforms" })).toBeVisible();
-  });
-
-  await test.step("the account's balance did not move", async () => {
+  await test.step("Accounts shows the same value, and takes no manual balance for it", async () => {
+    const service = page.url();
     await page.goto("/accounts");
-    await expect(page.getByRole("row").filter({ hasText: "ING Conto Arancio" }).first()).toContainText(
-      "5.000,00 €",
-    );
+    await expect(page.getByRole("row").filter({ hasText: "Directa" }).first()).toContainText(/10\.996,00\s€/);
+    await page.goto(`${service.replace(/\/investments\//, "/accounts/")}?tab=entries`);
+    await expect(page.getByRole("link", { name: "Open in Investments" })).toBeVisible();
+    await page.goto(service);
+  });
+
+  await test.step("deleting an operation asks first, and says which one went", async () => {
+    await page
+      .getByTestId("operation-row")
+      .first()
+      .getByRole("button", { name: /^Actions for the operation of/ })
+      .click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+    const dialog = page.getByRole("dialog", { name: "Delete this operation?" });
+    await expect(dialog).toContainText("Close of");
+    await dialog.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText(/^Deleted: Close of/)).toBeVisible();
+    await expect(value(page)).toHaveText(/^10\.498,00\s€$/);
   });
 });
 
+async function holdingAction(page: Page, action: string): Promise<void> {
+  await page
+    .getByTestId("holding-row")
+    .first()
+    .getByRole("button", { name: /^Actions for Vanguard/ })
+    .click();
+  await page.getByRole("menuitem", { name: action }).click();
+}
+
 /** The full text of the first option naming `payee`: dates and amounts make up the rest of it. */
-async function optionLabel(select: import("@playwright/test").Locator, payee: string): Promise<string> {
+async function optionLabel(select: Locator, payee: string): Promise<string> {
   const option = select.locator("option", { hasText: payee }).first();
   await expect(option).toHaveCount(1);
   return (await option.textContent()) ?? "";

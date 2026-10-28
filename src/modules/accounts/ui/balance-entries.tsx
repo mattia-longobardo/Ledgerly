@@ -149,8 +149,11 @@ function EditEntryDialog({
 }
 
 /** The message key a refused action carries, under `accounts.entries.errors`. */
-function messageOf(result: Extract<ActionResult, { ok: false }>): "futureDate" | "notFound" | "invalid" {
+function messageOf(
+  result: Extract<ActionResult, { ok: false }>,
+): "futureDate" | "notFound" | "invalid" | "managed" {
   if (result.error === "future_date") return "futureDate";
+  if (result.error === "managed_locked") return "managed";
   if (result.error === "not_found") return "notFound";
   return "invalid";
 }
@@ -165,11 +168,14 @@ export function BalanceEntries({
   entries,
   today,
   synced,
+  managedHref = null,
 }: {
   accountId: string;
   entries: EntryRow[];
   today: string;
   synced: boolean;
+  /** An account Investments manages: its value changes on the service page, never here (§1.3). */
+  managedHref?: string | null;
 }) {
   const t = useTranslations("accounts.entries");
   const form = useRef<HTMLFormElement>(null);
@@ -210,21 +216,34 @@ export function BalanceEntries({
     // the widest card's min-content — and a table's min-content is the whole table, which pushed
     // the form beside it 77 px past a phone's screen (plan F9 §3.3).
     <div className="grid gap-4 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <Card className="flex min-w-0 flex-col gap-3">
-        <h2 className="text-lg font-semibold">{t("add.title")}</h2>
-        <p className="text-sm text-muted">{synced ? t("add.syncedNote") : t("add.manualNote")}</p>
-        <form ref={form} onSubmit={onSubmit} className="flex flex-col gap-3">
-          {error && (
-            <p role="alert" className="text-sm text-neg">
-              {error}
-            </p>
-          )}
-          <EntryFields prefix={prefix} entry={null} today={today} />
-          <Button type="submit" variant="primary" size="sm" disabled={pending} className="self-start">
-            {t("add.submit")}
-          </Button>
-        </form>
-      </Card>
+      {managedHref ? (
+        <Card className="flex min-w-0 flex-col gap-3">
+          <h2 className="text-lg font-semibold">{t("managed.title")}</h2>
+          <p className="text-sm text-muted">{t("managed.note")}</p>
+          <a
+            href={managedHref}
+            className="focus-ring inline-flex min-h-6 items-center self-start rounded-[4px] text-accent hover:underline"
+          >
+            {t("managed.link")}
+          </a>
+        </Card>
+      ) : (
+        <Card className="flex min-w-0 flex-col gap-3">
+          <h2 className="text-lg font-semibold">{t("add.title")}</h2>
+          <p className="text-sm text-muted">{synced ? t("add.syncedNote") : t("add.manualNote")}</p>
+          <form ref={form} onSubmit={onSubmit} className="flex flex-col gap-3">
+            {error && (
+              <p role="alert" className="text-sm text-neg">
+                {error}
+              </p>
+            )}
+            <EntryFields prefix={prefix} entry={null} today={today} />
+            <Button type="submit" variant="primary" size="sm" disabled={pending} className="self-start">
+              {t("add.submit")}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       <Card padded={false} className="min-w-0">
         <CardHeader
@@ -272,7 +291,7 @@ export function BalanceEntries({
                         </Badge>
                       </Td>
                       <Td align="right">
-                        {entry.source === "manual" && (
+                        {entry.source === "manual" && !managedHref && (
                           <span className="flex justify-end gap-1">
                             <Button
                               size="xs"
@@ -320,7 +339,7 @@ export function BalanceEntries({
                     </Badge>
                   </div>
                   {entry.note && <span className="text-sm break-words text-muted">{entry.note}</span>}
-                  {entry.source === "manual" && (
+                  {entry.source === "manual" && !managedHref && (
                     <div className="flex gap-1">
                       <Button size="xs" variant="ghost" onClick={() => setEditing(entry)} disabled={pending}>
                         {t("list.edit")}

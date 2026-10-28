@@ -33,6 +33,7 @@ import { rulesOnAccount } from "@/modules/interests/queries";
 import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
+import { managedSinceOf } from "@/modules/investments/managed";
 import { lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
 import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -127,6 +128,8 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const counter = counterValue(row, view.currency, ctx.numberFormat);
   const synced = since(account.lastSyncedAt, now);
   const color = colorFor(account, index);
+  // A service of Investments takes no manual balance (docs/design/investments.md §1.3).
+  const managed = (await managedSinceOf(ctx, id)) !== null;
 
   return (
     <Page title={account.name} parent={{ href: "/accounts", label: t("title") }}>
@@ -152,6 +155,14 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           )}
           {account.state !== "active" && <Badge tone="warn">{t(`states.${account.state}`)}</Badge>}
           {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
+          {managed && (
+            <Link
+              href={`/investments/${id}` as Route}
+              className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+            >
+              {td("managedInInvestments")}
+            </Link>
+          )}
         </p>
         <h1 className="text-title font-semibold tracking-[-0.02em]">{account.name}</h1>
         <p className="flex flex-wrap items-baseline gap-3">
@@ -202,6 +213,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           accountId={id}
           today={today(ctx.timeZone, now)}
           synced={account.origin === "synced"}
+          managedHref={managed ? `/investments/${id}` : null}
           entries={await entryRows(ctx, id, account.currency)}
         />
       )}

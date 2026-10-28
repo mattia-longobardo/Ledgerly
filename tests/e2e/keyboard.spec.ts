@@ -130,6 +130,48 @@ test("a row menu opens on Enter, walks with the arrows and closes on Escape", as
   await expect(trigger).toBeFocused();
 });
 
+test("an investment dialog opened from a row menu traps the focus and gives it back", async ({ page }) => {
+  await page.goto("/investments");
+  await page.waitForTimeout(500);
+  const service = page.getByRole("link", { name: "Directa" }).filter({ visible: true }).first();
+  await page.goto((await service.getAttribute("href"))!);
+  await page.waitForTimeout(500);
+
+  const trigger = page
+    .getByRole("button", { name: /^Actions for Vanguard/ })
+    .filter({ visible: true })
+    .first();
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu").first();
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  expect(await focusIsVisible(page), "the menu item under the arrows draws no ring").toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  const opener = page.getByRole("button", { name: "Add asset" }).first();
+  await opener.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await page.waitForTimeout(300);
+  for (let index = 0; index < 20; index += 1) {
+    await page.keyboard.press("Tab");
+    const held = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element) return false;
+      if (document.querySelector('[role="dialog"]')?.contains(element)) return true;
+      return element === document.body || element.hasAttribute("data-base-ui-focus-guard");
+    });
+    expect(held, `Tab ${index + 1} left the dialog: focus on ${await focused(page)}`).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener, "closing the dialog did not give the focus back").toBeFocused();
+});
+
 test("a sortable table sorts from the keyboard, and the column says which way", async ({ page }) => {
   await page.goto("/expenses");
   await page.waitForTimeout(800);
