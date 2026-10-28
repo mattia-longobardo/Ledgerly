@@ -1,8 +1,8 @@
 # Investments: esito dello spike provider (fase 0)
 
 PERS-81 (27/10/2026), fase 0 di `docs/design/investments.md` (§7). Input per le fasi 3 (eToro) e 4
-(ccxt). Le proposte di questo documento **non cambiano il design**: vanno approvate e poi riportate in
-`investments.md` prima di scrivere il codice della fase.
+(ccxt). Le proposte E1–E9 e B1–B7 sono state **approvate da Mattia il 28/10/2026** (PERS-79) e
+riportate in `investments.md` come D17 (eToro) e D18 (Binance).
 
 Metodo: script usa e getta fuori dal repo, chiavi read-only reali di Ledgerly, solo chiamate `GET` (eToro)
 e metodi di lettura (ccxt `4.5.89` con override `undici` `7.30.1`). Nessuna chiamata di scrittura, nemmeno
