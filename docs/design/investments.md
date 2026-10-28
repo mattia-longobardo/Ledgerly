@@ -774,7 +774,8 @@ password (rifiutato), e come si revoca l'accesso (PERS-73).
 |---|---|
 | Permessi e identità | `GET /api/v1/me` |
 | Totale e conti nella valuta del conto (USD di default) | `GET /api/v1/balances?displayCurrency=<valuta del conto>&includeZeroBalances=true` [D17 · E7, E8] |
-| Posizioni e copy trading | `GET /api/v1/trading/info/portfolio` (`positions[]`, `mirrors[]`) [D17 · E3] |
+| Posizioni e copy trading | `GET /api/v1/trading/info/real/pnl`: lo stesso `clientPortfolio` di `/trading/info/portfolio` (`positions[]`, `mirrors[]`) con `unrealizedPnL` per posizione, che dà il valore della posizione [D17 · E3] |
+| Nomi degli strumenti | `GET /api/v1/market-data/instruments?instrumentIds=…` (scope `market-data:read`), a lotti di 50; se non risponde, l'asset prende il nome dall'id e la lettura è `partial` |
 
 - Flussi (`flows`):
 

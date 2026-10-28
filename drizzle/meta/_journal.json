@@ -267,6 +267,13 @@
       "when": 1793145211239,
       "tag": "0037_investments_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793183490655,
+      "tag": "0038_investment_sync",
+      "breakpoints": true
     }
   ]
 }

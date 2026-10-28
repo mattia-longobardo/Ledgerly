@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
@@ -14,6 +15,8 @@ import {
 } from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
 import { jobStatuses } from "@/platform/jobs/queries";
+import { providerOf } from "@/modules/investments/catalog";
+import { listInvestmentAccounts } from "@/modules/investments/service";
 import { pendingCount } from "@/modules/timeoff/service";
 import { Badge } from "@/ui/badge";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
@@ -116,6 +119,15 @@ export default async function SettingsIntegrationsPage() {
   const paperlessState: PaperlessCardState = paperless?.state ?? "absent";
   const paperlessLastSync = paperless?.lastOkAt ? formatInstant(paperless.lastOkAt, ctx) : null;
 
+  // Investments (docs/design/investments.md §4.2): listed here with their schedule; the key, its
+  // checks and the disconnection live on the service's page.
+  const services = await listInvestmentAccounts(ctx);
+  const invested = connections.flatMap((connection) => {
+    const provider = providerOf(connection.provider);
+    const service = services.find((one) => one.provider === connection.provider);
+    return provider && provider.connect === "apikey" && service ? [{ connection, provider, service }] : [];
+  });
+
   // §10.3: only an admin may run a job by hand, and only an admin sees that this is possible.
   const tJobs = await getTranslations("settings.jobs");
   const jobs: JobRow[] =
@@ -143,6 +155,41 @@ export default async function SettingsIntegrationsPage() {
         <div className="border-t border-border" />
         <PaperlessCard state={paperlessState} lastSync={paperlessLastSync} schedule={scheduleOf(paperless)} />
       </SettingsSection>
+
+      {invested.length > 0 && (
+        <SettingsSection
+          title={t("investments.title")}
+          description={t("investments.description")}
+          padded={false}
+        >
+          <ul className="flex flex-col">
+            {invested.map(({ connection, provider, service }) => (
+              <li
+                key={connection.id}
+                className="flex flex-col gap-2 border-t border-border p-4 first:border-t-0"
+                data-testid="investment-connection"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Link
+                    href={`/investments/${service.accountId}` as Route}
+                    className="focus-ring inline-flex min-h-6 items-center rounded-[4px] font-medium text-accent hover:underline"
+                  >
+                    {t("investments.open", { name: provider.name })}
+                  </Link>
+                  <Badge
+                    tone={
+                      connection.state === "active" ? "pos" : connection.state === "revoked" ? "neg" : "warn"
+                    }
+                  >
+                    {t(`states.${connection.state}`)}
+                  </Badge>
+                </div>
+                {scheduleOf(connection)}
+              </li>
+            ))}
+          </ul>
+        </SettingsSection>
+      )}
 
       {ctx.role === "admin" && (
         <SettingsSection title={tJobs("title")} description={tJobs("description")} padded={false}>

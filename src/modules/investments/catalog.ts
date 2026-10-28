@@ -1,6 +1,7 @@
 // src/modules/investments/catalog.ts — the providers of the section (docs/design/investments.md
-// §1.1, D12): static, in the code. Phase 2 makes only the manual account available; eToro (phase 3)
-// and the ccxt exchanges (phase 4) are listed as planned, with no "Connect".
+// §1.1, D12): static, in the code. The manual account and eToro (phase 3) are available; the ccxt
+// exchanges (phase 4) and the other brokers are listed as planned, with no "Connect".
+import { z } from "zod";
 import type { InvestmentCategory } from "./rules";
 
 export interface InvestmentProvider {
@@ -19,6 +20,8 @@ export interface InvestmentProvider {
   revokeUrl: string | null;
   /** The account currency offered first when a new account is created for it. */
   defaultCurrency: string;
+  /** The account currencies the provider can report in (eToro `displayCurrency`, E8); `null`: any. */
+  currencies: readonly string[] | null;
 }
 
 const manual = {
@@ -30,6 +33,7 @@ const manual = {
   products: ["custody"],
   revokeUrl: null,
   defaultCurrency: "EUR",
+  currencies: null,
 } as const;
 
 const exchange = (id: string, name: string, url: string, revokeUrl: string) =>
@@ -47,6 +51,7 @@ const exchange = (id: string, name: string, url: string, revokeUrl: string) =>
     products: ["spot", "funding"],
     revokeUrl,
     defaultCurrency: "EUR",
+    currencies: null,
   }) as const satisfies InvestmentProvider;
 
 export const MANUAL_PROVIDER = "manual";
@@ -65,15 +70,17 @@ export const INVESTMENT_PROVIDERS: readonly InvestmentProvider[] = [
     name: "eToro",
     category: "broker",
     connect: "apikey",
-    status: "planned",
+    status: "available",
     url: "https://www.etoro.com",
     credentialFields: ["api_key", "user_key"],
-    readOnlyCheck: "declared",
+    // D17 · E1: `GET /api/v1/me` lists the key's scopes, checked on every pass.
+    readOnlyCheck: "api",
     ipWhitelist: "unsupported",
     ccxtId: null,
-    products: ["custody"],
+    products: ["trading", "cash", "crypto", "copy"],
     revokeUrl: "https://www.etoro.com/settings/trade",
     defaultCurrency: "USD",
+    currencies: ["EUR", "USD", "GBP", "CHF"],
   },
   {
     id: "ibkr",
@@ -126,6 +133,26 @@ export const INVESTMENT_PROVIDERS: readonly InvestmentProvider[] = [
 
 export function providerOf(id: string): InvestmentProvider | null {
   return INVESTMENT_PROVIDERS.find((provider) => provider.id === id) ?? null;
+}
+
+/** A provider a key can connect today: `apikey`, available. */
+export function connectableProvider(id: string): InvestmentProvider | null {
+  const provider = providerOf(id);
+  return provider && provider.connect === "apikey" && provider.status === "available" ? provider : null;
+}
+
+/**
+ * The credentials of a provider as a strict object of its own fields (SEC-03): a field more — a
+ * proxy, a host, an option — is refused, never passed on. Each value is one header-safe line.
+ */
+export function credentialSchemaOf(provider: InvestmentProvider) {
+  const value = z
+    .string()
+    .trim()
+    .min(8)
+    .max(4096)
+    .regex(/^[\x21-\x7e]+$/);
+  return z.strictObject(Object.fromEntries(provider.credentialFields.map((field) => [field, value])));
 }
 
 /** The account type a service of a category is (D13): exchanges are `crypto`, the rest `investment`. */

@@ -110,3 +110,45 @@ describe("module boundaries", () => {
     expect(findModuleBoundaryViolations(files)).toEqual([]);
   });
 });
+
+/**
+ * SEC-05 (docs/design/investments.md §5.1): the key of an investment provider is saved only by
+ * `connectInvestmentProvider` and `replaceKey`, after the strict schema, the read-only check and a
+ * test reading. Every other `saveConnection` call names a provider that is not in the catalog.
+ */
+describe("saving an investment key", () => {
+  const CALL = /saveConnection\(\s*ctx,\s*\{\s*provider:\s*([A-Za-z_.]+)/g;
+  const OTHERS = new Set(["WALLET_PROVIDER", "TREK_PROVIDER", "PAPERLESS_PROVIDER"]);
+  const OWNER = "modules/investments/sync.ts";
+
+  function calls(): Map<string, string[]> {
+    const found = new Map<string, string[]>();
+    for (const file of sourceFiles(SRC)) {
+      const rel = relative(SRC, file).split(sep).join("/");
+      if (rel === SELF || /\.(test|itest)\.tsx?$/.test(rel) || rel === "platform/integrations/service.ts")
+        continue;
+      const content = readFileSync(file, "utf8");
+      const providers = [...content.matchAll(CALL)].map((match) => match[1]);
+      if (content.includes("saveConnection(") || providers.length > 0) found.set(rel, providers);
+    }
+    return found;
+  }
+
+  it("happens only in the investments sync, twice: connecting and replacing the key", () => {
+    const found = calls();
+    expect(found.get(OWNER)).toEqual(["provider.id", "provider.id"]);
+    const owner = readFileSync(join(SRC, OWNER), "utf8");
+    const connect = owner.slice(owner.indexOf("export async function connectInvestmentProvider("));
+    const replace = owner.slice(owner.indexOf("export async function replaceKey("));
+    expect(connect.split("export async function")[1]).toContain("saveConnection(");
+    expect(replace.split("export async function")[1]).toContain("saveConnection(");
+  });
+
+  it("names a non-investment provider everywhere else", () => {
+    for (const [file, providers] of calls()) {
+      if (file === OWNER) continue;
+      expect(providers.length, file).toBeGreaterThan(0);
+      for (const provider of providers) expect(OTHERS.has(provider), `${file}: ${provider}`).toBe(true);
+    }
+  });
+});

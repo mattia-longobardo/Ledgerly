@@ -39,7 +39,10 @@ export type HoldingOrigin = (typeof HOLDING_ORIGINS)[number];
 
 /** `other:<label>` is the escape hatch for a sub-account the list does not name (A1). */
 export const PRODUCTS = ["spot", "funding", "earn", "staking", "custody"] as const;
-export const PRODUCT_PATTERN = "^(spot|funding|earn|staking|custody|other:[a-z0-9_-]{1,30})$";
+/** The products of eToro's scope (D17 · E2, E3): one per account type, and the copies. */
+export const BROKER_PRODUCTS = ["trading", "cash", "crypto", "copy"] as const;
+export const PRODUCT_PATTERN =
+  "^(spot|funding|earn|staking|custody|trading|cash|crypto|copy|other:[a-z0-9_-]{1,30})$";
 
 export const EVENT_ORIGINS = ["manual", "provider", "conversion"] as const;
 export type EventOrigin = (typeof EVENT_ORIGINS)[number];
@@ -74,6 +77,14 @@ export type ReadingStatus = (typeof READING_STATUSES)[number];
 
 export const RECONCILIATION_KINDS = ["covered_by_provider", "outside_scope", "partial", "reopened"] as const;
 export type ReconciliationKind = (typeof RECONCILIATION_KINDS)[number];
+
+/** §1.2: what a key check can conclude; `error` is a check the provider did not answer. */
+export const KEY_CHECK_RESULTS = ["read-only", "write", "unknown-flag", "unverifiable", "error"] as const;
+export type KeyCheckOutcome = (typeof KEY_CHECK_RESULTS)[number];
+/** Why a check ran: the connection, a replacement of the key, a pass, or "Verify". */
+export const KEY_CHECK_ORIGINS = ["connect", "replace", "pass", "verify"] as const;
+export type KeyCheckOrigin = (typeof KEY_CHECK_ORIGINS)[number];
+export const COVERAGE_STATUSES = ["complete", "partial", "gap"] as const;
 
 // ——— Fixed-point decimals ————————————————————————————————————————————————————————————————————
 

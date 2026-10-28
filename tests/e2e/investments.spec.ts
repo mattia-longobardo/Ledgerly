@@ -17,7 +17,10 @@ test("a manual account follows its operations, and Accounts shows the same value
     await page.getByRole("link", { name: "Add service" }).first().click();
     await expect(page).toHaveURL(/\/investments\/catalog$/);
     // The providers still to connect are listed, with no way to connect them yet.
-    await expect(page.getByTestId("catalog-card").filter({ hasText: "eToro" })).toContainText("Coming soon");
+    await expect(page.getByTestId("catalog-card").filter({ hasText: "eToro" })).toContainText("Available");
+    await expect(page.getByTestId("catalog-card").filter({ hasText: "Interactive Brokers" })).toContainText(
+      "Coming soon",
+    );
   });
 
   await test.step("a manual account per asset, in euro", async () => {

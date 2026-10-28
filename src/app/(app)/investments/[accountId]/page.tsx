@@ -8,21 +8,26 @@ import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/displa
 import { type HoldingRow, type OperationRow, serviceDetail } from "@/modules/investments/queries";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { ensureAssetSeed } from "@/modules/investments/service";
+import { connectableProvider } from "@/modules/investments/catalog";
 import {
   AddAssetButton,
+  ConfirmRevokedButton,
   ConfirmZeroButton,
   ConversionButton,
+  DisconnectButton,
   type HoldingSummary,
   HoldingMenu,
   OperationButton,
   OperationMenu,
   type OperationSummary,
   ReconcileButton,
+  ReplaceKeyButton,
   type ServiceContext,
   ServiceUrlForm,
+  SyncButtons,
 } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
+import { civilDateIn, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { parseDecimal } from "@/modules/investments/rules";
@@ -68,6 +73,25 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
   const mode = summary.mode;
   const url = summary.investment.url ?? summary.provider?.url ?? null;
   const latestReading = detail.readings[0] ?? null;
+  const sync = detail.sync;
+  const provider = sync ? connectableProvider(sync.provider) : null;
+  const revokeUrl = provider?.revokeUrl ?? null;
+  const providerProps = (one: NonNullable<typeof provider>) => ({
+    id: one.id,
+    name: one.name,
+    credentialFields: one.credentialFields,
+    currencies: one.currencies,
+    defaultCurrency: one.defaultCurrency,
+    url: one.url,
+    revokeUrl: one.revokeUrl,
+  });
+  const instant = (at: Date) =>
+    `${formatDate(civilDateIn(at, ctx.timeZone), "long", ctx.locale)}, ${new Intl.DateTimeFormat(ctx.locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: ctx.timeZone,
+    }).format(at)}`;
   const tp = (key: "products.spot") => t(key);
 
   const context: ServiceContext = {
@@ -158,12 +182,13 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
       )}
     </span>
   );
-  const holdingActions = (row: HoldingRow) => (
-    <span className="flex items-center justify-end gap-1">
-      {row.conflict && <ReconcileButton holding={holdingOf(row)} context={context} />}
-      <HoldingMenu holding={holdingOf(row)} context={context} />
-    </span>
-  );
+  const holdingActions = (row: HoldingRow) =>
+    row.origin === "provider" ? null : (
+      <span className="flex items-center justify-end gap-1">
+        {row.conflict && <ReconcileButton holding={holdingOf(row)} context={context} />}
+        <HoldingMenu holding={holdingOf(row)} context={context} />
+      </span>
+    );
   const legText = (row: OperationRow) =>
     row.legs
       .map((leg) =>
@@ -267,7 +292,13 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
               : formatPercent(flows.simpleReturn, ctx.numberFormat, { signed: true })
           }
           deltaTone={toneOfSign(flows.simpleReturn)}
-          note={t("kpis.gainNote")}
+          note={
+            summary.reliable
+              ? t("kpis.gainNote")
+              : summary.reliableFrom
+                ? t("sync.reliableFrom", { date: long(summary.reliableFrom.toISOString().slice(0, 10)) })
+                : t("sync.notReliable")
+          }
         />
         {mode === "assets" && !synced ? (
           <KpiTile
@@ -590,6 +621,97 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
         </div>
       )}
 
+      {sync && (
+        <Card className="flex min-w-0 flex-col gap-3" data-testid="service-connection">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">{t("sync.title")}</h2>
+            {sync.connected && (
+              <Badge tone={sync.state === "active" ? "pos" : sync.state === "revoked" ? "neg" : "warn"}>
+                {t(`sync.states.${sync.state ?? "error"}` as "sync.states.active")}
+              </Badge>
+            )}
+          </div>
+          {sync.connected ? (
+            <>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt className="text-muted">{t("sync.lastOk")}</dt>
+                <dd>{sync.lastOkAt ? instant(sync.lastOkAt) : NULL_DISPLAY}</dd>
+                <dt className="text-muted">{t("sync.next")}</dt>
+                <dd>{sync.nextSyncAt ? instant(sync.nextSyncAt) : t("sync.manual")}</dd>
+                <dt className="text-muted">{t("sync.key")}</dt>
+                <dd>
+                  {sync.lastCheck
+                    ? t("sync.keyCheck", {
+                        result: t(`sync.results.${sync.lastCheck.result}` as "sync.results.read-only"),
+                        date: instant(sync.lastCheck.checkedAt),
+                      })
+                    : NULL_DISPLAY}
+                </dd>
+                <dt className="text-muted">{t("sync.keySet")}</dt>
+                <dd>{sync.keySetAt ? long(sync.keySetAt.toISOString().slice(0, 10)) : NULL_DISPLAY}</dd>
+              </dl>
+              {sync.lastError && (
+                <p className="text-sm text-warn">{t("sync.lastError", { error: sync.lastError })}</p>
+              )}
+              {sync.rotateDue && <p className="text-sm text-warn">{t("sync.rotate")}</p>}
+              <p className="text-sm text-muted">{t("sync.scheduleNote")}</p>
+              <div className="flex flex-wrap gap-2">
+                <SyncButtons accountId={accountId} />
+                {provider && <ReplaceKeyButton accountId={accountId} provider={providerProps(provider)} />}
+                <DisconnectButton accountId={accountId} name={account.name} />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">{t("sync.disconnected")}</p>
+          )}
+          {sync.revokePending && (
+            <div className="flex flex-col gap-2 rounded-[6px] border border-border p-3 text-sm">
+              <p className="font-medium">{t("sync.revokeTitle")}</p>
+              <p className="text-muted">{t("sync.revokeSteps")}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {revokeUrl && (
+                  <a
+                    href={revokeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px] text-accent hover:underline"
+                  >
+                    {t("sync.revokeOpen")}
+                    <ExternalLink aria-hidden className="size-3.5" />
+                  </a>
+                )}
+                <ConfirmRevokedButton accountId={accountId} />
+              </div>
+            </div>
+          )}
+          {sync.coverage.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold">{t("sync.coverage")}</h3>
+              <ul className="flex flex-col text-sm">
+                {sync.coverage.map((row) => (
+                  <li key={`${row.stream}-${row.fromAt.toISOString()}`} className="flex flex-wrap gap-x-2">
+                    <span>{t(`sync.streams.${row.stream}` as "sync.streams.trades")}</span>
+                    <span className="text-muted">
+                      {long(row.fromAt.toISOString().slice(0, 10))} →{" "}
+                      {long(row.toAt.toISOString().slice(0, 10))}
+                    </span>
+                    <span className={row.status === "complete" ? "text-muted" : "text-warn"}>
+                      {t(`sync.coverageStatus.${row.status}` as "sync.coverageStatus.complete")}
+                      {row.reason
+                        ? ` · ${t(`sync.reasons.${row.reason}` as "sync.reasons.api_limit_12m")}`
+                        : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary.investment.provider === "etoro" && (
+            <p className="text-xs text-muted">{t("sync.etoroBrand")}</p>
+          )}
+        </Card>
+      )}
+
       <Card className="flex min-w-0 flex-col gap-3">
         <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
         <div className="flex flex-col gap-1.5">
@@ -597,7 +719,7 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
             {t("settings.mode", { mode: mode ? t(`modes.${mode}`) : NULL_DISPLAY })}
           </p>
           {!synced && <p className="text-sm text-muted">{t("settings.convertNote")}</p>}
-          {mode === "assets" && <ConversionButton context={context} />}
+          {mode === "assets" && !synced && <ConversionButton context={context} />}
         </div>
         <div className="flex flex-col gap-1">
           <h3 className="text-sm font-semibold">{t("settings.periods")}</h3>

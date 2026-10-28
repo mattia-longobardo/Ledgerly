@@ -40,6 +40,7 @@ import {
   recordOperation,
 } from "../src/modules/investments/service";
 import { serviceDetail } from "../src/modules/investments/queries";
+import { connectInvestmentProvider, setSourcesForTests } from "../src/modules/investments/sync";
 import { parseDecimal, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "../src/modules/investments/rules";
 import { linkCandidates } from "../src/modules/transactions/queries";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
@@ -58,7 +59,7 @@ import { userScoped } from "../src/platform/db/scope";
 import { isBookable } from "../src/platform/holidays/rules";
 import { deleteFolder } from "../src/platform/storage";
 import { PAPERLESS_PROVIDER, WALLET_PROVIDER } from "../src/platform/integrations/rules";
-import { saveConnection, saveSchedule } from "../src/platform/integrations/service";
+import { listConnections, saveConnection, saveSchedule } from "../src/platform/integrations/service";
 import {
   BASE_URL,
   E2E_MCP_CLIENT_NAME,
@@ -530,6 +531,143 @@ async function seedCurrency(): Promise<void> {
   }
 }
 
+/**
+ * A connected eToro service (docs/design/investments.md §3.3) for the screens of phase 3: the
+ * connection is made through `connectInvestmentProvider` with a stand-in for eToro, so nothing is
+ * sent anywhere, and its schedule is manual, so the dispatcher never tries the made-up key.
+ */
+async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
+  const asset = (symbol: string, name: string, kind: "stock" | "etf") => ({
+    externalId: `instrument:${symbol}`,
+    class: kind,
+    name,
+    symbol,
+    currency: "USD",
+  });
+  const now = new Date();
+  setSourcesForTests(() => ({
+    verifyReadOnly: async () => ({
+      result: "read-only",
+      permissions: { "etoro-public:trade.real:read": true, "etoro-public:money.balance:read": true },
+      ipRestricted: null,
+      externalAccountId: "900001",
+    }),
+    fetchHoldings: async () => ({
+      observedAt: now,
+      externalAccountId: "900001",
+      totalCents: 512_345n,
+      cashCents: 12_345n,
+      positions: [
+        {
+          asset: asset("AAPL", "Apple", "stock"),
+          product: "trading",
+          quantity: "10",
+          price: "230.5",
+          priceCurrency: "USD",
+          priceSource: "etoro",
+          valueCents: 230_500n,
+        },
+        {
+          asset: asset("VOO", "Vanguard S&P 500 ETF", "etf"),
+          product: "copy",
+          quantity: "0.5",
+          price: "540",
+          priceCurrency: "USD",
+          priceSource: "etoro",
+          valueCents: 269_500n,
+        },
+      ],
+      scopes: [
+        { product: "cash", complete: true },
+        { product: "copy", complete: true },
+        { product: "trading", complete: true },
+      ],
+      empty: false,
+      complete: true,
+    }),
+    fetchFlows: async () => ({
+      events: [
+        {
+          externalId: "cash:e2e-1",
+          occurredAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          note: null,
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: null,
+              product: null,
+              quantity: null,
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "5000",
+              nativeCurrency: "USD",
+            },
+          ],
+        },
+      ],
+      coverage: [
+        {
+          stream: "trades",
+          fromAt: new Date("2020-01-01T00:00:00Z"),
+          toAt: now,
+          status: "complete",
+          reason: null,
+        },
+        {
+          stream: "deposits",
+          fromAt: new Date("2020-01-01T00:00:00Z"),
+          toAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          status: "partial",
+          reason: "before_first_movement",
+        },
+        {
+          stream: "deposits",
+          fromAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          toAt: now,
+          status: "complete",
+          reason: null,
+        },
+      ],
+    }),
+    fetchHistory: async () => ({
+      points: [
+        { on: addDays(on, -2), totalCents: 500_000n },
+        { on: addDays(on, -1), totalCents: 505_000n },
+      ],
+      coverage: [
+        {
+          stream: "balance_history",
+          fromAt: new Date("2020-01-01T00:00:00Z"),
+          toAt: new Date(`${addDays(on, -2)}T00:00:00Z`),
+          status: "gap",
+          reason: "api_limit_12m",
+        },
+        {
+          stream: "balance_history",
+          fromAt: new Date(`${addDays(on, -2)}T00:00:00Z`),
+          toAt: now,
+          status: "complete",
+          reason: null,
+        },
+      ],
+    }),
+  }));
+  try {
+    await connectInvestmentProvider(
+      ctx,
+      "etoro",
+      { api_key: "e2e-not-a-key-0001", user_key: "e2e-not-a-key-0002" },
+      { kind: "new", name: "eToro", currency: "USD" },
+    );
+  } finally {
+    setSourcesForTests(null);
+  }
+  const etoro = (await listConnections(ctx)).find((one) => one.provider === "etoro");
+  if (!etoro) throw new Error("e2e: the eToro connection is missing");
+  await saveSchedule(ctx, etoro.id, { rules: [] });
+}
+
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
   // A Paperless link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
@@ -701,6 +839,7 @@ async function seedLayout(): Promise<void> {
   });
   await recordOperation(ctx, fineco.accountId, { kind: "deposit", on, amountCents: 500_000n });
   await recordOperation(ctx, fineco.accountId, { kind: "account_valuation", on, amountCents: 512_340n });
+  await seedEtoro(ctx, on);
 
   // ——— Subscriptions ———
   await upsertFromProvider(ctx, current, [
