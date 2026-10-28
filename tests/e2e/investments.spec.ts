@@ -124,7 +124,7 @@ test("a withdrawal and a deposit between two services are proposed, linked and u
     await expect(create).toBeHidden();
     await expect(page.getByRole("heading", { name: "Conto Deposito", level: 1 })).toBeVisible();
     await page.getByRole("button", { name: "Deposit", exact: true }).first().click();
-    let dialog = page.getByRole("dialog", { name: "Deposit" });
+    let dialog = page.getByRole("dialog", { name: "Deposit", exact: true });
     await dialog.getByLabel("Amount").fill("1000");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
@@ -133,7 +133,7 @@ test("a withdrawal and a deposit between two services are proposed, linked and u
     await page.getByRole("link", { name: "Directa" }).filter({ visible: true }).first().click();
     await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
     await page.getByRole("button", { name: "Withdrawal", exact: true }).first().click();
-    dialog = page.getByRole("dialog", { name: "Withdrawal" });
+    dialog = page.getByRole("dialog", { name: "Withdrawal", exact: true });
     await dialog.getByLabel("Amount").fill("1000");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
