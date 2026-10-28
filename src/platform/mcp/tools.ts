@@ -4,6 +4,8 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { budgetsView } from "@/modules/budgets/queries";
+import { holdingsJson, portfolioJson } from "@/modules/investments/api";
+import { investmentsPortfolio, serviceHoldings } from "@/modules/investments/queries";
 import { listTransactions, transactionsSummary } from "@/modules/transactions/queries";
 import { TRANSACTION_TYPES } from "@/modules/transactions/rules";
 import { instant, money } from "@/platform/api/json";
@@ -24,7 +26,8 @@ import { monthlyFigures } from "@/platform/reports/monthly";
  *
  * v1 is read-only (PERS-44, question 3 unanswered): `record_account_balance` (scope `write`) is
  * left out until it is confirmed. Every tool says which scope it needs; a token without it does
- * not see the tool at all.
+ * not see the tool at all. The Investments tools need `investments:read`, which `read` does not
+ * imply (docs/design/investments.md §5.5).
  */
 
 const MAX_TRANSACTIONS = 500;
@@ -57,6 +60,7 @@ export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer
         "user's display currency); dates are YYYY-MM-DD in the user's time zone. Every tool is read-only.",
     },
   );
+  if (scopes.includes("investments:read")) registerInvestmentTools(server, ctx);
   if (!scopes.includes("read")) return server;
 
   server.registerTool(
@@ -262,4 +266,43 @@ export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer
   );
 
   return server;
+}
+
+/** The Investments tools (docs/design/investments.md §5.5): scope `investments:read` only. */
+function registerInvestmentTools(server: McpServer, ctx: Ctx): void {
+  server.registerTool(
+    "list_investments",
+    {
+      title: "Investments",
+      description:
+        "Every investment service (broker, exchange, manual account) with its value in its own " +
+        "`currency` and in the display currency, net invested, gain, simple return and XIRR, plus the " +
+        "portfolio's totals in the display `currency`, as GET /api/v1/investments. Returns are ratios " +
+        "(0.05 = 5 %). Gain and returns are null unless the service's history is complete " +
+        "(`reliable`; `reliableFrom` says from when it is); `xirrStatus` says why XIRR is missing. " +
+        "The portfolio leaves out transfers between its own services and includes the exchange effect.",
+      annotations: READ_ONLY,
+    },
+    async () => json(portfolioJson(await investmentsPortfolio(ctx))),
+  );
+
+  server.registerTool(
+    "get_investment_holdings",
+    {
+      title: "Investment holdings",
+      description:
+        "The open positions of one investment service today — asset, product, quantity, price, value " +
+        "and gain in the service's `currency` — as GET /api/v1/investments/{accountId}/holdings. Take " +
+        "the account id from list_investments.",
+      inputSchema: {
+        account_id: z.uuid().describe("The service's accountId, from list_investments."),
+      },
+      annotations: READ_ONLY,
+    },
+    async ({ account_id }) => {
+      const view = await serviceHoldings(ctx, account_id);
+      if (!view) return failure("Investment service not found.");
+      return json(holdingsJson(view));
+    },
+  );
 }

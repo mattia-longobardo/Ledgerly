@@ -262,7 +262,8 @@ how much you have planned, and how much is left — with **where each number com
   hour). A password reset and an admin's two-factor reset delete the person's OAuth refresh tokens
   together with the sessions.
 - **Client API** (`/settings/security`): what replaces the personal access tokens. A confidential
-  client with the `client_credentials` grant and the scopes `read`, `write`, `imports`, owned by
+  client with the `client_credentials` grant and the scopes `read`, `write`, `imports`,
+  `investments:read`, owned by
   whoever made it: its token acts as that person, and only on `/api/v1`. The secret is shown once
   and stored hashed; deleting the client stops its tokens at once.
 
@@ -276,7 +277,9 @@ how much you have planned, and how much is left — with **where each number com
   table are gone (migration `0033`), and a `pat_…` value on `/api/v1` is a `401` like any invalid token.
 - **`/api/v1`** (Hono, `src/app/api/v1/[[...route]]/route.ts`): `GET /accounts`,
   `GET /accounts/{id}/balances`, `GET /transactions`, `GET /summary` (scope `read`),
-  `POST /accounts/{id}/balances` (`write`) and `POST /imports` (`imports`). A token acts as its
+  `POST /accounts/{id}/balances` (`write`), `POST /imports` (`imports`), and `GET /investments`,
+  `GET /investments/{accountId}/holdings` (`investments:read`, which `read` does not imply; no key,
+  key check, last error or provider's external id in the answers). A token acts as its
   user and never beyond them; there is no administrative route at all. Amounts travel as decimal
   strings, never as JSON numbers: an account's balance in its own `currency`, the totals of
   `/summary` in the user's display currency (field `currency`). Changes: `docs/api-changelog.md`.
@@ -310,17 +313,20 @@ how much you have planned, and how much is left — with **where each number com
   which is where a client discovers the authorization server and starts the flow: RFC 9728 →
   RFC 8414 → dynamic registration of a public client → authorization code + PKCE (S256) with
   `resource=https://dash.longobardo.me/api/mcp` → sign-in (Authentik or password + TOTP) → consent.
-  A token without `read` is a `403 insufficient_scope`. Same 120 calls a minute per client as the API.
-  v1 is **read-only** — every tool needs `read`, calls the same services as `/api/v1` and answers
-  with amounts as decimal strings; each sees only the person who consented:
+  A token with neither `read` nor `investments:read` is a `403 insufficient_scope`. Same 120 calls a
+  minute per client as the API. v1 is **read-only** — every tool needs `read` (the Investments ones
+  `investments:read`), calls the same services as `/api/v1` and answers with amounts as decimal
+  strings; each sees only the person who consented:
 
-  | Tool                                                                                                | Mirrors                              |
-  | --------------------------------------------------------------------------------------------------- | ------------------------------------ |
-  | `get_summary`                                                                                       | `GET /api/v1/summary`                |
-  | `list_accounts`                                                                                     | `GET /api/v1/accounts`               |
-  | `get_account_balances` (`account_id`, `limit`)                                                      | `GET /api/v1/accounts/{id}/balances` |
-  | `list_transactions` (`from`, `to`, `account_id`, `category_id`, `type`, `payee`, `limit`, `offset`) | `GET /api/v1/transactions`           |
-  | `list_budgets` (`month` `YYYY-MM`)                                                                  | the Budgets page                     |
+  | Tool                                                                                                | Mirrors                                        |
+  | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+  | `get_summary`                                                                                       | `GET /api/v1/summary`                          |
+  | `list_accounts`                                                                                     | `GET /api/v1/accounts`                         |
+  | `get_account_balances` (`account_id`, `limit`)                                                      | `GET /api/v1/accounts/{id}/balances`           |
+  | `list_transactions` (`from`, `to`, `account_id`, `category_id`, `type`, `payee`, `limit`, `offset`) | `GET /api/v1/transactions`                     |
+  | `list_budgets` (`month` `YYYY-MM`)                                                                  | the Budgets page                               |
+  | `list_investments` (`investments:read`)                                                             | `GET /api/v1/investments`                      |
+  | `get_investment_holdings` (`account_id`; `investments:read`)                                        | `GET /api/v1/investments/{accountId}/holdings` |
 
   A write tool (`record_account_balance`, scope `write`) is in the design and left out until the
   owner confirms it (PERS-44, question 3).
@@ -328,7 +334,8 @@ how much you have planned, and how much is left — with **where each number com
   **Connecting a client.** Nothing to configure on the server: the client registers itself.
   - _Claude_ (claude.ai / Desktop): Settings › Connectors › Add custom connector, URL
     `https://dash.longobardo.me/api/mcp`, no client id or secret. Claude opens the Ledgerly sign-in,
-    then the consent page; tick `read`.
+    then the consent page; tick `read` (and `investments:read` if the client asks for it: it is never
+    given by default).
   - _Claude Code_: `claude mcp add --transport http ledgerly https://dash.longobardo.me/api/mcp`,
     then `/mcp` › ledgerly › Authenticate.
   - _MCP Inspector_: `npx @modelcontextprotocol/inspector`, transport "Streamable HTTP", URL as above,

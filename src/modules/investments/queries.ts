@@ -8,17 +8,20 @@ import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, lastDayOfMonth, type MonthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
-import { convertCents, type RateTable } from "@/platform/fx/rules";
+import { convertCents, NO_RATES, type RateTable } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
 import { type Cents, sumCents } from "@/platform/money";
 import { INVESTMENT_PROVIDERS, type InvestmentProvider, providerOf } from "./catalog";
 import {
   type AssetClass,
   type DayValue,
+  type FlowEntry,
+  flowEntriesOn,
   flowsOn,
   formatDecimal,
   type HoldingState,
   holdingStates,
+  investorFlows,
   type Mode,
   monthsBack,
   type AccountOrigin,
@@ -27,6 +30,8 @@ import {
   performance,
   PRICE_SCALE,
   QUANTITY_SCALE,
+  sumFlows,
+  transferProposals,
   valueOn,
 } from "./rules";
 import {
@@ -44,8 +49,10 @@ import {
   type LoadedBook,
   loadBook,
   ratesFor,
+  transferLegs,
 } from "./service";
 import { type SyncStatus, syncStatus } from "./sync";
+import { type Xirr, xirr } from "./xirr";
 
 /** The home chart looks back this far, as the legacy page did. */
 const HISTORY_MONTHS = 36;
@@ -66,6 +73,8 @@ export interface ServiceSummary {
   /** The change over 30 days, in the account's currency. */
   change30Cents: Cents | null;
   performance: Performance;
+  /** The money-weighted return in the account's currency (§2.4); `null` where gain is hidden. */
+  xirr: Xirr | null;
   /** Share of the portfolio's counter-value. */
   weight: number | null;
   lastUpdate: CivilDate | null;
@@ -139,7 +148,8 @@ function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, dis
   const valueCents = one.day.valueCents;
   const before = valueOn(one.book, addDays(todayOn, -30), one.rates).valueCents;
   const reliable = one.day.origin !== "synced" || (one.sync?.complete ?? false);
-  const measured = performance(flowsOn(one.book, todayOn), valueCents);
+  const entries = flowEntriesOn(one.book, todayOn);
+  const measured = performance(sumFlows(entries), valueCents);
   return {
     account: one.account,
     investment: one.investment,
@@ -153,6 +163,7 @@ function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, dis
         : convertCents(valueCents, one.account.currency, displayCurrency, todayOn, displayRates),
     change30Cents: valueCents === null || before === null ? null : valueCents - before,
     performance: reliable ? measured : { ...measured, gainCents: null, simpleReturn: null },
+    xirr: reliable && valueCents !== null ? xirr(investorFlows(entries, todayOn, valueCents)) : null,
     weight: null as number | null,
     lastUpdate: lastUpdateOf(one.book),
     warnings: warningsOf(one, todayOn),
@@ -176,6 +187,9 @@ export interface InvestmentsHome {
     investedCents: Cents | null;
     gainCents: Cents | null;
     simpleReturn: number | null;
+    xirr: Xirr | null;
+    /** Some service is in another currency: gain and returns include the exchange effect (§2.4). */
+    fxEffect: boolean;
   };
   months: MonthKey[];
   history: { value: (Cents | null)[]; invested: (Cents | null)[] };
@@ -192,26 +206,58 @@ function slices(parts: Map<string, Cents>): AllocationSlice[] {
     .map(([key, cents]) => ({ key, cents, share: total > 0n ? Number(cents) / Number(total) : 0 }));
 }
 
+export interface Portfolio {
+  currency: string;
+  todayOn: CivilDate;
+  services: ServiceSummary[];
+  totals: InvestmentsHome["totals"];
+}
+
+interface PortfolioState extends Portfolio {
+  live: Loaded[];
+  /** The portfolio's flows, transfers between its services left out, in the display currency. */
+  flows: FlowEntry[];
+  displayRates: RateTable;
+  months: MonthKey[];
+}
+
 /**
- * The home of the section (§4.1): every service with its value in its currency and in the display
- * currency, the totals in the display currency (§1.8), the value-vs-invested chart from the
- * `portfolio` balances, the allocation by asset class and by service, and the funds read only.
+ * Every live service with its value in its currency and in the display currency, and the
+ * portfolio's totals in the display currency (§1.8, §2.4): net invested, gain, simple return and
+ * XIRR, each flow converted at the rate of its own day and the value at today's.
  */
-export async function investmentsHome(
+async function portfolioState(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  now: Date = new Date(),
-): Promise<InvestmentsHome> {
+  now: Date,
+): Promise<PortfolioState> {
   const todayOn = today(ctx.timeZone, now);
   const currency = ctx.displayCurrency;
   const { loaded } = await loadAll(ctx, todayOn);
   const months = monthsBack(todayOn, HISTORY_MONTHS);
   const firstDay = months[0];
   const live = loaded.filter((one) => one.account.state !== "archived");
+
+  // The portfolio's flows (§2.4): a transfer between two of its services moves no money in or out,
+  // so both legs drop out — but only when both are here; a lone leg is a flow like any other.
+  const groups = new Map<string, Set<string>>();
+  for (const one of live) {
+    for (const event of one.book.events) {
+      if (event.transferGroupId === null) continue;
+      const accounts = groups.get(event.transferGroupId) ?? new Set<string>();
+      accounts.add(one.account.id);
+      groups.set(event.transferGroupId, accounts);
+    }
+  }
+  const internal = (entry: FlowEntry) =>
+    entry.transferGroupId !== null && (groups.get(entry.transferGroupId)?.size ?? 0) > 1;
+  const external = live.map((one) => flowEntriesOn(one.book, todayOn).filter((entry) => !internal(entry)));
+  const earliest = external
+    .flat()
+    .reduce<CivilDate>((min, entry) => (entry.on < min ? entry.on : min), firstDay);
+  const fxEffect = live.some((one) => one.account.currency !== currency);
   const displayRates = await ratesOn(
-    live.some((one) => one.account.currency !== currency)
-      ? [currency, ...live.map((one) => one.account.currency)]
-      : [],
-    addDays(firstDay, -7),
+    fxEffect ? [currency, ...live.map((one) => one.account.currency)] : [],
+    addDays(earliest, -7),
     todayOn,
   );
   const services = live.map((one) => summaryOf(one, todayOn, currency, displayRates));
@@ -222,26 +268,68 @@ export async function investmentsHome(
         ? null
         : Number(one.displayCents) / Number(value.total);
   }
-  const invested = sumCents(
-    services.map((one) =>
-      convertCents(one.performance.investedCents, one.account.currency, currency, todayOn, displayRates),
-    ),
-  );
-  const gainCents =
-    value.total === null || invested.total === null || value.partial || services.some((one) => !one.reliable)
-      ? null
-      : value.total - invested.total;
-  const base = sumCents(
-    live.map((one) => {
-      const flows = flowsOn(one.book, todayOn);
-      return convertCents(
-        flows.openingCents + flows.depositedCents,
-        one.account.currency,
-        currency,
-        todayOn,
-        displayRates,
-      );
+  // Each flow in the display currency at the rate of its own day; the value at today's (§2.4).
+  let unconverted = false;
+  const flows: FlowEntry[] = live.flatMap((one, index) =>
+    external[index].flatMap((entry) => {
+      const cents = convertCents(entry.cents, one.account.currency, currency, entry.on, displayRates);
+      if (cents === null) {
+        unconverted = true;
+        return [];
+      }
+      return [{ ...entry, cents }];
     }),
+  );
+  const portfolio = sumFlows(flows);
+  const investedCents = unconverted
+    ? null
+    : portfolio.openingCents + portfolio.depositedCents - portfolio.withdrawnCents;
+  const shown =
+    value.total !== null && investedCents !== null && !value.partial && services.every((one) => one.reliable);
+  const gainCents = shown ? (value.total as Cents) - (investedCents as Cents) : null;
+  const base = portfolio.openingCents + portfolio.depositedCents;
+
+  return {
+    currency,
+    todayOn,
+    services,
+    totals: {
+      valueCents: value.total,
+      partial: value.partial,
+      investedCents,
+      gainCents,
+      simpleReturn: gainCents === null || base <= 0n ? null : Number(gainCents) / Number(base),
+      xirr: gainCents === null ? null : xirr(investorFlows(flows, todayOn, value.total as Cents)),
+      fxEffect,
+    },
+    live,
+    flows,
+    displayRates,
+    months,
+  };
+}
+
+/** The services and the portfolio's totals, for `/api/v1/investments` and the MCP (§5.5). */
+export async function investmentsPortfolio(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  now: Date = new Date(),
+): Promise<Portfolio> {
+  const { currency, todayOn, services, totals } = await portfolioState(ctx, now);
+  return { currency, todayOn, services, totals };
+}
+
+/**
+ * The home of the section (§4.1): every service with its value in its currency and in the display
+ * currency, the totals in the display currency (§1.8), the value-vs-invested chart from the
+ * `portfolio` balances, the allocation by asset class and by service, and the funds read only.
+ */
+export async function investmentsHome(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  now: Date = new Date(),
+): Promise<InvestmentsHome> {
+  const { currency, todayOn, services, totals, live, flows, displayRates, months } = await portfolioState(
+    ctx,
+    now,
   );
 
   // The chart: month-end `portfolio` balances (held), and what had gone in by then.
@@ -256,23 +344,14 @@ export async function investmentsHome(
         : convertCents(cents, one.account.currency, currency, daysOf[index], displayRates),
     ),
   );
-  const investedSeries = live.map((one) => {
-    const first = one.book.periods[0]?.fromOn ?? null;
-    return daysOf.map((day) => {
-      if (first === null || day < first) return null;
-      const flows = flowsOn(one.book, day);
-      return convertCents(
-        flows.openingCents + flows.depositedCents - flows.withdrawnCents,
-        one.account.currency,
-        currency,
-        day,
-        displayRates,
-      );
-    });
-  });
+  const started = live.flatMap((one) => (one.book.periods[0] ? [one.book.periods[0].fromOn] : []));
   const history = {
     value: months.map((_, index) => sumCents(valueSeries.map((series) => series[index])).total),
-    invested: months.map((_, index) => sumCents(investedSeries.map((series) => series[index])).total),
+    invested: daysOf.map((day) => {
+      if (!started.some((first) => first <= day)) return null;
+      const by = sumFlows(flows.filter((entry) => entry.on <= day));
+      return by.openingCents + by.depositedCents - by.withdrawnCents;
+    }),
   };
 
   // Allocation: positions by class; cash, and accounts kept as a total, by their own key.
@@ -321,16 +400,7 @@ export async function investmentsHome(
   return {
     currency,
     services,
-    totals: {
-      valueCents: value.total,
-      partial: value.partial,
-      investedCents: invested.total,
-      gainCents,
-      simpleReturn:
-        gainCents === null || base.total === null || base.total <= 0n
-          ? null
-          : Number(gainCents) / Number(base.total),
-    },
+    totals,
     months,
     history,
     byClass: slices(byClass),
@@ -463,6 +533,19 @@ export interface OperationRow {
   linked: { payee: string | null; on: CivilDate; cents: Cents } | null;
   transactionId: string | null;
   revisions: number;
+  /** The other service of a transfer between the person's accounts (§2.4), if this is one leg. */
+  transfer: { accountId: string; accountName: string } | null;
+}
+
+/** A transfer the UI proposes to link (§2.4): this account's leg and the other service's. */
+export interface TransferProposalRow {
+  withdrawalId: string;
+  depositId: string;
+  /** Whether the money leaves this account (`out`) or comes in (`in`). */
+  direction: "in" | "out";
+  on: CivilDate;
+  amountCents: Cents;
+  other: { accountId: string; accountName: string; on: CivilDate };
 }
 
 export interface ServiceDetail {
@@ -498,6 +581,7 @@ export interface ServiceDetail {
   coveredProducts: string[];
   assets: InvestmentAsset[];
   linkOptions: { out: LinkOption[]; in: LinkOption[] };
+  transferProposals: TransferProposalRow[];
 }
 
 export interface LinkOption {
@@ -508,31 +592,11 @@ export interface LinkOption {
   accountName: string | null;
 }
 
-/** A `numeric` as text without its trailing zeros: "0.500000000000000000" → "0.5". */
-function trimmed(value: string): string {
-  if (!value.includes(".")) return value;
-  return value.replace(/0+$/, "").replace(/\.$/, "");
-}
-
-export async function serviceDetail(
-  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  accountId: string,
-  now: Date = new Date(),
-): Promise<ServiceDetail | null> {
-  const todayOn = today(ctx.timeZone, now);
-  const { loaded, accounts } = await loadAll(ctx, todayOn, accountId);
-  const one = loaded[0];
-  if (!one) return null;
-  const currency = ctx.displayCurrency;
-  const months = monthsBack(todayOn, HISTORY_MONTHS);
-  const displayRates = await ratesOn(
-    one.account.currency !== currency ? [currency, one.account.currency] : [],
-    todayOn,
-    todayOn,
-  );
-  const summary = summaryOf(one, todayOn, currency, displayRates);
-  summary.weight = null;
-
+/**
+ * The open positions of a service on `todayOn` (§4.3): the manual ones from the engine and, for a
+ * synced account, the provider's from its latest reading — never rebuilt from its trades (A6).
+ */
+async function holdingsOf(ctx: Pick<Ctx, "userId">, one: Loaded, todayOn: CivilDate): Promise<HoldingRow[]> {
   const states = holdingStates(one.book, todayOn, one.rates);
   const conflicted = new Set(one.day.conflicts.map((conflict) => conflict.holdingId));
   const assetsValue = [...states.values()].reduce<Cents>(
@@ -602,12 +666,61 @@ export async function serviceDetail(
     }
   }
 
+  return holdings;
+}
+
+/** The positions of one service, for `get_investment_holdings` and `/api/v1/investments/{id}/holdings`. */
+export async function serviceHoldings(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountId: string,
+  now: Date = new Date(),
+): Promise<{ account: Account; currency: string; on: CivilDate; holdings: HoldingRow[] } | null> {
+  const todayOn = today(ctx.timeZone, now);
+  const { loaded } = await loadAll(ctx, todayOn, accountId);
+  const one = loaded[0];
+  if (!one) return null;
+  return {
+    account: one.account,
+    currency: one.account.currency,
+    on: todayOn,
+    holdings: await holdingsOf(ctx, one, todayOn),
+  };
+}
+
+/** A `numeric` as text without its trailing zeros: "0.500000000000000000" → "0.5". */
+function trimmed(value: string): string {
+  if (!value.includes(".")) return value;
+  return value.replace(/0+$/, "").replace(/\.$/, "");
+}
+
+export async function serviceDetail(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  accountId: string,
+  now: Date = new Date(),
+): Promise<ServiceDetail | null> {
+  const todayOn = today(ctx.timeZone, now);
+  const { loaded, accounts } = await loadAll(ctx, todayOn, accountId);
+  const one = loaded[0];
+  if (!one) return null;
+  const currency = ctx.displayCurrency;
+  const months = monthsBack(todayOn, HISTORY_MONTHS);
+  const displayRates = await ratesOn(
+    one.account.currency !== currency ? [currency, one.account.currency] : [],
+    todayOn,
+    todayOn,
+  );
+  const summary = summaryOf(one, todayOn, currency, displayRates);
+  summary.weight = null;
+
+  const holdings = await holdingsOf(ctx, one, todayOn);
+
   // Operations, grouped by event, newest first, with their bank link and their revisions.
   const names = new Map(one.book.holdingRows.map((holding) => [holding.id, holding.asset.name]));
   const transactionIds = one.book.eventRows.flatMap((event) =>
     event.transactionId ? [event.transactionId] : [],
   );
-  const [linked, revisionRows] = await Promise.all([
+  const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
+  const [linked, revisionRows, legs] = await Promise.all([
     transactionsByIds(ctx, transactionIds),
     getDb()
       .select({ eventId: investmentOperationRevisions.eventId })
@@ -618,7 +731,17 @@ export async function serviceDetail(
           eq(investmentOperationRevisions.investmentAccountId, one.investment.id),
         ),
       ),
+    transferLegs(ctx),
   ]);
+  const partnerOf = (event: { id: string; transferGroupId: string | null }) => {
+    if (event.transferGroupId === null) return null;
+    const other = legs.find(
+      (leg) => leg.transferGroupId === event.transferGroupId && leg.eventId !== event.id,
+    );
+    return other
+      ? { accountId: other.accountId, accountName: accountNames.get(other.accountId) ?? "" }
+      : null;
+  };
   const revisions = new Map<string, number>();
   for (const row of revisionRows) revisions.set(row.eventId, (revisions.get(row.eventId) ?? 0) + 1);
   const operations: OperationRow[] = [...one.book.eventRows].reverse().map((event) => {
@@ -649,7 +772,29 @@ export async function serviceDetail(
       linked: transaction ? { payee: transaction.payee, on: event.on, cents: transaction.amountCents } : null,
       transactionId: event.transactionId,
       revisions: revisions.get(event.id) ?? 0,
+      transfer: partnerOf(event),
     };
+  });
+  const amountOf = new Map(operations.map((row) => [row.id, row.legs[0]?.amountCents ?? 0n]));
+  const proposals: TransferProposalRow[] = transferProposals(legs).flatMap(({ withdrawal, deposit }) => {
+    const out = withdrawal.accountId === accountId;
+    if (!out && deposit.accountId !== accountId) return [];
+    const mine = out ? withdrawal : deposit;
+    const other = out ? deposit : withdrawal;
+    return [
+      {
+        withdrawalId: withdrawal.eventId,
+        depositId: deposit.eventId,
+        direction: out ? ("out" as const) : ("in" as const),
+        on: mine.on,
+        amountCents: amountOf.get(mine.eventId) ?? 0n,
+        other: {
+          accountId: other.accountId,
+          accountName: accountNames.get(other.accountId) ?? "",
+          on: other.on,
+        },
+      },
+    ];
   });
 
   const scopeRows =
@@ -722,7 +867,6 @@ export async function serviceDetail(
     }),
   };
 
-  const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
   const from = addDays(todayOn, -LINK_WINDOW_DAYS);
   const [out, incoming, assets] = await Promise.all([
     linkCandidates(ctx, { direction: "out", from, to: todayOn }),
@@ -763,11 +907,12 @@ export async function serviceDetail(
     coveredProducts,
     assets,
     linkOptions: { out: out.map(option), in: incoming.map(option) },
+    transferProposals: proposals,
   };
 }
 
-/** For the export and the ⌘K palette: every service by name with its value today. */
-export async function investmentServices(ctx: Pick<Ctx, "userId" | "timeZone">): Promise<
+/** For the export and the ⌘K palette: every service by name with its value and returns today. */
+export async function investmentServices(ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">): Promise<
   {
     accountId: string;
     name: string;
@@ -776,29 +921,57 @@ export async function investmentServices(ctx: Pick<Ctx, "userId" | "timeZone">):
     mode: Mode | null;
     currency: string;
     valueCents: Cents | null;
+    investedCents: Cents;
+    gainCents: Cents | null;
+    simpleReturn: number | null;
+    xirr: Xirr | null;
+    reliableFrom: Date | null;
   }[]
 > {
   const todayOn = today(ctx.timeZone);
   const { loaded } = await loadAll(ctx, todayOn);
-  return loaded.map((one) => ({
-    accountId: one.account.id,
-    name: one.account.name,
-    category: one.investment.category,
-    provider: one.investment.provider,
-    mode: one.day.mode,
-    currency: one.account.currency,
-    valueCents: one.day.valueCents,
-  }));
+  return loaded.map((one) => {
+    const summary = summaryOf(one, todayOn, one.account.currency, NO_RATES);
+    return {
+      accountId: one.account.id,
+      name: one.account.name,
+      category: one.investment.category,
+      provider: one.investment.provider,
+      mode: one.day.mode,
+      currency: one.account.currency,
+      valueCents: one.day.valueCents,
+      investedCents: summary.performance.investedCents,
+      gainCents: summary.performance.gainCents,
+      simpleReturn: summary.performance.simpleReturn,
+      xirr: summary.xirr,
+      reliableFrom: summary.reliableFrom,
+    };
+  });
 }
 
-/** For the export: every operation leg of every service, oldest first. */
+/** For the export: every operation leg of every service, oldest first, with its transfer (§2.4). */
 export async function investmentOperationsExport(ctx: Pick<Ctx, "userId" | "timeZone">) {
   const todayOn = today(ctx.timeZone);
   const { loaded } = await loadAll(ctx, todayOn);
+  const names = new Map(loaded.map((one) => [one.investment.id, one.account.name]));
+  const groups = new Map<string, string[]>();
+  for (const one of loaded) {
+    for (const event of one.book.eventRows) {
+      if (event.transferGroupId === null) continue;
+      groups.set(event.transferGroupId, [
+        ...(groups.get(event.transferGroupId) ?? []),
+        event.investmentAccountId,
+      ]);
+    }
+  }
   return loaded.flatMap((one) => {
-    const names = new Map(one.book.holdingRows.map((holding) => [holding.id, holding.asset.name]));
-    return one.book.eventRows.flatMap((event) =>
-      one.book.operationRows
+    const holdingNames = new Map(one.book.holdingRows.map((holding) => [holding.id, holding.asset.name]));
+    return one.book.eventRows.flatMap((event) => {
+      const other =
+        event.transferGroupId === null
+          ? undefined
+          : groups.get(event.transferGroupId)?.find((id) => id !== event.investmentAccountId);
+      return one.book.operationRows
         .filter((op) => op.eventId === event.id)
         .map((op) => ({
           on: event.on,
@@ -806,12 +979,13 @@ export async function investmentOperationsExport(ctx: Pick<Ctx, "userId" | "time
           currency: one.account.currency,
           kind: op.kind,
           leg: op.leg,
-          asset: op.holdingId ? (names.get(op.holdingId) ?? null) : null,
+          asset: op.holdingId ? (holdingNames.get(op.holdingId) ?? null) : null,
           quantity: op.quantity === null ? null : trimmed(op.quantity),
           unitPrice: op.unitPrice === null ? null : trimmed(op.unitPrice),
           amountCents: op.amountCents,
+          transferWith: other === undefined ? null : (names.get(other) ?? null),
           note: event.note,
-        })),
-    );
+        }));
+    });
   });
 }
