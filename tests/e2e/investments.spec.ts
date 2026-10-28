@@ -112,6 +112,62 @@ test("a manual account follows its operations, and Accounts shows the same value
   });
 });
 
+test("a withdrawal and a deposit between two services are proposed, linked and unlinked as a transfer", async ({
+  page,
+}) => {
+  await test.step("1.000 € into a second service, 1.000 € out of Directa", async () => {
+    await page.goto("/investments/catalog");
+    await page.getByRole("button", { name: "Create manual account" }).click();
+    const create = page.getByRole("dialog", { name: "Create manual account" });
+    await create.getByLabel("Name").fill("Conto Deposito");
+    await create.getByRole("button", { name: "Create", exact: true }).click();
+    await expect(create).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Conto Deposito", level: 1 })).toBeVisible();
+    await page.getByRole("button", { name: "Deposit", exact: true }).first().click();
+    let dialog = page.getByRole("dialog", { name: "Deposit" });
+    await dialog.getByLabel("Amount").fill("1000");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+
+    await page.goto("/investments");
+    await page.getByRole("link", { name: "Directa" }).filter({ visible: true }).first().click();
+    await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
+    await page.getByRole("button", { name: "Withdrawal", exact: true }).first().click();
+    dialog = page.getByRole("dialog", { name: "Withdrawal" });
+    await dialog.getByLabel("Amount").fill("1000");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  await test.step("the pair is proposed, and linked it shows on the operation", async () => {
+    const proposal = page.getByTestId("transfer-proposal");
+    await expect(proposal).toHaveCount(1);
+    await expect(proposal).toContainText("Conto Deposito");
+    await proposal.getByRole("button", { name: /^Link as transfer/ }).click();
+    await expect(page.getByText("Transfer linked")).toBeVisible();
+    await expect(page.getByTestId("transfer-proposal")).toHaveCount(0);
+    const row = page.getByTestId("operation-row").filter({ hasText: "Transfer · Conto Deposito" });
+    await expect(row).toHaveCount(1);
+  });
+
+  await test.step("the home shows the portfolio's XIRR tile", async () => {
+    const service = page.url();
+    await page.goto("/investments");
+    await expect(page.getByText("XIRR", { exact: true })).toBeVisible();
+    await page.goto(service);
+  });
+
+  await test.step("unlinked, the pair is proposed again", async () => {
+    await page
+      .getByTestId("operation-row")
+      .filter({ hasText: "Transfer · Conto Deposito" })
+      .getByRole("button", { name: /^Unlink transfer/ })
+      .click();
+    await expect(page.getByText("Transfer unlinked")).toBeVisible();
+    await expect(page.getByTestId("transfer-proposal")).toHaveCount(1);
+  });
+});
+
 async function holdingAction(page: Page, action: string): Promise<void> {
   await page
     .getByTestId("holding-row")

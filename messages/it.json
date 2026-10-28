@@ -650,12 +650,14 @@
       "scopes": {
         "read": "lettura",
         "write": "scrittura",
-        "imports": "importazioni"
+        "imports": "importazioni",
+        "investments:read": "investments:read"
       },
       "scopeHints": {
         "read": "conti, saldi, transazioni e riepilogo",
         "write": "registrare la lettura di un saldo",
-        "imports": "caricare cedolini e documenti Cometa"
+        "imports": "caricare cedolini e documenti Cometa",
+        "investments:read": "servizi di investimento, rendimenti e posizioni"
       },
       "cancel": "Annulla",
       "copy": "Copia",
@@ -3102,7 +3104,9 @@
       "saveUrl": "Salva link",
       "open": "Apri",
       "createManual": "Crea conto manuale",
-      "more": "Altre azioni"
+      "more": "Altre azioni",
+      "linkTransfer": "Collega come trasferimento",
+      "unlinkTransfer": "Scollega trasferimento"
     },
     "kpis": {
       "value": "Valore totale",
@@ -3111,12 +3115,14 @@
       "investedNote": "apertura + versamenti − prelievi",
       "gain": "Guadagno",
       "gainNote": "valore − versato netto",
-      "services": "Servizi",
-      "servicesNote": "{count, plural, one {# conto} other {# conti}}",
       "deposited": "Versato",
       "withdrawn": "Prelevato",
       "value1": "Valore",
-      "return": "Rendimento semplice"
+      "return": "Rendimento semplice",
+      "xirr": "XIRR",
+      "xirrNote": "ponderato per il denaro, annuo",
+      "fxNote": "effetto cambio incluso",
+      "notComputable": "non calcolabile"
     },
     "chart": {
       "title": "Valore e versato netto",
@@ -3294,7 +3300,8 @@
         "quote": "quote",
         "fee": "commissione"
       },
-      "until": "fino al {date}"
+      "until": "fino al {date}",
+      "transferWith": "Trasferimento · {name}"
     },
     "kinds": {
       "opening_cash": "Liquidità iniziale",
@@ -3476,7 +3483,9 @@
       "verified": "La chiave è in sola lettura",
       "keyReplaced": "Chiave sostituita",
       "disconnected": "{name} scollegato: ora il conto è manuale",
-      "revoked": "Revoca registrata"
+      "revoked": "Revoca registrata",
+      "transferLinked": "Trasferimento collegato",
+      "transferUnlinked": "Trasferimento scollegato"
     },
     "errors": {
       "invalid": "Controlla i campi e riprova.",
@@ -3505,7 +3514,8 @@
       "not_connected": "Questo servizio non è collegato.",
       "cooldown": "Aspetta un minuto prima di riprovare.",
       "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore della connessione.",
-      "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato della connessione."
+      "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato della connessione.",
+      "not_a_transfer": "Queste due operazioni non si possono collegare come trasferimento."
     },
     "connect": {
       "open": "Collega",
@@ -3601,6 +3611,12 @@
       "notReliable": "storico incompleto",
       "etoroBrand": "Dati di eToro, letti con la tua chiave.",
       "binanceBrand": "Dati di Binance, letti con la tua chiave."
+    },
+    "transfers": {
+      "title": "Trasferimenti da confermare",
+      "description": "Un prelievo e un versamento dello stesso importo tra due tuoi servizi entro 3 giorni. Collegati, contano per ogni servizio ma non per il portafoglio.",
+      "out": "Uscita il {date} → {name}, entrata il {other}",
+      "in": "Entrata il {date} ← {name}, uscita il {other}"
     }
   },
   "payroll": {

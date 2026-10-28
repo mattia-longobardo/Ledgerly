@@ -254,7 +254,10 @@ describe("the doors that stay closed", () => {
     const response = await register({ scope: "read write imports offline_access" });
     expect(response.status, await response.clone().text()).toBe(201);
     const client = (await response.json()) as { client_id: string; scope: string };
-    expect(client.scope.split(" ").sort()).toEqual(["offline_access", "read"]);
+    // The plugin stores the registration's ceiling, never a grant: `investments:read` is in it
+    // (docs/design/investments.md §5.5) but a token carries it only if the authorize request asks
+    // and the person consents on a page that names it. `write` and `imports` never are.
+    expect(client.scope.split(" ").sort()).toEqual(["investments:read", "offline_access", "read"]);
     const links = await getDb()
       .select({ resource: oauthClientResources.resourceId })
       .from(oauthClientResources)

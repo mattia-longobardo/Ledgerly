@@ -11,7 +11,13 @@ import { addDays, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { catalogView, investmentsHome, serviceDetail } from "./queries";
+import {
+  catalogView,
+  investmentOperationsExport,
+  investmentsHome,
+  investmentsPortfolio,
+  serviceDetail,
+} from "./queries";
 import { parseDecimal, PRICE_SCALE, QUANTITY_SCALE } from "./rules";
 import {
   investmentAccountPeriods,
@@ -28,12 +34,15 @@ import {
   deleteOperation,
   eligibleAccounts,
   InvestmentError,
+  linkTransfer,
   rebuildAll,
   recordOperation,
   reconcileHolding,
   saveReading,
+  unlinkTransfer,
   updateOperation,
 } from "./service";
+import { investmentEvents } from "./schema";
 
 const qty = (value: string) => parseDecimal(value, QUANTITY_SCALE);
 const price = (value: string) => parseDecimal(value, PRICE_SCALE);
@@ -620,5 +629,137 @@ describe("one person's services are theirs alone", () => {
     await getDb().execute(sql`delete from accounts where id = ${accountId}`);
     const rows = await getDb().select().from(investmentAccounts);
     expect(rows).toEqual([]);
+  });
+});
+
+describe("§2.4 transfers between the person's services (A10)", () => {
+  async function twoServices() {
+    const make = (name: string) =>
+      createManualService(ctx, {
+        target: "new",
+        name,
+        category: "broker",
+        currency: "EUR",
+        mode: "total",
+        url: null,
+      });
+    const a = await make("Directa");
+    const b = await make("Fineco");
+    await recordOperation(ctx, a.accountId, { kind: "deposit", on: todayOn, amountCents: eur(10_000) });
+    await recordOperation(ctx, a.accountId, {
+      kind: "account_valuation",
+      on: todayOn,
+      amountCents: eur(10_000),
+    });
+    const { eventId: withdrawal } = await recordOperation(ctx, a.accountId, {
+      kind: "withdrawal",
+      on: todayOn,
+      amountCents: eur(2_000),
+    });
+    const { eventId: deposit } = await recordOperation(ctx, b.accountId, {
+      kind: "deposit",
+      on: todayOn,
+      amountCents: eur(2_000),
+    });
+    await recordOperation(ctx, b.accountId, {
+      kind: "account_valuation",
+      on: todayOn,
+      amountCents: eur(2_100),
+    });
+    return { a: a.accountId, b: b.accountId, withdrawal, deposit };
+  }
+
+  it("proposes the pair, links it, and leaves it out of the portfolio's flows only", async () => {
+    const { a, b, withdrawal, deposit } = await twoServices();
+    const detail = await serviceDetail(ctx, a);
+    expect(detail?.transferProposals).toEqual([
+      expect.objectContaining({
+        withdrawalId: withdrawal,
+        depositId: deposit,
+        direction: "out",
+        amountCents: -eur(2_000),
+        other: expect.objectContaining({ accountId: b, accountName: "Fineco" }),
+      }),
+    ]);
+
+    const before = await investmentsPortfolio(ctx);
+    // Unlinked, the 2.000 € count as money out of Directa and new money into Fineco: 12.000 € in.
+    expect(before.totals.gainCents).toBe(eur(100));
+    expect(before.totals.simpleReturn).toBeCloseTo(100 / 12_000, 10);
+
+    await linkTransfer(ctx, { withdrawalId: withdrawal, depositId: deposit });
+    const after = await investmentsPortfolio(ctx);
+    // Each account keeps the transfer as a flow (§2.4)…
+    const byName = new Map(after.services.map((one) => [one.account.name, one]));
+    expect(byName.get("Directa")?.performance.investedCents).toBe(eur(8_000));
+    expect(byName.get("Fineco")?.performance.investedCents).toBe(eur(2_000));
+    expect(byName.get("Fineco")?.performance.gainCents).toBe(eur(100));
+    // …the portfolio does not: 10.000 € went in from outside, 10.100 € is there.
+    expect(after.totals.valueCents).toBe(eur(10_100));
+    expect(after.totals.investedCents).toBe(eur(10_000));
+    expect(after.totals.gainCents).toBe(eur(100));
+    expect(after.totals.simpleReturn).toBeCloseTo(0.01, 10);
+
+    const linked = await serviceDetail(ctx, b);
+    expect(linked?.transferProposals).toEqual([]);
+    expect(linked?.operations.find((row) => row.id === deposit)?.transfer).toEqual({
+      accountId: a,
+      accountName: "Directa",
+    });
+    const exported = await investmentOperationsExport(ctx);
+    expect(exported.find((row) => row.service === "Fineco" && row.kind === "deposit")?.transferWith).toBe(
+      "Directa",
+    );
+
+    // A leg already linked cannot be linked again.
+    await expect(linkTransfer(ctx, { withdrawalId: withdrawal, depositId: deposit })).rejects.toMatchObject({
+      code: "not_a_transfer",
+    });
+
+    await unlinkTransfer(ctx, deposit);
+    const groups = await getDb()
+      .select({ id: investmentEvents.id, group: investmentEvents.transferGroupId })
+      .from(investmentEvents)
+      .where(eq(investmentEvents.userId, ctx.userId));
+    expect(groups.every((row) => row.group === null)).toBe(true);
+  });
+
+  it("refuses a pair that is not a transfer: same account, other amount, two deposits", async () => {
+    const { a, b, withdrawal, deposit } = await twoServices();
+    const { eventId: other } = await recordOperation(ctx, a, {
+      kind: "deposit",
+      on: todayOn,
+      amountCents: eur(2_000),
+    });
+    const { eventId: wrongAmount } = await recordOperation(ctx, b, {
+      kind: "deposit",
+      on: todayOn,
+      amountCents: eur(1_999),
+    });
+    for (const input of [
+      { withdrawalId: withdrawal, depositId: other },
+      { withdrawalId: withdrawal, depositId: wrongAmount },
+      { withdrawalId: deposit, depositId: other },
+    ]) {
+      await expect(linkTransfer(ctx, input)).rejects.toMatchObject({ code: "not_a_transfer" });
+    }
+    // Another person cannot link, nor even see, these operations.
+    const stranger = contextFor((await createTestUser()).id);
+    await expect(
+      linkTransfer(stranger, { withdrawalId: withdrawal, depositId: deposit }),
+    ).rejects.toMatchObject({
+      code: "not_found",
+    });
+  });
+
+  it("frees the other leg when one is deleted", async () => {
+    const { withdrawal, deposit } = await twoServices();
+    await linkTransfer(ctx, { withdrawalId: withdrawal, depositId: deposit });
+    await deleteOperation(ctx, deposit);
+    const [left] = await getDb()
+      .select({ group: investmentEvents.transferGroupId })
+      .from(investmentEvents)
+      .where(eq(investmentEvents.id, withdrawal));
+    expect(left.group).toBeNull();
   });
 });

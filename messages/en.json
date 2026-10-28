@@ -650,12 +650,14 @@
       "scopes": {
         "read": "read",
         "write": "write",
-        "imports": "imports"
+        "imports": "imports",
+        "investments:read": "investments:read"
       },
       "scopeHints": {
         "read": "accounts, balances, transactions and the summary",
         "write": "record a balance reading",
-        "imports": "upload payslips and Cometa documents"
+        "imports": "upload payslips and Cometa documents",
+        "investments:read": "investment services, their returns and holdings"
       },
       "cancel": "Cancel",
       "copy": "Copy",
@@ -3102,7 +3104,9 @@
       "saveUrl": "Save link",
       "open": "Open",
       "createManual": "Create manual account",
-      "more": "More actions"
+      "more": "More actions",
+      "linkTransfer": "Link as transfer",
+      "unlinkTransfer": "Unlink transfer"
     },
     "kpis": {
       "value": "Total value",
@@ -3111,12 +3115,14 @@
       "investedNote": "opening + deposits − withdrawals",
       "gain": "Gain",
       "gainNote": "value − net invested",
-      "services": "Services",
-      "servicesNote": "{count, plural, one {# account} other {# accounts}}",
       "deposited": "Deposited",
       "withdrawn": "Withdrawn",
       "value1": "Value",
-      "return": "Simple return"
+      "return": "Simple return",
+      "xirr": "XIRR",
+      "xirrNote": "money-weighted, yearly",
+      "fxNote": "incl. exchange effect",
+      "notComputable": "not computable"
     },
     "chart": {
       "title": "Value and net invested",
@@ -3294,7 +3300,8 @@
         "quote": "quote",
         "fee": "fee"
       },
-      "until": "until {date}"
+      "until": "until {date}",
+      "transferWith": "Transfer · {name}"
     },
     "kinds": {
       "opening_cash": "Opening cash",
@@ -3476,7 +3483,9 @@
       "verified": "The key only reads",
       "keyReplaced": "Key replaced",
       "disconnected": "{name} disconnected: the account is manual now",
-      "revoked": "Revocation noted"
+      "revoked": "Revocation noted",
+      "transferLinked": "Transfer linked",
+      "transferUnlinked": "Transfer unlinked"
     },
     "errors": {
       "invalid": "Check the fields and try again.",
@@ -3505,7 +3514,8 @@
       "not_connected": "This service is not connected.",
       "cooldown": "Wait a minute before trying again.",
       "sync_failed": "The sync failed: see the connection's last error.",
-      "sync_refused": "The sync was refused: see the connection's state."
+      "sync_refused": "The sync was refused: see the connection's state.",
+      "not_a_transfer": "Those two operations cannot be linked as a transfer."
     },
     "connect": {
       "open": "Connect",
@@ -3601,6 +3611,12 @@
       "notReliable": "history incomplete",
       "etoroBrand": "Data from eToro, read with your key.",
       "binanceBrand": "Data from Binance, read with your key."
+    },
+    "transfers": {
+      "title": "Transfers to confirm",
+      "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio.",
+      "out": "Out on {date} → {name}, in on {other}",
+      "in": "In on {date} ← {name}, out on {other}"
     }
   },
   "payroll": {

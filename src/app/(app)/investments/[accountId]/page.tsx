@@ -17,6 +17,7 @@ import {
   DisconnectButton,
   type HoldingSummary,
   HoldingMenu,
+  LinkTransferButton,
   OperationButton,
   OperationMenu,
   type OperationSummary,
@@ -25,7 +26,9 @@ import {
   type ServiceContext,
   ServiceUrlForm,
   SyncButtons,
+  UnlinkTransferButton,
 } from "@/modules/investments/ui/dialogs";
+import type { Xirr } from "@/modules/investments/xirr";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -145,6 +148,31 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
   });
 
   const flows = summary.performance;
+  const xirrText = (result: Xirr | null) =>
+    result === null
+      ? NULL_DISPLAY
+      : result.status === "ok"
+        ? formatPercent(result.rate, ctx.numberFormat, { signed: true })
+        : t("kpis.notComputable");
+  const reliabilityNote = summary.reliable
+    ? undefined
+    : summary.reliableFrom
+      ? t("sync.reliableFrom", { date: long(summary.reliableFrom.toISOString().slice(0, 10)) })
+      : t("sync.notReliable");
+  const transferText = (row: OperationRow) =>
+    row.transfer ? t("operations.transferWith", { name: row.transfer.accountName }) : null;
+  const operationActions = (row: OperationRow) => (
+    <span className="flex items-center justify-end gap-1">
+      {row.transfer && (
+        <UnlinkTransferButton
+          accountId={accountId}
+          eventId={row.id}
+          label={`${transferText(row)}, ${long(row.on)}`}
+        />
+      )}
+      <OperationMenu operation={operationOf(row)} context={context} />
+    </span>
+  );
   const toolbar = (
     <div className="flex flex-wrap gap-2">
       {mode === "assets" && <AddAssetButton context={context} />}
@@ -224,6 +252,7 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
       {row.revisions > 0 && (
         <span className="text-xs text-muted">{t("operations.revisions", { count: row.revisions })}</span>
       )}
+      {row.transfer && <span className="text-xs text-muted">{transferText(row)}</span>}
     </span>
   );
 
@@ -277,7 +306,7 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
 
       {toolbar}
 
-      <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-5">
         <KpiTile label={t("detail.kpis.value")} value={own(summary.valueCents)} />
         <KpiTile
           label={t("detail.kpis.invested")}
@@ -294,16 +323,17 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
               : formatPercent(flows.simpleReturn, ctx.numberFormat, { signed: true })
           }
           deltaTone={toneOfSign(flows.simpleReturn)}
-          note={
-            summary.reliable
-              ? t("kpis.gainNote")
-              : summary.reliableFrom
-                ? t("sync.reliableFrom", { date: long(summary.reliableFrom.toISOString().slice(0, 10)) })
-                : t("sync.notReliable")
-          }
+          note={reliabilityNote ?? t("kpis.gainNote")}
+        />
+        <KpiTile
+          label={t("kpis.xirr")}
+          value={xirrText(summary.xirr)}
+          valueTone={summary.xirr?.status === "ok" ? toneOfSign(summary.xirr.rate) : "fg"}
+          note={reliabilityNote ?? t("kpis.xirrNote")}
         />
         {mode === "assets" && !synced ? (
           <KpiTile
+            className="col-span-2 @4xl:col-span-1"
             label={t("detail.kpis.cash")}
             value={own(day.cashCents)}
             valueTone={day.cashCents < 0n ? "warn" : "fg"}
@@ -311,6 +341,7 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
           />
         ) : (
           <KpiTile
+            className="col-span-2 @4xl:col-span-1"
             label={t("services.change30")}
             value={signed(summary.change30Cents)}
             valueTone={toneOfSign(summary.change30Cents)}
@@ -452,6 +483,40 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
 
       {mode === "total" && !synced && <p className="text-sm text-muted">{t("detail.totalModeNote")}</p>}
 
+      {detail.transferProposals.length > 0 && (
+        <Card padded={false} className="min-w-0" data-testid="transfer-proposals">
+          <CardHeader title={t("transfers.title")} />
+          <p className="px-4 text-sm text-muted">{t("transfers.description")}</p>
+          <ul className="flex flex-col pt-2">
+            {detail.transferProposals.map((proposal) => {
+              const text = t(`transfers.${proposal.direction}`, {
+                date: long(proposal.on),
+                name: proposal.other.accountName,
+                other: long(proposal.other.on),
+              });
+              return (
+                <li
+                  key={`${proposal.withdrawalId}:${proposal.depositId}`}
+                  data-testid="transfer-proposal"
+                  className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm"
+                >
+                  <span className="min-w-0 truncate">{text}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-medium tabular-nums">{own(proposal.amountCents)}</span>
+                    <LinkTransferButton
+                      accountId={accountId}
+                      withdrawalId={proposal.withdrawalId}
+                      depositId={proposal.depositId}
+                      label={text}
+                    />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+
       <Card padded={false} className="min-w-0">
         <CardHeader
           title={t("operations.title")}
@@ -491,9 +556,7 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
                           ? (linkedText(row) ?? t("operations.notLinked"))
                           : NULL_DISPLAY}
                       </Td>
-                      <Td align="right">
-                        <OperationMenu operation={operationOf(row)} context={context} />
-                      </Td>
+                      <Td align="right">{operationActions(row)}</Td>
                     </Tr>
                   ))}
                 </TBody>
@@ -512,7 +575,7 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
                       <span className="font-medium tabular-nums">
                         {own(row.legs[0]?.amountCents ?? null)}
                       </span>
-                      <OperationMenu operation={operationOf(row)} context={context} />
+                      {operationActions(row)}
                     </span>
                   </div>
                   <span className="text-muted">{long(row.on)}</span>
