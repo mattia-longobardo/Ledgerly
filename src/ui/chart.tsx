@@ -15,6 +15,8 @@ export interface Series {
    * (owner, 2026-09-20). The same holds for a value that only moves when a document says so.
    */
   step?: boolean;
+  /** Per value, whether it is an estimate (PERS-100): those steps of the line are dashed. */
+  estimated?: readonly boolean[];
 }
 
 interface Box {
@@ -441,17 +443,29 @@ export function MultiLine({
             className="relative h-full w-full"
           >
             {series.map((one, index) =>
-              segmentsOf(one.values, extent, box).map((run, runIndex) => (
-                <polyline
-                  key={`${index}-${runIndex}`}
-                  points={path(one.step ? stepped(run) : run)}
-                  fill="none"
-                  stroke={one.color ?? "var(--accent)"}
-                  strokeWidth={1.5}
-                  strokeDasharray={one.dashed ? "4 4" : undefined}
-                  vectorEffect="non-scaling-stroke"
-                />
-              )),
+              one.estimated?.some(Boolean)
+                ? strokesOf(one.values, one.estimated, extent, box).map((stroke, runIndex) => (
+                    <polyline
+                      key={`${index}-${runIndex}`}
+                      points={path(stroke.points)}
+                      fill="none"
+                      stroke={one.color ?? "var(--accent)"}
+                      strokeWidth={1.5}
+                      strokeDasharray={one.dashed || stroke.dashed ? "4 4" : undefined}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))
+                : segmentsOf(one.values, extent, box).map((run, runIndex) => (
+                    <polyline
+                      key={`${index}-${runIndex}`}
+                      points={path(one.step ? stepped(run) : run)}
+                      fill="none"
+                      stroke={one.color ?? "var(--accent)"}
+                      strokeWidth={1.5}
+                      strokeDasharray={one.dashed ? "4 4" : undefined}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )),
             )}
           </svg>
           {hover && hover.length > 0 && <ChartHover points={hover} />}

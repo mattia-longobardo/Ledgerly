@@ -19,6 +19,7 @@ import { listConnections, listRuns } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import {
+  investmentAccountPeriods,
   investmentAccounts,
   investmentAssets,
   investmentEvents,
@@ -30,7 +31,7 @@ import {
   investmentSyncCoverage,
 } from "./schema";
 import { connectInvestmentProvider, runInvestmentPass, setSourcesForTests } from "./sync";
-import { serviceDetail } from "./queries";
+import { investmentHistory, serviceDetail } from "./queries";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/investments/binance");
 const body = (name: string): unknown =>
@@ -241,8 +242,12 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
     expect(check).toMatchObject({ result: "read-only", ipRestricted: false, provider: PROVIDER });
     expect(JSON.stringify(check)).not.toContain(CANARY_KEY);
 
-    const [reading] = await getDb().select().from(investmentReadings);
-    expect(reading).toMatchObject({ status: "complete", totalCents: 2n, missingPrices: 1 });
+    const [reading] = await getDb()
+      .select()
+      .from(investmentReadings)
+      .where(eq(investmentReadings.on, "2026-10-28"));
+    // ETHW has no market: dust, not a missing price (PERS-100).
+    expect(reading).toMatchObject({ status: "complete", totalCents: 2n, missingPrices: 0 });
     const positions = await getDb()
       .select({
         symbol: investmentAssets.symbol,
@@ -496,5 +501,84 @@ describe("the Binance pass (§3.1, A7)", () => {
     expect(text).not.toContain(CANARY_KEY);
     expect(text).not.toContain(CANARY_SECRET);
     expect(text).not.toContain("signature");
+  });
+});
+
+describe("the estimated history (PERS-100)", () => {
+  async function estimatedOf(accountId: string) {
+    const investment = await investmentOf(accountId);
+    return getDb()
+      .select()
+      .from(investmentReadings)
+      .where(
+        and(
+          eq(investmentReadings.investmentAccountId, investment.id),
+          eq(investmentReadings.status, "estimated"),
+        ),
+      )
+      .orderBy(asc(investmentReadings.on));
+  }
+
+  it("rebuilds every day of the 24 months from the flows and the daily closes, and says so", async () => {
+    const { accountId } = await connectNew();
+    const estimated = await estimatedOf(accountId);
+    expect(estimated[0].on).toBe("2024-10-28");
+    expect(estimated.at(-1)?.on).toBe("2026-10-27");
+    expect(estimated).toHaveLength(730);
+    // A flat market of 2 per coin: some day of the history held something.
+    expect(estimated.some((day) => day.totalCents > 0n)).toBe(true);
+
+    // The opening period starts with the history, and so does the service.
+    const investment = await investmentOf(accountId);
+    expect(investment).toMatchObject({ managedSince: "2024-10-28", openedOn: "2024-10-28" });
+    const periods = await getDb()
+      .select()
+      .from(investmentAccountPeriods)
+      .where(eq(investmentAccountPeriods.investmentAccountId, investment.id));
+    expect(periods.map((period) => [period.fromOn, period.reason])).toEqual([["2024-10-28", "opening"]]);
+    const [coverage] = await getDb()
+      .select()
+      .from(investmentSyncCoverage)
+      .where(eq(investmentSyncCoverage.stream, "balance_history"));
+    expect(coverage).toMatchObject({ kind: "holdings", status: "partial", reason: "estimated" });
+
+    // The chart: the year before today is drawn, dashed up to the first real reading.
+    const history = await investmentHistory(ctx, {
+      window: { grain: "day", range: "1y", custom: null },
+      accountId,
+      now: NOW,
+    });
+    // 1Y is the twelve months to this one: from 1 November on.
+    expect([history?.days[0], history?.days.length]).toEqual(["2025-11-01", 362]);
+    expect(history?.value.every((value) => value !== null)).toBe(true);
+    expect(history?.estimated.slice(0, -1).every(Boolean)).toBe(true);
+    expect(history?.estimated.at(-1)).toBe(false);
+    // Today's value is the reading's, untouched.
+    expect(history?.value.at(-1)).toBe(2n);
+  });
+
+  it("estimates once: the next pass writes no day twice and keeps the real reading", async () => {
+    const { accountId } = await connectNew();
+    const before = await estimatedOf(accountId);
+    await pass(new Date(NOW.getTime() + DAY));
+    const after = await estimatedOf(accountId);
+    expect(after.map((day) => [day.on, day.totalCents])).toEqual(
+      before.map((day) => [day.on, day.totalCents]),
+    );
+    const real = await getDb()
+      .select({ on: investmentReadings.on, status: investmentReadings.status })
+      .from(investmentReadings)
+      .where(eq(investmentReadings.on, "2026-10-28"));
+    expect(real).toEqual([{ on: "2026-10-28", status: "complete" }]);
+  });
+
+  it("leaves the history to the next pass when the closes cannot be read", async () => {
+    exchange.dailyCandles = async () => {
+      throw new Error("down");
+    };
+    const { accountId } = await connectNew();
+    expect(await estimatedOf(accountId)).toEqual([]);
+    const investment = await investmentOf(accountId);
+    expect(investment.managedSince).toBe("2026-10-28");
   });
 });

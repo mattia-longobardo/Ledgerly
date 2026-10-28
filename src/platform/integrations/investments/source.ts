@@ -159,6 +159,20 @@ export interface InvestmentSource {
     currency: string,
     now: Date,
   ): Promise<HistoryRead>;
+  /**
+   * For a provider with no history of the account's value (PERS-100, Binance): each coin's rate in
+   * the account's currency on every day from `from` to `now`, at the exchange's daily close (§1.8).
+   * Plain decimals by coin and day; a day no market priced is absent. The module rebuilds the
+   * history from these and the flows.
+   */
+  fetchDailyRates?(
+    credentials: Readonly<Record<string, string>>,
+    coins: readonly string[],
+    currency: string,
+    from: Date,
+    now: Date,
+    fx: FxLookup,
+  ): Promise<Record<string, Record<CivilDate, string>>>;
 }
 
 /**

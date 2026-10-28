@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, desc, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, ne, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "@/modules/accounts/queries";
-import { createAccount, takeOverEntries } from "@/modules/accounts/service";
+import { createAccount, openedNoLaterThan, takeOverEntries } from "@/modules/accounts/service";
 import type { Person } from "@/modules/users/jobs";
 import { alertAdmins } from "@/platform/alerts/gotify";
 import type { Ctx } from "@/platform/context";
@@ -49,11 +49,13 @@ import {
 import { withJobLock } from "@/platform/jobs/lock";
 import type { Cents } from "@/platform/money";
 import { accountTypeOf, connectableProvider, credentialSchemaOf, type InvestmentProvider } from "./catalog";
+import { estimateHistory, HISTORY_RATE_SCALE, type HistoryLeg, historyMoves } from "./history";
 import {
   divRound,
   emptyReadingStatus,
   formatDecimal,
   type KeyCheckOrigin,
+  missingPricesOf,
   type OperationKind,
   parseDecimal,
   PRICE_SCALE,
@@ -298,7 +300,12 @@ async function writeReading(
         status: input.status,
         totalCents: input.totalCents,
         cashCents: input.cashCents,
-        missingPrices: positions.filter((one) => one.valueCents === null).length,
+        missingPrices: missingPricesOf(
+          positions.map((one) => ({
+            valueCents: one.valueCents,
+            quantity: parseDecimal(one.quantity, QUANTITY_SCALE),
+          })),
+        ),
       }),
     )
     .returning({ id: investmentReadings.id });
@@ -813,9 +820,16 @@ export async function connectInvestmentProvider(
     });
     // The first flows now, so the page has its history at once; a failure waits for the next pass.
     const firstFlows = () =>
-      withJobLock(`investments-sync:${connection.id}`, () =>
-        syncFlows(ctx, connection, accountId, now),
-      ).catch((error: unknown) => {
+      withJobLock(`investments-sync:${connection.id}`, async () => {
+        await syncFlows(ctx, connection, accountId, now);
+        // The estimated history at once (PERS-100); a failure waits for the next pass.
+        const linked = await linkedOf(ctx, connection);
+        if (linked) {
+          await estimateHistoryOf(ctx, linked, now).catch((error: unknown) => {
+            console.error("[investments] history not estimated", sourceErrorLog(provider.id, error));
+          });
+        }
+      }).catch((error: unknown) => {
         console.error("[investments] first flows not read", sourceErrorLog(provider.id, error));
       });
     if (defer) defer(firstFlows);
@@ -1158,11 +1172,196 @@ async function syncFlows(
   });
 }
 
+/**
+ * The estimated history of a service whose provider has no history of its value (PERS-100,
+ * Binance): once, after the flows have reached back past the connection, every day from the first
+ * flow to the day before the first reading gets an `estimated` reading — the quantities rebuilt
+ * backwards from that reading, at the exchange's daily closes — and the opening period moves back
+ * to the first flow, so the chart and the net worth have the 24 months. Network first, then one
+ * transaction (V6). Returns the days written.
+ */
+async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Promise<number> {
+  const source = sourceOf(linked.connection.provider);
+  if (!source.fetchDailyRates) return 0;
+  const { investment, currency } = linked;
+  const periodsOf = (db: Pick<Tx, "select">) =>
+    db
+      .select()
+      .from(investmentAccountPeriods)
+      .where(
+        and(
+          userScoped(ctx).owns(investmentAccountPeriods),
+          eq(investmentAccountPeriods.investmentAccountId, investment.id),
+        ),
+      )
+      .orderBy(asc(investmentAccountPeriods.fromOn));
+  const periods = await periodsOf(getDb());
+  // Only a service connected new: a handover or a conversion has a history of its own before.
+  if (periods.length !== 1 || periods[0].reason !== "opening" || periods[0].origin !== "synced") return 0;
+  const opening = periods[0];
+  const [anchor] = await getDb()
+    .select({ id: investmentReadings.id, on: investmentReadings.on })
+    .from(investmentReadings)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadings),
+        eq(investmentReadings.investmentAccountId, investment.id),
+        notInArray(investmentReadings.status, ["pending_zero", "estimated"]),
+      ),
+    )
+    .orderBy(asc(investmentReadings.on))
+    .limit(1);
+  if (!anchor) return 0;
+  const legRows = await getDb()
+    .select({
+      on: investmentEvents.on,
+      kind: investmentOperations.kind,
+      quantity: investmentOperations.quantity,
+      nativeCurrency: investmentOperations.nativeCurrency,
+      amountCents: investmentOperations.amountCents,
+      symbol: investmentAssets.symbol,
+      class: investmentAssets.class,
+    })
+    .from(investmentOperations)
+    .innerJoin(investmentEvents, eq(investmentEvents.id, investmentOperations.eventId))
+    .leftJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
+    .leftJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentOperations),
+        eq(investmentEvents.investmentAccountId, investment.id),
+      ),
+    )
+    .orderBy(asc(investmentEvents.on), asc(investmentOperations.id));
+  const first = legRows[0]?.on ?? null;
+  if (first === null || first >= opening.fromOn || first >= anchor.on) return 0;
+  const positions = await getDb()
+    .select({
+      quantity: investmentReadingPositions.quantity,
+      valueCents: investmentReadingPositions.valueCents,
+      symbol: investmentAssets.symbol,
+      class: investmentAssets.class,
+    })
+    .from(investmentReadingPositions)
+    .innerJoin(investmentAssets, eq(investmentAssets.id, investmentReadingPositions.assetId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadingPositions),
+        eq(investmentReadingPositions.readingId, anchor.id),
+      ),
+    )
+    .orderBy(asc(investmentReadingPositions.id));
+
+  // The account's own cash is cents; every other asset, fiat included, a quantity to price.
+  const isCash = (row: { class: string | null; symbol: string | null }) =>
+    row.class === "cash" && row.symbol === currency;
+  const quantities = new Map<string, bigint>();
+  let cashCents = 0n;
+  for (const row of positions) {
+    if (isCash(row)) cashCents += row.valueCents ?? 0n;
+    else if (row.symbol)
+      quantities.set(
+        row.symbol,
+        (quantities.get(row.symbol) ?? 0n) + parseDecimal(row.quantity, QUANTITY_SCALE),
+      );
+  }
+  const legs: HistoryLeg[] = legRows.map((row) => ({
+    on: row.on,
+    kind: row.kind,
+    symbol: row.symbol === null || isCash(row) ? null : row.symbol,
+    quantity: row.quantity === null ? null : parseDecimal(row.quantity, QUANTITY_SCALE),
+    nativeCurrency: row.nativeCurrency,
+    amountCents: row.amountCents,
+  }));
+  const coins = [
+    ...new Set([...quantities.keys(), ...legs.flatMap((leg) => (leg.symbol ? [leg.symbol] : []))]),
+  ];
+  const todayOn = today(ctx.timeZone, now);
+  const lookup = await ratesOn(new Set([...LOOKUP_CURRENCIES, currency]), addDays(first, -7), todayOn);
+  const fx = fxLookupOf(lookup);
+  const credentials = await readCredentials(ctx, linked.connection.id);
+  const daily = await source.fetchDailyRates(
+    credentials,
+    coins,
+    currency,
+    new Date(`${first}T00:00:00Z`),
+    now,
+    fx,
+  );
+  const days: CivilDate[] = [];
+  for (let day = first; day < anchor.on; day = addDays(day, 1)) days.push(day);
+  const estimated = estimateHistory({
+    days,
+    anchor: { on: anchor.on, quantities, cashCents },
+    moves: historyMoves(legs, currency),
+    rate: (symbol, on) => {
+      const text = daily[symbol]?.[on];
+      if (text) return parseDecimal(text, HISTORY_RATE_SCALE);
+      // Fiat other than the account's own: the ECB rate of the day (§1.8).
+      const ecb = /^[A-Z]{3}$/.test(symbol) ? fx(symbol, currency, on) : null;
+      return ecb === null ? null : parseDecimal(ecb, HISTORY_RATE_SCALE);
+    },
+  });
+  if (estimated.length === 0) return 0;
+
+  return getDb().transaction(async (tx) => {
+    const locked = await lockInvestmentAccount(ctx, investment.accountId, tx);
+    const again = await periodsOf(tx);
+    // Someone else moved the period meanwhile (a conversion, a second pass): nothing to do.
+    if (again.length !== 1 || again[0].id !== opening.id || again[0].fromOn !== opening.fromOn) return 0;
+    for (let index = 0; index < estimated.length; index += 500) {
+      await tx
+        .insert(investmentReadings)
+        .values(
+          estimated.slice(index, index + 500).map((day) =>
+            userScoped(ctx).stamp({
+              investmentAccountId: locked.id,
+              on: day.on,
+              observedAt: new Date(`${day.on}T23:59:59Z`),
+              status: "estimated" as const,
+              totalCents: day.totalCents,
+              cashCents: null,
+              missingPrices: day.missingPrices,
+            }),
+          ),
+        )
+        .onConflictDoNothing({ target: [investmentReadings.investmentAccountId, investmentReadings.on] });
+    }
+    await tx
+      .update(investmentAccountPeriods)
+      .set({ fromOn: first, startsAt: new Date(`${first}T00:00:00Z`) })
+      .where(
+        and(eq(investmentAccountPeriods.id, opening.id), userScoped(ctx).owns(investmentAccountPeriods)),
+      );
+    await tx
+      .update(investmentAccounts)
+      .set({ managedSince: first, openedOn: first, updatedAt: now })
+      .where(and(eq(investmentAccounts.id, locked.id), userScoped(ctx).owns(investmentAccounts)));
+    await openedNoLaterThan(ctx, locked.accountId, first, tx);
+    await writeCoverage(ctx, tx, linked.connection.id, "holdings", [
+      {
+        stream: "balance_history",
+        fromAt: new Date(`${first}T00:00:00Z`),
+        toAt: new Date(`${anchor.on}T00:00:00Z`),
+        status: "partial",
+        reason: "estimated",
+      },
+    ]);
+    await rebuild(ctx, { ...locked, managedSince: first, openedOn: first }, currency, first, tx);
+    return estimated.length;
+  });
+}
+
 async function runFlows(ctx: WriteCtx, linked: Linked, now: Date): Promise<boolean> {
   const run = await recordRun(ctx, { connectionId: linked.connection.id, kind: "flows" });
   try {
     const created = await syncFlows(ctx, linked.connection, linked.investment.accountId, now);
-    await finishRun(ctx, run.id, { counts: { created } }, now);
+    // The estimated history, once the flows are in (PERS-100): a failure waits for the next pass.
+    const estimated = await estimateHistoryOf(ctx, linked, now).catch((error: unknown) => {
+      console.error("[investments] history not estimated", sourceErrorLog(linked.connection.provider, error));
+      return 0;
+    });
+    await finishRun(ctx, run.id, { counts: estimated > 0 ? { created, estimated } : { created } }, now);
     return true;
   } catch (error) {
     await finishRun(

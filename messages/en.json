@@ -3130,7 +3130,12 @@
       "invested": "Net invested",
       "empty": "Nothing to draw yet.",
       "hoverInvested": "net invested {amount}",
-      "summary": "Value today {value}, net invested {invested}."
+      "summary": "Value today {value}, net invested {invested}.",
+      "range": "Range",
+      "grain": "Points",
+      "grains": { "month": "Month", "day": "Day" },
+      "estimatedShort": "estimate",
+      "estimatedNote": "The dashed stretch is an estimate: the provider keeps no history of the value, so each day is rebuilt from the movements and the exchange's daily closes."
     },
     "services": {
       "title": "Services",
@@ -3265,6 +3270,8 @@
       "conflict": "To reconcile",
       "staleRate": "saved rate",
       "byValue": "by value",
+      "dust": "dust, no market",
+      "noPrice": "no price",
       "actions": "Actions",
       "origins": {
         "manual": "Manual",
@@ -3330,7 +3337,8 @@
         "complete": "Complete",
         "partial": "Partial",
         "confirmed_zero": "Empty, confirmed",
-        "pending_zero": "Empty?"
+        "pending_zero": "Empty?",
+        "estimated": "Estimated"
       },
       "pendingZero": "The provider reports the account as empty. Was it emptied? Until you confirm, the value holds."
     },
@@ -3610,7 +3618,8 @@
         "before_first_movement": "before the first eToro Money movement",
         "api_limit_24m": "the API keeps 24 months",
         "negative_opening": "the history explains more than the balance",
-        "quantity_mismatch": "the movements do not add up to the balance: a market may be missing"
+        "quantity_mismatch": "the movements do not add up to the balance: a market may be missing",
+        "estimated": "estimated from the movements and the daily closes"
       },
       "reliableFrom": "reliable from {date}",
       "notReliable": "history incomplete",

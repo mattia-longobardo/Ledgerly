@@ -1,11 +1,11 @@
 import "server-only";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { type Account, balancesOn, listAccounts, monthlyPoints } from "@/modules/accounts/queries";
-import { monthEndSeries } from "@/modules/accounts/rules";
+import { type Account, balancesOn, listAccounts } from "@/modules/accounts/queries";
+import { dailyBalancesOf } from "@/modules/accounts/service";
 import { fundsView } from "@/modules/funds/queries";
 import { linkCandidates, transactionsByIds } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
-import { addDays, type CivilDate, lastDayOfMonth, type MonthKey, today } from "@/platform/dates";
+import { addDays, type CivilDate, type MonthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { convertCents, NO_RATES, type RateTable } from "@/platform/fx/rules";
@@ -17,7 +17,6 @@ import {
   type DayValue,
   type FlowEntry,
   flowEntriesOn,
-  flowsOn,
   formatDecimal,
   type HoldingState,
   holdingStates,
@@ -52,6 +51,7 @@ import {
   transferLegs,
 } from "./service";
 import { type SyncStatus, syncStatus } from "./sync";
+import { type ChartGrain, type ChartWindow, chartDays } from "./window";
 import { type Xirr, xirr } from "./xirr";
 
 /** The home chart looks back this far, as the legacy page did. */
@@ -191,8 +191,6 @@ export interface InvestmentsHome {
     /** Some service is in another currency: gain and returns include the exchange effect (§2.4). */
     fxEffect: boolean;
   };
-  months: MonthKey[];
-  history: { value: (Cents | null)[]; invested: (Cents | null)[] };
   byClass: AllocationSlice[];
   byService: AllocationSlice[];
   funds: { id: string; name: string; valueCents: Cents | null; kind: string }[];
@@ -327,32 +325,7 @@ export async function investmentsHome(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   now: Date = new Date(),
 ): Promise<InvestmentsHome> {
-  const { currency, todayOn, services, totals, live, flows, displayRates, months } = await portfolioState(
-    ctx,
-    now,
-  );
-
-  // The chart: month-end `portfolio` balances (held), and what had gone in by then.
-  const points = await monthlyPoints(ctx, todayOn);
-  const daysOf = months.map((month, index) =>
-    index === months.length - 1 ? todayOn : lastDayOfMonth(month),
-  );
-  const valueSeries = live.map((one) =>
-    monthEndSeries(points.get(one.account.id) ?? [], months, "hold").map((cents, index) =>
-      cents === null
-        ? null
-        : convertCents(cents, one.account.currency, currency, daysOf[index], displayRates),
-    ),
-  );
-  const started = live.flatMap((one) => (one.book.periods[0] ? [one.book.periods[0].fromOn] : []));
-  const history = {
-    value: months.map((_, index) => sumCents(valueSeries.map((series) => series[index])).total),
-    invested: daysOf.map((day) => {
-      if (!started.some((first) => first <= day)) return null;
-      const by = sumFlows(flows.filter((entry) => entry.on <= day));
-      return by.openingCents + by.depositedCents - by.withdrawnCents;
-    }),
-  };
+  const { currency, todayOn, services, totals, live, displayRates } = await portfolioState(ctx, now);
 
   // Allocation: positions by class; cash, and accounts kept as a total, by their own key.
   const byClass = new Map<string, Cents>();
@@ -401,8 +374,6 @@ export async function investmentsHome(
     currency,
     services,
     totals,
-    months,
-    history,
     byClass: slices(byClass),
     byService: slices(byService),
     funds: funds.rows.map((row) => ({
@@ -411,6 +382,113 @@ export async function investmentsHome(
       valueCents: row.metrics.valueCents,
       kind: row.fund.type,
     })),
+  };
+}
+
+export interface InvestmentHistory {
+  currency: string;
+  grain: ChartGrain;
+  /** The window's months, after those before the history were dropped. */
+  months: MonthKey[];
+  /** The days the chart values: month ends (today for this month), or every day. */
+  days: CivilDate[];
+  value: (Cents | null)[];
+  /** What had gone in by each day: opening, deposits, withdrawals (§2.4). */
+  invested: (Cents | null)[];
+  /** Days that stand on an estimated reading (PERS-100): drawn dashed and said so. */
+  estimated: boolean[];
+}
+
+/**
+ * The value-vs-invested chart of the home (every live service, in the display currency, each day
+ * at its own rate) or of one service (in its currency), over a window (PERS-100): the `portfolio`
+ * balances held day by day, and the flows up to each day. `null` for a service that is not one.
+ */
+export async function investmentHistory(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  options: { window: ChartWindow; accountId?: string; now?: Date },
+): Promise<InvestmentHistory | null> {
+  const now = options.now ?? new Date();
+  const todayOn = today(ctx.timeZone, now);
+  const { loaded } = await loadAll(ctx, todayOn, options.accountId);
+  const live = options.accountId ? loaded : loaded.filter((one) => one.account.state !== "archived");
+  if (options.accountId && live.length === 0) return null;
+  const currency = options.accountId ? live[0].account.currency : ctx.displayCurrency;
+  const firsts = live.flatMap((one) => (one.book.periods[0] ? [one.book.periods[0].fromOn] : []));
+  const firstOn = firsts.length === 0 ? null : firsts.reduce((a, b) => (a < b ? a : b));
+  const { months, days } = chartDays(options.window, todayOn, firstOn);
+
+  const read = await dailyBalancesOf(
+    ctx,
+    live.map((one) => one.account.id),
+    { from: days[0], to: days[days.length - 1] },
+  );
+  const indexOf = new Map(read.days.map((day, index) => [day, index]));
+  const converts = live.some((one) => one.account.currency !== currency);
+  const rates = converts
+    ? await ratesOn(
+        new Set([currency, ...live.map((one) => one.account.currency)]),
+        addDays(days[0], -7),
+        todayOn,
+      )
+    : NO_RATES;
+  const valueSeries = live.map((one) => {
+    const values = read.series.get(one.account.id)?.values ?? [];
+    return days.map((day) => {
+      const cents = values[indexOf.get(day) ?? -1] ?? null;
+      return cents === null ? null : convertCents(cents, one.account.currency, currency, day, rates);
+    });
+  });
+  const estimatedThrough = live.map(
+    (one) => one.book.readingRows.filter((reading) => reading.status === "estimated").at(-1)?.on ?? null,
+  );
+
+  // What went in, each flow in the chart's currency at the rate of its own day (§2.4); a transfer
+  // between two of the services shown moves no money in or out.
+  const groups = new Map<string, Set<string>>();
+  for (const one of live) {
+    for (const event of one.book.events) {
+      if (event.transferGroupId === null) continue;
+      const accounts = groups.get(event.transferGroupId) ?? new Set<string>();
+      accounts.add(one.account.id);
+      groups.set(event.transferGroupId, accounts);
+    }
+  }
+  const flowRates = converts
+    ? await ratesOn(
+        new Set([currency, ...live.map((one) => one.account.currency)]),
+        addDays(firstOn ?? todayOn, -7),
+        todayOn,
+      )
+    : NO_RATES;
+  let unconverted = false;
+  const flows = live.flatMap((one) =>
+    flowEntriesOn(one.book, todayOn)
+      .filter((entry) => entry.transferGroupId === null || (groups.get(entry.transferGroupId)?.size ?? 0) < 2)
+      .flatMap((entry) => {
+        const cents = convertCents(entry.cents, one.account.currency, currency, entry.on, flowRates);
+        if (cents === null) unconverted = true;
+        return cents === null ? [] : [{ ...entry, cents }];
+      }),
+  );
+
+  return {
+    currency,
+    grain: options.window.grain,
+    months,
+    days,
+    value: days.map((_, index) => sumCents(valueSeries.map((series) => series[index])).total),
+    invested: days.map((day) => {
+      if (unconverted || firstOn === null || day < firstOn) return null;
+      const by = sumFlows(flows.filter((entry) => entry.on <= day));
+      return by.openingCents + by.depositedCents - by.withdrawnCents;
+    }),
+    estimated: days.map((day, index) =>
+      live.some(
+        (one, at) =>
+          estimatedThrough[at] !== null && day <= estimatedThrough[at]! && valueSeries[at][index] !== null,
+      ),
+    ),
   };
 }
 
@@ -573,8 +651,6 @@ export interface ServiceDetail {
     note: string | null;
     stale: boolean;
   }[];
-  months: MonthKey[];
-  history: { value: (Cents | null)[]; invested: (Cents | null)[] };
   /** The connection, its key and what its flows cover (§4.3, §5.3); `null` for a manual service. */
   sync: SyncStatus | null;
   /** Products the provider's latest reading covers: a manual position there would conflict (R4). */
@@ -703,7 +779,6 @@ export async function serviceDetail(
   const one = loaded[0];
   if (!one) return null;
   const currency = ctx.displayCurrency;
-  const months = monthsBack(todayOn, HISTORY_MONTHS);
   const displayRates = await ratesOn(
     one.account.currency !== currency ? [currency, one.account.currency] : [],
     todayOn,
@@ -853,20 +928,6 @@ export async function serviceDetail(
       })),
   );
 
-  const points = await monthlyPoints(ctx, todayOn);
-  const daysOf = months.map((month, index) =>
-    index === months.length - 1 ? todayOn : lastDayOfMonth(month),
-  );
-  const first = one.book.periods[0]?.fromOn ?? null;
-  const history = {
-    value: monthEndSeries(points.get(one.account.id) ?? [], months, "hold"),
-    invested: daysOf.map((day) => {
-      if (first === null || day < first) return null;
-      const flows = flowsOn(one.book, day);
-      return flows.openingCents + flows.depositedCents - flows.withdrawnCents;
-    }),
-  };
-
   const from = addDays(todayOn, -LINK_WINDOW_DAYS);
   const [out, incoming, assets] = await Promise.all([
     linkCandidates(ctx, { direction: "out", from, to: todayOn }),
@@ -901,8 +962,6 @@ export async function serviceDetail(
     operations,
     readings,
     adjustments,
-    months,
-    history,
     sync: one.sync,
     coveredProducts,
     assets,

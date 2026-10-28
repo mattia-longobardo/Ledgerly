@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { and, asc, eq, gte, inArray, max, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, max, or, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
   type CivilDate,
@@ -591,6 +591,28 @@ export async function replacePortfolioPoints(
     );
   if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
   return { written: rows.length };
+}
+
+/**
+ * Moves an account's opening back to `on` when its history turns out to start earlier (PERS-100:
+ * the estimated history of a service), inside the caller's transaction. Never moves it forward.
+ */
+export async function openedNoLaterThan(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  on: CivilDate,
+  tx: Tx,
+): Promise<void> {
+  await tx
+    .update(accounts)
+    .set({ openedOn: on })
+    .where(
+      and(
+        eq(accounts.id, accountId),
+        userScoped(ctx).owns(accounts),
+        or(isNull(accounts.openedOn), gt(accounts.openedOn, on)),
+      ),
+    );
 }
 
 /**

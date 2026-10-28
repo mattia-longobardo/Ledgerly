@@ -1,15 +1,16 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { asNumbers, axisLabels, monthLabels, PALETTE } from "@/modules/accounts/ui/display";
+import { PALETTE } from "@/modules/accounts/ui/display";
 import { investmentsHome, type ServiceSummary } from "@/modules/investments/queries";
+import { InvestmentHistoryCard } from "@/modules/investments/ui/history-card";
 import { requireSession } from "@/platform/auth/session";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";
-import { CompositionBar, MultiLine } from "@/ui/chart";
+import { CompositionBar } from "@/ui/chart";
 import { cn } from "@/ui/cn";
 import { KpiTile } from "@/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
@@ -26,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * own currency and in the display currency, what went in and what it gained, the history, the
  * allocation, and the funds that stay in Funds, read only.
  */
-export default async function InvestmentsPage() {
+export default async function InvestmentsPage({ searchParams }: PageProps<"/investments">) {
   const ctx = await requireSession();
   const t = await getTranslations("investments");
   const view = await investmentsHome(ctx);
@@ -169,46 +170,12 @@ export default async function InvestmentsPage() {
       </div>
 
       <div className="grid items-start gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card className="flex min-w-0 flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
-            <span className="flex gap-3 text-sm text-muted">
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden className="h-0.5 w-4 bg-accent" /> {t("chart.value")}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden className="w-4 border-t border-dashed border-muted" /> {t("chart.invested")}
-              </span>
-            </span>
-          </div>
-          {view.history.value.every((value) => value === null) ? (
-            <p className="text-sm text-muted">{t("chart.empty")}</p>
-          ) : (
-            <MultiLine
-              series={[
-                { values: asNumbers(view.history.value), color: "var(--accent)" },
-                { values: asNumbers(view.history.invested), color: "var(--muted)", dashed: true, step: true },
-              ]}
-              yLabels={axisLabels(
-                [...view.history.value, ...view.history.invested],
-                ctx.numberFormat,
-                4,
-                view.currency,
-              )}
-              xLabels={monthLabels(view.months, ctx.locale)}
-              hover={view.months.map((month, index) => ({
-                label: formatDate(month, "monthYear", ctx.locale),
-                value: display(view.history.value[index]),
-                note: t("chart.hoverInvested", { amount: display(view.history.invested[index]) }),
-              }))}
-              summary={t("chart.summary", {
-                value: display(totals.valueCents),
-                invested: display(totals.investedCents),
-              })}
-              height={180}
-            />
-          )}
-        </Card>
+        <InvestmentHistoryCard
+          ctx={ctx}
+          query={await searchParams}
+          path="/investments"
+          summaryValue={{ value: totals.valueCents, invested: totals.investedCents }}
+        />
 
         <Card className="flex min-w-0 flex-col gap-4">
           <Allocation

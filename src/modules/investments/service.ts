@@ -38,6 +38,7 @@ import {
   PRICE_SCALE,
   PRODUCT_PATTERN,
   positionCents,
+  missingPricesOf,
   QUANTITY_SCALE,
   RATE_SCALE,
   READING_STATUSES,
@@ -294,6 +295,7 @@ export async function loadBook(
           assetId: row.position.assetId,
           product: row.position.product,
           valueCents: row.position.valueCents,
+          quantity: fromNumeric(row.position.quantity, QUANTITY_SCALE),
         })),
       scopes: scopeRows
         .filter((row) => row.scope.readingId === reading.id)
@@ -1349,8 +1351,7 @@ export async function saveReading(
           status: input.status,
           totalCents: input.totalCents,
           cashCents: input.cashCents ?? null,
-          missingPrices:
-            input.missingPrices ?? input.positions.filter((one) => one.valueCents === null).length,
+          missingPrices: input.missingPrices ?? missingPricesOf(input.positions),
         }),
       )
       .returning();
