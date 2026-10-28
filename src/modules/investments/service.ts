@@ -85,9 +85,9 @@ export class InvestmentError extends Error {
   }
 }
 
-type WriteCtx = Pick<Ctx, "userId" | "timeZone">;
+export type WriteCtx = Pick<Ctx, "userId" | "timeZone">;
 
-function translated<T>(write: Promise<T>): Promise<T> {
+export function translated<T>(write: Promise<T>): Promise<T> {
   return write.catch((error: unknown) => {
     if (hasPgError(error, UNIQUE_VIOLATION, "investment_events_transaction_uq")) {
       throw new InvestmentError("already_linked");
@@ -131,7 +131,7 @@ export async function requireInvestmentAccount(
 }
 
 /** Takes the account's row lock: two writes to one account rebuild its points one after the other. */
-async function lockInvestmentAccount(ctx: Pick<Ctx, "userId">, accountId: string, tx: Tx) {
+export async function lockInvestmentAccount(ctx: Pick<Ctx, "userId">, accountId: string, tx: Tx) {
   const [row] = await tx
     .select()
     .from(investmentAccounts)
@@ -324,7 +324,7 @@ export async function ratesFor(book: Book, to: CivilDate): Promise<RateTable> {
  * Rewrites the account's `portfolio` points from `from` on (§1.7), inside the transaction that
  * changed its data: the engine on the book as the transaction now sees it.
  */
-async function rebuild(
+export async function rebuild(
   ctx: WriteCtx,
   investment: InvestmentAccount,
   currency: string,
@@ -338,7 +338,7 @@ async function rebuild(
   await replacePortfolioPoints(ctx, investment.accountId, from, points, tx);
 }
 
-async function currencyOf(ctx: Pick<Ctx, "userId">, accountId: string): Promise<string> {
+export async function currencyOf(ctx: Pick<Ctx, "userId">, accountId: string): Promise<string> {
   const account = await getAccount(ctx, accountId);
   if (!account) throw new InvestmentError("not_found");
   return account.currency;
@@ -676,7 +676,7 @@ export interface LegInput {
   validUntil?: CivilDate | null;
 }
 
-async function insertEvent(
+export async function insertEvent(
   ctx: Pick<Ctx, "userId">,
   tx: Tx,
   investmentAccountId: string,
@@ -732,7 +732,7 @@ async function insertLegs(ctx: Pick<Ctx, "userId">, tx: Tx, eventId: string, leg
 }
 
 /** The period in force at the end of `on` (the book's), or `null` before the first one. */
-function periodOn(book: LoadedBook, on: CivilDate): InvestmentPeriod | null {
+export function periodOn(book: LoadedBook, on: CivilDate): InvestmentPeriod | null {
   let found: InvestmentPeriod | null = null;
   for (const period of book.periodRows) if (period.fromOn <= on) found = period;
   return found;

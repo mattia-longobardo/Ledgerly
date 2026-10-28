@@ -271,7 +271,9 @@
         "accounts": "Conti e saldi",
         "transactions": "Movimenti",
         "leave": "Giorni di ferie",
-        "documents": "Documenti"
+        "documents": "Documenti",
+        "holdings": "Posizioni e valore",
+        "flows": "Trade e movimenti"
       },
       "runStates": {
         "running": "In corso",
@@ -436,6 +438,11 @@
         "optionalHint": "Facoltativo: lascia vuoto per saltarlo.",
         "disconnectDescription": "I documenti già importati restano. Ledgerly smette di leggere Paperless.",
         "typesMissing": "Paperless non ha un tipo di documento con uno di quei nomi. Controlla come è scritto in Paperless."
+      },
+      "investments": {
+        "title": "Connessioni di investimento",
+        "open": "Apri {name}",
+        "description": "Chiavi, verifiche e disconnessione stanno nella pagina del servizio."
       }
     },
     "categories": {
@@ -3177,7 +3184,7 @@
     },
     "catalog": {
       "title": "Catalogo",
-      "subtitle": "Scegli il servizio da aggiungere. Le connessioni con chiave in sola lettura arrivano nelle prossime fasi; un conto manuale va bene per tutti già oggi.",
+      "subtitle": "Scegli il servizio da aggiungere. eToro si collega con una chiave in sola lettura; un conto manuale va bene per tutti.",
       "sections": {
         "accounts": "Conti",
         "broker": "Online broker",
@@ -3191,7 +3198,8 @@
       "manualName": "Conto manuale",
       "manualDescription": "Directa, Fineco, conto deposito, BTP, fondi: tutto ciò che registri a mano.",
       "plannedDescription": "Non ancora collegabile: nel frattempo usa un conto manuale.",
-      "linked": "Collegato: {names}"
+      "linked": "Collegato: {names}",
+      "connectDescription": "Collegalo con una chiave in sola lettura: Ledgerly legge il valore due volte al giorno e non fa mai trading."
     },
     "manualForm": {
       "title": "Crea conto manuale",
@@ -3262,7 +3270,11 @@
       "funding": "Funding",
       "earn": "Earn",
       "staking": "Staking",
-      "custody": "Custodia"
+      "custody": "Custodia",
+      "trading": "Trading",
+      "cash": "eToro Money",
+      "crypto": "Wallet crypto",
+      "copy": "Copy trading"
     },
     "operations": {
       "title": "Operazioni",
@@ -3445,7 +3457,9 @@
       "deleteTitle": "Eliminare questa operazione?",
       "deleteDescription": "{kind} del {date}, {amount}. Il valore viene ricalcolato da quel giorno; l'operazione resta nelle revisioni.",
       "zeroTitle": "Il conto è stato svuotato?",
-      "zeroDescription": "La lettura del {date} conta come zero da quel giorno."
+      "zeroDescription": "La lettura del {date} conta come zero da quel giorno.",
+      "disconnectTitle": "Scollegare {name}?",
+      "disconnectDescription": "Da oggi il conto diventa manuale con le posizioni dell'ultima lettura, e la chiave viene cancellata da Ledgerly. Revocala anche sul provider."
     },
     "toasts": {
       "serviceCreated": "{name} creato",
@@ -3455,7 +3469,13 @@
       "converted": "Modo cambiato",
       "reconciled": "Posizione riconciliata",
       "zeroConfirmed": "Zero confermato",
-      "urlSaved": "Link salvato"
+      "urlSaved": "Link salvato",
+      "connected": "{name} collegato",
+      "synced": "Sincronizzato",
+      "verified": "La chiave è in sola lettura",
+      "keyReplaced": "Chiave sostituita",
+      "disconnected": "{name} scollegato: ora il conto è manuale",
+      "revoked": "Revoca registrata"
     },
     "errors": {
       "invalid": "Controlla i campi e riprova.",
@@ -3472,7 +3492,96 @@
       "already_linked": "Quel movimento bancario è già collegato.",
       "not_editable": "Solo le tue operazioni si possono modificare.",
       "before_period": "Quella data è prima dell'inizio del servizio.",
-      "managed_locked": "Questo conto è gestito in Investimenti."
+      "managed_locked": "Questo conto è gestito in Investimenti.",
+      "unknown_provider": "Questo provider non si può collegare.",
+      "invalid_credentials": "Controlla la chiave: incolla entrambi i campi, una riga ciascuno.",
+      "not_read_only": "La chiave può fare più che leggere. Crea una chiave con il solo permesso Read e riprova.",
+      "provider_auth": "Il provider ha rifiutato la chiave. Controlla che sia una chiave Real e che non sia stata revocata.",
+      "provider_unavailable": "Il provider non ha risposto. Non è stato salvato niente: riprova più tardi.",
+      "rate_limited": "Il provider ha chiesto di aspettare. Riprova tra qualche minuto.",
+      "unsupported_currency": "Il provider non può riportare il conto in questa valuta.",
+      "already_connected": "Questo provider è già collegato.",
+      "not_connected": "Questo servizio non è collegato.",
+      "cooldown": "Aspetta un minuto prima di riprovare.",
+      "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore della connessione.",
+      "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato della connessione."
+    },
+    "connect": {
+      "open": "Collega",
+      "title": "Collega {name}",
+      "description": "Una chiave in sola lettura: Ledgerly legge saldi, posizioni e storico, e controlla i permessi della chiave a ogni sincronizzazione.",
+      "steps": {
+        "etoro": {
+          "1": "Su eToro apri Impostazioni e la pagina delle chiavi API.",
+          "2": "Crea una chiave per l'ambiente Real con il solo permesso Read: lascia spento Write.",
+          "3": "Copia la chiave API pubblica e la chiave utente: eToro mostra la chiave utente una sola volta.",
+          "4": "Incollale qui. Ledgerly controlla che ogni permesso della chiave sia di sola lettura prima di salvare qualcosa."
+        }
+      },
+      "readOnlyNote": "Una chiave con un permesso che non è di lettura viene rifiutata, ora e a ogni sincronizzazione successiva. eToro non ha una IP whitelist per queste chiavi.",
+      "fields": {
+        "api_key": "Chiave API pubblica",
+        "user_key": "Chiave utente",
+        "secret": "Segreto"
+      },
+      "currencyHint": "La valuta in cui eToro riporta il conto.",
+      "existingHint": "Un conto di investimento che nessun altro scrive, o un servizio manuale: dal collegamento in poi il suo valore sono le letture di eToro.",
+      "currencyNotSupported": "valuta non supportata",
+      "submit": "Verifica e collega",
+      "checking": "Verifica della chiave…"
+    },
+    "sync": {
+      "title": "Connessione",
+      "states": {
+        "active": "Attiva",
+        "error": "Errore",
+        "revoked": "Chiave rifiutata"
+      },
+      "lastOk": "Ultima sincronizzazione riuscita",
+      "next": "Prossima sincronizzazione",
+      "manual": "Solo a mano",
+      "key": "Chiave",
+      "keyCheck": "{result}, verificata il {date}",
+      "keySet": "Chiave impostata il",
+      "results": {
+        "read-only": "sola lettura",
+        "write": "può scrivere",
+        "unknown-flag": "permessi sconosciuti",
+        "unverifiable": "non verificabile",
+        "error": "non verificata (il provider non ha risposto)"
+      },
+      "lastError": "Ultimo errore: {error}",
+      "rotate": "La chiave ha più di 90 giorni: sostituiscila con una nuova e revoca quella vecchia.",
+      "scheduleNote": "Sincronizzato alle 07:30 e alle 22:30; si conserva una lettura al giorno. Cambia gli orari in Impostazioni › Integrazioni.",
+      "now": "Sincronizza ora",
+      "verify": "Verifica chiave",
+      "replace": "Sostituisci chiave",
+      "replaceTitle": "Sostituisci la chiave di {name}",
+      "replaceDescription": "La nuova chiave passa dagli stessi controlli; se non li supera resta quella vecchia.",
+      "disconnect": "Scollega",
+      "disconnected": "Scollegato: il conto è manuale.",
+      "revokeTitle": "Revoca la vecchia chiave sul provider",
+      "revokeSteps": "Ledgerly non la usa più, ma funziona finché non la cancelli: apri la pagina delle chiavi API del provider, cancellala, poi conferma qui.",
+      "revokeOpen": "Apri la pagina delle chiavi API",
+      "revokedConfirm": "L'ho revocata",
+      "coverage": "Cosa copre lo storico",
+      "streams": {
+        "trades": "Trade",
+        "deposits": "Depositi e prelievi",
+        "balance_history": "Valore giornaliero"
+      },
+      "coverageStatus": {
+        "complete": "completo",
+        "partial": "parziale",
+        "gap": "non disponibile"
+      },
+      "reasons": {
+        "api_limit_12m": "l'API conserva 12 mesi",
+        "before_first_movement": "prima del primo movimento di eToro Money"
+      },
+      "reliableFrom": "attendibile dal {date}",
+      "notReliable": "storico incompleto",
+      "etoroBrand": "Dati di eToro, letti con la tua chiave."
     }
   },
   "payroll": {

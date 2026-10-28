@@ -3,7 +3,7 @@ import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { MANUAL_PROVIDER } from "@/modules/investments/catalog";
 import { catalogView } from "@/modules/investments/queries";
-import { CreateManualServiceButton } from "@/modules/investments/ui/dialogs";
+import { ConnectProviderButton, CreateManualServiceButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
@@ -15,8 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * The catalog (docs/design/investments.md §4.2): Accounts, Online brokers, Crypto. Phase 2 makes only
- * the manual account available; the providers to connect are listed as coming soon.
+ * The catalog (docs/design/investments.md §4.2): Accounts, Online brokers, Crypto. The manual account
+ * and eToro (phase 3) are available; the other providers are listed as coming soon.
  */
 export default async function InvestmentsCatalogPage() {
   const ctx = await requireSession();
@@ -40,6 +40,11 @@ export default async function InvestmentsCatalogPage() {
               .filter((provider) => provider.category === section)
               .map((provider) => {
                 const manual = provider.id === MANUAL_PROVIDER;
+                const connectable =
+                  !manual &&
+                  provider.connect === "apikey" &&
+                  provider.status === "available" &&
+                  provider.connected.length === 0;
                 const status = manual
                   ? "available"
                   : provider.connected.length > 0
@@ -59,7 +64,11 @@ export default async function InvestmentsCatalogPage() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted">
-                        {manual ? t("catalog.manualDescription") : t("catalog.plannedDescription")}
+                        {manual
+                          ? t("catalog.manualDescription")
+                          : provider.status === "available"
+                            ? t("catalog.connectDescription")
+                            : t("catalog.plannedDescription")}
                       </p>
                       {provider.connected.length > 0 && (
                         <p className="truncate text-sm">
@@ -71,6 +80,21 @@ export default async function InvestmentsCatalogPage() {
                       <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                         {manual && (
                           <CreateManualServiceButton
+                            existing={view.existing}
+                            numberFormat={ctx.numberFormat}
+                          />
+                        )}
+                        {connectable && (
+                          <ConnectProviderButton
+                            provider={{
+                              id: provider.id,
+                              name: provider.name,
+                              credentialFields: provider.credentialFields,
+                              currencies: provider.currencies,
+                              defaultCurrency: provider.defaultCurrency,
+                              url: provider.url,
+                              revokeUrl: provider.revokeUrl,
+                            }}
                             existing={view.existing}
                             numberFormat={ctx.numberFormat}
                           />

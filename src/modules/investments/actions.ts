@@ -26,11 +26,22 @@ import {
   updateOperation,
   updateServiceUrl,
 } from "./service";
+import {
+  type ConnectTarget,
+  confirmKeyRevoked,
+  connectInvestmentProvider,
+  disconnectProvider,
+  replaceKey,
+  SyncError,
+  syncNow,
+  verifyKey,
+} from "./sync";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof InvestmentError) return { ok: false, error: error.code };
+  if (error instanceof SyncError) return { ok: false, error: error.code };
   if (error instanceof AccountError) return { ok: false, error: error.code };
   if (error instanceof z.ZodError || error instanceof RangeError) return { ok: false, error: "invalid" };
   throw error;
@@ -305,6 +316,85 @@ export async function confirmZeroAction(accountId: string, readingId: string): P
   const ctx = await requireSession();
   try {
     await confirmZeroReading(ctx, readingId);
+    revalidate(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+// ——— Connected services (docs/design/investments.md §4.2, §4.3, §5) ——————————————————————————
+// The key fields are write only: they arrive here, go to `connectInvestmentProvider` or
+// `replaceKey`, and are never sent back nor named in a result.
+
+export async function connectProviderAction(
+  provider: string,
+  credentials: Record<string, string>,
+  target: ConnectTarget,
+): Promise<{ ok: true; accountId: string } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  try {
+    const { accountId } = await connectInvestmentProvider(ctx, provider, credentials, target);
+    revalidate(accountId);
+    revalidatePath("/settings/integrations");
+    return { ok: true, accountId };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function syncNowAction(accountId: string): Promise<ActionResult & { outcome?: string }> {
+  const ctx = await requireSession();
+  try {
+    const outcome = await syncNow(ctx, accountId);
+    revalidate(accountId);
+    return outcome === "answered" ? { ok: true, outcome } : { ok: false, error: `sync_${outcome}` };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function verifyKeyAction(accountId: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    const result = await verifyKey(ctx, accountId);
+    revalidate(accountId);
+    return result === "read-only" ? { ok: true } : { ok: false, error: "not_read_only" };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function replaceKeyAction(
+  accountId: string,
+  credentials: Record<string, string>,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await replaceKey(ctx, accountId, credentials);
+    revalidate(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function disconnectProviderAction(accountId: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await disconnectProvider(ctx, accountId);
+    revalidate(accountId);
+    revalidatePath("/settings/integrations");
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function confirmKeyRevokedAction(accountId: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await confirmKeyRevoked(ctx, accountId);
     revalidate(accountId);
     return { ok: true };
   } catch (error) {

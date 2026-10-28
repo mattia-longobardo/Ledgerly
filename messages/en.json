@@ -271,7 +271,9 @@
         "accounts": "Accounts and balances",
         "transactions": "Transactions",
         "leave": "Leave days",
-        "documents": "Documents"
+        "documents": "Documents",
+        "holdings": "Holdings and value",
+        "flows": "Trades and movements"
       },
       "runStates": {
         "running": "Running",
@@ -436,6 +438,11 @@
         "optionalHint": "Optional: leave empty to skip.",
         "disconnectDescription": "The documents already imported stay. Ledgerly stops reading Paperless.",
         "typesMissing": "Paperless has no document type with one of those names. Check the spelling in Paperless."
+      },
+      "investments": {
+        "title": "Investment connections",
+        "open": "Open {name}",
+        "description": "Keys, checks and disconnection live on the service's page."
       }
     },
     "categories": {
@@ -3177,7 +3184,7 @@
     },
     "catalog": {
       "title": "Catalog",
-      "subtitle": "Pick the service to add. Connections with a read-only key arrive in the next phases; a manual account works for any of them today.",
+      "subtitle": "Pick the service to add. eToro connects with a read-only key; a manual account works for any of them.",
       "sections": {
         "accounts": "Accounts",
         "broker": "Online brokers",
@@ -3191,7 +3198,8 @@
       "manualName": "Manual account",
       "manualDescription": "Directa, Fineco, a deposit account, BTPs, funds: anything you record by hand.",
       "plannedDescription": "Not connectable yet: use a manual account meanwhile.",
-      "linked": "Linked: {names}"
+      "linked": "Linked: {names}",
+      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades."
     },
     "manualForm": {
       "title": "Create manual account",
@@ -3262,7 +3270,11 @@
       "funding": "Funding",
       "earn": "Earn",
       "staking": "Staking",
-      "custody": "Custody"
+      "custody": "Custody",
+      "trading": "Trading",
+      "cash": "eToro Money",
+      "crypto": "Crypto wallet",
+      "copy": "Copy trading"
     },
     "operations": {
       "title": "Operations",
@@ -3445,7 +3457,9 @@
       "deleteTitle": "Delete this operation?",
       "deleteDescription": "{kind} of {date}, {amount}. The value is rewritten from that day; the operation stays in the revisions.",
       "zeroTitle": "Was the account emptied?",
-      "zeroDescription": "The reading of {date} counts as zero from that day."
+      "zeroDescription": "The reading of {date} counts as zero from that day.",
+      "disconnectTitle": "Disconnect {name}?",
+      "disconnectDescription": "The account becomes manual today with the positions of the last reading, and the key is deleted from Ledgerly. Revoke it on the provider too."
     },
     "toasts": {
       "serviceCreated": "{name} created",
@@ -3455,7 +3469,13 @@
       "converted": "Mode changed",
       "reconciled": "Position reconciled",
       "zeroConfirmed": "Zero confirmed",
-      "urlSaved": "Link saved"
+      "urlSaved": "Link saved",
+      "connected": "{name} connected",
+      "synced": "Synced",
+      "verified": "The key only reads",
+      "keyReplaced": "Key replaced",
+      "disconnected": "{name} disconnected: the account is manual now",
+      "revoked": "Revocation noted"
     },
     "errors": {
       "invalid": "Check the fields and try again.",
@@ -3472,7 +3492,96 @@
       "already_linked": "That bank movement is already linked.",
       "not_editable": "Only your own operations can be changed.",
       "before_period": "That date is before the service started.",
-      "managed_locked": "This account is managed in Investments."
+      "managed_locked": "This account is managed in Investments.",
+      "unknown_provider": "That provider cannot be connected.",
+      "invalid_credentials": "Check the key: paste both fields, one line each.",
+      "not_read_only": "The key can do more than read. Create a key with Read only and try again.",
+      "provider_auth": "The provider refused the key. Check that it is a Real key and that it was not revoked.",
+      "provider_unavailable": "The provider did not answer. Nothing was saved: try again later.",
+      "rate_limited": "The provider asked to wait. Try again in a few minutes.",
+      "unsupported_currency": "The provider cannot report in that currency.",
+      "already_connected": "This provider is already connected.",
+      "not_connected": "This service is not connected.",
+      "cooldown": "Wait a minute before trying again.",
+      "sync_failed": "The sync failed: see the connection's last error.",
+      "sync_refused": "The sync was refused: see the connection's state."
+    },
+    "connect": {
+      "open": "Connect",
+      "title": "Connect {name}",
+      "description": "A read-only key: Ledgerly reads balances, positions and history, and checks the key's permissions on every sync.",
+      "steps": {
+        "etoro": {
+          "1": "On eToro, open Settings and its API keys page.",
+          "2": "Create a key for the Real environment with the Read permission only: leave Write off.",
+          "3": "Copy the public API key and the user key: eToro shows the user key once.",
+          "4": "Paste both here. Ledgerly checks that every permission of the key only reads before it saves anything."
+        }
+      },
+      "readOnlyNote": "A key with any permission that is not read is refused, now and on every later sync. eToro has no IP whitelist for these keys.",
+      "fields": {
+        "api_key": "Public API key",
+        "user_key": "User key",
+        "secret": "Secret"
+      },
+      "currencyHint": "The currency eToro reports the account in.",
+      "existingHint": "An investment account no one else writes, or a manual service: from the connection on, eToro's readings are its value.",
+      "currencyNotSupported": "currency not supported",
+      "submit": "Verify and connect",
+      "checking": "Checking the key…"
+    },
+    "sync": {
+      "title": "Connection",
+      "states": {
+        "active": "Active",
+        "error": "Error",
+        "revoked": "Key refused"
+      },
+      "lastOk": "Last good sync",
+      "next": "Next sync",
+      "manual": "Only by hand",
+      "key": "Key",
+      "keyCheck": "{result}, checked {date}",
+      "keySet": "Key set on",
+      "results": {
+        "read-only": "read only",
+        "write": "can write",
+        "unknown-flag": "unknown permissions",
+        "unverifiable": "not verifiable",
+        "error": "not checked (provider did not answer)"
+      },
+      "lastError": "Last error: {error}",
+      "rotate": "The key is more than 90 days old: replace it with a new one and revoke the old one.",
+      "scheduleNote": "Synced at 07:30 and 22:30; one reading a day is kept. Change the times in Settings › Integrations.",
+      "now": "Sync now",
+      "verify": "Verify key",
+      "replace": "Replace key",
+      "replaceTitle": "Replace the {name} key",
+      "replaceDescription": "The new key goes through the same checks; if they fail, the old key stays.",
+      "disconnect": "Disconnect",
+      "disconnected": "Disconnected: the account is manual.",
+      "revokeTitle": "Revoke the old key on the provider",
+      "revokeSteps": "Ledgerly no longer uses it, but it still works until you delete it: open the provider's API key page, delete it, then confirm here.",
+      "revokeOpen": "Open the API keys page",
+      "revokedConfirm": "I revoked it",
+      "coverage": "What the history covers",
+      "streams": {
+        "trades": "Trades",
+        "deposits": "Deposits and withdrawals",
+        "balance_history": "Daily value"
+      },
+      "coverageStatus": {
+        "complete": "complete",
+        "partial": "partial",
+        "gap": "not available"
+      },
+      "reasons": {
+        "api_limit_12m": "the API keeps 12 months",
+        "before_first_movement": "before the first eToro Money movement"
+      },
+      "reliableFrom": "reliable from {date}",
+      "notReliable": "history incomplete",
+      "etoroBrand": "Data from eToro, read with your key."
     }
   },
   "payroll": {

@@ -10,15 +10,21 @@ export const CONNECTION_STATES = ["active", "error", "revoked"] as const;
  * Every kind of pass any provider can make. A provider makes only its own (`KINDS_OF`): this list
  * is the column's vocabulary, not a to-do list anybody works through.
  */
-export const SYNC_KINDS = ["accounts", "transactions", "leave", "documents"] as const;
+export const SYNC_KINDS = ["accounts", "transactions", "leave", "documents", "holdings", "flows"] as const;
 export const SYNC_STATES = ["running", "success", "failed", "skipped"] as const;
-/** `category_group` is a Wallet category group, filed as the local parent category (F2.5). */
+/**
+ * `category_group` is a Wallet category group, filed as the local parent category (F2.5);
+ * `investment_event` and `investment_holding` are the provider ids of Investments (docs/design/
+ * investments.md §1.2): the link sits on the event, never on one of its legs (A6).
+ */
 export const ENTITY_TYPES = [
   "account",
   "transaction",
   "category",
   "category_group",
   "interest_entry",
+  "investment_event",
+  "investment_holding",
 ] as const;
 
 export type ConnectionState = (typeof CONNECTION_STATES)[number];
@@ -33,8 +39,11 @@ export const TREK_PROVIDER = "trek";
 /** Paperless-ngx, read by Ledgerly (docs/auth-design.md D5): payslips and Cometa documents. */
 export const PAPERLESS_PROVIDER = "paperless";
 
+/** eToro, the first online broker of Investments (docs/design/investments.md §3.3). */
+export const ETORO_PROVIDER = "etoro";
+
 /** The providers a connection may be created for: one entry per provider the app can speak to. */
-export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER, PAPERLESS_PROVIDER] as const;
+export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER, PAPERLESS_PROVIDER, ETORO_PROVIDER] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
 export function isKnownProvider(provider: string): provider is Provider {
@@ -50,6 +59,8 @@ export const KINDS_OF = {
   [WALLET_PROVIDER]: ["accounts", "transactions"],
   [TREK_PROVIDER]: ["leave"],
   [PAPERLESS_PROVIDER]: ["documents"],
+  // Holdings and flows have outcomes of their own (A8): a failed history never stops the value.
+  [ETORO_PROVIDER]: ["holdings", "flows"],
 } as const satisfies Record<Provider, readonly SyncKind[]>;
 
 /**
