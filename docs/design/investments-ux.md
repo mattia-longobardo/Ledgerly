@@ -1,7 +1,8 @@
 # Investments · redesign UX/UI
 
 PERS-112 (28/10/2026), issue madre PERS-79. **Solo design**: nessun codice dell'app, nessuna migrazione e
-nessun deploy prima dell'approvazione di Mattia.
+nessun deploy prima dell'approvazione di Mattia. **Approvato da Mattia il 29/10/2026** con le 5
+raccomandazioni di §9.
 
 Input:
 
@@ -172,7 +173,7 @@ Regole:
   dato stimato (P9, regola Carbon). Il link apre il tab Collegamento del servizio interessato. Se gli
   avvisi sono più di uno, apre un `Popover` con la lista.
 - **Fondi** (H9): la riga sotto l'hero dice quanto vale la sezione Funds e porta lì. Il totale di
-  Investments resta "solo servizi"; l'etichetta lo dice. Decisione per Mattia (§9, scelta 4).
+  Investments resta "solo servizi"; l'etichetta lo dice (§9, decisione 4).
 - **Grafico** (H5, P5): vista P&L = barre del P&L di ogni intervallo impilate per servizio, sopra e
   sotto lo zero, e la linea del P&L cumulato che parte da 0 a inizio periodo. Vista Valore =
   `StackedArea` per servizio (come Overview), con il valore a fine intervallo. Il tooltip dà, per
@@ -361,7 +362,7 @@ il portafoglio, come oggi.
 
 ### 4.3 Rendimento %
 
-**Modified Dietz** sul periodo (decisione per Mattia, §9 scelta 2):
+**Modified Dietz** sul periodo (§9, decisione 2):
 
 ```text
 Capitale medio = V(s⁻) + Σ flusso_i × (giorni da flusso_i a e) / (giorni del periodo)
@@ -378,7 +379,7 @@ Rendimento     = P&L(s, e) / Capitale medio
 ### 4.4 Costo medio e realizzato
 
 - **Costo medio ponderato**, come `rules.ts` oggi (`:364-413`): un acquisto aumenta quantità e costo;
-  una vendita toglie la quantità al costo medio corrente. Alternativa FIFO: §9 scelta 3.
+  una vendita toglie la quantità al costo medio corrente. FIFO scartato: §9 decisione 3.
 - Oggi il costo uscito è scartato (`rules.ts:390, 408`). Il calcolo nuovo lo tiene: la funzione pura
   che ripercorre gli eventi restituisce anche, per ogni `sell` / `close`, il costo uscito e il
   realizzato. Nessuna migrazione: si ricalcola dagli eventi, come il costo medio di oggi.
@@ -513,11 +514,14 @@ Cambio       = P&L_D − P&L locale_D
 - Overview e Accounts tratteggiano i mesi stimati di Binance, come Investments (V2): `MultiLine` e
   `StackedArea` ricevono `estimated` dallo stesso campo.
 - Overview: la tessera "Investments" porta a `/investments` e dice "di cui servizi 3.473 €, fondi
-  7.884 €" se la scelta 4 (§9) resta "solo servizi".
+  7.884 €" (§9, decisione 4).
 
-## 9. Scelte per Mattia
+## 9. Decisioni di Mattia (29/10/2026)
 
-| # | Scelta                                     | Raccomandazione                                                                                                        | Alternativa                                                         |
+Mattia ha approvato la colonna "Raccomandazione" per tutte e 5 le scelte. Le alternative sono
+scartate.
+
+| # | Scelta                                     | Decisione (raccomandazione)                                                                                                      | Alternativa                                                         |
 | - | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | 1 | Forma del controllo del periodo            | `Anno · Tutto · Personalizzato` + stepper ‹ 2026 ›, come Accounts. L'anno in corso è "2026 · da inizio anno": un solo controllo per YTD e 2026 | Chip `YTD · 2025 · 2024 · … · Tutto · Personalizzato` (Ghostfolio): più diretto, ma la riga cresce ogni anno e su mobile va a capo |
 | 2 | Rendimento %                               | Modified Dietz sul periodo, XIRR solo nel tooltip per periodi ≥ 1 anno                                                 | Rendimento semplice (P&L / (valore iniziale + versamenti)): più facile, falsato dai versamenti a metà periodo |
@@ -550,7 +554,7 @@ Stima: U1 ~1 giorno, U2 ~1 giorno, U3 ~1,5 giorni, U4 ~1 giorno, U5 ~1 giorno.
 | H5, S13, A2                    | Grafico P&L \| Valore per servizio, marker, testo alternativo (§3.1, §3.3, §7) |
 | H6, H7                         | Composizione unica, colori di Overview (§0.6, §3.1)               |
 | H8, H12, M2                    | Lista dei servizi con P&L, contributo, quota (§3.1)               |
-| H9                             | Riga dei fondi sotto l'hero, scelta 4 (§9)                        |
+| H9                             | Riga dei fondi sotto l'hero, decisione 4 (§9)                        |
 | H10, S8, A4                    | Un'azione primaria per pagina, menu `⋯` (§3.1, §3.2)             |
 | H11                            | "Rendimento" con XIRR nel tooltip (§4.3, §5.1)                    |
 | S1, V3                         | `reliableFrom` per periodo, striscia e banda (§4.6, §3.3)         |
