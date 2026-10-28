@@ -1,6 +1,7 @@
 // src/modules/investments/catalog.ts — the providers of the section (docs/design/investments.md
-// §1.1, D12): static, in the code. The manual account and eToro (phase 3) are available; the ccxt
-// exchanges (phase 4) and the other brokers are listed as planned, with no "Connect".
+// §1.1, D12): static, in the code. The manual account, eToro (phase 3) and Binance (phase 4) are
+// available; the other exchanges — Kraken too: there is no account to test it on — and the other
+// brokers are listed as planned, with no "Connect".
 import { z } from "zod";
 import type { InvestmentCategory } from "./rules";
 
@@ -45,7 +46,7 @@ const exchange = (id: string, name: string, url: string, revokeUrl: string) =>
     status: "planned",
     url,
     credentialFields: ["api_key", "secret"],
-    readOnlyCheck: id === "binance" ? "api" : "declared",
+    readOnlyCheck: "declared",
     ipWhitelist: "supported",
     ccxtId: id,
     products: ["spot", "funding"],
@@ -114,12 +115,21 @@ export const INVESTMENT_PROVIDERS: readonly InvestmentProvider[] = [
     url: "https://scalable.capital",
     ...manual,
   },
-  exchange(
-    "binance",
-    "Binance",
-    "https://www.binance.com",
-    "https://www.binance.com/en/my/settings/api-management",
-  ),
+  {
+    ...exchange(
+      "binance",
+      "Binance",
+      "https://www.binance.com",
+      "https://www.binance.com/en/my/settings/api-management",
+    ),
+    status: "available",
+    // D18 · B1: `GET /sapi/v1/account/apiRestrictions`, an allowlist checked on every pass.
+    readOnlyCheck: "api",
+    // B4: Spot, Funding and Simple Earn; any other wallet with a value makes a reading partial.
+    products: ["spot", "funding", "earn"],
+    // The pairs the prices go through (§1.8): EUR on the exchange, USD through USDT/USD.
+    currencies: ["EUR", "USD"],
+  },
   exchange("kraken", "Kraken", "https://www.kraken.com", "https://pro.kraken.com/app/settings/api"),
   exchange("coinbase", "Coinbase", "https://www.coinbase.com", "https://www.coinbase.com/settings/api"),
   exchange("bitvavo", "Bitvavo", "https://bitvavo.com", "https://account.bitvavo.com/user/api"),

@@ -8,7 +8,7 @@ import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/displa
 import { type HoldingRow, type OperationRow, serviceDetail } from "@/modules/investments/queries";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { ensureAssetSeed } from "@/modules/investments/service";
-import { connectableProvider } from "@/modules/investments/catalog";
+import { accountTypeOf, connectableProvider } from "@/modules/investments/catalog";
 import {
   AddAssetButton,
   ConfirmRevokedButton,
@@ -79,6 +79,8 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
   const providerProps = (one: NonNullable<typeof provider>) => ({
     id: one.id,
     name: one.name,
+    accountType: accountTypeOf(one.category),
+    ipWhitelist: one.ipWhitelist,
     credentialFields: one.credentialFields,
     currencies: one.currencies,
     defaultCurrency: one.defaultCurrency,
@@ -572,6 +574,13 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
                         {t("readings.products")}:{" "}
                         {reading.products.map((one) => productLabel(one, tp)).join(", ") || NULL_DISPLAY}
                       </span>
+                      {reading.unread.length > 0 && (
+                        <span className="truncate text-warn">
+                          {t("readings.unread", {
+                            products: reading.unread.map((one) => productLabel(one, tp)).join(", "),
+                          })}
+                        </span>
+                      )}
                       {reading.missingPrices > 0 && (
                         <span className="text-warn">
                           {t("readings.missing", { count: reading.missingPrices })}
@@ -705,6 +714,9 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
                 ))}
               </ul>
             </div>
+          )}
+          {summary.investment.provider === "ccxt:binance" && (
+            <p className="text-xs text-muted">{t("sync.binanceBrand")}</p>
           )}
           {summary.investment.provider === "etoro" && (
             <p className="text-xs text-muted">{t("sync.etoroBrand")}</p>

@@ -3317,6 +3317,7 @@
       "status": "Stato",
       "total": "Totale",
       "products": "Perimetro",
+      "unread": "non letti: {products}",
       "missing": "{count, plural, one {# prezzo mancante} other {# prezzi mancanti}}",
       "statuses": {
         "complete": "Completa",
@@ -3516,16 +3517,24 @@
           "2": "Crea una chiave per l'ambiente Real con il solo permesso Read: lascia spento Write.",
           "3": "Copia la chiave API pubblica e la chiave utente: eToro mostra la chiave utente una sola volta.",
           "4": "Incollale qui. Ledgerly controlla che ogni permesso della chiave sia di sola lettura prima di salvare qualcosa."
+        },
+        "ccxt_binance": {
+          "1": "Su Binance apri Account › Gestione API e crea una chiave generata dal sistema.",
+          "2": "Lascia acceso solo “Abilita lettura”: trading, prelievi, trasferimenti, margin, futures e opzioni restano spenti.",
+          "3": "Copia la chiave API e la chiave segreta: Binance mostra la chiave segreta una sola volta.",
+          "4": "Incollale qui. Ledgerly legge da Binance i permessi della chiave e la rifiuta se uno di essi permette più della lettura."
         }
       },
-      "readOnlyNote": "Una chiave con un permesso che non è di lettura viene rifiutata, ora e a ogni sincronizzazione successiva. eToro non ha una IP whitelist per queste chiavi.",
+      "readOnlyNote": "Una chiave con un permesso che non è di lettura viene rifiutata, ora e a ogni sincronizzazione successiva.",
+      "ipSuggested": "Consigliato: su {name} limita la chiave all'IP pubblico dell'homelab. È facoltativo: la chiave funziona anche senza.",
+      "ipUnsupported": "{name} non ha una IP whitelist per queste chiavi.",
       "fields": {
         "api_key": "Chiave API pubblica",
         "user_key": "Chiave utente",
         "secret": "Segreto"
       },
-      "currencyHint": "La valuta in cui eToro riporta il conto.",
-      "existingHint": "Un conto di investimento che nessun altro scrive, o un servizio manuale: dal collegamento in poi il suo valore sono le letture di eToro.",
+      "currencyHint": "La valuta in cui {name} riporta il conto.",
+      "existingHint": "Un conto dello stesso tipo che nessun altro scrive, o un servizio manuale: dal collegamento in poi il suo valore sono le letture di {name}.",
       "currencyNotSupported": "valuta non supportata",
       "submit": "Verifica e collega",
       "checking": "Verifica della chiave…"
@@ -3568,7 +3577,13 @@
       "streams": {
         "trades": "Trade",
         "deposits": "Depositi e prelievi",
-        "balance_history": "Valore giornaliero"
+        "balance_history": "Valore giornaliero",
+        "withdrawals": "Prelievi",
+        "fiat_orders": "Bonifici (SEPA)",
+        "fiat_payments": "Acquisti con carta",
+        "convert": "Convert",
+        "dividends": "Reward e staking",
+        "quantities": "Quantità contro i saldi"
       },
       "coverageStatus": {
         "complete": "completo",
@@ -3577,11 +3592,15 @@
       },
       "reasons": {
         "api_limit_12m": "l'API conserva 12 mesi",
-        "before_first_movement": "prima del primo movimento di eToro Money"
+        "before_first_movement": "prima del primo movimento di eToro Money",
+        "api_limit_24m": "l'API conserva 24 mesi",
+        "negative_opening": "lo storico spiega più del saldo",
+        "quantity_mismatch": "i movimenti non tornano con il saldo: può mancare un mercato"
       },
       "reliableFrom": "attendibile dal {date}",
       "notReliable": "storico incompleto",
-      "etoroBrand": "Dati di eToro, letti con la tua chiave."
+      "etoroBrand": "Dati di eToro, letti con la tua chiave.",
+      "binanceBrand": "Dati di Binance, letti con la tua chiave."
     }
   },
   "payroll": {

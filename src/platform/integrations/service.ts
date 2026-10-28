@@ -616,6 +616,8 @@ export async function saveSyncJob(
     lastRunAt?: Date | null;
   },
   now: Date = new Date(),
+  /** The caller's transaction, so a cursor commits with the data it describes (A7). */
+  tx?: Tx,
 ): Promise<SyncJob> {
   await requireConnection(ctx, connectionId);
   // `undefined` means "leave this alone": dropping those keys is what keeps a cursor write from
@@ -625,7 +627,7 @@ export async function saveSyncJob(
     ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
     updatedAt: now,
   };
-  const [row] = await getDb()
+  const [row] = await (tx ?? getDb())
     .insert(syncJobs)
     .values(userScoped(ctx).stamp({ connectionId, kind, ...changes }))
     .onConflictDoUpdate({ target: [syncJobs.connectionId, syncJobs.kind], set: changes })

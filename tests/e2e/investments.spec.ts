@@ -18,6 +18,9 @@ test("a manual account follows its operations, and Accounts shows the same value
     await expect(page).toHaveURL(/\/investments\/catalog$/);
     // The providers still to connect are listed, with no way to connect them yet.
     await expect(page.getByTestId("catalog-card").filter({ hasText: "eToro" })).toContainText("Available");
+    await expect(page.getByTestId("catalog-card").filter({ hasText: "Binance" })).toContainText("Available");
+    // Kraken stays listed without an adapter: Mattia has no account to test it on (D5 as amended).
+    await expect(page.getByTestId("catalog-card").filter({ hasText: "Kraken" })).toContainText("Coming soon");
     await expect(page.getByTestId("catalog-card").filter({ hasText: "Interactive Brokers" })).toContainText(
       "Coming soon",
     );

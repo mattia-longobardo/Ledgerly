@@ -478,6 +478,8 @@ export interface ServiceDetail {
     status: string;
     totalCents: Cents;
     products: string[];
+    /** Products the reading saw but did not read (B4, E2): its value leaves them out. */
+    unread: string[];
     missingPrices: number;
   }[];
   adjustments: {
@@ -654,7 +656,11 @@ export async function serviceDetail(
     one.book.readingRows.length === 0
       ? []
       : await getDb()
-          .select({ readingId: investmentReadingScopes.readingId, product: investmentReadingScopes.product })
+          .select({
+            readingId: investmentReadingScopes.readingId,
+            product: investmentReadingScopes.product,
+            complete: investmentReadingScopes.complete,
+          })
           .from(investmentReadingScopes)
           .where(
             and(
@@ -675,7 +681,15 @@ export async function serviceDetail(
       totalCents: reading.totalCents,
       missingPrices: reading.missingPrices,
       products: [
-        ...new Set(scopeRows.filter((row) => row.readingId === reading.id).map((row) => row.product)),
+        ...new Set(
+          scopeRows.filter((row) => row.readingId === reading.id && row.complete).map((row) => row.product),
+        ),
+      ].sort(),
+      // A wallet or account type the provider reports but the adapter does not read (B4, E2).
+      unread: [
+        ...new Set(
+          scopeRows.filter((row) => row.readingId === reading.id && !row.complete).map((row) => row.product),
+        ),
       ].sort(),
     }));
   const coveredProducts = readings[0]?.products ?? [];
