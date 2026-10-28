@@ -260,6 +260,13 @@
       "when": 1793142870231,
       "tag": "0036_display_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793145211239,
+      "tag": "0037_investments_v2",
+      "breakpoints": true
     }
   ]
 }

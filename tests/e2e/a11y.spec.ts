@@ -189,10 +189,16 @@ const PAGES: Screen[] = [
     },
   },
   { name: "/investments", session: "layout", open: go("/investments") },
+  { name: "/investments/catalog", session: "layout", open: go("/investments/catalog") },
   {
-    name: "/investments?platform=",
+    name: "/investments/[accountId]",
     session: "layout",
-    open: (page) => follow(page, "/investments", "Binance"),
+    open: (page) => follow(page, "/investments", "Directa"),
+  },
+  {
+    name: "/investments/[accountId] in total mode",
+    session: "layout",
+    open: (page) => follow(page, "/investments", "Fineco Conto Deposito"),
   },
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
@@ -332,13 +338,59 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
-    name: "the new investment movement dialog",
+    name: "the create manual account dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/investments");
+      await page.goto("/investments/catalog");
       await settled(page);
-      await page.getByRole("button", { name: "New movement" }).first().click();
+      await page.getByRole("button", { name: "Create manual account" }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the add asset dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", "Directa");
+      await page.getByRole("button", { name: "Add asset" }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the investment deposit dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", "Directa");
+      await page.getByRole("button", { name: "Deposit", exact: true }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the position close dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", "Directa");
+      await page
+        .getByRole("button", { name: /^Actions for Vanguard/ })
+        .filter({ visible: true })
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: "Close" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the switch to per-asset mode dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", "Fineco Conto Deposito");
+      await page.getByRole("button", { name: "Switch to per-asset mode" }).first().click();
+      await page.getByRole("dialog").getByRole("button", { name: "Add position" }).click();
       await settledDialog(page);
     },
   },

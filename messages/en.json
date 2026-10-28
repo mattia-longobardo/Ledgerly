@@ -1513,7 +1513,8 @@
       "transactions": {
         "title": "Transactions arrive with expenses",
         "description": "This account's transactions will appear here once the expenses module lands."
-      }
+      },
+      "managedInInvestments": "Managed in Investments"
     },
     "entries": {
       "saved": "Balance saved",
@@ -1522,7 +1523,8 @@
         "invalid": "Check the date and the amount, then try again.",
         "futureDate": "A balance cannot be dated in the future.",
         "failed": "Couldn't save the balance. Try again.",
-        "notFound": "That balance is not one you can edit."
+        "notFound": "That balance is not one you can edit.",
+        "managed": "This account is managed in Investments: change its value on the service page."
       },
       "add": {
         "title": "Add balance entry",
@@ -1562,6 +1564,11 @@
         "description": "Only balances you entered by hand can be changed.",
         "cancel": "Cancel",
         "submit": "Save changes"
+      },
+      "managed": {
+        "title": "Managed in Investments",
+        "note": "Investments writes this account's value from its operations and readings. Record them on the service page.",
+        "link": "Open in Investments"
       }
     },
     "settings": {
@@ -1569,7 +1576,8 @@
       "restored": "Account restored",
       "errors": {
         "invalid": "Check the highlighted fields and try again.",
-        "failed": "Couldn't save. Try again."
+        "failed": "Couldn't save. Try again.",
+        "managed": "An account managed in Investments stays an investment or crypto account."
       },
       "general": {
         "title": "General",
@@ -3058,149 +3066,413 @@
   },
   "investments": {
     "title": "Investments",
-    "subtitle": "The money on trading platforms: what you put in, what you took out and what it is worth today. No account balance changes.",
+    "subtitle": "Your brokers, exchanges and investment accounts: what they are worth, what went in and what they gained.",
     "empty": {
-      "title": "No platforms",
-      "description": "Add your first trading platform, then record its deposits and withdrawals."
+      "title": "No services yet",
+      "description": "Add a manual account from the catalog, then record its deposits, assets and valuations."
     },
-    "filter": {
-      "label": "Platforms",
-      "all": "All"
+    "actions": {
+      "addService": "Add service",
+      "addAsset": "Add asset",
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
+      "updateValue": "Update value",
+      "toAssets": "Switch to per-asset mode",
+      "toTotal": "Switch to total mode",
+      "addAdjustment": "Add adjustment",
+      "reconcile": "Reconcile",
+      "value": "Value",
+      "sell": "Sell",
+      "close": "Close",
+      "edit": "Edit",
+      "delete": "Delete",
+      "holdingMenu": "Actions for {name}",
+      "operationMenu": "Actions for the operation of {date}",
+      "confirmZero": "Yes, it was emptied",
+      "openSite": "Open {name} (new tab)",
+      "openSiteShort": "Open site",
+      "accountSettings": "Account settings",
+      "saveUrl": "Save link",
+      "open": "Open",
+      "createManual": "Create manual account",
+      "more": "More actions"
     },
     "kpis": {
-      "value": "Current value",
-      "valueMissing": "{count, plural, one {# platform has no value} other {# platforms have no value}}",
-      "valueEstimated": "estimated from the value of {date}",
-      "valuedOn": "as of {date}",
-      "net": "Net invested",
-      "netNote": "{deposited} in · {withdrawn} out",
+      "value": "Total value",
+      "valuePartial": "Some services have no value yet",
+      "invested": "Net invested",
+      "investedNote": "opening + deposits − withdrawals",
       "gain": "Gain",
-      "gainNote": "value + withdrawn − deposited",
-      "movements": "Movements",
-      "platforms": "{count, plural, one {# platform} other {# platforms}}"
+      "gainNote": "value − net invested",
+      "services": "Services",
+      "servicesNote": "{count, plural, one {# account} other {# accounts}}",
+      "deposited": "Deposited",
+      "withdrawn": "Withdrawn",
+      "value1": "Value",
+      "return": "Simple return"
     },
-    "partial": "No value: {names}. Update the value from the platform's menu to see the total and the gain.",
     "chart": {
-      "title": "History",
+      "title": "Value and net invested",
       "value": "Value",
       "invested": "Net invested",
-      "empty": "No movements yet.",
+      "empty": "Nothing to draw yet.",
       "hoverInvested": "net invested {amount}",
       "summary": "Value today {value}, net invested {invested}."
     },
-    "composition": {
-      "title": "Composition",
-      "unknown": "The composition appears once every platform has a value."
-    },
-    "platforms": {
-      "title": "Platforms",
-      "name": "Platform",
-      "deposited": "Deposited",
-      "withdrawn": "Withdrawn",
-      "net": "Net",
+    "services": {
+      "title": "Services",
+      "name": "Service",
+      "category": "Category",
+      "origin": "Origin",
+      "lastUpdate": "Last update",
       "value": "Value",
-      "gain": "Gain",
-      "return": "Return",
-      "share": "Share",
+      "change30": "30 days",
+      "weight": "Weight",
+      "never": "never",
+      "noValue": "no value yet"
+    },
+    "categories": {
+      "accounts": "Account",
+      "broker": "Online broker",
+      "crypto": "Crypto"
+    },
+    "origins": {
+      "manual": "Manual",
+      "synced": "Synced"
+    },
+    "modes": {
+      "assets": "Per asset",
+      "total": "Total"
+    },
+    "warnings": {
+      "conflict": "{count, plural, one {# to reconcile} other {# to reconcile}}",
+      "pendingZero": "Emptied?",
+      "missingPrices": "{count, plural, one {# price missing} other {# prices missing}}",
+      "openAdjustments": "{count, plural, one {# open adjustment} other {# open adjustments}}"
+    },
+    "allocation": {
+      "classTitle": "By asset class",
+      "serviceTitle": "By service",
+      "empty": "The allocation appears once a service has a value."
+    },
+    "classes": {
+      "stock": "Stocks",
+      "etf": "ETF",
+      "fund": "Funds",
+      "bond": "Bonds",
+      "crypto": "Crypto",
+      "stablecoin": "Stablecoins",
+      "cash": "Cash",
+      "other": "Other",
+      "unclassified": "Not by asset"
+    },
+    "funds": {
+      "title": "Funds",
+      "description": "Pension funds and PACs stay in Funds; they are shown here read only.",
+      "empty": "No funds.",
+      "types": {
+        "pension": "Pension fund",
+        "pac": "PAC"
+      }
+    },
+    "catalog": {
+      "title": "Catalog",
+      "subtitle": "Pick the service to add. Connections with a read-only key arrive in the next phases; a manual account works for any of them today.",
+      "sections": {
+        "accounts": "Accounts",
+        "broker": "Online brokers",
+        "crypto": "Crypto"
+      },
+      "status": {
+        "connected": "Linked",
+        "available": "Available",
+        "planned": "Coming soon"
+      },
+      "manualName": "Manual account",
+      "manualDescription": "Directa, Fineco, a deposit account, BTPs, funds: anything you record by hand.",
+      "plannedDescription": "Not connectable yet: use a manual account meanwhile.",
+      "linked": "Linked: {names}"
+    },
+    "manualForm": {
+      "title": "Create manual account",
+      "description": "A service you keep by hand. Its value goes into your net worth from today.",
+      "destination": "Destination account",
+      "newAccount": "Create a new account",
+      "existingAccount": "Use an existing account",
+      "name": "Name",
+      "namePlaceholder": "e.g. Directa",
+      "category": "Category",
+      "currency": "Account currency",
+      "currencyHint": "Every balance and operation of the account is in this currency.",
+      "mode": "Mode",
+      "modeHint": "Per asset: you record positions and cash. Total: you record only the account's value.",
+      "url": "Link",
+      "urlHint": "Optional: the address of the service's site.",
+      "existing": "Account",
+      "existingHint": "From today Investments writes this account's value; its balance today opens the service.",
+      "noExisting": "No investment or crypto account to use.",
+      "option": "{name} · {balance}",
+      "reasons": {
+        "synced": "fed by a connection",
+        "fund": "a fund's account",
+        "managed": "already a service"
+      },
+      "submit": "Create"
+    },
+    "detail": {
+      "since": "Managed since {date}",
+      "noUrl": "No link to the service",
+      "negativeCash": "Cash is negative: the data may be incomplete.",
+      "noValue": "No value yet: record a valuation.",
+      "conflictNote": "The provider now reads a product you also keep by hand. Until you reconcile, the manual value counts and the total does not jump.",
+      "totalModeNote": "Total mode: you record the account's value, not its positions.",
+      "kpis": {
+        "value": "Value",
+        "invested": "Net invested",
+        "withdrawn": "Withdrawn",
+        "gain": "Gain",
+        "cash": "Cash",
+        "cashNote": "assets {amount}"
+      }
+    },
+    "assets": {
+      "title": "Assets",
+      "empty": "No positions yet.",
+      "asset": "Asset",
+      "class": "Class",
+      "product": "Product",
+      "quantity": "Quantity",
+      "price": "Price",
+      "value": "Value",
+      "weight": "Weight",
+      "gain": "P/L",
+      "fx": "of which exchange {amount}",
+      "origin": "Origin",
+      "conflict": "To reconcile",
+      "staleRate": "saved rate",
+      "byValue": "by value",
       "actions": "Actions",
-      "open": "Open {name} (new tab)",
-      "openShort": "Open {name}",
-      "noUrl": "No link to the platform",
-      "noValue": "no value",
-      "estimated": "estimate"
+      "origins": {
+        "manual": "Manual",
+        "provider": "Provider"
+      }
     },
-    "valuations": {
-      "title": "Recorded values",
-      "empty": "No value yet: use “Update value” from the menu."
+    "products": {
+      "spot": "Spot",
+      "funding": "Funding",
+      "earn": "Earn",
+      "staking": "Staking",
+      "custody": "Custody"
     },
-    "movements": {
-      "title": "Movements",
-      "count": "{count, plural, one {# movement} other {# movements}}",
-      "empty": "No deposits or withdrawals yet.",
+    "operations": {
+      "title": "Operations",
+      "count": "{count, plural, one {# operation} other {# operations}}",
+      "empty": "No operations yet.",
       "date": "Date",
-      "platform": "Platform",
       "kind": "Type",
+      "detail": "Detail",
       "amount": "Amount",
-      "linked": "Account movement",
-      "note": "Note",
-      "notLinked": "not linked"
+      "linked": "Bank movement",
+      "notLinked": "not linked",
+      "revisions": "{count, plural, one {# revision} other {# revisions}}",
+      "conversion": "conversion",
+      "legs": {
+        "main": "main",
+        "base": "base",
+        "quote": "quote",
+        "fee": "fee"
+      },
+      "until": "until {date}"
     },
     "kinds": {
+      "opening_cash": "Opening cash",
+      "opening_position": "Opening position",
       "deposit": "Deposit",
-      "withdrawal": "Withdrawal"
+      "withdrawal": "Withdrawal",
+      "buy": "Buy",
+      "sell": "Sell",
+      "valuation": "Valuation",
+      "close": "Close",
+      "income": "Income",
+      "fee": "Fee",
+      "account_valuation": "Account value",
+      "adjustment": "Adjustment"
+    },
+    "readings": {
+      "title": "Readings",
+      "empty": "No readings yet.",
+      "date": "Date",
+      "status": "Status",
+      "total": "Total",
+      "products": "Scope",
+      "missing": "{count, plural, one {# price missing} other {# prices missing}}",
+      "statuses": {
+        "complete": "Complete",
+        "partial": "Partial",
+        "confirmed_zero": "Empty, confirmed",
+        "pending_zero": "Empty?"
+      },
+      "pendingZero": "The provider reports the account as empty. Was it emptied? Until you confirm, the value holds."
+    },
+    "adjustments": {
+      "title": "Open adjustments",
+      "empty": "No open adjustments.",
+      "from": "From",
+      "until": "Until",
+      "amount": "Change",
+      "reason": "Reason",
+      "openEnded": "no end",
+      "stale": "open for more than 30 days"
+    },
+    "settings": {
+      "title": "Settings",
+      "mode": "Mode: {mode}",
+      "convertNote": "A change of mode is an explicit conversion on today's date: the value does not change.",
+      "url": "Link to the service",
+      "flags": "Net worth, snapshot and the other flags are in the account's settings.",
+      "periods": "Periods",
+      "period": "{mode} · {origin} from {date}"
     },
     "form": {
       "cancel": "Cancel",
-      "save": "Save"
-    },
-    "platformForm": {
-      "newTitle": "New platform",
-      "editTitle": "Edit platform",
-      "description": "A trading platform you keep money on. The link takes you to its site.",
-      "name": "Name",
-      "namePlaceholder": "e.g. eToro",
-      "url": "Link",
-      "urlHint": "Optional: the address of the platform's site or web app."
-    },
-    "movementForm": {
-      "newTitle": "New movement",
-      "editTitle": "Edit movement",
-      "description": "A deposit to the platform or a withdrawal from it. No account balance changes.",
-      "kind": "Movement type",
-      "platform": "Platform",
-      "amount": "Amount",
+      "save": "Save",
       "date": "Date",
-      "note": "Note",
+      "amount": "Amount",
+      "note": "Note"
+    },
+    "assetForm": {
+      "title": "Add asset",
+      "description": "A buy: the position, its price and its fee. The value is rewritten from its date.",
+      "source": "Asset",
+      "existing": "From the catalog",
+      "create": "New asset",
+      "search": "Search by name, ISIN or symbol",
+      "classFilter": "Class",
+      "allClasses": "All classes",
+      "asset": "Asset",
+      "noMatch": "No asset matches.",
+      "class": "Class",
+      "name": "Name",
+      "isin": "ISIN",
+      "symbol": "Symbol",
+      "currency": "Quote currency",
+      "product": "Product",
+      "covered": "The provider already reads: {products}. A manual position there would need reconciling.",
+      "priceMode": "How you record it",
+      "byQuantity": "Quantity and price",
+      "byTotal": "Total amount",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "fee": "Fee",
+      "fxRate": "Exchange rate",
+      "fxHint": "{account} per 1 {asset}. Empty: the ECB rate of the day.",
+      "submit": "Add"
+    },
+    "operationForm": {
+      "titles": {
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "account_valuation": "Update value",
+        "adjustment": "Add adjustment",
+        "valuation": "Edit valuation",
+        "income": "Income"
+      },
+      "editTitle": "Edit {kind}",
+      "descriptions": {
+        "deposit": "Money that went into the account.",
+        "withdrawal": "Money that came out of the account.",
+        "account_valuation": "What the account is worth at the end of that day.",
+        "adjustment": "A dated change of the value with a reason, e.g. a transfer in transit. Give it an end whenever you can.",
+        "valuation": "The new price or value of the position.",
+        "income": "A dividend, an interest or a reward paid in cash."
+      },
+      "value": "Value",
+      "delta": "Change",
+      "deltaHint": "Negative to lower the value.",
+      "validUntil": "Last day",
+      "validUntilHint": "Optional, but an adjustment without an end counts forever.",
+      "reason": "Reason",
       "linkOut": "Linked account expense",
       "linkIn": "Linked account income",
-      "linkHint": "Optional: the matching bank movement. It is a reference only.",
-      "noLink": "No link"
+      "linkHint": "Optional: the matching bank movement. It documents where the money came from and moves no balance.",
+      "noLink": "Not linked"
     },
-    "valuationForm": {
-      "title": "Update value · {name}",
-      "description": "What the platform is worth, as the platform itself shows it, at the end of the day.",
+    "holdingForm": {
+      "valuation": "Value · {name}",
+      "sell": "Sell · {name}",
+      "close": "Close · {name}",
+      "valuationDescription": "The new price from this date, or the new value of a position kept by value.",
+      "sellDescription": "Part of the position sold: the proceeds go to cash.",
+      "closeDescription": "The whole position sold: it is worth zero from this date and the proceeds go to cash.",
+      "byPrice": "Price",
+      "byAmount": "Amount",
+      "how": "Record by",
+      "unitPrice": "Unit price",
       "value": "Value",
-      "date": "Date"
+      "proceeds": "Proceeds",
+      "quantity": "Quantity",
+      "fee": "Fee"
+    },
+    "conversionForm": {
+      "toAssetsTitle": "Switch to per-asset mode",
+      "toTotalTitle": "Switch to total mode",
+      "toAssetsDescription": "Declare the positions the account holds today. The cash that keeps today's value of {value} unchanged opens the new period.",
+      "toTotalDescription": "From today you record only the account's value: today's {value} becomes its first valuation. The positions stay in the history.",
+      "noValue": "The account has no value today: record a valuation first.",
+      "addPosition": "Add position",
+      "removePosition": "Remove position {n}",
+      "position": "Position {n}",
+      "openingCash": "Opening cash: {amount}",
+      "otherCurrency": "Positions in another currency are converted at today's ECB rate when saved.",
+      "negative": "The positions are worth more than the account: the opening cash is negative.",
+      "acceptNegative": "Keep the negative cash",
+      "submit": "Convert"
+    },
+    "reconcileForm": {
+      "title": "Reconcile · {name}",
+      "description": "The provider's reading now covers this asset and product. Decide from which day and how much of it the provider covers.",
+      "choice": "The provider",
+      "covered": "Covers it all",
+      "partial": "Covers part of it",
+      "outside": "It is outside the scope",
+      "effectiveOn": "From",
+      "quantity": "Quantity covered",
+      "product": "Real product of the manual position",
+      "submit": "Reconcile"
     },
     "confirm": {
-      "platformTitle": "Delete {name}?",
-      "platformDescription": "{count, plural, =0 {The platform has no movements. Its recorded values go too.} one {# movement and the recorded values go too. This cannot be undone.} other {# movements and the recorded values go too. This cannot be undone.}}",
-      "movementTitle": "Delete the movement?",
-      "movementDescription": "{kind, select, deposit {Deposit} other {Withdrawal}} of {amount} on {date}. The linked account movement, if any, stays as it is.",
-      "valuationTitle": "Delete the value?",
-      "valuationDescription": "The value of {name} on {date} ({value})."
-    },
-    "actions": {
-      "newMovement": "New movement",
-      "newPlatform": "New platform",
-      "platformMenu": "Actions for {name}",
-      "updateValue": "Update value",
-      "editPlatform": "Edit platform",
-      "deletePlatform": "Delete platform",
-      "movementMenu": "Movement actions",
-      "editMovement": "Edit",
-      "deleteMovement": "Delete movement",
-      "deleteValuation": "Delete"
+      "deleteTitle": "Delete this operation?",
+      "deleteDescription": "{kind} of {date}, {amount}. The value is rewritten from that day; the operation stays in the revisions.",
+      "zeroTitle": "Was the account emptied?",
+      "zeroDescription": "The reading of {date} counts as zero from that day."
     },
     "toasts": {
-      "platformCreated": "{name} added",
-      "platformSaved": "{name} saved",
-      "deposited": "Deposit recorded",
-      "withdrawn": "Withdrawal recorded",
-      "movementSaved": "Movement saved",
-      "valued": "Value of {name} updated",
-      "platformDeleted": "{name} deleted with {count, plural, =0 {no movements} one {# movement} other {# movements}}",
-      "movementDeleted": "Movement deleted",
-      "valuationDeleted": "Value deleted"
+      "serviceCreated": "{name} created",
+      "assetAdded": "Asset added",
+      "saved": "Operation saved",
+      "deleted": "Deleted: {kind} of {date}",
+      "converted": "Mode changed",
+      "reconciled": "Position reconciled",
+      "zeroConfirmed": "Zero confirmed",
+      "urlSaved": "Link saved"
     },
     "errors": {
-      "invalid": "Check the fields: an amount, a date or a link is not valid.",
-      "not_found": "Not found: it may have been deleted.",
-      "duplicate_name": "A platform with this name already exists.",
-      "future_date": "The date cannot be in the future.",
-      "invalid_transaction": "That account movement goes the wrong way.",
-      "already_linked": "That account movement is already linked to another movement.",
-      "failed": "Something went wrong. Try again."
+      "invalid": "Check the fields and try again.",
+      "failed": "Couldn't save. Try again.",
+      "not_found": "That is no longer there.",
+      "future_date": "A date cannot be in the future.",
+      "not_eligible": "That account cannot become a service.",
+      "wrong_mode": "Not possible in this account's mode on that date.",
+      "negative_cash": "The opening cash would be negative: confirm to keep it.",
+      "no_value": "The account has no value today.",
+      "duplicate_asset": "An asset with that ISIN or symbol already exists.",
+      "duplicate_holding": "The account already has that asset in that product.",
+      "invalid_transaction": "That bank movement goes the other way.",
+      "already_linked": "That bank movement is already linked.",
+      "not_editable": "Only your own operations can be changed.",
+      "before_period": "That date is before the service started.",
+      "managed_locked": "This account is managed in Investments."
     }
   },
   "payroll": {

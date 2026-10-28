@@ -1513,7 +1513,8 @@
       "transactions": {
         "title": "I movimenti arrivano con le spese",
         "description": "I movimenti di questo conto compariranno qui quando arriverà il modulo spese."
-      }
+      },
+      "managedInInvestments": "Gestito in Investimenti"
     },
     "entries": {
       "saved": "Saldo salvato",
@@ -1522,7 +1523,8 @@
         "invalid": "Controlla la data e l'importo, poi riprova.",
         "futureDate": "Un saldo non può avere una data futura.",
         "failed": "Non è stato possibile salvare il saldo. Riprova.",
-        "notFound": "Questo saldo non è modificabile."
+        "notFound": "Questo saldo non è modificabile.",
+        "managed": "Questo conto è gestito in Investimenti: cambia il valore nella pagina del servizio."
       },
       "add": {
         "title": "Aggiungi saldo",
@@ -1562,6 +1564,11 @@
         "description": "Si possono modificare solo i saldi inseriti a mano.",
         "cancel": "Annulla",
         "submit": "Salva modifiche"
+      },
+      "managed": {
+        "title": "Gestito in Investimenti",
+        "note": "Investimenti calcola il valore di questo conto dalle sue operazioni e letture. Registrale nella pagina del servizio.",
+        "link": "Apri in Investimenti"
       }
     },
     "settings": {
@@ -1569,7 +1576,8 @@
       "restored": "Conto ripristinato",
       "errors": {
         "invalid": "Controlla i campi segnalati e riprova.",
-        "failed": "Non è stato possibile salvare. Riprova."
+        "failed": "Non è stato possibile salvare. Riprova.",
+        "managed": "Un conto gestito in Investimenti resta un conto di investimento o crypto."
       },
       "general": {
         "title": "Generale",
@@ -3058,149 +3066,413 @@
   },
   "investments": {
     "title": "Investimenti",
-    "subtitle": "Il denaro sulle piattaforme di trading: cosa hai versato, cosa hai ritirato e quanto vale oggi. Nessun saldo dei conti cambia.",
+    "subtitle": "I tuoi broker, exchange e conti di investimento: quanto valgono, quanto hai versato e quanto hanno reso.",
     "empty": {
-      "title": "Nessuna piattaforma",
-      "description": "Aggiungi la prima piattaforma di trading, poi registra i suoi depositi e ritiri."
+      "title": "Nessun servizio",
+      "description": "Aggiungi un conto manuale dal catalogo, poi registra versamenti, asset e valutazioni."
     },
-    "filter": {
-      "label": "Piattaforme",
-      "all": "Tutte"
+    "actions": {
+      "addService": "Aggiungi servizio",
+      "addAsset": "Aggiungi asset",
+      "deposit": "Versamento",
+      "withdrawal": "Prelievo",
+      "updateValue": "Aggiorna valore",
+      "toAssets": "Passa al modo per asset",
+      "toTotal": "Passa al modo totale",
+      "addAdjustment": "Aggiungi rettifica",
+      "reconcile": "Riconcilia",
+      "value": "Valuta",
+      "sell": "Vendi",
+      "close": "Chiudi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "holdingMenu": "Azioni per {name}",
+      "operationMenu": "Azioni per l'operazione del {date}",
+      "confirmZero": "Sì, è stato svuotato",
+      "openSite": "Apri {name} (nuova scheda)",
+      "openSiteShort": "Apri sito",
+      "accountSettings": "Impostazioni del conto",
+      "saveUrl": "Salva link",
+      "open": "Apri",
+      "createManual": "Crea conto manuale",
+      "more": "Altre azioni"
     },
     "kpis": {
-      "value": "Valore attuale",
-      "valueMissing": "{count, plural, one {manca il valore di # piattaforma} other {manca il valore di # piattaforme}}",
-      "valueEstimated": "stima dal valore del {date}",
-      "valuedOn": "al {date}",
-      "net": "Investito netto",
-      "netNote": "{deposited} versati · {withdrawn} ritirati",
+      "value": "Valore totale",
+      "valuePartial": "Alcuni servizi non hanno ancora un valore",
+      "invested": "Versato netto",
+      "investedNote": "apertura + versamenti − prelievi",
       "gain": "Guadagno",
-      "gainNote": "valore + ritirato − versato",
-      "movements": "Movimenti",
-      "platforms": "{count, plural, one {# piattaforma} other {# piattaforme}}"
-    },
-    "partial": "Senza valore: {names}. Aggiorna il valore dal menu della piattaforma per avere il totale e il guadagno.",
-    "chart": {
-      "title": "Storico",
-      "value": "Valore",
-      "invested": "Investito netto",
-      "empty": "Ancora nessun movimento.",
-      "hoverInvested": "investito netto {amount}",
-      "summary": "Valore oggi {value}, investito netto {invested}."
-    },
-    "composition": {
-      "title": "Composizione",
-      "unknown": "La composizione appare quando ogni piattaforma ha un valore."
-    },
-    "platforms": {
-      "title": "Piattaforme",
-      "name": "Piattaforma",
+      "gainNote": "valore − versato netto",
+      "services": "Servizi",
+      "servicesNote": "{count, plural, one {# conto} other {# conti}}",
       "deposited": "Versato",
-      "withdrawn": "Ritirato",
-      "net": "Netto",
+      "withdrawn": "Prelevato",
+      "value1": "Valore",
+      "return": "Rendimento semplice"
+    },
+    "chart": {
+      "title": "Valore e versato netto",
       "value": "Valore",
-      "gain": "Guadagno",
-      "return": "Rendimento",
-      "share": "Quota",
+      "invested": "Versato netto",
+      "empty": "Ancora niente da disegnare.",
+      "hoverInvested": "versato netto {amount}",
+      "summary": "Valore oggi {value}, versato netto {invested}."
+    },
+    "services": {
+      "title": "Servizi",
+      "name": "Servizio",
+      "category": "Categoria",
+      "origin": "Origine",
+      "lastUpdate": "Ultimo aggiornamento",
+      "value": "Valore",
+      "change30": "30 giorni",
+      "weight": "Peso",
+      "never": "mai",
+      "noValue": "ancora senza valore"
+    },
+    "categories": {
+      "accounts": "Conto",
+      "broker": "Online broker",
+      "crypto": "Crypto"
+    },
+    "origins": {
+      "manual": "Manuale",
+      "synced": "Sincronizzato"
+    },
+    "modes": {
+      "assets": "Per asset",
+      "total": "Totale"
+    },
+    "warnings": {
+      "conflict": "{count, plural, one {# da riconciliare} other {# da riconciliare}}",
+      "pendingZero": "Svuotato?",
+      "missingPrices": "{count, plural, one {# prezzo mancante} other {# prezzi mancanti}}",
+      "openAdjustments": "{count, plural, one {# rettifica aperta} other {# rettifiche aperte}}"
+    },
+    "allocation": {
+      "classTitle": "Per classe di asset",
+      "serviceTitle": "Per servizio",
+      "empty": "L'allocazione compare quando un servizio ha un valore."
+    },
+    "classes": {
+      "stock": "Azioni",
+      "etf": "ETF",
+      "fund": "Fondi",
+      "bond": "Obbligazioni",
+      "crypto": "Crypto",
+      "stablecoin": "Stablecoin",
+      "cash": "Liquidità",
+      "other": "Altro",
+      "unclassified": "Non per asset"
+    },
+    "funds": {
+      "title": "Fondi",
+      "description": "Fondi pensione e PAC restano in Fondi; qui sono in sola lettura.",
+      "empty": "Nessun fondo.",
+      "types": {
+        "pension": "Fondo pensione",
+        "pac": "PAC"
+      }
+    },
+    "catalog": {
+      "title": "Catalogo",
+      "subtitle": "Scegli il servizio da aggiungere. Le connessioni con chiave in sola lettura arrivano nelle prossime fasi; un conto manuale va bene per tutti già oggi.",
+      "sections": {
+        "accounts": "Conti",
+        "broker": "Online broker",
+        "crypto": "Crypto"
+      },
+      "status": {
+        "connected": "Collegato",
+        "available": "Disponibile",
+        "planned": "In arrivo"
+      },
+      "manualName": "Conto manuale",
+      "manualDescription": "Directa, Fineco, conto deposito, BTP, fondi: tutto ciò che registri a mano.",
+      "plannedDescription": "Non ancora collegabile: nel frattempo usa un conto manuale.",
+      "linked": "Collegato: {names}"
+    },
+    "manualForm": {
+      "title": "Crea conto manuale",
+      "description": "Un servizio che tieni a mano. Il suo valore entra nel patrimonio da oggi.",
+      "destination": "Conto di destinazione",
+      "newAccount": "Crea un conto nuovo",
+      "existingAccount": "Usa un conto esistente",
+      "name": "Nome",
+      "namePlaceholder": "es. Directa",
+      "category": "Categoria",
+      "currency": "Valuta del conto",
+      "currencyHint": "Ogni saldo e operazione del conto è in questa valuta.",
+      "mode": "Modo",
+      "modeHint": "Per asset: registri posizioni e liquidità. Totale: registri solo il valore del conto.",
+      "url": "Link",
+      "urlHint": "Facoltativo: l'indirizzo del sito del servizio.",
+      "existing": "Conto",
+      "existingHint": "Da oggi Investimenti scrive il valore di questo conto; il saldo di oggi apre il servizio.",
+      "noExisting": "Nessun conto di investimento o crypto da usare.",
+      "option": "{name} · {balance}",
+      "reasons": {
+        "synced": "alimentato da una connessione",
+        "fund": "conto di un fondo",
+        "managed": "già un servizio"
+      },
+      "submit": "Crea"
+    },
+    "detail": {
+      "since": "Gestito dal {date}",
+      "noUrl": "Nessun link al servizio",
+      "negativeCash": "La liquidità è negativa: i dati potrebbero essere incompleti.",
+      "noValue": "Ancora nessun valore: registra una valutazione.",
+      "conflictNote": "Il provider ora legge un prodotto che tieni anche a mano. Finché non riconcili conta il valore manuale e il totale non salta.",
+      "totalModeNote": "Modo totale: registri il valore del conto, non le sue posizioni.",
+      "kpis": {
+        "value": "Valore",
+        "invested": "Versato netto",
+        "withdrawn": "Prelevato",
+        "gain": "Guadagno",
+        "cash": "Liquidità",
+        "cashNote": "asset {amount}"
+      }
+    },
+    "assets": {
+      "title": "Asset",
+      "empty": "Ancora nessuna posizione.",
+      "asset": "Asset",
+      "class": "Classe",
+      "product": "Prodotto",
+      "quantity": "Quantità",
+      "price": "Prezzo",
+      "value": "Valore",
+      "weight": "Peso",
+      "gain": "P/L",
+      "fx": "di cui cambio {amount}",
+      "origin": "Origine",
+      "conflict": "Da riconciliare",
+      "staleRate": "cambio salvato",
+      "byValue": "per valore",
       "actions": "Azioni",
-      "open": "Apri {name} (nuova scheda)",
-      "openShort": "Apri {name}",
-      "noUrl": "Nessun link alla piattaforma",
-      "noValue": "nessun valore",
-      "estimated": "stima"
+      "origins": {
+        "manual": "Manuale",
+        "provider": "Provider"
+      }
     },
-    "valuations": {
-      "title": "Valori registrati",
-      "empty": "Nessun valore ancora: usa «Aggiorna valore» dal menu."
+    "products": {
+      "spot": "Spot",
+      "funding": "Funding",
+      "earn": "Earn",
+      "staking": "Staking",
+      "custody": "Custodia"
     },
-    "movements": {
-      "title": "Movimenti",
-      "count": "{count, plural, one {# movimento} other {# movimenti}}",
-      "empty": "Ancora nessun deposito o ritiro.",
+    "operations": {
+      "title": "Operazioni",
+      "count": "{count, plural, one {# operazione} other {# operazioni}}",
+      "empty": "Ancora nessuna operazione.",
       "date": "Data",
-      "platform": "Piattaforma",
       "kind": "Tipo",
+      "detail": "Dettaglio",
       "amount": "Importo",
-      "linked": "Movimento del conto",
-      "note": "Nota",
-      "notLinked": "non collegato"
+      "linked": "Movimento bancario",
+      "notLinked": "non collegato",
+      "revisions": "{count, plural, one {# revisione} other {# revisioni}}",
+      "conversion": "conversione",
+      "legs": {
+        "main": "principale",
+        "base": "base",
+        "quote": "quote",
+        "fee": "commissione"
+      },
+      "until": "fino al {date}"
     },
     "kinds": {
-      "deposit": "Deposito",
-      "withdrawal": "Ritiro"
+      "opening_cash": "Liquidità iniziale",
+      "opening_position": "Posizione iniziale",
+      "deposit": "Versamento",
+      "withdrawal": "Prelievo",
+      "buy": "Acquisto",
+      "sell": "Vendita",
+      "valuation": "Valutazione",
+      "close": "Chiusura",
+      "income": "Provento",
+      "fee": "Commissione",
+      "account_valuation": "Valore del conto",
+      "adjustment": "Rettifica"
+    },
+    "readings": {
+      "title": "Letture",
+      "empty": "Ancora nessuna lettura.",
+      "date": "Data",
+      "status": "Stato",
+      "total": "Totale",
+      "products": "Perimetro",
+      "missing": "{count, plural, one {# prezzo mancante} other {# prezzi mancanti}}",
+      "statuses": {
+        "complete": "Completa",
+        "partial": "Parziale",
+        "confirmed_zero": "Vuota, confermata",
+        "pending_zero": "Vuota?"
+      },
+      "pendingZero": "Il provider riporta il conto vuoto. È stato svuotato? Finché non confermi, il valore resta."
+    },
+    "adjustments": {
+      "title": "Rettifiche aperte",
+      "empty": "Nessuna rettifica aperta.",
+      "from": "Dal",
+      "until": "Al",
+      "amount": "Delta",
+      "reason": "Motivo",
+      "openEnded": "senza fine",
+      "stale": "aperta da più di 30 giorni"
+    },
+    "settings": {
+      "title": "Impostazioni",
+      "mode": "Modo: {mode}",
+      "convertNote": "Un cambio di modo è una conversione esplicita alla data di oggi: il valore non cambia.",
+      "url": "Link al servizio",
+      "flags": "Patrimonio, snapshot e gli altri flag sono nelle impostazioni del conto.",
+      "periods": "Periodi",
+      "period": "{mode} · {origin} dal {date}"
     },
     "form": {
       "cancel": "Annulla",
-      "save": "Salva"
-    },
-    "platformForm": {
-      "newTitle": "Nuova piattaforma",
-      "editTitle": "Modifica piattaforma",
-      "description": "Una piattaforma di trading su cui tieni denaro. Il link ti porta al suo sito.",
-      "name": "Nome",
-      "namePlaceholder": "es. eToro",
-      "url": "Link",
-      "urlHint": "Facoltativo: l'indirizzo del sito o dell'app web della piattaforma."
-    },
-    "movementForm": {
-      "newTitle": "Nuovo movimento",
-      "editTitle": "Modifica movimento",
-      "description": "Un deposito sulla piattaforma o un ritiro dalla piattaforma. Nessun saldo dei conti cambia.",
-      "kind": "Tipo di movimento",
-      "platform": "Piattaforma",
-      "amount": "Importo",
+      "save": "Salva",
       "date": "Data",
-      "note": "Nota",
-      "linkOut": "Uscita dal conto collegata",
-      "linkIn": "Entrata sul conto collegata",
-      "linkHint": "Facoltativo: il movimento bancario corrispondente. Serve solo come riferimento.",
-      "noLink": "Nessun collegamento"
+      "amount": "Importo",
+      "note": "Nota"
     },
-    "valuationForm": {
-      "title": "Aggiorna valore · {name}",
-      "description": "Quanto vale la piattaforma, come lo leggi sulla piattaforma stessa, a fine giornata.",
+    "assetForm": {
+      "title": "Aggiungi asset",
+      "description": "Un acquisto: la posizione, il prezzo e la commissione. Il valore viene ricalcolato dalla sua data.",
+      "source": "Asset",
+      "existing": "Dal catalogo",
+      "create": "Nuovo asset",
+      "search": "Cerca per nome, ISIN o simbolo",
+      "classFilter": "Classe",
+      "allClasses": "Tutte le classi",
+      "asset": "Asset",
+      "noMatch": "Nessun asset corrisponde.",
+      "class": "Classe",
+      "name": "Nome",
+      "isin": "ISIN",
+      "symbol": "Simbolo",
+      "currency": "Valuta di quotazione",
+      "product": "Prodotto",
+      "covered": "Il provider legge già: {products}. Una posizione manuale lì andrebbe riconciliata.",
+      "priceMode": "Come lo registri",
+      "byQuantity": "Quantità e prezzo",
+      "byTotal": "Importo totale",
+      "quantity": "Quantità",
+      "unitPrice": "Prezzo unitario",
+      "total": "Totale",
+      "fee": "Commissione",
+      "fxRate": "Cambio",
+      "fxHint": "{account} per 1 {asset}. Vuoto: cambio BCE del giorno.",
+      "submit": "Aggiungi"
+    },
+    "operationForm": {
+      "titles": {
+        "deposit": "Versamento",
+        "withdrawal": "Prelievo",
+        "account_valuation": "Aggiorna valore",
+        "adjustment": "Aggiungi rettifica",
+        "valuation": "Modifica valutazione",
+        "income": "Provento"
+      },
+      "editTitle": "Modifica {kind}",
+      "descriptions": {
+        "deposit": "Denaro entrato nel conto.",
+        "withdrawal": "Denaro uscito dal conto.",
+        "account_valuation": "Quanto vale il conto alla fine di quel giorno.",
+        "adjustment": "Una variazione datata del valore con un motivo, es. un bonifico in transito. Dai una data di fine quando puoi.",
+        "valuation": "Il nuovo prezzo o valore della posizione.",
+        "income": "Un dividendo, un interesse o una ricompensa pagata in liquidità."
+      },
       "value": "Valore",
-      "date": "Data"
+      "delta": "Delta",
+      "deltaHint": "Negativo per ridurre il valore.",
+      "validUntil": "Ultimo giorno",
+      "validUntilHint": "Facoltativo, ma una rettifica senza fine conta per sempre.",
+      "reason": "Motivo",
+      "linkOut": "Uscita del conto collegata",
+      "linkIn": "Entrata del conto collegata",
+      "linkHint": "Facoltativo: il movimento bancario corrispondente. Documenta da dove arriva il denaro e non sposta nessun saldo.",
+      "noLink": "Non collegato"
+    },
+    "holdingForm": {
+      "valuation": "Valuta · {name}",
+      "sell": "Vendi · {name}",
+      "close": "Chiudi · {name}",
+      "valuationDescription": "Il nuovo prezzo da questa data, o il nuovo valore di una posizione tenuta per valore.",
+      "sellDescription": "Parte della posizione venduta: il ricavato va in liquidità.",
+      "closeDescription": "Tutta la posizione venduta: vale zero da questa data e il ricavato va in liquidità.",
+      "byPrice": "Prezzo",
+      "byAmount": "Importo",
+      "how": "Registra per",
+      "unitPrice": "Prezzo unitario",
+      "value": "Valore",
+      "proceeds": "Ricavato",
+      "quantity": "Quantità",
+      "fee": "Commissione"
+    },
+    "conversionForm": {
+      "toAssetsTitle": "Passa al modo per asset",
+      "toTotalTitle": "Passa al modo totale",
+      "toAssetsDescription": "Dichiara le posizioni che il conto ha oggi. La liquidità che lascia invariato il valore di oggi di {value} apre il nuovo periodo.",
+      "toTotalDescription": "Da oggi registri solo il valore del conto: i {value} di oggi diventano la sua prima valutazione. Le posizioni restano nello storico.",
+      "noValue": "Il conto oggi non ha un valore: registra prima una valutazione.",
+      "addPosition": "Aggiungi posizione",
+      "removePosition": "Rimuovi posizione {n}",
+      "position": "Posizione {n}",
+      "openingCash": "Liquidità iniziale: {amount}",
+      "otherCurrency": "Le posizioni in un'altra valuta sono convertite al cambio BCE di oggi al salvataggio.",
+      "negative": "Le posizioni valgono più del conto: la liquidità iniziale è negativa.",
+      "acceptNegative": "Mantieni la liquidità negativa",
+      "submit": "Converti"
+    },
+    "reconcileForm": {
+      "title": "Riconcilia · {name}",
+      "description": "La lettura del provider ora copre questo asset e prodotto. Decidi da quale giorno e quanto ne copre il provider.",
+      "choice": "Il provider",
+      "covered": "La copre tutta",
+      "partial": "Ne copre una parte",
+      "outside": "È fuori dal perimetro",
+      "effectiveOn": "Dal",
+      "quantity": "Quantità coperta",
+      "product": "Prodotto reale della posizione manuale",
+      "submit": "Riconcilia"
     },
     "confirm": {
-      "platformTitle": "Eliminare {name}?",
-      "platformDescription": "{count, plural, =0 {La piattaforma non ha movimenti. Verranno eliminati anche i suoi valori registrati.} one {Verranno eliminati anche # movimento e i valori registrati. Non si può annullare.} other {Verranno eliminati anche # movimenti e i valori registrati. Non si può annullare.}}",
-      "movementTitle": "Eliminare il movimento?",
-      "movementDescription": "{kind, select, deposit {Deposito} other {Ritiro}} di {amount} del {date}. Il movimento del conto collegato, se c'è, resta com'è.",
-      "valuationTitle": "Eliminare il valore?",
-      "valuationDescription": "Il valore di {name} del {date} ({value})."
-    },
-    "actions": {
-      "newMovement": "Nuovo movimento",
-      "newPlatform": "Nuova piattaforma",
-      "platformMenu": "Azioni per {name}",
-      "updateValue": "Aggiorna valore",
-      "editPlatform": "Modifica piattaforma",
-      "deletePlatform": "Elimina piattaforma",
-      "movementMenu": "Azioni del movimento",
-      "editMovement": "Modifica",
-      "deleteMovement": "Elimina movimento",
-      "deleteValuation": "Elimina"
+      "deleteTitle": "Eliminare questa operazione?",
+      "deleteDescription": "{kind} del {date}, {amount}. Il valore viene ricalcolato da quel giorno; l'operazione resta nelle revisioni.",
+      "zeroTitle": "Il conto è stato svuotato?",
+      "zeroDescription": "La lettura del {date} conta come zero da quel giorno."
     },
     "toasts": {
-      "platformCreated": "{name} aggiunta",
-      "platformSaved": "{name} salvata",
-      "deposited": "Deposito registrato",
-      "withdrawn": "Ritiro registrato",
-      "movementSaved": "Movimento salvato",
-      "valued": "Valore di {name} aggiornato",
-      "platformDeleted": "{name} eliminata con {count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
-      "movementDeleted": "Movimento eliminato",
-      "valuationDeleted": "Valore eliminato"
+      "serviceCreated": "{name} creato",
+      "assetAdded": "Asset aggiunto",
+      "saved": "Operazione salvata",
+      "deleted": "Eliminata: {kind} del {date}",
+      "converted": "Modo cambiato",
+      "reconciled": "Posizione riconciliata",
+      "zeroConfirmed": "Zero confermato",
+      "urlSaved": "Link salvato"
     },
     "errors": {
-      "invalid": "Controlla i campi: un importo, una data o un link non sono validi.",
-      "not_found": "Non trovato: forse è stato eliminato.",
-      "duplicate_name": "Esiste già una piattaforma con questo nome.",
-      "future_date": "La data non può essere nel futuro.",
-      "invalid_transaction": "Quel movimento del conto non va nella direzione giusta.",
-      "already_linked": "Quel movimento del conto è già collegato a un altro movimento.",
-      "failed": "Qualcosa è andato storto. Riprova."
+      "invalid": "Controlla i campi e riprova.",
+      "failed": "Salvataggio non riuscito. Riprova.",
+      "not_found": "Non esiste più.",
+      "future_date": "Una data non può essere nel futuro.",
+      "not_eligible": "Quel conto non può diventare un servizio.",
+      "wrong_mode": "Non possibile nel modo del conto in quella data.",
+      "negative_cash": "La liquidità iniziale sarebbe negativa: conferma per mantenerla.",
+      "no_value": "Il conto oggi non ha un valore.",
+      "duplicate_asset": "Esiste già un asset con quell'ISIN o simbolo.",
+      "duplicate_holding": "Il conto ha già quell'asset in quel prodotto.",
+      "invalid_transaction": "Quel movimento bancario va nella direzione opposta.",
+      "already_linked": "Quel movimento bancario è già collegato.",
+      "not_editable": "Solo le tue operazioni si possono modificare.",
+      "before_period": "Quella data è prima dell'inizio del servizio.",
+      "managed_locked": "Questo conto è gestito in Investimenti."
     }
   },
   "payroll": {

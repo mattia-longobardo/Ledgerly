@@ -3,6 +3,18 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-10-28 · investment services (PERS-83)
+
+Investments writes the value of each investment service as the account's daily balance
+(`docs/design/investments.md` §1.7). The two legacy trading platforms became two accounts (Binance,
+type `crypto`; eToro, type `investment`).
+
+- `GET /api/v1/accounts/{id}/balances` and the MCP tool `get_account_balances`: an entry's `source`
+  may now also be `portfolio` (the value Investments computed). `balance` keeps its meaning: the
+  account's value in its `currency`.
+- `GET /api/v1/accounts` and `list_accounts` list the new accounts; `GET /api/v1/summary` and
+  `get_summary` count them in `netWorth` like every other account. Today both are worth 0.
+
 ## 2026-10-28 · display currency (PERS-82)
 
 Each account keeps its own currency; totals across accounts are converted to the user's display

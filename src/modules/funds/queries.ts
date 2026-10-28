@@ -7,6 +7,7 @@ import {
   listAccounts,
   listBalanceEntries,
 } from "@/modules/accounts/queries";
+import { managedSince } from "@/modules/investments/managed";
 import type { Ctx } from "@/platform/context";
 import { addDays, addMonths, type CivilDate, type MonthKey, monthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -522,10 +523,27 @@ export async function valuationAccountOptions(
     listAccounts(ctx),
     getDb().select({ id: funds.valuationAccountId }).from(funds).where(userScoped(ctx).owns(funds)),
   ]);
-  const taken = new Set(used.map((row) => row.id));
+  // An account Investments writes has its one writer already (docs/design/investments.md §1.3).
+  const managed = await managedSince(
+    ctx,
+    accounts.map((account) => account.id),
+  );
+  const taken = new Set([...used.map((row) => row.id), ...managed.keys()]);
   return accounts
     .filter((account) => account.origin === "manual" && !taken.has(account.id))
     .map((account) => ({ id: account.id, name: account.name }));
+}
+
+/**
+ * The accounts that are a fund's valuation account: `funds` writes them, so no other module may
+ * take them over (docs/design/investments.md §1.3).
+ */
+export async function valuationAccountIds(ctx: Pick<Ctx, "userId">): Promise<Set<string>> {
+  const rows = await getDb()
+    .select({ id: funds.valuationAccountId })
+    .from(funds)
+    .where(userScoped(ctx).owns(funds));
+  return new Set(rows.map((row) => row.id));
 }
 
 /** Funds by name, for the ⌘K palette (spec §8.2). */
