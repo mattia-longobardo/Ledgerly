@@ -152,3 +152,11 @@ describe("saving an investment key", () => {
     }
   });
 });
+
+describe("the image's dependencies (PERS-87 SEC-04)", () => {
+  it("are installed without their install scripts", () => {
+    const dockerfile = readFileSync(join(process.cwd(), "Dockerfile"), "utf8");
+    const installs = dockerfile.split("\n").filter((line) => /\bnpm (ci|install|i)\b/.test(line));
+    expect(installs).toEqual(["RUN npm ci --ignore-scripts"]);
+  });
+});

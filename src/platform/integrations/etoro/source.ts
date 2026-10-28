@@ -21,7 +21,8 @@ import {
 /**
  * The names of the instruments, best effort: the metadata endpoint was not part of the spike, so
  * a changed shape costs the names (the asset is then named by its id and the reading is partial),
- * never the reading or the history. A refused key or a rate limit still stops the pass.
+ * never the reading or the history. So does a 403 here: only `/me` judges the key (PERS-87
+ * SEC-06). A refused key (401) or a rate limit still stops the pass.
  */
 async function instrumentsOf(client: EtoroClient, ids: readonly number[]) {
   if (ids.length === 0) return [];
@@ -32,6 +33,7 @@ async function instrumentsOf(client: EtoroClient, ids: readonly number[]) {
       error instanceof SourceError &&
       (error.errorClass === "schema_mismatch" ||
         error.errorClass === "bad_response" ||
+        error.errorClass === "permission" ||
         error.errorClass === "unavailable")
     ) {
       return [];

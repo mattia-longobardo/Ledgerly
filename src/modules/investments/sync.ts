@@ -109,7 +109,8 @@ export type SyncErrorCode =
   | "already_connected"
   | "not_connected"
   | "not_eligible"
-  | "cooldown";
+  | "cooldown"
+  | "different_account";
 
 export class SyncError extends Error {
   constructor(readonly code: SyncErrorCode) {
@@ -139,6 +140,11 @@ function sourceOf(provider: string): InvestmentSource {
 
 /** "Sync now" and "Verify" wait this long between two calls of one connection (SEC-09). */
 export const COOLDOWN_MS = 60_000;
+/**
+ * "Connect" and "Replace key" together, per person and provider (PERS-87 SEC-01): each attempt is
+ * three to six calls to the provider, and Binance counts their weight per IP — the homelab's.
+ */
+export const KEY_ATTEMPTS = { max: 5, windowMs: 10 * 60_000 } as const;
 /** Two readings a day are enough for an end-of-day value and far from the rate limits (§3.1). */
 export const PROVIDER_SCHEDULE = {
   rules: [{ kind: "times" as const, times: ["07:30", "22:30"], days: { kind: "every" as const } }],
@@ -155,6 +161,24 @@ const ATTESTATION_TEXT_VERSIONS: Record<string, string> = {
 const READ_PERMISSIONS = new Set(["enableReading", "enableFixReadOnly"]);
 /** Runs work after the answer has gone (Next's `after`): slow first flows never hold a form. */
 export type Defer = (work: () => Promise<unknown>) => void;
+
+/**
+ * The attempts of {@link KEY_ATTEMPTS}, held in memory like the API's rate limit
+ * (`platform/api/rate-limit.ts`): a guard against a loop, not a boundary, and a restart forgets it.
+ */
+const keyAttempts = new Map<string, number[]>();
+
+function takeKeyAttempt(ctx: Pick<Ctx, "userId">, provider: string, now: Date): void {
+  const key = `${ctx.userId}:${provider}`;
+  const from = now.getTime() - KEY_ATTEMPTS.windowMs;
+  const recent = (keyAttempts.get(key) ?? []).filter((at) => at > from);
+  if (recent.length >= KEY_ATTEMPTS.max) {
+    keyAttempts.set(key, recent);
+    throw new SyncError("cooldown");
+  }
+  recent.push(now.getTime());
+  keyAttempts.set(key, recent);
+}
 
 /** A source failure as the code a form shows (§5.1): never the provider's text. */
 function codeOf(error: unknown): SyncErrorCode {
@@ -624,7 +648,7 @@ export async function connectInvestmentProvider(
   now: Date = new Date(),
   /** The first flows after the answer (Binance reads 24 months: minutes, §3.2); inline by default. */
   defer?: Defer,
-): Promise<{ accountId: string }> {
+): Promise<{ accountId: string; ipRestricted: boolean | null }> {
   const provider = connectableProvider(providerId);
   if (!provider) throw new SyncError("unknown_provider");
   const parsedCredentials = credentialSchemaOf(provider).safeParse(credentials);
@@ -634,6 +658,7 @@ export async function connectInvestmentProvider(
   if (!parsedTarget.success) throw new SyncError("not_eligible");
   if (await connectionOf(ctx, provider.id)) throw new SyncError("already_connected");
   const target = await targetOf(ctx, provider, parsedTarget.data);
+  takeKeyAttempt(ctx, provider.id, now);
 
   // The network, outside any transaction: the check, the test reading, the history.
   const source = sourceOf(provider.id);
@@ -795,7 +820,7 @@ export async function connectInvestmentProvider(
       });
     if (defer) defer(firstFlows);
     else await firstFlows();
-    return { accountId };
+    return { accountId, ipRestricted: check.ipRestricted };
   } catch (error) {
     // Nothing half done: without its account a key stays nowhere.
     await deleteConnection(ctx, connection.id).catch(() => undefined);
@@ -826,16 +851,24 @@ async function linkedOf(ctx: Pick<Ctx, "userId">, connection: Connection): Promi
   return { connection, investment, currency: account.currency };
 }
 
-/** 401/403 revoke the connection; 429 waits as long as the provider asked (SEC-09). */
+/**
+ * A 401, or a 403 of the key check itself (eToro `/me`, Binance `apiRestrictions`), revokes the
+ * connection; a 403 of any other call is only a failed reading (PERS-87 SEC-06). A 429 waits as
+ * long as the provider asked (SEC-09).
+ */
 async function noteFailure(
   ctx: WriteCtx,
   linked: Linked,
   error: unknown,
   now: Date,
+  step: "check" | "read",
 ): Promise<"failed" | "refused"> {
   const text = sourceErrorText(linked.connection.provider, error);
   console.error("[investments] pass failed", sourceErrorLog(linked.connection.provider, error));
-  if (error instanceof SourceError && (error.errorClass === "auth" || error.errorClass === "permission")) {
+  if (
+    error instanceof SourceError &&
+    (error.errorClass === "auth" || (error.errorClass === "permission" && step === "check"))
+  ) {
     await markConnection(ctx, linked.connection.id, "revoked", text, now);
     await retireKeys(ctx, getDb(), linked.investment.id, now);
     return "refused";
@@ -1168,7 +1201,7 @@ async function runHoldings(
       now,
     });
     await finishRun(ctx, run.id, { counts: {}, error: sourceErrorText(connection.provider, error) }, now);
-    return noteFailure(ctx, linked, error, now);
+    return noteFailure(ctx, linked, error, now, "check");
   }
   await insertKeyCheck(ctx, getDb(), {
     investmentAccountId: investment.id,
@@ -1204,7 +1237,7 @@ async function runHoldings(
     );
   } catch (error) {
     await finishRun(ctx, run.id, { counts: {}, error: sourceErrorText(connection.provider, error) }, now);
-    return noteFailure(ctx, linked, error, now);
+    return noteFailure(ctx, linked, error, now, "read");
   }
   const todayOn = today(ctx.timeZone, now);
   await getDb().transaction(async (tx) => {
@@ -1343,7 +1376,7 @@ export async function verifyKey(
       check: null,
       now,
     });
-    await noteFailure(ctx, linked, error, now);
+    await noteFailure(ctx, linked, error, now, "check");
     throw new SyncError(codeOf(error));
   }
   await insertKeyCheck(ctx, getDb(), {
@@ -1368,9 +1401,32 @@ export async function verifyKey(
   return check.result;
 }
 
+/** The provider's id of the account (eToro `gcid`, Binance `uid`) the latest reading came from. */
+async function lastExternalAccountOf(ctx: Pick<Ctx, "userId">, investmentAccountId: string) {
+  const [row] = await getDb()
+    .select({ externalAccountId: investmentReadingScopes.externalAccountId })
+    .from(investmentReadingScopes)
+    .innerJoin(investmentReadings, eq(investmentReadings.id, investmentReadingScopes.readingId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadings),
+        userScoped(ctx).owns(investmentReadingScopes),
+        eq(investmentReadings.investmentAccountId, investmentAccountId),
+      ),
+    )
+    .orderBy(
+      desc(investmentReadings.on),
+      desc(investmentReadings.observedAt),
+      asc(investmentReadingScopes.externalAccountId),
+    )
+    .limit(1);
+  return row?.externalAccountId ?? null;
+}
+
 /**
  * "Replace key" (§5.3): through the same checks as a connection; on any failure the old key stays.
- * The old key is retired, and the page asks for it to be revoked at the provider (SEC-07).
+ * The new key must read the same external account as the latest reading (PERS-87 SEC-03). The old
+ * key is retired, and the page asks for it to be revoked at the provider (SEC-07).
  */
 export async function replaceKey(
   ctx: WriteCtx,
@@ -1384,17 +1440,26 @@ export async function replaceKey(
   const parsed = credentialSchemaOf(provider).safeParse(credentials);
   if (!parsed.success) throw new SyncError("invalid_credentials");
   const keys = parsed.data as Record<string, string>;
+  takeKeyAttempt(ctx, provider.id, now);
   const source = sourceOf(provider.id);
   let check: KeyCheck;
+  let snapshot: HoldingsSnapshot;
   try {
     check = await source.verifyReadOnly(keys);
     if (check.result !== "read-only") throw new SyncError("not_read_only");
-    await source.fetchHoldings(keys, linked.currency, now, await todayLookup(ctx, linked.currency, now));
+    snapshot = await source.fetchHoldings(
+      keys,
+      linked.currency,
+      now,
+      await todayLookup(ctx, linked.currency, now),
+    );
   } catch (error) {
     if (!(error instanceof SyncError))
       console.error("[investments] key not replaced", sourceErrorLog(provider.id, error));
     throw new SyncError(codeOf(error));
   }
+  const previous = await lastExternalAccountOf(ctx, linked.investment.id);
+  if (previous !== null && previous !== snapshot.externalAccountId) throw new SyncError("different_account");
   await saveConnection(ctx, { provider: provider.id, credentials: keys });
   await getDb().transaction(async (tx) => {
     await retireKeys(ctx, tx, linked.investment.id, now);

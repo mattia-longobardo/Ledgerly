@@ -30,6 +30,7 @@ import {
   investmentSyncCoverage,
 } from "./schema";
 import { connectInvestmentProvider, runInvestmentPass, setSourcesForTests } from "./sync";
+import { serviceDetail } from "./queries";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/investments/binance");
 const body = (name: string): unknown =>
@@ -227,7 +228,10 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
   });
 
   it("saves the key, the reading with its prices, 24 months of flows and their cursor", async () => {
-    const { accountId } = await connectNew();
+    const { accountId, ipRestricted } = await connectNew();
+    // The dialog warns after connecting, and the service page shows its badge (PERS-87 SEC-02).
+    expect(ipRestricted).toBe(false);
+    expect((await serviceDetail(ctx, accountId))?.sync?.lastCheck?.ipRestricted).toBe(false);
     const [connection] = await listConnections(ctx);
     expect(connection).toMatchObject({ provider: PROVIDER, state: "active" });
     const investment = await investmentOf(accountId);

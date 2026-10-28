@@ -478,6 +478,22 @@ describe("the pass (§3.1)", () => {
     expect((await serviceDetail(ctx, accountId))?.sync?.revokePending).toBe(false);
   });
 
+  it("keeps the connection on a 403 of a reading, and revokes it on a 403 of the key check (PERS-87 SEC-06)", async () => {
+    await connectNew();
+    behaviour.holdings = async () => {
+      throw new SourceError("etoro", "permission", 403);
+    };
+    expect(await pass()).toBe("failed");
+    expect(await connection()).toMatchObject({ state: "active" });
+    expect((await listRuns(ctx, { limit: 2 })).map((run) => run.error)).toContain("etoro · permission · 403");
+
+    behaviour.check = async () => {
+      throw new SourceError("etoro", "permission", 403);
+    };
+    expect(await pass()).toBe("refused");
+    expect(await connection()).toMatchObject({ state: "revoked", lastError: "etoro · permission · 403" });
+  });
+
   it("is refused on a 429 and waits as long as the provider asked (SEC-09)", async () => {
     await connectNew();
     const now = new Date();
@@ -652,6 +668,47 @@ describe("the key on the service page (§4.3, §5.3)", () => {
       ["replace", true],
     ]);
     expect((await serviceDetail(ctx, accountId))?.sync?.revokePending).toBe(true);
+  });
+
+  it("refuses a key of another external account and keeps the old one (PERS-87 SEC-03)", async () => {
+    const { accountId } = await connectNew();
+    const now = new Date();
+    behaviour.holdings = async () => ({ ...snapshot(123_456n, now), externalAccountId: "900002" });
+    const fresh = { api_key: "other-api-key-1234", user_key: "other-user-key-1234" };
+    await expect(replaceKey(ctx, accountId, fresh)).rejects.toMatchObject({ code: "different_account" });
+    const checks = await getDb().select().from(investmentKeyChecks);
+    expect(checks.map((one) => [one.origin, one.retiredAt === null])).toEqual([["connect", true]]);
+    expect((await serviceDetail(ctx, accountId))?.sync?.revokePending).toBe(false);
+
+    behaviour.holdings = async () => snapshot(123_456n, now);
+    await replaceKey(ctx, accountId, fresh);
+  });
+
+  it("allows five attempts of Connect and Replace key in ten minutes, per provider (PERS-87 SEC-01)", async () => {
+    const now = new Date();
+    behaviour.check = async () => {
+      throw new SourceError("etoro", "unavailable", 503);
+    };
+    const target = { kind: "new" as const, name: "eToro", currency: "EUR" };
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await expect(
+        connectInvestmentProvider(ctx, "etoro", KEYS, target, new Date(now.getTime() + attempt * 1_000)),
+      ).rejects.toMatchObject({ code: "provider_unavailable" });
+    }
+    behaviour.check = async () => readOnly();
+    const { accountId } = await connectInvestmentProvider(ctx, "etoro", KEYS, target, now);
+    calls = [];
+    const fresh = { api_key: "new-api-key-1234", user_key: "new-user-key-1234" };
+    await expect(replaceKey(ctx, accountId, fresh, new Date(now.getTime() + 60_000))).rejects.toMatchObject({
+      code: "cooldown",
+    });
+    expect(calls).toEqual([]);
+    // Another person has a budget of their own.
+    const other = contextFor((await createTestUser()).id);
+    await expect(
+      connectInvestmentProvider(other, "etoro", KEYS, target, new Date(now.getTime() + 60_000)),
+    ).resolves.toMatchObject({ accountId: expect.any(String) });
+    await replaceKey(ctx, accountId, fresh, new Date(now.getTime() + 10 * 60_000 + 1));
   });
 
   it("disconnects into a manual account at the same value (§2.5), then forgets the key", async () => {
