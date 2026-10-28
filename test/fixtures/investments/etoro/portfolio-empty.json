@@ -1,0 +1,19 @@
+{
+  "request": "/api/v1/trading/info/portfolio",
+  "status": 200,
+  "body": {
+    "clientPortfolio": {
+      "positions": [],
+      "mirrors": [],
+      "credit": 0,
+      "orders": [],
+      "stockOrders": [],
+      "entryOrders": [],
+      "exitOrders": [],
+      "ordersForOpen": [],
+      "ordersForClose": [],
+      "ordersForCloseMultiple": [],
+      "bonusCredit": 0
+    }
+  }
+}

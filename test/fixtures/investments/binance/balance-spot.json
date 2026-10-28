@@ -1,0 +1,52 @@
+{
+  "method": "fetchBalance()",
+  "body": {
+    "info": {
+      "makerCommission": 10,
+      "takerCommission": 10,
+      "buyerCommission": 0,
+      "sellerCommission": 0,
+      "commissionRates": {
+        "maker": "0.00100000",
+        "taker": "0.00100000",
+        "buyer": "0.00000000",
+        "seller": "0.00000000"
+      },
+      "canTrade": true,
+      "canWithdraw": true,
+      "canDeposit": true,
+      "brokered": false,
+      "requireSelfTradePrevention": false,
+      "preventSor": false,
+      "updateTime": 1784081182365,
+      "accountType": "SPOT",
+      "balances": [
+        {
+          "asset": "BNB",
+          "free": "0.00002114",
+          "locked": "0.00000000"
+        },
+        {
+          "asset": "TRX",
+          "free": "0.00376788",
+          "locked": "0.00000000"
+        }
+      ],
+      "permissions": ["LEVERAGED", "TRD_GRP_002", "TRD_GRP_010", "PRE_MARKET"],
+      "uid": 900032
+    },
+    "free": {
+      "TRX": 0.00376788,
+      "BNB": 2.114e-5
+    },
+    "used": {
+      "TRX": 0,
+      "BNB": 0
+    },
+    "total": {
+      "TRX": 0.00376788,
+      "BNB": 2.114e-5
+    },
+    "note": "solo asset con saldo; ccxt riempie free/used/total con tutte le valute a 0"
+  }
+}

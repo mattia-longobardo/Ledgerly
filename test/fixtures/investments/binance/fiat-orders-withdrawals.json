@@ -1,0 +1,22 @@
+{
+  "method": "sapiGetFiatOrders({ transactionType: 1 })",
+  "body": {
+    "code": "000000",
+    "message": "success",
+    "data": [
+      {
+        "orderNo": "fixture-id-0054",
+        "fiatCurrency": "EUR",
+        "indicatedAmount": "688.977",
+        "amount": "688.607",
+        "totalFee": "0.37",
+        "method": "Bank transfer (SEPA Instant)",
+        "status": "Successful",
+        "createTime": 1779204731000,
+        "updateTime": 1779249374000
+      }
+    ],
+    "total": 0.37,
+    "success": true
+  }
+}

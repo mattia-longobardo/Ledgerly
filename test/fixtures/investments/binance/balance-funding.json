@@ -1,0 +1,25 @@
+{
+  "method": "fetchBalance({ type: 'funding' })",
+  "body": {
+    "info": [
+      {
+        "asset": "ETHW",
+        "free": "0.00002831",
+        "locked": "0",
+        "freeze": "0",
+        "withdrawing": "0",
+        "btcValuation": "0"
+      }
+    ],
+    "free": {
+      "ETHW": 2.831e-5
+    },
+    "used": {
+      "ETHW": 0
+    },
+    "total": {
+      "ETHW": 2.831e-5
+    },
+    "note": "solo asset con saldo; ccxt riempie free/used/total con tutte le valute a 0"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "method": "sapiGetFiatOrders({ transactionType: 0 })",
+  "body": {
+    "code": "000000",
+    "message": "success",
+    "data": [
+      {
+        "orderNo": "fixture-id-0051",
+        "fiatCurrency": "EUR",
+        "indicatedAmount": "0.74",
+        "amount": "0.37",
+        "totalFee": "0.37",
+        "method": "Bank transfer (SEPA Instant)",
+        "status": "Successful",
+        "createTime": 1779204676000,
+        "updateTime": 1779204676000
+      },
+      {
+        "orderNo": "fixture-id-0052",
+        "fiatCurrency": "EUR",
+        "indicatedAmount": "259",
+        "amount": "259",
+        "totalFee": "0",
+        "method": "Bank transfer (SEPA Instant)",
+        "status": "Successful",
+        "createTime": 1767480090000,
+        "updateTime": 1767480090000
+      },
+      {
+        "orderNo": "fixture-id-0053",
+        "fiatCurrency": "EUR",
+        "indicatedAmount": "185",
+        "amount": "185",
+        "totalFee": "0",
+        "method": "Bank transfer (SEPA Instant)",
+        "status": "Successful",
+        "createTime": 1763228633000,
+        "updateTime": 1763228634000
+      }
+    ],
+    "total": 1.11,
+    "success": true
+  }
+}

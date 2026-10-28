@@ -1,0 +1,10 @@
+{
+  "method": "sapiGetConvertTradeFlow (finestra 30 giorni)",
+  "body": {
+    "list": [],
+    "startTime": 1790635884661,
+    "endTime": 1793141484661,
+    "limit": 100,
+    "moreData": false
+  }
+}

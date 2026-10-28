@@ -1,0 +1,10 @@
+{
+  "request": "/api/v1/balances?displayCurrency=XYZ",
+  "status": 400,
+  "body": {
+    "code": "UNSUPPORTED_DISPLAY_CURRENCY",
+    "message": "displayCurrency 'XYZ' is not supported",
+    "requestId": "00000000-0000-4000-8000-000000000010",
+    "details": null
+  }
+}
