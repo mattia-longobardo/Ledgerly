@@ -31,6 +31,8 @@ import {
   createManualServiceAction,
   deleteOperationAction,
   disconnectProviderAction,
+  linkTransferAction,
+  unlinkTransferAction,
   replaceKeyAction,
   syncNowAction,
   verifyKeyAction,
@@ -114,6 +116,7 @@ const KNOWN_ERRORS = [
   "cooldown",
   "sync_failed",
   "sync_refused",
+  "not_a_transfer",
 ];
 
 function useErrors() {
@@ -1814,6 +1817,79 @@ export function ConfirmZeroButton({
         />
       )}
     </>
+  );
+}
+
+// ——— Transfers between the person's services (§2.4) ——————————————————————————————————————————
+
+function useTransferAction() {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>, done: string) =>
+    startTransition(async () => {
+      const result = await action();
+      notify(
+        result.ok
+          ? done
+          : t(`errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed"),
+        result.ok ? "success" : "error",
+      );
+      router.refresh();
+    });
+  return { pending, run, t };
+}
+
+/** "Link as transfer" on a proposal: both legs get one transfer group, nothing else changes. */
+export function LinkTransferButton({
+  accountId,
+  withdrawalId,
+  depositId,
+  label,
+}: {
+  accountId: string;
+  withdrawalId: string;
+  depositId: string;
+  /** What the proposal says, for the button's accessible name. */
+  label: string;
+}) {
+  const { pending, run, t } = useTransferAction();
+  return (
+    <Button
+      size="xs"
+      variant="secondary"
+      disabled={pending}
+      aria-label={`${t("actions.linkTransfer")}: ${label}`}
+      onClick={() =>
+        run(() => linkTransferAction(accountId, withdrawalId, depositId), t("toasts.transferLinked"))
+      }
+    >
+      {t("actions.linkTransfer")}
+    </Button>
+  );
+}
+
+/** "Unlink transfer" on a linked leg: both legs are plain deposits and withdrawals again. */
+export function UnlinkTransferButton({
+  accountId,
+  eventId,
+  label,
+}: {
+  accountId: string;
+  eventId: string;
+  label: string;
+}) {
+  const { pending, run, t } = useTransferAction();
+  return (
+    <Button
+      size="xs"
+      variant="ghost"
+      disabled={pending}
+      aria-label={`${t("actions.unlinkTransfer")}: ${label}`}
+      onClick={() => run(() => unlinkTransferAction(accountId, eventId), t("toasts.transferUnlinked"))}
+    >
+      {t("actions.unlinkTransfer")}
+    </Button>
   );
 }
 

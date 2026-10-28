@@ -148,12 +148,23 @@ export default async function InvestmentsPage() {
               : formatPercent(totals.simpleReturn, ctx.numberFormat, { signed: true })
           }
           deltaTone={toneOfSign(totals.simpleReturn)}
-          note={t("kpis.gainNote")}
+          note={totals.fxEffect ? t("kpis.fxNote") : t("kpis.gainNote")}
         />
         <KpiTile
-          label={t("kpis.services")}
-          value={String(view.services.length)}
-          note={t("kpis.servicesNote", { count: view.services.length })}
+          label={t("kpis.xirr")}
+          value={
+            totals.xirr === null
+              ? NULL_DISPLAY
+              : totals.xirr.status === "ok"
+                ? formatPercent(totals.xirr.rate, ctx.numberFormat, { signed: true })
+                : t("kpis.notComputable")
+          }
+          valueTone={totals.xirr?.status === "ok" ? toneOfSign(totals.xirr.rate) : "fg"}
+          note={
+            totals.gainCents === null && view.services.some((one) => !one.reliable)
+              ? t("sync.notReliable")
+              : t("kpis.xirrNote")
+          }
         />
       </div>
 

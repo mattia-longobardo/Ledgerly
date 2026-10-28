@@ -20,10 +20,12 @@ import {
   createManualService,
   deleteOperation,
   InvestmentError,
+  linkTransfer,
   type ManualServiceInput,
   type OperationInput,
   recordOperation,
   reconcileHolding,
+  unlinkTransfer,
   updateOperation,
   updateServiceUrl,
 } from "./service";
@@ -318,6 +320,35 @@ export async function confirmZeroAction(accountId: string, readingId: string): P
   try {
     await confirmZeroReading(ctx, readingId);
     revalidate(accountId);
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** A withdrawal and a deposit of two services linked as one transfer (§2.4): both pages change. */
+export async function linkTransferAction(
+  accountId: string,
+  withdrawalId: string,
+  depositId: string,
+): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await linkTransfer(ctx, { withdrawalId, depositId });
+    revalidate(accountId);
+    revalidatePath("/investments/[accountId]", "page");
+    return { ok: true };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function unlinkTransferAction(accountId: string, eventId: string): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await unlinkTransfer(ctx, eventId);
+    revalidate(accountId);
+    revalidatePath("/investments/[accountId]", "page");
     return { ok: true };
   } catch (error) {
     return failed(error);

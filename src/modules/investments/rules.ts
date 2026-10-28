@@ -726,29 +726,139 @@ export interface Flows {
   withdrawnCents: Cents;
 }
 
+/** One movement of money in or out of an account (§2.4), in the account's currency; `cents` ≥ 0. */
+export interface FlowEntry {
+  on: CivilDate;
+  kind: "opening" | "deposit" | "withdrawal";
+  cents: Cents;
+  /** The transfer between two of the person's accounts this leg belongs to (A10), if any. */
+  transferGroupId: string | null;
+}
+
 /**
- * The money that went into the account up to `on`: the opening of its first period, plus deposits,
- * minus withdrawals. A later conversion opens a new period at the same value (V before = V after),
- * so it is no flow.
+ * The money that went into the account up to `on`, one entry per movement: the opening of its
+ * first period, the deposits and the withdrawals. A later conversion opens a new period at the
+ * same value (V before = V after), so it is no flow.
  */
-export function flowsOn(book: Book, on: CivilDate): Flows {
+export function flowEntriesOn(book: Book, on: CivilDate): FlowEntry[] {
   const periods = sortedPeriods(book);
-  let openingCents = 0n;
-  let depositedCents = 0n;
-  let withdrawnCents = 0n;
-  for (const event of book.events) {
+  const entries: FlowEntry[] = [];
+  for (const event of [...book.events].sort(compareEvents)) {
     if (event.on > on) continue;
     const firstPeriod = periodIndexOf(periods, event) === 0;
+    const push = (kind: FlowEntry["kind"], cents: Cents) =>
+      entries.push({ on: event.on, kind, cents, transferGroupId: event.transferGroupId });
     for (const op of event.operations) {
-      if (op.kind === "deposit") depositedCents += op.amountCents;
-      else if (op.kind === "withdrawal") withdrawnCents -= op.amountCents;
+      if (op.kind === "deposit") push("deposit", op.amountCents);
+      else if (op.kind === "withdrawal") push("withdrawal", -op.amountCents);
       else if (event.origin === "conversion" && firstPeriod) {
-        if (op.kind === "opening_cash" || op.kind === "account_valuation") openingCents += op.amountCents;
-        else if (op.kind === "opening_position") openingCents += abs(op.amountCents);
+        if (op.kind === "opening_cash" || op.kind === "account_valuation") push("opening", op.amountCents);
+        else if (op.kind === "opening_position") push("opening", abs(op.amountCents));
       }
     }
   }
+  return entries;
+}
+
+/** The entries of {@link flowEntriesOn} summed. */
+export function sumFlows(entries: readonly FlowEntry[]): Flows {
+  let openingCents = 0n;
+  let depositedCents = 0n;
+  let withdrawnCents = 0n;
+  for (const entry of entries) {
+    if (entry.kind === "opening") openingCents += entry.cents;
+    else if (entry.kind === "deposit") depositedCents += entry.cents;
+    else withdrawnCents += entry.cents;
+  }
   return { openingCents, depositedCents, withdrawnCents };
+}
+
+/**
+ * The money that went into the account up to `on`: the opening of its first period, plus deposits,
+ * minus withdrawals. A transfer from another of the person's accounts is a flow for this account
+ * (§2.4): only the portfolio leaves it out.
+ */
+export function flowsOn(book: Book, on: CivilDate): Flows {
+  return sumFlows(flowEntriesOn(book, on));
+}
+
+/**
+ * The flows of {@link flowEntriesOn} as the person sees them for XIRR: money put in is negative,
+ * money taken out positive, and the value at `on` is the last amount taken out.
+ */
+export function investorFlows(
+  entries: readonly FlowEntry[],
+  on: CivilDate,
+  valueCents: Cents,
+): { on: CivilDate; cents: Cents }[] {
+  return [
+    ...entries.map((entry) => ({
+      on: entry.on,
+      cents: entry.kind === "withdrawal" ? entry.cents : -entry.cents,
+    })),
+    { on, cents: valueCents },
+  ];
+}
+
+// ——— Transfers between the person's accounts (§2.4, A10) ————————————————————————————————————
+
+/** How far apart the two legs of a proposed transfer may fall. */
+export const TRANSFER_WINDOW_DAYS = 3;
+
+/** The main leg of a deposit or a withdrawal, as the transfer proposal compares it. */
+export interface TransferLeg {
+  eventId: string;
+  accountId: string;
+  on: CivilDate;
+  kind: "deposit" | "withdrawal";
+  /** The asset moved, or `null` for cash. */
+  assetId: string | null;
+  /** The quantity of the asset, or the cash amount as a fixed-point decimal of {@link PRICE_SCALE}. */
+  amount: bigint;
+  /** The cash currency; `null` for an asset. */
+  currency: string | null;
+  transferGroupId: string | null;
+}
+
+export interface TransferProposal {
+  withdrawal: TransferLeg;
+  deposit: TransferLeg;
+}
+
+function daysApart(a: CivilDate, b: CivilDate): number {
+  return Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000;
+}
+
+/**
+ * The transfers the UI proposes (§2.4): a withdrawal from one account and a deposit into another,
+ * of the same asset and quantity (or the same cash amount and currency), at most
+ * {@link TRANSFER_WINDOW_DAYS} apart, neither already part of a transfer. Each leg is proposed
+ * once, with the closest partner; ties go to the older leg, so the answer is deterministic.
+ */
+export function transferProposals(legs: readonly TransferLeg[]): TransferProposal[] {
+  const free = legs.filter((leg) => leg.transferGroupId === null);
+  const order = (a: TransferLeg, b: TransferLeg) =>
+    a.on !== b.on ? (a.on < b.on ? -1 : 1) : a.eventId < b.eventId ? -1 : a.eventId > b.eventId ? 1 : 0;
+  const withdrawals = free.filter((leg) => leg.kind === "withdrawal").sort(order);
+  const deposits = free.filter((leg) => leg.kind === "deposit").sort(order);
+  const taken = new Set<string>();
+  const proposals: TransferProposal[] = [];
+  for (const withdrawal of withdrawals) {
+    let best: TransferLeg | null = null;
+    for (const deposit of deposits) {
+      if (taken.has(deposit.eventId) || deposit.accountId === withdrawal.accountId) continue;
+      if (deposit.assetId !== withdrawal.assetId || deposit.currency !== withdrawal.currency) continue;
+      if (deposit.amount !== withdrawal.amount) continue;
+      const apart = daysApart(deposit.on, withdrawal.on);
+      if (apart > TRANSFER_WINDOW_DAYS) continue;
+      if (best === null || apart < daysApart(best.on, withdrawal.on)) best = deposit;
+    }
+    if (best) {
+      taken.add(best.eventId);
+      proposals.push({ withdrawal, deposit: best });
+    }
+  }
+  return proposals;
 }
 
 export interface Performance {

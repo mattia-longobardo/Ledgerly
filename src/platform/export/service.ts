@@ -15,7 +15,7 @@ import { getPreferences } from "@/modules/users/service";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
-import { amount, day, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
+import { amount, day, ratio, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
 import { type ZipEntry, zipStream, zipToBytes } from "./zip";
 
 /**
@@ -248,7 +248,19 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     },
     {
       name: "investment-services",
-      columns: ["name", "category", "provider", "mode", "currency", "value"],
+      columns: [
+        "name",
+        "category",
+        "provider",
+        "mode",
+        "currency",
+        "value",
+        "invested",
+        "gain",
+        "simpleReturn",
+        "xirr",
+        "reliableFrom",
+      ],
       rows: investments.map((row) => ({
         name: row.name,
         category: row.category,
@@ -256,6 +268,12 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         mode: row.mode,
         currency: row.currency,
         value: amount(row.valueCents),
+        invested: amount(row.investedCents),
+        gain: amount(row.gainCents),
+        simpleReturn: ratio(row.simpleReturn),
+        // A rate when there is one; "none" or "multiple" when XIRR is not computable (§2.4).
+        xirr: row.xirr === null ? null : row.xirr.status === "ok" ? ratio(row.xirr.rate) : row.xirr.status,
+        reliableFrom: day(row.reliableFrom),
       })),
     },
     {
@@ -270,6 +288,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         "quantity",
         "unitPrice",
         "amount",
+        "transferWith",
         "note",
       ],
       rows: investmentOperations.map((row) => ({
@@ -282,6 +301,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         quantity: row.quantity,
         unitPrice: row.unitPrice,
         amount: amount(row.amountCents),
+        transferWith: row.transferWith,
         note: row.note,
       })),
     },

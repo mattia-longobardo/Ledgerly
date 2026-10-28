@@ -1024,6 +1024,10 @@ async function seedLayout(): Promise<void> {
   });
   await recordOperation(ctx, fineco.accountId, { kind: "deposit", on, amountCents: 500_000n });
   await recordOperation(ctx, fineco.accountId, { kind: "account_valuation", on, amountCents: 512_340n });
+  // A transfer to confirm (§2.4): 1.000 € out of Fineco and into Directa on the same day, so both
+  // service pages show the proposal the screen checks measure.
+  await recordOperation(ctx, fineco.accountId, { kind: "withdrawal", on, amountCents: 100_000n });
+  await recordOperation(ctx, directa.accountId, { kind: "deposit", on, amountCents: 100_000n });
   await seedEtoro(ctx, on);
   await seedBinance(ctx, on);
 

@@ -5,8 +5,10 @@ import {
   computePoints,
   emptyReadingStatus,
   type EventLike,
+  flowEntriesOn,
   flowsOn,
   formatDecimal,
+  investorFlows,
   holdingStates,
   type OperationLike,
   openingCashFor,
@@ -17,6 +19,8 @@ import {
   PRICE_SCALE,
   QUANTITY_SCALE,
   type ReadingLike,
+  type TransferLeg,
+  transferProposals,
   unitPriceOf,
   valueOn,
 } from "./rules";
@@ -709,5 +713,103 @@ describe("§2.5 conversions keep V(T)", () => {
     });
     expect(valueOn(account, "2026-04-01", NO_RATES).valueCents).toBe(eur(2500));
     expect(flowsOn(account, "2026-04-01").openingCents).toBe(eur(2500));
+  });
+});
+
+describe("§2.4 flows, and transfers between the person's accounts (A10)", () => {
+  it("lists every flow with its day and its transfer, and sums to flowsOn", () => {
+    const account = book({
+      events: [
+        event("2026-01-05", [{ kind: "deposit", amountCents: eur(1000) }]),
+        event("2026-02-05", [{ kind: "withdrawal", amountCents: -eur(300) }], { transferGroupId: "t1" }),
+      ],
+    });
+    const entries = flowEntriesOn(account, "2026-12-31");
+    expect(entries).toEqual([
+      { on: "2026-01-05", kind: "deposit", cents: eur(1000), transferGroupId: null },
+      { on: "2026-02-05", kind: "withdrawal", cents: eur(300), transferGroupId: "t1" },
+    ]);
+    // For the account itself a transfer is a flow like any other.
+    expect(flowsOn(account, "2026-12-31")).toEqual({
+      openingCents: 0n,
+      depositedCents: eur(1000),
+      withdrawnCents: eur(300),
+    });
+    expect(investorFlows(entries, "2026-12-31", eur(800))).toEqual([
+      { on: "2026-01-05", cents: -eur(1000) },
+      { on: "2026-02-05", cents: eur(300) },
+      { on: "2026-12-31", cents: eur(800) },
+    ]);
+  });
+
+  const leg = (partial: Partial<TransferLeg> & Pick<TransferLeg, "eventId" | "accountId" | "kind">) => ({
+    on: "2026-03-01",
+    assetId: null,
+    amount: price("1000"),
+    currency: "EUR",
+    transferGroupId: null,
+    ...partial,
+  });
+
+  it("proposes a withdrawal and a deposit of the same amount within 3 days, in two accounts", () => {
+    const out = leg({ eventId: "w1", accountId: "a", kind: "withdrawal" });
+    const into = leg({ eventId: "d1", accountId: "b", kind: "deposit", on: "2026-03-04" });
+    expect(transferProposals([out, into])).toEqual([{ withdrawal: out, deposit: into }]);
+  });
+
+  it("matches an asset by asset and quantity, never by value", () => {
+    const out = leg({
+      eventId: "w1",
+      accountId: "a",
+      kind: "withdrawal",
+      assetId: "btc",
+      amount: qty("0.5"),
+      currency: null,
+    });
+    const same = leg({
+      eventId: "d1",
+      accountId: "b",
+      kind: "deposit",
+      assetId: "btc",
+      amount: qty("0.5"),
+      currency: null,
+    });
+    const other = leg({
+      eventId: "d2",
+      accountId: "b",
+      kind: "deposit",
+      assetId: "eth",
+      amount: qty("0.5"),
+      currency: null,
+    });
+    expect(transferProposals([out, other, same])).toEqual([{ withdrawal: out, deposit: same }]);
+  });
+
+  it("proposes nothing in the same account, past 3 days, for another amount, currency, or a linked leg", () => {
+    const out = leg({ eventId: "w1", accountId: "a", kind: "withdrawal" });
+    expect(transferProposals([out, leg({ eventId: "d1", accountId: "a", kind: "deposit" })])).toEqual([]);
+    expect(
+      transferProposals([out, leg({ eventId: "d2", accountId: "b", kind: "deposit", on: "2026-03-05" })]),
+    ).toEqual([]);
+    expect(
+      transferProposals([out, leg({ eventId: "d3", accountId: "b", kind: "deposit", amount: price("999") })]),
+    ).toEqual([]);
+    expect(
+      transferProposals([out, leg({ eventId: "d4", accountId: "b", kind: "deposit", currency: "USD" })]),
+    ).toEqual([]);
+    expect(
+      transferProposals([out, leg({ eventId: "d5", accountId: "b", kind: "deposit", transferGroupId: "t" })]),
+    ).toEqual([]);
+  });
+
+  it("gives each leg one partner, the closest", () => {
+    const out = leg({ eventId: "w1", accountId: "a", kind: "withdrawal", on: "2026-03-02" });
+    const far = leg({ eventId: "d1", accountId: "b", kind: "deposit", on: "2026-03-05" });
+    const near = leg({ eventId: "d2", accountId: "c", kind: "deposit", on: "2026-03-02" });
+    const second = leg({ eventId: "w2", accountId: "a", kind: "withdrawal", on: "2026-03-04" });
+    expect(transferProposals([far, out, near, second])).toEqual([
+      { withdrawal: out, deposit: near },
+      { withdrawal: second, deposit: far },
+    ]);
   });
 });
