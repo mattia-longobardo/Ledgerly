@@ -247,3 +247,33 @@ describe("verifyReadOnly and fetchHoldings", () => {
     expect(snapshot.externalAccountId).toBe("900032");
   });
 });
+
+describe("fetchDailyRates (PERS-100)", () => {
+  it("prices each coin on every day it has a close, directly or through a stablecoin", async () => {
+    const first = Date.parse("2026-10-26T00:00:00Z");
+    const candles: Record<string, unknown[]> = {
+      "ETH/EUR": [
+        [first, 0, 0, 0, 2000, 0],
+        [first + DAY, 0, 0, 0, 2100, 0],
+      ],
+      "SUI/USDT": [[first + DAY, 0, 0, 0, 2, 0]],
+      "EUR/USDT": [[first + DAY, 0, 0, 0, 1.25, 0]],
+    };
+    const { api, calls } = fakeApi({ dailyCandles: async (symbol: string) => candles[symbol] ?? [] });
+    const rates = await binanceSource(async () => api).fetchDailyRates!(
+      KEYS,
+      ["ETH", "SUI", "EUR", "ETHW"],
+      "EUR",
+      new Date(first),
+      NOW,
+      () => null,
+    );
+    expect(rates).toEqual({
+      ETH: { "2026-10-26": "2000", "2026-10-27": "2100" },
+      ETHW: {},
+      SUI: { "2026-10-27": "1.6" },
+    });
+    // Fiat is the module's to convert; a coin with no market asks for nothing.
+    expect(named(calls, "dailyCandles").map((call) => call[1])).toEqual(["ETH/EUR", "EUR/USDT", "SUI/USDT"]);
+  });
+});

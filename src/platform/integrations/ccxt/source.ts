@@ -8,7 +8,7 @@
  * per market (`trades:ETH/EUR`: the next pass starts at it, inclusive), and `assets`, every coin
  * ever seen, so a market found once is followed for good (B3).
  */
-import { type CivilDate, civilDateIn } from "@/platform/dates";
+import { addDays, type CivilDate, civilDateIn } from "@/platform/dates";
 import {
   type FlowCursor,
   type FxLookup,
@@ -317,8 +317,26 @@ export function binanceSource(
     },
 
     async fetchHistory() {
-      // Binance has no daily history of the account's value: the value starts at the connection.
+      // Binance has no daily history of the account's value: the module estimates it (PERS-100).
       return { points: [], coverage: [] };
+    },
+
+    async fetchDailyRates(credentials, coins, currency, from, now, fx) {
+      const api = await apiOf(credentials);
+      const markets = new Set(await api.markets());
+      const wanted = [...new Set(coins)].filter((coin) => coin !== currency && !isFiat(coin)).sort();
+      const prices = await dailyPricesFor(api, [], currency, markets, now, wanted, from.getTime());
+      const rates: Record<string, Record<CivilDate, string>> = {};
+      const last = civilDateIn(now, "UTC");
+      for (const coin of wanted) {
+        const days: Record<CivilDate, string> = {};
+        for (let day = civilDateIn(from, "UTC"); day <= last; day = addDays(day, 1)) {
+          const rate = dailyRateOf(coin, currency, day, prices, fx);
+          if (rate) days[day] = rate.rate;
+        }
+        rates[coin] = days;
+      }
+      return rates;
     },
   };
 }

@@ -72,7 +72,18 @@ export const NEGATIVE_KINDS = ["withdrawal", "buy", "fee"] as const;
 
 export const QUANTITY_BASES = ["reported", "reconstructed", "inferred"] as const;
 
-export const READING_STATUSES = ["complete", "partial", "confirmed_zero", "pending_zero"] as const;
+/**
+ * `estimated` (PERS-100): a day before the first reading of a service whose provider has no
+ * history of its value, rebuilt from the flows and the exchange's daily closes. It counts, and every
+ * screen that shows it says it is an estimate.
+ */
+export const READING_STATUSES = [
+  "complete",
+  "partial",
+  "confirmed_zero",
+  "pending_zero",
+  "estimated",
+] as const;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 
 export const RECONCILIATION_KINDS = ["covered_by_provider", "outside_scope", "partial", "reopened"] as const;
@@ -195,7 +206,12 @@ export interface ReadingLike {
   on: CivilDate;
   status: ReadingStatus;
   totalCents: Cents;
-  positions: readonly { assetId: string; product: string; valueCents: Cents | null }[];
+  positions: readonly {
+    assetId: string;
+    product: string;
+    valueCents: Cents | null;
+    quantity?: bigint | null;
+  }[];
   scopes: readonly { product: string; complete: boolean }[];
 }
 
@@ -535,7 +551,30 @@ export function reconciliationOn(
 }
 
 /** The readings that count (R1, R5): a `pending_zero` waits for the person's answer. */
-const COUNTING: ReadonlySet<ReadingStatus> = new Set(["complete", "partial", "confirmed_zero"]);
+const COUNTING: ReadonlySet<ReadingStatus> = new Set(["complete", "partial", "confirmed_zero", "estimated"]);
+
+/** Dust (B5): under 0.001 units, too little for any market to price. */
+export const DUST_QUANTITY = 10n ** BigInt(QUANTITY_SCALE - 3);
+
+/**
+ * A position no market priced and too small to matter (B5, PERS-100: 0.0000765 ETHW in Funding):
+ * shown as dust, never counted as a missing price.
+ */
+export function isUnpricedDust(position: { valueCents: Cents | null; quantity?: bigint | null }): boolean {
+  return (
+    position.valueCents === null &&
+    position.quantity !== null &&
+    position.quantity !== undefined &&
+    position.quantity < DUST_QUANTITY
+  );
+}
+
+/** The prices a reading misses: its unpriced positions, dust left out. */
+export function missingPricesOf(
+  positions: readonly { valueCents: Cents | null; quantity?: bigint | null }[],
+): number {
+  return positions.filter((position) => position.valueCents === null && !isUnpricedDust(position)).length;
+}
 
 /**
  * V(A,d) (§2): the value of the account at the end of `on`, in its currency.
@@ -611,7 +650,7 @@ export function valueOn(book: Book, on: CivilDate, rates: RateTable): DayValue {
       .filter((one) => one.on >= period.fromOn && one.on <= on && COUNTING.has(one.status))
       .sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))[0] ?? null;
   if (reading === null) return { ...EMPTY, mode: period.mode, origin: "synced", adjustmentCents };
-  missing += reading.positions.filter((position) => position.valueCents === null).length;
+  missing += missingPricesOf(reading.positions);
 
   let manualCents = 0n;
   let conflictCents = 0n;
