@@ -279,12 +279,12 @@ precedente in `investment_operation_revisions` (`operation_id`, `changed_at`, `b
 | `id`, `user_id`, `investment_account_id` | uuid | |
 | `on` | date | una lettura per conto e giorno: l'ultima del giorno sostituisce le precedenti |
 | `observed_at` | timestamptz | ora della lettura; se il provider non dà il timestamp, ora della risposta |
-| `status` | `complete` \| `partial` \| `confirmed_zero` \| `pending_zero` | (A8) |
+| `status` | `complete` \| `partial` \| `confirmed_zero` \| `pending_zero` \| `estimated` | (A8); `estimated`: giorno ricostruito dai flussi e dalle chiusure giornaliere, per un provider senza storico del valore (PERS-100, `investments-history.md`) |
 | `total_cents` | bigint | valore totale nella valuta del conto, riportato o calcolato (R1) |
 | `cash_cents` | bigint null | |
 | `native_total` | `numeric(30,12)` null | |
 | `fx_rate`, `fx_source` | | percorso di conversione del totale (A5) |
-| `missing_prices` | int, default 0 | posizioni senza prezzo o cambio (A5) |
+| `missing_prices` | int, default 0 | posizioni senza prezzo o cambio (A5); il dust sotto 0,001 unità non conta (PERS-100) |
 
 `investment_reading_positions` (A5): `reading_id`, `asset_id`, `product`, `quantity`, `price`,
 `price_currency`, `price_at`, `price_source`, `fx_rate`, `fx_source`, `value_cents` (null se manca

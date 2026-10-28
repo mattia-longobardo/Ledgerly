@@ -88,6 +88,21 @@ test("a manual account follows its operations, and Accounts shows the same value
     await expect(page.getByTestId("holding-row")).toHaveCount(0);
   });
 
+  await test.step("the chart shows the last year, and moves to All and to days like Overview's (PERS-100)", async () => {
+    const range = page.getByRole("group", { name: "Range" });
+    await expect(range.getByRole("link", { name: "1Y" })).toHaveAttribute("aria-current", "true");
+    await range.getByRole("link", { name: "All" }).click();
+    await expect(page).toHaveURL(/[?&]range=all/);
+    await expect(range.getByRole("link", { name: "All" })).toHaveAttribute("aria-current", "true");
+    const points = page.getByRole("group", { name: "Points" });
+    await points.getByRole("link", { name: "Day" }).click();
+    await expect(page).toHaveURL(/[?&]grain=day/);
+    await expect(page).toHaveURL(/[?&]range=all/);
+    await expect(points.getByRole("link", { name: "Day" })).toHaveAttribute("aria-current", "true");
+    await expect(page.locator('summary[title="Chart range"]')).toBeVisible();
+    await page.goto(page.url().replace(/\?.*$/, ""));
+  });
+
   await test.step("Accounts shows the same value, and takes no manual balance for it", async () => {
     const service = page.url();
     await page.goto("/accounts");

@@ -3130,7 +3130,12 @@
       "invested": "Versato netto",
       "empty": "Ancora niente da disegnare.",
       "hoverInvested": "versato netto {amount}",
-      "summary": "Valore oggi {value}, versato netto {invested}."
+      "summary": "Valore oggi {value}, versato netto {invested}.",
+      "range": "Periodo",
+      "grain": "Punti",
+      "grains": { "month": "Mese", "day": "Giorno" },
+      "estimatedShort": "stima",
+      "estimatedNote": "Il tratto tratteggiato è una stima: il provider non conserva lo storico del valore, quindi ogni giorno è ricostruito dai movimenti e dalle chiusure giornaliere dell'exchange."
     },
     "services": {
       "title": "Servizi",
@@ -3265,6 +3270,8 @@
       "conflict": "Da riconciliare",
       "staleRate": "cambio salvato",
       "byValue": "per valore",
+      "dust": "residuo, nessun mercato",
+      "noPrice": "prezzo mancante",
       "actions": "Azioni",
       "origins": {
         "manual": "Manuale",
@@ -3330,7 +3337,8 @@
         "complete": "Completa",
         "partial": "Parziale",
         "confirmed_zero": "Vuota, confermata",
-        "pending_zero": "Vuota?"
+        "pending_zero": "Vuota?",
+        "estimated": "Stima"
       },
       "pendingZero": "Il provider riporta il conto vuoto. È stato svuotato? Finché non confermi, il valore resta."
     },
@@ -3610,7 +3618,8 @@
         "before_first_movement": "prima del primo movimento di eToro Money",
         "api_limit_24m": "l'API conserva 24 mesi",
         "negative_opening": "lo storico spiega più del saldo",
-        "quantity_mismatch": "i movimenti non tornano con il saldo: può mancare un mercato"
+        "quantity_mismatch": "i movimenti non tornano con il saldo: può mancare un mercato",
+        "estimated": "stimato dai movimenti e dalle chiusure giornaliere"
       },
       "reliableFrom": "attendibile dal {date}",
       "notReliable": "storico incompleto",

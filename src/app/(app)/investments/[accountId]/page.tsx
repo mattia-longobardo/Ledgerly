@@ -4,8 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAccount } from "@/modules/accounts/queries";
-import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/display";
 import { type HoldingRow, type OperationRow, serviceDetail } from "@/modules/investments/queries";
+import { InvestmentHistoryCard } from "@/modules/investments/ui/history-card";
 import { KeyCheckLine } from "@/modules/investments/ui/key-check";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { ensureAssetSeed } from "@/modules/investments/service";
@@ -34,12 +34,11 @@ import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
-import { parseDecimal } from "@/modules/investments/rules";
+import { isUnpricedDust, parseDecimal } from "@/modules/investments/rules";
 
 const priceCents = (text: string) => parseDecimal(text, 2);
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
-import { MultiLine } from "@/ui/chart";
 import { cn } from "@/ui/cn";
 import { KpiTile } from "@/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
@@ -58,7 +57,10 @@ export async function generateMetadata({ params }: PageProps<"/investments/[acco
  * operations grouped by event, the readings and adjustments of a synced account, and the settings
  * with the mode conversions.
  */
-export default async function InvestmentServicePage({ params }: PageProps<"/investments/[accountId]">) {
+export default async function InvestmentServicePage({
+  params,
+  searchParams,
+}: PageProps<"/investments/[accountId]">) {
   const ctx = await requireSession();
   const { accountId } = await params;
   const t = await getTranslations("investments");
@@ -189,7 +191,13 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
 
   const priceCell = (row: HoldingRow) =>
     row.priceText === null ? (
-      <span className="text-muted">{t("assets.byValue")}</span>
+      <span className="text-muted">
+        {row.state.quantity === null
+          ? t("assets.byValue")
+          : isUnpricedDust(row.state)
+            ? t("assets.dust")
+            : t("assets.noPrice")}
+      </span>
     ) : (
       <span className="inline-flex flex-col items-end">
         <span>
@@ -350,46 +358,13 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
         )}
       </div>
 
-      <Card className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
-          <span className="flex gap-3 text-sm text-muted">
-            <span className="flex items-center gap-1.5">
-              <span aria-hidden className="h-0.5 w-4 bg-accent" /> {t("chart.value")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span aria-hidden className="w-4 border-t border-dashed border-muted" /> {t("chart.invested")}
-            </span>
-          </span>
-        </div>
-        {detail.history.value.every((value) => value === null) ? (
-          <p className="text-sm text-muted">{t("chart.empty")}</p>
-        ) : (
-          <MultiLine
-            series={[
-              { values: asNumbers(detail.history.value), color: "var(--accent)" },
-              { values: asNumbers(detail.history.invested), color: "var(--muted)", dashed: true, step: true },
-            ]}
-            yLabels={axisLabels(
-              [...detail.history.value, ...detail.history.invested],
-              ctx.numberFormat,
-              4,
-              currency,
-            )}
-            xLabels={monthLabels(detail.months, ctx.locale)}
-            hover={detail.months.map((month, index) => ({
-              label: formatDate(month, "monthYear", ctx.locale),
-              value: own(detail.history.value[index]),
-              note: t("chart.hoverInvested", { amount: own(detail.history.invested[index]) }),
-            }))}
-            summary={t("chart.summary", {
-              value: own(summary.valueCents),
-              invested: own(flows.investedCents),
-            })}
-            height={180}
-          />
-        )}
-      </Card>
+      <InvestmentHistoryCard
+        ctx={ctx}
+        query={await searchParams}
+        path={`/investments/${accountId}`}
+        accountId={accountId}
+        summaryValue={{ value: summary.valueCents, invested: flows.investedCents }}
+      />
 
       {(mode === "assets" || detail.holdings.length > 0) && (
         <Card padded={false} className="min-w-0">
