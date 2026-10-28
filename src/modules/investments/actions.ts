@@ -363,11 +363,11 @@ export async function connectProviderAction(
   provider: string,
   credentials: Record<string, string>,
   target: ConnectTarget,
-): Promise<{ ok: true; accountId: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; accountId: string; ipRestricted: boolean | null } | { ok: false; error: string }> {
   const ctx = await requireSession();
   try {
     // The first flows run after the answer: 24 months of an exchange take minutes (§3.2).
-    const { accountId } = await connectInvestmentProvider(
+    const { accountId, ipRestricted } = await connectInvestmentProvider(
       ctx,
       provider,
       credentials,
@@ -377,7 +377,7 @@ export async function connectProviderAction(
     );
     revalidate(accountId);
     revalidatePath("/settings/integrations");
-    return { ok: true, accountId };
+    return { ok: true, accountId, ipRestricted };
   } catch (error) {
     return failed(error);
   }

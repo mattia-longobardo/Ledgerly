@@ -114,6 +114,7 @@ const KNOWN_ERRORS = [
   "already_connected",
   "not_connected",
   "cooldown",
+  "different_account",
   "sync_failed",
   "sync_refused",
   "not_a_transfer",
@@ -1988,6 +1989,36 @@ function ConnectDialog({
   const usable = (one: ExistingChoice) =>
     (one.reason === null || one.manualService) && currencies.includes(one.currency);
   const [accountId, setAccountId] = useState(choices.find(usable)?.id ?? "");
+  // Connected with a key that works from any IP (PERS-87 SEC-02): said here before the page opens.
+  const [unrestricted, setUnrestricted] = useState<string | null>(null);
+
+  if (unrestricted !== null) {
+    const open = () => {
+      onOpenChange(false);
+      router.push(`/investments/${unrestricted}` as Route);
+    };
+    return (
+      <Dialog
+        open
+        onOpenChange={open}
+        clear={clear}
+        title={t("connect.ipUnrestrictedTitle", { name: provider.name })}
+        onSubmit={(event) => {
+          event.preventDefault();
+          open();
+        }}
+      >
+        <p role="status" className="col-span-full text-sm text-warn">
+          {t("connect.ipUnrestricted", { name: provider.name })}
+        </p>
+        <div className="col-span-full flex justify-end gap-2">
+          <Button type="submit" variant="primary">
+            {t("connect.openService")}
+          </Button>
+        </div>
+      </Dialog>
+    );
+  }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2007,10 +2038,14 @@ function ConnectDialog({
         const input = form.elements.namedItem(field);
         if (input instanceof HTMLInputElement) input.value = "";
       }
-      if (!report(result)) return;
+      if (!report(result) || !result.ok) return;
       notify(t("toasts.connected", { name: provider.name }));
+      if (result.ipRestricted === false) {
+        setUnrestricted(result.accountId);
+        return;
+      }
       onOpenChange(false);
-      if (result.ok) router.push(`/investments/${result.accountId}` as Route);
+      router.push(`/investments/${result.accountId}` as Route);
     });
   }
 

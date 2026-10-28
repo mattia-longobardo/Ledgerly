@@ -56,6 +56,17 @@ describe("etoroSource", () => {
     expect(paths).toContain("/api/v1/money/accounts/cash/00000000-0000-4000-8000-000000000004/transactions");
   });
 
+  it("costs only the names when the instrument names answer 403 (PERS-87 SEC-06)", async () => {
+    const { source } = routed({
+      "/api/v1/trading/info/trade/history": ok(body("trade-history")),
+      "/api/v1/market-data/instruments": () => new Response("{}", { status: 403 }),
+      "/api/v1/balances": ok(body("balances-usd-include-zero")),
+      "/api/v1/money/accounts/cash/": ok(body("cash-transactions-all")),
+    });
+    const flows = await source.fetchFlows(KEYS, NOW);
+    expect(flows.events[0].legs[0].asset?.name).toBe("eToro 1377");
+  });
+
   it("reads 360 days of history at most (D11)", async () => {
     const { source } = routed({ "/api/v1/balances/history": ok(body("balances-history")) });
     const history = await source.fetchHistory(KEYS, "EUR", NOW);
