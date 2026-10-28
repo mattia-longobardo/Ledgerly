@@ -252,8 +252,10 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
+      // The first control is Paperless's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .first()
         .click();
       await settledDialog(page);
     },
@@ -266,8 +268,10 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
+      // The first control is Paperless's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .first()
         .click();
       await settledDialog(page);
       const dialog = page.getByRole("dialog");
