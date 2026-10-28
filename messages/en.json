@@ -3512,7 +3512,8 @@
       "unsupported_currency": "The provider cannot report in that currency.",
       "already_connected": "This provider is already connected.",
       "not_connected": "This service is not connected.",
-      "cooldown": "Wait a minute before trying again.",
+      "cooldown": "Wait a few minutes before trying again.",
+      "different_account": "That key belongs to another account on the provider. Use a key of the account already connected.",
       "sync_failed": "The sync failed: see the connection's last error.",
       "sync_refused": "The sync was refused: see the connection's state.",
       "not_a_transfer": "Those two operations cannot be linked as a transfer."
@@ -3538,6 +3539,9 @@
       "readOnlyNote": "A key with any permission that is not read is refused, now and on every later sync.",
       "ipSuggested": "Recommended: on {name}, restrict the key to the homelab's public IP. It is optional, and the key works without it.",
       "ipUnsupported": "{name} has no IP whitelist for these keys.",
+      "ipUnrestrictedTitle": "{name} connected: the key is not restricted by IP",
+      "ipUnrestricted": "The key works from any IP address: if it leaks, anyone can read the account with it. On {name}, restrict the key to the homelab's public IP, then press Verify key on the service page.",
+      "openService": "Open the service",
       "fields": {
         "api_key": "Public API key",
         "user_key": "User key",
@@ -3561,6 +3565,7 @@
       "manual": "Only by hand",
       "key": "Key",
       "keyCheck": "{result}, checked {date}",
+      "ipUnrestricted": "IP not restricted",
       "keySet": "Key set on",
       "results": {
         "read-only": "read only",

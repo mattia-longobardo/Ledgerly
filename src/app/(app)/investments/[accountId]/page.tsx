@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { getAccount } from "@/modules/accounts/queries";
 import { asNumbers, axisLabels, monthLabels } from "@/modules/accounts/ui/display";
 import { type HoldingRow, type OperationRow, serviceDetail } from "@/modules/investments/queries";
+import { KeyCheckLine } from "@/modules/investments/ui/key-check";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { ensureAssetSeed } from "@/modules/investments/service";
 import { accountTypeOf, connectableProvider } from "@/modules/investments/catalog";
@@ -712,12 +713,17 @@ export default async function InvestmentServicePage({ params }: PageProps<"/inve
                 <dd>{sync.nextSyncAt ? instant(sync.nextSyncAt) : t("sync.manual")}</dd>
                 <dt className="text-muted">{t("sync.key")}</dt>
                 <dd>
-                  {sync.lastCheck
-                    ? t("sync.keyCheck", {
+                  {sync.lastCheck ? (
+                    <KeyCheckLine
+                      text={t("sync.keyCheck", {
                         result: t(`sync.results.${sync.lastCheck.result}` as "sync.results.read-only"),
                         date: instant(sync.lastCheck.checkedAt),
-                      })
-                    : NULL_DISPLAY}
+                      })}
+                      ipRestricted={sync.lastCheck.ipRestricted}
+                    />
+                  ) : (
+                    NULL_DISPLAY
+                  )}
                 </dd>
                 <dt className="text-muted">{t("sync.keySet")}</dt>
                 <dd>{sync.keySetAt ? long(sync.keySetAt.toISOString().slice(0, 10)) : NULL_DISPLAY}</dd>

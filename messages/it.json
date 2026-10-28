@@ -3512,7 +3512,8 @@
       "unsupported_currency": "Il provider non può riportare il conto in questa valuta.",
       "already_connected": "Questo provider è già collegato.",
       "not_connected": "Questo servizio non è collegato.",
-      "cooldown": "Aspetta un minuto prima di riprovare.",
+      "cooldown": "Aspetta qualche minuto prima di riprovare.",
+      "different_account": "Questa chiave è di un altro conto del provider. Usa una chiave del conto già collegato.",
       "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore della connessione.",
       "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato della connessione.",
       "not_a_transfer": "Queste due operazioni non si possono collegare come trasferimento."
@@ -3538,6 +3539,9 @@
       "readOnlyNote": "Una chiave con un permesso che non è di lettura viene rifiutata, ora e a ogni sincronizzazione successiva.",
       "ipSuggested": "Consigliato: su {name} limita la chiave all'IP pubblico dell'homelab. È facoltativo: la chiave funziona anche senza.",
       "ipUnsupported": "{name} non ha una IP whitelist per queste chiavi.",
+      "ipUnrestrictedTitle": "{name} collegato: la chiave non è limitata per IP",
+      "ipUnrestricted": "La chiave funziona da qualsiasi indirizzo IP: se esce, chiunque può leggere il conto con quella chiave. Su {name} limita la chiave all'IP pubblico dell'homelab, poi premi Verifica chiave nella pagina del servizio.",
+      "openService": "Apri il servizio",
       "fields": {
         "api_key": "Chiave API pubblica",
         "user_key": "Chiave utente",
@@ -3561,6 +3565,7 @@
       "manual": "Solo a mano",
       "key": "Chiave",
       "keyCheck": "{result}, verificata il {date}",
+      "ipUnrestricted": "IP non limitato",
       "keySet": "Chiave impostata il",
       "results": {
         "read-only": "sola lettura",
