@@ -668,6 +668,191 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
   await saveSchedule(ctx, etoro.id, { rules: [] });
 }
 
+/**
+ * A connected Binance service (docs/design/investments.md §3.2) for the screens of phase 4: a
+ * stand-in for the exchange, as for eToro, with a wallet the adapter does not read (B4), the
+ * streams of D18 and the 24-month gap (D11), and a manual schedule.
+ */
+async function seedBinance(ctx: Ctx, on: string): Promise<void> {
+  const coin = (symbol: string, name: string, kind: "crypto" | "stablecoin" = "crypto") => ({
+    externalId: symbol,
+    class: kind,
+    name,
+    symbol,
+    currency: kind === "stablecoin" ? "USD" : "EUR",
+  });
+  const now = new Date();
+  const from = new Date(now.getTime() - 730 * 86_400_000);
+  const at = (days: number) => new Date(`${addDays(on, -days)}T10:00:00Z`);
+  const streams = [
+    "deposits",
+    "withdrawals",
+    "fiat_orders",
+    "fiat_payments",
+    "convert",
+    "dividends",
+    "trades",
+  ];
+  setSourcesForTests(() => ({
+    verifyReadOnly: async () => ({
+      result: "read-only",
+      permissions: { enableReading: true, enableWithdrawals: false, enableSpotAndMarginTrading: false },
+      ipRestricted: true,
+      externalAccountId: null,
+    }),
+    fetchHoldings: async () => ({
+      observedAt: now,
+      externalAccountId: "900032",
+      totalCents: 2_250_000n,
+      cashCents: 0n,
+      positions: [
+        {
+          asset: coin("BTC", "Bitcoin"),
+          product: "spot",
+          quantity: "0.0125",
+          price: "95000",
+          priceCurrency: "EUR",
+          priceSource: "binance:BTC/EUR",
+          valueCents: 118_750n,
+        },
+        {
+          asset: coin("ETH", "Ethereum"),
+          product: "earn",
+          quantity: "0.4",
+          price: "2100",
+          priceCurrency: "EUR",
+          priceSource: "binance:ETH/EUR",
+          valueCents: 84_000n,
+        },
+        {
+          asset: coin("USDT", "Tether", "stablecoin"),
+          product: "funding",
+          quantity: "250",
+          price: "0.8969",
+          priceCurrency: "EUR",
+          priceSource: "binance:EUR/USDT",
+          valueCents: 22_250n,
+        },
+      ],
+      scopes: [
+        { product: "spot", complete: true },
+        { product: "funding", complete: true },
+        { product: "earn", complete: true },
+        { product: "other:cross-margin", complete: false },
+      ],
+      empty: false,
+      complete: false,
+    }),
+    fetchFlows: async () => ({
+      events: [
+        {
+          externalId: "fiat:e2e-1",
+          occurredAt: at(40),
+          note: "SEPA",
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: null,
+              product: null,
+              quantity: null,
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "900",
+              nativeCurrency: "EUR",
+            },
+          ],
+        },
+        {
+          externalId: "trade:ETHEUR:e2e-2",
+          occurredAt: at(30),
+          note: null,
+          legs: [
+            {
+              leg: "base",
+              kind: "buy",
+              asset: coin("ETH", "Ethereum"),
+              product: "spot",
+              quantity: "0.4",
+              unitPrice: "2000",
+              priceCurrency: "EUR",
+              nativeAmount: "800",
+              nativeCurrency: "EUR",
+            },
+          ],
+        },
+        {
+          externalId: "deposit:e2e-3",
+          occurredAt: at(20),
+          note: null,
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: coin("BTC", "Bitcoin"),
+              product: "spot",
+              quantity: "0.0125",
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "0.0125",
+              nativeCurrency: "BTC",
+              fxRate: "92000",
+              fxSource: `exchange:BTC/EUR@${addDays(on, -20)}`,
+            },
+          ],
+        },
+        {
+          externalId: "deposit:e2e-4",
+          occurredAt: at(10),
+          note: null,
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: coin("USDT", "Tether", "stablecoin"),
+              product: "spot",
+              quantity: "250",
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "250",
+              nativeCurrency: "USDT",
+              fxRate: "0.9",
+              fxSource: `exchange:EUR/USDT@${addDays(on, -10)}`,
+            },
+          ],
+        },
+      ],
+      coverage: streams.flatMap((stream) => [
+        {
+          stream,
+          fromAt: new Date("2017-07-14T00:00:00Z"),
+          toAt: from,
+          status: "gap" as const,
+          reason: "api_limit_24m",
+        },
+        { stream, fromAt: from, toAt: now, status: "complete" as const, reason: null },
+      ]),
+      cursor: { from: from.toISOString() },
+      historyFrom: from,
+      openingRates: {},
+    }),
+    fetchHistory: async () => ({ points: [], coverage: [] }),
+  }));
+  try {
+    await connectInvestmentProvider(
+      ctx,
+      "ccxt:binance",
+      { api_key: "e2e-not-a-key-0003", secret: "e2e-not-a-key-0004" },
+      { kind: "new", name: "Binance", currency: "EUR" },
+    );
+  } finally {
+    setSourcesForTests(null);
+  }
+  const binance = (await listConnections(ctx)).find((one) => one.provider === "ccxt:binance");
+  if (!binance) throw new Error("e2e: the Binance connection is missing");
+  await saveSchedule(ctx, binance.id, { rules: [] });
+}
+
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
   // A Paperless link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
@@ -840,6 +1025,7 @@ async function seedLayout(): Promise<void> {
   await recordOperation(ctx, fineco.accountId, { kind: "deposit", on, amountCents: 500_000n });
   await recordOperation(ctx, fineco.accountId, { kind: "account_valuation", on, amountCents: 512_340n });
   await seedEtoro(ctx, on);
+  await seedBinance(ctx, on);
 
   // ——— Subscriptions ———
   await upsertFromProvider(ctx, current, [

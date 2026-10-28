@@ -5,7 +5,8 @@
  *
  * Amounts leave a source as plain decimal strings in the currency they are in (`nativeAmount`,
  * `nativeCurrency`), or as cents already in the account's currency where the provider converted
- * them itself (eToro's `displayCurrency`). The pass converts the rest at the ECB rate of the day.
+ * them itself (eToro's `displayCurrency`). The pass converts the rest at the ECB rate of the day,
+ * unless the source priced the leg itself (`fxRate`, an exchange's own market, §1.8).
  */
 import type { CivilDate } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
@@ -45,6 +46,11 @@ export interface SnapshotPosition {
   priceSource: string;
   /** In the account's currency; `null` when the provider gave no value for it. */
   valueCents: Cents | null;
+  /** When the price was quoted (a ticker's timestamp); the reading's time when absent. */
+  priceAt?: Date | null;
+  /** Account units per unit of `priceCurrency`, and where that came from (A5). */
+  fxRate?: string | null;
+  fxSource?: string | null;
 }
 
 export interface HoldingsSnapshot {
@@ -72,6 +78,13 @@ export interface ProviderLeg {
   /** Unsigned plain decimal: the kind gives the sign (§1.5). */
   nativeAmount: string;
   nativeCurrency: string;
+  /**
+   * Account units per unit of `nativeCurrency`, when the source priced the leg itself (a coin at
+   * the exchange's daily close, §1.8), with where it came from. `fxSource` without `fxRate`: no
+   * market priced it, so the leg counts its quantity and no amount.
+   */
+  fxRate?: string | null;
+  fxSource?: string | null;
 }
 
 export interface ProviderEvent {
@@ -92,9 +105,34 @@ export interface CoverageWindow {
   reason: string | null;
 }
 
+/** Where each stream of flows stopped (A7): opaque to the module, saved with the events it read. */
+export type FlowCursor = Record<string, string>;
+
 export interface FlowsRead {
   events: ProviderEvent[];
   coverage: CoverageWindow[];
+  /** The cursor to resume from; absent for a source that reads its whole history every pass. */
+  cursor?: FlowCursor;
+  /**
+   * The first moment of the history the source reads (24 months for ccxt, D11), for a source whose
+   * quantities the module checks (A6): opening positions are inferred there.
+   */
+  historyFrom?: Date;
+  /**
+   * Account units per unit of each coin held, on the day of `historyFrom`: the value of the opening
+   * positions the module infers there (A6, §2.4). Only on the pass that starts the history.
+   */
+  openingRates?: Record<string, { rate: string; source: string }>;
+}
+
+/** Account units per unit of `from` on a day, from the ECB rates the module keeps (§1.8). */
+export type FxLookup = (from: string, to: string, on: CivilDate) => string | null;
+
+export interface FlowsOptions {
+  /** The account's currency. */
+  currency: string;
+  cursor: FlowCursor | null;
+  fx: FxLookup;
 }
 
 export interface HistoryRead {
@@ -109,8 +147,13 @@ export interface InvestmentSource {
     credentials: Readonly<Record<string, string>>,
     currency: string,
     now: Date,
+    fx?: FxLookup,
   ): Promise<HoldingsSnapshot>;
-  fetchFlows(credentials: Readonly<Record<string, string>>, now: Date): Promise<FlowsRead>;
+  fetchFlows(
+    credentials: Readonly<Record<string, string>>,
+    now: Date,
+    options?: FlowsOptions,
+  ): Promise<FlowsRead>;
   fetchHistory(
     credentials: Readonly<Record<string, string>>,
     currency: string,

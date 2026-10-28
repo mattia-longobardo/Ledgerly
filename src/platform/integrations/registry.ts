@@ -11,6 +11,7 @@ import type { Ctx } from "@/platform/context";
 import type { Person } from "@/modules/users/jobs";
 import { runPaperlessPass } from "./paperless/sync";
 import {
+  BINANCE_PROVIDER,
   ETORO_PROVIDER,
   KINDS_OF,
   PAPERLESS_PROVIDER,
@@ -47,6 +48,9 @@ export const PASSES: readonly ProviderPass[] = [
   },
   // Investments (docs/design/investments.md §3.1): the module's own pass, lock and outcomes.
   { provider: ETORO_PROVIDER, kinds: KINDS_OF[ETORO_PROVIDER], run: runInvestmentPass },
+  // Binance through ccxt (§3.2). By id, not by the `ccxt:` prefix: an exchange without an adapter
+  // (Kraken, D5 as amended) has no pass to be routed to.
+  { provider: BINANCE_PROVIDER, kinds: KINDS_OF[BINANCE_PROVIDER], run: runInvestmentPass },
 ];
 
 /** The pass for `provider`: an exact id first, then the longest prefix; `null` when nobody owns it. */

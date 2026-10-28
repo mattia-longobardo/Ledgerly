@@ -12,10 +12,14 @@ import { userScoped } from "@/platform/db/scope";
 import { eurPerUnitOn, type RateTable } from "@/platform/fx/rules";
 import { ratesOn, saveRates, storedRange } from "@/platform/fx/service";
 import { fetchEcbRates } from "@/platform/fx/sources";
+import { BINANCE_PROVIDER } from "@/platform/integrations/ccxt/binance";
+import { binanceSource } from "@/platform/integrations/ccxt/source";
 import { etoroSource } from "@/platform/integrations/etoro/source";
 import {
   type AssetRef,
   type CoverageWindow,
+  type FlowsRead,
+  type FxLookup,
   type HoldingsSnapshot,
   type InvestmentSource,
   type KeyCheck,
@@ -116,7 +120,10 @@ export class SyncError extends Error {
 
 // ——— Sources ———————————————————————————————————————————————————————————————————————————————
 
-const SOURCES: Record<string, () => InvestmentSource> = { etoro: () => etoroSource() };
+const SOURCES: Record<string, () => InvestmentSource> = {
+  etoro: () => etoroSource(),
+  [BINANCE_PROVIDER]: () => binanceSource(),
+};
 let sourceOverride: ((provider: string) => InvestmentSource | null) | null = null;
 
 /** The tests' way in: a fake source per provider, `null` to restore the real ones. */
@@ -139,8 +146,15 @@ export const PROVIDER_SCHEDULE = {
 /** Without a `Retry-After`, a refused pass waits this long before the next call. */
 const DEFAULT_BACKOFF_SECONDS = 300;
 const BACKOFF_KEY = "backoff_until";
-/** The version of the dialog's text the person saw when connecting (§1.2). */
-export const ATTESTATION_TEXT_VERSION = "etoro-2026-10-28";
+/** The version of the dialog's text the person saw when connecting (§1.2), per provider. */
+const ATTESTATION_TEXT_VERSIONS: Record<string, string> = {
+  etoro: "etoro-2026-10-28",
+  [BINANCE_PROVIDER]: "binance-2026-10-28",
+};
+/** Permissions that only read, never named as the reason a key was refused (B1). */
+const READ_PERMISSIONS = new Set(["enableReading", "enableFixReadOnly"]);
+/** Runs work after the answer has gone (Next's `after`): slow first flows never hold a form. */
+export type Defer = (work: () => Promise<unknown>) => void;
 
 /** A source failure as the code a form shows (§5.1): never the provider's text. */
 function codeOf(error: unknown): SyncErrorCode {
@@ -277,8 +291,13 @@ async function writeReading(
             ? null
             : formatDecimal(parseDecimal(position.price, PRICE_SCALE), PRICE_SCALE),
         priceCurrency: position.priceCurrency,
-        priceAt: input.observedAt,
+        priceAt: position.priceAt ?? input.observedAt,
         priceSource: position.priceSource,
+        fxRate:
+          position.fxRate === null || position.fxRate === undefined
+            ? null
+            : formatDecimal(parseDecimal(position.fxRate, RATE_SCALE), RATE_SCALE),
+        fxSource: position.fxSource ?? null,
         valueCents: position.valueCents,
       }),
     );
@@ -395,7 +414,9 @@ async function insertKeyCheck(
       permissions: input.check?.permissions ?? {},
       ipRestricted: input.check?.ipRestricted ?? null,
       attestationTextVersion:
-        input.origin === "connect" || input.origin === "replace" ? ATTESTATION_TEXT_VERSION : null,
+        input.origin === "connect" || input.origin === "replace"
+          ? (ATTESTATION_TEXT_VERSIONS[input.provider] ?? null)
+          : null,
     }),
   );
 }
@@ -440,6 +461,9 @@ function rateBetween(rates: RateTable, from: string, to: string, on: CivilDate):
   return divRound(source * 10n ** BigInt(RATE_SCALE), target);
 }
 
+/** A rate a source gives, read at the precision of a coin's quantity before it is rounded. */
+const SOURCE_RATE_SCALE = 18;
+
 const SIGN: Record<string, 1n | -1n> = {
   deposit: 1n,
   withdrawal: -1n,
@@ -474,10 +498,27 @@ async function writeEvents(
     for (const leg of event.legs) {
       const native = parseDecimal(leg.nativeAmount, PRICE_SCALE);
       const nativeCents = divRound(native, 10n ** BigInt(PRICE_SCALE - 2));
-      const fxRate = rateBetween(rates, leg.nativeCurrency, currency, on);
-      if (leg.nativeCurrency !== currency && fxRate === null) throw new SyncError("provider_unavailable");
-      const amount =
-        fxRate === null ? nativeCents : divRound(nativeCents * fxRate, 10n ** BigInt(RATE_SCALE));
+      // A leg the source priced itself (a coin at the exchange's close, §1.8): its own rate, at
+      // full precision — a fee of 0.0001 BNB is cents, not zero; "unpriced" counts no amount.
+      const sourced = leg.fxSource !== undefined && leg.fxSource !== null;
+      const sourcedRate =
+        sourced && leg.fxRate !== null && leg.fxRate !== undefined
+          ? parseDecimal(leg.fxRate, SOURCE_RATE_SCALE)
+          : null;
+      const fxRate = sourced
+        ? sourcedRate === null
+          ? null
+          : divRound(sourcedRate, 10n ** BigInt(SOURCE_RATE_SCALE - RATE_SCALE))
+        : rateBetween(rates, leg.nativeCurrency, currency, on);
+      if (!sourced && leg.nativeCurrency !== currency && fxRate === null)
+        throw new SyncError("provider_unavailable");
+      const amount = sourced
+        ? sourcedRate === null
+          ? 0n
+          : divRound(native * sourcedRate, 10n ** BigInt(PRICE_SCALE + SOURCE_RATE_SCALE - 2))
+        : fxRate === null
+          ? nativeCents
+          : divRound(nativeCents * fxRate, 10n ** BigInt(RATE_SCALE));
       const holdingId =
         leg.asset === null || leg.product === null
           ? null
@@ -499,7 +540,7 @@ async function writeEvents(
         nativeAmount: native,
         nativeCurrency: leg.nativeCurrency,
         fxRate,
-        fxSource: fxRate === null ? null : `ecb:${on}`,
+        fxSource: sourced ? leg.fxSource : fxRate === null ? null : `ecb:${on}`,
         amountCents: SIGN[leg.kind] * (amount < 0n ? -amount : amount),
       });
     }
@@ -581,6 +622,8 @@ export async function connectInvestmentProvider(
   credentials: Readonly<Record<string, string>>,
   input: ConnectTarget,
   now: Date = new Date(),
+  /** The first flows after the answer (Binance reads 24 months: minutes, §3.2); inline by default. */
+  defer?: Defer,
 ): Promise<{ accountId: string }> {
   const provider = connectableProvider(providerId);
   if (!provider) throw new SyncError("unknown_provider");
@@ -599,7 +642,12 @@ export async function connectInvestmentProvider(
   try {
     check = await source.verifyReadOnly(keys);
     if (check.result !== "read-only") throw new SyncError("not_read_only");
-    snapshot = await source.fetchHoldings(keys, target.currency, now);
+    snapshot = await source.fetchHoldings(
+      keys,
+      target.currency,
+      now,
+      await todayLookup(ctx, target.currency, now),
+    );
   } catch (error) {
     if (!(error instanceof SyncError))
       console.error("[investments] connect failed", sourceErrorLog(provider.id, error));
@@ -739,9 +787,14 @@ export async function connectInvestmentProvider(
       return investment.accountId;
     });
     // The first flows now, so the page has its history at once; a failure waits for the next pass.
-    await syncFlows(ctx, connection, accountId, now).catch((error: unknown) => {
-      console.error("[investments] first flows not read", sourceErrorLog(provider.id, error));
-    });
+    const firstFlows = () =>
+      withJobLock(`investments-sync:${connection.id}`, () =>
+        syncFlows(ctx, connection, accountId, now),
+      ).catch((error: unknown) => {
+        console.error("[investments] first flows not read", sourceErrorLog(provider.id, error));
+      });
+    if (defer) defer(firstFlows);
+    else await firstFlows();
     return { accountId };
   } catch (error) {
     // Nothing half done: without its account a key stays nowhere.
@@ -801,7 +854,216 @@ async function noteFailure(
   return "failed";
 }
 
-/** The flows of a connection (§3.1 step 3): events, links and coverage in one transaction. */
+/** The ECB rates of `rates` as a source asks for them (§1.8): account units per unit, as a decimal. */
+function fxLookupOf(rates: RateTable): FxLookup {
+  return (from, to, on) => {
+    if (from === to) return "1";
+    const rate = rateBetween(rates, from, to, on);
+    return rate === null ? null : formatDecimal(rate, RATE_SCALE);
+  };
+}
+
+/** The fiat a source may need in a rate: USD for a stablecoin's path (§1.8), the usual cash. */
+const LOOKUP_CURRENCIES = ["USD", "EUR", "GBP", "CHF"];
+
+/** The latest ECB rates for a reading of today (§1.8 step 3–4): a week back covers any weekend. */
+async function todayLookup(ctx: Pick<Ctx, "timeZone">, currency: string, now: Date): Promise<FxLookup> {
+  const todayOn = today(ctx.timeZone, now);
+  return fxLookupOf(await ratesOn(new Set([...LOOKUP_CURRENCIES, currency]), addDays(todayOn, -10), todayOn));
+}
+
+/** How a leg moves its coin's quantity (A6): in for buy, deposit, income, opening; out otherwise. */
+const QUANTITY_SIGN: Record<string, 1n | -1n | 0n> = {
+  opening_position: 1n,
+  deposit: 1n,
+  buy: 1n,
+  income: 1n,
+  sell: -1n,
+  withdrawal: -1n,
+  fee: -1n,
+  close: -1n,
+};
+
+/** A difference this small is dust (B5): under a cent at the reading's price, or 0.001 unpriced. */
+function isDust(quantity: bigint, valueCents: Cents | null, reported: bigint): boolean {
+  const abs = quantity < 0n ? -quantity : quantity;
+  if (valueCents !== null && reported > 0n) {
+    return divRound((valueCents < 0n ? -valueCents : valueCents) * abs * 100n, reported) < 100n;
+  }
+  return abs < 10n ** BigInt(QUANTITY_SCALE - 3);
+}
+
+/**
+ * The quantities of a source that reads a window of history (A6, §3.2): on the first pass, one
+ * `opening_position` per coin held, `inferred` = reported today − net flows of the window; on every
+ * pass, opening + Σ legs against the reading, per coin. A difference over dust is a declared gap of
+ * the stream `quantities`, never a silent one.
+ */
+async function checkQuantities(
+  ctx: WriteCtx,
+  tx: Tx,
+  investment: InvestmentAccount,
+  connectionId: string,
+  read: FlowsRead,
+  now: Date,
+): Promise<CivilDate | null> {
+  const from = read.historyFrom!;
+  const [reading] = await tx
+    .select({ id: investmentReadings.id })
+    .from(investmentReadings)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadings),
+        eq(investmentReadings.investmentAccountId, investment.id),
+        ne(investmentReadings.status, "pending_zero"),
+      ),
+    )
+    .orderBy(desc(investmentReadings.on))
+    .limit(1);
+  if (!reading) return null;
+  const positions = await tx
+    .select({
+      assetId: investmentReadingPositions.assetId,
+      quantity: investmentReadingPositions.quantity,
+      valueCents: investmentReadingPositions.valueCents,
+      class: investmentAssets.class,
+      symbol: investmentAssets.symbol,
+    })
+    .from(investmentReadingPositions)
+    .innerJoin(investmentAssets, eq(investmentAssets.id, investmentReadingPositions.assetId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadingPositions),
+        eq(investmentReadingPositions.readingId, reading.id),
+      ),
+    )
+    .orderBy(asc(investmentReadingPositions.id));
+  const legs = await tx
+    .select({
+      assetId: investmentHoldings.assetId,
+      kind: investmentOperations.kind,
+      quantity: investmentOperations.quantity,
+      class: investmentAssets.class,
+      symbol: investmentAssets.symbol,
+    })
+    .from(investmentOperations)
+    .innerJoin(investmentEvents, eq(investmentEvents.id, investmentOperations.eventId))
+    .innerJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
+    .innerJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentOperations),
+        eq(investmentEvents.investmentAccountId, investment.id),
+        eq(investmentHoldings.origin, "provider"),
+      ),
+    )
+    .orderBy(asc(investmentOperations.id));
+
+  // Coins only: cash is not a position whose quantity a flow carries.
+  const reported = new Map<string, { quantity: bigint; valueCents: Cents | null; symbol: string }>();
+  for (const one of positions) {
+    if (one.class === "cash") continue;
+    const before = reported.get(one.assetId);
+    const quantity = parseDecimal(one.quantity, QUANTITY_SCALE);
+    reported.set(one.assetId, {
+      quantity: (before?.quantity ?? 0n) + quantity,
+      valueCents:
+        before === undefined
+          ? one.valueCents
+          : before.valueCents === null || one.valueCents === null
+            ? null
+            : before.valueCents + one.valueCents,
+      symbol: one.symbol ?? "",
+    });
+  }
+  const net = new Map<string, bigint>();
+  const symbols = new Map([...reported].map(([assetId, held]) => [assetId, held.symbol]));
+  let opened = false;
+  for (const one of legs) {
+    if (one.class === "cash" || one.quantity === null) continue;
+    if (one.kind === "opening_position") opened = true;
+    symbols.set(one.assetId, one.symbol ?? "");
+    const sign = QUANTITY_SIGN[one.kind] ?? 0n;
+    net.set(one.assetId, (net.get(one.assetId) ?? 0n) + sign * parseDecimal(one.quantity, QUANTITY_SCALE));
+  }
+
+  const fromOn = civilDateIn(from, ctx.timeZone);
+  let negative = false;
+  let written: CivilDate | null = null;
+  if (!opened && read.openingRates !== undefined) {
+    // Every coin held or moved: one sold out within the window started with what it sold (A6).
+    for (const [assetId, symbol] of symbols) {
+      const held = reported.get(assetId) ?? { quantity: 0n, valueCents: null, symbol };
+      const opening = held.quantity - (net.get(assetId) ?? 0n);
+      if (isDust(opening, held.valueCents, held.quantity)) continue;
+      if (opening < 0n) {
+        negative = true;
+        continue;
+      }
+      const rate = read.openingRates[held.symbol] ?? null;
+      const rateUnits = rate === null ? null : parseDecimal(rate.rate, SOURCE_RATE_SCALE);
+      const valueCents =
+        rateUnits === null
+          ? 0n
+          : divRound(opening * rateUnits, 10n ** BigInt(QUANTITY_SCALE + SOURCE_RATE_SCALE - 2));
+      const holdingId = await providerHoldingFor(ctx, tx, investment.id, assetId, "spot", fromOn);
+      const event = await insertEvent(ctx, tx, investment.id, {
+        on: fromOn,
+        occurredAt: from,
+        origin: "provider",
+        note: "Opening inferred from the history",
+        legs: [
+          {
+            leg: "main",
+            kind: "opening_position",
+            holdingId,
+            quantity: opening,
+            fxRate:
+              rateUnits === null ? null : divRound(rateUnits, 10n ** BigInt(SOURCE_RATE_SCALE - RATE_SCALE)),
+            fxSource: rate?.source ?? "unpriced",
+            amountCents: -valueCents,
+            quantityBasis: "inferred",
+          },
+        ],
+      });
+      await linkExternal(
+        ctx,
+        {
+          provider: investment.provider,
+          entityType: "investment_event",
+          entityId: event.id,
+          externalId: `opening:${held.symbol}`,
+        },
+        now,
+        tx,
+      );
+      net.set(assetId, (net.get(assetId) ?? 0n) + opening);
+      written = fromOn;
+    }
+  }
+  const assets = new Set([...reported.keys(), ...net.keys()]);
+  let mismatch = false;
+  for (const assetId of assets) {
+    const held = reported.get(assetId);
+    const difference = (held?.quantity ?? 0n) - (net.get(assetId) ?? 0n);
+    if (!isDust(difference, held?.valueCents ?? null, held?.quantity ?? 0n)) mismatch = true;
+  }
+  await writeCoverage(ctx, tx, connectionId, "flows", [
+    {
+      stream: "quantities",
+      fromAt: from,
+      toAt: now,
+      status: negative || mismatch ? "partial" : "complete",
+      reason: negative ? "negative_opening" : mismatch ? "quantity_mismatch" : null,
+    },
+  ]);
+  return written;
+}
+
+/**
+ * The flows of a connection (§3.1 step 3): events, links, coverage and the cursor in one
+ * transaction (A7), so a failed write never moves the cursor past what it did not save.
+ */
 async function syncFlows(
   ctx: WriteCtx,
   connection: Connection,
@@ -811,13 +1073,25 @@ async function syncFlows(
   const linked = await linkedOf(ctx, connection);
   if (!linked || linked.investment.accountId !== accountId) throw new SyncError("not_connected");
   const credentials = await readCredentials(ctx, connection.id);
-  const read = await sourceOf(connection.provider).fetchFlows(credentials, now);
   const todayOn = today(ctx.timeZone, now);
+  const cursor = (await readSyncJob(ctx, connection.id, "flows"))?.cursor ?? null;
+  // The rates a source may ask for (a stablecoin through USD, §1.8): those already kept.
+  const lookupFrom = addDays(todayOn, -761);
+  const lookupRates = await ratesOn(new Set([...LOOKUP_CURRENCIES, linked.currency]), lookupFrom, todayOn);
+  const read = await sourceOf(connection.provider).fetchFlows(credentials, now, {
+    currency: linked.currency,
+    cursor,
+    fx: fxLookupOf(lookupRates),
+  });
   const days = read.events.map((event) => civilDateIn(event.occurredAt, ctx.timeZone));
   const first = days.reduce<CivilDate | null>((min, day) => (min === null || day < min ? day : min), null);
   const currencies = new Set([
     linked.currency,
-    ...read.events.flatMap((event) => event.legs.map((leg) => leg.nativeCurrency)),
+    ...read.events.flatMap((event) =>
+      event.legs
+        .filter((leg) => leg.fxSource === undefined || leg.fxSource === null)
+        .map((leg) => leg.nativeCurrency),
+    ),
   ]);
   if (first !== null && currencies.size > 1) await ensureRatesFrom(first, todayOn);
   const rates =
@@ -838,7 +1112,15 @@ async function syncFlows(
       writeEvents(ctx, tx, investment, linked.currency, read.events, known, rates, now),
     );
     await writeCoverage(ctx, tx, connection.id, "flows", read.coverage);
-    if (oldest !== null) await rebuild(ctx, investment, linked.currency, oldest, tx);
+    const opened =
+      read.historyFrom === undefined
+        ? null
+        : await translated(checkQuantities(ctx, tx, investment, connection.id, read, now));
+    if (read.cursor !== undefined) {
+      await saveSyncJob(ctx, connection.id, "flows", { cursor: read.cursor }, now, tx);
+    }
+    const from = [oldest, opened].filter((day): day is CivilDate => day !== null).sort()[0] ?? null;
+    if (from !== null) await rebuild(ctx, investment, linked.currency, from, tx);
     return created;
   });
 }
@@ -901,8 +1183,10 @@ async function runHoldings(
     const text = `${connection.provider} · key_${check.result.replace("-", "_")}`;
     await finishRun(ctx, run.id, { counts: {}, error: text }, now);
     await markConnection(ctx, connection.id, "error", text, now);
-    const found = Object.keys(check.permissions)
-      .filter((name) => !name.endsWith(":read"))
+    // What the key may do beyond reading: eToro's scopes, Binance's flags that are on (§5.2).
+    const found = Object.entries(check.permissions)
+      .filter(([name, on]) => on && !name.endsWith(":read") && !READ_PERMISSIONS.has(name))
+      .map(([name]) => name)
       .slice(0, 10);
     await alertAdmins({
       title: "Ledgerly: investment key refused",
@@ -912,7 +1196,12 @@ async function runHoldings(
     return "refused";
   }
   try {
-    snapshot = await source.fetchHoldings(credentials, linked.currency, now);
+    snapshot = await source.fetchHoldings(
+      credentials,
+      linked.currency,
+      now,
+      await todayLookup(ctx, linked.currency, now),
+    );
   } catch (error) {
     await finishRun(ctx, run.id, { counts: {}, error: sourceErrorText(connection.provider, error) }, now);
     return noteFailure(ctx, linked, error, now);
@@ -945,7 +1234,12 @@ async function backoffUntil(ctx: Pick<Ctx, "userId">, connectionId: string): Pro
 }
 
 /** One pass of a connection, with its lock (V9) and separate outcomes for holdings and flows (A8). */
-async function passOf(ctx: WriteCtx, linked: Linked, now: Date): Promise<"answered" | "failed" | "refused"> {
+async function passOf(
+  ctx: WriteCtx,
+  linked: Linked,
+  now: Date,
+  defer?: Defer,
+): Promise<"answered" | "failed" | "refused"> {
   const { connection } = linked;
   const until = await backoffUntil(ctx, connection.id);
   if (connection.state === "revoked" || (until !== null && until > now)) {
@@ -961,13 +1255,18 @@ async function passOf(ctx: WriteCtx, linked: Linked, now: Date): Promise<"answer
   }
   const holdings = await runHoldings(ctx, linked, now);
   if (holdings === "refused") return "refused";
+  if (defer) {
+    // "Sync now" answers with the value; the flows follow under the same lock (A8: apart anyway).
+    defer(() => withJobLock(`investments-sync:${linked.connection.id}`, () => runFlows(ctx, linked, now)));
+    return holdings;
+  }
   const flows = await runFlows(ctx, linked, now);
   return holdings === "answered" && flows ? "answered" : "failed";
 }
 
-async function lockedPass(ctx: WriteCtx, linked: Linked, now: Date) {
+async function lockedPass(ctx: WriteCtx, linked: Linked, now: Date, defer?: Defer) {
   const result = await withJobLock(`investments-sync:${linked.connection.id}`, () =>
-    passOf(ctx, linked, now),
+    passOf(ctx, linked, now, defer),
   );
   return result.ran ? result.value : ("busy" as const);
 }
@@ -996,11 +1295,17 @@ async function linkedAccount(ctx: Pick<Ctx, "userId">, accountId: string): Promi
 }
 
 /** "Sync now" (§4.3): the same pass, at most once a minute per connection (SEC-09). */
-export async function syncNow(ctx: WriteCtx, accountId: string, now: Date = new Date()) {
+export async function syncNow(
+  ctx: WriteCtx,
+  accountId: string,
+  now: Date = new Date(),
+  /** The flows after the answer (the action passes Next's `after`); inline by default. */
+  defer?: Defer,
+) {
   const linked = await linkedAccount(ctx, accountId);
   const [last] = await listRuns(ctx, { connectionId: linked.connection.id, limit: 1 });
   if (last && now.getTime() - last.startedAt.getTime() < COOLDOWN_MS) throw new SyncError("cooldown");
-  const outcome = await lockedPass(ctx, linked, now);
+  const outcome = await lockedPass(ctx, linked, now, defer);
   if (outcome === "busy") throw new SyncError("cooldown");
   return outcome;
 }
@@ -1084,7 +1389,7 @@ export async function replaceKey(
   try {
     check = await source.verifyReadOnly(keys);
     if (check.result !== "read-only") throw new SyncError("not_read_only");
-    await source.fetchHoldings(keys, linked.currency, now);
+    await source.fetchHoldings(keys, linked.currency, now, await todayLookup(ctx, linked.currency, now));
   } catch (error) {
     if (!(error instanceof SyncError))
       console.error("[investments] key not replaced", sourceErrorLog(provider.id, error));

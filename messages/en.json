@@ -3317,6 +3317,7 @@
       "status": "Status",
       "total": "Total",
       "products": "Scope",
+      "unread": "not read: {products}",
       "missing": "{count, plural, one {# price missing} other {# prices missing}}",
       "statuses": {
         "complete": "Complete",
@@ -3516,16 +3517,24 @@
           "2": "Create a key for the Real environment with the Read permission only: leave Write off.",
           "3": "Copy the public API key and the user key: eToro shows the user key once.",
           "4": "Paste both here. Ledgerly checks that every permission of the key only reads before it saves anything."
+        },
+        "ccxt_binance": {
+          "1": "On Binance, open Account › API Management and create a system-generated key.",
+          "2": "Leave only “Enable Reading” on: trading, withdrawals, transfers, margin, futures and options stay off.",
+          "3": "Copy the API key and the secret key: Binance shows the secret once.",
+          "4": "Paste both here. Ledgerly reads the key's permissions from Binance and refuses it if any of them can do more than read."
         }
       },
-      "readOnlyNote": "A key with any permission that is not read is refused, now and on every later sync. eToro has no IP whitelist for these keys.",
+      "readOnlyNote": "A key with any permission that is not read is refused, now and on every later sync.",
+      "ipSuggested": "Recommended: on {name}, restrict the key to the homelab's public IP. It is optional, and the key works without it.",
+      "ipUnsupported": "{name} has no IP whitelist for these keys.",
       "fields": {
         "api_key": "Public API key",
         "user_key": "User key",
         "secret": "Secret"
       },
-      "currencyHint": "The currency eToro reports the account in.",
-      "existingHint": "An investment account no one else writes, or a manual service: from the connection on, eToro's readings are its value.",
+      "currencyHint": "The currency {name} reports the account in.",
+      "existingHint": "An account of the same type no one else writes, or a manual service: from the connection on, {name}'s readings are its value.",
       "currencyNotSupported": "currency not supported",
       "submit": "Verify and connect",
       "checking": "Checking the key…"
@@ -3568,7 +3577,13 @@
       "streams": {
         "trades": "Trades",
         "deposits": "Deposits and withdrawals",
-        "balance_history": "Daily value"
+        "balance_history": "Daily value",
+        "withdrawals": "Withdrawals",
+        "fiat_orders": "Bank transfers (SEPA)",
+        "fiat_payments": "Card purchases",
+        "convert": "Convert",
+        "dividends": "Rewards and staking",
+        "quantities": "Quantities against the balances"
       },
       "coverageStatus": {
         "complete": "complete",
@@ -3577,11 +3592,15 @@
       },
       "reasons": {
         "api_limit_12m": "the API keeps 12 months",
-        "before_first_movement": "before the first eToro Money movement"
+        "before_first_movement": "before the first eToro Money movement",
+        "api_limit_24m": "the API keeps 24 months",
+        "negative_opening": "the history explains more than the balance",
+        "quantity_mismatch": "the movements do not add up to the balance: a market may be missing"
       },
       "reliableFrom": "reliable from {date}",
       "notReliable": "history incomplete",
-      "etoroBrand": "Data from eToro, read with your key."
+      "etoroBrand": "Data from eToro, read with your key.",
+      "binanceBrand": "Data from Binance, read with your key."
     }
   },
   "payroll": {

@@ -377,7 +377,7 @@ describe("connectInvestmentProvider (§5.1, SEC-05)", () => {
     ).rejects.toMatchObject({ code: "invalid_credentials" });
     await expect(connectNew("JPY")).rejects.toMatchObject({ code: "unsupported_currency" });
     await expect(
-      connectInvestmentProvider(ctx, "ccxt:binance", KEYS, { kind: "new", name: "x", currency: "EUR" }),
+      connectInvestmentProvider(ctx, "ccxt:kraken", KEYS, { kind: "new", name: "x", currency: "EUR" }),
     ).rejects.toMatchObject({ code: "unknown_provider" });
     expect(calls).toEqual([]);
   });

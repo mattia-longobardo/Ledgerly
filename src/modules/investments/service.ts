@@ -674,6 +674,8 @@ export interface LegInput {
   fxSource?: string | null;
   amountCents: Cents;
   validUntil?: CivilDate | null;
+  /** `inferred` for the opening a provider's history implies (A6); `reported` otherwise. */
+  quantityBasis?: "reported" | "reconstructed" | "inferred";
 }
 
 export async function insertEvent(
@@ -726,6 +728,7 @@ async function insertLegs(ctx: Pick<Ctx, "userId">, tx: Tx, eventId: string, leg
         fxSource: leg.fxSource ?? null,
         amountCents: leg.amountCents,
         validUntil: leg.validUntil ?? null,
+        quantityBasis: leg.quantityBasis ?? "reported",
       }),
     ),
   );

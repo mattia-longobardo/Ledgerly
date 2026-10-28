@@ -1,7 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
-import { MANUAL_PROVIDER } from "@/modules/investments/catalog";
+import { accountTypeOf, MANUAL_PROVIDER } from "@/modules/investments/catalog";
 import { catalogView } from "@/modules/investments/queries";
 import { ConnectProviderButton, CreateManualServiceButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
@@ -89,6 +89,8 @@ export default async function InvestmentsCatalogPage() {
                             provider={{
                               id: provider.id,
                               name: provider.name,
+                              accountType: accountTypeOf(provider.category),
+                              ipWhitelist: provider.ipWhitelist,
                               credentialFields: provider.credentialFields,
                               currencies: provider.currencies,
                               defaultCurrency: provider.defaultCurrency,
