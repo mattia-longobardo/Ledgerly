@@ -200,6 +200,11 @@ const PAGES: Screen[] = [
     session: "layout",
     open: (page) => follow(page, "/investments", "Fineco Conto Deposito"),
   },
+  {
+    name: "/investments/[accountId] synced with eToro",
+    session: "layout",
+    open: (page) => follow(page, "/investments", "eToro"),
+  },
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
     name: "/payroll/[id]",
@@ -247,8 +252,10 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
+      // The first control is Paperless's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .first()
         .click();
       await settledDialog(page);
     },
@@ -261,8 +268,10 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
+      // The first control is Paperless's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .first()
         .click();
       await settledDialog(page);
       const dialog = page.getByRole("dialog");
@@ -380,6 +389,37 @@ const OVERLAYS: Screen[] = [
         .first()
         .click();
       await page.getByRole("menuitem", { name: "Close" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the connect eToro dialog",
+    session: "admin",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/investments/catalog");
+      await settled(page);
+      await page.getByRole("button", { name: "Connect", exact: true }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the replace key dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", "eToro");
+      await page.getByRole("button", { name: "Replace key" }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the disconnect dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", "eToro");
+      await page.getByRole("button", { name: "Disconnect", exact: true }).first().click();
       await settledDialog(page);
     },
   },

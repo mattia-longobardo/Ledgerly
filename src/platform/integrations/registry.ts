@@ -4,12 +4,20 @@
  * `ccxt:<exchange>` — so a new integration adds one entry here and the dispatcher does not change.
  */
 import "server-only";
+import { runInvestmentPass } from "@/modules/investments/sync";
 import { runTrekPass } from "@/modules/timeoff/jobs";
 import { runWalletPass } from "@/modules/transactions/jobs";
 import type { Ctx } from "@/platform/context";
 import type { Person } from "@/modules/users/jobs";
 import { runPaperlessPass } from "./paperless/sync";
-import { KINDS_OF, PAPERLESS_PROVIDER, type SyncKind, TREK_PROVIDER, WALLET_PROVIDER } from "./rules";
+import {
+  ETORO_PROVIDER,
+  KINDS_OF,
+  PAPERLESS_PROVIDER,
+  type SyncKind,
+  TREK_PROVIDER,
+  WALLET_PROVIDER,
+} from "./rules";
 import { type Connection, type DueConnection, listConnections } from "./service";
 
 export type PassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";
@@ -37,6 +45,8 @@ export const PASSES: readonly ProviderPass[] = [
     kinds: KINDS_OF[PAPERLESS_PROVIDER],
     run: (_person, ctx) => runPaperlessPass(ctx),
   },
+  // Investments (docs/design/investments.md §3.1): the module's own pass, lock and outcomes.
+  { provider: ETORO_PROVIDER, kinds: KINDS_OF[ETORO_PROVIDER], run: runInvestmentPass },
 ];
 
 /** The pass for `provider`: an exact id first, then the longest prefix; `null` when nobody owns it. */

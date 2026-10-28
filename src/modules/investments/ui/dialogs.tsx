@@ -24,10 +24,16 @@ import { Segmented } from "@/ui/segmented";
 import { notify } from "@/ui/toast";
 import {
   addAssetAction,
+  confirmKeyRevokedAction,
   confirmZeroAction,
+  connectProviderAction,
   convertModeAction,
   createManualServiceAction,
   deleteOperationAction,
+  disconnectProviderAction,
+  replaceKeyAction,
+  syncNowAction,
+  verifyKeyAction,
   type OperationFormInput,
   recordOperationAction,
   reconcileAction,
@@ -96,6 +102,18 @@ const KNOWN_ERRORS = [
   "not_editable",
   "before_period",
   "managed_locked",
+  "unknown_provider",
+  "invalid_credentials",
+  "not_read_only",
+  "provider_auth",
+  "provider_unavailable",
+  "rate_limited",
+  "unsupported_currency",
+  "already_connected",
+  "not_connected",
+  "cooldown",
+  "sync_failed",
+  "sync_refused",
 ];
 
 function useErrors() {
@@ -387,6 +405,8 @@ export interface ExistingChoice {
   type: string;
   balanceCents: Cents | null;
   reason: string | null;
+  /** A manual service a provider can be connected to (manual → synced, §2.5). */
+  manualService?: boolean;
 }
 
 export function CreateManualServiceButton({
@@ -1794,5 +1814,353 @@ export function ConfirmZeroButton({
         />
       )}
     </>
+  );
+}
+
+// ——— Connected services (§4.2, §4.3, §5) ——————————————————————————————————————————————————————
+
+export interface ConnectableProvider {
+  id: string;
+  name: string;
+  credentialFields: readonly string[];
+  currencies: readonly string[] | null;
+  defaultCurrency: string;
+  url: string | null;
+  revokeUrl: string | null;
+}
+
+/** The key fields of a provider: write only, never filled back, never kept by the browser. */
+function KeyFields({ provider, id }: { provider: ConnectableProvider; id: string }) {
+  const t = useTranslations("investments");
+  return (
+    <>
+      {provider.credentialFields.map((field) => (
+        <Field
+          key={field}
+          label={t(`connect.fields.${field}` as "connect.fields.api_key")}
+          htmlFor={`${id}-${field}`}
+        >
+          <Input
+            id={`${id}-${field}`}
+            name={field}
+            type="password"
+            required
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={4096}
+          />
+        </Field>
+      ))}
+    </>
+  );
+}
+
+function keysOf(provider: ConnectableProvider, data: FormData): Record<string, string> {
+  return Object.fromEntries(
+    provider.credentialFields.map((field) => [field, String(data.get(field) ?? "").trim()]),
+  );
+}
+
+export function ConnectProviderButton({
+  provider,
+  existing,
+  numberFormat,
+}: {
+  provider: ConnectableProvider;
+  existing: readonly ExistingChoice[];
+  numberFormat: NumberFormat;
+}) {
+  const t = useTranslations("investments");
+  return (
+    <Opener label={t("connect.open")} variant="primary">
+      {(close) => (
+        <ConnectDialog
+          onOpenChange={close}
+          provider={provider}
+          existing={existing}
+          numberFormat={numberFormat}
+        />
+      )}
+    </Opener>
+  );
+}
+
+function ConnectDialog({
+  onOpenChange,
+  provider,
+  existing,
+  numberFormat,
+}: {
+  onOpenChange: (open: boolean) => void;
+  provider: ConnectableProvider;
+  existing: readonly ExistingChoice[];
+  numberFormat: NumberFormat;
+}) {
+  const t = useTranslations("investments");
+  const id = useId();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const { error, clear, report } = useErrors();
+  const [target, setTarget] = useState<"new" | "existing">("new");
+  const currencies = provider.currencies ?? [provider.defaultCurrency];
+  const choices = existing.filter((one) => one.type === "investment");
+  const usable = (one: ExistingChoice) =>
+    (one.reason === null || one.manualService) && currencies.includes(one.currency);
+  const [accountId, setAccountId] = useState(choices.find(usable)?.id ?? "");
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const keys = keysOf(provider, data);
+    const name = String(data.get("name") ?? "").trim();
+    const currency = String(data.get("currency") ?? provider.defaultCurrency);
+    startTransition(async () => {
+      const result = await connectProviderAction(
+        provider.id,
+        keys,
+        target === "new" ? { kind: "new", name, currency } : { kind: "existing", accountId },
+      );
+      // The fields are cleared whatever happened: a key stays in the page no longer than needed.
+      for (const field of provider.credentialFields) {
+        const input = form.elements.namedItem(field);
+        if (input instanceof HTMLInputElement) input.value = "";
+      }
+      if (!report(result)) return;
+      notify(t("toasts.connected", { name: provider.name }));
+      onOpenChange(false);
+      if (result.ok) router.push(`/investments/${result.accountId}` as Route);
+    });
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onOpenChange}
+      clear={clear}
+      title={t("connect.title", { name: provider.name })}
+      description={t("connect.description")}
+      onSubmit={onSubmit}
+    >
+      <ol className="col-span-full flex list-decimal flex-col gap-1 pl-5 text-sm">
+        {(["1", "2", "3", "4"] as const).map((step) => (
+          <li key={step}>{t(`connect.steps.${provider.id}.${step}` as "connect.steps.etoro.1")}</li>
+        ))}
+      </ol>
+      <p className="col-span-full text-sm text-muted">{t("connect.readOnlyNote")}</p>
+      <KeyFields provider={provider} id={id} />
+      <div className="col-span-full">
+        <Segmented
+          label={t("manualForm.destination")}
+          value={target}
+          onChange={setTarget}
+          options={[
+            { value: "new", label: t("manualForm.newAccount") },
+            { value: "existing", label: t("manualForm.existingAccount") },
+          ]}
+        />
+      </div>
+      {target === "new" ? (
+        <>
+          <Field label={t("manualForm.name")} htmlFor={`${id}-name`}>
+            <Input id={`${id}-name`} name="name" required maxLength={80} defaultValue={provider.name} />
+          </Field>
+          <Field label={t("manualForm.currency")} htmlFor={`${id}-currency`} hint={t("connect.currencyHint")}>
+            <Select id={`${id}-currency`} name="currency" defaultValue={provider.defaultCurrency}>
+              {currencies.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </>
+      ) : (
+        <div className="col-span-full">
+          <Field label={t("manualForm.existing")} htmlFor={`${id}-account`} hint={t("connect.existingHint")}>
+            {choices.length === 0 ? (
+              <p className="text-sm text-muted">{t("manualForm.noExisting")}</p>
+            ) : (
+              <Select
+                id={`${id}-account`}
+                value={accountId}
+                onChange={(event) => setAccountId(event.target.value)}
+              >
+                {choices.map((one) => (
+                  <option key={one.id} value={one.id} disabled={!usable(one)}>
+                    {t("manualForm.option", {
+                      name: one.name,
+                      balance: formatMoney(one.balanceCents, numberFormat, { currency: one.currency }),
+                    })}
+                    {!currencies.includes(one.currency)
+                      ? ` — ${t("connect.currencyNotSupported")}`
+                      : !usable(one) && one.reason !== null
+                        ? ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.synced")}`
+                        : ""}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </div>
+      )}
+      <ErrorLine error={error} />
+      <Actions
+        onCancel={() => onOpenChange(false)}
+        pending={pending || (target === "existing" && accountId === "")}
+        submit={pending ? t("connect.checking") : t("connect.submit")}
+      />
+    </Dialog>
+  );
+}
+
+/** "Sync now" and "Verify" (§4.3): a minute apart at least, which the service enforces (SEC-09). */
+export function SyncButtons({ accountId }: { accountId: string }) {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>, done: string) =>
+    startTransition(async () => {
+      const result = await action();
+      notify(
+        result.ok
+          ? done
+          : t(`errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed"),
+        result.ok ? "success" : "error",
+      );
+      router.refresh();
+    });
+  return (
+    <span className="flex flex-wrap gap-2">
+      <Button
+        size="sm"
+        variant="primary"
+        disabled={pending}
+        onClick={() => run(() => syncNowAction(accountId), t("toasts.synced"))}
+      >
+        {t("sync.now")}
+      </Button>
+      <Button
+        size="sm"
+        disabled={pending}
+        onClick={() => run(() => verifyKeyAction(accountId), t("toasts.verified"))}
+      >
+        {t("sync.verify")}
+      </Button>
+    </span>
+  );
+}
+
+export function ReplaceKeyButton({
+  accountId,
+  provider,
+}: {
+  accountId: string;
+  provider: ConnectableProvider;
+}) {
+  const t = useTranslations("investments");
+  return (
+    <Opener label={t("sync.replace")}>
+      {(close) => <ReplaceKeyDialog onOpenChange={close} accountId={accountId} provider={provider} />}
+    </Opener>
+  );
+}
+
+function ReplaceKeyDialog({
+  onOpenChange,
+  accountId,
+  provider,
+}: {
+  onOpenChange: (open: boolean) => void;
+  accountId: string;
+  provider: ConnectableProvider;
+}) {
+  const t = useTranslations("investments");
+  const id = useId();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const { error, clear, report } = useErrors();
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const keys = keysOf(provider, new FormData(form));
+    startTransition(async () => {
+      const result = await replaceKeyAction(accountId, keys);
+      for (const field of provider.credentialFields) {
+        const input = form.elements.namedItem(field);
+        if (input instanceof HTMLInputElement) input.value = "";
+      }
+      if (!report(result)) return;
+      notify(t("toasts.keyReplaced"));
+      onOpenChange(false);
+      router.refresh();
+    });
+  }
+  return (
+    <Dialog
+      open
+      onOpenChange={onOpenChange}
+      clear={clear}
+      width={460}
+      title={t("sync.replaceTitle", { name: provider.name })}
+      description={t("sync.replaceDescription")}
+      onSubmit={onSubmit}
+    >
+      <KeyFields provider={provider} id={id} />
+      <ErrorLine error={error} />
+      <Actions onCancel={() => onOpenChange(false)} pending={pending} submit={t("connect.submit")} />
+    </Dialog>
+  );
+}
+
+export function DisconnectButton({ accountId, name }: { accountId: string; name: string }) {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" variant="danger" onClick={() => setOpen(true)}>
+        {t("sync.disconnect")}
+      </Button>
+      {open && (
+        <ConfirmDialog
+          open
+          onOpenChange={setOpen}
+          title={t("confirm.disconnectTitle", { name })}
+          description={t("confirm.disconnectDescription")}
+          confirm={t("sync.disconnect")}
+          onConfirm={async () => {
+            const result = await disconnectProviderAction(accountId);
+            notify(
+              result.ok ? t("toasts.disconnected", { name }) : t("errors.failed"),
+              result.ok ? "success" : "error",
+            );
+            if (result.ok) router.refresh();
+            return result.ok;
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+export function ConfirmRevokedButton({ accountId }: { accountId: string }) {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      size="sm"
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await confirmKeyRevokedAction(accountId);
+          notify(result.ok ? t("toasts.revoked") : t("errors.failed"), result.ok ? "success" : "error");
+          router.refresh();
+        })
+      }
+    >
+      {t("sync.revokedConfirm")}
+    </Button>
   );
 }

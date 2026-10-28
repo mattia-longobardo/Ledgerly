@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "../../platform/auth/schema";
+import { integrationConnections } from "../../platform/integrations/schema";
 import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
 import { MOVEMENT_KINDS } from "./legacy";
@@ -32,6 +33,9 @@ import {
   PERIOD_REASONS,
   POSITIVE_KINDS,
   PRICE_SOURCES,
+  COVERAGE_STATUSES,
+  KEY_CHECK_ORIGINS,
+  KEY_CHECK_RESULTS,
   PRODUCT_PATTERN,
   QUANTITY_BASES,
   READING_STATUSES,
@@ -589,5 +593,86 @@ export const investmentSupersededEntries = pgTable(
   (table) => [
     index("investment_superseded_entries_account_idx").on(table.accountId, table.on),
     index("investment_superseded_entries_user_idx").on(table.userId),
+  ],
+);
+
+// ——— Provider sync (docs/design/investments.md §1.2, §1.6; phase 3) ————————————————————————————
+
+/**
+ * What a key check found (SEC-01, SEC-07, D7): one row per check, never the key. `connection_id`
+ * outlives the connection as null, so after a disconnection the page can still ask for the key to
+ * be revoked at the provider; `retired_at` says the key is no longer the connection's.
+ */
+export const investmentKeyChecks = pgTable(
+  "investment_key_checks",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    investmentAccountId: uuid("investment_account_id")
+      .notNull()
+      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id").references(() => integrationConnections.id, { onDelete: "set null" }),
+    provider: text("provider").notNull(),
+    origin: text("origin", { enum: KEY_CHECK_ORIGINS }).notNull(),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+    result: text("result", { enum: KEY_CHECK_RESULTS }).notNull(),
+    permissions: jsonb("permissions").$type<Record<string, boolean>>().notNull().default({}),
+    ipRestricted: boolean("ip_restricted"),
+    attestedReadOnlyAt: timestamp("attested_read_only_at", { withTimezone: true }),
+    attestedIpAt: timestamp("attested_ip_at", { withTimezone: true }),
+    attestationTextVersion: text("attestation_text_version"),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    revokedAtProviderAt: timestamp("revoked_at_provider_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("investment_key_checks_account_idx").on(table.investmentAccountId, table.checkedAt),
+    index("investment_key_checks_user_idx").on(table.userId),
+    check("investment_key_checks_result_ck", sql`${table.result} in (${sql.raw(inList(KEY_CHECK_RESULTS))})`),
+    check("investment_key_checks_origin_ck", sql`${table.origin} in (${sql.raw(inList(KEY_CHECK_ORIGINS))})`),
+    check("investment_key_checks_provider_ck", sql`length(${table.provider}) between 1 and 40`),
+  ],
+);
+
+/**
+ * What the flows and the history of a connection cover (A7): windows per stream, rewritten with the
+ * data they describe in one transaction. The UI and the return read this, not the run's outcome.
+ */
+export const investmentSyncCoverage = pgTable(
+  "investment_sync_coverage",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => integrationConnections.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    stream: text("stream").notNull(),
+    fromAt: timestamp("from_at", { withTimezone: true }).notNull(),
+    toAt: timestamp("to_at", { withTimezone: true }).notNull(),
+    status: text("status", { enum: COVERAGE_STATUSES }).notNull(),
+    reason: text("reason"),
+  },
+  (table) => [
+    unique("investment_sync_coverage_window_uq").on(table.connectionId, table.stream, table.fromAt),
+    index("investment_sync_coverage_user_idx").on(table.userId),
+    check("investment_sync_coverage_kind_ck", sql`${table.kind} in ('holdings', 'flows')`),
+    check(
+      "investment_sync_coverage_status_ck",
+      sql`${table.status} in (${sql.raw(inList(COVERAGE_STATUSES))})`,
+    ),
+    check("investment_sync_coverage_stream_ck", sql`${table.stream} ~ '^[a-z][a-z0-9_:/-]{0,59}$'`),
+    check("investment_sync_coverage_window_ck", sql`${table.toAt} >= ${table.fromAt}`),
+    check(
+      "investment_sync_coverage_reason_ck",
+      sql`${table.reason} is null or ${table.reason} ~ '^[a-z][a-z0-9_]{0,59}$'`,
+    ),
   ],
 );

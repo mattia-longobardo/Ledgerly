@@ -22,6 +22,7 @@ import {
   type Mode,
   monthsBack,
   type AccountOrigin,
+  parseDecimal,
   type Performance,
   performance,
   PRICE_SCALE,
@@ -44,6 +45,7 @@ import {
   loadBook,
   ratesFor,
 } from "./service";
+import { type SyncStatus, syncStatus } from "./sync";
 
 /** The home chart looks back this far, as the legacy page did. */
 const HISTORY_MONTHS = 36;
@@ -68,6 +70,12 @@ export interface ServiceSummary {
   weight: number | null;
   lastUpdate: CivilDate | null;
   warnings: { conflicts: number; pendingZero: boolean; missingPrices: number; openAdjustments: number };
+  /**
+   * Whether gain and return can be shown (§2.4): always for a manual account; for a synced one
+   * only when the coverage of its flows is complete. Otherwise `reliableFrom` says from when.
+   */
+  reliable: boolean;
+  reliableFrom: Date | null;
 }
 
 interface Loaded {
@@ -76,6 +84,7 @@ interface Loaded {
   book: LoadedBook;
   rates: RateTable;
   day: DayValue;
+  sync: SyncStatus | null;
 }
 
 async function loadAll(
@@ -95,7 +104,10 @@ async function loadAll(
     if (!account) continue;
     const book = await loadBook(ctx, investment, account.currency);
     const rates = await ratesFor(book, todayOn);
-    loaded.push({ account, investment, book, rates, day: valueOn(book, todayOn, rates) });
+    const day = valueOn(book, todayOn, rates);
+    // Also after a disconnection: the retired key still asks to be revoked (SEC-07).
+    const sync = await syncStatus(ctx, investment);
+    loaded.push({ account, investment, book, rates, day, sync });
   }
   return { loaded, accounts };
 }
@@ -126,6 +138,8 @@ function lastUpdateOf(book: LoadedBook): CivilDate | null {
 function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, displayRates: RateTable) {
   const valueCents = one.day.valueCents;
   const before = valueOn(one.book, addDays(todayOn, -30), one.rates).valueCents;
+  const reliable = one.day.origin !== "synced" || (one.sync?.complete ?? false);
+  const measured = performance(flowsOn(one.book, todayOn), valueCents);
   return {
     account: one.account,
     investment: one.investment,
@@ -138,10 +152,12 @@ function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, dis
         ? null
         : convertCents(valueCents, one.account.currency, displayCurrency, todayOn, displayRates),
     change30Cents: valueCents === null || before === null ? null : valueCents - before,
-    performance: performance(flowsOn(one.book, todayOn), valueCents),
+    performance: reliable ? measured : { ...measured, gainCents: null, simpleReturn: null },
     weight: null as number | null,
     lastUpdate: lastUpdateOf(one.book),
     warnings: warningsOf(one, todayOn),
+    reliable,
+    reliableFrom: reliable ? null : (one.sync?.reliableFrom ?? null),
   } satisfies ServiceSummary;
 }
 
@@ -212,7 +228,9 @@ export async function investmentsHome(
     ),
   );
   const gainCents =
-    value.total === null || invested.total === null || value.partial ? null : value.total - invested.total;
+    value.total === null || invested.total === null || value.partial || services.some((one) => !one.reliable)
+      ? null
+      : value.total - invested.total;
   const base = sumCents(
     live.map((one) => {
       const flows = flowsOn(one.book, todayOn);
@@ -364,6 +382,8 @@ export interface CatalogView {
     type: string;
     balanceCents: Cents | null;
     reason: string | null;
+    /** A manual service a provider can be connected to (manual → synced, §2.5). */
+    manualService: boolean;
   }[];
 }
 
@@ -395,6 +415,11 @@ export async function catalogView(ctx: Pick<Ctx, "userId" | "timeZone">): Promis
       type: one.account.type,
       balanceCents: balances.get(one.account.id) ?? null,
       reason: one.reason,
+      manualService:
+        one.reason === "managed" &&
+        investments.some(
+          (investment) => investment.accountId === one.account.id && investment.provider === "manual",
+        ),
     })),
   };
 }
@@ -465,6 +490,8 @@ export interface ServiceDetail {
   }[];
   months: MonthKey[];
   history: { value: (Cents | null)[]; invested: (Cents | null)[] };
+  /** The connection, its key and what its flows cover (§4.3, §5.3); `null` for a manual service. */
+  sync: SyncStatus | null;
   /** Products the provider's latest reading covers: a manual position there would conflict (R4). */
   coveredProducts: string[];
   assets: InvestmentAsset[];
@@ -510,9 +537,12 @@ export async function serviceDetail(
     (sum, state) => sum + (state.open && state.valueCents !== null ? state.valueCents : 0n),
     0n,
   );
+  const syncedNow = one.day.origin === "synced";
   const holdings: HoldingRow[] = one.book.holdingRows.flatMap((holding) => {
     const state = states.get(holding.id);
     if (!state?.open) return [];
+    // A synced account's provider positions are the reading's, never rebuilt from its trades (A6).
+    if (syncedNow && holding.origin === "provider") return [];
     return [
       {
         id: holding.id,
@@ -531,6 +561,44 @@ export async function serviceDetail(
       },
     ];
   });
+
+  if (syncedNow) {
+    const reading = [...one.book.readingRows]
+      .filter((row) => row.on <= todayOn && row.status !== "pending_zero")
+      .at(-1);
+    const positions = reading ? await readingPositionsOf(ctx, reading.id) : [];
+    const catalog = new Map((await listAssets(ctx)).map((asset) => [asset.id, asset]));
+    const total = positions.reduce<Cents>((sum, position) => sum + (position.valueCents ?? 0n), 0n);
+    for (const position of positions) {
+      const asset = catalog.get(position.assetId);
+      if (!asset || reading === undefined) continue;
+      const quantity = position.quantity === null ? null : parseDecimal(position.quantity, QUANTITY_SCALE);
+      holdings.push({
+        id: position.id,
+        asset,
+        origin: "provider",
+        product: position.product,
+        state: {
+          holdingId: position.id,
+          quantity,
+          unitPrice: position.price === null ? null : parseDecimal(position.price, PRICE_SCALE),
+          priceCurrency: position.priceCurrency,
+          pricedOn: reading.on,
+          valueCents: position.valueCents,
+          costCents: 0n,
+          fxEffectCents: 0n,
+          staleRate: false,
+          open: true,
+        },
+        quantityText: quantity === null ? null : formatDecimal(quantity, QUANTITY_SCALE),
+        priceText: position.price === null ? null : trimmed(position.price),
+        weight:
+          position.valueCents === null || total <= 0n ? null : Number(position.valueCents) / Number(total),
+        gainCents: null,
+        conflict: false,
+      });
+    }
+  }
 
   // Operations, grouped by event, newest first, with their bank link and their revisions.
   const names = new Map(one.book.holdingRows.map((holding) => [holding.id, holding.asset.name]));
@@ -677,6 +745,7 @@ export async function serviceDetail(
     adjustments,
     months,
     history,
+    sync: one.sync,
     coveredProducts,
     assets,
     linkOptions: { out: out.map(option), in: incoming.map(option) },
