@@ -13,9 +13,9 @@ import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import {
   catalogView,
-  investmentHistory,
   investmentOperationsExport,
   investmentsHome,
+  investmentsPnlView,
   investmentsPortfolio,
   serviceDetail,
 } from "./queries";
@@ -221,6 +221,39 @@ describe("§2.1 the Directa example, end to end", () => {
     ]);
   });
 
+  it("feeds the P&L home (U2): bars that add up to the hero, the value of each service, its colour", async () => {
+    const accountId = await directa();
+    const todayOn = today(ctx.timeZone);
+    const year = await investmentsPnlView(ctx, {});
+    expect(year.period).toMatchObject({ kind: "year", year: Number(todayOn.slice(0, 4)) });
+    // The year to date is the gain of today: the service opened this year.
+    expect(year.portfolio.parts?.pnlCents).toBe(eur(996));
+    expect(year.barGrain).toBe("month");
+    expect(year.intervals.at(-1)?.to).toBe(todayOn);
+    const service = year.chart.find((one) => one.accountId === accountId)!;
+    expect(service.bars).toHaveLength(year.intervals.length);
+    expect(service.bars.reduce<bigint>((sum, cents) => sum + (cents ?? 0n), 0n)).toBe(eur(996));
+    expect(service.values.at(-1)).toBe(eur(8996));
+    expect(year.valueDays.at(-1)).toBe(todayOn);
+    expect(service.barsEstimated.some(Boolean)).toBe(false);
+    expect(year.colorIndex.has(accountId)).toBe(true);
+    expect(year.firstOn).toBe("2026-03-01");
+
+    // A quarter goes by week, and its bars still add up to its own P&L.
+    const quarter = await investmentsPnlView(ctx, { from: addDays(todayOn, -80), to: todayOn });
+    expect(quarter.barGrain).toBe("week");
+    expect(quarter.valueGrain).toBe("day");
+    const bars = quarter.chart.find((one) => one.accountId === accountId)!.bars;
+    expect(bars.reduce<bigint>((sum, cents) => sum + (cents ?? 0n), 0n)).toBe(
+      quarter.portfolio.parts?.pnlCents,
+    );
+
+    // "All" starts on the first day with data.
+    const all = await investmentsPnlView(ctx, { period: "all" });
+    expect(all.span.from).toBe("2026-03-01");
+    expect(all.portfolio.parts?.pnlCents).toBe(eur(996));
+  });
+
   it("feeds the home: totals, the chart over a window, the allocation by class and by service", async () => {
     const accountId = await directa();
     const home = await investmentsHome(ctx);
@@ -230,19 +263,6 @@ describe("§2.1 the Directa example, end to end", () => {
       investedCents: eur(8000),
       gainCents: eur(996),
     });
-    // The last year by default (PERS-100), from the first period on.
-    const history = await investmentHistory(ctx, { window: { grain: "month", range: "1y", custom: null } });
-    expect(history?.months.length).toBeLessThanOrEqual(12);
-    expect(history?.value.at(-1)).toBe(eur(8996));
-    expect(history?.invested.at(-1)).toBe(eur(8000));
-    expect(history?.estimated.some(Boolean)).toBe(false);
-    const daily = await investmentHistory(ctx, {
-      window: { grain: "day", range: "1y", custom: null },
-      accountId,
-    });
-    expect(daily?.days.at(-1)).toBe(today(ctx.timeZone));
-    expect(daily?.value.at(-1)).toBe(eur(8996));
-    expect(daily?.currency).toBe("EUR");
     expect(home.byClass).toEqual([{ key: "cash", cents: eur(8996), share: 1 }]);
     expect(home.byService.map((slice) => slice.key)).toEqual(["Directa"]);
     const catalog = await catalogView(ctx);

@@ -502,6 +502,11 @@ Ogni servizio, per un periodo, ha uno **stato** (PERS-113 · 2), che arriva fino
 | Classe delle rettifiche              | nessuna                                                  | Colonna additiva + dialog con l'anteprima dell'effetto sul P&L (§4.9)                    | U3   |
 | Non realizzato su eToro              | `amount` e `unrealizedPnL` sommati in un valore          | Migrazione additiva: `cost_cents` su `investment_reading_positions`, riempito da `amount` | U4   |
 | Non realizzato su Binance            | nessun costo di carico                                   | Costo dai trade (§4.4); con `quantity_mismatch` resta "Altro (dati incompleti)"          | U4   |
+
+U4 (PERS-119, `investments-ux-2-4.md`): il costo di una posizione sincronizzata viene dal provider,
+dai trade quando la loro quantità è quella letta, o da una lettura successiva con la stessa quantità;
+altrimenti è sconosciuto, per posizione. Un giorno con il totale e senza posizioni (storico eToro,
+stima Binance) ha le posizioni sconosciute, mai assenti.
 | P&L per periodo in API e MCP         | solo "da sempre"                                         | `investments:read` con `from`/`to`; annotare in `docs/api-changelog.md`                  | U5   |
 
 ### 4.8 Aggregato con periodi diversi
