@@ -3136,9 +3136,7 @@
       "grains": {
         "month": "Mese",
         "day": "Giorno"
-      },
-      "estimatedShort": "stima",
-      "estimatedNote": "Il tratto tratteggiato è una stima: il provider non conserva lo storico del valore, quindi ogni giorno è ricostruito dai movimenti e dalle chiusure giornaliere dell'exchange."
+      }
     },
     "services": {
       "title": "Servizi",
@@ -3341,7 +3339,7 @@
         "partial": "Parziale",
         "confirmed_zero": "Vuota, confermata",
         "pending_zero": "Vuota?",
-        "estimated": "Stima"
+        "reconstructed": "Ricostruita"
       },
       "pendingZero": "Il provider riporta il conto vuoto. È stato svuotato? Finché non confermi, il valore resta."
     },
@@ -3638,7 +3636,7 @@
         "opening_12m": "oltre 12 mesi: compreso nell'apertura",
         "negative_opening": "lo storico spiega più del saldo",
         "quantity_mismatch": "i movimenti non tornano con il saldo: può mancare un mercato",
-        "estimated": "stimato dai movimenti e dalle chiusure giornaliere"
+        "reconstructed": "ricostruito dai movimenti completi dei 12 mesi e dalle chiusure giornaliere"
       },
       "reliableFrom": "attendibile dal {date}",
       "notReliable": "storico incompleto",
@@ -3687,35 +3685,33 @@
         "noData": "Nessun dato in questo periodo. Il primo è del {date}."
       },
       "status": {
-        "estimated": "Stimato",
+        "stale": "Prezzo vecchio",
         "partial": "Dati parziali",
         "undetermined": "Non determinabile",
         "from": "dal {date}"
       },
       "coverage": {
         "partial": "{name} dal {date}",
-        "estimated": "{name} stimato",
+        "stale": "{name} con un prezzo vecchio",
         "excluded": "{count, plural, one {# servizio escluso} other {# servizi esclusi}}"
       },
       "alerts": {
         "label": "{count, plural, one {# cosa da controllare} other {# cose da controllare}}",
         "one": "da controllare: {text}",
-        "many": "da controllare",
-        "estimated": "storico stimato"
+        "many": "da controllare"
       },
       "kpis": {
         "realized": "Realizzato",
         "realizedNote": "vendite e chiusure",
         "unrealized": "Non realizzato",
-        "unrealizedNote": "posizioni aperte",
-        "unrealizedUnknown": "senza costo: in Altro",
+        "unrealizedNote": "{count, plural, one {# posizione aperta} other {# posizioni aperte}}",
+        "unrealizedUnknown": "posizioni del giorno non note",
         "income": "Proventi",
         "incomeNote": "dividendi, staking",
         "feesFx": "Commissioni e cambio",
         "feesFxNote": "commissioni {fees} · cambio {fx}",
         "corrections": "Correzioni",
-        "unattributed": "Altro (dati incompleti)",
-        "valuation": "Altro (valorizzazione e arrotondamenti)",
+        "unattributed": "Non spiegato dai dati",
         "transfers": "Trasferimenti tra servizi"
       },
       "chart": {
@@ -3734,7 +3730,6 @@
         },
         "line": "Cumulato",
         "legend": "I colori sono i servizi della lista sotto.",
-        "estimated": "Tratteggio o colore più chiaro = storico stimato.",
         "cumulative": "cumulato {amount}",
         "summary": "P&L {period}: {total}. Migliore {best}, peggiore {worst}. {services}.",
         "valueSummary": "Valore a fine periodo {value}.",
@@ -3784,7 +3779,10 @@
         "openingCash": "Cassa iniziale",
         "openingPosition": "Posizione iniziale",
         "valuation": "Valutazione",
-        "accountValuation": "Valore del conto aggiornato"
+        "accountValuation": "Valore del conto aggiornato",
+        "exchangeCost": "Costo di cambio",
+        "balanceDifference": "Differenza di saldo",
+        "cutoffOpening": "Apertura all’inizio dei 12 mesi"
       },
       "details": {
         "position": "{qty} {asset} a {price}",
@@ -3841,13 +3839,12 @@
       "partial": "Il P&L parte dal {date}: prima di quel giorno i dati di {name} non sono completi.",
       "partialLink": "Cosa manca",
       "undetermined": "Nessun dato affidabile nel periodo: il P&L non si può misurare.",
-      "estimated": "Una parte del periodo si basa su uno storico stimato.",
       "kpis": {
         "realized": "Realizzato",
         "realizedNote": "vendite e chiusure",
         "unrealized": "Var. non realizzato",
-        "unrealizedNote": "posizioni aperte",
-        "unrealizedUnknown": "senza costo: in Altro",
+        "unrealizedNote": "{count, plural, one {# posizione aperta} other {# posizioni aperte}}",
+        "unrealizedUnknown": "posizioni del giorno non note",
         "income": "Proventi",
         "incomeNote": "dividendi, staking",
         "incomeIncluded": "inclusi",
@@ -3875,8 +3872,7 @@
         "all": "Tutti i movimenti",
         "empty": "Nessun movimento nel periodo."
       },
-      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile.",
-      "convertedNote": "comprende il costo di cambio {from}→{to} di {name}: registra quei versamenti e prelievi in {from} senza dire quanto ha convertito, quindi sono valutati al cambio BCE."
+      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile."
     },
     "activityTab": {
       "deposits": "Versamenti",
@@ -3931,18 +3927,17 @@
         "activityGaps": "Incompleti: {streams}.",
         "activityNone": "{name} non dà lo storico dei movimenti.",
         "history": "Storico del valore",
-        "historyEstimated": "Stimato dal {from} al {to}: {name} non conserva il valore passato, quindi Ledgerly lo ricostruisce dai movimenti e dalle chiusure giornaliere. Nel grafico è tratteggiato.",
+        "historyReconstructed": "Ricostruito dal {from} al {to}: {name} non conserva il valore passato, quindi Ledgerly ricostruisce ogni giorno dai movimenti completi dei 12 mesi e dalle chiusure giornaliere.",
         "historyRead": "Letto ogni giorno dal {date}.",
         "cost": "Costo di carico",
-        "costMismatch": "Le quantità non tornano con i movimenti: il P&L non realizzato delle posizioni è in “Altro (dati incompleti)”.",
-        "costMissing": "{name} non dà il costo delle posizioni: il loro P&L non realizzato è in “Altro (dati incompleti)”.",
+        "costMismatch": "Le quantità non tornano con i movimenti: ogni differenza è una voce in Attività.",
+        "costMissing": "{name} non dà il costo delle posizioni: il periodo le valuta al suo inizio.",
         "details": "Dettaglio tecnico per flusso ({count})",
         "products": "Prodotti letti: {products}"
       },
       "status": {
         "complete": "Completo",
         "partial": "Dati parziali",
-        "estimated": "Stimato",
         "check": "Da controllare",
         "missing": "Non disponibile"
       },
@@ -3950,7 +3945,7 @@
         "title": "Storico sincronizzazioni",
         "note": "Le letture che il servizio ci ha dato",
         "same": "{count} letture uguali, {from} – {to}",
-        "estimated": "{count} letture stimate, {from} – {to}",
+        "reconstructed": "{count} letture ricostruite, {from} – {to}",
         "empty": "Nessuna lettura ancora."
       },
       "corrections": {
@@ -4002,7 +3997,7 @@
       "share": "Quota",
       "actions": "Azioni",
       "periodReturn": "{rate} nel periodo",
-      "noCost": "senza costo: in Altro",
+      "noCost": "senza costo",
       "inferredCost": "Costo da una lettura successiva",
       "byValue": "per valore",
       "manual": "Manuale",
@@ -4010,7 +4005,7 @@
       "cashNote": "{currency} disponibili",
       "total": "Totale",
       "mobileLine": "{quantity} × {price} · medio {average}",
-      "noCostNote": "{count, plural, one {# posizione non ha} other {# posizioni non hanno}} ancora un costo: {count, plural, one {il suo} other {il loro}} P&L è in Altro (dati incompleti).",
+      "noCostNote": "{count, plural, one {# posizione non ha} other {# posizioni non hanno}} un costo dal provider: il periodo {count, plural, one {la} other {le}} valuta al suo inizio.",
       "costLink": "Costo di carico →",
       "empty": "Nessuna posizione aperta.",
       "emptyWithClosed": "Nessuna posizione aperta · {count, plural, one {# chiusa} other {# chiuse}}.",
@@ -4037,13 +4032,12 @@
         "open": "Aperta",
         "sold": "Venduta nel periodo",
         "partlySold": "Aperta, venduta in parte",
-        "noCost": "Senza costo: il non realizzato è in Altro",
+        "noCost": "Senza costo: il periodo la valuta al suo inizio",
         "income": "Proventi",
         "fees": "Commissioni",
         "corrections": "Correzioni",
         "valueChange": "Variazione del valore",
-        "unattributed": "Altro (dati incompleti)",
-        "valuation": "Altro (valorizzazione e arrotondamenti)",
+        "unattributed": "Non spiegato dai dati",
         "total": "P&L del periodo",
         "same": "il numero della Panoramica",
         "bridge": "= {display} in Panoramica, effetto cambio {fx} incluso"

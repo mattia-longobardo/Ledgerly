@@ -2,7 +2,15 @@
 // §5.2, U3): the families its chips filter by, and one sentence per event, never its legs. Pure: no
 // database, no clock; the words come from the caller's translator.
 import { formatDecimalText, type NumberFormat } from "@/platform/format";
+import { GAP_NOTES } from "./cutoff";
 import type { AssetClass, OperationKind } from "./rules";
+
+/** The entries the 12 months book (PERS-145), by the code in their note: their own name. */
+const NAMED: Record<string, string> = {
+  [GAP_NOTES.exchange]: "labels.exchangeCost",
+  [GAP_NOTES.balance]: "labels.balanceDifference",
+  [GAP_NOTES.opening]: "labels.cutoffOpening",
+};
 
 /** The chips of the tab (§3.5): what the person looks for, not the engine's kinds. */
 export const ACTIVITY_FAMILIES = ["trades", "flows", "income", "fees", "other"] as const;
@@ -88,6 +96,11 @@ export function priceText(price: string, currency: string | null, format: Number
 export function describeEvent(event: DescribedEvent, t: ActivityT, format: NumberFormat): Description {
   const { leg } = event;
   const note = event.note?.trim() || null;
+  const named = note === null ? undefined : NAMED[note];
+  if (named !== undefined) {
+    const label = t(named);
+    return { label, detail: null, sentence: label };
+  }
   const qty = leg.quantity === null ? null : quantityText(leg.quantity, leg.assetClass, format);
   const price = leg.unitPrice === null ? null : priceText(leg.unitPrice, leg.priceCurrency, format);
   const asset = leg.assetName;

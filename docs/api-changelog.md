@@ -3,6 +3,22 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-10-30 · the P&L of a period (PERS-145)
+
+`GET /api/v1/investments` and the MCP tool `list_investments` add `pnl`: the profit and loss of a
+period from the engine every screen uses, so the API, the MCP and the screen quote one number. Every
+field before it is unchanged.
+
+- Query `period` (a year `YYYY` or `all`), or `from`/`to` (`YYYY-MM-DD`, they win over `period`);
+  nothing is the year running. The MCP tool takes the same three as optional arguments.
+- `pnl.period` (`kind`, `from`, `to`), `pnl.currency` (the display currency), `pnl.status`
+  (`verified`, `stale`, `undetermined`), and the parts as decimal strings: `pnl`, `realized`,
+  `unrealized` (open positions at the end of the period only; `0.00` when none is open), `income`,
+  `fees`, `corrections`, `fx`; plus `transfers` between the person's own services. The parts add up
+  to `pnl`; the services add up to it with `transfers`.
+- `pnl.services[]`: `accountId`, `status`, `from`, `to`, `openPositions`, `display` (the same parts
+  in the display currency) and `local` (in the service's own `currency`).
+
 ## 2026-10-28 · investments and returns (PERS-86)
 
 Investments is readable from outside, behind its own scope (`docs/design/investments.md` §5.5).

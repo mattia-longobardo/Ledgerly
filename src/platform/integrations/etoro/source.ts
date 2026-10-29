@@ -81,7 +81,12 @@ export function etoroSource(options: EtoroClientOptions = {}): InvestmentSource 
       const transactions = cash ? await client.cashTransactions(cash.accountId) : [];
       return {
         events: [...tradeEventsOf(trades, instruments), ...cashEventsOf(transactions)],
-        coverage: flowsCoverage(transactions, cash !== undefined, now),
+        coverage: flowsCoverage(
+          transactions,
+          cash !== undefined,
+          now,
+          new Date(`${historyFrom(civilDateIn(now, "UTC"))}T00:00:00Z`),
+        ),
       };
     },
 

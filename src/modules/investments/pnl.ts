@@ -91,8 +91,6 @@ export interface PnlService {
   rates: RateTable;
   /** The flow windows of a synced service; `null` for a manual one, whose book is every flow. */
   coverage: readonly CoverageWindow[] | null;
-  /** The `quantities` stream said the quantities do not add up (`quantity_mismatch`, `negative_opening`, A6). */
-  quantityMismatch: boolean;
   /** The provider's id of each event (eToro `trade:<positionId>:open|close`), by event id. */
   externalIds: ReadonlyMap<string, string>;
   /** The class of each correction, by event id; missing = `data` (§4.9). */
@@ -138,6 +136,19 @@ export interface TransferRecord {
 export interface CostState {
   quantity: bigint | null;
   costCents: Cents;
+  /** A by-value position (no quantity): its value at the last valuation, moved by buys and sells. */
+  valueCents?: Cents;
+  /** The first entry since the holding was last empty. */
+  since?: CivilDate | null;
+}
+
+/**
+ * Where a period's replay starts (PERS-145): the end of `on` (s⁻), each holding open then with its
+ * quantity and, as its cost, its value that day — the basis of the period (§4.4).
+ */
+export interface ReplayStart {
+  on: CivilDate;
+  states: ReadonlyMap<string, CostState>;
 }
 
 export interface Replay {
@@ -159,9 +170,12 @@ export function replayHoldings(
   book: Book,
   through: CivilDate,
   externalIds: ReadonlyMap<string, string> = new Map(),
+  start?: ReplayStart,
 ): Replay {
   const periods = sortedPeriods(book);
-  const events = book.events.filter((event) => event.on <= through).sort(compareEvents);
+  const events = book.events
+    .filter((event) => event.on <= through && (start === undefined || event.on > start.on))
+    .sort(compareEvents);
   // eToro: what each position invested, by positionId (E4), and when it opened.
   const opened = new Map<string, { cents: Cents; on: CivilDate }>();
   for (const event of events) {
@@ -183,6 +197,18 @@ export function replayHoldings(
   const transfers: TransferRecord[] = [];
   let running = new Map<string, Running>();
   let current: number | null = null;
+  if (start !== undefined) {
+    // The period's basis: what was open at s⁻, at its value of that day (§4.4, PERS-145).
+    current = periodIndexAt(book, start.on);
+    for (const [id, state] of start.states) {
+      running.set(id, {
+        quantity: state.quantity,
+        valueCents: state.valueCents ?? state.costCents,
+        costCents: state.costCents,
+        since: state.since ?? null,
+      });
+    }
+  }
   const stateOf = (id: string): Running => {
     let state = running.get(id);
     if (!state) {
@@ -343,7 +369,12 @@ export function replayHoldings(
   const costs = new Map<string, CostState>();
   if (current === inForce) {
     for (const [id, state] of running)
-      costs.set(id, { quantity: state.quantity, costCents: state.costCents });
+      costs.set(id, {
+        quantity: state.quantity,
+        costCents: state.costCents,
+        valueCents: state.valueCents,
+        since: state.since,
+      });
   }
   return { exits, transfers, costs };
 }
@@ -353,8 +384,12 @@ export function replayHoldings(
 /** The additive parts of a P&L (§4.2): their sum is `pnlCents`, to the cent. */
 export interface PnlParts {
   pnlCents: Cents;
+  /** Sales against the period's basis (§4.4), and what is left of a position closed below 1 € (dust). */
   realizedCents: Cents;
-  /** U(e) − U(s⁻); `null` where the positions have no cost yet: it is then in `unattributedCents`. */
+  /**
+   * The unrealized of the positions open at e against the period's basis (PERS-145): zero when
+   * none is open; `null` only where the positions of a day are unknown (then in `unattributedCents`).
+   */
   unrealizedChangeCents: Cents | null;
   incomeCents: Cents;
   /** Negative: the fees of the period. */
@@ -363,22 +398,20 @@ export interface PnlParts {
   correctionsCents: Cents;
   /** Only in the display currency (§4.5): P&L_D − the parts converted at the rate of the last day. */
   fxCents: Cents;
+  /** What no part explains: zero on consistent data (PERS-145), never shown as a part of its own. */
   unattributedCents: Cents;
 }
 
-export type PnlStatus = "verified" | "estimated" | "undetermined";
+/** `stale`: a price or a rate of the first or the last day is an old one (§4.6). */
+export type PnlStatus = "verified" | "stale" | "undetermined";
 
 export type PnlReason =
-  /** Some day of the period stands on the rebuilt history (PERS-100). */
-  | "estimated_history"
   /** The value at the start or the end used a saved rate or misses a price. */
   | "stale_price"
   /** The flows are not covered for the whole period: it starts later (`partial`) or not at all. */
   | "flows_gap"
   /** The value before the first day is unknown: the period starts at the first value known. */
   | "base_unknown"
-  /** The quantities do not add up: the estimated history is no base (§4.6). */
-  | "quantity_mismatch"
   /** No value on the last day: nothing to measure. */
   | "no_value"
   /** A rate to the display currency is missing. */
@@ -415,6 +448,10 @@ export interface HoldingPnl {
   unrealizedChangeCents: Cents | null;
   /** Realized + the change of the unrealized: what the position added to the period (§4.2). */
   contributionCents: Cents | null;
+  /** Open at e (dust left out, PERS-145). */
+  open: boolean;
+  /** Some of it left in the period: a sale, a close, a coin fee, a transfer out. */
+  sold: boolean;
   /** The position at the end of `s⁻` and at the end of `e`; `null` when it was not open then. */
   start: PositionAt | null;
   end: PositionAt | null;
@@ -434,6 +471,8 @@ export interface ServicePnl {
   endCents: Cents | null;
   /** The cash beside the positions on the last day (§3.4); `null` when the provider does not say it. */
   endCashCents: Cents | null;
+  /** The positions open at e (dust left out): without one, the period has no unrealized (PERS-145). */
+  openPositions: number;
   /** In the account's currency, fx zero; `null` when undetermined. */
   local: PnlParts | null;
   /** In the display currency, with the exchange effect (§4.5); `null` when a rate is missing. */
@@ -463,7 +502,7 @@ export const MIN_CAPITAL_SHARE = 0.01;
 export function flatSince(book: Book, end: CivilDate): CivilDate {
   const totals = new Map<CivilDate, Cents>();
   for (const reading of book.readings) {
-    if (reading.status === "estimated" || reading.status === "pending_zero") continue;
+    if (reading.status === "pending_zero") continue;
     totals.set(reading.on, reading.totalCents);
   }
   const booked = new Set(book.events.map((event) => event.on));
@@ -509,9 +548,10 @@ const DATA_RESULT: ReadonlySet<AdjustmentClass> = new Set(["data", "result"]);
  * Where a position's cost comes from (§4.7): the replay of its events (a manual position, a Binance
  * coin whose trades add up to the quantity read), the provider itself (eToro's invested `amount`),
  * or a later reading of the same quantity whose provider said it — the average cost of a position
- * moves only with its quantity.
+ * moves only with its quantity. `period`: the basis of a period (PERS-145), its value at s⁻ or what
+ * it cost when bought in the period.
  */
-export type CostSource = "events" | "provider" | "inferred";
+export type CostSource = "events" | "provider" | "inferred" | "period";
 
 export interface PositionAt {
   /** The holding's id; a provider position no event ever touched is `asset:<assetId>:<product>`. */
@@ -657,7 +697,23 @@ export function positionsOn(book: Book, on: CivilDate, rates: RateTable, replay:
   const reading = readingOn(book, on);
   if (reading === null) return { kind: "positions", positions, cashCents: null };
   if (reading.positions.length === 0 && (reading.cashCents ?? null) === null && reading.totalCents !== 0n) {
-    return { kind: "unknown", positions, cashCents: null };
+    // A day of history with a total only (eToro): all cash when the service books its trades and
+    // they leave nothing open that day.
+    const trades = book.events.some(
+      (event) => event.origin === "provider" && event.operations.some((op) => op.holdingId !== null),
+    );
+    const open =
+      !trades ||
+      book.holdings.some((holding) => {
+        if (holding.origin !== "provider") return false;
+        const state = replay.costs.get(holding.id);
+        return (
+          state !== undefined &&
+          (state.quantity === null ? (state.valueCents ?? 0n) > 0n : state.quantity > 0n)
+        );
+      });
+    if (open) return { kind: "unknown", positions, cashCents: null };
+    return { kind: "positions", positions, cashCents: reading.totalCents };
   }
   const providerHolding = new Map(
     book.holdings
@@ -773,6 +829,125 @@ function returnOf(
 
 const signed = (entry: FlowEntry): Cents => (entry.kind === "withdrawal" ? -entry.cents : entry.cents);
 
+/** Under this value a provider's position is dust (PERS-145): no open position, no unrealized. */
+export const OPEN_MIN_CENTS = 100n;
+
+const sumOf = (map: ReadonlyMap<string, Cents>): Cents =>
+  [...map.values()].reduce((sum, one) => sum + one, 0n);
+
+/**
+ * The cut-off of a synced service (PERS-145): the first day of its first period, when its
+ * provider's opening is booked on that day — what it held then, at that day's close, is a flow in.
+ * `null` for a manual service, or a synced one with no such opening.
+ */
+export function cutoffOf(book: Book): CivilDate | null {
+  const first = sortedPeriods(book)[0];
+  if (!first || first.origin === "manual") return null;
+  const opened = book.events.some(
+    (event) =>
+      event.origin === "provider" &&
+      event.on === first.fromOn &&
+      event.operations.some((op) => op.kind === "opening_cash" || op.kind === "opening_position"),
+  );
+  return opened ? first.fromOn : null;
+}
+
+/** The key a position is measured by: a provider's coin across its products, a manual holding alone. */
+function groupKey(position: Pick<PositionAt, "origin" | "assetId" | "key">): string {
+  return position.origin === "provider" && position.assetId !== null
+    ? `asset:${position.assetId}`
+    : position.key;
+}
+
+/** The positions of a day by {@link groupKey}: a provider's coin in spot and in Earn is one. */
+function groupPositions(positions: readonly PositionAt[]): Map<string, PositionAt> {
+  const groups = new Map<string, PositionAt>();
+  const add = (a: bigint | null, b: bigint | null) => (a === null ? b : b === null ? a : a + b);
+  for (const one of positions) {
+    const key = groupKey(one);
+    const group = groups.get(key);
+    if (!group) {
+      groups.set(key, { ...one, key });
+      continue;
+    }
+    const valueCents = add(group.valueCents, one.valueCents);
+    const costCents =
+      group.costCents === null || one.costCents === null ? null : group.costCents + one.costCents;
+    groups.set(key, {
+      ...group,
+      holdingId: group.holdingId ?? one.holdingId,
+      product: group.product === one.product ? group.product : null,
+      quantity: group.quantity === null || one.quantity === null ? null : group.quantity + one.quantity,
+      valueCents,
+      costCents,
+      unrealizedCents: costCents === null || valueCents === null ? null : valueCents - costCents,
+    });
+  }
+  return groups;
+}
+
+/** A position still open at the end of a day: a manual one, or a provider's worth at least 1 €. */
+function isOpen(position: PositionAt): boolean {
+  if (position.origin === "manual") return true;
+  if (position.valueCents === null) return !isUnpricedDust(position);
+  return position.valueCents >= OPEN_MIN_CENTS;
+}
+
+/**
+ * The basis of a period (§4.4, PERS-145): every holding open at s⁻ with its quantity and, as its
+ * cost, its value that day — a provider's coin split over its holdings by quantity, a holding the
+ * day does not show at zero (it is not in V(s⁻) either). The value of a position no event ever
+ * touched stays by asset (`unheld`). Where the positions of s⁻ are unknown, every holding keeps the
+ * cost it had.
+ */
+function basisOf(
+  book: Book,
+  at: PositionsAt,
+  replay: Replay,
+): { states: Map<string, CostState>; unheld: Map<string, Cents> } {
+  const states = new Map<string, CostState>();
+  for (const [id, state] of replay.costs) states.set(id, { ...state });
+  const unheld = new Map<string, Cents>();
+  if (at.kind !== "positions") return { states, unheld };
+  const holdingOf = new Map(book.holdings.map((holding) => [holding.id, holding]));
+  const members = new Map<string, string[]>();
+  for (const [id, state] of states) {
+    const holding = holdingOf.get(id);
+    if (!holding) continue;
+    const open = state.quantity === null ? (state.valueCents ?? 0n) > 0n : state.quantity > 0n;
+    if (!open) continue;
+    const key = holding.origin === "provider" ? `asset:${holding.assetId}` : id;
+    members.set(key, [...(members.get(key) ?? []), id]);
+  }
+  const values = groupPositions(at.positions);
+  for (const [key, ids] of members) {
+    const cents = values.get(key)?.valueCents ?? 0n;
+    const weights = ids.map((id) => {
+      const state = states.get(id)!;
+      return state.quantity ?? state.valueCents ?? 0n;
+    });
+    const total = weights.reduce((sum, one) => sum + one, 0n);
+    let left = cents;
+    ids.forEach((id, index) => {
+      const share =
+        index === ids.length - 1 ? left : total > 0n ? divRound(cents * weights[index], total) : 0n;
+      left -= share;
+      const state = states.get(id)!;
+      states.set(id, {
+        ...state,
+        costCents: share,
+        valueCents: state.quantity === null ? share : state.valueCents,
+      });
+    });
+  }
+  for (const [key, position] of values) {
+    if (members.has(key)) continue;
+    const cents = position.valueCents ?? 0n;
+    if (cents !== 0n) unheld.set(key, cents);
+  }
+  return { states, unheld };
+}
+
 /**
  * The P&L of one service over `[s, e]` (§4): V(e) − V(s⁻) − flows, split into realized, change of
  * the unrealized, income, fees, corrections and what is left unattributed — in the account's
@@ -793,6 +968,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     startCents: null,
     endCents: null,
     endCashCents: null,
+    openPositions: 0,
     local: null,
     display: null,
     localReturn: null,
@@ -812,26 +988,38 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     return empty(null);
   }
 
+  // The service's own start (PERS-145): a synced service opens on its cut-off with its provider's
+  // opening, a flow in; what its provider covers before that day is no gap of the service.
+  const cutoff = cutoffOf(book);
+
   // The flows (§4.6): from the end of the last gap that touches the period, and never before a
   // stream starts. A gap still open on the last day leaves nothing to measure.
   if (service.coverage !== null) {
-    const streams = new Set(service.coverage.map((window) => window.stream));
+    const coverage = service.coverage
+      .filter((window) => cutoff === null || window.toOn > cutoff)
+      .map((window) => (cutoff !== null && window.fromOn < cutoff ? { ...window, fromOn: cutoff } : window));
+    const streams = new Set(coverage.map((window) => window.stream));
     if (streams.size === 0) {
       reasons.add("flows_gap");
       return empty(null);
     }
     for (const stream of streams) {
-      const windows = service.coverage.filter((window) => window.stream === stream);
+      const windows = coverage.filter((window) => window.stream === stream);
       const start = windows.reduce(
         (min, window) => (window.fromOn < min ? window.fromOn : min),
         windows[0].fromOn,
       );
-      if (start > from) {
+      if (start > from && (cutoff === null || start > cutoff)) {
         from = start;
         reasons.add("flows_gap");
       }
       for (const window of windows) {
         if (window.complete || window.fromOn > e) continue;
+        // A stretch of the window read every day at one value, with nothing booked in it, moved no
+        // money (§4.6): covered. The cut-off's own day is its opening, a flow already booked.
+        const first = [window.fromOn, from, cutoff === null ? from : addDays(cutoff, 1)].sort().at(-1)!;
+        const last = addDays(window.toOn, -1) < e ? addDays(window.toOn, -1) : e;
+        if (first <= last && flatSince(book, last) <= first) continue;
         if (window.toOn > e) {
           reasons.add("flows_gap");
           return empty(null);
@@ -849,36 +1037,19 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     }
   }
 
-  // The rebuilt history stands on today's quantities: when they do not add up, it is no base.
-  const estimatedDays = book.readings
-    .filter((reading) => reading.status === "estimated")
-    .map((one) => one.on);
-  if (service.quantityMismatch && estimatedDays.length > 0) {
-    const real = book.readings
-      .filter((reading) => reading.status !== "estimated" && reading.status !== "pending_zero")
-      .map((reading) => reading.on)
-      .sort()[0];
-    if (real === undefined || addDays(real, 1) > e) {
-      reasons.add("quantity_mismatch");
-      return empty(null);
-    }
-    if (addDays(real, 1) > from) {
-      from = addDays(real, 1);
-      reasons.add("quantity_mismatch");
-    }
-  }
-
   // The value before the first day: known, zero before an account whose flows hold its whole
-  // history, or unknown — then the period starts after the first day with a value (never a base of 0).
+  // history — a manual one, a synced one from its cut-off on, or one with no opening inferred — or
+  // unknown: then the period starts after the first day with a value (never a base of 0).
   const periods = sortedPeriods(book);
-  const inferredOpening = book.events.some(
-    (event) => event.origin === "provider" && event.operations.some((op) => op.kind === "opening_position"),
-  );
   let base = addDays(from, -1);
   let startCents = valueOn(book, base, rates).valueCents;
   if (startCents === null) {
     const before = periods.length === 0 || base < periods[0].fromOn;
-    const whole = periods[0]?.origin === "manual" || (service.coverage !== null && !inferredOpening);
+    const inferredOpening = book.events.some(
+      (event) => event.origin === "provider" && event.operations.some((op) => op.kind === "opening_position"),
+    );
+    const whole =
+      periods[0]?.origin === "manual" || cutoff !== null || (service.coverage !== null && !inferredOpening);
     if (before && whole) startCents = 0n;
     else {
       const days = [
@@ -908,7 +1079,6 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
   }
   const endCents = end.valueCents;
   if (end.missing > 0 || start.missing > 0) reasons.add("stale_price");
-  if (estimatedDays.some((day) => day >= base)) reasons.add("estimated_history");
 
   // The flows of [from, e], and the corrections of class `capital` as flows (§4.9).
   const classOf = (eventId: string) => service.adjustmentClasses?.get(eventId) ?? "data";
@@ -940,11 +1110,9 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
   const flowCents = entries.reduce((sum, entry) => sum + entry.cents, 0n);
   const pnlCents = endCents - startCents - flowCents;
 
-  // The parts (§4.2).
-  const replayEnd = replayHoldings(book, e, service.externalIds);
-  const replayStart = replayHoldings(book, base, service.externalIds);
-  const exits = replayEnd.exits.filter((exit) => exit.on >= from);
-  const realizedCents = exits.reduce((sum, exit) => sum + (exit.realizedCents ?? 0n), 0n);
+  // The parts (§4.2) on the period's own basis (§4.4, PERS-145): a position open at s⁻ costs its
+  // value at s⁻, one bought in the period what it cost; a sale is realized against that basis; the
+  // unrealized is only that of the positions still open at e.
   let incomeCents = 0n;
   let feesCents = 0n;
   for (const event of book.events) {
@@ -957,38 +1125,81 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
   const correctionsCents =
     correctionsOn(book, e, classOf, DATA_RESULT) - correctionsOn(book, base, classOf, DATA_RESULT);
 
+  const replayBase = replayHoldings(book, base, service.externalIds);
+  const atStart = positionsOn(book, base, rates, replayBase);
+  const basis = basisOf(book, atStart, replayBase);
+  const replayEnd = replayHoldings(book, e, service.externalIds, { on: base, states: basis.states });
   const atEnd = positionsOn(book, e, rates, replayEnd);
-  const atStart = positionsOn(book, base, rates, replayStart);
+  const exits = replayEnd.exits.filter((exit) => exit.on >= from);
   const samePeriod = periodIndexAt(book, base) === periodIndexAt(book, e) || periodIndexAt(book, base) < 0;
-  const startBy = new Map(atStart.positions.map((one) => [one.key, one]));
-  const endBy = new Map(atEnd.positions.map((one) => [one.key, one]));
-  // U(e) − U(s⁻) by position (§4.2): a position with no cost at either end keeps its change in
-  // "Other"; the parts known are the change of the unrealized.
-  const changes = new Map<string, Cents | null>();
-  let unrealizedChangeCents: Cents | null = null;
+
+  const groupOfHolding = new Map(
+    book.holdings.map((holding) => [
+      holding.id,
+      holding.origin === "provider" ? `asset:${holding.assetId}` : holding.id,
+    ]),
+  );
+  const realizedBy = new Map<string, Cents>();
+  const soldKeys = new Set<string>();
+  const addTo = (map: Map<string, Cents>, key: string, cents: Cents) =>
+    map.set(key, (map.get(key) ?? 0n) + cents);
+  for (const exit of exits) {
+    const key = groupOfHolding.get(exit.holdingId) ?? exit.holdingId;
+    addTo(realizedBy, key, exit.proceedsCents - exit.costCents);
+    soldKeys.add(key);
+  }
+
+  const startBy = groupPositions(atStart.positions);
+  const endBy = groupPositions(atEnd.positions);
+  const unrealizedBy = new Map<string, Cents>();
+  const basisBy = new Map<string, Cents>(basis.unheld);
+  const costUnknown = new Set<string>();
+  let unrealizedChangeCents: Cents | null = 0n;
+  let openPositions = 0;
   if (samePeriod && atEnd.kind === "total" && atStart.kind !== "positions") {
     // "Value only" (§4.2): no positions — what is not income, fee or correction is the change of value.
-    unrealizedChangeCents = pnlCents - realizedCents - incomeCents - feesCents - correctionsCents;
-  } else if (samePeriod && atEnd.kind !== "total" && atStart.kind !== "total") {
-    let known = 0n;
-    let anyKnown = false;
-    // Absent at an end whose reading says nothing of its positions: unknown, not zero — unless manual.
-    const missing = (at: PositionsAt, other: PositionAt | undefined) =>
-      at.kind === "unknown" && other?.origin !== "manual" ? null : 0n;
-    const unknown = atStart.kind === "unknown" || atEnd.kind === "unknown";
-    for (const key of new Set([...startBy.keys(), ...endBy.keys()])) {
-      const before = startBy.has(key) ? startBy.get(key)!.unrealizedCents : missing(atStart, endBy.get(key));
-      const after = endBy.has(key) ? endBy.get(key)!.unrealizedCents : missing(atEnd, startBy.get(key));
-      const change = before === null || after === null ? null : after - before;
-      changes.set(key, change);
-      if (change !== null) {
-        known += change;
-        anyKnown = true;
-      }
+    unrealizedChangeCents = pnlCents - sumOf(realizedBy) - incomeCents - feesCents - correctionsCents;
+    openPositions = endCents !== 0n ? 1 : 0;
+  } else if (
+    !samePeriod ||
+    atEnd.kind === "unknown" ||
+    atEnd.kind === "total" ||
+    atStart.kind === "unknown"
+  ) {
+    // The positions of the last day are unknown (a conversion in the period, a day of history
+    // with a total only): their change stays out of the parts.
+    unrealizedChangeCents = null;
+  } else {
+    // What is left of the basis at e, by asset (a provider's coin across its products) or by
+    // manual holding: against the value of a position still open, the unrealized; against a
+    // position gone or left as dust, what its closing realized.
+    for (const [holdingId, state] of replayEnd.costs) {
+      addTo(basisBy, groupOfHolding.get(holdingId) ?? holdingId, state.costCents);
     }
-    unrealizedChangeCents = (changes.size > 0 || unknown) && !anyKnown ? null : known;
+    // A position no event and no day of s⁻ speaks of: what its provider says it cost, or unknown.
+    const unknown = new Set<string>();
+    for (const [key, at] of endBy) {
+      if (basisBy.has(key)) continue;
+      if (at.costCents !== null) basisBy.set(key, at.costCents);
+      else unknown.add(key);
+    }
+    for (const key of new Set([...basisBy.keys(), ...endBy.keys()])) {
+      const at = endBy.get(key);
+      if (unknown.has(key)) {
+        if (at !== undefined && isOpen(at)) openPositions += 1;
+        continue;
+      }
+      const value = at?.valueCents ?? 0n;
+      const rest = value - (basisBy.get(key) ?? 0n);
+      if (at !== undefined && isOpen(at)) {
+        unrealizedBy.set(key, rest);
+        openPositions += 1;
+      } else if (rest !== 0n) addTo(realizedBy, key, rest);
+    }
+    unrealizedChangeCents = unknown.size > 0 && unrealizedBy.size === 0 ? null : sumOf(unrealizedBy);
+    for (const key of unknown) costUnknown.add(key);
   }
-  const measuredChanges = samePeriod && atEnd.kind !== "total" && atStart.kind !== "total";
+  const realizedCents = sumOf(realizedBy);
   const local: PnlParts = {
     pnlCents,
     realizedCents,
@@ -1001,27 +1212,38 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
       pnlCents - realizedCents - (unrealizedChangeCents ?? 0n) - incomeCents - feesCents - correctionsCents,
   };
 
-  // By position: what each one added (realized + change of its unrealized), the sold ones too
-  // (PERS-113 · 4): a position open at s⁻ and sold in the period is a row with its realized.
-  const holdingOf = new Map(book.holdings.map((holding) => [holding.id, holding]));
-  const keys = new Set([...exits.map((exit) => exit.holdingId), ...startBy.keys(), ...endBy.keys()]);
+  // By position: what each one added in the period (realized + unrealized), the sold ones too
+  // (PERS-113 · 4), on the same basis as the parts.
+  const holdingIdOf = new Map<string, string>();
+  for (const [holdingId, key] of groupOfHolding) if (!holdingIdOf.has(key)) holdingIdOf.set(key, holdingId);
+  const assetOf = new Map(book.holdings.map((holding) => [holding.id, holding]));
+  const measured = unrealizedChangeCents !== null;
+  // A position open at e, with the period's basis as its cost: its unrealized is the part's.
+  const endOf = (key: string): PositionAt | null => {
+    const at = endBy.get(key);
+    if (!at || !unrealizedBy.has(key)) return at ?? null;
+    const costCents = basisBy.get(key) ?? 0n;
+    return { ...at, costCents, costSource: "period", unrealizedCents: unrealizedBy.get(key)! };
+  };
+  const keys = new Set([...realizedBy.keys(), ...startBy.keys(), ...endBy.keys()]);
   const holdings: HoldingPnl[] = [...keys].sort().map((key) => {
-    const realized = exits
-      .filter((exit) => exit.holdingId === key)
-      .reduce((sum, exit) => sum + (exit.realizedCents ?? 0n), 0n);
-    const change = measuredChanges ? (changes.has(key) ? changes.get(key)! : 0n) : null;
+    const realized = realizedBy.get(key) ?? 0n;
+    const change = measured && !costUnknown.has(key) ? (unrealizedBy.get(key) ?? 0n) : null;
     const position = endBy.get(key) ?? startBy.get(key) ?? null;
-    const holding = holdingOf.get(key);
+    const holdingId = position?.holdingId ?? holdingIdOf.get(key) ?? null;
+    const holding = holdingId === null ? undefined : assetOf.get(holdingId);
     return {
       key,
-      holdingId: position?.holdingId ?? (holding ? key : null),
+      holdingId,
       assetId: position?.assetId ?? holding?.assetId ?? null,
       product: position?.product ?? holding?.product ?? null,
       realizedCents: realized,
       unrealizedChangeCents: change,
       contributionCents: change === null ? null : realized + change,
+      open: unrealizedBy.has(key) || (!measured && endBy.has(key)),
+      sold: soldKeys.has(key),
       start: startBy.get(key) ?? null,
-      end: endBy.get(key) ?? null,
+      end: endOf(key),
     };
   });
 
@@ -1064,8 +1286,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     displayCapitalCents = displayReturn.averageCapitalCents;
   }
 
-  const status: PnlStatus =
-    reasons.has("estimated_history") || reasons.has("stale_price") ? "estimated" : "verified";
+  const status: PnlStatus = reasons.has("stale_price") ? "stale" : "verified";
   return {
     accountId: service.accountId,
     currency: service.currency,
@@ -1077,6 +1298,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     startCents,
     endCents,
     endCashCents: atEnd.cashCents,
+    openPositions,
     local,
     display: displayParts,
     localReturn: returnOf(from, e, startCents, endCents, pnlCents, entries),
@@ -1104,14 +1326,15 @@ export interface Contribution {
 export interface PortfolioPnl {
   currency: string;
   status: PnlStatus;
-  /** Some service starts later, is estimated or is left out: the hero says "P&L available". */
+  /** Some service starts later, stands on an old price or is left out: the hero says "P&L available". */
   available: boolean;
   services: ServicePnl[];
   /** In the total: not `undetermined`, with a display amount. */
   included: string[];
   excluded: { accountId: string; reasons: PnlReason[] }[];
   partial: { accountId: string; from: CivilDate }[];
-  estimated: string[];
+  /** The services whose first or last day used an old price or rate. */
+  stale: string[];
   /** Σ services + transfers between them = P&L (§4.6). */
   parts: PnlParts | null;
   /** Both legs of a transfer inside the portfolio and the period, in the display currency (§4.9). */
@@ -1135,7 +1358,7 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
   const partial = included
     .filter((one) => one.partial)
     .map((one) => ({ accountId: one.accountId, from: one.from! }));
-  const estimated = included.filter((one) => one.status === "estimated").map((one) => one.accountId);
+  const stale = included.filter((one) => one.status === "stale").map((one) => one.accountId);
 
   // A transfer is internal when both legs are in included services, each inside its own period.
   const legs = new Map<string, { accountId: string; flow: PeriodFlow }[]>();
@@ -1162,7 +1385,9 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
   if (included.length > 0) {
     const sum = (pick: (parts: PnlParts) => Cents | null) =>
       included.reduce((total, one) => total + (pick(one.display!) ?? 0n), 0n);
-    const unrealizedKnown = included.every((one) => one.display!.unrealizedChangeCents !== null);
+    // Part by part, the sum of the services (PERS-145): a service's unknown unrealized stays in its
+    // own unattributed, never moves another service's known one there.
+    const unrealizedKnown = included.some((one) => one.display!.unrealizedChangeCents !== null);
     parts = {
       pnlCents: sum((p) => p.pnlCents) + transfersCents,
       realizedCents: sum((p) => p.realizedCents),
@@ -1171,9 +1396,7 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
       feesCents: sum((p) => p.feesCents),
       correctionsCents: sum((p) => p.correctionsCents),
       fxCents: sum((p) => p.fxCents),
-      // A service's unknown unrealized stays in its unattributed; the transfers have their own row.
-      unattributedCents:
-        sum((p) => p.unattributedCents) + (unrealizedKnown ? 0n : sum((p) => p.unrealizedChangeCents)),
+      unattributedCents: sum((p) => p.unattributedCents),
     };
   }
 
@@ -1227,21 +1450,16 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
       abs(a.cents) > abs(b.cents) ? -1 : abs(a.cents) < abs(b.cents) ? 1 : a.accountId < b.accountId ? -1 : 1,
     );
 
-  const status: PnlStatus =
-    included.length === 0
-      ? "undetermined"
-      : excluded.length === 0 && partial.length === 0 && estimated.length === 0
-        ? "verified"
-        : "estimated";
+  const status: PnlStatus = included.length === 0 ? "undetermined" : stale.length > 0 ? "stale" : "verified";
   return {
     currency,
     status,
-    available: status !== "verified",
+    available: excluded.length > 0 || partial.length > 0 || stale.length > 0,
     services: [...services],
     included: included.map((one) => one.accountId),
     excluded,
     partial,
-    estimated,
+    stale,
     parts,
     transfersCents,
     rate,

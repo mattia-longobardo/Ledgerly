@@ -235,7 +235,6 @@ describe("§2.1 the Directa example, end to end", () => {
     expect(service.bars.reduce<bigint>((sum, cents) => sum + (cents ?? 0n), 0n)).toBe(eur(996));
     expect(service.values.at(-1)).toBe(eur(8996));
     expect(year.valueDays.at(-1)).toBe(todayOn);
-    expect(service.barsEstimated.some(Boolean)).toBe(false);
     expect(year.colorIndex.has(accountId)).toBe(true);
     expect(year.firstOn).toBe("2026-03-01");
 

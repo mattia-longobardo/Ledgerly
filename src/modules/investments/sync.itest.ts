@@ -26,6 +26,7 @@ import { tradeEventsOf } from "@/platform/integrations/etoro/mapping";
 import { withJobLock } from "@/platform/jobs/lock";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
+import { GAP_NOTES } from "./cutoff";
 import { investmentsPnl, serviceDetail, servicePositions } from "./queries";
 import {
   investmentAccountPeriods,
@@ -212,19 +213,22 @@ function fakeSource(): InvestmentSource {
     async fetchHistory(_credentials, _currency, now) {
       calls.push("history");
       const points = await behaviour.history();
+      // Today in Rome can still be yesterday in UTC: a window never starts after it ends.
+      const first = new Date(`${points[0]?.on ?? todayOn}T00:00:00Z`);
+      const start = first > now ? now : first;
       return {
         points,
         coverage: [
           {
             stream: "balance_history",
             fromAt: new Date("2020-01-01T00:00:00Z"),
-            toAt: new Date(`${points[0]?.on ?? todayOn}T00:00:00Z`),
+            toAt: start,
             status: "gap",
             reason: "api_limit_12m",
           },
           {
             stream: "balance_history",
-            fromAt: new Date(`${points[0]?.on ?? todayOn}T00:00:00Z`),
+            fromAt: start,
             toAt: now,
             status: "complete",
             reason: null,
@@ -431,10 +435,11 @@ describe("the pass (§3.1)", () => {
     calls = [];
     const now = new Date();
     behaviour.holdings = async () => snapshot(130_000n, now);
+    // Inside the 12 months the service reads (PERS-145): its history starts 3 days ago.
     behaviour.flows = async () => ({
       events: [
-        deposit("1", new Date("2026-06-10T09:06:55Z"), "740"),
-        trade(9, new Date("2026-06-12T14:03:20Z")),
+        deposit("1", new Date(`${addDays(todayOn, -2)}T09:06:55Z`), "740"),
+        trade(9, new Date(`${addDays(todayOn, -1)}T14:03:20Z`)),
       ],
     });
     expect(await pass(now)).toBe("answered");
@@ -448,19 +453,20 @@ describe("the pass (§3.1)", () => {
       .select()
       .from(investmentEvents)
       .where(eq(investmentEvents.origin, "provider"));
-    expect(events).toHaveLength(2);
+    // The deposit and the trade, and the cash of the cut-off as its opening (PERS-145).
+    expect(events.map((one) => one.note ?? "").sort()).toEqual(["", "", GAP_NOTES.opening]);
     const links = await getDb()
       .select()
       .from(providerLinks)
       .where(eq(providerLinks.entityType, "investment_event"));
-    expect(links.map((one) => one.externalId).sort()).toEqual(["cash:1", "trade:9:open"]);
+    expect(links.map((one) => one.externalId).sort()).toEqual(["cash:1", "opening:cash", "trade:9:open"]);
 
     // A second pass recognises the same events (A6).
     await getDb().delete(syncRuns);
     expect(await pass(new Date(now.getTime() + 120_000))).toBe("answered");
     expect(
       await getDb().select().from(investmentEvents).where(eq(investmentEvents.origin, "provider")),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("is busy while another pass of the same connection holds the lock (V9)", async () => {
@@ -783,6 +789,13 @@ describe("the P&L of a period on eToro's trades (docs/design/investments-ux.md �
       more(990002, "2026-07-15T10:00:00Z", "2026-09-01T10:00:00Z", 300, -30),
     );
     behaviour.flows = async () => ({ events: tradeEventsOf(trades, new Map()) });
+    // 12 months of history (PERS-145): the trades of 2026 are inside them.
+    behaviour.history = async () => {
+      const points = [];
+      for (let on = addDays(todayOn, -360); on < todayOn; on = addDays(on, 1))
+        points.push({ on, totalCents: 0n });
+      return points;
+    };
     const { accountId } = await connectNew("USD");
 
     const { portfolio } = await investmentsPnl(ctx, { from: "2026-06-10", to: todayOn });
@@ -801,12 +814,12 @@ describe("the P&L of a period on eToro's trades (docs/design/investments-ux.md �
       expect(exit.costCents).toBe(BigInt(Math.round(closed[index].investment * 100)));
     });
     expect(pnl.local?.realizedCents).toBe(closes.reduce((sum, exit) => sum + exit.realizedCents!, 0n));
-    // The day before the period is a day of eToro's history: a total and no positions, so their
-    // unrealized is unknown there (U4) and the rest of the P&L is in "Other", additive.
+    // The parts add up to the P&L (the fake's totals are not the trades', so part of it is
+    // unexplained here: the sync would book it as an entry, `cashGaps`).
     const parts = pnl.local!;
-    expect(parts.unrealizedChangeCents).toBeNull();
     expect(
       parts.realizedCents +
+        (parts.unrealizedChangeCents ?? 0n) +
         parts.incomeCents +
         parts.feesCents +
         parts.correctionsCents +
@@ -849,12 +862,11 @@ describe("the cost of an eToro position (docs/design/investments-ux.md §4.7, U4
     expect(apple.end).toMatchObject({
       valueCents: 123_456n,
       costCents: 100_000n,
-      costSource: "provider",
+      costSource: "period",
       unrealizedCents: 23_456n,
     });
     expect(view!.assets.get(apple.assetId!)?.symbol).toBe("AAPL");
-    // The history before it said a total and no positions: their unrealized there is unknown, so
-    // the change is in "Other" — the rows still close on the Overview's number.
+    // The rows close on the Overview's number, what the fake's history leaves unexplained included.
     const parts = view!.service.local!;
     expect(
       view!.service.holdings.reduce(

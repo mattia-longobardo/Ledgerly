@@ -5,7 +5,7 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/ui/display";
 import { describeEvent } from "@/modules/investments/activity";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
-import { contributionsOf, convertedCurrencies, otherIsGap } from "@/modules/investments/positions";
+import { contributionsOf } from "@/modules/investments/positions";
 import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
@@ -95,8 +95,8 @@ export default async function InvestmentServiceOverview({
       <Badge tone="accent">
         {t("home.status.from", { date: formatDate(service.from, "dayMonth", ctx.locale) })}
       </Badge>
-    ) : service.status === "estimated" ? (
-      <Badge tone="neutral">{t("home.status.estimated")}</Badge>
+    ) : service.status === "stale" ? (
+      <Badge tone="neutral">{t("home.status.stale")}</Badge>
     ) : null;
   const valueLine =
     summary.valueCents !== null &&
@@ -190,8 +190,6 @@ export default async function InvestmentServiceOverview({
   }));
 
   const parts = local;
-  const converted = convertedCurrencies(service);
-  const gap = otherIsGap(service);
   const etoro = summary.investment.provider === "etoro";
   const closing = parts
     ? [
@@ -279,9 +277,6 @@ export default async function InvestmentServiceOverview({
           </Link>
         </p>
       )}
-      {service.status === "estimated" && service.reasons.includes("estimated_history") && (
-        <p className="text-sm text-muted">{t("service.estimated")}</p>
-      )}
 
       {parts && (
         <div className="flex flex-col gap-2">
@@ -292,16 +287,19 @@ export default async function InvestmentServiceOverview({
               valueTone={toneOfSign(parts.realizedCents)}
               note={t("service.kpis.realizedNote")}
             />
-            <KpiTile
-              label={t("service.kpis.unrealized")}
-              value={money(parts.unrealizedChangeCents, true)}
-              valueTone={toneOfSign(parts.unrealizedChangeCents)}
-              note={
-                parts.unrealizedChangeCents === null
-                  ? t("service.kpis.unrealizedUnknown")
-                  : t("service.kpis.unrealizedNote")
-              }
-            />
+            {(service.openPositions > 0 || parts.unrealizedChangeCents === null) && (
+              // Only with a position open at the end (PERS-145): a sold one is all in the realized.
+              <KpiTile
+                label={t("service.kpis.unrealized")}
+                value={money(parts.unrealizedChangeCents, true)}
+                valueTone={toneOfSign(parts.unrealizedChangeCents)}
+                note={
+                  parts.unrealizedChangeCents === null
+                    ? t("service.kpis.unrealizedUnknown")
+                    : t("service.kpis.unrealizedNote", { count: service.openPositions })
+                }
+              />
+            )}
             {etoro && parts.incomeCents === 0n ? (
               // eToro sums dividends into the value: a KPI it cannot give says why (S2).
               <KpiTile
@@ -328,32 +326,10 @@ export default async function InvestmentServiceOverview({
             <p data-testid="pnl-closing" className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
               {closing.map((row) => (
                 <span key={row.key} data-cents={String(row.cents)}>
-                  {t(
-                    `home.kpis.${row.key === "unattributed" && !gap ? "valuation" : row.key}` as "home.kpis.corrections",
-                  )}{" "}
+                  {t(`home.kpis.${row.key}` as "home.kpis.corrections")}{" "}
                   <strong className={cn("font-semibold tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
                     {money(row.cents, true)}
                   </strong>
-                  {row.key === "unattributed" && converted.length > 0 && (
-                    <span data-testid="converted-note" className="ml-1">
-                      {t("service.convertedNote", {
-                        from: converted.join(", "),
-                        to: own,
-                        name: summary.account.name,
-                      })}
-                    </span>
-                  )}
-                  {row.key === "unattributed" && gap && (
-                    <>
-                      {" "}
-                      <Link
-                        href={tab("/connection")}
-                        className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
-                      >
-                        {t("service.partialLink")}
-                      </Link>
-                    </>
-                  )}
                 </span>
               ))}
             </p>
@@ -394,7 +370,6 @@ export default async function InvestmentServiceOverview({
                   label: summary.account.name,
                   color,
                   values: asNumbers(bars),
-                  estimated: series?.barsEstimated,
                 },
               ]}
               line={asNumbers(cumulative)}
@@ -438,7 +413,6 @@ export default async function InvestmentServiceOverview({
               { key: accountId, label: summary.account.name, color, values: asNumbers(series?.values ?? []) },
             ]}
             total={asNumbers(series?.values ?? [])}
-            estimated={series?.valuesEstimated ?? []}
             yLabels={axisLabels(series?.values ?? [], ctx.numberFormat, 4, display)}
             xLabels={
               pnl.valueGrain === "day"
@@ -464,9 +438,6 @@ export default async function InvestmentServiceOverview({
             </span>
           )}
           {view === "pnl" && markers.some(Boolean) && <span>{t("service.chart.markers")}</span>}
-          {(view === "pnl" ? series?.barsEstimated.some(Boolean) : series?.valuesEstimated.some(Boolean)) && (
-            <span>{t("home.chart.estimated")}</span>
-          )}
         </p>
       </Card>
 

@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NO_RATES } from "@/platform/fx/rules";
 import { pnlOf, type PnlService } from "./pnl";
-import {
-  closedGroups,
-  contributionsOf,
-  convertedCurrencies,
-  onCostOf,
-  otherIsGap,
-  periodReturnOf,
-} from "./positions";
+import { closedGroups, contributionsOf, onCostOf, periodReturnOf } from "./positions";
 import {
   type Book,
   type EventLike,
@@ -92,7 +85,6 @@ const service = (one: Book): PnlService => ({
   book: one,
   rates: NO_RATES,
   coverage: null,
-  quantityMismatch: false,
   externalIds: new Map(),
 });
 const EUR = { currency: "EUR", rates: NO_RATES };
@@ -171,10 +163,11 @@ describe("closedGroups (§3.4)", () => {
         positions: 0,
         openedOn: "2025-01-03",
         closedOn: "2026-03-01",
-        costCents: eur(100),
+        // Against the period's basis (PERS-145): its value at s⁻.
+        costCents: eur(150),
         proceedsCents: eur(160),
-        realizedCents: eur(60),
-        onCost: 0.6,
+        realizedCents: eur(10),
+        onCost: 10 / 150,
       },
     ]);
     expect(groups.reduce((sum, one) => sum + (one.realizedCents ?? 0n), 0n)).toBe(pnl.local!.realizedCents);
@@ -224,44 +217,5 @@ describe("closedGroups (§3.4)", () => {
     ]);
     expect(groups[0].onCost).toBeCloseTo(0.05);
     expect(groups[1].onCost).toBeNull();
-  });
-});
-
-describe("convertedCurrencies (PERS-119)", () => {
-  it("names the currencies a provider booked cash flows in, apart from the account's", () => {
-    const flows = book([
-      event("2026-06-10", [{ kind: "deposit", amountCents: eur(2307.8), nativeCurrency: "EUR" }]),
-      event("2026-06-16", [{ kind: "withdrawal", amountCents: -eur(100), nativeCurrency: "EUR" }]),
-    ]);
-    const usd = { ...flows, currency: "USD" };
-    expect(convertedCurrencies(pnlOf({ ...service(usd), currency: "USD" }, null, "2026-06-30", EUR))).toEqual(
-      ["EUR"],
-    );
-    // The account's own currency is no conversion.
-    expect(convertedCurrencies(pnlOf(service(flows), null, "2026-06-30", EUR))).toEqual([]);
-  });
-});
-
-describe("otherIsGap (PERS-141)", () => {
-  const base = {
-    partial: false,
-    reasons: [] as string[],
-    local: { unrealizedChangeCents: 0n },
-    flows: [] as { converted?: string | null }[],
-  };
-  const of = (over: Partial<typeof base>) => otherIsGap({ ...base, ...over } as never);
-
-  it("is valuation and rounding when every flow, cost and value of the period is known", () => {
-    expect(of({})).toBe(false);
-    expect(of({ reasons: ["estimated_history"] })).toBe(false);
-  });
-
-  it("is missing data on a gap, a position without a cost, or money converted by the provider", () => {
-    expect(of({ partial: true })).toBe(true);
-    for (const reason of ["flows_gap", "base_unknown", "quantity_mismatch", "stale_price", "no_rate"]) {
-      expect(of({ reasons: [reason] })).toBe(true);
-    }
-    expect(of({ local: { unrealizedChangeCents: null as never } })).toBe(true);
-    expect(of({ flows: [{ converted: "EUR" }] })).toBe(true);
   });
 });

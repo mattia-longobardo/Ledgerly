@@ -115,3 +115,34 @@ test("a service is highlighted in the chart from the keyboard, apart from the li
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
 });
+
+test("PERS-145: the home's hero is the sum of the service pages, in 2026 and 2025, with no estimate and no Other", async ({
+  page,
+}) => {
+  for (const year of ["2026", "2025"]) {
+    await page.goto(`/investments?period=${year}`);
+    const heroCents = await hero(page).getAttribute("data-cents");
+    const links = await page
+      .getByTestId("service-row")
+      .locator("a[href^='/investments/']")
+      .evaluateAll((anchors) => [...new Set(anchors.map((one) => one.getAttribute("href")!))]);
+    expect(links.length).toBeGreaterThan(0);
+    await expectNothingEstimated(page);
+    let services = 0n;
+    for (const href of links) {
+      await page.goto(href);
+      const cents = await hero(page).getAttribute("data-cents");
+      if (cents) services += BigInt(cents);
+      await expectNothingEstimated(page);
+    }
+    // A service that cannot be measured is left out of both, never counted as zero.
+    if (heroCents) expect(services, year).toBe(BigInt(heroCents));
+  }
+});
+
+/** No dashed history, no "estimated", no "What is missing", no "Other (…)" (PERS-145 · 3, 4). */
+async function expectNothingEstimated(page: Page): Promise<void> {
+  const main = page.getByRole("main");
+  await expect(main.getByText(/estimat|What is missing|Other \(/i)).toHaveCount(0);
+  expect(await page.locator("main svg [stroke-dasharray]").count()).toBe(0);
+}

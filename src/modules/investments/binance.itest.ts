@@ -30,6 +30,7 @@ import {
   investmentReadings,
   investmentSyncCoverage,
 } from "./schema";
+import { GAP_NOTES } from "./cutoff";
 import { connectInvestmentProvider, runInvestmentPass, setSourcesForTests } from "./sync";
 import { NO_RATES } from "@/platform/fx/rules";
 import { pnlOf, positionsOn, replayHoldings } from "./pnl";
@@ -418,14 +419,19 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
 describe("the Binance pass (§3.1, A7)", () => {
   it("reads again from 24 hours before the cursor, and writes each event once", async () => {
     const { accountId } = await connectNew();
-    const before = (await eventsOf(accountId)).length;
+    const gapNotes = new Set<string>(Object.values(GAP_NOTES));
+    const providerEvents = (rows: { note: string | null }[]) =>
+      rows.filter((one) => !gapNotes.has(one.note ?? "")).length;
+    const before = providerEvents(await eventsOf(accountId));
     calls = [];
     const later = new Date(NOW.getTime() + 12 * 3_600_000);
     expect(await pass(later)).toBe("answered");
     const deposits = named("deposits");
     expect(deposits).toEqual([["deposits", NOW.getTime() - DAY, later.getTime()]]);
     expect(named("myTrades")).toContainEqual(["myTrades", "ETH/USDT", 900_080]);
-    expect((await eventsOf(accountId)).length).toBe(before);
+    // The provider's events once; the day read since may close a difference of the cash, booked
+    // as an entry of its own (PERS-145), never a provider event twice.
+    expect(providerEvents(await eventsOf(accountId))).toBe(before);
     expect((await flowsCursor())?.deposits).toBe(later.toISOString());
   });
 
@@ -524,7 +530,7 @@ describe("the Binance pass (§3.1, A7)", () => {
   });
 });
 
-describe("the estimated history (PERS-100)", () => {
+describe("the reconstructed history (PERS-100, PERS-145)", () => {
   async function estimatedOf(accountId: string) {
     const investment = await investmentOf(accountId);
     return getDb()
@@ -533,13 +539,13 @@ describe("the estimated history (PERS-100)", () => {
       .where(
         and(
           eq(investmentReadings.investmentAccountId, investment.id),
-          eq(investmentReadings.status, "estimated"),
+          eq(investmentReadings.status, "reconstructed"),
         ),
       )
       .orderBy(asc(investmentReadings.on));
   }
 
-  it("rebuilds every day of the 12 months from the flows and the daily closes, and says so", async () => {
+  it("rebuilds every day of the 12 months from the flows and the daily closes: a datum, not an estimate", async () => {
     const { accountId } = await connectNew();
     const estimated = await estimatedOf(accountId);
     expect(estimated[0].on).toBe("2025-10-28");
@@ -570,14 +576,13 @@ describe("the estimated history (PERS-100)", () => {
       .select()
       .from(investmentSyncCoverage)
       .where(eq(investmentSyncCoverage.stream, "balance_history"));
-    expect(coverage).toMatchObject({ kind: "holdings", status: "partial", reason: "estimated" });
+    expect(coverage).toMatchObject({ kind: "holdings", status: "complete", reason: "reconstructed" });
 
-    // The chart: the history is drawn, dashed up to the first real reading.
+    // The chart: the history is drawn like any other day, nothing dashed (PERS-145 · 3).
     const view = await servicePnlView(ctx, accountId, { period: "all" }, NOW);
     const series = view!.chart[0];
     expect(series.values.every((value) => value !== null)).toBe(true);
-    expect(series.valuesEstimated.slice(0, -1).every(Boolean)).toBe(true);
-    expect(series.valuesEstimated.at(-1)).toBe(false);
+    expect(view!.portfolio.services[0].status).not.toBe("undetermined");
     // Today's value is the reading's, untouched.
     expect(series.values.at(-1)).toBe(2n);
   });
@@ -759,7 +764,6 @@ describe("the P&L of a period on Binance (docs/design/investments-ux.md §4.4, U
         book,
         rates,
         coverage: null,
-        quantityMismatch: false,
         externalIds: new Map(),
       },
       null,
@@ -817,7 +821,7 @@ describe("the P&L of a period on Binance (docs/design/investments-ux.md §4.4, U
     expect(positions.some((one) => one.costSource === "events")).toBe(true);
   });
 
-  it("does not stand a P&L on a rebuilt history whose quantities do not add up (§4.6)", async () => {
+  it("stands a P&L on the rebuilt history even when the quantities do not add up, and it closes (PERS-145)", async () => {
     const { accountId } = await connectNew();
     const [quantities] = await getDb()
       .select()
@@ -826,9 +830,17 @@ describe("the P&L of a period on Binance (docs/design/investments-ux.md §4.4, U
     expect(quantities).toMatchObject({ status: "partial", reason: "negative_opening" });
     const { portfolio } = await investmentsPnl(ctx, { period: "2026" }, NOW);
     const pnl = portfolio.services.find((one) => one.accountId === accountId)!;
-    // The first real reading is today's: nothing of 2026 stands on a trusted base yet.
-    expect(pnl).toMatchObject({ status: "undetermined", local: null });
-    expect(pnl.reasons).toContain("quantity_mismatch");
-    expect(portfolio).toMatchObject({ status: "undetermined", excluded: [{ accountId }] });
+    // The reconstructed days are data (rule 3): the year is measured, and every part adds up.
+    expect(pnl.status).not.toBe("undetermined");
+    const parts = pnl.local!;
+    expect(
+      parts.realizedCents +
+        (parts.unrealizedChangeCents ?? 0n) +
+        parts.incomeCents +
+        parts.feesCents +
+        parts.correctionsCents +
+        parts.unattributedCents,
+    ).toBe(parts.pnlCents);
+    expect(portfolio.included).toContain(accountId);
   });
 });
