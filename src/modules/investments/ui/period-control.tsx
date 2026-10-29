@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import type { useTranslations } from "next-intl";
 import { type PeriodQuery, yearsOf } from "@/modules/investments/period";
 import type { PnlPeriod } from "@/modules/investments/pnl";
 import { addDays, type CivilDate } from "@/platform/dates";
@@ -9,7 +9,9 @@ import { cn } from "@/ui/cn";
 import { type Params, withParams } from "@/ui/url";
 import { PeriodPicker } from "./period-picker";
 
-type T = Awaited<ReturnType<typeof getTranslations<"investments.period">>>;
+/** The words of the period: the server's `getTranslations` or the client's `useTranslations`. */
+export type PeriodT = ReturnType<typeof useTranslations<"investments.period">>;
+type T = PeriodT;
 
 /** The period in words (§2.1): "2026 · year to date", "2025", "since 28 Oct 2024", or the days. */
 export function periodText(
@@ -32,9 +34,11 @@ export function periodText(
  * The period of the section (docs/design/investments-ux.md §2.1, §9 decision 1): `Year · All ·
  * Custom` as links, and beside it the stepper ‹ 2026 › for a year, the first day for All, or the
  * day range picker for Custom. Everything is an address: the server draws it, the back button
- * walks it, and `params` (the chart's view, the composition's grouping) rides along.
+ * walks it, and `params` (the chart's view, the composition's grouping) rides along. Neither a
+ * server nor a client component: the home draws it on the server, a service's layout — which never
+ * sees the search parameters — through `ServicePeriodControl` on the client.
  */
-export async function PeriodControl({
+export function PeriodControl({
   period,
   span,
   todayOn,
@@ -42,6 +46,7 @@ export async function PeriodControl({
   path,
   params,
   locale,
+  t,
 }: {
   period: PnlPeriod;
   span: { from: CivilDate; to: CivilDate };
@@ -51,8 +56,8 @@ export async function PeriodControl({
   /** Every parameter but the period's. */
   params: Params;
   locale: UiLocale;
+  t: T;
 }) {
-  const t = await getTranslations("investments.period");
   const years = yearsOf(firstOn, todayOn);
   const href = (query: PeriodQuery) => withParams(path, params, query);
   const yearHref = (year: number) => href(year === years.last ? {} : { period: String(year) });

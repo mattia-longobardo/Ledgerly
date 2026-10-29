@@ -21,6 +21,7 @@ import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
 import { MOVEMENT_KINDS } from "./legacy";
 import {
+  ADJUSTMENT_CLASSES,
   ASSET_CLASSES,
   EVENT_ORIGINS,
   HOLDING_ORIGINS,
@@ -384,6 +385,8 @@ export const investmentOperations = pgTable(
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     validUntil: date("valid_until"),
     quantityBasis: text("quantity_basis", { enum: QUANTITY_BASES }).notNull().default("reported"),
+    /** What a correction (R3) stands for (docs/design/investments-ux.md §4.9); `null` = `data`. */
+    adjustmentClass: text("adjustment_class", { enum: ADJUSTMENT_CLASSES }),
   },
   (table) => [
     unique("investment_operations_leg_uq").on(table.eventId, table.leg),
@@ -404,6 +407,10 @@ export const investmentOperations = pgTable(
     check(
       "investment_operations_valid_until_ck",
       sql`${table.validUntil} is null or ${table.kind} = 'adjustment'`,
+    ),
+    check(
+      "investment_operations_adjustment_class_ck",
+      sql`${table.adjustmentClass} is null or (${table.kind} = 'adjustment' and ${table.adjustmentClass} in (${sql.raw(inList(ADJUSTMENT_CLASSES))}))`,
     ),
     check(
       "investment_operations_price_currency_ck",

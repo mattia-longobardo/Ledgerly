@@ -6,6 +6,7 @@ import { addDays, type CivilDate, daysBetween, isCivilDate } from "@/platform/da
 import { convertCents, type RateTable } from "@/platform/fx/rules";
 import type { Cents } from "@/platform/money";
 import {
+  type AdjustmentClass,
   type Book,
   compareEvents,
   divRound,
@@ -65,8 +66,8 @@ export function periodOf(params: PeriodParams, todayOn: CivilDate): PnlPeriod {
 
 // ——— Inputs ——————————————————————————————————————————————————————————————————————————————————
 
-/** §4.9: what a correction (R3) stands for. Until U3 stores it, every correction is `data`. */
-export type AdjustmentClass = "data" | "capital" | "result";
+/** §4.9: what a correction (R3) stands for; stored on its leg since U3, `data` when unset. */
+export type { AdjustmentClass };
 
 /** A window of what a provider's flows cover (`investment_sync_coverage`, kind `flows`), by day. */
 export interface CoverageWindow {

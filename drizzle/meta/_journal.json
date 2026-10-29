@@ -281,6 +281,13 @@
       "when": 1793222049516,
       "tag": "0039_investment_estimated",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793269266730,
+      "tag": "0040_adjustment_class",
+      "breakpoints": true
     }
   ]
 }

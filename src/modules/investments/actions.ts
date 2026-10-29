@@ -53,7 +53,8 @@ function failed(error: unknown): { ok: false; error: string } {
 function revalidate(accountId?: string): void {
   revalidatePath("/investments");
   revalidatePath("/investments/catalog");
-  if (accountId) revalidatePath(`/investments/${accountId}`);
+  // The service's tabs share its layout (header, tabs, period): every one of them is redrawn.
+  if (accountId) revalidatePath(`/investments/${accountId}`, "layout");
   revalidatePath("/accounts");
   revalidatePath("/");
 }
@@ -138,6 +139,8 @@ export interface OperationFormInput {
   unitPrice?: string;
   fee?: string;
   validUntil?: string | null;
+  /** A correction's class (§4.9 of the UX design): `data`, `capital` or `result`. */
+  adjustmentClass?: string;
   transactionId?: string | null;
   note: string;
 }
@@ -197,6 +200,7 @@ function operationOf(input: OperationFormInput, format: NumberFormat): Operation
         on: input.on,
         amountCents: amount ?? 0n,
         validUntil: input.validUntil || null,
+        adjustmentClass: (input.adjustmentClass || "data") as "data",
         note: input.note,
       };
   }
@@ -336,7 +340,7 @@ export async function linkTransferAction(
   try {
     await linkTransfer(ctx, { withdrawalId, depositId });
     revalidate(accountId);
-    revalidatePath("/investments/[accountId]", "page");
+    revalidatePath("/investments/[accountId]", "layout");
     return { ok: true };
   } catch (error) {
     return failed(error);
@@ -348,7 +352,7 @@ export async function unlinkTransferAction(accountId: string, eventId: string): 
   try {
     await unlinkTransfer(ctx, eventId);
     revalidate(accountId);
-    revalidatePath("/investments/[accountId]", "page");
+    revalidatePath("/investments/[accountId]", "layout");
     return { ok: true };
   } catch (error) {
     return failed(error);
