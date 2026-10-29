@@ -3631,6 +3631,121 @@
       "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio.",
       "out": "Out on {date} → {name}, in on {other}",
       "in": "In on {date} ← {name}, out on {other}"
+    },
+    "period": {
+      "label": "Period",
+      "stepper": "Year",
+      "kinds": {
+        "year": "Year",
+        "all": "All",
+        "custom": "Custom"
+      },
+      "yearToDate": "{year} · year to date",
+      "since": "since {date}",
+      "range": "{from} – {to}",
+      "previous": "Previous year",
+      "next": "Next year",
+      "last12": "Last 12 months",
+      "pick": "Pick the days",
+      "from": "From",
+      "to": "To",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "pickEnd": "Pick the end date",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "hint": "{from} – {to} · {count, plural, one {# day} other {# days}}"
+    },
+    "home": {
+      "empty": "Connect eToro or Binance, or create a manual account.",
+      "funds": "funds ({amount}) are in <link>Funds</link>",
+      "hero": {
+        "title": "Profit and loss · {period}",
+        "available": "P&L available · {period}",
+        "undetermined": "Not determinable",
+        "value": "Value today <strong>{value}</strong> · {count, plural, one {# service} other {# services}}",
+        "valueAt": "value on {date} {value}",
+        "noData": "No data in this period. The first is from {date}."
+      },
+      "status": {
+        "estimated": "Estimated",
+        "partial": "Partial data",
+        "undetermined": "Not determinable",
+        "from": "from {date}"
+      },
+      "coverage": {
+        "partial": "{name} from {date}",
+        "estimated": "{name} estimated",
+        "excluded": "{count, plural, one {# service left out} other {# services left out}}"
+      },
+      "alerts": {
+        "label": "{count, plural, one {# thing to check} other {# things to check}}",
+        "one": "to check: {text}",
+        "many": "to check",
+        "estimated": "estimated history"
+      },
+      "kpis": {
+        "realized": "Realized",
+        "realizedNote": "sales and closes",
+        "unrealized": "Unrealized",
+        "unrealizedNote": "open positions",
+        "unrealizedUnknown": "no cost yet: in Other",
+        "income": "Income",
+        "incomeNote": "dividends, staking",
+        "feesFx": "Fees and FX",
+        "feesFxNote": "fees {fees} · FX {fx}",
+        "corrections": "Corrections",
+        "unattributed": "Other (incomplete data)",
+        "transfers": "Transfers between services"
+      },
+      "chart": {
+        "title": "Performance",
+        "view": "Chart",
+        "pnl": "P&L",
+        "value": "Value",
+        "pnlNote": {
+          "week": "P&L by week and by service · the line is the running total of {period}",
+          "month": "P&L by month and by service · the line is the running total of {period}",
+          "year": "P&L by year and by service · the line is the running total of {period}"
+        },
+        "valueNote": {
+          "day": "Value by day and by service",
+          "month": "Value at each month end, by service"
+        },
+        "line": "Running total",
+        "legend": "The colours are the services of the list below.",
+        "estimated": "Dashed or lighter = estimated history.",
+        "cumulative": "running total {amount}",
+        "summary": "P&L {period}: {total}. Best {best}, worst {worst}. {services}.",
+        "valueSummary": "Value at the end of the period {value}.",
+        "data": "Chart data",
+        "interval": "Interval",
+        "cumulativeHeader": "Running total"
+      },
+      "services": {
+        "note": "Ordered by contribution · same period and colours as the chart",
+        "value": "Value today",
+        "pnl": "P&L",
+        "return": "Return",
+        "contribution": "Contribution",
+        "total": "Total",
+        "transfers": "Transfers between services",
+        "unavailable": "not available",
+        "highlight": "Highlight {name} in the chart",
+        "notComputable": "Return not computable: too little capital in the period",
+        "xirr": "XIRR {rate}",
+        "largeFlows": "Estimate: the flows are large next to the capital",
+        "share": "{share} of {net} net",
+        "shareNotComputable": "Share of the net not computable"
+      },
+      "composition": {
+        "title": "Composition today",
+        "by": "Group by",
+        "service": "Service",
+        "class": "Class",
+        "ccy": "Currency",
+        "note": "Always as of today: the period changes the P&L and the chart, not the shares."
+      }
     }
   },
   "payroll": {

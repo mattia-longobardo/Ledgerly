@@ -327,8 +327,8 @@ export function StackedArea({
   height = 240,
   hover,
 }: {
-  /** Bottom first. */
-  layers: readonly { label: string; color: string; values: readonly (number | null)[] }[];
+  /** Bottom first. `key`, when given, names the band for a `HighlightScope` around the chart. */
+  layers: readonly { key?: string; label: string; color: string; values: readonly (number | null)[] }[];
   total: readonly (number | null)[];
   estimated?: readonly boolean[];
   summary: string;
@@ -365,6 +365,7 @@ export function StackedArea({
                 <path
                   key={`${index}-${runIndex}`}
                   data-band={layers[index].label}
+                  data-series={layers[index].key}
                   d={d}
                   fill={layers[index].color}
                   fillOpacity={0.55}
@@ -564,6 +565,139 @@ export function Bars({
             })}
           </svg>
           {/* Bars sit in slots, not on points: the crosshair is placed slot by slot to match. */}
+          {hover && hover.length > 0 && <ChartHover points={hover} slots />}
+        </div>
+        <div
+          aria-hidden
+          className="flex shrink-0 flex-col justify-between text-right text-xs text-faint tabular-nums"
+          style={{ height }}
+        >
+          {yLabels.map((label, index) => (
+            <span key={index}>{label}</span>
+          ))}
+        </div>
+      </div>
+      <div aria-hidden className="flex justify-between text-xs text-faint">
+        {xLabels.map((label, index) => (
+          <span key={index}>{label}</span>
+        ))}
+      </div>
+      <figcaption className="sr-only">{summary}</figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Bars piled by series around a zero line, and a line over them (docs/design/investments-ux.md §3.1):
+ * the P&L of each interval, service by service — gains above zero, losses below, as `stackLayers`
+ * piles them — and the running total from zero at the start of the period. A layer with no value
+ * in a slot draws nothing there: unknown, not zero. An estimated piece is drawn with a dashed edge
+ * and a lighter fill. Each piece carries `data-series`, for a `HighlightScope` around the chart.
+ */
+export function StackedBars({
+  layers,
+  line,
+  summary,
+  yLabels,
+  xLabels,
+  height = 220,
+  hover,
+}: {
+  /** Bottom first. */
+  layers: readonly {
+    key: string;
+    label: string;
+    color: string;
+    values: readonly (number | null)[];
+    estimated?: readonly boolean[];
+  }[];
+  line: readonly (number | null)[];
+  summary: string;
+  yLabels: readonly string[];
+  xLabels: readonly string[];
+  height?: number;
+  hover?: readonly HoverPoint[];
+}) {
+  const width = 720;
+  const count = line.length;
+  const box: Box = { width, height, pad: 6 };
+  const { bands, top, bottom } = stackLayers(
+    layers.map((layer) => layer.values),
+    count,
+  );
+  // Zero always shows, so an all-loss period still has its baseline: the range of `axisLabels`.
+  const extent = extentOf([{ values: top }, { values: bottom }, { values: line }, { values: [0] }]);
+  const slot = width / Math.max(1, count);
+  const barWidth = Math.max(2, slot * 0.6);
+  const zero = scale(0, extent, box);
+  const points = line.map((value, index) =>
+    value === null ? null : { x: index * slot + slot / 2, y: scale(value, extent, box) },
+  );
+  const runs: { x: number; y: number }[][] = [];
+  let run: { x: number; y: number }[] = [];
+  for (const point of points) {
+    if (point === null) {
+      if (run.length > 0) runs.push(run);
+      run = [];
+    } else run.push(point);
+  }
+  if (run.length > 0) runs.push(run);
+
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="flex gap-3">
+        <div className="relative min-w-0 flex-1" style={{ height }}>
+          <div aria-hidden className="absolute inset-0 flex flex-col justify-between">
+            {yLabels.map((_, index) => (
+              <div key={index} className="border-t border-border/60" />
+            ))}
+          </div>
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            aria-hidden
+            className="relative h-full w-full"
+          >
+            <line x1={0} x2={width} y1={zero} y2={zero} stroke="var(--border)" strokeWidth={1} />
+            {bands.map((band, layerIndex) =>
+              band.upper.map((upper, index) => {
+                const lower = band.lower[index];
+                if (upper === null || lower === null || upper === lower) return null;
+                const y1 = scale(Math.max(upper, lower), extent, box);
+                const y2 = scale(Math.min(upper, lower), extent, box);
+                const estimated = layers[layerIndex].estimated?.[index] === true;
+                return (
+                  <rect
+                    key={`${layerIndex}-${index}`}
+                    data-series={layers[layerIndex].key}
+                    x={index * slot + (slot - barWidth) / 2}
+                    y={y1}
+                    width={barWidth}
+                    height={Math.max(1, y2 - y1)}
+                    fill={layers[layerIndex].color}
+                    fillOpacity={estimated ? 0.45 : 0.85}
+                    stroke={estimated ? layers[layerIndex].color : undefined}
+                    strokeDasharray={estimated ? "4 3" : undefined}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                );
+              }),
+            )}
+            {runs.map((points, index) =>
+              points.length === 1 ? (
+                <circle key={index} cx={points[0].x} cy={points[0].y} r={3} fill="var(--fg)" />
+              ) : (
+                <polyline
+                  key={index}
+                  points={path(points)}
+                  fill="none"
+                  stroke="var(--fg)"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ),
+            )}
+          </svg>
           {hover && hover.length > 0 && <ChartHover points={hover} slots />}
         </div>
         <div

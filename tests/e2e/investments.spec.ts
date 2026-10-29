@@ -165,10 +165,11 @@ test("a withdrawal and a deposit between two services are proposed, linked and u
     await expect(row).toHaveCount(1);
   });
 
-  await test.step("the home shows the portfolio's XIRR tile", async () => {
+  await test.step("the home leads with the P&L of the year (docs/design/investments-ux.md §3.1)", async () => {
     const service = page.url();
     await page.goto("/investments");
-    await expect(page.getByText("XIRR", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^(Profit and loss|P&L available) · / })).toBeVisible();
+    await expect(page.getByTestId("pnl-hero")).toBeVisible();
     await page.goto(service);
   });
 
