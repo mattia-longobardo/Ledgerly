@@ -3622,6 +3622,7 @@
         "dividends": "Rewards and staking",
         "dust": "Small balances converted to BNB",
         "pay": "Binance Pay",
+        "earn_rewards": "Simple Earn real-time rewards",
         "quantities": "Quantities against the balances"
       },
       "coverageStatus": {

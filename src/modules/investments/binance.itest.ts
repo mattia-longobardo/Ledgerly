@@ -109,6 +109,7 @@ function fixtureExchange(calls: Call[], overrides: Partial<BinanceApi> = {}): Bi
     },
     dustLog: async () => ({ total: 0, userAssetDribblets: [] }),
     payTransactions: async () => ({ data: [] }),
+    earnRewards: async () => ({ rows: [], total: 0 }),
     myTrades: async (symbol, fromId) =>
       (body("my-trades") as { symbol: string; info: { id: number } }[]).filter(
         (one) => one.symbol === symbol && one.info.id >= fromId,
@@ -318,13 +319,14 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       "dividends",
       "dust",
       "pay",
+      "earn_rewards",
       "trades",
       "quantities",
     ]) {
       expect(streams).toContain(stream);
     }
     // Older than the 12 months is the opening, for every stream, Pay included (PERS-141).
-    expect(coverage.filter((one) => one.reason === "opening_12m")).toHaveLength(9);
+    expect(coverage.filter((one) => one.reason === "opening_12m")).toHaveLength(10);
   });
 
   it("values a trade's fee in BNB at the day's close, in cents and not rounded to zero", async () => {
@@ -722,7 +724,7 @@ describe("a history read again with more streams and 12 months (PERS-141)", () =
     expect(first.on).toBe("2025-10-28");
     expect(await investmentOf(accountId)).toMatchObject({ managedSince: "2025-10-28" });
     expect(await flowsCursor()).toMatchObject({
-      history: "4",
+      history: "5",
       from: new Date(NOW.getTime() - 365 * DAY).toISOString(),
     });
 

@@ -871,6 +871,40 @@ export function dustEventsOf(raw: unknown, currency: string): StreamRows {
   return { events, assets: [DUST_TARGET, ...details.map((row) => row.fromAsset)], pendingFrom: null };
 }
 
+const earnRewardsSchema = z.looseObject({
+  rows: z
+    .array(
+      z.looseObject({
+        asset: code,
+        rewards: decimalString,
+        time: millis,
+        type: z.string().max(20).optional(),
+      }),
+    )
+    .nullable()
+    .optional(),
+});
+
+/**
+ * Simple Earn real-time APR rewards (PERS-141): `income` in the coin. Binance credits them into
+ * Earn and never lists them in the asset dividends, whose `BONUS` rewards are already read there.
+ * One a day per coin: the id is the coin and the time.
+ */
+export function earnRewardEventsOf(raw: unknown, currency: string): StreamRows & { count: number } {
+  const rows = parse(earnRewardsSchema, raw).rows ?? [];
+  const events: ProviderEvent[] = [];
+  for (const row of rows) {
+    if (row.rewards <= 0n) continue;
+    events.push({
+      externalId: `earn_reward:${row.asset}:${row.time}`,
+      occurredAt: new Date(row.time),
+      note: "Simple Earn real-time APR",
+      legs: [coinLeg("main", "income", row.asset, row.rewards, currency)],
+    });
+  }
+  return { events, assets: rows.map((row) => row.asset), pendingFrom: null, count: rows.length };
+}
+
 const paySchema = z.looseObject({
   data: z
     .array(
@@ -1202,6 +1236,7 @@ export const FLOW_STREAMS = [
   "dividends",
   "dust",
   "pay",
+  "earn_rewards",
   "trades",
 ] as const;
 
