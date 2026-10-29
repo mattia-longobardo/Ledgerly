@@ -14,7 +14,11 @@ import {
   type FlowEntry,
   flowEntriesOn,
   holdingStates,
+  isUnpricedDust,
   periodIndexOf,
+  type ReadingLike,
+  readingOn,
+  reconciliationOn,
   sortedPeriods,
   valueOn,
 } from "./rules";
@@ -115,6 +119,8 @@ export interface Exit {
   realizedCents: Cents | null;
   /** `position`: an eToro close matched with its opening by `positionId`. */
   matched: "position" | "average";
+  /** The day the quantity that left went in: the eToro opening, or the first buy since the holding was last empty. */
+  openedOn: CivilDate | null;
 }
 
 /** A leg of an asset moved in or out (§4.9): the value it moved at and the history it carried. */
@@ -156,13 +162,13 @@ export function replayHoldings(
 ): Replay {
   const periods = sortedPeriods(book);
   const events = book.events.filter((event) => event.on <= through).sort(compareEvents);
-  // eToro: what each position invested, by positionId (E4).
-  const opened = new Map<string, Cents>();
+  // eToro: what each position invested, by positionId (E4), and when it opened.
+  const opened = new Map<string, { cents: Cents; on: CivilDate }>();
   for (const event of events) {
     const match = POSITION.exec(externalIds.get(event.id) ?? "");
     if (match?.[2] !== "open") continue;
     const leg = event.operations.find((op) => op.kind === "buy");
-    if (leg) opened.set(match[1], abs(leg.amountCents));
+    if (leg) opened.set(match[1], { cents: abs(leg.amountCents), on: event.on });
   }
 
   interface Running {
@@ -170,6 +176,8 @@ export function replayHoldings(
     /** By-value positions: the value of the last valuation, moved by buys and sells. */
     valueCents: Cents;
     costCents: Cents;
+    /** The first entry since the holding was last empty. */
+    since: CivilDate | null;
   }
   const exits: Exit[] = [];
   const transfers: TransferRecord[] = [];
@@ -178,7 +186,7 @@ export function replayHoldings(
   const stateOf = (id: string): Running => {
     let state = running.get(id);
     if (!state) {
-      state = { quantity: null, valueCents: 0n, costCents: 0n };
+      state = { quantity: null, valueCents: 0n, costCents: 0n, since: null };
       running.set(id, state);
     }
     return state;
@@ -225,13 +233,20 @@ export function replayHoldings(
           costCents: cost,
           realizedCents: known ? amount - cost : null,
           matched: "average",
+          openedOn: state.since,
         });
+        if (state.quantity === null ? state.valueCents <= 0n : state.quantity <= 0n) state.since = null;
         return cost;
+      };
+      const enter = () => {
+        const empty = state.quantity === null ? state.valueCents <= 0n : state.quantity <= 0n;
+        if (empty || state.since === null) state.since = event.on;
       };
       switch (op.kind) {
         case "opening_position":
         case "buy":
         case "deposit":
+          enter();
           state.costCents += amount;
           if (op.quantity === null) state.valueCents += amount;
           else state.quantity = (state.quantity ?? 0n) + op.quantity;
@@ -250,6 +265,7 @@ export function replayHoldings(
         case "income":
           // A reward in coins is income at its value, and then the coins cost that (§4.4).
           if (op.quantity !== null) {
+            enter();
             state.quantity = (state.quantity ?? 0n) + op.quantity;
             state.costCents += amount;
           }
@@ -282,17 +298,19 @@ export function replayHoldings(
           if (invested !== undefined) {
             // eToro (§4.4): the position's own investment, not the holding's average.
             if (state.quantity !== null && op.quantity !== null) state.quantity -= op.quantity;
-            state.costCents = state.costCents > invested ? state.costCents - invested : 0n;
+            state.costCents = state.costCents > invested.cents ? state.costCents - invested.cents : 0n;
             exits.push({
               eventId: event.id,
               on: event.on,
               holdingId: op.holdingId,
               kind: "close",
               proceedsCents: amount,
-              costCents: invested,
-              realizedCents: amount - invested,
+              costCents: invested.cents,
+              realizedCents: amount - invested.cents,
               matched: "position",
+              openedOn: invested.on,
             });
+            if (state.quantity !== null && state.quantity <= 0n) state.since = null;
             break;
           }
           const cost = state.costCents;
@@ -305,10 +323,12 @@ export function replayHoldings(
             costCents: cost,
             realizedCents: amount - cost,
             matched: "average",
+            openedOn: state.since,
           });
           state.quantity = state.quantity === null ? null : 0n;
           state.valueCents = 0n;
           state.costCents = 0n;
+          state.since = null;
           break;
         }
         default:
@@ -383,11 +403,19 @@ export interface PeriodFlow {
 }
 
 export interface HoldingPnl {
-  holdingId: string;
+  /** {@link PositionAt.key}: the holding, or the provider's asset and product. */
+  key: string;
+  holdingId: string | null;
+  assetId: string | null;
+  product: string | null;
   realizedCents: Cents;
+  /** U(e) − U(s⁻) of this position; `null` when its cost is unknown at either end. */
   unrealizedChangeCents: Cents | null;
   /** Realized + the change of the unrealized: what the position added to the period (§4.2). */
   contributionCents: Cents | null;
+  /** The position at the end of `s⁻` and at the end of `e`; `null` when it was not open then. */
+  start: PositionAt | null;
+  end: PositionAt | null;
 }
 
 export interface ServicePnl {
@@ -402,6 +430,8 @@ export interface ServicePnl {
   partial: boolean;
   startCents: Cents | null;
   endCents: Cents | null;
+  /** The cash beside the positions on the last day (§3.4); `null` when the provider does not say it. */
+  endCashCents: Cents | null;
   /** In the account's currency, fx zero; `null` when undetermined. */
   local: PnlParts | null;
   /** In the display currency, with the exchange effect (§4.5); `null` when a rate is missing. */
@@ -448,39 +478,210 @@ function correctionsOn(
 
 const DATA_RESULT: ReadonlySet<AdjustmentClass> = new Set(["data", "result"]);
 
+// ——— The positions of a day (§3.4, §4.2, §4.7, U4) ————————————————————————————————————————————
+
 /**
- * What a period's unrealized is (§4.2): Σ (value − cost) of the open positions at the end of `on`,
- * for a manual account kept by positions; `0` before the account exists; `null` where the positions
- * have no cost (a synced account before U4) or are not kept (`total`, which has its own rule).
+ * Where a position's cost comes from (§4.7): the replay of its events (a manual position, a Binance
+ * coin whose trades add up to the quantity read), the provider itself (eToro's invested `amount`),
+ * or a later reading of the same quantity whose provider said it — the average cost of a position
+ * moves only with its quantity.
  */
-function unrealizedOn(book: Book, on: CivilDate, rates: RateTable, replay: Replay): Cents | null | "total" {
-  const periods = sortedPeriods(book);
-  let index = -1;
-  for (let at = 0; at < periods.length; at++) if (periods[at].fromOn <= on) index = at;
-  if (index < 0) return 0n;
-  const period = periods[index];
-  if (period.origin !== "manual") return null;
-  if (period.mode === "total") return "total";
-  let total = 0n;
-  for (const [holdingId, state] of holdingStates(book, on, rates)) {
-    if (!state.open) continue;
-    total += (state.valueCents ?? 0n) - (replay.costs.get(holdingId)?.costCents ?? 0n);
-  }
-  return total;
+export type CostSource = "events" | "provider" | "inferred";
+
+export interface PositionAt {
+  /** The holding's id; a provider position no event ever touched is `asset:<assetId>:<product>`. */
+  key: string;
+  holdingId: string | null;
+  assetId: string | null;
+  product: string | null;
+  origin: "manual" | "provider";
+  quantity: bigint | null;
+  unitPrice: bigint | null;
+  priceCurrency: string | null;
+  /** In the account's currency; `null` for a position no market priced. */
+  valueCents: Cents | null;
+  /** At average cost, in the account's currency; `null` when nothing says it (§4.7). */
+  costCents: Cents | null;
+  costSource: CostSource | null;
+  /** value − cost; `null` without either. */
+  unrealizedCents: Cents | null;
 }
 
-function unrealizedByHolding(
-  book: Book,
-  on: CivilDate,
-  rates: RateTable,
-  replay: Replay,
-): Map<string, Cents> {
-  const out = new Map<string, Cents>();
-  for (const [holdingId, state] of holdingStates(book, on, rates)) {
-    if (!state.open) continue;
-    out.set(holdingId, (state.valueCents ?? 0n) - (replay.costs.get(holdingId)?.costCents ?? 0n));
+export interface PositionsAt {
+  /**
+   * `total`: a manual account kept by value only, which has no positions; `none`: no period yet;
+   * `unknown`: the reading in force says a total and nothing of what it holds (a day of eToro's
+   * history, an estimated Binance day): its provider positions are unknown, never absent.
+   */
+  kind: "positions" | "total" | "none" | "unknown";
+  positions: PositionAt[];
+  /** The cash of the day: the reading's for a synced account, the book's for a manual one. */
+  cashCents: Cents | null;
+}
+
+/** Two quantities read and replayed are the same one: equal to a millionth (exchange rounding). */
+function sameQuantity(replayed: bigint | null, read: bigint | null): boolean {
+  if (replayed === null || read === null || read <= 0n) return false;
+  return abs(replayed - read) * 1_000_000n <= read;
+}
+
+interface ReadGroup {
+  assetId: string;
+  product: string;
+  quantity: bigint | null;
+  unitPrice: bigint | null;
+  priceCurrency: string | null;
+  valueCents: Cents | null;
+  /** Σ of the costs the provider gave; `null` when one of them is missing. */
+  costCents: Cents | null;
+}
+
+/** A reading's positions by asset and product (eToro has a row per trade), dust left out (V4). */
+function groupsOf(positions: ReadingLike["positions"], skip: ReadonlySet<string>): Map<string, ReadGroup> {
+  const groups = new Map<string, ReadGroup>();
+  for (const one of positions) {
+    if (isUnpricedDust(one)) continue;
+    const key = `${one.assetId}|${one.product}`;
+    if (skip.has(key)) continue;
+    const quantity = one.quantity ?? null;
+    const cost = one.costCents ?? null;
+    const group = groups.get(key);
+    if (!group) {
+      groups.set(key, {
+        assetId: one.assetId,
+        product: one.product,
+        quantity,
+        unitPrice: one.unitPrice ?? null,
+        priceCurrency: one.priceCurrency ?? null,
+        valueCents: one.valueCents,
+        costCents: cost,
+      });
+      continue;
+    }
+    group.quantity = group.quantity === null || quantity === null ? null : group.quantity + quantity;
+    group.valueCents =
+      group.valueCents === null || one.valueCents === null ? null : group.valueCents + one.valueCents;
+    group.costCents = group.costCents === null || cost === null ? null : group.costCents + cost;
   }
-  return out;
+  return groups;
+}
+
+/**
+ * The open positions at the end of `on` (§3.4), each with its value and its cost: a manual
+ * account's from its events; a synced one's from the reading in force, the manual positions it
+ * counts next to it, and a cost from the provider, from the replayed events when they add up to the
+ * quantity read, or from a later reading of the same quantity (§4.7). A cost nothing says is `null`:
+ * that position's unrealized stays in "Other (incomplete data)".
+ */
+export function positionsOn(book: Book, on: CivilDate, rates: RateTable, replay: Replay): PositionsAt {
+  const periods = sortedPeriods(book);
+  const index = periodIndexAt(book, on);
+  if (index < 0) return { kind: "none", positions: [], cashCents: null };
+  const period = periods[index];
+  if (period.origin === "manual" && period.mode === "total") {
+    return { kind: "total", positions: [], cashCents: null };
+  }
+  const states = holdingStates(book, on, rates);
+  const byId = new Map(book.holdings.map((holding) => [holding.id, holding]));
+  const positions: PositionAt[] = [];
+  const day = valueOn(book, on, rates);
+  const conflicted = new Set(day.conflicts.map((conflict) => conflict.holdingId));
+  const replaced = new Set<string>();
+
+  for (const [holdingId, state] of states) {
+    const holding = byId.get(holdingId);
+    if (!state.open || !holding) continue;
+    // A synced account's provider holdings are its trades: the reading says what is open (A6).
+    if (period.origin !== "manual" && holding.origin !== "manual") continue;
+    let valueCents = state.valueCents ?? 0n;
+    let costCents: Cents | null = replay.costs.get(holdingId)?.costCents ?? 0n;
+    if (period.origin !== "manual") {
+      const decided = reconciliationOn(book.reconciliations, holdingId, on);
+      if (decided?.kind === "covered_by_provider") continue;
+      if (decided?.kind === "partial" && decided.quantity !== null) {
+        // Only the part the provider does not cover counts; its cost is not split (R4).
+        const covered =
+          state.quantity !== null && state.quantity > 0n
+            ? divRound(
+                valueCents * (decided.quantity < state.quantity ? decided.quantity : state.quantity),
+                state.quantity,
+              )
+            : 0n;
+        valueCents -= covered;
+        costCents = null;
+      }
+      if (conflicted.has(holdingId)) replaced.add(`${holding.assetId}|${holding.product}`);
+    }
+    positions.push({
+      key: holdingId,
+      holdingId,
+      assetId: holding.assetId,
+      product: holding.product,
+      origin: holding.origin,
+      quantity: state.quantity,
+      unitPrice: state.unitPrice,
+      priceCurrency: state.priceCurrency,
+      valueCents,
+      costCents,
+      costSource: costCents === null ? null : "events",
+      unrealizedCents: costCents === null ? null : valueCents - costCents,
+    });
+  }
+  if (period.origin === "manual") return { kind: "positions", positions, cashCents: day.cashCents };
+
+  const reading = readingOn(book, on);
+  if (reading === null) return { kind: "positions", positions, cashCents: null };
+  if (reading.positions.length === 0 && (reading.cashCents ?? null) === null && reading.totalCents !== 0n) {
+    return { kind: "unknown", positions, cashCents: null };
+  }
+  const providerHolding = new Map(
+    book.holdings
+      .filter((holding) => holding.origin === "provider")
+      .map((holding) => [`${holding.assetId}|${holding.product}`, holding.id]),
+  );
+  const later = book.readings
+    .filter((one) => one.on > reading.on && one.on >= period.fromOn)
+    .filter((one) => one.positions.some((position) => position.costCents != null))
+    .sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0))
+    .map((one) => groupsOf(one.positions, replaced));
+  for (const [key, group] of groupsOf(reading.positions, replaced)) {
+    const holdingId = providerHolding.get(key) ?? null;
+    let costCents = group.costCents;
+    let costSource: CostSource | null = costCents === null ? null : "provider";
+    if (costCents === null && holdingId !== null) {
+      const replayed = replay.costs.get(holdingId);
+      if (replayed && sameQuantity(replayed.quantity, group.quantity)) {
+        costCents = replayed.costCents;
+        costSource = "events";
+      }
+    }
+    if (costCents === null) {
+      for (const groups of later) {
+        const next = groups.get(key);
+        if (!next || next.costCents === null) continue;
+        if (next.quantity !== null && next.quantity === group.quantity) {
+          costCents = next.costCents;
+          costSource = "inferred";
+        }
+        break;
+      }
+    }
+    positions.push({
+      key: holdingId ?? `asset:${key.replace("|", ":")}`,
+      holdingId,
+      assetId: group.assetId,
+      product: group.product,
+      origin: "provider",
+      quantity: group.quantity,
+      unitPrice: group.unitPrice,
+      priceCurrency: group.priceCurrency,
+      valueCents: group.valueCents,
+      costCents,
+      costSource,
+      unrealizedCents: costCents === null || group.valueCents === null ? null : group.valueCents - costCents,
+    });
+  }
+  return { kind: "positions", positions, cashCents: reading.cashCents ?? null };
 }
 
 function periodIndexAt(book: Book, on: CivilDate): number {
@@ -566,6 +767,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     partial: false,
     startCents: null,
     endCents: null,
+    endCashCents: null,
     local: null,
     display: null,
     localReturn: null,
@@ -715,16 +917,38 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
   const correctionsCents =
     correctionsOn(book, e, classOf, DATA_RESULT) - correctionsOn(book, base, classOf, DATA_RESULT);
 
-  const atEnd = unrealizedOn(book, e, rates, replayEnd);
-  const atStart = unrealizedOn(book, base, rates, replayStart);
+  const atEnd = positionsOn(book, e, rates, replayEnd);
+  const atStart = positionsOn(book, base, rates, replayStart);
   const samePeriod = periodIndexAt(book, base) === periodIndexAt(book, e) || periodIndexAt(book, base) < 0;
+  const startBy = new Map(atStart.positions.map((one) => [one.key, one]));
+  const endBy = new Map(atEnd.positions.map((one) => [one.key, one]));
+  // U(e) − U(s⁻) by position (§4.2): a position with no cost at either end keeps its change in
+  // "Other"; the parts known are the change of the unrealized.
+  const changes = new Map<string, Cents | null>();
   let unrealizedChangeCents: Cents | null = null;
-  if (samePeriod && atEnd === "total" && (atStart === "total" || atStart === 0n)) {
+  if (samePeriod && atEnd.kind === "total" && atStart.kind !== "positions") {
     // "Value only" (§4.2): no positions — what is not income, fee or correction is the change of value.
     unrealizedChangeCents = pnlCents - realizedCents - incomeCents - feesCents - correctionsCents;
-  } else if (samePeriod && typeof atEnd === "bigint" && typeof atStart === "bigint") {
-    unrealizedChangeCents = atEnd - atStart;
+  } else if (samePeriod && atEnd.kind !== "total" && atStart.kind !== "total") {
+    let known = 0n;
+    let anyKnown = false;
+    // Absent at an end whose reading says nothing of its positions: unknown, not zero — unless manual.
+    const missing = (at: PositionsAt, other: PositionAt | undefined) =>
+      at.kind === "unknown" && other?.origin !== "manual" ? null : 0n;
+    const unknown = atStart.kind === "unknown" || atEnd.kind === "unknown";
+    for (const key of new Set([...startBy.keys(), ...endBy.keys()])) {
+      const before = startBy.has(key) ? startBy.get(key)!.unrealizedCents : missing(atStart, endBy.get(key));
+      const after = endBy.has(key) ? endBy.get(key)!.unrealizedCents : missing(atEnd, startBy.get(key));
+      const change = before === null || after === null ? null : after - before;
+      changes.set(key, change);
+      if (change !== null) {
+        known += change;
+        anyKnown = true;
+      }
+    }
+    unrealizedChangeCents = (changes.size > 0 || unknown) && !anyKnown ? null : known;
   }
+  const measuredChanges = samePeriod && atEnd.kind !== "total" && atStart.kind !== "total";
   const local: PnlParts = {
     pnlCents,
     realizedCents,
@@ -737,21 +961,27 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
       pnlCents - realizedCents - (unrealizedChangeCents ?? 0n) - incomeCents - feesCents - correctionsCents,
   };
 
-  // By position: what each one added (realized + change of its unrealized).
-  const byStart = samePeriod ? unrealizedByHolding(book, base, rates, replayStart) : new Map<string, Cents>();
-  const byEnd = samePeriod ? unrealizedByHolding(book, e, rates, replayEnd) : new Map<string, Cents>();
-  const known = typeof atEnd === "bigint" && typeof atStart === "bigint" && samePeriod;
-  const ids = new Set([...exits.map((exit) => exit.holdingId), ...byStart.keys(), ...byEnd.keys()]);
-  const holdings: HoldingPnl[] = [...ids].sort().map((holdingId) => {
+  // By position: what each one added (realized + change of its unrealized), the sold ones too
+  // (PERS-113 · 4): a position open at s⁻ and sold in the period is a row with its realized.
+  const holdingOf = new Map(book.holdings.map((holding) => [holding.id, holding]));
+  const keys = new Set([...exits.map((exit) => exit.holdingId), ...startBy.keys(), ...endBy.keys()]);
+  const holdings: HoldingPnl[] = [...keys].sort().map((key) => {
     const realized = exits
-      .filter((exit) => exit.holdingId === holdingId)
+      .filter((exit) => exit.holdingId === key)
       .reduce((sum, exit) => sum + (exit.realizedCents ?? 0n), 0n);
-    const change = known ? (byEnd.get(holdingId) ?? 0n) - (byStart.get(holdingId) ?? 0n) : null;
+    const change = measuredChanges ? (changes.has(key) ? changes.get(key)! : 0n) : null;
+    const position = endBy.get(key) ?? startBy.get(key) ?? null;
+    const holding = holdingOf.get(key);
     return {
-      holdingId,
+      key,
+      holdingId: position?.holdingId ?? (holding ? key : null),
+      assetId: position?.assetId ?? holding?.assetId ?? null,
+      product: position?.product ?? holding?.product ?? null,
       realizedCents: realized,
       unrealizedChangeCents: change,
       contributionCents: change === null ? null : realized + change,
+      start: startBy.get(key) ?? null,
+      end: endBy.get(key) ?? null,
     };
   });
 
@@ -806,6 +1036,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     partial: from > asked,
     startCents,
     endCents,
+    endCashCents: atEnd.cashCents,
     local,
     display: displayParts,
     localReturn: returnOf(from, e, startCents, endCents, pnlCents, entries),

@@ -210,11 +210,18 @@ export interface ReadingLike {
   on: CivilDate;
   status: ReadingStatus;
   totalCents: Cents;
+  /** The cash the provider read, when it says it apart from the positions. */
+  cashCents?: Cents | null;
   positions: readonly {
     assetId: string;
     product: string;
     valueCents: Cents | null;
     quantity?: bigint | null;
+    /** What the position cost, in the account's currency, when the provider says (eToro, U4). */
+    costCents?: Cents | null;
+    /** The provider's unit price, in `priceCurrency`. */
+    unitPrice?: bigint | null;
+    priceCurrency?: string | null;
   }[];
   scopes: readonly { product: string; complete: boolean }[];
 }
@@ -583,6 +590,22 @@ export function missingPricesOf(
   return positions.filter((position) => position.valueCents === null && !isUnpricedDust(position)).length;
 }
 
+/** The reading in force at the end of `on` inside `period`: the last one that counts (R1, R5). */
+function readingIn(book: Book, period: PeriodLike, on: CivilDate): ReadingLike | null {
+  return (
+    book.readings
+      .filter((one) => one.on >= period.fromOn && one.on <= on && COUNTING.has(one.status))
+      .sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))[0] ?? null
+  );
+}
+
+/** The reading a synced account's value stands on at the end of `on`; `null` for a manual period. */
+export function readingOn(book: Book, on: CivilDate): ReadingLike | null {
+  const { period } = eventsOn(book, on);
+  if (period === null || period.origin === "manual") return null;
+  return readingIn(book, period, on);
+}
+
 /**
  * V(A,d) (§2): the value of the account at the end of `on`, in its currency.
  *
@@ -652,10 +675,7 @@ export function valueOn(book: Book, on: CivilDate, rates: RateTable): DayValue {
   }
 
   // Synced: P − C + M + R.
-  const reading =
-    book.readings
-      .filter((one) => one.on >= period.fromOn && one.on <= on && COUNTING.has(one.status))
-      .sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))[0] ?? null;
+  const reading = readingIn(book, period, on);
   if (reading === null) return { ...EMPTY, mode: period.mode, origin: "synced", adjustmentCents };
   missing += missingPricesOf(reading.positions);
 

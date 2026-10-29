@@ -502,6 +502,8 @@ export const investmentReadingPositions = pgTable(
     fxRate: rate("fx_rate"),
     fxSource: text("fx_source"),
     valueCents: bigint("value_cents", { mode: "bigint" }),
+    /** What the position cost, in the account's currency, when the provider says (eToro `amount`, U4). */
+    costCents: bigint("cost_cents", { mode: "bigint" }),
   },
   (table) => [
     index("investment_reading_positions_reading_idx").on(table.readingId),
