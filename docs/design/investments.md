@@ -702,6 +702,7 @@ Dati letti:
 | Flussi | `fetchLedger` (Kraken, Coinbase, Bitvavo, Crypto.com) | cursore per stream (sotto) |
 | Flussi Binance | `fetchDeposits` / `fetchWithdrawals` a finestre di 90 giorni (senza `since` si legge solo l'ultima), `fetchMyTrades` per simbolo (`since`, `limit` 1000, `fromId`) | scoperta dei simboli: sotto [D18 · B7] |
 | Flussi Binance, altri stream [D18 · B2] | `sapiGetFiatOrders` (`transactionType` 0/1), `sapiGetFiatPayments` (`transactionType` 0), `sapiGetConvertTradeFlow` (finestre ≤ 30 gg), `sapiGetAssetAssetDividend` (finestre ≤ 180 gg) | stream `fiat_orders`, `fiat_payments`, `convert`, `dividends`; `timeout` ccxt ≥ 35 s per le chiamate fiat. Senza questi stream la conservazione delle quantità (A6) fallisce |
+| Flussi Binance, PERS-141 | `sapiGetAssetDribblet` (finestre ≤ 90 gg), `sapiGetPayTransactions` (finestre ≤ 90 gg, 18 mesi, 100 righe), `loadMarkets` con i mercati delistati per `fetchMyTrades` | stream `dust` e `pay`. Il dust log nomina anche le coin vendute fino all'ultimo residuo, i cui trade nessun altro stream trova; `pay` prima dei suoi 18 mesi è una lacuna dichiarata (`api_limit_18m`) |
 | Identità | `GET /api/v3/account` → `uid` | id del conto esterno [D18 · B7]. `canTrade`/`canWithdraw` sono capacità del conto, non permessi della chiave: mai usarli per 5.2 |
 
 **Cursori e completezza (A7).**
@@ -717,6 +718,10 @@ Dati letti:
   nessun import di file la colma [D16].
 - Lo storico oltre il limite dell'API (24 mesi [D11]) è una lacuna dichiarata (`api_limit_24m`), non
   un periodo vuoto.
+- Rebase (PERS-141): il cursore porta la versione di ciò che il source legge (`history`). Quando
+  cambia (nuovi stream o mercati), il primo pass rilegge i nuovi stream dall'inizio dello storico,
+  cancella le aperture `inferred` del provider e lo storico stimato, e li ricalcola dai flussi
+  completi. Una sola volta per versione: nei pass normali le aperture non assorbono mai una lacuna.
 
 **Quantità (A6).** Per un conto sincronizzato la quantità corrente di ogni posizione è quella della
 lettura (`quantity_basis = reported`). Le quantità ricostruite dalle operazioni (`reconstructed`)
@@ -740,6 +745,8 @@ Mappatura sugli eventi:
 | Binance fiat payment (`fiat_payments`) | `buy` dell'asset (`base`) + gamba `quote` in EUR |
 | Binance Convert (`convert`) | evento come un trade: `buy` dell'asset ricevuto + `sell` dell'asset ceduto |
 | Binance dividend (`dividends`: reward, staking, airdrop, Launchpool) | `income` con quantità dell'asset |
+| Binance dust log (`dust`) | per coin convertita: `buy` BNB lordo (`base`) + `sell` della coin (`quote`, nessuna gamba se fiat) + `fee` BNB della commissione |
+| Binance Pay (`pay`) | ordine `TAX` (imposta di bollo raccolta da Binance) → `fee` nella coin pagata; altri ordini → `withdrawal` / `deposit` |
 | ledger `transfer` interno (spot ↔ earn) | ignorato solo se entrambi i prodotti sono nel perimetro dell'adapter; altrimenti `withdrawal`/`deposit` interni con `transfer_group_id` verso la posizione manuale del prodotto |
 
 Idempotenza: un trade è un solo evento con id esterno = id del trade; un retry riscrive tutte le

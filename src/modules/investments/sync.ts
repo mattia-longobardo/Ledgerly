@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNotNull, isNull, ne, notInArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "@/modules/accounts/queries";
 import { createAccount, openedNoLaterThan, takeOverEntries } from "@/modules/accounts/service";
@@ -45,6 +45,7 @@ import {
   saveSchedule,
   saveSyncJob,
   skipRun,
+  unlinkEntities,
 } from "@/platform/integrations/service";
 import { withJobLock } from "@/platform/jobs/lock";
 import type { Cents } from "@/platform/money";
@@ -942,6 +943,81 @@ function isDust(quantity: bigint, valueCents: Cents | null, reported: bigint): b
 }
 
 /**
+ * A rebase (PERS-141): the source reads more of the same history than when it started, so what was
+ * inferred from the old reading goes — the provider's inferred openings, with their links, and the
+ * estimated readings, with the opening period back on the first real reading. `checkQuantities`
+ * infers the openings again and `estimateHistoryOf` estimates the history again, on this pass.
+ */
+async function undoInferred(ctx: WriteCtx, tx: Tx, investment: InvestmentAccount, provider: string) {
+  const openings = await tx
+    .selectDistinct({ eventId: investmentOperations.eventId })
+    .from(investmentOperations)
+    .innerJoin(investmentEvents, eq(investmentEvents.id, investmentOperations.eventId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentOperations),
+        eq(investmentEvents.investmentAccountId, investment.id),
+        eq(investmentEvents.origin, "provider"),
+        eq(investmentOperations.kind, "opening_position"),
+        eq(investmentOperations.quantityBasis, "inferred"),
+      ),
+    )
+    .orderBy(asc(investmentOperations.eventId));
+  const eventIds = openings.map((one) => one.eventId);
+  if (eventIds.length > 0) {
+    await tx
+      .delete(investmentOperations)
+      .where(
+        and(inArray(investmentOperations.eventId, eventIds), userScoped(ctx).owns(investmentOperations)),
+      );
+    await tx
+      .delete(investmentEvents)
+      .where(and(inArray(investmentEvents.id, eventIds), userScoped(ctx).owns(investmentEvents)));
+    await unlinkEntities(ctx, provider, "investment_event", eventIds, tx);
+  }
+  const periods = await tx
+    .select()
+    .from(investmentAccountPeriods)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentAccountPeriods),
+        eq(investmentAccountPeriods.investmentAccountId, investment.id),
+      ),
+    )
+    .orderBy(asc(investmentAccountPeriods.fromOn));
+  // Only the history `estimateHistoryOf` wrote: one opening period of a service connected new.
+  if (periods.length !== 1 || periods[0].reason !== "opening" || periods[0].origin !== "synced") return;
+  const [real] = await tx
+    .select({ on: investmentReadings.on })
+    .from(investmentReadings)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadings),
+        eq(investmentReadings.investmentAccountId, investment.id),
+        notInArray(investmentReadings.status, ["pending_zero", "estimated"]),
+      ),
+    )
+    .orderBy(asc(investmentReadings.on))
+    .limit(1);
+  if (!real || periods[0].fromOn >= real.on) return;
+  await tx
+    .delete(investmentReadings)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentReadings),
+        eq(investmentReadings.investmentAccountId, investment.id),
+        eq(investmentReadings.status, "estimated"),
+      ),
+    );
+  await tx
+    .update(investmentAccountPeriods)
+    .set({ fromOn: real.on, startsAt: new Date(`${real.on}T00:00:00Z`) })
+    .where(
+      and(eq(investmentAccountPeriods.id, periods[0].id), userScoped(ctx).owns(investmentAccountPeriods)),
+    );
+}
+
+/**
  * The quantities of a source that reads a window of history (A6, §3.2): on the first pass, one
  * `opening_position` per coin held, `inferred` = reported today − net flows of the window; on every
  * pass, opening + Σ legs against the reading, per coin. A difference over dust is a declared gap of
@@ -1160,6 +1236,9 @@ async function syncFlows(
       writeEvents(ctx, tx, investment, linked.currency, read.events, known, rates, now),
     );
     await writeCoverage(ctx, tx, connection.id, "flows", read.coverage);
+    if (read.rebase && read.historyFrom !== undefined) {
+      await undoInferred(ctx, tx, investment, connection.provider);
+    }
     const opened =
       read.historyFrom === undefined
         ? null

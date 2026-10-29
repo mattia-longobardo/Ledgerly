@@ -568,12 +568,13 @@ export async function unlinkEntities(
   provider: string,
   entityType: string,
   entityIds: string[],
+  tx?: Tx,
 ): Promise<number> {
   const type = entityTypeSchema.safeParse(entityType);
   if (!type.success) throw new IntegrationError("invalid_link");
   const wanted = [...new Set(entityIds)];
   if (wanted.length === 0) return 0;
-  const deleted = await getDb()
+  const deleted = await (tx ?? getDb())
     .delete(providerLinks)
     .where(
       and(

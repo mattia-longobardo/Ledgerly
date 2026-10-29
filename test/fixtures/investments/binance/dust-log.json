@@ -1,0 +1,33 @@
+{
+  "method": "sapiGetAssetDribblet (finestre di 90 giorni)",
+  "note": "PERS-141: sintetico, forma della risposta reale; una conversione di due residui, uno in EUR",
+  "body": {
+    "total": 1,
+    "userAssetDribblets": [
+      {
+        "operateTime": 1747667538000,
+        "totalTransferedAmount": "0.00030000",
+        "totalServiceChargeAmount": "0.00000600",
+        "transId": 900500,
+        "userAssetDribbletDetails": [
+          {
+            "transId": 900500,
+            "serviceChargeAmount": "0.00000400",
+            "amount": "15.22070015",
+            "operateTime": 1747667538000,
+            "transferedAmount": "0.00020000",
+            "fromAsset": "SXT"
+          },
+          {
+            "transId": 900500,
+            "serviceChargeAmount": "0.00000200",
+            "amount": "0.25345",
+            "operateTime": 1747667538000,
+            "transferedAmount": "0.00010000",
+            "fromAsset": "EUR"
+          }
+        ]
+      }
+    ]
+  }
+}

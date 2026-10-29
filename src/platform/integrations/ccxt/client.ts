@@ -25,6 +25,8 @@ export interface BinanceApi {
   earnLocked(page: number): Promise<unknown>;
   /** The active spot markets, as ccxt symbols (`BTC/EUR`). */
   markets(): Promise<readonly string[]>;
+  /** Every spot market, delisted ones too: their trades stay readable (`MKR/USDT`, PERS-141). */
+  tradeMarkets(): Promise<readonly string[]>;
   tickers(symbols: readonly string[]): Promise<unknown>;
   /** Daily candles from `since`, oldest first, at most 1000. */
   dailyCandles(symbol: string, since: number): Promise<unknown>;
@@ -39,6 +41,10 @@ export interface BinanceApi {
   convertFlow(since: number, until: number): Promise<unknown>;
   /** Rewards, staking, airdrops: a window of at most 180 days, at most 500 rows (B2). */
   dividends(since: number, until: number): Promise<unknown>;
+  /** Small balances converted to BNB (`GET /sapi/v1/asset/dribblet`): a window of at most 90 days. */
+  dustLog(since: number, until: number): Promise<unknown>;
+  /** Binance Pay orders (`GET /sapi/v1/pay/transactions`): 90 days at most, 18 months back, 100 rows. */
+  payTransactions(since: number, until: number): Promise<unknown>;
   /** The trades of a market from `fromId` on, oldest first, at most 1000 (B7). */
   myTrades(symbol: string, fromId: number): Promise<unknown>;
 }
@@ -104,7 +110,16 @@ export async function binanceApi(
       throw ccxtErrorOf(ccxt, provider, error);
     }
   };
-  let markets: readonly string[] | null = null;
+  let spot: { symbol: string; active: boolean }[] | null = null;
+  const spotMarkets = async () => {
+    if (spot === null) {
+      const loaded = await exchange.loadMarkets();
+      spot = Object.values(loaded)
+        .filter((market) => market !== undefined && market.spot)
+        .map((market) => ({ symbol: market!.symbol, active: market!.active !== false }));
+    }
+    return spot;
+  };
   return {
     apiRestrictions: () => call(() => exchange.sapiGetAccountApiRestrictions()),
     account: () => call(() => exchange.privateGetAccount({ omitZeroBalances: "true" })),
@@ -114,15 +129,10 @@ export async function binanceApi(
       call(() => exchange.sapiGetSimpleEarnFlexiblePosition({ current: page, size: 100 })),
     earnLocked: (page) => call(() => exchange.sapiGetSimpleEarnLockedPosition({ current: page, size: 100 })),
     markets: () =>
-      call(async () => {
-        if (markets === null) {
-          const loaded = await exchange.loadMarkets();
-          markets = Object.values(loaded)
-            .filter((market) => market !== undefined && market.spot && market.active !== false)
-            .map((market) => market!.symbol);
-        }
-        return markets;
-      }),
+      call(async () =>
+        (await spotMarkets()).filter((market) => market.active).map((market) => market.symbol),
+      ),
+    tradeMarkets: () => call(async () => (await spotMarkets()).map((market) => market.symbol)),
     tickers: (symbols) => call(() => exchange.fetchTickers([...symbols])),
     dailyCandles: (symbol, since) => call(() => exchange.fetchOHLCV(symbol, "1d", since, 1000)),
     deposits: (since, until) =>
@@ -153,6 +163,10 @@ export async function binanceApi(
       call(() => exchange.sapiGetConvertTradeFlow({ startTime: since, endTime: until, limit: 1000 })),
     dividends: (since, until) =>
       call(() => exchange.sapiGetAssetAssetDividend({ startTime: since, endTime: until, limit: 500 })),
+    dustLog: (since, until) =>
+      call(() => exchange.sapiGetAssetDribblet({ startTime: since, endTime: until })),
+    payTransactions: (since, until) =>
+      call(() => exchange.sapiGetPayTransactions({ startTime: since, endTime: until, limit: 100 })),
     myTrades: (symbol, fromId) => call(() => exchange.fetchMyTrades(symbol, undefined, 1000, { fromId })),
   };
 }
