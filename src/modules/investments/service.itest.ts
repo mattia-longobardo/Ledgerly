@@ -16,6 +16,7 @@ import {
   investmentHistory,
   investmentOperationsExport,
   investmentsHome,
+  investmentsPnlView,
   investmentsPortfolio,
   serviceDetail,
 } from "./queries";
@@ -219,6 +220,39 @@ describe("§2.1 the Directa example, end to end", () => {
       ["buy", -eur(6000)],
       ["fee", -eur(2)],
     ]);
+  });
+
+  it("feeds the P&L home (U2): bars that add up to the hero, the value of each service, its colour", async () => {
+    const accountId = await directa();
+    const todayOn = today(ctx.timeZone);
+    const year = await investmentsPnlView(ctx, {});
+    expect(year.period).toMatchObject({ kind: "year", year: Number(todayOn.slice(0, 4)) });
+    // The year to date is the gain of today: the service opened this year.
+    expect(year.portfolio.parts?.pnlCents).toBe(eur(996));
+    expect(year.barGrain).toBe("month");
+    expect(year.intervals.at(-1)?.to).toBe(todayOn);
+    const service = year.chart.find((one) => one.accountId === accountId)!;
+    expect(service.bars).toHaveLength(year.intervals.length);
+    expect(service.bars.reduce<bigint>((sum, cents) => sum + (cents ?? 0n), 0n)).toBe(eur(996));
+    expect(service.values.at(-1)).toBe(eur(8996));
+    expect(year.valueDays.at(-1)).toBe(todayOn);
+    expect(service.barsEstimated.some(Boolean)).toBe(false);
+    expect(year.colorIndex.has(accountId)).toBe(true);
+    expect(year.firstOn).toBe("2026-03-01");
+
+    // A quarter goes by week, and its bars still add up to its own P&L.
+    const quarter = await investmentsPnlView(ctx, { from: addDays(todayOn, -80), to: todayOn });
+    expect(quarter.barGrain).toBe("week");
+    expect(quarter.valueGrain).toBe("day");
+    const bars = quarter.chart.find((one) => one.accountId === accountId)!.bars;
+    expect(bars.reduce<bigint>((sum, cents) => sum + (cents ?? 0n), 0n)).toBe(
+      quarter.portfolio.parts?.pnlCents,
+    );
+
+    // "All" starts on the first day with data.
+    const all = await investmentsPnlView(ctx, { period: "all" });
+    expect(all.span.from).toBe("2026-03-01");
+    expect(all.portfolio.parts?.pnlCents).toBe(eur(996));
   });
 
   it("feeds the home: totals, the chart over a window, the allocation by class and by service", async () => {

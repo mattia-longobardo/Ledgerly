@@ -61,6 +61,7 @@ import {
   portfolioPnl,
   type PortfolioPnl,
 } from "./pnl";
+import { type BarGrain, barIntervals, type Interval, periodSpan, valueDays } from "./period";
 import { type SyncStatus, syncStatus } from "./sync";
 import { type ChartGrain, type ChartWindow, chartDays } from "./window";
 import { type Xirr, xirr } from "./xirr";
@@ -1090,22 +1091,14 @@ function coverageOf(sync: SyncStatus, timeZone: string): { windows: CoverageWind
   };
 }
 
-/**
- * The P&L of the period (§4) of every live service and of the portfolio, in the display currency:
- * the engine of `pnl.ts` on each book, with its coverage, its provider ids (eToro's `positionId`)
- * and the rates from the earliest day measured. Nothing is shown with it yet (U2–U5).
- */
-export async function investmentsPnl(
+/** The inputs of the engine for every live service, and the rates to the display currency (§4.5). */
+async function pnlInputs(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  params: PeriodParams | PnlPeriod,
-  now: Date = new Date(),
-): Promise<InvestmentsPnl> {
-  const todayOn = today(ctx.timeZone, now);
-  const period = "kind" in params ? params : periodOf(params, todayOn);
+  live: Loaded[],
+  period: PnlPeriod,
+  todayOn: CivilDate,
+): Promise<{ services: PnlService[]; display: { currency: string; rates: RateTable } }> {
   const currency = ctx.displayCurrency;
-  const { loaded } = await loadAll(ctx, todayOn);
-  const live = loaded.filter((one) => one.account.state !== "archived");
-
   const services: PnlService[] = [];
   for (const one of live) {
     const synced = one.investment.provider !== "manual" && one.sync !== null;
@@ -1129,11 +1122,7 @@ export async function investmentsPnl(
     });
   }
 
-  const firsts = live.flatMap((one) => [
-    ...one.book.periods.map((p) => p.fromOn),
-    ...one.book.events.map((event) => event.on),
-  ]);
-  const earliest = period.from ?? (firsts.length === 0 ? todayOn : firsts.reduce((a, b) => (a < b ? a : b)));
+  const earliest = period.from ?? firstDayOf(live) ?? todayOn;
   const converts = live.some((one) => one.account.currency !== currency);
   const rates = converts
     ? await ratesOn(
@@ -1142,14 +1131,160 @@ export async function investmentsPnl(
         period.to,
       )
     : NO_RATES;
-  const display = { currency, rates };
+  return { services, display: { currency, rates } };
+}
+
+/** The first day any live service has something: its first period or its first event. */
+function firstDayOf(live: Loaded[]): CivilDate | null {
+  const firsts = live.flatMap((one) => [
+    ...one.book.periods.map((p) => p.fromOn),
+    ...one.book.events.map((event) => event.on),
+  ]);
+  return firsts.length === 0 ? null : firsts.reduce((a, b) => (a < b ? a : b));
+}
+
+/**
+ * The P&L of the period (§4) of every live service and of the portfolio, in the display currency:
+ * the engine of `pnl.ts` on each book, with its coverage, its provider ids (eToro's `positionId`)
+ * and the rates from the earliest day measured.
+ */
+export async function investmentsPnl(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<InvestmentsPnl> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const { loaded } = await loadAll(ctx, todayOn);
+  const live = loaded.filter((one) => one.account.state !== "archived");
+  const { services, display } = await pnlInputs(ctx, live, period, todayOn);
   return {
     period,
     todayOn,
-    currency,
+    currency: display.currency,
     portfolio: portfolioPnl(
       services.map((one) => pnlOf(one, period.from, period.to, display)),
-      currency,
+      display.currency,
     ),
+  };
+}
+
+export interface PnlChartService {
+  accountId: string;
+  /** The P&L of each bar in the display currency; `null` before the service is measured. */
+  bars: (Cents | null)[];
+  /** Per bar, whether it stands on an estimated reading (PERS-100): drawn dashed. */
+  barsEstimated: boolean[];
+  /** The value at each point in the display currency, at the rate of its day. */
+  values: (Cents | null)[];
+  valuesEstimated: boolean[];
+}
+
+export interface InvestmentsPnlView extends InvestmentsPnl {
+  /** The first day with data: where "All" starts and the stepper stops (§2.1). */
+  firstOn: CivilDate | null;
+  /** The days the period really spans, "All" from `firstOn`. */
+  span: { from: CivilDate; to: CivilDate };
+  /** The P&L chart (§2.2): bars by week, month or year, one layer per service. */
+  barGrain: BarGrain;
+  intervals: Interval[];
+  /** The value chart (§2.2): every day, or month ends. */
+  valueGrain: "day" | "month";
+  valueDays: CivilDate[];
+  chart: PnlChartService[];
+  /** The place of each live service in Overview's account order: its colour (§0.6). */
+  colorIndex: Map<string, number>;
+}
+
+/**
+ * The home of the section (docs/design/investments-ux.md §3.1, U2): the P&L of the period, and the
+ * chart that explains it — the P&L of each bar by service, and the value of each service. A bar is
+ * the difference of the P&L measured from the service's first day to the bar's last one, so the
+ * bars of a service add up to its P&L exactly, the last ending on the hero's own number.
+ */
+export async function investmentsPnlView(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<InvestmentsPnlView> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const { loaded, accounts } = await loadAll(ctx, todayOn);
+  const live = loaded.filter((one) => one.account.state !== "archived");
+  const { services, display } = await pnlInputs(ctx, live, period, todayOn);
+  const measured = services.map((one) => pnlOf(one, period.from, period.to, display));
+  const portfolio = portfolioPnl(measured, display.currency);
+
+  const firstOn = firstDayOf(live);
+  const span = periodSpan(period, firstOn);
+  const { grain: barGrain, intervals } = barIntervals(span.from, span.to);
+  const { grain: valueGrain, days } = valueDays(span.from, span.to);
+
+  const read = await dailyBalancesOf(
+    ctx,
+    live.map((one) => one.account.id),
+    { from: days[0], to: days[days.length - 1] },
+  );
+  const indexOf = new Map(read.days.map((day, index) => [day, index]));
+  // The rates of the engine start before the first day measured, so they reach every point.
+  const rates = display.rates;
+
+  const chart = live.map((one, at): PnlChartService => {
+    const service = services[at];
+    const whole = measured[at];
+    const estimatedThrough =
+      one.book.readingRows.filter((reading) => reading.status === "estimated").at(-1)?.on ?? null;
+    const stored = read.series.get(one.account.id)?.values ?? [];
+    const values = days.map((day) => {
+      const cents = stored[indexOf.get(day) ?? -1] ?? null;
+      return cents === null ? null : convertCents(cents, one.account.currency, display.currency, day, rates);
+    });
+
+    const bars: (Cents | null)[] = [];
+    let before: Cents = 0n;
+    intervals.forEach((interval, index) => {
+      const from = whole.from;
+      if (whole.display === null || from === null || interval.to < from) {
+        bars.push(null);
+        return;
+      }
+      const last = index === intervals.length - 1;
+      const through = last
+        ? whole.display.pnlCents
+        : pnlOf(service, from, interval.to, display).display?.pnlCents;
+      if (through === null || through === undefined) {
+        bars.push(null);
+        return;
+      }
+      bars.push(through - before);
+      before = through;
+    });
+    return {
+      accountId: one.account.id,
+      bars,
+      barsEstimated: intervals.map(
+        (interval) => estimatedThrough !== null && interval.from <= estimatedThrough,
+      ),
+      values,
+      valuesEstimated: days.map(
+        (day, index) => estimatedThrough !== null && day <= estimatedThrough && values[index] !== null,
+      ),
+    };
+  });
+
+  const order = accounts.filter((account) => account.state !== "archived");
+  return {
+    period,
+    todayOn,
+    currency: display.currency,
+    portfolio,
+    firstOn,
+    span,
+    barGrain,
+    intervals,
+    valueGrain,
+    valueDays: days,
+    chart,
+    colorIndex: new Map(order.map((account, index) => [account.id, index])),
   };
 }
