@@ -3715,6 +3715,7 @@
         "feesFxNote": "fees {fees} · FX {fx}",
         "corrections": "Corrections",
         "unattributed": "Other (incomplete data)",
+        "valuation": "Other (valuation and rounding)",
         "transfers": "Transfers between services"
       },
       "chart": {
@@ -4042,6 +4043,7 @@
         "corrections": "Corrections",
         "valueChange": "Change of value",
         "unattributed": "Other (incomplete data)",
+        "valuation": "Other (valuation and rounding)",
         "total": "P&L of the period",
         "same": "the Overview's number",
         "bridge": "= {display} in the Overview, exchange effect {fx} included"

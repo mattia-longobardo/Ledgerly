@@ -165,3 +165,18 @@ export function onCostOf(position: {
 export function convertedCurrencies(service: ServicePnl): string[] {
   return [...new Set(service.flows.flatMap((flow) => (flow.converted ? [flow.converted] : [])))].sort();
 }
+
+/** The reasons of a period whose data leave part of its P&L unexplained (§4.6). */
+const GAP_REASONS = new Set(["flows_gap", "base_unknown", "quantity_mismatch", "stale_price", "no_rate"]);
+
+/**
+ * Whether "Other" is data that are missing (PERS-141): a gap of the period, a position without a
+ * cost, or money converted at the provider's rate. Otherwise every flow, cost and value of the
+ * period is known and what is left is how the same coins were valued — at the trade's price, at
+ * the day's close — and the rounding of each exit: nothing to go and look for.
+ */
+export function otherIsGap(service: ServicePnl): boolean {
+  if (service.partial || service.reasons.some((reason) => GAP_REASONS.has(reason))) return true;
+  if (service.local !== null && service.local.unrealizedChangeCents === null) return true;
+  return convertedCurrencies(service).length > 0;
+}

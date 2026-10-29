@@ -3715,6 +3715,7 @@
         "feesFxNote": "commissioni {fees} · cambio {fx}",
         "corrections": "Correzioni",
         "unattributed": "Altro (dati incompleti)",
+        "valuation": "Altro (valorizzazione e arrotondamenti)",
         "transfers": "Trasferimenti tra servizi"
       },
       "chart": {
@@ -4042,6 +4043,7 @@
         "corrections": "Correzioni",
         "valueChange": "Variazione del valore",
         "unattributed": "Altro (dati incompleti)",
+        "valuation": "Altro (valorizzazione e arrotondamenti)",
         "total": "P&L del periodo",
         "same": "il numero della Panoramica",
         "bridge": "= {display} in Panoramica, effetto cambio {fx} incluso"

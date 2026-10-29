@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { NO_RATES } from "@/platform/fx/rules";
 import { pnlOf, type PnlService } from "./pnl";
-import { closedGroups, contributionsOf, convertedCurrencies, onCostOf, periodReturnOf } from "./positions";
+import {
+  closedGroups,
+  contributionsOf,
+  convertedCurrencies,
+  onCostOf,
+  otherIsGap,
+  periodReturnOf,
+} from "./positions";
 import {
   type Book,
   type EventLike,
@@ -232,5 +239,29 @@ describe("convertedCurrencies (PERS-119)", () => {
     );
     // The account's own currency is no conversion.
     expect(convertedCurrencies(pnlOf(service(flows), null, "2026-06-30", EUR))).toEqual([]);
+  });
+});
+
+describe("otherIsGap (PERS-141)", () => {
+  const base = {
+    partial: false,
+    reasons: [] as string[],
+    local: { unrealizedChangeCents: 0n },
+    flows: [] as { converted?: string | null }[],
+  };
+  const of = (over: Partial<typeof base>) => otherIsGap({ ...base, ...over } as never);
+
+  it("is valuation and rounding when every flow, cost and value of the period is known", () => {
+    expect(of({})).toBe(false);
+    expect(of({ reasons: ["estimated_history"] })).toBe(false);
+  });
+
+  it("is missing data on a gap, a position without a cost, or money converted by the provider", () => {
+    expect(of({ partial: true })).toBe(true);
+    for (const reason of ["flows_gap", "base_unknown", "quantity_mismatch", "stale_price", "no_rate"]) {
+      expect(of({ reasons: [reason] })).toBe(true);
+    }
+    expect(of({ local: { unrealizedChangeCents: null as never } })).toBe(true);
+    expect(of({ flows: [{ converted: "EUR" }] })).toBe(true);
   });
 });

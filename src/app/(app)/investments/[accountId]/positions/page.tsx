@@ -11,6 +11,7 @@ import {
   closedGroups,
   contributionsOf,
   convertedCurrencies,
+  otherIsGap,
   onCostOf,
   periodReturnOf,
 } from "@/modules/investments/positions";
@@ -690,7 +691,9 @@ export default async function InvestmentServicePositions({
                 className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-sm"
               >
                 <span className="text-muted">
-                  {t(`contributions.${row.key}`)}
+                  {t(
+                    `contributions.${row.key === "unattributed" && !otherIsGap(service) ? "valuation" : row.key}`,
+                  )}
                   {row.key === "unattributed" && convertedCurrencies(service).length > 0 && (
                     <span data-testid="converted-note" className="block text-xs">
                       {ti("service.convertedNote", {
@@ -700,7 +703,7 @@ export default async function InvestmentServicePositions({
                       })}
                     </span>
                   )}
-                  {row.key === "unattributed" && (
+                  {row.key === "unattributed" && otherIsGap(service) && (
                     <>
                       {" "}
                       <Link

@@ -6,6 +6,7 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels, PALETTE } from "@/modules/accounts/ui/display";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
 import type { PnlParts, ServicePnl } from "@/modules/investments/pnl";
+import { otherIsGap } from "@/modules/investments/positions";
 import { investmentsHome, investmentsPnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
@@ -474,7 +475,15 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         )}
       </section>
 
-      {parts && <PartsKpis parts={parts} transfersCents={portfolio.transfersCents} money={money} t={t} />}
+      {parts && (
+        <PartsKpis
+          parts={parts}
+          transfersCents={portfolio.transfersCents}
+          gap={portfolio.services.some(otherIsGap)}
+          money={money}
+          t={t}
+        />
+      )}
 
       <HighlightScope className="flex flex-col gap-4">
         <Card className="flex min-w-0 flex-col gap-3">
@@ -775,11 +784,14 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
 function PartsKpis({
   parts,
   transfersCents,
+  gap,
   money,
   t,
 }: {
   parts: PnlParts;
   transfersCents: Cents;
+  /** "Other" is data that are missing in some service, not only valuation and rounding (PERS-141). */
+  gap: boolean;
   money: (cents: Cents | null, signed?: boolean) => string;
   t: Awaited<ReturnType<typeof getTranslations<"investments">>>;
 }) {
@@ -828,7 +840,9 @@ function PartsKpis({
         <p data-testid="pnl-closing" className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
           {closing.map((row) => (
             <span key={row.key} data-cents={String(row.cents)}>
-              {t(`home.kpis.${row.key}` as "home.kpis.corrections")}{" "}
+              {t(
+                `home.kpis.${row.key === "unattributed" && !gap ? "valuation" : row.key}` as "home.kpis.corrections",
+              )}{" "}
               <strong className={cn("font-semibold tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
                 {money(row.cents, true)}
               </strong>
