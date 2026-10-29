@@ -3634,6 +3634,7 @@
         "before_first_movement": "prima del primo movimento di eToro Money",
         "api_limit_24m": "l'API conserva 24 mesi",
         "api_limit_18m": "l'API conserva 18 mesi",
+        "opening_12m": "oltre 12 mesi: compreso nell'apertura",
         "negative_opening": "lo storico spiega più del saldo",
         "quantity_mismatch": "i movimenti non tornano con il saldo: può mancare un mercato",
         "estimated": "stimato dai movimenti e dalle chiusure giornaliere"

@@ -572,11 +572,11 @@ describe("windows and coverage (A7, D11)", () => {
     for (const one of windows) expect(one.until - one.since).toBeLessThan(90 * 86_400_000);
   });
 
-  it("declares the history before the 24 months as a gap", () => {
+  it("declares the history before the 12 months the opening", () => {
     const from = new Date("2024-10-28T00:00:00Z");
     const now = new Date("2026-10-28T00:00:00Z");
     expect(binanceCoverage(["deposits"], from, now)).toEqual([
-      expect.objectContaining({ stream: "deposits", status: "gap", reason: "api_limit_24m", toAt: from }),
+      expect.objectContaining({ stream: "deposits", status: "gap", reason: "opening_12m", toAt: from }),
       { stream: "deposits", fromAt: from, toAt: now, status: "complete", reason: null },
     ]);
   });
@@ -588,7 +588,7 @@ describe("windows and coverage (A7, D11)", () => {
     expect(binanceCoverage(["pay", "dust"], from, now, { pay })).toEqual([
       expect.objectContaining({ stream: "pay", status: "gap", reason: "api_limit_18m", toAt: pay }),
       { stream: "pay", fromAt: pay, toAt: now, status: "complete", reason: null },
-      expect.objectContaining({ stream: "dust", status: "gap", reason: "api_limit_24m", toAt: from }),
+      expect.objectContaining({ stream: "dust", status: "gap", reason: "opening_12m", toAt: from }),
       { stream: "dust", fromAt: from, toAt: now, status: "complete", reason: null },
     ]);
   });

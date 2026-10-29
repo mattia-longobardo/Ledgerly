@@ -3634,6 +3634,7 @@
         "before_first_movement": "before the first eToro Money movement",
         "api_limit_24m": "the API keeps 24 months",
         "api_limit_18m": "the API keeps 18 months",
+        "opening_12m": "older than 12 months: part of the opening",
         "negative_opening": "the history explains more than the balance",
         "quantity_mismatch": "the movements do not add up to the balance: a market may be missing",
         "estimated": "estimated from the movements and the daily closes"

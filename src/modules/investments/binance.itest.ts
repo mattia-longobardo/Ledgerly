@@ -2,7 +2,7 @@
 // the real source and mapping, on a fake exchange that answers with the spike's fixtures, against
 // a real database — the strict credentials (SEC-03), the allowlist checked on every pass (B1), the
 // windows of 90 days, events of the same millisecond, the cursor committed with the data (A7), and
-// the opening inferred from 24 months of history (A6).
+// the opening inferred from 12 months of history (A6, PERS-141).
 import { and, asc, eq } from "drizzle-orm";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -34,7 +34,7 @@ import { connectInvestmentProvider, runInvestmentPass, setSourcesForTests } from
 import { NO_RATES } from "@/platform/fx/rules";
 import { pnlOf, positionsOn, replayHoldings } from "./pnl";
 import { investmentsPnl, serviceDetail, servicePnlView } from "./queries";
-import { loadBook, ratesFor } from "./service";
+import { insertEvent, loadBook, ratesFor } from "./service";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/investments/binance");
 const body = (name: string): unknown =>
@@ -234,7 +234,7 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
     expect(await getDb().select().from(investmentAccounts)).toEqual([]);
   });
 
-  it("saves the key, the reading with its prices, 24 months of flows and their cursor", async () => {
+  it("saves the key, the reading with its prices, 12 months of flows and their cursor", async () => {
     const { accountId, ipRestricted } = await connectNew();
     // The dialog warns after connecting, and the service page shows its badge (PERS-87 SEC-02).
     expect(ipRestricted).toBe(false);
@@ -270,9 +270,9 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       { symbol: "TRX", product: "spot", value: 0n, fxSource: "exchange:EUR/USDT@2026-10-27T22:52:46.431Z" },
     ]);
 
-    // B7: 24 months of crypto deposits in windows of 90 days.
+    // B7: 12 months of crypto deposits in windows of 90 days (PERS-141).
     const deposits = named("deposits");
-    expect(deposits).toHaveLength(9);
+    expect(deposits).toHaveLength(5);
     for (const call of deposits) expect((call[2] as number) - (call[1] as number)).toBeLessThan(90 * DAY);
 
     const events = await eventsOf(accountId);
@@ -287,17 +287,18 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
         "withdrawal:fixture-id-0043",
         "fiat:fixture-id-0051",
         "card:fixture-id-0055",
-        "convert:fixture-id-0057",
         "dividend:fixture-id-0062",
         "trade:ETHEUR:900076",
-        "trade:ETHUSDT:900072",
       ]),
     );
+    // Older than the 12 months (PERS-141): part of the opening, never rebuilt.
+    expect(ids).not.toContain("convert:fixture-id-0057");
+    expect(ids).not.toContain("trade:ETHUSDT:900072");
     expect(events.length).toBe(links.length);
 
     const cursor = await flowsCursor();
     expect(cursor).toMatchObject({
-      from: new Date(NOW.getTime() - 730 * DAY).toISOString(),
+      from: new Date(NOW.getTime() - 365 * DAY).toISOString(),
       deposits: NOW.toISOString(),
     });
     expect(cursor?.["trades:ETH/USDT"]).toBe("900080");
@@ -321,10 +322,8 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
     ]) {
       expect(streams).toContain(stream);
     }
-    expect(coverage.filter((one) => one.reason === "api_limit_24m")).toHaveLength(8);
-    expect(coverage.filter((one) => one.reason === "api_limit_18m").map((one) => one.stream)).toEqual([
-      "pay",
-    ]);
+    // Older than the 12 months is the opening, for every stream, Pay included (PERS-141).
+    expect(coverage.filter((one) => one.reason === "opening_12m")).toHaveLength(9);
   });
 
   it("values a trade's fee in BNB at the day's close, in cents and not rounded to zero", async () => {
@@ -372,14 +371,10 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       )
       .orderBy(asc(investmentAssets.symbol));
     expect(openings.every((one) => one.basis === "inferred")).toBe(true);
-    expect(openings.every((one) => one.on === "2024-10-28")).toBe(true);
-    // ETH held nothing today: the opening is what the 24 months took out of it.
-    const eth = openings.find((one) => one.symbol === "ETH");
-    expect(Number(eth?.quantity)).toBeCloseTo(
-      0.24346 + 0.0014324 + 0.000074 - 0.00403781 - 0.041625 - 0.00037 - 0.0015064 - 0.00000012,
-      12,
-    );
-    // For every coin with an opening, opening + Σ legs = the quantity reported (0 for ETH).
+    // The opening sits on the first day of the 12 months (PERS-141): older is never rebuilt.
+    expect(openings.every((one) => one.on === "2025-10-28")).toBe(true);
+    expect(openings.map((one) => one.symbol)).toContain("BNB");
+    // For every coin with an opening, opening + Σ legs = the quantity reported.
     const legs = await getDb()
       .select({
         symbol: investmentAssets.symbol,
@@ -391,11 +386,20 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       .innerJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
       .innerJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
       .where(eq(investmentEvents.investmentAccountId, investment.id));
+    const reported = await getDb()
+      .select({ symbol: investmentAssets.symbol, quantity: investmentReadingPositions.quantity })
+      .from(investmentReadingPositions)
+      .innerJoin(investmentAssets, eq(investmentAssets.id, investmentReadingPositions.assetId));
     const sign = (kind: string) => (["opening_position", "deposit", "buy", "income"].includes(kind) ? 1 : -1);
-    const ethTotal = legs
-      .filter((one) => one.symbol === "ETH" && one.quantity !== null)
-      .reduce((sum, one) => sum + sign(one.kind) * Number(one.quantity), 0);
-    expect(ethTotal).toBeCloseTo(0, 12);
+    for (const { symbol } of openings) {
+      const total = legs
+        .filter((one) => one.symbol === symbol && one.quantity !== null)
+        .reduce((sum, one) => sum + sign(one.kind) * Number(one.quantity), 0);
+      const held = reported
+        .filter((one) => one.symbol === symbol)
+        .reduce((sum, one) => sum + Number(one.quantity), 0);
+      expect(total).toBeCloseTo(held, 12);
+    }
     // XRP came in and the fixtures do not say where it went: a declared gap, never a silent one.
     const [quantities] = await getDb()
       .select()
@@ -530,23 +534,23 @@ describe("the estimated history (PERS-100)", () => {
       .orderBy(asc(investmentReadings.on));
   }
 
-  it("rebuilds every day of the 24 months from the flows and the daily closes, and says so", async () => {
+  it("rebuilds every day of the 12 months from the flows and the daily closes, and says so", async () => {
     const { accountId } = await connectNew();
     const estimated = await estimatedOf(accountId);
-    expect(estimated[0].on).toBe("2024-10-28");
+    expect(estimated[0].on).toBe("2025-10-28");
     expect(estimated.at(-1)?.on).toBe("2026-10-27");
-    expect(estimated).toHaveLength(730);
+    expect(estimated).toHaveLength(365);
     // A flat market of 2 per coin: some day of the history held something.
     expect(estimated.some((day) => day.totalCents > 0n)).toBe(true);
 
     // The opening period starts with the history, and so does the service.
     const investment = await investmentOf(accountId);
-    expect(investment).toMatchObject({ managedSince: "2024-10-28", openedOn: "2024-10-28" });
+    expect(investment).toMatchObject({ managedSince: "2025-10-28", openedOn: "2025-10-28" });
     const periods = await getDb()
       .select()
       .from(investmentAccountPeriods)
       .where(eq(investmentAccountPeriods.investmentAccountId, investment.id));
-    expect(periods.map((period) => [period.fromOn, period.reason])).toEqual([["2024-10-28", "opening"]]);
+    expect(periods.map((period) => [period.fromOn, period.reason])).toEqual([["2025-10-28", "opening"]]);
     const [coverage] = await getDb()
       .select()
       .from(investmentSyncCoverage)
@@ -589,13 +593,17 @@ describe("the estimated history (PERS-100)", () => {
   });
 });
 
-describe("a history read again with more streams (PERS-141)", () => {
-  it("infers the openings and estimates the history again, once, from the complete flows", async () => {
+describe("a history read again with more streams and 12 months (PERS-141)", () => {
+  it("drops what is older than 12 months and infers the openings and the history again, once", async () => {
     const { accountId } = await connectNew();
     const investment = await investmentOf(accountId);
-    const ethOpening = async () =>
+    const openingsOf = async (symbol: string) =>
       getDb()
-        .select({ eventId: investmentEvents.id, quantity: investmentOperations.quantity })
+        .select({
+          eventId: investmentEvents.id,
+          on: investmentEvents.on,
+          quantity: investmentOperations.quantity,
+        })
         .from(investmentOperations)
         .innerJoin(investmentEvents, eq(investmentEvents.id, investmentOperations.eventId))
         .innerJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
@@ -604,35 +612,56 @@ describe("a history read again with more streams (PERS-141)", () => {
           and(
             eq(investmentEvents.investmentAccountId, investment.id),
             eq(investmentOperations.kind, "opening_position"),
-            eq(investmentAssets.symbol, "ETH"),
+            eq(investmentAssets.symbol, symbol),
           ),
         );
-    const dayBefore = async () =>
+    const valueOn = async (on: string) =>
       (
         await getDb()
           .select({ totalCents: investmentReadings.totalCents })
           .from(investmentReadings)
           .where(
-            and(
-              eq(investmentReadings.investmentAccountId, investment.id),
-              eq(investmentReadings.on, "2025-01-09"),
-            ),
+            and(eq(investmentReadings.investmentAccountId, investment.id), eq(investmentReadings.on, on)),
           )
       )[0]?.totalCents;
-    const [before] = await ethOpening();
-    const valueBefore = await dayBefore();
+    const [bnbBefore] = await openingsOf("BNB");
+    const valueBefore = await valueOn("2025-12-09");
     expect(valueBefore).toBeDefined();
 
-    // A history started before the dust log: the cursor of the older source, and 1 ETH sold to dust.
+    // A history of the older source: 24 months, and a provider event it read before the 12.
     const [job] = await getDb().select().from(syncJobs).where(eq(syncJobs.kind, "flows"));
     const older = Object.fromEntries(
-      Object.entries(job.cursor ?? {}).filter(
-        ([key]) => !["history", "pay_from", "dust", "pay"].includes(key),
-      ),
+      Object.entries(job.cursor ?? {}).filter(([key]) => !["dust", "pay", "pay_from"].includes(key)),
     );
+    older.from = new Date(NOW.getTime() - 730 * DAY).toISOString();
+    older.history = "2";
     await getDb().update(syncJobs).set({ cursor: older }).where(eq(syncJobs.id, job.id));
+    const [bnbHolding] = await getDb()
+      .select({ id: investmentHoldings.id })
+      .from(investmentHoldings)
+      .innerJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+      .where(
+        and(eq(investmentHoldings.investmentAccountId, investment.id), eq(investmentAssets.symbol, "BNB")),
+      );
+    const old = await getDb().transaction((tx) =>
+      insertEvent(ctx, tx, investment.id, {
+        on: "2025-03-01",
+        occurredAt: new Date("2025-03-01T10:00:00Z"),
+        origin: "provider",
+        legs: [
+          {
+            leg: "main",
+            kind: "deposit",
+            holdingId: bnbHolding.id,
+            quantity: 10n ** 18n,
+            amountCents: 50000n,
+          },
+        ],
+      }),
+    );
+    // And 1 ETH sold to dust inside the 12 months, which the older source never read.
     exchange.dustLog = async (since, until) => {
-      const at = Date.parse("2025-01-10T12:00:00Z");
+      const at = Date.parse("2025-12-10T12:00:00Z");
       if (at < since || at > until) return { userAssetDribblets: [] };
       return {
         userAssetDribblets: [
@@ -642,8 +671,8 @@ describe("a history read again with more streams (PERS-141)", () => {
                 transId: 41,
                 fromAsset: "ETH",
                 amount: "1",
-                transferedAmount: "0.01",
-                serviceChargeAmount: "0.0002",
+                transferedAmount: "0.00000001",
+                serviceChargeAmount: "0",
                 operateTime: at,
               },
             ],
@@ -653,23 +682,40 @@ describe("a history read again with more streams (PERS-141)", () => {
     };
     await pass(new Date(NOW.getTime() + DAY));
 
-    // One ETH opening, inferred again: it now holds the coin the dust took.
-    const after = await ethOpening();
-    expect(after).toHaveLength(1);
-    expect(after[0].eventId).not.toBe(before.eventId);
-    expect(Number(after[0].quantity)).toBeCloseTo(Number(before.quantity) + 1, 12);
+    // The event older than the 12 months is gone; the openings are inferred again on their first day.
+    const events = await eventsOf(accountId);
+    expect(events.some((one) => one.id === old.id)).toBe(false);
+    expect(events.every((one) => one.on >= "2025-10-28")).toBe(true);
+    const [bnbAfter] = await openingsOf("BNB");
+    expect(bnbAfter.eventId).not.toBe(bnbBefore.eventId);
+    expect(bnbAfter.on).toBe("2025-10-28");
+    // ETH now has an opening: the coin the dust took was held when the 12 months began.
+    const eth = await openingsOf("ETH");
+    expect(eth).toHaveLength(1);
+    expect(Number(eth[0].quantity)).toBeGreaterThan(0.9);
     const links = await getDb()
       .select({ externalId: providerLinks.externalId })
       .from(providerLinks)
-      .where(eq(providerLinks.externalId, "opening:ETH"));
+      .where(eq(providerLinks.externalId, "opening:BNB"));
     expect(links).toHaveLength(1);
-    // The estimated history stands on the new flows: the day before held that ETH, at 2 a coin.
-    expect((await dayBefore())! - valueBefore!).toBeGreaterThanOrEqual(150n);
-    expect(await flowsCursor()).toMatchObject({ history: "2" });
+    // The estimated history stands on the new flows and starts with the 12 months, never before.
+    expect((await valueOn("2025-12-09"))! - valueBefore!).toBeGreaterThanOrEqual(150n);
+    const [first] = await getDb()
+      .select({ on: investmentReadings.on })
+      .from(investmentReadings)
+      .where(eq(investmentReadings.investmentAccountId, investment.id))
+      .orderBy(asc(investmentReadings.on))
+      .limit(1);
+    expect(first.on).toBe("2025-10-28");
+    expect(await investmentOf(accountId)).toMatchObject({ managedSince: "2025-10-28" });
+    expect(await flowsCursor()).toMatchObject({
+      history: "3",
+      from: new Date(NOW.getTime() - 365 * DAY).toISOString(),
+    });
 
     // Once: the next pass infers nothing again.
     await pass(new Date(NOW.getTime() + 2 * DAY));
-    expect((await ethOpening()).map((one) => one.eventId)).toEqual([after[0].eventId]);
+    expect((await openingsOf("BNB")).map((one) => one.eventId)).toEqual([bnbAfter.eventId]);
   });
 });
 
