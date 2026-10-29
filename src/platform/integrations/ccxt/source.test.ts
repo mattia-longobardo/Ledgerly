@@ -103,7 +103,7 @@ describe("fetchFlows (§3.2)", () => {
     expect(named(calls, "dustLog")).toHaveLength(5);
     const gaps = read.coverage.filter((one) => one.status === "gap");
     expect(gaps.map((one) => one.reason)).toEqual(Array(9).fill("opening_12m"));
-    expect(read.cursor).toMatchObject({ history: "3", pay_from: new Date(payFrom).toISOString() });
+    expect(read.cursor).toMatchObject({ history: "4", pay_from: new Date(payFrom).toISOString() });
     expect(read.rebase).toBeUndefined();
     expect(read.cursor).toMatchObject({ from: new Date(from).toISOString(), deposits: NOW.toISOString() });
   });
@@ -148,7 +148,7 @@ describe("fetchFlows (§3.2)", () => {
       dividends: stopped.toISOString(),
       "trades:ETH/EUR": "900076",
       assets: "ETH",
-      history: "3",
+      history: "4",
     };
     const read = await binanceSource(async () => api).fetchFlows(KEYS, NOW, {
       currency: "EUR",
@@ -211,7 +211,7 @@ describe("fetchFlows (§3.2)", () => {
     // Now 12 months before the connection; the cursor keeps it.
     const start = connected - 365 * DAY;
     expect(older.historyFrom?.getTime()).toBe(start);
-    expect(older.cursor).toMatchObject({ from: new Date(start).toISOString(), history: "3" });
+    expect(older.cursor).toMatchObject({ from: new Date(start).toISOString(), history: "4" });
     // The new streams start at the history, the old ones where they stopped.
     expect(named(calls, "dustLog")[0][1]).toBe(start);
     expect(named(calls, "deposits")[0][1]).toBe(NOW.getTime() - DAY);

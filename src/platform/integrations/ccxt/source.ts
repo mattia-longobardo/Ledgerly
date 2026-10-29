@@ -54,10 +54,10 @@ import { type BinanceApi, binanceApi } from "./client";
 
 /**
  * What the flows read (PERS-141): `2` added the dust log, Binance Pay and the delisted markets; `3`
- * keeps 12 months instead of 24. A history started under an older version gets its openings
- * inferred again (`rebase`), once.
+ * keeps 12 months instead of 24; `4` estimates the history with its positions. A history started
+ * under an older version gets its openings and its estimated history again (`rebase`), once.
  */
-const HISTORY_VERSION = "3";
+const HISTORY_VERSION = "4";
 const PAGE = 500;
 const PAY_PAGE = 100;
 const TRADES_PAGE = 1000;

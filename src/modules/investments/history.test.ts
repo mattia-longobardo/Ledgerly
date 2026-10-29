@@ -99,12 +99,18 @@ describe("estimateHistory (PERS-100)", () => {
       rate: () => rate("2000"),
     });
     // On the 4th: 0.75 ETH (the 5th's 0.25 undone) and 10 €; before the 3rd: 0.25 ETH and 510 €.
-    expect(days).toEqual([
+    expect(days.map(({ on, totalCents, missingPrices }) => ({ on, totalCents, missingPrices }))).toEqual([
       { on: "2025-01-01", totalCents: 50_000n + 51_000n, missingPrices: 0 },
       { on: "2025-01-02", totalCents: 50_000n + 51_000n, missingPrices: 0 },
       { on: "2025-01-03", totalCents: 150_000n + 1_000n, missingPrices: 0 },
       { on: "2025-01-04", totalCents: 150_000n + 1_000n, missingPrices: 0 },
     ]);
+    // Each day keeps its positions and its cash (PERS-141): the P&L reads them at the start.
+    expect(days[0]).toMatchObject({
+      cashCents: 51_000n,
+      positions: [{ symbol: "ETH", quantity: qty("0.25"), valueCents: 50_000n }],
+    });
+    expect(days[3].positions).toEqual([{ symbol: "ETH", quantity: qty("0.75"), valueCents: 150_000n }]);
   });
 
   it("carries the last close over a day with none, and counts a coin never priced as missing", () => {
@@ -121,9 +127,13 @@ describe("estimateHistory (PERS-100)", () => {
       moves: [],
       rate: (symbol, on) => (symbol === "ETH" && on === "2025-01-01" ? rate("1000.5") : null),
     });
-    expect(days).toEqual([
+    expect(days.map(({ on, totalCents, missingPrices }) => ({ on, totalCents, missingPrices }))).toEqual([
       { on: "2025-01-01", totalCents: 100_050n, missingPrices: 1 },
       { on: "2025-01-02", totalCents: 100_050n, missingPrices: 1 },
+    ]);
+    expect(days[1].positions).toEqual([
+      { symbol: "ETH", quantity: qty("1"), valueCents: 100_050n },
+      { symbol: "XYZ", quantity: qty("10"), valueCents: null },
     ]);
   });
 
@@ -137,7 +147,15 @@ describe("estimateHistory (PERS-100)", () => {
       ],
       rate: (symbol) => (symbol === "USDT" ? rate("0.9") : null),
     });
-    expect(days).toEqual([{ on: "2025-01-01", totalCents: 0n, missingPrices: 0 }]);
+    expect(days).toEqual([
+      {
+        on: "2025-01-01",
+        totalCents: 0n,
+        missingPrices: 0,
+        cashCents: 0n,
+        positions: [{ symbol: "ETHW", quantity: qty("0.0000765"), valueCents: null }],
+      },
+    ]);
   });
 
   it("estimates nothing on or after the anchor", () => {
