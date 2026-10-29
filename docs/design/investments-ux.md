@@ -646,25 +646,30 @@ Ogni fase: una PR, gate `npm run format && npm run lint && npm run typecheck && 
 npm test`, `npm run test:integration`, `npm run e2e`; tag `ledgerly:pre-ux-<n>` e dump prima del deploy;
 verifica su `https://dash.longobardo.me`.
 
-**Pubblicazione dietro un flag** (PERS-113 · 8): il redesign va dietro il flag `investments_ux_v2`,
-un'anteprima che la persona attiva in Settings, **spento di default**. U2 aggiunge il flag e la sua
-voce in Settings; fino a U5 la UI attuale resta la vista predefinita e il redesign si vede solo con
-il flag acceso. U5 accende il redesign per tutti e toglie la UI vecchia e il flag. Da U2, ogni fase
-verifica in e2e il percorso home → servizio → posizioni **con il flag acceso** e che con il flag
-spento nulla cambi. L'ordine delle fasi (§9, decisione 5) resta.
+**Pubblicazione in un solo rilascio** (PERS-113 · 8; decisione di Mattia del 29/10/2026 in PERS-116,
+che sostituisce il flag `investments_ux_v2` previsto prima): **nessun flag e mai due grafiche**.
+U2, U3 e U4 sono una PR ciascuna verso il ramo di integrazione `feat/investments-ux`, non verso
+`main`, e non hanno deploy. I gate locali (`npm run format … npm test`, `npm run test:integration`)
+girano a ogni PR. Quando U4 è chiusa, `feat/investments-ux` entra in `main` con un solo deploy (tag
+`ledgerly:pre-ux-2-4` e dump): la UI nuova di home, servizio e posizioni sostituisce quella attuale,
+che nello stesso rilascio viene tolta. L'e2e, che guida il sito deployato, verifica in quel rilascio
+il percorso home → servizio → posizioni, a11y e keyboard di tutte le schermate nuove. Fino a quel
+deploy la grafica di oggi resta l'unica. U5 (dialog, catalogo, Overview, API) segue con un deploy
+suo, perché non crea due versioni della stessa schermata. L'ordine delle fasi (§9, decisione 5)
+resta.
 
 | Fase | Contenuto                                                                                                                                                                                       | Test                                                                                                                                                                                              |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | U1   | `modules/investments/pnl.ts` (puro): `periodOf(params, today)`, `pnlOf(service, s, e)` con la scomposizione di §4.2, Modified Dietz e XIRR (§4.3), cambio e ponte §4.5, stati §4.6, aggregato §4.8, trasferimenti e rettifiche §4.9. Replay degli eventi con costo uscito. `investmentsPnl(ctx, period)` in `queries.ts`. Nessuna UI, nessuna migrazione | Unit: casi a mano (acquisto/vendita parziale, apertura nel periodo, flusso a metà, cambio, dust, mismatch → "Altro"); PERS-113: venduta nel periodo con non realizzato iniziale (+10), vendita totale e parziale, acquisti aggiuntivi; base mancante, lacuna intermedia, prezzo vecchio, stima con quantità che non torna; due date iniziali diverse; residuo ≠ 0 additivo e identità servizio ↔ portafoglio in EUR; trasferimento in valuta, a cavallo d'anno, verso Funds, rettifica retroattiva; versamento all'ultimo giorno, conto svuotato, anno bisestile, anno senza movimenti; contributo con netto zero, quasi zero e negativo; invarianti §4.6 su property test; "Tutto" = Gain di oggi. Integration: eToro realizzato per `positionId` su fixture, Binance con fee in BNB |
-| U2   | Flag `investments_ux_v2` e voce in Settings; periodo nuovo (`period`, `from`/`to` a giorni, redirect dei parametri vecchi solo con il flag), home `/investments` di §3.1 con stato e coperture nell'hero, colori di Overview, legame hover lista ↔ grafico, Composizione unica | Unit: parsing e redirect dei parametri. E2E con il flag: il periodo cambia hero, KPI, grafico e righe; somma righe = hero; "P&L disponibile" con un servizio parziale; a11y e keyboard della home e del popover. Senza flag: la home attuale |
-| U3   | `[accountId]/layout.tsx` con testata, tab e periodo; Panoramica con il ponte del cambio; Movimenti paginati con filtri, gruppi e descrizioni §5.2; Collegamento di §3.6; azioni con menu `⋯`; classe delle rettifiche (colonna additiva) con anteprima dell'effetto sul P&L | Unit: descrizioni di ogni tipo di evento in en e it. Integration: paginazione stabile (`ORDER BY`), conteggi per filtro, migrazione della classe. E2E con il flag: 4 tab in a11y/keyboard; pagina eToro < 3.000 px; Indietro tra i tab; P&L in EUR uguale tra home e servizio |
-| U4   | Posizioni aperte e chiuse con P&L del periodo; migrazione additiva `cost_cents` su `investment_reading_positions` riempita da eToro; costo dai trade per Binance; dust in `<details>`              | Unit: non realizzato con base a `s⁻`. Integration: migrazione su `ledgerly_test`, sync eToro con costo. E2E con il flag: percorso home → servizio → posizioni, somma Posizioni = Panoramica      |
-| U5   | Dialog (D1–D6), catalogo (C1–C2), Accounts "Last synced", tratteggio in Overview, `investments:read` con `from`/`to` + `docs/api-changelog.md`, MCP; redesign acceso per tutti, UI vecchia e flag rimossi | Unit: default del dialog per classe e valuta. Integration: API con periodo. E2E: Overview tratteggiata, catalogo, percorso completo senza flag                                                     |
+| U2   | Periodo nuovo (`period`, `from`/`to` a giorni, redirect dei parametri vecchi), home `/investments` di §3.1 con stato e coperture nell'hero, colori di Overview, legame hover lista ↔ grafico, Composizione unica | Unit: parsing e redirect dei parametri. E2E (nel rilascio U2–U4): il periodo cambia hero, KPI, grafico e righe; somma righe = hero; "P&L disponibile" con un servizio parziale; a11y e keyboard della home e del popover |
+| U3   | `[accountId]/layout.tsx` con testata, tab e periodo; Panoramica con il ponte del cambio; Movimenti paginati con filtri, gruppi e descrizioni §5.2; Collegamento di §3.6; azioni con menu `⋯`; classe delle rettifiche (colonna additiva) con anteprima dell'effetto sul P&L | Unit: descrizioni di ogni tipo di evento in en e it. Integration: paginazione stabile (`ORDER BY`), conteggi per filtro, migrazione della classe. E2E (nel rilascio U2–U4): 4 tab in a11y/keyboard; pagina eToro < 3.000 px; Indietro tra i tab; P&L in EUR uguale tra home e servizio |
+| U4   | Posizioni aperte e chiuse con P&L del periodo; migrazione additiva `cost_cents` su `investment_reading_positions` riempita da eToro; costo dai trade per Binance; dust in `<details>`              | Unit: non realizzato con base a `s⁻`. Integration: migrazione su `ledgerly_test`, sync eToro con costo. E2E (nel rilascio U2–U4): percorso home → servizio → posizioni, somma Posizioni = Panoramica; deploy unico di U2–U4 e rimozione della UI vecchia      |
+| U5   | Dialog (D1–D6), catalogo (C1–C2), Accounts "Last synced", tratteggio in Overview, `investments:read` con `from`/`to` + `docs/api-changelog.md`, MCP | Unit: default del dialog per classe e valuta. Integration: API con periodo. E2E: Overview tratteggiata, catalogo                                                     |
 
 Stima iniziale: U1 ~1 giorno, U2 ~1 giorno, U3 ~1,5 giorni, U4 ~1 giorno, U5 ~1 giorno (5,5 giorni).
-Stima rivista dopo le regole di PERS-113 (in U1): U1 ~1,5 giorni, U2 ~1,5 giorni (flag, stati
-nell'hero), U3 ~2 giorni (ponte del cambio, classe delle rettifiche), U4 ~1 giorno, U5 ~1,5 giorni
-(rimozione della UI vecchia e del flag): **~7,5 giorni**.
+Stima rivista dopo le regole di PERS-113 (in U1): U1 ~1,5 giorni, U2 ~1,5 giorni (stati
+nell'hero), U3 ~2 giorni (ponte del cambio, classe delle rettifiche), U4 ~1 giorno, U5 ~1,5 giorni: **~7,5 giorni**. Il rilascio unico
+sposta la rimozione della UI vecchia da U5 a U4, senza cambiare il totale.
 
 ## 11. Problemi dell'audit e dove si risolvono
 

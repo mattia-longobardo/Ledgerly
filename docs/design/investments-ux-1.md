@@ -2,7 +2,7 @@
 
 PERS-116 (29/10/2026), issue madre PERS-79. Regole: `docs/design/investments-ux.md` §4, con le
 obiezioni accettate della review PERS-113. **Nessuna UI, nessuna migrazione**: niente cambia in
-produzione finché U2 non usa il motore (dietro il flag `investments_ux_v2`, §10).
+produzione finché il rilascio unico di U2–U4 non usa il motore (§10).
 
 ## Cosa c'è
 
