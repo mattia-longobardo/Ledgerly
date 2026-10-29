@@ -3631,6 +3631,121 @@
       "description": "Un prelievo e un versamento dello stesso importo tra due tuoi servizi entro 3 giorni. Collegati, contano per ogni servizio ma non per il portafoglio.",
       "out": "Uscita il {date} → {name}, entrata il {other}",
       "in": "Entrata il {date} ← {name}, uscita il {other}"
+    },
+    "period": {
+      "label": "Periodo",
+      "stepper": "Anno",
+      "kinds": {
+        "year": "Anno",
+        "all": "Tutto",
+        "custom": "Personalizzato"
+      },
+      "yearToDate": "{year} · da inizio anno",
+      "since": "dal {date}",
+      "range": "{from} – {to}",
+      "previous": "Anno precedente",
+      "next": "Anno successivo",
+      "last12": "Ultimi 12 mesi",
+      "pick": "Scegli i giorni",
+      "from": "Dal",
+      "to": "Al",
+      "previousMonth": "Mese precedente",
+      "nextMonth": "Mese successivo",
+      "pickEnd": "Scegli la data di fine",
+      "apply": "Applica",
+      "cancel": "Annulla",
+      "hint": "{from} – {to} · {count, plural, one {# giorno} other {# giorni}}"
+    },
+    "home": {
+      "empty": "Collega eToro o Binance, o crea un conto manuale.",
+      "funds": "i fondi ({amount}) sono in <link>Funds</link>",
+      "hero": {
+        "title": "Profitto e perdita · {period}",
+        "available": "P&L disponibile · {period}",
+        "undetermined": "Non determinabile",
+        "value": "Valore oggi <strong>{value}</strong> · {count, plural, one {# servizio} other {# servizi}}",
+        "valueAt": "valore al {date} {value}",
+        "noData": "Nessun dato in questo periodo. Il primo è del {date}."
+      },
+      "status": {
+        "estimated": "Stimato",
+        "partial": "Dati parziali",
+        "undetermined": "Non determinabile",
+        "from": "dal {date}"
+      },
+      "coverage": {
+        "partial": "{name} dal {date}",
+        "estimated": "{name} stimato",
+        "excluded": "{count, plural, one {# servizio escluso} other {# servizi esclusi}}"
+      },
+      "alerts": {
+        "label": "{count, plural, one {# cosa da controllare} other {# cose da controllare}}",
+        "one": "da controllare: {text}",
+        "many": "da controllare",
+        "estimated": "storico stimato"
+      },
+      "kpis": {
+        "realized": "Realizzato",
+        "realizedNote": "vendite e chiusure",
+        "unrealized": "Non realizzato",
+        "unrealizedNote": "posizioni aperte",
+        "unrealizedUnknown": "senza costo: in Altro",
+        "income": "Proventi",
+        "incomeNote": "dividendi, staking",
+        "feesFx": "Commissioni e cambio",
+        "feesFxNote": "commissioni {fees} · cambio {fx}",
+        "corrections": "Correzioni",
+        "unattributed": "Altro (dati incompleti)",
+        "transfers": "Trasferimenti tra servizi"
+      },
+      "chart": {
+        "title": "Andamento",
+        "view": "Grafico",
+        "pnl": "P&L",
+        "value": "Valore",
+        "pnlNote": {
+          "week": "P&L per settimana e per servizio · la linea è il cumulato di {period}",
+          "month": "P&L per mese e per servizio · la linea è il cumulato di {period}",
+          "year": "P&L per anno e per servizio · la linea è il cumulato di {period}"
+        },
+        "valueNote": {
+          "day": "Valore per giorno e per servizio",
+          "month": "Valore a fine mese, per servizio"
+        },
+        "line": "Cumulato",
+        "legend": "I colori sono i servizi della lista sotto.",
+        "estimated": "Tratteggio o colore più chiaro = storico stimato.",
+        "cumulative": "cumulato {amount}",
+        "summary": "P&L {period}: {total}. Migliore {best}, peggiore {worst}. {services}.",
+        "valueSummary": "Valore a fine periodo {value}.",
+        "data": "Dati del grafico",
+        "interval": "Intervallo",
+        "cumulativeHeader": "Cumulato"
+      },
+      "services": {
+        "note": "Ordinati per contributo · stesso periodo e stessi colori del grafico",
+        "value": "Valore oggi",
+        "pnl": "P&L",
+        "return": "Rendimento",
+        "contribution": "Contributo",
+        "total": "Totale",
+        "transfers": "Trasferimenti tra servizi",
+        "unavailable": "non disponibile",
+        "highlight": "Evidenzia {name} nel grafico",
+        "notComputable": "Rendimento non calcolabile: capitale troppo piccolo nel periodo",
+        "xirr": "XIRR {rate}",
+        "largeFlows": "Stima: i flussi sono grandi rispetto al capitale",
+        "share": "{share} di {net} netti",
+        "shareNotComputable": "Quota sul netto non calcolabile"
+      },
+      "composition": {
+        "title": "Composizione oggi",
+        "by": "Raggruppa per",
+        "service": "Servizio",
+        "class": "Classe",
+        "ccy": "Valuta",
+        "note": "Sempre a oggi: il periodo cambia il P&L e il grafico, non le quote."
+      }
     }
   },
   "payroll": {
