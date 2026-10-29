@@ -156,7 +156,11 @@ test("an investment dialog opened from a row menu traps the focus and gives it b
   await opener.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menu")).toBeVisible();
+  // Opened from the keyboard, the menu takes the focus to its first item; the arrows walk on.
+  await expect(page.getByRole("menuitem", { name: "Buy", exact: true })).toBeFocused();
   await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Deposit", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowUp");
   await expect(page.getByRole("menuitem", { name: "Buy", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");

@@ -43,6 +43,7 @@ test("the four tabs are pages that carry the period, and Back walks them", async
 
   // A new period from a tab stays on that tab.
   await tabs(page).getByRole("link", { name: "Activity" }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all$`));
   await page.getByRole("group", { name: "Period" }).getByRole("link", { name: "Year" }).click();
   await expect(page).toHaveURL(new RegExp(`${base}/activity$`));
 });
