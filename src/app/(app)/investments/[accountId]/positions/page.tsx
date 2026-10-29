@@ -25,7 +25,7 @@ import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
-import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
+import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { withParams } from "@/ui/url";
 import { loadService, serviceContextOf } from "../service-data";
@@ -49,6 +49,8 @@ export default async function InvestmentServicePositions({
   const query = (await searchParams) as Query;
   const asked = one(query.status);
   const status: Status = STATUSES.includes(asked as Status) ? (asked as Status) : "open";
+  // "Group by Asset | Class" of the open positions (§3.4, mockup 05): by asset is the plain list.
+  const by: "asset" | "class" = one(query.by) === "class" ? "class" : "asset";
   const t = await getTranslations("investments.positions");
   const ti = await getTranslations("investments");
   const tp = await getTranslations("investments.period");
@@ -127,6 +129,33 @@ export default async function InvestmentServicePositions({
   const share = (cents: Cents | null) =>
     cents === null || openTotal <= 0n ? null : Number(cents) / Number(openTotal);
   const noCost = open.filter((row) => row.end.costCents === null).length;
+  type OpenRow = (typeof open)[number];
+  const groups: { key: string; label: string | null; rows: OpenRow[]; valueCents: Cents; pnlCents: Cents }[] =
+    [];
+  for (const row of open) {
+    const key = by === "class" ? (assetOf(row.assetId)?.class ?? "other") : "all";
+    let group = groups.find((one) => one.key === key);
+    if (!group) {
+      group = {
+        key,
+        label: by === "class" ? ti(`classes.${key}` as "classes.stock") : null,
+        rows: [],
+        valueCents: 0n,
+        pnlCents: 0n,
+      };
+      groups.push(group);
+    }
+    group.rows.push(row);
+    group.valueCents += row.end.valueCents ?? 0n;
+    group.pnlCents += row.contributionCents ?? 0n;
+  }
+  groups.sort((a, b) => Number(b.valueCents - a.valueCents));
+  const groupSummary = (group: (typeof groups)[number]) =>
+    t("groupSummary", {
+      value: money(group.valueCents),
+      pnl: money(group.pnlCents, true),
+      share: formatPercent(share(group.valueCents), nf),
+    });
   const today = new Map(detail.holdings.map((row) => [row.id, row]));
   const summaryOf = (row: HoldingRow): HoldingSummary => ({
     id: row.id,
@@ -283,7 +312,27 @@ export default async function InvestmentServicePositions({
 
       {status === "open" ? (
         <Card padded={false} className="min-w-0">
-          <CardHeader title={openTitle} />
+          <CardHeader
+            title={openTitle}
+            actions={
+              open.length > 1 ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-muted max-md:sr-only">{t("groupBy")}</span>
+                  <LinkTabs
+                    label={t("groupBy")}
+                    path={`${base}/positions`}
+                    params={{ ...periodParams }}
+                    name="by"
+                    current={by}
+                    options={[
+                      { value: "asset", label: t("byAsset") },
+                      { value: "class", label: t("byClass") },
+                    ]}
+                  />
+                </span>
+              ) : undefined
+            }
+          />
           {startDay && service.local && (
             <p className="-mt-1.5 px-4 pb-2.5 text-sm text-muted">
               {t("openNote", { period: name, date: startDay })}
@@ -319,28 +368,38 @@ export default async function InvestmentServicePositions({
                     </Th>
                   </THead>
                   <TBody>
-                    {open.map((row) => (
-                      <Tr key={row.key} data-testid="open-row">
-                        <Td className="max-w-64 py-1">
-                          {nameCell({
-                            assetId: row.assetId,
-                            product: row.product,
-                            manual: row.end.origin === "manual",
-                            badge: costBadge(row.end),
-                          })}
-                        </Td>
-                        <Td align="right">{quantityOf(row.end)}</Td>
-                        <Td align="right">{averageOf(row.end)}</Td>
-                        <Td align="right">{priceOf(row.end)}</Td>
-                        <Td align="right">{money(row.end.valueCents)}</Td>
-                        <Td align="right" className="py-1">
-                          {pnlCell(row)}
-                        </Td>
-                        <Td align="right">{onCostCell(row.end)}</Td>
-                        <Td align="right">{formatPercent(share(row.end.valueCents), nf)}</Td>
-                        <Td align="right">{actionsOf(row)}</Td>
-                      </Tr>
-                    ))}
+                    {groups.flatMap((group) => [
+                      group.label === null ? null : (
+                        <GroupRow
+                          key={`group-${group.key}`}
+                          colSpan={9}
+                          label={group.label}
+                          summary={groupSummary(group)}
+                        />
+                      ),
+                      ...group.rows.map((row) => (
+                        <Tr key={row.key} data-testid="open-row">
+                          <Td className="max-w-64 py-1">
+                            {nameCell({
+                              assetId: row.assetId,
+                              product: row.product,
+                              manual: row.end.origin === "manual",
+                              badge: costBadge(row.end),
+                            })}
+                          </Td>
+                          <Td align="right">{quantityOf(row.end)}</Td>
+                          <Td align="right">{averageOf(row.end)}</Td>
+                          <Td align="right">{priceOf(row.end)}</Td>
+                          <Td align="right">{money(row.end.valueCents)}</Td>
+                          <Td align="right" className="py-1">
+                            {pnlCell(row)}
+                          </Td>
+                          <Td align="right">{onCostCell(row.end)}</Td>
+                          <Td align="right">{formatPercent(share(row.end.valueCents), nf)}</Td>
+                          <Td align="right">{actionsOf(row)}</Td>
+                        </Tr>
+                      )),
+                    ])}
                     {shownCash !== null && (
                       <Tr data-testid="cash-row">
                         <Td className="py-1">
@@ -378,37 +437,49 @@ export default async function InvestmentServicePositions({
                 </Table>
               </div>
               <ul className="flex flex-col md:hidden">
-                {open.map((row) => (
-                  <li
-                    key={row.key}
-                    data-testid="open-item"
-                    className="flex items-start justify-between gap-3 border-t border-border px-4 py-3 text-sm"
-                  >
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      {nameCell({
-                        assetId: row.assetId,
-                        product: row.product,
-                        manual: row.end.origin === "manual",
-                        badge: costBadge(row.end),
-                      })}
-                      <span className="text-xs text-muted tabular-nums">
-                        {t("mobileLine", {
-                          quantity: quantityOf(row.end),
-                          price: priceOf(row.end),
-                          average: averageOf(row.end),
+                {groups.flatMap((group) => [
+                  group.label === null ? null : (
+                    <li
+                      key={`group-${group.key}`}
+                      data-testid="open-group"
+                      className="flex flex-wrap items-center justify-between gap-x-3 border-t border-border bg-bg px-4 py-2 text-sm"
+                    >
+                      <span className="font-semibold">{group.label}</span>
+                      <span className="text-muted tabular-nums">{groupSummary(group)}</span>
+                    </li>
+                  ),
+                  ...group.rows.map((row) => (
+                    <li
+                      key={row.key}
+                      data-testid="open-item"
+                      className="flex items-start justify-between gap-3 border-t border-border px-4 py-3 text-sm"
+                    >
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        {nameCell({
+                          assetId: row.assetId,
+                          product: row.product,
+                          manual: row.end.origin === "manual",
+                          badge: costBadge(row.end),
                         })}
+                        <span className="text-xs text-muted tabular-nums">
+                          {t("mobileLine", {
+                            quantity: quantityOf(row.end),
+                            price: priceOf(row.end),
+                            average: averageOf(row.end),
+                          })}
+                        </span>
                       </span>
-                    </span>
-                    <span className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
-                      <span className="font-medium">{money(row.end.valueCents)}</span>
-                      {pnlCell(row)}
-                      <span className="text-xs text-muted">
-                        {t("onCostShort", { rate: percent(onCostOf(row.end)) })}
+                      <span className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
+                        <span className="font-medium">{money(row.end.valueCents)}</span>
+                        {pnlCell(row)}
+                        <span className="text-xs text-muted">
+                          {t("onCostShort", { rate: percent(onCostOf(row.end)) })}
+                        </span>
+                        {actionsOf(row)}
                       </span>
-                      {actionsOf(row)}
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  )),
+                ])}
                 {shownCash !== null && (
                   <li className="flex items-start justify-between gap-3 border-t border-border px-4 py-3 text-sm">
                     <span className="flex flex-col">
