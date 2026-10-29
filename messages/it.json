@@ -3869,7 +3869,8 @@
         "all": "Tutti i movimenti",
         "empty": "Nessun movimento nel periodo."
       },
-      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile."
+      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile.",
+      "convertedNote": "comprende il costo di cambio {from}→{to} di {name}: registra quei versamenti e prelievi in {from} senza dire quanto ha convertito, quindi sono valutati al cambio BCE."
     },
     "activityTab": {
       "deposits": "Versamenti",

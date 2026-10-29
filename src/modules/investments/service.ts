@@ -257,6 +257,7 @@ export async function loadBook(
       amountCents: op.amountCents,
       fxRate: fromNumeric(op.fxRate, RATE_SCALE),
       validUntil: op.validUntil,
+      nativeCurrency: op.nativeCurrency,
     });
     opsByEvent.set(op.eventId, list);
   }

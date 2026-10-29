@@ -156,3 +156,12 @@ export function onCostOf(position: {
     return null;
   return Number(position.unrealizedCents) / Number(position.costCents);
 }
+
+/**
+ * The currencies the provider booked some flow of the period in and converted (eToro Money in EUR
+ * on a USD account): the ECB rate of the day values them, the provider's own rate moved the money,
+ * and the difference — its exchange cost — is part of "Other" (PERS-119).
+ */
+export function convertedCurrencies(service: ServicePnl): string[] {
+  return [...new Set(service.flows.flatMap((flow) => (flow.converted ? [flow.converted] : [])))].sort();
+}

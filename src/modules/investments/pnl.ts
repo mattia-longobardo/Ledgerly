@@ -400,6 +400,8 @@ export interface PeriodFlow {
   cents: Cents;
   displayCents: Cents | null;
   transferGroupId: string | null;
+  /** The currency it was booked in, when the provider converted it (eToro Money in EUR). */
+  converted?: string | null;
 }
 
 export interface HoldingPnl {
@@ -451,6 +453,29 @@ export interface ServicePnl {
 /** Below this, an average capital is "almost nothing" (§4.3): 1 €, or 1 % of the gross capital. */
 export const MIN_CAPITAL_CENTS = 100n;
 export const MIN_CAPITAL_SHARE = 0.01;
+
+/**
+ * The first day `t` of the stretch ending on `end` in which no money can have moved although the
+ * flows are not covered (PERS-119): the provider read the value every day from `t − 1` to `end`,
+ * always the same, and the book has no event in `[t, end]` — a deposit or a withdrawal would have
+ * moved the value, and one in and out on the same day changes no P&L. `end + 1` when there is none.
+ */
+export function flatSince(book: Book, end: CivilDate): CivilDate {
+  const totals = new Map<CivilDate, Cents>();
+  for (const reading of book.readings) {
+    if (reading.status === "estimated" || reading.status === "pending_zero") continue;
+    totals.set(reading.on, reading.totalCents);
+  }
+  const booked = new Set(book.events.map((event) => event.on));
+  const value = totals.get(end);
+  let start = addDays(end, 1);
+  if (value === undefined) return start;
+  for (let day = end; ; day = addDays(day, -1)) {
+    const before = totals.get(addDays(day, -1));
+    if (booked.has(day) || before === undefined || before !== value) return start;
+    start = day;
+  }
+}
 
 /** The first day the book knows anything of: its first period or its first event. */
 function firstDayOf(book: Book): CivilDate | null {
@@ -812,8 +837,13 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
           return empty(null);
         }
         if (window.toOn > from) {
-          from = window.toOn;
-          reasons.add("flows_gap");
+          // A stretch read every day at one value, with nothing booked in it, moved no money (§4.6).
+          const flat = flatSince(book, addDays(window.toOn, -1));
+          const resumes = flat > from ? (flat < window.toOn ? flat : window.toOn) : from;
+          if (resumes > from) {
+            from = resumes;
+            reasons.add("flows_gap");
+          }
         }
       }
     }
@@ -882,9 +912,19 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
 
   // The flows of [from, e], and the corrections of class `capital` as flows (§4.9).
   const classOf = (eventId: string) => service.adjustmentClasses?.get(eventId) ?? "data";
-  const entries: { on: CivilDate; cents: Cents; transferGroupId: string | null }[] = flowEntriesOn(book, e)
+  const entries: {
+    on: CivilDate;
+    cents: Cents;
+    transferGroupId: string | null;
+    converted?: string | null;
+  }[] = flowEntriesOn(book, e)
     .filter((entry) => entry.on >= from)
-    .map((entry) => ({ on: entry.on, cents: signed(entry), transferGroupId: entry.transferGroupId }));
+    .map((entry) => ({
+      on: entry.on,
+      cents: signed(entry),
+      transferGroupId: entry.transferGroupId,
+      converted: entry.converted ?? null,
+    }));
   for (const event of book.events) {
     if (classOf(event.id) !== "capital") continue;
     for (const op of event.operations) {

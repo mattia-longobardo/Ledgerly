@@ -184,6 +184,8 @@ export interface OperationLike {
   /** Account units per unit of `priceCurrency`, saved when the operation was written (A5). */
   fxRate: bigint | null;
   validUntil: CivilDate | null;
+  /** The currency the provider booked the operation in, when it is not the account's. */
+  nativeCurrency?: string | null;
 }
 
 export interface EventLike {
@@ -799,6 +801,8 @@ export interface FlowEntry {
   cents: Cents;
   /** The transfer between two of the person's accounts this leg belongs to (A10), if any. */
   transferGroupId: string | null;
+  /** Booked in another currency and converted at the ECB rate of its day (eToro Money in EUR). */
+  converted?: string | null;
 }
 
 /**
@@ -812,11 +816,22 @@ export function flowEntriesOn(book: Book, on: CivilDate): FlowEntry[] {
   for (const event of [...book.events].sort(compareEvents)) {
     if (event.on > on) continue;
     const firstPeriod = periodIndexOf(periods, event) === 0;
-    const push = (kind: FlowEntry["kind"], cents: Cents) =>
-      entries.push({ on: event.on, kind, cents, transferGroupId: event.transferGroupId });
+    const push = (kind: FlowEntry["kind"], cents: Cents, op?: OperationLike) => {
+      const converted =
+        op?.nativeCurrency && op.holdingId === null && op.nativeCurrency !== book.currency
+          ? op.nativeCurrency
+          : null;
+      entries.push({
+        on: event.on,
+        kind,
+        cents,
+        transferGroupId: event.transferGroupId,
+        ...(converted ? { converted } : {}),
+      });
+    };
     for (const op of event.operations) {
-      if (op.kind === "deposit") push("deposit", op.amountCents);
-      else if (op.kind === "withdrawal") push("withdrawal", -op.amountCents);
+      if (op.kind === "deposit") push("deposit", op.amountCents, op);
+      else if (op.kind === "withdrawal") push("withdrawal", -op.amountCents, op);
       else if (event.origin === "conversion" && firstPeriod) {
         if (op.kind === "opening_cash" || op.kind === "account_valuation") push("opening", op.amountCents);
         else if (op.kind === "opening_position") push("opening", abs(op.amountCents));

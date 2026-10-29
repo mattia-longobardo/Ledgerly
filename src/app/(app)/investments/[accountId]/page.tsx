@@ -5,7 +5,7 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/ui/display";
 import { describeEvent } from "@/modules/investments/activity";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
-import { contributionsOf } from "@/modules/investments/positions";
+import { contributionsOf, convertedCurrencies } from "@/modules/investments/positions";
 import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
@@ -190,6 +190,7 @@ export default async function InvestmentServiceOverview({
   }));
 
   const parts = local;
+  const converted = convertedCurrencies(service);
   const etoro = summary.investment.provider === "etoro";
   const closing = parts
     ? [
@@ -330,6 +331,15 @@ export default async function InvestmentServiceOverview({
                   <strong className={cn("font-semibold tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
                     {money(row.cents, true)}
                   </strong>
+                  {row.key === "unattributed" && converted.length > 0 && (
+                    <span data-testid="converted-note" className="ml-1">
+                      {t("service.convertedNote", {
+                        from: converted.join(", "),
+                        to: own,
+                        name: summary.account.name,
+                      })}
+                    </span>
+                  )}
                   {row.key === "unattributed" && (
                     <>
                       {" "}

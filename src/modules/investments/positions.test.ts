@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NO_RATES } from "@/platform/fx/rules";
 import { pnlOf, type PnlService } from "./pnl";
-import { closedGroups, contributionsOf, onCostOf, periodReturnOf } from "./positions";
+import { closedGroups, contributionsOf, convertedCurrencies, onCostOf, periodReturnOf } from "./positions";
 import {
   type Book,
   type EventLike,
@@ -217,5 +217,20 @@ describe("closedGroups (§3.4)", () => {
     ]);
     expect(groups[0].onCost).toBeCloseTo(0.05);
     expect(groups[1].onCost).toBeNull();
+  });
+});
+
+describe("convertedCurrencies (PERS-119)", () => {
+  it("names the currencies a provider booked cash flows in, apart from the account's", () => {
+    const flows = book([
+      event("2026-06-10", [{ kind: "deposit", amountCents: eur(2307.8), nativeCurrency: "EUR" }]),
+      event("2026-06-16", [{ kind: "withdrawal", amountCents: -eur(100), nativeCurrency: "EUR" }]),
+    ]);
+    const usd = { ...flows, currency: "USD" };
+    expect(convertedCurrencies(pnlOf({ ...service(usd), currency: "USD" }, null, "2026-06-30", EUR))).toEqual(
+      ["EUR"],
+    );
+    // The account's own currency is no conversion.
+    expect(convertedCurrencies(pnlOf(service(flows), null, "2026-06-30", EUR))).toEqual([]);
   });
 });
