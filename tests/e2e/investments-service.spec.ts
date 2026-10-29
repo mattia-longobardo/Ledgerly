@@ -79,7 +79,11 @@ test("home → service → positions: the rows of Positions add up to the Overvi
     const local = await hero.getAttribute("data-local-cents");
     const display = await hero.getAttribute("data-cents");
     await tabs(page).getByRole("link", { name: "Positions" }).click();
-    await expect(page).toHaveURL(new RegExp(`${base}/positions${query.replace("?", "\\?")}$`));
+    // The client navigation waits behind the tab's prefetch, which the site sometimes answers after
+    // more than 5 s while a direct request takes < 1 s (seen in the U4 release): give it the time.
+    await expect(page).toHaveURL(new RegExp(`${base}/positions${query.replace("?", "\\?")}$`), {
+      timeout: 15_000,
+    });
     const total = page.getByTestId("positions-total");
     if (local === "") {
       // An undetermined P&L has no rows to add up, and says so.
@@ -129,6 +133,8 @@ test("Positions: grouped by class, the same rows under each class with its subto
 }) => {
   const base = await openService(page, "Directa");
   await tabs(page).getByRole("link", { name: "Positions" }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/positions$`), { timeout: 15_000 });
+  await expect(page.getByTestId("open-row").first()).toBeVisible();
   const rows = await page.getByTestId("open-row").count();
   expect(rows).toBeGreaterThan(1);
   await page.getByRole("group", { name: "Group by" }).getByRole("link", { name: "Class" }).click();
