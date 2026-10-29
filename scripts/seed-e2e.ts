@@ -566,6 +566,8 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
           priceCurrency: "USD",
           priceSource: "etoro",
           valueCents: 230_500n,
+          // What it invested (U4): the Positions tab measures its unrealized from it.
+          costCents: 200_000n,
         },
         {
           asset: asset("VOO", "Vanguard S&P 500 ETF", "etf"),
@@ -575,6 +577,7 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
           priceCurrency: "USD",
           priceSource: "etoro",
           valueCents: 269_500n,
+          costCents: 250_000n,
         },
       ],
       scopes: [
@@ -587,6 +590,30 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
     }),
     fetchFlows: async () => ({
       events: [
+        // A trade opened and closed (E4): the closed positions of the Positions tab (U4).
+        ...(
+          [
+            ["open", -30, "buy", "200", "400"],
+            ["close", -10, "close", "250", "500"],
+          ] as const
+        ).map(([side, days, kind, unitPrice, nativeAmount]) => ({
+          externalId: `trade:e2e-7:${side}`,
+          occurredAt: new Date(`${addDays(on, days)}T15:00:00Z`),
+          note: null,
+          legs: [
+            {
+              leg: "base" as const,
+              kind,
+              asset: asset("TSLA", "Tesla", "stock"),
+              product: "trading",
+              quantity: "2",
+              unitPrice,
+              priceCurrency: "USD",
+              nativeAmount,
+              nativeCurrency: "USD",
+            },
+          ],
+        })),
         {
           externalId: "cash:e2e-1",
           occurredAt: new Date(`${addDays(on, -5)}T09:00:00Z`),

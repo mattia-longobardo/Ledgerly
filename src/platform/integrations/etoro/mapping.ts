@@ -161,6 +161,11 @@ export function holdingsOf(input: {
         : position.amount + pnl;
     const valueCents = value === null || tradingRate === null ? null : cents(value * tradingRate);
     if (valueCents === null) complete = false;
+    // What the position invested (U4, docs/design/investments-ux.md §4.7): value − cost is its P/L.
+    const costCents =
+      position.amount === null || position.amount === undefined || tradingRate === null
+        ? null
+        : cents(position.amount * tradingRate);
     const rate = position.unrealizedPnL?.closeRate ?? null;
     return {
       asset: instrumentAsset(position.instrumentID, instruments),
@@ -170,6 +175,7 @@ export function holdingsOf(input: {
       priceCurrency: rate === null ? null : TRADING_CURRENCY,
       priceSource: "etoro",
       valueCents,
+      costCents,
     };
   };
   for (const position of portfolio.clientPortfolio.positions) {

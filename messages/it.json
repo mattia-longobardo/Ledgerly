@@ -3133,7 +3133,10 @@
       "summary": "Valore oggi {value}, versato netto {invested}.",
       "range": "Periodo",
       "grain": "Punti",
-      "grains": { "month": "Mese", "day": "Giorno" },
+      "grains": {
+        "month": "Mese",
+        "day": "Giorno"
+      },
       "estimatedShort": "stima",
       "estimatedNote": "Il tratto tratteggiato è una stima: il provider non conserva lo storico del valore, quindi ogni giorno è ricostruito dai movimenti e dalle chiusure giornaliere dell'exchange."
     },
@@ -3402,7 +3405,7 @@
         "deposit": "Versamento",
         "withdrawal": "Prelievo",
         "account_valuation": "Aggiorna valore",
-        "adjustment": "Aggiungi rettifica",
+        "adjustment": "Correggi il valore",
         "valuation": "Modifica valutazione",
         "income": "Provento"
       },
@@ -3424,7 +3427,18 @@
       "linkOut": "Uscita del conto collegata",
       "linkIn": "Entrata del conto collegata",
       "linkHint": "Facoltativo: il movimento bancario corrispondente. Documenta da dove arriva il denaro e non sposta nessun saldo.",
-      "noLink": "Non collegato"
+      "noLink": "Non collegato",
+      "class": "Cosa corregge",
+      "classes": {
+        "data": "Una lettura sbagliata del servizio",
+        "capital": "Denaro entrato o uscito non registrato",
+        "result": "Un utile o una perdita non registrati"
+      },
+      "preview": {
+        "pnl": "Il P&L cambia di {amount} dal {date}",
+        "until": "e torna com'era dopo il {date}",
+        "capital": "Il valore cambia di {amount} dal {date}; il P&L no: è un flusso."
+      }
     },
     "holdingForm": {
       "valuation": "Valuta · {name}",
@@ -3631,6 +3645,401 @@
       "description": "Un prelievo e un versamento dello stesso importo tra due tuoi servizi entro 3 giorni. Collegati, contano per ogni servizio ma non per il portafoglio.",
       "out": "Uscita il {date} → {name}, entrata il {other}",
       "in": "Entrata il {date} ← {name}, uscita il {other}"
+    },
+    "period": {
+      "label": "Periodo",
+      "stepper": "Anno",
+      "kinds": {
+        "year": "Anno",
+        "all": "Tutto",
+        "custom": "Personalizzato"
+      },
+      "yearToDate": "{year} · da inizio anno",
+      "since": "dal {date}",
+      "range": "{from} – {to}",
+      "previous": "Anno precedente",
+      "next": "Anno successivo",
+      "last12": "Ultimi 12 mesi",
+      "pick": "Scegli i giorni",
+      "from": "Dal",
+      "to": "Al",
+      "previousMonth": "Mese precedente",
+      "nextMonth": "Mese successivo",
+      "pickEnd": "Scegli la data di fine",
+      "apply": "Applica",
+      "cancel": "Annulla",
+      "hint": "{from} – {to} · {count, plural, one {# giorno} other {# giorni}}"
+    },
+    "home": {
+      "empty": "Collega eToro o Binance, o crea un conto manuale.",
+      "funds": "i fondi ({amount}) sono in <link>Funds</link>",
+      "hero": {
+        "title": "Profitto e perdita · {period}",
+        "available": "P&L disponibile · {period}",
+        "undetermined": "Non determinabile",
+        "value": "Valore oggi <strong>{value}</strong> · {count, plural, one {# servizio} other {# servizi}}",
+        "valueAt": "valore al {date} {value}",
+        "noData": "Nessun dato in questo periodo. Il primo è del {date}."
+      },
+      "status": {
+        "estimated": "Stimato",
+        "partial": "Dati parziali",
+        "undetermined": "Non determinabile",
+        "from": "dal {date}"
+      },
+      "coverage": {
+        "partial": "{name} dal {date}",
+        "estimated": "{name} stimato",
+        "excluded": "{count, plural, one {# servizio escluso} other {# servizi esclusi}}"
+      },
+      "alerts": {
+        "label": "{count, plural, one {# cosa da controllare} other {# cose da controllare}}",
+        "one": "da controllare: {text}",
+        "many": "da controllare",
+        "estimated": "storico stimato"
+      },
+      "kpis": {
+        "realized": "Realizzato",
+        "realizedNote": "vendite e chiusure",
+        "unrealized": "Non realizzato",
+        "unrealizedNote": "posizioni aperte",
+        "unrealizedUnknown": "senza costo: in Altro",
+        "income": "Proventi",
+        "incomeNote": "dividendi, staking",
+        "feesFx": "Commissioni e cambio",
+        "feesFxNote": "commissioni {fees} · cambio {fx}",
+        "corrections": "Correzioni",
+        "unattributed": "Altro (dati incompleti)",
+        "transfers": "Trasferimenti tra servizi"
+      },
+      "chart": {
+        "title": "Andamento",
+        "view": "Grafico",
+        "pnl": "P&L",
+        "value": "Valore",
+        "pnlNote": {
+          "week": "P&L per settimana e per servizio · la linea è il cumulato di {period}",
+          "month": "P&L per mese e per servizio · la linea è il cumulato di {period}",
+          "year": "P&L per anno e per servizio · la linea è il cumulato di {period}"
+        },
+        "valueNote": {
+          "day": "Valore per giorno e per servizio",
+          "month": "Valore a fine mese, per servizio"
+        },
+        "line": "Cumulato",
+        "legend": "I colori sono i servizi della lista sotto.",
+        "estimated": "Tratteggio o colore più chiaro = storico stimato.",
+        "cumulative": "cumulato {amount}",
+        "summary": "P&L {period}: {total}. Migliore {best}, peggiore {worst}. {services}.",
+        "valueSummary": "Valore a fine periodo {value}.",
+        "data": "Dati del grafico",
+        "interval": "Intervallo",
+        "cumulativeHeader": "Cumulato"
+      },
+      "services": {
+        "note": "Ordinati per contributo · stesso periodo e stessi colori del grafico",
+        "value": "Valore oggi",
+        "pnl": "P&L",
+        "return": "Rendimento",
+        "contribution": "Contributo",
+        "total": "Totale",
+        "transfers": "Trasferimenti tra servizi",
+        "unavailable": "non disponibile",
+        "highlight": "Evidenzia {name} nel grafico",
+        "notComputable": "Rendimento non calcolabile: capitale troppo piccolo nel periodo",
+        "xirr": "XIRR {rate}",
+        "largeFlows": "Stima: i flussi sono grandi rispetto al capitale",
+        "share": "{share} di {net} netti",
+        "shareNotComputable": "Quota sul netto non calcolabile"
+      },
+      "composition": {
+        "title": "Composizione oggi",
+        "by": "Raggruppa per",
+        "service": "Servizio",
+        "class": "Classe",
+        "ccy": "Valuta",
+        "note": "Sempre a oggi: il periodo cambia il P&L e il grafico, non le quote."
+      }
+    },
+    "activity": {
+      "labels": {
+        "buy": "Acquisto",
+        "sell": "Vendita",
+        "deposit": "Versamento",
+        "withdrawal": "Prelievo",
+        "income": {
+          "staking": "Staking",
+          "reward": "Reward",
+          "dividend": "Dividendo",
+          "income": "Provento"
+        },
+        "fee": "Commissione",
+        "adjustment": "Correzione",
+        "openingCash": "Cassa iniziale",
+        "openingPosition": "Posizione iniziale",
+        "valuation": "Valutazione",
+        "accountValuation": "Valore del conto aggiornato"
+      },
+      "details": {
+        "position": "{qty} {asset} a {price}",
+        "quantity": "{qty} {asset}",
+        "from": "da {source}",
+        "to": "verso {dest}",
+        "priced": "{asset} a {price}",
+        "copy": "{detail} (copy)"
+      },
+      "sentence": "{label} {detail}",
+      "sentenceColon": "{label}: {detail}"
+    },
+    "header": {
+      "sync": "Sincronizza",
+      "addOperation": "Aggiungi operazione",
+      "operations": {
+        "buy": "Acquisto",
+        "deposit": "Versamento",
+        "withdrawal": "Prelievo",
+        "valuation": "Aggiorna valore"
+      },
+      "manual": {
+        "buy": "Acquisto manuale",
+        "deposit": "Versamento manuale",
+        "withdrawal": "Prelievo manuale",
+        "valuation": "Aggiorna valore"
+      },
+      "correct": "Correggi il valore",
+      "state": {
+        "synced": "Sincronizzato {when}",
+        "never": "Non ancora sincronizzato",
+        "error": "Errore: {error}",
+        "revoked": "Errore: chiave rifiutata",
+        "disconnected": "Disconnesso: tenuto a mano",
+        "manual": "Tenuto a mano"
+      },
+      "today": "oggi {time}",
+      "openSite": "Apri {name}"
+    },
+    "tabs": {
+      "label": "Sezioni del servizio",
+      "overview": "Panoramica",
+      "positions": "Posizioni",
+      "activity": "Movimenti",
+      "connection": "Collegamento",
+      "settings": "Impostazioni",
+      "alerts": "{count, plural, one {# cosa da controllare} other {# cose da controllare}}"
+    },
+    "service": {
+      "bridge": "{local} al cambio del {date} = {converted} · effetto cambio {fx}",
+      "value": "Valore oggi <strong>{value}</strong>",
+      "valueOther": "Valore oggi <strong>{value}</strong> ≈ {display}",
+      "valueAt": "valore al {date} {value}",
+      "partial": "Il P&L parte dal {date}: prima di quel giorno i dati di {name} non sono completi.",
+      "partialLink": "Cosa manca",
+      "undetermined": "Nessun dato affidabile nel periodo: il P&L non si può misurare.",
+      "estimated": "Una parte del periodo si basa su uno storico stimato.",
+      "kpis": {
+        "realized": "Realizzato",
+        "realizedNote": "vendite e chiusure",
+        "unrealized": "Var. non realizzato",
+        "unrealizedNote": "posizioni aperte",
+        "unrealizedUnknown": "senza costo: in Altro",
+        "income": "Proventi",
+        "incomeNote": "dividendi, staking",
+        "incomeIncluded": "inclusi",
+        "incomeIncludedNote": "{name} li somma al valore",
+        "fees": "Commissioni",
+        "feesNote": "tutte le commissioni del periodo"
+      },
+      "chart": {
+        "unavailable": "dati non disponibili prima del {date}",
+        "markers": "↑ versamento · ↓ prelievo",
+        "summaryFlows": "Versamenti in {deposits}, prelievi in {withdrawals}."
+      },
+      "top": {
+        "title": "Contributi principali",
+        "all": "Tutte le posizioni",
+        "asset": "Asset",
+        "value": "Valore",
+        "pnl": "P&L",
+        "weight": "Quota",
+        "empty": "Nessuna posizione si è mossa nel periodo.",
+        "cash": "Cassa"
+      },
+      "latest": {
+        "title": "Ultimi movimenti",
+        "all": "Tutti i movimenti",
+        "empty": "Nessun movimento nel periodo."
+      },
+      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile."
+    },
+    "activityTab": {
+      "deposits": "Versamenti",
+      "withdrawals": "Prelievi",
+      "net": "Versamenti netti",
+      "netPositive": "hai versato più di quanto hai ritirato",
+      "netNegative": "hai ritirato più di quanto hai versato",
+      "netZero": "tanto versato quanto ritirato",
+      "fees": "Commissioni",
+      "feesNote": "tutte le commissioni del periodo, operazioni incluse",
+      "chips": "Tipo di movimento",
+      "chip": "{label} · {count}",
+      "families": {
+        "all": "Tutti",
+        "trades": "Acquisti e vendite",
+        "flows": "Versamenti e prelievi",
+        "income": "Proventi",
+        "fees": "Commissioni",
+        "other": "Valutazioni e correzioni"
+      },
+      "search": "Cerca asset o descrizione",
+      "searchSubmit": "Cerca",
+      "clear": "Azzera",
+      "asset": "Solo {name}",
+      "assetAll": "Mostra tutti gli asset",
+      "date": "Data",
+      "type": "Tipo",
+      "description": "Descrizione",
+      "pnl": "P&L",
+      "amount": "Importo",
+      "actions": "Azioni",
+      "month": "{month} · {count, plural, one {# movimento} other {# movimenti}}",
+      "monthRealized": "P&L realizzato {amount}",
+      "range": "{first}–{last} di {total} · {allTime} da sempre",
+      "previous": "Pagina precedente",
+      "next": "Pagina successiva",
+      "empty": "Nessun movimento nel periodo.",
+      "emptyFiltered": "Nessun movimento corrisponde alla ricerca.",
+      "linkBank": "Collega al movimento bancario"
+    },
+    "connection": {
+      "alerts": "Da controllare",
+      "received": {
+        "title": "Cosa riceviamo da {name}",
+        "note": "Una riga per tipo di dato",
+        "balances": "Saldi e posizioni",
+        "balancesOk": "Completi, letti l'ultima volta {when}.",
+        "balancesPartial": "Ultima lettura parziale: {products} non letti.",
+        "balancesNone": "Nessuna lettura ancora.",
+        "activity": "Movimenti",
+        "activityOk": "Completi dal {date}.",
+        "activityGaps": "Incompleti: {streams}.",
+        "activityNone": "{name} non dà lo storico dei movimenti.",
+        "history": "Storico del valore",
+        "historyEstimated": "Stimato dal {from} al {to}: {name} non conserva il valore passato, quindi Ledgerly lo ricostruisce dai movimenti e dalle chiusure giornaliere. Nel grafico è tratteggiato.",
+        "historyRead": "Letto ogni giorno dal {date}.",
+        "cost": "Costo di carico",
+        "costMismatch": "Le quantità non tornano con i movimenti: il P&L non realizzato delle posizioni è in “Altro (dati incompleti)”.",
+        "costMissing": "{name} non dà il costo delle posizioni: il loro P&L non realizzato è in “Altro (dati incompleti)”.",
+        "details": "Dettaglio tecnico per flusso ({count})",
+        "products": "Prodotti letti: {products}"
+      },
+      "status": {
+        "complete": "Completo",
+        "partial": "Dati parziali",
+        "estimated": "Stimato",
+        "check": "Da controllare",
+        "missing": "Non disponibile"
+      },
+      "history": {
+        "title": "Storico sincronizzazioni",
+        "note": "Le letture che il servizio ci ha dato",
+        "same": "{count} letture uguali, {from} – {to}",
+        "estimated": "{count} letture stimate, {from} – {to}",
+        "empty": "Nessuna lettura ancora."
+      },
+      "corrections": {
+        "title": "Correzioni manuali",
+        "empty": "Nessuna correzione. Una correzione cambia il valore di un tratto di giorni quando il servizio sbaglia (es. un saldo mancante): aggiungila dal menu ⋯ in alto.",
+        "until": "fino al {date}"
+      },
+      "key": {
+        "title": "Chiave API",
+        "permissions": "Permessi",
+        "ip": "Restrizione IP",
+        "ipOn": "Attiva",
+        "ipOff": "Non attiva",
+        "ipAdvice": "Consigliata: limita la chiave all'IP dell'homelab dal sito {name}.",
+        "schedule": "Sincronizzazione"
+      },
+      "settings": {
+        "keeps": "Cosa tiene Ledgerly",
+        "modes": {
+          "assets": "Posizioni (una riga per asset)",
+          "total": "Solo valore (aggiorni il totale)"
+        },
+        "managedSince": "Gestito dal",
+        "inAccounts": "Il conto {name} in Accounts"
+      }
+    },
+    "positions": {
+      "status": "Quali posizioni",
+      "open": "Aperte",
+      "openAt": "Aperte al {date}",
+      "closedIn": "Chiuse nel {period}",
+      "closedInPeriod": "Chiuse nel periodo",
+      "all": "Tutte le chiuse",
+      "today": "Posizioni di oggi",
+      "undetermined": "Il P&L di {period} non è determinabile: le posizioni sono mostrate senza.",
+      "openTitle": "Posizioni aperte",
+      "openAtTitle": "Posizioni al {date}",
+      "openNote": "P&L {period}: dal valore del {date}, o dal costo se acquistata dopo. La % sul costo è il rendimento dall'acquisto.",
+      "asset": "Asset",
+      "unknownAsset": "Asset sconosciuto",
+      "quantity": "Quantità",
+      "average": "Prezzo medio",
+      "price": "Prezzo",
+      "value": "Valore",
+      "pnl": "P&L del periodo",
+      "pnlOf": "P&L {period}",
+      "onCost": "% sul costo",
+      "onCostShort": "{rate} sul costo",
+      "share": "Quota",
+      "actions": "Azioni",
+      "periodReturn": "{rate} nel periodo",
+      "noCost": "senza costo: in Altro",
+      "inferredCost": "Costo da una lettura successiva",
+      "byValue": "per valore",
+      "manual": "Manuale",
+      "cash": "Cassa",
+      "cashNote": "{currency} disponibili",
+      "total": "Totale",
+      "mobileLine": "{quantity} × {price} · medio {average}",
+      "noCostNote": "{count, plural, one {# posizione non ha} other {# posizioni non hanno}} ancora un costo: {count, plural, one {il suo} other {il loro}} P&L è in Altro (dati incompleti).",
+      "costLink": "Costo di carico →",
+      "empty": "Nessuna posizione aperta.",
+      "emptyWithClosed": "Nessuna posizione aperta · {count, plural, one {# chiusa} other {# chiuse}}.",
+      "dust": "{count, plural, one {# residuo} other {# residui}} senza mercato",
+      "dustNote": "Troppo poco perché un mercato lo prezzi: nessun valore e nessun P&L.",
+      "closedTitle": "Chiuse · {period}",
+      "allTitle": "Tutte le chiuse",
+      "closedNote": "Realizzato = incassato − costo medio uscito; le commissioni sono a parte.",
+      "closedNoteEtoro": "Realizzato = incassato − investito, commissioni di eToro incluse.",
+      "emptyClosed": "Nessuna posizione chiusa in {period}.",
+      "emptyAll": "Ancora nessuna posizione chiusa.",
+      "dates": "Aperta → chiusa",
+      "invested": "Investito",
+      "cost": "Costo",
+      "proceeds": "Incassato",
+      "realized": "Realizzato",
+      "totalRealized": "Totale realizzato",
+      "exits": "{count, plural, one {# uscita} other {# uscite}}",
+      "positionsCount": "{count, plural, one {# posizione} other {# posizioni}}",
+      "contributions": {
+        "title": "Contributi al P&L · {period}",
+        "note": "Quanto ha aggiunto ogni posizione, aperta o venduta: realizzato + variazione del non realizzato.",
+        "empty": "Nessuna posizione si è mossa in {period}.",
+        "open": "Aperta",
+        "sold": "Venduta nel periodo",
+        "partlySold": "Aperta, venduta in parte",
+        "noCost": "Senza costo: il non realizzato è in Altro",
+        "income": "Proventi",
+        "fees": "Commissioni",
+        "corrections": "Correzioni",
+        "valueChange": "Variazione del valore",
+        "unattributed": "Altro (dati incompleti)",
+        "total": "P&L del periodo",
+        "same": "il numero della Panoramica",
+        "bridge": "= {display} in Panoramica, effetto cambio {fx} incluso"
+      }
     }
   },
   "payroll": {

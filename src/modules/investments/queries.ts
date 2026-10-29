@@ -1,9 +1,9 @@
 import "server-only";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { type Account, balancesOn, listAccounts } from "@/modules/accounts/queries";
 import { dailyBalancesOf } from "@/modules/accounts/service";
 import { fundsView } from "@/modules/funds/queries";
-import { linkCandidates, transactionsByIds } from "@/modules/transactions/queries";
+import { escapeLike, linkCandidates, transactionsByIds } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
 import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -12,8 +12,10 @@ import { convertCents, NO_RATES, type RateTable } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
 import { externalIdsOf } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
+import { ACTIVITY_FAMILIES, type ActivityFamily, type DescribedLeg, familyOf, kindsOf } from "./activity";
 import { INVESTMENT_PROVIDERS, type InvestmentProvider, providerOf } from "./catalog";
 import {
+  type AdjustmentClass,
   type AssetClass,
   type DayValue,
   type FlowEntry,
@@ -22,9 +24,11 @@ import {
   type HoldingState,
   holdingStates,
   investorFlows,
+  isUnpricedDust,
   type Mode,
   monthsBack,
   type AccountOrigin,
+  type OperationKind,
   parseDecimal,
   type Performance,
   performance,
@@ -36,7 +40,10 @@ import {
 } from "./rules";
 import {
   investmentAssets,
+  investmentEvents,
+  investmentHoldings,
   investmentOperationRevisions,
+  investmentOperations,
   investmentReadingPositions,
   investmentReadingScopes,
 } from "./schema";
@@ -53,6 +60,7 @@ import {
 } from "./service";
 import {
   type CoverageWindow,
+  type Exit,
   type PeriodParams,
   periodOf,
   type PnlPeriod,
@@ -60,9 +68,11 @@ import {
   type PnlService,
   portfolioPnl,
   type PortfolioPnl,
+  replayHoldings,
+  type ServicePnl,
 } from "./pnl";
+import { type BarGrain, barIntervals, type Interval, periodSpan, valueDays } from "./period";
 import { type SyncStatus, syncStatus } from "./sync";
-import { type ChartGrain, type ChartWindow, chartDays } from "./window";
 import { type Xirr, xirr } from "./xirr";
 
 /** The home chart looks back this far, as the legacy page did. */
@@ -396,113 +406,6 @@ export async function investmentsHome(
   };
 }
 
-export interface InvestmentHistory {
-  currency: string;
-  grain: ChartGrain;
-  /** The window's months, after those before the history were dropped. */
-  months: MonthKey[];
-  /** The days the chart values: month ends (today for this month), or every day. */
-  days: CivilDate[];
-  value: (Cents | null)[];
-  /** What had gone in by each day: opening, deposits, withdrawals (§2.4). */
-  invested: (Cents | null)[];
-  /** Days that stand on an estimated reading (PERS-100): drawn dashed and said so. */
-  estimated: boolean[];
-}
-
-/**
- * The value-vs-invested chart of the home (every live service, in the display currency, each day
- * at its own rate) or of one service (in its currency), over a window (PERS-100): the `portfolio`
- * balances held day by day, and the flows up to each day. `null` for a service that is not one.
- */
-export async function investmentHistory(
-  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  options: { window: ChartWindow; accountId?: string; now?: Date },
-): Promise<InvestmentHistory | null> {
-  const now = options.now ?? new Date();
-  const todayOn = today(ctx.timeZone, now);
-  const { loaded } = await loadAll(ctx, todayOn, options.accountId);
-  const live = options.accountId ? loaded : loaded.filter((one) => one.account.state !== "archived");
-  if (options.accountId && live.length === 0) return null;
-  const currency = options.accountId ? live[0].account.currency : ctx.displayCurrency;
-  const firsts = live.flatMap((one) => (one.book.periods[0] ? [one.book.periods[0].fromOn] : []));
-  const firstOn = firsts.length === 0 ? null : firsts.reduce((a, b) => (a < b ? a : b));
-  const { months, days } = chartDays(options.window, todayOn, firstOn);
-
-  const read = await dailyBalancesOf(
-    ctx,
-    live.map((one) => one.account.id),
-    { from: days[0], to: days[days.length - 1] },
-  );
-  const indexOf = new Map(read.days.map((day, index) => [day, index]));
-  const converts = live.some((one) => one.account.currency !== currency);
-  const rates = converts
-    ? await ratesOn(
-        new Set([currency, ...live.map((one) => one.account.currency)]),
-        addDays(days[0], -7),
-        todayOn,
-      )
-    : NO_RATES;
-  const valueSeries = live.map((one) => {
-    const values = read.series.get(one.account.id)?.values ?? [];
-    return days.map((day) => {
-      const cents = values[indexOf.get(day) ?? -1] ?? null;
-      return cents === null ? null : convertCents(cents, one.account.currency, currency, day, rates);
-    });
-  });
-  const estimatedThrough = live.map(
-    (one) => one.book.readingRows.filter((reading) => reading.status === "estimated").at(-1)?.on ?? null,
-  );
-
-  // What went in, each flow in the chart's currency at the rate of its own day (§2.4); a transfer
-  // between two of the services shown moves no money in or out.
-  const groups = new Map<string, Set<string>>();
-  for (const one of live) {
-    for (const event of one.book.events) {
-      if (event.transferGroupId === null) continue;
-      const accounts = groups.get(event.transferGroupId) ?? new Set<string>();
-      accounts.add(one.account.id);
-      groups.set(event.transferGroupId, accounts);
-    }
-  }
-  const flowRates = converts
-    ? await ratesOn(
-        new Set([currency, ...live.map((one) => one.account.currency)]),
-        addDays(firstOn ?? todayOn, -7),
-        todayOn,
-      )
-    : NO_RATES;
-  let unconverted = false;
-  const flows = live.flatMap((one) =>
-    flowEntriesOn(one.book, todayOn)
-      .filter((entry) => entry.transferGroupId === null || (groups.get(entry.transferGroupId)?.size ?? 0) < 2)
-      .flatMap((entry) => {
-        const cents = convertCents(entry.cents, one.account.currency, currency, entry.on, flowRates);
-        if (cents === null) unconverted = true;
-        return cents === null ? [] : [{ ...entry, cents }];
-      }),
-  );
-
-  return {
-    currency,
-    grain: options.window.grain,
-    months,
-    days,
-    value: days.map((_, index) => sumCents(valueSeries.map((series) => series[index])).total),
-    invested: days.map((day) => {
-      if (unconverted || firstOn === null || day < firstOn) return null;
-      const by = sumFlows(flows.filter((entry) => entry.on <= day));
-      return by.openingCents + by.depositedCents - by.withdrawnCents;
-    }),
-    estimated: days.map((day, index) =>
-      live.some(
-        (one, at) =>
-          estimatedThrough[at] !== null && day <= estimatedThrough[at]! && valueSeries[at][index] !== null,
-      ),
-    ),
-  };
-}
-
 async function readingPositionsOf(ctx: Pick<Ctx, "userId">, readingId: string) {
   const rows = await getDb()
     .select({ position: investmentReadingPositions, asset: investmentAssets })
@@ -654,6 +557,10 @@ export interface ServiceDetail {
     unread: string[];
     missingPrices: number;
   }[];
+  /** The rebuilt history (PERS-100): how many estimated readings, from when to when. */
+  estimatedReadings: { count: number; from: CivilDate; to: CivilDate } | null;
+  /** The first reading the provider really gave. */
+  firstReadOn: CivilDate | null;
   adjustments: {
     eventId: string;
     on: CivilDate;
@@ -661,6 +568,7 @@ export interface ServiceDetail {
     validUntil: CivilDate | null;
     note: string | null;
     stale: boolean;
+    adjustmentClass: AdjustmentClass | null;
   }[];
   /** The connection, its key and what its flows cover (§4.3, §5.3); `null` for a manual service. */
   sync: SyncStatus | null;
@@ -902,9 +810,11 @@ export async function serviceDetail(
               ),
             ),
           );
+  // Enough of the latest to fold the runs of equal readings (§3.6); the estimated ones are one line.
   const readings = [...one.book.readingRows]
+    .filter((reading) => reading.status !== "estimated")
     .reverse()
-    .slice(0, 20)
+    .slice(0, 60)
     .map((reading) => ({
       id: reading.id,
       on: reading.on,
@@ -924,6 +834,12 @@ export async function serviceDetail(
       ].sort(),
     }));
   const coveredProducts = readings[0]?.products ?? [];
+  const estimated = one.book.readingRows.filter((reading) => reading.status === "estimated");
+  const estimatedReadings =
+    estimated.length === 0
+      ? null
+      : { count: estimated.length, from: estimated[0].on, to: estimated[estimated.length - 1].on };
+  const firstReadOn = one.book.readingRows.find((reading) => reading.status !== "estimated")?.on ?? null;
 
   const adjustments = one.book.eventRows.flatMap((event) =>
     one.book.operationRows
@@ -936,6 +852,7 @@ export async function serviceDetail(
         validUntil: op.validUntil,
         note: event.note,
         stale: op.validUntil === null && event.on <= addDays(todayOn, -OPEN_ADJUSTMENT_DAYS),
+        adjustmentClass: op.adjustmentClass,
       })),
   );
 
@@ -972,6 +889,8 @@ export async function serviceDetail(
     holdings,
     operations,
     readings,
+    estimatedReadings,
+    firstReadOn,
     adjustments,
     sync: one.sync,
     coveredProducts,
@@ -1090,22 +1009,14 @@ function coverageOf(sync: SyncStatus, timeZone: string): { windows: CoverageWind
   };
 }
 
-/**
- * The P&L of the period (§4) of every live service and of the portfolio, in the display currency:
- * the engine of `pnl.ts` on each book, with its coverage, its provider ids (eToro's `positionId`)
- * and the rates from the earliest day measured. Nothing is shown with it yet (U2–U5).
- */
-export async function investmentsPnl(
+/** The inputs of the engine for every live service, and the rates to the display currency (§4.5). */
+async function pnlInputs(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  params: PeriodParams | PnlPeriod,
-  now: Date = new Date(),
-): Promise<InvestmentsPnl> {
-  const todayOn = today(ctx.timeZone, now);
-  const period = "kind" in params ? params : periodOf(params, todayOn);
+  live: Loaded[],
+  period: PnlPeriod,
+  todayOn: CivilDate,
+): Promise<{ services: PnlService[]; display: { currency: string; rates: RateTable } }> {
   const currency = ctx.displayCurrency;
-  const { loaded } = await loadAll(ctx, todayOn);
-  const live = loaded.filter((one) => one.account.state !== "archived");
-
   const services: PnlService[] = [];
   for (const one of live) {
     const synced = one.investment.provider !== "manual" && one.sync !== null;
@@ -1126,14 +1037,15 @@ export async function investmentsPnl(
       coverage: coverage?.windows ?? null,
       quantityMismatch: coverage?.mismatch ?? false,
       externalIds,
+      adjustmentClasses: new Map(
+        one.book.operationRows.flatMap((op) =>
+          op.kind === "adjustment" && op.adjustmentClass ? [[op.eventId, op.adjustmentClass] as const] : [],
+        ),
+      ),
     });
   }
 
-  const firsts = live.flatMap((one) => [
-    ...one.book.periods.map((p) => p.fromOn),
-    ...one.book.events.map((event) => event.on),
-  ]);
-  const earliest = period.from ?? (firsts.length === 0 ? todayOn : firsts.reduce((a, b) => (a < b ? a : b)));
+  const earliest = period.from ?? firstDayOf(live) ?? todayOn;
   const converts = live.some((one) => one.account.currency !== currency);
   const rates = converts
     ? await ratesOn(
@@ -1142,14 +1054,518 @@ export async function investmentsPnl(
         period.to,
       )
     : NO_RATES;
-  const display = { currency, rates };
+  return { services, display: { currency, rates } };
+}
+
+/** The first day any live service has something: its first period or its first event. */
+function firstDayOf(live: Loaded[]): CivilDate | null {
+  const firsts = live.flatMap((one) => [
+    ...one.book.periods.map((p) => p.fromOn),
+    ...one.book.events.map((event) => event.on),
+  ]);
+  return firsts.length === 0 ? null : firsts.reduce((a, b) => (a < b ? a : b));
+}
+
+/**
+ * The P&L of the period (§4) of every live service and of the portfolio, in the display currency:
+ * the engine of `pnl.ts` on each book, with its coverage, its provider ids (eToro's `positionId`)
+ * and the rates from the earliest day measured.
+ */
+export async function investmentsPnl(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<InvestmentsPnl> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const { loaded } = await loadAll(ctx, todayOn);
+  const live = loaded.filter((one) => one.account.state !== "archived");
+  const { services, display } = await pnlInputs(ctx, live, period, todayOn);
   return {
     period,
     todayOn,
-    currency,
+    currency: display.currency,
     portfolio: portfolioPnl(
       services.map((one) => pnlOf(one, period.from, period.to, display)),
-      currency,
+      display.currency,
     ),
+  };
+}
+
+export interface PnlChartService {
+  accountId: string;
+  /** The P&L of each bar in the display currency; `null` before the service is measured. */
+  bars: (Cents | null)[];
+  /** Per bar, whether it stands on an estimated reading (PERS-100): drawn dashed. */
+  barsEstimated: boolean[];
+  /** The value at each point in the display currency, at the rate of its day. */
+  values: (Cents | null)[];
+  valuesEstimated: boolean[];
+}
+
+export interface InvestmentsPnlView extends InvestmentsPnl {
+  /** The first day with data: where "All" starts and the stepper stops (§2.1). */
+  firstOn: CivilDate | null;
+  /** The days the period really spans, "All" from `firstOn`. */
+  span: { from: CivilDate; to: CivilDate };
+  /** The P&L chart (§2.2): bars by week, month or year, one layer per service. */
+  barGrain: BarGrain;
+  intervals: Interval[];
+  /** The value chart (§2.2): every day, or month ends. */
+  valueGrain: "day" | "month";
+  valueDays: CivilDate[];
+  chart: PnlChartService[];
+  /** The place of each live service in Overview's account order: its colour (§0.6). */
+  colorIndex: Map<string, number>;
+}
+
+/**
+ * The home of the section (docs/design/investments-ux.md §3.1, U2): the P&L of the period, and the
+ * chart that explains it — the P&L of each bar by service, and the value of each service. A bar is
+ * the difference of the P&L measured from the service's first day to the bar's last one, so the
+ * bars of a service add up to its P&L exactly, the last ending on the hero's own number.
+ */
+export async function investmentsPnlView(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<InvestmentsPnlView> {
+  return pnlView(ctx, params, now);
+}
+
+/**
+ * One service's view of the period (§3.3, U3): the same engine, inputs and bars as the home, so the
+ * service's P&L in the display currency is the number of its row there, to the cent (PERS-113 · 5).
+ * `null` when the person has no such service.
+ */
+export async function servicePnlView(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  accountId: string,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<InvestmentsPnlView | null> {
+  const view = await pnlView(ctx, params, now, accountId);
+  return view.portfolio.services.length === 0 ? null : view;
+}
+
+export interface ServicePositions {
+  period: PnlPeriod;
+  todayOn: CivilDate;
+  /** The display currency. */
+  currency: string;
+  firstOn: CivilDate | null;
+  span: { from: CivilDate; to: CivilDate };
+  service: ServicePnl;
+  /** Every asset a row can name: the catalog, the provider's included. */
+  assets: Map<string, InvestmentAsset>;
+  /** Every holding of the service: what a closed row is. */
+  holdings: Map<string, { assetId: string; product: string; origin: "manual" | "provider" }>;
+  /** Every exit up to today: "All closed" (S10). */
+  allExits: Exit[];
+  /** The dust the reading in force on the period's last day leaves out (V4). */
+  dust: { assetId: string; product: string; quantity: string }[];
+}
+
+/**
+ * The Positions tab (docs/design/investments-ux.md §3.4, U4): the service's P&L of the period with
+ * its positions at both ends — open on the last day, and the ones the period sold — from the same
+ * engine and inputs as the Overview, so the rows add up to its number (PERS-113 · 1, 4, 5).
+ */
+export async function servicePositions(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  accountId: string,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<ServicePositions | null> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const { loaded } = await loadAll(ctx, todayOn, accountId);
+  const one = loaded[0];
+  if (!one) return null;
+  const { services, display } = await pnlInputs(ctx, [one], period, todayOn);
+  const firstOn = firstDayOf([one]);
+  const reading = [...one.book.readingRows]
+    .filter((row) => row.on <= period.to && row.status !== "pending_zero")
+    .at(-1);
+  const dust = reading
+    ? (await readingPositionsOf(ctx, reading.id))
+        .filter((position) =>
+          isUnpricedDust({
+            valueCents: position.valueCents,
+            quantity: parseDecimal(position.quantity, QUANTITY_SCALE),
+          }),
+        )
+        .map((position) => ({
+          assetId: position.assetId,
+          product: position.product,
+          quantity: trimmed(position.quantity),
+        }))
+    : [];
+  return {
+    period,
+    todayOn,
+    currency: display.currency,
+    firstOn,
+    span: periodSpan(period, firstOn),
+    service: pnlOf(services[0], period.from, period.to, display),
+    assets: new Map((await listAssets(ctx)).map((asset) => [asset.id, asset])),
+    holdings: new Map(
+      one.book.holdingRows.map((holding) => [
+        holding.id,
+        { assetId: holding.assetId, product: holding.product, origin: holding.origin },
+      ]),
+    ),
+    allExits: replayHoldings(one.book, todayOn, services[0].externalIds).exits,
+    dust,
+  };
+}
+
+async function pnlView(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  params: PeriodParams | PnlPeriod,
+  now: Date,
+  only?: string,
+): Promise<InvestmentsPnlView> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const { loaded, accounts } = await loadAll(ctx, todayOn, only);
+  // A service asked by name is shown archived too, as its page always was.
+  const live = loaded.filter((one) => only !== undefined || one.account.state !== "archived");
+  const { services, display } = await pnlInputs(ctx, live, period, todayOn);
+  const measured = services.map((one) => pnlOf(one, period.from, period.to, display));
+  const portfolio = portfolioPnl(measured, display.currency);
+
+  const firstOn = firstDayOf(live);
+  const span = periodSpan(period, firstOn);
+  const { grain: barGrain, intervals } = barIntervals(span.from, span.to);
+  const { grain: valueGrain, days } = valueDays(span.from, span.to);
+
+  const read = await dailyBalancesOf(
+    ctx,
+    live.map((one) => one.account.id),
+    { from: days[0], to: days[days.length - 1] },
+  );
+  const indexOf = new Map(read.days.map((day, index) => [day, index]));
+  // The rates of the engine start before the first day measured, so they reach every point.
+  const rates = display.rates;
+
+  const chart = live.map((one, at): PnlChartService => {
+    const service = services[at];
+    const whole = measured[at];
+    const estimatedThrough =
+      one.book.readingRows.filter((reading) => reading.status === "estimated").at(-1)?.on ?? null;
+    const stored = read.series.get(one.account.id)?.values ?? [];
+    const values = days.map((day) => {
+      const cents = stored[indexOf.get(day) ?? -1] ?? null;
+      return cents === null ? null : convertCents(cents, one.account.currency, display.currency, day, rates);
+    });
+
+    const bars: (Cents | null)[] = [];
+    let before: Cents = 0n;
+    intervals.forEach((interval, index) => {
+      const from = whole.from;
+      if (whole.display === null || from === null || interval.to < from) {
+        bars.push(null);
+        return;
+      }
+      const last = index === intervals.length - 1;
+      const through = last
+        ? whole.display.pnlCents
+        : pnlOf(service, from, interval.to, display).display?.pnlCents;
+      if (through === null || through === undefined) {
+        bars.push(null);
+        return;
+      }
+      bars.push(through - before);
+      before = through;
+    });
+    return {
+      accountId: one.account.id,
+      bars,
+      barsEstimated: intervals.map(
+        (interval) => estimatedThrough !== null && interval.from <= estimatedThrough,
+      ),
+      values,
+      valuesEstimated: days.map(
+        (day, index) => estimatedThrough !== null && day <= estimatedThrough && values[index] !== null,
+      ),
+    };
+  });
+
+  const order = accounts.filter((account) => account.state !== "archived");
+  return {
+    period,
+    todayOn,
+    currency: display.currency,
+    portfolio,
+    firstOn,
+    span,
+    barGrain,
+    intervals,
+    valueGrain,
+    valueDays: days,
+    chart,
+    colorIndex: new Map(order.map((account, index) => [account.id, index])),
+  };
+}
+
+// ——— The Activity tab (docs/design/investments-ux.md §3.5, U3) ————————————————————————————————————
+
+/** Rows per page of the Activity tab (§3.5): the page of 934 eToro events goes to ≈ 2,000 px. */
+export const ACTIVITY_PAGE_SIZE = 50;
+
+export interface ActivityQuery {
+  /** The period's days; `from` `null` = from the first event ("All"). */
+  from: CivilDate | null;
+  to: CivilDate;
+  family: ActivityFamily | null;
+  /** Searched in the asset's name and symbol and in the note. */
+  q: string | null;
+  /** An asset id: a row of Positions opens the tab filtered on it (§1.1). */
+  assetId: string | null;
+  /** 1-based. */
+  page: number;
+}
+
+export interface ActivityRow {
+  id: string;
+  on: CivilDate;
+  origin: string;
+  note: string | null;
+  family: ActivityFamily;
+  /** The leg that says what the event is: `main`, or a trade's `base` (never shown as a leg). */
+  leg: DescribedLeg & { holdingId: string | null; amountCents: Cents; validUntil: CivilDate | null };
+  adjustmentClass: AdjustmentClass | null;
+  transactionId: string | null;
+  linked: { payee: string | null; cents: Cents } | null;
+  /** The other service of a transfer between the person's accounts (§4.9), if this is one leg. */
+  transfer: { accountId: string; accountName: string } | null;
+}
+
+export interface ServiceActivity {
+  rows: ActivityRow[];
+  page: number;
+  pages: number;
+  /** The events of the period that the search and the chosen chip leave. */
+  total: number;
+  /** Every event of the service, whatever the period and the filters ("934 since the start"). */
+  allTime: number;
+  /** Per chip, in the period and with the search: the counts of §3.5. */
+  counts: Record<ActivityFamily | "all", number>;
+  /** The months of the filtered events, newest first, with how many each holds. */
+  months: { month: MonthKey; count: number }[];
+  /** The period's money in and out and its fees (every fee leg, also a trade's), in the account's currency. */
+  sums: { depositsCents: Cents; withdrawalsCents: Cents; feesCents: Cents };
+}
+
+/** The leg that names an event: `main`, else a trade's `base`, else the first by name. */
+const describingLeg = sql`case ${investmentOperations.leg} when 'main' then 0 when 'base' then 1 else 2 end`;
+
+/**
+ * One page of a service's events (§3.5) and what the tab says about them: paged in the database,
+ * newest first by `occurred_at` then `id` — the same order on every page, so a row never shows
+ * twice or goes missing between two of them — with the counts of every chip in the period.
+ */
+export async function serviceActivity(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  query: ActivityQuery,
+): Promise<ServiceActivity | null> {
+  const db = getDb();
+  const investment = (await listInvestmentAccounts(ctx)).find((one) => one.accountId === accountId);
+  if (!investment) return null;
+  const events = investmentEvents;
+  // Written out in full: inside a subquery Drizzle drops the table's name, and a bare "id" would
+  // be the inner table's own.
+  const eventId = sql.raw(`"investment_events"."id"`);
+  const kindOf = sql<OperationKind>`(select o.kind from ${investmentOperations} o where o.event_id = ${eventId} and o.user_id = ${ctx.userId} order by case o.leg when 'main' then 0 when 'base' then 1 else 2 end, o.leg limit 1)`;
+
+  const mine = and(userScoped(ctx).owns(events), eq(events.investmentAccountId, investment.id));
+  const inPeriod = and(
+    query.from === null ? undefined : gte(events.on, query.from),
+    lte(events.on, query.to),
+  );
+  const term = query.q?.trim() || null;
+  const searched =
+    term === null
+      ? undefined
+      : or(
+          ilike(events.note, `%${escapeLike(term)}%`),
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(investmentOperations)
+              .innerJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
+              .innerJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+              .where(
+                and(
+                  eq(investmentOperations.eventId, eventId),
+                  userScoped(ctx).owns(investmentOperations),
+                  or(
+                    ilike(investmentAssets.name, `%${escapeLike(term)}%`),
+                    ilike(investmentAssets.symbol, `%${escapeLike(term)}%`),
+                  ),
+                ),
+              ),
+          ),
+        );
+  const ofAsset =
+    query.assetId === null
+      ? undefined
+      : exists(
+          db
+            .select({ one: sql`1` })
+            .from(investmentOperations)
+            .innerJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
+            .where(
+              and(
+                eq(investmentOperations.eventId, eventId),
+                userScoped(ctx).owns(investmentOperations),
+                eq(investmentHoldings.assetId, query.assetId),
+              ),
+            ),
+        );
+  const ofFamily = query.family === null ? undefined : inArray(kindOf, kindsOf(query.family));
+  const filtered = and(mine, inPeriod, searched, ofAsset, ofFamily);
+
+  const byKind = db
+    .select({ kind: kindOf.as("kind") })
+    .from(events)
+    .where(and(mine, inPeriod, searched, ofAsset))
+    .as("by_kind");
+  const byMonth = db
+    .select({ month: sql<MonthKey>`to_char(${events.on}, 'YYYY-MM')`.as("month") })
+    .from(events)
+    .where(filtered)
+    .as("by_month");
+  const [kindRows, monthRows, [{ allTime }], sumRows] = await Promise.all([
+    db
+      .select({ kind: byKind.kind, count: count() })
+      .from(byKind)
+      .groupBy(byKind.kind)
+      .orderBy(asc(byKind.kind)),
+    db
+      .select({ month: byMonth.month, count: count() })
+      .from(byMonth)
+      .groupBy(byMonth.month)
+      .orderBy(desc(byMonth.month)),
+    db.select({ allTime: count() }).from(events).where(mine),
+    db
+      .select({
+        kind: investmentOperations.kind,
+        cents: sql<string>`coalesce(sum(${investmentOperations.amountCents}), 0)`,
+      })
+      .from(investmentOperations)
+      .innerJoin(events, eq(events.id, investmentOperations.eventId))
+      .where(
+        and(
+          mine,
+          inPeriod,
+          userScoped(ctx).owns(investmentOperations),
+          inArray(investmentOperations.kind, ["deposit", "opening_cash", "withdrawal", "fee"]),
+        ),
+      )
+      .groupBy(investmentOperations.kind)
+      .orderBy(asc(investmentOperations.kind)),
+  ]);
+
+  const counts = Object.fromEntries(
+    [...ACTIVITY_FAMILIES, "all"].map((key) => [key, 0]),
+  ) as ServiceActivity["counts"];
+  for (const row of kindRows) {
+    if (row.kind === null) continue;
+    counts[familyOf(row.kind)] += row.count;
+    counts.all += row.count;
+  }
+  const total = monthRows.reduce((sum, row) => sum + row.count, 0);
+  const pages = Math.max(1, Math.ceil(total / ACTIVITY_PAGE_SIZE));
+  const page = Math.min(Math.max(1, Math.trunc(query.page) || 1), pages);
+  const sumOf = (...kinds: string[]) =>
+    sumRows
+      .filter((row) => kinds.includes(row.kind))
+      .reduce<Cents>((sum, row) => sum + BigInt(row.cents), 0n);
+
+  const pageRows = await db
+    .select()
+    .from(events)
+    .where(filtered)
+    .orderBy(desc(events.occurredAt), desc(events.id))
+    .limit(ACTIVITY_PAGE_SIZE)
+    .offset((page - 1) * ACTIVITY_PAGE_SIZE);
+  const ids = pageRows.map((row) => row.id);
+  const legRows =
+    ids.length === 0
+      ? []
+      : await db
+          .select({ op: investmentOperations, holding: investmentHoldings, asset: investmentAssets })
+          .from(investmentOperations)
+          .leftJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
+          .leftJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+          .where(and(inArray(investmentOperations.eventId, ids), userScoped(ctx).owns(investmentOperations)))
+          .orderBy(asc(investmentOperations.eventId), asc(describingLeg), asc(investmentOperations.leg));
+  const firstLeg = new Map<string, (typeof legRows)[number]>();
+  for (const row of legRows) if (!firstLeg.has(row.op.eventId)) firstLeg.set(row.op.eventId, row);
+
+  const transfers = pageRows.some((row) => row.transferGroupId !== null) ? await transferLegs(ctx) : [];
+  const accountNames =
+    transfers.length === 0
+      ? new Map<string, string>()
+      : new Map((await listAccounts(ctx, { includeArchived: true })).map((one) => [one.id, one.name]));
+  const linked = await transactionsByIds(
+    ctx,
+    pageRows.flatMap((row) => (row.transactionId ? [row.transactionId] : [])),
+  );
+
+  const rows: ActivityRow[] = pageRows.flatMap((event) => {
+    const found = firstLeg.get(event.id);
+    if (!found) return [];
+    const { op, holding, asset } = found;
+    const partner =
+      event.transferGroupId === null
+        ? undefined
+        : transfers.find((leg) => leg.transferGroupId === event.transferGroupId && leg.eventId !== event.id);
+    const transaction = event.transactionId ? linked.get(event.transactionId) : undefined;
+    return [
+      {
+        id: event.id,
+        on: event.on,
+        origin: event.origin,
+        note: event.note,
+        family: familyOf(op.kind),
+        leg: {
+          kind: op.kind,
+          holdingId: op.holdingId,
+          assetName: asset?.name ?? null,
+          assetClass: asset?.class ?? null,
+          product: holding?.product ?? null,
+          quantity: op.quantity,
+          unitPrice: op.unitPrice,
+          priceCurrency: op.priceCurrency,
+          amountCents: op.amountCents,
+          validUntil: op.validUntil,
+        },
+        adjustmentClass: op.adjustmentClass,
+        transactionId: event.transactionId,
+        linked: transaction ? { payee: transaction.payee, cents: transaction.amountCents } : null,
+        transfer: partner
+          ? { accountId: partner.accountId, accountName: accountNames.get(partner.accountId) ?? "" }
+          : null,
+      },
+    ];
+  });
+
+  return {
+    rows,
+    page,
+    pages,
+    total,
+    allTime,
+    counts,
+    months: monthRows,
+    sums: {
+      depositsCents: sumOf("deposit", "opening_cash"),
+      withdrawalsCents: sumOf("withdrawal"),
+      feesCents: sumOf("fee"),
+    },
   };
 }

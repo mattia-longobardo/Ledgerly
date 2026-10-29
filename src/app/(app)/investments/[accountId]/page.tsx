@@ -1,807 +1,563 @@
-import { ExternalLink } from "lucide-react";
-import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getAccount } from "@/modules/accounts/queries";
-import { type HoldingRow, type OperationRow, serviceDetail } from "@/modules/investments/queries";
-import { InvestmentHistoryCard } from "@/modules/investments/ui/history-card";
-import { KeyCheckLine } from "@/modules/investments/ui/key-check";
-import { productLabel } from "@/modules/investments/ui/labels";
-import { ensureAssetSeed } from "@/modules/investments/service";
-import { accountTypeOf, connectableProvider } from "@/modules/investments/catalog";
-import {
-  AddAssetButton,
-  ConfirmRevokedButton,
-  ConfirmZeroButton,
-  ConversionButton,
-  DisconnectButton,
-  type HoldingSummary,
-  HoldingMenu,
-  LinkTransferButton,
-  OperationButton,
-  OperationMenu,
-  type OperationSummary,
-  ReconcileButton,
-  ReplaceKeyButton,
-  type ServiceContext,
-  ServiceUrlForm,
-  SyncButtons,
-  UnlinkTransferButton,
-} from "@/modules/investments/ui/dialogs";
-import type { Xirr } from "@/modules/investments/xirr";
+import { LinkTabs } from "@/modules/accounts/ui/controls";
+import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/ui/display";
+import { describeEvent } from "@/modules/investments/activity";
+import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
+import { contributionsOf } from "@/modules/investments/positions";
+import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
+import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
+import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn, today } from "@/platform/dates";
+import { today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
-import { isUnpricedDust, parseDecimal } from "@/modules/investments/rules";
-
-const priceCents = (text: string) => parseDecimal(text, 2);
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
+import { StackedArea, StackedBars, stackLayers } from "@/ui/chart";
 import { cn } from "@/ui/cn";
 import { KpiTile } from "@/ui/kpi-tile";
-import { Page } from "@/ui/shell/page";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { withParams } from "@/ui/url";
+import { loadService } from "./service-data";
 
-export async function generateMetadata({ params }: PageProps<"/investments/[accountId]">): Promise<Metadata> {
-  const ctx = await requireSession();
-  const { accountId } = await params;
-  const account = await getAccount(ctx, accountId);
-  return { title: account?.name ?? (await getTranslations("investments"))("title") };
-}
+const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 /**
- * A service (docs/design/investments.md §4.3): its value, what went in, the positions, the
- * operations grouped by event, the readings and adjustments of a synced account, and the settings
- * with the mode conversions.
+ * A service's Overview (docs/design/investments-ux.md §3.3, U3): the P&L of the period — the very
+ * number of its row on the home, in the display currency, with the bridge from its own currency —
+ * then how far it can be trusted, its parts, the chart, the main positions and the latest activity.
+ * The diagnostics live in Connection, never here.
  */
-export default async function InvestmentServicePage({
+export default async function InvestmentServiceOverview({
   params,
   searchParams,
 }: PageProps<"/investments/[accountId]">) {
   const ctx = await requireSession();
   const { accountId } = await params;
+  const query = (await searchParams) as Query;
+  const todayOn = today(ctx.timeZone);
+  const base = `/investments/${accountId}`;
+
+  // The old chart address of this page (`range`, months, `grain`) goes to the new one, once (§1.2).
+  const legacy = legacyPeriodQuery(query, todayOn);
+  if (legacy) permanentRedirect(withParams(base, {}, legacy));
+
   const t = await getTranslations("investments");
-  // The editable seed of the asset catalog (§1.4), written once, before the dialogs list it.
-  await ensureAssetSeed(ctx);
-  const detail = await serviceDetail(ctx, accountId);
-  if (!detail) notFound();
-  const { summary, day } = detail;
-  const account = summary.account;
-  const currency = detail.currency;
-  const own = (cents: Cents | null) => formatMoney(cents, ctx.numberFormat, { currency });
-  const signed = (cents: Cents | null) =>
-    cents === null ? NULL_DISPLAY : formatMoney(cents, ctx.numberFormat, { signed: true, currency });
-  const long = (on: string | null) => formatDate(on, "long", ctx.locale);
-  const synced = summary.origin === "synced";
-  const mode = summary.mode;
-  const url = summary.investment.url ?? summary.provider?.url ?? null;
-  const latestReading = detail.readings[0] ?? null;
-  const sync = detail.sync;
-  const provider = sync ? connectableProvider(sync.provider) : null;
-  const revokeUrl = provider?.revokeUrl ?? null;
-  const providerProps = (one: NonNullable<typeof provider>) => ({
-    id: one.id,
-    name: one.name,
-    accountType: accountTypeOf(one.category),
-    ipWhitelist: one.ipWhitelist,
-    credentialFields: one.credentialFields,
-    currencies: one.currencies,
-    defaultCurrency: one.defaultCurrency,
-    url: one.url,
-    revokeUrl: one.revokeUrl,
-  });
-  const instant = (at: Date) =>
-    `${formatDate(civilDateIn(at, ctx.timeZone), "long", ctx.locale)}, ${new Intl.DateTimeFormat(ctx.locale, {
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-      timeZone: ctx.timeZone,
-    }).format(at)}`;
-  const tp = (key: "products.spot") => t(key);
+  const tp = await getTranslations("investments.period");
+  const ta = await getTranslations("investments.activity");
+  const view = one(query.view) === "value" ? "value" : "pnl";
+  const [detail, pnl] = await Promise.all([
+    loadService(accountId),
+    servicePnlView(ctx, accountId, { period: one(query.period), from: one(query.from), to: one(query.to) }),
+  ]);
+  if (!detail || !pnl) notFound();
+  const service = pnl.portfolio.services[0];
+  const { summary } = detail;
+  const { period, span } = pnl;
+  const own = detail.currency;
+  const display = pnl.currency;
+  const money = (cents: Cents | null, signed = false, code = own) =>
+    formatMoney(cents, ctx.numberFormat, { currency: code, signed });
+  const percent = (value: number | null) => formatPercent(value, ctx.numberFormat, { signed: true });
+  const name = periodText(period, span, todayOn, ctx.locale, tp);
+  const periodParams = periodQuery(period, todayOn);
+  const tab = (path: string, extra: Record<string, string | undefined> = {}) =>
+    withParams(`${base}${path}`, {}, { ...periodParams, ...extra });
 
-  const context: ServiceContext = {
-    accountId,
-    name: account.name,
-    currency,
-    numberFormat: ctx.numberFormat,
-    locale: ctx.locale,
-    today: today(ctx.timeZone),
-    mode,
-    synced,
-    valueCents: summary.valueCents,
-    assets: detail.assets.map((asset) => ({
-      id: asset.id,
-      name: asset.name,
-      class: asset.class,
-      symbol: asset.symbol,
-      isin: asset.isin,
-      currency: asset.currency,
-    })),
-    coveredProducts: detail.coveredProducts,
-    linkOptions: detail.linkOptions,
-  };
-
-  const holdingOf = (row: HoldingRow): HoldingSummary => ({
-    id: row.id,
-    name: row.asset.name,
-    currency: row.asset.currency,
-    origin: row.origin,
-    product: row.product,
-    byValue: row.state.quantity === null,
-    quantityText: row.quantityText,
-    conflict: row.conflict,
-    readingId: latestReading?.id ?? null,
-    readingOn: latestReading?.on ?? null,
-  });
-  const operationOf = (row: OperationRow): OperationSummary => ({
-    id: row.id,
-    kind: row.kind,
-    on: row.on,
-    origin: row.origin,
-    note: row.note,
-    amountCents: row.legs[0]?.amountCents ?? 0n,
-    validUntil: row.legs[0]?.validUntil ?? null,
-    transactionId: row.transactionId,
-    holdingId: row.legs[0]?.holdingId ?? null,
-    holdingName: row.legs[0]?.holdingName ?? null,
-    unitPriceText: row.legs[0]?.priceText ?? null,
+  const activity = await serviceActivity(ctx, accountId, {
+    from: span.from,
+    to: span.to,
+    family: null,
+    q: null,
+    assetId: null,
+    page: 1,
   });
 
-  const flows = summary.performance;
-  const xirrText = (result: Xirr | null) =>
-    result === null
-      ? NULL_DISPLAY
-      : result.status === "ok"
-        ? formatPercent(result.rate, ctx.numberFormat, { signed: true })
-        : t("kpis.notComputable");
-  const reliabilityNote = summary.reliable
-    ? undefined
-    : summary.reliableFrom
-      ? t("sync.reliableFrom", { date: long(summary.reliableFrom.toISOString().slice(0, 10)) })
-      : t("sync.notReliable");
-  const transferText = (row: OperationRow) =>
-    row.transfer ? t("operations.transferWith", { name: row.transfer.accountName }) : null;
-  const operationActions = (row: OperationRow) => (
-    <span className="flex items-center justify-end gap-1">
-      {row.transfer && (
-        <UnlinkTransferButton
-          accountId={accountId}
-          eventId={row.id}
-          label={`${transferText(row)}, ${long(row.on)}`}
-        />
-      )}
-      <OperationMenu operation={operationOf(row)} context={context} />
-    </span>
-  );
-  const toolbar = (
-    <div className="flex flex-wrap gap-2">
-      {mode === "assets" && <AddAssetButton context={context} />}
-      {mode === "total" && !synced && (
-        <OperationButton kind="account_valuation" context={context} variant="primary" />
-      )}
-      <OperationButton kind="deposit" context={context} />
-      <OperationButton kind="withdrawal" context={context} />
-      {mode === "total" && !synced && <ConversionButton context={context} />}
-      {synced && <OperationButton kind="adjustment" context={context} />}
-    </div>
-  );
-
-  const priceCell = (row: HoldingRow) =>
-    row.priceText === null ? (
-      <span className="text-muted">
-        {row.state.quantity === null
-          ? t("assets.byValue")
-          : isUnpricedDust(row.state)
-            ? t("assets.dust")
-            : t("assets.noPrice")}
-      </span>
-    ) : (
-      <span className="inline-flex flex-col items-end">
-        <span>
-          {priceCents(row.priceText) === 0n
-            ? `${row.priceText} ${row.asset.currency}`
-            : formatMoney(priceCents(row.priceText), ctx.numberFormat, { currency: row.asset.currency })}
-        </span>
-        <span className="text-xs text-muted">
-          {row.state.pricedOn ? formatDate(row.state.pricedOn, "dayMonth", ctx.locale) : ""}
-          {row.state.staleRate && ` · ${t("assets.staleRate")}`}
-        </span>
-      </span>
-    );
-  const gainCell = (row: HoldingRow) => (
-    <span className="inline-flex flex-col items-end">
-      <span className={TONE_TEXT[toneOfSign(row.gainCents)]}>{signed(row.gainCents)}</span>
-      {row.state.fxEffectCents !== 0n && (
-        <span className="text-xs text-muted">
-          {t("assets.fx", { amount: signed(row.state.fxEffectCents) })}
-        </span>
-      )}
-    </span>
-  );
-  const holdingActions = (row: HoldingRow) =>
-    row.origin === "provider" ? null : (
-      <span className="flex items-center justify-end gap-1">
-        {row.conflict && <ReconcileButton holding={holdingOf(row)} context={context} />}
-        <HoldingMenu holding={holdingOf(row)} context={context} />
-      </span>
-    );
-  const legText = (row: OperationRow) =>
-    row.legs
-      .map((leg) =>
-        [
-          leg.leg !== "main" ? t(`operations.legs.${leg.leg}` as "operations.legs.fee") : null,
-          leg.holdingName,
-          leg.quantityText,
-          leg.priceText ? `@ ${leg.priceText} ${leg.priceCurrency ?? ""}`.trim() : null,
-          leg.validUntil
-            ? t("operations.until", { date: formatDate(leg.validUntil, "dayMonth", ctx.locale) })
-            : null,
-          leg.leg !== "main" ? own(leg.amountCents) : null,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      )
-      .filter((text) => text !== "")
-      .join(" · ");
-  const linkedText = (row: OperationRow) =>
-    row.linked
-      ? [row.linked.payee, formatMoney(row.linked.cents, ctx.numberFormat)].filter(Boolean).join(" · ")
+  // ——— Hero: the home's number, its state, and the bridge from the account's currency (§3.3, §4.5) ——
+  const heroCents = service.display?.pnlCents ?? null;
+  const local = service.local;
+  const rate = service.displayReturn?.dietz ?? null;
+  const bridge =
+    own !== display && local && service.display && service.status !== "undetermined"
+      ? t("service.bridge", {
+          local: money(local.pnlCents, true),
+          date: formatDate(service.to, "long", ctx.locale),
+          converted: money(service.display.pnlCents - service.display.fxCents, true, display),
+          fx: money(service.display.fxCents, true, display),
+        })
       : null;
-  const kindCell = (row: OperationRow) => (
-    <span className="flex flex-wrap items-center gap-1">
-      <Badge tone={row.origin === "conversion" ? "neutral" : "accent"}>
-        {t(`kinds.${row.kind}` as "kinds.deposit")}
+  const statusBadge =
+    service.status === "undetermined" ? (
+      <Badge tone="warn">{t("home.status.undetermined")}</Badge>
+    ) : service.partial && service.from ? (
+      <Badge tone="accent">
+        {t("home.status.from", { date: formatDate(service.from, "dayMonth", ctx.locale) })}
       </Badge>
-      {row.origin === "conversion" && (
-        <span className="text-xs text-muted">{t("operations.conversion")}</span>
-      )}
-      {row.revisions > 0 && (
-        <span className="text-xs text-muted">{t("operations.revisions", { count: row.revisions })}</span>
-      )}
-      {row.transfer && <span className="text-xs text-muted">{transferText(row)}</span>}
-    </span>
+    ) : service.status === "estimated" ? (
+      <Badge tone="neutral">{t("home.status.estimated")}</Badge>
+    ) : null;
+  const valueLine =
+    summary.valueCents !== null &&
+    own !== display &&
+    summary.displayCents !== null &&
+    summary.valueCents !== 0n
+      ? t.rich("service.valueOther", {
+          value: money(summary.valueCents),
+          display: money(summary.displayCents, false, display),
+          strong: (chunks) => (
+            <strong data-testid="service-value" className="font-semibold text-fg tabular-nums">
+              {chunks}
+            </strong>
+          ),
+        })
+      : t.rich("service.value", {
+          value: summary.valueCents === null ? t("services.noValue") : money(summary.valueCents),
+          strong: (chunks) => (
+            <strong data-testid="service-value" className="font-semibold text-fg tabular-nums">
+              {chunks}
+            </strong>
+          ),
+        });
+
+  // ——— The chart, one service (§3.3): bars, the running total, the band before the data, markers ———
+  const series = pnl.chart[0];
+  const color = colorFor(summary.account, pnl.colorIndex.get(accountId) ?? 0);
+  const bars = series?.bars ?? [];
+  const cumulative = runningTotal(bars);
+  const missingSlots =
+    service.from === null ? bars.length : pnl.intervals.filter((one) => one.to < service.from!).length;
+  const markers = pnl.intervals.map((interval) => {
+    const flows = service.flows.filter((flow) => flow.on >= interval.from && flow.on <= interval.to);
+    const into = flows.some((flow) => flow.cents > 0n);
+    const out = flows.some((flow) => flow.cents < 0n);
+    return into && out ? "both" : into ? "in" : out ? "out" : null;
+  });
+  const deposits = pnl.intervals.filter((_, index) => markers[index] === "in" || markers[index] === "both");
+  const withdrawals = pnl.intervals.filter(
+    (_, index) => markers[index] === "out" || markers[index] === "both",
   );
+  const intervalName = (index: number) => {
+    const interval = pnl.intervals[index];
+    if (pnl.barGrain === "year") return interval.from.slice(0, 4);
+    if (pnl.barGrain === "month") return formatDate(interval.from, "monthYear", ctx.locale);
+    return `${formatDate(interval.from, "dayMonth", ctx.locale)} – ${formatDate(interval.to, "dayMonth", ctx.locale)}`;
+  };
+  const best = bestAndWorst(bars);
+  const summaryText = [
+    t("home.chart.summary", {
+      period: name,
+      total: heroCents === null ? NULL_DISPLAY : money(heroCents, true, display),
+      best: best ? `${intervalName(best.best)} (${money(bars[best.best], true, display)})` : NULL_DISPLAY,
+      worst: best ? `${intervalName(best.worst)} (${money(bars[best.worst], true, display)})` : NULL_DISPLAY,
+      services: summary.account.name,
+    }),
+    deposits.length + withdrawals.length > 0
+      ? t("service.chart.summaryFlows", {
+          deposits:
+            deposits.map((interval) => intervalName(pnl.intervals.indexOf(interval))).join(", ") ||
+            NULL_DISPLAY,
+          withdrawals:
+            withdrawals.map((interval) => intervalName(pnl.intervals.indexOf(interval))).join(", ") ||
+            NULL_DISPLAY,
+        })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const stack = stackLayers([asNumbers(bars)], pnl.intervals.length);
+
+  // ——— The main contributions to the period, open or sold (§3.3, PERS-113 · 9): the position that
+  // explains the P&L is here even when it was sold or is small today ——————————————————————————————
+  const assetOf = new Map(detail.assets.map((asset) => [asset.id, asset]));
+  const top = (contributionsOf(service)?.rows ?? []).slice(0, 5);
+
+  // ——— The latest activity of the period, in words, with what a sale realized (§3.3, §3.5) ————————
+  const realizedOf = new Map<string, Cents>();
+  for (const exit of service.exits) {
+    if (exit.realizedCents === null) continue;
+    realizedOf.set(exit.eventId, (realizedOf.get(exit.eventId) ?? 0n) + exit.realizedCents);
+  }
+  const latest = (activity?.rows ?? []).slice(0, 5).map((row) => ({
+    row,
+    text: describeEvent(
+      { leg: row.leg, note: row.note, counterpart: row.transfer?.accountName ?? row.linked?.payee ?? null },
+      (key, values) => ta(key as "sentence", values as { label: string; detail: string }),
+      ctx.numberFormat,
+    ).sentence,
+    realized: realizedOf.get(row.id) ?? null,
+  }));
+
+  const parts = local;
+  const etoro = summary.investment.provider === "etoro";
+  const closing = parts
+    ? [
+        { key: "corrections", cents: parts.correctionsCents },
+        { key: "unattributed", cents: parts.unattributedCents },
+      ].filter((row) => row.cents !== 0n)
+    : [];
 
   return (
-    <Page title={account.name} parent={{ href: "/investments" as Route, label: t("title") }}>
-      <header className="flex flex-col gap-1">
-        <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-          <span>{t(`categories.${summary.investment.category}`)}</span>
-          <span aria-hidden>·</span>
-          <span>{summary.origin ? t(`origins.${summary.origin}`) : NULL_DISPLAY}</span>
-          {mode && (
-            <>
-              <span aria-hidden>·</span>
-              <span>{t(`modes.${mode}`)}</span>
-            </>
-          )}
-          <span aria-hidden>·</span>
-          <span>{t("detail.since", { date: long(summary.investment.managedSince) })}</span>
-          {url ? (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("actions.openSite", { name: account.name })}
-              className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px] text-accent hover:underline"
-            >
-              {t("actions.openSiteShort")}
-              <ExternalLink aria-hidden className="size-3.5" />
-            </a>
-          ) : (
-            <span>{t("detail.noUrl")}</span>
-          )}
-        </p>
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{account.name}</h1>
-        <p className="flex flex-wrap items-baseline gap-3">
-          <span className="text-hero-sm font-semibold tracking-[-0.02em]" data-testid="service-value">
-            {own(summary.valueCents)}
+    <>
+      <section aria-labelledby="pnl-title" className="flex flex-col gap-1">
+        <h2 id="pnl-title" className="flex flex-wrap items-center gap-2 text-sm font-medium text-muted">
+          {t("home.hero.title", { period: name })}
+          {statusBadge}
+        </h2>
+        <p
+          data-testid="pnl-hero"
+          data-cents={heroCents === null ? "" : String(heroCents)}
+          data-local-cents={local === null ? "" : String(local.pnlCents)}
+          className="flex flex-wrap items-baseline gap-x-3"
+        >
+          <span
+            className={cn(
+              "text-[2rem] leading-tight font-semibold tracking-[-0.02em] tabular-nums",
+              TONE_TEXT[toneOfSign(heroCents)],
+            )}
+          >
+            {heroCents === null ? t("home.hero.undetermined") : money(heroCents, true, display)}
           </span>
-          {currency !== ctx.displayCurrency && summary.valueCents !== null && (
-            <span className="text-sm text-muted">
-              ≈ {formatMoney(summary.displayCents, ctx.numberFormat, { currency: ctx.displayCurrency })}
+          {rate !== null && (
+            <span className={cn("text-lg font-semibold tabular-nums", TONE_TEXT[toneOfSign(rate)])}>
+              {percent(rate)}
             </span>
           )}
         </p>
-        {summary.valueCents === null && <p className="text-sm text-warn">{t("detail.noValue")}</p>}
-        {mode === "assets" && !synced && day.cashCents < 0n && (
-          <p className="text-sm text-warn">{t("detail.negativeCash")}</p>
+        {bridge && (
+          <p data-testid="pnl-bridge" className="text-sm text-muted tabular-nums">
+            {bridge}
+          </p>
         )}
-        {day.conflicts.length > 0 && <p className="text-sm text-warn">{t("detail.conflictNote")}</p>}
-      </header>
-
-      {toolbar}
-
-      <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-5">
-        <KpiTile label={t("detail.kpis.value")} value={own(summary.valueCents)} />
-        <KpiTile
-          label={t("detail.kpis.invested")}
-          value={own(flows.investedCents)}
-          note={t("kpis.investedNote")}
-        />
-        <KpiTile
-          label={t("detail.kpis.gain")}
-          value={signed(flows.gainCents)}
-          valueTone={toneOfSign(flows.gainCents)}
-          delta={
-            flows.simpleReturn === null
-              ? undefined
-              : formatPercent(flows.simpleReturn, ctx.numberFormat, { signed: true })
-          }
-          deltaTone={toneOfSign(flows.simpleReturn)}
-          note={reliabilityNote ?? t("kpis.gainNote")}
-        />
-        <KpiTile
-          label={t("kpis.xirr")}
-          value={xirrText(summary.xirr)}
-          valueTone={summary.xirr?.status === "ok" ? toneOfSign(summary.xirr.rate) : "fg"}
-          note={reliabilityNote ?? t("kpis.xirrNote")}
-        />
-        {mode === "assets" && !synced ? (
-          <KpiTile
-            className="col-span-2 @4xl:col-span-1"
-            label={t("detail.kpis.cash")}
-            value={own(day.cashCents)}
-            valueTone={day.cashCents < 0n ? "warn" : "fg"}
-            note={t("detail.kpis.cashNote", { amount: own(day.assetsCents) })}
-          />
-        ) : (
-          <KpiTile
-            className="col-span-2 @4xl:col-span-1"
-            label={t("services.change30")}
-            value={signed(summary.change30Cents)}
-            valueTone={toneOfSign(summary.change30Cents)}
-          />
-        )}
-      </div>
-
-      <InvestmentHistoryCard
-        ctx={ctx}
-        query={await searchParams}
-        path={`/investments/${accountId}`}
-        accountId={accountId}
-        summaryValue={{ value: summary.valueCents, invested: flows.investedCents }}
-      />
-
-      {(mode === "assets" || detail.holdings.length > 0) && (
-        <Card padded={false} className="min-w-0">
-          <CardHeader
-            title={t("assets.title")}
-            actions={mode === "assets" ? <AddAssetButton context={context} variant="secondary" /> : undefined}
-          />
-          {detail.holdings.length === 0 ? (
-            <p className="px-4 pb-4 text-sm text-muted">{t("assets.empty")}</p>
-          ) : (
+        <p className="text-sm text-muted">
+          {valueLine}
+          {period.to < todayOn && service.endCents !== null && (
             <>
-              <div className="overflow-x-auto max-md:hidden">
-                <Table>
-                  <THead>
-                    <Th>{t("assets.asset")}</Th>
-                    <Th>{t("assets.class")}</Th>
-                    <Th>{t("assets.product")}</Th>
-                    <Th align="right">{t("assets.quantity")}</Th>
-                    <Th align="right">{t("assets.price")}</Th>
-                    <Th align="right">{t("assets.value")}</Th>
-                    <Th align="right">{t("assets.weight")}</Th>
-                    <Th align="right">{t("assets.gain")}</Th>
-                    <Th>{t("assets.origin")}</Th>
-                    <Th align="right">
-                      <span className="sr-only">{t("assets.actions")}</span>
-                    </Th>
-                  </THead>
-                  <TBody>
-                    {detail.holdings.map((row) => (
-                      <Tr key={row.id} data-testid="holding-row">
-                        <Td className="max-w-64">
-                          <span className="flex flex-col items-start gap-0.5">
-                            <span className="max-w-full truncate font-medium">{row.asset.name}</span>
-                            {row.conflict && <Badge tone="warn">{t("assets.conflict")}</Badge>}
-                          </span>
-                        </Td>
-                        <Td muted>{t(`classes.${row.asset.class}`)}</Td>
-                        <Td muted>{productLabel(row.product, tp)}</Td>
-                        <Td align="right">{row.quantityText ?? NULL_DISPLAY}</Td>
-                        <Td align="right" className="py-1">
-                          {priceCell(row)}
-                        </Td>
-                        <Td align="right">{own(row.state.valueCents)}</Td>
-                        <Td align="right">{formatPercent(row.weight, ctx.numberFormat)}</Td>
-                        <Td align="right" className="py-1">
-                          {gainCell(row)}
-                        </Td>
-                        <Td muted>{t(`assets.origins.${row.origin}`)}</Td>
-                        <Td align="right">{holdingActions(row)}</Td>
-                      </Tr>
-                    ))}
-                  </TBody>
-                </Table>
-              </div>
-              <ul className="flex flex-col md:hidden">
-                {detail.holdings.map((row) => (
-                  <li
-                    key={row.id}
-                    data-testid="holding-item"
-                    className="flex flex-col gap-1.5 border-t border-border px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate font-medium">{row.asset.name}</span>
-                      {holdingActions(row)}
-                    </div>
-                    {row.conflict && <Badge tone="warn">{t("assets.conflict")}</Badge>}
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm tabular-nums">
-                      <dt className="text-muted">{t("assets.class")}</dt>
-                      <dd className="text-right">{t(`classes.${row.asset.class}`)}</dd>
-                      <dt className="text-muted">{t("assets.product")}</dt>
-                      <dd className="text-right">{productLabel(row.product, tp)}</dd>
-                      <dt className="text-muted">{t("assets.quantity")}</dt>
-                      <dd className="text-right">{row.quantityText ?? NULL_DISPLAY}</dd>
-                      <dt className="text-muted">{t("assets.price")}</dt>
-                      <dd className="text-right">{priceCell(row)}</dd>
-                      <dt className="text-muted">{t("assets.value")}</dt>
-                      <dd className="text-right">{own(row.state.valueCents)}</dd>
-                      <dt className="text-muted">{t("assets.weight")}</dt>
-                      <dd className="text-right">{formatPercent(row.weight, ctx.numberFormat)}</dd>
-                      <dt className="text-muted">{t("assets.gain")}</dt>
-                      <dd className="text-right">{gainCell(row)}</dd>
-                      <dt className="text-muted">{t("assets.origin")}</dt>
-                      <dd className="text-right">{t(`assets.origins.${row.origin}`)}</dd>
-                    </dl>
-                  </li>
-                ))}
-              </ul>
+              {" · "}
+              {t("service.valueAt", {
+                date: formatDate(period.to, "long", ctx.locale),
+                value: money(service.endCents),
+              })}
             </>
           )}
-        </Card>
-      )}
+        </p>
+        {service.status === "undetermined" && (
+          <p className="text-sm text-warn">{t("service.undetermined")}</p>
+        )}
+        {service.status !== "undetermined" && service.display === null && (
+          <p className="text-sm text-warn">{t("service.noRate", { currency: display })}</p>
+        )}
+        {pnl.firstOn !== null && period.to < pnl.firstOn && (
+          <p className="text-sm text-muted">
+            {t("home.hero.noData", { date: formatDate(pnl.firstOn, "long", ctx.locale) })}
+          </p>
+        )}
+      </section>
 
-      {mode === "total" && !synced && <p className="text-sm text-muted">{t("detail.totalModeNote")}</p>}
-
-      {detail.transferProposals.length > 0 && (
-        <Card padded={false} className="min-w-0" data-testid="transfer-proposals">
-          <CardHeader title={t("transfers.title")} />
-          <p className="px-4 text-sm text-muted">{t("transfers.description")}</p>
-          <ul className="flex flex-col pt-2">
-            {detail.transferProposals.map((proposal) => {
-              const text = t(`transfers.${proposal.direction}`, {
-                date: long(proposal.on),
-                name: proposal.other.accountName,
-                other: long(proposal.other.on),
-              });
-              return (
-                <li
-                  key={`${proposal.withdrawalId}:${proposal.depositId}`}
-                  data-testid="transfer-proposal"
-                  className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm"
-                >
-                  <span className="min-w-0 truncate">{text}</span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="font-medium tabular-nums">{own(proposal.amountCents)}</span>
-                    <LinkTransferButton
-                      accountId={accountId}
-                      withdrawalId={proposal.withdrawalId}
-                      depositId={proposal.depositId}
-                      label={text}
-                    />
-                  </span>
-                </li>
-              );
+      {service.partial && service.from && (
+        <p
+          data-testid="partial-strip"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[6px] border border-border bg-soft px-3 py-2 text-sm"
+        >
+          <Badge tone="accent">
+            {t("home.status.from", { date: formatDate(service.from, "dayMonth", ctx.locale) })}
+          </Badge>
+          <span>
+            {t("service.partial", {
+              date: formatDate(service.from, "long", ctx.locale),
+              name: summary.account.name,
             })}
-          </ul>
-        </Card>
+          </span>
+          <Link
+            href={tab("/connection")}
+            className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+          >
+            {t("service.partialLink")} →
+          </Link>
+        </p>
+      )}
+      {service.status === "estimated" && service.reasons.includes("estimated_history") && (
+        <p className="text-sm text-muted">{t("service.estimated")}</p>
       )}
 
-      <Card padded={false} className="min-w-0">
-        <CardHeader
-          title={t("operations.title")}
-          actions={
-            <span className="text-muted">{t("operations.count", { count: detail.operations.length })}</span>
-          }
-        />
-        {detail.operations.length === 0 ? (
-          <p className="px-4 pb-4 text-sm text-muted">{t("operations.empty")}</p>
-        ) : (
-          <>
-            <div className="overflow-x-auto max-md:hidden">
-              <Table>
-                <THead>
-                  <Th>{t("operations.date")}</Th>
-                  <Th>{t("operations.kind")}</Th>
-                  <Th>{t("operations.detail")}</Th>
-                  <Th align="right">{t("operations.amount")}</Th>
-                  <Th>{t("operations.linked")}</Th>
-                  <Th align="right">
-                    <span className="sr-only">{t("assets.actions")}</span>
-                  </Th>
-                </THead>
-                <TBody>
-                  {detail.operations.map((row) => (
-                    <Tr key={row.id} data-testid="operation-row">
-                      <Td muted>{long(row.on)}</Td>
-                      <Td>{kindCell(row)}</Td>
-                      <Td className="max-w-80 truncate text-muted">
-                        {[legText(row), row.note].filter(Boolean).join(" · ") || NULL_DISPLAY}
-                      </Td>
-                      <Td align="right" className="font-medium">
-                        {own(row.legs[0]?.amountCents ?? null)}
-                      </Td>
-                      <Td className="max-w-56 truncate text-muted">
-                        {row.kind === "deposit" || row.kind === "withdrawal"
-                          ? (linkedText(row) ?? t("operations.notLinked"))
-                          : NULL_DISPLAY}
-                      </Td>
-                      <Td align="right">{operationActions(row)}</Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </Table>
-            </div>
-            <ul className="flex flex-col md:hidden">
-              {detail.operations.map((row) => (
-                <li
-                  key={row.id}
-                  data-testid="operation-item"
-                  className="flex flex-col gap-1 border-t border-border px-4 py-3 text-sm"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    {kindCell(row)}
-                    <span className="flex shrink-0 items-center gap-1">
-                      <span className="font-medium tabular-nums">
-                        {own(row.legs[0]?.amountCents ?? null)}
-                      </span>
-                      {operationActions(row)}
-                    </span>
-                  </div>
-                  <span className="text-muted">{long(row.on)}</span>
-                  {(legText(row) || row.note) && (
-                    <span className="truncate text-muted">
-                      {[legText(row), row.note].filter(Boolean).join(" · ")}
-                    </span>
-                  )}
-                  {(row.kind === "deposit" || row.kind === "withdrawal") && (
-                    <span className="truncate text-muted">
-                      {linkedText(row) ?? t("operations.notLinked")}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Card>
-
-      {synced && (
-        <div className="grid items-start gap-4 @4xl:grid-cols-2">
-          <Card padded={false} className="min-w-0">
-            <CardHeader title={t("readings.title")} />
-            {latestReading?.status === "pending_zero" && (
-              <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
-                <p className="text-sm text-warn">{t("readings.pendingZero")}</p>
-                <ConfirmZeroButton
-                  accountId={accountId}
-                  readingId={latestReading.id}
-                  dateLabel={long(latestReading.on)}
-                />
-              </div>
-            )}
-            {detail.readings.length === 0 ? (
-              <p className="px-4 pb-4 text-sm text-muted">{t("readings.empty")}</p>
-            ) : (
-              <ul className="flex flex-col">
-                {detail.readings.map((reading) => (
-                  <li
-                    key={reading.id}
-                    className="flex flex-col gap-0.5 border-t border-border px-4 py-2 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted">{long(reading.on)}</span>
-                      <span className="font-medium tabular-nums">{own(reading.totalCents)}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        tone={
-                          reading.status === "complete" || reading.status === "confirmed_zero"
-                            ? "neutral"
-                            : "warn"
-                        }
-                      >
-                        {t(`readings.statuses.${reading.status}` as "readings.statuses.complete")}
-                      </Badge>
-                      <span className="truncate text-muted">
-                        {t("readings.products")}:{" "}
-                        {reading.products.map((one) => productLabel(one, tp)).join(", ") || NULL_DISPLAY}
-                      </span>
-                      {reading.unread.length > 0 && (
-                        <span className="truncate text-warn">
-                          {t("readings.unread", {
-                            products: reading.unread.map((one) => productLabel(one, tp)).join(", "),
-                          })}
-                        </span>
-                      )}
-                      {reading.missingPrices > 0 && (
-                        <span className="text-warn">
-                          {t("readings.missing", { count: reading.missingPrices })}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-          <Card padded={false} className="min-w-0">
-            <CardHeader
-              title={t("adjustments.title")}
-              actions={<OperationButton kind="adjustment" context={context} />}
+      {parts && (
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @4xl:grid-cols-4">
+            <KpiTile
+              label={t("service.kpis.realized")}
+              value={money(parts.realizedCents, true)}
+              valueTone={toneOfSign(parts.realizedCents)}
+              note={t("service.kpis.realizedNote")}
             />
-            {detail.adjustments.length === 0 ? (
-              <p className="px-4 pb-4 text-sm text-muted">{t("adjustments.empty")}</p>
+            <KpiTile
+              label={t("service.kpis.unrealized")}
+              value={money(parts.unrealizedChangeCents, true)}
+              valueTone={toneOfSign(parts.unrealizedChangeCents)}
+              note={
+                parts.unrealizedChangeCents === null
+                  ? t("service.kpis.unrealizedUnknown")
+                  : t("service.kpis.unrealizedNote")
+              }
+            />
+            {etoro && parts.incomeCents === 0n ? (
+              // eToro sums dividends into the value: a KPI it cannot give says why (S2).
+              <KpiTile
+                label={t("service.kpis.income")}
+                value={t("service.kpis.incomeIncluded")}
+                note={t("service.kpis.incomeIncludedNote", { name: summary.account.name })}
+              />
             ) : (
-              <ul className="flex flex-col">
-                {detail.adjustments.map((adjustment) => (
-                  <li
-                    key={adjustment.eventId}
-                    className="flex flex-col gap-0.5 border-t border-border px-4 py-2 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate">{adjustment.note ?? NULL_DISPLAY}</span>
-                      <span
-                        className={cn(
-                          "shrink-0 font-medium tabular-nums",
-                          TONE_TEXT[toneOfSign(adjustment.amountCents)],
-                        )}
-                      >
-                        {signed(adjustment.amountCents)}
-                      </span>
-                    </div>
-                    <span className="text-muted">
-                      {long(adjustment.on)} →{" "}
-                      {adjustment.validUntil ? long(adjustment.validUntil) : t("adjustments.openEnded")}
-                    </span>
-                    {adjustment.stale && <span className="text-warn">{t("adjustments.stale")}</span>}
-                  </li>
-                ))}
-              </ul>
+              <KpiTile
+                label={t("service.kpis.income")}
+                value={money(parts.incomeCents, true)}
+                valueTone={toneOfSign(parts.incomeCents)}
+                note={t("service.kpis.incomeNote")}
+              />
             )}
-          </Card>
-        </div>
-      )}
-
-      {sync && (
-        <Card className="flex min-w-0 flex-col gap-3" data-testid="service-connection">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">{t("sync.title")}</h2>
-            {sync.connected && (
-              <Badge tone={sync.state === "active" ? "pos" : sync.state === "revoked" ? "neg" : "warn"}>
-                {t(`sync.states.${sync.state ?? "error"}` as "sync.states.active")}
-              </Badge>
-            )}
+            <KpiTile
+              label={t("service.kpis.fees")}
+              value={money(parts.feesCents, true)}
+              valueTone={toneOfSign(parts.feesCents)}
+              note={t("service.kpis.feesNote")}
+            />
           </div>
-          {sync.connected ? (
-            <>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <dt className="text-muted">{t("sync.lastOk")}</dt>
-                <dd>{sync.lastOkAt ? instant(sync.lastOkAt) : NULL_DISPLAY}</dd>
-                <dt className="text-muted">{t("sync.next")}</dt>
-                <dd>{sync.nextSyncAt ? instant(sync.nextSyncAt) : t("sync.manual")}</dd>
-                <dt className="text-muted">{t("sync.key")}</dt>
-                <dd>
-                  {sync.lastCheck ? (
-                    <KeyCheckLine
-                      text={t("sync.keyCheck", {
-                        result: t(`sync.results.${sync.lastCheck.result}` as "sync.results.read-only"),
-                        date: instant(sync.lastCheck.checkedAt),
-                      })}
-                      ipRestricted={sync.lastCheck.ipRestricted}
-                    />
-                  ) : (
-                    NULL_DISPLAY
+          {closing.length > 0 && (
+            <p data-testid="pnl-closing" className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+              {closing.map((row) => (
+                <span key={row.key} data-cents={String(row.cents)}>
+                  {t(`home.kpis.${row.key}` as "home.kpis.corrections")}{" "}
+                  <strong className={cn("font-semibold tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
+                    {money(row.cents, true)}
+                  </strong>
+                  {row.key === "unattributed" && (
+                    <>
+                      {" "}
+                      <Link
+                        href={tab("/connection")}
+                        className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+                      >
+                        {t("service.partialLink")}
+                      </Link>
+                    </>
                   )}
-                </dd>
-                <dt className="text-muted">{t("sync.keySet")}</dt>
-                <dd>{sync.keySetAt ? long(sync.keySetAt.toISOString().slice(0, 10)) : NULL_DISPLAY}</dd>
-              </dl>
-              {sync.lastError && (
-                <p className="text-sm text-warn">{t("sync.lastError", { error: sync.lastError })}</p>
-              )}
-              {sync.rotateDue && <p className="text-sm text-warn">{t("sync.rotate")}</p>}
-              <p className="text-sm text-muted">{t("sync.scheduleNote")}</p>
-              <div className="flex flex-wrap gap-2">
-                <SyncButtons accountId={accountId} />
-                {provider && <ReplaceKeyButton accountId={accountId} provider={providerProps(provider)} />}
-                <DisconnectButton accountId={accountId} name={account.name} />
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted">{t("sync.disconnected")}</p>
+                </span>
+              ))}
+            </p>
           )}
-          {sync.revokePending && (
-            <div className="flex flex-col gap-2 rounded-[6px] border border-border p-3 text-sm">
-              <p className="font-medium">{t("sync.revokeTitle")}</p>
-              <p className="text-muted">{t("sync.revokeSteps")}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                {revokeUrl && (
-                  <a
-                    href={revokeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px] text-accent hover:underline"
-                  >
-                    {t("sync.revokeOpen")}
-                    <ExternalLink aria-hidden className="size-3.5" />
-                  </a>
-                )}
-                <ConfirmRevokedButton accountId={accountId} />
-              </div>
-            </div>
-          )}
-          {sync.coverage.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-semibold">{t("sync.coverage")}</h3>
-              <ul className="flex flex-col text-sm">
-                {sync.coverage.map((row) => (
-                  <li key={`${row.stream}-${row.fromAt.toISOString()}`} className="flex flex-wrap gap-x-2">
-                    <span>{t(`sync.streams.${row.stream}` as "sync.streams.trades")}</span>
-                    <span className="text-muted">
-                      {long(row.fromAt.toISOString().slice(0, 10))} →{" "}
-                      {long(row.toAt.toISOString().slice(0, 10))}
-                    </span>
-                    <span className={row.status === "complete" ? "text-muted" : "text-warn"}>
-                      {t(`sync.coverageStatus.${row.status}` as "sync.coverageStatus.complete")}
-                      {row.reason
-                        ? ` · ${t(`sync.reasons.${row.reason}` as "sync.reasons.api_limit_12m")}`
-                        : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {summary.investment.provider === "ccxt:binance" && (
-            <p className="text-xs text-muted">{t("sync.binanceBrand")}</p>
-          )}
-          {summary.investment.provider === "etoro" && (
-            <p className="text-xs text-muted">{t("sync.etoroBrand")}</p>
-          )}
-        </Card>
+        </div>
       )}
 
       <Card className="flex min-w-0 flex-col gap-3">
-        <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
-        <div className="flex flex-col gap-1.5">
-          <p className="font-medium">
-            {t("settings.mode", { mode: mode ? t(`modes.${mode}`) : NULL_DISPLAY })}
-          </p>
-          {!synced && <p className="text-sm text-muted">{t("settings.convertNote")}</p>}
-          {mode === "assets" && !synced && <ConversionButton context={context} />}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <h2 className="text-lg font-semibold">{t("home.chart.title")}</h2>
+            <p className="text-sm text-muted">
+              {view === "pnl"
+                ? t(`home.chart.pnlNote.${pnl.barGrain}`, { period: name })
+                : t(`home.chart.valueNote.${pnl.valueGrain}`)}
+            </p>
+          </div>
+          <LinkTabs
+            label={t("home.chart.view")}
+            path={base}
+            params={{ ...periodParams }}
+            name="view"
+            current={view}
+            options={[
+              { value: "pnl", label: t("home.chart.pnl") },
+              { value: "value", label: t("home.chart.value") },
+            ]}
+          />
         </div>
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold">{t("settings.periods")}</h3>
-          <ul className="flex flex-col text-sm text-muted">
-            {detail.periods.map((period) => (
-              <li key={`${period.fromOn}-${period.reason}-${period.mode}`}>
-                {t("settings.period", {
-                  mode: t(`modes.${period.mode}`),
-                  origin: t(`origins.${period.origin}`),
-                  date: long(period.fromOn),
-                })}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <ServiceUrlForm accountId={accountId} url={summary.investment.url} />
-        <p className="text-sm text-muted">
-          {t("settings.flags")}{" "}
-          <Link
-            href={`/accounts/${accountId}?tab=settings` as Route}
-            className="focus-ring inline rounded-[4px] text-accent hover:underline"
-          >
-            {t("actions.accountSettings")}
-          </Link>
+        {view === "pnl" ? (
+          bars.every((cents) => cents === null) ? (
+            <p className="text-sm text-muted">{t("chart.empty")}</p>
+          ) : (
+            <StackedBars
+              layers={[
+                {
+                  key: accountId,
+                  label: summary.account.name,
+                  color,
+                  values: asNumbers(bars),
+                  estimated: series?.barsEstimated,
+                },
+              ]}
+              line={asNumbers(cumulative)}
+              yLabels={axisLabels(
+                [...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)],
+                ctx.numberFormat,
+                4,
+                display,
+              )}
+              xLabels={sampled(pnl.intervals.length).map((index) =>
+                pnl.barGrain === "year"
+                  ? pnl.intervals[index].from.slice(0, 4)
+                  : pnl.barGrain === "month"
+                    ? formatDate(pnl.intervals[index].from, "monthShort", ctx.locale)
+                    : formatDate(pnl.intervals[index].from, "dayMonth", ctx.locale),
+              )}
+              hover={pnl.intervals.map((_, index) => ({
+                label: intervalName(index),
+                value: money(bars[index], true, display),
+                note: t("home.chart.cumulative", { amount: money(cumulative[index], true, display) }),
+              }))}
+              unavailable={
+                service.from !== null && missingSlots > 0
+                  ? {
+                      slots: missingSlots,
+                      label: t("service.chart.unavailable", {
+                        date: formatDate(service.from, "dayMonth", ctx.locale),
+                      }),
+                    }
+                  : undefined
+              }
+              markers={markers}
+              summary={summaryText}
+            />
+          )
+        ) : (series?.values ?? []).every((cents) => cents === null) ? (
+          <p className="text-sm text-muted">{t("chart.empty")}</p>
+        ) : (
+          <StackedArea
+            layers={[
+              { key: accountId, label: summary.account.name, color, values: asNumbers(series?.values ?? []) },
+            ]}
+            total={asNumbers(series?.values ?? [])}
+            estimated={series?.valuesEstimated ?? []}
+            yLabels={axisLabels(series?.values ?? [], ctx.numberFormat, 4, display)}
+            xLabels={
+              pnl.valueGrain === "day"
+                ? dayLabels(pnl.valueDays, ctx.locale)
+                : sampled(pnl.valueDays.length).map((index) =>
+                    formatDate(pnl.valueDays[index], "monthShort", ctx.locale),
+                  )
+            }
+            hover={pnl.valueDays.map((day, index) => ({
+              label: formatDate(day, "long", ctx.locale),
+              value: money(series?.values[index] ?? null, false, display),
+            }))}
+            summary={t("home.chart.valueSummary", {
+              value: money(series?.values.at(-1) ?? null, false, display),
+            })}
+            height={200}
+          />
+        )}
+        <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+          {view === "pnl" && (
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden className="h-0.5 w-4 bg-fg" /> {t("home.chart.line")}
+            </span>
+          )}
+          {view === "pnl" && markers.some(Boolean) && <span>{t("service.chart.markers")}</span>}
+          {(view === "pnl" ? series?.barsEstimated.some(Boolean) : series?.valuesEstimated.some(Boolean)) && (
+            <span>{t("home.chart.estimated")}</span>
+          )}
         </p>
       </Card>
-    </Page>
+
+      <div className="grid items-start gap-4 @4xl:grid-cols-2">
+        <Card padded={false} className="min-w-0">
+          <CardHeader
+            title={t("service.top.title")}
+            actions={
+              <Link
+                href={tab("/positions")}
+                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
+              >
+                {t("service.top.all")} →
+              </Link>
+            }
+          />
+          {top.length === 0 ? (
+            <p className="px-4 pb-4 text-sm text-muted">{t("service.top.empty")}</p>
+          ) : (
+            <ul className="flex flex-col" data-testid="top-positions">
+              {top.map((row) => {
+                const asset = row.assetId === null ? null : (assetOf.get(row.assetId) ?? null);
+                return (
+                  <li
+                    key={row.key}
+                    data-testid="top-position"
+                    className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5 text-sm"
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <Link
+                        href={tab("/activity", { asset: row.assetId ?? undefined })}
+                        className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
+                      >
+                        <span className="truncate">{asset?.name ?? t("positions.unknownAsset")}</span>
+                      </Link>
+                      <span className="text-xs text-muted">
+                        {[
+                          asset?.symbol,
+                          row.costUnknown
+                            ? t("positions.contributions.noCost")
+                            : row.open && row.sold
+                              ? t("positions.contributions.partlySold")
+                              : row.open
+                                ? t("positions.contributions.open")
+                                : t("positions.contributions.sold"),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    <span
+                      className={cn("shrink-0 font-medium tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}
+                    >
+                      {money(row.cents, true)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card padded={false} className="min-w-0">
+          <CardHeader
+            title={t("service.latest.title")}
+            actions={
+              <Link
+                href={tab("/activity")}
+                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
+              >
+                {t("service.latest.all")} →
+              </Link>
+            }
+          />
+          {latest.length === 0 ? (
+            <p className="px-4 pb-4 text-sm text-muted">{t("service.latest.empty")}</p>
+          ) : (
+            <ul className="flex flex-col" data-testid="latest-activity">
+              {latest.map(({ row, text, realized }) => (
+                <li
+                  key={row.id}
+                  className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5 text-sm"
+                >
+                  <span className="flex min-w-0 flex-col">
+                    <span>{text}</span>
+                    <span className="text-xs text-muted">
+                      {formatDate(row.on, "long", ctx.locale)}
+                      {realized !== null && (
+                        <>
+                          {" · "}
+                          <span className={TONE_TEXT[toneOfSign(realized)]}>{money(realized, true)}</span>
+                        </>
+                      )}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    {money(row.leg.amountCents, true)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+    </>
   );
 }

@@ -165,6 +165,26 @@ export function formatMoney(
     : `${sign}${body}${style.gap}${style.symbol}`;
 }
 
+/**
+ * A decimal written as text — a quantity, a unit price — with our separators and between `min` and
+ * `max` decimals, exactly (no float on the way); with `currency`, its symbol where an amount has it.
+ */
+export function formatDecimalText(
+  value: string,
+  format: NumberFormat,
+  options: { min?: number; max: number; currency?: string },
+): string {
+  const style = resolveStyle(format, options.currency);
+  const { sign, body } = digitsOf(value as `${number}`, style, {
+    minimumFractionDigits: options.min ?? 0,
+    maximumFractionDigits: options.max,
+  });
+  if (options.currency === undefined) return `${sign}${body}`;
+  return style.position === "before"
+    ? `${sign}${style.symbol}${style.gap}${body}`
+    : `${sign}${body}${style.gap}${style.symbol}`;
+}
+
 export function formatPercent(
   fraction: number | null,
   format: NumberFormat,

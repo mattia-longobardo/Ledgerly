@@ -16,6 +16,8 @@ import { ratesOn } from "@/platform/fx/service";
 import type { Cents } from "@/platform/money";
 import { accountTypeOf, ASSET_SEED, MANUAL_PROVIDER } from "./catalog";
 import {
+  ADJUSTMENT_CLASSES,
+  type AdjustmentClass,
   ASSET_CLASSES,
   atRate,
   type Book,
@@ -289,6 +291,7 @@ export async function loadBook(
       on: reading.on,
       status: reading.status,
       totalCents: reading.totalCents,
+      cashCents: reading.cashCents,
       positions: positionRows
         .filter((row) => row.position.readingId === reading.id)
         .map((row) => ({
@@ -296,6 +299,9 @@ export async function loadBook(
           product: row.position.product,
           valueCents: row.position.valueCents,
           quantity: fromNumeric(row.position.quantity, QUANTITY_SCALE),
+          costCents: row.position.costCents,
+          unitPrice: fromNumeric(row.position.price, PRICE_SCALE),
+          priceCurrency: row.position.priceCurrency,
         })),
       scopes: scopeRows
         .filter((row) => row.scope.readingId === reading.id)
@@ -682,6 +688,8 @@ export interface LegInput {
   validUntil?: CivilDate | null;
   /** `inferred` for the opening a provider's history implies (A6); `reported` otherwise. */
   quantityBasis?: "reported" | "reconstructed" | "inferred";
+  /** A correction's class (§4.9 of the UX design); only on an `adjustment`. */
+  adjustmentClass?: AdjustmentClass | null;
 }
 
 export async function insertEvent(
@@ -735,6 +743,7 @@ async function insertLegs(ctx: Pick<Ctx, "userId">, tx: Tx, eventId: string, leg
         amountCents: leg.amountCents,
         validUntil: leg.validUntil ?? null,
         quantityBasis: leg.quantityBasis ?? "reported",
+        adjustmentClass: leg.adjustmentClass ?? null,
       }),
     ),
   );
@@ -903,6 +912,7 @@ export const operationInputSchema = z.discriminatedUnion("kind", [
     on: civil,
     amountCents: z.bigint().refine((value) => value !== 0n, "An adjustment moves the value"),
     validUntil: civil.nullable().default(null),
+    adjustmentClass: z.enum(ADJUSTMENT_CLASSES).default("data"),
     note: z.string().trim().min(1).max(200),
   }),
 ]);
@@ -958,7 +968,13 @@ async function legsOf(
         throw new RangeError("Ends before it starts");
       return {
         legs: [
-          { leg: "main", kind: "adjustment", amountCents: input.amountCents, validUntil: input.validUntil },
+          {
+            leg: "main",
+            kind: "adjustment",
+            amountCents: input.amountCents,
+            validUntil: input.validUntil,
+            adjustmentClass: input.adjustmentClass,
+          },
         ],
         transactionId: null,
       };

@@ -176,6 +176,16 @@ describe("holdingsOf (R1, R5, E7)", () => {
     });
   });
 
+  it("saves what a position invested as its cost, at the same rate (U4): value − cost is eToro's P/L", () => {
+    const snapshot = holdingsOf({ balances: funded, portfolio, instruments, currency: "EUR", observedAt });
+    const apple = snapshot.positions.find((one) => one.asset.symbol === "AAPL");
+    // amount 100 USD, P/L +10 USD, at 0.9: worth 99 €, cost 90 €.
+    expect(apple).toMatchObject({ valueCents: 9900n, costCents: 9000n });
+    // A copy without its P/L has no value, and still a cost; a coin of the crypto account has none.
+    expect(snapshot.positions.find((one) => one.asset.symbol === "VOO")?.costCents).toBe(4500n);
+    expect(snapshot.positions.find((one) => one.asset.symbol === "BTC")?.costCents).toBeUndefined();
+  });
+
   it("reads a copy's positions as the copy product (E3) and a coin as the crypto product", () => {
     const snapshot = holdingsOf({ balances: funded, portfolio, instruments, currency: "EUR", observedAt });
     expect(snapshot.positions.find((one) => one.asset.symbol === "VOO")?.product).toBe("copy");

@@ -2,7 +2,7 @@
 // a connected service against a real database, with a fake source in place of eToro â€” the lock,
 // `revoked` on 401, `refused` with backoff on 429, the empty answers, holdings and flows with
 // outcomes of their own, the key's checks, and canary keys on every branch of failure.
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,12 +26,13 @@ import { tradeEventsOf } from "@/platform/integrations/etoro/mapping";
 import { withJobLock } from "@/platform/jobs/lock";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { investmentsPnl, serviceDetail } from "./queries";
+import { investmentsPnl, serviceDetail, servicePositions } from "./queries";
 import {
   investmentAccountPeriods,
   investmentAccounts,
   investmentEvents,
   investmentKeyChecks,
+  investmentReadingPositions,
   investmentReadings,
   investmentSyncCoverage,
 } from "./schema";
@@ -800,7 +801,8 @@ describe("the P&L of a period on eToro's trades (docs/design/investments-ux.md Â
       expect(exit.costCents).toBe(BigInt(Math.round(closed[index].investment * 100)));
     });
     expect(pnl.local?.realizedCents).toBe(closes.reduce((sum, exit) => sum + exit.realizedCents!, 0n));
-    // No cost of the open positions yet (U4): the rest of the P&L is in "Other", additive.
+    // The day before the period is a day of eToro's history: a total and no positions, so their
+    // unrealized is unknown there (U4) and the rest of the P&L is in "Other", additive.
     const parts = pnl.local!;
     expect(parts.unrealizedChangeCents).toBeNull();
     expect(
@@ -817,5 +819,52 @@ describe("the P&L of a period on eToro's trades (docs/design/investments-ux.md Â
     const { portfolio } = await investmentsPnl(ctx, { period: "2025" });
     expect(portfolio.excluded.map((one) => one.accountId)).toEqual([accountId]);
     expect(portfolio).toMatchObject({ status: "undetermined", parts: null });
+  });
+});
+
+describe("the cost of an eToro position (docs/design/investments-ux.md Â§4.7, U4, migration 0041)", () => {
+  it("adds a nullable cost to the reading positions, additive: what was there stays", async () => {
+    const columns = await getDb().execute<{ data_type: string; is_nullable: string }>(
+      sql`select data_type, is_nullable from information_schema.columns
+          where table_name = 'investment_reading_positions' and column_name = 'cost_cents'`,
+    );
+    expect(columns.rows).toEqual([{ data_type: "bigint", is_nullable: "YES" }]);
+  });
+
+  it("saves what each position invested on sync, and Positions measures its unrealized from it", async () => {
+    const now = new Date();
+    const read = snapshot(123_456n, now);
+    behaviour.holdings = async () => ({
+      ...read,
+      positions: read.positions.map((position) => ({ ...position, costCents: 100_000n })),
+    });
+    const { accountId } = await connectNew();
+    const saved = await getDb()
+      .select({ value: investmentReadingPositions.valueCents, cost: investmentReadingPositions.costCents })
+      .from(investmentReadingPositions);
+    expect(saved).toEqual([{ value: 123_456n, cost: 100_000n }]);
+
+    const view = await servicePositions(ctx, accountId, { period: "all" });
+    const apple = view!.service.holdings.find((one) => one.end !== null)!;
+    expect(apple.end).toMatchObject({
+      valueCents: 123_456n,
+      costCents: 100_000n,
+      costSource: "provider",
+      unrealizedCents: 23_456n,
+    });
+    expect(view!.assets.get(apple.assetId!)?.symbol).toBe("AAPL");
+    // The history before it said a total and no positions: their unrealized there is unknown, so
+    // the change is in "Other" â€” the rows still close on the Overview's number.
+    const parts = view!.service.local!;
+    expect(
+      view!.service.holdings.reduce(
+        (sum, one) => sum + one.realizedCents + (one.unrealizedChangeCents ?? 0n),
+        0n,
+      ) +
+        parts.incomeCents +
+        parts.feesCents +
+        parts.correctionsCents +
+        parts.unattributedCents,
+    ).toBe(parts.pnlCents);
   });
 });
