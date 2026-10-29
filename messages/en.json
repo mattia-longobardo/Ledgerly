@@ -3869,7 +3869,8 @@
         "all": "All activity",
         "empty": "No activity in this period."
       },
-      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available."
+      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available.",
+      "convertedNote": "includes {name}'s cost of converting {from} into {to}: it books those deposits and withdrawals in {from} and does not say how much it converted, so they are valued at the ECB rate."
     },
     "activityTab": {
       "deposits": "Deposits",

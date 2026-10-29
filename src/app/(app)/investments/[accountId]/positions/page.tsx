@@ -10,6 +10,7 @@ import {
   type ClosedGroup,
   closedGroups,
   contributionsOf,
+  convertedCurrencies,
   onCostOf,
   periodReturnOf,
 } from "@/modules/investments/positions";
@@ -690,6 +691,15 @@ export default async function InvestmentServicePositions({
               >
                 <span className="text-muted">
                   {t(`contributions.${row.key}`)}
+                  {row.key === "unattributed" && convertedCurrencies(service).length > 0 && (
+                    <span data-testid="converted-note" className="block text-xs">
+                      {ti("service.convertedNote", {
+                        from: convertedCurrencies(service).join(", "),
+                        to: currency,
+                        name: detail.summary.account.name,
+                      })}
+                    </span>
+                  )}
                   {row.key === "unattributed" && (
                     <>
                       {" "}

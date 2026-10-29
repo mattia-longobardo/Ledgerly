@@ -689,6 +689,64 @@ describe("pnlOf: cases by hand (§4.2)", () => {
     });
   });
 
+  describe("a flows gap with a flat value moved no money (PERS-119)", () => {
+    const gap = {
+      coverage: [
+        { stream: "deposits", fromOn: "2020-01-01", toOn: "2026-06-10", complete: false },
+        { stream: "deposits", fromOn: "2026-06-10", toOn: "2026-10-29", complete: true },
+      ],
+    } satisfies Partial<PnlService>;
+    /** A reading every day from `from` to `to`, worth `total`. */
+    const daily = (from: string, to: string, total: number) => {
+      const out: ReadingLike[] = [];
+      for (let day = from; day <= to; day = addDays(day, 1))
+        out.push(reading(day, total, { cashCents: eur(total) }));
+      return out;
+    };
+    const book = (events: EventLike[] = []) =>
+      syncedBook(
+        [deposit("2026-06-10", 2000, { origin: "provider" }), ...events],
+        [
+          ...daily("2025-12-31", "2026-06-09", 0.33),
+          reading("2026-06-10", 2000.33, { cashCents: eur(2000.33) }),
+          reading("2026-06-30", 2100.33, { cashCents: eur(2100.33) }),
+        ],
+      );
+
+    it("the year is measured from 1 January: the value never moved before the first covered deposit", () => {
+      const pnl = pnlOf(service(book(), gap), ...year(2026), EUR_DISPLAY);
+      expect(pnl).toMatchObject({ from: "2026-01-01", partial: false, status: "verified" });
+      expect(pnl.reasons).not.toContain("flows_gap");
+      expect(pnl.local?.pnlCents).toBe(eur(100));
+    });
+
+    it("an event inside the stretch ends it there; a day without a reading too", () => {
+      const sale = event(
+        "2026-03-02",
+        [{ leg: "base", kind: "sell", holdingId: "h1", quantity: qty("1"), amountCents: 0n }],
+        {
+          origin: "provider",
+        },
+      );
+      expect(pnlOf(service(book([sale]), gap), ...year(2026), EUR_DISPLAY)).toMatchObject({
+        from: "2026-03-03",
+        partial: true,
+      });
+      const holed = syncedBook(
+        [deposit("2026-06-10", 2000, { origin: "provider" })],
+        [
+          ...daily("2025-12-31", "2026-04-09", 0.33),
+          ...daily("2026-04-11", "2026-06-09", 0.33),
+          reading("2026-06-30", 2100.33),
+        ],
+      );
+      expect(pnlOf(service(holed, gap), ...year(2026), EUR_DISPLAY)).toMatchObject({
+        from: "2026-04-12",
+        partial: true,
+      });
+    });
+  });
+
   it("a fee paid in BNB is a sale of the BNB at its value, then the fee: never counted twice", () => {
     const book = manual([
       deposit("2026-01-02", 100),
