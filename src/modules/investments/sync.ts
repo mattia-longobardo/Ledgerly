@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, notInArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "@/modules/accounts/queries";
 import { createAccount, openedNoLaterThan, takeOverEntries } from "@/modules/accounts/service";
@@ -943,14 +943,22 @@ function isDust(quantity: bigint, valueCents: Cents | null, reported: bigint): b
 }
 
 /**
- * A rebase (PERS-141): the source reads more of the same history than when it started, so what was
- * inferred from the old reading goes — the provider's inferred openings, with their links, and the
+ * A rebase (PERS-141): the source reads a history other than the one it started, so what was
+ * inferred from the old reading goes — the provider's inferred openings and every provider event
+ * before the history's new start (older is the opening, never rebuilt), with their links, and the
  * estimated readings, with the opening period back on the first real reading. `checkQuantities`
  * infers the openings again and `estimateHistoryOf` estimates the history again, on this pass.
+ * Returns the first day it removed, for the points to be written again from there.
  */
-async function undoInferred(ctx: WriteCtx, tx: Tx, investment: InvestmentAccount, provider: string) {
+async function undoInferred(
+  ctx: WriteCtx,
+  tx: Tx,
+  investment: InvestmentAccount,
+  provider: string,
+  historyFrom: Date,
+): Promise<CivilDate | null> {
   const openings = await tx
-    .selectDistinct({ eventId: investmentOperations.eventId })
+    .selectDistinct({ eventId: investmentOperations.eventId, on: investmentEvents.on })
     .from(investmentOperations)
     .innerJoin(investmentEvents, eq(investmentEvents.id, investmentOperations.eventId))
     .where(
@@ -958,12 +966,18 @@ async function undoInferred(ctx: WriteCtx, tx: Tx, investment: InvestmentAccount
         userScoped(ctx).owns(investmentOperations),
         eq(investmentEvents.investmentAccountId, investment.id),
         eq(investmentEvents.origin, "provider"),
-        eq(investmentOperations.kind, "opening_position"),
-        eq(investmentOperations.quantityBasis, "inferred"),
+        or(
+          and(
+            eq(investmentOperations.kind, "opening_position"),
+            eq(investmentOperations.quantityBasis, "inferred"),
+          ),
+          lt(investmentEvents.occurredAt, historyFrom),
+        ),
       ),
     )
-    .orderBy(asc(investmentOperations.eventId));
+    .orderBy(asc(investmentEvents.on), asc(investmentOperations.eventId));
   const eventIds = openings.map((one) => one.eventId);
+  let removedFrom: CivilDate | null = openings[0]?.on ?? null;
   if (eventIds.length > 0) {
     await tx
       .delete(investmentOperations)
@@ -986,7 +1000,8 @@ async function undoInferred(ctx: WriteCtx, tx: Tx, investment: InvestmentAccount
     )
     .orderBy(asc(investmentAccountPeriods.fromOn));
   // Only the history `estimateHistoryOf` wrote: one opening period of a service connected new.
-  if (periods.length !== 1 || periods[0].reason !== "opening" || periods[0].origin !== "synced") return;
+  if (periods.length !== 1 || periods[0].reason !== "opening" || periods[0].origin !== "synced")
+    return removedFrom;
   const [real] = await tx
     .select({ on: investmentReadings.on })
     .from(investmentReadings)
@@ -999,7 +1014,8 @@ async function undoInferred(ctx: WriteCtx, tx: Tx, investment: InvestmentAccount
     )
     .orderBy(asc(investmentReadings.on))
     .limit(1);
-  if (!real || periods[0].fromOn >= real.on) return;
+  if (!real || periods[0].fromOn >= real.on) return removedFrom;
+  if (removedFrom === null || periods[0].fromOn < removedFrom) removedFrom = periods[0].fromOn;
   await tx
     .delete(investmentReadings)
     .where(
@@ -1015,6 +1031,11 @@ async function undoInferred(ctx: WriteCtx, tx: Tx, investment: InvestmentAccount
     .where(
       and(eq(investmentAccountPeriods.id, periods[0].id), userScoped(ctx).owns(investmentAccountPeriods)),
     );
+  await tx
+    .update(investmentAccounts)
+    .set({ managedSince: real.on, openedOn: real.on })
+    .where(and(eq(investmentAccounts.id, investment.id), userScoped(ctx).owns(investmentAccounts)));
+  return removedFrom;
 }
 
 /**
@@ -1236,9 +1257,10 @@ async function syncFlows(
       writeEvents(ctx, tx, investment, linked.currency, read.events, known, rates, now),
     );
     await writeCoverage(ctx, tx, connection.id, "flows", read.coverage);
-    if (read.rebase && read.historyFrom !== undefined) {
-      await undoInferred(ctx, tx, investment, connection.provider);
-    }
+    const removed =
+      read.rebase && read.historyFrom !== undefined
+        ? await undoInferred(ctx, tx, investment, connection.provider, read.historyFrom)
+        : null;
     const opened =
       read.historyFrom === undefined
         ? null
@@ -1246,7 +1268,7 @@ async function syncFlows(
     if (read.cursor !== undefined) {
       await saveSyncJob(ctx, connection.id, "flows", { cursor: read.cursor }, now, tx);
     }
-    const from = [oldest, opened].filter((day): day is CivilDate => day !== null).sort()[0] ?? null;
+    const from = [oldest, opened, removed].filter((day): day is CivilDate => day !== null).sort()[0] ?? null;
     if (from !== null) await rebuild(ctx, investment, linked.currency, from, tx);
     return created;
   });

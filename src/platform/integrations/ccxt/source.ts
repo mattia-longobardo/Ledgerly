@@ -35,6 +35,7 @@ import {
   FLOW_STREAMS,
   fiatOrderEventsOf,
   fiatPaymentEventsOf,
+  HISTORY_DAYS,
   historyStart,
   holdingsOf,
   isFiat,
@@ -52,10 +53,11 @@ import {
 import { type BinanceApi, binanceApi } from "./client";
 
 /**
- * What the flows read (PERS-141): `2` added the dust log, Binance Pay and the delisted markets. A
- * history started under an older version gets its openings inferred again (`rebase`), once.
+ * What the flows read (PERS-141): `2` added the dust log, Binance Pay and the delisted markets; `3`
+ * keeps 12 months instead of 24. A history started under an older version gets its openings
+ * inferred again (`rebase`), once.
  */
-const HISTORY_VERSION = "2";
+const HISTORY_VERSION = "3";
 const PAGE = 500;
 const PAY_PAGE = 100;
 const TRADES_PAGE = 1000;
@@ -63,6 +65,8 @@ const DIVIDENDS_PAGE = 500;
 /** A bound on every loop over pages: an exchange that keeps answering "more" stops here. */
 const MAX_PAGES = 50;
 const DAY_MS = 86_400_000;
+/** A history started with 24 months (versions 1–2) starts 12 months later: its connection less 12. */
+const SHORTENED_MS = (730 - HISTORY_DAYS) * DAY_MS;
 const ONE_UNIT = "1";
 
 function dailyRateOf(
@@ -185,7 +189,10 @@ export function binanceSource(
       const cursor: FlowCursor = options?.cursor ?? {};
       const api = await apiOf(credentials);
       const parsedFrom = cursor.from ? new Date(cursor.from) : null;
-      const from = parsedFrom && !Number.isNaN(parsedFrom.getTime()) ? parsedFrom : historyStart(now);
+      const valid = parsedFrom && !Number.isNaN(parsedFrom.getTime()) ? parsedFrom : null;
+      const longer = valid !== null && (cursor.history === undefined || cursor.history === "2");
+      const from =
+        valid === null ? historyStart(now) : longer ? new Date(valid.getTime() + SHORTENED_MS) : valid;
       const fromMs = from.getTime();
       const nowMs = now.getTime();
       /** Where a stream starts again: 24 hours before it stopped (A7), never before the history. */

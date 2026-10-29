@@ -1145,11 +1145,14 @@ export function priceLegs(
 // ——— Windows and coverage (A7, D11) ————————————————————————————————————————————————————————————
 
 const DAY_MS = 86_400_000;
-/** D11: 24 months of history for ccxt. */
-export const HISTORY_DAYS = 730;
+/**
+ * 12 months of history for ccxt (PERS-141, replaces the 24 of D11): what a connection rebuilds;
+ * everything older is the opening, inferred on the first day, never rebuilt.
+ */
+export const HISTORY_DAYS = 365;
 /** A7: each pass reads again the last 24 hours of every stream. */
 export const OVERLAP_MS = DAY_MS;
-/** The day Binance opened: where the declared gap before the 24 months starts. */
+/** The day Binance opened: where the history before the 12 months, the opening, starts. */
 export const BINANCE_SINCE = new Date("2017-07-14T00:00:00Z");
 
 /** `[from, until]` cut in windows of at most `days` days (B7: 90 for deposits, 30 for Convert). */
@@ -1162,7 +1165,7 @@ export function windowsOf(from: number, until: number, days: number): { since: n
   return windows;
 }
 
-/** The first moment a fresh connection reads: 24 months before now (D11). */
+/** The first moment a fresh connection reads: 12 months before now (PERS-141). */
 export function historyStart(now: Date): Date {
   return new Date(now.getTime() - HISTORY_DAYS * DAY_MS);
 }
@@ -1171,8 +1174,8 @@ export function historyStart(now: Date): Date {
 export const PAY_HISTORY_DAYS = 540;
 
 /**
- * Every stream complete from the start of the history, after a gap the API does not keep (D11).
- * A stream the API keeps for less (`starts`: Pay, 18 months) is complete from where it was first read.
+ * Every stream complete from the start of the history; before it, the opening (`opening_12m`).
+ * A stream the API keeps for less (`starts`) is complete from where it was first read.
  */
 export function binanceCoverage(
   streams: readonly string[],
@@ -1182,7 +1185,7 @@ export function binanceCoverage(
 ): CoverageWindow[] {
   return streams.flatMap((stream) => {
     const start = starts[stream] && starts[stream] > from ? starts[stream] : from;
-    const reason = start > from ? "api_limit_18m" : "api_limit_24m";
+    const reason = start > from ? "api_limit_18m" : "opening_12m";
     return [
       { stream, fromAt: BINANCE_SINCE, toAt: start, status: "gap" as const, reason },
       { stream, fromAt: start, toAt: now, status: "complete" as const, reason: null },

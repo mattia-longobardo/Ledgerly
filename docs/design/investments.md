@@ -702,7 +702,7 @@ Dati letti:
 | Flussi | `fetchLedger` (Kraken, Coinbase, Bitvavo, Crypto.com) | cursore per stream (sotto) |
 | Flussi Binance | `fetchDeposits` / `fetchWithdrawals` a finestre di 90 giorni (senza `since` si legge solo l'ultima), `fetchMyTrades` per simbolo (`since`, `limit` 1000, `fromId`) | scoperta dei simboli: sotto [D18 · B7] |
 | Flussi Binance, altri stream [D18 · B2] | `sapiGetFiatOrders` (`transactionType` 0/1), `sapiGetFiatPayments` (`transactionType` 0), `sapiGetConvertTradeFlow` (finestre ≤ 30 gg), `sapiGetAssetAssetDividend` (finestre ≤ 180 gg) | stream `fiat_orders`, `fiat_payments`, `convert`, `dividends`; `timeout` ccxt ≥ 35 s per le chiamate fiat. Senza questi stream la conservazione delle quantità (A6) fallisce |
-| Flussi Binance, PERS-141 | `sapiGetAssetDribblet` (finestre ≤ 90 gg), `sapiGetPayTransactions` (finestre ≤ 90 gg, 18 mesi, 100 righe), `loadMarkets` con i mercati delistati per `fetchMyTrades` | stream `dust` e `pay`. Il dust log nomina anche le coin vendute fino all'ultimo residuo, i cui trade nessun altro stream trova; `pay` prima dei suoi 18 mesi è una lacuna dichiarata (`api_limit_18m`) |
+| Flussi Binance, PERS-141 | `sapiGetAssetDribblet` (finestre ≤ 90 gg), `sapiGetPayTransactions` (finestre ≤ 90 gg, 18 mesi, 100 righe), `loadMarkets` con i mercati delistati per `fetchMyTrades` | stream `dust` e `pay`. Il dust log nomina anche le coin vendute fino all'ultimo residuo, i cui trade nessun altro stream trova; `pay` copre 18 mesi, più dello storico; se l'inizio dello storico fosse più vecchio, la parte prima dei 18 mesi sarebbe una lacuna dichiarata (`api_limit_18m`) |
 | Identità | `GET /api/v3/account` → `uid` | id del conto esterno [D18 · B7]. `canTrade`/`canWithdraw` sono capacità del conto, non permessi della chiave: mai usarli per 5.2 |
 
 **Cursori e completezza (A7).**
@@ -716,12 +716,15 @@ Dati letti:
   Un mercato comprato e venduto per intero senza depositi né prelievi non è scopribile: lo stream
   `trades` di Binance resta `partial` con motivo `pair_not_discovered`. È una lacuna dichiarata:
   nessun import di file la colma [D16].
-- Lo storico oltre il limite dell'API (24 mesi [D11]) è una lacuna dichiarata (`api_limit_24m`), non
-  un periodo vuoto.
+- Storico di 12 mesi per ogni conto d'investimento collegato (PERS-141, sostituisce i 24 mesi di
+  [D11] per ccxt; eToro ne legge 360 giorni, il limite della sua API). Al collegamento si
+  ricostruiscono solo i 12 mesi precedenti; poi i pass continuano ad aggiornare i dati. Quello che
+  è più vecchio non si ricostruisce: entra nell'apertura `inferred` del primo giorno (stream con
+  motivo `opening_12m`). Nei 12 mesi i dati non devono avere lacune né quantità che non tornano.
 - Rebase (PERS-141): il cursore porta la versione di ciò che il source legge (`history`). Quando
-  cambia (nuovi stream o mercati), il primo pass rilegge i nuovi stream dall'inizio dello storico,
-  cancella le aperture `inferred` del provider e lo storico stimato, e li ricalcola dai flussi
-  completi. Una sola volta per versione: nei pass normali le aperture non assorbono mai una lacuna.
+  cambia (nuovi stream o mercati, storico da 24 a 12 mesi), il primo pass rilegge i nuovi stream
+  dall'inizio dello storico, cancella le aperture `inferred` del provider, gli eventi del provider
+  anteriori all'inizio dello storico e lo storico stimato, e li ricalcola dai flussi completi. Una sola volta per versione: nei pass normali le aperture non assorbono mai una lacuna.
 
 **Quantità (A6).** Per un conto sincronizzato la quantità corrente di ogni posizione è quella della
 lettura (`quantity_basis = reported`). Le quantità ricostruite dalle operazioni (`reconstructed`)
