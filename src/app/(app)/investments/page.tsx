@@ -7,6 +7,7 @@ import { asNumbers, axisLabels, colorFor, dayLabels, PALETTE } from "@/modules/a
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
 import type { PnlParts, ServicePnl } from "@/modules/investments/pnl";
 import { investmentsHome, investmentsPnlView } from "@/modules/investments/queries";
+import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
@@ -66,6 +67,8 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
   const kept: Params = { view: view === "pnl" ? undefined : view, by: by === "service" ? undefined : by };
   const periodParams = periodQuery(period, todayOn);
   const serviceHref = (id: string) => withParams(`/investments/${id}`, {}, periodParams);
+  /** An alert opens the Connection tab of its service, where the thing to check is (§3.1, U3). */
+  const alertHref = (id: string) => withParams(`/investments/${id}/connection`, {}, periodParams);
   const fundsCents = sumCents(home.funds.map((fund) => fund.valueCents)).total;
 
   const addService = (
@@ -151,7 +154,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         row.pnl.reasons.includes("estimated_history") &&
         t("home.alerts.estimated"),
     ].filter((text): text is string => typeof text === "string");
-    // U3 points this to the service's Connection tab.
     return what.length === 0
       ? []
       : [{ id: row.summary.account.id, text: `${row.summary.account.name}: ${what.join(", ")}` }];
@@ -358,6 +360,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         path="/investments"
         params={kept}
         locale={ctx.locale}
+        t={tp}
       />
     </div>
   );
@@ -438,7 +441,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         </div>
         {alerts.length === 1 && (
           <Link
-            href={serviceHref(alerts[0].id)}
+            href={alertHref(alerts[0].id)}
             className="focus-ring inline-flex min-h-6 items-center gap-1.5 rounded-[4px] text-sm hover:underline"
           >
             <Badge tone="warn">1</Badge>
@@ -459,7 +462,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
               {alerts.map((alert) => (
                 <li key={alert.id}>
                   <Link
-                    href={serviceHref(alert.id)}
+                    href={alertHref(alert.id)}
                     className="focus-ring flex min-h-8 items-center rounded-[4px] px-2 text-sm hover:bg-hover"
                   >
                     {alert.text}
@@ -762,37 +765,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
       </HighlightScope>
     </Page>
   );
-}
-
-const toCents = (value: number | null): Cents | null => (value === null ? null : BigInt(Math.round(value)));
-
-/** The running total of the bars, from zero at the start of the period; a gap stays a gap. */
-function runningTotal(values: readonly (Cents | null)[]): (Cents | null)[] {
-  let total: Cents = 0n;
-  return values.map((cents) => {
-    if (cents === null) return null;
-    total += cents;
-    return total;
-  });
-}
-
-/** At most five evenly spread indices, the first and the last always among them. */
-function sampled(length: number, count = 5): number[] {
-  if (length <= count) return Array.from({ length }, (_, index) => index);
-  const step = (length - 1) / (count - 1);
-  return Array.from({ length: count }, (_, index) => Math.round(index * step));
-}
-
-/** The best and the worst interval, for the chart's text alternative (§7, A2). */
-function bestAndWorst(values: readonly (Cents | null)[]): { best: number; worst: number } | null {
-  let best = -1;
-  let worst = -1;
-  values.forEach((value, index) => {
-    if (value === null) return;
-    if (best < 0 || value > values[best]!) best = index;
-    if (worst < 0 || value < values[worst]!) worst = index;
-  });
-  return best < 0 ? null : { best, worst };
 }
 
 /**

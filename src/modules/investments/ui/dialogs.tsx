@@ -18,7 +18,7 @@ import type { Cents } from "@/platform/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
+import { ActionMenu, ButtonMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
 import { notify } from "@/ui/toast";
@@ -43,6 +43,8 @@ import {
   updateServiceUrlAction,
 } from "../actions";
 import {
+  ADJUSTMENT_CLASSES,
+  type AdjustmentClass,
   ASSET_CLASSES,
   type AssetClass,
   parseDecimal,
@@ -1002,6 +1004,8 @@ export interface OperationSummary {
   holdingId: string | null;
   holdingName: string | null;
   unitPriceText: string | null;
+  /** A correction's class (§4.9 of the UX design); `null` = `data`. */
+  adjustmentClass?: AdjustmentClass | null;
 }
 
 type AccountKind = "deposit" | "withdrawal" | "account_valuation" | "adjustment";
@@ -1055,6 +1059,9 @@ function OperationDialog({
   const [validUntil, setValidUntil] = useState(operation?.validUntil ?? "");
   const [note, setNote] = useState(operation?.note ?? "");
   const [link, setLink] = useState(operation?.transactionId ?? "");
+  const [adjustmentClass, setAdjustmentClass] = useState<AdjustmentClass>(
+    operation?.adjustmentClass ?? "data",
+  );
   const linkable = kind === "deposit" || kind === "withdrawal";
   const choices = linkable
     ? rankedChoices(
@@ -1074,6 +1081,7 @@ function OperationDialog({
       unitPrice: kind === "valuation" ? unitPrice : undefined,
       holdingId: operation?.holdingId ?? null,
       validUntil: kind === "adjustment" ? validUntil || null : null,
+      adjustmentClass: kind === "adjustment" ? adjustmentClass : undefined,
       transactionId: linkable && choices.some((choice) => choice.id === link) ? link : null,
       note,
     };
@@ -1147,6 +1155,30 @@ function OperationDialog({
           />
         </Field>
       )}
+      {kind === "adjustment" && (
+        <div className="col-span-full flex flex-col gap-1.5">
+          <Field label={t("operationForm.class")} htmlFor={`${id}-class`}>
+            <Select
+              id={`${id}-class`}
+              value={adjustmentClass}
+              onChange={(event) => setAdjustmentClass(event.target.value as AdjustmentClass)}
+            >
+              {ADJUSTMENT_CLASSES.map((one) => (
+                <option key={one} value={one}>
+                  {t(`operationForm.classes.${one}`)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <AdjustmentPreview
+            adjustmentClass={adjustmentClass}
+            cents={tryAmount(amount, context.numberFormat)}
+            on={on}
+            until={validUntil || null}
+            context={context}
+          />
+        </div>
+      )}
       <Field
         label={kind === "adjustment" ? t("operationForm.reason") : t("form.note")}
         htmlFor={`${id}-note`}
@@ -1180,6 +1212,37 @@ function OperationDialog({
       <ErrorLine error={error} />
       <Actions onCancel={() => onOpenChange(false)} pending={pending} submit={t("form.save")} />
     </Dialog>
+  );
+}
+
+/**
+ * What a correction will do to the P&L before it is saved (§4.9): a wrong reading of the provider or
+ * a gain or loss nobody recorded moves the P&L from its first day (and back on its last); money in
+ * or out that was never recorded is a flow, and the P&L stays.
+ */
+function AdjustmentPreview({
+  adjustmentClass,
+  cents,
+  on,
+  until,
+  context,
+}: {
+  adjustmentClass: AdjustmentClass;
+  cents: Cents | null;
+  on: string;
+  until: string | null;
+  context: ServiceContext;
+}) {
+  const t = useTranslations("investments.operationForm.preview");
+  if (cents === null || cents === 0n) return null;
+  const amount = formatMoney(cents, context.numberFormat, { currency: context.currency, signed: true });
+  const date = formatDate(on, "long", context.locale);
+  const end = until ? ` ${t("until", { date: formatDate(until, "long", context.locale) })}` : "";
+  return (
+    <p data-testid="adjustment-preview" className="text-sm text-muted">
+      {adjustmentClass === "capital" ? t("capital", { amount, date }) : t("pnl", { amount, date })}
+      {adjustmentClass !== "capital" && end}
+    </p>
   );
 }
 
@@ -2291,5 +2354,174 @@ export function ConfirmRevokedButton({ accountId }: { accountId: string }) {
     >
       {t("sync.revokedConfirm")}
     </Button>
+  );
+}
+
+// ——— The service's header (docs/design/investments-ux.md §3.2, U3) ———————————————————————————
+
+/** "Sync" of the header (§3.2): a minute apart at least, which the service enforces (SEC-09). */
+export function SyncNowButton({ accountId }: { accountId: string }) {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      size="sm"
+      variant="primary"
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await syncNowAction(accountId);
+          notify(
+            result.ok
+              ? t("toasts.synced")
+              : t(
+                  `errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed",
+                ),
+            result.ok ? "success" : "error",
+          );
+          router.refresh();
+        })
+      }
+    >
+      {t("header.sync")}
+    </Button>
+  );
+}
+
+type HeaderDialog = "asset" | AccountKind | "replace" | "disconnect";
+
+/** The dialog a header command opens; one at a time, mounted only while open. */
+function HeaderDialogs({
+  open,
+  setOpen,
+  context,
+  provider,
+}: {
+  open: HeaderDialog | null;
+  setOpen: (open: HeaderDialog | null) => void;
+  context: ServiceContext;
+  provider: ConnectableProvider | null;
+}) {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const close = (next: boolean) => {
+    if (!next) setOpen(null);
+  };
+  if (open === null) return null;
+  if (open === "asset") return <AddAssetDialog onOpenChange={close} context={context} />;
+  if (open === "replace")
+    return provider ? (
+      <ReplaceKeyDialog onOpenChange={close} accountId={context.accountId} provider={provider} />
+    ) : null;
+  if (open === "disconnect")
+    return (
+      <ConfirmDialog
+        open
+        onOpenChange={close}
+        title={t("confirm.disconnectTitle", { name: context.name })}
+        description={t("confirm.disconnectDescription")}
+        confirm={t("sync.disconnect")}
+        onConfirm={async () => {
+          const result = await disconnectProviderAction(context.accountId);
+          notify(
+            result.ok ? t("toasts.disconnected", { name: context.name }) : t("errors.failed"),
+            result.ok ? "success" : "error",
+          );
+          if (result.ok) router.refresh();
+          return result.ok;
+        }}
+      />
+    );
+  return <OperationDialog onOpenChange={close} kind={open} context={context} operation={null} />;
+}
+
+/**
+ * The commands of a service (§3.2, H10, S8): on a synced account "Sync" stays outside and the rest
+ * is in `⋯` — a manual movement, a correction, the key; on a manual account "Add operation" is the
+ * one primary button, with the correction in `⋯`.
+ */
+export function ServiceActions({
+  context,
+  provider,
+  connected,
+}: {
+  context: ServiceContext;
+  provider: ConnectableProvider | null;
+  connected: boolean;
+}) {
+  const t = useTranslations("investments");
+  const [open, setOpen] = useState<HeaderDialog | null>(null);
+  const assets = context.mode === "assets";
+  const operations = [
+    ...(assets ? [{ key: "buy" as const, onSelect: () => setOpen("asset") }] : []),
+    { key: "deposit" as const, onSelect: () => setOpen("deposit") },
+    { key: "withdrawal" as const, onSelect: () => setOpen("withdrawal") },
+    ...(context.mode === "total" && !context.synced
+      ? [{ key: "valuation" as const, onSelect: () => setOpen("account_valuation") }]
+      : []),
+  ];
+  const more = context.synced
+    ? [
+        ...operations.map((item) => ({ label: t(`header.manual.${item.key}`), onSelect: item.onSelect })),
+        { label: t("header.correct"), onSelect: () => setOpen("adjustment") },
+        ...(connected && provider ? [{ label: t("sync.replace"), onSelect: () => setOpen("replace") }] : []),
+        ...(connected
+          ? [{ label: t("sync.disconnect"), onSelect: () => setOpen("disconnect"), danger: true }]
+          : []),
+      ]
+    : [{ label: t("header.correct"), onSelect: () => setOpen("adjustment") }];
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {context.synced ? (
+        connected && <SyncNowButton accountId={context.accountId} />
+      ) : (
+        <ButtonMenu
+          text={t("header.addOperation")}
+          variant="primary"
+          items={operations.map((item) => ({
+            label: t(`header.operations.${item.key}`),
+            onSelect: item.onSelect,
+          }))}
+        />
+      )}
+      <ActionMenu label={t("actions.more")} items={more} />
+      <HeaderDialogs open={open} setOpen={setOpen} context={context} provider={provider} />
+    </span>
+  );
+}
+
+/**
+ * "Link to the bank movement" (§3.5, S16): only on the person's own deposit or withdrawal with no
+ * link and a movement of the same amount within three days; it opens the operation with the
+ * candidates.
+ */
+export function LinkBankButton({
+  operation,
+  context,
+}: {
+  operation: OperationSummary;
+  context: ServiceContext;
+}) {
+  const t = useTranslations("investments");
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+      >
+        {t("activityTab.linkBank")}
+      </button>
+      {open && (
+        <OperationDialog
+          onOpenChange={setOpen}
+          kind={operation.kind as AccountKind}
+          context={context}
+          operation={operation}
+        />
+      )}
+    </>
   );
 }

@@ -3133,7 +3133,10 @@
       "summary": "Value today {value}, net invested {invested}.",
       "range": "Range",
       "grain": "Points",
-      "grains": { "month": "Month", "day": "Day" },
+      "grains": {
+        "month": "Month",
+        "day": "Day"
+      },
       "estimatedShort": "estimate",
       "estimatedNote": "The dashed stretch is an estimate: the provider keeps no history of the value, so each day is rebuilt from the movements and the exchange's daily closes."
     },
@@ -3402,7 +3405,7 @@
         "deposit": "Deposit",
         "withdrawal": "Withdrawal",
         "account_valuation": "Update value",
-        "adjustment": "Add adjustment",
+        "adjustment": "Correct the value",
         "valuation": "Edit valuation",
         "income": "Income"
       },
@@ -3424,7 +3427,18 @@
       "linkOut": "Linked account expense",
       "linkIn": "Linked account income",
       "linkHint": "Optional: the matching bank movement. It documents where the money came from and moves no balance.",
-      "noLink": "Not linked"
+      "noLink": "Not linked",
+      "class": "What it corrects",
+      "classes": {
+        "data": "A wrong reading of the service",
+        "capital": "Money in or out never recorded",
+        "result": "A gain or loss never recorded"
+      },
+      "preview": {
+        "pnl": "The P&L changes by {amount} from {date}",
+        "until": "and goes back after {date}",
+        "capital": "The value changes by {amount} from {date}; the P&L does not: it is a flow."
+      }
     },
     "holdingForm": {
       "valuation": "Value · {name}",
@@ -3745,6 +3759,215 @@
         "class": "Class",
         "ccy": "Currency",
         "note": "Always as of today: the period changes the P&L and the chart, not the shares."
+      }
+    },
+    "activity": {
+      "labels": {
+        "buy": "Bought",
+        "sell": "Sold",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "income": {
+          "staking": "Staking",
+          "reward": "Reward",
+          "dividend": "Dividend",
+          "income": "Income"
+        },
+        "fee": "Fee",
+        "adjustment": "Correction",
+        "openingCash": "Opening cash",
+        "openingPosition": "Opening position",
+        "valuation": "Valued",
+        "accountValuation": "Account value updated"
+      },
+      "details": {
+        "position": "{qty} {asset} at {price}",
+        "quantity": "{qty} {asset}",
+        "from": "from {source}",
+        "to": "to {dest}",
+        "priced": "{asset} at {price}",
+        "copy": "{detail} (copy)"
+      },
+      "sentence": "{label} {detail}",
+      "sentenceColon": "{label}: {detail}"
+    },
+    "header": {
+      "sync": "Sync",
+      "addOperation": "Add operation",
+      "operations": {
+        "buy": "Buy",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "valuation": "Update value"
+      },
+      "manual": {
+        "buy": "Manual buy",
+        "deposit": "Manual deposit",
+        "withdrawal": "Manual withdrawal",
+        "valuation": "Update value"
+      },
+      "correct": "Correct the value",
+      "state": {
+        "synced": "Synced {when}",
+        "never": "Not synced yet",
+        "error": "Error: {error}",
+        "revoked": "Error: key refused",
+        "disconnected": "Disconnected: kept by hand",
+        "manual": "Kept by hand"
+      },
+      "today": "today {time}",
+      "openSite": "Open {name}"
+    },
+    "tabs": {
+      "label": "Sections of the service",
+      "overview": "Overview",
+      "positions": "Positions",
+      "activity": "Activity",
+      "connection": "Connection",
+      "settings": "Settings",
+      "alerts": "{count, plural, one {# thing to check} other {# things to check}}"
+    },
+    "service": {
+      "bridge": "{local} at the rate of {date} = {converted} · exchange effect {fx}",
+      "value": "Value today <strong>{value}</strong>",
+      "valueOther": "Value today <strong>{value}</strong> ≈ {display}",
+      "valueAt": "value on {date} {value}",
+      "partial": "The P&L starts on {date}: before that day the data of {name} are not complete.",
+      "partialLink": "What is missing",
+      "undetermined": "No reliable data in this period: the P&L cannot be measured.",
+      "estimated": "Part of the period stands on an estimated history.",
+      "kpis": {
+        "realized": "Realized",
+        "realizedNote": "sales and closes",
+        "unrealized": "Unrealized change",
+        "unrealizedNote": "open positions",
+        "unrealizedUnknown": "no cost yet: in Other",
+        "income": "Income",
+        "incomeNote": "dividends, staking",
+        "incomeIncluded": "included",
+        "incomeIncludedNote": "{name} adds it to the value",
+        "fees": "Fees",
+        "feesNote": "every fee of the period"
+      },
+      "chart": {
+        "unavailable": "no data before {date}",
+        "markers": "↑ deposit · ↓ withdrawal",
+        "summaryFlows": "Deposits in {deposits}, withdrawals in {withdrawals}."
+      },
+      "top": {
+        "title": "Main positions",
+        "all": "All positions",
+        "asset": "Asset",
+        "value": "Value",
+        "pnl": "P&L",
+        "weight": "Weight",
+        "empty": "No open positions.",
+        "cash": "Cash"
+      },
+      "latest": {
+        "title": "Latest activity",
+        "all": "All activity",
+        "empty": "No activity in this period."
+      },
+      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available."
+    },
+    "activityTab": {
+      "deposits": "Deposits",
+      "withdrawals": "Withdrawals",
+      "net": "Net deposits",
+      "netPositive": "you put in more than you took out",
+      "netNegative": "you took out more than you put in",
+      "netZero": "as much in as out",
+      "fees": "Fees",
+      "feesNote": "every fee of the period, trades included",
+      "chips": "Type of activity",
+      "chip": "{label} · {count}",
+      "families": {
+        "all": "All",
+        "trades": "Buys and sells",
+        "flows": "Deposits and withdrawals",
+        "income": "Income",
+        "fees": "Fees",
+        "other": "Valuations and corrections"
+      },
+      "search": "Search asset or description",
+      "searchSubmit": "Search",
+      "clear": "Clear",
+      "asset": "Only {name}",
+      "assetAll": "Show every asset",
+      "date": "Date",
+      "type": "Type",
+      "description": "Description",
+      "pnl": "P&L",
+      "amount": "Amount",
+      "actions": "Actions",
+      "month": "{month} · {count, plural, one {# event} other {# events}}",
+      "monthRealized": "realized P&L {amount}",
+      "range": "{first}–{last} of {total} · {allTime} since the start",
+      "previous": "Previous page",
+      "next": "Next page",
+      "empty": "No activity in this period.",
+      "emptyFiltered": "Nothing matches the search.",
+      "linkBank": "Link to the bank movement"
+    },
+    "connection": {
+      "alerts": "To check",
+      "received": {
+        "title": "What we get from {name}",
+        "note": "One row per kind of data",
+        "balances": "Balances and positions",
+        "balancesOk": "Complete, last read {when}.",
+        "balancesPartial": "Last reading partial: {products} not read.",
+        "balancesNone": "No reading yet.",
+        "activity": "Activity",
+        "activityOk": "Complete from {date}.",
+        "activityGaps": "Incomplete: {streams}.",
+        "activityNone": "{name} gives no history of the activity.",
+        "history": "Value history",
+        "historyEstimated": "Estimated from {from} to {to}: {name} keeps no past value, so Ledgerly rebuilds it from the activity and the daily closes. Dashed in the chart.",
+        "historyRead": "Read every day from {date}.",
+        "cost": "Cost basis",
+        "costMismatch": "The quantities do not add up with the activity: the unrealized P&L of the positions is in “Other (incomplete data)”.",
+        "costMissing": "{name} does not give the cost of the positions: their unrealized P&L is in “Other (incomplete data)”.",
+        "details": "Technical detail by stream ({count})",
+        "products": "Products read: {products}"
+      },
+      "status": {
+        "complete": "Complete",
+        "partial": "Partial data",
+        "estimated": "Estimated",
+        "check": "To check",
+        "missing": "Not available"
+      },
+      "history": {
+        "title": "Sync history",
+        "note": "The readings the service gave us",
+        "same": "{count} equal readings, {from} – {to}",
+        "estimated": "{count} estimated readings, {from} – {to}",
+        "empty": "No readings yet."
+      },
+      "corrections": {
+        "title": "Manual corrections",
+        "empty": "No correction. A correction changes the value of a stretch of days when the service gets it wrong (e.g. a missing balance): add it from the ⋯ menu at the top.",
+        "until": "until {date}"
+      },
+      "key": {
+        "title": "API key",
+        "permissions": "Permissions",
+        "ip": "IP restriction",
+        "ipOn": "Active",
+        "ipOff": "Not active",
+        "ipAdvice": "Recommended: restrict the key to the homelab's IP on the {name} site.",
+        "schedule": "Sync"
+      },
+      "settings": {
+        "keeps": "What Ledgerly keeps",
+        "modes": {
+          "assets": "Positions (one row per asset)",
+          "total": "Value only (you update the total)"
+        },
+        "managedSince": "Managed since",
+        "inAccounts": "The {name} account in Accounts"
       }
     }
   },

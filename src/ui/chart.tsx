@@ -602,6 +602,8 @@ export function StackedBars({
   xLabels,
   height = 220,
   hover,
+  unavailable,
+  markers,
 }: {
   /** Bottom first. */
   layers: readonly {
@@ -617,6 +619,10 @@ export function StackedBars({
   xLabels: readonly string[];
   height?: number;
   hover?: readonly HoverPoint[];
+  /** The first `slots` bars have no data: a grey band with its words, never a zero. */
+  unavailable?: { slots: number; label: string };
+  /** Per bar, money in (↑), out (↓) or both: drawn over it, words in `summary`. */
+  markers?: readonly ("in" | "out" | "both" | null)[];
 }) {
   const width = 720;
   const count = line.length;
@@ -698,6 +704,27 @@ export function StackedBars({
               ),
             )}
           </svg>
+          {unavailable && unavailable.slots > 0 && (
+            <div
+              aria-hidden
+              className="absolute inset-y-0 left-0 flex items-center justify-center rounded-[4px] bg-hover/70 p-1 text-center text-xs text-muted"
+              style={{ width: `${(Math.min(unavailable.slots, count) / Math.max(1, count)) * 100}%` }}
+            >
+              <span className="line-clamp-3">{unavailable.label}</span>
+            </div>
+          )}
+          {markers?.map((marker, index) =>
+            marker === null ? null : (
+              <span
+                key={index}
+                aria-hidden
+                className="absolute top-0 -translate-x-1/2 text-xs leading-none font-semibold text-muted"
+                style={{ left: `${((index + 0.5) / Math.max(1, count)) * 100}%` }}
+              >
+                {marker === "in" ? "↑" : marker === "out" ? "↓" : "↕"}
+              </span>
+            ),
+          )}
           {hover && hover.length > 0 && <ChartHover points={hover} slots />}
         </div>
         <div
