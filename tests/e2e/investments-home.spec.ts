@@ -60,7 +60,9 @@ test("the stepper stops at the first year with data and at the year running", as
   await page.goto("/investments");
   const stepper = page.getByRole("group", { name: "Year" });
   await expect(stepper.getByRole("button", { name: "Next year" })).toBeDisabled();
-  // Every seeded movement is of this year.
+  // eToro's 12 months start a year ago (PERS-145): the year before is the first with data.
+  await stepper.getByRole("link", { name: "Previous year" }).click();
+  await expect(page).toHaveURL(/[?&]period=\d{4}/);
   await expect(stepper.getByRole("button", { name: "Previous year" })).toBeDisabled();
 });
 

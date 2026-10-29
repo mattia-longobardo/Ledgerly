@@ -462,6 +462,15 @@ describe("cashGaps (PERS-145 · 4)", () => {
       reconciliations: [],
     };
     expect(openingCashAt(book, "2025-11-02")).toBe(33n);
+    // An empty service opens too, at zero: its cut-off is booked all the same.
+    const empty = { ...book, readings: [{ ...book.readings[0], totalCents: 0n }] };
+    expect(openingCashAt(empty, "2025-11-02")).toBe(0n);
+    const opened = { ...empty, events: [event("2025-11-02", [{ kind: "opening_cash", amountCents: 0n }])] };
+    expect(pnlOf(service(opened), "2025-01-01", "2025-12-31", EUR)).toMatchObject({
+      partial: false,
+      from: "2025-01-01",
+      startCents: 0n,
+    });
     expect(openingCashAt({ ...book, readings: [] }, "2025-11-02")).toBeNull();
     const leg = (over: Partial<OperationLike>) =>
       ({
