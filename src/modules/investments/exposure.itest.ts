@@ -121,8 +121,10 @@ function fakeSource(): InvestmentSource {
       };
     },
     async fetchHistory(_credentials, _currency, now) {
+      // The 12 months the service reads (PERS-145): its first day is its cut-off.
+      const first = new Date(now.getTime() - 360 * 86_400_000).toISOString().slice(0, 10);
       return {
-        points: [],
+        points: [{ on: first, totalCents: 0n }],
         coverage: [
           {
             stream: "balance_history",

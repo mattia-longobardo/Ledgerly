@@ -6,7 +6,6 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels, PALETTE } from "@/modules/accounts/ui/display";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
 import type { PnlParts, ServicePnl } from "@/modules/investments/pnl";
-import { otherIsGap } from "@/modules/investments/positions";
 import { investmentsHome, investmentsPnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
@@ -125,9 +124,9 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         date: formatDate(row.from, "dayMonth", ctx.locale),
       }),
     ),
-    ...portfolio.estimated
+    ...portfolio.stale
       .filter((id) => !portfolio.partial.some((row) => row.accountId === id))
-      .map((id) => t("home.coverage.estimated", { name: nameOf.get(id) ?? "" })),
+      .map((id) => t("home.coverage.stale", { name: nameOf.get(id) ?? "" })),
     ...(portfolio.excluded.length > 0
       ? [t("home.coverage.excluded", { count: portfolio.excluded.length })]
       : []),
@@ -135,15 +134,15 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
   const statusBadge =
     portfolio.status === "undetermined" ? (
       <Badge tone="warn">{t("home.status.undetermined")}</Badge>
-    ) : portfolio.status === "estimated" ? (
-      <Badge tone={portfolio.estimated.length > 0 ? "neutral" : "accent"}>
-        {portfolio.estimated.length > 0 ? t("home.status.estimated") : t("home.status.partial")}
-      </Badge>
+    ) : portfolio.status === "stale" ? (
+      <Badge tone="neutral">{t("home.status.stale")}</Badge>
+    ) : portfolio.available ? (
+      <Badge tone="accent">{t("home.status.partial")}</Badge>
     ) : null;
   const valueAtEnd =
     period.to < todayOn ? sumCents(pnl.chart.map((service) => service.values.at(-1) ?? null)).total : null;
 
-  // ——— Alerts: one link, only with something to do or an estimate (§3.1, P9) ———————————————
+  // ——— Alerts: one link, only with something to do (§3.1, P9) ——————————————————————————————
   const alerts = rows.flatMap((row) => {
     const { warnings } = row.summary;
     const what = [
@@ -151,9 +150,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
       warnings.pendingZero && t("warnings.pendingZero"),
       warnings.missingPrices > 0 && t("warnings.missingPrices", { count: warnings.missingPrices }),
       warnings.openAdjustments > 0 && t("warnings.openAdjustments", { count: warnings.openAdjustments }),
-      row.pnl?.status === "estimated" &&
-        row.pnl.reasons.includes("estimated_history") &&
-        t("home.alerts.estimated"),
     ].filter((text): text is string => typeof text === "string");
     return what.length === 0
       ? []
@@ -195,9 +191,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
       .map((row) => `${row.summary.account.name} ${money(row.pnl!.display!.pnlCents, true)}`)
       .join(", "),
   });
-  const estimatedChart = pnl.chart.some((service) =>
-    view === "pnl" ? service.barsEstimated.some(Boolean) : service.valuesEstimated.some(Boolean),
-  );
   const stack = stackLayers(
     chartRows.map((row) => asNumbers(chartOf.get(row.summary.account.id)?.bars ?? [])),
     pnl.intervals.length,
@@ -276,7 +269,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
           {t("home.status.from", { date: formatDate(service.from, "dayMonth", ctx.locale) })}
         </Badge>
       );
-    if (service.status === "estimated") return <Badge tone="neutral">{t("home.status.estimated")}</Badge>;
+    if (service.status === "stale") return <Badge tone="neutral">{t("home.status.stale")}</Badge>;
     return null;
   }
   const valueCell = (row: Row) => {
@@ -479,7 +472,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         <PartsKpis
           parts={parts}
           transfersCents={portfolio.transfersCents}
-          gap={portfolio.services.some(otherIsGap)}
+          openPositions={portfolio.services.reduce((sum, one) => sum + one.openPositions, 0)}
           money={money}
           t={t}
         />
@@ -520,7 +513,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
                     label: row.summary.account.name,
                     color: row.color,
                     values: asNumbers(service?.bars ?? []),
-                    estimated: service?.barsEstimated,
                   };
                 })}
                 line={asNumbers(cumulative)}
@@ -557,9 +549,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
                 values: asNumbers(chartOf.get(row.summary.account.id)?.values ?? []),
               }))}
               total={asNumbers(valueTotals)}
-              estimated={pnl.valueDays.map((_, index) =>
-                pnl.chart.some((service) => service.valuesEstimated[index]),
-              )}
               yLabels={axisLabels(valueTotals, ctx.numberFormat, 4, currency)}
               xLabels={
                 pnl.valueGrain === "day"
@@ -590,7 +579,6 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
               </span>
             )}
             <span>{t("home.chart.legend")}</span>
-            {estimatedChart && <span>{t("home.chart.estimated")}</span>}
           </p>
           {view === "pnl" && barTotals.some((cents) => cents !== null) && (
             <details className="text-sm">
@@ -777,21 +765,22 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
 }
 
 /**
- * The parts of the P&L (§3.1, §4.2): four tiles as Overview has them, and under them the amounts
- * that close the sum — corrections, the part with incomplete data, transfers between services —
- * when they are not zero: tiles + that line = the hero, to the cent.
+ * The parts of the P&L (§3.1, §4.2): four tiles as Overview has them — the unrealized only with a
+ * position open at the end (PERS-145) — and under them the amounts that close the sum, corrections
+ * and transfers between services, when they are not zero: tiles + that line = the hero, to the cent.
+ * What no part explains is zero on consistent data; it is shown, as such, only if it is not.
  */
 function PartsKpis({
   parts,
   transfersCents,
-  gap,
+  openPositions,
   money,
   t,
 }: {
   parts: PnlParts;
   transfersCents: Cents;
-  /** "Other" is data that are missing in some service, not only valuation and rounding (PERS-141). */
-  gap: boolean;
+  /** The positions open at the end of the period, over every service. */
+  openPositions: number;
   money: (cents: Cents | null, signed?: boolean) => string;
   t: Awaited<ReturnType<typeof getTranslations<"investments">>>;
 }) {
@@ -810,16 +799,18 @@ function PartsKpis({
           valueTone={toneOfSign(parts.realizedCents)}
           note={t("home.kpis.realizedNote")}
         />
-        <KpiTile
-          label={t("home.kpis.unrealized")}
-          value={money(parts.unrealizedChangeCents, true)}
-          valueTone={toneOfSign(parts.unrealizedChangeCents)}
-          note={
-            parts.unrealizedChangeCents === null
-              ? t("home.kpis.unrealizedUnknown")
-              : t("home.kpis.unrealizedNote")
-          }
-        />
+        {(openPositions > 0 || parts.unrealizedChangeCents === null) && (
+          <KpiTile
+            label={t("home.kpis.unrealized")}
+            value={money(parts.unrealizedChangeCents, true)}
+            valueTone={toneOfSign(parts.unrealizedChangeCents)}
+            note={
+              parts.unrealizedChangeCents === null
+                ? t("home.kpis.unrealizedUnknown")
+                : t("home.kpis.unrealizedNote", { count: openPositions })
+            }
+          />
+        )}
         <KpiTile
           label={t("home.kpis.income")}
           value={money(parts.incomeCents, true)}
@@ -840,9 +831,7 @@ function PartsKpis({
         <p data-testid="pnl-closing" className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
           {closing.map((row) => (
             <span key={row.key} data-cents={String(row.cents)}>
-              {t(
-                `home.kpis.${row.key === "unattributed" && !gap ? "valuation" : row.key}` as "home.kpis.corrections",
-              )}{" "}
+              {t(`home.kpis.${row.key}` as "home.kpis.corrections")}{" "}
               <strong className={cn("font-semibold tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
                 {money(row.cents, true)}
               </strong>

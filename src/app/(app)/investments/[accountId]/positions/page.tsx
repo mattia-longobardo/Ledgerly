@@ -10,8 +10,6 @@ import {
   type ClosedGroup,
   closedGroups,
   contributionsOf,
-  convertedCurrencies,
-  otherIsGap,
   onCostOf,
   periodReturnOf,
 } from "@/modules/investments/positions";
@@ -690,31 +688,7 @@ export default async function InvestmentServicePositions({
                 data-cents={String(row.cents)}
                 className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-sm"
               >
-                <span className="text-muted">
-                  {t(
-                    `contributions.${row.key === "unattributed" && !otherIsGap(service) ? "valuation" : row.key}`,
-                  )}
-                  {row.key === "unattributed" && convertedCurrencies(service).length > 0 && (
-                    <span data-testid="converted-note" className="block text-xs">
-                      {ti("service.convertedNote", {
-                        from: convertedCurrencies(service).join(", "),
-                        to: currency,
-                        name: detail.summary.account.name,
-                      })}
-                    </span>
-                  )}
-                  {row.key === "unattributed" && otherIsGap(service) && (
-                    <>
-                      {" "}
-                      <Link
-                        href={withParams(`${base}/connection`, {}, periodParams)}
-                        className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
-                      >
-                        {t("costLink")}
-                      </Link>
-                    </>
-                  )}
-                </span>
+                <span className="text-muted">{t(`contributions.${row.key}`)}</span>
                 <span className={cn("shrink-0 font-medium tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
                   {money(row.cents, true)}
                 </span>

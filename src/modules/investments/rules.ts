@@ -77,16 +77,16 @@ export type AdjustmentClass = (typeof ADJUSTMENT_CLASSES)[number];
 export const QUANTITY_BASES = ["reported", "reconstructed", "inferred"] as const;
 
 /**
- * `estimated` (PERS-100): a day before the first reading of a service whose provider has no
- * history of its value, rebuilt from the flows and the exchange's daily closes. It counts, and every
- * screen that shows it says it is an estimate.
+ * `reconstructed` (PERS-100, PERS-145): a day before the first reading of a service whose provider
+ * has no history of its value, rebuilt from the complete flows of its 12 months and the exchange's
+ * daily closes. A datum like any reading, not an estimate.
  */
 export const READING_STATUSES = [
   "complete",
   "partial",
   "confirmed_zero",
   "pending_zero",
-  "estimated",
+  "reconstructed",
 ] as const;
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 
@@ -567,7 +567,12 @@ export function reconciliationOn(
 }
 
 /** The readings that count (R1, R5): a `pending_zero` waits for the person's answer. */
-const COUNTING: ReadonlySet<ReadingStatus> = new Set(["complete", "partial", "confirmed_zero", "estimated"]);
+const COUNTING: ReadonlySet<ReadingStatus> = new Set([
+  "complete",
+  "partial",
+  "confirmed_zero",
+  "reconstructed",
+]);
 
 /** Dust (B5): under 0.001 units, too little for any market to price. */
 export const DUST_QUANTITY = 10n ** BigInt(QUANTITY_SCALE - 3);
@@ -807,8 +812,9 @@ export interface FlowEntry {
 
 /**
  * The money that went into the account up to `on`, one entry per movement: the opening of its
- * first period, the deposits and the withdrawals. A later conversion opens a new period at the
- * same value (V before = V after), so it is no flow.
+ * first period — a conversion's, or a synced service's at its cut-off (PERS-145) — the deposits and
+ * the withdrawals. A later conversion opens a new period at the same value (V before = V after), so
+ * it is no flow.
  */
 export function flowEntriesOn(book: Book, on: CivilDate): FlowEntry[] {
   const periods = sortedPeriods(book);
@@ -832,7 +838,7 @@ export function flowEntriesOn(book: Book, on: CivilDate): FlowEntry[] {
     for (const op of event.operations) {
       if (op.kind === "deposit") push("deposit", op.amountCents, op);
       else if (op.kind === "withdrawal") push("withdrawal", -op.amountCents, op);
-      else if (event.origin === "conversion" && firstPeriod) {
+      else if ((event.origin === "conversion" || event.origin === "provider") && firstPeriod) {
         if (op.kind === "opening_cash" || op.kind === "account_valuation") push("opening", op.amountCents);
         else if (op.kind === "opening_position") push("opening", abs(op.amountCents));
       }

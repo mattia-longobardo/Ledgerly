@@ -557,8 +557,8 @@ export interface ServiceDetail {
     unread: string[];
     missingPrices: number;
   }[];
-  /** The rebuilt history (PERS-100): how many estimated readings, from when to when. */
-  estimatedReadings: { count: number; from: CivilDate; to: CivilDate } | null;
+  /** The rebuilt history (PERS-100, PERS-145): how many reconstructed readings, from when to when. */
+  reconstructedReadings: { count: number; from: CivilDate; to: CivilDate } | null;
   /** The first reading the provider really gave. */
   firstReadOn: CivilDate | null;
   adjustments: {
@@ -810,9 +810,9 @@ export async function serviceDetail(
               ),
             ),
           );
-  // Enough of the latest to fold the runs of equal readings (§3.6); the estimated ones are one line.
+  // Enough of the latest to fold the runs of equal readings (§3.6); the reconstructed ones are one line.
   const readings = [...one.book.readingRows]
-    .filter((reading) => reading.status !== "estimated")
+    .filter((reading) => reading.status !== "reconstructed")
     .reverse()
     .slice(0, 60)
     .map((reading) => ({
@@ -834,12 +834,12 @@ export async function serviceDetail(
       ].sort(),
     }));
   const coveredProducts = readings[0]?.products ?? [];
-  const estimated = one.book.readingRows.filter((reading) => reading.status === "estimated");
-  const estimatedReadings =
-    estimated.length === 0
+  const rebuilt = one.book.readingRows.filter((reading) => reading.status === "reconstructed");
+  const reconstructedReadings =
+    rebuilt.length === 0
       ? null
-      : { count: estimated.length, from: estimated[0].on, to: estimated[estimated.length - 1].on };
-  const firstReadOn = one.book.readingRows.find((reading) => reading.status !== "estimated")?.on ?? null;
+      : { count: rebuilt.length, from: rebuilt[0].on, to: rebuilt[rebuilt.length - 1].on };
+  const firstReadOn = one.book.readingRows.find((reading) => reading.status !== "reconstructed")?.on ?? null;
 
   const adjustments = one.book.eventRows.flatMap((event) =>
     one.book.operationRows
@@ -889,7 +889,7 @@ export async function serviceDetail(
     holdings,
     operations,
     readings,
-    estimatedReadings,
+    reconstructedReadings,
     firstReadOn,
     adjustments,
     sync: one.sync,
@@ -1035,7 +1035,6 @@ async function pnlInputs(
       book: one.book,
       rates: one.rates,
       coverage: coverage?.windows ?? null,
-      quantityMismatch: coverage?.mismatch ?? false,
       externalIds,
       adjustmentClasses: new Map(
         one.book.operationRows.flatMap((op) =>
@@ -1096,11 +1095,8 @@ export interface PnlChartService {
   accountId: string;
   /** The P&L of each bar in the display currency; `null` before the service is measured. */
   bars: (Cents | null)[];
-  /** Per bar, whether it stands on an estimated reading (PERS-100): drawn dashed. */
-  barsEstimated: boolean[];
   /** The value at each point in the display currency, at the rate of its day. */
   values: (Cents | null)[];
-  valuesEstimated: boolean[];
 }
 
 export interface InvestmentsPnlView extends InvestmentsPnl {
@@ -1252,8 +1248,6 @@ async function pnlView(
   const chart = live.map((one, at): PnlChartService => {
     const service = services[at];
     const whole = measured[at];
-    const estimatedThrough =
-      one.book.readingRows.filter((reading) => reading.status === "estimated").at(-1)?.on ?? null;
     const stored = read.series.get(one.account.id)?.values ?? [];
     const values = days.map((day) => {
       const cents = stored[indexOf.get(day) ?? -1] ?? null;
@@ -1282,13 +1276,7 @@ async function pnlView(
     return {
       accountId: one.account.id,
       bars,
-      barsEstimated: intervals.map(
-        (interval) => estimatedThrough !== null && interval.from <= estimatedThrough,
-      ),
       values,
-      valuesEstimated: days.map(
-        (day, index) => estimatedThrough !== null && day <= estimatedThrough && values[index] !== null,
-      ),
     };
   });
 
