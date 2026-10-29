@@ -1,0 +1,135 @@
+{
+  "request": "/api/v1/money/accounts/cash/<cashId>/transactions?pageSize=5",
+  "status": 200,
+  "body": {
+    "results": [
+      {
+        "id": "fixture-id-0022",
+        "accountId": "00000000-0000-4000-8000-000000000004",
+        "transactionType": "bankTransfer",
+        "transactionSubtype": "payment",
+        "direction": "debit",
+        "status": "settled",
+        "amount": "888.5846",
+        "currency": "EUR",
+        "originalAmount": null,
+        "originalCurrency": null,
+        "conversionRate": null,
+        "postedAt": "2026-06-16T12:23:07.2366667Z",
+        "counterparty": {
+          "name": "Titolare conto",
+          "type": "bank_account"
+        },
+        "cardTransactionDetails": null,
+        "bankTransferTransactionDetails": {
+          "bankIdentifier": [
+            {
+              "name": "iban",
+              "value": "IT00X0000000000000000000000"
+            }
+          ],
+          "description": null,
+          "paymentReference": "riferimento"
+        },
+        "internalTransferTransactionDetails": null
+      },
+      {
+        "id": "fixture-id-0023",
+        "accountId": "00000000-0000-4000-8000-000000000004",
+        "transactionType": "internalTransfer",
+        "transactionSubtype": "transferReceived",
+        "direction": "credit",
+        "status": "settled",
+        "amount": "443.2008",
+        "currency": "EUR",
+        "originalAmount": null,
+        "originalCurrency": null,
+        "conversionRate": null,
+        "postedAt": "2026-06-16T12:13:34.41Z",
+        "counterparty": {
+          "name": "eToro Trading Platform WDL",
+          "type": "internal_account"
+        },
+        "cardTransactionDetails": null,
+        "bankTransferTransactionDetails": null,
+        "internalTransferTransactionDetails": {
+          "transferId": "fixture-id-0024"
+        }
+      },
+      {
+        "id": "fixture-id-0025",
+        "accountId": "00000000-0000-4000-8000-000000000004",
+        "transactionType": "internalTransfer",
+        "transactionSubtype": "transferReceived",
+        "direction": "credit",
+        "status": "settled",
+        "amount": "441.262",
+        "currency": "EUR",
+        "originalAmount": null,
+        "originalCurrency": null,
+        "conversionRate": null,
+        "postedAt": "2026-06-16T12:06:35.8433333Z",
+        "counterparty": {
+          "name": "eToro Trading Platform WDL",
+          "type": "internal_account"
+        },
+        "cardTransactionDetails": null,
+        "bankTransferTransactionDetails": null,
+        "internalTransferTransactionDetails": {
+          "transferId": "fixture-id-0026"
+        }
+      },
+      {
+        "id": "fixture-id-0027",
+        "accountId": "00000000-0000-4000-8000-000000000004",
+        "transactionType": "internalTransfer",
+        "transactionSubtype": "transfer",
+        "direction": "debit",
+        "status": "settled",
+        "amount": "364.7682",
+        "currency": "EUR",
+        "originalAmount": null,
+        "originalCurrency": null,
+        "conversionRate": null,
+        "postedAt": "2026-06-12T16:16:42.0833333Z",
+        "counterparty": {
+          "name": "eToro Trading Platform DPT",
+          "type": "internal_account"
+        },
+        "cardTransactionDetails": null,
+        "bankTransferTransactionDetails": null,
+        "internalTransferTransactionDetails": {
+          "transferId": "fixture-id-0028"
+        }
+      },
+      {
+        "id": "fixture-id-0029",
+        "accountId": "00000000-0000-4000-8000-000000000004",
+        "transactionType": "internalTransfer",
+        "transactionSubtype": "transfer",
+        "direction": "debit",
+        "status": "settled",
+        "amount": "371.11",
+        "currency": "EUR",
+        "originalAmount": null,
+        "originalCurrency": null,
+        "conversionRate": null,
+        "postedAt": "2026-06-12T14:03:20.4233333Z",
+        "counterparty": {
+          "name": "eToro Trading Platform DPT",
+          "type": "internal_account"
+        },
+        "cardTransactionDetails": null,
+        "bankTransferTransactionDetails": null,
+        "internalTransferTransactionDetails": {
+          "transferId": "fixture-id-0030"
+        }
+      }
+    ],
+    "pagination": {
+      "pageSize": 5,
+      "nextPageToken": "6:40880682",
+      "hasNext": true
+    }
+  }
+}

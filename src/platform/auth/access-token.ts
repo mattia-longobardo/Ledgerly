@@ -94,6 +94,7 @@ export async function authenticateAccessToken(
       locale: preferences.locale,
       timeZone: preferences.timeZone,
       numberFormat: numberStyle(preferences),
+      displayCurrency: preferences.displayCurrency,
     },
     scopes: principal.scopes,
     clientId: principal.clientId,

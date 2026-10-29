@@ -1,0 +1,55 @@
+{
+  "method": "sapiGetAssetWalletBalance",
+  "body": [
+    {
+      "activate": true,
+      "balance": "0.00000021",
+      "walletName": "Spot"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "Funding"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "Cross Margin"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "Isolated Margin"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "USDⓈ-M Futures"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "COIN-M Futures"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "Earn"
+    },
+    {
+      "activate": false,
+      "balance": "0",
+      "walletName": "Options"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "Trading Bots"
+    },
+    {
+      "activate": true,
+      "balance": "0",
+      "walletName": "Copy Trading"
+    }
+  ]
+}

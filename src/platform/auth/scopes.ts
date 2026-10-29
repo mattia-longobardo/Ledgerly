@@ -4,7 +4,7 @@
  * one list.
  */
 
-export const API_SCOPES = ["read", "write", "imports"] as const;
+export const API_SCOPES = ["read", "write", "imports", "investments:read"] as const;
 export type Scope = (typeof API_SCOPES)[number];
 
 /** The scopes a person ticked, validated: a non-empty subset of {@link API_SCOPES}. */

@@ -1,0 +1,7 @@
+{
+  "method": "sapiGetSimpleEarnLockedPosition",
+  "body": {
+    "total": 0,
+    "rows": []
+  }
+}

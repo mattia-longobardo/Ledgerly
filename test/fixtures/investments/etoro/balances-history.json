@@ -1,0 +1,148 @@
+{
+  "request": "/api/v1/balances/history?displayCurrency=EUR&fromDate=2025-11-01",
+  "status": 200,
+  "note": "3 snapshot su 360",
+  "body": {
+    "gcid": 900001,
+    "displayCurrency": "EUR",
+    "fromDate": "2025-11-01",
+    "toDate": "2026-10-27",
+    "snapshots": [
+      {
+        "date": "2025-11-01",
+        "totalCurrencyIso": "USD",
+        "totalCash": 0.1221,
+        "totalInvestedAmount": 0,
+        "totalPnl": 0,
+        "totalBalance": 0.1221,
+        "displayTotalCash": 0.111,
+        "displayTotalInvestedAmount": 0,
+        "displayTotalPnl": 0,
+        "displayTotalBalance": 0.111,
+        "totalExchangeRate": 0.89839188,
+        "accountSnapshots": [
+          {
+            "accountId": "fixture-id-0020",
+            "accountType": "Cash",
+            "currency": "EUR",
+            "cash": 0,
+            "investedAmount": 0,
+            "pnl": 0,
+            "total": 0,
+            "usdRate": 1.15,
+            "displayCash": 0,
+            "displayInvestedAmount": 0,
+            "displayPnl": 0,
+            "displayTotal": 0,
+            "exchangeRate": 1
+          },
+          {
+            "accountId": "fixture-id-0009",
+            "accountType": "Trading",
+            "currency": "USD",
+            "cash": 0.1221,
+            "investedAmount": 0,
+            "pnl": 0,
+            "total": 0.1221,
+            "usdRate": 1,
+            "displayCash": 0.111,
+            "displayInvestedAmount": 0,
+            "displayPnl": 0,
+            "displayTotal": 0.111,
+            "exchangeRate": 0.89839188
+          }
+        ]
+      },
+      {
+        "date": "2026-02-22",
+        "totalCurrencyIso": "USD",
+        "totalCash": 0.1221,
+        "totalInvestedAmount": 0,
+        "totalPnl": 0,
+        "totalBalance": 0.1221,
+        "displayTotalCash": 0.111,
+        "displayTotalInvestedAmount": 0,
+        "displayTotalPnl": 0,
+        "displayTotalBalance": 0.111,
+        "totalExchangeRate": 0.89839188,
+        "accountSnapshots": [
+          {
+            "accountId": "fixture-id-0009",
+            "accountType": "Trading",
+            "currency": "USD",
+            "cash": 0.1221,
+            "investedAmount": 0,
+            "pnl": 0,
+            "total": 0.1221,
+            "usdRate": 1,
+            "displayCash": 0.111,
+            "displayInvestedAmount": 0,
+            "displayPnl": 0,
+            "displayTotal": 0.111,
+            "exchangeRate": 0.89839188
+          },
+          {
+            "accountId": "fixture-id-0020",
+            "accountType": "Cash",
+            "currency": "EUR",
+            "cash": 0,
+            "investedAmount": 0,
+            "pnl": 0,
+            "total": 0,
+            "usdRate": 1.18,
+            "displayCash": 0,
+            "displayInvestedAmount": 0,
+            "displayPnl": 0,
+            "displayTotal": 0,
+            "exchangeRate": 1
+          }
+        ]
+      },
+      {
+        "date": "2026-10-26",
+        "totalCurrencyIso": "USD",
+        "totalCash": 0,
+        "totalInvestedAmount": 0,
+        "totalPnl": 0,
+        "totalBalance": 0,
+        "displayTotalCash": 0,
+        "displayTotalInvestedAmount": 0,
+        "displayTotalPnl": 0,
+        "displayTotalBalance": 0,
+        "totalExchangeRate": 0.89839188,
+        "accountSnapshots": [
+          {
+            "accountId": "fixture-id-0009",
+            "accountType": "Trading",
+            "currency": "USD",
+            "cash": 0,
+            "investedAmount": 0,
+            "pnl": 0,
+            "total": 0,
+            "usdRate": 1,
+            "displayCash": 0,
+            "displayInvestedAmount": 0,
+            "displayPnl": 0,
+            "displayTotal": 0,
+            "exchangeRate": 0.89839188
+          },
+          {
+            "accountId": "fixture-id-0020",
+            "accountType": "Cash",
+            "currency": "EUR",
+            "cash": 0,
+            "investedAmount": 0,
+            "pnl": 0,
+            "total": 0,
+            "usdRate": 1.12,
+            "displayCash": 0,
+            "displayInvestedAmount": 0,
+            "displayPnl": 0,
+            "displayTotal": 0,
+            "exchangeRate": 1
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "request": "/api/v1/trading/info/real/pnl",
+  "status": 200,
+  "body": {
+    "clientPortfolio": {
+      "positions": [],
+      "unrealizedPnL": 0,
+      "mirrors": [],
+      "accountCurrencyId": 1,
+      "credit": 0,
+      "orders": [],
+      "stockOrders": [],
+      "entryOrders": [],
+      "exitOrders": [],
+      "ordersForOpen": [],
+      "ordersForClose": [],
+      "ordersForCloseMultiple": [],
+      "bonusCredit": 0
+    }
+  }
+}

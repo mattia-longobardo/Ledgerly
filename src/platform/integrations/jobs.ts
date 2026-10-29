@@ -15,23 +15,12 @@
  * tick tries again.
  */
 import "server-only";
-import { runTrekPass } from "@/modules/timeoff/jobs";
-import { runWalletPass } from "@/modules/transactions/jobs";
 import { contextFor, personById } from "@/modules/users/jobs";
 import { redactForLog } from "@/platform/auth/logger";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
-import { runPaperlessPass } from "./paperless/sync";
-import { PAPERLESS_PROVIDER, TREK_PROVIDER, WALLET_PROVIDER } from "./rules";
-import {
-  advanceSchedule,
-  anyConnectionDue,
-  type Connection,
-  dueConnections,
-  listConnections,
-} from "./service";
-
-type PassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";
+import { type PassOutcome, passFor } from "./registry";
+import { advanceSchedule, anyConnectionDue, dueConnections } from "./service";
 
 /**
  * One pass of the dispatcher at `now`: every connection due by then, each moved on by its own
@@ -47,17 +36,8 @@ export async function dispatchDueConnections(now: Date): Promise<JobDetail> {
       const person = await personById(due.userId);
       if (!person) continue;
       const ctx = await contextFor(person);
-      let outcome: PassOutcome;
-      if (due.provider === WALLET_PROVIDER) {
-        const connection = (await listConnections(ctx)).find((one) => one.id === due.id);
-        outcome = connection ? await runWalletPass(person, ctx, connection as Connection, now) : "absent";
-      } else if (due.provider === TREK_PROVIDER) {
-        outcome = await runTrekPass(ctx);
-      } else if (due.provider === PAPERLESS_PROVIDER) {
-        outcome = await runPaperlessPass(ctx);
-      } else {
-        outcome = "absent";
-      }
+      const pass = passFor(due.provider);
+      const outcome: PassOutcome = pass ? await pass.run(person, ctx, due, now) : "absent";
       counts[outcome] += 1;
       byProvider[due.provider] = (byProvider[due.provider] ?? 0) + 1;
       if (outcome !== "busy") await advanceSchedule(ctx, due, now);

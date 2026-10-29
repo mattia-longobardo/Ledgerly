@@ -14,7 +14,14 @@ import { recurringPatterns, transactions } from "./schema";
 const NOW = new Date("2026-01-20T08:07:00Z");
 
 function contextFor(userId: string): Ctx {
-  return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId,
+    role: "user",
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 async function newAccount(ctx: Ctx): Promise<string> {

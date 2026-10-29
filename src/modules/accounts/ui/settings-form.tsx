@@ -96,7 +96,7 @@ export function AccountSettingsForm({
           betweenEntries: text("betweenEntries"),
         });
         if (!result.ok) {
-          setError(t("errors.invalid"));
+          setError(t(result.error === "managed_locked" ? "errors.managed" : "errors.invalid"));
           return;
         }
         setError(null);

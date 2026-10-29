@@ -130,6 +130,135 @@ test("a row menu opens on Enter, walks with the arrows and closes on Escape", as
   await expect(trigger).toBeFocused();
 });
 
+test("an investment dialog opened from a row menu traps the focus and gives it back", async ({ page }) => {
+  await page.goto("/investments");
+  await page.waitForTimeout(500);
+  const service = page.getByRole("link", { name: "Directa", exact: true }).filter({ visible: true }).first();
+  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions`);
+  await page.waitForTimeout(500);
+
+  const trigger = page
+    .getByRole("button", { name: /^Actions for Vanguard/ })
+    .filter({ visible: true })
+    .first();
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu").first();
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  expect(await focusIsVisible(page), "the menu item under the arrows draws no ring").toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  // "Add operation" (§3.2): a menu behind a button; its "Buy" opens the dialog.
+  const opener = page.getByRole("button", { name: "Add operation" }).first();
+  await opener.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menu")).toBeVisible();
+  // Opened from the keyboard, the menu takes the focus to its first item; the arrows walk on.
+  await expect(page.getByRole("menuitem", { name: "Buy", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Deposit", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("menuitem", { name: "Buy", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await page.waitForTimeout(300);
+  for (let index = 0; index < 20; index += 1) {
+    await page.keyboard.press("Tab");
+    const held = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element) return false;
+      if (document.querySelector('[role="dialog"]')?.contains(element)) return true;
+      return element === document.body || element.hasAttribute("data-base-ui-focus-guard");
+    });
+    expect(held, `Tab ${index + 1} left the dialog: focus on ${await focused(page)}`).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener, "closing the dialog did not give the focus back").toBeFocused();
+});
+
+test("the replace key dialog of a connected service traps the focus and gives it back", async ({ page }) => {
+  await page.goto("/investments");
+  await page.waitForTimeout(500);
+  const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
+  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/connection`);
+  await page.waitForTimeout(500);
+
+  const opener = page.getByRole("button", { name: "Replace key" }).first();
+  await opener.focus();
+  expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await page.waitForTimeout(300);
+  for (let index = 0; index < 12; index += 1) {
+    await page.keyboard.press("Tab");
+    const held = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element) return false;
+      if (document.querySelector('[role="dialog"]')?.contains(element)) return true;
+      return element === document.body || element.hasAttribute("data-base-ui-focus-guard");
+    });
+    expect(held, `Tab ${index + 1} left the dialog: focus on ${await focused(page)}`).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener, "closing the dialog did not give the focus back").toBeFocused();
+});
+
+test("a service's tabs are walked from the keyboard, each one a page, the period kept", async ({ page }) => {
+  await page.goto("/investments?period=all");
+  await page.waitForTimeout(500);
+  const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
+  await page.goto((await service.getAttribute("href"))!);
+  await page.waitForTimeout(500);
+
+  const tabs = page.getByRole("navigation", { name: "Sections of the service" });
+  const names = ["Overview", "Positions", "Activity", "Connection"];
+  await tabs.getByRole("link", { name: "Overview" }).focus();
+  expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
+  for (const name of names.slice(1)) {
+    await page.keyboard.press("Tab");
+    await expect(tabs.getByRole("link", { name: new RegExp(`^${name}`) })).toBeFocused();
+    expect(await focusIsVisible(page), `the ${name} tab draws no ring`).toBe(true);
+  }
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/connection\?period=all$/);
+  await expect(tabs.getByRole("link", { name: /^Connection/ })).toHaveAttribute("aria-current", "page");
+});
+
+test("Positions: the open, closed and all-closed views are links walked from the keyboard (§3.4)", async ({
+  page,
+}) => {
+  await page.goto("/investments?period=all");
+  await page.waitForTimeout(500);
+  const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
+  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions?period=all`);
+  await page.waitForTimeout(500);
+
+  const status = page.getByRole("group", { name: "Which positions" });
+  await status.getByRole("link", { name: /^Open/ }).focus();
+  expect(await focusIsVisible(page), "the Open link draws no ring").toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(status.getByRole("link", { name: /^Closed in/ })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(status.getByRole("link", { name: /^All closed/ })).toBeFocused();
+  expect(await focusIsVisible(page), "the All closed link draws no ring").toBe(true);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/positions\?period=all&status=all$/);
+  await expect(status.getByRole("link", { name: /^All closed/ })).toHaveAttribute("aria-current", "true");
+  // A row's asset opens its Activity: a link of its own, apart from the row.
+  const asset = page.getByTestId("closed-row").first().getByRole("link").first();
+  await asset.focus();
+  expect(await focusIsVisible(page), "the asset link draws no ring").toBe(true);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/activity\?period=all&asset=/);
+});
+
 test("a sortable table sorts from the keyboard, and the column says which way", async ({ page }) => {
   await page.goto("/expenses");
   await page.waitForTimeout(800);

@@ -1,6 +1,8 @@
 "use client";
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useRef, useState } from "react";
 import { addMonths, type CivilDate, type MonthKey, monthKey } from "@/platform/dates";
@@ -90,6 +92,7 @@ export function DateRangePicker({
   locale,
   labels,
   describe,
+  shortcuts,
 }: {
   grain?: RangeGrain;
   /**
@@ -109,6 +112,11 @@ export function DateRangePicker({
   labels: DateRangeLabels;
   /** The hint under the grids, for a picked range: its ends are days, or month keys. */
   describe: (from: string, to: string) => string;
+  /**
+   * Ready-made ranges above the fields (docs/design/investments-ux.md §2.1: "2026 year to date ·
+   * 2025 · Last 12 months · All"), as links: each one is an address of its own.
+   */
+  shortcuts?: { label: string; href: string; current?: boolean }[];
 }) {
   const router = useRouter();
   const byMonth = grain === "month";
@@ -207,6 +215,24 @@ export function DateRangePicker({
           align === "start" ? "left-0" : "right-0",
         )}
       >
+        {shortcuts && shortcuts.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5 border-b border-border pb-3">
+            {shortcuts.map((shortcut) => (
+              <Link
+                key={shortcut.href}
+                href={shortcut.href as Route}
+                aria-current={shortcut.current ? "true" : undefined}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "focus-ring inline-flex h-6 items-center rounded-full border px-2.5 text-sm font-medium",
+                  shortcut.current ? "border-fg bg-hover text-fg" : "border-border text-muted hover:text-fg",
+                )}
+              >
+                {shortcut.label}
+              </Link>
+            ))}
+          </div>
+        )}
         <form method="get" action={path} onSubmit={apply} className="flex flex-col gap-3">
           {Object.entries(params).map(([name, value]) =>
             value === undefined || value === "" ? null : (

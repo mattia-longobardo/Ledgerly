@@ -19,6 +19,17 @@ describe("preferencesInputSchema", () => {
     expect(parsed.patronSaint).toEqual({ month: 12, day: 7 });
   });
 
+  it("takes EUR or an ECB currency as the display currency, and EUR when none is sent", () => {
+    expect(
+      preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, displayCurrency: "USD" }).displayCurrency,
+    ).toBe("USD");
+    const older: Record<string, unknown> = { ...DEFAULT_PREFERENCES };
+    delete older.displayCurrency;
+    expect(preferencesInputSchema.parse(older).displayCurrency).toBe("EUR");
+    expect(() => preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, displayCurrency: "BGN" })).toThrow();
+    expect(() => preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, displayCurrency: "usd" })).toThrow();
+  });
+
   it("rejects an unknown timezone", () => {
     expect(() =>
       preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, timeZone: "Mars/Olympus" }),

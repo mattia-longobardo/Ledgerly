@@ -23,10 +23,10 @@ describe("OAuth addresses", () => {
     expect(protectedResourceMetadata(BASE, "api")).toMatchObject({
       resource: `${BASE}/api/v1`,
       authorization_servers: [`${BASE}/api/auth`],
-      scopes_supported: ["read", "write", "imports"],
+      scopes_supported: ["read", "write", "imports", "investments:read"],
     });
-    // The MCP is read-only: a client that asks for what the metadata offers asks for `read`.
-    expect(protectedResourceMetadata(BASE, "mcp").scopes_supported).toEqual(["read"]);
+    // The MCP is read-only: a client that asks for what the metadata offers asks for the two reads.
+    expect(protectedResourceMetadata(BASE, "mcp").scopes_supported).toEqual(["read", "investments:read"]);
   });
 });
 

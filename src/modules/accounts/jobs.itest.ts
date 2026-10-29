@@ -27,7 +27,14 @@ describe("accountAlertsJob", () => {
   beforeEach(async () => {
     await resetDatabase();
     const person = await createTestUser();
-    ctx = { userId: person.id, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+    ctx = {
+      userId: person.id,
+      role: "user",
+      locale: "en",
+      timeZone: "Europe/Rome",
+      numberFormat: "it-IT",
+      displayCurrency: "EUR",
+    };
   });
   afterAll(closeDatabase);
 

@@ -2,6 +2,7 @@ import "server-only";
 import { Hono } from "hono";
 import { accountsApi } from "@/modules/accounts/api";
 import { importsApi } from "@/modules/imports/api";
+import { investmentsApi } from "@/modules/investments/api";
 import { transactionsApi } from "@/modules/transactions/api";
 import { redactForLog } from "@/platform/auth/logger";
 import type { ApiEnv } from "./auth";
@@ -22,6 +23,7 @@ api.route("/", accountsApi);
 api.route("/", transactionsApi);
 api.route("/", summaryApi);
 api.route("/", importsApi);
+api.route("/", investmentsApi);
 
 api.notFound((c) => fail(c, "not_found"));
 

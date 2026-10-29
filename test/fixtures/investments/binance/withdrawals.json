@@ -1,0 +1,113 @@
+{
+  "method": "fetchWithdrawals(undefined, since, 1000, { endTime }) a finestre di 90 giorni",
+  "body": [
+    {
+      "info": {
+        "id": "fixture-id-0043",
+        "amount": "0.0014324",
+        "transactionFee": "0.000074",
+        "coin": "ETH",
+        "status": 6,
+        "address": "fixture-id-0044",
+        "txId": "fixture-id-0045",
+        "applyTime": "2025-12-01 14:54:06",
+        "network": "ETH",
+        "transferType": 0,
+        "info": "fixture-info",
+        "confirmNo": 128,
+        "walletType": 0,
+        "txKey": "",
+        "completeTime": "2025-12-01 14:56:12",
+        "type": "withdrawal"
+      },
+      "id": "fixture-id-0043",
+      "txid": "fixture-id-0045",
+      "timestamp": 1764600846000,
+      "datetime": "2025-12-01T14:54:06.000Z",
+      "network": "ERC20",
+      "address": "fixture-id-0044",
+      "addressTo": "fixture-id-0044",
+      "type": "withdrawal",
+      "amount": 0.0014324,
+      "currency": "ETH",
+      "status": "ok",
+      "internal": false,
+      "fee": {
+        "currency": "ETH",
+        "cost": 7.4e-5
+      }
+    },
+    {
+      "info": {
+        "id": "fixture-id-0046",
+        "amount": "1.52967699",
+        "transactionFee": "0.0222",
+        "coin": "SUI",
+        "status": 6,
+        "address": "fixture-id-0047",
+        "txId": "fixture-id-0048",
+        "applyTime": "2025-02-14 21:04:26",
+        "network": "SUI",
+        "transferType": 0,
+        "info": "fixture-info",
+        "confirmNo": 1,
+        "walletType": 0,
+        "txKey": "",
+        "completeTime": "2025-02-14 21:06:43",
+        "type": "withdrawal"
+      },
+      "id": "fixture-id-0046",
+      "txid": "fixture-id-0048",
+      "timestamp": 1739567066000,
+      "datetime": "2025-02-14T21:04:26.000Z",
+      "network": "SUI",
+      "address": "fixture-id-0047",
+      "addressTo": "fixture-id-0047",
+      "type": "withdrawal",
+      "amount": 1.52967699,
+      "currency": "SUI",
+      "status": "ok",
+      "internal": false,
+      "fee": {
+        "currency": "SUI",
+        "cost": 0.0222
+      }
+    },
+    {
+      "info": {
+        "id": "fixture-id-0049",
+        "amount": "38.373588",
+        "transactionFee": "0",
+        "coin": "USDT",
+        "status": 6,
+        "address": "fixture-id-0044",
+        "txId": "fixture-id-0050",
+        "applyTime": "2025-02-15 23:12:03",
+        "network": "BSC",
+        "transferType": 0,
+        "info": "fixture-info",
+        "confirmNo": 20,
+        "walletType": 0,
+        "txKey": "",
+        "completeTime": "2025-02-15 23:13:42",
+        "type": "withdrawal"
+      },
+      "id": "fixture-id-0049",
+      "txid": "fixture-id-0050",
+      "timestamp": 1739661123000,
+      "datetime": "2025-02-15T23:12:03.000Z",
+      "network": "BEP20",
+      "address": "fixture-id-0044",
+      "addressTo": "fixture-id-0044",
+      "type": "withdrawal",
+      "amount": 38.373588,
+      "currency": "USDT",
+      "status": "ok",
+      "internal": false,
+      "fee": {
+        "currency": "USDT",
+        "cost": 0
+      }
+    }
+  ]
+}

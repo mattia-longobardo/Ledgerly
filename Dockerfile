@@ -3,7 +3,11 @@
 FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# No install scripts (PERS-87 SEC-04): a dependency's `postinstall` (ccxt's, today a banner) never
+# runs at build time. Nothing needs one: esbuild, @swc/core and the other native packages find
+# their platform binary in the optional dependency npm already installed, and `npm run build`
+# below and the esbuild step after it fail the build if one does not.
+RUN npm ci --ignore-scripts
 
 FROM node:26-alpine AS builder
 WORKDIR /app

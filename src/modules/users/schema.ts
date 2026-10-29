@@ -19,6 +19,9 @@ export const userPreferences = pgTable(
     // before these two settings existed keeps formatting exactly as it did.
     decimalSeparator: text("decimal_separator", { enum: [".", ","] }),
     currencyPosition: text("currency_position", { enum: ["before", "after"] }),
+    // What every total across accounts is shown in (docs/design/investments.md §1.8, D1). Each
+    // account keeps its own currency; a total converts at read time, so this never rewrites a balance.
+    displayCurrency: text("display_currency").notNull().default("EUR"),
     weekStart: smallint("week_start").notNull(),
     theme: text("theme", { enum: ["system", "light", "dark"] }).notNull(),
     defaultRange: text("default_range", { enum: ["this_month", "last_30_days", "year_to_date"] }).notNull(),
@@ -46,6 +49,7 @@ export const userPreferences = pgTable(
       "user_preferences_currency_position_ck",
       sql`${table.currencyPosition} is null or ${table.currencyPosition} in ('before', 'after')`,
     ),
+    check("user_preferences_display_currency_ck", sql`${table.displayCurrency} ~ '^[A-Z]{3}$'`),
     check("user_preferences_theme_ck", sql`${table.theme} in ('system', 'light', 'dark')`),
     check(
       "user_preferences_default_range_ck",

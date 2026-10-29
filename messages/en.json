@@ -271,7 +271,9 @@
         "accounts": "Accounts and balances",
         "transactions": "Transactions",
         "leave": "Leave days",
-        "documents": "Documents"
+        "documents": "Documents",
+        "holdings": "Holdings and value",
+        "flows": "Trades and movements"
       },
       "runStates": {
         "running": "Running",
@@ -436,6 +438,11 @@
         "optionalHint": "Optional: leave empty to skip.",
         "disconnectDescription": "The documents already imported stay. Ledgerly stops reading Paperless.",
         "typesMissing": "Paperless has no document type with one of those names. Check the spelling in Paperless."
+      },
+      "investments": {
+        "title": "Investment connections",
+        "open": "Open {name}",
+        "description": "Keys, checks and disconnection live on the service's page."
       }
     },
     "categories": {
@@ -590,7 +597,7 @@
         "dot": "Point (1,234.56)",
         "comma": "Comma (1.234,56)"
       },
-      "currencyPosition": "Euro sign",
+      "currencyPosition": "Currency sign",
       "currencyPositions": {
         "auto": "From the number format",
         "before": "Before the amount (€ 1,234.56)",
@@ -622,7 +629,9 @@
       "errors": {
         "invalid": "Some of these preferences are invalid. Check your inputs and try again.",
         "failed": "Couldn't save preferences. Try again."
-      }
+      },
+      "displayCurrency": "Display currency",
+      "displayCurrencyHint": "Totals across accounts are converted to it at the ECB rate of their day. Each account keeps its own currency."
     },
     "signIn": {
       "title": "Sign-in",
@@ -641,12 +650,14 @@
       "scopes": {
         "read": "read",
         "write": "write",
-        "imports": "imports"
+        "imports": "imports",
+        "investments:read": "investments:read"
       },
       "scopeHints": {
         "read": "accounts, balances, transactions and the summary",
         "write": "record a balance reading",
-        "imports": "upload payslips and Cometa documents"
+        "imports": "upload payslips and Cometa documents",
+        "investments:read": "investment services, their returns and holdings"
       },
       "cancel": "Cancel",
       "copy": "Copy",
@@ -1511,7 +1522,8 @@
       "transactions": {
         "title": "Transactions arrive with expenses",
         "description": "This account's transactions will appear here once the expenses module lands."
-      }
+      },
+      "managedInInvestments": "Managed in Investments"
     },
     "entries": {
       "saved": "Balance saved",
@@ -1520,7 +1532,8 @@
         "invalid": "Check the date and the amount, then try again.",
         "futureDate": "A balance cannot be dated in the future.",
         "failed": "Couldn't save the balance. Try again.",
-        "notFound": "That balance is not one you can edit."
+        "notFound": "That balance is not one you can edit.",
+        "managed": "This account is managed in Investments: change its value on the service page."
       },
       "add": {
         "title": "Add balance entry",
@@ -1551,7 +1564,8 @@
         "provider": "Provider",
         "system": "Snapshot",
         "import": "Import",
-        "derived": "Rebuilt"
+        "derived": "Rebuilt",
+        "portfolio": "Portfolio"
       },
       "updated": "Balance updated",
       "edit": {
@@ -1559,6 +1573,11 @@
         "description": "Only balances you entered by hand can be changed.",
         "cancel": "Cancel",
         "submit": "Save changes"
+      },
+      "managed": {
+        "title": "Managed in Investments",
+        "note": "Investments writes this account's value from its operations and readings. Record them on the service page.",
+        "link": "Open in Investments"
       }
     },
     "settings": {
@@ -1566,7 +1585,8 @@
       "restored": "Account restored",
       "errors": {
         "invalid": "Check the highlighted fields and try again.",
-        "failed": "Couldn't save. Try again."
+        "failed": "Couldn't save. Try again.",
+        "managed": "An account managed in Investments stays an investment or crypto account."
       },
       "general": {
         "title": "General",
@@ -1688,7 +1708,8 @@
         "failed": "Couldn't save. Try again."
       }
     },
-    "showArchived": "Show archived"
+    "showArchived": "Show archived",
+    "missingRate": "No exchange rate from {currencies} to {currency}: those accounts are left out of the totals."
   },
   "budgets": {
     "title": "Budgets",
@@ -3054,149 +3075,983 @@
   },
   "investments": {
     "title": "Investments",
-    "subtitle": "The money on trading platforms: what you put in, what you took out and what it is worth today. No account balance changes.",
+    "subtitle": "Your brokers, exchanges and investment accounts: what they are worth, what went in and what they gained.",
     "empty": {
-      "title": "No platforms",
-      "description": "Add your first trading platform, then record its deposits and withdrawals."
+      "title": "No services yet",
+      "description": "Add a manual account from the catalog, then record its deposits, assets and valuations."
     },
-    "filter": {
-      "label": "Platforms",
-      "all": "All"
+    "actions": {
+      "addService": "Add service",
+      "addAsset": "Add asset",
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
+      "updateValue": "Update value",
+      "toAssets": "Switch to per-asset mode",
+      "toTotal": "Switch to total mode",
+      "addAdjustment": "Add adjustment",
+      "reconcile": "Reconcile",
+      "value": "Value",
+      "sell": "Sell",
+      "close": "Close",
+      "edit": "Edit",
+      "delete": "Delete",
+      "holdingMenu": "Actions for {name}",
+      "operationMenu": "Actions for the operation of {date}",
+      "confirmZero": "Yes, it was emptied",
+      "openSite": "Open {name} (new tab)",
+      "openSiteShort": "Open site",
+      "accountSettings": "Account settings",
+      "saveUrl": "Save link",
+      "open": "Open",
+      "createManual": "Create manual account",
+      "more": "More actions",
+      "linkTransfer": "Link as transfer",
+      "unlinkTransfer": "Unlink transfer"
     },
     "kpis": {
-      "value": "Current value",
-      "valueMissing": "{count, plural, one {# platform has no value} other {# platforms have no value}}",
-      "valueEstimated": "estimated from the value of {date}",
-      "valuedOn": "as of {date}",
-      "net": "Net invested",
-      "netNote": "{deposited} in · {withdrawn} out",
-      "gain": "Gain",
-      "gainNote": "value + withdrawn − deposited",
-      "movements": "Movements",
-      "platforms": "{count, plural, one {# platform} other {# platforms}}"
-    },
-    "partial": "No value: {names}. Update the value from the platform's menu to see the total and the gain.",
-    "chart": {
-      "title": "History",
-      "value": "Value",
+      "value": "Total value",
+      "valuePartial": "Some services have no value yet",
       "invested": "Net invested",
-      "empty": "No movements yet.",
-      "hoverInvested": "net invested {amount}",
-      "summary": "Value today {value}, net invested {invested}."
-    },
-    "composition": {
-      "title": "Composition",
-      "unknown": "The composition appears once every platform has a value."
-    },
-    "platforms": {
-      "title": "Platforms",
-      "name": "Platform",
+      "investedNote": "opening + deposits − withdrawals",
+      "gain": "Gain",
+      "gainNote": "value − net invested",
       "deposited": "Deposited",
       "withdrawn": "Withdrawn",
-      "net": "Net",
+      "value1": "Value",
+      "return": "Simple return",
+      "xirr": "XIRR",
+      "xirrNote": "money-weighted, yearly",
+      "fxNote": "incl. exchange effect",
+      "notComputable": "not computable"
+    },
+    "chart": {
+      "title": "Value and net invested",
       "value": "Value",
-      "gain": "Gain",
-      "return": "Return",
-      "share": "Share",
+      "invested": "Net invested",
+      "empty": "Nothing to draw yet.",
+      "hoverInvested": "net invested {amount}",
+      "summary": "Value today {value}, net invested {invested}.",
+      "range": "Range",
+      "grain": "Points",
+      "grains": {
+        "month": "Month",
+        "day": "Day"
+      },
+      "estimatedShort": "estimate",
+      "estimatedNote": "The dashed stretch is an estimate: the provider keeps no history of the value, so each day is rebuilt from the movements and the exchange's daily closes."
+    },
+    "services": {
+      "title": "Services",
+      "name": "Service",
+      "category": "Category",
+      "origin": "Origin",
+      "lastUpdate": "Last update",
+      "value": "Value",
+      "change30": "30 days",
+      "weight": "Weight",
+      "never": "never",
+      "noValue": "no value yet"
+    },
+    "categories": {
+      "accounts": "Account",
+      "broker": "Online broker",
+      "crypto": "Crypto"
+    },
+    "origins": {
+      "manual": "Manual",
+      "synced": "Synced"
+    },
+    "modes": {
+      "assets": "Per asset",
+      "total": "Total"
+    },
+    "warnings": {
+      "conflict": "{count, plural, one {# to reconcile} other {# to reconcile}}",
+      "pendingZero": "Emptied?",
+      "missingPrices": "{count, plural, one {# price missing} other {# prices missing}}",
+      "openAdjustments": "{count, plural, one {# open adjustment} other {# open adjustments}}"
+    },
+    "allocation": {
+      "classTitle": "By asset class",
+      "serviceTitle": "By service",
+      "empty": "The allocation appears once a service has a value."
+    },
+    "classes": {
+      "stock": "Stocks",
+      "etf": "ETF",
+      "fund": "Funds",
+      "bond": "Bonds",
+      "crypto": "Crypto",
+      "stablecoin": "Stablecoins",
+      "cash": "Cash",
+      "other": "Other",
+      "unclassified": "Not by asset"
+    },
+    "funds": {
+      "title": "Funds",
+      "description": "Pension funds and PACs stay in Funds; they are shown here read only.",
+      "empty": "No funds.",
+      "types": {
+        "pension": "Pension fund",
+        "pac": "PAC"
+      }
+    },
+    "catalog": {
+      "title": "Catalog",
+      "subtitle": "Pick the service to add. eToro connects with a read-only key; a manual account works for any of them.",
+      "sections": {
+        "accounts": "Accounts",
+        "broker": "Online brokers",
+        "crypto": "Crypto"
+      },
+      "status": {
+        "connected": "Linked",
+        "available": "Available",
+        "planned": "Coming soon"
+      },
+      "manualName": "Manual account",
+      "manualDescription": "Directa, Fineco, a deposit account, BTPs, funds: anything you record by hand.",
+      "plannedDescription": "Not connectable yet: use a manual account meanwhile.",
+      "linked": "Linked: {names}",
+      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades."
+    },
+    "manualForm": {
+      "title": "Create manual account",
+      "description": "A service you keep by hand. Its value goes into your net worth from today.",
+      "destination": "Destination account",
+      "newAccount": "Create a new account",
+      "existingAccount": "Use an existing account",
+      "name": "Name",
+      "namePlaceholder": "e.g. Directa",
+      "category": "Category",
+      "currency": "Account currency",
+      "currencyHint": "Every balance and operation of the account is in this currency.",
+      "mode": "Mode",
+      "modeHint": "Per asset: you record positions and cash. Total: you record only the account's value.",
+      "url": "Link",
+      "urlHint": "Optional: the address of the service's site.",
+      "existing": "Account",
+      "existingHint": "From today Investments writes this account's value; its balance today opens the service.",
+      "noExisting": "No investment or crypto account to use.",
+      "option": "{name} · {balance}",
+      "reasons": {
+        "synced": "fed by a connection",
+        "fund": "a fund's account",
+        "managed": "already a service"
+      },
+      "submit": "Create"
+    },
+    "detail": {
+      "since": "Managed since {date}",
+      "noUrl": "No link to the service",
+      "negativeCash": "Cash is negative: the data may be incomplete.",
+      "noValue": "No value yet: record a valuation.",
+      "conflictNote": "The provider now reads a product you also keep by hand. Until you reconcile, the manual value counts and the total does not jump.",
+      "totalModeNote": "Total mode: you record the account's value, not its positions.",
+      "kpis": {
+        "value": "Value",
+        "invested": "Net invested",
+        "withdrawn": "Withdrawn",
+        "gain": "Gain",
+        "cash": "Cash",
+        "cashNote": "assets {amount}"
+      }
+    },
+    "assets": {
+      "title": "Assets",
+      "empty": "No positions yet.",
+      "asset": "Asset",
+      "class": "Class",
+      "product": "Product",
+      "quantity": "Quantity",
+      "price": "Price",
+      "value": "Value",
+      "weight": "Weight",
+      "gain": "P/L",
+      "fx": "of which exchange {amount}",
+      "origin": "Origin",
+      "conflict": "To reconcile",
+      "staleRate": "saved rate",
+      "byValue": "by value",
+      "dust": "dust, no market",
+      "noPrice": "no price",
       "actions": "Actions",
-      "open": "Open {name} (new tab)",
-      "openShort": "Open {name}",
-      "noUrl": "No link to the platform",
-      "noValue": "no value",
-      "estimated": "estimate"
+      "origins": {
+        "manual": "Manual",
+        "provider": "Provider"
+      }
     },
-    "valuations": {
-      "title": "Recorded values",
-      "empty": "No value yet: use “Update value” from the menu."
+    "products": {
+      "spot": "Spot",
+      "funding": "Funding",
+      "earn": "Earn",
+      "staking": "Staking",
+      "custody": "Custody",
+      "trading": "Trading",
+      "cash": "eToro Money",
+      "crypto": "Crypto wallet",
+      "copy": "Copy trading"
     },
-    "movements": {
-      "title": "Movements",
-      "count": "{count, plural, one {# movement} other {# movements}}",
-      "empty": "No deposits or withdrawals yet.",
+    "operations": {
+      "title": "Operations",
+      "count": "{count, plural, one {# operation} other {# operations}}",
+      "empty": "No operations yet.",
       "date": "Date",
-      "platform": "Platform",
       "kind": "Type",
+      "detail": "Detail",
       "amount": "Amount",
-      "linked": "Account movement",
-      "note": "Note",
-      "notLinked": "not linked"
+      "linked": "Bank movement",
+      "notLinked": "not linked",
+      "revisions": "{count, plural, one {# revision} other {# revisions}}",
+      "conversion": "conversion",
+      "legs": {
+        "main": "main",
+        "base": "base",
+        "quote": "quote",
+        "fee": "fee"
+      },
+      "until": "until {date}",
+      "transferWith": "Transfer · {name}"
     },
     "kinds": {
+      "opening_cash": "Opening cash",
+      "opening_position": "Opening position",
       "deposit": "Deposit",
-      "withdrawal": "Withdrawal"
+      "withdrawal": "Withdrawal",
+      "buy": "Buy",
+      "sell": "Sell",
+      "valuation": "Valuation",
+      "close": "Close",
+      "income": "Income",
+      "fee": "Fee",
+      "account_valuation": "Account value",
+      "adjustment": "Adjustment"
+    },
+    "readings": {
+      "title": "Readings",
+      "empty": "No readings yet.",
+      "date": "Date",
+      "status": "Status",
+      "total": "Total",
+      "products": "Scope",
+      "unread": "not read: {products}",
+      "missing": "{count, plural, one {# price missing} other {# prices missing}}",
+      "statuses": {
+        "complete": "Complete",
+        "partial": "Partial",
+        "confirmed_zero": "Empty, confirmed",
+        "pending_zero": "Empty?",
+        "estimated": "Estimated"
+      },
+      "pendingZero": "The provider reports the account as empty. Was it emptied? Until you confirm, the value holds."
+    },
+    "adjustments": {
+      "title": "Open adjustments",
+      "empty": "No open adjustments.",
+      "from": "From",
+      "until": "Until",
+      "amount": "Change",
+      "reason": "Reason",
+      "openEnded": "no end",
+      "stale": "open for more than 30 days"
+    },
+    "settings": {
+      "title": "Settings",
+      "mode": "Mode: {mode}",
+      "convertNote": "A change of mode is an explicit conversion on today's date: the value does not change.",
+      "url": "Link to the service",
+      "flags": "Net worth, snapshot and the other flags are in the account's settings.",
+      "periods": "Periods",
+      "period": "{mode} · {origin} from {date}"
     },
     "form": {
       "cancel": "Cancel",
-      "save": "Save"
-    },
-    "platformForm": {
-      "newTitle": "New platform",
-      "editTitle": "Edit platform",
-      "description": "A trading platform you keep money on. The link takes you to its site.",
-      "name": "Name",
-      "namePlaceholder": "e.g. eToro",
-      "url": "Link",
-      "urlHint": "Optional: the address of the platform's site or web app."
-    },
-    "movementForm": {
-      "newTitle": "New movement",
-      "editTitle": "Edit movement",
-      "description": "A deposit to the platform or a withdrawal from it. No account balance changes.",
-      "kind": "Movement type",
-      "platform": "Platform",
-      "amount": "Amount",
+      "save": "Save",
       "date": "Date",
-      "note": "Note",
+      "amount": "Amount",
+      "note": "Note"
+    },
+    "assetForm": {
+      "title": "Add asset",
+      "description": "A buy: the position, its price and its fee. The value is rewritten from its date.",
+      "source": "Asset",
+      "existing": "From the catalog",
+      "create": "New asset",
+      "search": "Search by name, ISIN or symbol",
+      "classFilter": "Class",
+      "allClasses": "All classes",
+      "asset": "Asset",
+      "noMatch": "No asset matches.",
+      "class": "Class",
+      "name": "Name",
+      "isin": "ISIN",
+      "symbol": "Symbol",
+      "currency": "Quote currency",
+      "product": "Product",
+      "covered": "The provider already reads: {products}. A manual position there would need reconciling.",
+      "priceMode": "How you record it",
+      "byQuantity": "Quantity and price",
+      "byTotal": "Total amount",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "fee": "Fee",
+      "fxRate": "Exchange rate",
+      "fxHint": "{account} per 1 {asset}. Empty: the ECB rate of the day.",
+      "submit": "Add"
+    },
+    "operationForm": {
+      "titles": {
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "account_valuation": "Update value",
+        "adjustment": "Correct the value",
+        "valuation": "Edit valuation",
+        "income": "Income"
+      },
+      "editTitle": "Edit {kind}",
+      "descriptions": {
+        "deposit": "Money that went into the account.",
+        "withdrawal": "Money that came out of the account.",
+        "account_valuation": "What the account is worth at the end of that day.",
+        "adjustment": "A dated change of the value with a reason, e.g. a transfer in transit. Give it an end whenever you can.",
+        "valuation": "The new price or value of the position.",
+        "income": "A dividend, an interest or a reward paid in cash."
+      },
+      "value": "Value",
+      "delta": "Change",
+      "deltaHint": "Negative to lower the value.",
+      "validUntil": "Last day",
+      "validUntilHint": "Optional, but an adjustment without an end counts forever.",
+      "reason": "Reason",
       "linkOut": "Linked account expense",
       "linkIn": "Linked account income",
-      "linkHint": "Optional: the matching bank movement. It is a reference only.",
-      "noLink": "No link"
+      "linkHint": "Optional: the matching bank movement. It documents where the money came from and moves no balance.",
+      "noLink": "Not linked",
+      "class": "What it corrects",
+      "classes": {
+        "data": "A wrong reading of the service",
+        "capital": "Money in or out never recorded",
+        "result": "A gain or loss never recorded"
+      },
+      "preview": {
+        "pnl": "The P&L changes by {amount} from {date}",
+        "until": "and goes back after {date}",
+        "capital": "The value changes by {amount} from {date}; the P&L does not: it is a flow."
+      }
     },
-    "valuationForm": {
-      "title": "Update value · {name}",
-      "description": "What the platform is worth, as the platform itself shows it, at the end of the day.",
+    "holdingForm": {
+      "valuation": "Value · {name}",
+      "sell": "Sell · {name}",
+      "close": "Close · {name}",
+      "valuationDescription": "The new price from this date, or the new value of a position kept by value.",
+      "sellDescription": "Part of the position sold: the proceeds go to cash.",
+      "closeDescription": "The whole position sold: it is worth zero from this date and the proceeds go to cash.",
+      "byPrice": "Price",
+      "byAmount": "Amount",
+      "how": "Record by",
+      "unitPrice": "Unit price",
       "value": "Value",
-      "date": "Date"
+      "proceeds": "Proceeds",
+      "quantity": "Quantity",
+      "fee": "Fee"
+    },
+    "conversionForm": {
+      "toAssetsTitle": "Switch to per-asset mode",
+      "toTotalTitle": "Switch to total mode",
+      "toAssetsDescription": "Declare the positions the account holds today. The cash that keeps today's value of {value} unchanged opens the new period.",
+      "toTotalDescription": "From today you record only the account's value: today's {value} becomes its first valuation. The positions stay in the history.",
+      "noValue": "The account has no value today: record a valuation first.",
+      "addPosition": "Add position",
+      "removePosition": "Remove position {n}",
+      "position": "Position {n}",
+      "openingCash": "Opening cash: {amount}",
+      "otherCurrency": "Positions in another currency are converted at today's ECB rate when saved.",
+      "negative": "The positions are worth more than the account: the opening cash is negative.",
+      "acceptNegative": "Keep the negative cash",
+      "submit": "Convert"
+    },
+    "reconcileForm": {
+      "title": "Reconcile · {name}",
+      "description": "The provider's reading now covers this asset and product. Decide from which day and how much of it the provider covers.",
+      "choice": "The provider",
+      "covered": "Covers it all",
+      "partial": "Covers part of it",
+      "outside": "It is outside the scope",
+      "effectiveOn": "From",
+      "quantity": "Quantity covered",
+      "product": "Real product of the manual position",
+      "submit": "Reconcile"
     },
     "confirm": {
-      "platformTitle": "Delete {name}?",
-      "platformDescription": "{count, plural, =0 {The platform has no movements. Its recorded values go too.} one {# movement and the recorded values go too. This cannot be undone.} other {# movements and the recorded values go too. This cannot be undone.}}",
-      "movementTitle": "Delete the movement?",
-      "movementDescription": "{kind, select, deposit {Deposit} other {Withdrawal}} of {amount} on {date}. The linked account movement, if any, stays as it is.",
-      "valuationTitle": "Delete the value?",
-      "valuationDescription": "The value of {name} on {date} ({value})."
-    },
-    "actions": {
-      "newMovement": "New movement",
-      "newPlatform": "New platform",
-      "platformMenu": "Actions for {name}",
-      "updateValue": "Update value",
-      "editPlatform": "Edit platform",
-      "deletePlatform": "Delete platform",
-      "movementMenu": "Movement actions",
-      "editMovement": "Edit",
-      "deleteMovement": "Delete movement",
-      "deleteValuation": "Delete"
+      "deleteTitle": "Delete this operation?",
+      "deleteDescription": "{kind} of {date}, {amount}. The value is rewritten from that day; the operation stays in the revisions.",
+      "zeroTitle": "Was the account emptied?",
+      "zeroDescription": "The reading of {date} counts as zero from that day.",
+      "disconnectTitle": "Disconnect {name}?",
+      "disconnectDescription": "The account becomes manual today with the positions of the last reading, and the key is deleted from Ledgerly. Revoke it on the provider too."
     },
     "toasts": {
-      "platformCreated": "{name} added",
-      "platformSaved": "{name} saved",
-      "deposited": "Deposit recorded",
-      "withdrawn": "Withdrawal recorded",
-      "movementSaved": "Movement saved",
-      "valued": "Value of {name} updated",
-      "platformDeleted": "{name} deleted with {count, plural, =0 {no movements} one {# movement} other {# movements}}",
-      "movementDeleted": "Movement deleted",
-      "valuationDeleted": "Value deleted"
+      "serviceCreated": "{name} created",
+      "assetAdded": "Asset added",
+      "saved": "Operation saved",
+      "deleted": "Deleted: {kind} of {date}",
+      "converted": "Mode changed",
+      "reconciled": "Position reconciled",
+      "zeroConfirmed": "Zero confirmed",
+      "urlSaved": "Link saved",
+      "connected": "{name} connected",
+      "synced": "Synced",
+      "verified": "The key only reads",
+      "keyReplaced": "Key replaced",
+      "disconnected": "{name} disconnected: the account is manual now",
+      "revoked": "Revocation noted",
+      "transferLinked": "Transfer linked",
+      "transferUnlinked": "Transfer unlinked"
     },
     "errors": {
-      "invalid": "Check the fields: an amount, a date or a link is not valid.",
-      "not_found": "Not found: it may have been deleted.",
-      "duplicate_name": "A platform with this name already exists.",
-      "future_date": "The date cannot be in the future.",
-      "invalid_transaction": "That account movement goes the wrong way.",
-      "already_linked": "That account movement is already linked to another movement.",
-      "failed": "Something went wrong. Try again."
+      "invalid": "Check the fields and try again.",
+      "failed": "Couldn't save. Try again.",
+      "not_found": "That is no longer there.",
+      "future_date": "A date cannot be in the future.",
+      "not_eligible": "That account cannot become a service.",
+      "wrong_mode": "Not possible in this account's mode on that date.",
+      "negative_cash": "The opening cash would be negative: confirm to keep it.",
+      "no_value": "The account has no value today.",
+      "duplicate_asset": "An asset with that ISIN or symbol already exists.",
+      "duplicate_holding": "The account already has that asset in that product.",
+      "invalid_transaction": "That bank movement goes the other way.",
+      "already_linked": "That bank movement is already linked.",
+      "not_editable": "Only your own operations can be changed.",
+      "before_period": "That date is before the service started.",
+      "managed_locked": "This account is managed in Investments.",
+      "unknown_provider": "That provider cannot be connected.",
+      "invalid_credentials": "Check the key: paste both fields, one line each.",
+      "not_read_only": "The key can do more than read. Create a key with Read only and try again.",
+      "provider_auth": "The provider refused the key. Check that it is a Real key and that it was not revoked.",
+      "provider_unavailable": "The provider did not answer. Nothing was saved: try again later.",
+      "rate_limited": "The provider asked to wait. Try again in a few minutes.",
+      "unsupported_currency": "The provider cannot report in that currency.",
+      "already_connected": "This provider is already connected.",
+      "not_connected": "This service is not connected.",
+      "cooldown": "Wait a few minutes before trying again.",
+      "different_account": "That key belongs to another account on the provider. Use a key of the account already connected.",
+      "sync_failed": "The sync failed: see the connection's last error.",
+      "sync_refused": "The sync was refused: see the connection's state.",
+      "not_a_transfer": "Those two operations cannot be linked as a transfer."
+    },
+    "connect": {
+      "open": "Connect",
+      "title": "Connect {name}",
+      "description": "A read-only key: Ledgerly reads balances, positions and history, and checks the key's permissions on every sync.",
+      "steps": {
+        "etoro": {
+          "1": "On eToro, open Settings and its API keys page.",
+          "2": "Create a key for the Real environment with the Read permission only: leave Write off.",
+          "3": "Copy the public API key and the user key: eToro shows the user key once.",
+          "4": "Paste both here. Ledgerly checks that every permission of the key only reads before it saves anything."
+        },
+        "ccxt_binance": {
+          "1": "On Binance, open Account › API Management and create a system-generated key.",
+          "2": "Leave only “Enable Reading” on: trading, withdrawals, transfers, margin, futures and options stay off.",
+          "3": "Copy the API key and the secret key: Binance shows the secret once.",
+          "4": "Paste both here. Ledgerly reads the key's permissions from Binance and refuses it if any of them can do more than read."
+        }
+      },
+      "readOnlyNote": "A key with any permission that is not read is refused, now and on every later sync.",
+      "ipSuggested": "Recommended: on {name}, restrict the key to the homelab's public IP. It is optional, and the key works without it.",
+      "ipUnsupported": "{name} has no IP whitelist for these keys.",
+      "ipUnrestrictedTitle": "{name} connected: the key is not restricted by IP",
+      "ipUnrestricted": "The key works from any IP address: if it leaks, anyone can read the account with it. On {name}, restrict the key to the homelab's public IP, then press Verify key on the service page.",
+      "openService": "Open the service",
+      "fields": {
+        "api_key": "Public API key",
+        "user_key": "User key",
+        "secret": "Secret"
+      },
+      "currencyHint": "The currency {name} reports the account in.",
+      "existingHint": "An account of the same type no one else writes, or a manual service: from the connection on, {name}'s readings are its value.",
+      "currencyNotSupported": "currency not supported",
+      "submit": "Verify and connect",
+      "checking": "Checking the key…"
+    },
+    "sync": {
+      "title": "Connection",
+      "states": {
+        "active": "Active",
+        "error": "Error",
+        "revoked": "Key refused"
+      },
+      "lastOk": "Last good sync",
+      "next": "Next sync",
+      "manual": "Only by hand",
+      "key": "Key",
+      "keyCheck": "{result}, checked {date}",
+      "ipUnrestricted": "IP not restricted",
+      "keySet": "Key set on",
+      "results": {
+        "read-only": "read only",
+        "write": "can write",
+        "unknown-flag": "unknown permissions",
+        "unverifiable": "not verifiable",
+        "error": "not checked (provider did not answer)"
+      },
+      "lastError": "Last error: {error}",
+      "rotate": "The key is more than 90 days old: replace it with a new one and revoke the old one.",
+      "scheduleNote": "Synced at 07:30 and 22:30; one reading a day is kept. Change the times in Settings › Integrations.",
+      "now": "Sync now",
+      "verify": "Verify key",
+      "replace": "Replace key",
+      "replaceTitle": "Replace the {name} key",
+      "replaceDescription": "The new key goes through the same checks; if they fail, the old key stays.",
+      "disconnect": "Disconnect",
+      "disconnected": "Disconnected: the account is manual.",
+      "revokeTitle": "Revoke the old key on the provider",
+      "revokeSteps": "Ledgerly no longer uses it, but it still works until you delete it: open the provider's API key page, delete it, then confirm here.",
+      "revokeOpen": "Open the API keys page",
+      "revokedConfirm": "I revoked it",
+      "coverage": "What the history covers",
+      "streams": {
+        "trades": "Trades",
+        "deposits": "Deposits and withdrawals",
+        "balance_history": "Daily value",
+        "withdrawals": "Withdrawals",
+        "fiat_orders": "Bank transfers (SEPA)",
+        "fiat_payments": "Card purchases",
+        "convert": "Convert",
+        "dividends": "Rewards and staking",
+        "dust": "Small balances converted to BNB",
+        "pay": "Binance Pay",
+        "earn_rewards": "Simple Earn real-time rewards",
+        "quantities": "Quantities against the balances"
+      },
+      "coverageStatus": {
+        "complete": "complete",
+        "partial": "partial",
+        "gap": "not available"
+      },
+      "reasons": {
+        "api_limit_12m": "the API keeps 12 months",
+        "before_first_movement": "before the first eToro Money movement",
+        "api_limit_24m": "the API keeps 24 months",
+        "api_limit_18m": "the API keeps 18 months",
+        "opening_12m": "older than 12 months: part of the opening",
+        "negative_opening": "the history explains more than the balance",
+        "quantity_mismatch": "the movements do not add up to the balance: a market may be missing",
+        "estimated": "estimated from the movements and the daily closes"
+      },
+      "reliableFrom": "reliable from {date}",
+      "notReliable": "history incomplete",
+      "etoroBrand": "Data from eToro, read with your key.",
+      "binanceBrand": "Data from Binance, read with your key."
+    },
+    "transfers": {
+      "title": "Transfers to confirm",
+      "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio.",
+      "out": "Out on {date} → {name}, in on {other}",
+      "in": "In on {date} ← {name}, out on {other}"
+    },
+    "period": {
+      "label": "Period",
+      "stepper": "Year",
+      "kinds": {
+        "year": "Year",
+        "all": "All",
+        "custom": "Custom"
+      },
+      "yearToDate": "{year} · year to date",
+      "since": "since {date}",
+      "range": "{from} – {to}",
+      "previous": "Previous year",
+      "next": "Next year",
+      "last12": "Last 12 months",
+      "pick": "Pick the days",
+      "from": "From",
+      "to": "To",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "pickEnd": "Pick the end date",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "hint": "{from} – {to} · {count, plural, one {# day} other {# days}}"
+    },
+    "home": {
+      "empty": "Connect eToro or Binance, or create a manual account.",
+      "funds": "funds ({amount}) are in <link>Funds</link>",
+      "hero": {
+        "title": "Profit and loss · {period}",
+        "available": "P&L available · {period}",
+        "undetermined": "Not determinable",
+        "value": "Value today <strong>{value}</strong> · {count, plural, one {# service} other {# services}}",
+        "valueAt": "value on {date} {value}",
+        "noData": "No data in this period. The first is from {date}."
+      },
+      "status": {
+        "estimated": "Estimated",
+        "partial": "Partial data",
+        "undetermined": "Not determinable",
+        "from": "from {date}"
+      },
+      "coverage": {
+        "partial": "{name} from {date}",
+        "estimated": "{name} estimated",
+        "excluded": "{count, plural, one {# service left out} other {# services left out}}"
+      },
+      "alerts": {
+        "label": "{count, plural, one {# thing to check} other {# things to check}}",
+        "one": "to check: {text}",
+        "many": "to check",
+        "estimated": "estimated history"
+      },
+      "kpis": {
+        "realized": "Realized",
+        "realizedNote": "sales and closes",
+        "unrealized": "Unrealized",
+        "unrealizedNote": "open positions",
+        "unrealizedUnknown": "no cost yet: in Other",
+        "income": "Income",
+        "incomeNote": "dividends, staking",
+        "feesFx": "Fees and FX",
+        "feesFxNote": "fees {fees} · FX {fx}",
+        "corrections": "Corrections",
+        "unattributed": "Other (incomplete data)",
+        "valuation": "Other (valuation and rounding)",
+        "transfers": "Transfers between services"
+      },
+      "chart": {
+        "title": "Performance",
+        "view": "Chart",
+        "pnl": "P&L",
+        "value": "Value",
+        "pnlNote": {
+          "week": "P&L by week and by service · the line is the running total of {period}",
+          "month": "P&L by month and by service · the line is the running total of {period}",
+          "year": "P&L by year and by service · the line is the running total of {period}"
+        },
+        "valueNote": {
+          "day": "Value by day and by service",
+          "month": "Value at each month end, by service"
+        },
+        "line": "Running total",
+        "legend": "The colours are the services of the list below.",
+        "estimated": "Dashed or lighter = estimated history.",
+        "cumulative": "running total {amount}",
+        "summary": "P&L {period}: {total}. Best {best}, worst {worst}. {services}.",
+        "valueSummary": "Value at the end of the period {value}.",
+        "data": "Chart data",
+        "interval": "Interval",
+        "cumulativeHeader": "Running total"
+      },
+      "services": {
+        "note": "Ordered by contribution · same period and colours as the chart",
+        "value": "Value today",
+        "pnl": "P&L",
+        "return": "Return",
+        "contribution": "Contribution",
+        "total": "Total",
+        "transfers": "Transfers between services",
+        "unavailable": "not available",
+        "highlight": "Highlight {name} in the chart",
+        "notComputable": "Return not computable: too little capital in the period",
+        "xirr": "XIRR {rate}",
+        "largeFlows": "Estimate: the flows are large next to the capital",
+        "share": "{share} of {net} net",
+        "shareNotComputable": "Share of the net not computable"
+      },
+      "composition": {
+        "title": "Composition today",
+        "by": "Group by",
+        "service": "Service",
+        "class": "Class",
+        "ccy": "Currency",
+        "note": "Always as of today: the period changes the P&L and the chart, not the shares."
+      }
+    },
+    "activity": {
+      "labels": {
+        "buy": "Bought",
+        "sell": "Sold",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "income": {
+          "staking": "Staking",
+          "reward": "Reward",
+          "dividend": "Dividend",
+          "income": "Income"
+        },
+        "fee": "Fee",
+        "adjustment": "Correction",
+        "openingCash": "Opening cash",
+        "openingPosition": "Opening position",
+        "valuation": "Valued",
+        "accountValuation": "Account value updated"
+      },
+      "details": {
+        "position": "{qty} {asset} at {price}",
+        "quantity": "{qty} {asset}",
+        "from": "from {source}",
+        "to": "to {dest}",
+        "priced": "{asset} at {price}",
+        "copy": "{detail} (copy)"
+      },
+      "sentence": "{label} {detail}",
+      "sentenceColon": "{label}: {detail}"
+    },
+    "header": {
+      "sync": "Sync",
+      "addOperation": "Add operation",
+      "operations": {
+        "buy": "Buy",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "valuation": "Update value"
+      },
+      "manual": {
+        "buy": "Manual buy",
+        "deposit": "Manual deposit",
+        "withdrawal": "Manual withdrawal",
+        "valuation": "Update value"
+      },
+      "correct": "Correct the value",
+      "state": {
+        "synced": "Synced {when}",
+        "never": "Not synced yet",
+        "error": "Error: {error}",
+        "revoked": "Error: key refused",
+        "disconnected": "Disconnected: kept by hand",
+        "manual": "Kept by hand"
+      },
+      "today": "today {time}",
+      "openSite": "Open {name}"
+    },
+    "tabs": {
+      "label": "Sections of the service",
+      "overview": "Overview",
+      "positions": "Positions",
+      "activity": "Activity",
+      "connection": "Connection",
+      "settings": "Settings",
+      "alerts": "{count, plural, one {# thing to check} other {# things to check}}"
+    },
+    "service": {
+      "bridge": "{local} at the rate of {date} = {converted} · exchange effect {fx}",
+      "value": "Value today <strong>{value}</strong>",
+      "valueOther": "Value today <strong>{value}</strong> ≈ {display}",
+      "valueAt": "value on {date} {value}",
+      "partial": "The P&L starts on {date}: before that day the data of {name} are not complete.",
+      "partialLink": "What is missing",
+      "undetermined": "No reliable data in this period: the P&L cannot be measured.",
+      "estimated": "Part of the period stands on an estimated history.",
+      "kpis": {
+        "realized": "Realized",
+        "realizedNote": "sales and closes",
+        "unrealized": "Unrealized change",
+        "unrealizedNote": "open positions",
+        "unrealizedUnknown": "no cost yet: in Other",
+        "income": "Income",
+        "incomeNote": "dividends, staking",
+        "incomeIncluded": "included",
+        "incomeIncludedNote": "{name} adds it to the value",
+        "fees": "Fees",
+        "feesNote": "every fee of the period"
+      },
+      "chart": {
+        "unavailable": "no data before {date}",
+        "markers": "↑ deposit · ↓ withdrawal",
+        "summaryFlows": "Deposits in {deposits}, withdrawals in {withdrawals}."
+      },
+      "top": {
+        "title": "Main contributions",
+        "all": "All positions",
+        "asset": "Asset",
+        "value": "Value",
+        "pnl": "P&L",
+        "weight": "Weight",
+        "empty": "No position moved in the period.",
+        "cash": "Cash"
+      },
+      "latest": {
+        "title": "Latest activity",
+        "all": "All activity",
+        "empty": "No activity in this period."
+      },
+      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available.",
+      "convertedNote": "includes {name}'s cost of converting {from} into {to}: it books those deposits and withdrawals in {from} and does not say how much it converted, so they are valued at the ECB rate."
+    },
+    "activityTab": {
+      "deposits": "Deposits",
+      "withdrawals": "Withdrawals",
+      "net": "Net deposits",
+      "netPositive": "you put in more than you took out",
+      "netNegative": "you took out more than you put in",
+      "netZero": "as much in as out",
+      "fees": "Fees",
+      "feesNote": "every fee of the period, trades included",
+      "chips": "Type of activity",
+      "chip": "{label} · {count}",
+      "families": {
+        "all": "All",
+        "trades": "Buys and sells",
+        "flows": "Deposits and withdrawals",
+        "income": "Income",
+        "fees": "Fees",
+        "other": "Valuations and corrections"
+      },
+      "search": "Search asset or description",
+      "searchSubmit": "Search",
+      "clear": "Clear",
+      "asset": "Only {name}",
+      "assetAll": "Show every asset",
+      "date": "Date",
+      "type": "Type",
+      "description": "Description",
+      "pnl": "P&L",
+      "amount": "Amount",
+      "actions": "Actions",
+      "month": "{month} · {count, plural, one {# event} other {# events}}",
+      "monthRealized": "realized P&L {amount}",
+      "range": "{first}–{last} of {total} · {allTime} since the start",
+      "previous": "Previous page",
+      "next": "Next page",
+      "empty": "No activity in this period.",
+      "emptyFiltered": "Nothing matches the search.",
+      "linkBank": "Link to the bank movement"
+    },
+    "connection": {
+      "alerts": "To check",
+      "received": {
+        "title": "What we get from {name}",
+        "note": "One row per kind of data",
+        "balances": "Balances and positions",
+        "balancesOk": "Complete, last read {when}.",
+        "balancesPartial": "Last reading partial: {products} not read.",
+        "balancesNone": "No reading yet.",
+        "activity": "Activity",
+        "activityOk": "Complete from {date}.",
+        "activityGaps": "Incomplete: {streams}.",
+        "activityNone": "{name} gives no history of the activity.",
+        "history": "Value history",
+        "historyEstimated": "Estimated from {from} to {to}: {name} keeps no past value, so Ledgerly rebuilds it from the activity and the daily closes. Dashed in the chart.",
+        "historyRead": "Read every day from {date}.",
+        "cost": "Cost basis",
+        "costMismatch": "The quantities do not add up with the activity: the unrealized P&L of the positions is in “Other (incomplete data)”.",
+        "costMissing": "{name} does not give the cost of the positions: their unrealized P&L is in “Other (incomplete data)”.",
+        "details": "Technical detail by stream ({count})",
+        "products": "Products read: {products}"
+      },
+      "status": {
+        "complete": "Complete",
+        "partial": "Partial data",
+        "estimated": "Estimated",
+        "check": "To check",
+        "missing": "Not available"
+      },
+      "history": {
+        "title": "Sync history",
+        "note": "The readings the service gave us",
+        "same": "{count} equal readings, {from} – {to}",
+        "estimated": "{count} estimated readings, {from} – {to}",
+        "empty": "No readings yet."
+      },
+      "corrections": {
+        "title": "Manual corrections",
+        "empty": "No correction. A correction changes the value of a stretch of days when the service gets it wrong (e.g. a missing balance): add it from the ⋯ menu at the top.",
+        "until": "until {date}"
+      },
+      "key": {
+        "title": "API key",
+        "permissions": "Permissions",
+        "ip": "IP restriction",
+        "ipOn": "Active",
+        "ipOff": "Not active",
+        "ipAdvice": "Recommended: restrict the key to the homelab's IP on the {name} site.",
+        "schedule": "Sync"
+      },
+      "settings": {
+        "keeps": "What Ledgerly keeps",
+        "modes": {
+          "assets": "Positions (one row per asset)",
+          "total": "Value only (you update the total)"
+        },
+        "managedSince": "Managed since",
+        "inAccounts": "The {name} account in Accounts"
+      }
+    },
+    "positions": {
+      "status": "Which positions",
+      "open": "Open",
+      "openAt": "Open on {date}",
+      "closedIn": "Closed in {period}",
+      "closedInPeriod": "Closed in the period",
+      "all": "All closed",
+      "today": "Today's positions",
+      "undetermined": "The P&L of {period} cannot be determined: the positions are shown without it.",
+      "openTitle": "Open positions",
+      "openAtTitle": "Positions on {date}",
+      "openNote": "P&L {period}: from the value on {date}, or from the cost when bought later. % on cost is the return since purchase.",
+      "asset": "Asset",
+      "unknownAsset": "Unknown asset",
+      "quantity": "Quantity",
+      "average": "Average price",
+      "price": "Price",
+      "value": "Value",
+      "pnl": "P&L of the period",
+      "pnlOf": "P&L {period}",
+      "onCost": "% on cost",
+      "onCostShort": "{rate} on cost",
+      "share": "Share",
+      "actions": "Actions",
+      "periodReturn": "{rate} in the period",
+      "noCost": "no cost: in Other",
+      "inferredCost": "Cost from a later reading",
+      "byValue": "by value",
+      "manual": "Manual",
+      "cash": "Cash",
+      "cashNote": "{currency} available",
+      "total": "Total",
+      "mobileLine": "{quantity} × {price} · average {average}",
+      "noCostNote": "{count, plural, one {# position has} other {# positions have}} no cost yet: {count, plural, one {its} other {their}} P&L is in Other (incomplete data).",
+      "costLink": "Cost basis →",
+      "empty": "No open positions.",
+      "emptyWithClosed": "No open positions · {count, plural, one {# closed} other {# closed}}.",
+      "dust": "{count, plural, one {# leftover} other {# leftovers}} without a market",
+      "dustNote": "Too little for any market to price: no value and no P&L.",
+      "closedTitle": "Closed · {period}",
+      "allTitle": "All closed",
+      "closedNote": "Realized = what came back − what it cost at average cost; fees are apart.",
+      "closedNoteEtoro": "Realized = what came back − what was invested, eToro's fees included.",
+      "emptyClosed": "No position closed in {period}.",
+      "emptyAll": "No position closed yet.",
+      "dates": "Opened → closed",
+      "invested": "Invested",
+      "cost": "Cost",
+      "proceeds": "Came back",
+      "realized": "Realized",
+      "totalRealized": "Total realized",
+      "exits": "{count, plural, one {# exit} other {# exits}}",
+      "positionsCount": "{count, plural, one {# position} other {# positions}}",
+      "contributions": {
+        "title": "Contributions to the P&L · {period}",
+        "note": "What each position added, open or sold: realized + change of the unrealized.",
+        "empty": "No position moved in {period}.",
+        "open": "Open",
+        "sold": "Sold in the period",
+        "partlySold": "Open, partly sold",
+        "noCost": "No cost: its unrealized is in Other",
+        "income": "Income",
+        "fees": "Fees",
+        "corrections": "Corrections",
+        "valueChange": "Change of value",
+        "unattributed": "Other (incomplete data)",
+        "valuation": "Other (valuation and rounding)",
+        "total": "P&L of the period",
+        "same": "the Overview's number",
+        "bridge": "= {display} in the Overview, exchange effect {fx} included"
+      },
+      "groupBy": "Group by",
+      "byAsset": "Asset",
+      "byClass": "Class",
+      "groupSummary": "{value} · {pnl} · {share}"
     }
   },
   "payroll": {

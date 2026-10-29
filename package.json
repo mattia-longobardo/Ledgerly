@@ -31,6 +31,7 @@
     "@modelcontextprotocol/sdk": "1.32.2",
     "@node-rs/argon2": "2.2.1",
     "better-auth": "1.7.14",
+    "ccxt": "4.5.89",
     "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
     "hono": "4.13.14",
@@ -80,5 +81,8 @@
     "vite": "8.3.5",
     "vitest": "5.0.5",
     "yauzl": "3.4.0"
+  },
+  "overrides": {
+    "undici": "7.30.1"
   }
 }

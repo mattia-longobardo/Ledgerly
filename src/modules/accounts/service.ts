@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { and, asc, eq, inArray, max, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, max, or, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import {
   type CivilDate,
@@ -15,9 +15,12 @@ import {
 import { getDb, type Tx } from "@/platform/db/client";
 import { FOREIGN_KEY_VIOLATION, hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
-import { PROVIDERS } from "@/platform/integrations/rules";
+import { convertCents } from "@/platform/fx/rules";
+import { ratesOn } from "@/platform/fx/service";
+import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
+import { managedSinceOf } from "@/modules/investments/managed";
 import { dailyNetByAccount, transactionIdsOfAccount } from "@/modules/transactions/queries";
 import {
   type AccountCreateInput,
@@ -42,13 +45,29 @@ import { accountConnections, accounts, balanceEntries, snapshotRuns } from "./sc
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type AccountErrorCode =
-  "not_found" | "future_date" | "synced_locked" | "duplicate_name" | "duplicate_connection" | "invalid";
+  | "not_found"
+  | "future_date"
+  | "synced_locked"
+  | "currency_locked"
+  | "managed_locked"
+  | "duplicate_name"
+  | "duplicate_connection"
+  | "invalid";
 
 export class AccountError extends Error {
   constructor(readonly code: AccountErrorCode) {
     super(code);
     this.name = "AccountError";
   }
+}
+
+async function hasBalanceEntries(ctx: Pick<Ctx, "userId">, accountId: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: balanceEntries.id })
+    .from(balanceEntries)
+    .where(and(eq(balanceEntries.accountId, accountId), userScoped(ctx).owns(balanceEntries)))
+    .limit(1);
+  return row !== undefined;
 }
 
 async function requireAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Account> {
@@ -58,6 +77,15 @@ async function requireAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Acc
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
   if (!row) throw new AccountError("not_found");
   return row;
+}
+
+/**
+ * An account Investments manages takes no manual balance from `managed_since` on (§1.3, A4): its
+ * value there is the `portfolio` source alone, and the service page is where it changes.
+ */
+async function refuseManaged(ctx: Pick<Ctx, "userId">, accountId: string, on: CivilDate): Promise<void> {
+  const since = await managedSinceOf(ctx, accountId);
+  if (since !== null && on >= since) throw new AccountError("managed_locked");
 }
 
 async function nextSortOrder(ctx: Pick<Ctx, "userId">): Promise<number> {
@@ -72,13 +100,15 @@ async function nextSortOrder(ctx: Pick<Ctx, "userId">): Promise<number> {
  * A manual account, with its optional opening balance written in the same transaction so an
  * account never exists for a moment with a balance the caller believes it already has.
  */
-export async function createAccount(ctx: Ctx, input: unknown): Promise<Account> {
+export async function createAccount(ctx: Ctx, input: unknown, outer?: Tx): Promise<Account> {
   const parsed: AccountCreateInput = accountCreateSchema.parse(input);
   if (parsed.openingBalance && isFutureDate(parsed.openingBalance.on, today(ctx.timeZone))) {
     throw new AccountError("future_date");
   }
   const sortOrder = await nextSortOrder(ctx);
-  return getDb().transaction(async (tx) => {
+  const run = <T>(work: (tx: Tx) => Promise<T>): Promise<T> =>
+    outer ? work(outer) : getDb().transaction(work);
+  return run(async (tx) => {
     const [account] = await tx
       .insert(accounts)
       .values(
@@ -117,11 +147,26 @@ export async function createAccount(ctx: Ctx, input: unknown): Promise<Account> 
 /**
  * The Settings tab. A synced account keeps the provider's currency (spec §7.1); its type may be
  * changed here, and from then on the sync stops following the provider's (`retyped_locally`).
+ *
+ * An account with a balance keeps its currency (docs/design/investments.md §1.8): a new one would
+ * reinterpret every amount already recorded, so the change is refused with `currency_locked`.
  */
 export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown): Promise<Account> {
   const current = await requireAccount(ctx, id);
   const parsed: AccountSettingsInput = accountSettingsSchema.parse(input);
   const settings = current.origin === "synced" ? settingsForSynced(parsed, current) : parsed;
+  if (settings.currency !== current.currency && (await hasBalanceEntries(ctx, id))) {
+    throw new AccountError("currency_locked");
+  }
+  // A service of Investments stays an investment or crypto account (§1.3, D13).
+  if (
+    settings.type !== current.type &&
+    settings.type !== "investment" &&
+    settings.type !== "crypto" &&
+    (await managedSinceOf(ctx, id)) !== null
+  ) {
+    throw new AccountError("managed_locked");
+  }
   const [row] = await getDb()
     .update(accounts)
     .set({
@@ -222,6 +267,7 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
   await requireAccount(ctx, accountId);
   const parsed: BalanceEntryInput = balanceEntrySchema.parse(input);
   if (isFutureDate(parsed.on, today(ctx.timeZone))) throw new AccountError("future_date");
+  await refuseManaged(ctx, accountId, parsed.on);
   const values = {
     balanceCents: parsed.cents,
     availableCents: parsed.availableCents,
@@ -269,6 +315,7 @@ export async function updateBalanceEntry(ctx: Ctx, id: string, input: unknown): 
     );
   if (!current) throw new AccountError("not_found");
   if (isFutureDate(parsed.on, today(ctx.timeZone))) throw new AccountError("future_date");
+  await refuseManaged(ctx, current.accountId, current.on < parsed.on ? current.on : parsed.on);
   const values = {
     on: parsed.on,
     balanceCents: parsed.cents,
@@ -383,6 +430,11 @@ export async function saveImportBalance(
 }
 
 export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, id: string): Promise<void> {
+  const [entry] = await getDb()
+    .select({ accountId: balanceEntries.accountId, on: balanceEntries.on })
+    .from(balanceEntries)
+    .where(and(eq(balanceEntries.id, id), userScoped(ctx).owns(balanceEntries)));
+  if (entry) await refuseManaged(ctx, entry.accountId, entry.on);
   const [row] = await getDb()
     .delete(balanceEntries)
     .where(
@@ -452,7 +504,8 @@ export async function accountDailyBalances(
  * from scratch: every `derived` row of those accounts goes, and `deriveMonthEnds` writes the ones
  * the current readings and movements support, in one transaction — so running it twice changes
  * nothing, and a reading or a correction added since simply moves what gets rebuilt. A manual
- * account has no movements, so there is nothing to rebuild it from.
+ * account has no movements, so there is nothing to rebuild it from, and neither has the account of a
+ * provider that syncs no movements (`syncsTransactions`: an investment provider).
  *
  * Reads first, writes after, and no network anywhere (spec §4.3): the sync calls it once its own
  * reads are over.
@@ -462,7 +515,10 @@ export async function rebuildDerivedBalances(
   accountIds?: readonly string[],
 ): Promise<{ written: number }> {
   const synced = (await listAccounts(ctx, { includeArchived: true })).filter(
-    (account) => account.origin === "synced" && (accountIds === undefined || accountIds.includes(account.id)),
+    (account) =>
+      account.origin === "synced" &&
+      syncsTransactions(account.provider) &&
+      (accountIds === undefined || accountIds.includes(account.id)),
   );
   if (synced.length === 0) return { written: 0 };
   const ids = synced.map((account) => account.id);
@@ -494,11 +550,102 @@ export async function rebuildDerivedBalances(
   return { written: rows.length };
 }
 
+/**
+ * The `portfolio` points of an account Investments manages (docs/design/investments.md §1.7),
+ * inside the caller's transaction: every point from `from` on goes and `points` take their place,
+ * so a rewrite from the oldest day a change touches leaves every day before it as it was.
+ */
+export async function replacePortfolioPoints(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  from: CivilDate,
+  points: readonly { on: CivilDate; cents: Cents }[],
+  tx: Tx,
+): Promise<{ written: number }> {
+  const [owned] = await tx
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
+  if (!owned) throw new AccountError("not_found");
+  await tx
+    .delete(balanceEntries)
+    .where(
+      and(
+        userScoped(ctx).owns(balanceEntries),
+        eq(balanceEntries.accountId, accountId),
+        eq(balanceEntries.source, "portfolio"),
+        gte(balanceEntries.on, from),
+      ),
+    );
+  const capturedAt = new Date();
+  const rows = points
+    .filter((point) => point.on >= from)
+    .map((point) =>
+      userScoped(ctx).stamp({
+        accountId,
+        on: point.on,
+        balanceCents: point.cents,
+        source: "portfolio" as const,
+        capturedAt,
+      }),
+    );
+  if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+  return { written: rows.length };
+}
+
+/**
+ * Moves an account's opening back to `on` when its history turns out to start earlier (PERS-100:
+ * the estimated history of a service), inside the caller's transaction. Never moves it forward.
+ */
+export async function openedNoLaterThan(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  on: CivilDate,
+  tx: Tx,
+): Promise<void> {
+  await tx
+    .update(accounts)
+    .set({ openedOn: on })
+    .where(
+      and(
+        eq(accounts.id, accountId),
+        userScoped(ctx).owns(accounts),
+        or(isNull(accounts.openedOn), gt(accounts.openedOn, on)),
+      ),
+    );
+}
+
+/**
+ * The handover of an existing account to Investments at `T` (§1.3, A4), inside the caller's
+ * transaction: the `manual`, `import` and `provider` entries from `T` on are removed and returned,
+ * for the caller to archive in the same transaction; the ones before `T` stay.
+ */
+export async function takeOverEntries(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  from: CivilDate,
+  tx: Tx,
+): Promise<BalanceEntry[]> {
+  return tx
+    .delete(balanceEntries)
+    .where(
+      and(
+        userScoped(ctx).owns(balanceEntries),
+        eq(balanceEntries.accountId, accountId),
+        inArray(balanceEntries.source, ["manual", "import", "provider"]),
+        gte(balanceEntries.on, from),
+      ),
+    )
+    .returning();
+}
+
 export interface SnapshotOutcome {
   month: MonthKey;
   written: number;
   skipped: number;
+  /** In `currency`, the display currency of the day it ran: each account converted, then summed. */
   total: Cents | null;
+  currency: string;
   warnings: string[];
 }
 
@@ -507,9 +654,14 @@ export interface SnapshotOutcome {
  * last day of `month`, copied from the last balance known up to that day. Accounts with no data
  * are skipped, and running it twice changes nothing — both the balances and the `snapshot_runs`
  * row are upserts, so a retry after a partial failure is safe.
+ *
+ * Each `system` balance is a copy in the account's own currency. The run's total is in the display
+ * currency (docs/design/investments.md §2.3): every balance converted at the month end's rate, then
+ * summed, and saved with `total_currency`, so a later change of the preference never rewrites it.
+ * A balance with no rate stays out of the total, never counted 1:1.
  */
 export async function runSnapshot(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "displayCurrency">,
   month: MonthKey,
   now: Date = new Date(),
 ): Promise<SnapshotOutcome> {
@@ -559,12 +711,30 @@ export async function runSnapshot(
       });
   }
 
-  const { total } = sumCents(values.map((value) => value.balanceCents as Cents));
+  const currency = ctx.displayCurrency;
+  const currencyOf = new Map(open.map((account) => [account.id, account.currency]));
+  const rates = await ratesOn(
+    open.some((account) => account.currency !== currency) ? [currency, ...currencyOf.values()] : [],
+    on,
+    on,
+  );
+  const { total } = sumCents(
+    values.map((value) =>
+      convertCents(
+        value.balanceCents as Cents,
+        currencyOf.get(value.accountId) ?? currency,
+        currency,
+        on,
+        rates,
+      ),
+    ),
+  );
   const outcome: SnapshotOutcome = {
     month: monthKey(month),
     written: values.length,
     skipped: open.length - values.length,
     total,
+    currency,
     warnings,
   };
   const row = {
@@ -572,6 +742,7 @@ export async function runSnapshot(
     accountsWritten: outcome.written,
     accountsSkipped: outcome.skipped,
     totalCents: total,
+    totalCurrency: currency,
     warnings,
     ranAt: now,
   };

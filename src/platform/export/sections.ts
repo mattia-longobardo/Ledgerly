@@ -20,6 +20,11 @@ export function amount(cents: Cents | null | undefined): string | null {
   return cents === null || cents === undefined ? null : centsToDecimal(cents);
 }
 
+/** A ratio (0.05 = 5 %) to six decimals, as `/api/v1` gives it; `null` when there is none. */
+export function ratio(value: number | null | undefined): number | null {
+  return value === null || value === undefined || !Number.isFinite(value) ? null : Number(value.toFixed(6));
+}
+
 export function day(at: Date | null | undefined): string | null {
   return at ? at.toISOString() : null;
 }

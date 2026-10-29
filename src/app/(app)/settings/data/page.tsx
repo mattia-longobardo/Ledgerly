@@ -54,7 +54,9 @@ export default async function SettingsDataPage() {
                   <Td align="right">
                     {t("log.written", { written: run.accountsWritten, skipped: run.accountsSkipped })}
                   </Td>
-                  <Td align="right">{formatMoney(run.totalCents, ctx.numberFormat)}</Td>
+                  <Td align="right">
+                    {formatMoney(run.totalCents, ctx.numberFormat, { currency: run.totalCurrency })}
+                  </Td>
                   <Td muted>
                     {run.warnings && run.warnings.length > 0
                       ? t("log.stale", { accounts: run.warnings.join(", ") })

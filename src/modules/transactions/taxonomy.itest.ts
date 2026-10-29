@@ -33,7 +33,14 @@ import {
 } from "./taxonomy";
 
 function contextFor(userId: string): Ctx {
-  return { userId, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId,
+    role: "user",
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 async function newContext(): Promise<Ctx> {

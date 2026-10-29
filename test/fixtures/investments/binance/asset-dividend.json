@@ -1,0 +1,63 @@
+{
+  "method": "sapiGetAssetAssetDividend({ limit: 500 })",
+  "note": "una riga per enInfo, 402 righe in tutto",
+  "body": {
+    "total": "148.74",
+    "rows": [
+      {
+        "id": "fixture-id-0060",
+        "tranId": "fixture-id-0061",
+        "asset": "TRX",
+        "amount": "0.00376788",
+        "divTime": "1779248306000",
+        "enInfo": "Soft Lock Rewards",
+        "direction": "1"
+      },
+      {
+        "id": "fixture-id-0062",
+        "tranId": "fixture-id-0063",
+        "asset": "ROBO",
+        "amount": "1.29001227",
+        "divTime": "1773811079000",
+        "enInfo": "HODLer Airdrops",
+        "direction": "1"
+      },
+      {
+        "id": "fixture-id-0064",
+        "tranId": "fixture-id-0065",
+        "asset": "BNB",
+        "amount": "0.00000064",
+        "divTime": "1773376407000",
+        "enInfo": "BNB Vault",
+        "direction": "1"
+      },
+      {
+        "id": "fixture-id-0066",
+        "tranId": "fixture-id-0067",
+        "asset": "OPN",
+        "amount": "0.15099324",
+        "divTime": "1772670018000",
+        "enInfo": "Launchpool",
+        "direction": "1"
+      },
+      {
+        "id": "fixture-id-0068",
+        "tranId": "fixture-id-0069",
+        "asset": "SXT",
+        "amount": "5.63165906",
+        "divTime": "1772073889000",
+        "enInfo": "ETH Simple Earn Bonus APR Rewards in SXT",
+        "direction": "1"
+      },
+      {
+        "id": "fixture-id-0070",
+        "tranId": "fixture-id-0071",
+        "asset": "ETH",
+        "amount": "0.00000012",
+        "divTime": "1770610541000",
+        "enInfo": "Flexible",
+        "direction": "1"
+      }
+    ]
+  }
+}

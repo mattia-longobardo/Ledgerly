@@ -73,8 +73,8 @@ export async function handleMcp(request: Request): Promise<Response> {
   if (!verdict.allowed) {
     return reply(429, { error: "rate_limited" }, { ...limits, "Retry-After": String(verdict.retryAfter) });
   }
-  // Every v1 tool reads; a token that cannot read has nothing to call.
-  if (!identity.scopes.includes("read")) {
+  // Every tool reads; a token that can read neither the ledger nor Investments has nothing to call.
+  if (!identity.scopes.includes("read") && !identity.scopes.includes("investments:read")) {
     return reply(403, { error: "forbidden" }, challenge({ error: "insufficient_scope", scope: "read" }));
   }
 

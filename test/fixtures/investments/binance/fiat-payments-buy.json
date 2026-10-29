@@ -1,0 +1,23 @@
+{
+  "method": "sapiGetFiatPayments({ transactionType: 0 })",
+  "body": {
+    "code": "000000",
+    "message": "success",
+    "data": [
+      {
+        "orderNo": "fixture-id-0055",
+        "sourceAmount": "3.7",
+        "fiatCurrency": "EUR",
+        "obtainAmount": "0.0015064",
+        "cryptoCurrency": "ETH",
+        "totalFee": "0.0",
+        "price": "2456.19378386",
+        "status": "Completed",
+        "createTime": 1764600690000,
+        "updateTime": 1764600780000
+      }
+    ],
+    "total": 0.37,
+    "success": true
+  }
+}

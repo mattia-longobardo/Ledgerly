@@ -234,6 +234,8 @@ Scartate:
   | `get_account_balances` | `read` | Storico saldi di un conto |
   | `list_transactions` | `read` | Movimenti con filtri (periodo, conto, categoria, testo), paginati |
   | `list_budgets` | `read` | Budget e consumo del periodo |
+  | `list_investments` | `investments:read` | Servizi di investimento, totali e rendimenti (PERS-86) |
+  | `get_investment_holdings` | `investments:read` | Posizioni di un servizio (PERS-86) |
   | `record_account_balance` | `write` | Registra un saldo (come `POST /accounts/{id}/balances`) |
 
   Nessun tool di cancellazione o amministrazione. Altri tool (investimenti, buste paga, fondi)

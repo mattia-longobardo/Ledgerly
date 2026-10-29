@@ -1,0 +1,10 @@
+{
+  "request": "/api/v1/balances/history?displayCurrency=EUR&fromDate=2023-01-01",
+  "status": 400,
+  "body": {
+    "code": "DATE_RANGE_TOO_LARGE",
+    "message": "Date range cannot exceed 365 days",
+    "requestId": "00000000-0000-4000-8000-000000000021",
+    "details": null
+  }
+}

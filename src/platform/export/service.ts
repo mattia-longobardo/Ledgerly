@@ -3,7 +3,7 @@ import { balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts
 import { budgetsView } from "@/modules/budgets/queries";
 import { fundsView } from "@/modules/funds/queries";
 import { interestsView } from "@/modules/interests/queries";
-import { investmentsView } from "@/modules/investments/queries";
+import { investmentOperationsExport, investmentServices } from "@/modules/investments/queries";
 import { DOCUMENT_KINDS } from "@/modules/imports/rules";
 import { listDocuments, readOriginal } from "@/modules/imports/service";
 import { pocketsView } from "@/modules/pockets/queries";
@@ -15,7 +15,7 @@ import { getPreferences } from "@/modules/users/service";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
-import { amount, day, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
+import { amount, day, ratio, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
 import { type ZipEntry, zipStream, zipToBytes } from "./zip";
 
 /**
@@ -99,6 +99,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     leave,
     payroll,
     investments,
+    investmentOperations,
   ] = await Promise.all([
     allTransactions(ctx),
     subscriptionsView(ctx, now),
@@ -109,7 +110,8 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     listAllowances(ctx),
     listLeaveDays(ctx, LEAVE_WINDOW),
     registerView(ctx),
-    investmentsView(ctx, {}, now),
+    investmentServices(ctx),
+    investmentOperationsExport(ctx),
   ]);
 
   return [
@@ -245,29 +247,62 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
       ],
     },
     {
-      name: "investment-platforms",
-      columns: ["name", "url", "deposited", "withdrawn", "value", "valuedOn", "gain"],
-      rows: investments.platforms.map((row) => ({
-        name: row.platform.name,
-        url: row.platform.url,
-        deposited: amount(row.stats.depositedCents),
-        withdrawn: amount(row.stats.withdrawnCents),
-        value: amount(row.stats.valueCents),
-        valuedOn: row.stats.valuedOn,
-        gain: amount(row.stats.gainCents),
+      name: "investment-services",
+      columns: [
+        "name",
+        "category",
+        "provider",
+        "mode",
+        "currency",
+        "value",
+        "invested",
+        "gain",
+        "simpleReturn",
+        "xirr",
+        "reliableFrom",
+      ],
+      rows: investments.map((row) => ({
+        name: row.name,
+        category: row.category,
+        provider: row.provider,
+        mode: row.mode,
+        currency: row.currency,
+        value: amount(row.valueCents),
+        invested: amount(row.investedCents),
+        gain: amount(row.gainCents),
+        simpleReturn: ratio(row.simpleReturn),
+        // A rate when there is one; "none" or "multiple" when XIRR is not computable (§2.4).
+        xirr: row.xirr === null ? null : row.xirr.status === "ok" ? ratio(row.xirr.rate) : row.xirr.status,
+        reliableFrom: day(row.reliableFrom),
       })),
     },
     {
-      name: "investment-movements",
-      columns: ["on", "platform", "kind", "amount", "linkedPayee", "linkedAccount", "note"],
-      rows: investments.movements.map((row) => ({
-        on: row.movement.on,
-        platform: row.platformName,
-        kind: row.movement.kind,
-        amount: amount(row.movement.amountCents),
-        linkedPayee: row.linked?.payee ?? null,
-        linkedAccount: row.linked?.accountName ?? null,
-        note: row.movement.note,
+      name: "investment-operations",
+      columns: [
+        "on",
+        "service",
+        "currency",
+        "kind",
+        "leg",
+        "asset",
+        "quantity",
+        "unitPrice",
+        "amount",
+        "transferWith",
+        "note",
+      ],
+      rows: investmentOperations.map((row) => ({
+        on: row.on,
+        service: row.service,
+        currency: row.currency,
+        kind: row.kind,
+        leg: row.leg,
+        asset: row.asset,
+        quantity: row.quantity,
+        unitPrice: row.unitPrice,
+        amount: amount(row.amountCents),
+        transferWith: row.transferWith,
+        note: row.note,
       })),
     },
     {

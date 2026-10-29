@@ -69,7 +69,7 @@ export const monthlySummaryJob: JobDefinition = {
             ...summaryMail(ctx.locale, {
               // A `MonthKey` is already the first day of its month (`platform/dates`).
               month: formatDate(month, "monthYear", ctx.locale),
-              netWorth: money(figures.netWorthCents, ctx.numberFormat),
+              netWorth: formatMoney(figures.netWorthCents, ctx.numberFormat, { currency: figures.currency }),
               income: money(figures.incomeCents, ctx.numberFormat),
               expense: money(figures.expenseCents, ctx.numberFormat),
               net: money(figures.netCents, ctx.numberFormat),

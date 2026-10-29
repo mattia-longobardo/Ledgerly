@@ -13,6 +13,9 @@ export const USERS = {
   owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
   prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
   accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
+  // Phase 1b (docs/design/investments.md §1.8): an account in EUR and one in USD, and the display
+  // currency switched in Settings. Its own user, so no other journey sees its totals change.
+  currency: { email: "currency@example.test", password: "currency-password-123", name: "Currency" },
   expenses: { email: "expenses@example.test", password: "expenses-password-123", name: "Expenses" },
   budgets: { email: "budgets@example.test", password: "budgets-password-123", name: "Budgets" },
   pockets: { email: "pockets@example.test", password: "pockets-password-123", name: "Pockets" },
@@ -70,6 +73,7 @@ export const TEST_EMAIL_DOMAIN = "@example.test";
  */
 export const SESSIONS = {
   accounts: { user: "accounts", file: "accounts-session.json" },
+  currency: { user: "currency", file: "currency-session.json" },
   expenses: { user: "expenses", file: "expenses-session.json" },
   budgets: { user: "budgets", file: "budgets-session.json" },
   pockets: { user: "pockets", file: "pockets-session.json" },

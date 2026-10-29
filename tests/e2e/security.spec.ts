@@ -70,7 +70,9 @@ test("/api/v1 refuses a call with no token at all, and says where to get one", a
   );
   const metadata = await request.get("/.well-known/oauth-protected-resource/api/v1");
   expect(metadata.status()).toBe(200);
-  expect(await metadata.json()).toMatchObject({ scopes_supported: ["read", "write", "imports"] });
+  expect(await metadata.json()).toMatchObject({
+    scopes_supported: ["read", "write", "imports", "investments:read"],
+  });
   const server = await request.get("/.well-known/oauth-authorization-server/api/auth");
   expect(server.status()).toBe(200);
   expect(await server.json()).toMatchObject({

@@ -1,0 +1,11 @@
+{
+  "request": "/api/v1/data/positions/closed-events/history",
+  "status": 503,
+  "body": {
+    "success": false,
+    "error": {
+      "code": "DEPENDENCY_UNAVAILABLE",
+      "message": "The requested resource is temporarily unavailable"
+    }
+  }
+}

@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { accountsView, listAccounts } from "@/modules/accounts/queries";
-import { asNumbers, changeBetween, colorFor, shareOf, since } from "@/modules/accounts/ui/display";
+import {
+  asNumbers,
+  changeBetween,
+  colorFor,
+  counterValue,
+  shareOf,
+  since,
+} from "@/modules/accounts/ui/display";
 import { LinkTabs, PeriodStepper, ToggleLink } from "@/modules/accounts/ui/controls";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { type Grain, periodEnd } from "@/modules/accounts/rules";
@@ -97,7 +104,10 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       yoy: changeBetween(row.balance, yearAgo),
       // No share for an archived account: the total it would be a share of leaves it out, and a
       // percentage of a number you are not part of is a wrong number, not a missing one.
-      share: row.account.state === "archived" ? null : shareOf(row.balance, view.total),
+      share: row.account.state === "archived" ? null : shareOf(row.display.balance, view.total),
+      // An account's own figures stay in its currency; the total and the share are in the display one.
+      own: { currency: row.account.currency },
+      counter: counterValue(row, view.currency, ctx.numberFormat),
       synced: since(row.account.lastSyncedAt, now),
     };
   });
@@ -120,6 +130,8 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
     },
   ];
   const totalChange = changeBetween(view.total, view.previousTotal);
+  /** Every total on the page is in the display currency (§1.8, D1). */
+  const total = { currency: view.currency };
 
   return (
     <Page title={t("title")} actions={add}>
@@ -127,7 +139,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
         <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
         <p data-testid="accounts-summary" className="text-muted">
           {t("summary", {
-            total: formatMoney(view.total, ctx.numberFormat),
+            total: formatMoney(view.total, ctx.numberFormat, total),
             count: liveCount,
           })}
         </p>
@@ -171,7 +183,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
           <KpiTile
             key={kpi.key}
             label={t(`kpis.${kpi.key}`)}
-            value={formatMoney(kpi.total, ctx.numberFormat)}
+            value={formatMoney(kpi.total, ctx.numberFormat, total)}
             note={t("countAccounts", { count: kpi.count })}
           />
         ))}
@@ -218,11 +230,14 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                     </div>
                   </Td>
                   <Td muted>{t(`types.${row.account.type}`)}</Td>
-                  <Td align="right">{formatMoney(row.balance, ctx.numberFormat)}</Td>
+                  <Td align="right">
+                    {formatMoney(row.balance, ctx.numberFormat, row.own)}
+                    {row.counter && <span className="block text-sm text-muted">{row.counter}</span>}
+                  </Td>
                   <Td align="right" className={TONE_TEXT[toneOfSign(row.change.cents)]}>
                     {row.change.cents === null
                       ? NULL_DISPLAY
-                      : formatMoney(row.change.cents, ctx.numberFormat, { signed: true })}
+                      : formatMoney(row.change.cents, ctx.numberFormat, { signed: true, ...row.own })}
                   </Td>
                   <Td align="right" className={TONE_TEXT[toneOfSign(row.yoy.cents)]}>
                     {formatPercent(row.yoy.fraction, ctx.numberFormat, { signed: true })}
@@ -242,11 +257,11 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
               ))}
               <TotalRow label={t("total")}>
                 <Td />
-                <Td align="right">{formatMoney(view.total, ctx.numberFormat)}</Td>
+                <Td align="right">{formatMoney(view.total, ctx.numberFormat, total)}</Td>
                 <Td align="right" className={TONE_TEXT[toneOfSign(totalChange.cents)]}>
                   {totalChange.cents === null
                     ? NULL_DISPLAY
-                    : formatMoney(totalChange.cents, ctx.numberFormat, { signed: true })}
+                    : formatMoney(totalChange.cents, ctx.numberFormat, { signed: true, ...total })}
                 </Td>
                 <Td />
                 <Td align="right">{formatPercent(view.total === null ? null : 1, ctx.numberFormat)}</Td>
@@ -277,8 +292,9 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                     {row.account.name}
                   </Link>
                 </span>
-                <span className="shrink-0 font-medium tabular-nums">
-                  {formatMoney(row.balance, ctx.numberFormat)}
+                <span className="flex shrink-0 flex-col items-end font-medium tabular-nums">
+                  {formatMoney(row.balance, ctx.numberFormat, row.own)}
+                  {row.counter && <span className="text-sm font-normal text-muted">{row.counter}</span>}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
@@ -300,7 +316,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                   {t("columns.monthlyChange")}{" "}
                   {row.change.cents === null
                     ? NULL_DISPLAY
-                    : formatMoney(row.change.cents, ctx.numberFormat, { signed: true })}
+                    : formatMoney(row.change.cents, ctx.numberFormat, { signed: true, ...row.own })}
                 </span>
                 <span className={TONE_TEXT[toneOfSign(row.yoy.cents)]}>
                   {t("columns.yoy")} {formatPercent(row.yoy.fraction, ctx.numberFormat, { signed: true })}
@@ -314,12 +330,17 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
           ))}
           <li className="flex items-center justify-between gap-2 px-4 py-3 font-medium">
             <span>{t("total")}</span>
-            <span className="tabular-nums">{formatMoney(view.total, ctx.numberFormat)}</span>
+            <span className="tabular-nums">{formatMoney(view.total, ctx.numberFormat, total)}</span>
           </li>
         </ul>
       </Card>
 
       {view.totalPartial && <p className="text-sm text-warn">{t("partial")}</p>}
+      {view.missingRates.length > 0 && (
+        <p className="text-sm text-warn">
+          {t("missingRate", { currencies: view.missingRates.join(", "), currency: view.currency })}
+        </p>
+      )}
 
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* Overview's chart, with its own range and grain (`chart=` here: `grain` is the table's). */}
@@ -352,7 +373,9 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                 <span className="text-right tabular-nums text-muted">
                   {formatPercent(row.share, ctx.numberFormat)}
                 </span>
-                <span className="text-right tabular-nums">{formatMoney(row.balance, ctx.numberFormat)}</span>
+                <span className="text-right tabular-nums">
+                  {formatMoney(row.display.balance, ctx.numberFormat, total)}
+                </span>
               </li>
             ))}
           </ul>
@@ -360,13 +383,13 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
             <div>
               <dt className="text-muted">{t("composition.liquid")}</dt>
               <dd className="font-medium tabular-nums">
-                {formatMoney(view.buckets.cash.total, ctx.numberFormat)}
+                {formatMoney(view.buckets.cash.total, ctx.numberFormat, total)}
               </dd>
             </div>
             <div>
               <dt className="text-muted">{t("composition.invested")}</dt>
               <dd className="font-medium tabular-nums">
-                {formatMoney(view.buckets.investments.total, ctx.numberFormat)}
+                {formatMoney(view.buckets.investments.total, ctx.numberFormat, total)}
               </dd>
             </div>
           </dl>

@@ -51,11 +51,16 @@ export function resourceMetadataUrl(baseUrl: string, key: ResourceKey): string {
 /**
  * What a self-registered (DCR) client may hold: the read-only MCP and a refresh token, nothing on
  * `/api/v1` (PERS-49 SEC-01). Write access stays with the Client API a person makes in Settings.
+ * `investments:read` (docs/design/investments.md §5.5) may be asked for, never given by default:
+ * the consent page names it, and the default stays `read`.
  */
-export const DCR_SCOPES = ["read", "offline_access"] as const;
+export const DCR_SCOPES = ["read", "investments:read", "offline_access"] as const;
 
 /** The domain scopes each resource advertises (RFC 9728): the MCP is read-only. */
-const RESOURCE_SCOPES: Record<ResourceKey, readonly ApiScope[]> = { api: API_SCOPES, mcp: ["read"] };
+const RESOURCE_SCOPES: Record<ResourceKey, readonly ApiScope[]> = {
+  api: API_SCOPES,
+  mcp: ["read", "investments:read"],
+};
 
 /** The protected-resource metadata document of RFC 9728 for one resource. */
 export function protectedResourceMetadata(baseUrl: string, key: ResourceKey) {

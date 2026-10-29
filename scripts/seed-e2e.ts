@@ -32,7 +32,16 @@ import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "../src/modules/pockets/service";
 import { expenseLinkCandidates } from "../src/modules/pockets/queries";
-import { createMovement, createPlatform, setValuation } from "../src/modules/investments/service";
+import {
+  addAsset,
+  createManualService,
+  ensureAssetSeed,
+  listAssets,
+  recordOperation,
+} from "../src/modules/investments/service";
+import { serviceDetail } from "../src/modules/investments/queries";
+import { connectInvestmentProvider, setSourcesForTests } from "../src/modules/investments/sync";
+import { parseDecimal, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "../src/modules/investments/rules";
 import { linkCandidates } from "../src/modules/transactions/queries";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
@@ -50,7 +59,7 @@ import { userScoped } from "../src/platform/db/scope";
 import { isBookable } from "../src/platform/holidays/rules";
 import { deleteFolder } from "../src/platform/storage";
 import { PAPERLESS_PROVIDER, WALLET_PROVIDER } from "../src/platform/integrations/rules";
-import { saveConnection, saveSchedule } from "../src/platform/integrations/service";
+import { listConnections, saveConnection, saveSchedule } from "../src/platform/integrations/service";
 import {
   BASE_URL,
   E2E_MCP_CLIENT_NAME,
@@ -195,7 +204,14 @@ for (const name of Object.keys(SESSIONS) as (keyof typeof SESSIONS)[]) {
 async function contextOf(email: string): Promise<Ctx> {
   const [user] = await getDb().select({ id: users.id }).from(users).where(eq(users.email, email));
   if (!user) throw new Error(`No user for ${email}`);
-  return { userId: user.id, role: "user", locale: "en", timeZone: "Europe/Rome", numberFormat: "it-IT" };
+  return {
+    userId: user.id,
+    role: "user",
+    locale: "en",
+    timeZone: "Europe/Rome",
+    numberFormat: "it-IT",
+    displayCurrency: "EUR",
+  };
 }
 
 /** A Wallet account adopted the way the sync adopts one; returns its id. */
@@ -337,8 +353,8 @@ async function seedPockets(): Promise<void> {
 }
 
 /**
- * Investments: no platform yet — the journey creates them — and the two bank movements its
- * deposit and withdrawal get linked to: 2.000 € sent to eToro ten days ago, 2.401,58 € back five
+ * Investments: no service yet — the journey creates its manual account — and the two bank movements
+ * a deposit and a withdrawal can be linked to: 2.000 € sent to eToro ten days ago, 2.401,58 € back five
  * days ago, on a synced account.
  */
 async function seedInvestments(): Promise<void> {
@@ -489,6 +505,381 @@ function workingDay(from: string, delta: number): string {
  * Everything is written through the services, like the rest of this seed: a row no service would
  * write lays out a screen that does not exist.
  */
+/**
+ * The display-currency journey (docs/design/investments.md §1.8): one account in EUR and one in
+ * USD. The USD one is converted at the site's own ECB rates (`fx_rates`), so the spec checks the
+ * currency of the totals, never a converted figure.
+ */
+async function seedCurrency(): Promise<void> {
+  const ctx = await contextOf(USERS.currency.email);
+  const on = addDays(today(ctx.timeZone), -3);
+  for (const [name, type, currency] of [
+    ["Conto EUR", "checking", "EUR"],
+    ["Broker USD", "investment", "USD"],
+  ] as const) {
+    await createAccount(ctx, {
+      name,
+      type,
+      currency,
+      color: null,
+      reference: "",
+      purpose: "",
+      openedOn: null,
+      notes: "",
+      openingBalance: { on, cents: 1_000_00n },
+    });
+  }
+}
+
+/**
+ * A connected eToro service (docs/design/investments.md §3.3) for the screens of phase 3: the
+ * connection is made through `connectInvestmentProvider` with a stand-in for eToro, so nothing is
+ * sent anywhere, and its schedule is manual, so the dispatcher never tries the made-up key.
+ */
+async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
+  const asset = (symbol: string, name: string, kind: "stock" | "etf") => ({
+    externalId: `instrument:${symbol}`,
+    class: kind,
+    name,
+    symbol,
+    currency: "USD",
+  });
+  const now = new Date();
+  setSourcesForTests(() => ({
+    verifyReadOnly: async () => ({
+      result: "read-only",
+      permissions: { "etoro-public:trade.real:read": true, "etoro-public:money.balance:read": true },
+      ipRestricted: null,
+      externalAccountId: "900001",
+    }),
+    fetchHoldings: async () => ({
+      observedAt: now,
+      externalAccountId: "900001",
+      totalCents: 512_345n,
+      cashCents: 12_345n,
+      positions: [
+        {
+          asset: asset("AAPL", "Apple", "stock"),
+          product: "trading",
+          quantity: "10",
+          price: "230.5",
+          priceCurrency: "USD",
+          priceSource: "etoro",
+          valueCents: 230_500n,
+          // What it invested (U4): the Positions tab measures its unrealized from it.
+          costCents: 200_000n,
+        },
+        {
+          asset: asset("VOO", "Vanguard S&P 500 ETF", "etf"),
+          product: "copy",
+          quantity: "0.5",
+          price: "540",
+          priceCurrency: "USD",
+          priceSource: "etoro",
+          valueCents: 269_500n,
+          costCents: 250_000n,
+        },
+      ],
+      scopes: [
+        { product: "cash", complete: true },
+        { product: "copy", complete: true },
+        { product: "trading", complete: true },
+      ],
+      empty: false,
+      complete: true,
+    }),
+    fetchFlows: async () => ({
+      events: [
+        // A trade opened and closed (E4): the closed positions of the Positions tab (U4).
+        ...(
+          [
+            ["open", -30, "buy", "200", "400"],
+            ["close", -10, "close", "250", "500"],
+          ] as const
+        ).map(([side, days, kind, unitPrice, nativeAmount]) => ({
+          externalId: `trade:e2e-7:${side}`,
+          occurredAt: new Date(`${addDays(on, days)}T15:00:00Z`),
+          note: null,
+          legs: [
+            {
+              leg: "base" as const,
+              kind,
+              asset: asset("TSLA", "Tesla", "stock"),
+              product: "trading",
+              quantity: "2",
+              unitPrice,
+              priceCurrency: "USD",
+              nativeAmount,
+              nativeCurrency: "USD",
+            },
+          ],
+        })),
+        {
+          externalId: "cash:e2e-1",
+          occurredAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          note: null,
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: null,
+              product: null,
+              quantity: null,
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "5000",
+              nativeCurrency: "USD",
+            },
+          ],
+        },
+      ],
+      coverage: [
+        {
+          stream: "trades",
+          fromAt: new Date("2020-01-01T00:00:00Z"),
+          toAt: now,
+          status: "complete",
+          reason: null,
+        },
+        {
+          stream: "deposits",
+          fromAt: new Date("2020-01-01T00:00:00Z"),
+          toAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          status: "partial",
+          reason: "before_first_movement",
+        },
+        {
+          stream: "deposits",
+          fromAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          toAt: now,
+          status: "complete",
+          reason: null,
+        },
+      ],
+    }),
+    fetchHistory: async () => ({
+      points: [
+        { on: addDays(on, -2), totalCents: 500_000n },
+        { on: addDays(on, -1), totalCents: 505_000n },
+      ],
+      coverage: [
+        {
+          stream: "balance_history",
+          fromAt: new Date("2020-01-01T00:00:00Z"),
+          toAt: new Date(`${addDays(on, -2)}T00:00:00Z`),
+          status: "gap",
+          reason: "api_limit_12m",
+        },
+        {
+          stream: "balance_history",
+          fromAt: new Date(`${addDays(on, -2)}T00:00:00Z`),
+          toAt: now,
+          status: "complete",
+          reason: null,
+        },
+      ],
+    }),
+  }));
+  try {
+    await connectInvestmentProvider(
+      ctx,
+      "etoro",
+      { api_key: "e2e-not-a-key-0001", user_key: "e2e-not-a-key-0002" },
+      { kind: "new", name: "eToro", currency: "USD" },
+    );
+  } finally {
+    setSourcesForTests(null);
+  }
+  const etoro = (await listConnections(ctx)).find((one) => one.provider === "etoro");
+  if (!etoro) throw new Error("e2e: the eToro connection is missing");
+  await saveSchedule(ctx, etoro.id, { rules: [] });
+}
+
+/**
+ * A connected Binance service (docs/design/investments.md §3.2) for the screens of phase 4: a
+ * stand-in for the exchange, as for eToro, with a wallet the adapter does not read (B4), the
+ * streams of D18 and the 24-month gap (D11), and a manual schedule.
+ */
+async function seedBinance(ctx: Ctx, on: string): Promise<void> {
+  const coin = (symbol: string, name: string, kind: "crypto" | "stablecoin" = "crypto") => ({
+    externalId: symbol,
+    class: kind,
+    name,
+    symbol,
+    currency: kind === "stablecoin" ? "USD" : "EUR",
+  });
+  const now = new Date();
+  const from = new Date(now.getTime() - 730 * 86_400_000);
+  const at = (days: number) => new Date(`${addDays(on, -days)}T10:00:00Z`);
+  const streams = [
+    "deposits",
+    "withdrawals",
+    "fiat_orders",
+    "fiat_payments",
+    "convert",
+    "dividends",
+    "trades",
+  ];
+  setSourcesForTests(() => ({
+    verifyReadOnly: async () => ({
+      result: "read-only",
+      permissions: { enableReading: true, enableWithdrawals: false, enableSpotAndMarginTrading: false },
+      ipRestricted: true,
+      externalAccountId: null,
+    }),
+    fetchHoldings: async () => ({
+      observedAt: now,
+      externalAccountId: "900032",
+      totalCents: 2_250_000n,
+      cashCents: 0n,
+      positions: [
+        {
+          asset: coin("BTC", "Bitcoin"),
+          product: "spot",
+          quantity: "0.0125",
+          price: "95000",
+          priceCurrency: "EUR",
+          priceSource: "binance:BTC/EUR",
+          valueCents: 118_750n,
+        },
+        {
+          asset: coin("ETH", "Ethereum"),
+          product: "earn",
+          quantity: "0.4",
+          price: "2100",
+          priceCurrency: "EUR",
+          priceSource: "binance:ETH/EUR",
+          valueCents: 84_000n,
+        },
+        {
+          asset: coin("USDT", "Tether", "stablecoin"),
+          product: "funding",
+          quantity: "250",
+          price: "0.8969",
+          priceCurrency: "EUR",
+          priceSource: "binance:EUR/USDT",
+          valueCents: 22_250n,
+        },
+      ],
+      scopes: [
+        { product: "spot", complete: true },
+        { product: "funding", complete: true },
+        { product: "earn", complete: true },
+        { product: "other:cross-margin", complete: false },
+      ],
+      empty: false,
+      complete: false,
+    }),
+    fetchFlows: async () => ({
+      events: [
+        {
+          externalId: "fiat:e2e-1",
+          occurredAt: at(40),
+          note: "SEPA",
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: null,
+              product: null,
+              quantity: null,
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "900",
+              nativeCurrency: "EUR",
+            },
+          ],
+        },
+        {
+          externalId: "trade:ETHEUR:e2e-2",
+          occurredAt: at(30),
+          note: null,
+          legs: [
+            {
+              leg: "base",
+              kind: "buy",
+              asset: coin("ETH", "Ethereum"),
+              product: "spot",
+              quantity: "0.4",
+              unitPrice: "2000",
+              priceCurrency: "EUR",
+              nativeAmount: "800",
+              nativeCurrency: "EUR",
+            },
+          ],
+        },
+        {
+          externalId: "deposit:e2e-3",
+          occurredAt: at(20),
+          note: null,
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: coin("BTC", "Bitcoin"),
+              product: "spot",
+              quantity: "0.0125",
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "0.0125",
+              nativeCurrency: "BTC",
+              fxRate: "92000",
+              fxSource: `exchange:BTC/EUR@${addDays(on, -20)}`,
+            },
+          ],
+        },
+        {
+          externalId: "deposit:e2e-4",
+          occurredAt: at(10),
+          note: null,
+          legs: [
+            {
+              leg: "main",
+              kind: "deposit",
+              asset: coin("USDT", "Tether", "stablecoin"),
+              product: "spot",
+              quantity: "250",
+              unitPrice: null,
+              priceCurrency: null,
+              nativeAmount: "250",
+              nativeCurrency: "USDT",
+              fxRate: "0.9",
+              fxSource: `exchange:EUR/USDT@${addDays(on, -10)}`,
+            },
+          ],
+        },
+      ],
+      coverage: streams.flatMap((stream) => [
+        {
+          stream,
+          fromAt: new Date("2017-07-14T00:00:00Z"),
+          toAt: from,
+          status: "gap" as const,
+          reason: "api_limit_24m",
+        },
+        { stream, fromAt: from, toAt: now, status: "complete" as const, reason: null },
+      ]),
+      cursor: { from: from.toISOString() },
+      historyFrom: from,
+      openingRates: {},
+    }),
+    fetchHistory: async () => ({ points: [], coverage: [] }),
+  }));
+  try {
+    await connectInvestmentProvider(
+      ctx,
+      "ccxt:binance",
+      { api_key: "e2e-not-a-key-0003", secret: "e2e-not-a-key-0004" },
+      { kind: "new", name: "Binance", currency: "EUR" },
+    );
+  } finally {
+    setSourcesForTests(null);
+  }
+  const binance = (await listConnections(ctx)).find((one) => one.provider === "ccxt:binance");
+  if (!binance) throw new Error("e2e: the Binance connection is missing");
+  await saveSchedule(ctx, binance.id, { rules: [] });
+}
+
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
   // A Paperless link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
@@ -529,6 +920,19 @@ async function seedLayout(): Promise<void> {
     openedOn: null,
     notes: "",
     openingBalance: { on: addDays(addMonths(monthKey(on), -1), -1), cents: 1_000_000n },
+  });
+  // An account in another currency, so the screens are measured with its line in the display
+  // currency under its own value (§1.8).
+  await createAccount(ctx, {
+    name: "Interactive Brokers",
+    type: "investment",
+    currency: "USD",
+    color: null,
+    reference: "",
+    purpose: "",
+    openedOn: null,
+    notes: "",
+    openingBalance: { on: addDays(on, -3), cents: 250_000n },
   });
 
   // ——— What hangs off the accounts: the section replaces a table the owner kept by hand ———
@@ -584,55 +988,75 @@ async function seedLayout(): Promise<void> {
   const [gift] = await expenseLinkCandidates(ctx);
   if (gift) await linkExpense(ctx, gifts.id, gift.id);
 
-  // ——— Investments: one platform valued and linked, one closed at a gain ———
-  const binance = await createPlatform(ctx, { name: "Binance", url: "https://www.binance.com" });
-  const etoro = await createPlatform(ctx, { name: "eToro", url: "https://www.etoro.com" });
-  // The unpaired giroconto of last month (500 €) is the bank side of one Binance deposit.
+  // ——— Investments (docs/design/investments.md §4): a manual account per asset with a position in
+  // EUR and one in USD, its cash and a valuation, and a manual account kept as a total. A service
+  // starts today, so every operation is dated today. (No synced account: phase 2 has no provider.)
   const transfer = (await linkCandidates(ctx, { direction: "out", from: `${lastMonth}-01`, to: on })).find(
     (candidate) => candidate.payee === "Revolut",
   );
   if (!transfer) throw new Error("e2e: the layout user's giroconto is missing");
-  await createMovement(ctx, {
-    platformId: binance.id,
-    kind: "deposit",
-    amountCents: 280_000n,
-    on: addDays(on, -270),
+  const directa = await createManualService(ctx, {
+    target: "new",
+    name: "Directa",
+    category: "broker",
+    currency: "EUR",
+    mode: "assets",
+    url: "https://www.directa.it",
   });
-  await createMovement(ctx, {
-    platformId: binance.id,
+  await recordOperation(ctx, directa.accountId, { kind: "deposit", on, amountCents: 1_000_000n });
+  await recordOperation(ctx, directa.accountId, {
     kind: "deposit",
-    amountCents: 70_000n,
-    on: addDays(on, -260),
-  });
-  await createMovement(ctx, {
-    platformId: binance.id,
-    kind: "withdrawal",
-    amountCents: 186_110n,
-    on: addDays(on, -120),
-    note: "Presa di profitto",
-  });
-  await createMovement(ctx, {
-    platformId: binance.id,
-    kind: "deposit",
-    amountCents: transfer.cents,
-    on: transfer.on,
+    on,
+    amountCents: transfer.cents < 0n ? -transfer.cents : transfer.cents,
     transactionId: transfer.id,
   });
-  await setValuation(ctx, binance.id, { valueCents: 245_000n, on: addDays(on, -60) });
-  await setValuation(ctx, binance.id, { valueCents: 262_300n, on });
-  await createMovement(ctx, {
-    platformId: etoro.id,
-    kind: "deposit",
-    amountCents: 200_000n,
-    on: addDays(on, -100),
+  await ensureAssetSeed(ctx);
+  const seeded = await listAssets(ctx);
+  const assetOf = (symbol: string) => {
+    const asset = seeded.find((one) => one.symbol === symbol);
+    if (!asset) throw new Error(`e2e: the asset seed has no ${symbol}`);
+    return asset.id;
+  };
+  await addAsset(ctx, directa.accountId, {
+    asset: { id: assetOf("VWCE") },
+    on,
+    quantity: parseDecimal("100", QUANTITY_SCALE),
+    unitPrice: parseDecimal("60", PRICE_SCALE),
+    feeCents: 200n,
   });
-  await createMovement(ctx, {
-    platformId: etoro.id,
-    kind: "withdrawal",
-    amountCents: 240_158n,
-    on: addDays(on, -95),
+  await addAsset(ctx, directa.accountId, {
+    asset: { id: assetOf("CSPX") },
+    on,
+    quantity: parseDecimal("5", QUANTITY_SCALE),
+    unitPrice: parseDecimal("550.25", PRICE_SCALE),
+    fxRate: parseDecimal("0.92", RATE_SCALE),
   });
-  await setValuation(ctx, etoro.id, { valueCents: 0n, on: addDays(on, -95) });
+  const vwce = (await serviceDetail(ctx, directa.accountId))?.holdings.find(
+    (holding) => holding.asset.id === assetOf("VWCE"),
+  )?.id;
+  if (!vwce) throw new Error("e2e: the VWCE position is missing");
+  await recordOperation(ctx, directa.accountId, {
+    kind: "valuation",
+    holdingId: vwce,
+    on,
+    unitPrice: parseDecimal("65", PRICE_SCALE),
+  });
+  const fineco = await createManualService(ctx, {
+    target: "new",
+    name: "Fineco Conto Deposito",
+    category: "accounts",
+    currency: "EUR",
+    mode: "total",
+    url: null,
+  });
+  await recordOperation(ctx, fineco.accountId, { kind: "deposit", on, amountCents: 500_000n });
+  await recordOperation(ctx, fineco.accountId, { kind: "account_valuation", on, amountCents: 512_340n });
+  // A transfer to confirm (§2.4): 1.000 € out of Fineco and into Directa on the same day, so both
+  // service pages show the proposal the screen checks measure.
+  await recordOperation(ctx, fineco.accountId, { kind: "withdrawal", on, amountCents: 100_000n });
+  await recordOperation(ctx, directa.accountId, { kind: "deposit", on, amountCents: 100_000n });
+  await seedEtoro(ctx, on);
+  await seedBinance(ctx, on);
 
   // ——— Subscriptions ———
   await upsertFromProvider(ctx, current, [
@@ -771,6 +1195,7 @@ await seedFunds();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();
+await seedCurrency();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 
 process.exit(0);

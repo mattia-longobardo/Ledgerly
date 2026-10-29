@@ -1,0 +1,10 @@
+{
+  "request": "/api/v1/balances/history?displayCurrency=EUR&fromDate=2024-11-01&toDate=2025-10-31",
+  "status": 400,
+  "body": {
+    "code": "DATE_RANGE_OUTSIDE_RETENTION",
+    "message": "fromDate must be within the last 12 months (EOD history retention limit)",
+    "requestId": "fixture-id-9001",
+    "details": null
+  }
+}

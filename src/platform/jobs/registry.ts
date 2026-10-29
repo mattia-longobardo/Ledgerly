@@ -9,6 +9,7 @@ import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
 import { recurrencesRefreshJob } from "@/modules/transactions/jobs";
 import { backupJob } from "@/platform/backup/jobs";
 import { exportAllJob } from "@/platform/export/jobs";
+import { fxRatesRefreshJob } from "@/platform/fx/jobs";
 import { holidaysRefreshJob } from "@/platform/holidays/jobs";
 import { integrationsSyncJob } from "@/platform/integrations/jobs";
 import { monthlySummaryJob } from "@/platform/reports/jobs";
@@ -73,6 +74,8 @@ export const JOBS: readonly JobDefinition[] = [
   cometaSweepJob,
   // The subscribed holiday calendars, kept current from their sources (M3).
   holidaysRefreshJob,
+  // The ECB exchange rates of the day, and on its first run the history (investments.md §1.8).
+  fxRatesRefreshJob,
   // Every day with the rest of the daily tier (spec §10.2); its retention is in `housekeeping`.
   backupJob,
   // Last of the monthly tier: it reports numbers `accounts-snapshot` and `pockets-accrual` have

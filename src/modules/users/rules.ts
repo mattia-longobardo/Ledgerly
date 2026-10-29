@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Role } from "@/platform/context";
+import { DEFAULT_DISPLAY_CURRENCY, DISPLAY_CURRENCIES } from "@/platform/fx/rules";
 
 const VALID_TIME_ZONES = new Set(Intl.supportedValuesOf("timeZone"));
 
@@ -28,6 +29,9 @@ export const preferencesInputSchema = z.object({
   // otherwise), so the display of anyone who never touches them does not change.
   decimalSeparator: z.enum([".", ","]).nullable(),
   currencyPosition: z.enum(["before", "after"]).nullable(),
+  // What totals across accounts are shown in (§1.8, D1): EUR or a currency the ECB publishes, so
+  // there is always a rate. A form written before the setting existed sends none and keeps EUR.
+  displayCurrency: z.enum(DISPLAY_CURRENCIES).default(DEFAULT_DISPLAY_CURRENCY),
   weekStart: z.union([z.literal(0), z.literal(1)]),
   theme: z.enum(["system", "light", "dark"]),
   defaultRange: z.enum(["this_month", "last_30_days", "year_to_date"]),
@@ -44,6 +48,7 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   numberFormat: "it-IT",
   decimalSeparator: null,
   currencyPosition: null,
+  displayCurrency: DEFAULT_DISPLAY_CURRENCY,
   weekStart: 1,
   theme: "light",
   defaultRange: "this_month",

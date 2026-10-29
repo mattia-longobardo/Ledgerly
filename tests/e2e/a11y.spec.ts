@@ -100,6 +100,23 @@ async function openTab(page: Page, tab: string): Promise<void> {
   await settled(page);
 }
 
+/** A service's tab (docs/design/investments-ux.md §1.1): a route of its own under the service. */
+async function serviceTab(page: Page, service: string, tab: "" | "positions" | "activity" | "connection") {
+  // The exact name: the home's alert link names the service too, and opens its Connection tab.
+  await follow(page, "/investments", new RegExp(`^${service}$`));
+  if (tab === "") return;
+  const url = new URL(page.url());
+  url.pathname = `${url.pathname}/${tab}`;
+  await page.goto(url.toString());
+  await settled(page);
+}
+
+/** A command of a service's header (§3.2): "Add operation" or `⋯`, then the item. */
+async function headerCommand(page: Page, menu: "Add operation" | "More actions", item: string) {
+  await page.getByRole("button", { name: menu }).first().click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+}
+
 const go = (path: string) => async (page: Page) => {
   await page.goto(path);
   await settled(page);
@@ -190,9 +207,50 @@ const PAGES: Screen[] = [
   },
   { name: "/investments", session: "layout", open: go("/investments") },
   {
-    name: "/investments?platform=",
+    name: "/investments · All, the value chart, by class",
     session: "layout",
-    open: (page) => follow(page, "/investments", "Binance"),
+    open: go("/investments?period=all&view=value&by=class"),
+  },
+  { name: "/investments/catalog", session: "layout", open: go("/investments/catalog") },
+  // The four tabs of a service (§3.2–§3.6, U3), of a manual account per asset, of one in total
+  // mode, and of the two connected ones.
+  ...(
+    [
+      ["Directa", "a manual account"],
+      ["Fineco Conto Deposito", "a manual account in total mode"],
+      ["eToro", "synced with eToro"],
+      ["Binance", "synced with Binance"],
+    ] as const
+  ).flatMap(([service, what]) =>
+    (["", "positions", "activity", "connection"] as const).map((tab) => ({
+      name: `/investments/[accountId]${tab ? `/${tab}` : ""}, ${what}`,
+      session: "layout" as const,
+      open: (page: Page) => serviceTab(page, service, tab),
+    })),
+  ),
+  // The closed positions of Positions (§3.4, U4): in the period and ever, of a synced service.
+  ...(["closed", "all"] as const).map((status) => ({
+    name: `/investments/[accountId]/positions?status=${status}, synced with eToro`,
+    session: "layout" as const,
+    open: async (page: Page) => {
+      await serviceTab(page, "eToro", "positions");
+      const url = new URL(page.url());
+      url.searchParams.set("period", "all");
+      url.searchParams.set("status", status);
+      await page.goto(url.toString());
+      await settled(page);
+    },
+  })),
+  {
+    name: "/investments/[accountId]/positions?by=class, a manual account",
+    session: "layout",
+    open: async (page: Page) => {
+      await serviceTab(page, "Directa", "positions");
+      const url = new URL(page.url());
+      url.searchParams.set("by", "class");
+      await page.goto(url.toString());
+      await settled(page);
+    },
   },
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
@@ -241,8 +299,10 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
+      // The first control is Paperless's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .first()
         .click();
       await settledDialog(page);
     },
@@ -255,8 +315,10 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
+      // The first control is Paperless's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
+        .first()
         .click();
       await settledDialog(page);
       const dialog = page.getByRole("dialog");
@@ -332,13 +394,126 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
-    name: "the new investment movement dialog",
+    name: "the period picker of Investments",
+    session: "layout",
+    open: async (page) => {
+      await page.goto("/investments?from=2026-01-01&to=2026-06-30");
+      await settled(page);
+      await page.locator('summary[title="Pick the days"]').click();
+      await page.waitForTimeout(300);
+    },
+  },
+  {
+    name: "the create manual account dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/investments");
+      await page.goto("/investments/catalog");
       await settled(page);
-      await page.getByRole("button", { name: "New movement" }).first().click();
+      await page.getByRole("button", { name: "Create manual account" }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the add asset dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^Directa$/);
+      await headerCommand(page, "Add operation", "Buy");
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the investment deposit dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^Directa$/);
+      await headerCommand(page, "Add operation", "Deposit");
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the correct the value dialog, with its class and its effect",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^eToro$/);
+      await headerCommand(page, "More actions", "Correct the value");
+      await page.getByRole("dialog").getByLabel("Change").fill("120");
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the position close dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await serviceTab(page, "Directa", "positions");
+      await page
+        .getByRole("button", { name: /^Actions for Vanguard/ })
+        .filter({ visible: true })
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: "Close" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the connect eToro dialog",
+    session: "admin",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/investments/catalog");
+      await settled(page);
+      await page.getByRole("button", { name: "Connect", exact: true }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the connect Binance dialog",
+    session: "admin",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/investments/catalog");
+      await settled(page);
+      await page
+        .getByTestId("catalog-card")
+        .filter({ hasText: "Binance" })
+        .getByRole("button", { name: "Connect", exact: true })
+        .click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the replace key dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^eToro$/);
+      await headerCommand(page, "More actions", "Replace key");
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the disconnect dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await serviceTab(page, "eToro", "connection");
+      await page.getByRole("button", { name: "Disconnect", exact: true }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the switch to per-asset mode dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await serviceTab(page, "Fineco Conto Deposito", "connection");
+      await page.getByRole("button", { name: "Switch to per-asset mode" }).first().click();
+      await page.getByRole("dialog").getByRole("button", { name: "Add position" }).click();
       await settledDialog(page);
     },
   },

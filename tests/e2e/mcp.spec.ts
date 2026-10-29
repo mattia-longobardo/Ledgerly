@@ -78,6 +78,10 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
   expect(authorize.origin + authorize.pathname).toBe(`${BASE_URL}/api/auth/oauth2/authorize`);
   expect(authorize.searchParams.get("code_challenge_method")).toBe("S256");
   expect(authorize.searchParams.get("resource")).toBe(MCP_URL.href);
+  // The SDK asks for what the metadata offers: `read` and `investments:read` (investments.md §5.5).
+  expect(authorize.searchParams.get("scope")?.split(" ")).toEqual(
+    expect.arrayContaining(["read", "investments:read"]),
+  );
 
   // 2. The person: signed in already, so straight to consent; "Allow" sends the code to the client.
   let code: string | null = null;
@@ -91,6 +95,8 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
   // PERS-49 SEC-01: where the code goes, and that nobody vouches for the name.
   await expect(page.getByText("127.0.0.1:33418")).toBeVisible();
   await expect(page.getByText("Unverified client.")).toBeVisible();
+  // investments:read is never implied: the consent page names it.
+  await expect(page.getByText("investments:read", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Allow" }).click();
   await expect.poll(() => code).not.toBeNull();
 
@@ -102,9 +108,11 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
   const { tools } = await client.listTools();
   expect(tools.map((tool) => tool.name).sort()).toEqual([
     "get_account_balances",
+    "get_investment_holdings",
     "get_summary",
     "list_accounts",
     "list_budgets",
+    "list_investments",
     "list_transactions",
   ]);
   const listed = await client.callTool({ name: "list_accounts", arguments: {} });

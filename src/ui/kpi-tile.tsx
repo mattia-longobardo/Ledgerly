@@ -9,6 +9,7 @@ export function KpiTile({
   delta,
   deltaTone = "muted",
   note,
+  className,
 }: {
   label: string;
   value: string;
@@ -16,9 +17,10 @@ export function KpiTile({
   delta?: string;
   deltaTone?: Tone;
   note?: string;
+  className?: string;
 }) {
   return (
-    <Card className="flex min-w-0 flex-col gap-1.5">
+    <Card className={cn("flex min-w-0 flex-col gap-1.5", className)}>
       <span className="text-sm font-medium text-muted">{label}</span>
       <span className={cn("text-kpi font-semibold tracking-[-0.02em]", TONE_TEXT[valueTone])}>{value}</span>
       {(delta || note) && (

@@ -1,0 +1,5 @@
+{
+  "request": "/api/v1/trading/info/trade/history?minDate=2025-11-01&page=99&pageSize=5",
+  "status": 200,
+  "body": []
+}

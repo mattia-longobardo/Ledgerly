@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   // Otherwise `next dev` writes its own CLAUDE.md/AGENTS.md into the repository.
   agentRules: false,
+  // ccxt (Investments, docs/design/investments.md §3.2) is ~70 MB: required at run time from
+  // node_modules, never bundled. Listed before the package is added so the phase that adds it
+  // changes no build setting.
+  serverExternalPackages: ["ccxt"],
   // A document is at most 10 MB (spec §9.3); the multipart envelope needs a little more.
   experimental: { proxyClientMaxBodySize: "11mb", serverActions: { bodySizeLimit: "11mb" } },
   async headers() {

@@ -1,0 +1,36 @@
+{
+  "request": "/api/v1/me",
+  "status": 200,
+  "body": {
+    "gcid": 900001,
+    "realCid": 900002,
+    "demoCid": 900003,
+    "username": "user_fixture",
+    "firstName": "Nome",
+    "middleName": "",
+    "lastName": "Cognome",
+    "playerLevel": 1,
+    "gender": 1,
+    "language": 1,
+    "dateOfBirth": "1990-01-01",
+    "avatarUrl": "https://example.invalid/avatar.png",
+    "scopes": [
+      "etoro-public:agent-portfolio:read",
+      "etoro-public:club:read",
+      "etoro-public:crypto:read",
+      "etoro-public:feed:read",
+      "etoro-public:market-data:read",
+      "etoro-public:money.balance:read",
+      "etoro-public:money.cash-transactions:read",
+      "etoro-public:notifications:read",
+      "etoro-public:pi-data:read",
+      "etoro-public:pnl-alerts:read",
+      "etoro-public:sso-applications:read",
+      "etoro-public:sso-scopes:read",
+      "etoro-public:trade.demo:read",
+      "etoro-public:trade.real:read",
+      "etoro-public:user-info:read",
+      "etoro-public:watchlist:read"
+    ]
+  }
+}

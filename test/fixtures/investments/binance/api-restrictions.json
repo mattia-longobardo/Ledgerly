@@ -1,0 +1,18 @@
+{
+  "method": "sapiGetAccountApiRestrictions",
+  "body": {
+    "ipRestrict": false,
+    "createTime": 1793141247000,
+    "enableSpotAndMarginTrading": false,
+    "enableWithdrawals": false,
+    "enableInternalTransfer": false,
+    "permitsUniversalTransfer": false,
+    "enableVanillaOptions": false,
+    "enablePortfolioMarginTrading": false,
+    "enableFixApiTrade": false,
+    "enableFixReadOnly": false,
+    "enableReading": true,
+    "enableFutures": false,
+    "enableMargin": false
+  }
+}

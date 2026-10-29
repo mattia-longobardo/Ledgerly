@@ -1,7 +1,8 @@
 // tests/e2e/schedule.spec.ts — the sync schedule editor of Settings › Integrations
 // (docs/scheduler.md), on the seeded `layout` user's Paperless link, which starts on manual only and
 // is put back there at the end. The address of that link does not exist, so a pass the dispatcher
-// makes in between only records a failed run on a test user.
+// makes in between only records a failed run on a test user. Its control is the first on the page:
+// the seeded eToro link (manual only too) has its own further down, and is never touched here.
 import { expect, test } from "@playwright/test";
 import { sessionState } from "./env";
 
@@ -9,7 +10,7 @@ test.use({ storageState: sessionState("layout") });
 
 test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async ({ page }) => {
   await page.goto("/settings/integrations");
-  await page.getByRole("button", { name: "Change the sync schedule" }).click();
+  await page.getByRole("button", { name: "Change the sync schedule" }).first().click();
   const dialog = page.getByRole("dialog", { name: "Sync schedule" });
   await expect(dialog).toBeVisible();
 
@@ -49,10 +50,10 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
   });
 
   await test.step("back to manual only", async () => {
-    await page.getByRole("button", { name: "Change the sync schedule" }).click();
+    await page.getByRole("button", { name: "Change the sync schedule" }).first().click();
     await dialog.getByRole("button", { name: "Manual only" }).click();
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByText("No automatic sync")).toBeVisible();
+    await expect(page.getByText("No automatic sync").first()).toBeVisible();
   });
 });

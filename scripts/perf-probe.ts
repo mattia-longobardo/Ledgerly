@@ -35,6 +35,7 @@ const ctx: Ctx = {
   locale: "en",
   timeZone: "Europe/Rome",
   numberFormat: "it-IT",
+  displayCurrency: "EUR",
 };
 
 const categoryRows = await getDb()
