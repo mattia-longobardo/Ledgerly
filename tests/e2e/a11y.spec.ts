@@ -189,6 +189,11 @@ const PAGES: Screen[] = [
     },
   },
   { name: "/investments", session: "layout", open: go("/investments") },
+  {
+    name: "/investments · All, the value chart, by class",
+    session: "layout",
+    open: go("/investments?period=all&view=value&by=class"),
+  },
   { name: "/investments/catalog", session: "layout", open: go("/investments/catalog") },
   {
     name: "/investments/[accountId]",
@@ -349,6 +354,16 @@ const OVERLAYS: Screen[] = [
       await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"])');
       await page.getByRole("button", { name: /^(Rename|Rinomina)$/ }).click();
       await settledDialog(page);
+    },
+  },
+  {
+    name: "the period picker of Investments",
+    session: "layout",
+    open: async (page) => {
+      await page.goto("/investments?from=2026-01-01&to=2026-06-30");
+      await settled(page);
+      await page.locator('summary[title="Pick the days"]').click();
+      await page.waitForTimeout(300);
     },
   },
   {
