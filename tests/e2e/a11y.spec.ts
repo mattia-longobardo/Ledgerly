@@ -228,6 +228,19 @@ const PAGES: Screen[] = [
       open: (page: Page) => serviceTab(page, service, tab),
     })),
   ),
+  // The closed positions of Positions (§3.4, U4): in the period and ever, of a synced service.
+  ...(["closed", "all"] as const).map((status) => ({
+    name: `/investments/[accountId]/positions?status=${status}, synced with eToro`,
+    session: "layout" as const,
+    open: async (page: Page) => {
+      await serviceTab(page, "eToro", "positions");
+      const url = new URL(page.url());
+      url.searchParams.set("period", "all");
+      url.searchParams.set("status", status);
+      await page.goto(url.toString());
+      await settled(page);
+    },
+  })),
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
     name: "/payroll/[id]",

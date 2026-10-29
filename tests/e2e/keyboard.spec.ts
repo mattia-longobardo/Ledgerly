@@ -227,6 +227,34 @@ test("a service's tabs are walked from the keyboard, each one a page, the period
   await expect(tabs.getByRole("link", { name: /^Connection/ })).toHaveAttribute("aria-current", "page");
 });
 
+test("Positions: the open, closed and all-closed views are links walked from the keyboard (§3.4)", async ({
+  page,
+}) => {
+  await page.goto("/investments?period=all");
+  await page.waitForTimeout(500);
+  const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
+  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions?period=all`);
+  await page.waitForTimeout(500);
+
+  const status = page.getByRole("group", { name: "Which positions" });
+  await status.getByRole("link", { name: /^Open/ }).focus();
+  expect(await focusIsVisible(page), "the Open link draws no ring").toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(status.getByRole("link", { name: /^Closed in/ })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(status.getByRole("link", { name: /^All closed/ })).toBeFocused();
+  expect(await focusIsVisible(page), "the All closed link draws no ring").toBe(true);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/positions\?period=all&status=all$/);
+  await expect(status.getByRole("link", { name: /^All closed/ })).toHaveAttribute("aria-current", "true");
+  // A row's asset opens its Activity: a link of its own, apart from the row.
+  const asset = page.getByTestId("closed-row").first().getByRole("link").first();
+  await asset.focus();
+  expect(await focusIsVisible(page), "the asset link draws no ring").toBe(true);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/activity\?period=all&asset=/);
+});
+
 test("a sortable table sorts from the keyboard, and the column says which way", async ({ page }) => {
   await page.goto("/expenses");
   await page.waitForTimeout(800);

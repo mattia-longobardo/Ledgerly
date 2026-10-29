@@ -330,6 +330,7 @@ async function writeReading(
             : formatDecimal(parseDecimal(position.fxRate, RATE_SCALE), RATE_SCALE),
         fxSource: position.fxSource ?? null,
         valueCents: position.valueCents,
+        costCents: position.costCents ?? null,
       }),
     );
   }

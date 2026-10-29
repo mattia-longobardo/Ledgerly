@@ -32,8 +32,8 @@ import {
 } from "./schema";
 import { connectInvestmentProvider, runInvestmentPass, setSourcesForTests } from "./sync";
 import { NO_RATES } from "@/platform/fx/rules";
-import { pnlOf, replayHoldings } from "./pnl";
-import { investmentHistory, investmentsPnl, serviceDetail } from "./queries";
+import { pnlOf, positionsOn, replayHoldings } from "./pnl";
+import { investmentsPnl, serviceDetail, servicePnlView } from "./queries";
 import { loadBook, ratesFor } from "./service";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/investments/binance");
@@ -545,19 +545,14 @@ describe("the estimated history (PERS-100)", () => {
       .where(eq(investmentSyncCoverage.stream, "balance_history"));
     expect(coverage).toMatchObject({ kind: "holdings", status: "partial", reason: "estimated" });
 
-    // The chart: the year before today is drawn, dashed up to the first real reading.
-    const history = await investmentHistory(ctx, {
-      window: { grain: "day", range: "1y", custom: null },
-      accountId,
-      now: NOW,
-    });
-    // 1Y is the twelve months to this one: from 1 November on.
-    expect([history?.days[0], history?.days.length]).toEqual(["2025-11-01", 362]);
-    expect(history?.value.every((value) => value !== null)).toBe(true);
-    expect(history?.estimated.slice(0, -1).every(Boolean)).toBe(true);
-    expect(history?.estimated.at(-1)).toBe(false);
+    // The chart: the history is drawn, dashed up to the first real reading.
+    const view = await servicePnlView(ctx, accountId, { period: "all" }, NOW);
+    const series = view!.chart[0];
+    expect(series.values.every((value) => value !== null)).toBe(true);
+    expect(series.valuesEstimated.slice(0, -1).every(Boolean)).toBe(true);
+    expect(series.valuesEstimated.at(-1)).toBe(false);
     // Today's value is the reading's, untouched.
-    expect(history?.value.at(-1)).toBe(2n);
+    expect(series.values.at(-1)).toBe(2n);
   });
 
   it("estimates once: the next pass writes no day twice and keeps the real reading", async () => {
@@ -641,6 +636,32 @@ describe("the P&L of a period on Binance (docs/design/investments-ux.md §4.4, U
         parts.correctionsCents +
         parts.unattributedCents,
     ).toBe(parts.pnlCents);
+  });
+
+  it("takes a coin's cost from its trades when they add up to the quantity read (§4.7, U4)", async () => {
+    const { accountId } = await connectNew();
+    const investment = await investmentOf(accountId);
+    const book = await loadBook(ctx, investment, "EUR");
+    const rates = await ratesFor(book, "2026-10-28");
+    const replay = replayHoldings(book, "2026-10-28");
+    const { kind, positions } = positionsOn(book, "2026-10-28", rates, replay);
+    expect(kind).toBe("positions");
+    expect(positions.length).toBeGreaterThan(0);
+    for (const one of positions) {
+      const replayed = one.holdingId === null ? undefined : replay.costs.get(one.holdingId);
+      const adds =
+        replayed?.quantity != null &&
+        one.quantity !== null &&
+        (replayed.quantity > one.quantity
+          ? replayed.quantity - one.quantity
+          : one.quantity - replayed.quantity) *
+          1_000_000n <=
+          one.quantity;
+      if (adds) expect(one).toMatchObject({ costSource: "events", costCents: replayed!.costCents });
+      // Binance gives no cost of its own: what the trades do not explain has none, never a guess.
+      else expect(one).toMatchObject({ costSource: null, costCents: null, unrealizedCents: null });
+    }
+    expect(positions.some((one) => one.costSource === "events")).toBe(true);
   });
 
   it("does not stand a P&L on a rebuilt history whose quantities do not add up (§4.6)", async () => {

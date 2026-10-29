@@ -24,6 +24,7 @@ import {
   type HoldingState,
   holdingStates,
   investorFlows,
+  isUnpricedDust,
   type Mode,
   monthsBack,
   type AccountOrigin,
@@ -59,6 +60,7 @@ import {
 } from "./service";
 import {
   type CoverageWindow,
+  type Exit,
   type PeriodParams,
   periodOf,
   type PnlPeriod,
@@ -66,10 +68,11 @@ import {
   type PnlService,
   portfolioPnl,
   type PortfolioPnl,
+  replayHoldings,
+  type ServicePnl,
 } from "./pnl";
 import { type BarGrain, barIntervals, type Interval, periodSpan, valueDays } from "./period";
 import { type SyncStatus, syncStatus } from "./sync";
-import { type ChartGrain, type ChartWindow, chartDays } from "./window";
 import { type Xirr, xirr } from "./xirr";
 
 /** The home chart looks back this far, as the legacy page did. */
@@ -400,113 +403,6 @@ export async function investmentsHome(
       valueCents: row.metrics.valueCents,
       kind: row.fund.type,
     })),
-  };
-}
-
-export interface InvestmentHistory {
-  currency: string;
-  grain: ChartGrain;
-  /** The window's months, after those before the history were dropped. */
-  months: MonthKey[];
-  /** The days the chart values: month ends (today for this month), or every day. */
-  days: CivilDate[];
-  value: (Cents | null)[];
-  /** What had gone in by each day: opening, deposits, withdrawals (§2.4). */
-  invested: (Cents | null)[];
-  /** Days that stand on an estimated reading (PERS-100): drawn dashed and said so. */
-  estimated: boolean[];
-}
-
-/**
- * The value-vs-invested chart of the home (every live service, in the display currency, each day
- * at its own rate) or of one service (in its currency), over a window (PERS-100): the `portfolio`
- * balances held day by day, and the flows up to each day. `null` for a service that is not one.
- */
-export async function investmentHistory(
-  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  options: { window: ChartWindow; accountId?: string; now?: Date },
-): Promise<InvestmentHistory | null> {
-  const now = options.now ?? new Date();
-  const todayOn = today(ctx.timeZone, now);
-  const { loaded } = await loadAll(ctx, todayOn, options.accountId);
-  const live = options.accountId ? loaded : loaded.filter((one) => one.account.state !== "archived");
-  if (options.accountId && live.length === 0) return null;
-  const currency = options.accountId ? live[0].account.currency : ctx.displayCurrency;
-  const firsts = live.flatMap((one) => (one.book.periods[0] ? [one.book.periods[0].fromOn] : []));
-  const firstOn = firsts.length === 0 ? null : firsts.reduce((a, b) => (a < b ? a : b));
-  const { months, days } = chartDays(options.window, todayOn, firstOn);
-
-  const read = await dailyBalancesOf(
-    ctx,
-    live.map((one) => one.account.id),
-    { from: days[0], to: days[days.length - 1] },
-  );
-  const indexOf = new Map(read.days.map((day, index) => [day, index]));
-  const converts = live.some((one) => one.account.currency !== currency);
-  const rates = converts
-    ? await ratesOn(
-        new Set([currency, ...live.map((one) => one.account.currency)]),
-        addDays(days[0], -7),
-        todayOn,
-      )
-    : NO_RATES;
-  const valueSeries = live.map((one) => {
-    const values = read.series.get(one.account.id)?.values ?? [];
-    return days.map((day) => {
-      const cents = values[indexOf.get(day) ?? -1] ?? null;
-      return cents === null ? null : convertCents(cents, one.account.currency, currency, day, rates);
-    });
-  });
-  const estimatedThrough = live.map(
-    (one) => one.book.readingRows.filter((reading) => reading.status === "estimated").at(-1)?.on ?? null,
-  );
-
-  // What went in, each flow in the chart's currency at the rate of its own day (§2.4); a transfer
-  // between two of the services shown moves no money in or out.
-  const groups = new Map<string, Set<string>>();
-  for (const one of live) {
-    for (const event of one.book.events) {
-      if (event.transferGroupId === null) continue;
-      const accounts = groups.get(event.transferGroupId) ?? new Set<string>();
-      accounts.add(one.account.id);
-      groups.set(event.transferGroupId, accounts);
-    }
-  }
-  const flowRates = converts
-    ? await ratesOn(
-        new Set([currency, ...live.map((one) => one.account.currency)]),
-        addDays(firstOn ?? todayOn, -7),
-        todayOn,
-      )
-    : NO_RATES;
-  let unconverted = false;
-  const flows = live.flatMap((one) =>
-    flowEntriesOn(one.book, todayOn)
-      .filter((entry) => entry.transferGroupId === null || (groups.get(entry.transferGroupId)?.size ?? 0) < 2)
-      .flatMap((entry) => {
-        const cents = convertCents(entry.cents, one.account.currency, currency, entry.on, flowRates);
-        if (cents === null) unconverted = true;
-        return cents === null ? [] : [{ ...entry, cents }];
-      }),
-  );
-
-  return {
-    currency,
-    grain: options.window.grain,
-    months,
-    days,
-    value: days.map((_, index) => sumCents(valueSeries.map((series) => series[index])).total),
-    invested: days.map((day) => {
-      if (unconverted || firstOn === null || day < firstOn) return null;
-      const by = sumFlows(flows.filter((entry) => entry.on <= day));
-      return by.openingCents + by.depositedCents - by.withdrawnCents;
-    }),
-    estimated: days.map((day, index) =>
-      live.some(
-        (one, at) =>
-          estimatedThrough[at] !== null && day <= estimatedThrough[at]! && valueSeries[at][index] !== null,
-      ),
-    ),
   };
 }
 
@@ -1250,6 +1146,78 @@ export async function servicePnlView(
 ): Promise<InvestmentsPnlView | null> {
   const view = await pnlView(ctx, params, now, accountId);
   return view.portfolio.services.length === 0 ? null : view;
+}
+
+export interface ServicePositions {
+  period: PnlPeriod;
+  todayOn: CivilDate;
+  /** The display currency. */
+  currency: string;
+  firstOn: CivilDate | null;
+  span: { from: CivilDate; to: CivilDate };
+  service: ServicePnl;
+  /** Every asset a row can name: the catalog, the provider's included. */
+  assets: Map<string, InvestmentAsset>;
+  /** Every holding of the service: what a closed row is. */
+  holdings: Map<string, { assetId: string; product: string; origin: "manual" | "provider" }>;
+  /** Every exit up to today: "All closed" (S10). */
+  allExits: Exit[];
+  /** The dust the reading in force on the period's last day leaves out (V4). */
+  dust: { assetId: string; product: string; quantity: string }[];
+}
+
+/**
+ * The Positions tab (docs/design/investments-ux.md §3.4, U4): the service's P&L of the period with
+ * its positions at both ends — open on the last day, and the ones the period sold — from the same
+ * engine and inputs as the Overview, so the rows add up to its number (PERS-113 · 1, 4, 5).
+ */
+export async function servicePositions(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  accountId: string,
+  params: PeriodParams | PnlPeriod,
+  now: Date = new Date(),
+): Promise<ServicePositions | null> {
+  const todayOn = today(ctx.timeZone, now);
+  const period = "kind" in params ? params : periodOf(params, todayOn);
+  const { loaded } = await loadAll(ctx, todayOn, accountId);
+  const one = loaded[0];
+  if (!one) return null;
+  const { services, display } = await pnlInputs(ctx, [one], period, todayOn);
+  const firstOn = firstDayOf([one]);
+  const reading = [...one.book.readingRows]
+    .filter((row) => row.on <= period.to && row.status !== "pending_zero")
+    .at(-1);
+  const dust = reading
+    ? (await readingPositionsOf(ctx, reading.id))
+        .filter((position) =>
+          isUnpricedDust({
+            valueCents: position.valueCents,
+            quantity: parseDecimal(position.quantity, QUANTITY_SCALE),
+          }),
+        )
+        .map((position) => ({
+          assetId: position.assetId,
+          product: position.product,
+          quantity: trimmed(position.quantity),
+        }))
+    : [];
+  return {
+    period,
+    todayOn,
+    currency: display.currency,
+    firstOn,
+    span: periodSpan(period, firstOn),
+    service: pnlOf(services[0], period.from, period.to, display),
+    assets: new Map((await listAssets(ctx)).map((asset) => [asset.id, asset])),
+    holdings: new Map(
+      one.book.holdingRows.map((holding) => [
+        holding.id,
+        { assetId: holding.assetId, product: holding.product, origin: holding.origin },
+      ]),
+    ),
+    allExits: replayHoldings(one.book, todayOn, services[0].externalIds).exits,
+    dust,
+  };
 }
 
 async function pnlView(

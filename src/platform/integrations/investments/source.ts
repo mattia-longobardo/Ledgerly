@@ -46,6 +46,8 @@ export interface SnapshotPosition {
   priceSource: string;
   /** In the account's currency; `null` when the provider gave no value for it. */
   valueCents: Cents | null;
+  /** What the position cost, in the account's currency, when the provider says it (eToro, U4). */
+  costCents?: Cents | null;
   /** When the price was quoted (a ticker's timestamp); the reading's time when absent. */
   priceAt?: Date | null;
   /** Account units per unit of `priceCurrency`, and where that came from (A5). */

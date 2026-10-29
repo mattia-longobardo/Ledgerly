@@ -291,6 +291,7 @@ export async function loadBook(
       on: reading.on,
       status: reading.status,
       totalCents: reading.totalCents,
+      cashCents: reading.cashCents,
       positions: positionRows
         .filter((row) => row.position.readingId === reading.id)
         .map((row) => ({
@@ -298,6 +299,9 @@ export async function loadBook(
           product: row.position.product,
           valueCents: row.position.valueCents,
           quantity: fromNumeric(row.position.quantity, QUANTITY_SCALE),
+          costCents: row.position.costCents,
+          unitPrice: fromNumeric(row.position.price, PRICE_SCALE),
+          priceCurrency: row.position.priceCurrency,
         })),
       scopes: scopeRows
         .filter((row) => row.scope.readingId === reading.id)
