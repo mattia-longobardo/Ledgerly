@@ -43,6 +43,8 @@ export interface BinanceApi {
   dividends(since: number, until: number): Promise<unknown>;
   /** Small balances converted to BNB (`GET /sapi/v1/asset/dribblet`): a window of at most 90 days. */
   dustLog(since: number, until: number): Promise<unknown>;
+  /** Simple Earn flexible real-time APR rewards, a page of 100 in a window of at most 30 days. */
+  earnRewards(since: number, until: number, page: number): Promise<unknown>;
   /** Binance Pay orders (`GET /sapi/v1/pay/transactions`): 90 days at most, 18 months back, 100 rows. */
   payTransactions(since: number, until: number): Promise<unknown>;
   /** The trades of a market from `fromId` on, oldest first, at most 1000 (B7). */
@@ -165,6 +167,16 @@ export async function binanceApi(
       call(() => exchange.sapiGetAssetAssetDividend({ startTime: since, endTime: until, limit: 500 })),
     dustLog: (since, until) =>
       call(() => exchange.sapiGetAssetDribblet({ startTime: since, endTime: until })),
+    earnRewards: (since, until, page) =>
+      call(() =>
+        exchange.sapiGetSimpleEarnFlexibleHistoryRewardsRecord({
+          type: "REALTIME",
+          startTime: since,
+          endTime: until,
+          current: page,
+          size: 100,
+        }),
+      ),
     payTransactions: (since, until) =>
       call(() => exchange.sapiGetPayTransactions({ startTime: since, endTime: until, limit: 100 })),
     myTrades: (symbol, fromId) => call(() => exchange.fetchMyTrades(symbol, undefined, 1000, { fromId })),

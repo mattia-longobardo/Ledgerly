@@ -51,6 +51,7 @@ function fakeApi(overrides: Partial<BinanceApi> = {}) {
     dividends: log("dividends", () => ({ rows: [] })),
     dustLog: log("dustLog", () => ({ total: 0, userAssetDribblets: [] })),
     payTransactions: log("payTransactions", () => ({ data: [] })),
+    earnRewards: log("earnRewards", () => ({ rows: [], total: 0 })),
     myTrades: log("myTrades", () => []),
     // An override answers in place of the default and is logged the same way.
     ...Object.fromEntries(
@@ -102,8 +103,9 @@ describe("fetchFlows (§3.2)", () => {
     }
     expect(named(calls, "dustLog")).toHaveLength(5);
     const gaps = read.coverage.filter((one) => one.status === "gap");
-    expect(gaps.map((one) => one.reason)).toEqual(Array(9).fill("opening_12m"));
-    expect(read.cursor).toMatchObject({ history: "3", pay_from: new Date(payFrom).toISOString() });
+    expect(gaps.map((one) => one.reason)).toEqual(Array(10).fill("opening_12m"));
+    expect(named(calls, "earnRewards")).toHaveLength(13);
+    expect(read.cursor).toMatchObject({ history: "5", pay_from: new Date(payFrom).toISOString() });
     expect(read.rebase).toBeUndefined();
     expect(read.cursor).toMatchObject({ from: new Date(from).toISOString(), deposits: NOW.toISOString() });
   });
@@ -148,7 +150,7 @@ describe("fetchFlows (§3.2)", () => {
       dividends: stopped.toISOString(),
       "trades:ETH/EUR": "900076",
       assets: "ETH",
-      history: "3",
+      history: "5",
     };
     const read = await binanceSource(async () => api).fetchFlows(KEYS, NOW, {
       currency: "EUR",
@@ -211,7 +213,7 @@ describe("fetchFlows (§3.2)", () => {
     // Now 12 months before the connection; the cursor keeps it.
     const start = connected - 365 * DAY;
     expect(older.historyFrom?.getTime()).toBe(start);
-    expect(older.cursor).toMatchObject({ from: new Date(start).toISOString(), history: "3" });
+    expect(older.cursor).toMatchObject({ from: new Date(start).toISOString(), history: "5" });
     // The new streams start at the history, the old ones where they stopped.
     expect(named(calls, "dustLog")[0][1]).toBe(start);
     expect(named(calls, "deposits")[0][1]).toBe(NOW.getTime() - DAY);

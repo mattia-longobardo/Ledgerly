@@ -3622,6 +3622,7 @@
         "dividends": "Rewards and staking",
         "dust": "Small balances converted to BNB",
         "pay": "Binance Pay",
+        "earn_rewards": "Simple Earn real-time rewards",
         "quantities": "Quantities against the balances"
       },
       "coverageStatus": {
@@ -3714,6 +3715,7 @@
         "feesFxNote": "fees {fees} · FX {fx}",
         "corrections": "Corrections",
         "unattributed": "Other (incomplete data)",
+        "valuation": "Other (valuation and rounding)",
         "transfers": "Transfers between services"
       },
       "chart": {
@@ -4041,6 +4043,7 @@
         "corrections": "Corrections",
         "valueChange": "Change of value",
         "unattributed": "Other (incomplete data)",
+        "valuation": "Other (valuation and rounding)",
         "total": "P&L of the period",
         "same": "the Overview's number",
         "bridge": "= {display} in the Overview, exchange effect {fx} included"

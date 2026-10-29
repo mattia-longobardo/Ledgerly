@@ -749,6 +749,7 @@ Mappatura sugli eventi:
 | Binance Convert (`convert`) | evento come un trade: `buy` dell'asset ricevuto + `sell` dell'asset ceduto |
 | Binance dividend (`dividends`: reward, staking, airdrop, Launchpool) | `income` con quantità dell'asset |
 | Binance dust log (`dust`) | per coin convertita: `buy` BNB lordo (`base`) + `sell` della coin (`quote`, nessuna gamba se fiat) + `fee` BNB della commissione |
+| Simple Earn reward in tempo reale (`earn_rewards`, `sapiGetSimpleEarnFlexibleHistoryRewardsRecord` `type=REALTIME`, finestre ≤ 30 gg) | `income` nella coin: Binance le accredita nell'Earn e non le elenca nei dividend (le `BONUS` sì) |
 | Binance Pay (`pay`) | ordine `TAX` (imposta di bollo raccolta da Binance) → `fee` nella coin pagata; altri ordini → `withdrawal` / `deposit` |
 | ledger `transfer` interno (spot ↔ earn) | ignorato solo se entrambi i prodotti sono nel perimetro dell'adapter; altrimenti `withdrawal`/`deposit` interni con `transfer_group_id` verso la posizione manuale del prodotto |
 

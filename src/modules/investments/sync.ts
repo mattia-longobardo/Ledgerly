@@ -1405,14 +1405,38 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
     },
   });
   if (estimated.length === 0) return 0;
+  // Where each coin's positions go: the provider's own holding of it (PERS-141).
+  const holdingRows = await getDb()
+    .select({
+      symbol: investmentAssets.symbol,
+      assetId: investmentHoldings.assetId,
+      product: investmentHoldings.product,
+    })
+    .from(investmentHoldings)
+    .innerJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentHoldings),
+        eq(investmentHoldings.investmentAccountId, investment.id),
+        eq(investmentHoldings.origin, "provider"),
+      ),
+    )
+    .orderBy(asc(investmentHoldings.product), asc(investmentHoldings.id));
+  const assetOf = new Map<string, { assetId: string; product: string }>();
+  for (const row of holdingRows) {
+    if (!row.symbol) continue;
+    const held = assetOf.get(row.symbol);
+    if (!held || (held.product !== "spot" && row.product === "spot")) assetOf.set(row.symbol, row);
+  }
 
   return getDb().transaction(async (tx) => {
     const locked = await lockInvestmentAccount(ctx, investment.accountId, tx);
     const again = await periodsOf(tx);
     // Someone else moved the period meanwhile (a conversion, a second pass): nothing to do.
     if (again.length !== 1 || again[0].id !== opening.id || again[0].fromOn !== opening.fromOn) return 0;
+    const byDay = new Map(estimated.map((day) => [day.on, day]));
     for (let index = 0; index < estimated.length; index += 500) {
-      await tx
+      const written = await tx
         .insert(investmentReadings)
         .values(
           estimated.slice(index, index + 500).map((day) =>
@@ -1422,12 +1446,32 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
               observedAt: new Date(`${day.on}T23:59:59Z`),
               status: "estimated" as const,
               totalCents: day.totalCents,
-              cashCents: null,
+              cashCents: day.cashCents,
               missingPrices: day.missingPrices,
             }),
           ),
         )
-        .onConflictDoNothing({ target: [investmentReadings.investmentAccountId, investmentReadings.on] });
+        .onConflictDoNothing({ target: [investmentReadings.investmentAccountId, investmentReadings.on] })
+        .returning({ id: investmentReadings.id, on: investmentReadings.on });
+      const positions = written.flatMap((reading) =>
+        (byDay.get(reading.on)?.positions ?? []).flatMap((position) => {
+          const held = assetOf.get(position.symbol);
+          if (!held) return [];
+          return [
+            userScoped(ctx).stamp({
+              readingId: reading.id,
+              assetId: held.assetId,
+              product: held.product,
+              quantity: formatDecimal(position.quantity, QUANTITY_SCALE),
+              valueCents: position.valueCents,
+              priceSource: "estimated",
+            }),
+          ];
+        }),
+      );
+      for (let at = 0; at < positions.length; at += 1000) {
+        await tx.insert(investmentReadingPositions).values(positions.slice(at, at + 1000));
+      }
     }
     await tx
       .update(investmentAccountPeriods)

@@ -28,6 +28,7 @@ import {
   convertEventsOf,
   dividendEventsOf,
   dustEventsOf,
+  earnRewardEventsOf,
   type EarnPage,
   PAY_HISTORY_DAYS,
   payEventsOf,
@@ -54,12 +55,14 @@ import { type BinanceApi, binanceApi } from "./client";
 
 /**
  * What the flows read (PERS-141): `2` added the dust log, Binance Pay and the delisted markets; `3`
- * keeps 12 months instead of 24. A history started under an older version gets its openings
- * inferred again (`rebase`), once.
+ * keeps 12 months instead of 24; `4` estimates the history with its positions; `5` adds the Simple
+ * Earn real-time rewards. A history started
+ * under an older version gets its openings and its estimated history again (`rebase`), once.
  */
-const HISTORY_VERSION = "3";
+const HISTORY_VERSION = "5";
 const PAGE = 500;
 const PAY_PAGE = 100;
+const REWARDS_PAGE = 100;
 const TRADES_PAGE = 1000;
 const DIVIDENDS_PAGE = 500;
 /** A bound on every loop over pages: an exchange that keeps answering "more" stops here. */
@@ -295,6 +298,16 @@ export function binanceSource(
         }
       }
       next.pay = stopAt(null);
+
+      // Simple Earn real-time rewards: windows of 30 days, pages of 100 (PERS-141).
+      for (const window of windowsOf(startOf("earn_rewards"), nowMs, 30)) {
+        for (let page = 1; page <= MAX_PAGES; page += 1) {
+          const rows = earnRewardEventsOf(await api.earnRewards(window.since, window.until, page), currency);
+          take(rows);
+          if (rows.count < REWARDS_PAGE) break;
+        }
+      }
+      next.earn_rewards = stopAt(null);
 
       // Trades: every market of every coin seen anywhere (B3), by id from where each stopped (B7);
       // delisted markets too, since a coin sold out on one is still part of the history.

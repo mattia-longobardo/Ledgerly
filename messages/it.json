@@ -3622,6 +3622,7 @@
         "dividends": "Reward e staking",
         "dust": "Residui convertiti in BNB",
         "pay": "Binance Pay",
+        "earn_rewards": "Reward in tempo reale di Simple Earn",
         "quantities": "Quantità contro i saldi"
       },
       "coverageStatus": {
@@ -3714,6 +3715,7 @@
         "feesFxNote": "commissioni {fees} · cambio {fx}",
         "corrections": "Correzioni",
         "unattributed": "Altro (dati incompleti)",
+        "valuation": "Altro (valorizzazione e arrotondamenti)",
         "transfers": "Trasferimenti tra servizi"
       },
       "chart": {
@@ -4041,6 +4043,7 @@
         "corrections": "Correzioni",
         "valueChange": "Variazione del valore",
         "unattributed": "Altro (dati incompleti)",
+        "valuation": "Altro (valorizzazione e arrotondamenti)",
         "total": "P&L del periodo",
         "same": "il numero della Panoramica",
         "bridge": "= {display} in Panoramica, effetto cambio {fx} incluso"

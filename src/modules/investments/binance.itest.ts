@@ -109,6 +109,7 @@ function fixtureExchange(calls: Call[], overrides: Partial<BinanceApi> = {}): Bi
     },
     dustLog: async () => ({ total: 0, userAssetDribblets: [] }),
     payTransactions: async () => ({ data: [] }),
+    earnRewards: async () => ({ rows: [], total: 0 }),
     myTrades: async (symbol, fromId) =>
       (body("my-trades") as { symbol: string; info: { id: number } }[]).filter(
         (one) => one.symbol === symbol && one.info.id >= fromId,
@@ -263,6 +264,7 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       })
       .from(investmentReadingPositions)
       .innerJoin(investmentAssets, eq(investmentAssets.id, investmentReadingPositions.assetId))
+      .where(eq(investmentReadingPositions.readingId, reading.id))
       .orderBy(asc(investmentAssets.symbol));
     expect(positions).toEqual([
       { symbol: "BNB", product: "spot", value: 2n, fxSource: null },
@@ -317,13 +319,14 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       "dividends",
       "dust",
       "pay",
+      "earn_rewards",
       "trades",
       "quantities",
     ]) {
       expect(streams).toContain(stream);
     }
     // Older than the 12 months is the opening, for every stream, Pay included (PERS-141).
-    expect(coverage.filter((one) => one.reason === "opening_12m")).toHaveLength(9);
+    expect(coverage.filter((one) => one.reason === "opening_12m")).toHaveLength(10);
   });
 
   it("values a trade's fee in BNB at the day's close, in cents and not rounded to zero", async () => {
@@ -389,7 +392,9 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
     const reported = await getDb()
       .select({ symbol: investmentAssets.symbol, quantity: investmentReadingPositions.quantity })
       .from(investmentReadingPositions)
-      .innerJoin(investmentAssets, eq(investmentAssets.id, investmentReadingPositions.assetId));
+      .innerJoin(investmentAssets, eq(investmentAssets.id, investmentReadingPositions.assetId))
+      .innerJoin(investmentReadings, eq(investmentReadings.id, investmentReadingPositions.readingId))
+      .where(eq(investmentReadings.on, "2026-10-28"));
     const sign = (kind: string) => (["opening_position", "deposit", "buy", "income"].includes(kind) ? 1 : -1);
     for (const { symbol } of openings) {
       const total = legs
@@ -542,6 +547,16 @@ describe("the estimated history (PERS-100)", () => {
     expect(estimated).toHaveLength(365);
     // A flat market of 2 per coin: some day of the history held something.
     expect(estimated.some((day) => day.totalCents > 0n)).toBe(true);
+    // Each day keeps its coins (PERS-141): their values and the cash add up to the day's total.
+    const held = estimated.find((day) => day.totalCents > 0n)!;
+    const kept = await getDb()
+      .select({ valueCents: investmentReadingPositions.valueCents })
+      .from(investmentReadingPositions)
+      .where(eq(investmentReadingPositions.readingId, held.id));
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept.reduce((sum, one) => sum + (one.valueCents ?? 0n), held.cashCents ?? 0n)).toBe(
+      held.totalCents,
+    );
 
     // The opening period starts with the history, and so does the service.
     const investment = await investmentOf(accountId);
@@ -709,7 +724,7 @@ describe("a history read again with more streams and 12 months (PERS-141)", () =
     expect(first.on).toBe("2025-10-28");
     expect(await investmentOf(accountId)).toMatchObject({ managedSince: "2025-10-28" });
     expect(await flowsCursor()).toMatchObject({
-      history: "3",
+      history: "5",
       from: new Date(NOW.getTime() - 365 * DAY).toISOString(),
     });
 

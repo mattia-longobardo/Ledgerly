@@ -5,7 +5,7 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/ui/display";
 import { describeEvent } from "@/modules/investments/activity";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
-import { contributionsOf, convertedCurrencies } from "@/modules/investments/positions";
+import { contributionsOf, convertedCurrencies, otherIsGap } from "@/modules/investments/positions";
 import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
@@ -191,6 +191,7 @@ export default async function InvestmentServiceOverview({
 
   const parts = local;
   const converted = convertedCurrencies(service);
+  const gap = otherIsGap(service);
   const etoro = summary.investment.provider === "etoro";
   const closing = parts
     ? [
@@ -327,7 +328,9 @@ export default async function InvestmentServiceOverview({
             <p data-testid="pnl-closing" className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
               {closing.map((row) => (
                 <span key={row.key} data-cents={String(row.cents)}>
-                  {t(`home.kpis.${row.key}` as "home.kpis.corrections")}{" "}
+                  {t(
+                    `home.kpis.${row.key === "unattributed" && !gap ? "valuation" : row.key}` as "home.kpis.corrections",
+                  )}{" "}
                   <strong className={cn("font-semibold tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
                     {money(row.cents, true)}
                   </strong>
@@ -340,7 +343,7 @@ export default async function InvestmentServiceOverview({
                       })}
                     </span>
                   )}
-                  {row.key === "unattributed" && (
+                  {row.key === "unattributed" && gap && (
                     <>
                       {" "}
                       <Link

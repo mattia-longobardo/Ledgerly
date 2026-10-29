@@ -90,6 +90,13 @@ export interface EstimatedDay {
   totalCents: Cents;
   /** Coins held that day, over dust, with no rate on that day nor any day before it. */
   missingPrices: number;
+  /** The account's own cash that day, never below 0. */
+  cashCents: Cents;
+  /**
+   * Each coin held that day with its value (PERS-141): the P&L needs the positions of a day, not
+   * only its total, to tell the change of the unrealized from what it cannot explain.
+   */
+  positions: { symbol: string; quantity: bigint; valueCents: Cents | null }[];
 }
 
 /**
@@ -127,18 +134,23 @@ export function estimateHistory(input: {
   const lastRate = new Map<string, bigint>();
   return days.map((day) => {
     const state = values.get(day)!;
-    let total = state.cash > 0n ? state.cash : 0n;
+    const cashCents = state.cash > 0n ? state.cash : 0n;
+    let total = cashCents;
     let missing = 0;
+    const positions: EstimatedDay["positions"] = [];
     for (const [symbol, quantity] of [...state.quantities].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
       const rate = input.rate(symbol, day) ?? lastRate.get(symbol) ?? null;
       if (rate !== null) lastRate.set(symbol, rate);
       if (quantity <= 0n) continue;
       if (rate === null) {
         if (quantity >= DUST_QUANTITY) missing += 1;
+        positions.push({ symbol, quantity, valueCents: null });
         continue;
       }
-      total += divRound(quantity * rate, divisor);
+      const valueCents = divRound(quantity * rate, divisor);
+      total += valueCents;
+      positions.push({ symbol, quantity, valueCents });
     }
-    return { on: day, totalCents: total, missingPrices: missing };
+    return { on: day, totalCents: total, missingPrices: missing, cashCents, positions };
   });
 }

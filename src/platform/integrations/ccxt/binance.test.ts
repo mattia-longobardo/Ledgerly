@@ -17,6 +17,7 @@ import {
   dividendEventsOf,
   dustEventsOf,
   earnPageOf,
+  earnRewardEventsOf,
   fiatOrderEventsOf,
   fiatPaymentEventsOf,
   holdingsOf,
@@ -435,6 +436,33 @@ describe("flows (§3.2, B2, B7)", () => {
     // What reached the wallet is the BNB the log says, after the charge.
     expect(netQuantities(read.events).get("BNB")).toBe(units("0.0003"));
     expect(read.assets).toEqual(expect.arrayContaining(["BNB", "SXT", "EUR"]));
+  });
+
+  it("maps Simple Earn real-time rewards as income in the coin, one a day per coin (PERS-141)", () => {
+    const raw = {
+      rows: [
+        {
+          asset: "ETH",
+          rewards: "0.00000431",
+          projectId: "ETH001",
+          type: "REALTIME",
+          time: 1_767_916_800_000,
+        },
+        { asset: "ADA", rewards: "0.0213", projectId: "ADA001", type: "REALTIME", time: 1_767_916_800_000 },
+        { asset: "SOL", rewards: "0", projectId: "SOL001", type: "REALTIME", time: 1_767_916_800_000 },
+      ],
+      total: 3,
+    };
+    const read = earnRewardEventsOf(raw, "EUR");
+    expect(read.count).toBe(3);
+    expect(read.events.map((one) => one.externalId)).toEqual([
+      "earn_reward:ETH:1767916800000",
+      "earn_reward:ADA:1767916800000",
+    ]);
+    expect(read.events[0].legs).toEqual([
+      expect.objectContaining({ leg: "main", kind: "income", quantity: "0.00000431" }),
+    ]);
+    expect(earnRewardEventsOf(raw, "EUR").events).toEqual(read.events);
   });
 
   it("maps a Binance Pay TAX order as a fee in the coin it was paid with (PERS-141)", () => {
