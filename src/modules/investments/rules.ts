@@ -70,6 +70,10 @@ export type OperationKind = (typeof OPERATION_KINDS)[number];
 export const POSITIVE_KINDS = ["deposit", "sell", "close", "income"] as const;
 export const NEGATIVE_KINDS = ["withdrawal", "buy", "fee"] as const;
 
+/** What a correction (R3) stands for (docs/design/investments-ux.md §4.9): `data` by default. */
+export const ADJUSTMENT_CLASSES = ["data", "capital", "result"] as const;
+export type AdjustmentClass = (typeof ADJUSTMENT_CLASSES)[number];
+
 export const QUANTITY_BASES = ["reported", "reconstructed", "inferred"] as const;
 
 /**
