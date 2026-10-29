@@ -470,15 +470,19 @@ Ogni servizio, per un periodo, ha uno **stato** (PERS-113 · 2), che arriva fino
 | `estimated`    | Il calcolo usa almeno un giorno stimato (storico ricostruito) o un prezzo o un cambio vecchio (`missing` del valore iniziale o finale) |
 | `undetermined` | Manca il valore finale, o nessun giorno del periodo è affidabile. Il P&L è "non determinabile", **mai zero** |
 
-- **Periodo affidabile** `[s', e]`: `s'` = il più tardi tra `s`, l'apertura del servizio, il primo
-  giorno dopo l'ultima lacuna dei flussi che tocca il periodo (`investment_sync_coverage`, stream con
-  stato `partial` o `gap`, per esempio i versamenti eToro prima del 10/06/2026) e, se le quantità non
-  tornano (`quantity_mismatch`), il giorno della prima lettura vera: lo storico stimato parte dalle
+- **Periodo affidabile** `[s', e]`: `s'` = il più tardi tra `s`, l'inizio di ogni stream dei flussi,
+  il giorno in cui finisce l'ultima lacuna dei flussi che tocca il periodo (`investment_sync_coverage`,
+  stream con stato `partial` o `gap`, per esempio i versamenti eToro prima del 10/06/2026) e, se le
+  quantità non tornano (stream `quantities` non completo: `quantity_mismatch` o `negative_opening`) e
+  c'è uno storico stimato, il giorno dopo la prima lettura vera: lo storico stimato parte dalle
   quantità di oggi e con una quantità che non torna non è una base affidabile. Una **lacuna
-  intermedia** sposta `s'` dopo la lacuna e conserva il risultato valido dopo di essa.
+  intermedia** sposta `s'` dopo la lacuna e conserva il risultato valido dopo di essa. Una lacuna
+  ancora aperta a `e` rende il periodo `undetermined`.
 - Se `s < s' ≤ e`: il P&L si calcola su `[s', e]` e il servizio è **parziale** (badge "dal <data>").
-- Se `V(s'⁻)` non è noto (nessuna lettura prima di `s'` e il servizio era già aperto): `s'` diventa il
-  giorno della prima lettura nel periodo, e il servizio è parziale da lì. Mai una base zero inventata.
+- Prima dell'apertura del servizio il valore è zero solo se i flussi ne contengono l'apertura: un
+  conto manuale (l'apertura è un flusso) o un conto sincronizzato con i flussi completi e senza
+  aperture dedotte (A6). Altrimenti, se `V(s'⁻)` non è noto, `s'` diventa il giorno dopo il primo
+  valore noto nel periodo, e il servizio è parziale da lì. Mai una base zero inventata.
 - Il **portafoglio** somma i servizi inclusi (non `undetermined`); il suo stato è `verified` solo se
   tutti i servizi sono `verified`, coprono tutto il periodo e nessuno è escluso; `undetermined` se
   nessuno è incluso; altrimenti `estimated`, con l'elenco di parziali, stimati ed esclusi.

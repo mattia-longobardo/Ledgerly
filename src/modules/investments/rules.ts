@@ -246,12 +246,15 @@ function comparePeriods(a: PeriodLike, b: PeriodLike): number {
   return a.startsAt.getTime() - b.startsAt.getTime();
 }
 
-function sortedPeriods(book: Book): PeriodLike[] {
+export function sortedPeriods(book: Book): PeriodLike[] {
   return [...book.periods].sort(comparePeriods);
 }
 
 /** The period an event belongs to: the last one that starts at or before it. */
-function periodIndexOf(periods: readonly PeriodLike[], event: { on: CivilDate; occurredAt: Date }): number {
+export function periodIndexOf(
+  periods: readonly PeriodLike[],
+  event: { on: CivilDate; occurredAt: Date },
+): number {
   let found = -1;
   for (let index = 0; index < periods.length; index++) {
     const period = periods[index];
@@ -271,7 +274,7 @@ function periodIndexOn(periods: readonly PeriodLike[], on: CivilDate): number {
 }
 
 /** The events of the period in force at the end of `on`, up to `on`, in order. */
-function eventsOn(book: Book, on: CivilDate): { period: PeriodLike | null; events: EventLike[] } {
+export function eventsOn(book: Book, on: CivilDate): { period: PeriodLike | null; events: EventLike[] } {
   const periods = sortedPeriods(book);
   const index = periodIndexOn(periods, on);
   if (index < 0) return { period: null, events: [] };

@@ -31,7 +31,10 @@ import {
   investmentSyncCoverage,
 } from "./schema";
 import { connectInvestmentProvider, runInvestmentPass, setSourcesForTests } from "./sync";
-import { investmentHistory, serviceDetail } from "./queries";
+import { NO_RATES } from "@/platform/fx/rules";
+import { pnlOf, replayHoldings } from "./pnl";
+import { investmentHistory, investmentsPnl, serviceDetail } from "./queries";
+import { loadBook, ratesFor } from "./service";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/investments/binance");
 const body = (name: string): unknown =>
@@ -580,5 +583,78 @@ describe("the estimated history (PERS-100)", () => {
     expect(await estimatedOf(accountId)).toEqual([]);
     const investment = await investmentOf(accountId);
     expect(investment.managedSince).toBe("2026-10-28");
+  });
+});
+
+describe("the P&L of a period on Binance (docs/design/investments-ux.md §4.4, U1)", () => {
+  it("counts a fee paid in BNB once, as a fee at the day's close and as a sale of the BNB", async () => {
+    const { accountId } = await connectNew();
+    const [link] = await getDb()
+      .select({ entityId: providerLinks.entityId })
+      .from(providerLinks)
+      .where(eq(providerLinks.externalId, "trade:ETHEUR:900076"));
+    const legs = await getDb()
+      .select()
+      .from(investmentOperations)
+      .where(eq(investmentOperations.eventId, link.entityId));
+    const fee = legs.find((one) => one.kind === "fee")!;
+    const base = legs.find((one) => one.kind === "buy")!;
+
+    // The engine on the book Binance wrote, every flow taken as known.
+    const investment = await investmentOf(accountId);
+    const book = await loadBook(ctx, investment, "EUR");
+    const rates = await ratesFor(book, "2026-10-28");
+    const pnl = pnlOf(
+      {
+        accountId,
+        currency: "EUR",
+        book,
+        rates,
+        coverage: null,
+        quantityMismatch: false,
+        externalIds: new Map(),
+      },
+      null,
+      "2026-10-28",
+      { currency: "EUR", rates: NO_RATES },
+    );
+    // The fee leaves the BNB holding at its value of the day; the ETH costs its quote only.
+    const exit = pnl.exits.find((one) => one.eventId === link.entityId);
+    expect(exit).toMatchObject({ kind: "fee", holdingId: fee.holdingId, proceedsCents: -fee.amountCents });
+    expect(pnl.exits.some((one) => one.holdingId === base.holdingId && one.eventId === link.entityId)).toBe(
+      false,
+    );
+    const { costs } = replayHoldings(book, "2026-01-03");
+    expect(costs.get(base.holdingId!)?.costCents).toBeGreaterThanOrEqual(-base.amountCents);
+    // The fees of the period are every fee leg, the BNB ones included, once.
+    const fees = await getDb()
+      .select()
+      .from(investmentOperations)
+      .where(eq(investmentOperations.kind, "fee"));
+    expect(pnl.local?.feesCents).toBe(fees.reduce((sum, one) => sum + one.amountCents, 0n));
+    const parts = pnl.local!;
+    expect(
+      parts.realizedCents +
+        (parts.unrealizedChangeCents ?? 0n) +
+        parts.incomeCents +
+        parts.feesCents +
+        parts.correctionsCents +
+        parts.unattributedCents,
+    ).toBe(parts.pnlCents);
+  });
+
+  it("does not stand a P&L on a rebuilt history whose quantities do not add up (§4.6)", async () => {
+    const { accountId } = await connectNew();
+    const [quantities] = await getDb()
+      .select()
+      .from(investmentSyncCoverage)
+      .where(eq(investmentSyncCoverage.stream, "quantities"));
+    expect(quantities).toMatchObject({ status: "partial", reason: "negative_opening" });
+    const { portfolio } = await investmentsPnl(ctx, { period: "2026" }, NOW);
+    const pnl = portfolio.services.find((one) => one.accountId === accountId)!;
+    // The first real reading is today's: nothing of 2026 stands on a trusted base yet.
+    expect(pnl).toMatchObject({ status: "undetermined", local: null });
+    expect(pnl.reasons).toContain("quantity_mismatch");
+    expect(portfolio).toMatchObject({ status: "undetermined", excluded: [{ accountId }] });
   });
 });
