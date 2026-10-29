@@ -84,7 +84,7 @@ test("a manual account follows its operations, and Accounts shows the same value
     await expect(dialog).toBeHidden();
     await expect(await value(page)).toHaveText(/^9\.998,00\s€$/);
     await openTab(page, "Positions");
-    await expect(page.getByTestId("holding-row")).toContainText("Vanguard FTSE All-World");
+    await expect(page.getByTestId("open-row")).toContainText("Vanguard FTSE All-World");
   });
 
   await test.step("valued at 65 €: 10.498 €", async () => {
@@ -105,8 +105,25 @@ test("a manual account follows its operations, and Accounts shows the same value
     await dialog.getByLabel("Fee").fill("2");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId("holding-row")).toHaveCount(0);
+    await expect(page.getByTestId("open-row")).toHaveCount(0);
     await expect(await value(page)).toHaveText(/^10\.996,00\s€$/);
+  });
+
+  await test.step("the closed position: what it cost, what came back, and the Overview's P&L (§3.4)", async () => {
+    await openTab(page, "Positions");
+    await page
+      .getByRole("group", { name: "Which positions" })
+      .getByRole("link", { name: /^Closed in/ })
+      .click();
+    await expect(page).toHaveURL(/\/positions\?status=closed$/);
+    const row = page.getByTestId("closed-row").filter({ hasText: "Vanguard FTSE All-World" });
+    // 100 bought at 60 (6.000 €), closed at 70 (7.000 €): +1.000 €, the fees apart.
+    await expect(row).toContainText(/6\.000,00\s€/);
+    await expect(row).toContainText(/7\.000,00\s€/);
+    await expect(row).toContainText(/\+1\.000,00\s€/);
+    const total = await page.getByTestId("positions-total").getAttribute("data-cents");
+    await openTab(page, "Overview");
+    await expect(page.getByTestId("pnl-hero")).toHaveAttribute("data-local-cents", total ?? "");
   });
 
   await test.step("the chart's old address lands on the period, and the tabs carry it (§1.2)", async () => {
@@ -209,7 +226,7 @@ test("a withdrawal and a deposit between two services are proposed, linked and u
 
 async function holdingAction(page: Page, action: string): Promise<void> {
   await page
-    .getByTestId("holding-row")
+    .getByTestId("open-row")
     .first()
     .getByRole("button", { name: /^Actions for Vanguard/ })
     .click();

@@ -63,6 +63,66 @@ test("the service's P&L in the display currency is its row on the home, to the c
   }
 });
 
+test("home → service → positions: the rows of Positions add up to the Overview's P&L (§3.4, U4)", async ({
+  page,
+}) => {
+  for (const [name, query] of [
+    ["Directa", ""],
+    ["Directa", "?period=all"],
+    ["Fineco Conto Deposito", ""],
+    ["eToro", "?period=all"],
+    ["Binance", "?period=all"],
+  ] as const) {
+    const base = await openService(page, name, query);
+    const hero = page.getByTestId("pnl-hero");
+    const local = await hero.getAttribute("data-local-cents");
+    const display = await hero.getAttribute("data-cents");
+    await tabs(page).getByRole("link", { name: "Positions" }).click();
+    await expect(page).toHaveURL(new RegExp(`${base}/positions${query.replace("?", "\\?")}$`));
+    const total = page.getByTestId("positions-total");
+    if (local === "") {
+      // An undetermined P&L has no rows to add up, and says so.
+      await expect(total, `${name}${query}`).toHaveCount(0);
+      continue;
+    }
+    await expect(total, `${name}${query}`).toHaveAttribute("data-cents", local ?? "");
+    let sum = 0n;
+    for (const cell of await page
+      .locator('[data-testid="contribution-row"], [data-testid="contribution-part"]')
+      .all()) {
+      sum += BigInt((await cell.getAttribute("data-cents"))!);
+    }
+    expect(sum, `${name}${query}: Σ rows`).toBe(BigInt(local!));
+    // A service in another currency says the Overview's number in the display currency too.
+    if (name === "eToro" && display !== local)
+      await expect(page.getByTestId("positions-bridge")).toBeVisible();
+  }
+});
+
+test("Positions: open with a cost, closed in the period and ever, a past year on its last day", async ({
+  page,
+}) => {
+  const base = await openService(page, "eToro", "?period=all");
+  await tabs(page).getByRole("link", { name: "Positions" }).click();
+  const voo = page.getByTestId("open-row").filter({ hasText: "Vanguard S&P 500" });
+  // 0,5 × 540 $ worth 2.695,00 USD, 2.500,00 USD invested: +7,8 % on cost.
+  await expect(voo).toContainText(/\+7,8\s?%/);
+  const status = page.getByRole("group", { name: "Which positions" });
+  await status.getByRole("link", { name: /^All closed/ }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?period=all&status=all$`));
+  const tesla = page.getByTestId("closed-row").filter({ hasText: "Tesla" });
+  await expect(tesla).toContainText("+100,00 USD");
+  await expect(tesla).toContainText("1 position");
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?period=all$`));
+
+  // A year before the data: the positions on its last day, and a link to today's.
+  await page.goto(`${base}/positions?period=${new Date().getFullYear() - 1}`);
+  await expect(status.getByRole("link", { name: /^Open on/ })).toHaveAttribute("aria-current", "true");
+  await page.getByRole("link", { name: /^Today's positions/ }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?status=open$`));
+});
+
 test("Activity: the chips count the period and leave their own rows; the eToro page stays short", async ({
   page,
 }) => {
