@@ -5,6 +5,10 @@ nessun deploy prima dell'approvazione di Mattia. **Approvato da Mattia il 29/10/
 raccomandazioni di §9; §3, §4 e §10 aggiornati in U1 (PERS-116) con le obiezioni accettate della
 review avversariale PERS-113.
 
+**PERS-145 (30/10/2026) prevale** su ogni punto di questo documento che parla di storico "stimato",
+di tratteggio, dello stato `estimated`, di "Altro (dati incompleti)" o di "variazione del non
+realizzato" su posizioni vendute: le regole valide sono in §4.2, §4.4 e §4.10.
+
 Input:
 
 - audit della sezione in produzione, PERS-110 (`main` @ `cb9e70f`): i riferimenti `H1`–`H12`, `S1`–`S16`,
@@ -345,7 +349,9 @@ giorno prima di `s`. Il motore è `src/modules/investments/pnl.ts` (puro); `inve
 in `queries.ts` lo applica ai servizi della persona.
 
 La review avversariale PERS-113 (29/10/2026) ha corretto questa sezione: i riferimenti "PERS-113 · n"
-rimandano alle sue obiezioni accettate (1, 2, 3, 5, 6, 7, 8, 10).
+rimandano alle sue obiezioni accettate (1, 2, 3, 5, 6, 7, 8, 10). PERS-145 (30/10/2026, regole di Mattia
+1–6) la sostituisce dove le due dicono cose diverse: base di costo del periodo (§4.2, §4.4), taglio a 12
+mesi, niente stime e niente "Altro" (§4.10). Un solo motore per ogni schermata, l'API e l'MCP.
 
 ### 4.1 P&L del periodo
 
@@ -369,28 +375,30 @@ Il P&L del periodo si scompone in parti **additive**; la somma è uguale al P&L 
 
 | Parte                         | Regola                                                                                                                     |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Realizzato                    | Σ sulle uscite di quantità in `[s, e]` di (incasso − costo uscito). Costo uscito = costo medio al momento dell'uscita (§4.4) |
-| Variazione del non realizzato | `U(e) − U(s⁻)`, con `U(d)` = Σ sulle posizioni aperte a fine `d` di (valore − costo)                                        |
+| Realizzato                    | Σ sulle uscite di quantità in `[s, e]` di (incasso − base uscita). Base = valore a `s⁻` per la quantità già aperta, costo d'acquisto per quella comprata nel periodo, a costo medio (§4.4) |
+| Non realizzato                | Solo per le posizioni aperte a fine `e`: Σ (valore a `e` − base rimasta). Senza posizioni aperte è zero e non si mostra |
 | Proventi                      | Σ `income` in `[s, e]`                                                                                                     |
 | Commissioni                   | Σ gambe `fee` in `[s, e]` (negativo); mai anche dentro un costo o un realizzato                                            |
 | Correzioni                    | Variazione delle rettifiche in vigore, `A(e) − A(s⁻)`, delle classi "dati" e "risultato" (§4.9)                            |
 | Cambio                        | Solo nella valuta di visualizzazione (§4.5)                                                                                |
-| Non attribuito                | P&L − (somma delle parti sopra)                                                                                            |
+| Non attribuito                | P&L − (somma delle parti sopra): **zero** sui dati coerenti (PERS-145, test), mai una riga "Altro"                          |
 
-- **Realizzato storico e contributo al periodo** (PERS-113 · 1): il realizzato è storico (incasso −
-  costo medio, anche se il costo è di un anno prima). Il periodo lo riconcilia con la variazione del
-  non realizzato, che **comprende il non realizzato iniziale delle posizioni vendute**: a `s⁻` la
-  posizione è aperta e conta in `U(s⁻)`, a `e` non c'è più. Il **contributo** di una posizione al
-  periodo = realizzato + variazione del suo non realizzato.
+- **Base del periodo** (PERS-145 · 5, sostituisce PERS-113 · 1): una posizione aperta a `s⁻` costa al
+  periodo il suo valore a `s⁻`; il realizzato del periodo è la vendita meno quella base, o meno il costo
+  d'acquisto se l'acquisto è nel periodo. Il non realizzato esiste solo per le posizioni aperte a `e`.
 
   Esempio: comprata a 100 nel 2025, vale 150 al 31/12/2025, venduta a 160 nel 2026. Realizzato 2026 =
-  +60, variazione del non realizzato = 0 − 50 = −50, contributo al P&L 2026 = **+10** (= 160 − 150).
-  Nessuna parte cade in "Non attribuito".
-- **Non attribuito** è un importo additivo **visibile** (PERS-113 · 5), mai solo una nota. È diverso
-  da zero quando una parte non si può calcolare: oggi le posizioni di un conto sincronizzato non hanno
-  un costo (eToro, Binance prima di U4), quindi la loro variazione del non realizzato cade qui; e una
-  conversione di modo nel periodo azzera il costo delle posizioni dichiarate. La UI lo chiama "Altro
-  (dati incompleti)" con il link a "Costo di carico" in Collegamento.
+  **+10**, non realizzato 0. Il 2025 ha +50 di non realizzato (aperta al 31/12). Binance 2026: nessuna
+  posizione aperta a fine periodo, quindi niente non realizzato; il P&L è lo stesso totale, tutto
+  realizzato più proventi e commissioni. Lo storico della posizione (costo d'apertura, realizzato contro
+  il costo medio, eToro per `positionId`) resta nelle posizioni chiuse "da sempre".
+- Una posizione di un provider sotto **1 €** a fine periodo è un residuo (dust): non è aperta e ciò che
+  resta della sua base va nel realizzato.
+- Le posizioni di un provider si misurano per **asset**, sommando i prodotti (spot, Earn, funding).
+- **Non attribuito** è zero sui dati coerenti; è diverso da zero solo se le posizioni di un giorno non
+  sono note (un giorno di storico con il solo totale e posizioni aperte) o se la cassa letta non torna con
+  i movimenti: il sync la registra come voce propria (§4.10). Se non è zero, la UI lo dice come "Non
+  spiegato dai dati", mai "Altro".
 - Un conto "Solo valore" non ha posizioni: tutto il P&L meno proventi, commissioni e correzioni è
   variazione del non realizzato; il non attribuito è zero.
 - Una posizione aperta e chiusa nel periodo ha `U(s⁻) = U(e) = 0`: conta solo nel realizzato.
@@ -466,16 +474,15 @@ Ogni servizio, per un periodo, ha uno **stato** (PERS-113 · 2), che arriva fino
 
 | Stato          | Quando                                                                                                    |
 | -------------- | --------------------------------------------------------------------------------------------------------- |
-| `verified`     | Valore iniziale e finale noti, flussi completi su `[s', e]`, nessun giorno stimato, nessun prezzo vecchio |
-| `estimated`    | Il calcolo usa almeno un giorno stimato (storico ricostruito) o un prezzo o un cambio vecchio (`missing` del valore iniziale o finale) |
+| `verified`     | Valore iniziale e finale noti, flussi completi su `[s', e]`. I giorni ricostruiti sono dati (PERS-145)     |
+| `stale`        | Un prezzo o un cambio vecchio (`missing` del valore iniziale o finale)                                    |
 | `undetermined` | Manca il valore finale, o nessun giorno del periodo è affidabile. Il P&L è "non determinabile", **mai zero** |
 
 - **Periodo affidabile** `[s', e]`: `s'` = il più tardi tra `s`, l'inizio di ogni stream dei flussi,
   il giorno in cui finisce l'ultima lacuna dei flussi che tocca il periodo (`investment_sync_coverage`,
-  stream con stato `partial` o `gap`, per esempio i versamenti eToro prima del 10/06/2026) e, se le
-  quantità non tornano (stream `quantities` non completo: `quantity_mismatch` o `negative_opening`) e
-  c'è uno storico stimato, il giorno dopo la prima lettura vera: lo storico stimato parte dalle
-  quantità di oggi e con una quantità che non torna non è una base affidabile. Una **lacuna
+  stream con stato `partial` o `gap`). Una finestra prima del **taglio** del servizio non conta (§4.10);
+  un tratto di una finestra parziale letto ogni giorno allo stesso valore e senza movimenti è coperto
+  (nessun denaro si è mosso). Una **lacuna
   intermedia** sposta `s'` dopo la lacuna e conserva il risultato valido dopo di essa. Una lacuna
   ancora aperta a `e` rende il periodo `undetermined`.
 - Se `s < s' ≤ e`: il P&L si calcola su `[s', e]` e il servizio è **parziale** (badge "dal <data>").
@@ -483,9 +490,10 @@ Ogni servizio, per un periodo, ha uno **stato** (PERS-113 · 2), che arriva fino
   conto manuale (l'apertura è un flusso) o un conto sincronizzato con i flussi completi e senza
   aperture dedotte (A6). Altrimenti, se `V(s'⁻)` non è noto, `s'` diventa il giorno dopo il primo
   valore noto nel periodo, e il servizio è parziale da lì. Mai una base zero inventata.
-- Il **portafoglio** somma i servizi inclusi (non `undetermined`); il suo stato è `verified` solo se
-  tutti i servizi sono `verified`, coprono tutto il periodo e nessuno è escluso; `undetermined` se
-  nessuno è incluso; altrimenti `estimated`, con l'elenco di parziali, stimati ed esclusi.
+- Il **portafoglio** somma i servizi inclusi (non `undetermined`) **parte per parte**: la somma dei conti
+  è uguale all'Overview, voce per voce (PERS-145 · 6). Stato `undetermined` se nessuno è incluso,
+  `stale` se un servizio usa un prezzo vecchio, altrimenti `verified`; "P&L disponibile" quando un
+  servizio è parziale, escluso o `stale`, con l'elenco.
 - **Invarianti**, coperti dai test: Σ parti = P&L del servizio, in valuta locale e in `D`;
   Σ righe dei servizi + trasferimenti tra servizi = hero; Σ KPI + correzioni + non attribuito = hero;
   P&L "Tutto" = Gain di oggi quando la copertura è completa.
@@ -501,7 +509,7 @@ Ogni servizio, per un periodo, ha uno **stato** (PERS-113 · 2), che arriva fino
 | Stato di affidabilità                | solo `reliableFrom` dei flussi                           | §4.6 con lacune, stime, prezzi vecchi e quantità                                         | U1   |
 | Classe delle rettifiche              | nessuna                                                  | Colonna additiva + dialog con l'anteprima dell'effetto sul P&L (§4.9)                    | U3   |
 | Non realizzato su eToro              | `amount` e `unrealizedPnL` sommati in un valore          | Migrazione additiva: `cost_cents` su `investment_reading_positions`, riempito da `amount` | U4   |
-| Non realizzato su Binance            | nessun costo di carico                                   | Costo dai trade (§4.4); con `quantity_mismatch` resta "Altro (dati incompleti)"          | U4   |
+| Non realizzato su Binance            | nessun costo di carico                                   | Base del periodo (§4.4, PERS-145): il valore a `s⁻`, poi i trade                        | U4   |
 
 U4 (PERS-119, `investments-ux-2-4.md`): il costo di una posizione sincronizzata viene dal provider,
 dai trade quando la loro quantità è quella letta, o da una lettura successiva con la stessa quantità;
@@ -550,6 +558,37 @@ PERS-113 · 6.
   solo per la parte che entra o finisce in `[s, e]`. La classe si salva con una colonna additiva e si
   sceglie nel dialog, con l'anteprima dell'effetto sul P&L, in U3; fino ad allora il motore accetta la
   classe come input e usa "dati".
+
+### 4.10 Taglio a 12 mesi, niente stime, niente "Altro" (PERS-145)
+
+Regole di Mattia del 29–30/10/2026; codice in `cutoff.ts` (puro) e `settleCutoff` in `sync.ts`.
+
+1. **Taglio**: solo i conti di investimento sincronizzati e collegati come nuovi (un solo periodo
+   `opening`/`synced`). Il taglio è il primo giorno di quel periodo: collegamento − 12 mesi (Binance,
+   365 giorni) o il primo giorno che l'API restituisce (eToro, 360 giorni). I conti di Wallet manager,
+   i servizi manuali, gli handover e le conversioni non si toccano.
+2. **Pulizia**: `settleCutoff` cancella gli eventi del provider, le letture e le posizioni del provider
+   rimaste senza movimenti prima del taglio; il sync non scrive più eventi prima del taglio. L'apertura
+   al taglio è un dato: le posizioni (quantità dai flussi completi dei 12 mesi e dal saldo letto, al
+   prezzo di chiusura del giorno) e la cassa (`opening_cash`, nota `cutoff_opening`), un **flusso in
+   entrata**. Prima del taglio il valore è zero: un periodo che comincia prima non è parziale.
+3. **Niente stime**: le letture ricostruite hanno stato `reconstructed` (migrazione 0042), contano come
+   ogni lettura, non si tratteggiano e non abbassano lo stato. La copertura dei versamenti eToro è
+   completa dal taglio.
+4. **Niente "Altro"**: ogni scarto è una voce con un nome e una data, visibile in Attività.
+   `cashGaps` confronta la cassa di due giorni noti con ciò che i movimenti hanno mosso (`cashImpact`);
+   i tratti adiacenti con una differenza sono una voce sola, scritta sull'ultimo giorno quando un tratto
+   senza differenza la chiude. Con un flusso in un'altra valuta è il **Costo di cambio** del provider
+   (nota `exchange_cost`; eToro 2026: −43,56 USD il 16/06/2026), altrimenti una **Differenza di saldo**
+   (`balance_difference`): commissione se negativa, provento se positiva. Una differenza di quantità
+   senza prelievo è una commissione esplicita (come lo scarto di fee BNB del 19/05/2026). Il test di
+   proprietà (`cutoff.test.ts`) controlla che il non attribuito sia zero.
+5. **Base del periodo**: §4.2, §4.4.
+6. **Un solo calcolo**: home, servizio, posizioni, patrimonio netto (i punti `portfolio` dello stesso
+   motore), export (gli stessi eventi), `GET /api/v1/investments` e l'MCP `list_investments` (campo
+   `pnl`, `docs/api-changelog.md`) usano `investmentsPnl`/`pnlOf`.
+
+Deploy, dump e rollback: `investments-cutoff.md`.
 
 ## 5. Terminologia
 

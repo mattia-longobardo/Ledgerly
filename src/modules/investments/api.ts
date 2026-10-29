@@ -6,8 +6,11 @@ import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { instant, money } from "@/platform/api/json";
 import type { CivilDate } from "@/platform/dates";
+import type { PnlParts, PeriodParams } from "./pnl";
 import {
   type HoldingRow,
+  type InvestmentsPnl,
+  investmentsPnl,
   investmentsPortfolio,
   type Portfolio,
   serviceHoldings,
@@ -83,6 +86,44 @@ export function portfolioJson(portfolio: Portfolio) {
   };
 }
 
+function partsJson(parts: PnlParts | null) {
+  if (parts === null) return null;
+  return {
+    pnl: money(parts.pnlCents),
+    realized: money(parts.realizedCents),
+    unrealized: money(parts.unrealizedChangeCents),
+    income: money(parts.incomeCents),
+    fees: money(parts.feesCents),
+    corrections: money(parts.correctionsCents),
+    fx: money(parts.fxCents),
+  };
+}
+
+/**
+ * The P&L of the period (docs/design/investments-ux.md §4, PERS-145): the engine the screens use,
+ * so the API, the MCP and the screen quote one number. The parts add up to `pnl`; `services` add up
+ * to the portfolio with `transfers`. In the display `currency`, a service's `local` in its own.
+ */
+export function pnlJson(result: InvestmentsPnl) {
+  const { portfolio } = result;
+  return {
+    period: { kind: result.period.kind, from: result.period.from, to: result.period.to },
+    currency: result.currency,
+    status: portfolio.status,
+    ...partsJson(portfolio.parts),
+    transfers: money(portfolio.transfersCents),
+    services: portfolio.services.map((one) => ({
+      accountId: one.accountId,
+      status: one.status,
+      from: one.from,
+      to: one.to,
+      openPositions: one.openPositions,
+      display: partsJson(one.display),
+      local: { currency: one.currency, ...partsJson(one.local) },
+    })),
+  };
+}
+
 export function holdingJson(row: HoldingRow) {
   return {
     asset: {
@@ -115,8 +156,22 @@ export function holdingsJson(view: NonNullable<Awaited<ReturnType<typeof service
   };
 }
 
+/** `period` (a year or `all`), or `from`/`to` by day; nothing is the year running (§1.2). */
+function periodQuery(query: (name: string) => string | undefined): PeriodParams {
+  return { period: query("period") ?? null, from: query("from") ?? null, to: query("to") ?? null };
+}
+
 investmentsApi.get("/investments", withToken("investments:read"), async (c) => {
-  return c.json(portfolioJson(await investmentsPortfolio(c.get("ctx"))));
+  const ctx = c.get("ctx");
+  return c.json({
+    ...portfolioJson(await investmentsPortfolio(ctx)),
+    pnl: pnlJson(
+      await investmentsPnl(
+        ctx,
+        periodQuery((name) => c.req.query(name)),
+      ),
+    ),
+  });
 });
 
 investmentsApi.get("/investments/:accountId/holdings", withToken("investments:read"), async (c) => {

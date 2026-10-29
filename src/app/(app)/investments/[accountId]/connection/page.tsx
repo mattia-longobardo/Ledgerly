@@ -25,19 +25,17 @@ import { cn } from "@/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { instantText, loadService, providerOf, serviceContextOf } from "../service-data";
 
-type Status = "complete" | "partial" | "estimated" | "check" | "missing";
+type Status = "complete" | "partial" | "check" | "missing";
 
 const ICON: Record<Status, typeof CheckCircle2> = {
   complete: CheckCircle2,
   partial: CircleDashed,
-  estimated: CircleDashed,
   check: AlertTriangle,
   missing: CircleSlash,
 };
 const TONE: Record<Status, "pos" | "accent" | "neutral" | "warn"> = {
   complete: "pos",
   partial: "accent",
-  estimated: "neutral",
   check: "warn",
   missing: "warn",
 };
@@ -45,7 +43,6 @@ const TONE: Record<Status, "pos" | "accent" | "neutral" | "warn"> = {
 const ICON_TONE: Record<Status, string> = {
   complete: TONE_TEXT.pos,
   partial: TONE_TEXT.accent,
-  estimated: TONE_TEXT.muted,
   check: TONE_TEXT.warn,
   missing: TONE_TEXT.warn,
 };
@@ -372,14 +369,14 @@ function Received({
               })
             : t("connection.received.activityOk", { date: long(completeFrom!) }),
     },
-    detail.estimatedReadings
+    detail.reconstructedReadings
       ? {
           key: "history",
           title: t("connection.received.history"),
-          status: "estimated" as const,
-          text: t("connection.received.historyEstimated", {
-            from: long(detail.estimatedReadings.from),
-            to: long(detail.estimatedReadings.to),
+          status: "complete" as const,
+          text: t("connection.received.historyReconstructed", {
+            from: long(detail.reconstructedReadings.from),
+            to: long(detail.reconstructedReadings.to),
             name,
           }),
         }
@@ -489,7 +486,7 @@ function ReadingRuns({
       run.count += 1;
     } else runs.push({ first: reading, last: reading, count: 1 });
   }
-  if (runs.length === 0 && !detail.estimatedReadings)
+  if (runs.length === 0 && !detail.reconstructedReadings)
     return <p className="px-4 pb-4 text-sm text-muted">{t("connection.history.empty")}</p>;
   return (
     <ul className="flex flex-col">
@@ -523,20 +520,20 @@ function ReadingRuns({
           <span className="font-medium tabular-nums">{own(run.first.totalCents)}</span>
         </li>
       ))}
-      {detail.estimatedReadings && (
+      {detail.reconstructedReadings && (
         <li
           data-testid="reading-run"
           className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm"
         >
           <span className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-muted">
-              {t("connection.history.estimated", {
-                count: detail.estimatedReadings.count,
-                from: long(detail.estimatedReadings.from),
-                to: long(detail.estimatedReadings.to),
+              {t("connection.history.reconstructed", {
+                count: detail.reconstructedReadings.count,
+                from: long(detail.reconstructedReadings.from),
+                to: long(detail.reconstructedReadings.to),
               })}
             </span>
-            <Badge tone="neutral">{t("readings.statuses.estimated")}</Badge>
+            <Badge tone="neutral">{t("readings.statuses.reconstructed")}</Badge>
           </span>
         </li>
       )}

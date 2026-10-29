@@ -306,6 +306,27 @@ describe("cashEventsOf and flowsCoverage (E5)", () => {
       expect.objectContaining({ status: "partial", reason: "before_first_movement" }),
     ]);
   });
+
+  it("covers the deposits from the start of the 12 months read (PERS-145): inside them the data are complete", () => {
+    const now = new Date("2026-10-28T08:00:00Z");
+    const start = new Date("2025-11-02T00:00:00Z");
+    const deposits = (windows: ReturnType<typeof flowsCoverage>) =>
+      windows
+        .filter((window) => window.stream === "deposits")
+        .map((window) => [
+          window.status,
+          window.fromAt.toISOString().slice(0, 10),
+          window.toAt.toISOString().slice(0, 10),
+        ]);
+    expect(deposits(flowsCoverage(cash, true, now, start))).toEqual([
+      ["partial", "2020-01-01", "2025-11-02"],
+      ["complete", "2025-11-02", "2026-10-28"],
+    ]);
+    expect(deposits(flowsCoverage([], false, now, start))).toEqual([
+      ["partial", "2020-01-01", "2025-11-02"],
+      ["complete", "2025-11-02", "2026-10-28"],
+    ]);
+  });
 });
 
 describe("historyOf (D11)", () => {

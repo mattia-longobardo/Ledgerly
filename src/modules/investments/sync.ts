@@ -50,6 +50,7 @@ import {
 import { withJobLock } from "@/platform/jobs/lock";
 import type { Cents } from "@/platform/money";
 import { accountTypeOf, connectableProvider, credentialSchemaOf, type InvestmentProvider } from "./catalog";
+import { cashGaps, GAP_NOTES, openingCashAt } from "./cutoff";
 import { estimateHistory, HISTORY_RATE_SCALE, type HistoryLeg, historyMoves } from "./history";
 import {
   divRound,
@@ -521,12 +522,15 @@ async function writeEvents(
   known: ReadonlySet<string>,
   rates: RateTable,
   now: Date,
+  cutoff: CivilDate | null = null,
 ): Promise<{ created: number; oldest: CivilDate | null }> {
   let created = 0;
   let oldest: CivilDate | null = null;
   for (const event of events) {
     if (known.has(event.externalId)) continue;
     const on = civilDateIn(event.occurredAt, ctx.timeZone);
+    // Nothing older than the 12 months of the service (PERS-145): it is in the opening.
+    if (cutoff !== null && on < cutoff) continue;
     const legs: LegInput[] = [];
     for (const leg of event.legs) {
       const native = parseDecimal(leg.nativeAmount, PRICE_SCALE);
@@ -824,11 +828,15 @@ export async function connectInvestmentProvider(
     const firstFlows = () =>
       withJobLock(`investments-sync:${connection.id}`, async () => {
         await syncFlows(ctx, connection, accountId, now);
-        // The estimated history at once (PERS-100); a failure waits for the next pass.
+        // The reconstructed history and the 12 months settled at once (PERS-100, PERS-145); a
+        // failure waits for the next pass.
         const linked = await linkedOf(ctx, connection);
         if (linked) {
           await estimateHistoryOf(ctx, linked, now).catch((error: unknown) => {
-            console.error("[investments] history not estimated", sourceErrorLog(provider.id, error));
+            console.error("[investments] history not rebuilt", sourceErrorLog(provider.id, error));
+          });
+          await settleCutoff(ctx, accountId).catch((error: unknown) => {
+            console.error("[investments] cut-off not settled", sourceErrorLog(provider.id, error));
           });
         }
       }).catch((error: unknown) => {
@@ -1009,7 +1017,7 @@ async function undoInferred(
       and(
         userScoped(ctx).owns(investmentReadings),
         eq(investmentReadings.investmentAccountId, investment.id),
-        notInArray(investmentReadings.status, ["pending_zero", "estimated"]),
+        notInArray(investmentReadings.status, ["pending_zero", "reconstructed"]),
       ),
     )
     .orderBy(asc(investmentReadings.on))
@@ -1022,7 +1030,7 @@ async function undoInferred(
       and(
         userScoped(ctx).owns(investmentReadings),
         eq(investmentReadings.investmentAccountId, investment.id),
-        eq(investmentReadings.status, "estimated"),
+        eq(investmentReadings.status, "reconstructed"),
       ),
     );
   await tx
@@ -1253,8 +1261,9 @@ async function syncFlows(
   );
   return getDb().transaction(async (tx) => {
     const investment = await lockInvestmentAccount(ctx, linked.investment.accountId, tx);
+    const cutoff = read.historyFrom === undefined ? await cutoffOf(ctx, tx, investment.id) : null;
     const { created, oldest } = await translated(
-      writeEvents(ctx, tx, investment, linked.currency, read.events, known, rates, now),
+      writeEvents(ctx, tx, investment, linked.currency, read.events, known, rates, now, cutoff),
     );
     await writeCoverage(ctx, tx, connection.id, "flows", read.coverage);
     const removed =
@@ -1308,7 +1317,7 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
       and(
         userScoped(ctx).owns(investmentReadings),
         eq(investmentReadings.investmentAccountId, investment.id),
-        notInArray(investmentReadings.status, ["pending_zero", "estimated"]),
+        notInArray(investmentReadings.status, ["pending_zero", "reconstructed"]),
       ),
     )
     .orderBy(asc(investmentReadings.on))
@@ -1444,7 +1453,7 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
               investmentAccountId: locked.id,
               on: day.on,
               observedAt: new Date(`${day.on}T23:59:59Z`),
-              status: "estimated" as const,
+              status: "reconstructed" as const,
               totalCents: day.totalCents,
               cashCents: day.cashCents,
               missingPrices: day.missingPrices,
@@ -1464,7 +1473,7 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
               product: held.product,
               quantity: formatDecimal(position.quantity, QUANTITY_SCALE),
               valueCents: position.valueCents,
-              priceSource: "estimated",
+              priceSource: "close",
             }),
           ];
         }),
@@ -1489,8 +1498,8 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
         stream: "balance_history",
         fromAt: new Date(`${first}T00:00:00Z`),
         toAt: new Date(`${anchor.on}T00:00:00Z`),
-        status: "partial",
-        reason: "estimated",
+        status: "complete",
+        reason: "reconstructed",
       },
     ]);
     await rebuild(ctx, { ...locked, managedSince: first, openedOn: first }, currency, first, tx);
@@ -1498,14 +1507,201 @@ async function estimateHistoryOf(ctx: WriteCtx, linked: Linked, now: Date): Prom
   });
 }
 
+/**
+ * The cut-off of a service connected new (PERS-145): the first day of its one opening period, the
+ * 12 months it reads. `null` for a handover, a conversion or a manual service, which keep their past.
+ */
+async function cutoffOf(
+  ctx: Pick<Ctx, "userId">,
+  tx: Pick<Tx, "select">,
+  investmentAccountId: string,
+): Promise<CivilDate | null> {
+  const periods = await tx
+    .select()
+    .from(investmentAccountPeriods)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentAccountPeriods),
+        eq(investmentAccountPeriods.investmentAccountId, investmentAccountId),
+      ),
+    )
+    .orderBy(asc(investmentAccountPeriods.fromOn));
+  if (periods.length !== 1 || periods[0].reason !== "opening" || periods[0].origin !== "synced") return null;
+  return periods[0].fromOn;
+}
+
+export interface Settled {
+  cutoff: CivilDate | null;
+  /** Provider events before the cut-off removed, with their legs and links. */
+  events: number;
+  /** Readings before the cut-off removed. */
+  readings: number;
+  /** Provider holdings no leg uses any more, removed. */
+  holdings: number;
+  /** The cash opened at the cut-off, when the provider booked none. */
+  openingCents: Cents | null;
+  /** Differences of the cash booked as entries of their own. */
+  gaps: number;
+}
+
+/**
+ * The 12 months of a synced service (PERS-145, rules 1, 2, 4), for a service connected new only —
+ * a Wallet manager account, a handover or a manual service is never touched: nothing before its
+ * cut-off (the provider's events and readings, the holdings left with no leg), its cash opened at
+ * the cut-off when the provider booked none, and every difference of its cash an entry with a name
+ * and a day (`cashGaps`). One transaction; idempotent: a second run finds nothing to do.
+ */
+export async function settleCutoff(ctx: WriteCtx, accountId: string): Promise<Settled> {
+  const currency = (await getAccount(ctx, accountId))?.currency;
+  const none: Settled = { cutoff: null, events: 0, readings: 0, holdings: 0, openingCents: null, gaps: 0 };
+  if (!currency) return none;
+  return getDb().transaction(async (tx) => {
+    const investment = await lockInvestmentAccount(ctx, accountId, tx);
+    const cutoff = await cutoffOf(ctx, tx, investment.id);
+    if (cutoff === null || investment.provider === "manual") return none;
+    const provider = investment.provider;
+
+    const old = await tx
+      .select({ id: investmentEvents.id })
+      .from(investmentEvents)
+      .where(
+        and(
+          userScoped(ctx).owns(investmentEvents),
+          eq(investmentEvents.investmentAccountId, investment.id),
+          eq(investmentEvents.origin, "provider"),
+          lt(investmentEvents.on, cutoff),
+        ),
+      )
+      .orderBy(asc(investmentEvents.id));
+    const ids = old.map((one) => one.id);
+    for (let at = 0; at < ids.length; at += 500) {
+      const chunk = ids.slice(at, at + 500);
+      await tx
+        .delete(investmentEvents)
+        .where(and(inArray(investmentEvents.id, chunk), userScoped(ctx).owns(investmentEvents)));
+      await unlinkEntities(ctx, provider, "investment_event", chunk, tx);
+    }
+    const readings = await tx
+      .delete(investmentReadings)
+      .where(
+        and(
+          userScoped(ctx).owns(investmentReadings),
+          eq(investmentReadings.investmentAccountId, investment.id),
+          lt(investmentReadings.on, cutoff),
+        ),
+      )
+      .returning({ id: investmentReadings.id });
+    const used = tx
+      .select({ id: investmentOperations.holdingId })
+      .from(investmentOperations)
+      .where(and(userScoped(ctx).owns(investmentOperations), isNotNull(investmentOperations.holdingId)));
+    const positioned = tx
+      .select({ id: investmentHoldings.id })
+      .from(investmentHoldings)
+      .innerJoin(
+        investmentReadingPositions,
+        and(
+          eq(investmentReadingPositions.assetId, investmentHoldings.assetId),
+          eq(investmentReadingPositions.product, investmentHoldings.product),
+        ),
+      )
+      .innerJoin(investmentReadings, eq(investmentReadings.id, investmentReadingPositions.readingId))
+      .where(
+        and(
+          userScoped(ctx).owns(investmentHoldings),
+          eq(investmentReadings.investmentAccountId, investment.id),
+        ),
+      );
+    const holdings = await tx
+      .delete(investmentHoldings)
+      .where(
+        and(
+          userScoped(ctx).owns(investmentHoldings),
+          eq(investmentHoldings.investmentAccountId, investment.id),
+          eq(investmentHoldings.origin, "provider"),
+          notInArray(investmentHoldings.id, used),
+          notInArray(investmentHoldings.id, positioned),
+        ),
+      )
+      .returning({ id: investmentHoldings.id });
+
+    // The cash of the cut-off (rule 2), when the provider's opening did not book it.
+    let book = await loadBook(ctx, investment, currency, tx);
+    let openingCents: Cents | null = null;
+    const openedCash = book.events.some(
+      (event) =>
+        event.origin === "provider" &&
+        event.on === cutoff &&
+        event.operations.some((op) => op.kind === "opening_cash"),
+    );
+    if (!openedCash) {
+      openingCents = openingCashAt(book, cutoff);
+      if (openingCents !== null) {
+        const event = await insertEvent(ctx, tx, investment.id, {
+          on: cutoff,
+          occurredAt: new Date(`${cutoff}T00:00:00Z`),
+          origin: "provider",
+          note: GAP_NOTES.opening,
+          legs: [{ leg: "main", kind: "opening_cash", amountCents: openingCents }],
+        });
+        await linkExternal(
+          ctx,
+          { provider, entityType: "investment_event", entityId: event.id, externalId: "opening:cash" },
+          new Date(),
+          tx,
+        );
+        book = await loadBook(ctx, investment, currency, tx);
+      }
+    }
+
+    // Every difference of the cash, an entry with a name and a day (rule 4).
+    const gaps = cashGaps(book, cutoff);
+    for (const gap of gaps) {
+      const event = await insertEvent(ctx, tx, investment.id, {
+        on: gap.to,
+        occurredAt: new Date(`${gap.to}T23:59:59Z`),
+        origin: "provider",
+        note: gap.exchange ? GAP_NOTES.exchange : GAP_NOTES.balance,
+        legs: [{ leg: "main", kind: gap.cents < 0n ? "fee" : "income", amountCents: gap.cents }],
+      });
+      await linkExternal(
+        ctx,
+        {
+          provider,
+          entityType: "investment_event",
+          entityId: event.id,
+          externalId: `gap:${gap.from}:${gap.to}`,
+        },
+        new Date(),
+        tx,
+      );
+    }
+
+    const changed = ids.length + readings.length + holdings.length + gaps.length > 0 || openingCents !== null;
+    if (changed) await rebuild(ctx, investment, currency, cutoff, tx);
+    return {
+      cutoff,
+      events: ids.length,
+      readings: readings.length,
+      holdings: holdings.length,
+      openingCents,
+      gaps: gaps.length,
+    };
+  });
+}
+
 async function runFlows(ctx: WriteCtx, linked: Linked, now: Date): Promise<boolean> {
   const run = await recordRun(ctx, { connectionId: linked.connection.id, kind: "flows" });
   try {
     const created = await syncFlows(ctx, linked.connection, linked.investment.accountId, now);
-    // The estimated history, once the flows are in (PERS-100): a failure waits for the next pass.
+    // The reconstructed history, once the flows are in (PERS-100): a failure waits for the next pass.
     const estimated = await estimateHistoryOf(ctx, linked, now).catch((error: unknown) => {
-      console.error("[investments] history not estimated", sourceErrorLog(linked.connection.provider, error));
+      console.error("[investments] history not rebuilt", sourceErrorLog(linked.connection.provider, error));
       return 0;
+    });
+    // The 12 months, settled (PERS-145): a failure waits for the next pass, and changes nothing.
+    await settleCutoff(ctx, linked.investment.accountId).catch((error: unknown) => {
+      console.error("[investments] cut-off not settled", sourceErrorLog(linked.connection.provider, error));
     });
     await finishRun(ctx, run.id, { counts: estimated > 0 ? { created, estimated } : { created } }, now);
     return true;
