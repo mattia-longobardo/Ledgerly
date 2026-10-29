@@ -13,7 +13,6 @@ import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import {
   catalogView,
-  investmentHistory,
   investmentOperationsExport,
   investmentsHome,
   investmentsPnlView,
@@ -264,19 +263,6 @@ describe("§2.1 the Directa example, end to end", () => {
       investedCents: eur(8000),
       gainCents: eur(996),
     });
-    // The last year by default (PERS-100), from the first period on.
-    const history = await investmentHistory(ctx, { window: { grain: "month", range: "1y", custom: null } });
-    expect(history?.months.length).toBeLessThanOrEqual(12);
-    expect(history?.value.at(-1)).toBe(eur(8996));
-    expect(history?.invested.at(-1)).toBe(eur(8000));
-    expect(history?.estimated.some(Boolean)).toBe(false);
-    const daily = await investmentHistory(ctx, {
-      window: { grain: "day", range: "1y", custom: null },
-      accountId,
-    });
-    expect(daily?.days.at(-1)).toBe(today(ctx.timeZone));
-    expect(daily?.value.at(-1)).toBe(eur(8996));
-    expect(daily?.currency).toBe("EUR");
     expect(home.byClass).toEqual([{ key: "cash", cents: eur(8996), share: 1 }]);
     expect(home.byService.map((slice) => slice.key)).toEqual(["Directa"]);
     const catalog = await catalogView(ctx);

@@ -5,6 +5,7 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/ui/display";
 import { describeEvent } from "@/modules/investments/activity";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
+import { contributionsOf } from "@/modules/investments/positions";
 import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
@@ -167,11 +168,10 @@ export default async function InvestmentServiceOverview({
     .join(" ");
   const stack = stackLayers([asNumbers(bars)], pnl.intervals.length);
 
-  // ——— The main positions today, with what they added to the period (§3.3) ——————————————————————
-  const contributionOf = new Map(service.holdings.map((one) => [one.holdingId, one.contributionCents]));
-  const top = [...detail.holdings]
-    .sort((a, b) => Number((b.state.valueCents ?? 0n) - (a.state.valueCents ?? 0n)))
-    .slice(0, 5);
+  // ——— The main contributions to the period, open or sold (§3.3, PERS-113 · 9): the position that
+  // explains the P&L is here even when it was sold or is small today ——————————————————————————————
+  const assetOf = new Map(detail.assets.map((asset) => [asset.id, asset]));
+  const top = (contributionsOf(service)?.rows ?? []).slice(0, 5);
 
   // ——— The latest activity of the period, in words, with what a sale realized (§3.3, §3.5) ————————
   const realizedOf = new Map<string, Cents>();
@@ -208,6 +208,7 @@ export default async function InvestmentServiceOverview({
         <p
           data-testid="pnl-hero"
           data-cents={heroCents === null ? "" : String(heroCents)}
+          data-local-cents={local === null ? "" : String(local.pnlCents)}
           className="flex flex-wrap items-baseline gap-x-3"
         >
           <span
@@ -474,33 +475,39 @@ export default async function InvestmentServiceOverview({
           ) : (
             <ul className="flex flex-col" data-testid="top-positions">
               {top.map((row) => {
-                const contribution = contributionOf.get(row.id) ?? null;
+                const asset = row.assetId === null ? null : (assetOf.get(row.assetId) ?? null);
                 return (
                   <li
-                    key={row.id}
+                    key={row.key}
+                    data-testid="top-position"
                     className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5 text-sm"
                   >
                     <span className="flex min-w-0 flex-col">
                       <Link
-                        href={tab("/activity", { asset: row.asset.id })}
+                        href={tab("/activity", { asset: row.assetId ?? undefined })}
                         className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
                       >
-                        <span className="truncate">{row.asset.name}</span>
+                        <span className="truncate">{asset?.name ?? t("positions.unknownAsset")}</span>
                       </Link>
                       <span className="text-xs text-muted">
-                        {[row.asset.symbol, t(`classes.${row.asset.class}`)].filter(Boolean).join(" · ")}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 flex-col items-end tabular-nums">
-                      <span>{money(row.state.valueCents)}</span>
-                      <span className="text-xs text-muted">
                         {[
-                          contribution === null ? null : money(contribution, true),
-                          row.weight === null ? null : formatPercent(row.weight, ctx.numberFormat),
+                          asset?.symbol,
+                          row.costUnknown
+                            ? t("positions.contributions.noCost")
+                            : row.open && row.sold
+                              ? t("positions.contributions.partlySold")
+                              : row.open
+                                ? t("positions.contributions.open")
+                                : t("positions.contributions.sold"),
                         ]
                           .filter(Boolean)
-                          .join(" · ") || NULL_DISPLAY}
+                          .join(" · ")}
                       </span>
+                    </span>
+                    <span
+                      className={cn("shrink-0 font-medium tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}
+                    >
+                      {money(row.cents, true)}
                     </span>
                   </li>
                 );
