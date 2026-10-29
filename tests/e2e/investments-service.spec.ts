@@ -124,6 +124,19 @@ test("Positions: open with a cost, closed in the period and ever, a past year on
   await expect(page).toHaveURL(new RegExp(`${base}/positions\\?status=open$`));
 });
 
+test("Positions: grouped by class, the same rows under each class with its subtotal (§3.4)", async ({
+  page,
+}) => {
+  const base = await openService(page, "Directa");
+  await tabs(page).getByRole("link", { name: "Positions" }).click();
+  const rows = await page.getByTestId("open-row").count();
+  expect(rows).toBeGreaterThan(1);
+  await page.getByRole("group", { name: "Group by" }).getByRole("link", { name: "Class" }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?by=class$`));
+  await expect(page.getByRole("rowheader", { name: /^ETF/ })).toBeVisible();
+  await expect(page.getByTestId("open-row")).toHaveCount(rows);
+});
+
 test("Activity: the chips count the period and leave their own rows; the eToro page stays short", async ({
   page,
 }) => {
