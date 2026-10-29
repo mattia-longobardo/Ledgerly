@@ -180,7 +180,8 @@ export function cashGaps(book: Book, from: CivilDate): CashGap[] {
 /**
  * The cash a synced service opens with at its cut-off (PERS-145, rule 2), when its provider booked
  * no opening of the cash: the cash of the cut-off's reading, minus what that day's own entries
- * moved. `null` when the day's cash is unknown, or there is none.
+ * moved — zero included, so the cut-off is booked even for a service empty that day. `null` when
+ * the day's cash is unknown.
  */
 export function openingCashAt(book: Book, cutoff: CivilDate): Cents | null {
   const known = cashByDay(book).get(cutoff) ?? null;
@@ -189,5 +190,5 @@ export function openingCashAt(book: Book, cutoff: CivilDate): Cents | null {
     .filter((event) => event.on === cutoff)
     .reduce((sum, event) => sum + event.operations.reduce((one, op) => one + cashImpact(op), 0n), 0n);
   const opening = known - moved;
-  return opening > 0n ? opening : null;
+  return opening >= 0n ? opening : null;
 }
