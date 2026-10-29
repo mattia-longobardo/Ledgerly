@@ -27,7 +27,10 @@ import {
   decimal,
   convertEventsOf,
   dividendEventsOf,
+  dustEventsOf,
   type EarnPage,
+  PAY_HISTORY_DAYS,
+  payEventsOf,
   earnPageOf,
   FLOW_STREAMS,
   fiatOrderEventsOf,
@@ -48,7 +51,13 @@ import {
 } from "./binance";
 import { type BinanceApi, binanceApi } from "./client";
 
+/**
+ * What the flows read (PERS-141): `2` added the dust log, Binance Pay and the delisted markets. A
+ * history started under an older version gets its openings inferred again (`rebase`), once.
+ */
+const HISTORY_VERSION = "2";
 const PAGE = 500;
+const PAY_PAGE = 100;
 const TRADES_PAGE = 1000;
 const DIVIDENDS_PAGE = 500;
 /** A bound on every loop over pages: an exchange that keeps answering "more" stops here. */
@@ -184,7 +193,7 @@ export function binanceSource(
         const stopped = cursor[key] ? Date.parse(cursor[key]) : Number.NaN;
         return Number.isNaN(stopped) ? fromMs : Math.max(fromMs, Math.min(nowMs, stopped) - OVERLAP_MS);
       };
-      const next: FlowCursor = { from: from.toISOString() };
+      const next: FlowCursor = { from: from.toISOString(), history: HISTORY_VERSION };
       const stopAt = (pendingFrom: number | null) =>
         new Date(pendingFrom === null ? nowMs : Math.max(fromMs, pendingFrom)).toISOString();
       const events: ProviderEvent[] = [];
@@ -255,11 +264,38 @@ export function binanceSource(
       }
       next.dividends = stopAt(null);
 
-      // Trades: every market of every coin seen anywhere (B3), by id from where each stopped (B7).
+      // Dust converted to BNB: windows of 90 days. It also names the coins sold out to the last
+      // crumb, whose trades no other stream would find (PERS-141).
+      for (const window of windowsOf(startOf("dust"), nowMs, 90)) {
+        take(dustEventsOf(await api.dustLog(window.since, window.until), currency));
+      }
+      next.dust = stopAt(null);
+
+      // Binance Pay: windows of 90 days, 18 months back at most, 100 orders an answer — a full one
+      // is read again below its oldest order.
+      const storedPay = cursor.pay_from ? Date.parse(cursor.pay_from) : Number.NaN;
+      const payFrom = Number.isNaN(storedPay)
+        ? Math.max(fromMs, nowMs - (PAY_HISTORY_DAYS - 1) * DAY_MS)
+        : storedPay;
+      next.pay_from = new Date(payFrom).toISOString();
+      for (const window of windowsOf(Math.max(startOf("pay"), payFrom), nowMs, 90)) {
+        let until = window.until;
+        for (let page = 0; page < MAX_PAGES; page += 1) {
+          const rows = payEventsOf(await api.payTransactions(window.since, until), currency);
+          take(rows);
+          if (rows.count < PAY_PAGE || rows.oldest === null || rows.oldest <= window.since) break;
+          until = rows.oldest < until ? rows.oldest : until - 1;
+        }
+      }
+      next.pay = stopAt(null);
+
+      // Trades: every market of every coin seen anywhere (B3), by id from where each stopped (B7);
+      // delisted markets too, since a coin sold out on one is still part of the history.
       const markets = new Set(await api.markets());
+      const tradeMarkets = new Set(await api.tradeMarkets());
       const balances = await readBalances(api);
       for (const one of balances.quantities) assets.add(one.asset);
-      for (const symbol of tradeSymbols(assets, currency, markets)) {
+      for (const symbol of tradeSymbols(assets, currency, tradeMarkets)) {
         const key = `trades:${symbol}`;
         const stored = Number(cursor[key]);
         let fromId = Number.isSafeInteger(stored) && stored >= 0 ? stored : 0;
@@ -278,8 +314,10 @@ export function binanceSource(
       // Only the history the design keeps (D11): older trades of a market read by id are dropped.
       const kept = events.filter((event) => event.occurredAt.getTime() >= fromMs);
       const unique = [...new Map(kept.map((event) => [event.externalId, event])).values()];
-      // The first pass starts the history: the coins held are valued on its first day (A6).
+      // The first pass starts the history: the coins held are valued on its first day (A6). So
+      // does the first pass after the source learned to read more of it (PERS-141).
       const starting = !parsedFrom;
+      const rebase = !starting && cursor.history !== HISTORY_VERSION;
       // Every coin held or moved: one sold out in the 24 months has an opening too (A6).
       const held = [
         ...new Set([
@@ -294,10 +332,10 @@ export function binanceSource(
         markets,
         now,
         held,
-        starting ? fromMs : null,
+        starting || rebase ? fromMs : null,
       );
       const openingRates: Record<string, { rate: string; source: string }> = {};
-      if (starting) {
+      if (starting || rebase) {
         const day = civilDateIn(from, "UTC");
         for (const coin of held) {
           const rate =
@@ -309,10 +347,11 @@ export function binanceSource(
       }
       return {
         events: priceLegs(unique, currency, prices, fx),
-        coverage: binanceCoverage(FLOW_STREAMS, from, now),
+        coverage: binanceCoverage(FLOW_STREAMS, from, now, { pay: new Date(payFrom) }),
         cursor: next,
         historyFrom: from,
-        ...(starting ? { openingRates } : {}),
+        ...(starting || rebase ? { openingRates } : {}),
+        ...(rebase ? { rebase: true } : {}),
       };
     },
 

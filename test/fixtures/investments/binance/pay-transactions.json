@@ -1,0 +1,28 @@
+{
+  "method": "sapiGetPayTransactions (finestre di 90 giorni, 18 mesi)",
+  "note": "PERS-141: sintetico, forma della risposta reale; un ordine TAX pagato in ETH dall'Earn",
+  "body": {
+    "code": "000000",
+    "message": "success",
+    "data": [
+      {
+        "uid": 1,
+        "counterpartyId": 0,
+        "orderId": "fixture-id-0901",
+        "note": "",
+        "orderType": "TAX",
+        "transactionId": "P_FIXTURE0001",
+        "transactionTime": 1767820635744,
+        "amount": "-3.6",
+        "currency": "EUR",
+        "walletType": 5,
+        "walletTypes": ["5"],
+        "fundsDetail": [
+          { "currency": "ETH", "amount": "0.00134326", "walletAssetCost": { "5": "0.00134326" } }
+        ],
+        "totalPaymentFee": "0"
+      }
+    ],
+    "success": true
+  }
+}

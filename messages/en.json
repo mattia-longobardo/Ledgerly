@@ -3620,6 +3620,8 @@
         "fiat_payments": "Card purchases",
         "convert": "Convert",
         "dividends": "Rewards and staking",
+        "dust": "Small balances converted to BNB",
+        "pay": "Binance Pay",
         "quantities": "Quantities against the balances"
       },
       "coverageStatus": {
@@ -3631,6 +3633,7 @@
         "api_limit_12m": "the API keeps 12 months",
         "before_first_movement": "before the first eToro Money movement",
         "api_limit_24m": "the API keeps 24 months",
+        "api_limit_18m": "the API keeps 18 months",
         "negative_opening": "the history explains more than the balance",
         "quantity_mismatch": "the movements do not add up to the balance: a market may be missing",
         "estimated": "estimated from the movements and the daily closes"

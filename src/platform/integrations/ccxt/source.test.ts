@@ -33,6 +33,14 @@ function fakeApi(overrides: Partial<BinanceApi> = {}) {
     earnFlexible: log("earnFlexible", () => body("earn-flexible-empty")),
     earnLocked: log("earnLocked", () => body("earn-locked-empty")),
     markets: log("markets", () => ["ETH/EUR", "ETH/USDT", "EUR/USDT", "BNB/EUR", "TRX/USDT", "SUI/USDT"]),
+    tradeMarkets: log("tradeMarkets", () => [
+      "ETH/EUR",
+      "ETH/USDT",
+      "EUR/USDT",
+      "BNB/EUR",
+      "TRX/USDT",
+      "SUI/USDT",
+    ]),
     tickers: log("tickers", () => body("tickers")),
     dailyCandles: log("dailyCandles", () => []),
     deposits: log("deposits", () => []),
@@ -41,6 +49,8 @@ function fakeApi(overrides: Partial<BinanceApi> = {}) {
     fiatPayments: log("fiatPayments", () => ({ data: [] })),
     convertFlow: log("convertFlow", () => ({ list: [] })),
     dividends: log("dividends", () => ({ rows: [] })),
+    dustLog: log("dustLog", () => ({ total: 0, userAssetDribblets: [] })),
+    payTransactions: log("payTransactions", () => ({ data: [] })),
     myTrades: log("myTrades", () => []),
     // An override answers in place of the default and is logged the same way.
     ...Object.fromEntries(
@@ -84,9 +94,18 @@ describe("fetchFlows (§3.2)", () => {
       [1, from, NOW.getTime(), 1],
     ]);
     expect(named(calls, "fiatPayments")).toHaveLength(1);
-    expect(read.coverage.filter((one) => one.status === "gap").map((one) => one.reason)).toEqual(
-      Array(7).fill("api_limit_24m"),
-    );
+    // Pay keeps 18 months (PERS-141): read from there, every other stream from the 24 months.
+    const payFrom = NOW.getTime() - 539 * DAY;
+    expect(named(calls, "payTransactions")[0][1]).toBe(payFrom);
+    for (const call of named(calls, "payTransactions")) {
+      expect((call[2] as number) - (call[1] as number)).toBeLessThan(90 * DAY);
+    }
+    expect(named(calls, "dustLog")).toHaveLength(9);
+    const gaps = read.coverage.filter((one) => one.status === "gap");
+    expect(gaps.filter((one) => one.reason === "api_limit_24m")).toHaveLength(8);
+    expect(gaps.filter((one) => one.reason === "api_limit_18m").map((one) => one.stream)).toEqual(["pay"]);
+    expect(read.cursor).toMatchObject({ history: "2", pay_from: new Date(payFrom).toISOString() });
+    expect(read.rebase).toBeUndefined();
     expect(read.cursor).toMatchObject({ from: new Date(from).toISOString(), deposits: NOW.toISOString() });
   });
 
@@ -95,6 +114,7 @@ describe("fetchFlows (§3.2)", () => {
       dividends: async () => body("asset-dividend"),
       myTrades: async (symbol: string) => (symbol === "ETH/USDT" ? body("my-trades") : []),
       markets: async () => ["ETH/EUR", "ETH/USDT", "EUR/USDT", "TRX/USDT", "ROBO/USDT", "BNB/EUR"],
+      tradeMarkets: async () => ["ETH/EUR", "ETH/USDT", "EUR/USDT", "TRX/USDT", "ROBO/USDT", "BNB/EUR"],
     });
     // From 2024-11-20: the ETH/USDT trades of 2024-10 and 2024-11 are older than the 24 months.
     const later = new Date("2026-11-20T10:00:00Z");
@@ -129,6 +149,7 @@ describe("fetchFlows (§3.2)", () => {
       dividends: stopped.toISOString(),
       "trades:ETH/EUR": "900076",
       assets: "ETH",
+      history: "2",
     };
     const read = await binanceSource(async () => api).fetchFlows(KEYS, NOW, {
       currency: "EUR",
@@ -143,6 +164,60 @@ describe("fetchFlows (§3.2)", () => {
     // The history keeps its first day; no opening is valued again.
     expect(read.cursor?.from).toBe(cursor.from);
     expect(read.openingRates).toBeUndefined();
+  });
+
+  it("follows the coins of the dust log into their markets, delisted ones too (PERS-141)", async () => {
+    const { api, calls } = fakeApi({
+      dustLog: async () => ({
+        userAssetDribblets: [
+          {
+            userAssetDribbletDetails: [
+              {
+                transId: 7,
+                fromAsset: "MKR",
+                amount: "0.0001",
+                transferedAmount: "0.00001",
+                serviceChargeAmount: "0.0000002",
+                operateTime: NOW.getTime() - 10 * DAY,
+              },
+            ],
+          },
+        ],
+      }),
+      tradeMarkets: async () => ["ETH/EUR", "MKR/USDT", "BNB/EUR"],
+    });
+    const read = await binanceSource(async () => api).fetchFlows(KEYS, NOW, {
+      currency: "EUR",
+      cursor: null,
+      fx: () => null,
+    });
+    // MKR/USDT is no longer an active market (`markets`), but its trades are still read.
+    expect(named(calls, "myTrades").map((call) => call[1])).toContain("MKR/USDT");
+    expect(read.events.some((one) => one.externalId === "dust:7:MKR")).toBe(true);
+    expect(read.cursor?.assets).toContain("MKR");
+  });
+
+  it("rebases a history started before the dust log and Pay: openings valued again, once", async () => {
+    const { api, calls } = fakeApi();
+    const from = new Date(NOW.getTime() - 400 * DAY).toISOString();
+    const older = await binanceSource(async () => api).fetchFlows(KEYS, NOW, {
+      currency: "EUR",
+      cursor: { from, deposits: NOW.toISOString(), assets: "ETH" },
+      fx: () => null,
+    });
+    expect(older.rebase).toBe(true);
+    expect(older.openingRates).toBeDefined();
+    expect(older.historyFrom?.toISOString()).toBe(from);
+    // The new streams start at the history (Pay at its 18 months), the old ones where they stopped.
+    expect(named(calls, "dustLog")[0][1]).toBe(Date.parse(from));
+    expect(named(calls, "deposits")[0][1]).toBe(NOW.getTime() - DAY);
+    const again = await binanceSource(async () => api).fetchFlows(KEYS, NOW, {
+      currency: "EUR",
+      cursor: older.cursor ?? null,
+      fx: () => null,
+    });
+    expect(again.rebase).toBeUndefined();
+    expect(again.openingRates).toBeUndefined();
   });
 
   it("keeps two events of the same millisecond, and one event read twice once", async () => {

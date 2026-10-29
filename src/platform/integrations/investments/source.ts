@@ -125,6 +125,12 @@ export interface FlowsRead {
    * positions the module infers there (A6, §2.4). Only on the pass that starts the history.
    */
   openingRates?: Record<string, { rate: string; source: string }>;
+  /**
+   * The source now reads streams or markets it did not read when the history started (PERS-141):
+   * the openings inferred then absorbed what it missed, so the module infers them again from
+   * `openingRates` and estimates the history again. Once per change of what the source reads.
+   */
+  rebase?: boolean;
 }
 
 /** Account units per unit of `from` on a day, from the ECB rates the module keeps (§1.8). */

@@ -15,12 +15,14 @@ import {
   convertEventsOf,
   decimal,
   dividendEventsOf,
+  dustEventsOf,
   earnPageOf,
   fiatOrderEventsOf,
   fiatPaymentEventsOf,
   holdingsOf,
   keyCheckOf,
   netQuantities,
+  payEventsOf,
   pricePath,
   priceLegs,
   type Quote,
@@ -415,6 +417,60 @@ describe("flows (§3.2, B2, B7)", () => {
     expect(new Set(once.map((one) => one.externalId)).size).toBe(once.length);
   });
 
+  it("maps dust to BNB: the coin sold, the gross BNB bought, the charge a fee (PERS-141)", () => {
+    const read = dustEventsOf(body("dust-log"), "EUR");
+    const [sxt, eur] = read.events;
+    expect(sxt).toMatchObject({ externalId: "dust:900500:SXT", note: "Dust to BNB" });
+    expect(sxt.occurredAt.getTime()).toBe(1_747_667_538_000);
+    expect(sxt.legs.map((one) => [one.leg, one.kind, one.asset?.symbol, one.quantity])).toEqual([
+      ["base", "buy", "BNB", "0.000204"],
+      ["quote", "sell", "SXT", "15.22070015"],
+      ["fee", "fee", "BNB", "0.000004"],
+    ]);
+    // The euro given is cash, as in Convert: only the BNB moves a quantity.
+    expect(eur.legs.map((one) => [one.leg, one.kind, one.asset?.symbol])).toEqual([
+      ["base", "buy", "BNB"],
+      ["fee", "fee", "BNB"],
+    ]);
+    // What reached the wallet is the BNB the log says, after the charge.
+    expect(netQuantities(read.events).get("BNB")).toBe(units("0.0003"));
+    expect(read.assets).toEqual(expect.arrayContaining(["BNB", "SXT", "EUR"]));
+  });
+
+  it("maps a Binance Pay TAX order as a fee in the coin it was paid with (PERS-141)", () => {
+    const read = payEventsOf(body("pay-transactions"), "EUR");
+    expect(read.count).toBe(1);
+    expect(read.events).toHaveLength(1);
+    expect(read.events[0]).toMatchObject({ externalId: "pay:P_FIXTURE0001", note: "Binance Pay TAX" });
+    expect(read.events[0].legs).toEqual([
+      expect.objectContaining({
+        leg: "main",
+        kind: "fee",
+        quantity: "0.00134326",
+        nativeAmount: "3.6",
+        nativeCurrency: "EUR",
+      }),
+    ]);
+    expect(read.oldest).toBe(1_767_820_635_744);
+  });
+
+  it("maps any other Pay order as money out or in", () => {
+    const order = (amount: string) => ({
+      data: [
+        {
+          orderType: "C2C",
+          transactionId: `P_${amount.replace(/\D/g, "")}`,
+          transactionTime: 1_767_820_635_744,
+          amount,
+          currency: "USDT",
+          fundsDetail: [{ currency: "USDT", amount: amount.replace("-", "") }],
+        },
+      ],
+    });
+    expect(payEventsOf(order("-10"), "EUR").events[0].legs[0].kind).toBe("withdrawal");
+    expect(payEventsOf(order("10"), "EUR").events[0].legs[0].kind).toBe("deposit");
+  });
+
   it("discovers the markets of every coin seen anywhere (B3)", () => {
     const markets = new Set(["ADA/EUR", "ADA/USDT", "TON/USDT", "EUR/USDT", "ETH/BTC", "XYZ/ABC"]);
     expect(tradeSymbols(["ADA", "TON", "EUR", "ETH"], "EUR", markets)).toEqual([
@@ -522,6 +578,18 @@ describe("windows and coverage (A7, D11)", () => {
     expect(binanceCoverage(["deposits"], from, now)).toEqual([
       expect.objectContaining({ stream: "deposits", status: "gap", reason: "api_limit_24m", toAt: from }),
       { stream: "deposits", fromAt: from, toAt: now, status: "complete", reason: null },
+    ]);
+  });
+
+  it("declares Pay a gap before the 18 months it keeps, from where it was first read", () => {
+    const from = new Date("2024-10-28T00:00:00Z");
+    const now = new Date("2026-10-28T00:00:00Z");
+    const pay = new Date("2025-05-07T00:00:00Z");
+    expect(binanceCoverage(["pay", "dust"], from, now, { pay })).toEqual([
+      expect.objectContaining({ stream: "pay", status: "gap", reason: "api_limit_18m", toAt: pay }),
+      { stream: "pay", fromAt: pay, toAt: now, status: "complete", reason: null },
+      expect.objectContaining({ stream: "dust", status: "gap", reason: "api_limit_24m", toAt: from }),
+      { stream: "dust", fromAt: from, toAt: now, status: "complete", reason: null },
     ]);
   });
 

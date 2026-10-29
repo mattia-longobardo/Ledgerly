@@ -820,6 +820,112 @@ export function dividendEventsOf(
   return { events, assets: rows.map((row) => row.asset), pendingFrom: null, count: rows.length, oldest };
 }
 
+const dustSchema = z.looseObject({
+  userAssetDribblets: z
+    .array(
+      z.looseObject({
+        userAssetDribbletDetails: z.array(
+          z.looseObject({
+            transId: z.union([z.string(), z.number()]).transform(String),
+            fromAsset: code,
+            amount: decimalString,
+            transferedAmount: decimalString,
+            serviceChargeAmount: decimalString,
+            operateTime: millis,
+          }),
+        ),
+      }),
+    )
+    .nullable()
+    .optional(),
+});
+
+const DUST_TARGET = "BNB";
+
+/**
+ * Small balances converted to BNB (PERS-141): one event per coin given, the coin sold and the BNB
+ * bought. `transferedAmount` is what reached the wallet after the charge, so the BNB leg is the
+ * gross and the charge a fee leg, as in a trade; a fiat coin given (EUR) leaves no leg, as in Convert.
+ */
+export function dustEventsOf(raw: unknown, currency: string): StreamRows {
+  const details = (parse(dustSchema, raw).userAssetDribblets ?? []).flatMap(
+    (one) => one.userAssetDribbletDetails,
+  );
+  const events: ProviderEvent[] = [];
+  for (const row of details) {
+    if (row.amount <= 0n || row.transferedAmount <= 0n) continue;
+    const gross = row.transferedAmount + row.serviceChargeAmount;
+    const value = { nativeAmount: decimal(gross), nativeCurrency: DUST_TARGET };
+    const legs: ProviderLeg[] = [coinLeg("base", "buy", DUST_TARGET, gross, currency, value)];
+    if (!isFiat(row.fromAsset))
+      legs.push(coinLeg("quote", "sell", row.fromAsset, row.amount, currency, value));
+    if (row.serviceChargeAmount > 0n)
+      legs.push(coinLeg("fee", "fee", DUST_TARGET, row.serviceChargeAmount, currency));
+    events.push({
+      externalId: `dust:${row.transId}:${row.fromAsset}`,
+      occurredAt: new Date(row.operateTime),
+      note: "Dust to BNB",
+      legs,
+    });
+  }
+  return { events, assets: [DUST_TARGET, ...details.map((row) => row.fromAsset)], pendingFrom: null };
+}
+
+const paySchema = z.looseObject({
+  data: z
+    .array(
+      z.looseObject({
+        transactionId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/),
+        orderType: z.string().max(40),
+        transactionTime: millis,
+        amount: z.string().regex(/^-?\d+(\.\d+)?$/),
+        currency: code,
+        fundsDetail: z
+          .array(z.looseObject({ currency: code, amount: decimalString }))
+          .nullable()
+          .optional(),
+      }),
+    )
+    .nullable()
+    .optional(),
+});
+
+/**
+ * Binance Pay (PERS-141): one event per order, a leg per coin it moved (`fundsDetail`). A `TAX`
+ * order (the yearly stamp duty Binance collects for Italy) is a cost of holding, so a fee; any
+ * other order is money leaving (`amount` < 0) or reaching the account. With one coin, the order's
+ * own amount values it.
+ */
+export function payEventsOf(
+  raw: unknown,
+  currency: string,
+): StreamRows & { count: number; oldest: number | null } {
+  const rows = parse(paySchema, raw).data ?? [];
+  const events: ProviderEvent[] = [];
+  for (const row of rows) {
+    const out = row.amount.startsWith("-");
+    const total = units(out ? row.amount.slice(1) : row.amount);
+    const funds = (row.fundsDetail ?? []).filter((one) => one.amount > 0n);
+    if (total === null || total <= 0n || funds.length === 0) continue;
+    const kind: ProviderLeg["kind"] = row.orderType === "TAX" ? "fee" : out ? "withdrawal" : "deposit";
+    const value = funds.length === 1 ? { nativeAmount: decimal(total), nativeCurrency: row.currency } : {};
+    events.push({
+      externalId: `pay:${row.transactionId}`,
+      occurredAt: new Date(row.transactionTime),
+      note: `Binance Pay ${row.orderType}`.slice(0, 200),
+      legs: funds.map((one) => coinLeg("main", kind, one.currency, one.amount, currency, value)),
+    });
+  }
+  const oldest = rows.length === 0 ? null : Math.min(...rows.map((row) => row.transactionTime));
+  return {
+    events,
+    assets: rows.flatMap((row) => (row.fundsDetail ?? []).map((one) => one.currency)),
+    pendingFrom: null,
+    count: rows.length,
+    oldest,
+  };
+}
+
 const tradesSchema = z.array(
   z.looseObject({
     timestamp: z.number(),
@@ -1061,12 +1167,27 @@ export function historyStart(now: Date): Date {
   return new Date(now.getTime() - HISTORY_DAYS * DAY_MS);
 }
 
-/** Every stream complete from the start of the history, after a gap the API does not keep (D11). */
-export function binanceCoverage(streams: readonly string[], from: Date, now: Date): CoverageWindow[] {
-  return streams.flatMap((stream) => [
-    { stream, fromAt: BINANCE_SINCE, toAt: from, status: "gap" as const, reason: "api_limit_24m" },
-    { stream, fromAt: from, toAt: now, status: "complete" as const, reason: null },
-  ]);
+/** Binance Pay keeps 18 months of orders (PERS-141): the first day a pass may ask for. */
+export const PAY_HISTORY_DAYS = 540;
+
+/**
+ * Every stream complete from the start of the history, after a gap the API does not keep (D11).
+ * A stream the API keeps for less (`starts`: Pay, 18 months) is complete from where it was first read.
+ */
+export function binanceCoverage(
+  streams: readonly string[],
+  from: Date,
+  now: Date,
+  starts: Readonly<Record<string, Date>> = {},
+): CoverageWindow[] {
+  return streams.flatMap((stream) => {
+    const start = starts[stream] && starts[stream] > from ? starts[stream] : from;
+    const reason = start > from ? "api_limit_18m" : "api_limit_24m";
+    return [
+      { stream, fromAt: BINANCE_SINCE, toAt: start, status: "gap" as const, reason },
+      { stream, fromAt: start, toAt: now, status: "complete" as const, reason: null },
+    ];
+  });
 }
 
 export const FLOW_STREAMS = [
@@ -1076,6 +1197,8 @@ export const FLOW_STREAMS = [
   "fiat_payments",
   "convert",
   "dividends",
+  "dust",
+  "pay",
   "trades",
 ] as const;
 

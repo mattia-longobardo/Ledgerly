@@ -83,6 +83,7 @@ function fixtureExchange(calls: Call[], overrides: Partial<BinanceApi> = {}): Bi
     earnFlexible: async () => body("earn-flexible-empty"),
     earnLocked: async () => body("earn-locked-empty"),
     markets: async () => MARKETS,
+    tradeMarkets: async () => MARKETS,
     tickers: async () => ({
       ...(body("tickers") as object),
       "BNB/EUR": { last: 950, timestamp: NOW.getTime() },
@@ -106,6 +107,8 @@ function fixtureExchange(calls: Call[], overrides: Partial<BinanceApi> = {}): Bi
       const all = body("asset-dividend") as { rows: { divTime: string }[] };
       return { rows: all.rows.filter((one) => within(Number(one.divTime), since, until)) };
     },
+    dustLog: async () => ({ total: 0, userAssetDribblets: [] }),
+    payTransactions: async () => ({ data: [] }),
     myTrades: async (symbol, fromId) =>
       (body("my-trades") as { symbol: string; info: { id: number } }[]).filter(
         (one) => one.symbol === symbol && one.info.id >= fromId,
@@ -311,12 +314,17 @@ describe("connecting Binance (§5.1, SEC-03, B1)", () => {
       "fiat_payments",
       "convert",
       "dividends",
+      "dust",
+      "pay",
       "trades",
       "quantities",
     ]) {
       expect(streams).toContain(stream);
     }
-    expect(coverage.filter((one) => one.reason === "api_limit_24m")).toHaveLength(7);
+    expect(coverage.filter((one) => one.reason === "api_limit_24m")).toHaveLength(8);
+    expect(coverage.filter((one) => one.reason === "api_limit_18m").map((one) => one.stream)).toEqual([
+      "pay",
+    ]);
   });
 
   it("values a trade's fee in BNB at the day's close, in cents and not rounded to zero", async () => {
@@ -578,6 +586,90 @@ describe("the estimated history (PERS-100)", () => {
     expect(await estimatedOf(accountId)).toEqual([]);
     const investment = await investmentOf(accountId);
     expect(investment.managedSince).toBe("2026-10-28");
+  });
+});
+
+describe("a history read again with more streams (PERS-141)", () => {
+  it("infers the openings and estimates the history again, once, from the complete flows", async () => {
+    const { accountId } = await connectNew();
+    const investment = await investmentOf(accountId);
+    const ethOpening = async () =>
+      getDb()
+        .select({ eventId: investmentEvents.id, quantity: investmentOperations.quantity })
+        .from(investmentOperations)
+        .innerJoin(investmentEvents, eq(investmentEvents.id, investmentOperations.eventId))
+        .innerJoin(investmentHoldings, eq(investmentHoldings.id, investmentOperations.holdingId))
+        .innerJoin(investmentAssets, eq(investmentAssets.id, investmentHoldings.assetId))
+        .where(
+          and(
+            eq(investmentEvents.investmentAccountId, investment.id),
+            eq(investmentOperations.kind, "opening_position"),
+            eq(investmentAssets.symbol, "ETH"),
+          ),
+        );
+    const dayBefore = async () =>
+      (
+        await getDb()
+          .select({ totalCents: investmentReadings.totalCents })
+          .from(investmentReadings)
+          .where(
+            and(
+              eq(investmentReadings.investmentAccountId, investment.id),
+              eq(investmentReadings.on, "2025-01-09"),
+            ),
+          )
+      )[0]?.totalCents;
+    const [before] = await ethOpening();
+    const valueBefore = await dayBefore();
+    expect(valueBefore).toBeDefined();
+
+    // A history started before the dust log: the cursor of the older source, and 1 ETH sold to dust.
+    const [job] = await getDb().select().from(syncJobs).where(eq(syncJobs.kind, "flows"));
+    const older = Object.fromEntries(
+      Object.entries(job.cursor ?? {}).filter(
+        ([key]) => !["history", "pay_from", "dust", "pay"].includes(key),
+      ),
+    );
+    await getDb().update(syncJobs).set({ cursor: older }).where(eq(syncJobs.id, job.id));
+    exchange.dustLog = async (since, until) => {
+      const at = Date.parse("2025-01-10T12:00:00Z");
+      if (at < since || at > until) return { userAssetDribblets: [] };
+      return {
+        userAssetDribblets: [
+          {
+            userAssetDribbletDetails: [
+              {
+                transId: 41,
+                fromAsset: "ETH",
+                amount: "1",
+                transferedAmount: "0.01",
+                serviceChargeAmount: "0.0002",
+                operateTime: at,
+              },
+            ],
+          },
+        ],
+      };
+    };
+    await pass(new Date(NOW.getTime() + DAY));
+
+    // One ETH opening, inferred again: it now holds the coin the dust took.
+    const after = await ethOpening();
+    expect(after).toHaveLength(1);
+    expect(after[0].eventId).not.toBe(before.eventId);
+    expect(Number(after[0].quantity)).toBeCloseTo(Number(before.quantity) + 1, 12);
+    const links = await getDb()
+      .select({ externalId: providerLinks.externalId })
+      .from(providerLinks)
+      .where(eq(providerLinks.externalId, "opening:ETH"));
+    expect(links).toHaveLength(1);
+    // The estimated history stands on the new flows: the day before held that ETH, at 2 a coin.
+    expect((await dayBefore())! - valueBefore!).toBeGreaterThanOrEqual(150n);
+    expect(await flowsCursor()).toMatchObject({ history: "2" });
+
+    // Once: the next pass infers nothing again.
+    await pass(new Date(NOW.getTime() + 2 * DAY));
+    expect((await ethOpening()).map((one) => one.eventId)).toEqual([after[0].eventId]);
   });
 });
 

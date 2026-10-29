@@ -3620,6 +3620,8 @@
         "fiat_payments": "Acquisti con carta",
         "convert": "Convert",
         "dividends": "Reward e staking",
+        "dust": "Residui convertiti in BNB",
+        "pay": "Binance Pay",
         "quantities": "Quantità contro i saldi"
       },
       "coverageStatus": {
@@ -3631,6 +3633,7 @@
         "api_limit_12m": "l'API conserva 12 mesi",
         "before_first_movement": "prima del primo movimento di eToro Money",
         "api_limit_24m": "l'API conserva 24 mesi",
+        "api_limit_18m": "l'API conserva 18 mesi",
         "negative_opening": "lo storico spiega più del saldo",
         "quantity_mismatch": "i movimenti non tornano con il saldo: può mancare un mercato",
         "estimated": "stimato dai movimenti e dalle chiusure giornaliere"
