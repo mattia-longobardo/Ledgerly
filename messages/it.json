@@ -4039,7 +4039,11 @@
         "total": "P&L del periodo",
         "same": "il numero della Panoramica",
         "bridge": "= {display} in Panoramica, effetto cambio {fx} incluso"
-      }
+      },
+      "groupBy": "Raggruppa per",
+      "byAsset": "Asset",
+      "byClass": "Classe",
+      "groupSummary": "{value} · {pnl} · {share}"
     }
   },
   "payroll": {

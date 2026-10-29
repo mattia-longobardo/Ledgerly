@@ -4039,7 +4039,11 @@
         "total": "P&L of the period",
         "same": "the Overview's number",
         "bridge": "= {display} in the Overview, exchange effect {fx} included"
-      }
+      },
+      "groupBy": "Group by",
+      "byAsset": "Asset",
+      "byClass": "Class",
+      "groupSummary": "{value} · {pnl} · {share}"
     }
   },
   "payroll": {

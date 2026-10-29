@@ -241,6 +241,17 @@ const PAGES: Screen[] = [
       await settled(page);
     },
   })),
+  {
+    name: "/investments/[accountId]/positions?by=class, a manual account",
+    session: "layout",
+    open: async (page: Page) => {
+      await serviceTab(page, "Directa", "positions");
+      const url = new URL(page.url());
+      url.searchParams.set("by", "class");
+      await page.goto(url.toString());
+      await settled(page);
+    },
+  },
   { name: "/payroll", session: "layout", open: go("/payroll") },
   {
     name: "/payroll/[id]",
