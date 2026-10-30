@@ -49,7 +49,13 @@ import {
 } from "@/platform/integrations/service";
 import { withJobLock } from "@/platform/jobs/lock";
 import type { Cents } from "@/platform/money";
-import { accountTypeOf, connectableProvider, credentialSchemaOf, type InvestmentProvider } from "./catalog";
+import {
+  accountTypeOf,
+  connectableProvider,
+  credentialSchemaOf,
+  type InvestmentProvider,
+  PROVIDER_SCHEDULE,
+} from "./catalog";
 import { cashGaps, GAP_NOTES, openingCashAt } from "./cutoff";
 import { estimateHistory, HISTORY_RATE_SCALE, type HistoryLeg, historyMoves } from "./history";
 import {
@@ -149,10 +155,7 @@ export const COOLDOWN_MS = 60_000;
  * three to six calls to the provider, and Binance counts their weight per IP — the homelab's.
  */
 export const KEY_ATTEMPTS = { max: 5, windowMs: 10 * 60_000 } as const;
-/** Two readings a day are enough for an end-of-day value and far from the rate limits (§3.1). */
-export const PROVIDER_SCHEDULE = {
-  rules: [{ kind: "times" as const, times: ["07:30", "22:30"], days: { kind: "every" as const } }],
-};
+export { PROVIDER_SCHEDULE };
 /** Without a `Retry-After`, a refused pass waits this long before the next call. */
 const DEFAULT_BACKOFF_SECONDS = 300;
 const BACKOFF_KEY = "backoff_until";

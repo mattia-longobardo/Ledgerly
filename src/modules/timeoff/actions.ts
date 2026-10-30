@@ -28,7 +28,7 @@ function failed(error: unknown): { ok: false; error: string; refused?: RefusedDa
 }
 
 function revalidate(): void {
-  revalidatePath("/timeoff");
+  revalidatePath("/timeoff", "layout");
 }
 
 /**

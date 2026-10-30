@@ -340,16 +340,7 @@
       },
       "scheduleControl": {
         "title": "Orario di sincronizzazione",
-        "description": "Gli orari sono nel tuo fuso orario ({timeZone}, da Impostazioni › Profilo), al minuto. Una sincronizzazione parte entro un minuto dall'orario scelto; tra due sincronizzazioni passano almeno {minutes} minuti.",
-        "presets": {
-          "label": "Scelte rapide",
-          "hourly": "Ogni ora",
-          "officeHours": "Ogni 30 min, orario d'ufficio",
-          "twiceDaily": "Due volte al giorno",
-          "weekdays8": "Giorni feriali alle 8:00",
-          "monthStart": "Il 1° del mese",
-          "manual": "Solo manuale"
-        },
+        "description": "Gli orari sono nel fuso {timeZone}. <link>Cambia il fuso orario</link>",
         "rule": "Regola {n}",
         "kindLabel": "Tipo della regola {n}",
         "kinds": {
@@ -386,10 +377,18 @@
           "workdays": "lun–ven",
           "weekend": "sab–dom",
           "last": "ultimo",
-          "ofMonth": "il giorno {days}"
+          "ofMonth": "il giorno {days}",
+          "choices": {
+            "every": "Ogni giorno",
+            "workdays": "Lun–ven",
+            "pick": "Scegli i giorni",
+            "month": "Giorni del mese"
+          },
+          "weekdaysLabel": "Giorni della settimana",
+          "monthDaysLabel": "Giorni del mese"
         },
         "preview": {
-          "title": "Prossime {n} sincronizzazioni",
+          "title": "Prossime sincronizzazioni",
           "manual": "Nessuna sincronizzazione automatica: solo “Sincronizza ora” ne avvia una.",
           "fix": "Correggi le regole segnate in rosso per vedere le prossime sincronizzazioni."
         },
@@ -400,9 +399,10 @@
           "days": "Scegli almeno un giorno.",
           "cron": "Questa espressione cron non è valida.",
           "neverRuns": "Questa regola non parte mai.",
-          "tooFrequent": "Due sincronizzazioni alle {first} e alle {second}: tienile ad almeno {minutes} minuti di distanza."
+          "tooFrequent": "Due sincronizzazioni alle {first} e alle {second}: tienile ad almeno {minutes} minuti di distanza.",
+          "time": "Scrivi l'orario come HH:MM, ad esempio 06:43."
         },
-        "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Scegli una scelta rapida o aggiungi una regola.",
+        "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Aggiungi una regola o scegli un'altra modalità.",
         "summary": {
           "manual": "Solo manuale",
           "hourly": "Ogni ora",
@@ -420,7 +420,22 @@
         "cancel": "Annulla",
         "save": "Salva",
         "saved": "Orario salvato",
-        "invalid": "Questo orario è stato rifiutato: controlla le regole."
+        "invalid": "Questo orario è stato rifiutato: controlla le regole.",
+        "titleFor": "Orario di sincronizzazione · {name}",
+        "modes": {
+          "label": "Quando sincronizzare",
+          "repeat": "Ripeti",
+          "times": "A orari precisi",
+          "timesHint": "Qualsiasi minuto del giorno, ad esempio 06:43",
+          "manual": "Solo manuale",
+          "manualHint": "Solo “Sincronizza ora” avvia una sincronizzazione",
+          "custom": "Regole personalizzate",
+          "customHint": "Più regole insieme, oppure un'espressione cron"
+        },
+        "onlyBetween": "Solo tra le",
+        "useRecommended": "Usa il consigliato ({schedule})",
+        "removeTimeSimple": "Rimuovi {time}",
+        "newTimeSimple": "Nuovo orario"
       },
       "paperless": {
         "notLinked": "Non collegato. Ledgerly legge i cedolini archiviati da Paperless, con il token di un utente Paperless in sola lettura.",
@@ -440,8 +455,8 @@
       },
       "investments": {
         "title": "Connessioni di investimento",
-        "open": "Apri {name}",
-        "description": "Chiavi, verifiche e disconnessione stanno nella pagina del servizio."
+        "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Connessione del servizio: lì ci sono la chiave e i controlli.",
+        "role": "Chiave API in sola lettura"
       }
     },
     "categories": {
@@ -614,24 +629,16 @@
         "light": "Chiaro",
         "dark": "Scuro"
       },
-      "defaultRange": "Intervallo predefinito",
-      "ranges": {
-        "this_month": "Questo mese",
-        "last_30_days": "Ultimi 30 giorni",
-        "year_to_date": "Da inizio anno"
-      },
       "monthlySummary": "Inviami il riepilogo mensile via email",
-      "hoursPerDay": "Giornata lavorativa (ore)",
-      "patronSaint": "Festa del santo patrono",
-      "patronDay": "Giorno",
-      "patronNone": "Nessuna",
       "saved": "Preferenze salvate",
       "errors": {
         "invalid": "Alcune di queste preferenze non sono valide. Controlla i valori e riprova.",
         "failed": "Impossibile salvare le preferenze. Riprova."
       },
       "displayCurrency": "Valuta di visualizzazione",
-      "displayCurrencyHint": "I totali su più conti sono convertiti in questa valuta al cambio BCE del loro giorno. Ogni conto mantiene la sua valuta."
+      "displayCurrencyHint": "I totali su più conti sono convertiti in questa valuta al cambio BCE del loro giorno. Ogni conto mantiene la sua valuta.",
+      "timeOffMoved": "Orario di lavoro, santo patrono e calendari delle festività sono in <link>Ferie › Impostazioni</link>.",
+      "monthlySummaryBlocked": "Un amministratore ha disattivato questa email per tutto il server."
     },
     "signIn": {
       "title": "Accesso",
@@ -954,7 +961,7 @@
     "holidays": {
       "title": "Festività",
       "description": "I calendari su cui si misurano le tue giornate. Tienine quanti ti servono: vengono presi dalla loro fonte e aggiornati ogni giorno.",
-      "empty": "Ancora nessun calendario. Finché non ne aggiungi uno valgono le festività italiane, più il santo patrono indicato qui sopra.",
+      "empty": "Ancora nessun calendario. Finché non ne aggiungi uno valgono le festività italiane, più il santo patrono indicato qui sotto.",
       "meta": "{days} giorni nel {year} · {source}",
       "never": "Mai aggiornato",
       "updated": "Aggiornato il {when}",
@@ -1750,7 +1757,8 @@
     "hint": "Fai clic su un limite per modificarlo; Invio salva, Esc annulla.",
     "row": {
       "menu": "Azioni del budget",
-      "remove": "Rimuovi da questo mese"
+      "remove": "Rimuovi da questo mese",
+      "alerts": "Avvisi"
     },
     "empty": {
       "title": "Nessun budget",
@@ -2971,7 +2979,7 @@
         "payrollDescription": "Quali codici del cedolino alimentano ogni componente, e se questo fondo li riceve. Specifico del tracciato Reply / TeamSystem.",
         "payrollOn": "Questo fondo riceve i contributi di ogni cedolino applicato.",
         "payrollOff": "I contributi dei cedolini vanno a un altro fondo.",
-        "codes": "I codici di ogni componente sono quelli della mappa dei codici, in Impostazioni › Dati.",
+        "codes": "I codici di ogni componente sono quelli della mappa dei codici, in Payroll › Impostazioni.",
         "takePayroll": "Ricevi i contributi dei cedolini",
         "rebuild": "Ricostruisci dai cedolini",
         "rebuilt": "{count, plural, one {# cedolino riletto} other {# cedolini riletti}}",
@@ -3013,7 +3021,7 @@
           "enrollment": "Quote di iscrizione",
           "adjustment": "Rettifiche"
         },
-        "openCodeMap": "Apri Impostazioni › Dati",
+        "openCodeMap": "Apri Payroll › Impostazioni",
         "frequency": "Frequenza",
         "frequencies": {
           "quarterly": "Trimestrale",
@@ -3599,8 +3607,6 @@
         "revoked": "Chiave rifiutata"
       },
       "lastOk": "Ultima sincronizzazione riuscita",
-      "next": "Prossima sincronizzazione",
-      "manual": "Solo a mano",
       "key": "Chiave",
       "keyCheck": "{result}, verificata il {date}",
       "ipUnrestricted": "IP non limitato",
@@ -3614,7 +3620,6 @@
       },
       "lastError": "Ultimo errore: {error}",
       "rotate": "La chiave ha più di 90 giorni: sostituiscila con una nuova e revoca quella vecchia.",
-      "scheduleNote": "Sincronizzato alle 07:30 e alle 22:30; si conserva una lettura al giorno. Cambia gli orari in Impostazioni › Integrazioni.",
       "now": "Sincronizza ora",
       "verify": "Verifica chiave",
       "replace": "Sostituisci chiave",
@@ -3659,7 +3664,8 @@
       "reliableFrom": "attendibile dal {date}",
       "notReliable": "storico incompleto",
       "etoroBrand": "Dati di eToro, letti con la tua chiave.",
-      "binanceBrand": "Dati di Binance, letti con la tua chiave."
+      "binanceBrand": "Dati di Binance, letti con la tua chiave.",
+      "readingsNote": "Si conserva una lettura al giorno."
     },
     "transfers": {
       "title": "Trasferimenti da confermare",
@@ -3815,7 +3821,6 @@
       "sentenceColon": "{label}: {detail}"
     },
     "header": {
-      "sync": "Sincronizza",
       "addOperation": "Aggiungi operazione",
       "operations": {
         "buy": "Acquisto",
@@ -4225,7 +4230,7 @@
       },
       "warnings": {
         "title": "Da guardare",
-        "unknown_code": "Il codice {code} non è nella tua mappa dei codici: la riga resta, ma non conta per nulla finché non lo mappi (Impostazioni › Dati).",
+        "unknown_code": "Il codice {code} non è nella tua mappa dei codici: la riga resta, ma non conta per nulla finché non lo mappi (Buste paga › Impostazioni).",
         "tfr_both_differ": "La casella TFR ({monthField}) e la voce 8003 ({contributionLine}) differiscono: si usa la voce 8003, mai entrambe.",
         "tfr_partial_month": "TFR su un mese parziale: trascritto come stampato, non ricalcolato.",
         "employer_fund_adjustment_only": "Una rettifica del fondo azienda senza quota ordinaria accanto: nessun importo aziendale mensile viene calcolato. Controllala con il cedolino precedente.",
@@ -4415,6 +4420,17 @@
       "rolAccrued": "ROL, maturati",
       "rolUsed": "ROL, goduti",
       "rolRemaining": "ROL, residui"
+    },
+    "tabs": {
+      "label": "Payroll",
+      "register": "Registro",
+      "settings": "Impostazioni"
+    },
+    "settingsPage": {
+      "related": "Altrove",
+      "relatedDescription": "Da cosa dipendono anche i cedolini.",
+      "paperless": "Paperless, in Integrazioni",
+      "llm": "Fallback LLM, in Server"
     }
   },
   "timeoff": {
@@ -4513,12 +4529,12 @@
     },
     "actions": {
       "add": "Aggiungi",
-      "allowance": "Dotazione",
       "edit": "Modifica",
       "remove": "Elimina",
       "cancel": "Annulla",
       "save": "Salva",
-      "confirmDelete": "Eliminare la giornata del {date}?"
+      "confirmDelete": "Eliminare la giornata del {date}?",
+      "setAllowance": "Imposta il monte ferie"
     },
     "dialog": {
       "addTitle": "Aggiungi giornata",
@@ -4540,13 +4556,10 @@
       "rolLocal": "Il ROL resta qui: non viene mai inviato a Trek."
     },
     "allowance": {
-      "title": "Dotazione {year}",
       "description": "Quello che il contratto concede quest'anno. Lascia vuoto un campo per non dichiarare nulla; il residuo dell'anno scorso arriva dal cedolino.",
       "vacationDays": "Giorni di ferie",
       "rolDays": "Giorni di ROL",
-      "rolHint": "In giorni, come le ferie: tutta la schermata conta in giorni.",
-      "totalDays": "Giorni concessi in totale",
-      "totalDaysHint": "Ferie e ROL insieme, come li indica il contratto."
+      "totalDays": "Giorni concessi in totale"
     },
     "toasts": {
       "saved": "Giornata salvata",
@@ -4580,6 +4593,36 @@
     },
     "mismatch": "Le due parti non tornano col totale concesso: {amount} {direction}.",
     "mismatchOver": "in più",
-    "mismatchUnder": "in meno"
+    "mismatchUnder": "in meno",
+    "tabs": {
+      "label": "Ferie",
+      "overview": "Panoramica",
+      "settings": "Impostazioni"
+    },
+    "settings": {
+      "allowance": {
+        "title": "Monte ferie"
+      },
+      "copyFrom": "Copia dal {year}",
+      "hours": {
+        "title": "Orario di lavoro",
+        "description": "Quanto dura un giorno di ferie.",
+        "label": "Ore in un giorno di lavoro",
+        "hint": "Le ore della busta paga diventano giorni con questo numero, per tutti gli anni. Sabato e domenica non contano mai come ferie.",
+        "saved": "Orario di lavoro salvato"
+      },
+      "patron": {
+        "label": "Santo patrono",
+        "none": "Nessuno",
+        "day": "Giorno",
+        "hint": "Un giorno festivo solo nella tua città. Una data già nel calendario conta una volta sola.",
+        "saved": "Santo patrono salvato"
+      },
+      "trek": {
+        "description": "Dove vivono anche i giorni di ferie.",
+        "manage": "Gestisci in Integrazioni",
+        "connect": "Collega in Integrazioni"
+      }
+    }
   }
 }

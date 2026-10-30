@@ -42,6 +42,13 @@ export const preferencesInputSchema = z.object({
 
 export type Preferences = z.infer<typeof preferencesInputSchema>;
 
+/** What Time off › Settings changes: only leave reads these, and each form saves its own. */
+export const timeOffPreferencesSchema = preferencesInputSchema
+  .pick({ minutesPerDay: true, patronSaint: true })
+  .partial()
+  .strict();
+export type TimeOffPreferences = z.infer<typeof timeOffPreferencesSchema>;
+
 export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   timeZone: "Europe/Rome",
   locale: "en",

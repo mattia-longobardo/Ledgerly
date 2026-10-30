@@ -19,7 +19,7 @@ npm install
 cp .env.example .env.homelab   # then replace every value (README, Operations)
 ```
 
-Users change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
+Users change their own password from **Settings → Security**, under **Sign-in** (accounts with no
 password — SSO-only — do not see that form).
 
 ## Accounts and Overview (F1)
@@ -166,7 +166,7 @@ fingerprint makes a second upload of the same document a duplicate rather than a
   (employer, employee, year, period, type) is **superseded**, never summed — a reprint replaces the
   original — and what the payslip accrued for the pension fund and for leave is published to F6 and
   F7 from there.
-- **Unknown codes** are yours to teach: Settings → Data holds the code map, so a line the profile
+- **Unknown codes** are yours to teach: Payroll → Settings holds the code map, so a line the profile
   does not know can be given a role once and is known from then on.
 - `payslips-sweep` (hourly) picks up a reading that was interrupted; `documents-retention` (daily
   at 12:00) deletes originals past their retention while keeping the numbers read out of them.

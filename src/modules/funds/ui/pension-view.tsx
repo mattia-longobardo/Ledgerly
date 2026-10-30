@@ -965,7 +965,7 @@ export async function PensionView({
           </dl>
           <p className="text-sm text-muted">{t("settings.codes")}</p>
           <Link
-            href={"/settings/data" as Route}
+            href={"/payroll/settings" as Route}
             className="inline-flex h-6 items-center self-start text-sm font-medium text-accent hover:underline"
           >
             {t("settings.openCodeMap")}
@@ -1091,17 +1091,14 @@ export async function PensionView({
             </TBody>
           </Table>
         )}
-        <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-accent">
-            {t("settings.addRule")}
-          </summary>
-          <div className="pt-3">
-            <ContributionRuleForm
-              fundId={fund.id}
-              today={detail.chart.months.at(-1)?.slice(0, 10) ?? fund.startOn}
-            />
-          </div>
-        </details>
+        {/* Open, not folded: this whole page is the fund's settings, nothing here needs hiding. */}
+        <div className="flex flex-col gap-3">
+          <h3 className="text-sm font-medium">{t("settings.addRule")}</h3>
+          <ContributionRuleForm
+            fundId={fund.id}
+            today={detail.chart.months.at(-1)?.slice(0, 10) ?? fund.startOn}
+          />
+        </div>
       </SettingsSection>
 
       <SettingsSection

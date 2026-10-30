@@ -6,8 +6,11 @@ import { BACKUPS_KEPT, lastBackup, postgresVersion } from "@/platform/backup/ser
 import { lastExport } from "@/platform/export/jobs";
 import { issuerOrigin } from "@/platform/settings/oidc";
 import { APP_VERSION, NEXT_VERSION } from "@/platform/version";
+import { jobStatuses } from "@/platform/jobs/queries";
 import { llmFallbackView, oidcView, smtpView } from "@/platform/settings/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { formatInstant } from "../integrations/format-instant";
+import { type JobRow, JobsCard } from "./jobs-card";
 import { LlmCard } from "./llm-card";
 import { MaintenanceCard } from "./maintenance-card";
 import { OidcCard } from "./oidc-card";
@@ -31,6 +34,14 @@ export default async function SettingsServerPage() {
     lastExport(),
   ]);
   const [backup, postgres] = await Promise.all([lastBackup(), postgresVersion()]);
+  const tJobs = await getTranslations("settings.jobs");
+  const jobs: JobRow[] = (await jobStatuses(ctx)).map((job) => ({
+    name: job.name,
+    tier: job.tier,
+    lastRun: job.lastRun ? formatInstant(job.lastRun.startedAt, ctx) : null,
+    status: job.lastRun?.status ?? null,
+    error: job.lastRun?.error ?? null,
+  }));
 
   // Formatted here, in the user's zone and language, so the card renders the same string on the
   // server and in the browser (the design's "last check 07:10").
@@ -75,6 +86,9 @@ export default async function SettingsServerPage() {
       </SettingsSection>
       <SettingsSection title={t("title")} description={t("description")}>
         <LlmCard current={llm && { model: llm.model, keyHint: llm.keyHint }} />
+      </SettingsSection>
+      <SettingsSection title={tJobs("title")} description={tJobs("description")} padded={false}>
+        <JobsCard jobs={jobs} />
       </SettingsSection>
       <SettingsSection title={tMaintenance("title")} description={tMaintenance("description")}>
         <MaintenanceCard

@@ -129,11 +129,11 @@ test("Overview puts the chart and the accounts side by side only past the wide t
  */
 test("Settings gives each section the whole row, its card against the right edge", async ({ page }) => {
   const account = page.getByRole("heading", { name: "Account", level: 2 });
-  const signIn = page.getByRole("heading", { name: "Sign-in", level: 2 });
+  const preferences = page.getByRole("heading", { name: "Preferences", level: 2 });
 
   for (const width of [2560, 1280] as const) {
     await openAt(page, width, "expanded", "/settings/profile");
-    const [first, second] = [await box(page, account), await box(page, signIn)];
+    const [first, second] = [await box(page, account), await box(page, preferences)];
     // One under the other, never side by side.
     expect(second.y, `at ${width}px`).toBeGreaterThan(first.y + 100);
     expect(Math.round(second.x), `at ${width}px`).toBe(Math.round(first.x));

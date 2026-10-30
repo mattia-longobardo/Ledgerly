@@ -31,11 +31,11 @@ test("a user signs in with a password, reaches the app and signs out", async ({ 
   await expect(topbar.getByRole("link", { name: "Settings" })).toBeVisible();
   await expect(topbar.getByText("Profile", { exact: true })).toBeVisible();
   await expect(page.getByText("Role: User")).toBeVisible();
-  await expect(page.getByText("Sign-in method: Local password")).toBeVisible();
-  await expect(page.getByLabel("Current password")).toBeVisible();
+  await expect(page.getByLabel("Current password")).toHaveCount(0);
   await page.goto("/settings/security");
   await expect(page.getByText("Active now")).toBeVisible();
-  await expect(page.getByLabel("Current password")).toHaveCount(0);
+  await expect(page.getByText("Sign-in method: Local password")).toBeVisible();
+  await expect(page.getByLabel("Current password")).toBeVisible();
 
   await nav.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);

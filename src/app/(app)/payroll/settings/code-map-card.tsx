@@ -18,7 +18,7 @@ interface Entry {
 }
 
 /**
- * Settings › Data › the payslip code map (spec §7.8, §7.10): what each body code means. A change
+ * Payroll › Settings › the payslip code map (spec §7.8, §7.10): what each body code means. A change
  * applies to the payslips read after it; the ones already imported are read again from their page.
  */
 export function CodeMapCard({ entries }: { entries: Entry[] }) {
