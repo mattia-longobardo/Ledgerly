@@ -1231,10 +1231,12 @@ async function syncFlows(
   // The rates a source may ask for (a stablecoin through USD, §1.8): those already kept.
   const lookupFrom = addDays(todayOn, -761);
   const lookupRates = await ratesOn(new Set([...LOOKUP_CURRENCIES, linked.currency]), lookupFrom, todayOn);
+  const since = await cutoffOf(ctx, getDb(), linked.investment.id);
   const read = await sourceOf(connection.provider).fetchFlows(credentials, now, {
     currency: linked.currency,
     cursor,
     fx: fxLookupOf(lookupRates),
+    ...(since === null ? {} : { since: new Date(`${since}T00:00:00Z`) }),
   });
   const days = read.events.map((event) => civilDateIn(event.occurredAt, ctx.timeZone));
   const first = days.reduce<CivilDate | null>((min, day) => (min === null || day < min ? day : min), null);
