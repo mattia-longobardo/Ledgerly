@@ -85,8 +85,8 @@ test("a manual account follows its operations, and Accounts shows the same value
     await addOperation(page, "Buy");
     const dialog = page.getByRole("dialog", { name: "Add asset" });
     // D1: nothing chosen, the search on the account's currency; a search picks the first match.
-    await expect(dialog.getByLabel("Asset", { exact: true })).toHaveValue("");
-    await expect(dialog.getByLabel("Currency", { exact: true })).toHaveValue("EUR");
+    await expect(dialog.getByRole("combobox", { name: "Asset", exact: true })).toHaveValue("");
+    await expect(dialog.getByRole("combobox", { name: "Currency", exact: true })).toHaveValue("EUR");
     await dialog.getByLabel("Search by name, ISIN or symbol").fill("VWCE");
     await dialog.getByLabel("Quantity").fill("100");
     await dialog.getByLabel("Unit price").fill("60");
