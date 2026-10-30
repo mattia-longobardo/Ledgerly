@@ -641,24 +641,28 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
           status: "complete",
           reason: null,
         },
+        // As `flowsCoverage` writes them (PERS-145): complete from the start of the 12 months.
         {
           stream: "deposits",
           fromAt: new Date("2020-01-01T00:00:00Z"),
-          toAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          toAt: new Date(`${addDays(on, -360)}T00:00:00Z`),
           status: "partial",
           reason: "before_first_movement",
         },
         {
           stream: "deposits",
-          fromAt: new Date(`${addDays(on, -5)}T09:00:00Z`),
+          fromAt: new Date(`${addDays(on, -360)}T00:00:00Z`),
           toAt: now,
           status: "complete",
           reason: null,
         },
       ],
     }),
+    // The 12 months eToro gives (PERS-145): its first day is the service's cut-off, so the trade
+    // of a month ago is inside them.
     fetchHistory: async () => ({
       points: [
+        { on: addDays(on, -360), totalCents: 0n },
         { on: addDays(on, -2), totalCents: 500_000n },
         { on: addDays(on, -1), totalCents: 505_000n },
       ],
@@ -666,13 +670,13 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
         {
           stream: "balance_history",
           fromAt: new Date("2020-01-01T00:00:00Z"),
-          toAt: new Date(`${addDays(on, -2)}T00:00:00Z`),
+          toAt: new Date(`${addDays(on, -360)}T00:00:00Z`),
           status: "gap",
           reason: "api_limit_12m",
         },
         {
           stream: "balance_history",
-          fromAt: new Date(`${addDays(on, -2)}T00:00:00Z`),
+          fromAt: new Date(`${addDays(on, -360)}T00:00:00Z`),
           toAt: now,
           status: "complete",
           reason: null,

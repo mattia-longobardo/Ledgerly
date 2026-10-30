@@ -33,7 +33,7 @@ import { rulesOnAccount } from "@/modules/interests/queries";
 import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
-import { managedSinceOf } from "@/modules/investments/managed";
+import { managedSinceOf, syncedServicesOf } from "@/modules/investments/managed";
 import { lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
 import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -126,7 +126,15 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   // The share is of the net worth, so both sides are in the display currency (§1.8, D1).
   const share = shareOf(row.display.balance, view.total);
   const counter = counterValue(row, view.currency, ctx.numberFormat);
-  const synced = since(account.lastSyncedAt, now);
+  // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
+  const service = (await syncedServicesOf(ctx, [id])).get(id) ?? null;
+  const synced = since(service?.lastSyncedAt ?? account.lastSyncedAt, now);
+  const source =
+    service !== null
+      ? t("origins.syncedWith", { provider: service.provider })
+      : account.origin === "manual"
+        ? t("origins.manual")
+        : t("origins.syncedWith", { provider: account.provider ?? "" });
   const color = colorFor(account, index);
   // A service of Investments takes no manual balance (docs/design/investments.md §1.3).
   const managed = (await managedSinceOf(ctx, id)) !== null;
@@ -138,12 +146,8 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           <span aria-hidden className="size-2 rounded-full" style={{ background: color }} />
           <span>{t(`types.${account.type}`)}</span>
           <span aria-hidden>·</span>
-          <span>
-            {account.origin === "manual"
-              ? t("origins.manual")
-              : t("origins.syncedWith", { provider: account.provider ?? "" })}
-          </span>
-          {account.origin === "synced" && (
+          <span>{source}</span>
+          {(account.origin === "synced" || service !== null) && (
             <>
               <span aria-hidden>·</span>
               <span>
@@ -201,6 +205,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           id={id}
           chart={chart}
           connections={connections}
+          source={source}
         />
       )}
 
@@ -269,6 +274,7 @@ async function OverviewTab({
   id,
   chart,
   connections,
+  source,
 }: {
   ctx: Ctx;
   /** The account today: the KPIs and the details. */
@@ -278,6 +284,8 @@ async function OverviewTab({
   months: string[];
   /** What hangs off the account, read-only here: it is consulted far more often than edited. */
   connections: ConnectionRow[];
+  /** Where the balance comes from: "Manual", or the provider that syncs it. */
+  source: string;
   /** The window day by day, when the chart's grain is the day (F2.5). */
   daily: Awaited<ReturnType<typeof accountDailyBalances>> | null;
   /** The range the picker wrote, or `null` when a span decides the window. */
@@ -497,11 +505,7 @@ async function OverviewTab({
               <dt className="text-muted">{t("details.currency")}</dt>
               <dd>{row.account.currency}</dd>
               <dt className="text-muted">{t("details.source")}</dt>
-              <dd>
-                {row.account.origin === "manual"
-                  ? ta("origins.manual")
-                  : ta("origins.syncedWith", { provider: row.account.provider ?? "" })}
-              </dd>
+              <dd>{source}</dd>
               <dt className="text-muted">{t("details.betweenEntries")}</dt>
               <dd>{t(`details.trends.${row.account.betweenEntries}`)}</dd>
               <dt className="text-muted">{t("details.inNetWorth")}</dt>

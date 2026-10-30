@@ -21,7 +21,7 @@ export interface ContributionRow {
   open: boolean;
   /** Some of it left in the period: a sale, a close, a coin fee, a transfer out. */
   sold: boolean;
-  /** Its cost is unknown at one end: its unrealized is in "Other (incomplete data)". */
+  /** The positions of a day are unknown, so is its unrealized (a day of history with a total only). */
   costUnknown: boolean;
   /** The divergent bar (§4.8): −1…1, scaled on the largest |cents| of the rows. */
   bar: number;
@@ -34,6 +34,7 @@ export interface Contributions {
   correctionsCents: Cents;
   /** The change of value a service kept by value only has without positions (§4.2). */
   valueChangeCents: Cents;
+  /** What no part explains: zero on consistent data (PERS-145). */
   unattributedCents: Cents;
   /** Σ rows + the parts above: the service's P&L in its own currency, the Overview's number. */
   totalCents: Cents;
@@ -41,13 +42,12 @@ export interface Contributions {
 
 /**
  * What each position added to the period (PERS-113 · 9), the largest first, and the parts that are
- * not a position's — income, fees, corrections, the change of a value without positions, Other —
- * so that the rows add up to the service's P&L in its currency. `null` when it is undetermined.
+ * not a position's — income, fees, corrections, the change of a value without positions — so that
+ * the rows add up to the service's P&L in its currency. `null` when it is undetermined.
  */
 export function contributionsOf(service: ServicePnl): Contributions | null {
   const local = service.local;
   if (local === null) return null;
-  const sold = new Set(service.exits.map((exit) => exit.holdingId));
   const rows = service.holdings
     .map((one: HoldingPnl) => ({
       key: one.key,
@@ -57,8 +57,8 @@ export function contributionsOf(service: ServicePnl): Contributions | null {
       cents: one.realizedCents + (one.unrealizedChangeCents ?? 0n),
       realizedCents: one.realizedCents,
       unrealizedChangeCents: one.unrealizedChangeCents,
-      open: one.end !== null,
-      sold: sold.has(one.key),
+      open: one.open,
+      sold: one.sold,
       costUnknown: one.unrealizedChangeCents === null && (one.start !== null || one.end !== null),
     }))
     .filter((row) => row.cents !== 0n || row.costUnknown)
@@ -155,28 +155,4 @@ export function onCostOf(position: {
   if (position.costCents === null || position.unrealizedCents === null || position.costCents <= 0n)
     return null;
   return Number(position.unrealizedCents) / Number(position.costCents);
-}
-
-/**
- * The currencies the provider booked some flow of the period in and converted (eToro Money in EUR
- * on a USD account): the ECB rate of the day values them, the provider's own rate moved the money,
- * and the difference — its exchange cost — is part of "Other" (PERS-119).
- */
-export function convertedCurrencies(service: ServicePnl): string[] {
-  return [...new Set(service.flows.flatMap((flow) => (flow.converted ? [flow.converted] : [])))].sort();
-}
-
-/** The reasons of a period whose data leave part of its P&L unexplained (§4.6). */
-const GAP_REASONS = new Set(["flows_gap", "base_unknown", "quantity_mismatch", "stale_price", "no_rate"]);
-
-/**
- * Whether "Other" is data that are missing (PERS-141): a gap of the period, a position without a
- * cost, or money converted at the provider's rate. Otherwise every flow, cost and value of the
- * period is known and what is left is how the same coins were valued — at the trade's price, at
- * the day's close — and the rounding of each exit: nothing to go and look for.
- */
-export function otherIsGap(service: ServicePnl): boolean {
-  if (service.partial || service.reasons.some((reason) => GAP_REASONS.has(reason))) return true;
-  if (service.local !== null && service.local.unrealizedChangeCents === null) return true;
-  return convertedCurrencies(service).length > 0;
 }

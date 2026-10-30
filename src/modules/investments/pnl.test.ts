@@ -165,7 +165,6 @@ function service(book: Book, extra: Partial<PnlService> = {}): PnlService {
     book,
     rates: NO_RATES,
     coverage: null,
-    quantityMismatch: false,
     externalIds: new Map(),
     ...extra,
   };
@@ -248,7 +247,7 @@ describe("replayHoldings (§4.4)", () => {
       costCents: 18_500n,
       realizedCents: 8_500n,
     });
-    expect(costs.get("h1")).toEqual({ quantity: qty("1.5"), costCents: 18_500n });
+    expect(costs.get("h1")).toMatchObject({ quantity: qty("1.5"), costCents: 18_500n });
   });
 
   it("matches an eToro close with its opening by positionId, not the holding's average (§4.4)", () => {
@@ -310,7 +309,7 @@ describe("pnlOf: cases by hand (§4.2)", () => {
     expectAdditive(pnl);
   });
 
-  it("PERS-113 · 1: bought in 2025 at 100, worth 150 on 31/12, sold at 160 in 2026 → +10", () => {
+  it("PERS-145 · 5: bought in 2025 at 100, worth 150 on 31/12, sold at 160 in 2026 → +10, all realized", () => {
     const book = manual([
       deposit("2025-01-02", 100),
       buy("2025-01-03", "h1", "1", "100"),
@@ -318,24 +317,28 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       sell("2026-03-01", "h1", "1", "160"),
     ]);
     const pnl = pnlOf(service(book), ...year(2026), EUR_DISPLAY);
+    // The position open at s⁻ costs the period its value then: 160 − 150, and nothing unrealized.
     expect(pnl.local).toMatchObject({
       pnlCents: 1_000n,
-      realizedCents: 6_000n,
-      unrealizedChangeCents: -5_000n,
+      realizedCents: 1_000n,
+      unrealizedChangeCents: 0n,
       unattributedCents: 0n,
     });
+    expect(pnl.openPositions).toBe(0);
     expect(pnl.holdings).toMatchObject([
       {
         key: "h1",
         holdingId: "h1",
-        realizedCents: 6_000n,
-        unrealizedChangeCents: -5_000n,
+        realizedCents: 1_000n,
+        unrealizedChangeCents: 0n,
         contributionCents: 1_000n,
-        start: { valueCents: 15_000n, costCents: 10_000n },
+        open: false,
+        sold: true,
+        start: { valueCents: 15_000n },
         end: null,
       },
     ]);
-    // The year before: all of it unrealized.
+    // The year before: all of it unrealized, against what it cost.
     expect(pnlOf(service(book), ...year(2025), EUR_DISPLAY).local).toMatchObject({
       pnlCents: 5_000n,
       realizedCents: 0n,
@@ -343,7 +346,7 @@ describe("pnlOf: cases by hand (§4.2)", () => {
     });
   });
 
-  it("PERS-113 · 1: a partial sale after further purchases, and a sale of everything", () => {
+  it("PERS-145 · 5: a partial sale after further purchases, and a sale of everything", () => {
     const book = manual([
       deposit("2025-01-02", 200),
       buy("2025-01-03", "h1", "2", "100"),
@@ -355,15 +358,15 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       sell("2026-09-01", "h1", "1.5", "200"),
     ]);
     const mid = pnlOf(service(book), "2026-01-01", "2026-06-30", EUR_DISPLAY);
-    // Average (200 + 170) / 3; 1.5 out at 185 for 270; 1.5 left worth 285 at cost 185.
+    // Basis 2 × 150 + 170 = 470 for 3; 1.5 out at 235 for 270; 1.5 left worth 285 at 235.
     expect(mid.local).toMatchObject({
       pnlCents: 8_500n,
-      realizedCents: 8_500n,
-      unrealizedChangeCents: 0n,
+      realizedCents: 3_500n,
+      unrealizedChangeCents: 5_000n,
       unattributedCents: 0n,
     });
     const whole = pnlOf(service(book), ...year(2026), EUR_DISPLAY);
-    expect(whole.local).toMatchObject({ realizedCents: 8_500n + 11_500n, unrealizedChangeCents: -10_000n });
+    expect(whole.local).toMatchObject({ realizedCents: 3_500n + 6_500n, unrealizedChangeCents: 0n });
     expect(whole.local!.pnlCents).toBe(30_000n + 27_000n - 30_000n - 17_000n);
     expectAdditive(whole);
   });
@@ -427,7 +430,7 @@ describe("pnlOf: cases by hand (§4.2)", () => {
     expectAdditive(pnl);
   });
 
-  it("dust is no missing price; a real unpriced position makes the P&L estimated", () => {
+  it("dust is no missing price; a real unpriced position makes the P&L stale", () => {
     const dust = { assetId: "x", product: "funding", valueCents: null, quantity: qty("0.0000765") };
     const real = { assetId: "y", product: "spot", valueCents: null, quantity: qty("2") };
     const at = (positions: ReadingLike["positions"]) =>
@@ -446,10 +449,10 @@ describe("pnlOf: cases by hand (§4.2)", () => {
         EUR_DISPLAY,
       );
     expect(at([dust]).status).toBe("verified");
-    expect(at([dust, real])).toMatchObject({ status: "estimated", reasons: ["stale_price"] });
+    expect(at([dust, real])).toMatchObject({ status: "stale", reasons: ["stale_price"] });
   });
 
-  it("a synced service: a position whose trades do not add up has no cost, and goes to Other (§4.2)", () => {
+  it("a synced service whose cash the entries do not explain: the parts on the period's basis, the rest unexplained (PERS-145)", () => {
     const sale = event(
       "2026-03-01",
       [{ leg: "base", kind: "sell", holdingId: "h1", quantity: qty("1"), amountCents: eur(60) }],
@@ -477,18 +480,20 @@ describe("pnlOf: cases by hand (§4.2)", () => {
     const pnl = pnlOf(
       service(book, {
         coverage: [{ stream: "trades", fromOn: "2020-01-01", toOn: "2026-10-29", complete: true }],
-        quantityMismatch: true,
       }),
       "2026-01-01",
       "2026-06-30",
       EUR_DISPLAY,
     );
+    // The 3 units read at s⁻ are worth 100: the 2 the trades hold carry it all (50 each); one
+    // sold at 60 realizes 10; the one left is worth 120 against 50. The sale's 60 and the fee never
+    // reached the cash the provider read: −59 no entry explains — the sync books it (`cashGaps`).
     expect(pnl.local).toMatchObject({
       pnlCents: 2_000n,
-      realizedCents: 2_000n,
-      unrealizedChangeCents: null,
+      realizedCents: 1_000n,
+      unrealizedChangeCents: 7_000n,
       feesCents: -100n,
-      unattributedCents: 100n,
+      unattributedCents: -5_900n,
     });
     expectAdditive(pnl);
   });
@@ -498,7 +503,7 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       coverage: [{ stream: "trades", fromOn: "2020-01-01", toOn: "2026-10-29", complete: true }],
     } satisfies Partial<PnlService>;
 
-    it("eToro gives the cost: the change of the unrealized is U(e) − U(s⁻), nothing left to Other", () => {
+    it("PERS-145 · 5: a position open at s⁻ costs the period its value then, whatever the provider says it cost", () => {
       const book = syncedBook(
         [],
         [
@@ -514,12 +519,14 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       });
       expect(pnl.holdings).toMatchObject([
         {
-          key: "h1",
+          key: "asset:asset-h1",
           contributionCents: 2_000n,
-          start: { unrealizedCents: 5_000n, costSource: "provider" },
-          end: { unrealizedCents: 7_000n, costSource: "provider" },
+          open: true,
+          start: { valueCents: 15_000n },
+          end: { costCents: 15_000n, unrealizedCents: 2_000n, costSource: "period" },
         },
       ]);
+      expect(pnl.openPositions).toBe(1);
       expectAdditive(pnl);
     });
 
@@ -537,7 +544,10 @@ describe("pnlOf: cases by hand (§4.2)", () => {
         unrealizedChangeCents: 3_000n,
         unattributedCents: 0n,
       });
-      expect(pnl.holdings[0]).toMatchObject({ start: null, end: { costCents: 10_000n } });
+      expect(pnl.holdings[0]).toMatchObject({
+        start: null,
+        end: { costCents: 10_000n, costSource: "period" },
+      });
     });
 
     it("a day of the provider's history says a total and no positions: unknown, never zero", () => {
@@ -584,10 +594,11 @@ describe("pnlOf: cases by hand (§4.2)", () => {
         unrealizedChangeCents: 3_000n,
         unattributedCents: 0n,
       });
-      expect(pnl.holdings[0].end).toMatchObject({ costCents: 8_000n, costSource: "events" });
+      // The trades' 80 is history: the period's basis is the 100 the 2 units were worth at s⁻.
+      expect(pnl.holdings[0].end).toMatchObject({ costCents: 10_000n, costSource: "period" });
     });
 
-    it("an eToro position open at s⁻ and closed in the period: realized +60, unrealized −50, +10", () => {
+    it("PERS-145 · 5: an eToro position open at s⁻ and closed in the period: +10, all realized", () => {
       const ids = new Map([
         ["open", "trade:42:open"],
         ["close", "trade:42:close"],
@@ -613,14 +624,20 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       const pnl = pnlOf(service(book, { ...covered, externalIds: ids }), ...year(2026), EUR_DISPLAY);
       expect(pnl.local).toMatchObject({
         pnlCents: 1_000n,
-        realizedCents: 6_000n,
-        unrealizedChangeCents: -5_000n,
+        realizedCents: 1_000n,
+        unrealizedChangeCents: 0n,
         unattributedCents: 0n,
       });
       expect(pnl.holdings).toMatchObject([
-        { key: "h1", realizedCents: 6_000n, contributionCents: 1_000n, end: null },
+        { key: "asset:asset-h1", realizedCents: 1_000n, contributionCents: 1_000n, end: null, sold: true },
       ]);
-      expect(pnl.exits[0]).toMatchObject({ openedOn: "2025-05-01", matched: "position" });
+      // Against the period's basis, not the opening of 2025: that is the history of the position.
+      expect(pnl.exits[0]).toMatchObject({ proceedsCents: 16_000n, costCents: 15_000n });
+      expect(replayHoldings(book, "2026-12-31", ids).exits[0]).toMatchObject({
+        openedOn: "2025-05-01",
+        matched: "position",
+        realizedCents: 6_000n,
+      });
     });
 
     it("a reading before the cost was saved takes it from a later reading of the same quantity", () => {
@@ -634,7 +651,7 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       const pnl = pnlOf(service(book, covered), "2026-01-01", "2026-06-30", EUR_DISPLAY);
       expect(pnl.local).toMatchObject({ unrealizedChangeCents: 2_000n, unattributedCents: 0n });
       expect(pnl.holdings[0].start).toMatchObject({ costCents: 10_000n, costSource: "inferred" });
-      // Another quantity is another cost: nothing to infer, the change stays in Other.
+      // Another quantity: the period still has its basis, the value of s⁻.
       const moved = syncedBook(
         [],
         [
@@ -643,11 +660,11 @@ describe("pnlOf: cases by hand (§4.2)", () => {
         ],
       );
       const other = pnlOf(service(moved, covered), "2026-01-01", "2026-06-30", EUR_DISPLAY);
-      expect(other.local).toMatchObject({ unrealizedChangeCents: null, unattributedCents: 2_000n });
+      expect(other.local).toMatchObject({ unrealizedChangeCents: 2_000n, unattributedCents: 0n });
       expectAdditive(other);
     });
 
-    it("one position without a cost leaves the others measured: only its change is Other", () => {
+    it("PERS-145: a position without a cost from the provider is measured from its value at s⁻", () => {
       const book = syncedBook(
         [],
         [
@@ -662,8 +679,8 @@ describe("pnlOf: cases by hand (§4.2)", () => {
       const pnl = pnlOf(service(book, covered), "2026-01-01", "2026-06-30", EUR_DISPLAY);
       expect(pnl.local).toMatchObject({
         pnlCents: 4_000n,
-        unrealizedChangeCents: 2_000n,
-        unattributedCents: 2_000n,
+        unrealizedChangeCents: 4_000n,
+        unattributedCents: 0n,
       });
       const rows = pnl.holdings.reduce(
         (sum, one) => sum + one.realizedCents + (one.unrealizedChangeCents ?? 0n),
@@ -790,6 +807,7 @@ describe("pnlOf: how far the number can be trusted (§4.6)", () => {
   ];
 
   it("an unknown base is never zero: the period starts after the first value known", () => {
+    // An opening inferred later than the period's start: the value before it is unknown.
     const opening = event(
       "2026-03-01",
       [{ kind: "opening_position", holdingId: "h1", quantity: qty("1"), amountCents: -eur(90) }],
@@ -798,12 +816,39 @@ describe("pnlOf: how far the number can be trusted (§4.6)", () => {
     const book = syncedBook(
       [opening, deposit("2026-05-01", 50)],
       [reading("2026-03-01", 100), reading("2026-06-30", 170)],
-      "2026-03-01",
+      "2026-02-01",
     );
     const pnl = pnlOf(service(book, { coverage: complete }), ...year(2026), EUR_DISPLAY);
     expect(pnl).toMatchObject({ partial: true, from: "2026-03-02", startCents: 10_000n, status: "verified" });
     expect(pnl.reasons).toContain("base_unknown");
     expect(pnl.local?.pnlCents).toBe(17_000n - 10_000n - 5_000n);
+  });
+
+  it("PERS-145 · 2: a synced service opens at its cut-off with its opening, a flow in, and is not partial", () => {
+    const opening = event(
+      "2026-03-01",
+      [
+        { kind: "opening_position", holdingId: "h1", quantity: qty("1"), amountCents: -eur(90) },
+        { leg: "base", kind: "opening_cash", amountCents: eur(10) },
+      ],
+      { origin: "provider" },
+    );
+    const book = syncedBook(
+      [opening, deposit("2026-05-01", 50)],
+      [
+        reading("2026-03-01", 100, { cashCents: eur(10), positions: [spot("h1", "1", 90)] }),
+        reading("2026-06-30", 170, { cashCents: eur(60), positions: [spot("h1", "1", 110)] }),
+      ],
+      "2026-03-01",
+    );
+    const pnl = pnlOf(service(book, { coverage: complete }), ...year(2026), EUR_DISPLAY);
+    expect(pnl).toMatchObject({ partial: false, from: "2026-01-01", startCents: 0n, status: "verified" });
+    expect(pnl.flows.map((flow) => flow.cents)).toEqual([eur(90), eur(10), eur(50)]);
+    expect(pnl.local).toMatchObject({
+      pnlCents: 2_000n,
+      unrealizedChangeCents: 2_000n,
+      unattributedCents: 0n,
+    });
   });
 
   it("a gap in the middle moves the start after it and keeps the valid part", () => {
@@ -846,37 +891,17 @@ describe("pnlOf: how far the number can be trusted (§4.6)", () => {
     });
   });
 
-  it("an old price is estimated; the rebuilt history is estimated; with quantities that do not add up it is no base", () => {
+  it("PERS-145 · 3: the reconstructed history is a datum: the period stands on it, verified", () => {
     const readings = [
-      reading("2025-12-31", 100, { status: "estimated" }),
-      reading("2026-02-28", 110, { status: "estimated" }),
+      reading("2025-12-31", 100, { status: "reconstructed" }),
+      reading("2026-02-28", 110, { status: "reconstructed" }),
       reading("2026-03-01", 120),
       reading("2026-06-30", 150),
     ];
     const book = syncedBook([], readings);
-    const estimated = pnlOf(service(book, { coverage: complete }), "2026-01-01", "2026-06-30", EUR_DISPLAY);
-    expect(estimated).toMatchObject({
-      status: "estimated",
-      reasons: ["estimated_history"],
-      startCents: 10_000n,
-    });
-    const mismatch = pnlOf(
-      service(book, { coverage: complete, quantityMismatch: true }),
-      "2026-01-01",
-      "2026-06-30",
-      EUR_DISPLAY,
-    );
-    expect(mismatch).toMatchObject({
-      status: "verified",
-      partial: true,
-      from: "2026-03-02",
-      startCents: 12_000n,
-    });
-    expect(mismatch.reasons).toEqual(["quantity_mismatch"]);
-    // After the first real reading the period stands on real values only.
-    expect(pnlOf(service(book, { coverage: complete }), "2026-04-01", "2026-06-30", EUR_DISPLAY).status).toBe(
-      "verified",
-    );
+    const pnl = pnlOf(service(book, { coverage: complete }), "2026-01-01", "2026-06-30", EUR_DISPLAY);
+    expect(pnl).toMatchObject({ status: "verified", reasons: [], partial: false, startCents: 10_000n });
+    expect(pnl.local?.pnlCents).toBe(5_000n);
   });
 
   it("no value on the last day is undetermined, not zero", () => {
@@ -1102,7 +1127,7 @@ describe("portfolioPnl (§4.8)", () => {
     );
     const mixed = portfolioPnl([one, two, late], "EUR");
     expect(mixed).toMatchObject({
-      status: "estimated",
+      status: "verified",
       available: true,
       rate: null,
       rateReason: "mixed_ranges",
@@ -1125,7 +1150,12 @@ describe("portfolioPnl (§4.8)", () => {
       EUR_DISPLAY,
     );
     const portfolio = portfolioPnl([one, none], "EUR");
-    expect(portfolio).toMatchObject({ status: "estimated", included: ["A"], excluded: [{ accountId: "Z" }] });
+    expect(portfolio).toMatchObject({
+      status: "verified",
+      available: true,
+      included: ["A"],
+      excluded: [{ accountId: "Z" }],
+    });
     expect(portfolioPnl([none], "EUR")).toMatchObject({ status: "undetermined", parts: null });
   });
 

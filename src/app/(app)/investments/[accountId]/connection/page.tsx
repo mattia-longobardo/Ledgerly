@@ -25,19 +25,17 @@ import { cn } from "@/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { instantText, loadService, providerOf, serviceContextOf } from "../service-data";
 
-type Status = "complete" | "partial" | "estimated" | "check" | "missing";
+type Status = "complete" | "partial" | "check" | "missing";
 
 const ICON: Record<Status, typeof CheckCircle2> = {
   complete: CheckCircle2,
   partial: CircleDashed,
-  estimated: CircleDashed,
   check: AlertTriangle,
   missing: CircleSlash,
 };
 const TONE: Record<Status, "pos" | "accent" | "neutral" | "warn"> = {
   complete: "pos",
   partial: "accent",
-  estimated: "neutral",
   check: "warn",
   missing: "warn",
 };
@@ -45,7 +43,6 @@ const TONE: Record<Status, "pos" | "accent" | "neutral" | "warn"> = {
 const ICON_TONE: Record<Status, string> = {
   complete: TONE_TEXT.pos,
   partial: TONE_TEXT.accent,
-  estimated: TONE_TEXT.muted,
   check: TONE_TEXT.warn,
   missing: TONE_TEXT.warn,
 };
@@ -317,9 +314,19 @@ function Received({
   instant: (at: Date) => string;
   tp: (key: "products.spot") => string;
 }) {
-  const sync = detail.sync!;
   const name = detail.summary.account.name;
   const latest = detail.readings[0] ?? null;
+  // Only the days the service reads (PERS-145): before its start — the cut-off of its 12 months —
+  // nothing is kept, so what a provider does not give there is no gap of the service.
+  // By day, as the engine reads them: a window that ends on the cut-off's own day is before it.
+  const sinceOn = detail.summary.investment.managedSince;
+  const since = new Date(`${sinceOn}T00:00:00Z`);
+  const sync = {
+    ...detail.sync!,
+    coverage: detail
+      .sync!.coverage.filter((row) => dayOf(row.toAt) > sinceOn)
+      .map((row) => (dayOf(row.fromAt) < sinceOn ? { ...row, fromAt: since } : row)),
+  };
   const flows = sync.coverage.filter(
     (row) => row.kind === "flows" && row.stream !== "quantities" && row.stream !== "balance_history",
   );
@@ -372,14 +379,14 @@ function Received({
               })
             : t("connection.received.activityOk", { date: long(completeFrom!) }),
     },
-    detail.estimatedReadings
+    detail.reconstructedReadings
       ? {
           key: "history",
           title: t("connection.received.history"),
-          status: "estimated" as const,
-          text: t("connection.received.historyEstimated", {
-            from: long(detail.estimatedReadings.from),
-            to: long(detail.estimatedReadings.to),
+          status: "complete" as const,
+          text: t("connection.received.historyReconstructed", {
+            from: long(detail.reconstructedReadings.from),
+            to: long(detail.reconstructedReadings.to),
             name,
           }),
         }
@@ -394,11 +401,11 @@ function Received({
     {
       key: "cost",
       title: t("connection.received.cost"),
-      status: quantities && quantities.status !== "complete" ? "check" : "missing",
+      status: quantities && quantities.status !== "complete" ? "check" : "complete",
       text:
         quantities && quantities.status !== "complete"
           ? t("connection.received.costMismatch")
-          : t("connection.received.costMissing", { name }),
+          : t("connection.received.costPeriod"),
     },
   ];
 
@@ -489,7 +496,7 @@ function ReadingRuns({
       run.count += 1;
     } else runs.push({ first: reading, last: reading, count: 1 });
   }
-  if (runs.length === 0 && !detail.estimatedReadings)
+  if (runs.length === 0 && !detail.reconstructedReadings)
     return <p className="px-4 pb-4 text-sm text-muted">{t("connection.history.empty")}</p>;
   return (
     <ul className="flex flex-col">
@@ -523,20 +530,20 @@ function ReadingRuns({
           <span className="font-medium tabular-nums">{own(run.first.totalCents)}</span>
         </li>
       ))}
-      {detail.estimatedReadings && (
+      {detail.reconstructedReadings && (
         <li
           data-testid="reading-run"
           className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm"
         >
           <span className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-muted">
-              {t("connection.history.estimated", {
-                count: detail.estimatedReadings.count,
-                from: long(detail.estimatedReadings.from),
-                to: long(detail.estimatedReadings.to),
+              {t("connection.history.reconstructed", {
+                count: detail.reconstructedReadings.count,
+                from: long(detail.reconstructedReadings.from),
+                to: long(detail.reconstructedReadings.to),
               })}
             </span>
-            <Badge tone="neutral">{t("readings.statuses.estimated")}</Badge>
+            <Badge tone="neutral">{t("readings.statuses.reconstructed")}</Badge>
           </span>
         </li>
       )}

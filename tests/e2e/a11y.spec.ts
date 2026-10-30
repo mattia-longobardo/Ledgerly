@@ -441,7 +441,7 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await follow(page, "/investments", /^eToro$/);
       await headerCommand(page, "More actions", "Correct the value");
-      await page.getByRole("dialog").getByLabel("Change").fill("120");
+      await page.getByRole("dialog").getByLabel("Amount").fill("120");
       await settledDialog(page);
     },
   },

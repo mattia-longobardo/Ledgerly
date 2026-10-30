@@ -4,8 +4,8 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { budgetsView } from "@/modules/budgets/queries";
-import { holdingsJson, portfolioJson } from "@/modules/investments/api";
-import { investmentsPortfolio, serviceHoldings } from "@/modules/investments/queries";
+import { holdingsJson, pnlJson, portfolioJson } from "@/modules/investments/api";
+import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@/modules/investments/queries";
 import { listTransactions, transactionsSummary } from "@/modules/transactions/queries";
 import { TRANSACTION_TYPES } from "@/modules/transactions/rules";
 import { instant, money } from "@/platform/api/json";
@@ -280,10 +280,28 @@ function registerInvestmentTools(server: McpServer, ctx: Ctx): void {
         "portfolio's totals in the display `currency`, as GET /api/v1/investments. Returns are ratios " +
         "(0.05 = 5 %). Gain and returns are null unless the service's history is complete " +
         "(`reliable`; `reliableFrom` says from when it is); `xirrStatus` says why XIRR is missing. " +
-        "The portfolio leaves out transfers between its own services and includes the exchange effect.",
+        "The portfolio leaves out transfers between its own services and includes the exchange effect. " +
+        "`pnl` is the profit and loss of the period (the year running by default), the number the " +
+        "screen shows: realized, unrealized (open positions only), income, fees, corrections and " +
+        "exchange effect add up to it, and the services add up to the portfolio with `transfers`.",
+      inputSchema: {
+        period: z
+          .string()
+          .regex(/^(\d{4}|all)$/)
+          .optional()
+          .describe("A year (YYYY) or `all`; default the year running."),
+        from: civilDate.optional().describe("First day, YYYY-MM-DD; with `to`, wins over `period`."),
+        to: civilDate.optional().describe("Last day, YYYY-MM-DD."),
+      },
       annotations: READ_ONLY,
     },
-    async () => json(portfolioJson(await investmentsPortfolio(ctx))),
+    async ({ period, from, to }) =>
+      json({
+        ...portfolioJson(await investmentsPortfolio(ctx)),
+        pnl: pnlJson(
+          await investmentsPnl(ctx, { period: period ?? null, from: from ?? null, to: to ?? null }),
+        ),
+      }),
   );
 
   server.registerTool(

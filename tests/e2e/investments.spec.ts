@@ -34,14 +34,19 @@ test("a manual account follows its operations, and Accounts shows the same value
     await expect(page.getByRole("heading", { name: "No services yet" })).toBeVisible();
     await page.getByRole("link", { name: "Add service" }).first().click();
     await expect(page).toHaveURL(/\/investments\/catalog$/);
-    // The providers still to connect are listed, with no way to connect them yet.
+    // C1: both providers that connect are named; C2: the rest is closed under "Coming soon", with
+    // its count, and Kraken is not listed.
+    await expect(page.getByText("eToro and Binance connect with a read-only key")).toBeVisible();
     await expect(page.getByTestId("catalog-card").filter({ hasText: "eToro" })).toContainText("Available");
     await expect(page.getByTestId("catalog-card").filter({ hasText: "Binance" })).toContainText("Available");
-    // Kraken stays listed without an adapter: Mattia has no account to test it on (D5 as amended).
-    await expect(page.getByTestId("catalog-card").filter({ hasText: "Kraken" })).toContainText("Coming soon");
-    await expect(page.getByTestId("catalog-card").filter({ hasText: "Interactive Brokers" })).toContainText(
-      "Coming soon",
-    );
+    await expect(page.getByTestId("catalog-card").filter({ hasText: "Kraken" })).toHaveCount(0);
+    const planned = page.getByTestId("catalog-planned");
+    await expect(planned).not.toHaveAttribute("open");
+    await expect(planned.getByText(/^Coming soon · \d+$/)).toBeVisible();
+    const ibkr = planned.getByTestId("catalog-card").filter({ hasText: "Interactive Brokers" });
+    await expect(ibkr).toBeHidden();
+    await planned.getByText(/^Coming soon · \d+$/).click();
+    await expect(ibkr).toContainText("Coming soon");
   });
 
   await test.step("a manual account per asset, in euro", async () => {
@@ -64,7 +69,10 @@ test("a manual account follows its operations, and Accounts shows the same value
     await addOperation(page, "Deposit");
     dialog = page.getByRole("dialog", { name: "Deposit" });
     await dialog.getByLabel("Amount").fill("2000");
+    // The link offers only the same amount within three days; a search finds any movement (D3).
     const link = dialog.getByLabel("Linked account expense");
+    await expect(link.locator("option")).toHaveCount(1);
+    await dialog.getByLabel("Search a bank movement").fill("Bonifico eToro");
     await link.selectOption({ label: await optionLabel(link, "Bonifico eToro") });
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
@@ -76,6 +84,9 @@ test("a manual account follows its operations, and Accounts shows the same value
   await test.step("100 VWCE at 60 € with a 2 € fee: 9.998 €", async () => {
     await addOperation(page, "Buy");
     const dialog = page.getByRole("dialog", { name: "Add asset" });
+    // D1: nothing chosen, the search on the account's currency; a search picks the first match.
+    await expect(dialog.getByLabel("Asset", { exact: true })).toHaveValue("");
+    await expect(dialog.getByLabel("Currency", { exact: true })).toHaveValue("EUR");
     await dialog.getByLabel("Search by name, ISIN or symbol").fill("VWCE");
     await dialog.getByLabel("Quantity").fill("100");
     await dialog.getByLabel("Unit price").fill("60");

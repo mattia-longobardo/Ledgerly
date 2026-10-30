@@ -141,6 +141,11 @@ export interface FlowsOptions {
   currency: string;
   cursor: FlowCursor | null;
   fx: FxLookup;
+  /**
+   * The first day the service keeps (PERS-145): its cut-off, once it has one. Inside it the data
+   * are complete; a source that marks an earlier stretch as partial ends it here, never later.
+   */
+  since?: Date;
 }
 
 export interface HistoryRead {

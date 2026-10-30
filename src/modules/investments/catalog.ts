@@ -1,7 +1,7 @@
 // src/modules/investments/catalog.ts — the providers of the section (docs/design/investments.md
 // §1.1, D12): static, in the code. The manual account, eToro (phase 3) and Binance (phase 4) are
-// available; the other exchanges — Kraken too: there is no account to test it on — and the other
-// brokers are listed as planned, with no "Connect".
+// available; the other exchanges and brokers are listed as planned, with no "Connect". Kraken is not
+// listed: Mattia has no account there and none is planned (C2 of the UX audit).
 import { z } from "zod";
 import type { InvestmentCategory } from "./rules";
 
@@ -130,7 +130,6 @@ export const INVESTMENT_PROVIDERS: readonly InvestmentProvider[] = [
     // The pairs the prices go through (§1.8): EUR on the exchange, USD through USDT/USD.
     currencies: ["EUR", "USD"],
   },
-  exchange("kraken", "Kraken", "https://www.kraken.com", "https://pro.kraken.com/app/settings/api"),
   exchange("coinbase", "Coinbase", "https://www.coinbase.com", "https://www.coinbase.com/settings/api"),
   exchange("bitvavo", "Bitvavo", "https://bitvavo.com", "https://account.bitvavo.com/user/api"),
   exchange(

@@ -16,6 +16,10 @@ export default defineConfig({
     screenshot: "only-on-failure",
     locale: "en-US",
     timezoneId: "Europe/Rome",
+    // HTTP/2 over TCP, not HTTP/3 (PERS-120): Chrome moves to QUIC once Cloudflare advertises it, and
+    // from this host a QUIC request is sometimes lost — it never reaches Traefik and is never
+    // retried, so a Server Action or a navigation hangs and a random step of a spec times out.
+    launchOptions: { args: ["--disable-quic"] },
   },
   projects: [
     {

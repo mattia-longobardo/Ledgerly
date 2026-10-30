@@ -56,6 +56,26 @@ describe("etoroSource", () => {
     expect(paths).toContain("/api/v1/money/accounts/cash/00000000-0000-4000-8000-000000000004/transactions");
   });
 
+  it("covers the deposits from the service's cut-off, not from the API's moving 12 months (PERS-145)", async () => {
+    const { source } = routed({
+      "/api/v1/trading/info/trade/history": ok(body("trade-history")),
+      "/api/v1/market-data/instruments": () => new Response("{}", { status: 200 }),
+      "/api/v1/balances": ok(body("balances-usd-include-zero")),
+      "/api/v1/money/accounts/cash/": ok(body("cash-transactions-all")),
+    });
+    const since = new Date("2025-10-20T00:00:00Z");
+    const flows = await source.fetchFlows(KEYS, NOW, {
+      currency: "USD",
+      cursor: null,
+      fx: () => null,
+      since,
+    });
+    const complete = flows.coverage.find(
+      (window) => window.stream === "deposits" && window.status === "complete",
+    );
+    expect(complete?.fromAt).toEqual(since);
+  });
+
   it("costs only the names when the instrument names answer 403 (PERS-87 SEC-06)", async () => {
     const { source } = routed({
       "/api/v1/trading/info/trade/history": ok(body("trade-history")),

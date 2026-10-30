@@ -318,42 +318,40 @@ export function cashEventsOf(transactions: readonly EtoroCashTransaction[]): Pro
 const startOf = (on: CivilDate) => new Date(`${on}T00:00:00Z`);
 
 /**
- * What the flows cover (A7, E4, E5): the trade history is complete from {@link FLOWS_FROM};
- * the deposits only from the first movement of eToro Money — before it, money that went straight
- * to the trading account is not in the API (`before_first_movement`).
+ * What the flows cover (A7, E4, E5): the trade history is complete from {@link FLOWS_FROM}; the
+ * deposits, from the start of the 12 months the service reads (`windowFrom`, PERS-145: inside them
+ * the data are complete, Mattia's rule) or from the first movement of eToro Money if earlier —
+ * before that, money that went straight to the trading account is not in the API
+ * (`before_first_movement`).
  */
 export function flowsCoverage(
   transactions: readonly EtoroCashTransaction[],
   hasCashAccount: boolean,
   now: Date,
+  windowFrom: Date = now,
 ): CoverageWindow[] {
   const from = startOf(FLOWS_FROM);
   const windows: CoverageWindow[] = [
     { stream: "trades", fromAt: from, toAt: now, status: "complete", reason: null },
   ];
-  const first = transactions
-    .map((transaction) => instant(transaction.postedAt))
-    .reduce<Date | null>((min, at) => (min === null || at < min ? at : min), null);
-  if (!hasCashAccount || first === null) {
+  const first =
+    (hasCashAccount
+      ? transactions
+          .map((transaction) => instant(transaction.postedAt))
+          .reduce<Date | null>((min, at) => (min === null || at < min ? at : min), null)
+      : null) ?? windowFrom;
+  const complete = first < windowFrom ? first : windowFrom;
+  if (complete > from) {
     windows.push({
       stream: "deposits",
       fromAt: from,
-      toAt: now,
+      toAt: complete,
       status: "partial",
       reason: "before_first_movement",
     });
-  } else {
-    if (first > from) {
-      windows.push({
-        stream: "deposits",
-        fromAt: from,
-        toAt: first,
-        status: "partial",
-        reason: "before_first_movement",
-      });
-    }
-    windows.push({ stream: "deposits", fromAt: first, toAt: now, status: "complete", reason: null });
   }
+  if (complete < now)
+    windows.push({ stream: "deposits", fromAt: complete, toAt: now, status: "complete", reason: null });
   return windows;
 }
 

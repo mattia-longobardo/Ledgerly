@@ -27,6 +27,8 @@ export function serviceContextOf(detail: ServiceDetail, ctx: Ctx): ServiceContex
   return {
     accountId: summary.account.id,
     name: summary.account.name,
+    category: summary.investment.category,
+    providerName: detail.sync ? (connectableProvider(detail.sync.provider)?.name ?? null) : null,
     currency: detail.currency,
     numberFormat: ctx.numberFormat,
     locale: ctx.locale,

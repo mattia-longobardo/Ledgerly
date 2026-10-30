@@ -3136,9 +3136,7 @@
       "grains": {
         "month": "Month",
         "day": "Day"
-      },
-      "estimatedShort": "estimate",
-      "estimatedNote": "The dashed stretch is an estimate: the provider keeps no history of the value, so each day is rebuilt from the movements and the exchange's daily closes."
+      }
     },
     "services": {
       "title": "Services",
@@ -3198,7 +3196,7 @@
     },
     "catalog": {
       "title": "Catalog",
-      "subtitle": "Pick the service to add. eToro connects with a read-only key; a manual account works for any of them.",
+      "subtitle": "Pick the service to add. eToro and Binance connect with a read-only key; a manual account works for any of them.",
       "sections": {
         "accounts": "Accounts",
         "broker": "Online brokers",
@@ -3213,7 +3211,8 @@
       "manualDescription": "Directa, Fineco, a deposit account, BTPs, funds: anything you record by hand.",
       "plannedDescription": "Not connectable yet: use a manual account meanwhile.",
       "linked": "Linked: {names}",
-      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades."
+      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades.",
+      "plannedSection": "Coming soon · {count}"
     },
     "manualForm": {
       "title": "Create manual account",
@@ -3226,8 +3225,7 @@
       "category": "Category",
       "currency": "Account currency",
       "currencyHint": "Every balance and operation of the account is in this currency.",
-      "mode": "Mode",
-      "modeHint": "Per asset: you record positions and cash. Total: you record only the account's value.",
+      "mode": "What you keep",
       "url": "Link",
       "urlHint": "Optional: the address of the service's site.",
       "existing": "Account",
@@ -3239,7 +3237,17 @@
         "fund": "a fund's account",
         "managed": "already a service"
       },
-      "submit": "Create"
+      "submit": "Create",
+      "modes": {
+        "assets": {
+          "label": "Positions: one row per asset, P&L per asset",
+          "example": "E.g. Directa with 100 VWCE and 20 BTP: you record each buy and sale, and Ledgerly values them."
+        },
+        "total": {
+          "label": "Value only: you update the total by hand",
+          "example": "E.g. a pension plan or a deposit account whose statement gives only the value: you type it when it changes."
+        }
+      }
     },
     "detail": {
       "since": "Managed since {date}",
@@ -3341,7 +3349,7 @@
         "partial": "Partial",
         "confirmed_zero": "Empty, confirmed",
         "pending_zero": "Empty?",
-        "estimated": "Estimated"
+        "reconstructed": "Reconstructed"
       },
       "pendingZero": "The provider reports the account as empty. Was it emptied? Until you confirm, the value holds."
     },
@@ -3388,7 +3396,7 @@
       "symbol": "Symbol",
       "currency": "Quote currency",
       "product": "Product",
-      "covered": "The provider already reads: {products}. A manual position there would need reconciling.",
+      "covered": "{provider} already reads {products}: they are disabled here. Add here only what {provider} does not see, for example an external wallet.",
       "priceMode": "How you record it",
       "byQuantity": "Quantity and price",
       "byTotal": "Total amount",
@@ -3398,7 +3406,12 @@
       "fee": "Fee",
       "fxRate": "Exchange rate",
       "fxHint": "{account} per 1 {asset}. Empty: the ECB rate of the day.",
-      "submit": "Add"
+      "submit": "Add",
+      "theProvider": "The provider",
+      "choose": "Choose an asset",
+      "chooseProduct": "Choose a product",
+      "currencyFilter": "Currency",
+      "allCurrencies": "All currencies"
     },
     "operationForm": {
       "titles": {
@@ -3414,15 +3427,15 @@
         "deposit": "Money that went into the account.",
         "withdrawal": "Money that came out of the account.",
         "account_valuation": "What the account is worth at the end of that day.",
-        "adjustment": "A dated change of the value with a reason, e.g. a transfer in transit. Give it an end whenever you can.",
+        "adjustment": "Use it when the value is wrong for some days and no movement explains it. Example: eToro did not read 120 USD of cash from 3 to 10 March: Amount 120, From 3 March, To 10 March.",
         "valuation": "The new price or value of the position.",
         "income": "A dividend, an interest or a reward paid in cash."
       },
       "value": "Value",
       "delta": "Change",
       "deltaHint": "Negative to lower the value.",
-      "validUntil": "Last day",
-      "validUntilHint": "Optional, but an adjustment without an end counts forever.",
+      "validUntil": "To (optional)",
+      "validUntilHint": "The last day it counts. Empty: no end, it counts on every day from the first. Leave it empty only if the difference stays.",
       "reason": "Reason",
       "linkOut": "Linked account expense",
       "linkIn": "Linked account income",
@@ -3438,7 +3451,10 @@
         "pnl": "The P&L changes by {amount} from {date}",
         "until": "and goes back after {date}",
         "capital": "The value changes by {amount} from {date}; the P&L does not: it is a flow."
-      }
+      },
+      "from": "From",
+      "linkSearch": "Search a bank movement",
+      "noCandidates": "No movement of the same amount within 3 days"
     },
     "holdingForm": {
       "valuation": "Value · {name}",
@@ -3638,7 +3654,7 @@
         "opening_12m": "older than 12 months: part of the opening",
         "negative_opening": "the history explains more than the balance",
         "quantity_mismatch": "the movements do not add up to the balance: a market may be missing",
-        "estimated": "estimated from the movements and the daily closes"
+        "reconstructed": "rebuilt from the complete activity of the 12 months and the daily closes"
       },
       "reliableFrom": "reliable from {date}",
       "notReliable": "history incomplete",
@@ -3647,7 +3663,7 @@
     },
     "transfers": {
       "title": "Transfers to confirm",
-      "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio.",
+      "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio. Linking changes no P&L: each service keeps both as flows, and the portfolio leaves them out.",
       "out": "Out on {date} → {name}, in on {other}",
       "in": "In on {date} ← {name}, out on {other}"
     },
@@ -3687,35 +3703,33 @@
         "noData": "No data in this period. The first is from {date}."
       },
       "status": {
-        "estimated": "Estimated",
+        "stale": "Old price",
         "partial": "Partial data",
         "undetermined": "Not determinable",
         "from": "from {date}"
       },
       "coverage": {
         "partial": "{name} from {date}",
-        "estimated": "{name} estimated",
+        "stale": "{name} with an old price",
         "excluded": "{count, plural, one {# service left out} other {# services left out}}"
       },
       "alerts": {
         "label": "{count, plural, one {# thing to check} other {# things to check}}",
         "one": "to check: {text}",
-        "many": "to check",
-        "estimated": "estimated history"
+        "many": "to check"
       },
       "kpis": {
         "realized": "Realized",
         "realizedNote": "sales and closes",
         "unrealized": "Unrealized",
-        "unrealizedNote": "open positions",
-        "unrealizedUnknown": "no cost yet: in Other",
+        "unrealizedNote": "{count, plural, one {# open position} other {# open positions}}",
+        "unrealizedUnknown": "positions of the day not known",
         "income": "Income",
         "incomeNote": "dividends, staking",
         "feesFx": "Fees and FX",
         "feesFxNote": "fees {fees} · FX {fx}",
         "corrections": "Corrections",
-        "unattributed": "Other (incomplete data)",
-        "valuation": "Other (valuation and rounding)",
+        "unattributed": "Not explained by the data",
         "transfers": "Transfers between services"
       },
       "chart": {
@@ -3734,7 +3748,6 @@
         },
         "line": "Running total",
         "legend": "The colours are the services of the list below.",
-        "estimated": "Dashed or lighter = estimated history.",
         "cumulative": "running total {amount}",
         "summary": "P&L {period}: {total}. Best {best}, worst {worst}. {services}.",
         "valueSummary": "Value at the end of the period {value}.",
@@ -3753,8 +3766,9 @@
         "unavailable": "not available",
         "highlight": "Highlight {name} in the chart",
         "notComputable": "Return not computable: too little capital in the period",
+        "onInvested": "Return on the money put in: it went in and out inside the period, so Dietz has no average capital to divide by",
         "xirr": "XIRR {rate}",
-        "largeFlows": "Estimate: the flows are large next to the capital",
+        "largeFlows": "The flows are large next to the capital: Dietz is further from a time-weighted return",
         "share": "{share} of {net} net",
         "shareNotComputable": "Share of the net not computable"
       },
@@ -3784,7 +3798,10 @@
         "openingCash": "Opening cash",
         "openingPosition": "Opening position",
         "valuation": "Valued",
-        "accountValuation": "Account value updated"
+        "accountValuation": "Account value updated",
+        "exchangeCost": "Exchange cost",
+        "balanceDifference": "Balance difference",
+        "cutoffOpening": "Opening at the 12-month start"
       },
       "details": {
         "position": "{qty} {asset} at {price}",
@@ -3841,13 +3858,12 @@
       "partial": "The P&L starts on {date}: before that day the data of {name} are not complete.",
       "partialLink": "What is missing",
       "undetermined": "No reliable data in this period: the P&L cannot be measured.",
-      "estimated": "Part of the period stands on an estimated history.",
       "kpis": {
         "realized": "Realized",
         "realizedNote": "sales and closes",
         "unrealized": "Unrealized change",
-        "unrealizedNote": "open positions",
-        "unrealizedUnknown": "no cost yet: in Other",
+        "unrealizedNote": "{count, plural, one {# open position} other {# open positions}}",
+        "unrealizedUnknown": "positions of the day not known",
         "income": "Income",
         "incomeNote": "dividends, staking",
         "incomeIncluded": "included",
@@ -3875,8 +3891,7 @@
         "all": "All activity",
         "empty": "No activity in this period."
       },
-      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available.",
-      "convertedNote": "includes {name}'s cost of converting {from} into {to}: it books those deposits and withdrawals in {from} and does not say how much it converted, so they are valued at the ECB rate."
+      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available."
     },
     "activityTab": {
       "deposits": "Deposits",
@@ -3931,18 +3946,17 @@
         "activityGaps": "Incomplete: {streams}.",
         "activityNone": "{name} gives no history of the activity.",
         "history": "Value history",
-        "historyEstimated": "Estimated from {from} to {to}: {name} keeps no past value, so Ledgerly rebuilds it from the activity and the daily closes. Dashed in the chart.",
+        "historyReconstructed": "Rebuilt from {from} to {to}: {name} keeps no past value, so Ledgerly rebuilds each day from the complete activity of the 12 months and the daily closes.",
         "historyRead": "Read every day from {date}.",
         "cost": "Cost basis",
-        "costMismatch": "The quantities do not add up with the activity: the unrealized P&L of the positions is in “Other (incomplete data)”.",
-        "costMissing": "{name} does not give the cost of the positions: their unrealized P&L is in “Other (incomplete data)”.",
+        "costMismatch": "The quantities do not add up with the activity: each difference is an entry in Activity.",
         "details": "Technical detail by stream ({count})",
-        "products": "Products read: {products}"
+        "products": "Products read: {products}",
+        "costPeriod": "Each period values the positions at its start, and those bought in it at what they cost: no cost from the provider is needed."
       },
       "status": {
         "complete": "Complete",
         "partial": "Partial data",
-        "estimated": "Estimated",
         "check": "To check",
         "missing": "Not available"
       },
@@ -3950,7 +3964,7 @@
         "title": "Sync history",
         "note": "The readings the service gave us",
         "same": "{count} equal readings, {from} – {to}",
-        "estimated": "{count} estimated readings, {from} – {to}",
+        "reconstructed": "{count} reconstructed readings, {from} – {to}",
         "empty": "No readings yet."
       },
       "corrections": {
@@ -4002,7 +4016,7 @@
       "share": "Share",
       "actions": "Actions",
       "periodReturn": "{rate} in the period",
-      "noCost": "no cost: in Other",
+      "noCost": "no cost",
       "inferredCost": "Cost from a later reading",
       "byValue": "by value",
       "manual": "Manual",
@@ -4010,7 +4024,7 @@
       "cashNote": "{currency} available",
       "total": "Total",
       "mobileLine": "{quantity} × {price} · average {average}",
-      "noCostNote": "{count, plural, one {# position has} other {# positions have}} no cost yet: {count, plural, one {its} other {their}} P&L is in Other (incomplete data).",
+      "noCostNote": "{count, plural, one {# position has} other {# positions have}} no cost from the provider: the period values {count, plural, one {it} other {them}} at its start.",
       "costLink": "Cost basis →",
       "empty": "No open positions.",
       "emptyWithClosed": "No open positions · {count, plural, one {# closed} other {# closed}}.",
@@ -4037,13 +4051,12 @@
         "open": "Open",
         "sold": "Sold in the period",
         "partlySold": "Open, partly sold",
-        "noCost": "No cost: its unrealized is in Other",
+        "noCost": "No cost: the period values it at its start",
         "income": "Income",
         "fees": "Fees",
         "corrections": "Corrections",
         "valueChange": "Change of value",
-        "unattributed": "Other (incomplete data)",
-        "valuation": "Other (valuation and rounding)",
+        "unattributed": "Not explained by the data",
         "total": "P&L of the period",
         "same": "the Overview's number",
         "bridge": "= {display} in the Overview, exchange effect {fx} included"
