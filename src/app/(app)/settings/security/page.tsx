@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { describeUserAgent } from "@/modules/users/rules";
 import { listOwnSessions } from "@/modules/users/service";
-import { hasPasswordAccount } from "@/platform/auth/accounts";
+import { hasPasswordAccount, hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@/platform/dates";
@@ -17,6 +17,7 @@ import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table
 import { NewApiClient } from "./new-api-client";
 import { type SessionRow, SessionsList } from "./sessions-list";
 import { TwoFactorCard } from "./two-factor-card";
+import { SignInMethod } from "./sign-in-method";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
@@ -25,12 +26,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const [current, sessions, clients, apps, hasPassword] = await Promise.all([
+  const [current, sessions, clients, apps, hasPassword, sso] = await Promise.all([
     (await getAuth()).api.getSession({ headers: await headers() }),
     listOwnSessions(ctx),
     listApiClients(ctx),
     listConnectedApps(ctx),
     hasPasswordAccount(ctx.userId),
+    hasSsoAccount(ctx.userId),
   ]);
   const t = await getTranslations("settings");
 
@@ -67,6 +69,9 @@ export default async function SecurityPage() {
 
   return (
     <SettingsGrid>
+      <SettingsSection title={t("signIn.title")} description={t("signIn.description")}>
+        <SignInMethod sso={sso} password={hasPassword} />
+      </SettingsSection>
       {/* Password accounts only: an Authentik user's second factor is configured in Authentik. */}
       {hasPassword && current && (
         <SettingsSection title={t("twoFactor.title")} description={t("twoFactor.description")} padded={false}>

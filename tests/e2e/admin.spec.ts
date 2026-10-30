@@ -102,7 +102,7 @@ test("Admin › Server shows the identity provider, outgoing mail and maintenanc
 });
 
 test("an admin can see every scheduled job and run one by hand", async ({ page }) => {
-  await page.goto("/settings/integrations");
+  await page.goto("/settings/server");
   await expect(page.getByRole("heading", { name: "Scheduled jobs" })).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: "housekeeping" });
   await expect(row).toBeVisible();

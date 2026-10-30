@@ -8,7 +8,7 @@ import { Field } from "@/ui/field";
 import { Input, Select, Textarea } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { type ActionResult, deleteLeaveAction, saveAllowanceAction, saveLeaveAction } from "../actions";
+import { type ActionResult, deleteLeaveAction, saveLeaveAction } from "../actions";
 import { LEAVE_DAY_KINDS, type LeaveDayKind } from "../rules";
 
 /** A day as the edit dialog needs it back: the values the person would retype. */
@@ -204,115 +204,6 @@ function noteHint(kind: LeaveDayKind, t: ReturnType<typeof useTranslations<"time
   return t("dialog.noteHint");
 }
 
-/* The year's allowance */
-
-export function AllowanceDialog({
-  open,
-  onOpenChange,
-  allowance,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  allowance: AllowanceSummary;
-}) {
-  const t = useTranslations("timeoff");
-  const router = useRouter();
-  const id = useId();
-  const [pending, start] = useTransition();
-  const { error, clear, report } = useErrors();
-
-  const [vacationDays, setVacationDays] = useState(allowance.vacationDays);
-  const [rolDays, setRolDays] = useState(allowance.rolDays);
-  const [totalDays, setTotalDays] = useState(allowance.totalDays);
-  const [note, setNote] = useState(allowance.note);
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    clear();
-    start(async () => {
-      const result = await saveAllowanceAction({
-        year: String(allowance.year),
-        vacationDays,
-        rolDays,
-        totalDays,
-        note,
-      });
-      if (!report(result)) return;
-      notify(t("toasts.allowanceSaved"));
-      onOpenChange(false);
-      router.refresh();
-    });
-  }
-
-  return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("allowance.title", { year: allowance.year })}
-      description={t("allowance.description")}
-      footer={
-        <>
-          <Button onClick={() => onOpenChange(false)} disabled={pending}>
-            {t("actions.cancel")}
-          </Button>
-          <Button variant="primary" onClick={submit} disabled={pending} type="submit">
-            {t("actions.save")}
-          </Button>
-        </>
-      }
-    >
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label={t("allowance.vacationDays")} htmlFor={`${id}-vac`}>
-          <Input
-            id={`${id}-vac`}
-            type="number"
-            min="0"
-            max="400"
-            step="0.5"
-            numeric
-            value={vacationDays}
-            onChange={(event) => setVacationDays(event.target.value)}
-          />
-        </Field>
-        {/* Days, like vacation (N9): one unit on the whole screen, whatever the contract states. */}
-        <Field label={t("allowance.rolDays")} htmlFor={`${id}-rol`} hint={t("allowance.rolHint")}>
-          <Input
-            id={`${id}-rol`}
-            type="number"
-            min="0"
-            max="400"
-            step="0.5"
-            numeric
-            value={rolDays}
-            onChange={(event) => setRolDays(event.target.value)}
-          />
-        </Field>
-        <Field label={t("allowance.totalDays")} htmlFor={`${id}-total`} hint={t("allowance.totalDaysHint")}>
-          <Input
-            id={`${id}-total`}
-            type="number"
-            min="0"
-            max="400"
-            step="0.5"
-            numeric
-            value={totalDays}
-            onChange={(event) => setTotalDays(event.target.value)}
-          />
-        </Field>
-        <Field label={t("dialog.note")} htmlFor={`${id}-note`}>
-          <Input
-            id={`${id}-note`}
-            maxLength={200}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </Field>
-        <ErrorLine error={error} />
-      </form>
-    </Modal>
-  );
-}
-
 /* The buttons the page places */
 
 /** "Add leave" — the topbar action and the empty state's. */
@@ -324,19 +215,6 @@ export function AddLeave({ today, label }: { today: string; label: string }) {
         {label}
       </Button>
       {open && <LeaveDialog open={open} onOpenChange={setOpen} day={null} today={today} />}
-    </>
-  );
-}
-
-/** The header's allowance button: "26 days · 32 h", which opens the year's allowance. */
-export function EditAllowance({ allowance, label }: { allowance: AllowanceSummary; label: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        {label}
-      </Button>
-      {open && <AllowanceDialog open={open} onOpenChange={setOpen} allowance={allowance} />}
     </>
   );
 }

@@ -199,7 +199,7 @@ export async function setCodeRoleAction(code: string, role: string, note: string
   const ctx = await requireSession();
   try {
     await setCodeRole(ctx, { code, role, note });
-    revalidatePath("/settings/data");
+    revalidatePath("/payroll/settings");
     return { ok: true };
   } catch (error) {
     return failed(error);
@@ -210,7 +210,7 @@ export async function resetCodeAction(code: string): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
     await resetCode(ctx, code);
-    revalidatePath("/settings/data");
+    revalidatePath("/payroll/settings");
     return { ok: true };
   } catch (error) {
     return failed(error);

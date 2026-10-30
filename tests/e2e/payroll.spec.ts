@@ -123,8 +123,8 @@ test("a payslip is uploaded, read, reviewed against its PDF, verified and applie
     );
   });
 
-  await test.step("the code map is in Settings › Data, and a code's meaning can change", async () => {
-    await page.goto("/settings/data");
+  await test.step("the code map is in Payroll › Settings, and a code's meaning can change", async () => {
+    await page.goto("/payroll/settings");
     const row = page.locator('li[data-code="9424"]');
     await expect(row).toBeVisible();
     await row.getByRole("combobox").selectOption({ label: "Separate payment" });

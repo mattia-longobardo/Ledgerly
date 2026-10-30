@@ -311,6 +311,30 @@ export async function deleteConnection(ctx: Pick<Ctx, "userId">, connectionId: s
   if (deleted.length === 0) throw new IntegrationError("not_found");
 }
 
+/**
+ * When a sync last changed the movements, across all users, as the jobs that read them are run
+ * for all users. A failed pass counts as a change: it can write rows before it fails, and its run
+ * does not carry their count. `updated_at` and not `finished_at`: a scheduled pass closes its run
+ * with the time of its tick, and this has to be the time the run really ended.
+ */
+export async function lastMovementChangeAt(): Promise<Date | null> {
+  const changed = sql`coalesce((${syncRuns.counts}->>'created')::int, 0)
+    + coalesce((${syncRuns.counts}->>'updated')::int, 0)
+    + coalesce((${syncRuns.counts}->>'removed')::int, 0) > 0`;
+  const [row] = await getDb()
+    .select({ at: syncRuns.updatedAt })
+    .from(syncRuns)
+    .where(
+      and(
+        eq(syncRuns.kind, "transactions"),
+        or(eq(syncRuns.state, "failed"), and(eq(syncRuns.state, "success"), changed)),
+      ),
+    )
+    .orderBy(desc(syncRuns.updatedAt))
+    .limit(1);
+  return row?.at ?? null;
+}
+
 /** Opens a sync attempt (spec §10.3 shows the history this builds). */
 export async function recordRun(
   ctx: Pick<Ctx, "userId">,

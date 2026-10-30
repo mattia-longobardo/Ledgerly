@@ -55,6 +55,28 @@ const LABELS = {
 describe("CommandPalette", () => {
   beforeEach(() => push.mockReset());
 
+  it("finds the search-only pages by name, and does not list them before a search", async () => {
+    const security: NavLink = {
+      id: "settings-security",
+      href: "/settings/security" as Route,
+      label: "Settings › Security",
+      icon: "settings",
+      group: "footer",
+      mobile: false,
+    };
+    render(
+      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+        <CommandPalette links={LINKS} searchLinks={[security]} />
+      </ShellProvider>,
+    );
+
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    const input = await screen.findByPlaceholderText("Jump to a page…");
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+    await userEvent.type(input, "secur");
+    expect(screen.getByRole("option", { name: /Settings › Security/ })).toBeInTheDocument();
+  });
+
   it("moves aria-activedescendant and aria-selected as ArrowDown moves the cursor", async () => {
     render(
       <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>

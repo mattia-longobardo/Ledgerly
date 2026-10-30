@@ -11,6 +11,7 @@ import { Button, IconButton } from "./button";
 import { cn } from "./cn";
 import { useDismiss } from "./dismissable-details";
 import { type Params, withParams } from "./url";
+import { useWeekStart, type WeekStart } from "./week-start";
 
 /** What the picker picks: whole days, or whole months (spec §8.3, F2.5). */
 export type RangeGrain = "day" | "month";
@@ -29,10 +30,10 @@ export interface DateRangeLabels {
   cancel: string;
 }
 
-/** The calendar cells of one month, Monday first, with the leading blanks of the design's grid. */
-export function calendarCells(month: MonthKey): (CivilDate | null)[] {
+/** The calendar cells of one month, from the person's first day of the week, with the leading blanks. */
+export function calendarCells(month: MonthKey, weekStart: WeekStart = 1): (CivilDate | null)[] {
   const [year, monthNumber] = month.split("-").map(Number);
-  const blanks = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() + 6) % 7;
+  const blanks = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() - weekStart + 7) % 7;
   const days = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
   return [
     ...Array.from({ length: blanks }, () => null),
@@ -53,13 +54,15 @@ export function yearCells(year: number): MonthKey[] {
  * formatter, and these are names rather than a number or a money format (spec §8.5), so they are
  * built here.
  */
-function weekdayInitials(locale: UiLocale): string[] {
+function weekdayInitials(locale: UiLocale, weekStart: WeekStart): string[] {
   const formatter = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
     weekday: "narrow",
     timeZone: "UTC",
   });
-  // 5 January 1970 was a Monday, which is the day the design's grid starts on.
-  return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(Date.UTC(1970, 0, 5 + index))));
+  // 4 January 1970 was a Sunday, and the 5th a Monday.
+  return Array.from({ length: 7 }, (_, index) =>
+    formatter.format(new Date(Date.UTC(1970, 0, 4 + weekStart + index))),
+  );
 }
 
 /** A cell of either grid: the value it stands for, what it shows, and what it is called. */
@@ -118,6 +121,7 @@ export function DateRangePicker({
    */
   shortcuts?: { label: string; href: string; current?: boolean }[];
 }) {
+  const weekStart = useWeekStart();
   const router = useRouter();
   const byMonth = grain === "month";
   /** A picked value at this grain: the day itself, or the first of its month. */
@@ -185,7 +189,7 @@ export function DateRangePicker({
         name: formatDate(month, "monthYear", locale),
       }));
     }
-    return calendarCells(panel).map((day) =>
+    return calendarCells(panel, weekStart).map((day) =>
       day === null ? null : { value: day, text: String(Number(day.slice(8))) },
     );
   }
@@ -286,7 +290,7 @@ export function DateRangePicker({
                 </div>
                 {!byMonth && (
                   <div className="grid grid-cols-7 gap-0.5 text-center text-micro text-faint">
-                    {weekdayInitials(locale).map((initial, index) => (
+                    {weekdayInitials(locale, weekStart).map((initial, index) => (
                       <span key={`${panel}-${index}`}>{initial}</span>
                     ))}
                   </div>

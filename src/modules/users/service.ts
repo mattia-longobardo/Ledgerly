@@ -5,7 +5,12 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Ctx } from "@/platform/context";
 import { DEFAULT_DISPLAY_CURRENCY, isDisplayCurrency } from "@/platform/fx/rules";
-import { DEFAULT_PREFERENCES, type Preferences, preferencesInputSchema } from "./rules";
+import {
+  DEFAULT_PREFERENCES,
+  type Preferences,
+  preferencesInputSchema,
+  timeOffPreferencesSchema,
+} from "./rules";
 import { userPreferences } from "./schema";
 
 type Row = typeof userPreferences.$inferSelect;
@@ -58,6 +63,33 @@ export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown
     .onConflictDoUpdate({ target: userPreferences.userId, set: values })
     .returning();
   return fromRow(row);
+}
+
+/**
+ * What the Profile form saves. Hours and patron saint are not its to write any more (PERS-158): they
+ * are read back from the row, so a form loaded before a change on Time off › Settings cannot put the
+ * old values back. `defaultRange` has no control left and nothing reads it: it just stays as it is.
+ */
+export async function updateProfilePreferences(
+  ctx: Pick<Ctx, "userId">,
+  input: unknown,
+): Promise<Preferences> {
+  const current = await getPreferences(ctx);
+  return updatePreferences(ctx, {
+    ...(input as object),
+    minutesPerDay: current.minutesPerDay,
+    patronSaint: current.patronSaint,
+    defaultRange: current.defaultRange,
+  });
+}
+
+/** What Time off › Settings saves: only the fields it names, the rest of the row stays. */
+export async function updateTimeOffPreferences(
+  ctx: Pick<Ctx, "userId">,
+  input: unknown,
+): Promise<Preferences> {
+  const patch = timeOffPreferencesSchema.parse(input);
+  return updatePreferences(ctx, { ...(await getPreferences(ctx)), ...patch });
 }
 
 /**

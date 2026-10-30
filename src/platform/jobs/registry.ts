@@ -20,18 +20,20 @@ import type { JobDetail } from "./schema";
  * When a job runs. `manual` is the odd one out: no tick ever asks for that tier, so such a job only
  * ever runs because an admin pressed "Run now" (spec §10.3). It is a tier and not a flag because
  * `job_runs.tier` has to record what asked for the run, and "nobody asked, a person did" is the
- * honest answer for those.
+ * honest answer for those. `afterSync` has no tick either: `runAfterSync` starts such a job when a
+ * sync has changed the movements (docs/scheduler.md).
  */
-export type Tier = "minute" | "hourly" | "daily" | "monthly" | "manual";
+export type Tier = "minute" | "hourly" | "daily" | "monthly" | "manual" | "afterSync";
 
 /** The tiers the cron sidecar may ask for. */
-export type ScheduledTier = Exclude<Tier, "manual">;
+export type ScheduledTier = Exclude<Tier, "manual" | "afterSync">;
+
+/** What `job_runs.tier` says: who asked for the run. `afterSync` names a schedule, not an asker. */
+export type RecordedTier = Exclude<Tier, "afterSync">;
 
 export interface JobDefinition {
   name: string;
   tier: Tier;
-  /** Further tiers that run the job too: `integrations-sync` is in `minute` and `hourly`. */
-  alsoIn?: readonly ScheduledTier[];
   /**
    * Asked by a tick before the job runs: false means there is nothing to do, and the tick passes
    * the job by without a lock or a `job_runs` row. A job ticked every minute uses it, or
@@ -43,26 +45,24 @@ export interface JobDefinition {
 
 /** Whether a tick of `tier` runs this job. */
 export function runsIn(job: JobDefinition, tier: Tier): boolean {
-  return job.tier === tier || (job.alsoIn?.includes(tier as ScheduledTier) ?? false);
+  return job.tier === tier;
 }
 
 /** The one list of scheduled jobs. Each phase appends its jobs here. */
 export const JOBS: readonly JobDefinition[] = [
-  // First of all (docs/scheduler.md): every connection due by its own schedule, Wallet, Trek and
-  // Paperless, every minute. In the hourly tier too, ahead of everything that reads its result.
+  // First of all (docs/scheduler.md): every connection due by its own schedule, every minute. What
+  // reads its result runs after it, through `runAfterSync`.
   integrationsSyncJob,
   housekeepingJob,
   accountAlertsJob,
   accountsSnapshotJob,
-  // What `wallet-sync` did besides the pass (own transfers, recurrences), still every hour.
+  // After a sync that changed the movements: own transfers and recurrences.
   recurrencesRefreshJob,
-  // After the sync: `runTier` runs a tier in this order, so the check sees the new movements.
+  // After such a sync too, and daily: a period that ends with no payment changes state by the date.
   subscriptionsCheckJob,
-  // Hourly, after `wallet-sync` too: a budget emails within the hour of the movement that passed
-  // one of its thresholds (spec §7.3).
+  // After such a sync: a budget emails right after the movement that passed a threshold (spec §7.3).
   budgetAlertsJob,
-  // Hourly too, each rule at its own hour (spec §7.6): after `wallet-sync`, so the day it accrues
-  // is worked out on the balances that sync has just brought in.
+  // Hourly, each rule at its own hour (spec §7.6): by the date, and it syncs its own balance first.
   interestsAccrualJob,
   // Daily: a second look, lookup only, for the settlements whose posting was left unsure.
   interestsRematchJob,

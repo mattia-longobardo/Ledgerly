@@ -99,6 +99,13 @@ describe("calendarCells", () => {
     expect(calendarCells("2026-06-01")[0]).toBe("2026-06-01");
   });
 
+  it("starts from Sunday when the person's week does", () => {
+    // 1 June 2026 is a Monday: one blank before it, and none for a month starting on a Sunday.
+    expect(calendarCells("2026-06-01", 0)[0]).toBeNull();
+    expect(calendarCells("2026-06-01", 0)[1]).toBe("2026-06-01");
+    expect(calendarCells("2026-11-01", 0)[0]).toBe("2026-11-01");
+  });
+
   it("counts the days of February in a leap year", () => {
     expect(calendarCells("2028-02-01").filter((day) => day !== null).length).toBe(29);
   });

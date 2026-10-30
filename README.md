@@ -19,7 +19,7 @@ npm install
 cp .env.example .env.homelab   # then replace every value (README, Operations)
 ```
 
-Users change their own password from **Settings → Profile**, under **Sign-in** (accounts with no
+Users change their own password from **Settings → Security**, under **Sign-in** (accounts with no
 password — SSO-only — do not see that form).
 
 ## Accounts and Overview (F1)
@@ -166,7 +166,7 @@ fingerprint makes a second upload of the same document a duplicate rather than a
   (employer, employee, year, period, type) is **superseded**, never summed — a reprint replaces the
   original — and what the payslip accrued for the pension fund and for leave is published to F6 and
   F7 from there.
-- **Unknown codes** are yours to teach: Settings → Data holds the code map, so a line the profile
+- **Unknown codes** are yours to teach: Payroll → Settings holds the code map, so a line the profile
   does not know can be given a role once and is known from then on.
 - `payslips-sweep` (hourly) picks up a reading that was interrupted; `documents-retention` (daily
   at 12:00) deletes originals past their retention while keeping the numbers read out of them.
@@ -431,13 +431,15 @@ The app image applies pending migrations on boot, then serves the standalone Nex
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
 start if any check fails, so a misconfigured deployment fails loudly instead of on the first
 request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
-`http://ledgerly:3000/api/jobs/tick?tier=<quarter|hourly|daily|monthly>` with `CRON_SECRET` as the
+`http://ledgerly:3000/api/jobs/tick?tier=<minute|hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
 and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
-tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `integrations-sync` alone at :22,
-:37 and :52, then first at :07 before `recurrences-refresh`, `subscriptions-check` and
-`funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
-`interests-accrual` daily, `accounts-snapshot` and `pockets-accrual` monthly) for that tier, in that order; touching the heartbeat file is a side
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `integrations-sync` every minute,
+`interests-accrual`, `payslips-sweep` and `cometa-sweep` at :30, `subscriptions-check`,
+`housekeeping` and `accounts-alerts` daily, `accounts-snapshot` and `pockets-accrual` monthly) for
+that tier, in that order, and `runAfterSync` runs `recurrences-refresh`, `subscriptions-check`,
+`budgets-alerts` and `funds-deposits` after a sync that changed the movements
+(`docs/scheduler.md`); touching the heartbeat file is a side
 effect of every tick, not a job of its own.
 
 ## Operations

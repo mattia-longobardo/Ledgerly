@@ -12,7 +12,7 @@ const YEAR = new Date().getFullYear();
 
 test("a calendar is picked by country and place, and its days arrive from the source", async ({ page }) => {
   await test.step("with no calendar, the screen says what is used instead", async () => {
-    await page.goto("/settings/profile");
+    await page.goto("/timeoff/settings");
     await expect(page.getByRole("heading", { name: "Public holidays" })).toBeVisible();
     await expect(page.getByText("No calendar yet")).toBeVisible();
   });
@@ -56,7 +56,7 @@ test("a calendar is picked by country and place, and its days arrive from the so
   });
 
   await test.step("removing it puts the days back the way they were", async () => {
-    await page.goto("/settings/profile");
+    await page.goto("/timeoff/settings");
     page.once("dialog", (confirm) => confirm.accept());
     await page
       .getByRole("listitem")
@@ -65,4 +65,29 @@ test("a calendar is picked by country and place, and its days arrive from the so
       .click();
     await expect(page.getByText("No calendar yet")).toBeVisible();
   });
+});
+
+test("the patron saint and the working day are saved on their own, on Time off › Settings", async ({
+  page,
+}) => {
+  await page.goto("/timeoff/settings");
+  const patron = page.getByLabel("Patron saint holiday");
+  await patron.selectOption({ label: "December" });
+  await page.getByLabel("Day", { exact: true }).selectOption("7");
+  await page.locator("form", { has: patron }).getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Patron saint saved")).toBeVisible();
+
+  const hours = page.getByLabel("Hours in a working day");
+  await hours.fill("7.5");
+  await page.locator("form", { has: hours }).getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Working hours saved")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel("Hours in a working day")).toHaveValue("7.5");
+  await expect(page.getByLabel("Day", { exact: true })).toHaveValue("7");
+
+  // Saved separately from the Profile form, which no longer has either field.
+  await page.goto("/settings/profile");
+  await expect(page.getByLabel("Patron saint holiday")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Time off › Settings" })).toBeVisible();
 });

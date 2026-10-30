@@ -37,14 +37,15 @@ function alertMail(locale: UiLocale, over: boolean, values: Record<string, strin
  * has reached one of the thresholds its owner chose on its page — 85 % and over the limit until
  * they choose otherwise — emails once for that threshold and month.
  *
- * Hourly, after `wallet-sync`, so an alert follows the movement that caused it within the hour.
+ * After a sync that changed the movements (`runAfterSync`), so an alert follows the movement that
+ * caused it at once.
  * One email per pass and budget: when a single movement walks past several thresholds, only the
  * highest is news. A threshold the budget has fallen back under (a refund, a limit raised) is
  * forgotten, so reaching it again later in the month emails again.
  */
 export const budgetAlertsJob: JobDefinition = {
   name: "budgets-alerts",
-  tier: "hourly",
+  tier: "afterSync",
   async run(): Promise<JobDetail> {
     const now = new Date();
     let sent = 0;

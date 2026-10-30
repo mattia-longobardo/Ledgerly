@@ -15,8 +15,8 @@ export function Modal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description?: string;
-  width?: 420 | 440 | 460 | 520;
+  description?: ReactNode;
+  width?: 420 | 440 | 460 | 520 | 680;
   footer?: ReactNode;
   children: ReactNode;
 }) {

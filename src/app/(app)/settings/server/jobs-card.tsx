@@ -8,7 +8,7 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
-import { runJobAction } from "../server/actions";
+import { runJobAction } from "./actions";
 
 export interface JobRow {
   name: string;
@@ -22,11 +22,9 @@ export interface JobRow {
 const TONE = { running: "accent", success: "pos", failed: "neg", skipped: "neutral" } as const;
 
 /**
- * Settings › Integrations › Scheduled jobs (spec §7.10, §10.3): every registered job, when it last
- * ran, and "Run now" for an admin.
- *
- * It lives here rather than in Admin › Server because §7.10 puts it here, beside the sync log it
- * belongs with — the plan proposed the other page, the spec decides.
+ * Admin › Server › Scheduled jobs (spec §10.3): every registered job, when it last ran, and "Run
+ * now". Spec §7.10 put it on Integrations; the owner moved it here in PERS-158, because a job belongs
+ * to the instance and not to one person's connections.
  */
 export function JobsCard({ jobs }: { jobs: JobRow[] }) {
   const t = useTranslations("settings.jobs");

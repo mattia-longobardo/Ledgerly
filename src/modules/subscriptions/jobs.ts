@@ -5,13 +5,14 @@ import type { JobDetail } from "@/platform/jobs/schema";
 import { checkSubscriptions } from "./service";
 
 /**
- * Every hour, right after `wallet-sync` in the same tier (spec §10.2: "Wallet transactions, then
+ * After a sync that changed the movements (`runAfterSync`; spec §10.2: "Wallet transactions, then
  * recurrences and the subscription check"): each user's payment check against the movements the
- * pass just stored. No network: it only reads what is already here.
+ * pass just stored. Daily too, because the date alone moves a charge: a period that ends unpaid
+ * becomes `not_found` and a new period comes into view. No network: it only reads what is here.
  */
 export const subscriptionsCheckJob: JobDefinition = {
   name: "subscriptions-check",
-  tier: "hourly",
+  tier: "daily",
   async run(): Promise<JobDetail> {
     let checked = 0;
     let written = 0;

@@ -14,6 +14,7 @@ import { Card } from "@/ui/card";
 import { KpiTile } from "@/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
+import { TabLinks } from "@/ui/tab-links";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("payroll"))("title") };
@@ -59,6 +60,14 @@ export default async function PayrollPage() {
           </span>
         )}
       </div>
+
+      <TabLinks
+        label={t("tabs.label")}
+        tabs={[
+          { href: "/payroll", label: t("tabs.register"), active: true },
+          { href: "/payroll/settings" as Route, label: t("tabs.settings"), active: false },
+        ]}
+      />
 
       {empty ? (
         <EmptyState

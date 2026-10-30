@@ -24,6 +24,10 @@ import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { instantText, loadService, providerOf, serviceContextOf } from "../service-data";
+import { formatInstant } from "@/app/(app)/settings/integrations/format-instant";
+import { recommendedSchedule } from "@/app/(app)/settings/integrations/recommended-schedule";
+import { ScheduleControl } from "@/app/(app)/settings/integrations/schedule-control";
+import { listConnections } from "@/platform/integrations/service";
 
 type Status = "complete" | "partial" | "check" | "missing";
 
@@ -59,9 +63,13 @@ export default async function InvestmentServiceConnection({
   const ctx = await requireSession();
   const { accountId } = await params;
   const t = await getTranslations("investments");
+  const tIntegrations = await getTranslations("settings.integrations");
   const detail = await loadService(accountId);
   if (!detail) notFound();
   const { summary, sync } = detail;
+  const connection = sync?.connected
+    ? ((await listConnections(ctx)).find((one) => one.provider === sync.provider) ?? null)
+    : null;
   const name = summary.account.name;
   const context = serviceContextOf(detail, ctx);
   const provider = providerOf(detail);
@@ -197,9 +205,7 @@ export default async function InvestmentServiceConnection({
                       </>
                     )}
                     <dt className="text-muted">{t("sync.lastOk")}</dt>
-                    <dd>{sync.lastOkAt ? instant(sync.lastOkAt) : NULL_DISPLAY}</dd>
-                    <dt className="text-muted">{t("sync.next")}</dt>
-                    <dd>{sync.nextSyncAt ? instant(sync.nextSyncAt) : t("sync.manual")}</dd>
+                    <dd>{sync.lastOkAt ? formatInstant(sync.lastOkAt, ctx) : NULL_DISPLAY}</dd>
                     <dt className="text-muted">{t("sync.keySet")}</dt>
                     <dd>{sync.keySetAt ? long(dayOf(sync.keySetAt)) : NULL_DISPLAY}</dd>
                   </dl>
@@ -207,7 +213,20 @@ export default async function InvestmentServiceConnection({
                     <p className="text-sm text-warn">{t("sync.lastError", { error: sync.lastError })}</p>
                   )}
                   {sync.rotateDue && <p className="text-sm text-warn">{t("sync.rotate")}</p>}
-                  <p className="text-sm text-muted">{t("sync.scheduleNote")}</p>
+                  {connection && (
+                    <div className="text-sm">
+                      <div className="text-muted">{tIntegrations("fields.schedule")}</div>
+                      <ScheduleControl
+                        provider={connection.provider}
+                        name={name}
+                        schedule={connection.schedule}
+                        recommended={recommendedSchedule(connection.provider)}
+                        next={connection.nextSyncAt ? formatInstant(connection.nextSyncAt, ctx) : null}
+                        timeZone={ctx.timeZone}
+                      />
+                      <p className="mt-1.5 text-muted">{t("sync.readingsNote")}</p>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     <SyncButtons accountId={accountId} />
                     {provider && <ReplaceKeyButton accountId={accountId} provider={provider} />}

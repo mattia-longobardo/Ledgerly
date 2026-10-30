@@ -4,6 +4,7 @@ import { forEachUser } from "@/modules/users/jobs";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
+import { runAfterSync } from "@/platform/jobs/after-sync";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
 import { interestRules } from "./schema";
@@ -47,6 +48,20 @@ export interface AccrualPass {
   reasons: StaleReason[];
 }
 
+/** The active rules of one user whose hour is now in their own zone. */
+async function dueRules(ctx: Pick<Ctx, "userId" | "timeZone">, now: Date) {
+  const active = await getDb()
+    .select({
+      id: interestRules.id,
+      accountId: interestRules.accountId,
+      runHour: interestRules.runHour,
+    })
+    .from(interestRules)
+    .where(and(userScoped(ctx).owns(interestRules), eq(interestRules.state, "active")))
+    .orderBy(asc(interestRules.id));
+  return active.filter((rule) => runsAt(rule.runHour, now, ctx.timeZone));
+}
+
 /**
  * One user's due rules, accrued on a balance that has just been made fresh (spec §7.6).
  *
@@ -60,16 +75,7 @@ export async function accrueDueRules(
   options: FreshnessOptions = {},
 ): Promise<AccrualPass> {
   const pass: AccrualPass = { rules: 0, posted: 0, stale: 0, reasons: [] };
-  const active = await getDb()
-    .select({
-      id: interestRules.id,
-      accountId: interestRules.accountId,
-      runHour: interestRules.runHour,
-    })
-    .from(interestRules)
-    .where(and(userScoped(ctx).owns(interestRules), eq(interestRules.state, "active")))
-    .orderBy(asc(interestRules.id));
-  const due = active.filter((rule) => runsAt(rule.runHour, now, ctx.timeZone));
+  const due = await dueRules(ctx, now);
   if (due.length === 0) return pass;
 
   // One Wallet pass per connection, however many rules of this user are due on it.
@@ -98,6 +104,15 @@ export async function accrueDueRules(
 export const interestsAccrualJob: JobDefinition = {
   name: "interests-accrual",
   tier: "hourly",
+  // An hour with no rule due leaves no row: 23 hours out of 24 for a rule at its one hour.
+  async hasWork() {
+    const now = new Date();
+    let any = false;
+    await forEachUser("interests-accrual", async (_person, ctx) => {
+      if (!any) any = (await dueRules(ctx, now)).length > 0;
+    });
+    return any;
+  },
   async run(): Promise<JobDetail> {
     const now = new Date();
     let rules = 0;
@@ -111,6 +126,8 @@ export const interestsAccrualJob: JobDefinition = {
       stale += pass.stale;
       for (const reason of pass.reasons) reasons.add(reason);
     });
+    // The Wallet pass before the accrual is a sync too: what it brought in gets the same checks.
+    await runAfterSync("hourly");
     return {
       ...counts,
       rules,

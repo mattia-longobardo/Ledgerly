@@ -3,11 +3,9 @@
  * each connection whose own `next_sync_at` has come, then moves that time on by the person's
  * schedule.
  *
- * It runs in two tiers. `minute` (every minute) starts a pass within a minute of the time the
- * person chose, and asks {@link anyConnectionDue} first, so an idle minute leaves no trace;
- * `hourly` (:07) runs it **first**, so the jobs that read what a sync brought in —
- * `recurrences-refresh`, `subscriptions-check`, `budget-alerts`, `interests-accrual` — never start
- * ahead of a pass that is due.
+ * The `minute` tier starts a pass within a minute of the time the person chose, and asks
+ * {@link anyConnectionDue} first, so an idle minute leaves no trace. After the passes,
+ * `runAfterSync` starts the jobs that read the movements, if a sync changed them.
  *
  * A pass that fails does not bring the next one forward: the provider's own `sync_runs` row and
  * the connection's health say what happened, and the schedule moves on as after a good pass. A
@@ -17,6 +15,7 @@
 import "server-only";
 import { contextFor, personById } from "@/modules/users/jobs";
 import { redactForLog } from "@/platform/auth/logger";
+import { runAfterSync } from "@/platform/jobs/after-sync";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@/platform/jobs/schema";
 import { type PassOutcome, passFor } from "./registry";
@@ -48,7 +47,12 @@ export async function dispatchDueConnections(now: Date): Promise<JobDetail> {
     }
   }
 
+  // Once for the whole dispatch, so two connections due together start the checks once. It never
+  // throws: a check that fails is recorded in `job_runs` and leaves this sync a success.
+  const checks = await runAfterSync("minute");
+
   return {
+    checks: checks.length,
     due: Object.values(counts).reduce((sum, value) => sum + value, 0) + errors,
     passes: counts.answered,
     failures: counts.failed + errors,
@@ -61,7 +65,6 @@ export async function dispatchDueConnections(now: Date): Promise<JobDetail> {
 export const integrationsSyncJob: JobDefinition = {
   name: "integrations-sync",
   tier: "minute",
-  alsoIn: ["hourly"],
   hasWork: () => anyConnectionDue(),
   run: () => dispatchDueConnections(new Date()),
 };

@@ -26,8 +26,14 @@ import {
   setPersonBlocked,
   setPersonRole,
 } from "./admin";
-import type { Preferences } from "./rules";
-import { findSessionToken, getPreferences, updatePreferences } from "./service";
+import type { Preferences, TimeOffPreferences } from "./rules";
+import {
+  findSessionToken,
+  getPreferences,
+  updatePreferences,
+  updateProfilePreferences,
+  updateTimeOffPreferences,
+} from "./service";
 
 const YEAR = 60 * 60 * 24 * 365;
 
@@ -50,7 +56,7 @@ export async function saveTheme(theme: ThemePreference): Promise<void> {
 export async function savePreferencesAction(input: Preferences): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    const saved = await updatePreferences(ctx, input);
+    const saved = await updateProfilePreferences(ctx, input);
     // The times of an integration's schedule are local times (D7): they follow the person's zone.
     if (saved.timeZone !== ctx.timeZone)
       await rescheduleConnections({ userId: ctx.userId, timeZone: saved.timeZone });
@@ -58,6 +64,19 @@ export async function savePreferencesAction(input: Preferences): Promise<ActionR
     jar.set(LOCALE_COOKIE, saved.locale, { path: "/", maxAge: YEAR, sameSite: "lax" });
     jar.set(THEME_COOKIE, saved.theme, { path: "/", maxAge: YEAR, sameSite: "lax" });
     revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, error: "invalid" };
+    throw error;
+  }
+}
+
+/** Time off › Settings: the working day and the patron saint, each form on its own. */
+export async function saveTimeOffPreferencesAction(input: TimeOffPreferences): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    await updateTimeOffPreferences(ctx, input);
+    revalidatePath("/timeoff", "layout");
     return { ok: true };
   } catch (error) {
     if (error instanceof z.ZodError) return { ok: false, error: "invalid" };

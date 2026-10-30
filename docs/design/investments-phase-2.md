@@ -4,7 +4,7 @@ PERS-83, fase 2 del piano di `docs/design/investments.md` (§7), in un solo depl
 completo della §2 (`V = P − C + M + R`, R1–R6, conversioni §2.5, stato a data, revisioni) scrive il
 valore giornaliero di ogni servizio come `balance_entry` con fonte `portfolio`: patrimonio netto,
 Overview, snapshot, MCP e `/api/v1` lo leggono senza modifiche. Le due piattaforme legacy diventano
-conti; le tabelle legacy restano in sola lettura fino al drop (≥ 30 giorni dopo il deploy).
+conti; le tabelle legacy restano in sola lettura fino al drop (`0043`, PERS-98).
 
 ## Cosa cambia
 
@@ -35,8 +35,8 @@ conti; le tabelle legacy restano in sola lettura fino al drop (≥ 30 giorni dop
      Investments con il passaggio di autorità al giorno del deploy: il saldo di quel giorno apre il
      periodo, le entry `manual`/`import`/`provider` da quel giorno sono archiviate e rimosse. In
      produzione nessun conto è in questo caso (Fideuram e Cometa restano in `funds`);
-   - i punti `portfolio` calcolati in SQL con la stessa regola del motore (test `migration.itest.ts`:
-     una ricostruzione non cambia nessun punto). Oggi Binance ed eToro valgono 0 dal 23/09/2026:
+   - i punti `portfolio` calcolati in SQL con la stessa regola del motore (verificato dal test della migrazione,
+     rimosso con il drop: una ricostruzione non cambia nessun punto). Oggi Binance ed eToro valgono 0 dal 23/09/2026:
      il patrimonio netto non cambia.
 3. **Sola lettura**: trigger `BEFORE INSERT OR UPDATE OR DELETE … FOR EACH ROW` sulle tre tabelle
    legacy (`investments_legacy_read_only`, errore `read_only_sql_transaction`). Un `TRUNCATE` e una
@@ -51,7 +51,8 @@ conti; le tabelle legacy restano in sola lettura fino al drop (≥ 30 giorni dop
 - **Confine di periodo dentro un giorno**: colonna `starts_at` in `investment_account_periods`. Gli
   eventi dello stesso giorno ordinati prima della conversione appartengono al periodo precedente,
   così l'invariante V(T) prima = V(T) dopo regge anche con operazioni nel giorno T.
-- **`legacy_platform_id`** in `investment_accounts`: lega il conto alla piattaforma per il rollback.
+- **`legacy_platform_id`** in `investment_accounts`: legava il conto alla piattaforma per il rollback
+  (colonna tolta dalla `0043`).
 - **Passaggio di autorità**: T = giorno della scelta (o del deploy); il saldo di T apre il periodo
   (`account_valuation` in modo `total`, `opening_cash` in modo `assets`) ed è il valore iniziale nei
   flussi del rendimento. Accounts controlla `investment_accounts` (`investments/managed.ts`) e
@@ -78,24 +79,14 @@ conti; le tabelle legacy restano in sola lettura fino al drop (≥ 30 giorni dop
 
 ## Rollback
 
-1. `docker tag ledgerly:pre-investments-2 ledgerly:latest` e
-   `docker tag ledgerly-cron:pre-investments-2 ledgerly-cron:latest`, poi `docker compose up -d --no-build`.
-2. SQL inverso, in una sola transazione:
-   `docker exec -i postgres psql -U ledgerly ledgerly -v ON_ERROR_STOP=1 < docs/design/investments-phase-2-rollback.sql`.
-   Toglie i trigger; rifà movimenti e valutazioni legacy dagli eventi correnti (anche quelli scritti
-   dopo il deploy; un servizio nuovo con depositi, prelievi o valutazioni diventa una piattaforma);
-   rimette in `balance_entries` le entry archiviate; cancella i punti `portfolio`; archivia i conti
-   creati per le piattaforme legacy; toglie la riga di 0037 dal journal. Le tabelle nuove restano e
-   conservano asset, letture e rettifiche, che il modello vecchio non rappresenta. Validato su una
-   copia del DB di produzione.
-3. Prima di un nuovo deploy della fase 2 dopo un rollback: eliminare le tabelle nuove (`DROP TABLE
-   investment_… CASCADE`, dopo un dump) oppure ripristinare il dump, altrimenti la `0037` fallisce.
-4. Ultima risorsa: `pg_restore --clean --if-exists` da `backups/ledgerly/pre-investments-2.dump`.
+Non più disponibile: il drop delle tabelle legacy (PERS-98) ha tolto lo script SQL inverso. Ultima
+risorsa: `pg_restore --clean --if-exists` da `backups/ledgerly/pre-investments-2.dump`. Per le tabelle
+legacy vedi `docs/design/investments-drop.md`.
 
 ## Dopo il deploy
 
 Deploy eseguito il **28/10/2026** (0037 applicata; Binance ed eToro migrati come conti `crypto` e
 `investment` in modo `total`, valore 0 € dal 23/09/2026; nessun conto esistente passato di mano).
 
-Il drop delle tabelle legacy (`0039_drop_legacy_investments`) è un'issue separata, da fare non prima
-del **27/11/2026** (30 giorni dopo il deploy), dopo un dump.
+Il drop delle tabelle legacy è la migrazione `0043_drop_legacy_investments` (PERS-98,
+`docs/design/investments-drop.md`).

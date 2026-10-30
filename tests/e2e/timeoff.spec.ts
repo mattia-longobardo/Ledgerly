@@ -187,14 +187,17 @@ test("time off counts the year, says where each number comes from, and refuses a
   });
 
   await test.step("the allowance takes the contract's total, and never asks what last year left over", async () => {
-    await page.getByRole("button", { name: "Allowance" }).click();
-    const dialog = page.getByRole("dialog", { name: `Allowance for ${YEAR}` });
+    const tabs = page.getByRole("navigation", { name: "Time off" });
+    await tabs.getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/timeoff\/settings/);
+    const form = page.locator("form", { has: page.getByLabel("Days granted in total") });
     // The carry-over is the payslip's A.P. since N9: there is no longer a field to type it into,
     // and so no second answer to disagree with the employer's own.
-    await expect(dialog.getByLabel("Carried over from last year")).toHaveCount(0);
-    await dialog.getByLabel("Days granted in total").fill("30");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
+    await expect(form.getByLabel("Carried over from last year")).toHaveCount(0);
+    await form.getByLabel("Days granted in total").fill("30");
+    await form.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Allowance saved")).toBeVisible();
+    await tabs.getByRole("link", { name: "Overview" }).click();
 
     // 26 + 4 = 30 parts against a 30-day total: they agree, so nothing is said about it.
     await expect(page.getByTestId("taken-card")).toContainText("of 30 d granted");

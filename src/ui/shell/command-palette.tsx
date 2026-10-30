@@ -21,10 +21,13 @@ const DEBOUNCE_MS = 200;
 
 export function CommandPalette({
   links,
+  searchLinks = [],
   searchPayees,
   searchRecords,
 }: {
   links: NavLink[];
+  /** Pages found by name but not listed before a search starts: the many settings pages. */
+  searchLinks?: NavLink[];
   /**
    * Looks up payees for the palette. A Server Action the app layout hands down, the same way
    * `saveTheme` is, so `src/ui` needs no domain module. Left out, the palette is pages only.
@@ -48,7 +51,7 @@ export function CommandPalette({
     records: [],
   });
   const needle = query.trim();
-  const pages = filterCommands(links, query);
+  const pages = filterCommands(needle ? [...links, ...searchLinks] : links, query);
   const options = paletteOptions(
     pages,
     found.query === needle ? found.payees : [],
@@ -164,7 +167,7 @@ export function CommandPalette({
             />
             <Kbd>{labels.palette.escape}</Kbd>
           </div>
-          <div className="max-h-[50vh] overflow-y-auto p-1.5">
+          <div tabIndex={0} className="focus-ring-inset max-h-[50vh] overflow-y-auto p-1.5">
             <div
               id={pagesLabelId}
               className="px-2 py-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase"

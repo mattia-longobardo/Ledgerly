@@ -6,7 +6,14 @@ import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { contextFor } from "./jobs";
 import { DEFAULT_PREFERENCES } from "./rules";
-import { findSessionToken, getPreferences, listOwnSessions, updatePreferences } from "./service";
+import {
+  findSessionToken,
+  getPreferences,
+  listOwnSessions,
+  updatePreferences,
+  updateProfilePreferences,
+  updateTimeOffPreferences,
+} from "./service";
 
 describe("preferences service", () => {
   beforeEach(resetDatabase);
@@ -25,6 +32,35 @@ describe("preferences service", () => {
     );
     expect(saved.locale).toBe("it");
     expect(await getPreferences({ userId: user.id })).toEqual(saved);
+  });
+
+  it("keeps Time off's values when the Profile form saves, even from a stale page", async () => {
+    const user = await createTestUser();
+    const ctx = { userId: user.id };
+    await updateTimeOffPreferences(ctx, { minutesPerDay: 450, patronSaint: { month: 12, day: 7 } });
+    const saved = await updateProfilePreferences(ctx, { ...DEFAULT_PREFERENCES, locale: "it" });
+    expect(saved.locale).toBe("it");
+    expect(saved.minutesPerDay).toBe(450);
+    expect(saved.patronSaint).toEqual({ month: 12, day: 7 });
+  });
+
+  it("saves one Time off value and leaves the rest of the row", async () => {
+    const user = await createTestUser();
+    const ctx = { userId: user.id };
+    await updatePreferences(ctx, {
+      ...DEFAULT_PREFERENCES,
+      locale: "it",
+      patronSaint: { month: 6, day: 24 },
+    });
+    const saved = await updateTimeOffPreferences(ctx, { minutesPerDay: 420 });
+    expect(saved.minutesPerDay).toBe(420);
+    expect(saved.locale).toBe("it");
+    expect(saved.patronSaint).toEqual({ month: 6, day: 24 });
+  });
+
+  it("refuses a Time off save that names any other preference", async () => {
+    const user = await createTestUser();
+    await expect(updateTimeOffPreferences({ userId: user.id }, { theme: "dark" })).rejects.toThrow();
   });
 
   it("saves the decimal separator and the euro's position, and reads them back", async () => {

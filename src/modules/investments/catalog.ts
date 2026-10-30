@@ -5,6 +5,11 @@
 import { z } from "zod";
 import type { InvestmentCategory } from "./rules";
 
+/** Two readings a day are enough for an end-of-day value and far from the rate limits (§3.1). */
+export const PROVIDER_SCHEDULE = {
+  rules: [{ kind: "times" as const, times: ["07:30", "22:30"], days: { kind: "every" as const } }],
+};
+
 export interface InvestmentProvider {
   /** Equal to `integration_connections.provider` once the provider can connect. */
   id: string;

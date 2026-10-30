@@ -260,10 +260,12 @@ const PAGES: Screen[] = [
       await page.goto("/payroll");
       await settled(page);
       // Not `…/original`, which is the stored PDF and starts a download rather than a page.
-      await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"])');
+      await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"]):not([href$="/settings"])');
     },
   },
   { name: "/timeoff", session: "layout", open: go("/timeoff") },
+  { name: "/timeoff/settings", session: "layout", open: go("/timeoff/settings") },
+  { name: "/payroll/settings", session: "layout", open: go("/payroll/settings") },
   { name: "/settings/profile", session: "layout", open: go("/settings/profile") },
   { name: "/settings/security", session: "layout", open: go("/settings/security") },
   { name: "/settings/categories", session: "layout", open: go("/settings/categories") },
@@ -322,9 +324,8 @@ const OVERLAYS: Screen[] = [
         .click();
       await settledDialog(page);
       const dialog = page.getByRole("dialog");
-      await dialog
-        .getByRole("button", { name: /Every 30 min, office hours|Ogni 30 min, orario d'ufficio/ })
-        .click();
+      await dialog.getByRole("radio", { name: /Custom rules|Regole personalizzate/ }).check();
+      await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
       await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
       await dialog.getByRole("button", { name: /Add a rule|Aggiungi una regola/ }).click();
       await dialog.getByLabel(/Kind of rule 3|Tipo della regola 3/).selectOption("cron");
@@ -388,7 +389,7 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/payroll");
       await settled(page);
-      await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"])');
+      await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"]):not([href$="/settings"])');
       await page.getByRole("button", { name: /^(Rename|Rinomina)$/ }).click();
       await settledDialog(page);
     },

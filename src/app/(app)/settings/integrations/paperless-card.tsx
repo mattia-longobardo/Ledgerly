@@ -3,22 +3,21 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { TONE_TEXT, type Tone } from "@/ui/tone";
 import {
   connectPaperlessAction,
   disconnectPaperlessAction,
   syncPaperlessNowAction,
   testPaperlessAction,
 } from "./actions";
+import { ConnectionRow, type ConnectionState } from "./connection-row";
 
 /** The same four states the Wallet card has; the names are the `states.*` catalogue keys. */
-export type PaperlessCardState = "absent" | "active" | "error" | "revoked";
+export type PaperlessCardState = ConnectionState;
 
 /**
  * Everything the browser is told about the Paperless link. **No token and no URL**: both live in
@@ -31,20 +30,6 @@ export interface PaperlessCardProps {
   /** The connection's own sync schedule control (D7); the fixed label when there is no link. */
   schedule?: ReactNode;
 }
-
-const DOT: Record<PaperlessCardState, string> = {
-  absent: "bg-faint",
-  active: "bg-pos",
-  error: "bg-neg",
-  revoked: "bg-faint",
-};
-
-const STATUS_TONE: Record<PaperlessCardState, Tone> = {
-  absent: "muted",
-  active: "pos",
-  error: "neg",
-  revoked: "muted",
-};
 
 const FORM_ID = "paperless-token-form";
 
@@ -109,76 +94,62 @@ export function PaperlessCard({ state, lastSync, schedule }: PaperlessCardProps)
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
-        <div className="min-w-0 flex-1 basis-56">
-          <div className="flex items-center gap-2">
-            <span aria-hidden className={cn("size-[7px] shrink-0 rounded-full", DOT[state])} />
-            <span className="min-w-0 truncate font-semibold">{t("providers.paperless.name")}</span>
-            <span className={cn("text-sm font-medium whitespace-nowrap", TONE_TEXT[STATUS_TONE[state]])}>
-              {t(`states.${state}`)}
-            </span>
-          </div>
-          <p className="mt-0.5 text-sm text-muted">{t("providers.paperless.role")}</p>
-        </div>
-
-        <div className="text-sm">
-          <div className="text-muted">{t("fields.lastSync")}</div>
-          <div className="mt-0.5 font-medium whitespace-nowrap">{lastSync ?? t("fields.never")}</div>
-        </div>
-
-        <div className="text-sm">
-          <div className="text-muted">{t("fields.schedule")}</div>
-          {schedule ?? <div className="mt-0.5 font-medium whitespace-nowrap">{t("schedule")}</div>}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          {connected && (
+      <ConnectionRow
+        name={t("providers.paperless.name")}
+        role={t("providers.paperless.role")}
+        state={state}
+        lastSync={lastSync}
+        schedule={schedule}
+        actions={
+          <>
+            {connected && (
+              <Button
+                size="sm"
+                disabled={pending}
+                onClick={() => {
+                  setError(null);
+                  run(syncPaperlessNowAction, t("toasts.synced"));
+                }}
+              >
+                {t("actions.sync")}
+              </Button>
+            )}
             <Button
               size="sm"
+              variant={connected ? "secondary" : "primary"}
               disabled={pending}
               onClick={() => {
                 setError(null);
-                run(syncPaperlessNowAction, t("toasts.synced"));
+                setConnecting(true);
               }}
             >
-              {t("actions.sync")}
+              {t("actions.configure")}
             </Button>
-          )}
-          <Button
-            size="sm"
-            variant={connected ? "secondary" : "primary"}
-            disabled={pending}
-            onClick={() => {
-              setError(null);
-              setConnecting(true);
-            }}
-          >
-            {t("actions.configure")}
-          </Button>
-          {connected && (
-            <ActionMenu
-              label={t("providers.paperless.name")}
-              items={[
-                {
-                  label: t("actions.test"),
-                  onSelect: () => {
-                    setError(null);
-                    run(testPaperlessAction, t("toasts.tested"));
+            {connected && (
+              <ActionMenu
+                label={t("providers.paperless.name")}
+                items={[
+                  {
+                    label: t("actions.test"),
+                    onSelect: () => {
+                      setError(null);
+                      run(testPaperlessAction, t("toasts.tested"));
+                    },
                   },
-                },
-                {
-                  label: t("actions.disconnect"),
-                  onSelect: () => {
-                    setError(null);
-                    setDisconnecting(true);
+                  {
+                    label: t("actions.disconnect"),
+                    onSelect: () => {
+                      setError(null);
+                      setDisconnecting(true);
+                    },
+                    danger: true,
                   },
-                  danger: true,
-                },
-              ]}
-            />
-          )}
-        </div>
-      </div>
+                ]}
+              />
+            )}
+          </>
+        }
+      />
 
       {!connected && (
         <p className="border-t border-border px-4 py-2.5 text-sm text-muted">{t("paperless.notLinked")}</p>
