@@ -64,7 +64,7 @@ export function etoroSource(options: EtoroClientOptions = {}): InvestmentSource 
       return holdingsOf({ balances, portfolio, instruments, currency, observedAt: now });
     },
 
-    async fetchFlows(credentials, now) {
+    async fetchFlows(credentials, now, flows) {
       const client = clientOf(credentials, options);
       const trades = await client.trades(FLOWS_FROM);
       const instruments = new Map(
@@ -85,7 +85,8 @@ export function etoroSource(options: EtoroClientOptions = {}): InvestmentSource 
           transactions,
           cash !== undefined,
           now,
-          new Date(`${historyFrom(civilDateIn(now, "UTC"))}T00:00:00Z`),
+          // The service's own cut-off once it has one: the API's 12 months move a day every day.
+          flows?.since ?? new Date(`${historyFrom(civilDateIn(now, "UTC"))}T00:00:00Z`),
         ),
       };
     },
