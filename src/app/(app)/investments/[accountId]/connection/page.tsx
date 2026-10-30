@@ -318,12 +318,14 @@ function Received({
   const latest = detail.readings[0] ?? null;
   // Only the days the service reads (PERS-145): before its start — the cut-off of its 12 months —
   // nothing is kept, so what a provider does not give there is no gap of the service.
-  const since = new Date(`${detail.summary.investment.managedSince}T00:00:00Z`);
+  // By day, as the engine reads them: a window that ends on the cut-off's own day is before it.
+  const sinceOn = detail.summary.investment.managedSince;
+  const since = new Date(`${sinceOn}T00:00:00Z`);
   const sync = {
     ...detail.sync!,
     coverage: detail
-      .sync!.coverage.filter((row) => row.toAt > since)
-      .map((row) => (row.fromAt < since ? { ...row, fromAt: since } : row)),
+      .sync!.coverage.filter((row) => dayOf(row.toAt) > sinceOn)
+      .map((row) => (dayOf(row.fromAt) < sinceOn ? { ...row, fromAt: since } : row)),
   };
   const flows = sync.coverage.filter(
     (row) => row.kind === "flows" && row.stream !== "quantities" && row.stream !== "balance_history",
