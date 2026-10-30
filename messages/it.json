@@ -3748,8 +3748,9 @@
         "unavailable": "non disponibile",
         "highlight": "Evidenzia {name} nel grafico",
         "notComputable": "Rendimento non calcolabile: capitale troppo piccolo nel periodo",
+        "onInvested": "Rendimento sul capitale versato: il denaro è entrato e uscito nel periodo, quindi Dietz non ha un capitale medio su cui dividere",
         "xirr": "XIRR {rate}",
-        "largeFlows": "Stima: i flussi sono grandi rispetto al capitale",
+        "largeFlows": "I flussi sono grandi rispetto al capitale: Dietz si allontana da un rendimento ponderato nel tempo",
         "share": "{share} di {net} netti",
         "shareNotComputable": "Quota sul netto non calcolabile"
       },
@@ -3931,9 +3932,9 @@
         "historyRead": "Letto ogni giorno dal {date}.",
         "cost": "Costo di carico",
         "costMismatch": "Le quantità non tornano con i movimenti: ogni differenza è una voce in Attività.",
-        "costMissing": "{name} non dà il costo delle posizioni: il periodo le valuta al suo inizio.",
         "details": "Dettaglio tecnico per flusso ({count})",
-        "products": "Prodotti letti: {products}"
+        "products": "Prodotti letti: {products}",
+        "costPeriod": "Ogni periodo valuta le posizioni al suo inizio, e quelle comprate nel periodo al loro costo: non serve il costo del provider."
       },
       "status": {
         "complete": "Completo",

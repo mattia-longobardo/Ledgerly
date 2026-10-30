@@ -433,6 +433,10 @@ describe("cashGaps (PERS-145 · 4)", () => {
       unrealizedChangeCents: 0n,
       unattributedCents: 0n,
     });
+    // The money went in and out inside the year: Dietz has no capital to divide by, so the return
+    // is on the money put in (0.33 + 2,307.80): +20.6 %.
+    expect(pnl.localReturn).toMatchObject({ method: "invested" });
+    expect(pnl.localReturn!.dietz).toBeCloseTo(47_626 / 230_813, 10);
   });
 
   it("a gap counts only once a day with no difference follows it", () => {

@@ -304,6 +304,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
     if (!measured) return undefined;
     const notes = [
       measured.dietz === null ? t("home.services.notComputable") : null,
+      measured.method === "invested" ? t("home.services.onInvested") : null,
       measured.xirr?.status === "ok" ? t("home.services.xirr", { rate: percent(measured.xirr.rate) }) : null,
       measured.largeFlows ? t("home.services.largeFlows") : null,
     ].filter(Boolean);
