@@ -334,7 +334,6 @@ function ScheduleDialog({
             )}
           </div>
         </section>
-        <p className="text-sm text-muted">{t("dependentHint")}</p>
       </div>
     </Modal>
   );

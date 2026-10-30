@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { AFTER_SYNC_JOBS } from "./after-sync";
 import { JOBS, runsIn } from "./registry";
 
 /** The tiers `cron/crontab` really asks for: the file supercronic runs, not a copy of it. */
@@ -17,17 +18,17 @@ function crontabTiers(): Set<string> {
 describe("JOBS", () => {
   it("schedules every job each phase registered, under the tier spec §10.2 gives it", () => {
     expect(JOBS.map((job) => [job.name, job.tier])).toEqual([
-      // Every connection by its own schedule (docs/scheduler.md); in `hourly` too, first.
+      // Every connection by its own schedule (docs/scheduler.md).
       ["integrations-sync", "minute"],
       ["housekeeping", "daily"],
       ["accounts-alerts", "daily"],
       ["accounts-snapshot", "monthly"],
-      ["recurrences-refresh", "hourly"],
-      ["subscriptions-check", "hourly"],
-      ["budgets-alerts", "hourly"],
+      ["recurrences-refresh", "afterSync"],
+      ["subscriptions-check", "daily"],
+      ["budgets-alerts", "afterSync"],
       ["interests-accrual", "hourly"],
       ["interests-rematch", "daily"],
-      ["funds-deposits", "hourly"],
+      ["funds-deposits", "afterSync"],
       ["pockets-accrual", "monthly"],
       ["pockets-planned-cleanup", "daily"],
       ["documents-retention", "daily"],
@@ -46,17 +47,30 @@ describe("JOBS", () => {
     const called = crontabTiers();
     expect([...called].sort()).toEqual(["daily", "hourly", "minute", "monthly"]);
     for (const job of JOBS) {
-      if (job.tier === "manual") continue;
+      if (job.tier === "manual" || job.tier === "afterSync") continue;
       expect(called.has(job.tier), job.name).toBe(true);
-      for (const tier of job.alsoIn ?? []) expect(called.has(tier), job.name).toBe(true);
     }
   });
 
-  it("runs the integrations dispatcher first in the hourly tier, before what reads its result", () => {
-    const hourly = JOBS.filter((job) => runsIn(job, "hourly")).map((job) => job.name);
-    expect(hourly[0]).toBe("integrations-sync");
-    expect(hourly.indexOf("recurrences-refresh")).toBeLessThan(hourly.indexOf("subscriptions-check"));
+  it("leaves in the hourly tier only what goes by the date or by a stuck document, at :30", () => {
+    expect(JOBS.filter((job) => runsIn(job, "hourly")).map((job) => job.name)).toEqual([
+      "interests-accrual",
+      "payslips-sweep",
+      "cometa-sweep",
+    ]);
     expect(JOBS.filter((job) => runsIn(job, "minute")).map((job) => job.name)).toEqual(["integrations-sync"]);
+    const crontab = readFileSync(new URL("../../../cron/crontab", import.meta.url), "utf8");
+    expect(crontab).toMatch(/^30 \* \* \* \* .*tier=hourly"$/m);
+  });
+
+  it("registers every job that follows a sync, in the order they read each other", () => {
+    expect(AFTER_SYNC_JOBS.map((job) => job.name)).toEqual([
+      "recurrences-refresh",
+      "subscriptions-check",
+      "budgets-alerts",
+      "funds-deposits",
+    ]);
+    for (const job of AFTER_SYNC_JOBS) expect(JOBS).toContain(job);
   });
 
   it("names each job once: two entries with one name would both answer to it", () => {

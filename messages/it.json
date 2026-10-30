@@ -403,7 +403,6 @@
           "tooFrequent": "Due sincronizzazioni alle {first} e alle {second}: tienile ad almeno {minutes} minuti di distanza."
         },
         "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Scegli una scelta rapida o aggiungi una regola.",
-        "dependentHint": "Avvisi dei budget, abbonamenti e interessi si controllano ogni ora al minuto 07: dopo una sincronizzazione a un altro orario vedono i nuovi movimenti al controllo successivo.",
         "summary": {
           "manual": "Solo manuale",
           "hourly": "Ogni ora",
@@ -545,7 +544,8 @@
         "daily": "Ogni giorno",
         "monthly": "Ogni mese",
         "manual": "Solo a mano",
-        "minute": "Ogni minuto, e ogni ora"
+        "minute": "Ogni minuto",
+        "afterSync": "Dopo una sincronizzazione"
       },
       "states": {
         "running": "In corso",
