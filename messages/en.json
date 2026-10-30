@@ -3196,7 +3196,7 @@
     },
     "catalog": {
       "title": "Catalog",
-      "subtitle": "Pick the service to add. eToro connects with a read-only key; a manual account works for any of them.",
+      "subtitle": "Pick the service to add. eToro and Binance connect with a read-only key; a manual account works for any of them.",
       "sections": {
         "accounts": "Accounts",
         "broker": "Online brokers",
@@ -3211,7 +3211,8 @@
       "manualDescription": "Directa, Fineco, a deposit account, BTPs, funds: anything you record by hand.",
       "plannedDescription": "Not connectable yet: use a manual account meanwhile.",
       "linked": "Linked: {names}",
-      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades."
+      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades.",
+      "plannedSection": "Coming soon · {count}"
     },
     "manualForm": {
       "title": "Create manual account",
@@ -3224,8 +3225,7 @@
       "category": "Category",
       "currency": "Account currency",
       "currencyHint": "Every balance and operation of the account is in this currency.",
-      "mode": "Mode",
-      "modeHint": "Per asset: you record positions and cash. Total: you record only the account's value.",
+      "mode": "What you keep",
       "url": "Link",
       "urlHint": "Optional: the address of the service's site.",
       "existing": "Account",
@@ -3237,7 +3237,17 @@
         "fund": "a fund's account",
         "managed": "already a service"
       },
-      "submit": "Create"
+      "submit": "Create",
+      "modes": {
+        "assets": {
+          "label": "Positions: one row per asset, P&L per asset",
+          "example": "E.g. Directa with 100 VWCE and 20 BTP: you record each buy and sale, and Ledgerly values them."
+        },
+        "total": {
+          "label": "Value only: you update the total by hand",
+          "example": "E.g. a pension plan or a deposit account whose statement gives only the value: you type it when it changes."
+        }
+      }
     },
     "detail": {
       "since": "Managed since {date}",
@@ -3386,7 +3396,7 @@
       "symbol": "Symbol",
       "currency": "Quote currency",
       "product": "Product",
-      "covered": "The provider already reads: {products}. A manual position there would need reconciling.",
+      "covered": "{provider} already reads {products}: they are disabled here. Add here only what {provider} does not see, for example an external wallet.",
       "priceMode": "How you record it",
       "byQuantity": "Quantity and price",
       "byTotal": "Total amount",
@@ -3396,7 +3406,12 @@
       "fee": "Fee",
       "fxRate": "Exchange rate",
       "fxHint": "{account} per 1 {asset}. Empty: the ECB rate of the day.",
-      "submit": "Add"
+      "submit": "Add",
+      "theProvider": "The provider",
+      "choose": "Choose an asset",
+      "chooseProduct": "Choose a product",
+      "currencyFilter": "Currency",
+      "allCurrencies": "All currencies"
     },
     "operationForm": {
       "titles": {
@@ -3412,15 +3427,15 @@
         "deposit": "Money that went into the account.",
         "withdrawal": "Money that came out of the account.",
         "account_valuation": "What the account is worth at the end of that day.",
-        "adjustment": "A dated change of the value with a reason, e.g. a transfer in transit. Give it an end whenever you can.",
+        "adjustment": "Use it when the value is wrong for some days and no movement explains it. Example: eToro did not read 120 USD of cash from 3 to 10 March: Amount 120, From 3 March, To 10 March.",
         "valuation": "The new price or value of the position.",
         "income": "A dividend, an interest or a reward paid in cash."
       },
       "value": "Value",
       "delta": "Change",
       "deltaHint": "Negative to lower the value.",
-      "validUntil": "Last day",
-      "validUntilHint": "Optional, but an adjustment without an end counts forever.",
+      "validUntil": "To (optional)",
+      "validUntilHint": "The last day it counts. Empty: no end, it counts on every day from the first. Leave it empty only if the difference stays.",
       "reason": "Reason",
       "linkOut": "Linked account expense",
       "linkIn": "Linked account income",
@@ -3436,7 +3451,10 @@
         "pnl": "The P&L changes by {amount} from {date}",
         "until": "and goes back after {date}",
         "capital": "The value changes by {amount} from {date}; the P&L does not: it is a flow."
-      }
+      },
+      "from": "From",
+      "linkSearch": "Search a bank movement",
+      "noCandidates": "No movement of the same amount within 3 days"
     },
     "holdingForm": {
       "valuation": "Value · {name}",
@@ -3645,7 +3663,7 @@
     },
     "transfers": {
       "title": "Transfers to confirm",
-      "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio.",
+      "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio. Linking changes no P&L: each service keeps both as flows, and the portfolio leaves them out.",
       "out": "Out on {date} → {name}, in on {other}",
       "in": "In on {date} ← {name}, out on {other}"
     },

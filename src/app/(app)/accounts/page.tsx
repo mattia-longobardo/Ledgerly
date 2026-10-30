@@ -13,6 +13,7 @@ import {
 import { LinkTabs, PeriodStepper, ToggleLink } from "@/modules/accounts/ui/controls";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { type Grain, periodEnd } from "@/modules/accounts/rules";
+import { syncedServicesOf } from "@/modules/investments/managed";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -95,6 +96,11 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
     );
   }
 
+  // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
+  const services = await syncedServicesOf(
+    ctx,
+    view.rows.map((row) => row.account.id),
+  );
   const rows = view.rows.map((row, index) => {
     const yearAgo = row.series.at(-13) ?? null;
     return {
@@ -108,7 +114,8 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       // An account's own figures stay in its currency; the total and the share are in the display one.
       own: { currency: row.account.currency },
       counter: counterValue(row, view.currency, ctx.numberFormat),
-      synced: since(row.account.lastSyncedAt, now),
+      service: services.has(row.account.id),
+      synced: since(services.get(row.account.id)?.lastSyncedAt ?? row.account.lastSyncedAt, now),
     };
   });
 
@@ -244,7 +251,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                   </Td>
                   <Td align="right">{formatPercent(row.share, ctx.numberFormat)}</Td>
                   <Td muted>
-                    {row.account.origin === "manual"
+                    {row.account.origin === "manual" && !row.service
                       ? t("origins.manual")
                       : row.synced.unit === "never"
                         ? t("synced.never")
@@ -301,7 +308,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                 <span>{t(`types.${row.account.type}`)}</span>
                 <span aria-hidden>·</span>
                 <span>
-                  {row.account.origin === "manual"
+                  {row.account.origin === "manual" && !row.service
                     ? t("origins.manual")
                     : row.synced.unit === "never"
                       ? t("synced.never")
