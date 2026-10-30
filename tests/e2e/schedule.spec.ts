@@ -46,7 +46,7 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText("At 06:43 · Mon–Fri +1")).toBeVisible();
-    await expect(page.getByText(/^Next: .*(6:43|6:30)/)).toBeVisible();
+    await expect(page.getByText(/^Next: .*(6:43|18:30)/)).toBeVisible();
   });
 
   await test.step("back to manual only", async () => {
