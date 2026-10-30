@@ -1,6 +1,6 @@
 /**
- * The hourly Wallet pass (spec §10.2: every hour at minute 07) and what follows it: "Wallet
- * accounts + balances; Wallet transactions (then recurrences)".
+ * The Wallet pass (docs/scheduler.md) and what follows it: "Wallet accounts + balances; Wallet
+ * transactions (then recurrences)".
  *
  * The job is the scheduler, not the engine. The engine is `platform/integrations/wallet/sync.ts`,
  * which coordinates the two modules and writes `sync_runs`; this file iterates over the users,
@@ -314,15 +314,14 @@ export async function runWalletPass(
 }
 
 /**
- * Every hour (spec §10.2), for every user: own transfers linked, then the recurrences recomputed
- * from what is stored. This is what was left of `wallet-sync` once the Wallet pass itself moved to
- * the integrations dispatcher (D7): it runs right after the dispatcher in the hourly tier, so the
- * jobs behind it (`subscriptions-check`, `budget-alerts`, `interests-accrual`) still see movements
- * an on-the-hour sync has just brought in.
+ * For every user: own transfers linked, then the recurrences recomputed from what is stored. This
+ * is what was left of `wallet-sync` once the Wallet pass itself moved to the integrations dispatcher
+ * (D7): it runs first after a sync that changed the movements (`runAfterSync`), so the jobs behind
+ * it see them.
  */
 export const recurrencesRefreshJob: JobDefinition = {
   name: "recurrences-refresh",
-  tier: "hourly",
+  tier: "afterSync",
   async run(): Promise<JobDetail> {
     const now = new Date();
     let patterns = 0;

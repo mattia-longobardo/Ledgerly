@@ -85,15 +85,54 @@ dopo `after`.
 - `JobDefinition.hasWork()`: prima di prendere il lock il tick chiede se c'è una connessione
   dovuta (`anyConnectionDue`, una lettura sull'indice `next_sync_at`). Se no, nessun lock e nessuna
   riga in `job_runs`: altrimenti 1.440 righe al giorno senza contenuto. "Run now" non lo chiede.
-- `integrations-sync` resta anche **primo** nel tier `hourly` (`:07`), prima dei job che leggono i
-  movimenti sincronizzati. Al minuto `:07` minute e hourly scattano insieme: il lock
-  `job:integrations-sync` fa passare le connessioni una volta sola.
 - Ritardo: una connessione dovuta alle 06:43 parte al tick delle 06:43:00, salvo una sync più
   lunga di un minuto ancora in corso (il lock fa saltare i tick fino alla sua fine). L'heartbeat
   viene toccato ogni minuto.
 - Dopo il run `next_sync_at = nextSyncAfterPass(schedule, tz, slot, now)`: il primo slot dopo
   `now`, mai entro 15 minuti dallo slot eseguito. Dopo un fermo dell'app parte un run, poi il
   prossimo slot futuro: nessun recupero a raffica.
+
+## Controlli dopo la sincronizzazione
+
+PERS-157 (30/10/2026). I job che leggono i movimenti partono subito dopo la sync, non a un minuto
+fisso. Il tick `hourly` si sposta da `:07` a `:30` e tiene solo i job che non seguono i movimenti.
+
+| Job | Quando parte | Perché |
+|---|---|---|
+| `recurrences-refresh` | dopo la sync | legge solo i movimenti |
+| `subscriptions-check` | dopo la sync e `daily` (12:00) | la data da sola cambia un addebito: `due` diventa `not_found` a fine periodo, e nasce il periodo nuovo |
+| `budgets-alerts` | dopo la sync | legge solo i movimenti |
+| `funds-deposits` | dopo la sync | legge solo i movimenti |
+| `interests-accrual` | `hourly`, solo se una regola è dovuta (`hasWork`) | ogni regola matura alla sua ora sul saldo chiuso di ieri, con una sync Wallet propria |
+| `payslips-sweep`, `cometa-sweep` | `hourly` | riprendono i documenti bloccati, non dipendono dai movimenti |
+
+`runAfterSync` (`src/platform/jobs/after-sync.ts`) parte una volta alla fine di ogni dispatch di
+`integrations-sync`, dopo "Sync now" e dopo la sync di `interests-accrual`. Un job è **indietro**
+se l'ultima sync che ha cambiato i movimenti è finita dopo il suo ultimo avvio riuscito.
+
+- **Quale sync conta:** una riga `sync_runs` di kind `transactions` con `created`, `updated` o
+  `removed` > 0, oppure fallita, perché una sync fallita può aver già scritto righe. Solo Wallet ha
+  questo kind: eToro, Binance, Trek e Paperless non attivano i controlli.
+- **Doppi avvisi:** `notifyOnce` prende la chiave con un upsert atomico, quindi un avviso parte una
+  volta per soglia e mese. Il lock `job:<nome>` impedisce due esecuzioni insieme.
+- **Job occupato:** `runAfterSync` riprova per 60 secondi. Dopo l'attesa il job parte solo se è
+  ancora indietro. Allo scadere registra `skipped`.
+- **Fallimenti:** l'errore va in `job_runs` e agli admin via Gotify, e la sync resta riuscita. Un
+  job fallito resta indietro, quindi si ripete al dispatch successivo anche senza movimenti nuovi.
+  Un errore su un solo utente (`forEachUser`, `detail.failed`) qui conta come fallimento.
+- **Modifiche senza sync:** una categoria cambiata, un movimento nascosto o un limite ridotto
+  arrivano ai controlli con la prossima sync che cambia i movimenti. Scelta di Mattia.
+
+`job_runs.tier` dice chi ha chiesto il run: `minute` dal dispatch, `manual` da "Sync now", `hourly`
+da `interests-accrual`. La colonna "tier" di Settings › Integrazioni mostra `afterSync` come "Dopo
+una sincronizzazione".
+
+### Rollback
+
+`docker tag ledgerly:pre-sync-dependents ledgerly:latest`,
+`docker tag ledgerly-cron:pre-sync-dependents ledgerly-cron:latest`, poi
+`docker compose up -d --no-build ledgerly ledgerly-cron`. Le due immagini vanno insieme. Non c'è
+migrazione, e il dump `backups/ledgerly/pre-sync-dependents.dump` serve solo per un danno ai dati.
 
 ## Interfaccia
 

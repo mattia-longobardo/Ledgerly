@@ -266,10 +266,12 @@ describe("the accrual pass and the hour a rule runs at (spec §10.2)", () => {
     expect(await daysOf(created.id)).toBe(40);
 
     clockAt(at("2026-02-11", 11));
+    expect(await interestsAccrualJob.hasWork?.()).toBe(false);
     expect(await interestsAccrualJob.run()).toMatchObject({ rules: 0 });
     expect(await daysOf(created.id)).toBe(40);
 
     clockAt(at("2026-02-11", 12));
+    expect(await interestsAccrualJob.hasWork?.()).toBe(true);
     expect(await interestsAccrualJob.run()).toMatchObject({ rules: 1 });
     expect(await daysOf(created.id)).toBe(41);
   });

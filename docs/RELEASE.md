@@ -167,7 +167,7 @@ serving: stop `ledgerly` first.
 ## 9. After
 
 - Watch `docker logs -f ledgerly` for a few minutes, and `/api/health` until `heartbeat` is `fresh`
-  again (the hourly tick runs at minute 07).
+  again (the hourly tick runs at minute 30).
 - **Settings → Integrations** lists every scheduled job with its last run: the first hourly tick
   after a release is the one to look at.
 - If `GOTIFY_URL` and `GOTIFY_TOKEN` are set, a failed job tells the admins by itself. If they are

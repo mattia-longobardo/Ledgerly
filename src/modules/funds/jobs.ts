@@ -7,12 +7,12 @@ import { processCometaDocument } from "./pension/imports";
 import { matchDeposits } from "./service";
 
 /**
- * Every hour, after `wallet-sync` (spec §10.2): the movements the pass brought in that a fund's
- * deposit rule recognises become deposits. No network: it reads what is already stored.
+ * After a sync that changed the movements (`runAfterSync`): the movements the pass brought in that
+ * a fund's deposit rule recognises become deposits. No network: it reads what is already stored.
  */
 export const fundsDepositsJob: JobDefinition = {
   name: "funds-deposits",
-  tier: "hourly",
+  tier: "afterSync",
   async run(): Promise<JobDetail> {
     let written = 0;
     const counts = await forEachUser("funds-deposits", async (_person, ctx) => {

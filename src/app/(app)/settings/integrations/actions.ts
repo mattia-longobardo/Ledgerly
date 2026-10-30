@@ -10,11 +10,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
+import { runAfterSync } from "@/platform/jobs/after-sync";
 import type { Ctx } from "@/platform/context";
-import { matchDeposits } from "@/modules/funds/service";
-import { checkSubscriptions } from "@/modules/subscriptions/service";
-import { refreshRecurrences } from "@/modules/transactions/jobs";
-import { linkOwnTransfers } from "@/modules/transactions/service";
 import {
   isKnownProvider,
   PAPERLESS_PROVIDER,
@@ -181,12 +178,8 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
 
   try {
     await syncWalletNow(ctx, connection.id);
-    await linkOwnTransfers(ctx);
-    // What the hourly job does after a pass (spec §10.2): the recurrences, then the subscription
-    // check against the movements just brought in (F3; closes the deviation of F2 §11.4).
-    await refreshRecurrences(ctx);
-    await checkSubscriptions(ctx);
-    await matchDeposits(ctx);
+    // The same checks as after a scheduled pass (docs/scheduler.md), only if the movements changed.
+    await runAfterSync("manual");
     revalidatePath("/subscriptions");
     revalidatePath("/funds");
   } catch (error) {

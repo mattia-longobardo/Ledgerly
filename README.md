@@ -431,13 +431,15 @@ The app image applies pending migrations on boot, then serves the standalone Nex
 also validates every environment variable at startup (`src/instrumentation.ts`) and refuses to
 start if any check fails, so a misconfigured deployment fails loudly instead of on the first
 request. The cron image runs `supercronic` against `cron/crontab`, which `curl`s
-`http://ledgerly:3000/api/jobs/tick?tier=<quarter|hourly|daily|monthly>` with `CRON_SECRET` as the
+`http://ledgerly:3000/api/jobs/tick?tier=<minute|hourly|daily|monthly>` with `CRON_SECRET` as the
 `X-Cron-Secret` header — the cron container needs `CRON_SECRET` set to the same value as the app,
 and reaches the app by its compose service name, `ledgerly`, on the internal network. Each
-tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `integrations-sync` alone at :22,
-:37 and :52, then first at :07 before `recurrences-refresh`, `subscriptions-check` and
-`funds-deposits` hourly, `housekeeping`, `accounts-alerts` and
-`interests-accrual` daily, `accounts-snapshot` and `pockets-accrual` monthly) for that tier, in that order; touching the heartbeat file is a side
+tick runs every job in `JOBS` (`src/platform/jobs/registry.ts`: `integrations-sync` every minute,
+`interests-accrual`, `payslips-sweep` and `cometa-sweep` at :30, `subscriptions-check`,
+`housekeeping` and `accounts-alerts` daily, `accounts-snapshot` and `pockets-accrual` monthly) for
+that tier, in that order, and `runAfterSync` runs `recurrences-refresh`, `subscriptions-check`,
+`budgets-alerts` and `funds-deposits` after a sync that changed the movements
+(`docs/scheduler.md`); touching the heartbeat file is a side
 effect of every tick, not a job of its own.
 
 ## Operations

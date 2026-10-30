@@ -403,7 +403,6 @@
           "tooFrequent": "Two syncs at {first} and {second}: keep them at least {minutes} minutes apart."
         },
         "manualHint": "No rule: only “Sync now” starts a sync. Pick a quick choice or add a rule.",
-        "dependentHint": "Budget alerts, subscriptions and interest are checked every hour at minute 07: after a sync at another time they see the new movements at the next check.",
         "summary": {
           "manual": "Manual only",
           "hourly": "Every hour",
@@ -545,7 +544,8 @@
         "daily": "Daily",
         "monthly": "Monthly",
         "manual": "By hand only",
-        "minute": "Every minute, and hourly"
+        "minute": "Every minute",
+        "afterSync": "After a sync"
       },
       "states": {
         "running": "Running",
