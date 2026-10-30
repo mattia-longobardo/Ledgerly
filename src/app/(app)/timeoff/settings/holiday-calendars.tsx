@@ -33,7 +33,7 @@ export interface CalendarRow {
 }
 
 /**
- * Settings › Profile, the holiday calendars (M3).
+ * Time off › Settings, the holiday calendars (M3).
  *
  * More than one on purpose: somebody who works across two countries, or who keeps the town they
  * are from as well as the one they live in. The days are fetched from the source and refreshed

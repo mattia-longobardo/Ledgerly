@@ -1,10 +1,7 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate, NULL_DISPLAY } from "@/platform/format";
+import { NULL_DISPLAY } from "@/platform/format";
 import { PAPERLESS_PROVIDER, TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
 import {
   type Connection,
@@ -14,15 +11,18 @@ import {
   type SyncRun,
 } from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
-import { jobStatuses } from "@/platform/jobs/queries";
 import { providerOf } from "@/modules/investments/catalog";
 import { listInvestmentAccounts } from "@/modules/investments/service";
 import { pendingCount } from "@/modules/timeoff/service";
+import { SyncNowButton } from "@/modules/investments/ui/dialogs";
 import { Badge } from "@/ui/badge";
+import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { type JobRow, JobsCard } from "./jobs-card";
+import { ConnectionRow } from "./connection-row";
+import { formatInstant } from "./format-instant";
 import { PaperlessCard, type PaperlessCardState } from "./paperless-card";
+import { recommendedSchedule } from "./recommended-schedule";
 import { ScheduleControl } from "./schedule-control";
 import { TrekCard, type TrekCardState } from "./trek-card";
 import { WalletCard, type WalletCardState } from "./wallet-card";
@@ -59,22 +59,6 @@ const RUN_TONE = {
   skipped: "neutral",
 } as const;
 
-/**
- * An instant as this page shows it: the civil day in the user's zone (spec §8.5) and the clock,
- * because an hourly sync is told apart by its time of day and `platform/format` has no date-time
- * style yet.
- */
-function formatInstant(instant: Date, ctx: Ctx): string {
-  const day = formatDate(civilDateIn(instant, ctx.timeZone), "long", ctx.locale);
-  const clock = new Intl.DateTimeFormat(ctx.locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-    timeZone: ctx.timeZone,
-  }).format(instant);
-  return `${day}, ${clock}`;
-}
-
 /** How long a finished run took, to the second; `null` while it is still running. */
 function durationSeconds(run: SyncRun): number | null {
   if (run.finishedAt === null) return null;
@@ -82,8 +66,8 @@ function durationSeconds(run: SyncRun): number | null {
 }
 
 /**
- * Settings › Integrations (spec §9.1, §7.10 and §10.3): the Wallet link, the log of what it did,
- * and — for an admin — every scheduled job with "Run now".
+ * Settings › Integrations (spec §9.1 and §7.10): every connection, in one kind of row, and the log
+ * of what they did. The scheduled jobs moved to Admin › Server in PERS-158.
  *
  * The connection is read through `listConnections`, which cannot carry credentials — the sealed
  * column is only ever opened by `readCredentials`, and only inside a Server Action. Nothing on
@@ -99,12 +83,24 @@ export default async function SettingsIntegrationsPage() {
   const lastSync = wallet?.lastOkAt ? formatInstant(wallet.lastOkAt, ctx) : null;
   const job = wallet ? await readSyncJob(ctx, wallet.id, "transactions") : null;
 
+  const connectionName = (provider: string) =>
+    providerOf(provider)?.name ??
+    t(
+      provider === WALLET_PROVIDER
+        ? "providers.wallet.name"
+        : provider === TREK_PROVIDER
+          ? "providers.trek.name"
+          : "providers.paperless.name",
+    );
+
   // The schedule control of a connection (D7); a provider with no link keeps the fixed label.
   const scheduleOf = (connection: Connection | null) =>
     connection && (
       <ScheduleControl
         provider={connection.provider}
+        name={connectionName(connection.provider)}
         schedule={connection.schedule}
+        recommended={recommendedSchedule(connection.provider)}
         next={connection.nextSyncAt ? formatInstant(connection.nextSyncAt, ctx) : null}
         timeZone={ctx.timeZone}
       />
@@ -127,19 +123,6 @@ export default async function SettingsIntegrationsPage() {
     const service = services.find((one) => one.provider === connection.provider);
     return provider && provider.connect === "apikey" && service ? [{ connection, provider, service }] : [];
   });
-
-  // §10.3: only an admin may run a job by hand, and only an admin sees that this is possible.
-  const tJobs = await getTranslations("settings.jobs");
-  const jobs: JobRow[] =
-    ctx.role === "admin"
-      ? (await jobStatuses(ctx)).map((job) => ({
-          name: job.name,
-          tier: job.tier,
-          lastRun: job.lastRun ? formatInstant(job.lastRun.startedAt, ctx) : null,
-          status: job.lastRun?.status ?? null,
-          error: job.lastRun?.error ?? null,
-        }))
-      : [];
 
   return (
     <SettingsGrid>
@@ -166,34 +149,27 @@ export default async function SettingsIntegrationsPage() {
             {invested.map(({ connection, provider, service }) => (
               <li
                 key={connection.id}
-                className="flex flex-col gap-2 border-t border-border p-4 first:border-t-0"
+                className="border-t border-border first:border-t-0"
                 data-testid="investment-connection"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link
-                    href={`/investments/${service.accountId}` as Route}
-                    className="focus-ring inline-flex min-h-6 items-center rounded-[4px] font-medium text-accent hover:underline"
-                  >
-                    {t("investments.open", { name: provider.name })}
-                  </Link>
-                  <Badge
-                    tone={
-                      connection.state === "active" ? "pos" : connection.state === "revoked" ? "neg" : "warn"
-                    }
-                  >
-                    {t(`states.${connection.state}`)}
-                  </Badge>
-                </div>
-                {scheduleOf(connection)}
+                <ConnectionRow
+                  name={provider.name}
+                  role={t("investments.role")}
+                  state={connection.state}
+                  lastSync={connection.lastOkAt ? formatInstant(connection.lastOkAt, ctx) : null}
+                  schedule={scheduleOf(connection)}
+                  actions={
+                    <>
+                      <SyncNowButton accountId={service.accountId} size="sm" variant="secondary" />
+                      <ButtonLink href={`/investments/${service.accountId}/connection` as Route} size="sm">
+                        {t("actions.configure")}
+                      </ButtonLink>
+                    </>
+                  }
+                />
               </li>
             ))}
           </ul>
-        </SettingsSection>
-      )}
-
-      {ctx.role === "admin" && (
-        <SettingsSection title={tJobs("title")} description={tJobs("description")} padded={false}>
-          <JobsCard jobs={jobs} />
         </SettingsSection>
       )}
 

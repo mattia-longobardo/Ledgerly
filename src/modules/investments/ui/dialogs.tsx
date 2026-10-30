@@ -2243,40 +2243,72 @@ function ConnectDialog({
   );
 }
 
+/** "Sync now" (§4.3): a minute apart at least, which the service enforces (SEC-09). */
+export function SyncNowButton({
+  accountId,
+  size = "sm",
+  variant = "primary",
+}: {
+  accountId: string;
+  size?: "sm" | "md";
+  variant?: "primary" | "secondary";
+}) {
+  const t = useTranslations("investments");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      size={size}
+      variant={variant}
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await syncNowAction(accountId);
+          notifyOutcome(result, t("toasts.synced"), t);
+          router.refresh();
+        })
+      }
+    >
+      {t("sync.now")}
+    </Button>
+  );
+}
+
 /** "Sync now" and "Verify" (§4.3): a minute apart at least, which the service enforces (SEC-09). */
 export function SyncButtons({ accountId }: { accountId: string }) {
   const t = useTranslations("investments");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>, done: string) =>
-    startTransition(async () => {
-      const result = await action();
-      notify(
-        result.ok
-          ? done
-          : t(`errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed"),
-        result.ok ? "success" : "error",
-      );
-      router.refresh();
-    });
   return (
     <span className="flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        variant="primary"
-        disabled={pending}
-        onClick={() => run(() => syncNowAction(accountId), t("toasts.synced"))}
-      >
-        {t("sync.now")}
-      </Button>
+      <SyncNowButton accountId={accountId} />
       <Button
         size="sm"
         disabled={pending}
-        onClick={() => run(() => verifyKeyAction(accountId), t("toasts.verified"))}
+        onClick={() =>
+          startTransition(async () => {
+            const result = await verifyKeyAction(accountId);
+            notifyOutcome(result, t("toasts.verified"), t);
+            router.refresh();
+          })
+        }
       >
         {t("sync.verify")}
       </Button>
     </span>
+  );
+}
+
+function notifyOutcome(
+  result: { ok: true } | { ok: false; error: string },
+  done: string,
+  t: ReturnType<typeof useTranslations<"investments">>,
+): void {
+  notify(
+    result.ok
+      ? done
+      : t(`errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed"),
+    result.ok ? "success" : "error",
   );
 }
 
@@ -2395,36 +2427,6 @@ export function ConfirmRevokedButton({ accountId }: { accountId: string }) {
 }
 
 // ——— The service's header (docs/design/investments-ux.md §3.2, U3) ———————————————————————————
-
-/** "Sync" of the header (§3.2): a minute apart at least, which the service enforces (SEC-09). */
-export function SyncNowButton({ accountId }: { accountId: string }) {
-  const t = useTranslations("investments");
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  return (
-    <Button
-      size="sm"
-      variant="primary"
-      disabled={pending}
-      onClick={() =>
-        startTransition(async () => {
-          const result = await syncNowAction(accountId);
-          notify(
-            result.ok
-              ? t("toasts.synced")
-              : t(
-                  `errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed",
-                ),
-            result.ok ? "success" : "error",
-          );
-          router.refresh();
-        })
-      }
-    >
-      {t("header.sync")}
-    </Button>
-  );
-}
 
 type HeaderDialog = "asset" | AccountKind | "replace" | "disconnect";
 

@@ -96,15 +96,4 @@ describe("PreferencesForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.preferences.errors.failed);
   });
-
-  it("clamps the patron-saint day to the selected month's length, and gives the day its own label", async () => {
-    save.mockResolvedValueOnce({ ok: true });
-    renderForm({ ...DEFAULT_PREFERENCES, patronSaint: { month: 1, day: 31 } });
-    // Only the month select carries the "Patron saint holiday" accessible name; the day select has
-    // its own distinct label ("Day"), so a screen reader never announces the same name twice.
-    await userEvent.selectOptions(screen.getByLabelText("Patron saint holiday"), "2");
-    expect(screen.getByLabelText("Day")).toHaveDisplayValue("28");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ patronSaint: { month: 2, day: 28 } }));
-  });
 });

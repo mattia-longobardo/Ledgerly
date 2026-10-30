@@ -32,9 +32,8 @@ export type HolidayActionError = "unreachable" | "duplicate" | "tooMany" | "notF
 export type HolidayActionResult = { ok: true } | { ok: false; error: HolidayActionError };
 
 function revalidate(): void {
-  revalidatePath("/settings/profile");
   // The leave screen decides what can be booked from these very days.
-  revalidatePath("/timeoff");
+  revalidatePath("/timeoff", "layout");
 }
 
 function failed(error: unknown): { ok: false; error: HolidayActionError } {

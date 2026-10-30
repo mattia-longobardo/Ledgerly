@@ -1,8 +1,10 @@
+import type { Route } from "next";
 import { cookies, headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { searchPayeesAction } from "@/modules/transactions/actions";
 import { searchRecordsAction } from "./palette-actions";
 import { saveTheme } from "@/modules/users/actions";
+import { getPreferences } from "@/modules/users/service";
 import { hasSsoAccount } from "@/platform/auth/accounts";
 import { getAuth } from "@/platform/auth/auth";
 import { requireSession } from "@/platform/auth/session";
@@ -13,6 +15,7 @@ import { ShellProvider } from "@/ui/shell/shell-context";
 import { parseSidebar, SIDEBAR_COOKIE } from "@/ui/shell/sidebar-state";
 import { Sidebar } from "@/ui/shell/sidebar";
 import { Toaster } from "@/ui/toast";
+import { WeekStartProvider } from "@/ui/week-start";
 import { navFor } from "./navigation";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -20,6 +23,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const viaSso = await hasSsoAccount(ctx.userId);
   const t = await getTranslations();
+  const { weekStart } = await getPreferences(ctx);
 
   const links: NavLink[] = navFor(ctx.role).map(({ id, href, icon, group, mobile, labelKey }) => ({
     id,
@@ -29,6 +33,43 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     mobile,
     label: t(`nav.${labelKey}`),
   }));
+  // What the palette finds beyond the sidebar: every settings page, by name (PERS-158).
+  const settingsLink = (id: string, href: string, label: string): NavLink => ({
+    id,
+    href: href as Route,
+    icon: "settings",
+    group: "footer",
+    mobile: false,
+    label,
+  });
+  const settingsLinks: NavLink[] = [
+    ...(["profile", "security", "integrations", "categories", "data"] as const).map((tab) =>
+      settingsLink(
+        `settings-${tab}`,
+        `/settings/${tab}`,
+        `${t("settings.title")} › ${t(`settings.tabs.${tab}`)}`,
+      ),
+    ),
+    ...(ctx.role === "admin"
+      ? (["users", "server"] as const).map((tab) =>
+          settingsLink(
+            `settings-${tab}`,
+            `/settings/${tab}`,
+            `${t("settings.title")} › ${t(`settings.tabs.${tab}`)}`,
+          ),
+        )
+      : []),
+    settingsLink(
+      "timeoff-settings",
+      "/timeoff/settings",
+      `${t("timeoff.title")} › ${t("timeoff.tabs.settings")}`,
+    ),
+    settingsLink(
+      "payroll-settings",
+      "/payroll/settings",
+      `${t("payroll.title")} › ${t("payroll.tabs.settings")}`,
+    ),
+  ];
   const labels = {
     product: t("common.product"),
     primary: t("nav.primary"),
@@ -58,16 +99,22 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <ShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
-      <div className="flex h-dvh overflow-hidden">
-        <Sidebar links={links} user={user} />
-        {/* `relative`: the containing block of every absolutely placed element of a page. Without it
+      <WeekStartProvider value={weekStart}>
+        <div className="flex h-dvh overflow-hidden">
+          <Sidebar links={links} user={user} />
+          {/* `relative`: the containing block of every absolutely placed element of a page. Without it
             an `sr-only` label far down a long list was placed against the viewport instead, and
             stretched the document itself: a second scrollbar over an empty half page (2026-09-18). */}
-        <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
-      </div>
-      <MobileNav links={links} user={user} />
-      <CommandPalette links={links} searchPayees={searchPayeesAction} searchRecords={searchRecordsAction} />
-      <Toaster closeLabel={t("common.close")} />
+          <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        </div>
+        <MobileNav links={links} user={user} />
+        <CommandPalette
+          links={[...links, ...settingsLinks]}
+          searchPayees={searchPayeesAction}
+          searchRecords={searchRecordsAction}
+        />
+        <Toaster closeLabel={t("common.close")} />
+      </WeekStartProvider>
     </ShellProvider>
   );
 }

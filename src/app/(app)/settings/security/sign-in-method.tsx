@@ -6,7 +6,7 @@ import { PasswordForm } from "./password-form";
 
 const strong = (chunks: ReactNode) => <span className="font-medium text-fg">{chunks}</span>;
 
-/** Settings › Profile › Sign-in: how the account signs in, and the password change when it has one. */
+/** Settings › Security › Sign-in: how the account signs in, and the password change when it has one. */
 export async function SignInMethod({ sso, password }: { sso: boolean; password: boolean }) {
   const t = await getTranslations("settings");
   const provider = identityProviderUrl();

@@ -136,20 +136,33 @@ migrazione, e il dump `backups/ledgerly/pre-sync-dependents.dump` serve solo per
 
 ## Interfaccia
 
-Settings › Integrazioni, card di ogni provider: riassunto della prima regola (`+N` se ce ne sono
-altre, tutte nel tooltip) e "Prossima: …". "Cambia" apre il dialog:
+Aggiornata da PERS-158: un solo controllo (`ScheduleControl`) in Settings › Integrazioni, nel tab
+Connessione di un servizio e in Ferie › Impostazioni. Ogni connessione usa la stessa riga
+(`ConnectionRow`): stato, ultima sync, orario con "Cambia" e prossima sync, azioni.
 
-1. **Scelte rapide**: Ogni ora, Ogni 30 min in orario d'ufficio, Due volte al giorno, Giorni
-   feriali alle 8:00, Il 1° del mese, Solo manuale. Riempiono l'editor; nulla è salvato finché
-   non si preme Salva.
-2. **Regole**: per ognuna il tipo (Ogni… / Agli orari… / Cron), i campi del tipo e i giorni (tutti,
-   giorni della settimana come chip, giorni del mese come griglia 1–31 + "Ultimo giorno"). Gli
-   orari si aggiungono con un campo `time` e si tolgono dal chip. "Aggiungi una regola" fino a 8.
-3. **Anteprima** delle prossime 5 esecuzioni nella timezone dell'utente, aggiornata a ogni
-   modifica (`aria-live`). Con un errore mostra il motivo e Salva resta disabilitato.
+Il dialog chiede una di quattro modalità; il dato salvato resta la lista di regole:
+
+| Modalità | Regole salvate | Campi |
+|---|---|---|
+| Ripeti | 1 `interval` con 15, 30, 60, 120, 240, 360 o 720 minuti | intervallo, "Solo tra le" (fascia), giorni |
+| A orari precisi | 1 `times` | orari al minuto, giorni |
+| Solo manuale | `[]` | nessuno |
+| Regole personalizzate | qualsiasi altra lista, cron compreso | l'editor per regole |
+
+- `scheduleForm(schedule)` (`settings/integrations/schedule-form.ts`) sceglie la modalità all'apertura;
+  `formRules` è il ritorno. Aprire e salvare senza modifiche produce lo stesso JSON. Una lista che non
+  entra in una modalità semplice si apre sotto "Regole personalizzate", senza modifiche.
+- **Giorni**: Ogni giorno, Lun–ven, Scegli i giorni (chip), Giorni del mese (griglia 1–31 + "Ultimo
+  giorno").
+- **Orari**: campo di testo a 24 ore, non `type="time"`, che mostrerebbe AM/PM secondo il browser.
+  `normalizeTime` accetta `643`, `0643`, `6:43` e `6.43`.
+- **Anteprima**: prossime 5 esecuzioni (3 su telefono) nella timezone dell'utente, a 24 ore e
+  aggiornata a ogni modifica (`aria-live`). Con un errore mostra il motivo e Salva resta disabilitato.
+- **"Usa il consigliato"** riempie il default della connessione (`recommendedSchedule`): ogni ora, o
+  07:30 e 22:30 per i servizi di investimento. Nulla è salvato finché non si preme Salva.
 
 i18n in `messages/{en,it}.json` (`settings.integrations.scheduleControl`). Il dialog entra in
-`tests/e2e/a11y.spec.ts` due volte: vuoto (manuale) e con tre regole.
+`tests/e2e/a11y.spec.ts` due volte: manuale e con tre regole.
 
 ## Migrazione `0034_sync_scheduler_v2`
 

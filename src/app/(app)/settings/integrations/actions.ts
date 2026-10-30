@@ -498,5 +498,8 @@ export async function saveScheduleAction(
     throw error;
   }
   revalidate();
+  // The same control sits on a service's Connection tab and on Time off › Settings.
+  revalidatePath("/investments", "layout");
+  revalidatePath("/timeoff/settings");
   return { ok: true };
 }

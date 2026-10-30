@@ -14,32 +14,35 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
   const dialog = page.getByRole("dialog", { name: "Sync schedule" });
   await expect(dialog).toBeVisible();
 
-  await test.step("a preset fills the editor, and the time is set to the minute", async () => {
-    await dialog.getByRole("button", { name: "Weekdays at 8:00" }).click();
-    await dialog.getByRole("button", { name: "Remove 08:00 from rule 1" }).click();
-    await dialog.getByLabel("New time for rule 1").fill("06:43");
+  await test.step("at set times, the time is set to the minute", async () => {
+    await dialog.getByRole("radio", { name: /At set times/ }).check();
+    await dialog.getByRole("button", { name: "Remove 07:30" }).click();
+    await dialog.getByRole("button", { name: "Remove 22:30" }).click();
+    await dialog.getByLabel("New time").fill("06:43");
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await dialog.getByRole("button", { name: "Mon–Fri" }).click();
     await expect(dialog.getByRole("listitem").filter({ hasText: "06:43" }).first()).toBeVisible();
   });
 
-  await test.step("a second rule, in cron, joins the preview in time order", async () => {
+  await test.step("custom rules start from it; a cron rule joins the preview in time order", async () => {
+    await dialog.getByRole("radio", { name: /Custom rules/ }).check();
     await dialog.getByRole("button", { name: "Add a rule" }).click();
     await dialog.getByLabel("Kind of rule 2").selectOption("cron");
-    const cron = dialog.getByLabel("Cron expression");
+    const cron = dialog.getByLabel("Cron expression", { exact: true });
     await cron.fill("30 18 * * 6,0");
-    const preview = dialog.getByRole("list", { name: "Next 5 syncs" });
+    const preview = dialog.getByRole("list", { name: "Next syncs" });
     await expect(preview.getByRole("listitem")).toHaveCount(5);
     const items = await preview.getByRole("listitem").allTextContents();
-    // The preview speaks the person's locale: en-US writes 18:30 as 06:30 PM.
-    expect(items.some((item) => item.includes("06:43 AM"))).toBe(true);
-    expect(items.every((item) => /06:43 AM|06:30 PM/.test(item))).toBe(true);
+    // 24 hours, whatever the language: the summary and the fields write it the same way.
+    expect(items.some((item) => item.includes("06:43"))).toBe(true);
+    expect(items.every((item) => /06:43|18:30/.test(item))).toBe(true);
   });
 
   await test.step("too close is refused before saving", async () => {
-    await dialog.getByLabel("Cron expression").fill("50 6 * * *");
+    await dialog.getByLabel("Cron expression", { exact: true }).fill("50 6 * * *");
     await expect(dialog.getByText(/Two syncs at 06:43 and 06:50/)).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Save" })).toBeDisabled();
-    await dialog.getByLabel("Cron expression").fill("30 18 * * 6,0");
+    await dialog.getByLabel("Cron expression", { exact: true }).fill("30 18 * * 6,0");
   });
 
   await test.step("saved: the card sums it up and names the next pass", async () => {
@@ -51,9 +54,22 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
 
   await test.step("back to manual only", async () => {
     await page.getByRole("button", { name: "Change the sync schedule" }).first().click();
-    await dialog.getByRole("button", { name: "Manual only" }).click();
+    await dialog.getByRole("radio", { name: /Manual only/ }).check();
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText("No automatic sync").first()).toBeVisible();
   });
+});
+
+test("a service's Connection tab shows its real schedule, with the same control", async ({ page }) => {
+  await page.goto("/settings/integrations");
+  const row = page.getByTestId("investment-connection").filter({ hasText: "eToro" });
+  // Seeded on manual only: the tab used to say 07:30 and 22:30 whatever the schedule was.
+  await expect(row.getByText("Manual only")).toBeVisible();
+  await row.getByRole("link", { name: "Configure" }).click();
+  const card = page.getByTestId("service-connection");
+  await expect(card.getByText("Manual only")).toBeVisible();
+  await expect(card.getByText("07:30")).toHaveCount(0);
+  await card.getByRole("button", { name: "Change the sync schedule" }).click();
+  await expect(page.getByRole("dialog", { name: "Sync schedule · eToro" })).toBeVisible();
 });

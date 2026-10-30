@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
@@ -8,17 +9,9 @@ import { DISPLAY_CURRENCIES } from "@/platform/fx/rules";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
+import { Checkbox, Select } from "@/ui/input";
 import { useTheme } from "@/ui/theme-provider";
 import { notify } from "@/ui/toast";
-
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-// A non-leap-year probe (matches the server's own patron-saint validation): Feb has 28 days here.
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
-
-function daysInMonth(month: number | undefined): number {
-  return month ? DAYS_IN_MONTH[month - 1] : 31;
-}
 
 /**
  * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change
@@ -27,10 +20,13 @@ function daysInMonth(month: number | undefined): number {
 export function PreferencesForm({
   initial,
   timeZones,
+  summaryBlocked = false,
 }: {
   initial: Preferences;
   /** Every selectable IANA zone, labelled with its current UTC offset. */
   timeZones: { value: string; label: string }[];
+  /** An admin turned this mail off for the whole instance: the box alone would promise too much. */
+  summaryBlocked?: boolean;
 }) {
   const t = useTranslations("settings.preferences");
   const common = useTranslations("common");
@@ -42,13 +38,7 @@ export function PreferencesForm({
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPrefs((p) => ({ ...p, [key]: value }));
 
-  const monthFormatter = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-    month: "long",
-    timeZone: "UTC",
-  });
-  const monthLabel = (month: number) => monthFormatter.format(new Date(Date.UTC(2023, month - 1, 1)));
   const currencyNames = new Intl.DisplayNames(locale === "it" ? "it-IT" : "en-US", { type: "currency" });
-  const days = Array.from({ length: daysInMonth(prefs.patronSaint?.month) }, (_, i) => i + 1);
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -165,73 +155,25 @@ export function PreferencesForm({
           <option value="dark">{t("themes.dark")}</option>
         </Select>
       </Field>
-      <Field label={t("defaultRange")} htmlFor="defaultRange">
-        <Select
-          id="defaultRange"
-          value={prefs.defaultRange}
-          onChange={(e) => set("defaultRange", e.target.value as Preferences["defaultRange"])}
-        >
-          <option value="this_month">{t("ranges.this_month")}</option>
-          <option value="last_30_days">{t("ranges.last_30_days")}</option>
-          <option value="year_to_date">{t("ranges.year_to_date")}</option>
-        </Select>
-      </Field>
-      <Field label={t("hoursPerDay")} htmlFor="hoursPerDay">
-        <Input
-          id="hoursPerDay"
-          // Left like the selects around it: `numeric` right-aligns, for amounts in a column.
-          className="tabular-nums"
-          type="number"
-          min={1}
-          max={12}
-          step={0.25}
-          value={prefs.minutesPerDay / 60}
-          onChange={(e) => set("minutesPerDay", Math.round(Number(e.target.value) * 60))}
-        />
-      </Field>
-      <Field label={t("patronSaint")} htmlFor="patronMonth">
-        <div className="flex gap-2">
-          <Select
-            id="patronMonth"
-            value={prefs.patronSaint?.month ?? ""}
-            onChange={(e) => {
-              const month = e.target.value ? Number(e.target.value) : null;
-              set(
-                "patronSaint",
-                month ? { month, day: Math.min(prefs.patronSaint?.day ?? 1, daysInMonth(month)) } : null,
-              );
-            }}
-          >
-            <option value="">{t("patronNone")}</option>
-            {MONTHS.map((m) => (
-              <option key={m} value={m}>
-                {monthLabel(m)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label={t("patronDay")}
-            disabled={!prefs.patronSaint}
-            value={prefs.patronSaint?.day ?? ""}
-            onChange={(e) =>
-              prefs.patronSaint &&
-              set("patronSaint", { month: prefs.patronSaint.month, day: Number(e.target.value) })
-            }
-          >
-            {days.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </Field>
+      {/* Only leave reads these, so they live with it (PERS-158); this says where they went. */}
+      <p className="text-sm text-muted sm:col-span-2">
+        {t.rich("timeOffMoved", {
+          link: (chunks) => (
+            <Link href="/timeoff/settings" className="focus-ring rounded-[4px] text-accent underline">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
       <CardFooter>
-        <Checkbox
-          label={t("monthlySummary")}
-          checked={prefs.monthlySummary}
-          onChange={(e) => set("monthlySummary", e.target.checked)}
-        />
+        <div className="flex flex-col gap-1">
+          <Checkbox
+            label={t("monthlySummary")}
+            checked={prefs.monthlySummary}
+            onChange={(e) => set("monthlySummary", e.target.checked)}
+          />
+          {summaryBlocked && <p className="text-sm text-warn">{t("monthlySummaryBlocked")}</p>}
+        </div>
         <Button type="submit" variant="primary" size="sm" disabled={pending}>
           {common("save")}
         </Button>

@@ -2,15 +2,12 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { listSnapshotRuns } from "@/modules/accounts/queries";
 import { SnapshotButton } from "@/modules/accounts/ui/snapshot-button";
-import { codeMapView } from "@/modules/payroll/queries";
-import { REPLY_TEAMSYSTEM_CODES } from "@/modules/payroll/rules";
 import { requireSession } from "@/platform/auth/session";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
 import { buttonClassName } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { CodeMapCard } from "./code-map-card";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("settings.tabs"))("data") };
@@ -19,10 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SettingsDataPage() {
   const ctx = await requireSession();
   const t = await getTranslations("settings.snapshots");
-  const codes = await getTranslations("settings.codeMap");
   const mine = await getTranslations("settings.exportMine");
-  const [runs, codeMap] = await Promise.all([listSnapshotRuns(ctx), codeMapView(ctx)]);
-  const seeded = new Set(REPLY_TEAMSYSTEM_CODES.map((entry) => entry.code));
+  const runs = await listSnapshotRuns(ctx);
 
   return (
     <SettingsGrid>
@@ -78,17 +73,6 @@ export default async function SettingsDataPage() {
           </a>
           <p className="text-sm text-muted">{mine("hint")}</p>
         </div>
-      </SettingsSection>
-
-      <SettingsSection title={codes("title")} description={codes("description")} padded={false}>
-        <CodeMapCard
-          entries={codeMap.map((entry) => ({
-            code: entry.code,
-            role: entry.role,
-            note: entry.note,
-            seeded: seeded.has(entry.code),
-          }))}
-        />
       </SettingsSection>
     </SettingsGrid>
   );

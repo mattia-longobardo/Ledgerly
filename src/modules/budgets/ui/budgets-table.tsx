@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -109,6 +110,7 @@ export function BudgetsTable({
   monthLabel: string;
 }) {
   const t = useTranslations("budgets");
+  const router = useRouter();
 
   function remove(row: BudgetRowView) {
     void stopBudgetAction(row.scope, month).then((result) =>
@@ -122,7 +124,10 @@ export function BudgetsTable({
   const menu = (row: BudgetRowView) => (
     <ActionMenu
       label={t("row.menu")}
-      items={[{ label: t("row.remove"), onSelect: () => remove(row), danger: true }]}
+      items={[
+        { label: t("row.alerts"), onSelect: () => router.push(row.href as Route) },
+        { label: t("row.remove"), onSelect: () => remove(row), danger: true },
+      ]}
     />
   );
   const label = (row: BudgetRowView) => (

@@ -340,16 +340,7 @@
       },
       "scheduleControl": {
         "title": "Sync schedule",
-        "description": "Times are in your time zone ({timeZone}, from Settings › Profile), to the minute. A sync starts within a minute of the time chosen; two syncs are at least {minutes} minutes apart.",
-        "presets": {
-          "label": "Quick choices",
-          "hourly": "Every hour",
-          "officeHours": "Every 30 min, office hours",
-          "twiceDaily": "Twice a day",
-          "weekdays8": "Weekdays at 8:00",
-          "monthStart": "1st of the month",
-          "manual": "Manual only"
-        },
+        "description": "Times are in {timeZone}. <link>Change the time zone</link>",
         "rule": "Rule {n}",
         "kindLabel": "Kind of rule {n}",
         "kinds": {
@@ -386,10 +377,18 @@
           "workdays": "Mon–Fri",
           "weekend": "Sat–Sun",
           "last": "last",
-          "ofMonth": "on day {days}"
+          "ofMonth": "on day {days}",
+          "choices": {
+            "every": "Every day",
+            "workdays": "Mon–Fri",
+            "pick": "Pick days",
+            "month": "Month days"
+          },
+          "weekdaysLabel": "Days of the week",
+          "monthDaysLabel": "Days of the month"
         },
         "preview": {
-          "title": "Next {n} syncs",
+          "title": "Next syncs",
           "manual": "No automatic sync: only “Sync now” starts one.",
           "fix": "Fix the rules marked in red to see the next syncs."
         },
@@ -400,9 +399,10 @@
           "days": "Pick at least one day.",
           "cron": "This is not a valid cron expression.",
           "neverRuns": "This rule never runs.",
-          "tooFrequent": "Two syncs at {first} and {second}: keep them at least {minutes} minutes apart."
+          "tooFrequent": "Two syncs at {first} and {second}: keep them at least {minutes} minutes apart.",
+          "time": "Write the time as HH:MM, such as 06:43."
         },
-        "manualHint": "No rule: only “Sync now” starts a sync. Pick a quick choice or add a rule.",
+        "manualHint": "No rule: only “Sync now” starts a sync. Add a rule, or choose another mode.",
         "summary": {
           "manual": "Manual only",
           "hourly": "Every hour",
@@ -420,7 +420,22 @@
         "cancel": "Cancel",
         "save": "Save",
         "saved": "Schedule saved",
-        "invalid": "This schedule was refused: check the rules."
+        "invalid": "This schedule was refused: check the rules.",
+        "titleFor": "Sync schedule · {name}",
+        "modes": {
+          "label": "When to sync",
+          "repeat": "Repeat",
+          "times": "At set times",
+          "timesHint": "Any minute of the day, such as 06:43",
+          "manual": "Manual only",
+          "manualHint": "Only “Sync now” starts a sync",
+          "custom": "Custom rules",
+          "customHint": "Several rules together, or a cron expression"
+        },
+        "onlyBetween": "Only between",
+        "useRecommended": "Use recommended ({schedule})",
+        "removeTimeSimple": "Remove {time}",
+        "newTimeSimple": "New time"
       },
       "paperless": {
         "notLinked": "Not linked. Ledgerly reads the payslips Paperless files, with the token of a read-only Paperless user.",
@@ -440,8 +455,8 @@
       },
       "investments": {
         "title": "Investment connections",
-        "open": "Open {name}",
-        "description": "Keys, checks and disconnection live on the service's page."
+        "description": "Same row and same schedule as the others. Configure opens the service's Connection tab: the key and its checks are there.",
+        "role": "Read-only API key"
       }
     },
     "categories": {
@@ -614,24 +629,16 @@
         "light": "Light",
         "dark": "Dark"
       },
-      "defaultRange": "Default date range",
-      "ranges": {
-        "this_month": "This month",
-        "last_30_days": "Last 30 days",
-        "year_to_date": "Year to date"
-      },
       "monthlySummary": "Email me the monthly summary",
-      "hoursPerDay": "Working day (hours)",
-      "patronSaint": "Patron saint holiday",
-      "patronDay": "Day",
-      "patronNone": "None",
       "saved": "Preferences saved",
       "errors": {
         "invalid": "Some of these preferences are invalid. Check your inputs and try again.",
         "failed": "Couldn't save preferences. Try again."
       },
       "displayCurrency": "Display currency",
-      "displayCurrencyHint": "Totals across accounts are converted to it at the ECB rate of their day. Each account keeps its own currency."
+      "displayCurrencyHint": "Totals across accounts are converted to it at the ECB rate of their day. Each account keeps its own currency.",
+      "timeOffMoved": "Working hours, patron saint and holiday calendars are in <link>Time off › Settings</link>.",
+      "monthlySummaryBlocked": "An admin turned this email off for the whole server."
     },
     "signIn": {
       "title": "Sign-in",
@@ -954,7 +961,7 @@
     "holidays": {
       "title": "Public holidays",
       "description": "The calendars your days off are measured against. Keep as many as you need — they are fetched from their source and refreshed every day.",
-      "empty": "No calendar yet. Until you add one, the Italian public holidays are used, plus the patron saint set above.",
+      "empty": "No calendar yet. Until you add one, the Italian public holidays are used, plus the patron saint set below.",
       "meta": "{days} days in {year} · {source}",
       "never": "Never updated",
       "updated": "Updated {when}",
@@ -1750,7 +1757,8 @@
     "hint": "Click a limit to edit it inline; Enter saves, Esc cancels.",
     "row": {
       "menu": "Budget actions",
-      "remove": "Remove from this month"
+      "remove": "Remove from this month",
+      "alerts": "Alerts"
     },
     "empty": {
       "title": "No budgets set",
@@ -2971,7 +2979,7 @@
         "payrollDescription": "Which payslip codes feed each component, and whether this fund receives them. Specific to the Reply / TeamSystem layout.",
         "payrollOn": "This fund takes the contributions of every applied payslip.",
         "payrollOff": "Another fund takes the payslips' contributions.",
-        "codes": "The codes each component comes from are the payroll code map, in Settings › Data.",
+        "codes": "The codes each component comes from are the payroll code map, in Payroll › Settings.",
         "takePayroll": "Take the payslips' contributions",
         "rebuild": "Rebuild from payslips",
         "rebuilt": "{count, plural, one {# payslip} other {# payslips}} read again",
@@ -3013,7 +3021,7 @@
           "enrollment": "Enrolment fees",
           "adjustment": "Corrections"
         },
-        "openCodeMap": "Open Settings › Data",
+        "openCodeMap": "Open Payroll › Settings",
         "frequency": "Frequency",
         "frequencies": {
           "quarterly": "Quarterly",
@@ -3599,8 +3607,6 @@
         "revoked": "Key refused"
       },
       "lastOk": "Last good sync",
-      "next": "Next sync",
-      "manual": "Only by hand",
       "key": "Key",
       "keyCheck": "{result}, checked {date}",
       "ipUnrestricted": "IP not restricted",
@@ -3614,7 +3620,6 @@
       },
       "lastError": "Last error: {error}",
       "rotate": "The key is more than 90 days old: replace it with a new one and revoke the old one.",
-      "scheduleNote": "Synced at 07:30 and 22:30; one reading a day is kept. Change the times in Settings › Integrations.",
       "now": "Sync now",
       "verify": "Verify key",
       "replace": "Replace key",
@@ -3659,7 +3664,8 @@
       "reliableFrom": "reliable from {date}",
       "notReliable": "history incomplete",
       "etoroBrand": "Data from eToro, read with your key.",
-      "binanceBrand": "Data from Binance, read with your key."
+      "binanceBrand": "Data from Binance, read with your key.",
+      "readingsNote": "One reading a day is kept."
     },
     "transfers": {
       "title": "Transfers to confirm",
@@ -3815,7 +3821,6 @@
       "sentenceColon": "{label}: {detail}"
     },
     "header": {
-      "sync": "Sync",
       "addOperation": "Add operation",
       "operations": {
         "buy": "Buy",
@@ -4415,6 +4420,17 @@
       "rolAccrued": "ROL, accrued",
       "rolUsed": "ROL, used",
       "rolRemaining": "ROL, remaining"
+    },
+    "tabs": {
+      "label": "Payroll",
+      "register": "Register",
+      "settings": "Settings"
+    },
+    "settingsPage": {
+      "related": "Elsewhere",
+      "relatedDescription": "What payslips also depend on.",
+      "paperless": "Paperless, in Integrations",
+      "llm": "LLM fallback, in Server"
     }
   },
   "timeoff": {
@@ -4513,12 +4529,12 @@
     },
     "actions": {
       "add": "Add leave",
-      "allowance": "Allowance",
       "edit": "Edit",
       "remove": "Remove",
       "cancel": "Cancel",
       "save": "Save",
-      "confirmDelete": "Remove the leave on {date}?"
+      "confirmDelete": "Remove the leave on {date}?",
+      "setAllowance": "Set allowance"
     },
     "dialog": {
       "addTitle": "Add leave",
@@ -4540,13 +4556,10 @@
       "rolLocal": "ROL stays here: it is never sent to Trek."
     },
     "allowance": {
-      "title": "Allowance for {year}",
       "description": "What the contract grants this year. Leave a field empty to state nothing; what last year left over comes from your payslip.",
       "vacationDays": "Vacation days",
       "rolDays": "ROL days",
-      "rolHint": "Days, like vacation: the screen counts in days throughout.",
-      "totalDays": "Days granted in total",
-      "totalDaysHint": "Vacation and ROL together, as the contract states it."
+      "totalDays": "Days granted in total"
     },
     "toasts": {
       "saved": "Leave saved",
@@ -4580,6 +4593,36 @@
     },
     "mismatch": "The parts do not add up to the total granted: {amount} {direction}.",
     "mismatchOver": "more",
-    "mismatchUnder": "less"
+    "mismatchUnder": "less",
+    "tabs": {
+      "label": "Time off",
+      "overview": "Overview",
+      "settings": "Settings"
+    },
+    "settings": {
+      "allowance": {
+        "title": "Allowance"
+      },
+      "copyFrom": "Copy from {year}",
+      "hours": {
+        "title": "Working hours",
+        "description": "How long a day off is.",
+        "label": "Hours in a working day",
+        "hint": "Payslip hours become days with this number, in every year. Saturday and Sunday never count as leave.",
+        "saved": "Working hours saved"
+      },
+      "patron": {
+        "label": "Patron saint holiday",
+        "none": "None",
+        "day": "Day",
+        "hint": "A day off only in your town. A date already in a calendar counts once.",
+        "saved": "Patron saint saved"
+      },
+      "trek": {
+        "description": "Where leave days also live.",
+        "manage": "Manage in Integrations",
+        "connect": "Connect in Integrations"
+      }
+    }
   }
 }

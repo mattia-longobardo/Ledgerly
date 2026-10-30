@@ -6,22 +6,19 @@ import { getTranslations } from "next-intl/server";
 import { type LeaveRow, timeOffView } from "@/modules/timeoff/queries";
 import type { MonthBar, MonthGroup, Overdrawn, ResidualView } from "@/modules/timeoff/rules";
 import { KindCard, MonthBars } from "@/modules/timeoff/ui/kind-card";
-import {
-  type AllowanceSummary,
-  type LeaveSummary,
-  AddLeave,
-  EditAllowance,
-  RowActions,
-} from "@/modules/timeoff/ui/leave-actions";
+import { type LeaveSummary, AddLeave, RowActions } from "@/modules/timeoff/ui/leave-actions";
+import { YearPicker } from "@/modules/timeoff/ui/year-picker";
 import { KIND_CLASS, weekdayInitials } from "@/modules/timeoff/ui/kinds";
 import { YearCalendar } from "@/modules/timeoff/ui/year-calendar";
 import { requireSession } from "@/platform/auth/session";
 import { today as todayIn } from "@/platform/dates";
 import { formatDate, NULL_DISPLAY, type UiLocale } from "@/platform/format";
 import { Badge } from "@/ui/badge";
+import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Page } from "@/ui/shell/page";
+import { TabLinks } from "@/ui/tab-links";
 import { EmptyState } from "@/ui/states";
 import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 
@@ -99,14 +96,6 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
   /** A minute total as a card prints it: bare days, or the dash of a residual nobody can compute. */
   const asDays = (minutes: number | null) =>
     minutes === null ? NULL_DISPLAY : formatNumber(minutes / view.minutesPerDay, locale);
-
-  const allowanceSummary: AllowanceSummary = {
-    year,
-    vacationDays: view.allowance?.vacationDays == null ? "" : trim(view.allowance.vacationDays),
-    rolDays: view.allowance?.rolDays == null ? "" : trim(view.allowance.rolDays),
-    totalDays: view.allowance?.totalDays == null ? "" : trim(view.allowance.totalDays),
-    note: view.allowance?.note ?? "",
-  };
 
   const headline = [
     view.vacation.allowanceMinutes === null
@@ -233,7 +222,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
             year={year}
             years={view.years}
             currentYear={currentYear}
-            filter={filter}
+            hrefFor={(one) => hrefFor(one, filter)}
             labels={{
               label: t("header.yearLabel"),
               previous: t("header.previousYear"),
@@ -249,8 +238,19 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
           <h1 className="text-title font-semibold tracking-[-0.02em]">{t("heading")}</h1>
           <p className="text-muted">{headline || t("header.noAllowance")}</p>
         </div>
-        <EditAllowance allowance={allowanceSummary} label={t("actions.allowance")} />
+        {view.allowance === null && (
+          <ButtonLink href={`/timeoff/settings?year=${year}` as Route} size="sm">
+            {t("actions.setAllowance")}
+          </ButtonLink>
+        )}
       </div>
+      <TabLinks
+        label={t("tabs.label")}
+        tabs={[
+          { href: hrefFor(year, filter), label: t("tabs.overview"), active: true },
+          { href: `/timeoff/settings?year=${year}` as Route, label: t("tabs.settings"), active: false },
+        ]}
+      />
 
       {/* The two parts against the total the contract states (N7): reported, never corrected. */}
       {view.allowanceMismatch !== null && (
@@ -530,72 +530,6 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
   );
 }
 
-/**
- * The design's year stepper: previous, the year itself, next, and a way back to this one. Links
- * rather than buttons, so the year is in the URL and the whole page stays a server render.
- */
-function YearPicker({
-  year,
-  years,
-  currentYear,
-  filter,
-  labels,
-}: {
-  year: number;
-  years: number[];
-  currentYear: number;
-  filter: Filter;
-  labels: { label: string; previous: string; next: string; today: string };
-}) {
-  const first = Math.min(...years, year);
-  const step = (delta: number) => hrefFor(year + delta, filter);
-  return (
-    <nav aria-label={labels.label} className="flex h-7 items-center rounded-ctl border border-border bg-card">
-      <YearStep href={step(-1)} label={labels.previous} disabled={year <= first - 1} glyph="‹" />
-      <span className="min-w-[56px] px-2 text-center font-medium tabular-nums">{year}</span>
-      <YearStep href={step(1)} label={labels.next} disabled={year >= currentYear} glyph="›" />
-      <span aria-hidden="true" className="h-4 w-px bg-border max-sm:hidden" />
-      <Link
-        href={hrefFor(currentYear, filter)}
-        // Hidden on the narrowest screens, where it would wrap the topbar onto two lines; the
-        // arrows still walk the years, and the year itself is always in view.
-        className="focus-ring inline-flex h-full items-center px-2.5 text-sm font-medium text-accent hover:underline max-sm:hidden"
-      >
-        {labels.today}
-      </Link>
-    </nav>
-  );
-}
-
-function YearStep({
-  href,
-  label,
-  disabled,
-  glyph,
-}: {
-  href: Route;
-  label: string;
-  disabled: boolean;
-  glyph: string;
-}) {
-  if (disabled) {
-    return (
-      <span aria-hidden="true" className="grid w-7 place-items-center text-faint">
-        {glyph}
-      </span>
-    );
-  }
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      className="focus-ring grid w-7 place-items-center text-muted hover:text-fg"
-    >
-      <span aria-hidden="true">{glyph}</span>
-    </Link>
-  );
-}
-
 function Legend({ className, label }: { className: string; label: string }) {
   return (
     <li className="flex items-center gap-1.5">
@@ -611,11 +545,6 @@ function asFilter(value: string | undefined): Filter {
 
 function hrefFor(year: number, filter: Filter): Route {
   return `/timeoff?year=${year}${filter === "all" ? "" : `&filter=${filter}`}` as Route;
-}
-
-/** A `numeric(5,2)` as a person would type it back: "26.00" is "26", "0.50" is "0.5". */
-function trim(value: string): string {
-  return String(Number(value));
 }
 
 function formatNumber(value: number, locale: UiLocale): string {
