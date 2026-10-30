@@ -3748,8 +3748,9 @@
         "unavailable": "not available",
         "highlight": "Highlight {name} in the chart",
         "notComputable": "Return not computable: too little capital in the period",
+        "onInvested": "Return on the money put in: it went in and out inside the period, so Dietz has no average capital to divide by",
         "xirr": "XIRR {rate}",
-        "largeFlows": "Estimate: the flows are large next to the capital",
+        "largeFlows": "The flows are large next to the capital: Dietz is further from a time-weighted return",
         "share": "{share} of {net} net",
         "shareNotComputable": "Share of the net not computable"
       },
@@ -3931,9 +3932,9 @@
         "historyRead": "Read every day from {date}.",
         "cost": "Cost basis",
         "costMismatch": "The quantities do not add up with the activity: each difference is an entry in Activity.",
-        "costMissing": "{name} does not give the cost of the positions: the period values them at its start.",
         "details": "Technical detail by stream ({count})",
-        "products": "Products read: {products}"
+        "products": "Products read: {products}",
+        "costPeriod": "Each period values the positions at its start, and those bought in it at what they cost: no cost from the provider is needed."
       },
       "status": {
         "complete": "Complete",

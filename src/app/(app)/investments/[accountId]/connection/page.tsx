@@ -314,9 +314,17 @@ function Received({
   instant: (at: Date) => string;
   tp: (key: "products.spot") => string;
 }) {
-  const sync = detail.sync!;
   const name = detail.summary.account.name;
   const latest = detail.readings[0] ?? null;
+  // Only the days the service reads (PERS-145): before its start — the cut-off of its 12 months —
+  // nothing is kept, so what a provider does not give there is no gap of the service.
+  const since = new Date(`${detail.summary.investment.managedSince}T00:00:00Z`);
+  const sync = {
+    ...detail.sync!,
+    coverage: detail
+      .sync!.coverage.filter((row) => row.toAt > since)
+      .map((row) => (row.fromAt < since ? { ...row, fromAt: since } : row)),
+  };
   const flows = sync.coverage.filter(
     (row) => row.kind === "flows" && row.stream !== "quantities" && row.stream !== "balance_history",
   );
@@ -391,11 +399,11 @@ function Received({
     {
       key: "cost",
       title: t("connection.received.cost"),
-      status: quantities && quantities.status !== "complete" ? "check" : "missing",
+      status: quantities && quantities.status !== "complete" ? "check" : "complete",
       text:
         quantities && quantities.status !== "complete"
           ? t("connection.received.costMismatch")
-          : t("connection.received.costMissing", { name }),
+          : t("connection.received.costPeriod"),
     },
   ];
 
