@@ -5,7 +5,7 @@ import { getDb } from "@/platform/db/client";
 import { JOBS, type Tier } from "./registry";
 import { jobRuns } from "./schema";
 
-/** The jobs card of Settings › Integrations (spec §7.10, §10.3): admins only. */
+/** The jobs card of Admin › Server (spec §10.3): admins only. */
 export interface JobStatus {
   name: string;
   tier: Tier;

@@ -1,4 +1,4 @@
-// src/app/(app)/settings/profile/holiday-actions.ts — the holiday calendars of Settings › Profile
+// src/app/(app)/timeoff/settings/holiday-actions.ts — the holiday calendars of Time off › Settings
 // (M3): list the places the two services can name, subscribe to one, drop one, fetch one again.
 //
 // The two country lists are fetched on demand rather than on every render of the page: they change

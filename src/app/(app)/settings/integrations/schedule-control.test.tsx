@@ -3,8 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../messages/en.json";
-import { DEFAULT_SYNC_SCHEDULE, type SyncSchedule } from "@/platform/integrations/schedule";
+import {
+  DEFAULT_SYNC_SCHEDULE,
+  type SyncDays,
+  type SyncRule,
+  type SyncSchedule,
+} from "@/platform/integrations/schedule";
 import { ScheduleControl } from "./schedule-control";
+import { REPEAT_MINUTES } from "./schedule-form";
 
 const save = vi.fn();
 
@@ -39,7 +45,69 @@ beforeEach(() => {
   save.mockResolvedValue({ ok: true });
 });
 
+const EVERY: SyncDays = { kind: "every" };
+const WORKDAYS: SyncDays = { kind: "weekdays", weekdays: [1, 2, 3, 4, 5] };
+const interval = (
+  everyMinutes: number,
+  from = "00:00",
+  until = "23:59",
+  days: SyncDays = EVERY,
+): SyncRule => ({
+  kind: "interval",
+  everyMinutes,
+  from,
+  until,
+  days,
+});
+
+/** Every row of the table in docs/scheduler.md, with the mode the dialog must open it in. */
+const UNCHANGED: [string, "repeat" | "times" | "manual" | "custom", SyncSchedule][] = [
+  ["no rule", "manual", { rules: [] }],
+  ...REPEAT_MINUTES.map((minutes): [string, "repeat", SyncSchedule] => [
+    `every ${minutes} minutes`,
+    "repeat",
+    { rules: [interval(minutes)] },
+  ]),
+  ["a window on workdays", "repeat", { rules: [interval(30, "08:00", "19:00", WORKDAYS)] }],
+  [
+    "a window on picked days",
+    "repeat",
+    { rules: [interval(240, "06:15", "20:45", { kind: "weekdays", weekdays: [2, 6, 7] })] },
+  ],
+  ["two times", "times", { rules: [{ kind: "times", times: ["07:30", "22:30"], days: EVERY }] }],
+  [
+    "a time on month days",
+    "times",
+    { rules: [{ kind: "times", times: ["06:43"], days: { kind: "monthDays", monthDays: [-1, 1, 15] } }] },
+  ],
+  ["an interval the Select does not offer", "custom", { rules: [interval(45)] }],
+  ["a whole number of hours it does not offer", "custom", { rules: [interval(180, "01:00", "23:00")] }],
+  ["a cron rule", "custom", { rules: [{ kind: "cron", expression: "43 6 * * 1-5" }] }],
+  [
+    "two rules",
+    "custom",
+    {
+      rules: [
+        { kind: "times", times: ["06:43"], days: WORKDAYS },
+        { kind: "cron", expression: "30 18 * * 6,0" },
+      ],
+    },
+  ],
+];
+
 describe("ScheduleControl", () => {
+  it.each(UNCHANGED)(
+    "opens %s in its mode, and saving untouched sends the same JSON",
+    async (_, mode, rules) => {
+      renderControl(rules);
+      const dialog = await openDialog();
+      expect(within(dialog).getByRole("radio", { name: new RegExp(`^${T.modes[mode]}`) })).toBeChecked();
+      await userEvent.click(within(dialog).getByRole("button", { name: T.save }));
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(save.mock.calls[0][1])).toBe(JSON.stringify(rules));
+    },
+  );
+
   it("sums the schedule up on the card", () => {
     renderControl({
       rules: [

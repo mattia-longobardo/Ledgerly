@@ -4230,7 +4230,7 @@
       },
       "warnings": {
         "title": "Da guardare",
-        "unknown_code": "Il codice {code} non è nella tua mappa dei codici: la riga resta, ma non conta per nulla finché non lo mappi (Impostazioni › Dati).",
+        "unknown_code": "Il codice {code} non è nella tua mappa dei codici: la riga resta, ma non conta per nulla finché non lo mappi (Buste paga › Impostazioni).",
         "tfr_both_differ": "La casella TFR ({monthField}) e la voce 8003 ({contributionLine}) differiscono: si usa la voce 8003, mai entrambe.",
         "tfr_partial_month": "TFR su un mese parziale: trascritto come stampato, non ricalcolato.",
         "employer_fund_adjustment_only": "Una rettifica del fondo azienda senza quota ordinaria accanto: nessun importo aziendale mensile viene calcolato. Controllala con il cedolino precedente.",

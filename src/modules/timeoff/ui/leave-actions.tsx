@@ -219,7 +219,6 @@ export function AddLeave({ today, label }: { today: string; label: string }) {
   );
 }
 
-/** The header's allowance button: "26 days · 32 h", which opens the year's allowance. */
 /** One table row's Edit and Remove. */
 export function RowActions({ day, today }: { day: LeaveSummary; today: string }) {
   const t = useTranslations("timeoff");

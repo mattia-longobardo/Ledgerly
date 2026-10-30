@@ -109,7 +109,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </div>
         <MobileNav links={links} user={user} />
         <CommandPalette
-          links={[...links, ...settingsLinks]}
+          links={links}
+          searchLinks={settingsLinks}
           searchPayees={searchPayeesAction}
           searchRecords={searchRecordsAction}
         />

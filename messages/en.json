@@ -4230,7 +4230,7 @@
       },
       "warnings": {
         "title": "Needs your attention",
-        "unknown_code": "Code {code} is not in your code map: its line is kept, but counted for nothing until you map it (Settings › Data).",
+        "unknown_code": "Code {code} is not in your code map: its line is kept, but counted for nothing until you map it (Payroll › Settings).",
         "tfr_both_differ": "The TFR box ({monthField}) and line 8003 ({contributionLine}) differ: line 8003 is used, never both.",
         "tfr_partial_month": "TFR on a partial month: transcribed as printed, not recomputed.",
         "employer_fund_adjustment_only": "An employer fund adjustment with no regular quota beside it: no monthly employer amount is computed. Check it against the payslip before.",
