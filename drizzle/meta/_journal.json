@@ -302,6 +302,13 @@
       "when": 1793314323163,
       "tag": "0042_reading_reconstructed",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793375998535,
+      "tag": "0043_drop_legacy_investments",
+      "breakpoints": true
     }
   ]
 }
