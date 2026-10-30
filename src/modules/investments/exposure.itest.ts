@@ -352,6 +352,47 @@ describe("/api/v1/investments (§5.5)", () => {
     });
   });
 
+  it("answers the P&L of the period asked, and the same fields as before around it (U5)", async () => {
+    const ctx = await ssoPerson("api-period@example.test");
+    const { manual } = await seed(ctx);
+    const token = await tokenFor(["investments:read"], API);
+    const on = today(ctx.timeZone);
+    const { investmentsPnl } = await import("./queries");
+    const { pnlJson } = await import("./api");
+
+    const plain = JSON.parse(await (await get("/investments", token)).text());
+    expect(plain.pnl.period).toEqual({ kind: "year", from: `${on.slice(0, 4)}-01-01`, to: on });
+
+    // One day by `from`/`to`: Directa took 1.000 € and is worth 1.050 €, so +50 €.
+    const day = await get(`/investments?from=${on}&to=${on}`, token);
+    expect(day.status).toBe(200);
+    const body = JSON.parse(await day.text());
+    expect(body.pnl.period).toEqual({ kind: "custom", from: on, to: on });
+    const directa = body.pnl.services.find((one: { accountId: string }) => one.accountId === manual);
+    expect(directa).toMatchObject({ from: on, to: on, display: { pnl: "50.00" } });
+    // The engine every screen uses, to the cent.
+    expect(body.pnl).toEqual(
+      JSON.parse(JSON.stringify(pnlJson(await investmentsPnl(ctx, { from: on, to: on })))),
+    );
+    // The period is optional and additive: every other field is the one without it.
+    const withoutPnl = (json: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(json).filter(([key]) => key !== "pnl"));
+    expect(withoutPnl(body)).toEqual(withoutPnl(plain));
+
+    // `period=all`; a malformed range is the year running, never an error.
+    const all = JSON.parse(await (await get("/investments?period=all", token)).text());
+    expect(all.pnl.period).toEqual({ kind: "all", from: null, to: on });
+    const wrong = await get("/investments?from=2026-13-45&to=nope", token);
+    expect(wrong.status).toBe(200);
+    expect(JSON.parse(await wrong.text()).pnl.period.kind).toBe("year");
+
+    // The MCP tool takes the same arguments and gives the same answer.
+    const mcp = await tokenFor(["investments:read"], MCP);
+    const tool = await callTool(mcp, "list_investments", { from: on, to: on });
+    expect(tool.isError).toBe(false);
+    expect(JSON.parse(tool.text).pnl).toEqual(body.pnl);
+  });
+
   it("answers 404 for another person's service and 400 for a malformed id", async () => {
     const owner = await ssoPerson("api-owner@example.test");
     const { etoro } = await seed(owner);

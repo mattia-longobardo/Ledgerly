@@ -5,7 +5,6 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useId, useMemo, useState, useTransition } from "react";
 import { parseAmount } from "@/modules/accounts/rules";
-import { daysBetween, isCivilDate } from "@/platform/dates";
 import {
   formatAmountInput,
   formatDate,
@@ -16,6 +15,7 @@ import {
 } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Button } from "@/ui/button";
+import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
 import { ActionMenu, ButtonMenu } from "@/ui/menu";
@@ -53,32 +53,28 @@ import {
   PRICE_SCALE,
   PRODUCTS,
   QUANTITY_SCALE,
+  type InvestmentCategory,
 } from "../rules";
+import {
+  type AssetChoice,
+  assetDialogDefaults,
+  assetMatches,
+  type LinkChoice,
+  linkCandidates,
+} from "./dialog-rules";
 import { productLabel } from "./labels";
 
+export type { AssetChoice, LinkChoice } from "./dialog-rules";
+
 // ——— Shared ——————————————————————————————————————————————————————————————————————————————
-
-export interface LinkChoice {
-  id: string;
-  on: string;
-  cents: Cents;
-  payee: string | null;
-  accountName: string | null;
-}
-
-export interface AssetChoice {
-  id: string;
-  name: string;
-  class: AssetClass;
-  symbol: string | null;
-  isin: string | null;
-  currency: string;
-}
 
 /** What every dialog of a service page needs to know about it. */
 export interface ServiceContext {
   accountId: string;
   name: string;
+  category: InvestmentCategory;
+  /** The provider that syncs the service, by name; `null` for a manual one. */
+  providerName: string | null;
   currency: string;
   numberFormat: NumberFormat;
   locale: UiLocale;
@@ -289,33 +285,6 @@ function linkLabel(choice: LinkChoice, context: ServiceContext): string {
   ]
     .filter(Boolean)
     .join(" · ");
-}
-
-/** How far a bank movement is from the date being typed; a half-typed date is no date. */
-function daysApart(choice: string, on: string): number {
-  return isCivilDate(on) ? Math.abs(daysBetween(choice, on)) : 0;
-}
-
-/** The bank movements worth offering: the same amount first, then the nearest to the date. */
-function rankedChoices(
-  choices: readonly LinkChoice[],
-  on: string,
-  cents: Cents | null,
-  keep: string | null,
-): LinkChoice[] {
-  const ranked = [...choices]
-    .sort((a, b) => {
-      const sameA = cents !== null && a.cents === cents ? 0 : 1;
-      const sameB = cents !== null && b.cents === cents ? 0 : 1;
-      return (
-        sameA - sameB ||
-        daysApart(a.on, on) - daysApart(b.on, on) ||
-        (a.on > b.on ? -1 : a.on < b.on ? 1 : a.id < b.id ? -1 : 1)
-      );
-    })
-    .slice(0, 40);
-  const kept = keep ? choices.find((choice) => choice.id === keep) : undefined;
-  return kept && !ranked.some((choice) => choice.id === kept.id) ? [kept, ...ranked] : ranked;
 }
 
 function DateField({
@@ -577,18 +546,31 @@ function ManualServiceDialog({
           placeholder="https://www.directa.it"
         />
       </Field>
-      <div className="col-span-full flex flex-col gap-1.5">
-        <Segmented
-          label={t("manualForm.mode")}
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: "assets", label: t("modes.assets") },
-            { value: "total", label: t("modes.total") },
-          ]}
-        />
-        <p className="text-sm text-muted">{t("manualForm.modeHint")}</p>
-      </div>
+      <fieldset className="col-span-full flex flex-col gap-2">
+        <legend className="mb-1.5 text-sm font-medium">{t("manualForm.mode")}</legend>
+        {(["assets", "total"] as const).map((one) => (
+          <label
+            key={one}
+            className={cn(
+              "flex cursor-pointer items-start gap-2.5 rounded-[7px] border p-3",
+              mode === one ? "border-accent bg-soft" : "border-border",
+            )}
+          >
+            <input
+              type="radio"
+              name="mode"
+              value={one}
+              checked={mode === one}
+              onChange={() => setMode(one)}
+              className="focus-ring mt-0.5 size-4 shrink-0 accent-accent"
+            />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">{t(`manualForm.modes.${one}.label`)}</span>
+              <span className="text-sm text-muted">{t(`manualForm.modes.${one}.example`)}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
       <ErrorLine error={error} />
       <Actions
         onCancel={() => onOpenChange(false)}
@@ -605,40 +587,49 @@ type AssetPick =
   | { id: string }
   | { create: { class: AssetClass; name: string; isin: string; symbol: string; currency: string } };
 
+/**
+ * The asset of a buy (D1): the search starts on the class and the currency of the account, and no
+ * asset is chosen until the person picks one or a search narrows the list.
+ */
 function AssetPicker({
   prefix,
   assets,
   onChange,
   defaultCurrency,
+  defaults,
 }: {
   prefix: string;
   assets: readonly AssetChoice[];
   onChange: (pick: AssetPick | null, currency: string) => void;
   defaultCurrency: string;
+  defaults: { classFilter: AssetClass | ""; currencyFilter: string; draftClass: AssetClass };
 }) {
   const t = useTranslations("investments");
   const [source, setSource] = useState<"existing" | "create">(assets.length > 0 ? "existing" : "create");
   const [query, setQuery] = useState("");
-  const [klass, setKlass] = useState<string>("");
-  const [selected, setSelected] = useState(assets[0]?.id ?? "");
+  const [klass, setKlass] = useState<string>(defaults.classFilter);
+  const [currency, setCurrency] = useState<string>(defaults.currencyFilter);
+  const [selected, setSelected] = useState("");
   const [draft, setDraft] = useState({
-    class: "etf" as AssetClass,
+    class: defaults.draftClass,
     name: "",
     isin: "",
     symbol: "",
     currency: defaultCurrency,
   });
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return assets.filter(
-      (asset) =>
-        (klass === "" || asset.class === klass) &&
-        (needle === "" ||
-          asset.name.toLowerCase().includes(needle) ||
-          (asset.isin ?? "").toLowerCase().includes(needle) ||
-          (asset.symbol ?? "").toLowerCase().includes(needle)),
+  const currencies = useMemo(
+    () => [...new Set([defaults.currencyFilter, ...assets.map((asset) => asset.currency)])].sort(),
+    [assets, defaults.currencyFilter],
+  );
+  const matching = (next: { query?: string; classFilter?: string; currencyFilter?: string }) =>
+    assets.filter((asset) =>
+      assetMatches(asset, {
+        query: next.query ?? query,
+        classFilter: next.classFilter ?? klass,
+        currencyFilter: next.currencyFilter ?? currency,
+      }),
     );
-  }, [assets, query, klass]);
+  const filtered = matching({});
 
   const emit = (nextSource: "existing" | "create", id: string, nextDraft: typeof draft) => {
     if (nextSource === "existing") {
@@ -648,8 +639,13 @@ function AssetPicker({
       onChange(nextDraft.name.trim() === "" ? null : { create: nextDraft }, nextDraft.currency.toUpperCase());
     }
   };
-  const pickFirst = (list: readonly AssetChoice[]) => {
-    const keep = list.some((one) => one.id === selected) ? selected : (list[0]?.id ?? "");
+  /** A search keeps the asset chosen if it still matches, or takes the first; a filter only keeps. */
+  const pickFirst = (list: readonly AssetChoice[], searched: boolean) => {
+    const keep = list.some((one) => one.id === selected)
+      ? selected
+      : searched && list.length > 0
+        ? list[0].id
+        : "";
     setSelected(keep);
     emit("existing", keep, draft);
   };
@@ -684,17 +680,7 @@ function AssetPicker({
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
-                const needle = event.target.value.trim().toLowerCase();
-                pickFirst(
-                  assets.filter(
-                    (asset) =>
-                      (klass === "" || asset.class === klass) &&
-                      (needle === "" ||
-                        asset.name.toLowerCase().includes(needle) ||
-                        (asset.isin ?? "").toLowerCase().includes(needle) ||
-                        (asset.symbol ?? "").toLowerCase().includes(needle)),
-                  ),
-                );
+                pickFirst(matching({ query: event.target.value }), event.target.value.trim() !== "");
               }}
             />
           </Field>
@@ -704,15 +690,30 @@ function AssetPicker({
               value={klass}
               onChange={(event) => {
                 setKlass(event.target.value);
-                pickFirst(
-                  assets.filter((asset) => event.target.value === "" || asset.class === event.target.value),
-                );
+                pickFirst(matching({ classFilter: event.target.value }), false);
               }}
             >
               <option value="">{t("assetForm.allClasses")}</option>
               {ASSET_CLASSES.map((one) => (
                 <option key={one} value={one}>
                   {t(`classes.${one}`)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t("assetForm.currencyFilter")} htmlFor={`${prefix}-currency-filter`}>
+            <Select
+              id={`${prefix}-currency-filter`}
+              value={currency}
+              onChange={(event) => {
+                setCurrency(event.target.value);
+                pickFirst(matching({ currencyFilter: event.target.value }), false);
+              }}
+            >
+              <option value="">{t("assetForm.allCurrencies")}</option>
+              {currencies.map((one) => (
+                <option key={one} value={one}>
+                  {one}
                 </option>
               ))}
             </Select>
@@ -725,11 +726,15 @@ function AssetPicker({
                 <Select
                   id={`${prefix}-asset`}
                   value={selected}
+                  required
                   onChange={(event) => {
                     setSelected(event.target.value);
                     emit("existing", event.target.value, draft);
                   }}
                 >
+                  <option value="" disabled>
+                    {t("assetForm.choose")}
+                  </option>
                   {filtered.map((asset) => (
                     <option key={asset.id} value={asset.id}>
                       {[asset.name, asset.symbol, asset.isin, asset.currency].filter(Boolean).join(" · ")}
@@ -796,16 +801,22 @@ function AssetPicker({
   );
 }
 
+/**
+ * The product of a manual buy (D1, D2): empty on a synced service, the person picks it; the products
+ * the provider already reads are disabled, and a note says why in words.
+ */
 function ProductSelect({
   id,
   value,
   onChange,
   covered,
+  provider,
 }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   covered: readonly string[];
+  provider: string | null;
 }) {
   const t = useTranslations("investments");
   return (
@@ -814,13 +825,19 @@ function ProductSelect({
       htmlFor={id}
       hint={
         covered.length > 0
-          ? t("assetForm.covered", { products: covered.map((one) => productLabel(one, t)).join(", ") })
+          ? t("assetForm.covered", {
+              provider: provider ?? t("assetForm.theProvider"),
+              products: covered.map((one) => productLabel(one, t)).join(", "),
+            })
           : undefined
       }
     >
-      <Select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
+      <Select id={id} value={value} required onChange={(event) => onChange(event.target.value)}>
+        <option value="" disabled>
+          {t("assetForm.chooseProduct")}
+        </option>
         {PRODUCTS.map((product) => (
-          <option key={product} value={product}>
+          <option key={product} value={product} disabled={covered.includes(product)}>
             {t(`products.${product}`)}
           </option>
         ))}
@@ -857,9 +874,10 @@ function AddAssetDialog({
   const id = useId();
   const [pending, startTransition] = useTransition();
   const { error, clear, report } = useErrors();
-  const [pick, setPick] = useState<AssetPick | null>(context.assets[0] ? { id: context.assets[0].id } : null);
-  const [currency, setCurrency] = useState(context.assets[0]?.currency ?? context.currency);
-  const [product, setProduct] = useState(context.synced ? "earn" : "custody");
+  const defaults = assetDialogDefaults(context);
+  const [pick, setPick] = useState<AssetPick | null>(null);
+  const [currency, setCurrency] = useState(context.currency);
+  const [product, setProduct] = useState(defaults.product);
   const [on, setOn] = useState(context.today);
   const [how, setHow] = useState<"quantity" | "total">("quantity");
   const [quantity, setQuantity] = useState("");
@@ -871,7 +889,7 @@ function AddAssetDialog({
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pick === null) {
+    if (pick === null || product === "") {
       report({ ok: false, error: "invalid" });
       return;
     }
@@ -906,6 +924,7 @@ function AddAssetDialog({
         prefix={id}
         assets={context.assets}
         defaultCurrency={context.currency}
+        defaults={defaults}
         onChange={(next, nextCurrency) => {
           setPick(next);
           setCurrency(nextCurrency);
@@ -916,6 +935,7 @@ function AddAssetDialog({
         value={product}
         onChange={setProduct}
         covered={context.coveredProducts}
+        provider={context.providerName}
       />
       <DateField id={`${id}-on`} label={t("form.date")} value={on} onChange={setOn} max={context.today} />
       <div className="col-span-full">
@@ -1062,12 +1082,15 @@ function OperationDialog({
   const [adjustmentClass, setAdjustmentClass] = useState<AdjustmentClass>(
     operation?.adjustmentClass ?? "data",
   );
+  const [linkQuery, setLinkQuery] = useState("");
   const linkable = kind === "deposit" || kind === "withdrawal";
+  // Only the candidates — same amount, within three days — or what the search finds (D3).
   const choices = linkable
-    ? rankedChoices(
+    ? linkCandidates(
         kind === "deposit" ? context.linkOptions.out : context.linkOptions.in,
         on,
         tryAmount(amount, context.numberFormat),
+        linkQuery,
         operation?.transactionId ?? null,
       )
     : [];
@@ -1121,7 +1144,7 @@ function OperationDialog({
           id={`${id}-amount`}
           label={
             kind === "adjustment"
-              ? t("operationForm.delta")
+              ? t("form.amount")
               : kind === "account_valuation" || kind === "valuation"
                 ? t("operationForm.value")
                 : t("form.amount")
@@ -1135,7 +1158,7 @@ function OperationDialog({
       )}
       <DateField
         id={`${id}-on`}
-        label={kind === "adjustment" ? t("adjustments.from") : t("form.date")}
+        label={kind === "adjustment" ? t("operationForm.from") : t("form.date")}
         value={on}
         onChange={setOn}
         max={context.today}
@@ -1192,6 +1215,16 @@ function OperationDialog({
         />
       </Field>
       {linkable && (
+        <Field label={t("operationForm.linkSearch")} htmlFor={`${id}-link-search`}>
+          <Input
+            id={`${id}-link-search`}
+            type="search"
+            value={linkQuery}
+            onChange={(event) => setLinkQuery(event.target.value)}
+          />
+        </Field>
+      )}
+      {linkable && (
         <div className="col-span-full">
           <Field
             label={kind === "deposit" ? t("operationForm.linkOut") : t("operationForm.linkIn")}
@@ -1199,7 +1232,9 @@ function OperationDialog({
             hint={t("operationForm.linkHint")}
           >
             <Select id={`${id}-link`} value={link} onChange={(event) => setLink(event.target.value)}>
-              <option value="">{t("operationForm.noLink")}</option>
+              <option value="">
+                {choices.length === 0 ? t("operationForm.noCandidates") : t("operationForm.noLink")}
+              </option>
               {choices.map((choice) => (
                 <option key={choice.id} value={choice.id}>
                   {linkLabel(choice, context)}
@@ -1703,6 +1738,7 @@ function ConversionDialog({
                 prefix={`${id}-${position.key}`}
                 assets={context.assets}
                 defaultCurrency={context.currency}
+                defaults={assetDialogDefaults(context)}
                 onChange={(pick, currency) => update(position.key, { pick, currency })}
               />
               <ProductSelect
@@ -1710,6 +1746,7 @@ function ConversionDialog({
                 value={position.product}
                 onChange={(product) => update(position.key, { product })}
                 covered={[]}
+                provider={null}
               />
               <div className="col-span-full">
                 <Segmented
@@ -1762,13 +1799,13 @@ function ConversionDialog({
             <Button
               size="sm"
               onClick={() => {
-                const first = context.assets[0];
+                // Nothing chosen until the person picks it (D1), as in "Add asset".
                 setPositions((list) => [
                   ...list,
                   {
                     key: nextKey,
-                    pick: first ? { id: first.id } : null,
-                    currency: first?.currency ?? context.currency,
+                    pick: null,
+                    currency: context.currency,
                     product: "custody",
                     how: "quantity",
                     quantity: "",
