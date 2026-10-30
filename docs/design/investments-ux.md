@@ -418,6 +418,11 @@ Convenzioni e casi limite (PERS-113 · 7):
 
 - I giorni si contano sul calendario (`2024` ha 366 giorni). Un versamento dell'ultimo giorno ha peso
   0; un periodo di un solo giorno ha `Capitale medio = V(s'⁻)`.
+- **Capitale versato** (PERS-145): quando Dietz non ha un capitale medio su cui dividere perché il
+  denaro è entrato e uscito nel periodo, utile compreso (eToro 2026: 2.000 € in giugno, 2.401,58 €
+  fuori dopo sei giorni), il rendimento è P&L / capitale lordo (`V(s'⁻)` + Σ versamenti), con la nota
+  "Rendimento sul capitale versato". Resta "non calcolabile" senza capitale, o con il solo versamento
+  dell'ultimo giorno.
 - **Soglia**: il rendimento è "non calcolabile" quando il capitale medio è ≤ 0 oppure sotto
   `max(1 €, 1 % del capitale lordo)`, con capitale lordo = `V(s'⁻)` + Σ versamenti del periodo. Il
   P&L in valore resta. Esempi: conto svuotato prima del periodo e mai riaperto; conto aperto
@@ -566,7 +571,9 @@ Regole di Mattia del 29–30/10/2026; codice in `cutoff.ts` (puro) e `settleCuto
 1. **Taglio**: solo i conti di investimento sincronizzati e collegati come nuovi (un solo periodo
    `opening`/`synced`). Il taglio è il primo giorno di quel periodo: collegamento − 12 mesi (Binance,
    365 giorni) o il primo giorno che l'API restituisce (eToro, 360 giorni). I conti di Wallet manager,
-   i servizi manuali, gli handover e le conversioni non si toccano.
+   i servizi manuali, gli handover e le conversioni non si toccano. Collegamento mostra le coperture
+   solo dal taglio: prima non si tiene nulla, quindi non c'è una lacuna; il costo di carico è sempre
+   la base del periodo.
 2. **Pulizia**: `settleCutoff` cancella gli eventi del provider, le letture e le posizioni del provider
    rimaste senza movimenti prima del taglio; il sync non scrive più eventi prima del taglio. L'apertura
    al taglio è un dato: le posizioni (quantità dai flussi completi dei 12 mesi e dal saldo letto, al

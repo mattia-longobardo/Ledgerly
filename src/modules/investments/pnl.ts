@@ -418,8 +418,13 @@ export type PnlReason =
   | "no_rate";
 
 export interface PeriodReturn {
-  /** Modified Dietz (§4.3); `null` when the average capital is too small to divide by. */
+  /**
+   * The period's return (§4.3): Modified Dietz; when it has no average capital to divide by — the
+   * money went in and out inside the period, profit included (eToro 2026) — the P&L on the money
+   * put in (PERS-145, `method: "invested"`). `null` when there is no capital at all.
+   */
   dietz: number | null;
+  method: "dietz" | "invested";
   averageCapitalCents: number;
   /** XIRR over the period, only when it covers at least a year (§4.3). */
   xirr: Xirr | null;
@@ -812,8 +817,12 @@ function returnOf(
   const base = addDays(from, -1);
   const covered = daysBetween(base, to);
   const moved = flows.reduce((sum, flow) => sum + abs(flow.cents), 0n);
+  // Money put in before the last day (an opening on the last day is no capital yet, §4.3).
+  const putIn = startCents > 0n || flows.some((flow) => flow.cents > 0n && flow.on < to);
+  const invested = dietz.rate === null && putIn && dietz.gross >= Number(MIN_CAPITAL_CENTS);
   return {
-    dietz: dietz.rate,
+    dietz: invested ? Number(pnlCents) / dietz.gross : dietz.rate,
+    method: invested ? "invested" : "dietz",
     averageCapitalCents: dietz.averageCapital,
     xirr:
       covered >= 365
