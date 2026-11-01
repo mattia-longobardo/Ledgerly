@@ -1,0 +1,12 @@
+/* Mockup statici PERS-208: riusano i token del mockup Investments. Non è codice dell'app. */
+@import url("../../investments-ux/mockups/style.css");
+.who .comp { margin-top: 2px; }
+.prog { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; } .prog i { display: block; height: 100%; background: var(--accent); }
+.years td, .years th { padding: 9px 12px; } tr.open td { background: var(--sel); font-weight: 600; } tr.sub td { background: var(--bg); font-size: 12px; color: var(--muted); }
+.yearcard { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.yearcard:first-child { border-top: 0; } .yearcard.open { background: var(--sel); }
+.rowb { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; } .wrap { flex-wrap: wrap; }
+.scrollx { overflow-x: auto; } .lnk { color: var(--accent); font-weight: 500; }
+.empty { padding: 28px 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+@media (max-width: 1000px) { .app { grid-template-columns: 1fr; } .side, .search { display: none !important; } .grid2 { grid-template-columns: minmax(0, 1fr); } th, td { padding-left: 10px; padding-right: 10px; } .kpi .n { white-space: normal; } }
+@media (max-width: 700px) { .stepper b { font-size: 12px; } .hero-actions { width: 100%; } .tabs span { padding: 0 6px; } }
