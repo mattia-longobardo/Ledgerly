@@ -24,6 +24,7 @@ import {
   periodReturns,
   periodStats,
 } from "./rules";
+import { latestDocumented, pacFlows, projectionMonthly } from "./period";
 import {
   COMETA_SCHEDULE,
   dueDate,
@@ -288,12 +289,13 @@ export async function fundsView(
   const accountName = new Map(accounts.map((account) => [account.id, account.name]));
   const entryDates = new Map<string, CivilDate>();
   // A pension fund's value is the one its statement documents, with the statement's own date
-  // (GC §12) — never "as of today", which would leave a fund valued only in the future blank.
+  // (GC §12) — never "as of today", which would leave a fund valued only in the future blank. The
+  // snapshot's month-end copy documents nothing: its date said the value was newer than it is.
   const statementValues = new Map<string, Cents>();
   for (const fund of open) {
-    const entries = await listBalanceEntries(ctx, fund.valuationAccountId, 50);
+    const entries = await listBalanceEntries(ctx, fund.valuationAccountId, 200);
     if (fund.type === "pension") {
-      const latest = entries[0];
+      const latest = latestDocumented(entries);
       if (latest) {
         entryDates.set(fund.id, latest.on);
         statementValues.set(fund.id, latest.balanceCents);
@@ -505,8 +507,11 @@ export async function fundDetail(
     forecast: fundForecast({
       valueCents: value,
       paidInCents: metrics.paidInCents,
-      flows: deposits,
-      months: returnMonths,
+      monthlyCents: projectionMonthly({
+        planCents: fund.state === "active" ? fund.monthlyCents : null,
+        flows: pacFlows(deposits),
+        months: returnMonths,
+      }),
       ownRate: annualisedOverPeriods(periods),
     }),
     month: monthStatus(fund, deposits, todayOn),

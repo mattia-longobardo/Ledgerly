@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { listBalanceEntries } from "@/modules/accounts/queries";
 import { getDocument, listEvidence } from "@/modules/imports/service";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@/modules/payroll/service";
+import { runSnapshot } from "@/modules/accounts/service";
 import type { Ctx } from "@/platform/context";
 import { deleteFolder, ensureBucket } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
@@ -35,6 +36,8 @@ import {
   snapshotsOf,
   uploadCometaDocument,
 } from "./imports";
+import { recordValuation } from "../service";
+import { managementItem } from "./metrics";
 import { pensionDetail } from "./queries";
 import {
   addVoluntaryContribution,
@@ -361,5 +364,46 @@ describe("what the pages read (plan F6 L4–L6)", () => {
       { year: 2031, workerCents: 10_000n, employerCents: 18_000n, totalCents: 28_000n, limitCents: 530_000n },
     ]);
     expect(detail.tariffs.find((row) => row.item === "management_crescita")?.rate).toBe("0.000800");
+  });
+
+  it("takes no system copy for a value, and reads the compartment from the movements", async () => {
+    const bare = await createPensionFund(ctx, { name: "Senza comparto", startOn: "2031-01-01" });
+    const { id } = await importedExport(EXPORT_AUGUST);
+    await applyOperations(ctx, bare.id, id);
+    // The snapshot of September copies 900,00 €; the reading of the same day comes after it.
+    await recordValuation(ctx, bare.id, { on: "2026-09-01", cents: 90_000n });
+    await runSnapshot(ctx, "2026-09-01");
+    await recordValuation(ctx, bare.id, { on: "2026-09-30", cents: 88_000n });
+    await runSnapshot(ctx, "2026-10-01");
+    const detail = await pensionDetail(ctx, bare.id);
+
+    expect(detail.fund.compartment).toBeNull();
+    expect(detail.metrics.value).toMatchObject({ on: "2026-09-30", cents: 88_000n });
+    // The loss is September's: the copy of the same day does not hide it, and October has no stretch.
+    expect(detail.periods.find((period) => period.to === "2026-09-30")).toMatchObject({
+      from: "2026-09-01",
+      gainCents: -2_000n,
+    });
+    expect(detail.periods.find((period) => period.to === "2026-10-31")).toBeUndefined();
+    expect(detail.compartment?.toLowerCase()).toBe("crescita");
+    expect(detail.tariffs.find((row) => row.item === managementItem(detail.compartment))?.rate).toBe(
+      "0.000800",
+    );
+  });
+
+  it("projects on the contributions alone", async () => {
+    const { id } = await importedExport(EXPORT_EXOTIC, "esotiche.xls");
+    await applyOperations(ctx, fundId, id);
+    const detail = await pensionDetail(ctx, fundId, new Date("2031-12-15T12:00:00Z"));
+    // Voluntary, transfer, switch and exit: not one of them is a rhythm.
+    expect(detail.forecast.monthlyCents).toBe(0n);
+  });
+
+  it("lists every quarter the amount on the way is made of", async () => {
+    await appliedPayslip(JANUARY);
+    await appliedPayslip(THIRTEENTH);
+    const { metrics } = await pensionDetail(ctx, fundId);
+    expect(metrics.pending.length).toBeGreaterThan(1);
+    expect(metrics.pending.reduce((sum, one) => sum + one.cents, 0n)).toBe(metrics.pendingCents);
   });
 });

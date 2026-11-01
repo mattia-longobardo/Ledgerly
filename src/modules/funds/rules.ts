@@ -234,7 +234,7 @@ export function monthlyRhythm(flows: readonly DepositLike[], months: readonly Mo
 
 /** What a fund's projection is built from, the same way for a PAC and for a pension fund. */
 export interface FundForecast {
-  /** The monthly rhythm the projection runs on, read from the last twelve months. */
+  /** What the projection adds each month: the plan, or the average of the recurring payments. */
   monthlyCents: Cents;
   /** The fund's own yearly rate, when a year of months has been measured; `null` otherwise. */
   ownRate: number | null;
@@ -246,14 +246,13 @@ export interface FundForecast {
 export function fundForecast(input: {
   valueCents: Cents | null;
   paidInCents: Cents;
-  flows: readonly DepositLike[];
-  months: readonly MonthKey[];
+  monthlyCents: Cents;
   /** The fund's own yearly rate, or `null` when there is not a year of it to annualise. */
   ownRate: number | null;
 }): FundForecast {
   const ownRate = input.ownRate;
   const rates = ownRate === null ? [...FORECAST_RATES] : [...FORECAST_RATES, ownRate];
-  const monthlyCents = monthlyRhythm(input.flows, input.months);
+  const monthlyCents = input.monthlyCents;
   return {
     monthlyCents,
     ownRate,

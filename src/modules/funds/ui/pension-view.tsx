@@ -16,6 +16,7 @@ import { KpiTile } from "@/ui/kpi-tile";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { managementItem } from "../pension/metrics";
 import type { PensionDetail } from "../pension/queries";
 import { MAIN_COMPONENTS, type ComponentStatus, type QuarterStatus } from "../pension/reconcile";
 import {
@@ -95,6 +96,7 @@ export async function PensionView({
   const t = await getTranslations("funds.pension");
   const tv = await getTranslations("funds");
   const { fund, metrics } = detail;
+  const managementRate = detail.tariffs.find((row) => row.item === managementItem(detail.compartment))?.rate;
   const base = `/funds/${fund.id}`;
   const money = (cents: bigint | null) =>
     cents === null ? NULL_DISPLAY : formatMoney(cents, ctx.numberFormat);
@@ -180,7 +182,10 @@ export async function PensionView({
           note={
             metrics.pending.length === 0
               ? t("kpis.pendingNone")
-              : t("kpis.pendingNote", { date: date(metrics.pending[0].due) })
+              : t("kpis.pendingNote", {
+                  count: metrics.pending.length,
+                  date: date(metrics.pending[0].due),
+                })
           }
         />
       </div>
@@ -193,8 +198,15 @@ export async function PensionView({
           {metrics.pending.length > 0 &&
             t("notice.pending", {
               amount: money(metrics.pendingCents),
-              quarter: quarterLabel(metrics.pending[0].year, metrics.pending[0].quarter),
-              date: date(metrics.pending[0].due),
+              quarters: metrics.pending
+                .map((one) =>
+                  t("notice.pendingQuarter", {
+                    quarter: quarterLabel(one.year, one.quarter),
+                    amount: money(one.cents),
+                    date: date(one.due),
+                  }),
+                )
+                .join("; "),
             })}{" "}
           {metrics.value && t("notice.dated", { date: date(metrics.value.on) })}
         </p>
@@ -259,6 +271,7 @@ export async function PensionView({
           actions={
             <span className="text-sm text-muted">
               {t("operations.hint", { count: detail.operations.length })}
+              {metrics.units !== null && ` · ${t("operations.units", { units: metrics.units })}`}
             </span>
           }
         />
@@ -333,8 +346,6 @@ export async function PensionView({
                       {money(-metrics.feesCents)}
                     </Td>
                     <Td align="right">{money(metrics.investedCents)}</Td>
-                    <Td align="right">{metrics.units ?? NULL_DISPLAY}</Td>
-                    <Td />
                     <Td />
                   </TotalRow>
                 </TBody>
@@ -438,20 +449,7 @@ export async function PensionView({
             />
             <Line
               label={t("position.management")}
-              value={
-                detail.tariffs.find(
-                  (row) => row.item === `management_${(fund.compartment ?? "").toLowerCase()}`,
-                )?.rate
-                  ? formatPercent(
-                      Number(
-                        detail.tariffs.find(
-                          (row) => row.item === `management_${(fund.compartment ?? "").toLowerCase()}`,
-                        )!.rate,
-                      ),
-                      ctx.numberFormat,
-                    )
-                  : NULL_DISPLAY
-              }
+              value={managementRate ? formatPercent(Number(managementRate), ctx.numberFormat) : NULL_DISPLAY}
               note={t("position.managementNote")}
             />
             <Line
@@ -923,7 +921,7 @@ export async function PensionView({
     const row = tariffOf(item);
     return row?.amountCents === null || row === null ? NULL_DISPLAY : money(row.amountCents);
   };
-  const managementTariff = tariffOf(`management_${(fund.compartment ?? "").toLowerCase()}`);
+  const managementTariff = tariffOf(managementItem(detail.compartment));
   const newest = detail.tariffs[0] ?? null;
 
   /**
@@ -1035,7 +1033,7 @@ export async function PensionView({
                     ? formatPercent(Number(managementTariff.rate), ctx.numberFormat)
                     : NULL_DISPLAY
                 }
-                note={fund.compartment ?? t("settings.feeUnits.yearOfAssets")}
+                note={detail.compartment ?? t("settings.feeUnits.yearOfAssets")}
               />
             </dl>
             {newest && (

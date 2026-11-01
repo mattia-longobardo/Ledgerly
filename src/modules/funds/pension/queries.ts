@@ -24,6 +24,7 @@ import {
   periodReturns,
   periodStats,
 } from "../rules";
+import { documentedEntries, latestDocumented, pensionFlows, projectionMonthly } from "../period";
 import type { Fund } from "../service";
 import {
   type Operation,
@@ -36,6 +37,7 @@ import {
 import {
   bridge,
   type BridgeLine,
+  currentCompartment,
   type DatedValue,
   heldAt,
   type MovementLike,
@@ -123,6 +125,8 @@ export interface PensionDetail {
   forecast: FundForecast;
   /** Whether the fund's statement is older than its latest operation (GC §11.8). */
   valueOlderThanOperations: boolean;
+  /** The compartment the units are in, which the fund's own field may not say. */
+  compartment: string | null;
   /** The codes behind worker, employer, TFR and enrolment, for Settings to show them. */
   codes: FundCodes;
   /** The payslip a competence came from → the document its review page is served from. */
@@ -225,7 +229,10 @@ export async function pensionDetail(
     today: todayOn,
   });
 
-  const latest = entries[0] ?? null;
+  // The snapshot's copies stay for Overview and Accounts: here they would date the value a month
+  // later than anybody read it, and hide a real valuation of the same day (funds-ux §5.2).
+  const documented = documentedEntries(entries);
+  const latest = latestDocumented(entries);
   const value: DatedValue | null = latest
     ? {
         cents: latest.balanceCents,
@@ -275,7 +282,7 @@ export async function pensionDetail(
   // month before the window, and the money that went in during each month.
   const inflows = paidInFlows(asOperations, quarters, fees).map((flow) => ({ ...flow, feeCents: null }));
   const points = valuePoints(
-    entries.map((entry) => ({ on: entry.on, cents: entry.balanceCents })),
+    documented.map((entry) => ({ on: entry.on, cents: entry.balanceCents })),
     movementLikes,
   );
   const first =
@@ -323,11 +330,15 @@ export async function pensionDetail(
     forecast: fundForecast({
       valueCents: value?.cents ?? null,
       paidInCents: metrics.standsOnPayslips ? metrics.transferredCents : metrics.paidInCents,
-      flows: inflows,
-      months: returnMonths,
+      monthlyCents: projectionMonthly({
+        planCents: null,
+        flows: pensionFlows(asOperations, quarters, fees),
+        months: returnMonths,
+      }),
       ownRate: annualisedOverPeriods(periods),
     }),
     valueOlderThanOperations: value !== null && lastOperation !== null && lastOperation > value.on,
+    compartment: currentCompartment(movementLikes, fund.compartment),
     codes,
     payslipDocuments,
   };

@@ -1,6 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { accountsView, getAccount, listBalanceEntries } from "@/modules/accounts/queries";
-import { applyProviderAccounts, deleteBalanceEntry, removeAccount } from "@/modules/accounts/service";
+import {
+  applyProviderAccounts,
+  deleteBalanceEntry,
+  removeAccount,
+  runSnapshot,
+} from "@/modules/accounts/service";
 import { chargeCandidates } from "@/modules/transactions/queries";
 import {
   markRemovedUpstream,
@@ -12,6 +17,7 @@ import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { fundDetail, fundsView, valuationAccountOptions } from "./queries";
+import { createPensionFund } from "./pension/service";
 import {
   addDeposit,
   createFund,
@@ -435,5 +441,40 @@ describe("isolation between users (spec §4.4, §11)", () => {
       ["2026-02-28", 530_000n],
     ]);
     expect(valuation.source).toBe("manual");
+  });
+});
+
+describe("a fund's system copies (funds-ux §4, n. 1)", () => {
+  const NOW = new Date("2026-11-01T12:00:00Z");
+
+  it("leaves a pension fund's value and date on the last reading in fundsView", async () => {
+    const fund = await createPensionFund(ctx, { name: "Cometa", startOn: "2026-01-01" });
+    await recordValuation(ctx, fund.id, { on: "2026-09-30", cents: 223_536n });
+    await runSnapshot(ctx, "2026-10-01");
+    expect((await listBalanceEntries(ctx, fund.valuationAccountId))[0]).toMatchObject({
+      on: "2026-10-31",
+      source: "system",
+    });
+
+    const view = await fundsView(ctx, NOW);
+    expect(view.rows[0]).toMatchObject({ lastValuation: "2026-09-30", metrics: { valueCents: 223_536n } });
+  });
+
+  it("measures the gain against the money in by that date, not by the copy's", async () => {
+    const fund = await createFund(ctx, input({ initialCents: 100_000n }));
+    await recordValuation(ctx, fund.id, { on: "2026-09-30", cents: 110_000n });
+    await addDeposit(ctx, fund.id, { on: "2026-10-15", chargedCents: 25_100n, feeCents: 100n, note: null });
+    await runSnapshot(ctx, "2026-10-01");
+    const view = await fundsView(ctx, NOW);
+    expect(view.rows[0]).toMatchObject({
+      lastValuation: "2026-09-30",
+      metrics: { gainCents: 10_000n, paidInAfterValueCents: 25_100n },
+    });
+  });
+
+  it("projects a PAC on its plan, not on the average with the initial capital", async () => {
+    const fund = await createFund(ctx, input({ initialCents: 3_250_00n, monthlyCents: 251_00n }));
+    const detail = await fundDetail(ctx, fund.id, 12, new Date("2026-03-01T12:00:00Z"));
+    expect(detail.forecast.monthlyCents).toBe(251_00n);
   });
 });

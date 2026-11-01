@@ -2426,9 +2426,10 @@
         "feesNone": "no fee set",
         "gain": "Gain",
         "gainNote": "{percent} on paid in",
-        "year": "Last 12 months",
-        "yearNote": "compounded · TER {ter}",
-        "yearNoTer": "compounded"
+        "compounded": "Compounded return",
+        "compoundedSince": "Compounded since {date}",
+        "compoundedNote": "between valuations · TER {ter}",
+        "compoundedNoTer": "between valuations"
       },
       "chart": {
         "title": "Value vs paid in · {months} months",
@@ -2454,7 +2455,7 @@
     "forecast": {
       "title": "Where this is heading",
       "description": "If {monthly} a month keeps going in and the fund grows at the rate in each column. A projection, not a promise: no rate here is the fund's unless the last column says so.",
-      "noRhythm": "Nothing has gone in over the last twelve months, so there is no rhythm to carry forward.",
+      "noRhythm": "No recurring payment has gone in over the last twelve months, so there is no rhythm to carry forward.",
       "horizon": "Horizon",
       "years": "In {years, plural, one {# year} other {# years}}",
       "paidIn": "Paid in",
@@ -2681,7 +2682,7 @@
         "gain": "Gain since start",
         "gainNote": "{percent} of paid in, not annualised",
         "pending": "Still to be credited",
-        "pendingNote": "payslips accrued, employer transfer due {date}",
+        "pendingNote": "{count, plural, one {payslips accrued, employer transfer due {date}} other {payslips of # quarters accrued, first employer transfer due {date}}}",
         "pendingNone": "every quarter due has been transferred"
       },
       "gainReasons": {
@@ -2690,7 +2691,8 @@
         "outflows_unknown": "an outflow is not documented"
       },
       "notice": {
-        "pending": "{amount} accrued in the payslips of {quarter} is not yet in the fund · employer transfer due {date}.",
+        "pending": "{amount} accrued in the payslips is not yet in the fund: {quarters}.",
+        "pendingQuarter": "{quarter}, {amount}, employer transfer due {date}",
         "dated": "Value dated {date} — not a delay."
       },
       "chart": {
@@ -2703,6 +2705,7 @@
       "operations": {
         "title": "Fund operations",
         "hint": "{count, plural, one {# operation} other {# operations}}",
+        "units": "{units} units",
         "empty": "No operation imported yet.",
         "competence": "Competence",
         "date": "Op. date",

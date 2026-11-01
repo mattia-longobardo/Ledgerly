@@ -315,4 +315,30 @@ export function awaitingCredit(quarter: QuarterStatus): boolean {
     .every((one) => one.creditedCents === null);
 }
 
+/** A quarter accrued in the payslips and not yet in the fund. */
+export interface PendingQuarter {
+  year: number;
+  quarter: Quarter;
+  due: CivilDate | null;
+  cents: Cents;
+}
+
+/**
+ * "Still to be credited" is what is genuinely still on its way: a quarter not yet due, or one
+ * whose export should have shown a credit and did not. A quarter past its deadline with no export
+ * to check it against has left as far as anything here knows (`transferred`), so counting it as
+ * pending would keep the whole history waiting for ever (owner, 2026-09-20).
+ */
+export function pendingQuarters(quarters: readonly QuarterStatus[]): PendingQuarter[] {
+  return quarters
+    .filter((quarter) => awaitingCredit(quarter) && quarter.status !== "transferred")
+    .map((quarter) => ({
+      year: quarter.year,
+      quarter: quarter.quarter,
+      due: quarter.due,
+      cents: accruedTotal(quarter) ?? 0n,
+    }))
+    .filter((quarter) => quarter.cents !== 0n);
+}
+
 export { MAIN as MAIN_COMPONENTS };

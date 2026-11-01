@@ -2426,9 +2426,10 @@
         "feesNone": "nessuna commissione impostata",
         "gain": "Guadagno",
         "gainNote": "{percent} sul versato",
-        "year": "Ultimi 12 mesi",
-        "yearNote": "composto · TER {ter}",
-        "yearNoTer": "composto"
+        "compounded": "Rendimento composto",
+        "compoundedSince": "Composto dal {date}",
+        "compoundedNote": "tra le valutazioni · TER {ter}",
+        "compoundedNoTer": "tra le valutazioni"
       },
       "chart": {
         "title": "Valore e versato · {months} mesi",
@@ -2454,7 +2455,7 @@
     "forecast": {
       "title": "Dove sta andando",
       "description": "Se continuano a entrare {monthly} al mese e il fondo cresce al tasso di ogni colonna. Una proiezione, non una promessa: nessun tasso qui è quello del fondo, salvo l'ultima colonna quando c'è.",
-      "noRhythm": "Negli ultimi dodici mesi non è entrato nulla, quindi non c'è un ritmo da proiettare.",
+      "noRhythm": "Negli ultimi dodici mesi non è entrato nessun versamento ricorrente, quindi non c'è un ritmo da proiettare.",
       "horizon": "Orizzonte",
       "years": "Fra {years, plural, one {# anno} other {# anni}}",
       "paidIn": "Versato",
@@ -2681,7 +2682,7 @@
         "gain": "Guadagno dall'inizio",
         "gainNote": "{percent} sul versato, non annualizzato",
         "pending": "Da accreditare",
-        "pendingNote": "maturato nei cedolini, versamento previsto il {date}",
+        "pendingNote": "{count, plural, one {maturato nei cedolini, versamento previsto il {date}} other {maturato nei cedolini di # trimestri, primo versamento previsto il {date}}}",
         "pendingNone": "ogni trimestre scaduto è stato versato"
       },
       "gainReasons": {
@@ -2690,7 +2691,8 @@
         "outflows_unknown": "un'uscita non è documentata"
       },
       "notice": {
-        "pending": "{amount} maturati nei cedolini di {quarter} non sono ancora nel fondo · versamento aziendale previsto il {date}.",
+        "pending": "{amount} maturati nei cedolini non sono ancora nel fondo: {quarters}.",
+        "pendingQuarter": "{quarter}, {amount}, versamento aziendale previsto il {date}",
         "dated": "Valore al {date} — non è un ritardo."
       },
       "chart": {
@@ -2703,6 +2705,7 @@
       "operations": {
         "title": "Operazioni del fondo",
         "hint": "{count, plural, one {# operazione} other {# operazioni}}",
+        "units": "{units} quote",
         "empty": "Nessuna operazione importata.",
         "competence": "Competenza",
         "date": "Data operazione",

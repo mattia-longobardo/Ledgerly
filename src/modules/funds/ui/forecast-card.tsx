@@ -7,16 +7,16 @@ import type { FundForecast } from "../rules";
 
 /**
  * "Where this is heading" (owner, 2026-09-20): what the fund will hold in one, three, five and ten
- * years if the money keeps going in at the rhythm of the last twelve months and it grows at each
- * of the rates in the header.
+ * years if the money keeps going in at the plan's amount, or at the average of the recurring
+ * payments with no plan, and it grows at each of the rates in the header.
  *
  * Those rates are **hypotheses** and the card says so, twice: in its own description and in the
  * column headers. The only rate that belongs to the fund is the last column, and it appears only
  * when a year of months has been measured — annualising a quarter of good weather would be the
  * most convincing lie this page could tell.
  *
- * The "Paid in" column needs neither a rate nor a valuation: the rhythm is read from what actually
- * went in, so it is the one column that is always answered.
+ * The "Paid in" column needs neither a rate nor a valuation, so it is the one column that is always
+ * answered.
  */
 export async function ForecastCard({
   ctx,

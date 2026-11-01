@@ -483,15 +483,21 @@ export default async function FundPage({ params, searchParams }: PageProps<"/fun
               note={t("detail.kpis.gainNote", { percent: pct(metrics.gainFraction) })}
             />
             <KpiTile
-              label={t("detail.kpis.year")}
+              label={
+                detail.periods[0]
+                  ? t("detail.kpis.compoundedSince", {
+                      date: formatDate(detail.periods[0].from, "long", ctx.locale),
+                    })
+                  : t("detail.kpis.compounded")
+              }
               value={pct(detail.stats.compounded)}
               valueTone={
                 detail.stats.compounded === null ? "fg" : detail.stats.compounded >= 0 ? "pos" : "neg"
               }
               note={
                 fund.ter === null
-                  ? t("detail.kpis.yearNoTer")
-                  : t("detail.kpis.yearNote", { ter: formatRate(fund.ter, ctx.numberFormat) })
+                  ? t("detail.kpis.compoundedNoTer")
+                  : t("detail.kpis.compoundedNote", { ter: formatRate(fund.ter, ctx.numberFormat) })
               }
             />
           </div>

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { MonthKey } from "@/platform/dates";
 import {
   bridge,
+  currentCompartment,
   heldAt,
+  managementItem,
   type MovementLike,
   paidInAt,
   pensionMetrics,
@@ -364,5 +366,53 @@ describe("fees off a transfer (GC §6.1)", () => {
     expect(netOfFees(66_000n, 0n, COMETA_FEES).netCents).toBe(65_700n);
     // Never more enrolment fee than the enrolment quotas themselves.
     expect(netOfFees(0n, 500n, COMETA_FEES)).toEqual({ grossCents: 500n, feesCents: 500n, netCents: 0n });
+  });
+});
+
+describe("the compartment and the units points (funds-ux §4, §5.2)", () => {
+  const movement = (compartment: string, units: string, on: string, price = "10") => ({
+    operationId: `op-${on}`,
+    compartment,
+    units,
+    unitPrice: price,
+    unitPriceDate: on,
+  });
+
+  it("reads the compartment from the movements, the largest one still held", () => {
+    expect(currentCompartment([movement("CRESCITA", "5", "2031-04-30")], null)).toBe("CRESCITA");
+    expect(
+      currentCompartment(
+        [
+          movement("CRESCITA", "5", "2031-04-30"),
+          movement("CRESCITA", "-5", "2031-05-30"),
+          movement("REDDITO", "6", "2031-05-30"),
+        ],
+        "Crescita",
+      ),
+    ).toBe("REDDITO");
+    expect(
+      currentCompartment([
+        movement("SICUREZZA", "5", "2031-04-30"),
+        movement("CRESCITA", "35", "2031-04-30"),
+      ]),
+    ).toBe("CRESCITA");
+    expect(currentCompartment([], "Crescita")).toBe("Crescita");
+    expect(currentCompartment([], null)).toBeNull();
+  });
+
+  it("names the tariff row of a compartment, however it is written", () => {
+    expect(managementItem("CRESCITA")).toBe("management_crescita");
+    expect(managementItem("Monetario Plus")).toBe("management_monetario_plus");
+  });
+
+  it("drops a units point less than 3 days from a documented value, and keeps one 3 days away", () => {
+    const points = valuePoints(
+      [{ on: "2031-05-01", cents: 100n }],
+      [movement("CRESCITA", "5", "2031-04-28"), movement("CRESCITA", "5", "2031-04-30")],
+    );
+    expect(points.map((point) => [point.on, point.kind])).toEqual([
+      ["2031-04-28", "units"],
+      ["2031-05-01", "statement"],
+    ]);
   });
 });

@@ -1,7 +1,14 @@
-import { type CivilDate, lastDayOfMonth, type MonthKey, monthKey } from "@/platform/dates";
+import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey, monthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
-import { accruedTotal, awaitingCredit, type OperationLike, type QuarterStatus } from "./reconcile";
-import { netOfFees, NO_FEES, type PensionFees, type Quarter } from "./rules";
+import {
+  accruedTotal,
+  awaitingCredit,
+  type OperationLike,
+  type PendingQuarter,
+  pendingQuarters,
+  type QuarterStatus,
+} from "./reconcile";
+import { netOfFees, NO_FEES, type PensionFees } from "./rules";
 
 /**
  * The pension fund's figures (spec §7.7; GC §1, §9.1–9.3, §12; plan F6 §3.4.7): six quantities that
@@ -24,12 +31,7 @@ export interface DatedValue {
   source: "statement" | "manual";
 }
 
-export interface PendingQuarter {
-  year: number;
-  quarter: Quarter;
-  due: CivilDate | null;
-  cents: Cents;
-}
+export type { PendingQuarter };
 
 export type GainReason = "no_value" | "nothing_paid" | "outflows_unknown";
 
@@ -127,6 +129,31 @@ export function sumUnits(values: readonly string[]): string | null {
   );
 }
 
+/**
+ * The compartment the fund's units are in now, which is what the management cost applies to. The
+ * movements know it even when the fund's own field was left empty. Over two compartments, the one
+ * with the most units: the line has room for one rate.
+ */
+export function currentCompartment(
+  movements: readonly MovementLike[],
+  fallback: string | null = null,
+): string | null {
+  const held = new Map<string, bigint>();
+  for (const movement of movements) {
+    held.set(movement.compartment, (held.get(movement.compartment) ?? 0n) + micro(movement.units));
+  }
+  let largest: string | null = null;
+  for (const [compartment, units] of [...held].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    if (units > 0n && (largest === null || units > held.get(largest)!)) largest = compartment;
+  }
+  return largest ?? fallback;
+}
+
+/** The tariff row of a compartment's management cost: "Monetario Plus" → `management_monetario_plus`. */
+export function managementItem(compartment: string | null): string {
+  return `management_${(compartment ?? "").trim().toLowerCase().replace(/\s+/g, "_")}`;
+}
+
 export function operationUnits(movements: readonly MovementLike[]): string {
   return sumUnits(movements.map((movement) => movement.units)) ?? "0";
 }
@@ -211,19 +238,7 @@ export function pensionMetrics(input: {
     } else gainFraction = ratio(gainCents, basis + transfersIn);
   }
 
-  // "Still to be credited" is what is genuinely still on its way: a quarter not yet due, or one
-  // whose export should have shown a credit and did not. A quarter past its deadline with no
-  // export to check it against has left as far as anything here knows (`transferred`), so counting
-  // it as pending would keep the whole history waiting for ever (owner, 2026-09-20).
-  const pending = quarters
-    .filter((quarter) => awaitingCredit(quarter) && quarter.status !== "transferred")
-    .map((quarter) => ({
-      year: quarter.year,
-      quarter: quarter.quarter,
-      due: quarter.due,
-      cents: accruedTotal(quarter) ?? 0n,
-    }))
-    .filter((quarter) => quarter.cents !== 0n);
+  const pending = pendingQuarters(quarters);
 
   const credited = quarters.filter(
     (quarter) => !awaitingCredit(quarter) && quarter.operationDates.length > 0,
@@ -336,10 +351,15 @@ export function bridge(metrics: PensionMetrics): BridgeLine[] | null {
   return lines;
 }
 
+/** Closer than this to a statement or a valuation, a recomputation adds a stretch of nothing. */
+const UNITS_POINT_MIN_DAYS = 3;
+
 /**
  * Documented points of the value (GC §5): the statements and valuations, and — as a diagnostic
  * recomputation — the units held × the unit price on each price date, when every compartment held
  * has a price that day. No interpolation: between points the chart holds the last one.
+ *
+ * `values` holds documented readings only (funds-ux §5.2): `documentedEntries` is the filter.
  */
 export function valuePoints(
   values: readonly { on: CivilDate; cents: Cents }[],
@@ -375,7 +395,11 @@ export function valuePoints(
     }
     if (complete && held.size > 0) points.set(on, { on, cents, kind: "units" });
   }
-  // A statement or a valuation of the same day wins over the recomputation.
+  // A statement or a valuation wins over a recomputation of the same days: two points a day or two
+  // apart only drew a stretch of 0,0 %.
+  for (const on of points.keys()) {
+    if (values.some((value) => Math.abs(daysBetween(value.on, on)) < UNITS_POINT_MIN_DAYS)) points.delete(on);
+  }
   for (const value of values) points.set(value.on, { on: value.on, cents: value.cents, kind: "statement" });
   return [...points.values()].sort((a, b) => (a.on < b.on ? -1 : 1));
 }

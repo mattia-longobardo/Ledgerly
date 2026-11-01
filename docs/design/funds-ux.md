@@ -159,6 +159,10 @@ Guadagno  = V(a(p)) − V(s) − Flussi
   invariante da coprire con un test.
 - **Lettura del 1° gennaio**: chiude l'anno prima (decisione 3). Con il valore registrato il giorno 1, senza
   questa regola il mese di dicembre finirebbe nell'anno dopo.
+- **Lettura del giorno 1 (F1)**: la regola vale per ogni periodo che finisce l'ultimo giorno di un mese, non
+  solo per l'anno. Il grafico di F2 la riusa per i mesi.
+- **Primo valore senza denaro prima (F1)**: è una posizione, non un guadagno. Il punto di partenza è quel valore,
+  non `V = 0`. Il modulo fa già così dal 20/09/2026.
 - **Valuta**: tutti i fondi sono in EUR oggi. La conversione resta quella del saldo; un fondo in altra valuta
   è un'estensione futura, con le regole di Investments §4.5.
 
