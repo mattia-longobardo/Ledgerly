@@ -364,3 +364,42 @@ Mattia ha approvato la colonna «Default raccomandato» per tutte le 8 scelte. L
 | 6 | Quote del PAC                           | **Non ora**: quote solo dove i documenti le danno. Nessun campo in più da compilare ogni mese     | Campo facoltativo nel dialog del valore: nessuna migrazione, `units` esiste     |
 | 7 | Soglia "da aggiornare"                  | **31 giorni**: Mattia registra circa una volta al mese                                            | 45 giorni, o nessun avviso                                                      |
 | 8 | Proiezione                              | **Piano del PAC; media dei ricorrenti per il fondo pensione**; chiusa di default sul fondo pensione | Media di 12 mesi con le una tantum, come oggi: è il difetto n. 4                |
+
+## 10. Fase F2: la home non collegata
+
+Il codice è su `main`, ma la produzione non lo mostra. La pagina è `src/app/(app)/funds/preview/page.tsx`. I
+numeri sono in `src/modules/funds/home.ts` (puro), sopra `measurePeriod`. F5 sposta la pagina su `/funds`, poi
+toglie `preview.ts`, `preview-env.ts`, `playwright.preview.config.ts` e i rami `FUNDS_HOME_PREVIEW` degli spec.
+
+**Meccanismo.** `/funds/preview` risponde solo con `FUNDS_HOME_PREVIEW=1`. La variabile non esiste in
+`.env.homelab`, quindi in produzione il layout della route risponde 404, prima di ogni lettura dei dati. Nessun
+link porta alla route. Sul sito in produzione `funds-home.spec.ts` controlla il 404, e gli altri spec della home
+non partono.
+
+**E2E in locale.** L'anteprima usa `ledgerly_test`, mai `ledgerly`, e ascolta solo su `127.0.0.1:3999`:
+
+```sh
+docker build -t ledgerly:preview .
+sh scripts/preview-on-test.sh up ledgerly:preview   # attendi /api/health
+sh scripts/preview-on-test.sh seed
+npx playwright test --config playwright.preview.config.ts tests/e2e/funds-home.spec.ts
+sh scripts/preview-on-test.sh remove
+sh scripts/preview-on-test.sh down && docker image rm ledgerly:preview
+```
+
+Il browser di Playwright si prepara come dice `AGENTS.md`, sezione Deploy. Una checkout senza `.env.homelab`
+indica il file con `LEDGERLY_ENV_FILE`. Il seed `fundsHome` contiene anni negli stati di §6, con importi inventati.
+
+**Scelte di F2.**
+
+- Lo stepper parte dalla data più vecchia tra versamento, valore e busta. Un primo valore del giorno 1, con il
+  denaro già entrato, porta l'inizio al giorno prima: il guadagno cade nel mese prima, e nell'anno prima il 1° gennaio.
+- Un fondo archiviato conta in ogni periodo dove ha dati, anche in quello che arriva a oggi: così Σ anni = Tutto.
+  In un periodo che arriva a oggi il suo valore non conta: resta il guadagno, ma quel denaro non è nel portafoglio.
+- «Anno per anno»: un anno senza misura mostra «—» in Commissioni, perché quelle commissioni entrano nell'anno del
+  valore successivo. Così la colonna somma al totale. I KPI di quell'anno mostrano le commissioni pagate (§6).
+- Con un fondo misurato e uno no, Commissioni somma solo i fondi misurati: Andamento − Commissioni = Guadagno.
+- La vista Valore disegna un gradino per lettura. A ogni data un fondo conta con la sua ultima lettura e con il
+  solo denaro che quella lettura vede: un versamento successivo non crea una perdita.
+- Dalla riga esce «Modifica» (§4, n. 20): resta nel tab Impostazioni del fondo. Resta «Registra valore».
+- I link ai fondi non portano ancora il periodo: il dettaglio di oggi legge `from` e `to` a mesi. Li aggiunge F3.
