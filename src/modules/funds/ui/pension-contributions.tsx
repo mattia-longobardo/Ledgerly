@@ -98,7 +98,7 @@ export async function PensionContributions({
       </span>
     ) : null;
 
-  const years = deductibleYears(flows, period);
+  const years = deductibleYears(flows, period, todayOn);
 
   return (
     <>

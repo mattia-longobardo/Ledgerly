@@ -63,13 +63,19 @@ export interface DeductibleYear {
 
 /**
  * The deductible money by calendar year, newest first (§5.3), from the flows the KPI reads. A custom period
- * shows the whole of each year it touches, because the limit is a limit of the whole year.
+ * shows the whole of each year it touches, because the limit is a limit of the whole year. Money dated after
+ * today is not there yet, for the KPI too.
  */
-export function deductibleYears(flows: readonly FundFlow[], period: FundPeriod): DeductibleYear[] {
+export function deductibleYears(
+  flows: readonly FundFlow[],
+  period: FundPeriod,
+  todayOn: CivilDate,
+): DeductibleYear[] {
   const firstYear = period.from === null ? null : Number(period.from.slice(0, 4));
   const lastYear = Number(period.to.slice(0, 4));
   const years = new Map<number, DeductibleYear>();
   for (const { on, origin } of flows) {
+    if (on > todayOn) continue;
     const year = Number(on.slice(0, 4));
     if (year > lastYear || (firstYear !== null && year < firstYear)) continue;
     if (origin.youCents === 0n && origin.employerCents === 0n) continue;
