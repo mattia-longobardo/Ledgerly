@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createAccount, removeAccount } from "@/modules/accounts/service";
+import { getTransaction } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
 import { isCivilDate } from "@/platform/dates";
 import { type Db, getDb, type Tx } from "@/platform/db/client";
@@ -545,6 +546,9 @@ export async function addVoluntaryContribution(
   await requirePensionFund(ctx, fundId);
   const parsed = voluntarySchema.parse(input);
   if (parsed.feesCents > parsed.amountCents) throw new FundError("invalid");
+  // The foreign key knows the movement exists, not whose it is: only the user's own can be tied.
+  if (parsed.transactionId !== null && !(await getTransaction(ctx, parsed.transactionId)))
+    throw new FundError("not_found");
   const [row] = await getDb()
     .insert(fundOperations)
     .values(

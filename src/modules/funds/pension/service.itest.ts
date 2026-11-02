@@ -11,12 +11,14 @@ import {
   uploadPayslip,
   verifyPayslip,
 } from "@/modules/payroll/service";
+import { chargeCandidates } from "@/modules/transactions/queries";
+import { upsertFromProvider } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { hasPgError } from "@/platform/db/errors";
 import { deleteFolder, ensureBucket } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
-import { newContext } from "../../../../test/fixtures";
+import { anAccount, movement, newContext } from "../../../../test/fixtures";
 import { MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../tests/fixtures/payroll/samples";
 import { twinPdf, type TwinPayslip } from "../../../../tests/fixtures/payroll/twin";
 import { fundFeeTariffs, funds, pensionCompetences } from "../schema";
@@ -24,6 +26,7 @@ import { createFund, FundError } from "../service";
 import { COMETA_SCHEDULE } from "./rules";
 import {
   addContributionRule,
+  addVoluntaryContribution,
   competencesOf,
   createPensionFund,
   feeTariffs,
@@ -214,6 +217,42 @@ describe("competences from applied payslips (plan F6 L1)", () => {
     await createPensionFund(ctx, cometa());
     const other = await createPensionFund(ctx, cometa({ name: "Other" }));
     await expect(replaceCompetences(ctx, other.id, [])).rejects.toMatchObject({ code: "invalid" });
+  });
+});
+
+describe("a voluntary contribution tied to a movement", () => {
+  const paid = (transactionId: string) => ({ on: "2031-02-01", amountCents: 100_00n, transactionId });
+  async function aMovement(who: Ctx): Promise<string> {
+    const accountId = await anAccount(who);
+    await upsertFromProvider(who, accountId, [movement()]);
+    const [found] = await chargeCandidates(who, { accountId, from: "2026-03-01", to: "2026-03-31" });
+    return found.id;
+  }
+
+  it("ties the user's own movement", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    const paying = await aMovement(ctx);
+    const row = await addVoluntaryContribution(ctx, fund.id, paid(paying));
+    expect(row.transactionId).toBe(paying);
+  });
+
+  it("refuses a movement of another user, and leaves it free for its owner", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    const other = await newContext();
+    const theirs = await aMovement(other);
+    await expect(addVoluntaryContribution(ctx, fund.id, paid(theirs))).rejects.toMatchObject({
+      code: "not_found",
+    });
+    const theirFund = await createPensionFund(other, cometa());
+    const row = await addVoluntaryContribution(other, theirFund.id, paid(theirs));
+    expect(row.transactionId).toBe(theirs);
+  });
+
+  it("answers the same for a movement that does not exist", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    await expect(
+      addVoluntaryContribution(ctx, fund.id, paid("00000000-0000-4000-8000-000000000000")),
+    ).rejects.toMatchObject({ code: "not_found" });
   });
 });
 
