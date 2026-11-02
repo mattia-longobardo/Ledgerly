@@ -279,11 +279,17 @@ async function seedExpenses(): Promise<void> {
   const accountId = await syncedAccount(ctx, "e2e-acc-1", "ING Conto Arancio");
   const thisMonth = thisMonthOf(ctx);
   const lastMonth = lastMonthOf(ctx);
+  // Never after today: the chart stops at today, so early in a month these figures would not be there.
+  const upToToday = (day: string) => {
+    const date = `${thisMonth}-${day}`;
+    const on = today(ctx.timeZone);
+    return date < on ? date : on;
+  };
   await upsertFromProvider(ctx, accountId, [
-    walletMovement("e2e-tx-1", `${thisMonth}-02`, -1299n, "Netflix", "Abbonamenti"),
-    walletMovement("e2e-tx-2", `${thisMonth}-04`, -4550n, "Esselunga", "Spesa"),
-    walletMovement("e2e-tx-3", `${thisMonth}-09`, -2100n, "Trenitalia", "Trasporti"),
-    walletMovement("e2e-tx-4", `${thisMonth}-11`, 210000n, "Stipendio", null),
+    walletMovement("e2e-tx-1", upToToday("02"), -1299n, "Netflix", "Abbonamenti"),
+    walletMovement("e2e-tx-2", upToToday("04"), -4550n, "Esselunga", "Spesa"),
+    walletMovement("e2e-tx-3", upToToday("09"), -2100n, "Trenitalia", "Trasporti"),
+    walletMovement("e2e-tx-4", upToToday("11"), 210000n, "Stipendio", null),
     walletMovement("e2e-tx-5", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
     // One leg of a giroconto whose other account is not linked here (F2.5): in the list, flagged as
     // unpaired, and in no total. Last month, so this month's figures stay what they were.

@@ -73,6 +73,8 @@ export async function generateMetadata({ params }: PageProps<"/funds/[id]">): Pr
 export default async function FundDetailPage({ params, searchParams }: PageProps<"/funds/[id]">) {
   const ctx = await requireSession();
   const { id } = await params;
+  // The layout answers 404 too, but this page starts beside it: the database never sees such an id.
+  if (!isFundId(id)) notFound();
   const query = (await searchParams) as Query;
   const todayOn = today(ctx.timeZone);
   const base = `${HOME}/${id}`;
