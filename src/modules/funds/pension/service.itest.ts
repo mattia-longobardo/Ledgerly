@@ -29,6 +29,8 @@ import {
   addVoluntaryContribution,
   competencesOf,
   createPensionFund,
+  decideDifference,
+  decisionsOf,
   feeTariffs,
   payrollFund,
   pensionRulesOf,
@@ -268,3 +270,55 @@ describe("a voluntary contribution tied to a movement", () => {
 function eqId(id: string) {
   return eq(funds.id, id);
 }
+
+describe("the lines a decision names", () => {
+  const decision = {
+    year: 2031,
+    quarter: 1,
+    component: "worker" as const,
+    decision: "accepted_difference" as const,
+    note: "Rounded by the fund",
+    differenceCents: 100n,
+    accruedCents: 7_500n,
+    creditedCents: 7_400n,
+  };
+
+  it("takes the fund's own lines", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    const operation = await addVoluntaryContribution(ctx, fund.id, { on: "2031-02-01", amountCents: 100n });
+    await decideDifference(ctx, fund.id, { ...decision, competenceIds: [], operationIds: [operation.id] });
+    const [saved] = await decisionsOf(ctx, fund.id);
+    expect(saved.operationIds).toEqual([operation.id]);
+  });
+
+  it("refuses a line of another user's and saves nothing", async () => {
+    const other = await newContext();
+    const theirs = await createPensionFund(other, cometa());
+    const operation = await addVoluntaryContribution(other, theirs.id, {
+      on: "2031-02-01",
+      amountCents: 100n,
+    });
+    const fund = await createPensionFund(ctx, cometa());
+    await expect(
+      decideDifference(ctx, fund.id, { ...decision, competenceIds: [], operationIds: [operation.id] }),
+    ).rejects.toMatchObject({ code: "not_found" });
+    expect(await decisionsOf(ctx, fund.id)).toEqual([]);
+  });
+
+  it("refuses a line of another fund of the same user", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    const second = await createPensionFund(ctx, cometa({ name: "Second" }));
+    const operation = await addVoluntaryContribution(ctx, second.id, { on: "2031-02-01", amountCents: 100n });
+    await expect(
+      decideDifference(ctx, fund.id, { ...decision, competenceIds: [], operationIds: [operation.id] }),
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("refuses what is not an id", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    await expect(
+      decideDifference(ctx, fund.id, { ...decision, competenceIds: ["nope"], operationIds: [] }),
+    ).rejects.toThrow();
+    expect(await decisionsOf(ctx, fund.id)).toEqual([]);
+  });
+});

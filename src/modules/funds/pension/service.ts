@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createAccount, removeAccount } from "@/modules/accounts/service";
 import { getTransaction } from "@/modules/transactions/queries";
@@ -446,6 +446,49 @@ export interface DecisionInput {
 }
 
 /**
+ * The lines a decision is about come from the browser, and an array of ids has no foreign key: only the
+ * lines of this fund of this user's can be named.
+ */
+async function requireOwnLines(
+  ctx: Pick<Ctx, "userId">,
+  fundId: string,
+  input: Pick<DecisionInput, "competenceIds" | "operationIds">,
+): Promise<void> {
+  const ids = z.array(z.uuid());
+  const competenceIds = [...new Set(ids.parse(input.competenceIds))];
+  const operationIds = [...new Set(ids.parse(input.operationIds))];
+  const [competences, operations] = await Promise.all([
+    competenceIds.length === 0
+      ? []
+      : getDb()
+          .select({ id: pensionCompetences.id })
+          .from(pensionCompetences)
+          .where(
+            and(
+              eq(pensionCompetences.fundId, fundId),
+              inArray(pensionCompetences.id, competenceIds),
+              userScoped(ctx).owns(pensionCompetences),
+            ),
+          ),
+    operationIds.length === 0
+      ? []
+      : getDb()
+          .select({ id: fundOperations.id })
+          .from(fundOperations)
+          .where(
+            and(
+              eq(fundOperations.fundId, fundId),
+              inArray(fundOperations.id, operationIds),
+              userScoped(ctx).owns(fundOperations),
+            ),
+          ),
+  ]);
+  if (competences.length !== competenceIds.length || operations.length !== operationIds.length) {
+    throw new FundError("not_found");
+  }
+}
+
+/**
  * A difference a person has looked at and accepted, with its note and what it was about (GC §11.9):
  * never a fee invented to make the books balance. The decision holds only while the difference is
  * the one decided on — a later import that changes it puts the quarter back in front of the
@@ -458,6 +501,7 @@ export async function decideDifference(
   now: Date = new Date(),
 ): Promise<void> {
   await requirePensionFund(ctx, fundId);
+  await requireOwnLines(ctx, fundId, input);
   const note = input.note.trim();
   if (
     !isQuarter(input.quarter) ||
