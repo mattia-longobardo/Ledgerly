@@ -1,7 +1,6 @@
 // The numbers of a fund's page (docs/design/funds-ux.md §5.3, §6, F3). Pure, and on top of `home.ts`:
 // a fund's page is the home of that one fund, so its gain and its return cannot differ from its row.
 import type { CivilDate } from "@/platform/dates";
-import type { Query } from "@/modules/investments/period";
 import { type FundLine, firstDataOn, type HomeFund, type HomeSummary, homeSummary, lineOf } from "./home";
 import type { FundFlow, FundPeriod } from "./period";
 import type { FundForecast } from "./rules";
@@ -73,15 +72,6 @@ export function hypothesesOnly(forecast: FundForecast): FundForecast {
     rates: forecast.rates.slice(0, -1),
     rows: forecast.rows.map((row) => ({ ...row, valueCents: row.valueCents.slice(0, -1) })),
   };
-}
-
-/**
- * The address of the old page (§6): `span` chose the months of its chart. It goes, and a link saved
- * with it still opens. `null` when nothing is old. `from` and `to` by month are `legacyPeriodQuery`'s.
- */
-export function withoutSpan(query: Query): Query | null {
-  if (query.span === undefined) return null;
-  return Object.fromEntries(Object.entries(query).filter(([name]) => name !== "span"));
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

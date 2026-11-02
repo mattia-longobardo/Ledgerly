@@ -63,6 +63,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
   const t = await getTranslations("funds");
   const th = await getTranslations("funds.home");
   const tp = await getTranslations("investments.period");
+  const tf = await getTranslations("funds.fund");
   const query = (await searchParams) as Query;
   const todayOn = today(ctx.timeZone);
 
@@ -365,7 +366,8 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
         fundName={firstValueFund.fund.name}
         today={todayOn}
         lastLine={null}
-        label={t("table.valuation")}
+        label={tf("recordValue")}
+        newCopy
       />
     ) : null;
 
@@ -660,8 +662,9 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
         fundName={line.fund.name}
         today={todayOn}
         lastLine={null}
-        label={line.status === "never_valued" ? th("list.first") : t("table.valuation")}
+        label={line.status === "never_valued" ? th("list.first") : tf("recordValue")}
         place="row"
+        newCopy
       />
     );
   const paidHeader =

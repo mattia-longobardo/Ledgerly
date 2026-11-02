@@ -3216,11 +3216,6 @@
       }
     },
     "fund": {
-      "tabPending": {
-        "title": "{tab} is not ready yet",
-        "note": "This tab comes with the next phase of the new page. Until then it shows no numbers.",
-        "back": "Back to the overview"
-      },
       "hero": {
         "value": "Value <strong>{value}</strong> on {date}",
         "valueAtYearEnd": "Value at year end <strong>{value}</strong> · value of {date}",
@@ -3270,6 +3265,148 @@
         "onAverage": "If {monthly} a month keeps going in, the average of the recurring payments. A projection, not a promise.",
         "short": "In {years} years, at {rate}",
         "allRates": "See all the rates"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "contributions": "Contributions",
+        "deposits": "Deposits",
+        "valuations": "Valuations",
+        "settings": "Settings"
+      },
+      "recordValue": "Record value",
+      "valuationForm": {
+        "title": "Record value · {name}",
+        "description": "Enter the value on the latest statement. It is saved as the balance of the fund's account.",
+        "date": "Date of the value",
+        "value": "Value (€)",
+        "save": "Save value",
+        "editTitle": "Edit value",
+        "recorded": "Value recorded",
+        "updated": "Value updated"
+      },
+      "bridgeValue": "Value",
+      "bridgeNoValue": "A value is needed to connect these figures.",
+      "settingsCopy": {
+        "ter": "Annual management fee (%)",
+        "valuations": "Values",
+        "dangerText": "Archive {name}. Deposits and values stay readable.",
+        "valuationAccount": "Account of the value",
+        "transfersDescription": "When the contributions are expected in the fund. Calculated automatically, no confirmation needed."
+      },
+      "valuations": {
+        "title": "Values",
+        "count": "{count, plural, one {# value} other {# values}}",
+        "date": "Date",
+        "value": "Value",
+        "paid": "Paid in, stretch",
+        "gain": "Gain, stretch",
+        "rate": "Stretch return",
+        "rateNote": "The stretch return measures only the days between two values. It is not the return of the period: that one is in the Overview.",
+        "from": "from {date}",
+        "fromNothing": "first value, from the first deposit",
+        "position": "first value: a starting point, not a gain",
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleted": "Value deleted",
+        "noneEver": "No value yet. Record the first one to measure the fund.",
+        "noneIn": "No value {when}.",
+        "lastValue": "Last value {value}, on {date}.",
+        "needsSecond": "A second value is needed for the stretch return.",
+        "bestWorst": "Best stretch {best}, to {bestOn}. Worst stretch {worst}, to {worstOn}.",
+        "notInValue": "{amount} paid in after the last value: no value includes it yet.",
+        "statements": {
+          "title": "Fund statements",
+          "empty": "No statement {when}.",
+          "you": "You",
+          "employer": "Employer",
+          "tfr": "TFR",
+          "inflows": "Money in",
+          "outflows": "Money out",
+          "gain": "Reported gain"
+        },
+        "documents": {
+          "title": "Fund documents",
+          "kinds": {
+            "cometa_operations": "Operations",
+            "cometa_position": "Statement"
+          }
+        }
+      },
+      "deposits": {
+        "title": "Deposits",
+        "count": "{count, plural, one {# deposit} other {# deposits}}",
+        "date": "Date",
+        "charged": "Charged",
+        "fee": "Fee",
+        "invested": "Invested",
+        "source": "Source",
+        "sourceRule": "Found by the rule",
+        "sourceHand": "One-off",
+        "edit": "Edit",
+        "delete": "Delete",
+        "total": "Total",
+        "empty": "No deposit {when}.",
+        "rule": {
+          "title": "The rule",
+          "text": "Expenses on {account} whose payee contains {match} become a deposit, less {fee} of fee.",
+          "anyAccount": "any account",
+          "noFee": "no",
+          "active": "Active",
+          "paused": "Paused",
+          "edit": "Edit the rule",
+          "none": "No rule: enter the deposits by hand."
+        }
+      },
+      "contributions": {
+        "you": "You",
+        "employer": "Employer",
+        "tfr": "TFR",
+        "other": "Other",
+        "total": "Total",
+        "operations": {
+          "title": "Operations of the fund",
+          "count": "{count, plural, one {# operation} other {# operations}}",
+          "empty": "No operation {when}.",
+          "quarter": "Quarter",
+          "date": "Date",
+          "fees": "Fees",
+          "net": "Invested",
+          "remove": "Remove"
+        },
+        "payslips": {
+          "title": "Payslips",
+          "hint": "enrolment fees excluded",
+          "empty": "No payslip {when}.",
+          "month": "Month",
+          "quarter": "Quarter",
+          "status": "Status",
+          "open": "Open the payslip"
+        },
+        "quarters": {
+          "title": "Quarters",
+          "hint": "{days} days of tolerance before a missing credit is flagged",
+          "empty": "No quarter {when}.",
+          "missing": "Payslip missing for {months}."
+        },
+        "components": {
+          "worker": "You",
+          "employer": "Employer",
+          "tfr": "TFR",
+          "enrollment": "Enrolment"
+        },
+        "deductible": {
+          "title": "Deductible by year",
+          "empty": "No deductible money {when}.",
+          "year": "Year",
+          "used": "Used",
+          "limit": "Limit",
+          "note": "You + employer, TFR excluded, by operation date. The year the fund certifies can differ: for your tax return, use the fund's certificate."
+        },
+        "voluntary": {
+          "title": "Voluntary payment",
+          "description": "Money paid directly to the fund, outside the payslip. You can link it to the movement that paid it.",
+          "add": "Add a payment"
+        }
       }
     }
   },

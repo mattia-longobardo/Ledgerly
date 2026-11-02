@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flowCounts, fundSummary, hypothesesOnly, isFundId, recentFlows, withoutSpan } from "./detail";
+import { flowCounts, fundSummary, hypothesesOnly, isFundId, recentFlows } from "./detail";
 import { gainBars, type HomeFund, homeSummary, valueSeries } from "./home";
 import { allPeriod, type FundFlow, yearPeriod } from "./period";
 import type { FundForecast } from "./rules";
@@ -158,11 +158,6 @@ describe("hypothesesOnly", () => {
 });
 
 describe("the address", () => {
-  it("drops the old page's span and keeps the rest", () => {
-    expect(withoutSpan({ span: "24", tab: "settings" })).toEqual({ tab: "settings" });
-    expect(withoutSpan({ tab: "settings" })).toBeNull();
-  });
-
   it("knows an id from anything else", () => {
     expect(isFundId("019a0000-0000-7000-8000-000000000000")).toBe(true);
     expect(isFundId("not-a-fund")).toBe(false);

@@ -10,6 +10,7 @@ import { fundDraft } from "./present";
 /** A PAC's settings (§6: "as today"), which do not follow the period. */
 export async function PacSettings({ ctx, detail }: { ctx: Pick<Ctx, "numberFormat">; detail: FundDetail }) {
   const t = await getTranslations("funds");
+  const tf = await getTranslations("funds.fund.settingsCopy");
   const { fund } = detail;
   return (
     <SettingsGrid>
@@ -18,6 +19,7 @@ export async function PacSettings({ ctx, detail }: { ctx: Pick<Ctx, "numberForma
           fundId={fund.id}
           draft={fundDraft(fund, ctx.numberFormat)}
           accounts={detail.accounts}
+          terLabel={tf("ter")}
         />
       </SettingsSection>
       <SettingsSection title={t("settings.rule.title")} description={t("settings.rule.description")}>
@@ -31,10 +33,7 @@ export async function PacSettings({ ctx, detail }: { ctx: Pick<Ctx, "numberForma
           accounts={detail.accounts}
         />
       </SettingsSection>
-      <SettingsSection
-        title={t("settings.valuations.title")}
-        description={t("settings.valuations.description")}
-      >
+      <SettingsSection title={tf("valuations")} description={t("settings.valuations.description")}>
         <Link
           href={`/accounts/${fund.valuationAccountId}?tab=settings` as Route}
           className="inline-flex h-6 items-center self-start font-medium text-accent hover:underline"
@@ -43,7 +42,7 @@ export async function PacSettings({ ctx, detail }: { ctx: Pick<Ctx, "numberForma
         </Link>
       </SettingsSection>
       <SettingsSection title={t("settings.danger.title")} description={t("settings.danger.description")}>
-        <p className="text-sm">{t("settings.danger.text", { name: fund.name })}</p>
+        <p className="text-sm">{tf("dangerText", { name: fund.name })}</p>
         <div>
           {fund.state === "archived" ? (
             <FundStateButton

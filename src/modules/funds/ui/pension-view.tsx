@@ -79,6 +79,7 @@ export async function PensionView({
   archiveButton,
   window,
   rangePicker,
+  newCopy,
 }: {
   ctx: Ctx;
   detail: PensionDetail;
@@ -92,6 +93,8 @@ export async function PensionView({
   /** The months the chart draws, already cut to the preset or to the range the picker wrote. */
   window: { months: MonthKey[]; value: (Cents | null)[]; paidIn: (Cents | null)[] };
   rangePicker: ReactNode;
+  /** The words of the new pages (docs/design/funds-ux.md §6). The page of today does not pass them. */
+  newCopy?: { valuationAccount: string; transfersDescription: string };
 }) {
   const t = await getTranslations("funds.pension");
   const tv = await getTranslations("funds");
@@ -971,7 +974,10 @@ export async function PensionView({
         </div>
       </SettingsSection>
 
-      <SettingsSection title={t("settings.transfers")} description={t("settings.transfersDescription")}>
+      <SettingsSection
+        title={t("settings.transfers")}
+        description={newCopy?.transfersDescription ?? t("settings.transfersDescription")}
+      >
         {detail.schedule === null ? (
           <p className="text-sm text-muted">{t("settings.noSchedule")}</p>
         ) : (
@@ -1100,7 +1106,7 @@ export async function PensionView({
       </SettingsSection>
 
       <SettingsSection
-        title={t("settings.valuationAccount")}
+        title={newCopy?.valuationAccount ?? t("settings.valuationAccount")}
         description={t("settings.valuationDescription")}
       >
         <Link
@@ -1141,7 +1147,7 @@ function Line({ label, value, note }: { label: string; value: string; note?: str
   );
 }
 
-function ComponentLine({
+export function ComponentLine({
   fundId,
   quarter,
   component,

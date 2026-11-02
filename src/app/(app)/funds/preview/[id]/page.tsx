@@ -3,20 +3,17 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { colorFor } from "@/modules/accounts/ui/display";
-import {
-  flowCounts,
-  fundSummary,
-  hypothesesOnly,
-  isFundId,
-  recentFlows,
-  withoutSpan,
-} from "@/modules/funds/detail";
+import { flowCounts, fundSummary, hypothesesOnly, isFundId, recentFlows } from "@/modules/funds/detail";
 import { isFutureYear, valueToday } from "@/modules/funds/home";
 import { fundHomeRow } from "@/modules/funds/home-queries";
+import { legacyFundQuery, valuationLines } from "@/modules/funds/tabs";
 import { fundsHomePreview } from "@/modules/funds/preview";
 import { fundDetail } from "@/modules/funds/queries";
 import { FundError, requireFund } from "@/modules/funds/service";
+import { PacDeposits } from "@/modules/funds/ui/pac-deposits";
+import { PensionContributions } from "@/modules/funds/ui/pension-contributions";
 import { FundChart } from "@/modules/funds/ui/fund-chart";
+import { FundValuations } from "@/modules/funds/ui/fund-valuations";
 import { Kpi } from "@/modules/funds/ui/fund-kpi";
 import { ValuationButton, FundStateButton } from "@/modules/funds/ui/fund-forms";
 import { PacSettings } from "@/modules/funds/ui/pac-settings";
@@ -25,9 +22,10 @@ import { quarterLabel } from "@/modules/funds/ui/pension-present";
 import { PENSION_TABS, PensionView } from "@/modules/funds/ui/pension-view";
 import { monthPill } from "@/modules/funds/ui/present";
 import { ClosedProjection, ShortProjection } from "@/modules/funds/ui/projection";
-import { legacyPeriodQuery, periodQuery, periodSpan, type Query } from "@/modules/investments/period";
+import { periodQuery, periodSpan, type Query } from "@/modules/investments/period";
 import { periodOf } from "@/modules/investments/pnl";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
+import { chargeCandidates } from "@/modules/transactions/queries";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
 import { formatDate, formatDecimalText, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -63,7 +61,7 @@ export async function generateMetadata({ params }: PageProps<"/funds/preview/[id
 
 /**
  * A fund's new page (docs/design/funds-ux.md §5.3, §6, F3, mockups a-05 and a-06): the header, the tabs,
- * the period, and the Overview of a pension fund or of a PAC. The period is in the address and stays from
+ * the period, the Overview of a pension fund or of a PAC, and the tabs that follow the period (F4). The period is in the address and stays from
  * the home to the fund and from a tab to the next. "On the way", the plan, this month's deposit and the
  * projection stay as of today. Not connected yet: the layout above answers 404 on the deployed site.
  */
@@ -80,11 +78,7 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
   const todayOn = today(ctx.timeZone);
   const base = `${HOME}/${id}`;
 
-  const stripped = withoutSpan(query);
-  if (stripped) {
-    permanentRedirect(withParams(base, {}, Object.fromEntries(Object.entries(stripped).map(flat))));
-  }
-  const legacy = legacyPeriodQuery(query, todayOn);
+  const legacy = legacyFundQuery(query, todayOn);
   if (legacy) permanentRedirect(withParams(base, {}, legacy));
   const view = one(query.view) === "value" ? "value" : "gain";
   const row = await fundHomeRow(ctx, id);
@@ -148,16 +142,14 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
       </h1>
     </div>
   );
-  const followsPeriod = tab === "overview";
+  const followsPeriod = tab !== "settings";
   const nav = (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <TabLinks
         label={t("detail.tabs.label")}
         tabs={tabs.map((name) => ({
           href: tabHref(name),
-          label: isPension
-            ? tp(`tabs.${name}` as "tabs.overview")
-            : t(`detail.tabs.${name}` as "detail.tabs.overview"),
+          label: tf(`tabs.${name}` as "tabs.overview"),
           active: name === tab,
         }))}
       />
@@ -189,7 +181,8 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
               fundName={fund.name}
               today={todayOn}
               lastLine={lastLine}
-              label={t("table.valuation")}
+              label={tf("recordValue")}
+              newCopy
             />
           </span>
         )
@@ -226,6 +219,10 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
             />
           }
           valuationButton={null}
+          newCopy={{
+            valuationAccount: tf("settingsCopy.valuationAccount"),
+            transfersDescription: tf("settingsCopy.transfersDescription"),
+          }}
           archiveButton={
             archived ? (
               <FundStateButton
@@ -250,25 +247,6 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
     );
   }
 
-  // ——— A tab of the next phase: no number at all, so it cannot show a different one ————————————————
-  if (tab !== "overview") {
-    const label = isPension
-      ? tp(`tabs.${tab}` as "tabs.overview")
-      : t(`detail.tabs.${tab}` as "detail.tabs.overview");
-    return shell(
-      <Card data-testid="tab-pending" className="flex flex-col items-start gap-2">
-        <h2 className="text-lg font-semibold">{tf("tabPending.title", { tab: label })}</h2>
-        <p className="text-sm text-muted">{tf("tabPending.note")}</p>
-        <Link
-          href={tabHref("overview")}
-          className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm font-medium text-accent hover:underline"
-        >
-          {tf("tabPending.back")}
-        </Link>
-      </Card>,
-    );
-  }
-
   // ——— A year before anything there is (§6) ——————————————————————————————————————————————————————
   const { state } = summary;
   const firstYear = firstOn === null ? Number(todayOn.slice(0, 4)) : Number(firstOn.slice(0, 4));
@@ -284,6 +262,70 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
             {th("noDataLink", { year: firstYear })}
           </ButtonLink>
         }
+      />,
+    );
+  }
+
+  // ——— The tabs that follow the period (§6): the same lines the Overview reads ——————————————————————
+  const movementsOf = async (accountId: string | null) =>
+    (
+      await chargeCandidates(ctx, {
+        accountId,
+        from: fund.startOn,
+        to: todayOn,
+        types: ["expense", "transfer"],
+      })
+    )
+      .slice(-60)
+      .reverse()
+      .map((candidate) => ({
+        id: candidate.id,
+        label: `${formatDate(candidate.on, "dayMonth", ctx.locale)} · ${candidate.payee ?? ""} · ${money(candidate.cents)}`,
+      }));
+  if (tab === "deposits" && pac) {
+    return shell(
+      <PacDeposits
+        ctx={ctx}
+        detail={pac}
+        archived={archived}
+        period={period}
+        when={when}
+        todayOn={todayOn}
+        movements={await movementsOf(fund.debitAccountId)}
+        settingsHref={tabHref("settings")}
+      />,
+    );
+  }
+  if (tab === "contributions" && pension) {
+    return shell(
+      <PensionContributions
+        ctx={ctx}
+        detail={pension}
+        flows={home.flows}
+        archived={archived}
+        period={period}
+        when={when}
+        todayOn={todayOn}
+        movements={await movementsOf(null)}
+      />,
+    );
+  }
+  if (tab === "valuations") {
+    const newest = [...home.points].sort((a, b) => (a.on < b.on ? 1 : -1))[0] ?? null;
+    return shell(
+      <FundValuations
+        ctx={ctx}
+        fundId={fund.id}
+        archived={archived}
+        period={period}
+        lines={valuationLines(line, period)}
+        recorded={pension ? pension.valuations : pac!.valuations}
+        valuesEver={home.points.length}
+        lastValue={newest}
+        notInValueCents={line.measure.notInValueCents}
+        when={when}
+        todayOn={todayOn}
+        pension={pension}
       />,
     );
   }
@@ -644,7 +686,7 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
     <Card className="flex min-w-0 flex-col gap-3" data-testid="fund-bridge">
       <h2 className="text-lg font-semibold">{tf("bridge.title")}</h2>
       {pension.bridge === null ? (
-        <p className="text-sm text-muted">{tp("bridge.noValue")}</p>
+        <p className="text-sm text-muted">{tf("bridgeNoValue")}</p>
       ) : (
         <>
           <dl className="flex flex-col gap-1 text-sm">
@@ -656,7 +698,11 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
                   bridgeLine.total && "border-t border-border pt-1 font-semibold",
                 )}
               >
-                <dt>{tp(`bridge.lines.${bridgeLine.key}` as "bridge.lines.accrued")}</dt>
+                <dt>
+                  {bridgeLine.key === "value"
+                    ? tf("bridgeValue")
+                    : tp(`bridge.lines.${bridgeLine.key}` as "bridge.lines.accrued")}
+                </dt>
                 <dd className="tabular-nums">{money(bridgeLine.cents, !bridgeLine.total)}</dd>
               </div>
             ))}
@@ -721,8 +767,9 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
               fundName={fund.name}
               today={todayOn}
               lastLine={lastLine}
-              label={line.status === "never_valued" ? th("list.first") : t("table.valuation")}
+              label={line.status === "never_valued" ? th("list.first") : tf("recordValue")}
               place="card"
+              newCopy
             />
           </div>
         )}
@@ -745,11 +792,6 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
       {pension && <ClosedProjection ctx={ctx} forecast={hypothesesOnly(pension.forecast)} />}
     </>,
   );
-}
-
-/** A query's entry as a link writes it. */
-function flat([name, value]: [string, string | string[] | undefined]): [string, string | undefined] {
-  return [name, one(value)];
 }
 
 export const dynamic = "force-dynamic";

@@ -421,10 +421,48 @@ pagina e toglie il gruppo `(home)`.
   proprio del fondo è un composto, e sarebbe un secondo rendimento (decisione 2 di §9).
 - I link della home portano il periodo verso `/funds/preview/<id>`, e la briciola del fondo lo riporta alla home. Il
   periodo resta tra i tab; `view` resta solo nel tab Panoramica.
-- Il controllo del periodo compare solo sui tab che lo seguono. Oggi è solo Panoramica: F4 lo aggiunge ai suoi tab.
-- Contributi, Versamenti e Valutazioni mostrano un avviso senza numeri fino a F4. Impostazioni funziona già come oggi.
+- Il controllo del periodo compare solo sui tab che lo seguono: tutti, tranne Impostazioni (§12).
 - «Dal maturato al valore» non segue il periodo: copre tutta la vita del fondo fino all'ultimo valore, e lo dichiara.
 - Una lettura da quote × valore quota il 1° gennaio chiude l'anno prima come ogni altra lettura del giorno 1. Con
   essa passano all'anno prima anche il denaro e le commissioni che quella lettura vede (§5.2).
 - Il grafico è `FundChart`, lo stesso della home: un fondo non mostra un valore tra due letture, e un versamento
   conta solo dalla lettura che lo vede.
+
+## 12. Fase F4: i tab del dettaglio
+
+I tab sono in `src/modules/funds/ui/` (`pension-contributions.tsx`, `pac-deposits.tsx`, `fund-valuations.tsx`), sotto la
+stessa pagina di F3. I numeri sono in `src/modules/funds/tabs.ts` (puro). Con la variabile spenta ogni tab e il redirect
+rispondono 404.
+
+**E2E.** `tests/e2e/funds-tabs.spec.ts`, con i seed `fundsDetail` e `fundsCopy` (gli stessi fondi, in italiano). Stessa
+procedura di §10. Con `FUNDS_HOME_PREVIEW=0` nell'anteprima e `E2E_FUNDS_HOME_PREVIEW=0` nello spec, si prova il
+comportamento della produzione: route nuove 404, pagine attuali invariate.
+
+**Compiti di F5.**
+
+- Spostare `preview/[id]/returns/route.ts` su `/funds/[id]/returns`, al posto della pagina attuale, con `base` nuovo.
+- Il redirect di `span`, `from` e `to` (`legacyFundQuery`) è già nella pagina del fondo: si attiva quando la pagina si sposta.
+- Togliere le chiavi di testo non più usate e le prop `newCopy` e `terLabel`, che tengono separati i testi vecchi e nuovi.
+- Portare le pagine dei documenti sotto il nuovo dettaglio: oggi `fund-valuations.tsx` porta a `/funds/[id]/documents/...`.
+
+**Scelte di F4.**
+
+- Una riga per valore: il tratto finisce su quel valore. I guadagni sono quelli di `stretchesOf`, quindi Σ tratti = guadagno
+  della Panoramica, al centesimo. Il valore del 1° gennaio resta nell'anno che chiude (decisione 3).
+- Il primo valore con denaro prima ha un guadagno, da zero, ma non un rendimento: serve un secondo valore (§6). Il primo
+  valore senza denaro prima è un punto di partenza, senza guadagno (§5.2).
+- Il rendimento del tratto è la formula della pagina `/returns`: guadagno / (valore iniziale + versato nel tratto). Si chiama
+  «Rendimento del tratto», con una nota sotto la tabella.
+- Da `/returns` restano le righe, il tratto migliore e il peggiore. Il composto, il valore «all'anno» e il grafico a barre non
+  passano nel tab: i primi due sembrerebbero un secondo rendimento del periodo (decisione 2), il terzo ripete le righe.
+- Il deducibile legge gli stessi flussi del KPI, quindi il tab e il KPI non possono differire: tu + azienda di ogni flusso in
+  ingresso. La pagina di oggi conta solo contributi e versamenti volontari, quindi non conta le quote di iscrizione. Un periodo
+  personalizzato mostra l'anno intero di ogni anno che tocca, perché il limite è annuale.
+- Un trimestre compare nel periodo se lo toccano i suoi mesi, la scadenza o un accredito: il IV trimestre accreditato a gennaio
+  sta in due anni.
+- Le righe di Estratti seguono il periodo. La lista dei documenti no: un file non appartiene a un periodo.
+- Le tabelle passano a lista in base alla larghezza della pagina (`@5xl`), non a `md`: con la barra laterale, a 768 px le colonne
+  non entrano.
+- `span`: 60 era «All» e porta a `period=all`; 12 porta all'anno in corso, come `1y` in Investments; altri numeri restano gli
+  stessi mesi, come `from` e `to`. `from` e `to` a mesi vincono su `span`, come nella pagina di oggi.
+- Il testo «TER» resta nel messaggio di errore condiviso `funds.errors.invalid`: F5 lo cambia con le altre chiavi vecchie.

@@ -3136,15 +3136,15 @@
         "gain": "Guadagno",
         "value": "Valore",
         "gainNote": {
-          "month": "Per mese e per fondo · la linea è il cumulato {when}",
-          "year": "Per anno e per fondo · la linea è il cumulato",
-          "stretch": "Tra un valore e l'altro, per fondo · la linea è il cumulato"
+          "month": "Per mese e per fondo · la linea è il totale progressivo {when}",
+          "year": "Per anno e per fondo · la linea è il totale progressivo",
+          "stretch": "Tra un valore e l'altro, per fondo · la linea è il totale progressivo"
         },
         "valueNote": "Valore e versato a ogni valutazione · nessun valore tra due letture",
-        "line": "Cumulato del periodo",
+        "line": "Totale progressivo del periodo",
         "paid": "Versato",
         "band": "Guadagno, lo spazio tra le due",
-        "cumulative": "Cumulato {amount}",
+        "cumulative": "Totale progressivo {amount}",
         "stretch": "{from} – {to}",
         "summary": "Guadagno {when}: {total}. Migliore {best}, peggiore {worst}. Per fondo: {funds}.",
         "valueSummary": "Valore e versato a ogni valutazione {when}. Ultimo valore {value} al {date}, versato {paid}.",
@@ -3154,7 +3154,7 @@
         "emptyValue": "Serve un secondo valore per disegnare la linea.",
         "data": "Dati del grafico",
         "interval": "Intervallo",
-        "cumulativeHeader": "Cumulato",
+        "cumulativeHeader": "Totale progressivo",
         "valueHeader": "Valore",
         "dateHeader": "Data"
       },
@@ -3216,11 +3216,6 @@
       }
     },
     "fund": {
-      "tabPending": {
-        "title": "{tab} non è ancora pronto",
-        "note": "Questa scheda arriva con la prossima fase della nuova pagina. Fino ad allora non mostra numeri.",
-        "back": "Torna alla panoramica"
-      },
       "hero": {
         "value": "Valore <strong>{value}</strong> al {date}",
         "valueAtYearEnd": "Valore a fine anno <strong>{value}</strong> · valore del {date}",
@@ -3246,9 +3241,9 @@
         "link": "Vedi i contributi"
       },
       "chartNote": {
-        "month": "Per mese, tra una valutazione e la successiva · la linea è il cumulato {when}",
-        "year": "Per anno, tra una valutazione e la successiva · la linea è il cumulato",
-        "stretch": "Tra una valutazione e la successiva · la linea è il cumulato"
+        "month": "Per mese, tra una valutazione e la successiva · la linea è il totale progressivo {when}",
+        "year": "Per anno, tra una valutazione e la successiva · la linea è il totale progressivo",
+        "stretch": "Tra una valutazione e la successiva · la linea è il totale progressivo"
       },
       "recent": {
         "title": "Ultimi versamenti",
@@ -3270,6 +3265,148 @@
         "onAverage": "Se continuano a entrare {monthly} al mese, la media dei versamenti ricorrenti. Un'ipotesi, non una promessa.",
         "short": "Fra {years} anni, al {rate}",
         "allRates": "Vedi tutti i tassi"
+      },
+      "tabs": {
+        "overview": "Panoramica",
+        "contributions": "Contributi",
+        "deposits": "Versamenti",
+        "valuations": "Valutazioni",
+        "settings": "Impostazioni"
+      },
+      "recordValue": "Registra valore",
+      "valuationForm": {
+        "title": "Registra valore · {name}",
+        "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo.",
+        "date": "Data del valore",
+        "value": "Valore (€)",
+        "save": "Salva valore",
+        "editTitle": "Modifica valore",
+        "recorded": "Valore registrato",
+        "updated": "Valore aggiornato"
+      },
+      "bridgeValue": "Valore",
+      "bridgeNoValue": "Serve un valore per raccordare le cifre.",
+      "settingsCopy": {
+        "ter": "Commissione di gestione annua (%)",
+        "valuations": "Valori",
+        "dangerText": "Archivia {name}. Versamenti e valori restano leggibili.",
+        "valuationAccount": "Conto del valore",
+        "transfersDescription": "Quando i contributi sono attesi nel fondo. Calcolato automaticamente, nessuna conferma richiesta."
+      },
+      "valuations": {
+        "title": "Valori",
+        "count": "{count, plural, one {# valore} other {# valori}}",
+        "date": "Data",
+        "value": "Valore",
+        "paid": "Versato nel tratto",
+        "gain": "Guadagno del tratto",
+        "rate": "Rendimento del tratto",
+        "rateNote": "Il rendimento del tratto misura solo i giorni tra due valori. Non è il rendimento del periodo: quello è in Panoramica.",
+        "from": "dal {date}",
+        "fromNothing": "primo valore, dal primo versamento",
+        "position": "primo valore: un punto di partenza, non un guadagno",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "deleted": "Valore eliminato",
+        "noneEver": "Ancora nessun valore. Registra il primo per misurare il fondo.",
+        "noneIn": "Nessun valore {when}.",
+        "lastValue": "Ultimo valore {value}, del {date}.",
+        "needsSecond": "Serve un secondo valore per il rendimento del tratto.",
+        "bestWorst": "Tratto migliore {best}, fino al {bestOn}. Tratto peggiore {worst}, fino al {worstOn}.",
+        "notInValue": "{amount} versati dopo l'ultimo valore: nessun valore li comprende ancora.",
+        "statements": {
+          "title": "Estratti del fondo",
+          "empty": "Nessun estratto {when}.",
+          "you": "Tu",
+          "employer": "Azienda",
+          "tfr": "TFR",
+          "inflows": "Entrate",
+          "outflows": "Uscite",
+          "gain": "Guadagno dichiarato"
+        },
+        "documents": {
+          "title": "Documenti del fondo",
+          "kinds": {
+            "cometa_operations": "Operazioni",
+            "cometa_position": "Estratto"
+          }
+        }
+      },
+      "deposits": {
+        "title": "Versamenti",
+        "count": "{count, plural, one {# versamento} other {# versamenti}}",
+        "date": "Data",
+        "charged": "Addebitato",
+        "fee": "Commissione",
+        "invested": "Investito",
+        "source": "Origine",
+        "sourceRule": "Trovato dalla regola",
+        "sourceHand": "Una tantum",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "total": "Totale",
+        "empty": "Nessun versamento {when}.",
+        "rule": {
+          "title": "La regola",
+          "text": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento, meno {fee} di commissione.",
+          "anyAccount": "qualunque conto",
+          "noFee": "nessuna",
+          "active": "Attiva",
+          "paused": "In pausa",
+          "edit": "Modifica la regola",
+          "none": "Nessuna regola: inserisci i versamenti a mano."
+        }
+      },
+      "contributions": {
+        "you": "Tu",
+        "employer": "Azienda",
+        "tfr": "TFR",
+        "other": "Altro",
+        "total": "Totale",
+        "operations": {
+          "title": "Operazioni del fondo",
+          "count": "{count, plural, one {# operazione} other {# operazioni}}",
+          "empty": "Nessuna operazione {when}.",
+          "quarter": "Trimestre",
+          "date": "Data",
+          "fees": "Spese",
+          "net": "Investito",
+          "remove": "Elimina"
+        },
+        "payslips": {
+          "title": "Buste paga",
+          "hint": "quote d'iscrizione escluse",
+          "empty": "Nessuna busta paga {when}.",
+          "month": "Mese",
+          "quarter": "Trimestre",
+          "status": "Stato",
+          "open": "Apri la busta paga"
+        },
+        "quarters": {
+          "title": "Trimestri",
+          "hint": "{days} giorni di tolleranza prima di segnalare un accredito mancante",
+          "empty": "Nessun trimestre {when}.",
+          "missing": "Manca la busta paga di {months}."
+        },
+        "components": {
+          "worker": "Tu",
+          "employer": "Azienda",
+          "tfr": "TFR",
+          "enrollment": "Iscrizione"
+        },
+        "deductible": {
+          "title": "Deducibile per anno",
+          "empty": "Nessuna somma deducibile {when}.",
+          "year": "Anno",
+          "used": "Usato",
+          "limit": "Limite",
+          "note": "Tu + azienda, senza TFR, per data dell'operazione. L'anno certificato dal fondo può differire: per la dichiarazione usa la certificazione del fondo."
+        },
+        "voluntary": {
+          "title": "Versamento volontario",
+          "description": "Denaro versato direttamente al fondo, fuori dalla busta paga. Puoi collegarlo al movimento che lo ha pagato.",
+          "add": "Aggiungi un versamento"
+        }
       }
     }
   },
