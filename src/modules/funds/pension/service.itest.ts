@@ -254,6 +254,15 @@ describe("a voluntary contribution tied to a movement", () => {
       addVoluntaryContribution(ctx, fund.id, paid("00000000-0000-4000-8000-000000000000")),
     ).rejects.toMatchObject({ code: "not_found" });
   });
+
+  it("answers with a form error for a movement another operation holds", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    const paying = await aMovement(ctx);
+    await addVoluntaryContribution(ctx, fund.id, paid(paying));
+    await expect(addVoluntaryContribution(ctx, fund.id, paid(paying))).rejects.toMatchObject({
+      code: "movement_taken",
+    });
+  });
 });
 
 function eqId(id: string) {

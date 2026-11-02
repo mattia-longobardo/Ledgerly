@@ -25,7 +25,14 @@ export type FundDeposit = typeof fundDeposits.$inferSelect;
 export type FundValuation = typeof fundValuations.$inferSelect;
 
 export type FundErrorCode =
-  "not_found" | "invalid" | "invalid_account" | "duplicate_name" | "archived" | "linked" | "future_date";
+  | "not_found"
+  | "invalid"
+  | "invalid_account"
+  | "duplicate_name"
+  | "archived"
+  | "linked"
+  | "future_date"
+  | "movement_taken";
 
 export class FundError extends Error {
   constructor(readonly code: FundErrorCode) {

@@ -2655,6 +2655,7 @@
       "archived": "Un fondo archiviato non cambia. Ripristinalo prima.",
       "linked": "Questo versamento viene da un movimento: nascondi il movimento in Spese per toglierlo.",
       "future_date": "La data non può essere nel futuro.",
+      "movement_taken": "Quel movimento è già collegato a un'altra operazione.",
       "failed": "Salvataggio non riuscito. Riprova."
     },
     "account": {

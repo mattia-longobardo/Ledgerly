@@ -2655,6 +2655,7 @@
       "archived": "An archived fund can't change. Restore it first.",
       "linked": "This deposit comes from a movement: hide the movement in Expenses to drop it.",
       "future_date": "The date can't be in the future.",
+      "movement_taken": "That movement is already tied to another operation.",
       "failed": "Couldn't save. Try again."
     },
     "account": {

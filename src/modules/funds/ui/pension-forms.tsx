@@ -36,6 +36,7 @@ const KNOWN = [
   "invalid",
   "not_found",
   "linked",
+  "movement_taken",
   "empty",
   "too_large",
   "too_many",

@@ -567,7 +567,12 @@ export async function addVoluntaryContribution(
         note: parsed.note,
       }),
     )
-    .returning();
+    .returning()
+    .catch((error: unknown) => {
+      if (hasPgError(error, UNIQUE_VIOLATION, "fund_operations_transaction_uq"))
+        throw new FundError("movement_taken");
+      throw error;
+    });
   return row;
 }
 
