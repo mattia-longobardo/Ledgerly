@@ -105,7 +105,7 @@ test.describe("in a preview", () => {
     await page.getByRole("group", { name: "Period", exact: true }).getByRole("link", { name: "All" }).click();
     await expect(page).toHaveURL(/period=all/);
     await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Contributions" }).click();
-    await expect(page.getByTestId("tab-pending")).toBeVisible();
+    await expect(page.getByTestId("fund-operations")).toBeVisible();
 
     await page.goBack();
     await expect(page).toHaveURL(/period=all$/);
@@ -194,16 +194,6 @@ test.describe("in a preview", () => {
     await expect(page.locator('svg rect[data-band="neg"]')).toHaveCount(0);
   });
 
-  test("a tab not ready shows no number", async ({ page }) => {
-    const path = await fundPath(page, "PAC Piano");
-    for (const tab of ["deposits", "valuations"]) {
-      await page.goto(`${path}?tab=${tab}&period=${Y - 1}`);
-      await expect(page.getByTestId("tab-pending")).toBeVisible();
-      await expect(page.locator("main")).not.toContainText("€");
-      await expect(page.getByTestId("funds-hero")).toHaveCount(0);
-    }
-  });
-
   test("Settings do not follow the period, and work as today", async ({ page }) => {
     const path = await fundPath(page, "Pensione Beta");
     await page.goto(`${path}?tab=settings&period=${Y - 1}`);
@@ -225,8 +215,10 @@ test.describe("in a preview", () => {
     await expect(page.getByRole("link", { name: `Go to ${Y - 2}` })).toBeVisible();
     await page.goto(`${path}?period=${Y + 1}`);
     await expect(page).toHaveURL(new RegExp(`${path}$`));
-    await page.goto(`${path}?span=24`);
+    await page.goto(`${path}?span=12`);
     await expect(page).toHaveURL(new RegExp(`${path}$`));
+    await page.goto(`${path}?span=60`);
+    await expect(page).toHaveURL(new RegExp(`${path}\\?period=all$`));
     await page.goto(`${path}?from=${Y - 1}-01&to=${Y - 1}-03`);
     await expect(page).toHaveURL(new RegExp(`from=${Y - 1}-01-01&to=${Y - 1}-03-31`));
   });
@@ -256,7 +248,7 @@ test.describe("in a preview", () => {
       await expect(hero(page)).toHaveAttribute("data-cents", "");
       await expect(hero(page)).toHaveText(`No value yet in ${Y}`);
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
-      await expect(page.getByRole("button", { name: "Record valuation" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Record value" }).first()).toBeVisible();
     });
 
     test("an archived fund: its badge, its gain, and a last value that is not held today", async ({
@@ -269,7 +261,7 @@ test.describe("in a preview", () => {
       await expect(hero(page)).toHaveAttribute("data-cents", cents!);
       await expect(page.locator("h1")).toContainText("Archived");
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
-      await expect(page.getByRole("button", { name: "Record valuation" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Record value" })).toHaveCount(0);
     });
 
     test("a past year with no value: the last one known, and today's", async ({ page }) => {
@@ -291,8 +283,8 @@ test.describe("in a preview", () => {
         .getByRole("link", { name: `Open the contributions of ${Y - 4}` })
         .click();
       await expect(page).toHaveURL(new RegExp(`period=${Y - 4}`));
-      await expect(page.getByTestId("tab-pending")).toBeVisible();
-      await page.getByRole("link", { name: "Back to the overview" }).click();
+      await expect(page.getByTestId("fund-payslips")).toBeVisible();
+      await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Overview" }).click();
       await expect(hero(page)).toHaveText("Not determinable");
       await expect(page.getByTestId("kpi-accrued")).toBeVisible();
       await expect(page.getByTestId("payslips-only")).toBeVisible();
@@ -317,7 +309,7 @@ test.describe("in a preview", () => {
     await expect(
       page.getByTestId("recent-flow").or(page.getByText("No deposit in this period.")),
     ).not.toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Record valuation/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Record value/ }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Import/ }).first()).toBeVisible();
   });
 });

@@ -18,7 +18,7 @@ import {
 import { createSubscription } from "../src/modules/subscriptions/service";
 import { createFund, addDeposit, recordValuation, setFundState } from "../src/modules/funds/service";
 import { fundOperations, pensionCompetences, unitMovements } from "../src/modules/funds/schema";
-import { createPensionFund } from "../src/modules/funds/pension/service";
+import { addVoluntaryContribution, createPensionFund } from "../src/modules/funds/pension/service";
 import {
   applyOperations,
   applyPosition,
@@ -54,6 +54,7 @@ import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { createAuth } from "../src/platform/auth/auth";
 import { oauthClients } from "../src/platform/auth/oauth/schema";
 import { users } from "../src/platform/auth/schema";
+import { getPreferences, updatePreferences } from "../src/modules/users/service";
 import type { Ctx } from "../src/platform/context";
 import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
 import { getDb } from "../src/platform/db/client";
@@ -589,8 +590,8 @@ async function seedFundsHome(): Promise<void> {
  * one. The PAC has a plan, the pension fund has operations with their units and a quarter on the way.
  * Every amount is invented.
  */
-async function seedFundsDetail(): Promise<void> {
-  const ctx = await contextOf(USERS.fundsDetail.email);
+async function seedFundsDetail(email: string): Promise<void> {
+  const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   const year = Number(on.slice(0, 4));
   const thisMonth = `${on.slice(0, 7)}-01`;
@@ -680,21 +681,43 @@ async function seedFundsDetail(): Promise<void> {
     await recordValuation(ctx, pension.id, { on: day, cents, units: null, note: null });
   }
   const quarter = Math.floor((Number(on.slice(5, 7)) - 1) / 3) + 1;
-  await getDb()
-    .insert(pensionCompetences)
-    .values(
-      userScoped(ctx).stamp({
-        fundId: pension.id,
-        payslipId: randomUUID(),
-        payrollPeriod: thisMonth,
-        payslipType: "ordinary",
-        year,
-        quarter,
-        workerCents: 12_000n,
-        employerCents: 18_000n,
-        tfrCents: 30_000n,
-      }),
-    );
+  // This month's payslip, and two of last year: the Contributions tab filters them by period.
+  for (const [payrollPeriod, competenceYear, competenceQuarter] of [
+    [thisMonth, year, quarter],
+    [`${year - 1}-01-01`, year - 1, 1],
+    [`${year - 1}-02-01`, year - 1, 1],
+  ] as const) {
+    await getDb()
+      .insert(pensionCompetences)
+      .values(
+        userScoped(ctx).stamp({
+          fundId: pension.id,
+          payslipId: randomUUID(),
+          payrollPeriod,
+          payslipType: "ordinary",
+          year: competenceYear,
+          quarter: competenceQuarter,
+          workerCents: 12_000n,
+          employerCents: 18_000n,
+          tfrCents: 30_000n,
+        }),
+      );
+  }
+  // A payment by hand, so the tab has its "Remove" at both widths. Two years ago: last year's figures stay.
+  await addVoluntaryContribution(ctx, pension.id, {
+    on: `${year - 2}-05-10`,
+    amountCents: 5_000n,
+    feesCents: 0n,
+    transactionId: null,
+    note: null,
+  });
+}
+
+/** The same funds, read in Italian (funds-ux §6): the words of the new pages are checked in both languages. */
+async function seedFundsCopy(): Promise<void> {
+  await seedFundsDetail(USERS.fundsCopy.email);
+  const ctx = await contextOf(USERS.fundsCopy.email);
+  await updatePreferences(ctx, { ...(await getPreferences(ctx)), locale: "it" });
 }
 
 /**
@@ -1427,7 +1450,8 @@ await seedSubscriptions();
 await seedInterests();
 await seedFunds();
 await seedFundsHome();
-await seedFundsDetail();
+await seedFundsDetail(USERS.fundsDetail.email);
+await seedFundsCopy();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();

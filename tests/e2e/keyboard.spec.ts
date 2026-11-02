@@ -343,7 +343,7 @@ test.describe("the new Funds home", () => {
     await expect(row.getByRole("link", { name: "PAC Beta" })).toBeFocused();
     expect(await focusIsVisible(page), "the fund's name draws no ring").toBe(true);
 
-    const record = row.getByRole("button", { name: "Record valuation" });
+    const record = row.getByRole("button", { name: "Record value" });
     await record.focus();
     expect(await focusIsVisible(page), "the action draws no ring").toBe(true);
     await page.keyboard.press("Enter");
@@ -417,7 +417,7 @@ test.describe("a fund's new page", () => {
     const href = await row.getByRole("link", { name: "PAC Piano" }).getAttribute("href");
     await page.goto(href!);
     await page.waitForTimeout(500);
-    const record = page.getByRole("button", { name: "Record valuation" }).first();
+    const record = page.getByRole("button", { name: "Record value" }).first();
     await record.focus();
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog");
@@ -425,5 +425,63 @@ test.describe("a fund's new page", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(record, "closing the dialog did not give the focus back").toBeFocused();
+  });
+
+  for (const [fund, tab, period] of [
+    ["PAC Piano", "Deposits", "deposits"],
+    ["PAC Piano", "Valuations", "valuations"],
+    ["Pensione Beta", "Contributions", "contributions"],
+    ["Pensione Beta", "Valuations", "valuations"],
+  ] as const) {
+    test(`${fund}: ${tab}, its period and its controls are walked from the keyboard`, async ({ page }) => {
+      await page.goto("/funds/preview");
+      await page.waitForTimeout(500);
+      const href = await page
+        .getByTestId("fund-home-row")
+        .filter({ hasText: fund })
+        .getByRole("link", { name: fund })
+        .getAttribute("href");
+      await page.goto(href!);
+      await page.waitForTimeout(500);
+
+      const link = page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: tab });
+      await link.focus();
+      expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(new RegExp(`tab=${period}`));
+
+      const all = page.getByRole("group", { name: "Period", exact: true }).getByRole("link", { name: "All" });
+      await all.focus();
+      expect(await focusIsVisible(page), "the All link draws no ring").toBe(true);
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(new RegExp(`tab=${period}.*period=all|period=all.*tab=${period}`));
+      await page.waitForTimeout(500);
+
+      const control = page
+        .locator("main")
+        .getByRole("button", { name: /^(Edit|Remove)$/ })
+        .first();
+      await control.focus();
+      expect(await focusIsVisible(page), "the row's control draws no ring").toBe(true);
+    });
+  }
+
+  test("the edit dialog of a value gives the focus back", async ({ page }) => {
+    await page.goto("/funds/preview");
+    await page.waitForTimeout(500);
+    const href = await page
+      .getByTestId("fund-home-row")
+      .filter({ hasText: "PAC Piano" })
+      .getByRole("link", { name: "PAC Piano" })
+      .getAttribute("href");
+    await page.goto(`${href}?tab=valuations&period=all`);
+    await page.waitForTimeout(500);
+    const edit = page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" });
+    await edit.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
   });
 });

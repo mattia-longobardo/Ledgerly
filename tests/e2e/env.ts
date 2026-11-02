@@ -42,6 +42,12 @@ export const USERS = {
     password: "funds-detail-password-123",
     name: "Funds Detail",
   },
+  // Funds F4: the same funds in Italian, so the words of the new pages are read in both languages.
+  fundsCopy: {
+    email: "funds-copy@example.test",
+    password: "funds-copy-password-123",
+    name: "Funds Copy",
+  },
   investments: {
     email: "investments@example.test",
     password: "investments-password-123",
@@ -98,6 +104,7 @@ export const SESSIONS = {
   funds: { user: "funds", file: "funds-session.json" },
   fundsHome: { user: "fundsHome", file: "funds-home-session.json" },
   fundsDetail: { user: "fundsDetail", file: "funds-detail-session.json" },
+  fundsCopy: { user: "fundsCopy", file: "funds-copy-session.json" },
   investments: { user: "investments", file: "investments-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
   cometa: { user: "cometa", file: "cometa-session.json" },

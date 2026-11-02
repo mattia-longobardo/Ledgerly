@@ -242,7 +242,17 @@ const PAGES: Screen[] = [
               ["All", "?period=all"],
               ["a year before the data", `?period=${THIS_YEAR - 9}`],
               ["a custom period", `?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-03-31`],
-              ["a tab not ready", `?tab=valuations`],
+              ["Valuations", "?tab=valuations&period=all"],
+              ["Valuations, a past year", `?tab=valuations&period=${THIS_YEAR - 1}`],
+              ["Valuations, a year with none", `?tab=valuations&period=${THIS_YEAR - 9}`],
+              [
+                fund === "PAC Piano" ? "Deposits" : "Contributions",
+                `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=all`,
+              ],
+              [
+                fund === "PAC Piano" ? "Deposits, a past year" : "Contributions, a past year",
+                `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=${THIS_YEAR - 1}`,
+              ],
               ["Settings", "?tab=settings"],
             ] as const
           ).map(([what, query]): Screen => ({
@@ -260,6 +270,8 @@ const PAGES: Screen[] = [
           [
             ["no value in the year running", ""],
             ["a year of payslips alone", `?period=${THIS_YEAR - 4}`],
+            ["Contributions, a year of payslips alone", `?tab=contributions&period=${THIS_YEAR - 4}`],
+            ["Valuations, a year of payslips alone", `?tab=valuations&period=${THIS_YEAR - 4}`],
           ] as const
         ).map(([what, query]): Screen => ({
           name: `/funds/preview/[id], ${what}`,
@@ -267,6 +279,17 @@ const PAGES: Screen[] = [
           open: async (page) => {
             await follow(page, "/funds/preview", /^Pensione Alfa$/);
             await page.goto(`${new URL(page.url()).pathname}${query}`);
+            await settled(page);
+          },
+          everyWidth: true,
+        })),
+        // Documents and statements of the fund: only `layout` has them.
+        ...(["contributions", "valuations"] as const).map((tab): Screen => ({
+          name: `/funds/preview/[id], Cometa with its documents, ${tab}`,
+          session: "layout",
+          open: async (page) => {
+            await follow(page, "/funds/preview", /^Cometa$/);
+            await page.goto(`${new URL(page.url()).pathname}?tab=${tab}&period=all`);
             await settled(page);
           },
           everyWidth: true,
