@@ -3214,6 +3214,63 @@
         "all": "da sempre",
         "custom": "tra il {from} e il {to}"
       }
+    },
+    "fund": {
+      "tabPending": {
+        "title": "{tab} non è ancora pronto",
+        "note": "Questa scheda arriva con la prossima fase della nuova pagina. Fino ad allora non mostra numeri.",
+        "back": "Torna alla panoramica"
+      },
+      "hero": {
+        "value": "Valore <strong>{value}</strong> al {date}",
+        "valueAtYearEnd": "Valore a fine anno <strong>{value}</strong> · valore del {date}",
+        "valueAtEnd": "Valore al {end} <strong>{value}</strong> · valore del {date}",
+        "today": "oggi {value}, valore del {date}",
+        "units": "{units} quote",
+        "unitPrice": "ultimo valore quota {price} del {date}",
+        "accrued": "Maturato in busta finora: {amount}."
+      },
+      "kpis": {
+        "deposits": "{recurring, plural, one {# versamento} other {# versamenti}}, {oneOff, plural, one {# una tantum} other {# una tantum}}",
+        "perDeposit": "{fee} per versamento",
+        "deductible": "Deducibile usato",
+        "deductibleNote": "di {limit} nel {year}, TFR escluso, per data operazione",
+        "deductibleOver": "di {limit} nel {year}: oltre di {over}. TFR escluso, per data operazione",
+        "plan": "Piano",
+        "planDay": "al mese, il giorno {day}",
+        "planStatus": "al mese, il giorno {day} · {status}",
+        "planMonth": "al mese",
+        "noPlan": "nessun piano"
+      },
+      "onTheWay": {
+        "link": "Vedi i contributi"
+      },
+      "chartNote": {
+        "month": "Per mese, tra una valutazione e la successiva · la linea è il cumulato {when}",
+        "year": "Per anno, tra una valutazione e la successiva · la linea è il cumulato",
+        "stretch": "Tra una valutazione e la successiva · la linea è il cumulato"
+      },
+      "recent": {
+        "title": "Ultimi versamenti",
+        "allContributions": "Tutti i contributi",
+        "allDeposits": "Tutti i versamenti",
+        "sourceRule": "Trovato dalla regola",
+        "sourceHand": "Una tantum",
+        "fee": "commissione {amount}",
+        "origin": "tu {you} · azienda {employer} · TFR {tfr}",
+        "empty": "Nessun versamento in questo periodo."
+      },
+      "bridge": {
+        "title": "Dal maturato al valore",
+        "note": "Su tutta la vita del fondo, fino al valore del {date}: non segue il periodo."
+      },
+      "projection": {
+        "horizons": "proiezione a 1, 3, 5 e 10 anni",
+        "onPlan": "Se il piano resta di {monthly} al mese. Un'ipotesi, non una promessa.",
+        "onAverage": "Se continuano a entrare {monthly} al mese, la media dei versamenti ricorrenti. Un'ipotesi, non una promessa.",
+        "short": "Fra {years} anni, al {rate}",
+        "allRates": "Vedi tutti i tassi"
+      }
     }
   },
   "investments": {

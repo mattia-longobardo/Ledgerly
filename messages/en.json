@@ -3214,6 +3214,63 @@
         "all": "overall",
         "custom": "between {from} and {to}"
       }
+    },
+    "fund": {
+      "tabPending": {
+        "title": "{tab} is not ready yet",
+        "note": "This tab comes with the next phase of the new page. Until then it shows no numbers.",
+        "back": "Back to the overview"
+      },
+      "hero": {
+        "value": "Value <strong>{value}</strong> on {date}",
+        "valueAtYearEnd": "Value at year end <strong>{value}</strong> · value of {date}",
+        "valueAtEnd": "Value on {end} <strong>{value}</strong> · value of {date}",
+        "today": "today {value}, value of {date}",
+        "units": "{units} units",
+        "unitPrice": "last unit value {price} of {date}",
+        "accrued": "Accrued in payslips so far: {amount}."
+      },
+      "kpis": {
+        "deposits": "{recurring, plural, one {# deposit} other {# deposits}}, {oneOff, plural, one {# one-off} other {# one-offs}}",
+        "perDeposit": "{fee} per deposit",
+        "deductible": "Deductible used",
+        "deductibleNote": "of {limit} in {year}, TFR excluded, by operation date",
+        "deductibleOver": "of {limit} in {year}: over by {over}. TFR excluded, by operation date",
+        "plan": "Plan",
+        "planDay": "a month, on day {day}",
+        "planStatus": "a month, on day {day} · {status}",
+        "planMonth": "a month",
+        "noPlan": "no plan"
+      },
+      "onTheWay": {
+        "link": "See the contributions"
+      },
+      "chartNote": {
+        "month": "By month, between one value and the next · the line is the running total {when}",
+        "year": "By year, between one value and the next · the line is the running total",
+        "stretch": "Between one value and the next · the line is the running total"
+      },
+      "recent": {
+        "title": "Latest deposits",
+        "allContributions": "All the contributions",
+        "allDeposits": "All the deposits",
+        "sourceRule": "Found by the rule",
+        "sourceHand": "One-off",
+        "fee": "fee {amount}",
+        "origin": "you {you} · employer {employer} · TFR {tfr}",
+        "empty": "No deposit in this period."
+      },
+      "bridge": {
+        "title": "From accrued to value",
+        "note": "Over the fund's whole life, up to the value of {date}: it does not follow the period."
+      },
+      "projection": {
+        "horizons": "projection at 1, 3, 5 and 10 years",
+        "onPlan": "If the plan stays at {monthly} a month. A projection, not a promise.",
+        "onAverage": "If {monthly} a month keeps going in, the average of the recurring payments. A projection, not a promise.",
+        "short": "In {years} years, at {rate}",
+        "allRates": "See all the rates"
+      }
     }
   },
   "investments": {

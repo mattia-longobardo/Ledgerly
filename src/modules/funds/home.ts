@@ -147,7 +147,7 @@ export function lineValue(line: FundLine, period: FundPeriod, todayOn: CivilDate
   return line.measure.end?.cents ?? null;
 }
 
-function lineOf(fund: HomeFund, period: FundPeriod): FundLine {
+export function lineOf(fund: HomeFund, period: FundPeriod): FundLine {
   const measure = measurePeriod({ points: fund.points, flows: fund.flows, period });
   const accruedCents = fund.accrued
     .filter((line) => (period.from === null || line.on >= period.from) && line.on <= period.to)

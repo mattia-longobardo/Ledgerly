@@ -402,4 +402,29 @@ indica il file con `LEDGERLY_ENV_FILE`. Il seed `fundsHome` contiene anni negli 
 - La vista Valore disegna un gradino per lettura. A ogni data un fondo conta con la sua ultima lettura e con il
   solo denaro che quella lettura vede: un versamento successivo non crea una perdita.
 - Dalla riga esce «Modifica» (§4, n. 20): resta nel tab Impostazioni del fondo. Resta «Registra valore».
-- I link ai fondi non portano ancora il periodo: il dettaglio di oggi legge `from` e `to` a mesi. Li aggiunge F3.
+- I link ai fondi non portano ancora il periodo: il dettaglio di oggi legge `from` e `to` a mesi. Li aggiunge F3 (§11).
+
+## 11. Fase F3: il dettaglio non collegato
+
+La pagina è `src/app/(app)/funds/preview/[id]/page.tsx`, sotto lo stesso `layout.tsx` della home: con la variabile
+spenta risponde 404 prima di ogni lettura dei dati. La home sta in `preview/(home)/`, perché il suo `loading.tsx` non
+copra il fondo: un fondo inesistente risponde un vero 404 e non uno skeleton. I numeri sono in
+`src/modules/funds/detail.ts` (puro): `fundSummary` chiama `homeSummary` con quel solo fondo, e `fundHomeRow` legge la
+stessa riga della home. Così guadagno e rendimento non possono differire dalla riga della home. F5 sposta anche questa
+pagina e toglie il gruppo `(home)`.
+
+**E2E.** `tests/e2e/funds-detail.spec.ts`, con il seed `fundsDetail`. Stessa procedura di §10.
+
+**Scelte di F3.**
+
+- Un solo rendimento: Modified Dietz, con XIRR nel `title` da 365 giorni. La proiezione mostra solo le ipotesi: il tasso
+  proprio del fondo è un composto, e sarebbe un secondo rendimento (decisione 2 di §9).
+- I link della home portano il periodo verso `/funds/preview/<id>`, e la briciola del fondo lo riporta alla home. Il
+  periodo resta tra i tab; `view` resta solo nel tab Panoramica.
+- Il controllo del periodo compare solo sui tab che lo seguono. Oggi è solo Panoramica: F4 lo aggiunge ai suoi tab.
+- Contributi, Versamenti e Valutazioni mostrano un avviso senza numeri fino a F4. Impostazioni funziona già come oggi.
+- «Dal maturato al valore» non segue il periodo: copre tutta la vita del fondo fino all'ultimo valore, e lo dichiara.
+- Una lettura da quote × valore quota il 1° gennaio chiude l'anno prima come ogni altra lettura del giorno 1. Con
+  essa passano all'anno prima anche il denaro e le commissioni che quella lettura vede (§5.2).
+- Il grafico è `FundChart`, lo stesso della home: un fondo non mostra un valore tra due letture, e un versamento
+  conta solo dalla lettura che lo vede.

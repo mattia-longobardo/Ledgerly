@@ -3,29 +3,26 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { listAccounts } from "@/modules/accounts/queries";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { asNumbers, axisLabels, colorFor } from "@/modules/accounts/ui/display";
+import { colorFor } from "@/modules/accounts/ui/display";
 import {
   firstDataOn,
   type FundLine,
-  gainBars,
-  gainGrain,
   homeSummary,
   isFutureYear,
   lineValue,
   staleFunds,
-  valueSeries,
   valueToday,
   yearRows,
 } from "@/modules/funds/home";
 import { fundsHomeRows } from "@/modules/funds/home-queries";
 import { fundsHomePreview } from "@/modules/funds/preview";
 import { valuationAccountOptions } from "@/modules/funds/queries";
+import { FundChart } from "@/modules/funds/ui/fund-chart";
 import { FundStateButton, NewFundButton, ValuationButton } from "@/modules/funds/ui/fund-forms";
+import { Kpi } from "@/modules/funds/ui/fund-kpi";
 import { monthPill, newFundDraft } from "@/modules/funds/ui/present";
 import { legacyPeriodQuery, periodQuery, periodSpan, type Query } from "@/modules/investments/period";
 import { periodOf } from "@/modules/investments/pnl";
-import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
@@ -34,7 +31,7 @@ import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";
-import { CompositionBar, MultiLine, StackedBars, stackLayers } from "@/ui/chart";
+import { CompositionBar } from "@/ui/chart";
 import { cn } from "@/ui/cn";
 import { HighlightScope, SeriesToggle } from "@/ui/highlight";
 import { Popover } from "@/ui/popover";
@@ -42,9 +39,9 @@ import { ProgressBar } from "@/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
-import { type Tone, TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { type Params, withParams } from "@/ui/url";
-import { createPensionFundAction } from "../pension-setup";
+import { createPensionFundAction } from "../../pension-setup";
 
 const PATH = "/funds/preview";
 
@@ -53,31 +50,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-
-/** A KPI whose note wraps: the tiles here explain their number, and a cut note explains nothing. */
-function Kpi({
-  label,
-  value,
-  tone = "fg",
-  note,
-  testId,
-}: {
-  label: string;
-  value: string;
-  tone?: Tone;
-  note?: string;
-  testId?: string;
-}) {
-  return (
-    <Card className="flex min-w-0 flex-col gap-1.5" data-testid={testId}>
-      <span className="text-sm font-medium text-muted">{label}</span>
-      <span className={cn("text-kpi font-semibold tracking-[-0.02em] tabular-nums", TONE_TEXT[tone])}>
-        {value}
-      </span>
-      {note && <span className="text-sm text-muted">{note}</span>}
-    </Card>
-  );
-}
 
 /**
  * Funds · the new home (docs/design/funds-ux.md §5.3, §6, F2, mockups a-01 to a-04): the gain of the
@@ -115,6 +87,12 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
       size={size}
     />
   );
+  // The period in the address as it is, before the fund's list is drawn: an empty one is the year running.
+  const archivedParams: Params = {
+    period: one(query.period),
+    from: one(query.from),
+    to: one(query.to),
+  };
   const archived = rows.filter((row) => row.home.archived);
   const open = rows.filter((row) => !row.home.archived);
   const archivedList =
@@ -127,7 +105,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
           {archived.map(({ fund }) => (
             <li key={fund.id} className="flex items-center justify-between gap-2">
               <Link
-                href={`/funds/${fund.id}` as Route}
+                href={withParams(`${PATH}/${fund.id}`, {}, archivedParams)}
                 className="focus-ring inline-flex min-h-6 items-center rounded-[4px] hover:underline"
               >
                 {fund.name}
@@ -180,6 +158,8 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
   const day = (date: string | null) => formatDate(date, "dayMonth", ctx.locale);
 
   const rowOf = new Map(rows.map((row) => [row.fund.id, row]));
+  /** A fund's page, on the period of this one: the period stays from the home to the fund (§6). */
+  const fundHref = (id: string, tab?: string) => withParams(`${PATH}/${id}`, periodParams, { tab });
   const colorOf = (id: string) => {
     const index = rows.findIndex((row) => row.fund.id === id);
     return colorFor({ color: rows[index].color }, index);
@@ -343,7 +323,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
   const staleLink =
     stale.length === 1 ? (
       <Link
-        href={`/funds/${stale[0].fund.id}` as Route}
+        href={fundHref(stale[0].fund.id)}
         className="focus-ring inline-flex min-h-6 items-center gap-1.5 rounded-[4px] text-sm hover:underline"
       >
         <Badge tone="warn">1</Badge>
@@ -363,7 +343,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
           {stale.map(({ fund, lastOn }) => (
             <li key={fund.id}>
               <Link
-                href={`/funds/${fund.id}` as Route}
+                href={fundHref(fund.id)}
                 className="focus-ring flex min-h-8 items-center rounded-[4px] px-2 text-sm hover:bg-hover"
               >
                 {th("stale.one", { name: fund.name, date: day(lastOn) })}
@@ -469,119 +449,6 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
     </div>
   );
 
-  // ——— The chart (§6) ——————————————————————————————————————————————————————————————————————————
-  const grain = gainGrain(period, span);
-  const bars = gainBars(summary.lines, span, grain);
-  const stack = [...lines].reverse();
-  const totals = bars.map((bar) => bar.totalCents);
-  const cumulative = runningTotal(totals);
-  const barName = (index: number) => {
-    const bar = bars[index];
-    if (grain === "year") return bar.from.slice(0, 4);
-    if (grain === "month") return formatDate(bar.from, "monthYear", ctx.locale);
-    return th("chart.stretch", { from: day(bar.from), to: day(bar.to) });
-  };
-  const barLabels = sampled(bars.length).map((index) =>
-    grain === "year"
-      ? bars[index].from.slice(0, 4)
-      : grain === "month"
-        ? formatDate(bars[index].from, "month", ctx.locale)
-        : day(bars[index].to),
-  );
-  const extremes = bestAndWorst(totals);
-  const gainSummary = th("chart.summary", {
-    when,
-    total: heroCents === null ? NULL_DISPLAY : money(heroCents, true),
-    best: extremes ? `${barName(extremes.best)} (${money(totals[extremes.best], true)})` : NULL_DISPLAY,
-    worst: extremes ? `${barName(extremes.worst)} (${money(totals[extremes.worst], true)})` : NULL_DISPLAY,
-    funds: lines
-      .filter((line) => line.status === "measured")
-      .map((line) => `${line.fund.name} ${money(line.measure.gainCents, true)}`)
-      .join(", "),
-  });
-  const layerValues = stack.map((line) => asNumbers(bars.map((bar) => bar.byFund.get(line.fund.id) ?? null)));
-  const layers = stackLayers(layerValues, bars.length);
-  const series = valueSeries(summary.lines);
-  const seriesValues = series.map((point) => point.valueCents);
-  const seriesPaid = series.map((point) => point.paidCents);
-  const lastPoint = series.at(-1);
-
-  const chartBody =
-    view === "gain" ? (
-      totals.every((cents) => cents === null) ? (
-        <p data-testid="chart-empty" className="text-sm text-muted">
-          {th("chart.empty", { when })}
-        </p>
-      ) : (
-        <StackedBars
-          layers={stack.map((line, index) => ({
-            key: line.fund.id,
-            label: line.fund.name,
-            color: colorOf(line.fund.id),
-            values: layerValues[index],
-          }))}
-          line={asNumbers(cumulative)}
-          yLabels={axisLabels(
-            [...cumulative, ...layers.top.map(toCents), ...layers.bottom.map(toCents)],
-            ctx.numberFormat,
-            4,
-          )}
-          xLabels={barLabels}
-          hover={bars.map((bar, index) => ({
-            label: barName(index),
-            value: money(totals[index], true),
-            note: th("chart.cumulative", { amount: money(cumulative[index], true) }),
-            rows: bar.stretches.map((stretch) => ({
-              label: `${rowOf.get(stretch.fundId)?.fund.name ?? ""} · ${th("chart.stretch", {
-                from: day(stretch.from),
-                to: day(stretch.to),
-              })}`,
-              value: money(stretch.gainCents, true),
-              color: colorOf(stretch.fundId),
-            })),
-          }))}
-          summary={gainSummary}
-        />
-      )
-    ) : series.length < 2 ? (
-      <p data-testid="chart-empty" className="text-sm text-muted">
-        {series.length === 0 ? th("chart.empty", { when }) : th("chart.emptyValue")}
-      </p>
-    ) : (
-      <MultiLine
-        series={[
-          { values: asNumbers(seriesValues), color: "var(--accent)", step: true },
-          { values: asNumbers(seriesPaid), color: "var(--muted)", dashed: true, step: true },
-        ]}
-        band={{ upper: asNumbers(seriesValues), lower: asNumbers(seriesPaid) }}
-        yLabels={axisLabels([...seriesValues, ...seriesPaid], ctx.numberFormat, 4)}
-        xLabels={sampled(series.length).map((index) =>
-          series[0].on.slice(0, 4) === lastPoint?.on.slice(0, 4)
-            ? day(series[index].on)
-            : formatDate(series[index].on, "long", ctx.locale),
-        )}
-        hover={series.map((point) => ({
-          label: formatDate(point.on, "long", ctx.locale),
-          value: money(point.valueCents),
-          note: th("chart.paidRow", { amount: money(point.paidCents) }),
-          rows: [
-            {
-              label: th("chart.gain"),
-              value: money(point.valueCents - point.paidCents, true),
-              color: "var(--pos)",
-            },
-          ],
-        }))}
-        summary={th("chart.valueSummary", {
-          when,
-          value: money(lastPoint?.valueCents ?? null),
-          date: formatDate(lastPoint?.on ?? null, "long", ctx.locale),
-          paid: money(lastPoint?.paidCents ?? null),
-        })}
-        height={200}
-      />
-    );
-
   const contributionsFund = accruedFund;
   const chartCard =
     state === "payslips_only" ? (
@@ -594,106 +461,26 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
             </ButtonLink>
           )}
           {contributionsFund && (
-            <ButtonLink
-              href={`/funds/${contributionsFund.id}?tab=contributions` as Route}
-              variant="ghost"
-              size="sm"
-            >
+            <ButtonLink href={fundHref(contributionsFund.id, "contributions")} variant="ghost" size="sm">
               {period.kind === "year" ? th("openContributions", { year: period.year! }) : th("chart.data")}
             </ButtonLink>
           )}
         </div>
       </Card>
     ) : (
-      <Card className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <h2 className="text-lg font-semibold">{th("chart.title")}</h2>
-            <p className="text-sm text-muted">
-              {view === "gain" ? th(`chart.gainNote.${grain}`, { when }) : th("chart.valueNote")}
-            </p>
-          </div>
-          <LinkTabs
-            label={th("chart.view")}
-            path={PATH}
-            params={periodParams}
-            name="view"
-            current={view}
-            options={[
-              { value: "gain", label: th("chart.gain") },
-              { value: "value", label: th("chart.value") },
-            ]}
-          />
-        </div>
-        {chartBody}
-        <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-          {view === "gain" ? (
-            <span className="flex items-center gap-1.5">
-              <span aria-hidden className="h-0.5 w-4 bg-fg" /> {th("chart.line")}
-            </span>
-          ) : (
-            <>
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden className="h-0.5 w-4 bg-accent" /> {th("chart.value")}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden className="w-4 border-t border-dashed border-muted" /> {th("chart.paid")}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden className="size-2.5 rounded-[2px] bg-pos-bg" /> {th("chart.band")}
-              </span>
-            </>
-          )}
-        </p>
-        {view === "gain" && totals.some((cents) => cents !== null) && (
-          <details className="text-sm">
-            <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
-              {th("chart.data")}
-            </summary>
-            <Table className="mt-2">
-              <THead>
-                <Th>{th("chart.interval")}</Th>
-                <Th align="right">{th("chart.gain")}</Th>
-                <Th align="right">{th("chart.cumulativeHeader")}</Th>
-              </THead>
-              <TBody>
-                {bars.map((bar, index) => (
-                  <Tr key={bar.from + bar.to}>
-                    <Td>{barName(index)}</Td>
-                    <Td align="right" className={TONE_TEXT[toneOfSign(totals[index])]}>
-                      {money(totals[index], true)}
-                    </Td>
-                    <Td align="right">{money(cumulative[index], true)}</Td>
-                  </Tr>
-                ))}
-              </TBody>
-            </Table>
-          </details>
-        )}
-        {view === "value" && series.length >= 2 && (
-          <details className="text-sm">
-            <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
-              {th("chart.data")}
-            </summary>
-            <Table className="mt-2">
-              <THead>
-                <Th>{th("chart.dateHeader")}</Th>
-                <Th align="right">{th("chart.valueHeader")}</Th>
-                <Th align="right">{th("chart.paid")}</Th>
-              </THead>
-              <TBody>
-                {series.map((point) => (
-                  <Tr key={point.on}>
-                    <Td>{formatDate(point.on, "long", ctx.locale)}</Td>
-                    <Td align="right">{money(point.valueCents)}</Td>
-                    <Td align="right">{money(point.paidCents)}</Td>
-                  </Tr>
-                ))}
-              </TBody>
-            </Table>
-          </details>
-        )}
-      </Card>
+      <FundChart
+        ctx={ctx}
+        lines={lines}
+        colorOf={colorOf}
+        period={period}
+        span={span}
+        when={when}
+        totalCents={heroCents}
+        view={view}
+        path={PATH}
+        params={periodParams}
+        gainNote={(grain) => th(`chart.gainNote.${grain}`, { when })}
+      />
     );
 
   // ——— Year by year, under All (§6, a-04) —————————————————————————————————————————————————————
@@ -831,7 +618,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
         label={th("list.highlight", { name: line.fund.name })}
       />
       <Link
-        href={`/funds/${line.fund.id}` as Route}
+        href={fundHref(line.fund.id)}
         className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
       >
         <span className="truncate">{line.fund.name}</span>
@@ -857,6 +644,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds/
     const { rate, xirr } = line.measure;
     return (
       <span
+        data-testid="fund-rate"
         title={xirr?.status === "ok" ? th("list.xirr", { rate: percent(xirr.rate) }) : undefined}
         className={TONE_TEXT[rate === null ? "muted" : toneOfSign(rate)]}
       >
