@@ -24,7 +24,8 @@ import {
   periodReturns,
   periodStats,
 } from "./rules";
-import { latestDocumented, pacFlows, projectionMonthly } from "./period";
+import { closingDay, documentedPoints, pacFlows, projectionMonthly, type ValuePoint } from "./period";
+import type { MovementLike } from "./pension/metrics";
 import {
   COMETA_SCHEDULE,
   dueDate,
@@ -43,6 +44,7 @@ import {
   fundValuations,
   pensionCompetences,
   pensionRules,
+  unitMovements,
 } from "./schema";
 import { type Fund, type FundDeposit, FundError } from "./service";
 
@@ -247,6 +249,30 @@ export async function depositsOf(
   return byFund;
 }
 
+/** The unit movements of each pension fund, for the points they document. */
+async function unitMovementsOf(
+  ctx: Pick<Ctx, "userId">,
+  fundIds: readonly string[],
+): Promise<Map<string, MovementLike[]>> {
+  const byFund = new Map<string, MovementLike[]>();
+  if (fundIds.length === 0) return byFund;
+  const rows = await getDb()
+    .select({
+      fundId: fundOperations.fundId,
+      operationId: unitMovements.operationId,
+      compartment: unitMovements.compartment,
+      units: unitMovements.units,
+      unitPrice: unitMovements.unitPrice,
+      unitPriceDate: unitMovements.unitPriceDate,
+    })
+    .from(unitMovements)
+    .innerJoin(fundOperations, eq(fundOperations.id, unitMovements.operationId))
+    .where(and(userScoped(ctx).owns(unitMovements), inArray(fundOperations.fundId, [...fundIds])))
+    .orderBy(asc(unitMovements.operationId), asc(unitMovements.position));
+  for (const { fundId, ...movement } of rows) byFund.set(fundId, [...(byFund.get(fundId) ?? []), movement]);
+  return byFund;
+}
+
 /** The Funds list (spec §7.7, design): KPIs, the combined chart, one row per fund, the totals. */
 export async function fundsView(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
@@ -269,15 +295,30 @@ export async function fundsView(
   ]);
   const accountName = new Map(accounts.map((account) => [account.id, account.name]));
   const entryDates = new Map<string, CivilDate>();
-  // A fund's value is the last one a person or a document gave, with its own date (funds-ux §5.2, F5),
-  // never "as of today", which would leave a fund valued only in the future blank. The snapshot's
-  // month-end copy documents nothing: its date said the value was newer than it is.
+  // A fund's value is its last documented point, with its own date (funds-ux §5.2, F5): the same
+  // points the fund's page reads, a pension fund's units × price included. Never "as of today", which
+  // would leave a fund valued only in the future blank. The snapshot's month-end copy documents
+  // nothing: its date said the value was newer than it is.
   const documentedValues = new Map<string, Cents>();
+  const movementsOf = await unitMovementsOf(
+    ctx,
+    open.filter((fund) => fund.type === "pension").map((fund) => fund.id),
+  );
   for (const fund of open) {
-    const latest = latestDocumented(await listBalanceEntries(ctx, fund.valuationAccountId, 200));
+    const points = documentedPoints(
+      await listBalanceEntries(ctx, fund.valuationAccountId, 200),
+      movementsOf.get(fund.id) ?? [],
+    );
+    const newest = (from: readonly ValuePoint[]) =>
+      from.reduce<ValuePoint | null>(
+        (last, point) => (last === null || point.on > last.on ? point : last),
+        null,
+      );
+    // What the home calls today's value; a point after today only when there is nothing else.
+    const latest = newest(points.filter((point) => point.on <= closingDay(todayOn))) ?? newest(points);
     if (latest) {
       entryDates.set(fund.id, latest.on);
-      documentedValues.set(fund.id, latest.balanceCents);
+      documentedValues.set(fund.id, latest.cents);
     }
   }
 

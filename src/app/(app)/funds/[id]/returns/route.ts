@@ -16,6 +16,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const query: Query = Object.fromEntries(new URL(request.url).searchParams);
   return new Response(null, {
     status: 308,
-    headers: { Location: returnsTarget(`/funds/${id}`, query, today(ctx.timeZone)) },
+    // `no-store`: the target depends on today, and a browser may keep a 308 for ever.
+    headers: {
+      Location: returnsTarget(`/funds/${id}`, query, today(ctx.timeZone)),
+      "Cache-Control": "no-store",
+    },
   });
 }

@@ -13,6 +13,7 @@ import { newContext } from "../../../../test/fixtures";
 import {
   ENROLLMENT,
   EXPORT_AUGUST,
+  inYear,
   EXPORT_EXOTIC,
   FIRST_QUARTER,
   POSITION_APRIL,
@@ -39,6 +40,8 @@ import {
 } from "./imports";
 import { recordValuation } from "../service";
 import { managementItem } from "./metrics";
+import { fundHomeRow } from "../home-queries";
+import { fundsView } from "../queries";
 import { pensionDetail, pensionDetailFlows } from "./queries";
 import {
   addVoluntaryContribution,
@@ -371,6 +374,18 @@ describe("what the pages read (plan F6 L4–L6)", () => {
       limitCents: 530_000n,
     });
     expect(detail.tariffs.find((row) => row.item === "management_crescita")?.rate).toBe("0.000800");
+  });
+
+  it("gives Investments and the export the value the fund's page reads, units × price included (F5)", async () => {
+    const { id } = await importedExport(EXPORT_AUGUST.map((one) => inYear(one, 2025)));
+    await applyOperations(ctx, fundId, id);
+    await recordValuation(ctx, fundId, { on: "2025-05-01", cents: 40_000n });
+    const row = (await fundsView(ctx)).rows.find((one) => one.fund.id === fundId)!;
+    const { points } = (await fundHomeRow(ctx, fundId)).home;
+    const last = [...points].sort((a, b) => (a.on < b.on ? 1 : -1))[0];
+    expect(last.on).toBe("2025-07-31");
+    expect(row.lastValuation).toBe(last.on);
+    expect(row.metrics.valueCents).toBe(last.cents);
   });
 
   it("takes no system copy for a value, and reads the compartment from the movements", async () => {

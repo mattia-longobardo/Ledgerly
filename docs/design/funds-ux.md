@@ -468,8 +468,9 @@ risponde 404, perché `preview` non è un id di un fondo.
 - **Deducibile (decisione dell'orchestratore, senza risposta di Mattia).** La quota di iscrizione non conta, come nella pagina di
   prima: il trattamento fiscale non è verificato. La regola è una sola, per il tab e per il KPI. Per contarla basta aggiungere
   `enrollment` a `DEDUCTIBLE_CLASSES`.
-- **Export e riga dei fondi in Investments.** `fundsView` legge l'ultimo valore documentato per ogni fondo, anche per un PAC. Prima un
-  PAC leggeva il saldo a oggi, che può essere la copia `system` di un valore poi corretto.
+- **Export e riga dei fondi in Investments.** `fundsView` legge l'ultimo punto documentato di §5.2 per ogni fondo: voci di saldo e, per un
+  fondo pensione, quote × valore quota, come la pagina del fondo. Prima un PAC leggeva il saldo a oggi, che può essere la copia `system`
+  di un valore poi corretto, e un fondo pensione ignorava i punti da quote.
 - **Documenti.** Il ritorno e «Applica» portano al tab Valutazioni, che elenca i documenti.
 - **Una sola copia dei testi.** `fund.valuationForm` e `fund.settingsCopy` sono confluiti nelle chiavi originali. Le chiavi che nessun
   codice legge sono tolte.
