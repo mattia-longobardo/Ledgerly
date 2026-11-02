@@ -4,7 +4,13 @@
 // server any more. It signs in only as the users below, all on the reserved `example.test` domain;
 // the seed creates them with their sample data before the run and removes them, with everything
 // they own, after it (scripts/seed-e2e.ts). No spec reads or writes anybody else's data.
-export const BASE_URL = "https://dash.longobardo.me";
+//
+// E2E_BASE_URL points them at a local preview instead, against `ledgerly_test`: the only place a
+// screen not yet connected can be driven (playwright.preview.config.ts, docs/design/funds-ux.md §10).
+export const BASE_URL = process.env.E2E_BASE_URL ?? "https://dash.longobardo.me";
+
+/** True in a local preview, where the new Funds home answers; the deployed site must answer 404. */
+export const FUNDS_HOME_PREVIEW = process.env.E2E_FUNDS_HOME_PREVIEW === "1";
 
 // Better Auth rate-limits password sign-ins to 5 per minute per client (/sign-in/email,
 // src/platform/auth/auth.ts), and the whole run is one client. The suite spends 4; a spec that
@@ -26,6 +32,9 @@ export const USERS = {
   },
   interests: { email: "interests@example.test", password: "interests-password-123", name: "Interests" },
   funds: { email: "funds@example.test", password: "funds-password-123", name: "Funds" },
+  // Funds F2: years in each state of docs/design/funds-ux.md §6, with invented amounts. The `funds`
+  // user starts empty on purpose, and `layout` has one year only.
+  fundsHome: { email: "funds-home@example.test", password: "funds-home-password-123", name: "Funds Home" },
   investments: {
     email: "investments@example.test",
     password: "investments-password-123",
@@ -80,6 +89,7 @@ export const SESSIONS = {
   subscriptions: { user: "subscriptions", file: "subscriptions-session.json" },
   interests: { user: "interests", file: "interests-session.json" },
   funds: { user: "funds", file: "funds-session.json" },
+  fundsHome: { user: "fundsHome", file: "funds-home-session.json" },
   investments: { user: "investments", file: "investments-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
   cometa: { user: "cometa", file: "cometa-session.json" },

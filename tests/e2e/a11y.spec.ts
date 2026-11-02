@@ -10,7 +10,7 @@
 // /settings/integrations went unseen until F9 looked at that page as an admin.
 import { createRequire } from "node:module";
 import { expect, type Page, test } from "@playwright/test";
-import { type SESSIONS, sessionState } from "./env";
+import { FUNDS_HOME_PREVIEW, type SESSIONS, sessionState } from "./env";
 
 const require = createRequire(import.meta.url);
 const AXE = require.resolve("axe-core/axe.min.js");
@@ -21,6 +21,15 @@ const WIDTHS = [
 ] as const;
 
 type Size = (typeof WIDTHS)[number]["name"];
+
+const THIS_YEAR = new Date().getFullYear();
+
+/** What the new Funds home is also measured at (funds-ux §6): the phone of the design, and a tablet. */
+const EVERY_WIDTH = [
+  ...WIDTHS,
+  { width: 768, height: 1024, name: "tablet" },
+  { width: 375, height: 812, name: "small phone" },
+] as const;
 
 interface Screen {
   /** What the failure message calls it. */
@@ -33,6 +42,8 @@ interface Screen {
   roots?: string[];
   /** A screen that only exists at one width: the mobile bar has no desktop, and vice versa. */
   only?: Size;
+  /** Measured at the design's four widths and not the usual two. */
+  everyWidth?: boolean;
 }
 
 // ——— Getting to a screen ———————————————————————————————————————————————————————————————————
@@ -44,6 +55,26 @@ async function settled(page: Page): Promise<void> {
       timeout: 15_000,
     })
     .catch(() => undefined);
+  await finished(page);
+}
+
+/**
+ * Whatever is still moving, a shimmer aside. Against a fast server, the opacity above can be read
+ * before the fade starts, and axe then reports the contrast of a page half faded in.
+ */
+async function finished(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.race([
+      // A popover's own animation can stay pending while nothing moves: never wait for it for long.
+      new Promise((resolve) => setTimeout(resolve, 1_000)),
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => undefined)),
+      ),
+    ]),
+  );
 }
 
 /**
@@ -169,6 +200,31 @@ const PAGES: Screen[] = [
     open: (page) => follow(page, "/interests", "Revolut Saving"),
   },
   { name: "/funds", session: "layout", open: go("/funds") },
+  // The new home answers only in a local preview until F5 connects it (funds-ux §8).
+  ...(FUNDS_HOME_PREVIEW
+    ? [
+        { name: "/funds/preview, as `layout`", session: "layout", open: go("/funds/preview") } as Screen,
+        ...(
+          [
+            ["the year running", ""],
+            ["the value chart", "?view=value"],
+            ["All, with the years", "?period=all"],
+            ["All, the value chart", "?period=all&view=value"],
+            ["a measured year", `?period=${THIS_YEAR - 3}`],
+            ["a year with money and no value", `?period=${THIS_YEAR - 2}`],
+            ["a year with nothing", `?period=${THIS_YEAR - 1}`],
+            ["a year with payslips alone", `?period=${THIS_YEAR - 4}`],
+            ["a year before the data", `?period=${THIS_YEAR - 9}`],
+            ["a custom period", `?from=${THIS_YEAR - 3}-01-01&to=${THIS_YEAR - 3}-03-31`],
+          ] as const
+        ).map(([what, query]): Screen => ({
+          name: `/funds/preview, ${what}`,
+          session: "fundsHome",
+          open: go(`/funds/preview${query}`),
+          everyWidth: true,
+        })),
+      ]
+    : []),
   {
     name: "/funds/[id] (PAC)",
     session: "layout",
@@ -687,13 +743,14 @@ function audit(screens: readonly Screen[]): void {
       else test.use({ storageState: { cookies: [], origins: [] } });
 
       for (const screen of screens.filter((one) => one.session === session)) {
-        for (const { width, height, name: size } of WIDTHS) {
+        for (const { width, height, name: size } of screen.everyWidth ? EVERY_WIDTH : WIDTHS) {
           if (screen.only !== undefined && screen.only !== size) continue;
           test(`${screen.name} at ${size} width`, async ({ page }) => {
             await page.setViewportSize({ width, height });
             await setTheme(page, "light");
             await screen.open(page);
             await setTheme(page, "light");
+            await finished(page);
 
             // One assertion for all four answers rather than four in a row: a screen that fails
             // its layout would otherwise never be put in front of axe, and the run would report
@@ -703,6 +760,7 @@ function audit(screens: readonly Screen[]): void {
             const scope = screen.roots === undefined ? undefined : roots;
             const light = await violationsOf(page, scope);
             await setTheme(page, "dark");
+            await finished(page);
             const dark = await violationsOf(page, scope);
             expect({ layout, light, dark }, `${screen.name} at ${width}px`).toEqual({
               layout: [],

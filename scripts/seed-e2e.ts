@@ -6,6 +6,7 @@
 //
 // Both touch only users whose address ends in `@example.test`: the site's real users and their
 // data are never read or written here.
+import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { and, eq, isNull, like } from "drizzle-orm";
 import {
@@ -15,7 +16,8 @@ import {
   saveBalanceEntry,
 } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
-import { createFund, addDeposit, recordValuation } from "../src/modules/funds/service";
+import { createFund, addDeposit, recordValuation, setFundState } from "../src/modules/funds/service";
+import { pensionCompetences } from "../src/modules/funds/schema";
 import { createPensionFund } from "../src/modules/funds/pension/service";
 import {
   applyOperations,
@@ -465,6 +467,121 @@ async function seedFunds(): Promise<void> {
       "Investimenti",
     ),
   ]);
+}
+
+/**
+ * The new Funds home (docs/design/funds-ux.md §6): the years, counted back from this one, each in a
+ * state of the table. Y−4: payslips alone. Y−3: measured, with an archived fund. Y−2: money and no
+ * value. Y−1: nothing. Y: one PAC measured, a pension fund with an old value, a PAC with no value.
+ * Every amount is invented.
+ */
+async function seedFundsHome(): Promise<void> {
+  const ctx = await contextOf(USERS.fundsHome.email);
+  const on = today(ctx.timeZone);
+  const year = Number(on.slice(0, 4));
+
+  const beta = await createFund(ctx, {
+    name: "PAC Beta",
+    provider: "Esempio",
+    isin: null,
+    compartment: null,
+    debitAccountId: null,
+    debitDay: null,
+    ter: null,
+    startOn: `${year - 3}-01-10`,
+    monthlyCents: null,
+    depositFeeCents: null,
+    valuationAccountId: null,
+  });
+  for (const [day, chargedCents, feeCents] of [
+    [`${year - 3}-01-10`, 100_000n, 100n],
+    [`${year - 3}-07-10`, 100_000n, 100n],
+    [`${year - 2}-05-10`, 50_000n, 50n],
+    [`${year}-01-01`, 30_000n, 30n],
+  ] as const) {
+    await addDeposit(ctx, beta.id, { on: day, chargedCents, feeCents, note: null });
+  }
+  for (const [day, cents] of [
+    [`${year - 3}-02-28`, 101_000n],
+    // The 1st of January closes the year before (decision 3 of §9): this one is Y−3's last value.
+    [`${year - 2}-01-01`, 210_000n],
+    [on, 330_000n],
+  ] as const) {
+    await recordValuation(ctx, beta.id, { on: day, cents, units: null, note: null });
+  }
+
+  const pension = await createPensionFund(ctx, {
+    name: "Pensione Alfa",
+    provider: "Esempio",
+    compartment: "Crescita",
+    startOn: `${year - 4}-10-01`,
+    receivesPayroll: false,
+  });
+  // Payslips of Y−4, and of the quarter running: the second is what "On the way" reports.
+  const quarter = Math.floor((Number(on.slice(5, 7)) - 1) / 3) + 1;
+  for (const [competenceYear, competenceQuarter, period] of [
+    [year - 4, 4, `${year - 4}-11-01`],
+    [year, quarter, `${on.slice(0, 7)}-01`],
+  ] as const) {
+    await getDb()
+      .insert(pensionCompetences)
+      .values(
+        userScoped(ctx).stamp({
+          fundId: pension.id,
+          payslipId: randomUUID(),
+          payrollPeriod: period,
+          payslipType: "ordinary",
+          year: competenceYear,
+          quarter: competenceQuarter,
+          workerCents: 15_000n,
+          employerCents: 20_000n,
+          tfrCents: 30_000n,
+        }),
+      );
+  }
+  await recordValuation(ctx, pension.id, {
+    on: `${year - 3}-06-30`,
+    cents: 66_000n,
+    units: null,
+    note: null,
+  });
+
+  const gamma = await createFund(ctx, {
+    name: "PAC Gamma",
+    provider: "Esempio",
+    isin: null,
+    compartment: null,
+    debitAccountId: null,
+    debitDay: null,
+    ter: null,
+    startOn: `${year - 3}-03-10`,
+    monthlyCents: null,
+    depositFeeCents: null,
+    valuationAccountId: null,
+  });
+  await addDeposit(ctx, gamma.id, {
+    on: `${year - 3}-03-10`,
+    chargedCents: 40_000n,
+    feeCents: 0n,
+    note: null,
+  });
+  await recordValuation(ctx, gamma.id, { on: `${year - 3}-09-30`, cents: 41_000n, units: null, note: null });
+  await setFundState(ctx, gamma.id, "archived");
+
+  const delta = await createFund(ctx, {
+    name: "PAC Delta",
+    provider: "Esempio",
+    isin: null,
+    compartment: null,
+    debitAccountId: null,
+    debitDay: null,
+    ter: null,
+    startOn: `${year}-01-01`,
+    monthlyCents: null,
+    depositFeeCents: null,
+    valuationAccountId: null,
+  });
+  await addDeposit(ctx, delta.id, { on: `${year}-01-01`, chargedCents: 20_000n, feeCents: 0n, note: null });
 }
 
 /**
@@ -1196,6 +1313,7 @@ await seedPockets();
 await seedSubscriptions();
 await seedInterests();
 await seedFunds();
+await seedFundsHome();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();

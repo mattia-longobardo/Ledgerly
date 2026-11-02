@@ -6,7 +6,7 @@
 // It runs as the seeded `layout` user, who has something on every page (scripts/seed-e2e.ts): a
 // menu with nothing in it traps nothing.
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { sessionState } from "./env";
+import { FUNDS_HOME_PREVIEW, sessionState } from "./env";
 
 test.use({ storageState: sessionState("layout") });
 
@@ -293,4 +293,78 @@ test("the sidebar, the page and its controls are reachable in order from the top
     return (await focused(page)).includes("ING Conto Arancio");
   });
   expect(steps, "the first account link was not reached within 40 tabs").toBeGreaterThan(0);
+});
+
+test.describe("the new Funds home", () => {
+  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
+  test.use({ storageState: sessionState("fundsHome") });
+
+  test("the period, the chart's view, a fund's name and its value are walked from the keyboard", async ({
+    page,
+  }) => {
+    await page.goto("/funds/preview");
+    await page.waitForTimeout(500);
+
+    const period = page.getByRole("group", { name: "Period", exact: true });
+    await period.getByRole("link", { name: "Year" }).focus();
+    expect(await focusIsVisible(page), "the Year link draws no ring").toBe(true);
+    await page.keyboard.press("Tab");
+    await expect(period.getByRole("link", { name: "All" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/funds\/preview\?period=all$/);
+
+    const value = page
+      .getByRole("group", { name: "What the chart shows" })
+      .getByRole("link", { name: "Value" });
+    await value.focus();
+    expect(await focusIsVisible(page), "the Value link draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/period=all&view=value|view=value&period=all/);
+
+    // The stepper keeps the chart's view from one year to the next.
+    await page.goto("/funds/preview?view=value");
+    await page.waitForTimeout(500);
+    const stepper = page.getByRole("group", { name: "Year", exact: true });
+    await stepper.getByRole("link", { name: "Previous year" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/period=\d{4}/);
+    await expect(page).toHaveURL(/view=value/);
+
+    // A row's series toggle, its name and its action are three stops, each with its ring.
+    await page.goto("/funds/preview");
+    await page.waitForTimeout(500);
+    const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Beta" });
+    const toggle = row.getByRole("button", { name: /Highlight PAC Beta/ });
+    await toggle.focus();
+    expect(await focusIsVisible(page), "the series toggle draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Tab");
+    await expect(row.getByRole("link", { name: "PAC Beta" })).toBeFocused();
+    expect(await focusIsVisible(page), "the fund's name draws no ring").toBe(true);
+
+    const record = row.getByRole("button", { name: "Record valuation" });
+    await record.focus();
+    expect(await focusIsVisible(page), "the action draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(record, "closing the dialog did not give the focus back").toBeFocused();
+  });
+
+  test("a year of Year by year opens from the keyboard", async ({ page }) => {
+    await page.goto("/funds/preview?period=all");
+    await page.waitForTimeout(500);
+    const year = new Date().getFullYear() - 3;
+    const link = page
+      .getByTestId("year-row")
+      .getByRole("link", { name: `Open ${year}` })
+      .first();
+    await link.focus();
+    expect(await focusIsVisible(page), "the year's link draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`period=${year}$`));
+  });
 });
