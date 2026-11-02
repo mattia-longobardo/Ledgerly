@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAccount, saveBalanceEntry } from "@/modules/accounts/service";
+import { createAccount, runSnapshot, saveBalanceEntry } from "@/modules/accounts/service";
+import { createFund, recordValuation, updateValuation } from "@/modules/funds/service";
 import { uploadPayslip } from "@/modules/payroll/service";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import { upsertFromProvider } from "@/modules/transactions/service";
@@ -131,6 +132,24 @@ describe("exportUser", () => {
 });
 
 describe("exportFileName", () => {
+  it("writes a fund's documented value, not the copy of a month end (funds-ux F5)", async () => {
+    const ctx = await newContext();
+    const fund = await createFund(ctx, {
+      name: "PAC",
+      startOn: "2026-01-01",
+      valuationAccountId: null,
+      initialCents: 100_000n,
+    });
+    const valuation = await recordValuation(ctx, fund.id, { on: "2026-09-30", cents: 110_000n });
+    await runSnapshot(ctx, "2026-10-01");
+    await updateValuation(ctx, valuation.id, { on: "2026-09-30", cents: 120_000n });
+    const zip = await readZip(await exportUserBytes(ctx, NOW));
+    const row = zip.get("funds.csv")!.toString("utf8");
+    expect(row).toContain("1200.00");
+    expect(row).toContain("2026-09-30");
+    expect(row).not.toContain("1100.00");
+  });
+
   it("carries the day it was made", () => {
     expect(exportFileName(NOW)).toBe("ledgerly-2026-09-21.zip");
   });

@@ -472,6 +472,19 @@ describe("a fund's system copies (funds-ux §4, n. 1)", () => {
     });
   });
 
+  it("leaves a PAC's value and date on the last reading in fundsView, not on an older copy (F5)", async () => {
+    const fund = await createFund(ctx, input({ initialCents: 100_000n }));
+    const valuation = await recordValuation(ctx, fund.id, { on: "2026-09-30", cents: 110_000n });
+    await runSnapshot(ctx, "2026-10-01");
+    // The value is corrected after the copy was made: the copy still says the old one, a day later.
+    await updateValuation(ctx, valuation.id, { on: "2026-09-30", cents: 120_000n });
+    const view = await fundsView(ctx, NOW);
+    expect(view.rows[0]).toMatchObject({
+      lastValuation: "2026-09-30",
+      metrics: { valueCents: 120_000n, gainCents: 20_000n },
+    });
+  });
+
   it("projects a PAC on its plan, not on the average with the initial capital", async () => {
     const fund = await createFund(ctx, input({ initialCents: 3_250_00n, monthlyCents: 251_00n }));
     const detail = await fundDetail(ctx, fund.id, 12, new Date("2026-03-01T12:00:00Z"));

@@ -259,52 +259,26 @@ export async function fundsView(
     .where(userScoped(ctx).owns(funds))
     .orderBy(asc(funds.name), asc(funds.id));
   const open = all.filter((fund) => fund.state === "active");
-  const [deposits, values, accounts, chart, lastEntries] = await Promise.all([
+  const [deposits, accounts, chart] = await Promise.all([
     depositsOf(
       ctx,
       open.map((fund) => fund.id),
     ),
-    balancesOn(
-      ctx,
-      open.map((fund) => fund.valuationAccountId),
-      todayOn,
-    ),
     listAccounts(ctx, { includeArchived: true }),
     accountsView(ctx, { now, months: 12 }),
-    open.length === 0
-      ? []
-      : getDb()
-          .select({ fundId: fundValuations.fundId, balanceEntryId: fundValuations.balanceEntryId })
-          .from(fundValuations)
-          .where(
-            and(
-              userScoped(ctx).owns(fundValuations),
-              inArray(
-                fundValuations.fundId,
-                open.map((fund) => fund.id),
-              ),
-            ),
-          ),
   ]);
   const accountName = new Map(accounts.map((account) => [account.id, account.name]));
   const entryDates = new Map<string, CivilDate>();
-  // A pension fund's value is the one its statement documents, with the statement's own date
-  // (GC §12) — never "as of today", which would leave a fund valued only in the future blank. The
-  // snapshot's month-end copy documents nothing: its date said the value was newer than it is.
-  const statementValues = new Map<string, Cents>();
+  // A fund's value is the last one a person or a document gave, with its own date (funds-ux §5.2, F5),
+  // never "as of today", which would leave a fund valued only in the future blank. The snapshot's
+  // month-end copy documents nothing: its date said the value was newer than it is.
+  const documentedValues = new Map<string, Cents>();
   for (const fund of open) {
-    const entries = await listBalanceEntries(ctx, fund.valuationAccountId, 200);
-    if (fund.type === "pension") {
-      const latest = latestDocumented(entries);
-      if (latest) {
-        entryDates.set(fund.id, latest.on);
-        statementValues.set(fund.id, latest.balanceCents);
-      }
-      continue;
+    const latest = latestDocumented(await listBalanceEntries(ctx, fund.valuationAccountId, 200));
+    if (latest) {
+      entryDates.set(fund.id, latest.on);
+      documentedValues.set(fund.id, latest.balanceCents);
     }
-    const ids = new Set(lastEntries.filter((row) => row.fundId === fund.id).map((row) => row.balanceEntryId));
-    const latest = entries.find((entry) => ids.has(entry.id));
-    if (latest) entryDates.set(fund.id, latest.on);
   }
 
   const inflowsByFund = await pensionInflows(
@@ -314,10 +288,7 @@ export async function fundsView(
   );
   const rows: FundRow[] = open.map((fund) => {
     const own = deposits.get(fund.id) ?? [];
-    const value =
-      fund.type === "pension"
-        ? (statementValues.get(fund.id) ?? null)
-        : (values.get(fund.valuationAccountId) ?? null);
+    const value = documentedValues.get(fund.id) ?? null;
     // The value's own day: a PAC's debits are picked up on their own, its value only when somebody
     // records one, so every percentage is measured against what had been paid in by then.
     const base = fundMetrics(own, value, entryDates.get(fund.id) ?? null);
