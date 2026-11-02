@@ -264,7 +264,7 @@ function sumOrigin(flows: readonly FundFlow[]): MoneyOrigin {
  * day before the first flow, at zero. A first value with no money before it is a position and not
  * a gain, so it is itself the starting point.
  */
-function startOf(
+export function startOf(
   before: ValuePoint | null,
   points: readonly ValuePoint[],
   flows: readonly FundFlow[],

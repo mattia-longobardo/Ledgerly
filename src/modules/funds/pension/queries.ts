@@ -24,7 +24,13 @@ import {
   periodReturns,
   periodStats,
 } from "../rules";
-import { documentedEntries, latestDocumented, pensionFlows, projectionMonthly } from "../period";
+import {
+  documentedEntries,
+  type FundFlow,
+  latestDocumented,
+  pensionFlows,
+  projectionMonthly,
+} from "../period";
 import type { Fund } from "../service";
 import {
   type Operation,
@@ -342,6 +348,18 @@ export async function pensionDetail(
     codes,
     payslipDocuments,
   };
+}
+
+/** A pension fund's money, as the period engine reads it (funds-ux §5.2). */
+export function pensionDetailFlows(detail: PensionDetail): FundFlow[] {
+  const { schedule } = detail;
+  return pensionFlows(
+    detail.operations.map((operation) => asOperation(operation, detail.unitsOf.get(operation.id) ?? "0")),
+    detail.quarters,
+    schedule
+      ? { enrollmentCents: schedule.enrollmentFeeCents, quarterCents: schedule.quarterFeeCents }
+      : NO_FEES,
+  );
 }
 
 /** The pension columns of the Funds list (design): worker, employer and TFR credited so far. */

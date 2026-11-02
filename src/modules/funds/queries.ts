@@ -197,7 +197,7 @@ export type MonthStatus =
   | { kind: "missing"; by: CivilDate }
   | { kind: "none" };
 
-function monthStatus(fund: Fund, deposits: readonly FundDeposit[], todayOn: CivilDate): MonthStatus {
+export function monthStatus(fund: Fund, deposits: readonly FundDeposit[], todayOn: CivilDate): MonthStatus {
   const thisMonth = monthKey(todayOn);
   const found = deposits
     .filter((deposit) => monthKey(deposit.on) === thisMonth)
@@ -232,7 +232,7 @@ export interface FundsView {
   paidSeries: Cents[];
 }
 
-async function depositsOf(
+export async function depositsOf(
   ctx: Pick<Ctx, "userId">,
   fundIds: readonly string[],
 ): Promise<Map<string, FundDeposit[]>> {
