@@ -368,3 +368,62 @@ test.describe("the new Funds home", () => {
     await expect(page).toHaveURL(new RegExp(`period=${year}$`));
   });
 });
+
+test.describe("a fund's new page", () => {
+  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
+  test.use({ storageState: sessionState("fundsDetail") });
+
+  test("the fund, its tabs, its period and its projection are walked from the keyboard", async ({ page }) => {
+    await page.goto("/funds/preview");
+    await page.waitForTimeout(500);
+    const name = page
+      .getByTestId("fund-home-row")
+      .filter({ hasText: "Pensione Beta" })
+      .getByRole("link", { name: "Pensione Beta" });
+    await name.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/funds\/preview\/[0-9a-f-]+$/);
+    await page.waitForTimeout(500);
+
+    const period = page.getByRole("group", { name: "Period", exact: true });
+    const all = period.getByRole("link", { name: "All" });
+    await all.focus();
+    expect(await focusIsVisible(page), "the All link draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/period=all$/);
+
+    const tabs = page.getByRole("navigation", { name: "Fund" });
+    const contributions = tabs.getByRole("link", { name: "Contributions" });
+    await contributions.focus();
+    expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/tab=contributions/);
+    await expect(page).toHaveURL(/period=all/);
+
+    await tabs.getByRole("link", { name: "Overview" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("fund-projection")).toBeVisible();
+    const summary = page.getByTestId("fund-projection").locator("summary");
+    await summary.focus();
+    expect(await focusIsVisible(page), "the projection draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("fund-projection")).toHaveAttribute("open", "");
+  });
+
+  test("the valuation dialog gives the focus back", async ({ page }) => {
+    await page.goto("/funds/preview");
+    await page.waitForTimeout(500);
+    const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Piano" });
+    const href = await row.getByRole("link", { name: "PAC Piano" }).getAttribute("href");
+    await page.goto(href!);
+    await page.waitForTimeout(500);
+    const record = page.getByRole("button", { name: "Record valuation" }).first();
+    await record.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(record, "closing the dialog did not give the focus back").toBeFocused();
+  });
+});

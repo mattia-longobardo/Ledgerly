@@ -35,6 +35,13 @@ export const USERS = {
   // Funds F2: years in each state of docs/design/funds-ux.md §6, with invented amounts. The `funds`
   // user starts empty on purpose, and `layout` has one year only.
   fundsHome: { email: "funds-home@example.test", password: "funds-home-password-123", name: "Funds Home" },
+  // Funds F3: a fund's new page, a PAC with a plan and a pension fund with its operations, with invented
+  // amounts. Its own user, so the years of `fundsHome` keep meaning what its spec says.
+  fundsDetail: {
+    email: "funds-detail@example.test",
+    password: "funds-detail-password-123",
+    name: "Funds Detail",
+  },
   investments: {
     email: "investments@example.test",
     password: "investments-password-123",
@@ -90,6 +97,7 @@ export const SESSIONS = {
   interests: { user: "interests", file: "interests-session.json" },
   funds: { user: "funds", file: "funds-session.json" },
   fundsHome: { user: "fundsHome", file: "funds-home-session.json" },
+  fundsDetail: { user: "fundsDetail", file: "funds-detail-session.json" },
   investments: { user: "investments", file: "investments-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
   cometa: { user: "cometa", file: "cometa-session.json" },

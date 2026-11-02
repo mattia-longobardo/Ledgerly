@@ -17,7 +17,7 @@ import {
 } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
 import { createFund, addDeposit, recordValuation, setFundState } from "../src/modules/funds/service";
-import { pensionCompetences } from "../src/modules/funds/schema";
+import { fundOperations, pensionCompetences, unitMovements } from "../src/modules/funds/schema";
 import { createPensionFund } from "../src/modules/funds/pension/service";
 import {
   applyOperations,
@@ -582,6 +582,119 @@ async function seedFundsHome(): Promise<void> {
     valuationAccountId: null,
   });
   await addDeposit(ctx, delta.id, { on: `${year}-01-01`, chargedCents: 20_000n, feeCents: 0n, note: null });
+}
+
+/**
+ * A fund's new page (docs/design/funds-ux.md §6, F3): two funds over three years, counted back from this
+ * one. The PAC has a plan, the pension fund has operations with their units and a quarter on the way.
+ * Every amount is invented.
+ */
+async function seedFundsDetail(): Promise<void> {
+  const ctx = await contextOf(USERS.fundsDetail.email);
+  const on = today(ctx.timeZone);
+  const year = Number(on.slice(0, 4));
+  const thisMonth = `${on.slice(0, 7)}-01`;
+
+  const pac = await createFund(ctx, {
+    name: "PAC Piano",
+    provider: "Esempio",
+    isin: null,
+    compartment: null,
+    debitAccountId: null,
+    debitDay: 1,
+    ter: null,
+    startOn: `${year - 2}-01-05`,
+    monthlyCents: 25_000n,
+    depositFeeCents: 100n,
+    valuationAccountId: null,
+  });
+  for (const [day, chargedCents] of [
+    [`${year - 2}-01-05`, 100_000n],
+    [`${year - 1}-03-05`, 50_000n],
+    // This month's: so the plan's status does not depend on the day of the run.
+    [thisMonth, 25_000n],
+  ] as const) {
+    await addDeposit(ctx, pac.id, { on: day, chargedCents, feeCents: 100n, note: null });
+  }
+  for (const [day, cents] of [
+    [`${year - 2}-06-30`, 104_000n],
+    [`${year - 1}-12-15`, 160_000n],
+    [on, 190_000n],
+  ] as const) {
+    await recordValuation(ctx, pac.id, { on: day, cents, units: null, note: null });
+  }
+
+  const pension = await createPensionFund(ctx, {
+    name: "Pensione Beta",
+    provider: "Esempio",
+    compartment: "Crescita",
+    startOn: `${year - 2}-01-01`,
+    receivesPayroll: false,
+  });
+  const contributions = [
+    [year - 2, 1, `${year - 2}-04-15`, "10.000000"],
+    [year - 1, 1, `${year - 1}-04-15`, "11.000000"],
+    [year - 1, 2, `${year - 1}-07-15`, "12.000000"],
+    [year - 1, 4, `${year}-01-02`, "12.500000"],
+  ] as const;
+  for (const [competenceYear, competenceQuarter, operationDate, unitPrice] of contributions) {
+    const [operation] = await getDb()
+      .insert(fundOperations)
+      .values(
+        userScoped(ctx).stamp({
+          fundId: pension.id,
+          originKey: `e2e:${operationDate}`,
+          originalType: "Contributo",
+          classification: "contribution" as const,
+          originalState: "QUOTATO",
+          competenceYear,
+          competenceQuarter,
+          operationDate,
+          workerCents: 10_000n,
+          employerCents: 15_000n,
+          tfrCents: 35_000n,
+          feesCents: 300n,
+          netCents: 59_700n,
+          source: "import" as const,
+        }),
+      )
+      .returning();
+    await getDb()
+      .insert(unitMovements)
+      .values(
+        userScoped(ctx).stamp({
+          operationId: operation.id,
+          position: 1,
+          compartment: "Crescita",
+          units: "50.000000",
+          unitPrice,
+          unitPriceDate: operationDate,
+        }),
+      );
+  }
+  for (const [day, cents] of [
+    [`${year - 2}-06-30`, 62_000n],
+    [`${year - 1}-08-31`, 190_000n],
+    [on, 260_000n],
+  ] as const) {
+    await recordValuation(ctx, pension.id, { on: day, cents, units: null, note: null });
+  }
+  const quarter = Math.floor((Number(on.slice(5, 7)) - 1) / 3) + 1;
+  await getDb()
+    .insert(pensionCompetences)
+    .values(
+      userScoped(ctx).stamp({
+        fundId: pension.id,
+        payslipId: randomUUID(),
+        payrollPeriod: thisMonth,
+        payslipType: "ordinary",
+        year,
+        quarter,
+        workerCents: 12_000n,
+        employerCents: 18_000n,
+        tfrCents: 30_000n,
+      }),
+    );
 }
 
 /**
@@ -1314,6 +1427,7 @@ await seedSubscriptions();
 await seedInterests();
 await seedFunds();
 await seedFundsHome();
+await seedFundsDetail();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();

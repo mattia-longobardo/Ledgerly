@@ -55,6 +55,16 @@ async function settled(page: Page): Promise<void> {
       timeout: 15_000,
     })
     .catch(() => undefined);
+  // A skeleton is a `<main>` too, and it does not fade in: measured, it says nothing about the page.
+  await page
+    .locator('[data-testid="funds-home-loading"], [data-testid="fund-detail-loading"]')
+    .first()
+    .waitFor({ state: "detached", timeout: 15_000 });
+  await page
+    .waitForFunction(() => getComputedStyle(document.querySelector("main")!).opacity === "1", null, {
+      timeout: 15_000,
+    })
+    .catch(() => undefined);
   await finished(page);
 }
 
@@ -221,6 +231,44 @@ const PAGES: Screen[] = [
           name: `/funds/preview, ${what}`,
           session: "fundsHome",
           open: go(`/funds/preview${query}`),
+          everyWidth: true,
+        })),
+        ...(["PAC Piano", "Pensione Beta"] as const).flatMap((fund) =>
+          (
+            [
+              ["the year running", ""],
+              ["the value chart", "?view=value"],
+              ["a past year", `?period=${THIS_YEAR - 1}`],
+              ["All", "?period=all"],
+              ["a year before the data", `?period=${THIS_YEAR - 9}`],
+              ["a custom period", `?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-03-31`],
+              ["a tab not ready", `?tab=valuations`],
+              ["Settings", "?tab=settings"],
+            ] as const
+          ).map(([what, query]): Screen => ({
+            name: `/funds/preview/[id], ${fund}, ${what}`,
+            session: "fundsDetail",
+            open: async (page) => {
+              await follow(page, "/funds/preview", new RegExp(`^${fund}$`));
+              await page.goto(`${new URL(page.url()).pathname}${query}`);
+              await settled(page);
+            },
+            everyWidth: true,
+          })),
+        ),
+        ...(
+          [
+            ["no value in the year running", ""],
+            ["a year of payslips alone", `?period=${THIS_YEAR - 4}`],
+          ] as const
+        ).map(([what, query]): Screen => ({
+          name: `/funds/preview/[id], ${what}`,
+          session: "fundsHome",
+          open: async (page) => {
+            await follow(page, "/funds/preview", /^Pensione Alfa$/);
+            await page.goto(`${new URL(page.url()).pathname}${query}`);
+            await settled(page);
+          },
           everyWidth: true,
         })),
       ]
