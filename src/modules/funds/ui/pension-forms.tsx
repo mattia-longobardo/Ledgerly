@@ -214,7 +214,7 @@ export function ApplyDocumentButton({
           startTransition(async () => {
             if (ok(await applyCometaDocumentAction(fundId, documentId, kind))) {
               notify(toast);
-              router.push(`/funds/${fundId}`);
+              router.push(`/funds/${fundId}?tab=valuations`);
             }
           })
         }
@@ -262,7 +262,7 @@ export function DocumentActions({
             startTransition(async () => {
               if (ok(await deleteCometaDocumentAction(fundId, documentId))) {
                 notify(labels.deleted);
-                router.push(`/funds/${fundId}`);
+                router.push(`/funds/${fundId}?tab=valuations`);
               }
             })
           }

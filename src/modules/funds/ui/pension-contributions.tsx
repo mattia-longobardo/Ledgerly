@@ -7,14 +7,20 @@ import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
+import { cn } from "@/ui/cn";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
+import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import type { FundFlow, FundPeriod } from "../period";
 import type { PensionDetail } from "../pension/queries";
-import { MAIN_COMPONENTS, type QuarterStatus } from "../pension/reconcile";
+import { type ComponentStatus, MAIN_COMPONENTS, type QuarterStatus } from "../pension/reconcile";
 import { competenceOn, deductibleYears, inPeriod, quarterInPeriod } from "../tabs";
-import { AddVoluntaryButton, DeleteOperationButton } from "./pension-forms";
+import {
+  AcceptDifferenceButton,
+  AddVoluntaryButton,
+  ClearDecisionButton,
+  DeleteOperationButton,
+} from "./pension-forms";
 import { quarterLabel, STATUS_TONE } from "./pension-present";
-import { ComponentLine } from "./pension-view";
 
 /**
  * The Contributions tab of a pension fund (docs/design/funds-ux.md §5.3, §6, F4): payslips, quarters,
@@ -456,4 +462,72 @@ export async function PensionContributions({
       </div>
     </>
   );
+}
+
+function ComponentLine({
+  fundId,
+  quarter,
+  component,
+  labels,
+  money,
+  signed,
+}: {
+  fundId: string;
+  quarter: QuarterStatus;
+  component: ComponentStatus;
+  labels: Record<"component" | "accrued" | "credited" | "difference" | "accept" | "clear", string>;
+  money: (cents: bigint | null) => string;
+  signed: (cents: bigint | null) => string;
+}) {
+  const open = component.status === "discrepancy";
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <span className="w-24 shrink-0 font-medium">{labels.component}</span>
+      <span className="text-muted">
+        {labels.accrued} {money(component.accruedCents)} · {labels.credited} {money(component.creditedCents)}
+      </span>
+      {component.differenceCents !== null && component.differenceCents !== 0n && (
+        <span className={cn("font-medium", TONE_TEXT[toneOfSign(component.differenceCents)])}>
+          {labels.difference} {signed(component.differenceCents)}
+        </span>
+      )}
+      {open && (
+        <AcceptDifferenceButton
+          fundId={fundId}
+          label={labels.accept}
+          target={{
+            year: quarter.year,
+            quarter: quarter.quarter,
+            component: component.component,
+            componentLabel: labels.component,
+            differenceCents: decimalOf(component.differenceCents ?? 0n),
+            accruedCents: component.accruedCents === null ? null : decimalOf(component.accruedCents),
+            creditedCents: component.creditedCents === null ? null : decimalOf(component.creditedCents),
+            competenceIds: component.competenceIds,
+            operationIds: component.operationIds,
+            difference: signed(component.differenceCents),
+          }}
+        />
+      )}
+      {component.decision && (
+        <>
+          <span className="text-sm text-muted">{component.decision.note}</span>
+          <ClearDecisionButton
+            fundId={fundId}
+            year={quarter.year}
+            quarter={quarter.quarter}
+            component={component.component}
+            label={labels.clear}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Cents as the action reads them back ("-500" → "-5.00"). */
+function decimalOf(cents: bigint): string {
+  const negative = cents < 0n;
+  const absolute = (negative ? -cents : cents).toString().padStart(3, "0");
+  return `${negative ? "-" : ""}${absolute.slice(0, -2)}.${absolute.slice(-2)}`;
 }

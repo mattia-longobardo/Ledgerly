@@ -6,7 +6,7 @@
 // It runs as the seeded `layout` user, who has something on every page (scripts/seed-e2e.ts): a
 // menu with nothing in it traps nothing.
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { FUNDS_HOME_PREVIEW, sessionState } from "./env";
+import { sessionState } from "./env";
 
 test.use({ storageState: sessionState("layout") });
 
@@ -295,14 +295,13 @@ test("the sidebar, the page and its controls are reachable in order from the top
   expect(steps, "the first account link was not reached within 40 tabs").toBeGreaterThan(0);
 });
 
-test.describe("the new Funds home", () => {
-  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
+test.describe("the Funds home", () => {
   test.use({ storageState: sessionState("fundsHome") });
 
   test("the period, the chart's view, a fund's name and its value are walked from the keyboard", async ({
     page,
   }) => {
-    await page.goto("/funds/preview");
+    await page.goto("/funds");
     await page.waitForTimeout(500);
 
     const period = page.getByRole("group", { name: "Period", exact: true });
@@ -311,7 +310,7 @@ test.describe("the new Funds home", () => {
     await page.keyboard.press("Tab");
     await expect(period.getByRole("link", { name: "All" })).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/funds\/preview\?period=all$/);
+    await expect(page).toHaveURL(/\/funds\?period=all$/);
 
     const value = page
       .getByRole("group", { name: "What the chart shows" })
@@ -322,7 +321,7 @@ test.describe("the new Funds home", () => {
     await expect(page).toHaveURL(/period=all&view=value|view=value&period=all/);
 
     // The stepper keeps the chart's view from one year to the next.
-    await page.goto("/funds/preview?view=value");
+    await page.goto("/funds?view=value");
     await page.waitForTimeout(500);
     const stepper = page.getByRole("group", { name: "Year", exact: true });
     await stepper.getByRole("link", { name: "Previous year" }).focus();
@@ -331,7 +330,7 @@ test.describe("the new Funds home", () => {
     await expect(page).toHaveURL(/view=value/);
 
     // A row's series toggle, its name and its action are three stops, each with its ring.
-    await page.goto("/funds/preview");
+    await page.goto("/funds");
     await page.waitForTimeout(500);
     const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Beta" });
     const toggle = row.getByRole("button", { name: /Highlight PAC Beta/ });
@@ -355,7 +354,7 @@ test.describe("the new Funds home", () => {
   });
 
   test("a year of Year by year opens from the keyboard", async ({ page }) => {
-    await page.goto("/funds/preview?period=all");
+    await page.goto("/funds?period=all");
     await page.waitForTimeout(500);
     const year = new Date().getFullYear() - 3;
     const link = page
@@ -370,11 +369,10 @@ test.describe("the new Funds home", () => {
 });
 
 test.describe("a fund's new page", () => {
-  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
   test.use({ storageState: sessionState("fundsDetail") });
 
   test("the fund, its tabs, its period and its projection are walked from the keyboard", async ({ page }) => {
-    await page.goto("/funds/preview");
+    await page.goto("/funds");
     await page.waitForTimeout(500);
     const name = page
       .getByTestId("fund-home-row")
@@ -382,7 +380,7 @@ test.describe("a fund's new page", () => {
       .getByRole("link", { name: "Pensione Beta" });
     await name.focus();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/funds\/preview\/[0-9a-f-]+$/);
+    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]+$/);
     await page.waitForTimeout(500);
 
     const period = page.getByRole("group", { name: "Period", exact: true });
@@ -411,7 +409,7 @@ test.describe("a fund's new page", () => {
   });
 
   test("the valuation dialog gives the focus back", async ({ page }) => {
-    await page.goto("/funds/preview");
+    await page.goto("/funds");
     await page.waitForTimeout(500);
     const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Piano" });
     const href = await row.getByRole("link", { name: "PAC Piano" }).getAttribute("href");
@@ -434,7 +432,7 @@ test.describe("a fund's new page", () => {
     ["Pensione Beta", "Valuations", "valuations"],
   ] as const) {
     test(`${fund}: ${tab}, its period and its controls are walked from the keyboard`, async ({ page }) => {
-      await page.goto("/funds/preview");
+      await page.goto("/funds");
       await page.waitForTimeout(500);
       const href = await page
         .getByTestId("fund-home-row")
@@ -467,7 +465,7 @@ test.describe("a fund's new page", () => {
   }
 
   test("the edit dialog of a value gives the focus back", async ({ page }) => {
-    await page.goto("/funds/preview");
+    await page.goto("/funds");
     await page.waitForTimeout(500);
     const href = await page
       .getByTestId("fund-home-row")

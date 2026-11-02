@@ -2,7 +2,7 @@ import { Card } from "@/ui/card";
 import { Skeleton } from "@/ui/skeleton";
 
 /** The shape of the home while it reads (§6): the hero, the KPIs, the chart and two rows. */
-export default function FundsHomeLoading() {
+export function FundsHomeSkeleton() {
   return (
     <main
       data-testid="funds-home-loading"

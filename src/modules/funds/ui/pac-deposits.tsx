@@ -173,6 +173,11 @@ export async function PacDeposits({
                 </span>
               </li>
             </ul>
+            {rows.some((deposit) => deposit.feeCents === null) && (
+              <p className="border-t border-border px-4 py-3 text-sm text-muted" data-testid="fee-unknown">
+                {t("feeUnknown")}
+              </p>
+            )}
           </>
         )}
       </Card>
@@ -192,10 +197,10 @@ export async function PacDeposits({
           ) : (
             <>
               <p className="text-sm">
-                {t("rule.text", {
+                {t(fund.depositFeeCents === null ? "rule.textNoFee" : "rule.text", {
                   account: accounts.find((one) => one.id === rule.accountId)?.name ?? t("rule.anyAccount"),
                   match: rule.payeeMatch,
-                  fee: fund.depositFeeCents === null ? t("rule.noFee") : money(fund.depositFeeCents),
+                  fee: money(fund.depositFeeCents),
                 })}
               </p>
               <p className={cn("text-sm", rule.active ? "text-pos" : "text-muted")}>

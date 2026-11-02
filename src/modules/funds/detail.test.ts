@@ -11,6 +11,7 @@ const flow = (on: string, chargedCents: bigint, recurring = true): FundFlow => (
   feeCents: 100n,
   origin: { youCents: chargedCents, employerCents: 0n, tfrCents: 0n, otherCents: 0n },
   recurring,
+  deductible: true,
 });
 const fund = (overrides: Partial<HomeFund> = {}): HomeFund => ({
   id: "f",

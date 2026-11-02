@@ -148,7 +148,7 @@ export default async function CometaDocumentPage({ params }: PageProps<"/funds/[
       ];
     });
     return (
-      <Page title={tr("title")} parent={{ href: base as Route, label: tr("back") }}>
+      <Page title={tr("title")} parent={{ href: `${base}?tab=valuations` as Route, label: tr("back") }}>
         {header}
         <PositionReview
           fundId={id}
@@ -165,7 +165,7 @@ export default async function CometaDocumentPage({ params }: PageProps<"/funds/[
   const preview = document.storageKey ? await previewOperations(ctx, id, document.id) : null;
   const added = preview?.rows.filter((row) => row.state === "new").length ?? 0;
   return (
-    <Page title={tr("title")} parent={{ href: base as Route, label: tr("back") }}>
+    <Page title={tr("title")} parent={{ href: `${base}?tab=valuations` as Route, label: tr("back") }}>
       {header}
       <Card padded={false} data-testid="operations-preview">
         <CardHeader

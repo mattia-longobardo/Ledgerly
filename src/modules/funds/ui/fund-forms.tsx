@@ -108,14 +108,12 @@ function FundFields({
   id,
   kind,
   onKindChange,
-  terLabel,
 }: {
   draft: FundDraft;
   accounts: Accounts;
   id: string;
   kind: FundKind;
   onKindChange?: (kind: FundKind) => void;
-  terLabel?: string;
 }) {
   const t = useTranslations("funds.settings");
   const shows = fundFormFields(kind);
@@ -181,7 +179,7 @@ function FundFields({
         </Field>
       )}
       {shows.has("ter") && (
-        <Field label={terLabel ?? t("plan.ter")} htmlFor={`${id}-ter`}>
+        <Field label={t("plan.ter")} htmlFor={`${id}-ter`}>
           <InputGroup suffix="%">
             <Input id={`${id}-ter`} name="ter" inputMode="decimal" numeric defaultValue={draft.ter} />
           </InputGroup>
@@ -332,14 +330,11 @@ export function FundSettingsForm({
   draft,
   accounts,
   kind = "pac",
-  terLabel,
 }: {
   fundId: string;
   draft: FundDraft;
   accounts: Accounts;
   kind?: FundKind;
-  /** The word of the new pages (docs/design/funds-ux.md §6). The page of today does not pass it. */
-  terLabel?: string;
 }) {
   const t = useTranslations("funds");
   const id = useId();
@@ -354,7 +349,7 @@ export function FundSettingsForm({
   }
   return (
     <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-      <FundFields draft={draft} accounts={accounts} id={id} kind={kind} terLabel={terLabel} />
+      <FundFields draft={draft} accounts={accounts} id={id} kind={kind} />
       <ErrorLine error={error} />
       <div className="col-span-full flex justify-end">
         <Button type="submit" variant="primary" disabled={pending}>
@@ -401,25 +396,14 @@ export interface ValuationDraft extends ValuationFormInput {
 }
 
 /** The valuation fields, shared by "Record valuation" and "Edit" so the two agree. */
-function ValuationFields({
-  id,
-  today,
-  draft,
-  newCopy,
-}: {
-  id: string;
-  today: string;
-  draft?: ValuationDraft;
-  newCopy?: boolean;
-}) {
+function ValuationFields({ id, today, draft }: { id: string; today: string; draft?: ValuationDraft }) {
   const t = useTranslations("funds.valuations.form");
-  const fresh = useTranslations("funds.fund.valuationForm");
   return (
     <>
-      <Field label={newCopy ? fresh("date") : t("date")} htmlFor={`${id}-on`}>
+      <Field label={t("date")} htmlFor={`${id}-on`}>
         <Input id={`${id}-on`} name="on" type="date" max={today} defaultValue={draft?.on ?? today} required />
       </Field>
-      <Field label={newCopy ? fresh("value") : t("value")} htmlFor={`${id}-value`}>
+      <Field label={t("value")} htmlFor={`${id}-value`}>
         <Input
           id={`${id}-value`}
           name="value"
@@ -450,7 +434,6 @@ export function ValuationButton({
   lastLine,
   label,
   place = "page",
-  newCopy,
 }: {
   fundId: string;
   fundName: string;
@@ -458,11 +441,8 @@ export function ValuationButton({
   lastLine: string | null;
   label: string;
   place?: TriggerPlace;
-  /** The words of the new pages (docs/design/funds-ux.md §6). The pages of today do not ask for them. */
-  newCopy?: boolean;
 }) {
   const t = useTranslations("funds");
-  const fresh = useTranslations("funds.fund.valuationForm");
   const id = useId();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -473,7 +453,7 @@ export function ValuationButton({
     const input = readValuation(new FormData(event.currentTarget));
     startTransition(async () => {
       if (!ok(await recordValuationAction(fundId, input))) return;
-      notify(newCopy ? fresh("recorded") : t("toasts.valuation"));
+      notify(t("toasts.valuation"));
       setOpen(false);
     });
   }
@@ -484,17 +464,17 @@ export function ValuationButton({
         open={open}
         onOpenChange={setOpen}
         finalFocus={opener}
-        title={newCopy ? fresh("title", { name: fundName }) : t("valuations.form.title", { name: fundName })}
-        description={newCopy ? fresh("description") : t("valuations.form.description")}
+        title={t("valuations.form.title", { name: fundName })}
+        description={t("valuations.form.description")}
       >
         <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3">
-          <ValuationFields id={id} today={today} newCopy={newCopy} />
+          <ValuationFields id={id} today={today} />
           {lastLine && <p className="col-span-full text-sm text-muted">{lastLine}</p>}
           <ErrorLine error={error} />
           <div className="col-span-full flex justify-end gap-2">
             <Button onClick={() => setOpen(false)}>{t("valuations.form.cancel")}</Button>
             <Button type="submit" variant="primary" disabled={pending}>
-              {newCopy ? fresh("save") : t("valuations.form.save")}
+              {t("valuations.form.save")}
             </Button>
           </div>
         </form>
@@ -512,16 +492,13 @@ export function EditValuationButton({
   draft,
   today,
   label,
-  newCopy,
 }: {
   fundId: string;
   draft: ValuationDraft;
   today: string;
   label: string;
-  newCopy?: boolean;
 }) {
   const t = useTranslations("funds");
-  const fresh = useTranslations("funds.fund.valuationForm");
   const id = useId();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -531,7 +508,7 @@ export function EditValuationButton({
     const input = readValuation(new FormData(event.currentTarget));
     startTransition(async () => {
       if (!ok(await updateValuationAction(fundId, draft.id, input))) return;
-      notify(newCopy ? fresh("updated") : t("toasts.valuationUpdated"));
+      notify(t("toasts.valuationUpdated"));
       setOpen(false);
     });
   }
@@ -540,18 +517,14 @@ export function EditValuationButton({
       <Button size="xs" variant="ghost" onClick={() => (setError(null), setOpen(true))}>
         {label}
       </Button>
-      <Modal
-        open={open}
-        onOpenChange={setOpen}
-        title={newCopy ? fresh("editTitle") : t("valuations.editTitle")}
-      >
+      <Modal open={open} onOpenChange={setOpen} title={t("valuations.editTitle")}>
         <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3">
-          <ValuationFields id={id} today={today} draft={draft} newCopy={newCopy} />
+          <ValuationFields id={id} today={today} draft={draft} />
           <ErrorLine error={error} />
           <div className="col-span-full flex justify-end gap-2">
             <Button onClick={() => setOpen(false)}>{t("valuations.form.cancel")}</Button>
             <Button type="submit" variant="primary" disabled={pending}>
-              {newCopy ? fresh("save") : t("valuations.form.save")}
+              {t("valuations.form.save")}
             </Button>
           </div>
         </form>

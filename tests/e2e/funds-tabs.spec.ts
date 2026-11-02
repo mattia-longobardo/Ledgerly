@@ -1,40 +1,12 @@
-// tests/e2e/funds-tabs.spec.ts — the tabs of a fund's new page (docs/design/funds-ux.md §4, §5.3, §6, F4), with
-// the invented funds of the `fundsDetail` seed. In a local preview it drives the tabs; on the deployed site the
-// old pages stay, and the new routes do not answer, until F5 connects them.
+// tests/e2e/funds-tabs.spec.ts — the tabs of a fund's page (docs/design/funds-ux.md §4, §5.3, §6, F4), with the
+// invented funds of the `fundsDetail` seed.
 import { expect, type Page, test } from "@playwright/test";
-import { FUNDS_HOME_PREVIEW, sessionState } from "./env";
+import { sessionState } from "./env";
 
-const HOME = "/funds/preview";
+const HOME = "/funds";
 const Y = new Date().getFullYear();
 
-test.describe("on the deployed site", () => {
-  test.skip(FUNDS_HOME_PREVIEW, "it answers in a local preview");
-  test.use({ storageState: sessionState("layout") });
-
-  test("the new tabs and the redirect do not answer, and the old returns page still does", async ({
-    page,
-  }) => {
-    await page.goto("/funds");
-    const href = await page
-      .getByRole("link", { name: /Fideuram/ })
-      .filter({ visible: true })
-      .first()
-      .getAttribute("href");
-    const id = href!.split("/").at(-1)!.split("?")[0];
-    for (const path of ["?tab=deposits", "?tab=valuations", "?tab=contributions&period=all", "/returns"]) {
-      expect((await page.goto(`${HOME}/${id}${path}`))?.status(), path).toBe(404);
-    }
-    const old = await page.goto(`/funds/${id}/returns`);
-    expect(old?.status()).toBe(200);
-    expect(new URL(page.url()).pathname).toBe(`/funds/${id}/returns`);
-    const span = await page.goto(`/funds/${id}?span=24`);
-    expect(span?.status()).toBe(200);
-    expect(page.url()).toContain("span=24");
-  });
-});
-
-test.describe("in a preview", () => {
-  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
+test.describe("the tabs", () => {
   test.use({ storageState: sessionState("fundsDetail") });
 
   async function fundPath(page: Page, name: string): Promise<string> {
@@ -138,7 +110,7 @@ test.describe("in a preview", () => {
     await expect(page.getByTestId("deductible-line")).toHaveCount(1);
     await expect(page.getByTestId("deductible-line")).toHaveAttribute("data-cents", "50000");
     await expect(page.getByTestId("deductible-line")).toContainText(kpi);
-    await expect(page.getByTestId("deductible-note")).toContainText("TFR excluded");
+    await expect(page.getByTestId("deductible-note")).toContainText("TFR and enrolment fee excluded");
     await expect(page.getByTestId("deductible-note")).toContainText("certifies can differ");
   });
 
@@ -202,6 +174,20 @@ test.describe("in a preview", () => {
         page.getByTestId("operation-line-item").getByRole("button", { name: "Remove" }),
       ).toBeVisible();
     });
+  });
+
+  test("a returns address with no fund in it answers 404, and a span that is no span is ignored", async ({
+    page,
+  }) => {
+    const bad = await page.request.get(`${HOME}/not%0D%0Aan-id/returns`, { maxRedirects: 0 });
+    expect(bad.status()).toBe(404);
+    const euro = await page.request.get(`${HOME}/%E2%82%AC/returns`, { maxRedirects: 0 });
+    expect(euro.status()).toBe(404);
+    const path = await fundPath(page, "PAC Piano");
+    await page.goto(`${path}?span=99999999999`);
+    expect(new URL(page.url()).search).toBe("");
+    await page.goto(`${path}?span=abc`);
+    expect(new URL(page.url()).search).toBe("");
   });
 
   test("the old returns page goes to Valuations, with its period", async ({ page }) => {

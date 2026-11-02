@@ -1,5 +1,6 @@
 // The Cometa documents end to end (plan F6 L2–L4, L6) on the synthetic twins, against the real
 // test database and bucket. Every amount here comes from `tests/fixtures/cometa`: all invented.
+import { deductibleYears } from "../tabs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { listBalanceEntries } from "@/modules/accounts/queries";
 import { getDocument, listEvidence } from "@/modules/imports/service";
@@ -38,7 +39,7 @@ import {
 } from "./imports";
 import { recordValuation } from "../service";
 import { managementItem } from "./metrics";
-import { pensionDetail } from "./queries";
+import { pensionDetail, pensionDetailFlows } from "./queries";
 import {
   addVoluntaryContribution,
   createPensionFund,
@@ -356,13 +357,19 @@ describe("what the pages read (plan F6 L4–L6)", () => {
     expect(detail.quarters).toEqual([]);
   });
 
-  it("counts a year's contributions against its deductibility limit, TFR excluded (GC §7)", async () => {
+  it("counts a year's contributions against its limit, TFR and enrolment fee excluded (GC §7, funds-ux §5.3)", async () => {
     const { id } = await importedExport(EXPORT_AUGUST);
     await applyOperations(ctx, fundId, id);
     const detail = await pensionDetail(ctx, fundId);
-    expect(detail.taxYears).toEqual([
-      { year: 2031, workerCents: 10_000n, employerCents: 18_000n, totalCents: 28_000n, limitCents: 530_000n },
-    ]);
+    const period = { from: "2031-01-01", to: "2031-12-31" };
+    const [year] = deductibleYears(pensionDetailFlows(detail), period, "2031-12-31");
+    expect(year).toEqual({
+      year: 2031,
+      youCents: 10_000n,
+      employerCents: 18_000n,
+      usedCents: 28_000n,
+      limitCents: 530_000n,
+    });
     expect(detail.tariffs.find((row) => row.item === "management_crescita")?.rate).toBe("0.000800");
   });
 

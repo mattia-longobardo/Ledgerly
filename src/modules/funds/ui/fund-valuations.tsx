@@ -12,7 +12,7 @@ import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import type { PensionDetail } from "../pension/queries";
 import type { ValuationRow } from "../queries";
-import { bestAndWorst, inPeriod, type ValuationLine } from "../tabs";
+import { bestAndWorst, closesPeriodBefore, readsPeriod, type ValuationLine } from "../tabs";
 import type { FundPeriod } from "../period";
 import { DeleteValuation, EditValuationButton } from "./fund-forms";
 import { valuationDraft } from "./present";
@@ -52,13 +52,13 @@ export async function FundValuations({
   pension: PensionDetail | null;
 }) {
   const t = await getTranslations("funds.fund.valuations");
+  const th = await getTranslations("funds.home");
   const tp = await getTranslations("funds.pension");
   const money = (cents: Cents | null) => formatMoney(cents, ctx.numberFormat);
   const signed = (cents: Cents | null) => formatMoney(cents, ctx.numberFormat, { signed: true });
   const percent = (value: number | null) =>
     value === null ? NULL_DISPLAY : formatPercent(value, ctx.numberFormat, { signed: true });
   const long = (on: string | null) => formatDate(on, "long", ctx.locale);
-  const day = (on: string | null) => formatDate(on, "dayMonth", ctx.locale);
   const recordedOn = new Map(recorded.map((row) => [row.on, row]));
   const { best, worst } = bestAndWorst(lines);
 
@@ -78,14 +78,13 @@ export async function FundValuations({
           draft={valuationDraft(row, ctx.numberFormat)}
           today={todayOn}
           label={t("edit")}
-          newCopy
         />
         <DeleteValuation fundId={fundId} valuationId={row.id} label={t("delete")} toast={t("deleted")} />
       </span>
     );
   };
 
-  const statements = (pension?.snapshots ?? []).filter((one) => inPeriod(one.valuationDate, period));
+  const statements = (pension?.snapshots ?? []).filter((one) => readsPeriod(one.valuationDate, period));
   const documentHref = (id: string) => `/funds/${fundId}/documents/${id}` as Route;
 
   return (
@@ -100,6 +99,9 @@ export async function FundValuations({
             <p>{valuesEver === 0 ? t("noneEver") : t("noneIn", { when })}</p>
             {lastValue && (
               <p>{t("lastValue", { value: money(lastValue.cents), date: long(lastValue.on) })}</p>
+            )}
+            {lastValue && closesPeriodBefore(lastValue.on, period) && (
+              <p data-testid="closing-note">{th("closingNote", { date: long(lastValue.on) })}</p>
             )}
           </div>
         ) : (
@@ -197,9 +199,9 @@ export async function FundValuations({
                 <p data-testid="best-worst">
                   {t("bestWorst", {
                     best: percent(best.rate),
-                    bestOn: day(best.on),
+                    bestOn: long(best.on),
                     worst: percent(worst.rate),
-                    worstOn: day(worst.on),
+                    worstOn: long(worst.on),
                   })}
                 </p>
               )}

@@ -2350,35 +2350,9 @@
   },
   "funds": {
     "title": "Fondi",
-    "summary": "{value} in {count, plural, one {# fondo} other {# fondi}}",
     "add": "Aggiungi fondo",
     "kpis": {
-      "value": "Valore attuale",
-      "paidIn": "Versato",
-      "gain": "Guadagno totale",
-      "monthly": "Versamenti mensili"
-    },
-    "chart": {
-      "title": "Valore complessivo e versato · 12 mesi",
-      "value": "Valore",
-      "paid": "Versato",
-      "summary": "Valore dei fondi e versato, mese per mese; {value} oggi."
-    },
-    "table": {
-      "title": "Tutti i fondi",
-      "hint": "Fai clic su un fondo per la sua pagina",
-      "fund": "Fondo",
-      "type": "Tipo",
-      "paidIn": "Versato",
-      "value": "Valore",
-      "gain": "Guadagno",
-      "cumulative": "Cumulato",
-      "lastValuation": "Ultima valorizzazione",
-      "month": "Questo mese",
-      "edit": "Modifica",
-      "valuation": "Registra valorizzazione",
-      "total": "Totale",
-      "perMonth": "{amount} / mese"
+      "paidIn": "Versato"
     },
     "types": {
       "pac": "PAC",
@@ -2406,91 +2380,18 @@
     "detail": {
       "kind": "Piano di accumulo (PAC)",
       "since": "dal {date}",
-      "asOf": "{paidIn} versati · al {date}",
-      "afterValue": "{amount} versati dopo, che nessuna valutazione ha ancora contato",
-      "cumulative": "cumulato",
-      "noValue": "Ancora nessuna valorizzazione",
       "tabs": {
-        "label": "Fondo",
-        "overview": "Panoramica",
-        "deposits": "Versamenti",
-        "valuations": "Valorizzazioni",
-        "settings": "Impostazioni"
-      },
-      "kpis": {
-        "invested": "Investito (al netto delle commissioni)",
-        "investedNote": "{count, plural, one {# versamento} other {# versamenti}}",
-        "investedPartial": "una commissione è sconosciuta",
-        "fees": "Commissioni sui versamenti",
-        "feesNote": "{fee} per versamento",
-        "feesNone": "nessuna commissione impostata",
-        "gain": "Guadagno",
-        "gainNote": "{percent} sul versato",
-        "compounded": "Rendimento composto",
-        "compoundedSince": "Composto dal {date}",
-        "compoundedNote": "tra le valutazioni · TER {ter}",
-        "compoundedNoTer": "tra le valutazioni"
-      },
-      "chart": {
-        "title": "Valore e versato · {months} mesi",
-        "value": "Valore",
-        "paid": "Versato",
-        "summary": "{name}: valore e versato a ogni fine mese; {value} oggi."
-      },
-      "returns": {
-        "title": "Rendimento mensile",
-        "avg": "media {value} / mese",
-        "best": "Mese migliore",
-        "worst": "Mese peggiore",
-        "positive": "Mesi positivi",
-        "positiveValue": "{positive} / {counted}",
-        "empty": "Serve una valorizzazione a entrambi i capi di un mese.",
-        "bar": "{month} {value}"
-      },
-      "recent": {
-        "title": "Versamenti recenti",
-        "all": "Tutti i versamenti"
+        "label": "Fondo"
       }
     },
     "forecast": {
       "title": "Dove sta andando",
-      "description": "Se continuano a entrare {monthly} al mese e il fondo cresce al tasso di ogni colonna. Una proiezione, non una promessa: nessun tasso qui è quello del fondo, salvo l'ultima colonna quando c'è.",
       "noRhythm": "Negli ultimi dodici mesi non è entrato nessun versamento ricorrente, quindi non c'è un ritmo da proiettare.",
       "horizon": "Orizzonte",
       "years": "Fra {years, plural, one {# anno} other {# anni}}",
       "paidIn": "Versato",
       "rate": "al {rate}",
-      "ownRate": "al suo {rate}",
-      "ownRateNote": "L'ultima colonna è il tasso annuo del fondo stesso, misurato sui dodici mesi del grafico qui sopra.",
-      "noOwnRate": "Il tasso del fondo richiede dodici mesi misurati: fino ad allora si disegnano solo le ipotesi.",
       "noValue": "Nessuna valutazione registrata, quindi si può dire solo quanto sarà stato versato."
-    },
-    "returns": {
-      "title": "Rendimento fra valutazioni",
-      "details": "Dettaglio",
-      "empty": "Servono due valutazioni perché un rendimento si possa misurare. Registrane una e qui compare.",
-      "since": "su {days, plural, one {# giorno} other {# giorni}}",
-      "hover": "{gain} di guadagno · {paidIn} versati",
-      "best": "Tratto migliore",
-      "worst": "Tratto peggiore",
-      "positive": "Positivi",
-      "positiveValue": "{positive} / {counted}",
-      "page": {
-        "title": "Rendimento",
-        "description": "Quello che il fondo ha fatto fra una valutazione documentata e la successiva, mai annualizzato. Il versato del tratto viene sottratto prima di leggere il guadagno (Simple Dietz).",
-        "from": "Da",
-        "to": "A",
-        "days": "Giorni",
-        "start": "Valore all'inizio",
-        "end": "Valore alla fine",
-        "flows": "Versato",
-        "gain": "Guadagno",
-        "rate": "Rendimento",
-        "compounded": "Composto",
-        "annualised": "All'anno",
-        "noAnnualised": "serve un anno di storia",
-        "back": "Torna al fondo"
-      }
     },
     "detect": {
       "button": "Trova questo addebito ovunque",
@@ -2516,22 +2417,6 @@
       "failed": "Non è riuscito. Riprova."
     },
     "deposits": {
-      "title": "Versamenti",
-      "hint": "{count, plural, one {# versamento} other {# versamenti}}",
-      "date": "Data",
-      "debited": "Addebitato",
-      "fee": "Commissione",
-      "invested": "Investito",
-      "source": "Origine",
-      "sources": {
-        "manual": "Manuale",
-        "rule": "Abbinato"
-      },
-      "note": "Nota",
-      "edit": "Modifica",
-      "delete": "Elimina",
-      "total": "Totale",
-      "empty": "Ancora nessun versamento.",
       "add": {
         "title": "Aggiungi versamento",
         "hint": "Inserisci l'importo addebitato; la commissione viene sottratta.",
@@ -2542,45 +2427,24 @@
         "note": "Nota",
         "save": "Salva versamento"
       },
-      "editTitle": "Modifica versamento",
-      "rule": {
-        "title": "Regola di abbinamento",
-        "text": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento, meno {fee} di commissione.",
-        "anyAccount": "qualunque conto",
-        "noFee": "nessuna",
-        "active": "Attiva",
-        "paused": "In pausa",
-        "edit": "Modifica regola",
-        "none": "Nessuna regola: i versamenti si inseriscono a mano."
-      }
+      "editTitle": "Modifica versamento"
     },
     "valuations": {
-      "title": "Valorizzazioni",
-      "hint": "{count, plural, one {# registrazione} other {# registrazioni}}",
-      "date": "Data",
-      "value": "Valore",
-      "paidIn": "Versato",
-      "gain": "Guadagno",
-      "note": "Nota",
-      "edit": "Modifica",
-      "delete": "Elimina",
-      "editTitle": "Modifica valorizzazione",
-      "empty": "Ancora nessuna valorizzazione.",
+      "editTitle": "Modifica valore",
       "form": {
-        "title": "Registra valorizzazione · {name}",
-        "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo; i rendimenti mensili si calcolano da lì.",
-        "date": "Data valorizzazione",
-        "value": "Valore attuale (€)",
+        "title": "Registra valore · {name}",
+        "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo.",
+        "date": "Data del valore",
+        "value": "Valore (€)",
         "note": "Nota",
         "last": "Ultima registrata: {value} · {date}",
         "cancel": "Annulla",
-        "save": "Salva valorizzazione"
+        "save": "Salva valore"
       }
     },
     "settings": {
       "general": {
         "title": "Generale",
-        "description": "Nome, gestore e come il fondo è classificato nel patrimonio.",
         "name": "Nome",
         "provider": "Gestore",
         "compartment": "Tipo / comparto",
@@ -2594,15 +2458,13 @@
         "memberSince": "Iscritto dal"
       },
       "plan": {
-        "title": "Versamenti",
         "description": "Il piano mensile e la commissione su ogni versamento.",
         "monthly": "Importo mensile addebitato (€)",
         "fee": "Commissione per versamento (€)",
-        "investedPerMonth": "Investito al mese: {value}",
         "debitAccount": "Conto di addebito",
         "noAccount": "Nessuno",
         "debitDay": "Giorno di addebito",
-        "ter": "Commissione di gestione annua (TER, %)"
+        "ter": "Commissione di gestione annua (%)"
       },
       "rule": {
         "title": "Abbinamento delle spese",
@@ -2614,14 +2476,14 @@
         "save": "Salva regola"
       },
       "valuations": {
-        "title": "Valorizzazioni",
+        "title": "Valori",
         "description": "Il valore sta sul conto del fondo: le sue impostazioni decidono patrimonio, snapshot e promemoria.",
         "open": "Apri le impostazioni di {account}"
       },
       "danger": {
         "title": "Zona pericolosa",
         "description": "Archiviare nasconde il fondo ma ne conserva la storia.",
-        "text": "Archivia {name}. Versamenti e valorizzazioni restano leggibili.",
+        "text": "Archivia {name}. Versamenti e valori restano leggibili.",
         "archive": "Archivia fondo",
         "restore": "Ripristina fondo"
       },
@@ -2640,15 +2502,14 @@
       "saved": "Fondo salvato",
       "archived": "Fondo archiviato: storia conservata",
       "restored": "Fondo ripristinato",
-      "valuation": "Valorizzazione registrata",
-      "valuationUpdated": "Valorizzazione aggiornata",
-      "valuationDeleted": "Valorizzazione eliminata",
+      "valuation": "Valore registrato",
+      "valuationUpdated": "Valore aggiornato",
       "deposit": "Versamento salvato",
       "depositDeleted": "Versamento eliminato",
       "rule": "Regola salvata"
     },
     "errors": {
-      "invalid": "Controlla i valori: un nome, importi maggiori di zero, una commissione non oltre l'importo, TER fra 0 e 100 %.",
+      "invalid": "Controlla i valori: un nome, importi maggiori di zero, una commissione non oltre l'importo, una commissione di gestione fra 0 e 100 %.",
       "not_found": "Quel fondo non esiste più.",
       "invalid_account": "Scegli un conto aperto; il valore vuole un conto manuale che nessun altro fondo usa.",
       "duplicate_name": "Esiste già un fondo con quel nome.",
@@ -2663,59 +2524,25 @@
     },
     "pension": {
       "kind": "Fondo pensione",
-      "notAnnualised": "guadagno / versato, non annualizzato",
       "tabs": {
         "overview": "Riepilogo",
         "contributions": "Contributi",
         "valuations": "Valorizzazioni",
         "settings": "Impostazioni"
       },
-      "header": {
-        "paidIn": "{paidIn} versati · valore al {date}",
-        "accrued": "Maturato nei cedolini"
-      },
       "kpis": {
-        "value": "Valore posizione",
-        "valueNote": "al {date}",
-        "noValue": "nessun riepilogo importato",
-        "paidIn": "Versato al fondo",
-        "paidInNote": "comprese {enrollment} di quote d'iscrizione",
-        "gain": "Guadagno dall'inizio",
-        "gainNote": "{percent} sul versato, non annualizzato",
-        "pending": "Da accreditare",
-        "pendingNote": "{count, plural, one {maturato nei cedolini, versamento previsto il {date}} other {maturato nei cedolini di # trimestri, primo versamento previsto il {date}}}",
-        "pendingNone": "ogni trimestre scaduto è stato versato"
-      },
-      "gainReasons": {
-        "no_value": "nessun riepilogo: il valore non è noto",
-        "nothing_paid": "nessun versamento finora",
-        "outflows_unknown": "un'uscita non è documentata"
+        "paidIn": "Versato al fondo"
       },
       "notice": {
         "pending": "{amount} maturati nei cedolini non sono ancora nel fondo: {quarters}.",
-        "pendingQuarter": "{quarter}, {amount}, versamento aziendale previsto il {date}",
-        "dated": "Valore al {date} — non è un ritardo."
-      },
-      "chart": {
-        "title": "Valore e versato",
-        "hint": "Solo punti documentati: le valutazioni che registri.",
-        "steps": "I gradini sono accrediti trimestrali, non rendimenti; fra due documenti non si disegna nulla.",
-        "summary": "{name}: valore e versato a fine di ogni mese; {value} all'ultimo riepilogo.",
-        "hoverPaidIn": "{paidIn} versati"
+        "pendingQuarter": "{quarter}, {amount}, versamento aziendale previsto il {date}"
       },
       "operations": {
         "title": "Operazioni del fondo",
-        "hint": "{count, plural, one {# operazione} other {# operazioni}}",
-        "units": "{units} quote",
         "empty": "Nessuna operazione importata.",
-        "competence": "Competenza",
         "date": "Data operazione",
-        "worker": "Aderente",
-        "employer": "Azienda",
-        "tfr": "TFR",
         "fees": "Spese",
         "net": "Netto investito",
-        "total": "Totale",
         "remove": "Elimina",
         "removed": "Operazione eliminata"
       },
@@ -2730,7 +2557,6 @@
       },
       "bridge": {
         "title": "Perché i numeri differiscono?",
-        "noValue": "Serve un riepilogo della posizione per raccordare le cifre.",
         "note": "Guadagno / versato non è annualizzato ed è al netto delle sole spese esplicite, non della tassazione all'erogazione.",
         "lines": {
           "accrued": "Maturato nei cedolini",
@@ -2744,32 +2570,6 @@
           "market": "Variazione di valore",
           "value": "Valore posizione"
         }
-      },
-      "position": {
-        "title": "Posizione",
-        "fees": "Spese esplicite",
-        "feesSplit": "{enrollment} iscrizione · {association} associativa",
-        "management": "Commissione di gestione",
-        "managementNote": "già dedotta dal valore · informativa",
-        "rule": "Regola contributiva",
-        "noRule": "nessuna regola registrata",
-        "covered": "Competenze coperte fino a",
-        "coveredNote": "l'ultimo trimestre accreditato dal fondo"
-      },
-      "months": {
-        "title": "Maturato nei cedolini",
-        "hint": "quote d'iscrizione escluse",
-        "empty": "Nessun cedolino applicato.",
-        "period": "Mese del cedolino",
-        "quarter": "Trimestre",
-        "worker": "Lavoratore",
-        "employer": "Azienda",
-        "tfr": "TFR",
-        "total": "Totale",
-        "status": "Stato",
-        "totalRow": "Totale",
-        "thirteenth": "13ª",
-        "openPayslip": "Apri il cedolino"
       },
       "payslipTypes": {
         "ordinary": "Ordinario",
@@ -2835,22 +2635,9 @@
         "cancel": "Annulla",
         "added": "Versamento aggiunto"
       },
-      "tax": {
-        "title": "Deducibilità per anno",
-        "empty": "Nessun contributo accreditato.",
-        "year": "Anno",
-        "worker": "Lavoratore",
-        "employer": "Azienda",
-        "total": "Totale",
-        "limit": "Limite",
-        "note": "Solo contributi lavoratore e azienda, TFR escluso, per data dell'operazione: l'anno fiscale certificato può differire."
-      },
       "statements": {
         "title": "Riepiloghi della posizione",
         "empty": "Nessun riepilogo importato.",
-        "date": "Data valorizzazione",
-        "value": "Valore",
-        "worker": "Aderente",
         "employer": "Azienda",
         "tfr": "TFR",
         "inflows": "Totale entrate",
@@ -2861,9 +2648,6 @@
         "title": "Documenti Cometa",
         "import": "Importa documenti",
         "empty": "Nessun documento.",
-        "file": "File",
-        "kind": "Tipo",
-        "received": "Ricevuto",
         "state": "Stato",
         "kinds": {
           "cometa_operations": "Dettaglio operazioni",
@@ -2962,8 +2746,7 @@
         "states": {
           "reading": "Il documento è in lettura.",
           "failed": "Non è stato possibile leggere il documento: {error}.",
-          "applied": "Applicato al fondo.",
-          "rejected": "Messo da parte."
+          "applied": "Applicato al fondo."
         }
       },
       "create": {
@@ -2988,7 +2771,7 @@
         "rebuild": "Ricostruisci dai cedolini",
         "rebuilt": "{count, plural, one {# cedolino riletto} other {# cedolini riletti}}",
         "transfers": "Versamenti aziendali",
-        "transfersDescription": "Quando le competenze sono attese nel fondo. Calcolato automaticamente, nessuna conferma richiesta.",
+        "transfersDescription": "Quando i contributi sono attesi nel fondo. Calcolato automaticamente, nessuna conferma richiesta.",
         "schedule": "Scadenze il {dates} del mese successivo al trimestre.",
         "source": "Fonte: {source} · verificata il {date}",
         "tolerance": "Tolleranza di visualizzazione (giorni)",
@@ -3012,7 +2795,7 @@
         "tfrPct": "% TFR",
         "verifiedOn": "Verificata il",
         "sourceHint": "La pagina o il documento da cui viene la regola.",
-        "valuationAccount": "Conto di valorizzazione",
+        "valuationAccount": "Conto del valore",
         "valuationDescription": "Il conto su cui si scrive il valore del fondo.",
         "openAccount": "Apri {account}",
         "danger": "Zona pericolosa",
@@ -3078,10 +2861,6 @@
         "parse_failed": "Non è stato possibile leggere il documento fino in fondo.",
         "original_missing": "L'originale non è più in archivio, quindi non si può rileggere.",
         "unreadable_pdf": "Questo PDF non si è potuto aprire. Riscarica il riepilogo della posizione dal portale Cometa."
-      },
-      "kpiReasons": {
-        "cometa_operations": "nessun dettaglio operazioni importato",
-        "cometa_position": "nessun riepilogo posizione importato"
       }
     },
     "home": {
@@ -3149,7 +2928,6 @@
         "stretch": "{from} – {to}",
         "summary": "Guadagno {when}: {total}. Migliore {best}, peggiore {worst}. Per fondo: {funds}.",
         "valueSummary": "Valore e versato a ogni valutazione {when}. Ultimo valore {value} al {date}, versato {paid}.",
-        "gainRow": "Guadagno {amount}",
         "paidRow": "Versato {amount}",
         "empty": "Niente da disegnare {when}",
         "emptyValue": "Serve un secondo valore per disegnare la linea.",
@@ -3184,7 +2962,6 @@
         "rate": "Rend.",
         "value": "Valore",
         "updated": "Aggiornato",
-        "actions": "Azioni",
         "plan": "Piano {amount} al mese · {status}",
         "planOff": "Piano {amount} al mese",
         "onTheWay": "In arrivo {amount} · {count, plural, one {# trimestre} other {# trimestri}}",
@@ -3193,7 +2970,6 @@
         "highlight": "Evidenzia {name} nel grafico",
         "undetermined": "non determinabile",
         "first": "Registra il primo valore",
-        "noValue": "ancora nessun valore",
         "total": "Totale",
         "xirr": "Annualizzato (XIRR) {rate}",
         "updatedShort": "aggiornato il {date}"
@@ -3214,7 +2990,8 @@
         "year": "nel {year}",
         "all": "da sempre",
         "custom": "tra il {from} e il {to}"
-      }
+      },
+      "closingNote": "Il valore del {date} chiude il periodo prima."
     },
     "fund": {
       "hero": {
@@ -3230,8 +3007,8 @@
         "deposits": "{recurring, plural, one {# versamento} other {# versamenti}}, {oneOff, plural, one {# una tantum} other {# una tantum}}",
         "perDeposit": "{fee} per versamento",
         "deductible": "Deducibile usato",
-        "deductibleNote": "di {limit} nel {year}, TFR escluso, per data operazione",
-        "deductibleOver": "di {limit} nel {year}: oltre di {over}. TFR escluso, per data operazione",
+        "deductibleNote": "di {limit} nel {year}, senza TFR e quota di iscrizione, per data operazione",
+        "deductibleOver": "di {limit} nel {year}: oltre di {over}. Senza TFR e quota di iscrizione, per data operazione",
         "plan": "Piano",
         "planDay": "al mese, il giorno {day}",
         "planStatus": "al mese, il giorno {day} · {status}",
@@ -3253,7 +3030,6 @@
         "sourceRule": "Trovato dalla regola",
         "sourceHand": "Una tantum",
         "fee": "commissione {amount}",
-        "origin": "tu {you} · azienda {employer} · TFR {tfr}",
         "empty": "Nessun versamento in questo periodo."
       },
       "bridge": {
@@ -3275,25 +3051,8 @@
         "settings": "Impostazioni"
       },
       "recordValue": "Registra valore",
-      "valuationForm": {
-        "title": "Registra valore · {name}",
-        "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo.",
-        "date": "Data del valore",
-        "value": "Valore (€)",
-        "save": "Salva valore",
-        "editTitle": "Modifica valore",
-        "recorded": "Valore registrato",
-        "updated": "Valore aggiornato"
-      },
       "bridgeValue": "Valore",
       "bridgeNoValue": "Serve un valore per raccordare le cifre.",
-      "settingsCopy": {
-        "ter": "Commissione di gestione annua (%)",
-        "valuations": "Valori",
-        "dangerText": "Archivia {name}. Versamenti e valori restano leggibili.",
-        "valuationAccount": "Conto del valore",
-        "transfersDescription": "Quando i contributi sono attesi nel fondo. Calcolato automaticamente, nessuna conferma richiesta."
-      },
       "valuations": {
         "title": "Valori",
         "count": "{count, plural, one {# valore} other {# valori}}",
@@ -3351,12 +3110,13 @@
           "title": "La regola",
           "text": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento, meno {fee} di commissione.",
           "anyAccount": "qualunque conto",
-          "noFee": "nessuna",
           "active": "Attiva",
           "paused": "In pausa",
           "edit": "Modifica la regola",
-          "none": "Nessuna regola: inserisci i versamenti a mano."
-        }
+          "none": "Nessuna regola: inserisci i versamenti a mano.",
+          "textNoFee": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento. Nessuna commissione impostata."
+        },
+        "feeUnknown": "Una commissione è sconosciuta: i totali la contano come 0."
       },
       "contributions": {
         "you": "Tu",
@@ -3401,7 +3161,7 @@
           "year": "Anno",
           "used": "Usato",
           "limit": "Limite",
-          "note": "Tu + azienda, senza TFR, per data dell'operazione. L'anno certificato dal fondo può differire: per la dichiarazione usa la certificazione del fondo."
+          "note": "Tu + azienda, senza TFR e quota di iscrizione, per data dell'operazione. L'anno certificato dal fondo può differire: per la dichiarazione usa la certificazione del fondo."
         },
         "voluntary": {
           "title": "Versamento volontario",

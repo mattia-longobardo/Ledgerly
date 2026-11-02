@@ -16,7 +16,13 @@ import {
   saveBalanceEntry,
 } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
-import { createFund, addDeposit, recordValuation, setFundState } from "../src/modules/funds/service";
+import {
+  addDeposit,
+  createFund,
+  recordValuation,
+  saveDepositRule,
+  setFundState,
+} from "../src/modules/funds/service";
 import { fundOperations, pensionCompetences, unitMovements } from "../src/modules/funds/schema";
 import { addVoluntaryContribution, createPensionFund } from "../src/modules/funds/pension/service";
 import {
@@ -27,7 +33,7 @@ import {
 } from "../src/modules/funds/pension/imports";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../src/modules/payroll/service";
 import { createRule } from "../src/modules/interests/service";
-import { EXPORT_AUGUST, POSITION_AUGUST } from "../tests/fixtures/cometa/samples";
+import { EXPORT_AUGUST, inYear, POSITION_AUGUST } from "../tests/fixtures/cometa/samples";
 import { twinOperationsHtml, twinPositionPdf } from "../tests/fixtures/cometa/twin";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/payroll/samples";
 import { twinPdf } from "../tests/fixtures/payroll/twin";
@@ -582,7 +588,9 @@ async function seedFundsHome(): Promise<void> {
     depositFeeCents: null,
     valuationAccountId: null,
   });
-  await addDeposit(ctx, delta.id, { on: `${year}-01-01`, chargedCents: 20_000n, feeCents: 0n, note: null });
+  // A fee nobody knows, and a rule with no fee set: what the Deposits tab has to say out loud.
+  await addDeposit(ctx, delta.id, { on: `${year}-01-01`, chargedCents: 20_000n, feeCents: null, note: null });
+  await saveDepositRule(ctx, delta.id, { payeeMatch: "Delta", accountId: null, active: true });
 }
 
 /**
@@ -1365,6 +1373,7 @@ async function seedLayout(): Promise<void> {
   });
 
   // ——— An investment PAC with its deposits and valuations ———
+  const layoutYear = Number(on.slice(0, 4));
   const pac = await createFund(ctx, {
     name: "Fideuram Master Selection",
     provider: "Fideuram",
@@ -1373,10 +1382,29 @@ async function seedLayout(): Promise<void> {
     debitAccountId: current,
     debitDay: 5,
     ter: "0.0185",
-    startOn: `${addMonths(monthKey(on), -6).slice(0, 7)}-05`,
+    startOn: `${layoutYear - 2}-03-05`,
     monthlyCents: 25_100n,
     depositFeeCents: 100n,
     valuationAccountId: null,
+  });
+  // Two years before this one (funds-ux §8, F5): money with no value, then a year with a value.
+  await addDeposit(ctx, pac.id, {
+    on: `${layoutYear - 2}-03-05`,
+    chargedCents: 25_100n,
+    feeCents: 100n,
+    note: null,
+  });
+  await addDeposit(ctx, pac.id, {
+    on: `${layoutYear - 1}-02-05`,
+    chargedCents: 25_100n,
+    feeCents: 100n,
+    note: null,
+  });
+  await recordValuation(ctx, pac.id, {
+    on: `${layoutYear - 1}-02-28`,
+    cents: 50_000n,
+    units: null,
+    note: null,
   });
   for (const back of [5, 4, 3, 2, 1]) {
     await addDeposit(ctx, pac.id, {
@@ -1404,7 +1432,9 @@ async function seedLayout(): Promise<void> {
   }
 
   // ——— Payroll: the synthetic twins of a whole year, read, verified and applied ———
-  for (const twin of [JANUARY, FEBRUARY, MARCH, APRIL, THIRTEENTH]) {
+  // Last year: a fund's pages read nothing after today, and the twins are dated 2031.
+  const lastYear = <T>(twin: T): T => inYear(twin, layoutYear - 1);
+  for (const twin of [JANUARY, FEBRUARY, MARCH, APRIL, THIRTEENTH].map(lastYear)) {
     const { document } = await uploadPayslip(ctx, {
       name: `${twin.period.replace(/\s+/g, "-").toLowerCase()}.pdf`,
       bytes: await twinPdf(twin),
@@ -1419,18 +1449,18 @@ async function seedLayout(): Promise<void> {
     name: "Cometa",
     provider: "Cometa",
     compartment: "Crescita",
-    startOn: "2031-01-01",
+    startOn: `${layoutYear - 1}-01-01`,
     receivesPayroll: true,
   });
   const operations = await uploadCometaDocument(ctx, "cometa_operations", {
     name: "DettaglioOperazioni.xls",
-    bytes: twinOperationsHtml(EXPORT_AUGUST),
+    bytes: twinOperationsHtml(EXPORT_AUGUST.map(lastYear)),
   });
   await processCometaDocument(ctx, operations.document.id);
   await applyOperations(ctx, pension.id, operations.document.id);
   const position = await uploadCometaDocument(ctx, "cometa_position", {
     name: "riepilogo_posizione.pdf",
-    bytes: await twinPositionPdf(POSITION_AUGUST),
+    bytes: await twinPositionPdf(lastYear(POSITION_AUGUST)),
   });
   await processCometaDocument(ctx, position.document.id);
   await applyPosition(ctx, pension.id, position.document.id);

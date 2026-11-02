@@ -26,6 +26,7 @@ const flow = (on: CivilDate, chargedCents: Cents, feeCents: Cents | null = 0n): 
   feeCents,
   origin: { youCents: chargedCents, employerCents: 0n, tfrCents: 0n, otherCents: 0n },
   recurring: true,
+  deductible: true,
 });
 
 const fund = (overrides: Partial<HomeFund> & { id: string }): HomeFund => ({

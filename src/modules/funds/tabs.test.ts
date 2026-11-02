@@ -4,11 +4,13 @@ import { type HomeFund, lineOf, type FundLine, homeSummary } from "./home";
 import { allPeriod, type FundFlow, type FundPeriod, yearPeriod } from "./period";
 import {
   bestAndWorst,
+  closesPeriodBefore,
   competenceOn,
   deductibleYears,
   inPeriod,
   legacyFundQuery,
   quarterInPeriod,
+  readsPeriod,
   returnsTarget,
   valuationLines,
 } from "./tabs";
@@ -20,6 +22,7 @@ const flow = (on: string, chargedCents: bigint, employerCents = 0n, tfrCents = 0
   feeCents: 100n,
   origin: { youCents: chargedCents, employerCents, tfrCents, otherCents: 0n },
   recurring: true,
+  deductible: true,
 });
 const fund = (overrides: Partial<HomeFund> = {}): HomeFund => ({
   id: "f",
@@ -223,5 +226,60 @@ describe("the old addresses", () => {
     expect(returnsTarget(base, { from: "2027-01", to: "2027-03", view: "value" }, TODAY)).toBe(
       "/funds/abc?tab=valuations&from=2027-01-01&to=2027-03-31",
     );
+  });
+});
+
+describe("the enrolment fee and the deductible (funds-ux §5.3)", () => {
+  const enrolment: FundFlow = {
+    on: "2027-02-10",
+    chargedCents: 1_032n,
+    feeCents: 1_032n,
+    origin: { youCents: 516n, employerCents: 516n, tfrCents: 0n, otherCents: 0n },
+    recurring: false,
+    deductible: false,
+  };
+  const paying = fund({ type: "pension", flows: [flow("2027-01-10", 10_000n, 5_000n), enrolment] });
+  const period = { ...yearPeriod(2027, TODAY), year: 2027 };
+
+  it("leaves it out of the tab and of the KPI, which do not differ", () => {
+    const [year] = deductibleYears(paying.flows, period, TODAY);
+    expect(year).toMatchObject({ youCents: 10_000n, employerCents: 5_000n, usedCents: 15_000n });
+    const { deductible } = homeSummary({ funds: [paying], period, todayOn: TODAY, firstOn: "2027-01-10" });
+    expect(deductible!.usedCents).toBe(15_000n);
+  });
+
+  it("keeps it in the money paid in", () => {
+    const { paidInCents } = homeSummary({ funds: [paying], period, todayOn: TODAY, firstOn: "2027-01-10" });
+    expect(paidInCents).toBe(16_032n);
+  });
+
+  it("has no deductible year for an enrolment fee alone", () => {
+    expect(deductibleYears([enrolment], period, TODAY)).toEqual([]);
+  });
+});
+
+describe("a reading of the 1st (decision 3 of funds-ux §9)", () => {
+  it("belongs to the year it closes, as a value of that day does", () => {
+    expect(readsPeriod("2027-01-01", yearPeriod(2026, TODAY))).toBe(true);
+    expect(readsPeriod("2027-01-01", yearPeriod(2027, TODAY))).toBe(false);
+    expect(readsPeriod("2027-01-02", yearPeriod(2027, TODAY))).toBe(true);
+    expect(readsPeriod("2027-01-01", allPeriod(TODAY))).toBe(true);
+  });
+
+  it("is said to close the period before, and only then", () => {
+    expect(closesPeriodBefore("2027-01-01", yearPeriod(2027, TODAY))).toBe(true);
+    expect(closesPeriodBefore("2027-01-02", yearPeriod(2027, TODAY))).toBe(false);
+    expect(closesPeriodBefore("2026-12-31", yearPeriod(2027, TODAY))).toBe(false);
+    expect(closesPeriodBefore("2027-01-01", allPeriod(TODAY))).toBe(false);
+  });
+});
+
+describe("a span that is not a span", () => {
+  it.each(["99999999999", "1201", "abc", "-3", "0", "1e3"])("%s is dropped from the address", (span) => {
+    expect(legacyFundQuery({ span, tab: "valuations" }, TODAY)).toEqual({ tab: "valuations" });
+  });
+
+  it("keeps a real number of months", () => {
+    expect(legacyFundQuery({ span: "24" }, TODAY)).toEqual({ from: "2026-07-01", to: TODAY });
   });
 });

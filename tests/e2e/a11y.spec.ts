@@ -10,7 +10,7 @@
 // /settings/integrations went unseen until F9 looked at that page as an admin.
 import { createRequire } from "node:module";
 import { expect, type Page, test } from "@playwright/test";
-import { FUNDS_HOME_PREVIEW, type SESSIONS, sessionState } from "./env";
+import { type SESSIONS, sessionState } from "./env";
 
 const require = createRequire(import.meta.url);
 const AXE = require.resolve("axe-core/axe.min.js");
@@ -24,7 +24,7 @@ type Size = (typeof WIDTHS)[number]["name"];
 
 const THIS_YEAR = new Date().getFullYear();
 
-/** What the new Funds home is also measured at (funds-ux §6): the phone of the design, and a tablet. */
+/** What the Funds pages are also measured at (funds-ux §6): the phone of the design, and a tablet. */
 const EVERY_WIDTH = [
   ...WIDTHS,
   { width: 768, height: 1024, name: "tablet" },
@@ -209,118 +209,99 @@ const PAGES: Screen[] = [
     session: "layout",
     open: (page) => follow(page, "/interests", "Revolut Saving"),
   },
-  { name: "/funds", session: "layout", open: go("/funds") },
-  // The new home answers only in a local preview until F5 connects it (funds-ux §8).
-  ...(FUNDS_HOME_PREVIEW
-    ? [
-        { name: "/funds/preview, as `layout`", session: "layout", open: go("/funds/preview") } as Screen,
-        ...(
-          [
-            ["the year running", ""],
-            ["the value chart", "?view=value"],
-            ["All, with the years", "?period=all"],
-            ["All, the value chart", "?period=all&view=value"],
-            ["a measured year", `?period=${THIS_YEAR - 3}`],
-            ["a year with money and no value", `?period=${THIS_YEAR - 2}`],
-            ["a year with nothing", `?period=${THIS_YEAR - 1}`],
-            ["a year with payslips alone", `?period=${THIS_YEAR - 4}`],
-            ["a year before the data", `?period=${THIS_YEAR - 9}`],
-            ["a custom period", `?from=${THIS_YEAR - 3}-01-01&to=${THIS_YEAR - 3}-03-31`],
-          ] as const
-        ).map(([what, query]): Screen => ({
-          name: `/funds/preview, ${what}`,
-          session: "fundsHome",
-          open: go(`/funds/preview${query}`),
-          everyWidth: true,
-        })),
-        ...(["PAC Piano", "Pensione Beta"] as const).flatMap((fund) =>
-          (
-            [
-              ["the year running", ""],
-              ["the value chart", "?view=value"],
-              ["a past year", `?period=${THIS_YEAR - 1}`],
-              ["All", "?period=all"],
-              ["a year before the data", `?period=${THIS_YEAR - 9}`],
-              ["a custom period", `?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-03-31`],
-              ["Valuations", "?tab=valuations&period=all"],
-              ["Valuations, a past year", `?tab=valuations&period=${THIS_YEAR - 1}`],
-              ["Valuations, a year with none", `?tab=valuations&period=${THIS_YEAR - 9}`],
-              [
-                fund === "PAC Piano" ? "Deposits" : "Contributions",
-                `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=all`,
-              ],
-              [
-                fund === "PAC Piano" ? "Deposits, a past year" : "Contributions, a past year",
-                `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=${THIS_YEAR - 1}`,
-              ],
-              ["Settings", "?tab=settings"],
-            ] as const
-          ).map(([what, query]): Screen => ({
-            name: `/funds/preview/[id], ${fund}, ${what}`,
-            session: "fundsDetail",
-            open: async (page) => {
-              await follow(page, "/funds/preview", new RegExp(`^${fund}$`));
-              await page.goto(`${new URL(page.url()).pathname}${query}`);
-              await settled(page);
-            },
-            everyWidth: true,
-          })),
-        ),
-        ...(
-          [
-            ["no value in the year running", ""],
-            ["a year of payslips alone", `?period=${THIS_YEAR - 4}`],
-            ["Contributions, a year of payslips alone", `?tab=contributions&period=${THIS_YEAR - 4}`],
-            ["Valuations, a year of payslips alone", `?tab=valuations&period=${THIS_YEAR - 4}`],
-          ] as const
-        ).map(([what, query]): Screen => ({
-          name: `/funds/preview/[id], ${what}`,
-          session: "fundsHome",
-          open: async (page) => {
-            await follow(page, "/funds/preview", /^Pensione Alfa$/);
-            await page.goto(`${new URL(page.url()).pathname}${query}`);
-            await settled(page);
-          },
-          everyWidth: true,
-        })),
-        // Documents and statements of the fund: only `layout` has them.
-        ...(["contributions", "valuations"] as const).map((tab): Screen => ({
-          name: `/funds/preview/[id], Cometa with its documents, ${tab}`,
-          session: "layout",
-          open: async (page) => {
-            await follow(page, "/funds/preview", /^Cometa$/);
-            await page.goto(`${new URL(page.url()).pathname}?tab=${tab}&period=all`);
-            await settled(page);
-          },
-          everyWidth: true,
-        })),
-      ]
-    : []),
-  {
-    name: "/funds/[id] (PAC)",
+  { name: "/funds", session: "layout", open: go("/funds"), everyWidth: true },
+  // The seeded `layout` has years of its own: one measured and one with money and no value.
+  ...(
+    [
+      ["last year", `?period=${THIS_YEAR - 1}`],
+      ["a year with money and no value", `?period=${THIS_YEAR - 2}`],
+      ["All", "?period=all"],
+    ] as const
+  ).map(([what, query]): Screen => ({
+    name: `/funds, as \`layout\`, ${what}`,
     session: "layout",
-    open: (page) => follow(page, "/funds", /Fideuram/),
-  },
-  {
-    name: "/funds/[id]/returns",
+    open: go(`/funds${query}`),
+    everyWidth: true,
+  })),
+  ...(
+    [
+      ["the year running", ""],
+      ["the value chart", "?view=value"],
+      ["All, with the years", "?period=all"],
+      ["All, the value chart", "?period=all&view=value"],
+      ["a measured year", `?period=${THIS_YEAR - 3}`],
+      ["a year with money and no value", `?period=${THIS_YEAR - 2}`],
+      ["a year with nothing", `?period=${THIS_YEAR - 1}`],
+      ["a year with payslips alone", `?period=${THIS_YEAR - 4}`],
+      ["a year before the data", `?period=${THIS_YEAR - 9}`],
+      ["a custom period", `?from=${THIS_YEAR - 3}-01-01&to=${THIS_YEAR - 3}-03-31`],
+    ] as const
+  ).map(([what, query]): Screen => ({
+    name: `/funds, ${what}`,
+    session: "fundsHome",
+    open: go(`/funds${query}`),
+    everyWidth: true,
+  })),
+  ...(["PAC Piano", "Pensione Beta"] as const).flatMap((fund) =>
+    (
+      [
+        ["the year running", ""],
+        ["the value chart", "?view=value"],
+        ["a past year", `?period=${THIS_YEAR - 1}`],
+        ["All", "?period=all"],
+        ["a year before the data", `?period=${THIS_YEAR - 9}`],
+        ["a custom period", `?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-03-31`],
+        ["Valuations", "?tab=valuations&period=all"],
+        ["Valuations, a past year", `?tab=valuations&period=${THIS_YEAR - 1}`],
+        ["Valuations, a year with none", `?tab=valuations&period=${THIS_YEAR - 9}`],
+        [
+          fund === "PAC Piano" ? "Deposits" : "Contributions",
+          `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=all`,
+        ],
+        [
+          fund === "PAC Piano" ? "Deposits, a past year" : "Contributions, a past year",
+          `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=${THIS_YEAR - 1}`,
+        ],
+        ["Settings", "?tab=settings"],
+      ] as const
+    ).map(([what, query]): Screen => ({
+      name: `/funds/[id], ${fund}, ${what}`,
+      session: "fundsDetail",
+      open: async (page) => {
+        await follow(page, "/funds", new RegExp(`^${fund}$`));
+        await page.goto(`${new URL(page.url()).pathname}${query}`);
+        await settled(page);
+      },
+      everyWidth: true,
+    })),
+  ),
+  ...(
+    [
+      ["no value in the year running", ""],
+      ["a year of payslips alone", `?period=${THIS_YEAR - 4}`],
+      ["Contributions, a year of payslips alone", `?tab=contributions&period=${THIS_YEAR - 4}`],
+      ["Valuations, a year of payslips alone", `?tab=valuations&period=${THIS_YEAR - 4}`],
+    ] as const
+  ).map(([what, query]): Screen => ({
+    name: `/funds/[id], ${what}`,
+    session: "fundsHome",
+    open: async (page) => {
+      await follow(page, "/funds", /^Pensione Alfa$/);
+      await page.goto(`${new URL(page.url()).pathname}${query}`);
+      await settled(page);
+    },
+    everyWidth: true,
+  })),
+  // Documents and statements of the fund: only `layout` has them.
+  ...(["contributions", "valuations"] as const).map((tab): Screen => ({
+    name: `/funds/[id], Cometa with its documents, ${tab}`,
     session: "layout",
     open: async (page) => {
-      await follow(page, "/funds", /Cometa/);
-      await followLink(page, '[data-testid="pension-returns"] a[href$="/returns"]');
+      await follow(page, "/funds", /^Cometa$/);
+      await page.goto(`${new URL(page.url()).pathname}?tab=${tab}&period=all`);
+      await settled(page);
     },
-  },
-  {
-    name: "/funds/[id] (pension)",
-    session: "layout",
-    open: (page) => follow(page, "/funds", /Cometa/),
-  },
-  ...(["contributions", "valuations", "settings"] as const).map((tab) => ({
-    name: `/funds/[id] (pension)?tab=${tab}`,
-    session: "layout" as const,
-    open: async (page: Page) => {
-      await follow(page, "/funds", /Cometa/);
-      await openTab(page, tab);
-    },
+    everyWidth: true,
   })),
   {
     name: "/funds/[id]/documents/[docId]",
@@ -329,7 +310,7 @@ const PAGES: Screen[] = [
       await follow(page, "/funds", /Cometa/);
       // The documents card lives on the Valuations tab, not on the fund's first screen.
       await openTab(page, "valuations");
-      await followLink(page, '[data-testid="pension-documents"] a[href*="/documents/"]');
+      await followLink(page, '[data-testid="fund-documents"] a[href*="/documents/"]');
     },
   },
   { name: "/investments", session: "layout", open: go("/investments") },

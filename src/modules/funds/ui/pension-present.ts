@@ -19,55 +19,6 @@ export function quarterLabel(year: number, quarter: number): string {
   return `${["I", "II", "III", "IV"][quarter - 1]} ${year}`;
 }
 
-/** The two Cometa documents the fund is fed from (spec §9.3, GC §8.4): nothing else is imported. */
-export const COMETA_KINDS = ["cometa_operations", "cometa_position"] as const;
-export type CometaKind = (typeof COMETA_KINDS)[number];
-
-/** A document the fund still needs; `awaiting` when one is already uploaded and not yet applied. */
-export interface MissingImport {
-  kind: CometaKind;
-  awaiting: boolean;
-}
-
-/** A document that is neither applied nor out of the way is still on its way to the fund. */
-const IN_PROGRESS = (state: string) => state !== "applied" && state !== "rejected" && state !== "failed";
-
-/**
- * Which of the two Cometa documents the fund is still missing, in the order they are asked for:
- * the operations export (no operation imported) then the position summary (no statement). Both
- * present — the ordinary case — gives an empty list, and the guidance disappears with it.
- */
-export function missingImports({
-  operations,
-  snapshots,
-  documents,
-}: {
-  operations: number;
-  snapshots: number;
-  documents: readonly { kind: string; state: string }[];
-}): MissingImport[] {
-  const awaiting = (kind: CometaKind) =>
-    documents.some((document) => document.kind === kind && IN_PROGRESS(document.state));
-  const missing: MissingImport[] = [];
-  if (operations === 0) missing.push({ kind: "cometa_operations", awaiting: awaiting("cometa_operations") });
-  if (snapshots === 0) missing.push({ kind: "cometa_position", awaiting: awaiting("cometa_position") });
-  return missing;
-}
-
-/** The quantities a missing import leaves unknown: never a mute "—" (spec §8.4.7). */
-export type BlockedKpi = "value" | "paidIn";
-
-const KPI_NEEDS: Record<BlockedKpi, CometaKind> = {
-  value: "cometa_position",
-  paidIn: "cometa_operations",
-};
-
-/** The document a quantity waits for, or `null` when it is computable and only the data is empty. */
-export function kpiBlockedBy(kpi: BlockedKpi, missing: readonly MissingImport[]): CometaKind | null {
-  const kind = KPI_NEEDS[kpi];
-  return missing.some((one) => one.kind === kind) ? kind : null;
-}
-
 /** How the versioned schedule reads in Settings (design "Employer transfers"): never a field. */
 export interface TransferRhythm {
   frequency: "quarterly" | "monthly" | "custom";

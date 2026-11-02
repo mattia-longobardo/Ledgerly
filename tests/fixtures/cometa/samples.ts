@@ -162,3 +162,8 @@ export const POSITION_APRIL: TwinPosition = {
   inflows: "670,32",
   gain: "-0,32",
 };
+
+/** A twin moved to another year: its dates and its quarters are text, and the twins are dated 2031. */
+export function inYear<T>(twin: T, year: number): T {
+  return JSON.parse(JSON.stringify(twin).replaceAll("2031", String(year))) as T;
+}

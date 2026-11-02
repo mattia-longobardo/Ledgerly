@@ -1,24 +1,28 @@
-// tests/e2e/funds-home.spec.ts — the new Funds home (docs/design/funds-ux.md §5.3, §6, F2), with the
-// invented years of the `fundsHome` seed. In a local preview it drives the page; on the deployed site
-// the only thing to say about it is that it does not answer, because Mattia never sees two designs.
+// tests/e2e/funds-home.spec.ts — the Funds home (docs/design/funds-ux.md §5.3, §6, F2), with the
+// invented years of the `fundsHome` seed.
 import { expect, type Page, test } from "@playwright/test";
-import { FUNDS_HOME_PREVIEW, sessionState } from "./env";
+import { sessionState } from "./env";
 
-const PATH = "/funds/preview";
+const PATH = "/funds";
 const Y = new Date().getFullYear();
 
-test.use({ storageState: sessionState(FUNDS_HOME_PREVIEW ? "fundsHome" : "layout") });
+test.use({ storageState: sessionState("fundsHome") });
 
-test("the new home does not answer on the deployed site", async ({ page }) => {
-  test.skip(FUNDS_HOME_PREVIEW, "it answers in a local preview");
-  const response = await page.goto(PATH);
+test("the address of the preview does not answer any more", async ({ page }) => {
+  const response = await page.goto("/funds/preview");
   expect(response?.status()).toBe(404);
   await expect(page.getByTestId("funds-hero")).toHaveCount(0);
 });
 
-test.describe("in a preview", () => {
-  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
+test("the Deposits tab says a fee is unknown, and a rule with no fee reads well", async ({ page }) => {
+  await page.goto(`${PATH}?period=all`);
+  await page.getByRole("link", { name: "PAC Delta" }).filter({ visible: true }).first().click();
+  await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Deposits" }).click();
+  await expect(page.getByTestId("fee-unknown")).toContainText("A fee is unknown");
+  await expect(page.getByTestId("fund-deposit-rule")).toContainText("become a deposit. No fee is set.");
+});
 
+test.describe("the home", () => {
   const hero = (page: Page) => page.getByTestId("funds-hero");
   const heroCents = async (page: Page) => BigInt((await hero(page).getAttribute("data-cents")) || "0");
 

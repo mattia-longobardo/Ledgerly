@@ -2350,35 +2350,9 @@
   },
   "funds": {
     "title": "Funds",
-    "summary": "{value} across {count, plural, one {# fund} other {# funds}}",
     "add": "Add fund",
     "kpis": {
-      "value": "Current value",
-      "paidIn": "Paid in",
-      "gain": "Total gain",
-      "monthly": "Monthly contributions"
-    },
-    "chart": {
-      "title": "Combined value vs paid in · 12 months",
-      "value": "Value",
-      "paid": "Paid in",
-      "summary": "Value of the funds and what had been paid in, month by month; {value} now."
-    },
-    "table": {
-      "title": "All funds",
-      "hint": "Click a fund for its page",
-      "fund": "Fund",
-      "type": "Type",
-      "paidIn": "Paid in",
-      "value": "Value",
-      "gain": "Gain",
-      "cumulative": "Cumulative",
-      "lastValuation": "Last valuation",
-      "month": "This month",
-      "edit": "Edit",
-      "valuation": "Record valuation",
-      "total": "Total",
-      "perMonth": "{amount} / month"
+      "paidIn": "Paid in"
     },
     "types": {
       "pac": "PAC",
@@ -2406,91 +2380,18 @@
     "detail": {
       "kind": "Accumulation plan (PAC)",
       "since": "since {date}",
-      "asOf": "{paidIn} paid in · as of {date}",
-      "afterValue": "{amount} paid in since, which no valuation has counted yet",
-      "cumulative": "cumulative",
-      "noValue": "No valuation yet",
       "tabs": {
-        "label": "Fund",
-        "overview": "Overview",
-        "deposits": "Deposits",
-        "valuations": "Valuations",
-        "settings": "Settings"
-      },
-      "kpis": {
-        "invested": "Invested (net of fees)",
-        "investedNote": "{count, plural, one {# deposit} other {# deposits}}",
-        "investedPartial": "a fee is unknown",
-        "fees": "Fees paid on deposits",
-        "feesNote": "{fee} per deposit",
-        "feesNone": "no fee set",
-        "gain": "Gain",
-        "gainNote": "{percent} on paid in",
-        "compounded": "Compounded return",
-        "compoundedSince": "Compounded since {date}",
-        "compoundedNote": "between valuations · TER {ter}",
-        "compoundedNoTer": "between valuations"
-      },
-      "chart": {
-        "title": "Value vs paid in · {months} months",
-        "value": "Value",
-        "paid": "Paid in",
-        "summary": "{name}: value and paid in at each month end; {value} now."
-      },
-      "returns": {
-        "title": "Monthly return",
-        "avg": "avg {value} / month",
-        "best": "Best month",
-        "worst": "Worst month",
-        "positive": "Positive months",
-        "positiveValue": "{positive} / {counted}",
-        "empty": "Needs a valuation at both ends of a month.",
-        "bar": "{month} {value}"
-      },
-      "recent": {
-        "title": "Recent deposits",
-        "all": "All deposits"
+        "label": "Fund"
       }
     },
     "forecast": {
       "title": "Where this is heading",
-      "description": "If {monthly} a month keeps going in and the fund grows at the rate in each column. A projection, not a promise: no rate here is the fund's unless the last column says so.",
       "noRhythm": "No recurring payment has gone in over the last twelve months, so there is no rhythm to carry forward.",
       "horizon": "Horizon",
       "years": "In {years, plural, one {# year} other {# years}}",
       "paidIn": "Paid in",
       "rate": "at {rate}",
-      "ownRate": "at its own {rate}",
-      "ownRateNote": "The last column is the fund's own yearly rate, measured over the twelve months in the chart above.",
-      "noOwnRate": "The fund's own rate needs twelve months measured: until then only the hypotheses are drawn.",
       "noValue": "No valuation recorded, so only what will have been paid in can be said."
-    },
-    "returns": {
-      "title": "Return between valuations",
-      "details": "Details",
-      "empty": "Two valuations are needed before a return can be measured. Record one and this fills in.",
-      "since": "over {days, plural, one {# day} other {# days}}",
-      "hover": "{gain} gained · {paidIn} paid in",
-      "best": "Best stretch",
-      "worst": "Worst stretch",
-      "positive": "Positive",
-      "positiveValue": "{positive} / {counted}",
-      "page": {
-        "title": "Return",
-        "description": "What the fund did between one documented value and the next, never annualised. The money paid in over a stretch is subtracted before the gain is read (Simple Dietz).",
-        "from": "From",
-        "to": "To",
-        "days": "Days",
-        "start": "Value at the start",
-        "end": "Value at the end",
-        "flows": "Paid in",
-        "gain": "Gain",
-        "rate": "Return",
-        "compounded": "Compounded",
-        "annualised": "Per year",
-        "noAnnualised": "needs a year of history",
-        "back": "Back to the fund"
-      }
     },
     "detect": {
       "button": "Find this charge everywhere",
@@ -2516,22 +2417,6 @@
       "failed": "Couldn't do it. Try again."
     },
     "deposits": {
-      "title": "Deposits",
-      "hint": "{count, plural, one {# deposit} other {# deposits}}",
-      "date": "Date",
-      "debited": "Debited",
-      "fee": "Fee",
-      "invested": "Invested",
-      "source": "Source",
-      "sources": {
-        "manual": "Manual",
-        "rule": "Matched"
-      },
-      "note": "Note",
-      "edit": "Edit",
-      "delete": "Delete",
-      "total": "Total",
-      "empty": "No deposits yet.",
       "add": {
         "title": "Add deposit",
         "hint": "Enter the debited amount; the fee is subtracted.",
@@ -2542,45 +2427,24 @@
         "note": "Note",
         "save": "Save deposit"
       },
-      "editTitle": "Edit deposit",
-      "rule": {
-        "title": "Linked expense rule",
-        "text": "Expenses on {account} whose payee contains {match} become a deposit, less {fee} fee.",
-        "anyAccount": "any account",
-        "noFee": "no",
-        "active": "Active",
-        "paused": "Paused",
-        "edit": "Edit rule",
-        "none": "No rule: deposits are entered by hand."
-      }
+      "editTitle": "Edit deposit"
     },
     "valuations": {
-      "title": "Valuation records",
-      "hint": "{count, plural, one {# record} other {# records}}",
-      "date": "Date",
-      "value": "Value",
-      "paidIn": "Paid in",
-      "gain": "Gain",
-      "note": "Note",
-      "edit": "Edit",
-      "delete": "Delete",
-      "editTitle": "Edit valuation",
-      "empty": "No valuation yet.",
+      "editTitle": "Edit value",
       "form": {
-        "title": "Record valuation · {name}",
-        "description": "Enter the value shown on the latest statement. It is saved as the balance of the fund's account; monthly returns are computed from it.",
-        "date": "Valuation date",
-        "value": "Current value (€)",
+        "title": "Record value · {name}",
+        "description": "Enter the value on the latest statement. It is saved as the balance of the fund's account.",
+        "date": "Date of the value",
+        "value": "Value (€)",
         "note": "Note",
         "last": "Last recorded: {value} · {date}",
         "cancel": "Cancel",
-        "save": "Save valuation"
+        "save": "Save value"
       }
     },
     "settings": {
       "general": {
         "title": "General",
-        "description": "Name, provider and how the fund is classified in net worth.",
         "name": "Name",
         "provider": "Provider",
         "compartment": "Type / compartment",
@@ -2594,15 +2458,13 @@
         "memberSince": "Member since"
       },
       "plan": {
-        "title": "Contributions",
         "description": "The monthly plan and the fee taken on each deposit.",
         "monthly": "Monthly amount debited (€)",
         "fee": "Fee per deposit (€)",
-        "investedPerMonth": "Invested per month: {value}",
         "debitAccount": "Paying account",
         "noAccount": "None",
         "debitDay": "Charge day",
-        "ter": "Annual management fee (TER, %)"
+        "ter": "Annual management fee (%)"
       },
       "rule": {
         "title": "Linked expense",
@@ -2614,14 +2476,14 @@
         "save": "Save rule"
       },
       "valuations": {
-        "title": "Valuations",
+        "title": "Values",
         "description": "The value lives on the fund's account: its settings decide net worth, snapshot and reminders.",
         "open": "Open {account} settings"
       },
       "danger": {
         "title": "Danger zone",
         "description": "Archiving hides the fund but keeps its history.",
-        "text": "Archive {name}. Deposits and valuations stay readable.",
+        "text": "Archive {name}. Deposits and values stay readable.",
         "archive": "Archive fund",
         "restore": "Restore fund"
       },
@@ -2640,15 +2502,14 @@
       "saved": "Fund saved",
       "archived": "Fund archived — history kept",
       "restored": "Fund restored",
-      "valuation": "Valuation recorded",
-      "valuationUpdated": "Valuation updated",
-      "valuationDeleted": "Valuation deleted",
+      "valuation": "Value recorded",
+      "valuationUpdated": "Value updated",
       "deposit": "Deposit saved",
       "depositDeleted": "Deposit deleted",
       "rule": "Rule saved"
     },
     "errors": {
-      "invalid": "Check the values: a name, amounts above zero, a fee not above the amount, TER between 0 and 100 %.",
+      "invalid": "Check the values: a name, amounts above zero, a fee not above the amount, a management fee between 0 and 100 %.",
       "not_found": "That fund no longer exists.",
       "invalid_account": "Pick an open account; the value needs a manual account no other fund uses.",
       "duplicate_name": "There is already a fund with that name.",
@@ -2663,59 +2524,25 @@
     },
     "pension": {
       "kind": "Pension fund",
-      "notAnnualised": "gain / paid in, not annualised",
       "tabs": {
         "overview": "Overview",
         "contributions": "Contributions",
         "valuations": "Valuations",
         "settings": "Settings"
       },
-      "header": {
-        "paidIn": "{paidIn} paid in · value as of {date}",
-        "accrued": "Accrued in payslips"
-      },
       "kpis": {
-        "value": "Position value",
-        "valueNote": "as of {date}",
-        "noValue": "no statement yet",
-        "paidIn": "Paid in",
-        "paidInNote": "including {enrollment} of enrolment fees",
-        "gain": "Gain since start",
-        "gainNote": "{percent} of paid in, not annualised",
-        "pending": "Still to be credited",
-        "pendingNote": "{count, plural, one {payslips accrued, employer transfer due {date}} other {payslips of # quarters accrued, first employer transfer due {date}}}",
-        "pendingNone": "every quarter due has been transferred"
-      },
-      "gainReasons": {
-        "no_value": "no statement: the value is unknown",
-        "nothing_paid": "nothing paid in yet",
-        "outflows_unknown": "an outflow is not documented"
+        "paidIn": "Paid in"
       },
       "notice": {
         "pending": "{amount} accrued in the payslips is not yet in the fund: {quarters}.",
-        "pendingQuarter": "{quarter}, {amount}, employer transfer due {date}",
-        "dated": "Value dated {date} — not a delay."
-      },
-      "chart": {
-        "title": "Value and paid in",
-        "hint": "Documented points only: the valuations you record.",
-        "steps": "Steps are quarterly credits, not returns; nothing between two documents is drawn.",
-        "summary": "{name}: value and paid in at each month end; {value} at the last statement.",
-        "hoverPaidIn": "{paidIn} paid in"
+        "pendingQuarter": "{quarter}, {amount}, employer transfer due {date}"
       },
       "operations": {
         "title": "Fund operations",
-        "hint": "{count, plural, one {# operation} other {# operations}}",
-        "units": "{units} units",
         "empty": "No operation imported yet.",
-        "competence": "Competence",
         "date": "Op. date",
-        "worker": "Worker",
-        "employer": "Employer",
-        "tfr": "TFR",
         "fees": "Fees",
         "net": "Net invested",
-        "total": "Total",
         "remove": "Remove",
         "removed": "Operation removed"
       },
@@ -2730,7 +2557,6 @@
       },
       "bridge": {
         "title": "Why the numbers differ",
-        "noValue": "A statement is needed to reconcile the figures.",
         "note": "Gain / paid in is not annualised and is net of the explicit fees only, not of taxation at payout.",
         "lines": {
           "accrued": "Accrued in payslips",
@@ -2744,32 +2570,6 @@
           "market": "Change in value",
           "value": "Position value"
         }
-      },
-      "position": {
-        "title": "Position",
-        "fees": "Explicit fees",
-        "feesSplit": "{enrollment} enrolment · {association} association",
-        "management": "Management fee",
-        "managementNote": "already taken off the value · informative",
-        "rule": "Contribution rule",
-        "noRule": "no rule recorded",
-        "covered": "Competences covered until",
-        "coveredNote": "the last quarter the fund credited"
-      },
-      "months": {
-        "title": "Accrued in payslips",
-        "hint": "enrolment fees excluded",
-        "empty": "No payslip applied yet.",
-        "period": "Payslip period",
-        "quarter": "Quarter",
-        "worker": "Worker",
-        "employer": "Employer",
-        "tfr": "TFR",
-        "total": "Total",
-        "status": "Status",
-        "totalRow": "Total",
-        "thirteenth": "13th",
-        "openPayslip": "Open the payslip"
       },
       "payslipTypes": {
         "ordinary": "Ordinary",
@@ -2835,22 +2635,9 @@
         "cancel": "Cancel",
         "added": "Contribution added"
       },
-      "tax": {
-        "title": "Deductibility by year",
-        "empty": "No contribution credited yet.",
-        "year": "Year",
-        "worker": "Worker",
-        "employer": "Employer",
-        "total": "Total",
-        "limit": "Limit",
-        "note": "Worker and employer contributions only, TFR excluded, by the date of the operation: the certified tax year can differ."
-      },
       "statements": {
         "title": "Statements",
         "empty": "No statement imported yet.",
-        "date": "Valuation date",
-        "value": "Value",
-        "worker": "Worker",
         "employer": "Employer",
         "tfr": "TFR",
         "inflows": "Inflows",
@@ -2861,9 +2648,6 @@
         "title": "Cometa documents",
         "import": "Import documents",
         "empty": "No document yet.",
-        "file": "File",
-        "kind": "Kind",
-        "received": "Received",
         "state": "State",
         "kinds": {
           "cometa_operations": "Operations export",
@@ -2962,8 +2746,7 @@
         "states": {
           "reading": "The document is being read.",
           "failed": "The document could not be read: {error}.",
-          "applied": "Applied to the fund.",
-          "rejected": "Set aside."
+          "applied": "Applied to the fund."
         }
       },
       "create": {
@@ -2988,7 +2771,7 @@
         "rebuild": "Rebuild from payslips",
         "rebuilt": "{count, plural, one {# payslip} other {# payslips}} read again",
         "transfers": "Employer transfers",
-        "transfersDescription": "When accrued amounts are expected in the fund. Computed automatically, no confirmation needed.",
+        "transfersDescription": "When the contributions are expected in the fund. Calculated automatically, no confirmation needed.",
         "schedule": "Due on {dates} of the month after the quarter.",
         "source": "Source: {source} · verified {date}",
         "tolerance": "Display tolerance (days)",
@@ -3012,7 +2795,7 @@
         "tfrPct": "TFR %",
         "verifiedOn": "Verified on",
         "sourceHint": "The page or document the rule was read from.",
-        "valuationAccount": "Valuation account",
+        "valuationAccount": "Account of the value",
         "valuationDescription": "The account the fund's value is written to.",
         "openAccount": "Open {account}",
         "danger": "Danger zone",
@@ -3078,10 +2861,6 @@
         "parse_failed": "The document could not be read to the end.",
         "original_missing": "The original is no longer in storage, so it cannot be read again.",
         "unreadable_pdf": "This PDF could not be opened. Download the position summary from the Cometa portal again."
-      },
-      "kpiReasons": {
-        "cometa_operations": "no operations export imported yet",
-        "cometa_position": "no position summary imported yet"
       }
     },
     "home": {
@@ -3149,7 +2928,6 @@
         "stretch": "{from} – {to}",
         "summary": "Gain {when}: {total}. Best {best}, worst {worst}. By fund: {funds}.",
         "valueSummary": "Value and paid in at each valuation {when}. Last value {value} on {date}, paid in {paid}.",
-        "gainRow": "Gain {amount}",
         "paidRow": "Paid in {amount}",
         "empty": "Nothing to draw {when}",
         "emptyValue": "A second value is needed to draw the line.",
@@ -3184,7 +2962,6 @@
         "rate": "Return",
         "value": "Value",
         "updated": "Updated",
-        "actions": "Actions",
         "plan": "Plan {amount} a month · {status}",
         "planOff": "Plan {amount} a month",
         "onTheWay": "On the way {amount} · {count, plural, one {# quarter} other {# quarters}}",
@@ -3193,7 +2970,6 @@
         "highlight": "Highlight {name} on the chart",
         "undetermined": "not determinable",
         "first": "Record the first value",
-        "noValue": "no value yet",
         "total": "Total",
         "xirr": "Annualised (XIRR) {rate}",
         "updatedShort": "updated {date}"
@@ -3214,7 +2990,8 @@
         "year": "in {year}",
         "all": "overall",
         "custom": "between {from} and {to}"
-      }
+      },
+      "closingNote": "The value of {date} closes the period before."
     },
     "fund": {
       "hero": {
@@ -3230,8 +3007,8 @@
         "deposits": "{recurring, plural, one {# deposit} other {# deposits}}, {oneOff, plural, one {# one-off} other {# one-offs}}",
         "perDeposit": "{fee} per deposit",
         "deductible": "Deductible used",
-        "deductibleNote": "of {limit} in {year}, TFR excluded, by operation date",
-        "deductibleOver": "of {limit} in {year}: over by {over}. TFR excluded, by operation date",
+        "deductibleNote": "of {limit} in {year}, TFR and enrolment fee excluded, by operation date",
+        "deductibleOver": "of {limit} in {year}: over by {over}. TFR and enrolment fee excluded, by operation date",
         "plan": "Plan",
         "planDay": "a month, on day {day}",
         "planStatus": "a month, on day {day} · {status}",
@@ -3253,7 +3030,6 @@
         "sourceRule": "Found by the rule",
         "sourceHand": "One-off",
         "fee": "fee {amount}",
-        "origin": "you {you} · employer {employer} · TFR {tfr}",
         "empty": "No deposit in this period."
       },
       "bridge": {
@@ -3275,25 +3051,8 @@
         "settings": "Settings"
       },
       "recordValue": "Record value",
-      "valuationForm": {
-        "title": "Record value · {name}",
-        "description": "Enter the value on the latest statement. It is saved as the balance of the fund's account.",
-        "date": "Date of the value",
-        "value": "Value (€)",
-        "save": "Save value",
-        "editTitle": "Edit value",
-        "recorded": "Value recorded",
-        "updated": "Value updated"
-      },
       "bridgeValue": "Value",
       "bridgeNoValue": "A value is needed to connect these figures.",
-      "settingsCopy": {
-        "ter": "Annual management fee (%)",
-        "valuations": "Values",
-        "dangerText": "Archive {name}. Deposits and values stay readable.",
-        "valuationAccount": "Account of the value",
-        "transfersDescription": "When the contributions are expected in the fund. Calculated automatically, no confirmation needed."
-      },
       "valuations": {
         "title": "Values",
         "count": "{count, plural, one {# value} other {# values}}",
@@ -3351,12 +3110,13 @@
           "title": "The rule",
           "text": "Expenses on {account} whose payee contains {match} become a deposit, less {fee} of fee.",
           "anyAccount": "any account",
-          "noFee": "no",
           "active": "Active",
           "paused": "Paused",
           "edit": "Edit the rule",
-          "none": "No rule: enter the deposits by hand."
-        }
+          "none": "No rule: enter the deposits by hand.",
+          "textNoFee": "Expenses on {account} whose payee contains {match} become a deposit. No fee is set."
+        },
+        "feeUnknown": "A fee is unknown: the totals count it as 0."
       },
       "contributions": {
         "you": "You",
@@ -3401,7 +3161,7 @@
           "year": "Year",
           "used": "Used",
           "limit": "Limit",
-          "note": "You + employer, TFR excluded, by operation date. The year the fund certifies can differ: for your tax return, use the fund's certificate."
+          "note": "You + employer, TFR and enrolment fee excluded, by operation date. The year the fund certifies can differ: for your tax return, use the fund's certificate."
         },
         "voluntary": {
           "title": "Voluntary payment",

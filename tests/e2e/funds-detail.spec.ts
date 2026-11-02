@@ -1,32 +1,12 @@
-// tests/e2e/funds-detail.spec.ts — a fund's new page (docs/design/funds-ux.md §5.3, §6, F3), with the
-// invented funds of the `fundsDetail` seed. In a local preview it drives the page; on the deployed site the
-// only thing to say about it is that it does not answer, because Mattia never sees two designs.
+// tests/e2e/funds-detail.spec.ts — a fund's page (docs/design/funds-ux.md §5.3, §6, F3), with the invented
+// funds of the `fundsDetail` seed.
 import { expect, type Page, test } from "@playwright/test";
-import { FUNDS_HOME_PREVIEW, sessionState } from "./env";
+import { sessionState } from "./env";
 
-const HOME = "/funds/preview";
+const HOME = "/funds";
 const Y = new Date().getFullYear();
 
-test.describe("on the deployed site", () => {
-  test.skip(FUNDS_HOME_PREVIEW, "it answers in a local preview");
-  test.use({ storageState: sessionState("layout") });
-
-  test("a real fund's new page does not answer", async ({ page }) => {
-    await page.goto("/funds");
-    const href = await page
-      .getByRole("link", { name: /Fideuram/ })
-      .filter({ visible: true })
-      .first()
-      .getAttribute("href");
-    const id = href!.split("/").at(-1)!.split("?")[0];
-    const response = await page.goto(`${HOME}/${id}`);
-    expect(response?.status()).toBe(404);
-    await expect(page.getByTestId("funds-hero")).toHaveCount(0);
-  });
-});
-
-test.describe("in a preview", () => {
-  test.skip(!FUNDS_HOME_PREVIEW, "it answers only in a local preview until F5 connects it");
+test.describe("a fund's page", () => {
   test.use({ storageState: sessionState("fundsDetail") });
 
   const row = (page: Page, name: string) => page.getByTestId("fund-home-row").filter({ hasText: name });
@@ -50,7 +30,7 @@ test.describe("in a preview", () => {
         const rate = await home.getByTestId("fund-rate").textContent();
         const paid = await home.locator("td").nth(1).textContent();
         await home.getByRole("link", { name }).click();
-        await expect(page).toHaveURL(new RegExp(`/funds/preview/[0-9a-f-]+${query.replace("?", "\\?")}$`));
+        await expect(page).toHaveURL(new RegExp(`/funds/[0-9a-f-]+${query.replace("?", "\\?")}$`));
         await expect(hero(page)).toHaveAttribute("data-cents", cents!);
         await expect(page.getByTestId("funds-rate")).toHaveText(rate!);
         await expect(page.getByTestId("kpi-paid")).toContainText(paid!);
@@ -86,7 +66,7 @@ test.describe("in a preview", () => {
     await tabs.getByRole("link", { name: "Overview" }).click();
     await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
     await page.locator(`header a[href="${HOME}?period=${Y - 1}"]`).click();
-    await expect(page).toHaveURL(new RegExp(`/funds/preview\\?period=${Y - 1}$`));
+    await expect(page).toHaveURL(new RegExp(`/funds\\?period=${Y - 1}$`));
     await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
   });
 

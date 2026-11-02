@@ -297,9 +297,7 @@ export function homeSummary(input: {
       limitCents === null || pensions.length === 0
         ? null
         : {
-            usedCents: sum(
-              pensions.map((line) => line.measure.origin.youCents + line.measure.origin.employerCents),
-            ),
+            usedCents: sum(pensions.map((line) => line.measure.deductibleCents)),
             limitCents,
           },
   };

@@ -5,12 +5,9 @@
 // the seed creates them with their sample data before the run and removes them, with everything
 // they own, after it (scripts/seed-e2e.ts). No spec reads or writes anybody else's data.
 //
-// E2E_BASE_URL points them at a local preview instead, against `ledgerly_test`: the only place a
-// screen not yet connected can be driven (playwright.preview.config.ts, docs/design/funds-ux.md §10).
+// E2E_BASE_URL points them at a local preview instead, against `ledgerly_test`
+// (scripts/preview-on-test.sh, docs/design/funds-ux.md §10).
 export const BASE_URL = process.env.E2E_BASE_URL ?? "https://dash.longobardo.me";
-
-/** True in a local preview, where the new Funds home answers; the deployed site must answer 404. */
-export const FUNDS_HOME_PREVIEW = process.env.E2E_FUNDS_HOME_PREVIEW === "1";
 
 // Better Auth rate-limits password sign-ins to 5 per minute per client (/sign-in/email,
 // src/platform/auth/auth.ts), and the whole run is one client. The suite spends 4; a spec that

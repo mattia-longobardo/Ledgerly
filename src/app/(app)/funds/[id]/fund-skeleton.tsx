@@ -2,7 +2,7 @@ import { Card } from "@/ui/card";
 import { Skeleton } from "@/ui/skeleton";
 
 /** The shape of a fund's page while it reads (§6): the header, the hero, the KPIs, the chart and two rows. */
-export default function FundDetailLoading() {
+export function FundDetailSkeleton() {
   return (
     <main
       data-testid="fund-detail-loading"

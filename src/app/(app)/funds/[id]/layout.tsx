@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { isFundId } from "@/modules/funds/detail";
-import { fundsHomePreview } from "@/modules/funds/preview";
 import { FundError, requireFund } from "@/modules/funds/service";
 import { requireSession } from "@/platform/auth/session";
 
-/** Above the page's `loading.tsx`, so another person's fund answers a real 404 and never a skeleton. */
+/** Above the page's skeleton, so another person's fund answers a real 404. */
 export default async function FundDetailLayout({
   children,
   params,
@@ -13,7 +12,6 @@ export default async function FundDetailLayout({
   children: ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  if (!fundsHomePreview()) notFound();
   const ctx = await requireSession();
   const { id } = await params;
   if (!isFundId(id)) notFound();

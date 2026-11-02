@@ -1,7 +1,7 @@
 // tests/e2e/cometa.spec.ts — the F6 pension journey (spec §7.7, §9.3, §11), on the synthetic twins
 // of the Cometa documents and of the payslips: never the owner's own files.
 import { expect, type Page, test } from "@playwright/test";
-import { EXPORT_AUGUST, POSITION_AUGUST } from "../fixtures/cometa/samples";
+import { EXPORT_AUGUST, inYear, POSITION_AUGUST } from "../fixtures/cometa/samples";
 import { twinOperationsHtml, twinPositionPdf } from "../fixtures/cometa/twin";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../fixtures/payroll/samples";
 import { twinPdf } from "../fixtures/payroll/twin";
@@ -22,6 +22,10 @@ async function importDocuments(page: Page, files: { name: string; mimeType: stri
   await expect(dialog).toBeHidden();
 }
 
+/** The twins are dated 2031, and a fund's pages read nothing after today: last year, every day of it past. */
+const LAST_YEAR = new Date().getFullYear() - 1;
+const lastYear = <T>(twin: T): T => inYear(twin, LAST_YEAR);
+
 const tab = (page: Page, name: string) =>
   page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name });
 
@@ -32,7 +36,7 @@ test("a pension fund takes the payslips, the export and the statement, and recon
 
   await test.step("the payslips of a whole year are applied before the fund exists", async () => {
     await page.goto("/payroll");
-    for (const twin of [JANUARY, FEBRUARY, MARCH, APRIL, THIRTEENTH]) {
+    for (const twin of [JANUARY, FEBRUARY, MARCH, APRIL, THIRTEENTH].map(lastYear)) {
       await page.getByRole("button", { name: "Add payslip" }).first().click();
       const dialog = page.getByRole("dialog", { name: "Add payslips" });
       await dialog.locator('input[type="file"]').setInputFiles([
@@ -64,19 +68,17 @@ test("a pension fund takes the payslips, the export and the statement, and recon
     await dialog.getByLabel("Name").fill("Cometa");
     await dialog.getByLabel("Provider").fill("Cometa");
     await dialog.getByLabel("Type / compartment").fill("Crescita");
-    await dialog.getByLabel("Member since").fill("2031-01-01");
+    await dialog.getByLabel("Member since").fill(`${LAST_YEAR}-01-01`);
     await dialog.getByRole("button", { name: "Save fund" }).click();
     await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/);
     fundUrl = page.url();
     await expect(page.getByRole("heading", { name: "Cometa", level: 1 })).toBeVisible();
     // 4 × (25,00 + 45,00 + 150,00) + the 13th's 5,00 = 885,00 € accrued, nothing credited yet.
-    await expect(page.getByTestId("pension-notice")).toContainText("885,00 €");
-    await expect(page.getByTestId("pension-notice")).toContainText("I 2031");
-    // With no document of the fund's own, the page shows that money under its own label rather
-    // than "No valuation yet" and a column of dashes — and says nothing about a confirmation the
-    // fund owes: the payslips are the source (owner, 2026-09-20).
-    await expect(page.getByText("Accrued in payslips").first()).toBeVisible();
-    await expect(page.getByText("the fund has not confirmed it yet")).toHaveCount(0);
+    // The contributions tab has them, with their quarters, before the fund has said anything.
+    await page.goto(`${fundUrl}?tab=contributions&period=all`);
+    await expect(page.getByTestId("payslip-line")).toHaveCount(5);
+    await expect(page.getByTestId("fund-payslips")).toContainText("885,00 €");
+    await expect(page.getByTestId("fund-quarters")).toContainText(`I ${LAST_YEAR}`);
   });
 
   await test.step("the export is reviewed operation by operation, then applied", async () => {
@@ -84,7 +86,7 @@ test("a pension fund takes the payslips, the export and the statement, and recon
       {
         name: "DettaglioOperazioni.xls",
         mimeType: "application/vnd.ms-excel",
-        buffer: Buffer.from(twinOperationsHtml(EXPORT_AUGUST)),
+        buffer: Buffer.from(twinOperationsHtml(EXPORT_AUGUST.map(lastYear))),
       },
     ]);
     await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}\/documents\/[0-9a-f-]{36}$/);
@@ -96,8 +98,9 @@ test("a pension fund takes the payslips, the export and the statement, and recon
     await expect(rows.filter({ hasText: "New" })).toHaveCount(3);
     await expect(rows.filter({ hasText: "Enrolment" })).toHaveCount(1);
     await page.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/, { timeout: 20_000 });
-    await expect(page.getByTestId("operation-row")).toHaveCount(3);
+    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}\?tab=valuations$/, { timeout: 20_000 });
+    await page.goto(`${fundUrl}?tab=contributions&period=all`);
+    await expect(page.getByTestId("operation-line")).toHaveCount(3);
   });
 
   await test.step("the statement gives the value, with its own date and its box on the page", async () => {
@@ -105,7 +108,7 @@ test("a pension fund takes the payslips, the export and the statement, and recon
       {
         name: "riepilogo_posizione.pdf",
         mimeType: "application/pdf",
-        buffer: Buffer.from(await twinPositionPdf(POSITION_AUGUST)),
+        buffer: Buffer.from(await twinPositionPdf(lastYear(POSITION_AUGUST))),
       },
     ]);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Position summary", {
@@ -116,43 +119,40 @@ test("a pension fund takes the payslips, the export and the statement, and recon
     await page.getByRole("button", { name: "Position value" }).click();
     await expect(page.getByTestId("pdf-highlight")).toHaveCount(1);
     await page.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}\?tab=valuations$/, { timeout: 20_000 });
   });
 
   await test.step("the six quantities are shown apart, and the panel reconciles them", async () => {
-    await page.goto(fundUrl);
-    // Value 950,00 · paid in 890,32 · gain +59,68 · still to be credited 5,00 (the 13th).
-    await expect(page.getByText("950,00 €").first()).toBeVisible();
-    await expect(page.getByText("890,32 €").first()).toBeVisible();
-    await expect(page.getByText("+59,68 €").first()).toBeVisible();
-    const bridge = page.getByTestId("pension-bridge");
+    await page.goto(`${fundUrl}?period=${LAST_YEAR}`);
+    // Value 950,00 · paid in 890,32 · gain +59,68.
+    await expect(page.getByTestId("fund-value")).toContainText("950,00 €");
+    await expect(page.getByTestId("kpi-paid")).toContainText("890,32 €");
+    await expect(page.getByTestId("funds-hero")).toContainText("+59,68 €");
+    // The enrolment fee is in the money paid in, and not in the deductible: 100,00 + 180,00.
+    await expect(page.getByTestId("kpi-deductible")).toContainText("280,00 €");
+    const bridge = page.getByTestId("fund-bridge");
     await expect(bridge).toContainText("Accrued in payslips");
     await expect(bridge).toContainText("885,00 €");
     await expect(bridge).toContainText("890,32 €");
     await expect(bridge).toContainText("874,00 €");
-    // Units, unit price and holdings are not shown any more (owner, 2026-09-20): what the Position
-    // card answers for is the fees, the tariff and how far the fund's own credits reach.
-    await expect(page.getByTestId("pension-position")).toContainText("16,32 €");
-    await expect(page.getByTestId("pension-position")).not.toContainText("40.000");
   });
 
   await test.step("the quarters reconcile, and the months carry their state", async () => {
     await tab(page, "Contributions").click();
-    await expect(page.getByTestId("competence-row")).toHaveCount(5);
-    const quarters = page.getByTestId("pension-quarters");
-    await expect(quarters).toContainText("I 2031");
+    await expect(page.getByTestId("payslip-line")).toHaveCount(5);
+    const quarters = page.getByTestId("fund-quarters");
+    await expect(quarters).toContainText(`I ${LAST_YEAR}`);
     await expect(quarters).toContainText("Reconciled");
-    await expect(quarters).toContainText("Accrued, not due");
-    await expect(page.getByTestId("pension-tax")).toContainText("2031");
+    // The same deductible as the KPI: the table and the KPI read the same flows.
+    await expect(page.getByTestId("deductible-line")).toHaveAttribute("data-cents", "28000");
   });
 
   await test.step("the statement and the documents are listed, and the list shows the fund", async () => {
     await tab(page, "Valuations").click();
-    await expect(page.getByTestId("statement-row")).toHaveCount(1);
-    await expect(page.getByTestId("document-row")).toHaveCount(2);
-    await page.goto("/funds");
-    const row = page.getByTestId("fund-row").filter({ hasText: "Cometa" });
-    await expect(row).toContainText("Pension fund");
+    await expect(page.getByTestId("statement-line")).toHaveCount(1);
+    await expect(page.getByTestId("fund-document")).toHaveCount(2);
+    await page.goto(`/funds?period=${LAST_YEAR}`);
+    const row = page.getByTestId("fund-home-row").filter({ hasText: "Cometa" });
     await expect(row).toContainText("950,00 €");
     await expect(row).toContainText("890,32 €");
   });
@@ -160,13 +160,13 @@ test("a pension fund takes the payslips, the export and the statement, and recon
 
 test("the pension fund reads at 400 px", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 900 });
-  await page.goto("/funds");
-  const item = page.getByTestId("fund-item").filter({ hasText: "Cometa" });
+  await page.goto(`/funds?period=${LAST_YEAR}`);
+  const item = page.getByTestId("fund-home-item").filter({ hasText: "Cometa" });
   await expect(item).toBeVisible();
-  await item.click();
+  await item.getByRole("link", { name: "Cometa" }).click();
   await expect(page.getByRole("heading", { name: "Cometa", level: 1 })).toBeVisible();
   await expect(page.getByText("950,00 €").first()).toBeVisible();
-  await expect(page.getByTestId("pension-bridge")).toBeVisible();
+  await expect(page.getByTestId("fund-bridge")).toBeVisible();
   // Nothing overflows the phone's width.
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);

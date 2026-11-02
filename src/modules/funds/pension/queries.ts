@@ -58,7 +58,6 @@ import { type OperationLike, type QuarterStatus, reconcile } from "./reconcile";
 import {
   type Component,
   DEDUCTIBILITY_LIMITS,
-  deductibilityLimit,
   NO_FEES,
   parseSchedule,
   type PensionFees,
@@ -79,15 +78,6 @@ import {
 export interface MonthRow {
   competence: Competence;
   quarter: QuarterStatus | null;
-}
-
-/** A year against its deductibility limit (GC §7): worker + employer, TFR excluded. */
-export interface TaxYear {
-  year: number;
-  workerCents: Cents;
-  employerCents: Cents;
-  totalCents: Cents;
-  limitCents: Cents | null;
 }
 
 /**
@@ -116,7 +106,6 @@ export interface PensionDetail {
   /** When the latest applied export was received: what says whether a missing credit is late. */
   freshness: CivilDate | null;
   tariffs: Awaited<ReturnType<typeof feeTariffs>>;
-  taxYears: TaxYear[];
   chart: { months: MonthKey[]; value: (Cents | null)[]; paidIn: Cents[] };
   /**
    * How the fund did, month by month (spec §7.7's Simple Dietz), and where it is heading. The
@@ -267,23 +256,6 @@ export async function pensionDetail(
     quarter: byQuarter.get(`${competence.year}-${competence.quarter}`) ?? null,
   }));
 
-  const taxByYear = new Map<number, TaxYear>();
-  for (const operation of operations) {
-    if (operation.classification !== "contribution" && operation.classification !== "voluntary") continue;
-    const year = Number(operation.operationDate.slice(0, 4));
-    const row = taxByYear.get(year) ?? {
-      year,
-      workerCents: 0n,
-      employerCents: 0n,
-      totalCents: 0n,
-      limitCents: deductibilityLimit(year),
-    };
-    row.workerCents += operation.workerCents;
-    row.employerCents += operation.employerCents;
-    row.totalCents = row.workerCents + row.employerCents;
-    taxByYear.set(year, row);
-  }
-
   // Simple Dietz over the last twelve months: thirteen month ends, the first being the end of the
   // month before the window, and the money that went in during each month.
   const inflows = paidInFlows(asOperations, quarters, fees).map((flow) => ({ ...flow, feeCents: null }));
@@ -322,7 +294,6 @@ export async function pensionDetail(
     documents,
     freshness,
     tariffs,
-    taxYears: [...taxByYear.values()].sort((a, b) => b.year - a.year),
     chart: {
       months: chartMonths,
       value: heldAt(points, chartMonths),

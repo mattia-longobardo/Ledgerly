@@ -180,7 +180,7 @@ Tutti seguono il periodo, salvo dove è scritto. Disponibilità: **sì** = il da
 | **Commissioni**                       | Costi espliciti sui versamenti                                  | Σ `feeCents` nel periodo. Andamento − Commissioni = Guadagno, al centesimo                          | Sì. Gap: `feeCents` nullo su un versamento → nota «una commissione è sconosciuta». Il costo di gestione non è qui: è già nel valore |
 | **In arrivo** (sempre a oggi)         | Maturato in busta, non ancora nel fondo                         | `pendingCents`, `metrics.ts:218-226`, per trimestre con scadenza                                   | Sì. Solo fondo pensione                            |
 | **Non ancora nel valore** (nota)      | Versato dopo l'ultimo valore                                    | Flussi con data > `a(p)`                                                                           | Sì                                                |
-| **Deducibile usato** (per anno)       | Quota fiscale consumata                                         | (tu + azienda) nell'anno / `deductibilityLimit(anno)`. Senza periodo: non si mostra                  | Sì: `pension/rules.ts:165`. Per data operazione: l'anno certificato può differire, la nota lo dice |
+| **Deducibile usato** (per anno)       | Quota fiscale consumata                                         | (tu + azienda) di contributi e versamenti volontari nell'anno / `deductibilityLimit(anno)`. Quota di iscrizione esclusa, nel KPI e nel tab. Senza periodo: non si mostra                  | Sì: `pension/rules.ts:165`. Per data operazione: l'anno certificato può differire, la nota lo dice |
 | **Piano** (sempre a oggi, PAC)        | Cosa deve entrare                                               | `monthlyCents`, `debitDay`, `monthStatus`                                                          | Sì                                                |
 | **Quote, valore quota** (riga, pensione) | Posizione in quote                                           | Σ `unit_movements.units`; ultimo `unit_price` con data                                             | Sì per il fondo pensione. **Gap PAC**: `fund_valuations.units` è sempre vuoto e il modulo non lo chiede; nessun valore quota. Si mostra solo dove esiste (decisione 6) |
 | **Proiezione** (sempre a oggi)        | Dove arriva il fondo, per ipotesi                               | `forecast()` con il **piano** se esiste, altrimenti la media dei soli versamenti ricorrenti. Una tantum escluso | Sì, dopo la correzione del n. 4                    |
@@ -367,28 +367,29 @@ Mattia ha approvato la colonna «Default raccomandato» per tutte le 8 scelte. L
 
 ## 10. Fase F2: la home non collegata
 
-Il codice è su `main`, ma la produzione non lo mostra. La pagina è `src/app/(app)/funds/preview/page.tsx`. I
-numeri sono in `src/modules/funds/home.ts` (puro), sopra `measurePeriod`. F5 sposta la pagina su `/funds`, poi
-toglie `preview.ts`, `preview-env.ts`, `playwright.preview.config.ts` e i rami `FUNDS_HOME_PREVIEW` degli spec.
+La pagina è `src/app/(app)/funds/page.tsx`, collegata in F5 (§13). I numeri sono in `src/modules/funds/home.ts`
+(puro), sopra `measurePeriod`.
 
-**Meccanismo.** `/funds/preview` risponde solo con `FUNDS_HOME_PREVIEW=1`. La variabile non esiste in
-`.env.homelab`, quindi in produzione il layout della route risponde 404, prima di ogni lettura dei dati. Nessun
-link porta alla route. Sul sito in produzione `funds-home.spec.ts` controlla il 404, e gli altri spec della home
-non partono.
-
-**E2E in locale.** L'anteprima usa `ledgerly_test`, mai `ledgerly`, e ascolta solo su `127.0.0.1:3999`:
+**E2E in locale.** Dopo F5 gli spec girano sul sito deployato. L'anteprima serve a provarli prima del deploy: usa
+`ledgerly_test`, mai `ledgerly`, e ascolta solo su `127.0.0.1:3999`. Serve una configurazione Playwright temporanea,
+non committata, con `globalSetup` e `globalTeardown` a `undefined`, perché il seed della suite scrive sul sito
+deployato:
 
 ```sh
 docker build -t ledgerly:preview .
 sh scripts/preview-on-test.sh up ledgerly:preview   # attendi /api/health
 sh scripts/preview-on-test.sh seed
-npx playwright test --config playwright.preview.config.ts tests/e2e/funds-home.spec.ts
+E2E_BASE_URL=http://localhost:3999 npx playwright test --config <configurazione temporanea> tests/e2e/funds-home.spec.ts
 sh scripts/preview-on-test.sh remove
 sh scripts/preview-on-test.sh down && docker image rm ledgerly:preview
 ```
 
 Il browser di Playwright si prepara come dice `AGENTS.md`, sezione Deploy. Una checkout senza `.env.homelab`
 indica il file con `LEDGERLY_ENV_FILE`. Il seed `fundsHome` contiene anni negli stati di §6, con importi inventati.
+
+**Limite dell'anteprima.** Un login con password risponde 403 `INVALID_ORIGIN`: `.env.homelab` ha `BETTER_AUTH_URL` di
+produzione, e l'origine `http://localhost:3999` non è fidata. Quindi `mobile.spec.ts:6`, che fa il login, fallisce
+solo in anteprima. Sul sito deployato passa. Gli spec che partono dalle sessioni del seed non hanno questo limite.
 
 **Scelte di F2.**
 
@@ -402,16 +403,12 @@ indica il file con `LEDGERLY_ENV_FILE`. Il seed `fundsHome` contiene anni negli 
 - La vista Valore disegna un gradino per lettura. A ogni data un fondo conta con la sua ultima lettura e con il
   solo denaro che quella lettura vede: un versamento successivo non crea una perdita.
 - Dalla riga esce «Modifica» (§4, n. 20): resta nel tab Impostazioni del fondo. Resta «Registra valore».
-- I link ai fondi non portano ancora il periodo: il dettaglio di oggi legge `from` e `to` a mesi. Li aggiunge F3 (§11).
 
 ## 11. Fase F3: il dettaglio non collegato
 
-La pagina è `src/app/(app)/funds/preview/[id]/page.tsx`, sotto lo stesso `layout.tsx` della home: con la variabile
-spenta risponde 404 prima di ogni lettura dei dati. La home sta in `preview/(home)/`, perché il suo `loading.tsx` non
-copra il fondo: un fondo inesistente risponde un vero 404 e non uno skeleton. I numeri sono in
+La pagina è `src/app/(app)/funds/[id]/page.tsx`, collegata in F5 (§13). I numeri sono in
 `src/modules/funds/detail.ts` (puro): `fundSummary` chiama `homeSummary` con quel solo fondo, e `fundHomeRow` legge la
-stessa riga della home. Così guadagno e rendimento non possono differire dalla riga della home. F5 sposta anche questa
-pagina e toglie il gruppo `(home)`.
+stessa riga della home. Così guadagno e rendimento non possono differire dalla riga della home.
 
 **E2E.** `tests/e2e/funds-detail.spec.ts`, con il seed `fundsDetail`. Stessa procedura di §10.
 
@@ -419,7 +416,7 @@ pagina e toglie il gruppo `(home)`.
 
 - Un solo rendimento: Modified Dietz, con XIRR nel `title` da 365 giorni. La proiezione mostra solo le ipotesi: il tasso
   proprio del fondo è un composto, e sarebbe un secondo rendimento (decisione 2 di §9).
-- I link della home portano il periodo verso `/funds/preview/<id>`, e la briciola del fondo lo riporta alla home. Il
+- I link della home portano il periodo verso `/funds/<id>`, e la briciola del fondo lo riporta alla home. Il
   periodo resta tra i tab; `view` resta solo nel tab Panoramica.
 - Il controllo del periodo compare solo sui tab che lo seguono: tutti, tranne Impostazioni (§12).
 - «Dal maturato al valore» non segue il periodo: copre tutta la vita del fondo fino all'ultimo valore, e lo dichiara.
@@ -431,19 +428,9 @@ pagina e toglie il gruppo `(home)`.
 ## 12. Fase F4: i tab del dettaglio
 
 I tab sono in `src/modules/funds/ui/` (`pension-contributions.tsx`, `pac-deposits.tsx`, `fund-valuations.tsx`), sotto la
-stessa pagina di F3. I numeri sono in `src/modules/funds/tabs.ts` (puro). Con la variabile spenta ogni tab e il redirect
-rispondono 404.
+stessa pagina di F3. I numeri sono in `src/modules/funds/tabs.ts` (puro).
 
-**E2E.** `tests/e2e/funds-tabs.spec.ts`, con i seed `fundsDetail` e `fundsCopy` (gli stessi fondi, in italiano). Stessa
-procedura di §10. Con `FUNDS_HOME_PREVIEW=0` nell'anteprima e `E2E_FUNDS_HOME_PREVIEW=0` nello spec, si prova il
-comportamento della produzione: route nuove 404, pagine attuali invariate.
-
-**Compiti di F5.**
-
-- Spostare `preview/[id]/returns/route.ts` su `/funds/[id]/returns`, al posto della pagina attuale, con `base` nuovo.
-- Il redirect di `span`, `from` e `to` (`legacyFundQuery`) è già nella pagina del fondo: si attiva quando la pagina si sposta.
-- Togliere le chiavi di testo non più usate e le prop `newCopy` e `terLabel`, che tengono separati i testi vecchi e nuovi.
-- Portare le pagine dei documenti sotto il nuovo dettaglio: oggi `fund-valuations.tsx` porta a `/funds/[id]/documents/...`.
+**E2E.** `tests/e2e/funds-tabs.spec.ts`, con i seed `fundsDetail` e `fundsCopy` (gli stessi fondi, in italiano).
 
 **Scelte di F4.**
 
@@ -455,14 +442,38 @@ comportamento della produzione: route nuove 404, pagine attuali invariate.
   «Rendimento del tratto», con una nota sotto la tabella.
 - Da `/returns` restano le righe, il tratto migliore e il peggiore. Il composto, il valore «all'anno» e il grafico a barre non
   passano nel tab: i primi due sembrerebbero un secondo rendimento del periodo (decisione 2), il terzo ripete le righe.
-- Il deducibile legge gli stessi flussi del KPI, quindi il tab e il KPI non possono differire: tu + azienda di ogni flusso in
-  ingresso. La pagina di oggi conta solo contributi e versamenti volontari, quindi non conta le quote di iscrizione. Un periodo
-  personalizzato mostra l'anno intero di ogni anno che tocca, perché il limite è annuale.
+- Il deducibile legge gli stessi flussi del KPI, quindi il tab e il KPI non possono differire: tu + azienda dei soli contributi e
+  versamenti volontari (`FundFlow.deductible`). La quota di iscrizione e un trasferimento in entrata restano nel versato, fuori dal
+  deducibile (§13). Un periodo personalizzato mostra l'anno intero di ogni anno che tocca, perché il limite è annuale.
 - Un trimestre compare nel periodo se lo toccano i suoi mesi, la scadenza o un accredito: il IV trimestre accreditato a gennaio
   sta in due anni.
-- Le righe di Estratti seguono il periodo. La lista dei documenti no: un file non appartiene a un periodo.
+- Le righe di Estratti seguono il periodo con la decisione 3: un estratto del 1° gennaio sta nell'anno che chiude, come un valore
+  dello stesso giorno. La lista dei documenti non segue il periodo: un file non appartiene a un periodo.
 - Le tabelle passano a lista in base alla larghezza della pagina (`@5xl`), non a `md`: con la barra laterale, a 768 px le colonne
   non entrano.
 - `span`: 60 era «All» e porta a `period=all`; 12 porta all'anno in corso, come `1y` in Investments; altri numeri restano gli
-  stessi mesi, come `from` e `to`. `from` e `to` a mesi vincono su `span`, come nella pagina di oggi.
-- Il testo «TER» resta nel messaggio di errore condiviso `funds.errors.invalid`: F5 lo cambia con le altre chiavi vecchie.
+  stessi mesi, come `from` e `to`. `from` e `to` a mesi vincono su `span`, come nella vecchia pagina. Uno `span` che non è un numero di
+  mesi tra 1 e 1200 viene ignorato.
+
+## 13. Fase F5: collegamento e rilascio unico
+
+Un solo deploy porta in produzione F2, F3, F4 e F5. La UI vecchia e il meccanismo dell'anteprima non esistono più: `/funds/preview`
+risponde 404, perché `preview` non è un id di un fondo.
+
+**Scelte di F5.**
+
+- **Nessun gruppo `(home)` e nessun `loading.tsx`.** Un `loading.tsx` su `/funds` coprirebbe anche `/funds/[id]`, e uno su
+  `/funds/[id]` coprirebbe i documenti: un id inesistente risponderebbe 200 con uno skeleton. Lo skeleton è un `Suspense` dentro la
+  pagina, e i redirect stanno sopra di esso, quindi restano veri redirect.
+- **Deducibile (decisione dell'orchestratore, senza risposta di Mattia).** La quota di iscrizione non conta, come nella pagina di
+  prima: il trattamento fiscale non è verificato. La regola è una sola, per il tab e per il KPI. Per contarla basta aggiungere
+  `enrollment` a `DEDUCTIBLE_CLASSES`.
+- **Export e riga dei fondi in Investments.** `fundsView` legge l'ultimo valore documentato per ogni fondo, anche per un PAC. Prima un
+  PAC leggeva il saldo a oggi, che può essere la copia `system` di un valore poi corretto.
+- **Documenti.** Il ritorno e «Applica» portano al tab Valutazioni, che elenca i documenti.
+- **Una sola copia dei testi.** `fund.valuationForm` e `fund.settingsCopy` sono confluiti nelle chiavi originali. Le chiavi che nessun
+  codice legge sono tolte.
+- **Seed `layout`.** Il PAC ha un anno con denaro e senza valori (due anni fa) e un anno misurato (l'anno scorso). Cometa e le sue buste
+  sono dell'anno scorso: le date 2031 dei gemelli cadevano dopo oggi, e la pagina del fondo mostrava solo uno stato vuoto.
+- **Controllo dei proprietari.** `decideDifference` riceve dal browser gli id di buste e operazioni: un array di uuid non ha chiave
+  esterna, quindi ora accetta solo le righe di quel fondo e di quell'utente.

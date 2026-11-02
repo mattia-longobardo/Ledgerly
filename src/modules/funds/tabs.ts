@@ -19,6 +19,17 @@ import { periodReturns, periodStats } from "./rules";
 export const inPeriod = (on: string, period: FundPeriod): boolean =>
   (period.from === null || on >= period.from) && on <= period.to;
 
+/**
+ * Whether a reading belongs to a period. A reading on the 1st closes the month before (decision 3 of §9), so a
+ * statement of 1 January belongs to the year before, as a value of that day does.
+ */
+export const readsPeriod = (on: string, period: FundPeriod): boolean =>
+  (period.from === null || on > closingDay(addDays(period.from, -1))) && on <= closingDay(period.to);
+
+/** A reading inside the dates of a period that closes the period before: it says nothing about this one. */
+export const closesPeriodBefore = (on: string, period: FundPeriod): boolean =>
+  period.from !== null && on >= period.from && on <= closingDay(addDays(period.from, -1));
+
 const quarterStart = (year: number, quarter: number): MonthKey =>
   addMonths(monthKey(`${year}-01-01`), (quarter - 1) * 3);
 
@@ -62,9 +73,9 @@ export interface DeductibleYear {
 }
 
 /**
- * The deductible money by calendar year, newest first (§5.3), from the flows the KPI reads. A custom period
- * shows the whole of each year it touches, because the limit is a limit of the whole year. Money dated after
- * today is not there yet, for the KPI too.
+ * The deductible money by calendar year, newest first (§5.3), from the flows the KPI reads, so the two cannot
+ * differ: an enrolment fee is in neither. A custom period shows the whole of each year it touches, because the
+ * limit is a limit of the whole year. Money dated after today is not there yet, for the KPI too.
  */
 export function deductibleYears(
   flows: readonly FundFlow[],
@@ -74,8 +85,8 @@ export function deductibleYears(
   const firstYear = period.from === null ? null : Number(period.from.slice(0, 4));
   const lastYear = Number(period.to.slice(0, 4));
   const years = new Map<number, DeductibleYear>();
-  for (const { on, origin } of flows) {
-    if (on > todayOn) continue;
+  for (const { on, origin, deductible } of flows) {
+    if (!deductible || on > todayOn) continue;
     const year = Number(on.slice(0, 4));
     if (year > lastYear || (firstYear !== null && year < firstYear)) continue;
     if (origin.youCents === 0n && origin.employerCents === 0n) continue;
@@ -188,14 +199,15 @@ const flat = (query: Query): Record<string, string> => {
  * The address of the old page sent to the new parameters (§6). `from` and `to` by month are
  * `legacyPeriodQuery`'s, and they win, as they did on the old page. `span` chose the last months of a chart:
  * 60 was the old "All", 12 is the year running like the `1y` of Investments, and any other number stays the
- * same months as days. `null` when nothing is old. F5 turns this on for `/funds/[id]`.
+ * same months as days. `null` when nothing is old. A `span` that is not a number of months is dropped.
  */
 export function legacyFundQuery(query: Query, todayOn: CivilDate): Record<string, string> | null {
   const span = one(query.span);
   const rest = Object.fromEntries(Object.entries(query).filter(([name]) => name !== "span"));
   const legacy = legacyPeriodQuery(rest, todayOn);
   if (span === undefined) return legacy;
-  const months = /^[1-9]\d*$/.test(span) ? Number(span) : null;
+  // Past a century it is not a span of months: `addMonths` would write a date that does not exist.
+  const months = /^[1-9]\d{0,3}$/.test(span) && Number(span) <= 1200 ? Number(span) : null;
   const named = rest.period !== undefined || rest.from !== undefined || rest.to !== undefined;
   if (legacy !== null || named || months === null || months === 12) return legacy ?? flat(rest);
   if (months === 60) return { ...flat(rest), period: "all" };
@@ -204,7 +216,6 @@ export function legacyFundQuery(query: Query, todayOn: CivilDate): Record<string
 
 /**
  * Where the old returns page goes (§6): the Valuations tab of the fund, with the period the address had.
- * F5 moves the route to `/funds/[id]/returns`.
  */
 export function returnsTarget(base: string, query: Query, todayOn: CivilDate): string {
   const period = legacyFundQuery(query, todayOn) ?? flat(query);
