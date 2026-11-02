@@ -1,6 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "./cn";
 
 const VARIANT = {
@@ -25,6 +25,7 @@ type Variant = keyof typeof VARIANT;
 type Size = keyof typeof SIZE;
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: Ref<HTMLButtonElement>;
   variant?: Variant;
   size?: Size;
   icon?: ReactNode;

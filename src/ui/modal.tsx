@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 
 export function Modal({
   open,
@@ -10,6 +10,7 @@ export function Modal({
   description,
   width = 460,
   footer,
+  finalFocus,
   children,
 }: {
   open: boolean;
@@ -18,6 +19,8 @@ export function Modal({
   description?: ReactNode;
   width?: 420 | 440 | 460 | 520 | 680;
   footer?: ReactNode;
+  /** Where the focus goes on closing, for an opener the dialog cannot find by itself. */
+  finalFocus?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) {
   return (
@@ -31,6 +34,7 @@ export function Modal({
           address bar hides the footer again.
         */}
         <Dialog.Popup
+          finalFocus={finalFocus}
           className="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-32px)] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 animate-in flex-col gap-4 rounded-modal border border-border bg-card p-5 shadow-overlay"
           style={{ width }}
         >

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useId, useState, useTransition } from "react";
+import { type FormEvent, type Ref, useId, useRef, useState, useTransition } from "react";
 import { parseAmount } from "@/modules/accounts/rules";
 import { formatMoney, type NumberFormat } from "@/platform/format";
 import { Button } from "@/ui/button";
@@ -367,15 +367,25 @@ export function FundSettingsForm({
 export type TriggerPlace = "page" | "card" | "row";
 
 /** One trigger, so "Record valuation" carries the same weight wherever it is offered. */
-function Trigger({ place, label, onClick }: { place: TriggerPlace; label: string; onClick: () => void }) {
+function Trigger({
+  place,
+  label,
+  onClick,
+  ref,
+}: {
+  place: TriggerPlace;
+  label: string;
+  onClick: () => void;
+  ref?: Ref<HTMLButtonElement>;
+}) {
   if (place === "row")
     return (
-      <Button size="xs" variant="ghost" onClick={onClick}>
+      <Button ref={ref} size="xs" variant="ghost" onClick={onClick}>
         {label}
       </Button>
     );
   return (
-    <Button variant={place === "page" ? "primary" : "secondary"} size="sm" onClick={onClick}>
+    <Button ref={ref} variant={place === "page" ? "primary" : "secondary"} size="sm" onClick={onClick}>
       {label}
     </Button>
   );
@@ -437,6 +447,7 @@ export function ValuationButton({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const { error, setError, ok } = useResult();
+  const opener = useRef<HTMLButtonElement>(null);
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const input = readValuation(new FormData(event.currentTarget));
@@ -448,10 +459,11 @@ export function ValuationButton({
   }
   return (
     <>
-      <Trigger place={place} label={label} onClick={() => (setError(null), setOpen(true))} />
+      <Trigger ref={opener} place={place} label={label} onClick={() => (setError(null), setOpen(true))} />
       <Modal
         open={open}
         onOpenChange={setOpen}
+        finalFocus={opener}
         title={t("valuations.form.title", { name: fundName })}
         description={t("valuations.form.description")}
       >

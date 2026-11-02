@@ -4,6 +4,7 @@ import {
   AreaLine,
   Bars,
   MiniBars,
+  MultiLine,
   extentOf,
   segmentsOf,
   Sparkline,
@@ -185,5 +186,31 @@ describe("MiniBars", () => {
     // 115 against a top of 115 × 1.15: the tallest column stops at about 87 %.
     expect(parseFloat(screen.getByTestId("mini-bar").style.height)).toBeCloseTo(86.96, 1);
     expect(screen.queryByTestId("mini-bars-target")).toBeNull();
+  });
+});
+
+describe("MultiLine's band", () => {
+  it("shades each step between the two lines by its sign, and nothing after the last point", () => {
+    const { container } = render(
+      <MultiLine
+        series={[{ values: [10, 20, 15, 30] }, { values: [10, 15, 20, 25] }]}
+        band={{ upper: [10, 20, 15, 30], lower: [10, 15, 20, 25] }}
+        yLabels={[]}
+        xLabels={[]}
+        summary="s"
+      />,
+    );
+    const bands = [...container.querySelectorAll("rect[data-band]")].map((rect) =>
+      rect.getAttribute("data-band"),
+    );
+    // The first step has no gap, the last point starts no step.
+    expect(bands).toEqual(["pos", "neg"]);
+  });
+
+  it("has no band unless one is asked for", () => {
+    const { container } = render(
+      <MultiLine series={[{ values: [1, 2] }]} yLabels={[]} xLabels={[]} summary="s" />,
+    );
+    expect(container.querySelectorAll("rect[data-band]")).toHaveLength(0);
   });
 });

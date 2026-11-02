@@ -417,6 +417,7 @@ export function MultiLine({
   xLabels,
   height = 180,
   hover,
+  band,
 }: {
   series: readonly Series[];
   summary: string;
@@ -424,6 +425,8 @@ export function MultiLine({
   xLabels: readonly string[];
   height?: number;
   hover?: readonly HoverPoint[];
+  /** The gap between two series, shaded step by step: green above `lower`, red below it. */
+  band?: { upper: readonly (number | null)[]; lower: readonly (number | null)[] };
 }) {
   const box: Box = { width: 720, height, pad: 6 };
   const extent = extentOf(series);
@@ -443,6 +446,25 @@ export function MultiLine({
             aria-hidden
             className="relative h-full w-full"
           >
+            {band?.upper.map((upper, index) => {
+              const lower = band.lower[index];
+              const count = band.upper.length;
+              if (index + 1 >= count || upper === null || lower === null || upper === lower) return null;
+              const y1 = scale(Math.max(upper, lower), extent, box);
+              const y2 = scale(Math.min(upper, lower), extent, box);
+              const x = xOf(index, count, box);
+              return (
+                <rect
+                  key={index}
+                  data-band={upper > lower ? "pos" : "neg"}
+                  x={x}
+                  y={y1}
+                  width={xOf(index + 1, count, box) - x}
+                  height={Math.max(1, y2 - y1)}
+                  fill={upper > lower ? "var(--pos-bg)" : "var(--neg-bg)"}
+                />
+              );
+            })}
             {series.map((one, index) =>
               one.estimated?.some(Boolean)
                 ? strokesOf(one.values, one.estimated, extent, box).map((stroke, runIndex) => (
