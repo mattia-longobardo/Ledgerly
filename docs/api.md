@@ -99,13 +99,17 @@ on the allowlist in `src/platform/auth/oauth.ts`. They can reach `/api/mcp` only
 approval and the refresh tokens; the access token ends within one hour. To block a client at once,
 set `disabled` on its row in the `oauth_clients` table.
 
-## Paperless-ngx import
+## Document import
 
-Paperless sends each payslip to `POST /api/v1/imports` with the workflow "Ledgerly – buste paga".
-The homelab Paperless image gets a token with the API client "Paperless webhook" (scope `imports`).
-The client ID and secret are in `storage/.env`
-(`PAPERLESS_WEBHOOK_OAUTH2_CLIENT_ID`, `PAPERLESS_WEBHOOK_OAUTH2_CLIENT_SECRET`). To create the
-client again: `npm run user:create-api-client`.
+`POST /api/v1/imports` (scope `imports`) reads a document through the same pipeline as the upload
+screen. Send `multipart/form-data` with `kind` (`payslip`, `cometa_operations` or
+`cometa_position`) and `file` (at most 10 MB). The answer is `201` for a new document and `200`
+with `duplicate: true` when the same file (same SHA-256) is already there. The document is read
+after the answer goes out.
 
-A second path, where Ledgerly pulls documents from Paperless, is in the code but is not in use.
-Migration notes: [`runbooks/oauth-paperless-migration.md`](runbooks/oauth-paperless-migration.md).
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" -F kind=payslip -F file=@payslip.pdf \
+  https://dash.longobardo.me/api/v1/imports
+```
+
+To create an API client from the server, without a browser: `npm run user:create-api-client`.

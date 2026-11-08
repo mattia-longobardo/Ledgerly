@@ -402,14 +402,14 @@ const PAGES: Screen[] = [
 /** Overlays: they live in a portal, outside `<main>`, so each says what to measure. */
 const OVERLAYS: Screen[] = [
   {
-    // The sync schedule of the layout user's Paperless link (seeded on manual only).
+    // The sync schedule of the layout user's Trek link (seeded on manual only).
     name: "the sync schedule dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
-      // The first control is Paperless's; the seeded eToro link has one too, further down.
+      // The first control is Trek's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
         .first()
@@ -425,7 +425,7 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/settings/integrations");
       await settled(page);
-      // The first control is Paperless's; the seeded eToro link has one too, further down.
+      // The first control is Trek's; the seeded eToro link has one too, further down.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
         .first()

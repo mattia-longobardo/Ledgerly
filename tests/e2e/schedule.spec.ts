@@ -1,5 +1,5 @@
 // tests/e2e/schedule.spec.ts — the sync schedule editor of Settings › Integrations
-// (docs/scheduler.md), on the seeded `layout` user's Paperless link, which starts on manual only and
+// (docs/scheduler.md), on the seeded `layout` user's Trek link, which starts on manual only and
 // is put back there at the end. The address of that link does not exist, so a pass the dispatcher
 // makes in between only records a failed run on a test user. Its control is the first on the page:
 // the seeded eToro link (manual only too) has its own further down, and is never touched here.

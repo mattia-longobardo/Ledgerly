@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { users } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
@@ -9,7 +9,7 @@ import { newContext } from "../../../test/fixtures";
 import { jobRuns } from "@/platform/jobs/schema";
 import { runTier } from "@/platform/jobs/tick";
 import { dispatchDueConnections, integrationsSyncJob } from "./jobs";
-import { PAPERLESS_PROVIDER } from "./rules";
+import { TREK_PROVIDER } from "./rules";
 import { nextSyncTimes, type SyncSchedule } from "./schedule";
 import { integrationConnections } from "./schema";
 import {
@@ -23,6 +23,10 @@ import {
   saveSchedule,
 } from "./service";
 
+// A Trek pass that answers without calling Trek: the pass is real to the dispatcher, its content
+// beside the point.
+vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn(async () => "answered") }));
+
 // The integrations dispatcher of docs/scheduler.md against a real database: a connection is passed
 // when its own rules say so, to the minute, its next pass moves on, and `manual` is never due.
 
@@ -31,24 +35,12 @@ let ctx: Ctx;
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
-  // A Paperless that answers with nothing: the pass is real, its content beside the point.
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = new URL(String(input));
-      return Response.json({
-        next: null,
-        results: url.pathname === "/api/document_types/" ? [{ id: 48, name: "Payroll" }] : [],
-      });
-    }),
-  );
   await saveConnection(ctx, {
-    provider: PAPERLESS_PROVIDER,
-    credentials: { baseUrl: "http://paperless-ngx:8000", token: "t", payslipType: "Payroll" },
+    provider: TREK_PROVIDER,
+    credentials: { baseUrl: "https://trek.example", token: "t" },
   });
 });
 
-afterEach(() => vi.unstubAllGlobals());
 afterAll(closeDatabase);
 
 describe("integrations-sync", () => {
@@ -58,7 +50,7 @@ describe("integrations-sync", () => {
       due: 1,
       passes: 1,
       failures: 0,
-      provider_paperless: 1,
+      provider_trek: 1,
     });
     const [connection] = await listConnections(ctx);
     expect(connection.nextSyncAt).not.toBeNull();
@@ -182,7 +174,7 @@ describe("integrations-sync", () => {
 
   it("migration 0034 keeps every D7 choice and the instants it ran at", async () => {
     const connections = [(await listConnections(ctx))[0]];
-    for (const provider of ["wallet", "trek"]) {
+    for (const provider of ["wallet", "etoro"]) {
       connections.push(await saveConnection(ctx, { provider, credentials: { token: "t" } }));
     }
     const legacy = [
@@ -230,7 +222,7 @@ describe("integrations-sync", () => {
   it("skips a revoked connection and every connection of a banned person (PERS-49 SEC-08)", async () => {
     const [connection] = await listConnections(ctx);
     expect(await dueConnections()).toHaveLength(1);
-    await markConnection(ctx, connection.id, "revoked", "Paperless refused the token");
+    await markConnection(ctx, connection.id, "revoked", "Trek refused the token");
     expect(await dueConnections()).toHaveLength(0);
     await markConnection(ctx, connection.id, "active");
     await getDb().update(users).set({ banned: true }).where(eq(users.id, ctx.userId));

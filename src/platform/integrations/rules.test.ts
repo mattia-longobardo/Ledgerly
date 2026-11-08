@@ -6,7 +6,6 @@ import {
   isKnownProvider,
   nextRunAt,
   normalizeCounts,
-  PAPERLESS_PROVIDER,
   outcomeState,
   providerLinkSchema,
   syncErrorText,
@@ -137,7 +136,6 @@ describe("syncsTransactions", () => {
   it("is true only for a known provider that brings in movements", () => {
     expect(syncsTransactions(WALLET_PROVIDER)).toBe(true);
     expect(syncsTransactions(TREK_PROVIDER)).toBe(false);
-    expect(syncsTransactions(PAPERLESS_PROVIDER)).toBe(false);
     expect(syncsTransactions("ccxt:binance")).toBe(false);
     expect(syncsTransactions(null)).toBe(false);
   });

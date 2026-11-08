@@ -46,7 +46,7 @@ insieme e a cavallo della mezzanotte (max 96 esecuzioni al giorno).
 
 - Ogni sync fa più chiamate al provider (Wallet: conti, poi i movimenti a pagine). L'API di Wallet
   non è ufficiale e non pubblica quote; 15 minuti è il minimo con cui D7 ha già girato senza 429.
-- Il limite vale per tutti i provider: Trek e Paperless sono self-hosted, ma una regola uniforme è
+- Il limite vale per tutti i provider: Trek è self-hosted, ma una regola uniforme è
   più semplice da spiegare e da verificare.
 - Scartato un minimo più basso (5 min): guadagno reale nullo per dati finanziari che cambiano poche
   volte al giorno, rischio di blocco del token Wallet.
@@ -112,7 +112,7 @@ se l'ultima sync che ha cambiato i movimenti è finita dopo il suo ultimo avvio 
 
 - **Quale sync conta:** una riga `sync_runs` di kind `transactions` con `created`, `updated` o
   `removed` > 0, oppure fallita, perché una sync fallita può aver già scritto righe. Solo Wallet ha
-  questo kind: eToro, Binance, Trek e Paperless non attivano i controlli.
+  questo kind: eToro, Binance e Trek non attivano i controlli.
 - **Doppi avvisi:** `notifyOnce` prende la chiave con un upsert atomico, quindi un avviso parte una
   volta per soglia e mese. Il lock `job:<nome>` impedisce due esecuzioni insieme.
 - **Job occupato:** `runAfterSync` riprova per 60 secondi. Dopo l'attesa il job parte solo se è

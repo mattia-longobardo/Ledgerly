@@ -49,18 +49,15 @@ export default async function PayrollSettingsPage() {
             }))}
           />
         </SettingsSection>
-        <SettingsSection title={t("settingsPage.related")} description={t("settingsPage.relatedDescription")}>
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/settings/integrations" size="sm">
-              {t("settingsPage.paperless")}
-            </ButtonLink>
-            {ctx.role === "admin" && (
+        {ctx.role === "admin" && (
+          <SettingsSection title={t("settingsPage.related")} description={t("settingsPage.relatedDescription")}>
+            <div className="flex flex-wrap gap-2">
               <ButtonLink href={"/settings/server" as Route} size="sm">
                 {t("settingsPage.llm")}
               </ButtonLink>
-            )}
-          </div>
-        </SettingsSection>
+            </div>
+          </SettingsSection>
+        )}
       </SettingsGrid>
     </Page>
   );

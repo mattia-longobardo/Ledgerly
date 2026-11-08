@@ -215,10 +215,6 @@
         "trek": {
           "name": "Trek",
           "role": "Leave days"
-        },
-        "paperless": {
-          "name": "Paperless-ngx",
-          "role": "Payslips and Cometa documents"
         }
       },
       "states": {
@@ -309,9 +305,7 @@
         "notConnected": "Wallet is not connected.",
         "busy": "A sync is already running. Try again in a moment.",
         "failed": "Couldn't save. Try again.",
-        "types": "Paperless has no document type with that name.",
-        "schedule": "That schedule is not valid.",
-        "notAllowed": "This Paperless address is not allowed on this server. The admin sets the allowed ones in PAPERLESS_ALLOWED_ORIGINS."
+        "schedule": "That schedule is not valid."
       },
       "notifications": {
         "failedSubject": "Wallet sync failed",
@@ -436,22 +430,6 @@
         "useRecommended": "Use recommended ({schedule})",
         "removeTimeSimple": "Remove {time}",
         "newTimeSimple": "New time"
-      },
-      "paperless": {
-        "notLinked": "Not linked. Ledgerly reads the payslips Paperless files, with the token of a read-only Paperless user.",
-        "connectTitle": "Link Paperless",
-        "connectDescription": "The token of the read-only Paperless user (for example ledgerly-sync) and the document types to read.",
-        "baseUrl": "Paperless URL",
-        "baseUrlHint": "Inside the homelab: http://paperless-ngx:8000.",
-        "token": "API token",
-        "tokenHint": "From the Paperless profile of the read-only user. It is stored encrypted and never shown again.",
-        "payslipType": "Payslip document type",
-        "payslipTypeHint": "The name of the Paperless document type, as Paperless shows it.",
-        "cometaOperationsType": "Cometa operations document type",
-        "cometaPositionType": "Cometa position document type",
-        "optionalHint": "Optional: leave empty to skip.",
-        "disconnectDescription": "The documents already imported stay. Ledgerly stops reading Paperless.",
-        "typesMissing": "Paperless has no document type with one of those names. Check the spelling in Paperless."
       },
       "investments": {
         "title": "Investment connections",
@@ -4519,7 +4497,6 @@
     "settingsPage": {
       "related": "Elsewhere",
       "relatedDescription": "What payslips also depend on.",
-      "paperless": "Paperless, in Integrations",
       "llm": "LLM fallback, in Server"
     }
   },

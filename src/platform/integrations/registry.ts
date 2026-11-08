@@ -9,12 +9,10 @@ import { runTrekPass } from "@/modules/timeoff/jobs";
 import { runWalletPass } from "@/modules/transactions/jobs";
 import type { Ctx } from "@/platform/context";
 import type { Person } from "@/modules/users/jobs";
-import { runPaperlessPass } from "./paperless/sync";
 import {
   BINANCE_PROVIDER,
   ETORO_PROVIDER,
   KINDS_OF,
-  PAPERLESS_PROVIDER,
   type SyncKind,
   TREK_PROVIDER,
   WALLET_PROVIDER,
@@ -41,11 +39,6 @@ export const PASSES: readonly ProviderPass[] = [
     },
   },
   { provider: TREK_PROVIDER, kinds: KINDS_OF[TREK_PROVIDER], run: (_person, ctx) => runTrekPass(ctx) },
-  {
-    provider: PAPERLESS_PROVIDER,
-    kinds: KINDS_OF[PAPERLESS_PROVIDER],
-    run: (_person, ctx) => runPaperlessPass(ctx),
-  },
   // Investments (docs/design/investments.md §3.1): the module's own pass, lock and outcomes.
   { provider: ETORO_PROVIDER, kinds: KINDS_OF[ETORO_PROVIDER], run: runInvestmentPass },
   // Binance through ccxt (§3.2). By id, not by the `ccxt:` prefix: an exchange without an adapter

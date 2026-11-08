@@ -1,6 +1,11 @@
 # Ledgerly — design di autenticazione (PERS-44 / PERS-45)
 
 Stato: proposta, solo design. Riferimento per gli stage successivi di PERS-44.
+
+> **Paperless rimosso (2026-11-08).** L'integrazione Paperless (pull, webhook del Workflow 1, client
+> API «Paperless webhook», `PAPERLESS_ALLOWED_ORIGINS`) non esiste più in Ledgerly. D5 e §3 restano
+> solo come storia della decisione. `POST /api/v1/imports` resta, come import generico
+> ([`api.md`](api.md)).
 Data analisi: 2026-10-27, su `main` = `origin/main` (`ae78c01`).
 
 Obiettivi:
@@ -170,7 +175,7 @@ Parametri:
 
 > **Superata (PERS-47, PERS-57).** Mattia ha scelto l'opzione A il 27/10/2026: resta il webhook del
 > Workflow 1, con un token OAuth2 `client_credentials` ottenuto dalla patch del fork Paperless
-> (`docs/runbooks/oauth-paperless-migration.md`). Il provider pull resta nel codice, non collegato;
+> (runbook poi eliminato). Il provider pull restava nel codice, non collegato;
 > non c'è l'utente `ledgerly-sync`. Il testo sotto resta come storia della decisione.
 
 Il webhook di Paperless manda solo header statici: non può fare `client_credentials` (token di 1 h

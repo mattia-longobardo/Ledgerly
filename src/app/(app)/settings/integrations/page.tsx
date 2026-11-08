@@ -2,7 +2,7 @@ import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
 import { NULL_DISPLAY } from "@/platform/format";
-import { PAPERLESS_PROVIDER, TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
 import {
   type Connection,
   listConnections,
@@ -21,7 +21,6 @@ import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { ConnectionRow } from "./connection-row";
 import { formatInstant } from "./format-instant";
-import { PaperlessCard, type PaperlessCardState } from "./paperless-card";
 import { recommendedSchedule } from "./recommended-schedule";
 import { ScheduleControl } from "./schedule-control";
 import { TrekCard, type TrekCardState } from "./trek-card";
@@ -85,13 +84,11 @@ export default async function SettingsIntegrationsPage() {
 
   const connectionName = (provider: string) =>
     providerOf(provider)?.name ??
-    t(
-      provider === WALLET_PROVIDER
-        ? "providers.wallet.name"
-        : provider === TREK_PROVIDER
-          ? "providers.trek.name"
-          : "providers.paperless.name",
-    );
+    (provider === WALLET_PROVIDER
+      ? t("providers.wallet.name")
+      : provider === TREK_PROVIDER
+        ? t("providers.trek.name")
+        : provider);
 
   // The schedule control of a connection (D7); a provider with no link keeps the fixed label.
   const scheduleOf = (connection: Connection | null) =>
@@ -110,10 +107,6 @@ export default async function SettingsIntegrationsPage() {
   const trekState: TrekCardState = trek?.state ?? "absent";
   const trekLastSync = trek?.lastOkAt ? formatInstant(trek.lastOkAt, ctx) : null;
   const waiting = trek ? await pendingCount(ctx) : 0;
-
-  const paperless = connections.find((connection) => connection.provider === PAPERLESS_PROVIDER) ?? null;
-  const paperlessState: PaperlessCardState = paperless?.state ?? "absent";
-  const paperlessLastSync = paperless?.lastOkAt ? formatInstant(paperless.lastOkAt, ctx) : null;
 
   // Investments (docs/design/investments.md §4.2): listed here with their schedule; the key, its
   // checks and the disconnection live on the service's page.
@@ -135,8 +128,6 @@ export default async function SettingsIntegrationsPage() {
         />
         <div className="border-t border-border" />
         <TrekCard state={trekState} lastSync={trekLastSync} pending={waiting} schedule={scheduleOf(trek)} />
-        <div className="border-t border-border" />
-        <PaperlessCard state={paperlessState} lastSync={paperlessLastSync} schedule={scheduleOf(paperless)} />
       </SettingsSection>
 
       {invested.length > 0 && (

@@ -35,13 +35,13 @@ at `https://dash.longobardo.me`.
 
 ## Documentation
 
-| Guide                                | For                                                             |
-| ------------------------------------ | --------------------------------------------------------------- |
-| [Features](docs/features.md)         | How each section works and the rules behind the numbers.        |
-| [API and MCP](docs/api.md)           | OAuth2, the `/api/v1` routes, the MCP server, Paperless import. |
-| [Development](docs/development.md)   | Setup, conventions and tests.                                   |
-| [Operations](docs/operations.md)     | Deploy, configuration, homelab services, backups, admin tasks.  |
-| [Release checklist](docs/RELEASE.md) | A step-by-step release, with what to do when it goes wrong.     |
+| Guide                                | For                                                            |
+| ------------------------------------ | -------------------------------------------------------------- |
+| [Features](docs/features.md)         | How each section works and the rules behind the numbers.       |
+| [API and MCP](docs/api.md)           | OAuth2, the `/api/v1` routes, the MCP server, document import. |
+| [Development](docs/development.md)   | Setup, conventions and tests.                                  |
+| [Operations](docs/operations.md)     | Deploy, configuration, homelab services, backups, admin tasks. |
+| [Release checklist](docs/RELEASE.md) | A step-by-step release, with what to do when it goes wrong.    |
 
 All documents are listed in [`docs/README.md`](docs/README.md).
 

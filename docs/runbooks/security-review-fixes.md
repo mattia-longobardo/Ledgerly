@@ -3,6 +3,9 @@
 Runbook for the fixes of the PERS-49 review (task PERS-57). Secrets are never written here: only
 where they live.
 
+> The Paperless integration was removed on 2026-11-08: SEC-04, the Paperless limits of SEC-09 and
+> `PAPERLESS_ALLOWED_ORIGINS` no longer apply.
+
 ## What the deploy changes
 
 | ID | Change | Data |

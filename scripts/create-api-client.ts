@@ -1,5 +1,5 @@
 // scripts/create-api-client.ts — a Client API (docs/auth-design.md D3) for a person, without a
-// browser: what a service that cannot sign in needs, such as the Paperless webhook (PERS-47).
+// browser: what a service that cannot sign in needs.
 //
 // Usage (on the homelab): npm run user:create-api-client -- <email> <name> <scope[,scope…]> <env-file> <PREFIX>
 // The client id and secret are written to <env-file> as <PREFIX>_CLIENT_ID and

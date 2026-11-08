@@ -84,7 +84,7 @@ export async function createApiClient(input: {
 
 /**
  * The same, for a given instance and the headers of a session: what `scripts/create-api-client.ts`
- * uses to make the Paperless webhook's client for its owner without a browser.
+ * uses to make a service's client for its owner without a browser.
  */
 export async function createApiClientWith(
   auth: Auth,

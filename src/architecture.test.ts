@@ -118,7 +118,7 @@ describe("module boundaries", () => {
  */
 describe("saving an investment key", () => {
   const CALL = /saveConnection\(\s*ctx,\s*\{\s*provider:\s*([A-Za-z_.]+)/g;
-  const OTHERS = new Set(["WALLET_PROVIDER", "TREK_PROVIDER", "PAPERLESS_PROVIDER"]);
+  const OTHERS = new Set(["WALLET_PROVIDER", "TREK_PROVIDER"]);
   const OWNER = "modules/investments/sync.ts";
 
   function calls(): Map<string, string[]> {

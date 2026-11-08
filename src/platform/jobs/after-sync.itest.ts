@@ -2,7 +2,7 @@
 // when a sync changed the movements and only then, one alert however many syncs, and a check that
 // fails stays with the check.
 import { desc, eq } from "drizzle-orm";
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUDGET_ALERT_KIND } from "@/modules/budgets/jobs";
 import { setLimit } from "@/modules/budgets/service";
 import { upsertFromProvider } from "@/modules/transactions/service";
@@ -10,7 +10,7 @@ import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
-import { PAPERLESS_PROVIDER } from "@/platform/integrations/rules";
+import { TREK_PROVIDER } from "@/platform/integrations/rules";
 import { integrationConnections } from "@/platform/integrations/schema";
 import { finishRun, lastMovementChangeAt, recordRun, saveConnection } from "@/platform/integrations/service";
 import { notificationsLog } from "@/platform/notifications/schema";
@@ -20,6 +20,9 @@ import { AFTER_SYNC_JOBS, runAfterSync } from "./after-sync";
 import { withJobLock } from "./lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "./schema";
+
+// A Trek pass that answers without calling Trek: the dispatch is real, the pass beside the point.
+vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn(async () => "answered") }));
 
 let ctx: Ctx;
 let walletId: string;
@@ -47,27 +50,17 @@ function check(name: string, behaviour: () => void = () => {}) {
   return { job, run };
 }
 
-/** Makes Paperless due, so the dispatcher makes a real pass that does not call Wallet. */
+/** Makes Trek due, so the dispatcher makes a pass that does not call Wallet. */
 async function makeDue() {
   await getDb()
     .update(integrationConnections)
     .set({ nextSyncAt: new Date(Date.now() - 30_000) })
-    .where(eq(integrationConnections.provider, PAPERLESS_PROVIDER));
+    .where(eq(integrationConnections.provider, TREK_PROVIDER));
 }
 
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = new URL(String(input));
-      return Response.json({
-        next: null,
-        results: url.pathname === "/api/document_types/" ? [{ id: 48, name: "Payroll" }] : [],
-      });
-    }),
-  );
   const wallet = await saveConnection(ctx, { provider: "wallet", credentials: { token: "t" } });
   walletId = wallet.id;
   // Wallet stays out of the dispatch, which would call the provider: its runs are written by hand.
@@ -76,12 +69,11 @@ beforeEach(async () => {
     .set({ nextSyncAt: null })
     .where(eq(integrationConnections.id, walletId));
   await saveConnection(ctx, {
-    provider: PAPERLESS_PROVIDER,
-    credentials: { baseUrl: "http://paperless-ngx:8000", token: "t", payslipType: "Payroll" },
+    provider: TREK_PROVIDER,
+    credentials: { baseUrl: "https://trek.example", token: "t" },
   });
 });
 
-afterEach(() => vi.unstubAllGlobals());
 afterAll(closeDatabase);
 
 describe("runAfterSync", () => {
