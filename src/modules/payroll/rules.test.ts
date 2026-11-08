@@ -3,6 +3,7 @@ import {
   averageNet,
   averageTaxRate,
   groupByYear,
+  isExtraMonth,
   logicalKey,
   meanCents,
   medianCents,
@@ -30,6 +31,13 @@ describe("parsePeriodLabel (owner's spec L36–37)", () => {
     expect(parsePeriodLabel("dicembre  2025")).toEqual({ type: "ordinary", year: 2025, period: "2025-12-01" });
     expect(parsePeriodLabel("13a MENS. 2025")).toEqual({ type: "thirteenth", year: 2025, period: null });
     expect(parsePeriodLabel("14a MENS. 2026")).toEqual({ type: "fourteenth", year: 2026, period: null });
+  });
+
+  it("reads the 15th like the 13th and 14th, in every way they are written", () => {
+    for (const label of ["15a MENS. 2026", "15ª MENS. 2026", "15° MENS 2026", "15A MENSILITA' 2026", "15 mensilita 2026"]) {
+      expect(parsePeriodLabel(label)).toEqual({ type: "fifteenth", year: 2026, period: null });
+    }
+    expect(parsePeriodLabel("16a MENS. 2026")).toBeNull();
   });
 
   it("refuses anything else rather than guessing a month", () => {
@@ -104,6 +112,25 @@ describe("the register's KPIs (spec §7.8)", () => {
     expect(ralEstimate(withThirteenth)?.cents).toBe(200_000n * 12n + 180_000n);
   });
 
+  it("adds the real 14th and 15th, and never estimates a missing one", () => {
+    const extras = [
+      ...payslips,
+      { type: "fourteenth" as const, year: 2026, period: null, gross: 70_000n, taxesTotal: null, netPay: null },
+      { type: "fifteenth" as const, year: 2026, period: null, gross: 30_000n, taxesTotal: null, netPay: null },
+      { type: "fifteenth" as const, year: 2025, period: null, gross: 999_999n, taxesTotal: null, netPay: null },
+    ];
+    expect(ralEstimate(extras)?.cents).toBe(200_000n * 13n + 70_000n + 30_000n);
+  });
+
+  it("does not ask for a 15th to call a year complete, and sums it when there is one", () => {
+    const year = Array.from({ length: 12 }, (_, index) => ordinary(`2025-${String(index + 1).padStart(2, "0")}-01`, 100_000n));
+    const thirteenth = { type: "thirteenth" as const, year: 2025, period: null, gross: 50_000n, taxesTotal: null, netPay: null };
+    const fifteenth = { type: "fifteenth" as const, year: 2025, period: null, gross: 20_000n, taxesTotal: null, netPay: null };
+    expect(ralEstimate([...year, thirteenth])).toEqual({ cents: 1_250_000n, basis: "complete_year", year: 2025 });
+    expect(ralEstimate([...year, thirteenth, fifteenth])).toEqual({ cents: 1_270_000n, basis: "complete_year", year: 2025 });
+    expect(ralEstimate([...year, fifteenth])?.basis).toBe("estimate");
+  });
+
   it("sums a complete year as it is", () => {
     const year = Array.from({ length: 12 }, (_, index) =>
       ordinary(`2025-${String(index + 1).padStart(2, "0")}-01`, 100_000n + BigInt(index)),
@@ -123,5 +150,43 @@ describe("the register's KPIs (spec §7.8)", () => {
       [2026, ["2026-01-01"]],
       [2025, ["thirteenth", "2025-12-01", "2025-11-01"]],
     ]);
+  });
+
+  it("puts the 15th, which has no fixed month, after the 13th and the 14th with June", () => {
+    const extra = (type: "thirteenth" | "fourteenth" | "fifteenth") => ({ type, year: 2025, period: null, gross: 1n, taxesTotal: null, netPay: null });
+    const groups = groupByYear([
+      ordinary("2025-05-01", 1n),
+      extra("fifteenth"),
+      ordinary("2025-06-01", 1n),
+      extra("thirteenth"),
+      ordinary("2025-12-01", 1n),
+      extra("fourteenth"),
+      ordinary("2025-07-01", 1n),
+    ]);
+    expect(groups[0].payslips.map((payslip) => payslip.period ?? payslip.type)).toEqual([
+      "fifteenth",
+      "thirteenth",
+      "2025-12-01",
+      "2025-07-01",
+      "fourteenth",
+      "2025-06-01",
+      "2025-05-01",
+    ]);
+  });
+});
+
+describe("isExtraMonth (spec §7.8 \"Medie\")", () => {
+  it("is true for the 13th, 14th and 15th only", () => {
+    expect(["thirteenth", "fourteenth", "fifteenth"].every((type) => isExtraMonth(type as "fifteenth"))).toBe(true);
+    expect(["ordinary", "bonus", "settlement"].some((type) => isExtraMonth(type as "ordinary"))).toBe(false);
+  });
+
+  it("keeps the 15th out of the monthly averages", () => {
+    const payslips: RegisterPayslip[] = [
+      ordinary("2026-01-01", 200_000n, 150_000n),
+      { type: "fifteenth", year: 2026, period: null, gross: 500_000n, taxesTotal: 1n, netPay: 400_000n },
+    ];
+    expect(averageNet(payslips, 3)).toBe(150_000n);
+    expect(averageTaxRate(payslips)).toBeCloseTo(0.2, 6);
   });
 });

@@ -2553,6 +2553,7 @@
         "ordinary": "Ordinary",
         "thirteenth": "13th month",
         "fourteenth": "14th month",
+        "fifteenth": "15th month",
         "bonus": "Bonus",
         "settlement": "Settlement"
       },
@@ -4190,6 +4191,7 @@
       "rolLeft": "ROL left",
       "thirteenth": "13th",
       "fourteenth": "14th",
+      "fifteenth": "15th",
       "bonus": "Bonus",
       "settlement": "Final pay",
       "notApplied": "Not in the totals until applied",
@@ -4303,7 +4305,7 @@
         "tfr_partial_month": "TFR on a partial month: transcribed as printed, not recomputed.",
         "employer_fund_adjustment_only": "An employer fund adjustment with no regular quota beside it: no monthly employer amount is computed. Check it against the payslip before.",
         "permit_unclassified": "{hours} h of permits the ROL balance does not confirm: kept as permits, not ROL.",
-        "extra_month_leave": "Leave lines on a 13th or 14th: they are not counted.",
+        "extra_month_leave": "Leave lines on a 13th, 14th or 15th: they are not counted.",
         "rectification": "A payslip for the same month is already applied: applying this one replaces it.",
         "missing_identity": "The month, the employer or the employee was not found: correct them to go on.",
         "unknown_layout": "This is not a Reply/TeamSystem payslip: nothing could be read from it."
