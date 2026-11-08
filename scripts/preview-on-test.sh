@@ -10,7 +10,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 env_file="${LEDGERLY_ENV_FILE:-.env.homelab}"
-database_url=$(sed -n "s/^DATABASE_URL=//p" "$env_file" | head -n 1)
+database_url=$(sed -n "s/^DATABASE_URL=//p" "$env_file" | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/")
 DATABASE_URL="${database_url%/*}/ledgerly_test"
 S3_KEY_PREFIX="tests/preview/"
 E2E_BASE_URL="http://localhost:3999"

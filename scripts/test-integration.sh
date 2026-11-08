@@ -14,7 +14,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-value() { sed -n "s/^$1=//p" .env.homelab | head -n 1; }
+value() { sed -n "s/^$1=//p" .env.homelab | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
 
 database_url=$(value DATABASE_URL)
 TEST_DATABASE_URL="${database_url%/*}/ledgerly_test"
