@@ -43,7 +43,9 @@ type PayslipRow = Pick<
  * - TFR = the contribution line (8003) only, never the month's "TFR MESE" box: October accrued TFR
  *   but paid none into the fund (GC §8.2);
  * - enrolment (7053/7052) apart; the statistical 9110 and 7897 add nothing.
- * The quarter is the month's; a 13th belongs to the fourth. `null` when no quarter can be told.
+ * The quarter is the month's; a 13th belongs to the fourth. A 14th or 15th takes the quarter of
+ * the day it was printed; a 15th with no such day, having no fixed month, falls back to the fourth.
+ * `null` when no quarter can be told.
  */
 export function pensionCompetenceOf(
   payslip: PayslipRow,
@@ -56,7 +58,9 @@ export function pensionCompetenceOf(
         ? 4
         : payslip.printedOn !== null && payslip.printedOn.startsWith(String(payslip.year))
           ? quarterOfMonth(payslip.printedOn)
-          : null;
+          : payslip.type === "fifteenth"
+            ? 4
+            : null;
   if (quarter === null) return null;
   return {
     payslipId: payslip.id,

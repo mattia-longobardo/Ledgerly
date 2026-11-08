@@ -174,10 +174,10 @@ export const payslips = pgTable(
       "payslips_period_ck",
       sql`${table.period} is null or (extract(day from ${table.period}) = 1 and extract(year from ${table.period}) = ${table.year})`,
     ),
-    // An ordinary payslip has its month; a 13th or 14th has none to invent (owner's spec L37).
+    // An ordinary payslip has its month; a 13th, 14th or 15th has none to invent (owner's spec L37).
     check(
       "payslips_period_type_ck",
-      sql`(${table.type} <> 'ordinary' or ${table.period} is not null) and (${table.type} not in ('thirteenth', 'fourteenth') or ${table.period} is null)`,
+      sql`(${table.type} <> 'ordinary' or ${table.period} is not null) and (${table.type} not in ('thirteenth', 'fourteenth', 'fifteenth') or ${table.period} is null)`,
     ),
     check("payslips_active_ck", sql`not ${table.active} or ${table.appliedAt} is not null`),
   ],

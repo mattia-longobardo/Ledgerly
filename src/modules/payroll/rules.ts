@@ -2,7 +2,7 @@ import { addMonths, type CivilDate, type MonthKey } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
 import type { MoneyField } from "./fields";
 
-export const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "bonus", "settlement"] as const;
+export const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "fifteenth", "bonus", "settlement"] as const;
 export type PayslipType = (typeof PAYSLIP_TYPES)[number];
 
 export const LINE_UNITS = ["hours", "days", "months"] as const;
@@ -138,22 +138,25 @@ const MONTHS: Record<string, number> = {
   DICEMBRE: 12,
 };
 
+const EXTRA_MONTHS: Record<string, PayslipType> = { "13": "thirteenth", "14": "fourteenth", "15": "fifteenth" };
+
 export interface PayslipIdentity {
   type: PayslipType;
   year: number;
-  /** The first of the month paid; `null` for a 13th or 14th, which have none (owner's spec L37). */
+  /** The first of the month paid; `null` for a 13th, 14th or 15th, which have none (owner's spec L37). */
   period: MonthKey | null;
 }
 
 /**
  * Reads *MESE RETRIBUITO* (owner's spec L36–37): "AGOSTO 2026" is August 2026, "13a MENS. 2025"
- * the 13th of 2025. Anything else is `null`: the month never comes from the file's name.
+ * the 13th of 2025; the 14th and the 15th read the same way. Anything else is `null`: the month
+ * never comes from the file's name.
  */
 export function parsePeriodLabel(label: string): PayslipIdentity | null {
   const text = label.toUpperCase().replace(/\s+/g, " ").trim();
-  const extra = /^(13|14)\s*[AªA^°]?\.?\s*MENS(?:ILITA'?)?\.?\s+(\d{4})$/.exec(text);
+  const extra = /^(13|14|15)\s*[AªA^°]?\.?\s*MENS(?:ILITA'?)?\.?\s+(\d{4})$/.exec(text);
   if (extra) {
-    return { type: extra[1] === "13" ? "thirteenth" : "fourteenth", year: Number(extra[2]), period: null };
+    return { type: EXTRA_MONTHS[extra[1]], year: Number(extra[2]), period: null };
   }
   const ordinary = /^([A-Z]+)\s+(\d{4})$/.exec(text);
   if (ordinary && MONTHS[ordinary[1]] !== undefined) {
@@ -189,9 +192,9 @@ export function logicalKey(payslip: {
   return [payslip.employerKey, payslip.employeeKey, payslip.year, payslip.type, payslip.period ?? "-"].join("|");
 }
 
-/** A 13th or 14th: kept out of monthly averages, in the yearly totals (spec §7.8 "Medie"). */
+/** A 13th, 14th or 15th: kept out of monthly averages, in the yearly totals (spec §7.8 "Medie"). */
 export function isExtraMonth(type: PayslipType): boolean {
-  return type === "thirteenth" || type === "fourteenth";
+  return type === "thirteenth" || type === "fourteenth" || type === "fifteenth";
 }
 
 export interface RegisterPayslip {
@@ -254,8 +257,8 @@ export interface RalEstimate {
 /**
  * The yearly gross (spec §7.8 "Stima RAL"): the year's gross when its twelve ordinary months and
  * its 13th are all there; otherwise the mean ordinary gross × 12, plus the real 13th or one mean
- * month in its place, plus the 14th when the year has one. The year is the latest one with an
- * ordinary payslip.
+ * month in its place, plus the 14th and the 15th when the year has them. A 15th is never required
+ * for a complete year. The year is the latest one with an ordinary payslip.
  */
 export function ralEstimate(payslips: readonly RegisterPayslip[]): RalEstimate | null {
   const latest = ordinariesNewestFirst(payslips)[0];
@@ -265,6 +268,7 @@ export function ralEstimate(payslips: readonly RegisterPayslip[]): RalEstimate |
   const ordinary = ofYear.filter((payslip) => payslip.type === "ordinary");
   const thirteenth = ofYear.find((payslip) => payslip.type === "thirteenth");
   const fourteenth = ofYear.find((payslip) => payslip.type === "fourteenth");
+  const fifteenth = ofYear.find((payslip) => payslip.type === "fifteenth");
   const months = new Set(ordinary.map((payslip) => payslip.period));
   if (months.size === 12 && thirteenth && ofYear.every((payslip) => payslip.gross !== null)) {
     return {
@@ -276,7 +280,7 @@ export function ralEstimate(payslips: readonly RegisterPayslip[]): RalEstimate |
   const mean = meanCents(ordinary.map((payslip) => payslip.gross));
   if (mean === null) return null;
   return {
-    cents: mean * 12n + (thirteenth?.gross ?? mean) + (fourteenth?.gross ?? 0n),
+    cents: mean * 12n + (thirteenth?.gross ?? mean) + (fourteenth?.gross ?? 0n) + (fifteenth?.gross ?? 0n),
     basis: "estimate",
     year,
   };
@@ -287,11 +291,19 @@ export interface YearGroup<P extends RegisterPayslip> {
   payslips: P[];
 }
 
-/** The register's year groups, newest year first, each newest month first with extras after December. */
+/**
+ * The register's year groups, newest year first, each newest month first: the 14th with June, the
+ * 13th after December, and the 15th — which has no fixed month — after the 13th.
+ */
 export function groupByYear<P extends RegisterPayslip>(payslips: readonly P[]): YearGroup<P>[] {
   const years = [...new Set(payslips.map((payslip) => payslip.year))].toSorted((a, b) => b - a);
   const rank = (payslip: P) =>
-    payslip.period ?? (payslip.type === "fourteenth" ? `${payslip.year}-06-99` : `${payslip.year}-12-99`);
+    payslip.period ??
+    (payslip.type === "fourteenth"
+      ? `${payslip.year}-06-99`
+      : payslip.type === "fifteenth"
+        ? `${payslip.year}-12-999`
+        : `${payslip.year}-12-99`);
   return years.map((year) => ({
     year,
     payslips: payslips.filter((payslip) => payslip.year === year).toSorted((a, b) => rank(b).localeCompare(rank(a))),

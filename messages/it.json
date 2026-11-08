@@ -2553,6 +2553,7 @@
         "ordinary": "Ordinario",
         "thirteenth": "Tredicesima",
         "fourteenth": "Quattordicesima",
+        "fifteenth": "Quindicesima",
         "bonus": "Premio",
         "settlement": "Conguaglio"
       },
@@ -4190,6 +4191,7 @@
       "rolLeft": "ROL residui",
       "thirteenth": "13ª",
       "fourteenth": "14ª",
+      "fifteenth": "15ª",
       "bonus": "Premio",
       "settlement": "Competenze finali",
       "notApplied": "Fuori dai totali finché non lo applichi",
@@ -4303,7 +4305,7 @@
         "tfr_partial_month": "TFR su un mese parziale: trascritto come stampato, non ricalcolato.",
         "employer_fund_adjustment_only": "Una rettifica del fondo azienda senza quota ordinaria accanto: nessun importo aziendale mensile viene calcolato. Controllala con il cedolino precedente.",
         "permit_unclassified": "{hours} h di permessi che il saldo ROL non conferma: restano permessi, non ROL.",
-        "extra_month_leave": "Righe di assenze in una 13ª o 14ª: non vengono contate.",
+        "extra_month_leave": "Righe di assenze in una 13ª, 14ª o 15ª: non vengono contate.",
         "rectification": "C'è già un cedolino applicato per lo stesso mese: applicare questo lo sostituisce.",
         "missing_identity": "Non ho trovato il mese, il datore o il dipendente: correggili per andare avanti.",
         "unknown_layout": "Non è un cedolino Reply/TeamSystem: non si è potuto leggere nulla."

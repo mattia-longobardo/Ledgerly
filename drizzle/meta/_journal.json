@@ -309,6 +309,13 @@
       "when": 1793375998535,
       "tag": "0043_drop_legacy_investments",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794159326999,
+      "tag": "0044_fifteenth_month",
+      "breakpoints": true
     }
   ]
 }

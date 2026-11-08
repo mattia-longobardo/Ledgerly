@@ -1,0 +1,4 @@
+ALTER TABLE "payslips" DROP CONSTRAINT "payslips_type_ck";--> statement-breakpoint
+ALTER TABLE "payslips" DROP CONSTRAINT "payslips_period_type_ck";--> statement-breakpoint
+ALTER TABLE "payslips" ADD CONSTRAINT "payslips_type_ck" CHECK ("payslips"."type" in ('ordinary', 'thirteenth', 'fourteenth', 'fifteenth', 'bonus', 'settlement'));--> statement-breakpoint
+ALTER TABLE "payslips" ADD CONSTRAINT "payslips_period_type_ck" CHECK (("payslips"."type" <> 'ordinary' or "payslips"."period" is not null) and ("payslips"."type" not in ('thirteenth', 'fourteenth', 'fifteenth') or "payslips"."period" is null));
