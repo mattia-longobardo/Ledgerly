@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useId, useState, useTransition } from "react";
+import { type FormEvent, useId, useRef, useState, useTransition } from "react";
 import type { OidcProbeOutcome } from "@/platform/settings/oidc-probe";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { removeOidcAction, saveOidcAction, testOidcAction } from "./actions";
 
 export interface OidcCardProps {
@@ -42,6 +43,8 @@ export function OidcCard({
   const id = useId();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef);
   const [error, setError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -62,6 +65,7 @@ export function OidcCard({
       }
       setError(null);
       (form.elements.namedItem("clientSecret") as HTMLInputElement).value = "";
+      unsaved.saved();
       notify(result.signedEveryoneOut ? t("savedSignedOut") : t("saved"));
       // A changed issuer took this session with it: the refresh lands on /sign-in, which is
       // exactly what the card warned would happen.
@@ -87,7 +91,7 @@ export function OidcCard({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
       {!saved && (
         <p className="text-sm text-muted" data-testid="oidc-source">
           {t("fromEnv")}
@@ -164,9 +168,12 @@ export function OidcCard({
           <Button size="sm" onClick={onTest} disabled={pending}>
             {testing ? t("test.running") : t("test.action")}
           </Button>
-          <Button type="submit" size="sm" variant="primary" disabled={pending}>
-            {t("save")}
-          </Button>
+          {/* Only with something to save; values still from the environment file are. */}
+          {(unsaved.dirty || !saved) && (
+            <Button type="submit" size="sm" variant="primary" disabled={pending}>
+              {t("save")}
+            </Button>
+          )}
         </div>
       </div>
     </form>

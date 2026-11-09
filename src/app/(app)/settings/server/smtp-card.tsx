@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useId, useState, useTransition } from "react";
+import { type FormEvent, useId, useRef, useState, useTransition } from "react";
 import { ENCRYPTIONS, type Encryption, type MailPolicy } from "@/platform/settings/smtp";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { removeSmtpAction, saveSmtpAction, sendTestEmailAction } from "./actions";
 
 export interface SmtpCardProps {
@@ -28,6 +29,8 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
   const id = useId();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [tested, setTested] = useState<{ message: string; ok: boolean } | null>(null);
@@ -58,6 +61,7 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
       setError(null);
       setTested(null);
       (form.elements.namedItem("password") as HTMLInputElement).value = "";
+      unsaved.saved();
       notify(t("saved"));
       router.refresh();
     });
@@ -91,7 +95,7 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
       {!saved && (
         <p className="text-sm text-muted" data-testid="smtp-source">
           {t("fromEnv")}
@@ -188,9 +192,12 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
           <Button size="sm" onClick={onTest} disabled={pending}>
             {sending ? t("test.running") : t("test.action")}
           </Button>
-          <Button type="submit" size="sm" variant="primary" disabled={pending}>
-            {t("save")}
-          </Button>
+          {/* Only with something to save; values still from the environment file are. */}
+          {(unsaved.dirty || !saved) && (
+            <Button type="submit" size="sm" variant="primary" disabled={pending}>
+              {t("save")}
+            </Button>
+          )}
         </div>
       </div>
     </form>

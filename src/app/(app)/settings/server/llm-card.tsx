@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useId, useState, useTransition } from "react";
+import { type FormEvent, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 import type { LlmProbeResult } from "@/platform/settings/llm-probe";
 import { removeLlmFallbackAction, saveLlmFallbackAction, testLlmFallbackAction } from "./actions";
 
@@ -19,6 +20,8 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
   const id = useId();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef);
   const [error, setError] = useState<string | null>(null);
   const [tested, setTested] = useState<{ message: string; ok: boolean } | null>(null);
   const [testing, setTesting] = useState(false);
@@ -39,6 +42,7 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
       setError(null);
       setTested(null);
       (form.elements.namedItem("apiKey") as HTMLInputElement).value = "";
+      unsaved.saved();
       notify(t("saved"));
       router.refresh();
     });
@@ -71,7 +75,7 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-3" noValidate>
       <p className="text-sm text-muted" data-testid="llm-status">
         {current ? t("configured", { model: current.model, hint: current.keyHint }) : t("notConfigured")}
       </p>
@@ -116,9 +120,11 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
             {t("remove")}
           </Button>
         )}
-        <Button type="submit" variant="primary" disabled={pending}>
-          {t("save")}
-        </Button>
+        {unsaved.dirty && (
+          <Button type="submit" variant="primary" disabled={pending}>
+            {t("save")}
+          </Button>
+        )}
       </div>
     </form>
   );

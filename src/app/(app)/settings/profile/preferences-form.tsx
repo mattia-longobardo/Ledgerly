@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useRef, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@/modules/users/rules";
 import { DISPLAY_CURRENCIES } from "@/platform/fx/rules";
@@ -12,6 +12,7 @@ import { Field } from "@/ui/field";
 import { Checkbox, Select } from "@/ui/input";
 import { useTheme } from "@/ui/theme-provider";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 
 /**
  * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change
@@ -35,6 +36,8 @@ export function PreferencesForm({
   const [prefs, setPrefs] = useState<Preferences>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef);
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPrefs((p) => ({ ...p, [key]: value }));
 
@@ -50,6 +53,7 @@ export function PreferencesForm({
           return;
         }
         setError(null);
+        unsaved.saved();
         setTheme(prefs.theme);
         notify(t("saved"));
       } catch {
@@ -59,7 +63,7 @@ export function PreferencesForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+    <form ref={formRef} onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
       {error && (
         <p role="alert" className="text-sm text-neg sm:col-span-2">
           {error}
@@ -174,9 +178,11 @@ export function PreferencesForm({
           />
           {summaryBlocked && <p className="text-sm text-warn">{t("monthlySummaryBlocked")}</p>}
         </div>
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {common("save")}
-        </Button>
+        {unsaved.dirty && (
+          <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            {common("save")}
+          </Button>
+        )}
       </CardFooter>
     </form>
   );

@@ -21,6 +21,26 @@ test("theme and language preferences apply at once, persist, and come from the a
   await page.goto("/settings/profile");
   const preferences = page.locator("form", { has: page.locator("#language") });
 
+  await test.step("Save and the banner appear with a change only, and leave once it is saved", async () => {
+    const banner = page.getByTestId("unsaved-banner");
+    const save = preferences.getByRole("button", { name: "Save" });
+    await expect(save).toHaveCount(0);
+    await expect(banner).toHaveCount(0);
+    await page.getByLabel("Week starts on").selectOption("0");
+    await expect(save).toBeVisible();
+    await expect(banner).toBeVisible();
+    await page.getByLabel("Week starts on").selectOption("1");
+    await expect(save).toHaveCount(0);
+    await expect(banner).toHaveCount(0);
+    await page.getByLabel("Week starts on").selectOption("0");
+    await banner.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Preferences saved")).toBeVisible();
+    await expect(banner).toHaveCount(0);
+    await expect(save).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByLabel("Week starts on")).toHaveValue("0");
+  });
+
   await test.step("the topbar toggle and the preferences form agree without a reload", async () => {
     const themeSaved = nextActionResponse(page);
     await page.getByRole("button", { name: "Toggle theme" }).click();

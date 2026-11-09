@@ -2,6 +2,7 @@ import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
 import { Page } from "@/ui/shell/page";
+import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { SettingsTabs, SettingsTitle } from "./settings-tabs";
 
 export default async function SettingsLayout({ children }: LayoutProps<"/settings">) {
@@ -29,7 +30,8 @@ export default async function SettingsLayout({ children }: LayoutProps<"/setting
       <div className="flex w-full flex-col gap-4">
         <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
         <SettingsTabs label={t("tabs.label")} tabs={tabs} />
-        {children}
+        {/* A form with changes not saved shows its Save and the banner; leaving asks first. */}
+        <UnsavedChangesProvider>{children}</UnsavedChangesProvider>
       </div>
     </Page>
   );

@@ -8,6 +8,12 @@
     "loading": "Loading…",
     "cancel": "Cancel"
   },
+  "unsaved": {
+    "banner": "{count, plural, one {A section has changes that are not saved} other {# sections have changes that are not saved}}",
+    "discard": "Discard changes",
+    "saveAll": "Save changes",
+    "leave": "There are changes that are not saved. Leave the page and lose them?"
+  },
   "nav": {
     "primary": "Primary",
     "groups": {

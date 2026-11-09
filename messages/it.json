@@ -8,6 +8,12 @@
     "loading": "Caricamento…",
     "cancel": "Annulla"
   },
+  "unsaved": {
+    "banner": "{count, plural, one {Una sezione ha modifiche non salvate} other {# sezioni hanno modifiche non salvate}}",
+    "discard": "Annulla modifiche",
+    "saveAll": "Salva modifiche",
+    "leave": "Ci sono modifiche non salvate. Uscire dalla pagina e perderle?"
+  },
   "nav": {
     "primary": "Principale",
     "groups": {

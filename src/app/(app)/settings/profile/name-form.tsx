@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useRef, useState, useTransition } from "react";
 import { updateNameAction } from "@/modules/users/actions";
 import type { Role } from "@/platform/context";
 import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
@@ -11,6 +11,7 @@ import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 
 export function NameForm({
   name,
@@ -27,6 +28,8 @@ export function NameForm({
   const common = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,6 +42,7 @@ export function NameForm({
           return;
         }
         setError(null);
+        unsaved.saved();
         notify(t("saved"));
       } catch {
         setError(t("errors.failed"));
@@ -47,7 +51,7 @@ export function NameForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+    <form ref={formRef} onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
       {error && (
         <p role="alert" className="text-sm text-neg sm:col-span-2">
           {error}
@@ -79,9 +83,11 @@ export function NameForm({
         {sso ? (
           <span className="text-sm text-muted">{t("ssoNote")}</span>
         ) : (
-          <Button type="submit" variant="primary" size="sm" disabled={pending}>
-            {common("save")}
-          </Button>
+          unsaved.dirty && (
+            <Button type="submit" variant="primary" size="sm" disabled={pending}>
+              {common("save")}
+            </Button>
+          )
         )}
       </CardFooter>
     </form>

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -39,7 +39,7 @@ describe("PreferencesForm", () => {
     renderForm();
     await userEvent.selectOptions(screen.getByLabelText("Language"), "it");
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, locale: "it", theme: "dark" });
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
@@ -52,7 +52,7 @@ describe("PreferencesForm", () => {
     expect(screen.getByLabelText("Currency sign")).toHaveValue("");
     await userEvent.selectOptions(screen.getByLabelText("Decimal separator"), ".");
     await userEvent.selectOptions(screen.getByLabelText("Currency sign"), "after");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     expect(save).toHaveBeenCalledWith({
       ...DEFAULT_PREFERENCES,
       decimalSeparator: ".",
@@ -74,8 +74,17 @@ describe("PreferencesForm", () => {
     expect(screen.getByRole("option", { name: "USD · US Dollar" })).toHaveValue("USD");
     expect(screen.queryByRole("option", { name: /^BGN/ })).toBeNull();
     await userEvent.selectOptions(field, "USD");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, displayCurrency: "USD" });
+  });
+
+  it("shows Save only while a preference differs from the saved one", async () => {
+    renderForm();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
+    expect(await screen.findByRole("button", { name: "Save" })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Theme"), "light");
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument());
   });
 
   it("labels every timezone with its UTC offset", () => {
@@ -86,14 +95,16 @@ describe("PreferencesForm", () => {
   it("shows a catalogued error instead of crashing when the action refuses to save", async () => {
     save.mockResolvedValueOnce({ ok: false, error: "invalid" });
     renderForm();
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.preferences.errors.invalid);
   });
 
   it("shows a catalogued error instead of crashing when the action rejects unexpectedly", async () => {
     save.mockRejectedValueOnce(new Error("network down"));
     renderForm();
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.preferences.errors.failed);
   });
 });
