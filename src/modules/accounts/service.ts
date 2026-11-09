@@ -369,15 +369,28 @@ export interface ProviderBalanceInput {
  * stamps it only on the accounts its reconciliation had a step for, so an account that came back
  * unchanged would otherwise go stale while being read every hour. Same transaction as the balance,
  * so the two facts cannot disagree.
+ *
+ * An account Investments manages (a Wallet account handed over to a service, §1.3, A4) takes no
+ * provider balance from `managed_since` on: its value there is the `portfolio` source alone. The
+ * reading still happened, so `last_synced_at` moves and the account does not go stale; `null` says
+ * no balance was written.
  */
 export async function saveProviderBalance(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
   input: ProviderBalanceInput,
   now: Date = new Date(),
-): Promise<BalanceEntry> {
+): Promise<BalanceEntry | null> {
   await requireAccount(ctx, accountId);
   if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
+  const since = await managedSinceOf(ctx, accountId);
+  if (since !== null && input.on >= since) {
+    await getDb()
+      .update(accounts)
+      .set({ lastSyncedAt: now })
+      .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
+    return null;
+  }
   const values = {
     balanceCents: input.cents,
     availableCents: input.availableCents ?? null,

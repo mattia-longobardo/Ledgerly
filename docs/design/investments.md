@@ -144,8 +144,10 @@ Vincoli:
 - **niente adozione per nome (A4).** Al collegamento e nella migrazione l'utente sceglie in modo
   esplicito: "Crea un conto nuovo" oppure "Usa il conto esistente X". Il dialog elenca i conti dello
   stesso tipo con saldo e fonte dell'ultima entry;
-- un conto già alimentato da un'altra connessione (es. Wallet) non si può scegliere finché
-  quella connessione lo alimenta. Il dialog lo mostra disabilitato con il motivo;
+- un conto sincronizzato da Wallet si può scegliere (PERS-324, 09/11/2026: Fineco arriva da Wallet).
+  Da `managed_since` la sync Wallet non scrive più il saldo del conto (`saveProviderBalance`
+  aggiorna solo `last_synced_at`): il valore sono i punti `portfolio`, con un solo scrittore. Prima
+  la regola escludeva il conto finché Wallet lo alimentava, e Fineco non poteva diventare un servizio;
 - **passaggio di autorità atomico (A4).** In una sola transazione, al giorno `T` = `managed_since`:
   le entry `manual`/`import`/`provider` del conto con `on ≥ T` vengono copiate in
   `investment_superseded_entries` (archivio con motivo) e cancellate; le entry prima di `T` restano;

@@ -436,20 +436,22 @@ async function syncAccounts(
 
   const on = today(ctx.timeZone, now);
   let written = 0;
-  let unresolved = 0;
+  let skipped = 0;
   for (const balance of balances) {
     const accountId = after.get(balance.accountExternalId);
     if (accountId === undefined) {
-      unresolved += 1;
+      skipped += 1;
       continue;
     }
-    await saveProviderBalance(
+    const saved = await saveProviderBalance(
       ctx,
       accountId,
       { on, cents: balance.cents, availableCents: balance.availableCents },
       now,
     );
-    written += 1;
+    // `null`: a service of Investments owns the account's balance (§1.3), not this pass.
+    if (saved === null) skipped += 1;
+    else written += 1;
   }
 
   const present = new Set(remote.map((account) => account.externalId));
@@ -458,7 +460,7 @@ async function syncAccounts(
     counts: {
       [CREATED]: [...after.keys()].filter((externalId) => !before.has(externalId)).length,
       [UPDATED]: written,
-      [SKIPPED]: unresolved,
+      [SKIPPED]: skipped,
       [REMOVED]: gone.length,
     },
     present,

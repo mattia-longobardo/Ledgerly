@@ -4,7 +4,13 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { accountsView, listBalanceEntries } from "@/modules/accounts/queries";
-import { AccountError, createAccount, saveBalanceEntry } from "@/modules/accounts/service";
+import {
+  AccountError,
+  applyProviderAccounts,
+  createAccount,
+  saveBalanceEntry,
+  saveProviderBalance,
+} from "@/modules/accounts/service";
 import { createFund } from "@/modules/funds/service";
 import type { Ctx } from "@/platform/context";
 import { addDays, today } from "@/platform/dates";
@@ -402,6 +408,45 @@ describe("handover of an existing account (§1.3, A4)", () => {
     // The only account: counted once, never twice.
     expect(view.total).toBe(eur(1500));
     expect(view.buckets.investments.total).toBe(eur(1500));
+  });
+
+  it("a Wallet account (Fineco) becomes a manual service, and Wallet stops writing its balance", async () => {
+    // The bug: an account synced by Wallet was offered disabled ("fed by a connection") and the
+    // handover refused it, so Fineco could not become a service without being counted twice.
+    await applyProviderAccounts(ctx, "wallet", [
+      {
+        provider: "wallet",
+        providerAccountId: "fineco",
+        name: "Fineco",
+        type: "investment",
+        currency: "EUR",
+      },
+    ]);
+    const [fineco] = (await accountsView(ctx)).rows.filter((one) => one.account.name === "Fineco");
+    const accountId = fineco.account.id;
+    await saveProviderBalance(ctx, accountId, { on: addDays(todayOn, -1), cents: eur(5_000) });
+    await saveProviderBalance(ctx, accountId, { on: todayOn, cents: eur(5_100) });
+
+    const reasons = new Map((await eligibleAccounts(ctx)).map((one) => [one.account.id, one.reason]));
+    expect(reasons.get(accountId)).toBeNull();
+    await createManualService(ctx, {
+      target: "existing",
+      accountId,
+      category: "broker",
+      mode: "total",
+      url: null,
+    });
+    expect((await serviceDetail(ctx, accountId))?.summary.valueCents).toBe(eur(5_100));
+
+    // The next Wallet pass reads a new balance: Investments is the account's only writer from T.
+    await expect(saveProviderBalance(ctx, accountId, { on: todayOn, cents: eur(9_999) })).resolves.toBeNull();
+    const entries = await listBalanceEntries(ctx, accountId);
+    expect(entries.filter((entry) => entry.source === "provider").map((entry) => entry.on)).toEqual([
+      addDays(todayOn, -1),
+    ]);
+    const view = await accountsView(ctx);
+    expect(view.rows.find((one) => one.account.id === accountId)?.balance).toBe(eur(5_100));
+    expect(view.rows.find((one) => one.account.id === accountId)?.stale).toBe(false);
   });
 
   it("from T Accounts refuses a manual balance; before T it still takes one", async () => {

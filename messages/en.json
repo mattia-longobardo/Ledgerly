@@ -3310,7 +3310,6 @@
       "noExisting": "No investment or crypto account to use.",
       "option": "{name} · {balance}",
       "reasons": {
-        "synced": "fed by a connection",
         "fund": "a fund's account",
         "managed": "already a service"
       },

@@ -416,9 +416,10 @@ export const manualServiceSchema = z.discriminatedUnion("target", [
 export type ManualServiceInput = z.input<typeof manualServiceSchema>;
 
 /**
- * The accounts "Use the existing account" may offer (§1.3): manual, open accounts of type
- * investment or crypto that no other module writes — not a fund's valuation account, not already
- * a service. A synced account is fed by its connection, so it is never one.
+ * The accounts "Use the existing account" may offer (§1.3): open accounts of type investment or
+ * crypto that no other module writes — not a fund's valuation account, not already a service. An
+ * account synced by Wallet is offered too: from `managed_since` the Wallet pass leaves its balance
+ * to Investments (`saveProviderBalance`), so the handover keeps one writer.
  */
 export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
   const [all, funded, managed] = await Promise.all([
@@ -435,13 +436,11 @@ export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
     reason:
       account.type !== "investment" && account.type !== "crypto"
         ? ("type" as const)
-        : account.origin !== "manual"
-          ? ("synced" as const)
-          : taken.has(account.id)
-            ? funded.has(account.id)
-              ? ("fund" as const)
-              : ("managed" as const)
-            : null,
+        : taken.has(account.id)
+          ? funded.has(account.id)
+            ? ("fund" as const)
+            : ("managed" as const)
+          : null,
   }));
 }
 

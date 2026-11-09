@@ -519,7 +519,7 @@ function ManualServiceDialog({
                       balance: formatMoney(one.balanceCents, numberFormat, { currency: one.currency }),
                     })}
                     {one.reason !== null &&
-                      ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.synced")}`}
+                      ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.managed")}`}
                   </option>
                 ))}
               </Select>
@@ -2224,7 +2224,7 @@ function ConnectDialog({
                     {!currencies.includes(one.currency)
                       ? ` — ${t("connect.currencyNotSupported")}`
                       : !usable(one) && one.reason !== null
-                        ? ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.synced")}`
+                        ? ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.managed")}`
                         : ""}
                   </option>
                 ))}
