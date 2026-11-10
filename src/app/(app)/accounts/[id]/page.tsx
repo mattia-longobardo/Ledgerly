@@ -224,11 +224,11 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
         />
       )}
 
-      {tab === "settings" && <ConnectionsSection accountId={id} rows={connections} />}
-
       {tab === "settings" && (
-        // Save and Discard for the settings live in the banner, which appears with a change.
+        // Save and Discard for the settings live in the banner, which appears with a change: above
+        // the connections, the first section of the tab, so it is seen where the tab starts.
         <UnsavedChangesProvider>
+          <ConnectionsSection accountId={id} rows={connections} />
           <AccountSettingsForm
             today={today(ctx.timeZone, now)}
             // The place the account holds in the list, so the colour control shows the colour the

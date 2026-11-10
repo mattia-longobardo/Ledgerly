@@ -111,6 +111,11 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await page.goto(`${account}?tab=settings`);
     await page.getByLabel("Name").fill("ING main");
     await page.getByLabel("Warn below").fill("2.000,00");
+    // The banner opens the tab, above the connections, not between them and the form.
+    await expect(page.getByTestId("unsaved-banner")).toBeVisible();
+    const banner = await page.getByTestId("unsaved-banner").boundingBox();
+    const connections = await page.getByRole("heading", { name: "Connections" }).boundingBox();
+    expect(banner!.y).toBeLessThan(connections!.y);
     await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Account saved")).toBeVisible();
 
