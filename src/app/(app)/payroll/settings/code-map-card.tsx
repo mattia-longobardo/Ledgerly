@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
 import { resetCodeAction, setCodeRoleAction } from "@/modules/payroll/actions";
 import { CODE_ROLES } from "@/modules/payroll/rules";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input, Select } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 
 interface Entry {
   code: string;
@@ -29,7 +30,7 @@ export function CodeMapCard({ entries }: { entries: Entry[] }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>) {
+  function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, then?: () => void) {
     startTransition(async () => {
       const result = await action();
       if (!result.ok) {
@@ -37,21 +38,10 @@ export function CodeMapCard({ entries }: { entries: Entry[] }) {
         return;
       }
       setError(null);
+      then?.();
       notify(t("saved"));
       router.refresh();
     });
-  }
-
-  function onSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(() =>
-      setCodeRoleAction(
-        String(data.get("code") ?? ""),
-        String(data.get("role") ?? ""),
-        String(data.get("note") ?? ""),
-      ),
-    );
   }
 
   function onAdd(event: FormEvent<HTMLFormElement>) {
@@ -87,39 +77,13 @@ export function CodeMapCard({ entries }: { entries: Entry[] }) {
         {entries.map((entry) => (
           <li key={entry.code} data-code={entry.code}>
             {/* Keyed by what is stored: a reset or a save elsewhere redraws the row with it. */}
-            <form
+            <CodeRow
               key={`${entry.role}|${entry.note ?? ""}`}
-              onSubmit={onSave}
-              className="grid grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 max-md:grid-cols-2"
-            >
-              <input type="hidden" name="code" value={entry.code} />
-              <span className="flex items-center gap-1.5 font-medium tabular-nums">
-                {entry.code}
-                {!entry.seeded && <Badge tone="accent">{t("custom")}</Badge>}
-              </span>
-              <Select name="role" defaultValue={entry.role} aria-label={`${t("role")} ${entry.code}`}>
-                {roleOptions}
-              </Select>
-              <Input
-                name="note"
-                defaultValue={entry.note ?? ""}
-                maxLength={200}
-                aria-label={`${t("note")} ${entry.code}`}
-              />
-              <span className="flex gap-1">
-                <Button type="submit" size="xs" disabled={pending}>
-                  {t("save")}
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => run(() => resetCodeAction(entry.code))}
-                >
-                  {entry.seeded ? t("reset") : t("remove")}
-                </Button>
-              </span>
-            </form>
+              entry={entry}
+              roleOptions={roleOptions}
+              pending={pending}
+              run={run}
+            />
           </li>
         ))}
       </ul>
@@ -144,5 +108,72 @@ export function CodeMapCard({ entries }: { entries: Entry[] }) {
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * One code of the map. No Save of its own: a changed row is saved by the banner of the page
+ * (`useUnsavedForm`), with every other changed row.
+ */
+function CodeRow({
+  entry,
+  roleOptions,
+  pending,
+  run,
+}: {
+  entry: Entry;
+  roleOptions: ReactNode;
+  pending: boolean;
+  run: (action: () => Promise<{ ok: true } | { ok: false; error: string }>, then?: () => void) => void;
+}) {
+  const t = useTranslations("settings.codeMap");
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef, pending);
+
+  function onSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    run(
+      () =>
+        setCodeRoleAction(
+          String(data.get("code") ?? ""),
+          String(data.get("role") ?? ""),
+          String(data.get("note") ?? ""),
+        ),
+      unsaved.saved,
+    );
+  }
+
+  return (
+    <form
+      ref={formRef}
+      onSubmit={onSave}
+      className="grid grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 px-4 py-1.5 max-md:grid-cols-2"
+    >
+      <input type="hidden" name="code" value={entry.code} />
+      <span className="flex items-center gap-1.5 font-medium tabular-nums">
+        {entry.code}
+        {!entry.seeded && <Badge tone="accent">{t("custom")}</Badge>}
+      </span>
+      <Select name="role" defaultValue={entry.role} aria-label={`${t("role")} ${entry.code}`}>
+        {roleOptions}
+      </Select>
+      <Input
+        name="note"
+        defaultValue={entry.note ?? ""}
+        maxLength={200}
+        aria-label={`${t("note")} ${entry.code}`}
+      />
+      <span className="flex gap-1">
+        <Button
+          size="xs"
+          variant="ghost"
+          disabled={pending}
+          onClick={() => run(() => resetCodeAction(entry.code))}
+        >
+          {entry.seeded ? t("reset") : t("remove")}
+        </Button>
+      </span>
+    </form>
   );
 }

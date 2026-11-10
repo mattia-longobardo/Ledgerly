@@ -21,7 +21,7 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const unsaved = useUnsavedForm(formRef);
+  const unsaved = useUnsavedForm(formRef, pending);
   const [error, setError] = useState<string | null>(null);
   const [tested, setTested] = useState<{ message: string; ok: boolean } | null>(null);
   const [testing, setTesting] = useState(false);
@@ -118,11 +118,6 @@ export function LlmCard({ current }: { current: { model: string; keyHint: string
         {current && (
           <Button variant="danger" onClick={onRemove} disabled={pending}>
             {t("remove")}
-          </Button>
-        )}
-        {unsaved.dirty && (
-          <Button type="submit" variant="primary" disabled={pending}>
-            {t("save")}
           </Button>
         )}
       </div>

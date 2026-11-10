@@ -27,7 +27,7 @@ test("the totals follow the display currency chosen in Settings, each account ke
     await expect(field).toBeFocused();
     await expect(field).toHaveValue("EUR");
     await field.selectOption("USD");
-    await page.locator("form", { has: field }).getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Preferences saved")).toBeVisible();
   });
 
@@ -53,7 +53,7 @@ test("the totals follow the display currency chosen in Settings, each account ke
     await page.goto("/settings/profile");
     const field = page.getByLabel("Display currency");
     await field.selectOption("EUR");
-    await page.locator("form", { has: field }).getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Preferences saved")).toBeVisible();
     await page.goto("/");
     await expect(hero).toContainText("€");

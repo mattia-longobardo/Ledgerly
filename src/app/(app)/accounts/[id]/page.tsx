@@ -23,6 +23,7 @@ import {
   type ConnectionRow,
 } from "@/modules/accounts/ui/connections";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
+import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
 import { LinkTabs, type SpanKey, SPAN_OPTIONS, spanMonths } from "@/modules/accounts/ui/controls";
 import { MonthRangePicker } from "@/modules/accounts/ui/month-range-picker";
@@ -226,33 +227,36 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
       {tab === "settings" && <ConnectionsSection accountId={id} rows={connections} />}
 
       {tab === "settings" && (
-        <AccountSettingsForm
-          today={today(ctx.timeZone, now)}
-          // The place the account holds in the list, so the colour control shows the colour the
-          // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
-          index={index}
-          account={{
-            id: account.id,
-            name: account.name,
-            type: account.type,
-            currency: account.currency,
-            provider: account.provider,
-            origin: account.origin,
-            state: account.state,
-            color: account.color,
-            reference: account.reference,
-            purpose: account.purpose,
-            openedOn: account.openedOn,
-            notes: account.notes,
-            inNetWorth: account.inNetWorth,
-            inSnapshot: account.inSnapshot,
-            countsAsLiquid: account.countsAsLiquid,
-            lowBalance: account.lowBalanceCents === null ? "" : centsToDecimal(account.lowBalanceCents),
-            staleAfterHours: account.staleAfterHours,
-            reminder: account.reminder,
-            betweenEntries: account.betweenEntries,
-          }}
-        />
+        // Save and Discard for the settings live in the banner, which appears with a change.
+        <UnsavedChangesProvider>
+          <AccountSettingsForm
+            today={today(ctx.timeZone, now)}
+            // The place the account holds in the list, so the colour control shows the colour the
+            // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
+            index={index}
+            account={{
+              id: account.id,
+              name: account.name,
+              type: account.type,
+              currency: account.currency,
+              provider: account.provider,
+              origin: account.origin,
+              state: account.state,
+              color: account.color,
+              reference: account.reference,
+              purpose: account.purpose,
+              openedOn: account.openedOn,
+              notes: account.notes,
+              inNetWorth: account.inNetWorth,
+              inSnapshot: account.inSnapshot,
+              countsAsLiquid: account.countsAsLiquid,
+              lowBalance: account.lowBalanceCents === null ? "" : centsToDecimal(account.lowBalanceCents),
+              staleAfterHours: account.staleAfterHours,
+              reminder: account.reminder,
+              betweenEntries: account.betweenEntries,
+            }}
+          />
+        </UnsavedChangesProvider>
       )}
     </Page>
   );

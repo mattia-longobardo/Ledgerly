@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useRef, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
@@ -11,6 +11,7 @@ import { Checkbox, Input, Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { SettingsSection } from "@/ui/section";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 import {
   archiveAccountAction,
   removeAccountAction,
@@ -61,11 +62,12 @@ export function AccountSettingsForm({
 }) {
   const t = useTranslations("accounts.settings");
   const types = useTranslations("accounts.types");
-  const common = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef, pending);
   const synced = account.origin === "synced";
   const colour = colorField(account, index);
   // Checked, the account has no colour of its own and keeps none: the swatch beside it shows the
@@ -100,6 +102,7 @@ export function AccountSettingsForm({
           return;
         }
         setError(null);
+        unsaved.saved();
         notify(t("saved"));
       } catch {
         setError(t("errors.failed"));
@@ -152,7 +155,7 @@ export function AccountSettingsForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-6">
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-6">
       {error && (
         <p role="alert" className="text-sm text-neg">
           {error}
@@ -292,9 +295,6 @@ export function AccountSettingsForm({
         </div>
         <CardFooter>
           <span className="text-sm text-muted">{t("reporting.footnote")}</span>
-          <Button type="submit" variant="primary" size="sm" disabled={pending}>
-            {common("save")}
-          </Button>
         </CardFooter>
       </SettingsSection>
 

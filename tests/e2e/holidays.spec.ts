@@ -74,12 +74,12 @@ test("the patron saint and the working day are saved on their own, on Time off â
   const patron = page.getByLabel("Patron saint holiday");
   await patron.selectOption({ label: "December" });
   await page.getByLabel("Day", { exact: true }).selectOption("7");
-  await page.locator("form", { has: patron }).getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Patron saint saved")).toBeVisible();
 
   const hours = page.getByLabel("Hours in a working day");
   await hours.fill("7.5");
-  await page.locator("form", { has: hours }).getByRole("button", { name: "Save" }).click();
+  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Working hours saved")).toBeVisible();
 
   await page.reload();

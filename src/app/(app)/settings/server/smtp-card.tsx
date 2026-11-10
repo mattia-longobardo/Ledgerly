@@ -30,7 +30,7 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const unsaved = useUnsavedForm(formRef);
+  const unsaved = useUnsavedForm(formRef, pending);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [tested, setTested] = useState<{ message: string; ok: boolean } | null>(null);
@@ -192,12 +192,6 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
           <Button size="sm" onClick={onTest} disabled={pending}>
             {sending ? t("test.running") : t("test.action")}
           </Button>
-          {/* Only with something to save; values still from the environment file are. */}
-          {(unsaved.dirty || !saved) && (
-            <Button type="submit" size="sm" variant="primary" disabled={pending}>
-              {t("save")}
-            </Button>
-          )}
         </div>
       </div>
     </form>

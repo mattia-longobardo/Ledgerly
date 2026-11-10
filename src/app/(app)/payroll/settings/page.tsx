@@ -7,6 +7,7 @@ import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Page } from "@/ui/shell/page";
 import { TabLinks } from "@/ui/tab-links";
+import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { CodeMapCard } from "./code-map-card";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -38,27 +39,30 @@ export default async function PayrollSettingsPage() {
           ]}
         />
       </div>
-      <SettingsGrid>
-        <SettingsSection title={codes("title")} description={codes("description")} padded={false}>
-          <CodeMapCard
-            entries={codeMap.map((entry) => ({
-              code: entry.code,
-              role: entry.role,
-              note: entry.note,
-              seeded: seeded.has(entry.code),
-            }))}
-          />
-        </SettingsSection>
-        {ctx.role === "admin" && (
-          <SettingsSection title={t("settingsPage.related")} description={t("settingsPage.relatedDescription")}>
-            <div className="flex flex-wrap gap-2">
-              <ButtonLink href={"/settings/server" as Route} size="sm">
-                {t("settingsPage.llm")}
-              </ButtonLink>
-            </div>
+      {/* Save and Discard for the code map live in the banner, which appears with a change. */}
+      <UnsavedChangesProvider>
+        <SettingsGrid>
+          <SettingsSection title={codes("title")} description={codes("description")} padded={false}>
+            <CodeMapCard
+              entries={codeMap.map((entry) => ({
+                code: entry.code,
+                role: entry.role,
+                note: entry.note,
+                seeded: seeded.has(entry.code),
+              }))}
+            />
           </SettingsSection>
-        )}
-      </SettingsGrid>
+          {ctx.role === "admin" && (
+            <SettingsSection title={t("settingsPage.related")} description={t("settingsPage.relatedDescription")}>
+              <div className="flex flex-wrap gap-2">
+                <ButtonLink href={"/settings/server" as Route} size="sm">
+                  {t("settingsPage.llm")}
+                </ButtonLink>
+              </div>
+            </SettingsSection>
+          )}
+        </SettingsGrid>
+      </UnsavedChangesProvider>
     </Page>
   );
 }

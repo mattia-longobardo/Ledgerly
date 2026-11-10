@@ -44,7 +44,7 @@ export function OidcCard({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const unsaved = useUnsavedForm(formRef);
+  const unsaved = useUnsavedForm(formRef, pending);
   const [error, setError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -168,12 +168,6 @@ export function OidcCard({
           <Button size="sm" onClick={onTest} disabled={pending}>
             {testing ? t("test.running") : t("test.action")}
           </Button>
-          {/* Only with something to save; values still from the environment file are. */}
-          {(unsaved.dirty || !saved) && (
-            <Button type="submit" size="sm" variant="primary" disabled={pending}>
-              {t("save")}
-            </Button>
-          )}
         </div>
       </div>
     </form>

@@ -21,22 +21,18 @@ test("theme and language preferences apply at once, persist, and come from the a
   await page.goto("/settings/profile");
   const preferences = page.locator("form", { has: page.locator("#language") });
 
-  await test.step("Save and the banner appear with a change only, and leave once it is saved", async () => {
+  await test.step("no Save of its own; the banner appears with a change only, and leaves once saved", async () => {
     const banner = page.getByTestId("unsaved-banner");
-    const save = preferences.getByRole("button", { name: "Save" });
-    await expect(save).toHaveCount(0);
+    await expect(preferences.getByRole("button", { name: "Save" })).toHaveCount(0);
     await expect(banner).toHaveCount(0);
     await page.getByLabel("Week starts on").selectOption("0");
-    await expect(save).toBeVisible();
     await expect(banner).toBeVisible();
     await page.getByLabel("Week starts on").selectOption("1");
-    await expect(save).toHaveCount(0);
     await expect(banner).toHaveCount(0);
     await page.getByLabel("Week starts on").selectOption("0");
     await banner.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Preferences saved")).toBeVisible();
     await expect(banner).toHaveCount(0);
-    await expect(save).toHaveCount(0);
     await page.reload();
     await expect(page.getByLabel("Week starts on")).toHaveValue("0");
   });
@@ -49,7 +45,7 @@ test("theme and language preferences apply at once, persist, and come from the a
     await expect(page.getByLabel("Theme", { exact: true })).toHaveValue("dark");
 
     await page.getByLabel("Language").selectOption("it");
-    await preferences.getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(
       page.getByRole("navigation", { name: "Principale" }).getByRole("link", { name: "Panoramica" }),
     ).toBeVisible();
@@ -68,7 +64,7 @@ test("theme and language preferences apply at once, persist, and come from the a
   await test.step("System follows the OS colour scheme while the page is open", async () => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.getByLabel("Tema", { exact: true }).selectOption("system");
-    await preferences.getByRole("button", { name: "Salva" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Salva modifiche" }).click();
     await expect(html).toHaveAttribute("data-theme", "light");
     await page.emulateMedia({ colorScheme: "dark" });
     await expect(html).toHaveAttribute("data-theme", "dark");

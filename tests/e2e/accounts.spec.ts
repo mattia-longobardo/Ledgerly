@@ -111,7 +111,7 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await page.goto(`${account}?tab=settings`);
     await page.getByLabel("Name").fill("ING main");
     await page.getByLabel("Warn below").fill("2.000,00");
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Account saved")).toBeVisible();
 
     await page.goto("/accounts");

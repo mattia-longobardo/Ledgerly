@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
+import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { AllowanceForm, PatronSaintForm, WorkingHoursForm } from "./settings-forms";
 
 const savePreferences = vi.fn();
@@ -17,12 +18,13 @@ vi.mock("../actions", () => ({ saveAllowanceAction: (...args: unknown[]) => save
 function inIntl(children: React.ReactNode) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      {children}
+      <UnsavedChangesProvider>{children}</UnsavedChangesProvider>
     </NextIntlClientProvider>,
   );
 }
 
-const save = () => userEvent.click(screen.getByRole("button", { name: "Save" }));
+/** The forms have no Save of their own: the page's banner saves them once they hold a change. */
+const save = async () => userEvent.click(await screen.findByRole("button", { name: "Save changes" }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -62,6 +64,9 @@ describe("WorkingHoursForm", () => {
   it("says when the value is refused", async () => {
     savePreferences.mockResolvedValue({ ok: false, error: "invalid" });
     inIntl(<WorkingHoursForm minutesPerDay={480} />);
+    const hours = screen.getByLabelText("Hours in a working day");
+    await userEvent.clear(hours);
+    await userEvent.type(hours, "7");
     await save();
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.timeoff.errors.invalid);
   });
@@ -83,6 +88,16 @@ describe("AllowanceForm", () => {
       totalDays: "30",
       note: "CCNL",
     });
+  });
+
+  it("shows the banner only once a value differs, and has no Save of its own", async () => {
+    inIntl(<AllowanceForm allowance={empty} previous={last} stepper={null} />);
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(screen.queryByTestId("unsaved-banner")).toBeNull();
+    // Set by a button, not typed: the form still sees it.
+    await userEvent.click(screen.getByRole("button", { name: "Copy from 2025" }));
+    expect(await screen.findByTestId("unsaved-banner")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });
 
   it("offers no copy when last year has no allowance", () => {

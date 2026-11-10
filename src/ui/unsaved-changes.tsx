@@ -1,8 +1,9 @@
 "use client";
 
-// src/ui/unsaved-changes.tsx — the Settings forms say when they hold changes not yet saved: their
-// Save button appears only then, a banner over the page offers Save and Discard for all of them,
-// and leaving the page (a link, a reload, closing the tab) asks first.
+// src/ui/unsaved-changes.tsx — the settings forms (Settings, an account's settings, Time off and
+// Payroll settings) have no Save button of their own: once one holds a change not yet saved, a
+// banner over the page offers Save and Discard for all of them, and leaving the page (a link, a
+// reload, closing the tab) asks first.
 //
 // A form is compared by what its controls show, not by its state: the Settings forms are a mix of
 // controlled and uncontrolled ones, and the DOM is the one thing every one of them has.
@@ -74,6 +75,7 @@ const same = (a: readonly Value[], b: readonly Value[]) =>
 interface Entry {
   submit: () => void;
   reset: () => void;
+  pending: boolean;
 }
 
 interface Registry {
@@ -84,10 +86,11 @@ const UnsavedContext = createContext<Registry | null>(null);
 
 /**
  * Tracks one form. `dirty` is true while what it shows differs from what was saved; call `saved()`
- * once a save went through, so what it shows now is the new starting point. Works without a
- * {@link UnsavedChangesProvider} too (a form alone in a test): then only `dirty` is there.
+ * once a save went through, so what it shows now is the new starting point. The form has no Save
+ * button of its own: the banner of {@link UnsavedChangesProvider} submits it, and is disabled while
+ * `pending`. Without a provider (a form alone in a test) only `dirty` is there.
  */
-export function useUnsavedForm(formRef: RefObject<HTMLFormElement | null>) {
+export function useUnsavedForm(formRef: RefObject<HTMLFormElement | null>, pending = false) {
   const registry = useContext(UnsavedContext);
   const id = useId();
   const baseline = useRef<Value[] | null>(null);
@@ -119,6 +122,11 @@ export function useUnsavedForm(formRef: RefObject<HTMLFormElement | null>) {
     };
   }, [formRef, check]);
 
+  // A value set by code, not by an event (a "copy last year's" button): seen after the render.
+  useEffect(() => {
+    check();
+  });
+
   useEffect(() => {
     if (!registry) return;
     registry.set(
@@ -131,10 +139,11 @@ export function useUnsavedForm(formRef: RefObject<HTMLFormElement | null>) {
               if (form && baseline.current) writeForm(form, baseline.current);
               check();
             },
+            pending,
           }
         : null,
     );
-  }, [registry, id, dirty, formRef, check]);
+  }, [registry, id, dirty, pending, formRef, check]);
 
   useEffect(() => () => registry?.set(id, null), [registry, id]);
 
@@ -154,14 +163,16 @@ export function useUnsavedForm(formRef: RefObject<HTMLFormElement | null>) {
 export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
   const t = useTranslations("unsaved");
   const entries = useRef(new Map<string, Entry>());
-  const [count, setCount] = useState(0);
+  const [list, setList] = useState<Entry[]>([]);
+  const count = list.length;
+  const pending = list.some((entry) => entry.pending);
 
   const registry = useMemo<Registry>(
     () => ({
       set: (id, entry) => {
         if (entry) entries.current.set(id, entry);
         else entries.current.delete(id);
-        setCount(entries.current.size);
+        setList([...entries.current.values()]);
       },
     }),
     [],
@@ -215,10 +226,10 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
           <TriangleAlert aria-hidden className="size-4 shrink-0 text-warn" />
           <p className="mr-auto min-w-0 font-medium text-fg">{t("banner", { count })}</p>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => all("reset")}>
+            <Button size="sm" onClick={() => all("reset")} disabled={pending}>
               {t("discard")}
             </Button>
-            <Button size="sm" variant="primary" onClick={() => all("submit")}>
+            <Button size="sm" variant="primary" onClick={() => all("submit")} disabled={pending}>
               {t("saveAll")}
             </Button>
           </div>

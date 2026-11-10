@@ -128,7 +128,7 @@ test("a payslip is uploaded, read, reviewed against its PDF, verified and applie
     const row = page.locator('li[data-code="9424"]');
     await expect(row).toBeVisible();
     await row.getByRole("combobox").selectOption({ label: "Separate payment" });
-    await row.getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(toast(page, "Code map saved")).toBeVisible();
     await row.getByRole("button", { name: "Reset" }).click();
     await expect(row.getByRole("combobox")).toHaveValue("statistical");

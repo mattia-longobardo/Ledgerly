@@ -2,13 +2,14 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useId, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useId, useRef, useState, useTransition } from "react";
 import { saveTimeOffPreferencesAction } from "@/modules/users/actions";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Input, Select } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { saveAllowanceAction } from "../actions";
 import type { AllowanceSummary } from "./leave-actions";
 
@@ -20,12 +21,17 @@ function daysInMonth(month: number | undefined): number {
   return month ? DAYS_IN_MONTH[month - 1] : 31;
 }
 
-/** The submit-and-say-so all three forms share. */
+/**
+ * The submit-and-say-so all three forms share. None has a Save button of its own: the banner of
+ * the page submits the forms with a change (`useUnsavedForm`).
+ */
 function useSave(success: string) {
   const t = useTranslations("timeoff");
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const unsaved = useUnsavedForm(formRef, pending);
   const save = (work: () => Promise<{ ok: true } | { ok: false; error: string }>) =>
     start(async () => {
       try {
@@ -35,13 +41,14 @@ function useSave(success: string) {
           return;
         }
         setError(null);
+        unsaved.saved();
         notify(success);
         router.refresh();
       } catch {
         setError(t("errors.failed"));
       }
     });
-  return { pending, error, save };
+  return { pending, error, save, formRef };
 }
 
 function ErrorLine({ error }: { error: string | null }) {
@@ -73,7 +80,7 @@ export function AllowanceForm({
   const [rolDays, setRolDays] = useState(allowance.rolDays);
   const [totalDays, setTotalDays] = useState(allowance.totalDays);
   const [note, setNote] = useState(allowance.note);
-  const { pending, error, save } = useSave(t("toasts.allowanceSaved"));
+  const { pending, error, save, formRef } = useSave(t("toasts.allowanceSaved"));
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -94,7 +101,7 @@ export function AllowanceForm({
   );
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium">{t("header.yearLabel")}</span>
         {stepper}
@@ -120,8 +127,8 @@ export function AllowanceForm({
         />
       </Field>
       <ErrorLine error={error} />
-      <CardFooter>
-        {previous ? (
+      {previous && (
+        <CardFooter>
           <Button
             size="sm"
             variant="ghost"
@@ -135,13 +142,8 @@ export function AllowanceForm({
           >
             {t("settings.copyFrom", { year: previous.year })}
           </Button>
-        ) : (
-          <span />
-        )}
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {t("actions.save")}
-        </Button>
-      </CardFooter>
+        </CardFooter>
+      )}
     </form>
   );
 }
@@ -150,7 +152,7 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
   const t = useTranslations("timeoff");
   const id = useId();
   const [minutes, setMinutes] = useState(minutesPerDay);
-  const { pending, error, save } = useSave(t("settings.hours.saved"));
+  const { error, save, formRef } = useSave(t("settings.hours.saved"));
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -158,7 +160,7 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3">
       <div className="max-w-56">
         <Field label={t("settings.hours.label")} htmlFor={`${id}-hours`} hint={t("settings.hours.hint")}>
           <Input
@@ -175,12 +177,6 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
         </Field>
       </div>
       <ErrorLine error={error} />
-      <CardFooter>
-        <span />
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {t("actions.save")}
-        </Button>
-      </CardFooter>
     </form>
   );
 }
@@ -190,7 +186,7 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
   const locale = useLocale();
   const id = useId();
   const [patron, setPatron] = useState(patronSaint);
-  const { pending, error, save } = useSave(t("settings.patron.saved"));
+  const { error, save, formRef } = useSave(t("settings.patron.saved"));
 
   const monthFormatter = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
     month: "long",
@@ -205,7 +201,7 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 border-t border-border pt-3">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3 border-t border-border pt-3">
       <Field label={t("settings.patron.label")} htmlFor={`${id}-month`} hint={t("settings.patron.hint")}>
         <div className="flex gap-2">
           <Select
@@ -240,12 +236,6 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
         </div>
       </Field>
       <ErrorLine error={error} />
-      <CardFooter>
-        <span />
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {t("actions.save")}
-        </Button>
-      </CardFooter>
     </form>
   );
 }

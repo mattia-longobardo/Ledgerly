@@ -195,7 +195,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     // and so no second answer to disagree with the employer's own.
     await expect(form.getByLabel("Carried over from last year")).toHaveCount(0);
     await form.getByLabel("Days granted in total").fill("30");
-    await form.getByRole("button", { name: "Save" }).click();
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Allowance saved")).toBeVisible();
     await tabs.getByRole("link", { name: "Overview" }).click();
 

@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,13 +16,15 @@ function renderForm(initial = DEFAULT_PREFERENCES) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <ThemeProvider saved={initial.theme}>
-        <PreferencesForm
-          initial={initial}
-          timeZones={[
-            { value: "Europe/Rome", label: "Europe/Rome (UTC+2)" },
-            { value: "Europe/London", label: "Europe/London (UTC+1)" },
-          ]}
-        />
+        <UnsavedChangesProvider>
+          <PreferencesForm
+            initial={initial}
+            timeZones={[
+              { value: "Europe/Rome", label: "Europe/Rome (UTC+2)" },
+              { value: "Europe/London", label: "Europe/London (UTC+1)" },
+            ]}
+          />
+        </UnsavedChangesProvider>
       </ThemeProvider>
     </NextIntlClientProvider>,
   );
@@ -39,7 +42,7 @@ describe("PreferencesForm", () => {
     renderForm();
     await userEvent.selectOptions(screen.getByLabelText("Language"), "it");
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
-    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save changes" }));
     expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, locale: "it", theme: "dark" });
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
@@ -52,7 +55,7 @@ describe("PreferencesForm", () => {
     expect(screen.getByLabelText("Currency sign")).toHaveValue("");
     await userEvent.selectOptions(screen.getByLabelText("Decimal separator"), ".");
     await userEvent.selectOptions(screen.getByLabelText("Currency sign"), "after");
-    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save changes" }));
     expect(save).toHaveBeenCalledWith({
       ...DEFAULT_PREFERENCES,
       decimalSeparator: ".",
@@ -74,17 +77,18 @@ describe("PreferencesForm", () => {
     expect(screen.getByRole("option", { name: "USD · US Dollar" })).toHaveValue("USD");
     expect(screen.queryByRole("option", { name: /^BGN/ })).toBeNull();
     await userEvent.selectOptions(field, "USD");
-    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save changes" }));
     expect(save).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, displayCurrency: "USD" });
   });
 
-  it("shows Save only while a preference differs from the saved one", async () => {
+  it("has no Save of its own; the banner shows only while a preference differs", async () => {
     renderForm();
-    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
-    expect(await screen.findByRole("button", { name: "Save" })).toBeInTheDocument();
+    expect(await screen.findByTestId("unsaved-banner")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "light");
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId("unsaved-banner")).toBeNull());
   });
 
   it("labels every timezone with its UTC offset", () => {
@@ -96,7 +100,7 @@ describe("PreferencesForm", () => {
     save.mockResolvedValueOnce({ ok: false, error: "invalid" });
     renderForm();
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
-    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save changes" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.preferences.errors.invalid);
   });
 
@@ -104,7 +108,7 @@ describe("PreferencesForm", () => {
     save.mockRejectedValueOnce(new Error("network down"));
     renderForm();
     await userEvent.selectOptions(screen.getByLabelText("Theme"), "dark");
-    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Save changes" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.settings.preferences.errors.failed);
   });
 });

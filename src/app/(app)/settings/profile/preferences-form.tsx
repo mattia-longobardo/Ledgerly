@@ -6,7 +6,6 @@ import { type FormEvent, useRef, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@/modules/users/rules";
 import { DISPLAY_CURRENCIES } from "@/platform/fx/rules";
-import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Checkbox, Select } from "@/ui/input";
@@ -30,14 +29,13 @@ export function PreferencesForm({
   summaryBlocked?: boolean;
 }) {
   const t = useTranslations("settings.preferences");
-  const common = useTranslations("common");
   const locale = useLocale();
   const { setPreference: setTheme } = useTheme();
   const [prefs, setPrefs] = useState<Preferences>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const unsaved = useUnsavedForm(formRef);
+  const unsaved = useUnsavedForm(formRef, pending);
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPrefs((p) => ({ ...p, [key]: value }));
 
@@ -178,11 +176,6 @@ export function PreferencesForm({
           />
           {summaryBlocked && <p className="text-sm text-warn">{t("monthlySummaryBlocked")}</p>}
         </div>
-        {unsaved.dirty && (
-          <Button type="submit" variant="primary" size="sm" disabled={pending}>
-            {common("save")}
-          </Button>
-        )}
       </CardFooter>
     </form>
   );

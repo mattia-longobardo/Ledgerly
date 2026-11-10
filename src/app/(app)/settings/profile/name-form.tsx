@@ -6,7 +6,6 @@ import { updateNameAction } from "@/modules/users/actions";
 import type { Role } from "@/platform/context";
 import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
 import { Avatar } from "@/ui/avatar";
-import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
@@ -25,11 +24,10 @@ export function NameForm({
   sso: boolean;
 }) {
   const t = useTranslations("settings.account");
-  const common = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const unsaved = useUnsavedForm(formRef);
+  const unsaved = useUnsavedForm(formRef, pending);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,15 +78,7 @@ export function NameForm({
             strong: (chunks) => <span className="font-medium text-fg">{chunks}</span>,
           })}
         </span>
-        {sso ? (
-          <span className="text-sm text-muted">{t("ssoNote")}</span>
-        ) : (
-          unsaved.dirty && (
-            <Button type="submit" variant="primary" size="sm" disabled={pending}>
-              {common("save")}
-            </Button>
-          )
-        )}
+        {sso && <span className="text-sm text-muted">{t("ssoNote")}</span>}
       </CardFooter>
     </form>
   );
