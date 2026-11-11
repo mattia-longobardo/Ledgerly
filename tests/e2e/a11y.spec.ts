@@ -320,17 +320,20 @@ const PAGES: Screen[] = [
     open: go("/investments?period=all&view=value&by=class"),
   },
   { name: "/investments/catalog", session: "layout", open: go("/investments/catalog") },
-  // The four tabs of a service (§3.2–§3.6, U3), of a manual account per asset, of one in total
-  // mode, and of the two connected ones.
+  // The tabs of a service (§3.2–§3.6, U3): the three of the two manual accounts, which keep no
+  // positions (PERS-335), and the four of the two connected ones.
   ...(
     [
-      ["Directa", "a manual account"],
-      ["Fineco Conto Deposito", "a manual account in total mode"],
-      ["eToro", "synced with eToro"],
-      ["Binance", "synced with Binance"],
+      ["Directa", "a manual account", false],
+      ["Fineco Conto Deposito", "a manual account opened today", false],
+      ["eToro", "synced with eToro", true],
+      ["Binance", "synced with Binance", true],
     ] as const
-  ).flatMap(([service, what]) =>
-    (["", "positions", "activity", "connection"] as const).map((tab) => ({
+  ).flatMap(([service, what, positions]) =>
+    (positions
+      ? (["", "positions", "activity", "connection"] as const)
+      : (["", "activity", "connection"] as const)
+    ).map((tab) => ({
       name: `/investments/[accountId]${tab ? `/${tab}` : ""}, ${what}`,
       session: "layout" as const,
       open: (page: Page) => serviceTab(page, service, tab),
@@ -350,10 +353,10 @@ const PAGES: Screen[] = [
     },
   })),
   {
-    name: "/investments/[accountId]/positions?by=class, a manual account",
+    name: "/investments/[accountId]/positions?by=class, synced with eToro",
     session: "layout",
     open: async (page: Page) => {
-      await serviceTab(page, "Directa", "positions");
+      await serviceTab(page, "eToro", "positions");
       const url = new URL(page.url());
       url.searchParams.set("by", "class");
       await page.goto(url.toString());
@@ -528,8 +531,9 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await follow(page, "/investments", /^Directa$/);
-      await headerCommand(page, "Add operation", "Buy");
+      // Only a synced service adds a position by hand (PERS-335).
+      await follow(page, "/investments", /^eToro$/);
+      await headerCommand(page, "More actions", "Manual buy");
       await settledDialog(page);
     },
   },
@@ -551,21 +555,6 @@ const OVERLAYS: Screen[] = [
       await follow(page, "/investments", /^eToro$/);
       await headerCommand(page, "More actions", "Correct the value");
       await page.getByRole("dialog").getByLabel("Amount").fill("120");
-      await settledDialog(page);
-    },
-  },
-  {
-    name: "the position close dialog",
-    session: "layout",
-    roots: ['[role="dialog"]'],
-    open: async (page) => {
-      await serviceTab(page, "Directa", "positions");
-      await page
-        .getByRole("button", { name: /^Actions for Vanguard/ })
-        .filter({ visible: true })
-        .first()
-        .click();
-      await page.getByRole("menuitem", { name: "Close" }).click();
       await settledDialog(page);
     },
   },
@@ -612,17 +601,6 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await serviceTab(page, "eToro", "connection");
       await page.getByRole("button", { name: "Disconnect", exact: true }).first().click();
-      await settledDialog(page);
-    },
-  },
-  {
-    name: "the switch to per-asset mode dialog",
-    session: "layout",
-    roots: ['[role="dialog"]'],
-    open: async (page) => {
-      await serviceTab(page, "Fineco Conto Deposito", "connection");
-      await page.getByRole("button", { name: "Switch to per-asset mode" }).first().click();
-      await page.getByRole("dialog").getByRole("button", { name: "Add position" }).click();
       await settledDialog(page);
     },
   },

@@ -22,6 +22,8 @@ import {
   flowEntriesOn,
   formatDecimal,
   type HoldingState,
+  accountPnl,
+  type AccountPnl,
   holdingStates,
   investorFlows,
   isUnpricedDust,
@@ -106,6 +108,11 @@ export interface ServiceSummary {
    */
   reliable: boolean;
   reliableFrom: Date | null;
+  /**
+   * A manual service's P&L since it started (PERS-335): the value typed from the broker against the
+   * net money put in, with the day of that value. `null` for a synced service.
+   */
+  manualPnl: AccountPnl | null;
 }
 
 interface Loaded {
@@ -190,6 +197,7 @@ function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, dis
     warnings: warningsOf(one, todayOn),
     reliable,
     reliableFrom: reliable ? null : (one.sync?.reliableFrom ?? null),
+    manualPnl: one.day.origin === "manual" ? accountPnl(one.book, todayOn, valueCents) : null,
   } satisfies ServiceSummary;
 }
 

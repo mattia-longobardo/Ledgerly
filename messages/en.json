@@ -3169,8 +3169,6 @@
       "deposit": "Deposit",
       "withdrawal": "Withdrawal",
       "updateValue": "Update value",
-      "toAssets": "Switch to per-asset mode",
-      "toTotal": "Switch to total mode",
       "addAdjustment": "Add adjustment",
       "reconcile": "Reconcile",
       "value": "Value",
@@ -3299,7 +3297,7 @@
     },
     "manualForm": {
       "title": "Create manual account",
-      "description": "A service you keep by hand. Its value goes into your net worth from today.",
+      "description": "A service with no connection: you record deposits, withdrawals and the value you read from the broker. Its value goes into your net worth from today.",
       "destination": "Destination account",
       "newAccount": "Create a new account",
       "existingAccount": "Use an existing account",
@@ -3308,7 +3306,6 @@
       "category": "Category",
       "currency": "Account currency",
       "currencyHint": "Every balance and operation of the account is in this currency.",
-      "mode": "What you keep",
       "url": "Link",
       "urlHint": "Optional: the address of the service's site.",
       "existing": "Account",
@@ -3319,17 +3316,7 @@
         "fund": "a fund's account",
         "managed": "already a service"
       },
-      "submit": "Create",
-      "modes": {
-        "assets": {
-          "label": "Positions: one row per asset, P&L per asset",
-          "example": "E.g. Directa with 100 VWCE and 20 BTP: you record each buy and sale, and Ledgerly values them."
-        },
-        "total": {
-          "label": "Value only: you update the total by hand",
-          "example": "E.g. a pension plan or a deposit account whose statement gives only the value: you type it when it changes."
-        }
-      }
+      "submit": "Create"
     },
     "detail": {
       "since": "Managed since {date}",
@@ -3448,7 +3435,6 @@
     "settings": {
       "title": "Settings",
       "mode": "Mode: {mode}",
-      "convertNote": "A change of mode is an explicit conversion on today's date: the value does not change.",
       "url": "Link to the service",
       "flags": "Net worth, snapshot and the other flags are in the account's settings.",
       "periods": "Periods",
@@ -3554,21 +3540,6 @@
       "quantity": "Quantity",
       "fee": "Fee"
     },
-    "conversionForm": {
-      "toAssetsTitle": "Switch to per-asset mode",
-      "toTotalTitle": "Switch to total mode",
-      "toAssetsDescription": "Declare the positions the account holds today. The cash that keeps today's value of {value} unchanged opens the new period.",
-      "toTotalDescription": "From today you record only the account's value: today's {value} becomes its first valuation. The positions stay in the history.",
-      "noValue": "The account has no value today: record a valuation first.",
-      "addPosition": "Add position",
-      "removePosition": "Remove position {n}",
-      "position": "Position {n}",
-      "openingCash": "Opening cash: {amount}",
-      "otherCurrency": "Positions in another currency are converted at today's ECB rate when saved.",
-      "negative": "The positions are worth more than the account: the opening cash is negative.",
-      "acceptNegative": "Keep the negative cash",
-      "submit": "Convert"
-    },
     "reconcileForm": {
       "title": "Reconcile · {name}",
       "description": "The provider's reading now covers this asset and product. Decide from which day and how much of it the provider covers.",
@@ -3594,7 +3565,6 @@
       "assetAdded": "Asset added",
       "saved": "Operation saved",
       "deleted": "Deleted: {kind} of {date}",
-      "converted": "Mode changed",
       "reconciled": "Position reconciled",
       "zeroConfirmed": "Zero confirmed",
       "urlSaved": "Link saved",
@@ -3970,7 +3940,19 @@
         "all": "All activity",
         "empty": "No activity in this period."
       },
-      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available."
+      "noRate": "No exchange rate to {currency} for this period: the P&L in {currency} is not available.",
+      "manual": {
+        "title": "Profit and loss of the account",
+        "value": "Current value",
+        "valuedOn": "updated on {date}",
+        "noValueNote": "no value recorded",
+        "invested": "Net invested",
+        "investedNote": "deposits − withdrawals",
+        "pnl": "Profit / loss",
+        "pnlNote": "since the start",
+        "noValue": "No value recorded: use Add operation → Update value to see the profit or loss.",
+        "stale": "The last value is from {date}, more than {days} days ago: update it to see the profit or loss of today."
+      }
     },
     "activityTab": {
       "deposits": "Deposits",

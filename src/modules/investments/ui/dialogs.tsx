@@ -15,9 +15,8 @@ import {
 } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";
-import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
+import { Input, InputGroup, Select } from "@/ui/input";
 import { ActionMenu, ButtonMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
@@ -27,7 +26,6 @@ import {
   confirmKeyRevokedAction,
   confirmZeroAction,
   connectProviderAction,
-  convertModeAction,
   createManualServiceAction,
   deleteOperationAction,
   disconnectProviderAction,
@@ -47,12 +45,7 @@ import {
   type AdjustmentClass,
   ASSET_CLASSES,
   type AssetClass,
-  parseDecimal,
-  plainDecimal,
-  positionCents,
-  PRICE_SCALE,
   PRODUCTS,
-  QUANTITY_SCALE,
   type InvestmentCategory,
 } from "../rules";
 import {
@@ -268,14 +261,6 @@ function tryAmount(input: string, format: NumberFormat): Cents | null {
   }
 }
 
-function tryDecimal(input: string, format: NumberFormat, scale: number): bigint | null {
-  try {
-    return input.trim() === "" ? null : parseDecimal(plainDecimal(input, numberSeparators(format)), scale);
-  } catch {
-    return null;
-  }
-}
-
 function linkLabel(choice: LinkChoice, context: ServiceContext): string {
   return [
     formatDate(choice.on, "long", context.locale),
@@ -418,7 +403,6 @@ function ManualServiceDialog({
   const [pending, startTransition] = useTransition();
   const { error, clear, report } = useErrors();
   const [target, setTarget] = useState<"new" | "existing">("new");
-  const [mode, setMode] = useState<"assets" | "total">("assets");
   const eligible = existing.filter((one) => one.reason === null);
   const [accountId, setAccountId] = useState(eligible[0]?.id ?? "");
 
@@ -437,10 +421,9 @@ function ManualServiceDialog({
               name,
               category,
               currency: text("currency").trim().toUpperCase(),
-              mode,
               url: text("url"),
             }
-          : { target, accountId, category, mode, url: text("url") },
+          : { target, accountId, category, url: text("url") },
       );
       if (!report(result)) return;
       notify(t("toasts.serviceCreated", { name }));
@@ -546,31 +529,6 @@ function ManualServiceDialog({
           placeholder="https://www.directa.it"
         />
       </Field>
-      <fieldset className="col-span-full flex flex-col gap-2">
-        <legend className="mb-1.5 text-sm font-medium">{t("manualForm.mode")}</legend>
-        {(["assets", "total"] as const).map((one) => (
-          <label
-            key={one}
-            className={cn(
-              "flex cursor-pointer items-start gap-2.5 rounded-[7px] border p-3",
-              mode === one ? "border-accent bg-soft" : "border-border",
-            )}
-          >
-            <input
-              type="radio"
-              name="mode"
-              value={one}
-              checked={mode === one}
-              onChange={() => setMode(one)}
-              className="focus-ring mt-0.5 size-4 shrink-0 accent-accent"
-            />
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-medium">{t(`manualForm.modes.${one}.label`)}</span>
-              <span className="text-sm text-muted">{t(`manualForm.modes.${one}.example`)}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
       <ErrorLine error={error} />
       <Actions
         onCancel={() => onOpenChange(false)}
@@ -1611,238 +1569,6 @@ function ReconcileDialog({
       )}
       <ErrorLine error={error} />
       <Actions onCancel={() => onOpenChange(false)} pending={pending} submit={t("reconcileForm.submit")} />
-    </Dialog>
-  );
-}
-
-// ——— Conversion (§2.5) ——————————————————————————————————————————————————————————————————————
-
-interface PositionDraft {
-  key: number;
-  pick: AssetPick | null;
-  currency: string;
-  product: string;
-  how: "quantity" | "total";
-  quantity: string;
-  unitPrice: string;
-  total: string;
-}
-
-export function ConversionButton({
-  context,
-  variant = "secondary",
-}: {
-  context: ServiceContext;
-  variant?: "primary" | "secondary";
-}) {
-  const t = useTranslations("investments");
-  if (context.mode === null || context.synced) return null;
-  const to = context.mode === "total" ? "assets" : "total";
-  return (
-    <Opener label={to === "assets" ? t("actions.toAssets") : t("actions.toTotal")} variant={variant}>
-      {(close) => <ConversionDialog onOpenChange={close} to={to} context={context} />}
-    </Opener>
-  );
-}
-
-function ConversionDialog({
-  onOpenChange,
-  to,
-  context,
-}: {
-  onOpenChange: (open: boolean) => void;
-  to: "assets" | "total";
-  context: ServiceContext;
-}) {
-  const t = useTranslations("investments");
-  const id = useId();
-  const [pending, startTransition] = useTransition();
-  const { error, clear, report } = useErrors();
-  const [positions, setPositions] = useState<PositionDraft[]>([]);
-  const [accept, setAccept] = useState(false);
-  const [nextKey, setNextKey] = useState(1);
-  const money = (cents: Cents | null) =>
-    formatMoney(cents, context.numberFormat, { currency: context.currency });
-
-  const declared = positions.reduce<{ cents: Cents; foreign: boolean }>(
-    (sum, position) => {
-      if (position.currency !== context.currency) return { ...sum, foreign: true };
-      const value =
-        position.how === "quantity"
-          ? (() => {
-              const quantity = tryDecimal(position.quantity, context.numberFormat, QUANTITY_SCALE);
-              const price = tryDecimal(position.unitPrice, context.numberFormat, PRICE_SCALE);
-              return quantity === null || price === null ? 0n : positionCents(quantity, price);
-            })()
-          : (tryAmount(position.total, context.numberFormat) ?? 0n);
-      return { ...sum, cents: sum.cents + value };
-    },
-    { cents: 0n, foreign: false },
-  );
-  const openingCash = context.valueCents === null ? null : context.valueCents - declared.cents;
-  const negative = openingCash !== null && openingCash < 0n;
-
-  const update = (key: number, patch: Partial<PositionDraft>) =>
-    setPositions((list) => list.map((one) => (one.key === key ? { ...one, ...patch } : one)));
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (to === "assets" && positions.some((one) => one.pick === null)) {
-      report({ ok: false, error: "invalid" });
-      return;
-    }
-    startTransition(async () => {
-      const result = await convertModeAction(context.accountId, {
-        to,
-        acceptNegativeCash: accept,
-        positions: positions.map((one) => ({
-          asset: one.pick as { id: string },
-          product: one.product,
-          quantity: one.how === "quantity" ? one.quantity : "",
-          unitPrice: one.how === "quantity" ? one.unitPrice : "",
-          total: one.how === "total" ? one.total : "",
-        })),
-      });
-      if (!report(result)) return;
-      notify(t("toasts.converted"));
-      onOpenChange(false);
-    });
-  }
-
-  return (
-    <Dialog
-      open
-      onOpenChange={onOpenChange}
-      clear={clear}
-      title={to === "assets" ? t("conversionForm.toAssetsTitle") : t("conversionForm.toTotalTitle")}
-      description={
-        context.valueCents === null
-          ? t("conversionForm.noValue")
-          : to === "assets"
-            ? t("conversionForm.toAssetsDescription", { value: money(context.valueCents) })
-            : t("conversionForm.toTotalDescription", { value: money(context.valueCents) })
-      }
-      onSubmit={onSubmit}
-    >
-      {to === "assets" && (
-        <>
-          {positions.map((position, index) => (
-            <fieldset
-              key={position.key}
-              className="col-span-full grid grid-cols-2 gap-3 rounded-card border border-border p-3 max-sm:grid-cols-1"
-            >
-              <legend className="px-1 text-sm font-medium">
-                {t("conversionForm.position", { n: index + 1 })}
-              </legend>
-              <AssetPicker
-                prefix={`${id}-${position.key}`}
-                assets={context.assets}
-                defaultCurrency={context.currency}
-                defaults={assetDialogDefaults(context)}
-                onChange={(pick, currency) => update(position.key, { pick, currency })}
-              />
-              <ProductSelect
-                id={`${id}-${position.key}-product`}
-                value={position.product}
-                onChange={(product) => update(position.key, { product })}
-                covered={[]}
-                provider={null}
-              />
-              <div className="col-span-full">
-                <Segmented
-                  label={t("assetForm.priceMode")}
-                  value={position.how}
-                  onChange={(how) => update(position.key, { how })}
-                  options={[
-                    { value: "quantity", label: t("assetForm.byQuantity") },
-                    { value: "total", label: t("assetForm.byTotal") },
-                  ]}
-                />
-              </div>
-              {position.how === "quantity" ? (
-                <>
-                  <NumberField
-                    id={`${id}-${position.key}-quantity`}
-                    label={t("assetForm.quantity")}
-                    value={position.quantity}
-                    onChange={(quantity) => update(position.key, { quantity })}
-                  />
-                  <MoneyField
-                    id={`${id}-${position.key}-price`}
-                    label={t("assetForm.unitPrice")}
-                    value={position.unitPrice}
-                    onChange={(unitPrice) => update(position.key, { unitPrice })}
-                    currency={position.currency}
-                  />
-                </>
-              ) : (
-                <MoneyField
-                  id={`${id}-${position.key}-total`}
-                  label={t("assetForm.total")}
-                  value={position.total}
-                  onChange={(total) => update(position.key, { total })}
-                  currency={position.currency}
-                />
-              )}
-              <div className="col-span-full flex justify-end">
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => setPositions((list) => list.filter((one) => one.key !== position.key))}
-                >
-                  {t("conversionForm.removePosition", { n: index + 1 })}
-                </Button>
-              </div>
-            </fieldset>
-          ))}
-          <div className="col-span-full flex flex-wrap items-center justify-between gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                // Nothing chosen until the person picks it (D1), as in "Add asset".
-                setPositions((list) => [
-                  ...list,
-                  {
-                    key: nextKey,
-                    pick: null,
-                    currency: context.currency,
-                    product: "custody",
-                    how: "quantity",
-                    quantity: "",
-                    unitPrice: "",
-                    total: "",
-                  },
-                ]);
-                setNextKey((key) => key + 1);
-              }}
-            >
-              {t("conversionForm.addPosition")}
-            </Button>
-            <p role="status" className={negative ? "text-sm font-medium text-warn" : "text-sm font-medium"}>
-              {t("conversionForm.openingCash", { amount: money(openingCash) })}
-            </p>
-          </div>
-          {declared.foreign && (
-            <p className="col-span-full text-sm text-muted">{t("conversionForm.otherCurrency")}</p>
-          )}
-          {negative && (
-            <div className="col-span-full flex flex-col gap-1">
-              <p className="text-sm text-warn">{t("conversionForm.negative")}</p>
-              <Checkbox
-                label={t("conversionForm.acceptNegative")}
-                checked={accept}
-                onChange={(event) => setAccept(event.target.checked)}
-              />
-            </div>
-          )}
-        </>
-      )}
-      <ErrorLine error={error} />
-      <Actions
-        onCancel={() => onOpenChange(false)}
-        pending={pending || context.valueCents === null}
-        submit={t("conversionForm.submit")}
-      />
     </Dialog>
   );
 }

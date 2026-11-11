@@ -6,6 +6,7 @@ import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/u
 import { describeEvent } from "@/modules/investments/activity";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
 import { contributionsOf } from "@/modules/investments/positions";
+import { STALE_VALUE_DAYS } from "@/modules/investments/rules";
 import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
@@ -190,6 +191,8 @@ export default async function InvestmentServiceOverview({
   }));
 
   const parts = local;
+  // A manual service (PERS-335): its value against the money put in, never a per-asset split.
+  const manual = summary.manualPnl;
   const etoro = summary.investment.provider === "etoro";
   const closing = parts
     ? [
@@ -278,7 +281,55 @@ export default async function InvestmentServiceOverview({
         </p>
       )}
 
-      {parts && (
+      {manual && (
+        <section
+          aria-labelledby="manual-pnl-title"
+          data-testid="manual-pnl"
+          data-pnl-cents={manual.pnlCents === null ? "" : String(manual.pnlCents)}
+          data-invested-cents={String(manual.investedCents)}
+          className="flex flex-col gap-2"
+        >
+          <h2 id="manual-pnl-title" className="sr-only">
+            {t("service.manual.title")}
+          </h2>
+          <div className="grid grid-cols-1 gap-4 @lg:grid-cols-3">
+            <KpiTile
+              label={t("service.manual.value")}
+              value={manual.valueCents === null ? NULL_DISPLAY : money(manual.valueCents)}
+              note={
+                manual.valuedOn === null
+                  ? t("service.manual.noValueNote")
+                  : t("service.manual.valuedOn", { date: formatDate(manual.valuedOn, "long", ctx.locale) })
+              }
+            />
+            <KpiTile
+              label={t("service.manual.invested")}
+              value={money(manual.investedCents)}
+              note={t("service.manual.investedNote")}
+            />
+            <KpiTile
+              label={t("service.manual.pnl")}
+              value={manual.pnlCents === null ? NULL_DISPLAY : money(manual.pnlCents, true)}
+              valueTone={toneOfSign(manual.pnlCents)}
+              delta={manual.rate === null ? undefined : percent(manual.rate)}
+              deltaTone={toneOfSign(manual.rate)}
+              note={t("service.manual.pnlNote")}
+            />
+          </div>
+          {manual.stale && (
+            <p data-testid="manual-stale" className="text-sm text-warn">
+              {manual.valuedOn === null
+                ? t("service.manual.noValue")
+                : t("service.manual.stale", {
+                    date: formatDate(manual.valuedOn, "long", ctx.locale),
+                    days: STALE_VALUE_DAYS,
+                  })}
+            </p>
+          )}
+        </section>
+      )}
+
+      {parts && !manual && (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @4xl:grid-cols-4">
             <KpiTile
@@ -441,64 +492,66 @@ export default async function InvestmentServiceOverview({
         </p>
       </Card>
 
-      <div className="grid items-start gap-4 @4xl:grid-cols-2">
-        <Card padded={false} className="min-w-0">
-          <CardHeader
-            title={t("service.top.title")}
-            actions={
-              <Link
-                href={tab("/positions")}
-                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
-              >
-                {t("service.top.all")} →
-              </Link>
-            }
-          />
-          {top.length === 0 ? (
-            <p className="px-4 pb-4 text-sm text-muted">{t("service.top.empty")}</p>
-          ) : (
-            <ul className="flex flex-col" data-testid="top-positions">
-              {top.map((row) => {
-                const asset = row.assetId === null ? null : (assetOf.get(row.assetId) ?? null);
-                return (
-                  <li
-                    key={row.key}
-                    data-testid="top-position"
-                    className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5 text-sm"
-                  >
-                    <span className="flex min-w-0 flex-col">
-                      <Link
-                        href={tab("/activity", { asset: row.assetId ?? undefined })}
-                        className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
-                      >
-                        <span className="truncate">{asset?.name ?? t("positions.unknownAsset")}</span>
-                      </Link>
-                      <span className="text-xs text-muted">
-                        {[
-                          asset?.symbol,
-                          row.costUnknown
-                            ? t("positions.contributions.noCost")
-                            : row.open && row.sold
-                              ? t("positions.contributions.partlySold")
-                              : row.open
-                                ? t("positions.contributions.open")
-                                : t("positions.contributions.sold"),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                    </span>
-                    <span
-                      className={cn("shrink-0 font-medium tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}
+      <div className={cn("grid items-start gap-4", !manual && "@4xl:grid-cols-2")}>
+        {!manual && (
+          <Card padded={false} className="min-w-0">
+            <CardHeader
+              title={t("service.top.title")}
+              actions={
+                <Link
+                  href={tab("/positions")}
+                  className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
+                >
+                  {t("service.top.all")} →
+                </Link>
+              }
+            />
+            {top.length === 0 ? (
+              <p className="px-4 pb-4 text-sm text-muted">{t("service.top.empty")}</p>
+            ) : (
+              <ul className="flex flex-col" data-testid="top-positions">
+                {top.map((row) => {
+                  const asset = row.assetId === null ? null : (assetOf.get(row.assetId) ?? null);
+                  return (
+                    <li
+                      key={row.key}
+                      data-testid="top-position"
+                      className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5 text-sm"
                     >
-                      {money(row.cents, true)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
+                      <span className="flex min-w-0 flex-col">
+                        <Link
+                          href={tab("/activity", { asset: row.assetId ?? undefined })}
+                          className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
+                        >
+                          <span className="truncate">{asset?.name ?? t("positions.unknownAsset")}</span>
+                        </Link>
+                        <span className="text-xs text-muted">
+                          {[
+                            asset?.symbol,
+                            row.costUnknown
+                              ? t("positions.contributions.noCost")
+                              : row.open && row.sold
+                                ? t("positions.contributions.partlySold")
+                                : row.open
+                                  ? t("positions.contributions.open")
+                                  : t("positions.contributions.sold"),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                      <span
+                        className={cn("shrink-0 font-medium tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}
+                      >
+                        {money(row.cents, true)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        )}
 
         <Card padded={false} className="min-w-0">
           <CardHeader

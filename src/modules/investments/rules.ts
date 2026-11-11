@@ -14,6 +14,12 @@ export type InvestmentCategory = (typeof INVESTMENT_CATEGORIES)[number];
 export const MODES = ["assets", "total"] as const;
 export type Mode = (typeof MODES)[number];
 
+/**
+ * The one mode of a manual service (PERS-335): deposits, withdrawals and the value the person reads
+ * from the broker — no positions. `assets` stays for the synced services and for old periods.
+ */
+export const MANUAL_MODE = "total" satisfies Mode;
+
 export const ORIGINS = ["manual", "synced"] as const;
 export type AccountOrigin = (typeof ORIGINS)[number];
 
@@ -967,6 +973,44 @@ export function performance(flows: Flows, valueCents: Cents | null): Performance
   };
 }
 
+/** A manual value older than this is flagged as old (PERS-335). */
+export const STALE_VALUE_DAYS = 30;
+
+/** The profit or loss of an account since it started (PERS-335): value against net money put in. */
+export interface AccountPnl {
+  valueCents: Cents | null;
+  /** The net capital put in: opening + deposits − withdrawals. */
+  investedCents: Cents;
+  /** value − net capital; `null` without a value or before the first account valuation. */
+  pnlCents: Cents | null;
+  /** pnl ÷ net capital; `null` without a value or when the net capital is not above zero. */
+  rate: number | null;
+  /** The day of the last account valuation up to `on`, the source of a manual value. */
+  valuedOn: CivilDate | null;
+  /** No valuation yet, or the last one older than {@link STALE_VALUE_DAYS}. */
+  stale: boolean;
+}
+
+export function accountPnl(book: Book, on: CivilDate, valueCents: Cents | null): AccountPnl {
+  const flows = flowsOn(book, on);
+  const investedCents = flows.openingCents + flows.depositedCents - flows.withdrawnCents;
+  let valuedOn: CivilDate | null = null;
+  for (const event of book.events) {
+    if (event.on > on || (valuedOn !== null && event.on <= valuedOn)) continue;
+    if (event.operations.some((op) => op.kind === "account_valuation")) valuedOn = event.on;
+  }
+  // No valuation yet: the value is a guess (zero, or flows only), so there is no P&L to show.
+  const pnlCents = valueCents === null || valuedOn === null ? null : valueCents - investedCents;
+  return {
+    valueCents,
+    investedCents,
+    pnlCents,
+    rate: pnlCents === null || investedCents <= 0n ? null : Number(pnlCents) / Number(investedCents),
+    valuedOn,
+    stale: valuedOn === null || valuedOn < addDays(on, -STALE_VALUE_DAYS),
+  };
+}
+
 // ——— Empty readings (R5) ————————————————————————————————————————————————————————————————————
 
 /** Below this a vanished balance is believable without asking (R5): 50 €, in cents. */
@@ -987,24 +1031,6 @@ export function emptyReadingStatus(input: {
     return "confirmed_zero";
   }
   return "pending_zero";
-}
-
-// ——— Conversions (§2.5) ——————————————————————————————————————————————————————————————————————
-
-export interface DeclaredPosition {
-  holdingId: string;
-  quantity: bigint | null;
-  unitPrice: bigint | null;
-  /** The position's value in the account's currency. */
-  valueCents: Cents;
-}
-
-/**
- * `total` → `assets` at T: the opening cash that keeps V(T) unchanged — V(T) minus the positions
- * declared. Negative when the positions are worth more than the account: the dialog asks.
- */
-export function openingCashFor(valueCents: Cents, positions: readonly DeclaredPosition[]): Cents {
-  return positions.reduce<Cents>((cash, position) => cash - position.valueCents, valueCents);
 }
 
 /** The months a chart covers, oldest first, ending with the month of `today`. */

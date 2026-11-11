@@ -16,6 +16,7 @@ import type { Ctx } from "@/platform/context";
 import { addDays, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
+import { assetsService } from "../../../test/investments";
 import { createTestUser } from "../../../test/users";
 import {
   catalogView,
@@ -36,12 +37,12 @@ import {
 import {
   addAsset,
   confirmZeroReading,
-  convertMode,
   createManualService,
   deleteOperation,
   eligibleAccounts,
   InvestmentError,
   linkTransfer,
+  type ManualServiceInput,
   rebuildAll,
   recordOperation,
   reconcileHolding,
@@ -106,16 +107,9 @@ async function backdate(accountId: string, from: string, origin: "manual" | "syn
 }
 
 async function newService(mode: "assets" | "total", name = "Directa") {
-  return (
-    await createManualService(ctx, {
-      target: "new",
-      name,
-      category: "broker",
-      currency: "EUR",
-      mode,
-      url: null,
-    })
-  ).accountId;
+  const input = { target: "new" as const, name, category: "broker" as const, currency: "EUR", url: null };
+  return (mode === "assets" ? await assetsService(ctx, input) : await createManualService(ctx, input))
+    .accountId;
 }
 
 async function holdingId(accountId: string): Promise<string> {
@@ -125,12 +119,60 @@ async function holdingId(accountId: string): Promise<string> {
 
 describe("a new manual service", () => {
   it("is an investment account with its first point at zero, today", async () => {
-    const accountId = await newService("assets");
+    const accountId = await newService("total");
     expect(await points(accountId)).toEqual(new Map([[todayOn, 0n]]));
     const detail = await serviceDetail(ctx, accountId);
     expect(detail?.summary.account.type).toBe("investment");
-    expect(detail?.summary.mode).toBe("assets");
+    expect(detail?.summary.mode).toBe("total");
     expect(detail?.summary.valueCents).toBe(0n);
+  });
+
+  it("keeps only its value (PERS-335): a mode asked for is ignored, and no position goes in", async () => {
+    const { accountId } = await createManualService(ctx, {
+      target: "new",
+      name: "Fineco",
+      category: "broker",
+      currency: "EUR",
+      url: null,
+      mode: "assets",
+    } as ManualServiceInput);
+    expect((await serviceDetail(ctx, accountId))?.summary.mode).toBe("total");
+    await expect(
+      addAsset(ctx, accountId, {
+        asset: { create: { class: "etf", name: "Vanguard FTSE All-World", symbol: "VWCE", currency: "EUR" } },
+        on: todayOn,
+        quantity: qty("1"),
+        unitPrice: price("60"),
+      }),
+    ).rejects.toMatchObject({ code: "wrong_mode" });
+    const periods = await getDb()
+      .select({ mode: investmentAccountPeriods.mode })
+      .from(investmentAccountPeriods)
+      .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentAccountPeriods.investmentAccountId))
+      .where(eq(investmentAccounts.accountId, accountId));
+    expect(periods).toEqual([{ mode: "total" }]);
+  });
+
+  it("10.000 in, 2.000 out, worth 9.000: +1.000 and +12,5% (PERS-335)", async () => {
+    const accountId = await newService("total", "Fineco");
+    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: eur(10000) });
+    await recordOperation(ctx, accountId, { kind: "withdrawal", on: todayOn, amountCents: eur(2000) });
+    // Money in and no value typed yet: no P&L, never a made-up one.
+    let pnl = (await serviceDetail(ctx, accountId))?.summary.manualPnl;
+    expect(pnl).toMatchObject({ valueCents: null, pnlCents: null, rate: null, valuedOn: null, stale: true });
+    await recordOperation(ctx, accountId, { kind: "account_valuation", on: todayOn, amountCents: eur(9000) });
+    const detail = await serviceDetail(ctx, accountId);
+    pnl = detail?.summary.manualPnl;
+    expect(pnl).toEqual({
+      valueCents: eur(9000),
+      investedCents: eur(8000),
+      pnlCents: eur(1000),
+      rate: 0.125,
+      valuedOn: todayOn,
+      stale: false,
+    });
+    // The same gain as the summary's performance, the number the home adds up.
+    expect(detail?.summary.performance.gainCents).toBe(eur(1000));
   });
 
   it("an exchange is a crypto account; a total account starts at zero", async () => {
@@ -139,7 +181,6 @@ describe("a new manual service", () => {
       name: "Ledger",
       category: "crypto",
       currency: "EUR",
-      mode: "total",
       url: "ledger.com",
     });
     const detail = await serviceDetail(ctx, accountId);
@@ -334,17 +375,6 @@ describe("revisions (A2)", () => {
       ["deleted", "30000", "2026-05-05"],
     ]);
   });
-
-  it("an event a conversion wrote is not the person's to change", async () => {
-    const accountId = await newService("total");
-    await recordOperation(ctx, accountId, { kind: "account_valuation", on: todayOn, amountCents: eur(500) });
-    await convertMode(ctx, accountId, { to: "assets", positions: [] });
-    const detail = await serviceDetail(ctx, accountId);
-    const conversion = detail?.operations.find((row) => row.origin === "conversion");
-    await expect(deleteOperation(ctx, conversion?.id as string)).rejects.toMatchObject({
-      code: "not_editable",
-    });
-  });
 });
 
 describe("handover of an existing account (§1.3, A4)", () => {
@@ -371,7 +401,6 @@ describe("handover of an existing account (§1.3, A4)", () => {
       target: "existing",
       accountId,
       category: "broker",
-      mode: "total",
       url: null,
     });
 
@@ -397,7 +426,6 @@ describe("handover of an existing account (§1.3, A4)", () => {
       target: "existing",
       accountId,
       category: "broker",
-      mode: "assets",
       url: null,
     });
     const detail = await serviceDetail(ctx, accountId);
@@ -408,6 +436,22 @@ describe("handover of an existing account (§1.3, A4)", () => {
     // The only account: counted once, never twice.
     expect(view.total).toBe(eur(1500));
     expect(view.buckets.investments.total).toBe(eur(1500));
+  });
+
+  it("opens with the balance of T as the first value, which is not the person's to change", async () => {
+    const accountId = await existing();
+    await createManualService(ctx, { target: "existing", accountId, category: "broker", url: null });
+    const detail = await serviceDetail(ctx, accountId);
+    expect(detail?.summary.mode).toBe("total");
+    expect(detail?.summary.manualPnl).toMatchObject({
+      valueCents: eur(1500),
+      investedCents: eur(1500),
+      pnlCents: 0n,
+      valuedOn: todayOn,
+    });
+    const opening = detail?.operations.find((row) => row.origin === "conversion");
+    expect(opening?.kind).toBe("account_valuation");
+    await expect(deleteOperation(ctx, opening?.id as string)).rejects.toMatchObject({ code: "not_editable" });
   });
 
   it("a Wallet account (Fineco) becomes a manual service, and Wallet stops writing its balance", async () => {
@@ -433,7 +477,6 @@ describe("handover of an existing account (§1.3, A4)", () => {
       target: "existing",
       accountId,
       category: "broker",
-      mode: "total",
       url: null,
     });
     expect((await serviceDetail(ctx, accountId))?.summary.valueCents).toBe(eur(5_100));
@@ -455,7 +498,6 @@ describe("handover of an existing account (§1.3, A4)", () => {
       target: "existing",
       accountId,
       category: "broker",
-      mode: "total",
       url: null,
     });
     await expect(saveBalanceEntry(ctx, accountId, { on: todayOn, cents: eur(1) })).rejects.toBeInstanceOf(
@@ -488,7 +530,6 @@ describe("handover of an existing account (§1.3, A4)", () => {
       target: "existing",
       accountId,
       category: "broker",
-      mode: "total",
       url: null,
     });
     const reasons = new Map((await eligibleAccounts(ctx)).map((one) => [one.account.id, one.reason]));
@@ -500,81 +541,10 @@ describe("handover of an existing account (§1.3, A4)", () => {
           target: "existing",
           accountId: id,
           category: "broker",
-          mode: "total",
           url: null,
         }),
       ).rejects.toMatchObject({ code: "not_eligible" });
     }
-  });
-});
-
-describe("conversions keep V(T) (§2.5)", () => {
-  it("total → assets opens the cash that keeps the value; assets → total values the account", async () => {
-    const accountId = await newService("total");
-    await backdate(accountId, "2026-09-01");
-    await recordOperation(ctx, accountId, {
-      kind: "account_valuation",
-      on: "2026-09-01",
-      amountCents: eur(10000),
-    });
-
-    const result = await convertMode(ctx, accountId, {
-      to: "assets",
-      positions: [
-        {
-          asset: {
-            create: { class: "etf", name: "Vanguard FTSE All-World", symbol: "VWCE", currency: "EUR" },
-          },
-          product: "custody",
-          quantity: qty("100"),
-          unitPrice: price("60"),
-        },
-      ],
-    });
-    expect(result.openingCashCents).toBe(eur(4000));
-    let detail = await serviceDetail(ctx, accountId);
-    expect(detail?.summary.valueCents).toBe(eur(10000));
-    expect(detail?.summary.mode).toBe("assets");
-    expect(detail?.day.cashCents).toBe(eur(4000));
-    expect((await points(accountId)).get(todayOn)).toBe(eur(10000));
-    // No money went in: the conversion is no flow.
-    expect(detail?.summary.performance.investedCents).toBe(0n);
-
-    await convertMode(ctx, accountId, { to: "total" });
-    detail = await serviceDetail(ctx, accountId);
-    expect(detail?.summary.mode).toBe("total");
-    expect(detail?.summary.valueCents).toBe(eur(10000));
-  });
-
-  it("a negative opening cash is refused unless the person keeps it", async () => {
-    const accountId = await newService("total");
-    await recordOperation(ctx, accountId, { kind: "account_valuation", on: todayOn, amountCents: eur(1000) });
-    const positions = [
-      {
-        asset: { create: { class: "crypto" as const, name: "Bitcoin", symbol: "BTC", currency: "EUR" } },
-        product: "custody",
-        quantity: qty("0.1"),
-        unitPrice: price("20000"),
-      },
-    ];
-    await expect(convertMode(ctx, accountId, { to: "assets", positions })).rejects.toMatchObject({
-      code: "negative_cash",
-    });
-    const kept = await convertMode(ctx, accountId, {
-      to: "assets",
-      acceptNegativeCash: true,
-      positions: [{ ...positions[0], asset: { create: { ...positions[0].asset.create, symbol: "XBT" } } }],
-    });
-    expect(kept.openingCashCents).toBe(-eur(1000));
-    expect((await serviceDetail(ctx, accountId))?.summary.valueCents).toBe(eur(1000));
-  });
-
-  it("a total account with money in and no valuation has no value to convert", async () => {
-    const accountId = await newService("total");
-    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: eur(10) });
-    await expect(convertMode(ctx, accountId, { to: "assets", positions: [] })).rejects.toMatchObject({
-      code: "no_value",
-    });
   });
 });
 
@@ -586,12 +556,11 @@ describe("§2.2 a synced account: example 2b with a reading and a reconciliation
   ];
 
   async function binance() {
-    const { accountId } = await createManualService(ctx, {
+    const { accountId } = await assetsService(ctx, {
       target: "new",
       name: "Binance",
       category: "crypto",
       currency: "EUR",
-      mode: "assets",
       url: null,
     });
     await backdate(accountId, "2026-08-01", "synced");
@@ -693,9 +662,9 @@ describe("one person's services are theirs alone", () => {
     await expect(
       recordOperation(other, accountId, { kind: "deposit", on: todayOn, amountCents: eur(1) }),
     ).rejects.toBeInstanceOf(InvestmentError);
-    await expect(convertMode(other, accountId, { to: "assets", positions: [] })).rejects.toMatchObject({
-      code: "not_found",
-    });
+    await expect(
+      recordOperation(other, accountId, { kind: "account_valuation", on: todayOn, amountCents: eur(1) }),
+    ).rejects.toMatchObject({ code: "not_found" });
     expect(await eligibleAccounts(other)).toEqual([]);
   });
 
@@ -715,7 +684,6 @@ describe("§2.4 transfers between the person's services (A10)", () => {
         name,
         category: "broker",
         currency: "EUR",
-        mode: "total",
         url: null,
       });
     const a = await make("Directa");

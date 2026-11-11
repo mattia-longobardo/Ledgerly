@@ -63,6 +63,7 @@ import {
   emptyReadingStatus,
   formatDecimal,
   type KeyCheckOrigin,
+  MANUAL_MODE,
   missingPricesOf,
   type OperationKind,
   parseDecimal,
@@ -2022,9 +2023,9 @@ export async function replaceKey(
 }
 
 /**
- * "Disconnect" (§2.5, §5.3): synced → manual at today, V before = V after — the last counting
- * reading's positions become manual positions and the rest opening cash — then the key goes. The
- * page then shows the steps to revoke it at the provider.
+ * "Disconnect" (§2.5, §5.3): synced → manual at today, V before = V after — a manual service keeps
+ * only its value (PERS-335), so V(T) becomes its first account valuation and the positions stay in
+ * the history — then the key goes. The page then shows the steps to revoke it at the provider.
  */
 export async function disconnectProvider(
   ctx: WriteCtx,
@@ -2047,84 +2048,19 @@ export async function disconnectProvider(
         investmentAccountId: investment.id,
         fromOn: todayOn,
         startsAt,
-        mode: value === null ? ("total" as const) : ("assets" as const),
+        // A manual service keeps only its value (PERS-335): the positions stay in the history.
+        mode: MANUAL_MODE,
         origin: "manual" as const,
         reason: "conversion" as const,
       }),
     );
     if (value !== null) {
-      const reading = [...book.readingRows]
-        .filter((one) => one.status !== "pending_zero")
-        .sort((a, b) => (a.on < b.on ? 1 : -1))[0];
-      const positions = reading
-        ? await tx
-            .select()
-            .from(investmentReadingPositions)
-            .where(
-              and(
-                userScoped(ctx).owns(investmentReadingPositions),
-                eq(investmentReadingPositions.readingId, reading.id),
-              ),
-            )
-            .orderBy(asc(investmentReadingPositions.id))
-        : [];
-      let positionsCents = 0n;
-      const opened: { holdingId: string; quantity: bigint; valueCents: Cents }[] = [];
-      for (const position of positions) {
-        if (position.valueCents === null) continue;
-        const quantity = parseDecimal(position.quantity, QUANTITY_SCALE);
-        if (quantity <= 0n) continue;
-        const [holding] = await tx
-          .insert(investmentHoldings)
-          .values(
-            userScoped(ctx).stamp({
-              investmentAccountId: investment.id,
-              assetId: position.assetId,
-              origin: "manual" as const,
-              product: position.product,
-              openedOn: todayOn,
-            }),
-          )
-          .onConflictDoUpdate({
-            target: [
-              investmentHoldings.investmentAccountId,
-              investmentHoldings.assetId,
-              investmentHoldings.origin,
-              investmentHoldings.product,
-            ],
-            set: { openedOn: todayOn },
-          })
-          .returning({ id: investmentHoldings.id });
-        opened.push({ holdingId: holding.id, quantity, valueCents: position.valueCents });
-        positionsCents += position.valueCents;
-      }
       await insertEvent(ctx, tx, investment.id, {
         on: todayOn,
         occurredAt: startsAt,
         origin: "conversion",
-        legs: [{ leg: "main", kind: "opening_cash", amountCents: value - positionsCents }],
+        legs: [{ leg: "main", kind: "account_valuation", amountCents: value }],
       });
-      for (const one of opened) {
-        await insertEvent(ctx, tx, investment.id, {
-          on: todayOn,
-          occurredAt: startsAt,
-          origin: "conversion",
-          legs: [
-            {
-              leg: "main",
-              kind: "opening_position",
-              holdingId: one.holdingId,
-              quantity: one.quantity,
-              unitPrice: divRound(
-                one.valueCents * 10n ** BigInt(QUANTITY_SCALE + PRICE_SCALE - 2),
-                one.quantity,
-              ),
-              priceCurrency: linked.currency,
-              amountCents: -one.valueCents,
-            },
-          ],
-        });
-      }
     }
     await retireKeys(ctx, tx, investment.id, now);
     await tx

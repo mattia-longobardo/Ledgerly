@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { priceText, quantityText } from "@/modules/investments/activity";
@@ -59,6 +59,10 @@ export default async function InvestmentServicePositions({
     servicePositions(ctx, accountId, { period: one(query.period), from: one(query.from), to: one(query.to) }),
   ]);
   if (!detail || !view) notFound();
+  // A manual service keeps no positions (PERS-335): its value and P&L are on the Overview.
+  if (detail.summary.origin === "manual") {
+    redirect(withParams(`/investments/${accountId}`, {}, periodQuery(view.period, view.todayOn)));
+  }
   const { period, span, todayOn, service, assets, holdings } = view;
   const context = serviceContextOf(detail, ctx);
   const currency = detail.currency;

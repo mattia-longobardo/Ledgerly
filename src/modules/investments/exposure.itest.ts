@@ -248,7 +248,6 @@ async function seed(ctx: Ctx): Promise<{ etoro: string; manual: string }> {
     name: "Directa",
     category: "broker",
     currency: "EUR",
-    mode: "total",
     url: null,
   });
   const on = today(ctx.timeZone);

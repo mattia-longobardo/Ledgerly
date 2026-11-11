@@ -219,7 +219,6 @@ describe("settleCutoff (PERS-145)", () => {
       name: "Directa",
       category: "broker",
       currency: "EUR",
-      mode: "total",
       url: null,
     });
     await recordOperation(ctx, manual, { kind: "deposit", on: todayOn, amountCents: 50_000n });

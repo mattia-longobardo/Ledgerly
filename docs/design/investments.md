@@ -137,6 +137,11 @@ non sono colonne correnti: sono intervalli in `investment_account_periods` (`inv
 `from_on`, `mode`, `origin`, `reason`). Il valore di un giorno usa il periodo valido in quel giorno.
 Un cambio di modo o di origine è sempre una **conversione esplicita** (sezione 2.5).
 
+**Servizi manuali: solo valore (PERS-335, 11/11/2026).** Un servizio manuale (senza API) ha sempre
+il modo `total`: versamenti, prelievi e il valore letto dal broker ("Aggiorna valore"). Niente
+posizioni, asset, opzioni, acquisti o vendite. Il modo `assets` resta per i servizi sincronizzati e
+per i periodi già scritti. Il P/L del conto è in 2.6.
+
 Vincoli:
 
 - un conto che è già `valuation_account_id` di un fondo non può diventare un conto di investimento
@@ -395,7 +400,8 @@ seq)` (A2). La conversione nella valuta di visualizzazione avviene dopo, solo ne
 
 ### 2.1 Conto manuale
 
-**Modo `assets`:**
+**Modo `assets`** (dal PERS-335 solo per i periodi storici e per le posizioni manuali di un conto
+sincronizzato; un conto manuale nuovo è sempre `total`):
 
 ```
 V(A,d) = Cassa(A,d) + Σ ValoreAsset(h,d)   per le posizioni con quantità > 0 al giorno d
@@ -422,15 +428,14 @@ Esempio (conto Directa in EUR, manuale, modo `assets`):
 | 15/09 | close VWCE @ 70 € + gamba fee 2 € | 10.996 | 0 | **10.996** |
 | 20/09 | withdrawal 2.000 € | 8.996 | 0 | **8.996** |
 
-**Modo `total`** (il comportamento di oggi, per chi non vuole tracciare le posizioni):
+**Modo `total`** (l'unico modo di un conto manuale dal PERS-335):
 
 ```
 V(A,d) = ultima account_valuation ≤ d + flussi netti (deposit − withdrawal) dopo quella valutazione
 ```
 
-È la regola di `valueOn` (`src/modules/investments/rules.ts:115`). In modo `total` il dialog
-"Aggiungi asset" non c'è: la pagina propone "Passa al modo per asset", che è una conversione (2.5).
-Nessuna transizione automatica al primo acquisto (A3).
+È la regola di `valueOn` (`src/modules/investments/rules.ts`). In modo `total` il dialog
+"Aggiungi asset" non c'è, e non c'è più una conversione verso `assets` (PERS-335).
 
 ### 2.2 Conto sincronizzato
 
@@ -617,15 +622,41 @@ conversion`; i periodi precedenti non cambiano.
 
 | Conversione | Cosa succede al giorno `T` |
 |---|---|
-| `total` → `assets` | Il dialog chiede le posizioni a `T` (asset, quantità, prezzo) e calcola `opening_cash = V(T) − Σ posizioni`. Se la cassa risultante è negativa, l'utente corregge o conferma |
-| `assets` → `total` | `account_valuation` a `T` = V(T) |
+| `total` → `assets` | **Rimossa (PERS-335)**: un conto manuale non tiene posizioni. I periodi già convertiti restano nello storico |
+| `assets` → `total` | `account_valuation` a `T` = V(T). Dal PERS-335 la fa solo la migrazione `0045_manual_value_only`, non la UI |
 | manuale → sincronizzato | Collegamento del provider sul conto esistente (1.3, A4). Il primo valore è la prima lettura; la differenza con V(T−1) è visibile nel grafico come "collegamento", non come guadagno |
-| sincronizzato → manuale (disconnessione) | L'ultima lettura completa diventa `opening_cash` + `opening_position` (quantità e prezzi della lettura) a `T`. Il conto resta in modo `assets` con quelle posizioni |
+| sincronizzato → manuale (disconnessione) | Nuovo periodo `total` a `T` con `account_valuation` = V(T) (PERS-335). Le posizioni restano nello storico, il conto manuale non ne tiene |
 | riconnessione | Come manuale → sincronizzato. Le posizioni manuali esistenti entrano in conflitto R4 se lo stesso prodotto è coperto |
 
-Esempio: conto `total` con una valutazione di 10.000 € il 01/02. Il 10/02 Mattia passa al modo
-`assets` e dichiara 100 VWCE @ 60 € = 6.000 €. `opening_cash` = 4.000 €. V(10/02) = 4.000 + 6.000 =
-**10.000** prima e dopo.
+Esempio (storico, prima del PERS-335): conto `total` con una valutazione di 10.000 € il 01/02. Il
+10/02 Mattia passa al modo `assets` e dichiara 100 VWCE @ 60 € = 6.000 €. `opening_cash` = 4.000 €.
+V(10/02) = 4.000 + 6.000 = **10.000** prima e dopo.
+
+### 2.6 P/L di un conto manuale (PERS-335)
+
+```
+Versato netto(A,d) = apertura del primo periodo + Σ deposit − Σ withdrawal      (on ≤ d)
+P/L(A,d)           = V(A,d) − Versato netto(A,d)
+P/L %              = P/L ÷ Versato netto     (solo se Versato netto > 0, altrimenti "—")
+```
+
+`accountPnl` in `rules.ts`; `ServiceSummary.manualPnl` lo espone per i servizi manuali. Con il
+periodo "Tutto" il P/L è lo stesso numero dell'hero (P&L del periodo) e della riga della home.
+
+- Senza un `account_valuation` (nessun "Aggiorna valore", nessuna apertura con un valore) niente
+  P/L: la pagina chiede il valore. Mai un P/L calcolato su un valore inventato.
+- Il valore di apertura di un handover, della migrazione o di una disconnessione è un
+  `account_valuation` con origine `conversion`: conta come valore noto a quella data.
+- La data dell'ultimo `account_valuation` è la data del valore. Più vecchia di 30 giorni
+  (`STALE_VALUE_DAYS`): la pagina lo dice.
+
+Esempio: versati 10.000 €, prelevati 2.000 €, valore 9.000 € → versato netto 8.000 €, P/L
+**+1.000 € (+12,5 %)**.
+
+**Migrazione `0045_manual_value_only`.** Ogni servizio manuale ancora in modo `assets` passa a
+`total` come la conversione `assets` → `total`: nuovo periodo e `account_valuation` = ultimo punto
+`portfolio` del conto. V e versato netto non cambiano. Un servizio manuale con posizioni ferma la
+migrazione (eccezione): va convertito a mano. In produzione l'unico era Fineco, senza posizioni.
 
 ## 3. Integrazioni
 
@@ -869,8 +900,8 @@ target ≥ 24 px, voci in `navigation.ts` e `icons.ts`, presenza in `tests/e2e/a
     con l'IP pubblico di uscita dell'homelab dove il servizio la supporta [D7], campi write-only,
     **conto di destinazione** ("Crea un conto nuovo", con la valuta del conto, oppure "Usa il conto
     esistente X", 1.3), verifica permessi, primo sync;
-  - `manual` → dialog "Crea conto manuale" (nome, categoria, valuta del conto, modo
-    `assets`/`total`, URL);
+  - `manual` → dialog "Crea conto manuale" (nome, categoria, valuta del conto, URL). Nessuna
+    scelta di modo: un conto manuale è sempre "solo valore" (PERS-335);
   - già collegato → "Apri" (pagina del servizio).
 - Le card delle integrazioni di investimento non compaiono più in Settings → Integrazioni come card
   dedicate: Settings mostra la connessione nell'elenco con link al catalogo (E7). Schedule, test e
@@ -894,14 +925,19 @@ target ≥ 24 px, voci in `navigation.ts` e `icons.ts`, presenza in `tests/e2e/a
 - **Letture, copertura e rettifiche** (solo sincronizzati): ultime letture con stato, copertura per
   stream con lacune dichiarate, rettifiche aperte con scadenza, "Aggiungi rettifica" (delta, dal,
   al, motivo).
-- **Impostazioni**: modo con conversione esplicita (2.5), flag del conto, stato della chiave
+- **Conto manuale (PERS-335)**: niente tab Posizioni (l'indirizzo `/positions` porta alla
+  Panoramica); la Panoramica mostra valore attuale con la sua data, versato netto e P/L (2.6) al
+  posto dei KPI per asset e delle posizioni principali. "Aggiungi operazione": Versamento, Prelievo,
+  Aggiorna valore.
+- **Impostazioni**: modo (solo lettura), flag del conto, stato della chiave
   (ultima verifica, `ip_restricted`, conferme), sostituzione chiave (5.3), disconnessione.
   Disconnettere applica la conversione sincronizzato → manuale (2.5) e mostra i passi per revocare la
   chiave presso il provider (SEC-07).
 
 ### 4.4 Inserimento manuale degli asset
 
-Dialog "Aggiungi asset" (solo in modo `assets`, 2.1):
+Dialog "Aggiungi asset" (solo in modo `assets`, 2.1; dal PERS-335 solo sui conti sincronizzati, da
+`⋯` → "Acquisto manuale"):
 
 1. Ricerca nel catalogo `investment_assets` (combobox con filtro per classe, ricerca per nome, ISIN o
    simbolo). Se manca: "Nuovo asset" (classe, nome, ISIN/simbolo, valuta).

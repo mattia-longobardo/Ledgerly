@@ -397,7 +397,6 @@ describe("connectInvestmentProvider (§5.1, SEC-05)", () => {
       name: "eToro legacy",
       category: "broker",
       currency: "EUR",
-      mode: "total",
       url: null,
     });
     await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 50_000n });
@@ -722,16 +721,18 @@ describe("the key on the service page (§4.3, §5.3)", () => {
     await replaceKey(ctx, accountId, fresh, new Date(now.getTime() + 10 * 60_000 + 1));
   });
 
-  it("disconnects into a manual account at the same value (§2.5), then forgets the key", async () => {
+  it("disconnects into a value-only manual account at the same value (§2.5), then forgets the key", async () => {
     const { accountId } = await connectNew();
     const before = (await serviceDetail(ctx, accountId))?.summary.valueCents;
     await disconnectProvider(ctx, accountId);
     expect(await listConnections(ctx)).toEqual([]);
     const detail = await serviceDetail(ctx, accountId);
+    // A manual service keeps only its value (PERS-335): V(T) is its first valuation, no position.
     expect(detail?.summary.origin).toBe("manual");
-    expect(detail?.summary.mode).toBe("assets");
+    expect(detail?.summary.mode).toBe("total");
     expect(detail?.summary.valueCents).toBe(before);
-    expect(detail?.holdings.map((row) => [row.asset.symbol, row.origin])).toEqual([["AAPL", "manual"]]);
+    expect(detail?.summary.manualPnl?.valuedOn).toBe(today(ctx.timeZone));
+    expect(detail?.holdings.filter((row) => row.origin === "manual")).toEqual([]);
     expect(detail?.sync?.revokePending).toBe(true);
     const [investment] = await getDb()
       .select()
