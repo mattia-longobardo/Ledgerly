@@ -16,7 +16,6 @@ import {
   addAsset,
   type AssetInput,
   confirmZeroReading,
-  convertMode,
   createManualService,
   deleteOperation,
   InvestmentError,
@@ -241,52 +240,6 @@ export async function deleteOperationAction(accountId: string, eventId: string):
     await deleteOperation(ctx, eventId);
     revalidate(accountId);
     return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export interface ConversionFormInput {
-  to: "assets" | "total";
-  positions: {
-    asset: { id: string } | { create: AssetInput };
-    product: string;
-    quantity: string;
-    unitPrice: string;
-    total: string;
-  }[];
-  acceptNegativeCash: boolean;
-}
-
-export async function convertModeAction(
-  accountId: string,
-  input: ConversionFormInput,
-): Promise<{ ok: true; openingCashCents: string | null } | { ok: false; error: string }> {
-  const ctx = await requireSession();
-  try {
-    const format = ctx.numberFormat;
-    const result = await convertMode(
-      ctx,
-      accountId,
-      input.to === "total"
-        ? { to: "total" }
-        : {
-            to: "assets",
-            acceptNegativeCash: input.acceptNegativeCash,
-            positions: input.positions.map((position) => {
-              const quantity = number(position.quantity, format, QUANTITY_SCALE);
-              return {
-                asset: position.asset,
-                product: position.product,
-                quantity,
-                unitPrice: quantity === null ? null : number(position.unitPrice, format, PRICE_SCALE),
-                totalCents: quantity === null ? money(position.total, format) : null,
-              };
-            }),
-          },
-    );
-    revalidate(accountId);
-    return { ok: true, openingCashCents: result.openingCashCents?.toString() ?? null };
   } catch (error) {
     return failed(error);
   }

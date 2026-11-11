@@ -28,14 +28,12 @@ import {
   formatDecimal,
   INVESTMENT_CATEGORIES,
   type Leg,
-  MODES,
-  type Mode,
+  MANUAL_MODE,
   oldestDay,
   TRANSFER_WINDOW_DAYS,
   type TransferLeg,
   type OperationKind,
   type OperationLike,
-  openingCashFor,
   parseDecimal,
   PRICE_SCALE,
   PRODUCT_PATTERN,
@@ -45,7 +43,6 @@ import {
   RATE_SCALE,
   READING_STATUSES,
   RECONCILIATION_KINDS,
-  valueOn,
 } from "./rules";
 import {
   investmentAccountPeriods,
@@ -402,14 +399,12 @@ export const manualServiceSchema = z.discriminatedUnion("target", [
     name: z.string().trim().min(1).max(80),
     category: z.enum(INVESTMENT_CATEGORIES),
     currency: z.string().regex(/^[A-Z]{3}$/),
-    mode: z.enum(MODES),
     url: url.nullable().default(null),
   }),
   z.object({
     target: z.literal("existing"),
     accountId: z.uuid(),
     category: z.enum(INVESTMENT_CATEGORIES),
-    mode: z.enum(MODES),
     url: url.nullable().default(null),
   }),
 ]);
@@ -487,7 +482,7 @@ export async function createManualService(
           investmentAccountId: investment.id,
           fromOn: todayOn,
           startsAt: now,
-          mode: parsed.mode,
+          mode: MANUAL_MODE,
           origin: "manual" as const,
           reason: "opening" as const,
         }),
@@ -520,7 +515,7 @@ export async function createManualService(
         investmentAccountId: investment.id,
         fromOn: todayOn,
         startsAt: now,
-        mode: parsed.mode,
+        mode: MANUAL_MODE,
         origin: "manual" as const,
         reason: "handover" as const,
       }),
@@ -533,7 +528,7 @@ export async function createManualService(
         legs: [
           {
             leg: "main",
-            kind: parsed.mode === "total" ? "account_valuation" : "opening_cash",
+            kind: "account_valuation",
             amountCents: opening,
           },
         ],
@@ -1179,139 +1174,6 @@ export async function deleteOperation(ctx: WriteCtx, eventId: string): Promise<v
       }
     }
     await rebuild(ctx, investment, await currencyOf(ctx, accountId), event.on, tx);
-  });
-}
-
-// ——— Conversions (§2.5) ———————————————————————————————————————————————————————————————————
-
-export const conversionInputSchema = z.discriminatedUnion("to", [
-  z.object({
-    to: z.literal("assets"),
-    positions: z
-      .array(
-        z.object({
-          asset: z.union([z.object({ id: z.uuid() }), z.object({ create: assetInputSchema })]),
-          product: z.string().regex(new RegExp(PRODUCT_PATTERN)).default("custody"),
-          quantity: positive.nullable().default(null),
-          unitPrice: z.bigint().nonnegative().nullable().default(null),
-          totalCents: positive.nullable().default(null),
-        }),
-      )
-      .max(50),
-    /** The person saw that the opening cash comes out negative, and keeps it. */
-    acceptNegativeCash: z.boolean().default(false),
-  }),
-  z.object({ to: z.literal("total") }),
-]);
-export type ConversionInput = z.input<typeof conversionInputSchema>;
-
-/**
- * A change of mode at T = today (§2.5): a new period and its opening events in one transaction,
- * with V(T) the same before and after. `total` → `assets` opens with the positions declared and the
- * cash that keeps V; `assets` → `total` opens with an account valuation equal to V(T).
- */
-export async function convertMode(
-  ctx: WriteCtx,
-  accountId: string,
-  input: ConversionInput,
-): Promise<{ openingCashCents: Cents | null }> {
-  const parsed = conversionInputSchema.parse(input);
-  const account = await getAccount(ctx, accountId);
-  if (!account) throw new InvestmentError("not_found");
-  const todayOn = today(ctx.timeZone);
-  return getDb().transaction(async (tx) => {
-    const investment = await lockInvestmentAccount(ctx, accountId, tx);
-    const book = await loadBook(ctx, investment, account.currency, tx);
-    const current = periodOn(book, todayOn);
-    if (current === null || current.origin !== "manual") throw new InvestmentError("wrong_mode");
-    if (current.mode === parsed.to) throw new InvestmentError("wrong_mode");
-    const rates = await ratesFor(book, todayOn);
-    const before = valueOn(book, todayOn, rates).valueCents;
-    if (before === null) throw new InvestmentError("no_value");
-    const now = new Date();
-    // A second conversion on the same day starts after the first, never at the same instant.
-    const startsAt =
-      current.startsAt.getTime() >= now.getTime() ? new Date(current.startsAt.getTime() + 1) : now;
-    await tx.insert(investmentAccountPeriods).values(
-      userScoped(ctx).stamp({
-        investmentAccountId: investment.id,
-        fromOn: todayOn,
-        startsAt,
-        mode: parsed.to as Mode,
-        origin: "manual" as const,
-        reason: "conversion" as const,
-      }),
-    );
-    let openingCashCents: Cents | null = null;
-    if (parsed.to === "total") {
-      await insertEvent(ctx, tx, investment.id, {
-        on: todayOn,
-        occurredAt: startsAt,
-        origin: "conversion",
-        legs: [{ leg: "main", kind: "account_valuation", amountCents: before }],
-      });
-    } else {
-      const declared: { holdingId: string; legs: LegInput[]; valueCents: Cents }[] = [];
-      for (const position of parsed.positions) {
-        if (position.quantity === null ? position.totalCents === null : position.unitPrice === null) {
-          throw new RangeError("A position needs a quantity and a price, or a value");
-        }
-        const asset =
-          "id" in position.asset
-            ? await requireAsset(ctx, position.asset.id, tx)
-            : await createAsset(ctx, position.asset.create, tx);
-        const holding = await holdingFor(ctx, tx, investment.id, asset.id, position.product, todayOn);
-        const { fxRate, fxSource } = await rateOf(asset.currency, account.currency, todayOn, null);
-        const native =
-          position.quantity !== null && position.unitPrice !== null
-            ? positionCents(position.quantity, position.unitPrice)
-            : (position.totalCents as Cents);
-        const valueCents = inAccount(native, fxRate);
-        declared.push({
-          holdingId: holding.id,
-          valueCents,
-          legs: [
-            {
-              leg: "main",
-              kind: "opening_position",
-              holdingId: holding.id,
-              quantity: position.quantity,
-              unitPrice: position.quantity === null ? null : position.unitPrice,
-              priceCurrency: asset.currency,
-              fxRate,
-              fxSource,
-              amountCents: -valueCents,
-            },
-          ],
-        });
-      }
-      openingCashCents = openingCashFor(
-        before,
-        declared.map((one) => ({
-          holdingId: one.holdingId,
-          quantity: null,
-          unitPrice: null,
-          valueCents: one.valueCents,
-        })),
-      );
-      if (openingCashCents < 0n && !parsed.acceptNegativeCash) throw new InvestmentError("negative_cash");
-      await insertEvent(ctx, tx, investment.id, {
-        on: todayOn,
-        occurredAt: startsAt,
-        origin: "conversion",
-        legs: [{ leg: "main", kind: "opening_cash", amountCents: openingCashCents }],
-      });
-      for (const one of declared) {
-        await insertEvent(ctx, tx, investment.id, {
-          on: todayOn,
-          occurredAt: startsAt,
-          origin: "conversion",
-          legs: one.legs,
-        });
-      }
-    }
-    await rebuild(ctx, investment, account.currency, todayOn, tx);
-    return { openingCashCents };
   });
 }
 

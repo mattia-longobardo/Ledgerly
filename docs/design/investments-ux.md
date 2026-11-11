@@ -72,6 +72,8 @@ Finance ▸ Investments
   disegna testata, tab e selettore del periodo una volta sola.
 - Collegamento e Movimenti sono tab anche per i conti manuali. Su un conto manuale "Collegamento" si
   chiama **"Impostazioni"** e contiene solo le impostazioni e le correzioni manuali (§3.6).
+- Un conto manuale non ha il tab Posizioni (PERS-335): tiene solo versamenti, prelievi e valore.
+  `/positions` di un conto manuale porta alla Panoramica con lo stesso periodo.
 - Il terzo livello (dettaglio asset) **non** è una pagina nuova: una riga di Posizioni apre Movimenti
   filtrati sull'asset (`/activity?asset=<id>`). Resta il limite di due livelli (P1).
 - Breadcrumb: `Investments / eToro / Posizioni`. Il selettore del periodo e il parametro `period`
@@ -219,8 +221,8 @@ Panoramica  Posizioni  Movimenti  Collegamento (1)        [Anno|Tutto|Personaliz
   spariscono (vanno in Collegamento → Impostazioni).
 - **Azioni** (S8, A4): su un conto sincronizzato, "Sincronizza" (cooldown 60 s come oggi) e il menu
   `⋯`: Aggiungi movimento manuale, Aggiungi correzione, Sostituisci chiave, Disconnetti. Su un conto
-  manuale: "Aggiungi operazione" (primario: Acquisto, Vendita, Versamento, Prelievo, Valutazione) e il
-  menu `⋯` con Aggiungi correzione. Nell'ordine del DOM le azioni vengono dopo l'hero (A4).
+  manuale: "Aggiungi operazione" (primario: Versamento, Prelievo, Aggiorna valore; niente acquisti né
+  vendite dal PERS-335) e il menu `⋯` con Aggiungi correzione. Nell'ordine del DOM le azioni vengono dopo l'hero (A4).
 - Il badge sul tab Collegamento conta gli avvisi con un'azione (stesso conteggio della home).
 - Mobile: titolo, azioni sotto il titolo, tab su una riga (4 etichette corte entrano in 390 px:
   verificato nel mockup), selettore del periodo sotto i tab.
@@ -250,6 +252,11 @@ Profitto e perdita · 2026 da inizio anno
 - Grafico: come la home, con una sola serie. Marker sui versamenti (↑) e prelievi (↓) (S13).
 - Posizioni principali: le prime 5 per valore, con P&L del periodo. Ultimi movimenti: i 5 più recenti
   nel periodo, con le descrizioni leggibili di §3.5.
+- **Conto manuale (PERS-335)**: al posto dei KPI per asset tre KPI del conto da sempre — Valore
+  attuale (con la data dell'ultimo "Aggiorna valore"), Versato netto (versamenti − prelievi),
+  Profitto / perdita (importo e % sul versato netto, `investments.md` §2.6). Senza valore: "—" e
+  "Nessun valore inserito" con il comando da usare; valore più vecchio di 30 giorni: avviso con la
+  data. Niente card "Posizioni principali". Con il periodo "Tutto" il P/L è uguale all'hero.
 
 ### 3.4 Tab Posizioni (mockup `05-service-positions`)
 
@@ -277,7 +284,8 @@ Somma: non realizzato + realizzato − commissioni fuori dalle chiusure = P&L de
 - **Dust** (V4, S9): le posizioni sotto la soglia di `isUnpricedDust` non sono in lista. Una riga
   finale "N residui senza mercato" le mostra in un `<details>`.
 - Una riga apre Movimenti filtrati sull'asset.
-- Azioni per riga (solo conti manuali o posizioni manuali): `⋯` → Valuta, Vendi, Chiudi.
+- Azioni per riga (solo posizioni manuali di un conto sincronizzato; i conti manuali non hanno più
+  posizioni, PERS-335): `⋯` → Valuta, Vendi, Chiudi.
 - Mobile: righe con nome, "quantità × prezzo · medio", a destra valore e P&L.
 
 ### 3.5 Tab Movimenti (mockup `06-service-activity`)
@@ -321,7 +329,7 @@ Due colonne (2/3 + 1/3); in mobile una colonna.
 | Storico sincronizzazioni     | Ex "Readings". Ultime letture; le letture consecutive uguali si uniscono in una riga ("20 letture uguali, 18–27 ott · mostra"); le stimate in una riga sola | S6 |
 | Correzioni manuali           | Ex "Open adjustments". Visibile solo se ce ne sono; altrimenti una riga che spiega cosa sono e dove aggiungerle (menu `⋯`) | S7, D4 |
 | Chiave API                   | Permessi ("Solo lettura · verificata oggi"), Restrizione IP con il consiglio in parole, orari di sync, Sostituisci chiave, Disconnetti | S11 |
-| Impostazioni                 | "Cosa tiene Ledgerly": Posizioni / Solo valore (ex Per asset / Total), gestito dal, link al conto in Accounts | S15, D6 |
+| Impostazioni                 | "Cosa tiene Ledgerly": Posizioni / Solo valore (ex Per asset / Total; solo lettura, niente conversione dal PERS-335), gestito dal, link al conto in Accounts | S15, D6 |
 
 Un conto manuale ha al posto di questo tab "Impostazioni" (solo le ultime due card e le correzioni).
 
@@ -334,8 +342,9 @@ Un conto manuale ha al posto di questo tab "Impostazioni" (solo le ultime due ca
   I prodotti già coperti sono disabilitati nella `select`, con la stessa nota.
 - **Correzione** (D4): titolo "Correggi il valore", esempio nel testo ("eToro non ha letto 120 USD
   di cassa dal 3 al 10 marzo"), campi Importo, Dal, Al (facoltativo, "senza fine" spiegato), Motivo.
-- **Crea conto manuale** (D6): scelta "Posizioni (una riga per asset, P&L per asset)" / "Solo valore
-  (aggiorni il totale a mano)", con un esempio per ognuna.
+- **Crea conto manuale** (D6, PERS-335): nessuna scelta di modo. Un conto manuale è sempre "Solo
+  valore": la descrizione del dialog dice che si registrano versamenti, prelievi e il valore letto dal
+  broker.
 - **Selettore del periodo** (D5): §2.1.
 - **Catalogo** (C1, C2): sottotitolo "eToro e Binance si collegano con una chiave di sola lettura";
   Kraken esce da "In arrivo"; la sezione "In arrivo" è chiusa di default con il conteggio.

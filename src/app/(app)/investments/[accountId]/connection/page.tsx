@@ -7,7 +7,6 @@ import type { ServiceDetail } from "@/modules/investments/queries";
 import {
   ConfirmRevokedButton,
   ConfirmZeroButton,
-  ConversionButton,
   ReplaceKeyButton,
   ServiceUrlForm,
   SyncButtons,
@@ -23,7 +22,7 @@ import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
-import { instantText, loadService, providerOf, serviceContextOf } from "../service-data";
+import { instantText, loadService, providerOf } from "../service-data";
 import { formatInstant } from "@/app/(app)/settings/integrations/format-instant";
 import { recommendedSchedule } from "@/app/(app)/settings/integrations/recommended-schedule";
 import { ScheduleControl } from "@/app/(app)/settings/integrations/schedule-control";
@@ -71,9 +70,7 @@ export default async function InvestmentServiceConnection({
     ? ((await listConnections(ctx)).find((one) => one.provider === sync.provider) ?? null)
     : null;
   const name = summary.account.name;
-  const context = serviceContextOf(detail, ctx);
   const provider = providerOf(detail);
-  const synced = summary.origin === "synced";
   const long = (on: string) => formatDate(on, "long", ctx.locale);
   const dayOf = (at: Date) => civilDateIn(at, ctx.timeZone);
   const own = (cents: Cents | null, signed = false) =>
@@ -272,14 +269,6 @@ export default async function InvestmentServiceConnection({
               <dt className="text-muted">{t("connection.settings.managedSince")}</dt>
               <dd>{long(summary.investment.managedSince)}</dd>
             </dl>
-            {!synced && (
-              <div className="flex flex-col gap-1.5">
-                <p className="text-sm text-muted">{t("settings.convertNote")}</p>
-                <span>
-                  <ConversionButton context={context} />
-                </span>
-              </div>
-            )}
             <div className="flex flex-col gap-1">
               <h3 className="text-sm font-semibold">{t("settings.periods")}</h3>
               <ul className="flex flex-col text-sm text-muted">

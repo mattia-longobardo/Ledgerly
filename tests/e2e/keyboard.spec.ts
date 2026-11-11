@@ -134,11 +134,12 @@ test("an investment dialog opened from a row menu traps the focus and gives it b
   await page.goto("/investments");
   await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "Directa", exact: true }).filter({ visible: true }).first();
-  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions`);
+  // A manual service keeps no positions (PERS-335): the row menu is an operation's, in Activity.
+  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/activity`);
   await page.waitForTimeout(500);
 
   const trigger = page
-    .getByRole("button", { name: /^Actions for Vanguard/ })
+    .getByRole("button", { name: /^Actions for the operation of/ })
     .filter({ visible: true })
     .first();
   await trigger.focus();
@@ -151,17 +152,17 @@ test("an investment dialog opened from a row menu traps the focus and gives it b
   await expect(menu).toBeHidden();
   await expect(trigger).toBeFocused();
 
-  // "Add operation" (§3.2): a menu behind a button; its "Buy" opens the dialog.
+  // "Add operation" (§3.2): a menu behind a button; its "Deposit" opens the dialog.
   const opener = page.getByRole("button", { name: "Add operation" }).first();
   await opener.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menu")).toBeVisible();
   // Opened from the keyboard, the menu takes the focus to its first item; the arrows walk on.
-  await expect(page.getByRole("menuitem", { name: "Buy", exact: true })).toBeFocused();
-  await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menuitem", { name: "Deposit", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Withdrawal", exact: true })).toBeFocused();
   await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("menuitem", { name: "Buy", exact: true })).toBeFocused();
+  await expect(page.getByRole("menuitem", { name: "Deposit", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();

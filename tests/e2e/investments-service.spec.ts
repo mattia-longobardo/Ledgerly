@@ -68,9 +68,6 @@ test("home → service → positions: the rows of Positions add up to the Overvi
   page,
 }) => {
   for (const [name, query] of [
-    ["Directa", ""],
-    ["Directa", "?period=all"],
-    ["Fineco Conto Deposito", ""],
     ["eToro", "?period=all"],
     ["Binance", "?period=all"],
   ] as const) {
@@ -104,6 +101,30 @@ test("home → service → positions: the rows of Positions add up to the Overvi
   }
 });
 
+test("a manual service: no Positions, its value against the money put in is the P&L of All (PERS-335)", async ({
+  page,
+}) => {
+  for (const name of ["Directa", "Fineco Conto Deposito"]) {
+    const base = await openService(page, name, "?period=all");
+    await expect(tabs(page).getByRole("link", { name: "Positions" }), name).toHaveCount(0);
+    const manual = page.getByTestId("manual-pnl");
+    await expect(manual, name).toBeVisible();
+    await expect(manual).toContainText("Net invested");
+    // Since the start, the account's profit or loss is the period's P&L of All, to the cent.
+    const local = await page.getByTestId("pnl-hero").getAttribute("data-local-cents");
+    await expect(manual, name).toHaveAttribute("data-pnl-cents", local ?? "");
+    await expect(page.getByTestId("top-positions")).toHaveCount(0);
+    // The old address of Positions lands on the Overview, with the period.
+    await page.goto(`${base}/positions?period=all`);
+    await expect(page).toHaveURL(new RegExp(`${base}\\?period=all$`));
+    // "Add operation" offers no buy: deposits, withdrawals and the value only.
+    await page.getByRole("button", { name: "Add operation" }).click();
+    const items = page.getByRole("menuitem");
+    await expect(items).toHaveText(["Deposit", "Withdrawal", "Update value"]);
+    await page.keyboard.press("Escape");
+  }
+});
+
 test("Positions: open with a cost, closed in the period and ever, a past year on its last day", async ({
   page,
 }) => {
@@ -131,7 +152,7 @@ test("Positions: open with a cost, closed in the period and ever, a past year on
 test("Positions: grouped by class, the same rows under each class with its subtotal (§3.4)", async ({
   page,
 }) => {
-  const base = await openService(page, "Directa");
+  const base = await openService(page, "eToro");
   await tabs(page).getByRole("link", { name: "Positions" }).click();
   await expect(page).toHaveURL(new RegExp(`${base}/positions$`), { timeout: 15_000 });
   await expect(page.getByTestId("open-row").first()).toBeVisible();

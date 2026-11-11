@@ -10,7 +10,8 @@ import { createTestUser } from "../../../test/users";
 import { ACTIVITY_PAGE_SIZE, investmentsPnl, serviceActivity, servicePnlView } from "./queries";
 import type { OperationKind } from "./rules";
 import { investmentAccountPeriods, investmentAccounts, investmentOperations } from "./schema";
-import { createManualService, insertEvent, rebuildAll, recordOperation } from "./service";
+import { assetsService } from "../../../test/investments";
+import { insertEvent, rebuildAll, recordOperation } from "./service";
 
 const eur = (value: number) => BigInt(Math.round(value * 100));
 
@@ -32,12 +33,11 @@ afterAll(closeDatabase);
 
 /** A manual service opened on `from` (the service always opens today; dated examples need it earlier). */
 async function serviceFrom(from: string): Promise<{ accountId: string; investmentId: string }> {
-  const { accountId } = await createManualService(ctx, {
+  const { accountId } = await assetsService(ctx, {
     target: "new",
     name: "Directa",
     category: "broker",
     currency: "EUR",
-    mode: "assets",
     url: null,
   });
   const [investment] = await getDb()

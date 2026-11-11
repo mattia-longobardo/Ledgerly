@@ -3169,8 +3169,6 @@
       "deposit": "Versamento",
       "withdrawal": "Prelievo",
       "updateValue": "Aggiorna valore",
-      "toAssets": "Passa al modo per asset",
-      "toTotal": "Passa al modo totale",
       "addAdjustment": "Aggiungi rettifica",
       "reconcile": "Riconcilia",
       "value": "Valuta",
@@ -3299,7 +3297,7 @@
     },
     "manualForm": {
       "title": "Crea conto manuale",
-      "description": "Un servizio che tieni a mano. Il suo valore entra nel patrimonio da oggi.",
+      "description": "Un servizio senza collegamento: registri versamenti, prelievi e il valore che leggi dal broker. Il suo valore entra nel patrimonio da oggi.",
       "destination": "Conto di destinazione",
       "newAccount": "Crea un conto nuovo",
       "existingAccount": "Usa un conto esistente",
@@ -3308,7 +3306,6 @@
       "category": "Categoria",
       "currency": "Valuta del conto",
       "currencyHint": "Ogni saldo e operazione del conto è in questa valuta.",
-      "mode": "Cosa tieni",
       "url": "Link",
       "urlHint": "Facoltativo: l'indirizzo del sito del servizio.",
       "existing": "Conto",
@@ -3319,17 +3316,7 @@
         "fund": "conto di un fondo",
         "managed": "già un servizio"
       },
-      "submit": "Crea",
-      "modes": {
-        "assets": {
-          "label": "Posizioni: una riga per asset, P&L per asset",
-          "example": "Es. Directa con 100 VWCE e 20 BTP: registri ogni acquisto e vendita, e Ledgerly li valuta."
-        },
-        "total": {
-          "label": "Solo valore: aggiorni il totale a mano",
-          "example": "Es. un fondo pensione o un conto deposito il cui estratto dà solo il valore: lo scrivi quando cambia."
-        }
-      }
+      "submit": "Crea"
     },
     "detail": {
       "since": "Gestito dal {date}",
@@ -3448,7 +3435,6 @@
     "settings": {
       "title": "Impostazioni",
       "mode": "Modo: {mode}",
-      "convertNote": "Un cambio di modo è una conversione esplicita alla data di oggi: il valore non cambia.",
       "url": "Link al servizio",
       "flags": "Patrimonio, snapshot e gli altri flag sono nelle impostazioni del conto.",
       "periods": "Periodi",
@@ -3554,21 +3540,6 @@
       "quantity": "Quantità",
       "fee": "Commissione"
     },
-    "conversionForm": {
-      "toAssetsTitle": "Passa al modo per asset",
-      "toTotalTitle": "Passa al modo totale",
-      "toAssetsDescription": "Dichiara le posizioni che il conto ha oggi. La liquidità che lascia invariato il valore di oggi di {value} apre il nuovo periodo.",
-      "toTotalDescription": "Da oggi registri solo il valore del conto: i {value} di oggi diventano la sua prima valutazione. Le posizioni restano nello storico.",
-      "noValue": "Il conto oggi non ha un valore: registra prima una valutazione.",
-      "addPosition": "Aggiungi posizione",
-      "removePosition": "Rimuovi posizione {n}",
-      "position": "Posizione {n}",
-      "openingCash": "Liquidità iniziale: {amount}",
-      "otherCurrency": "Le posizioni in un'altra valuta sono convertite al cambio BCE di oggi al salvataggio.",
-      "negative": "Le posizioni valgono più del conto: la liquidità iniziale è negativa.",
-      "acceptNegative": "Mantieni la liquidità negativa",
-      "submit": "Converti"
-    },
     "reconcileForm": {
       "title": "Riconcilia · {name}",
       "description": "La lettura del provider ora copre questo asset e prodotto. Decidi da quale giorno e quanto ne copre il provider.",
@@ -3594,7 +3565,6 @@
       "assetAdded": "Asset aggiunto",
       "saved": "Operazione salvata",
       "deleted": "Eliminata: {kind} del {date}",
-      "converted": "Modo cambiato",
       "reconciled": "Posizione riconciliata",
       "zeroConfirmed": "Zero confermato",
       "urlSaved": "Link salvato",
@@ -3970,7 +3940,19 @@
         "all": "Tutti i movimenti",
         "empty": "Nessun movimento nel periodo."
       },
-      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile."
+      "noRate": "Nessun cambio verso {currency} nel periodo: il P&L in {currency} non è disponibile.",
+      "manual": {
+        "title": "Profitto e perdita del conto",
+        "value": "Valore attuale",
+        "valuedOn": "aggiornato il {date}",
+        "noValueNote": "nessun valore inserito",
+        "invested": "Versato netto",
+        "investedNote": "versamenti − prelievi",
+        "pnl": "Profitto / perdita",
+        "pnlNote": "dall'inizio",
+        "noValue": "Nessun valore inserito: usa Aggiungi operazione → Aggiorna valore per vedere il profitto o la perdita.",
+        "stale": "L'ultimo valore è del {date}, più di {days} giorni fa: aggiornalo per vedere il profitto o la perdita di oggi."
+      }
     },
     "activityTab": {
       "deposits": "Versamenti",

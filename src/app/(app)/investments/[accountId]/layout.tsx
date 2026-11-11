@@ -48,7 +48,8 @@ export default async function InvestmentServiceLayout({
 
   const tabs: ServiceTab[] = [
     { key: "overview", href: base, label: t("tabs.overview") },
-    { key: "positions", href: `${base}/positions`, label: t("tabs.positions") },
+    // A manual service keeps no positions (PERS-335): no tab for them.
+    ...(synced ? [{ key: "positions", href: `${base}/positions`, label: t("tabs.positions") }] : []),
     { key: "activity", href: `${base}/activity`, label: t("tabs.activity") },
     {
       key: "connection",

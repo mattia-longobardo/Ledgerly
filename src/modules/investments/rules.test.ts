@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rateTable, NO_RATES } from "@/platform/fx/rules";
 import {
+  accountPnl,
   type Book,
   computePoints,
   emptyReadingStatus,
@@ -11,7 +12,6 @@ import {
   investorFlows,
   holdingStates,
   type OperationLike,
-  openingCashFor,
   parseDecimal,
   performance,
   pointDays,
@@ -636,10 +636,8 @@ describe("§2.5 conversions keep V(T)", () => {
       product: "custody",
       currency: "EUR",
     };
-    const cash = openingCashFor(eur(10000), [
-      { holdingId: vwce.id, quantity: qty("100"), unitPrice: price("60"), valueCents: eur(6000) },
-    ]);
-    expect(cash).toBe(eur(4000));
+    // The opening cash of an old conversion (PERS-335 removed it from the app): V(T) − positions.
+    const cash = eur(10000) - eur(6000);
     const conversionAt = new Date("2026-02-10T15:00:00Z");
     const account = book({
       periods: [
@@ -811,5 +809,84 @@ describe("§2.4 flows, and transfers between the person's accounts (A10)", () =>
       { withdrawal: out, deposit: near },
       { withdrawal: second, deposit: far },
     ]);
+  });
+});
+
+describe("PERS-335 the P&L of a manual account: value against the net money put in", () => {
+  const manual = (events: EventLike[]) =>
+    book({
+      periods: [
+        { fromOn: "2026-01-01", startsAt: new Date("2026-01-01T00:00:00Z"), mode: "total", origin: "manual" },
+      ],
+      events,
+    });
+
+  it("10.000 in, 2.000 out, worth 9.000: +1.000, +12,5% of the 8.000 left in", () => {
+    const account = manual([
+      event("2026-03-01", [{ kind: "deposit", amountCents: eur(10000) }]),
+      event("2026-04-01", [{ kind: "withdrawal", amountCents: -eur(2000) }]),
+      event("2026-05-01", [{ kind: "account_valuation", amountCents: eur(9000) }]),
+    ]);
+    const value = valueOn(account, "2026-05-10", NO_RATES).valueCents;
+    expect(value).toBe(eur(9000));
+    expect(accountPnl(account, "2026-05-10", value)).toEqual({
+      valueCents: eur(9000),
+      investedCents: eur(8000),
+      pnlCents: eur(1000),
+      rate: 0.125,
+      valuedOn: "2026-05-01",
+      stale: false,
+    });
+  });
+
+  it("without a value there is no P&L, and the account asks for one", () => {
+    const account = manual([event("2026-03-01", [{ kind: "deposit", amountCents: eur(10000) }])]);
+    const value = valueOn(account, "2026-03-02", NO_RATES).valueCents;
+    expect(value).toBeNull();
+    expect(accountPnl(account, "2026-03-02", value)).toMatchObject({
+      investedCents: eur(10000),
+      pnlCents: null,
+      rate: null,
+      valuedOn: null,
+      stale: true,
+    });
+  });
+
+  it("an account where nothing happened is worth zero, but has no P&L until a value is typed", () => {
+    const account = manual([]);
+    expect(
+      accountPnl(account, "2026-03-02", valueOn(account, "2026-03-02", NO_RATES).valueCents),
+    ).toMatchObject({
+      valueCents: 0n,
+      investedCents: 0n,
+      pnlCents: null,
+      rate: null,
+      valuedOn: null,
+      stale: true,
+    });
+  });
+
+  it("a value older than 30 days is old; one of 30 days is not", () => {
+    const account = manual([
+      event("2026-03-01", [{ kind: "deposit", amountCents: eur(1000) }]),
+      event("2026-03-01", [{ kind: "account_valuation", amountCents: eur(900) }]),
+    ]);
+    expect(accountPnl(account, "2026-03-31", eur(900)).stale).toBe(false);
+    expect(accountPnl(account, "2026-04-01", eur(900)).stale).toBe(true);
+    expect(accountPnl(account, "2026-04-01", eur(900))).toMatchObject({ pnlCents: -eur(100), rate: -0.1 });
+  });
+
+  it("more taken out than put in: a P&L, but no percentage of a capital that is not there", () => {
+    const account = manual([
+      event("2026-03-01", [{ kind: "deposit", amountCents: eur(1000) }]),
+      event("2026-03-02", [{ kind: "account_valuation", amountCents: eur(3000) }]),
+      event("2026-03-03", [{ kind: "withdrawal", amountCents: -eur(2000) }]),
+    ]);
+    const value = valueOn(account, "2026-03-03", NO_RATES).valueCents;
+    expect(accountPnl(account, "2026-03-03", value)).toMatchObject({
+      investedCents: -eur(1000),
+      pnlCents: eur(2000),
+      rate: null,
+    });
   });
 });
