@@ -1262,7 +1262,6 @@
     },
     "chart": {
       "title": "Net worth over time",
-      "range": "Range",
       "summary": "Net worth from {from} to {to}, ending at {value}.",
       "inPeriod": "in the period",
       "legend": "Accounts in the chart"
@@ -1471,7 +1470,6 @@
       "chart": {
         "title": "Balance · {count, plural, one {# month} other {# months}}",
         "summary": "{name} over time, ending at {value}.",
-        "span": "Chart span",
         "mode": "Chart type",
         "modes": {
           "line": "Line",
@@ -1641,30 +1639,6 @@
         "archivedToast": "{name} archived. Its history stays in past months.",
         "remove": "Remove account"
       }
-    },
-    "period": {
-      "label": "Period",
-      "grain": "Granularity",
-      "grains": {
-        "month": "Month",
-        "year": "Year"
-      },
-      "previous": "Previous period",
-      "next": "Next period",
-      "latest": "Latest",
-      "today": "today",
-      "ytd": "year to date"
-    },
-    "range": {
-      "label": "Chart range",
-      "from": "From",
-      "to": "To",
-      "previousYear": "Previous year",
-      "nextYear": "Next year",
-      "pickEnd": "Pick the end month",
-      "apply": "Apply",
-      "cancel": "Cancel",
-      "hint": "{from} – {to} · {count, plural, one {# month} other {# months}}"
     },
     "estimated": {
       "short": "estimated",

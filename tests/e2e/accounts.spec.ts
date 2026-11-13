@@ -51,50 +51,52 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page.getByRole("row").filter({ hasText: "Total" })).toContainText("1.750,50 €");
   });
 
-  await test.step("the period and chart controls work without JavaScript state", async () => {
+  await test.step("the period control of Expenses drives the table and the chart (PERS-342)", async () => {
     await page.goto("/accounts");
     const columns = page.getByRole("columnheader");
-
-    await page.getByRole("group", { name: "Granularity" }).getByRole("link", { name: "Year" }).click();
-    await expect(page).toHaveURL(/grain=year/);
-    await expect(columns.filter({ hasText: "Balance · 2026" })).toBeVisible();
-    // Overview's chart, here too; its day grain is `chart=` and keeps the table's `grain=year`.
+    // No Month / Year any more: the presets and the stepper of Expenses.
+    await expect(page.getByRole("group", { name: "Granularity" })).toHaveCount(0);
+    await page.getByRole("link", { name: "Last 3 months" }).first().click();
+    await expect(page).toHaveURL(/preset=last3Months/);
     await expect(page.getByRole("heading", { name: "Net worth over time" })).toBeVisible();
+    // The chart's day grain is `chart=` here, and keeps the period.
     await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Day" }).click();
     await expect(page).toHaveURL(/chart=day/);
-    await expect(page).toHaveURL(/grain=year/);
+    await expect(page).toHaveURL(/preset=last3Months/);
     await expect(page.getByRole("list", { name: "Accounts in the chart" })).toContainText(
       "ING Conto Arancio",
     );
 
-    const period = page.getByRole("group", { name: "Period" });
-    await period.getByRole("link", { name: "Previous period" }).click();
+    await page.getByRole("link", { name: "Previous period" }).click();
     await expect(page).toHaveURL(/off=1/);
-    await expect(period.getByRole("link", { name: "Latest" })).toBeVisible();
-    await period.getByRole("link", { name: "Latest" }).click();
+    await expect(page).toHaveURL(/preset=last3Months/);
+    await expect(columns.filter({ hasText: /^Balance · / })).toBeVisible();
+    await page.getByRole("link", { name: "Latest" }).click();
     await expect(page).not.toHaveURL(/off=/);
 
-    await page.goto(`${account}?span=3m`);
+    await page.goto(`${account}?preset=last3Months`);
     await expect(page.getByRole("heading", { name: "Balance · 3 months" })).toBeVisible();
     await page.getByRole("group", { name: "Chart type" }).getByRole("link", { name: "Bars" }).click();
     await expect(page).toHaveURL(/mode=bars/);
+    await expect(page).toHaveURL(/preset=last3Months/);
   });
 
-  await test.step("a past chart range moves the chart and leaves the header on today (F2.5)", async () => {
+  await test.step("a past range moves the chart and leaves the header on today (F2.5)", async () => {
     await page.goto(account);
-    await page.getByTitle("Chart range").click();
-    await page.getByLabel("From", { exact: true }).fill("2026-01");
-    await page.getByLabel("To", { exact: true }).fill("2026-01");
+    await page.getByTitle("Date range").click();
+    await page.getByLabel("From", { exact: true }).fill("2026-01-01");
+    await page.getByLabel("To", { exact: true }).fill("2026-01-31");
     await page.getByRole("button", { name: "Apply" }).click();
-    await expect(page).toHaveURL(/from=2026-01&to=2026-01/);
+    await expect(page).toHaveURL(/from=2026-01-01&to=2026-01-31/);
     await expect(page.getByRole("heading", { name: "Balance · 1 month" })).toBeVisible();
     // January ended at 1.500,00 €; the header is about today, and today is 1.750,50 €.
     await expect(page.getByText("1.750,50 €").first()).toBeVisible();
     await expect(page.getByText("1.500,00 €").first()).toBeVisible();
 
-    // A span drops the range again.
-    await page.getByRole("group", { name: "Chart span" }).getByRole("link", { name: "1Y" }).click();
+    // A preset drops the range again.
+    await page.getByRole("link", { name: "Year to date" }).first().click();
     await expect(page).not.toHaveURL(/from=/);
+    await expect(page).toHaveURL(/preset=ytd/);
   });
 
   await test.step("the account chart goes down to the day, and keeps it across its other controls (F2.5)", async () => {
@@ -129,12 +131,14 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await expect(page.getByText("1.750,50 €").first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Net worth over time" })).toBeVisible();
 
-    // Overview has the same picker (F2.5); a range ending in January keeps the hero on today.
-    await page.getByTitle("Chart range").click();
-    await page.getByLabel("From", { exact: true }).fill("2026-01");
-    await page.getByLabel("To", { exact: true }).fill("2026-02");
+    // Overview has the period control of Expenses (PERS-342); a range ending in February keeps
+    // the hero on today.
+    await expect(page.getByRole("link", { name: "Last 3 months" }).first()).toBeVisible();
+    await page.getByTitle("Date range").click();
+    await page.getByLabel("From", { exact: true }).fill("2026-01-01");
+    await page.getByLabel("To", { exact: true }).fill("2026-02-28");
     await page.getByRole("button", { name: "Apply" }).click();
-    await expect(page).toHaveURL(/from=2026-01&to=2026-02/);
+    await expect(page).toHaveURL(/from=2026-01-01&to=2026-02-28/);
     await expect(page.locator("p.text-hero")).toHaveText("1.750,50 €");
     // The stacked chart names each account under it, with its share of the total.
     const legend = page.getByRole("list", { name: "Accounts in the chart" });
@@ -144,7 +148,7 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     // Day by day too, keeping the range.
     await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Day" }).click();
     await expect(page).toHaveURL(/grain=day/);
-    await expect(page).toHaveURL(/from=2026-01/);
+    await expect(page).toHaveURL(/from=2026-01-01/);
     await expect(legend).toContainText("ING main");
   });
 

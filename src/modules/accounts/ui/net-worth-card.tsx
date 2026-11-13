@@ -3,7 +3,7 @@ import Link from "next/link";
 import { accountsView } from "@/modules/accounts/queries";
 import { dailyBalancesOf } from "@/modules/accounts/service";
 import type { Ctx } from "@/platform/context";
-import { addDays, lastDayOfMonth, monthKey, today } from "@/platform/dates";
+import { addDays, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent } from "@/platform/format";
 import { convertCents } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
@@ -13,44 +13,42 @@ import { StackedArea } from "@/ui/chart";
 import { cn } from "@/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import type { Params } from "@/ui/url";
-import { LinkTabs, RANGE_OPTIONS, type RangeKey, rangeMonths } from "./controls";
+import { LinkTabs } from "./controls";
 import { asNumbers, axisLabels, changeBetween, colorFor, dayLabels, monthLabels, shareOf } from "./display";
-import { MonthRangePicker } from "./month-range-picker";
-import { monthRange } from "./range";
-
-type Query = Record<string, string | string[] | undefined>;
+import { periodEnd as lastDayOf, periodMonths, type PeriodQuery } from "./period";
+import { PeriodBar } from "./period-bar";
 
 /**
  * "Net worth over time" (spec §7.1, F2.5): the stacked chart of Overview, also on Accounts. Its
- * window is a preset (`range`) or the months the picker wrote (`from`/`to`), read by month or by day
- * (`grainParam`, which a page that already uses `grain` for something else renames). `carry` is
- * what the page's own links carry, kept by every control of the card. `null` without accounts.
+ * window is the period of the page (PERS-342: the Expenses control, `parsePeriodQuery`), read by
+ * month or by day (`grainParam`, which a page that already uses `grain` for something else
+ * renames). With `controls` the card draws the period control itself; without, the page has it.
+ * `carry` is what the page's own links carry, kept by every control of the card. `null` without
+ * accounts.
  */
 export async function NetWorthCard({
   ctx,
-  query,
+  period,
   path,
   carry = {},
   grainParam = "grain",
+  controls = true,
   now = new Date(),
 }: {
   ctx: Pick<Ctx, "userId" | "timeZone" | "locale" | "numberFormat" | "displayCurrency">;
-  query: Query;
+  period: PeriodQuery;
   path: string;
   carry?: Params;
   grainParam?: string;
+  controls?: boolean;
   now?: Date;
 }) {
   const t = await getTranslations("overview");
   const ta = await getTranslations("accounts");
-  const thisMonth = monthKey(today(ctx.timeZone, now));
-  const custom = monthRange(query, thisMonth);
-  const range: RangeKey = RANGE_OPTIONS.find((option) => option.value === query.range)?.value ?? "1y";
-  const grain = query[grainParam] === "day" ? ("day" as const) : ("month" as const);
-  const chart = await accountsView(
-    ctx,
-    custom ? { now, months: custom.months, through: custom.to } : { now, months: rangeMonths(range) },
-  );
+  const todayOn = today(ctx.timeZone, now);
+  const grain = period.grain;
+  const window = periodMonths(period.range, todayOn);
+  const chart = await accountsView(ctx, { now, months: window.months, through: window.through });
   if (chart.rows.length === 0) return null;
 
   // "All" (or a range reaching back past the history) asks for more months than there are: the
@@ -92,11 +90,10 @@ export async function NetWorthCard({
     estimated: boolean[];
   };
   if (grain === "day") {
-    const todayOn = today(ctx.timeZone, now);
-    const lastDay = lastDayOfMonth(months[months.length - 1]);
-    const end = lastDay < todayOn ? lastDay : todayOn;
+    const end = lastDayOf(period.range, todayOn);
     const earliest = addDays(end, -365);
-    const start = months[0] > earliest ? months[0] : earliest;
+    const first = period.range.from > months[0] ? period.range.from : months[0];
+    const start = first > earliest ? first : earliest;
     const read = await dailyBalancesOf(
       ctx,
       stacked.map(({ row }) => row.account.id),
@@ -151,17 +148,8 @@ export async function NetWorthCard({
   );
   const periodEnd = plot.total[plot.total.length - 1] ?? null;
   const periodChange = changeBetween(periodEnd, plot.total.find((value) => value !== null) ?? null);
-  /** What the chart's links carry, so switching one control keeps the others. */
-  const chartGrain = grain === "day" ? "day" : undefined;
-  /** What a range control carries: the page's own parameters and the chart's grain. */
-  const kept = { ...carry, [grainParam]: chartGrain };
-  const carried = {
-    ...kept,
-    range: custom ? undefined : range,
-    from: custom?.from.slice(0, 7),
-    to: custom?.to.slice(0, 7),
-  };
-
+  /** What the grain control carries: the page's own parameters and the period. */
+  const carried = { ...carry, ...period.params };
   return (
     <Card padded={false} className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -183,22 +171,7 @@ export async function NetWorthCard({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <MonthRangePicker
-            from={months[0]}
-            to={months[months.length - 1]}
-            path={path}
-            params={kept}
-            locale={ctx.locale}
-          />
-          {/* A preset link carries no `from`/`to`: picking one leaves the custom range. */}
-          <LinkTabs
-            label={t("chart.range")}
-            path={path}
-            params={kept}
-            name="range"
-            current={custom ? "" : range}
-            options={RANGE_OPTIONS}
-          />
+          {controls && <PeriodBar period={period} path={path} carry={carry} locale={ctx.locale} />}
           <LinkTabs
             label={ta("detail.chart.grain")}
             path={path}

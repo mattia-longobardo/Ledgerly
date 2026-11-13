@@ -521,16 +521,3 @@ export function parseAmount(input: string, format: NumberFormat): Cents {
   const plain = cleaned.split(group).join("").replace(decimal, ".");
   return parseCents(plain);
 }
-
-export type Grain = "month" | "year";
-
-/**
- * The last month of the period the Accounts page is showing. `offset` steps back one grain at a
- * time, so 0 is the period still running: the current month, or the current year to date.
- */
-export function periodEnd(grain: Grain, offset: number, todayOn: CivilDate): MonthKey {
-  const thisMonth = monthKey(todayOn);
-  if (offset <= 0) return thisMonth;
-  if (grain === "month") return addMonths(thisMonth, -offset);
-  return `${Number(thisMonth.slice(0, 4)) - offset}-12-01`;
-}

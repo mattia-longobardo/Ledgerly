@@ -110,47 +110,6 @@ export function PeriodStepper({
   );
 }
 
-export type RangeKey = "3m" | "1y" | "all";
-
-const RANGE_MONTHS: Record<RangeKey, number> = { "3m": 3, "1y": 12, all: 120 };
-
-export const RANGE_OPTIONS: readonly { value: RangeKey; label: string }[] = [
-  { value: "3m", label: "3M" },
-  { value: "1y", label: "1Y" },
-  { value: "all", label: "All" },
-];
-
-export function rangeMonths(range: RangeKey | undefined): number {
-  return RANGE_MONTHS[range ?? "1y"] ?? RANGE_MONTHS["1y"];
-}
-
-/** The account chart's spans, from the design: 3M · 6M · 1Y · 2Y · YTD. */
-export type SpanKey = "3m" | "6m" | "1y" | "2y" | "ytd";
-
-export const SPAN_OPTIONS: readonly { value: SpanKey; label: string }[] = [
-  { value: "3m", label: "3M" },
-  { value: "6m", label: "6M" },
-  { value: "1y", label: "1Y" },
-  { value: "2y", label: "2Y" },
-  { value: "ytd", label: "YTD" },
-];
-
-/** How many months a span covers; YTD counts January of the current year to now. */
-export function spanMonths(span: SpanKey | undefined, month: number): number {
-  switch (span) {
-    case "3m":
-      return 3;
-    case "6m":
-      return 6;
-    case "2y":
-      return 24;
-    case "ytd":
-      return month;
-    default:
-      return 12;
-  }
-}
-
 /**
  * A checkbox that is really a link, the shape the Expenses filter bar already uses: a server
  * component cannot hold state, so the query string is the state and the glyph draws it.

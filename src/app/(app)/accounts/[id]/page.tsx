@@ -25,9 +25,9 @@ import {
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
-import { LinkTabs, type SpanKey, SPAN_OPTIONS, spanMonths } from "@/modules/accounts/ui/controls";
-import { MonthRangePicker } from "@/modules/accounts/ui/month-range-picker";
-import { monthRange } from "@/modules/accounts/ui/range";
+import { LinkTabs } from "@/modules/accounts/ui/controls";
+import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@/modules/accounts/ui/period";
+import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { pocketsOnAccount } from "@/modules/pockets/queries";
 import { subscriptionsOnAccount } from "@/modules/subscriptions/queries";
 import { rulesOnAccount } from "@/modules/interests/queries";
@@ -35,7 +35,7 @@ import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
 import { managedSinceOf, serviceAccountIds, syncedServicesOf } from "@/modules/investments/managed";
-import { lastDayOfMonth, monthKey, today } from "@/platform/dates";
+import { today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
 import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
@@ -65,17 +65,13 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const now = new Date();
 
   const query = await searchParams;
-  const thisMonth = monthKey(today(ctx.timeZone, now));
-  const custom = monthRange(query, thisMonth);
-  const span: SpanKey = SPAN_OPTIONS.find((option) => option.value === query.span)?.value ?? "1y";
+  // The chart's window is the period of the Expenses control (PERS-342), by month or by day.
+  const period = parsePeriodQuery(query, today(ctx.timeZone, now));
   const chart = {
     mode: query.mode === "bars" ? ("bars" as const) : ("line" as const),
-    // Month ends, or every day of the window (F2.5).
-    grain: query.grain === "day" ? ("day" as const) : ("month" as const),
-    span,
-    custom: custom !== null,
+    grain: period.grain,
   };
-  const width = custom ? custom.months : spanMonths(span, Number(thisMonth.slice(5, 7)));
+  const span = periodMonths(period.range, today(ctx.timeZone, now));
 
   // The header and the KPIs speak of today whatever window the chart shows (spec §7.1, F2.5): one
   // reading for both used to put the balance at the end of a past range under "this month", and
@@ -97,8 +93,8 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const account = row.account;
   const window = await accountsView(ctx, {
     now,
-    months: width,
-    through: custom?.to ?? thisMonth,
+    months: span.months,
+    through: span.through,
     includeArchived: true,
   });
   const windowRow = window.rows.find((one) => one.account.id === id) ?? row;
@@ -113,12 +109,11 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
 
   // Day grain: every day of the window up to today, read only when the chart shows it.
   const todayOn = today(ctx.timeZone, now);
-  const windowEnd = lastDayOfMonth(window.months[window.months.length - 1]);
   const daily =
     tab === "overview" && chart.grain === "day"
       ? await accountDailyBalances(ctx, id, {
-          from: window.months[0],
-          to: windowEnd < todayOn ? windowEnd : todayOn,
+          from: period.range.from,
+          to: periodEnd(period.range, todayOn),
         })
       : null;
 
@@ -201,7 +196,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           windowRow={windowRow}
           months={window.months}
           daily={daily}
-          range={custom}
+          period={period}
           yoy={yoy}
           share={share}
           color={color}
@@ -273,7 +268,7 @@ async function OverviewTab({
   windowRow,
   months,
   daily,
-  range,
+  period,
   yoy,
   share,
   color,
@@ -294,13 +289,13 @@ async function OverviewTab({
   source: string;
   /** The window day by day, when the chart's grain is the day (F2.5). */
   daily: Awaited<ReturnType<typeof accountDailyBalances>> | null;
-  /** The range the picker wrote, or `null` when a span decides the window. */
-  range: { from: string; to: string } | null;
+  /** The period of the chart (PERS-342), with its control. */
+  period: PeriodQuery;
   yoy: ReturnType<typeof changeBetween>;
   share: number | null;
   color: string;
   id: string;
-  chart: { mode: "line" | "bars"; grain: "month" | "day"; span: SpanKey; custom: boolean };
+  chart: { mode: "line" | "bars"; grain: "month" | "day" };
 }) {
   /** Everything on this tab is the account's own value, in its own currency. */
   const own = { currency: row.account.currency };
@@ -347,11 +342,8 @@ async function OverviewTab({
   );
   /** Everything the chart's links carry, so switching one control keeps the others. */
   const carried = {
+    ...period.params,
     mode: chart.mode === "line" ? undefined : chart.mode,
-    grain: chart.grain === "month" ? undefined : chart.grain,
-    span: range ? undefined : chart.span,
-    from: range?.from.slice(0, 7),
-    to: range?.to.slice(0, 7),
   };
   const monthRows = months
     .map((month, index) => ({
@@ -393,19 +385,10 @@ async function OverviewTab({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">{t("chart.title", { count: months.length })}</h2>
             <div className="flex flex-wrap items-center gap-2">
-              <LinkTabs
-                label={t("chart.span")}
+              <PeriodBar
+                period={period}
                 path={`/accounts/${id}`}
-                params={{ mode: carried.mode, grain: carried.grain }}
-                name="span"
-                current={chart.custom ? "" : chart.span}
-                options={SPAN_OPTIONS}
-              />
-              <MonthRangePicker
-                from={months[0]}
-                to={months[months.length - 1]}
-                path={`/accounts/${id}`}
-                params={{ mode: carried.mode, grain: carried.grain }}
+                carry={{ mode: carried.mode }}
                 locale={ctx.locale}
               />
               <LinkTabs

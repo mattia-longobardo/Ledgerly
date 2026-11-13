@@ -10,9 +10,10 @@ import {
   shareOf,
   since,
 } from "@/modules/accounts/ui/display";
-import { LinkTabs, PeriodStepper, ToggleLink } from "@/modules/accounts/ui/controls";
+import { ToggleLink } from "@/modules/accounts/ui/controls";
+import { parsePeriodQuery, periodMonths } from "@/modules/accounts/ui/period";
+import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
-import { type Grain, periodEnd } from "@/modules/accounts/rules";
 import { syncedServicesOf } from "@/modules/investments/managed";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
@@ -38,21 +39,17 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
   const now = new Date();
 
   const query = await searchParams;
-  const grain: Grain = query.grain === "year" ? "year" : "month";
-  const offset = Math.max(0, Number(query.off ?? 0) || 0);
+  // One period for the whole page, the Expenses control (PERS-342): the table's balances are those
+  // of its last month, the chart draws all of it. `chart` is the chart's grain parameter.
+  const todayOn = today(ctx.timeZone, now);
+  const period = parsePeriodQuery(query, todayOn, "chart");
   // An archived account is off the list until it is asked for, and it stays out of the totals even
   // then: the same page must not give two different net worths depending on a checkbox.
   const showArchived = query.archived === "1";
-  const params = {
-    grain: grain === "month" ? undefined : grain,
-    off: offset ? String(offset) : undefined,
-    archived: showArchived ? "1" : undefined,
-  };
-  const end = periodEnd(grain, offset, today(ctx.timeZone, now));
-  const periodShort = grain === "year" ? end.slice(0, 4) : formatDate(end, "monthShort", ctx.locale);
-  const periodLong =
-    (grain === "year" ? end.slice(0, 4) : formatDate(end, "monthYear", ctx.locale)) +
-    (offset === 0 ? ` · ${grain === "year" ? t("period.ytd") : t("period.today")}` : "");
+  const page = { archived: showArchived ? "1" : undefined };
+  const params = { ...period.params, ...page };
+  const end = periodMonths(period.range, todayOn).through;
+  const periodShort = formatDate(end, "monthShort", ctx.locale);
 
   const view = await accountsView(ctx, { now, through: end, includeArchived: showArchived });
 
@@ -153,35 +150,13 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <LinkTabs
-            label={t("period.grain")}
-            path="/accounts"
-            params={params}
-            name="grain"
-            current={grain}
-            options={[
-              { value: "month", label: t("period.grains.month") },
-              { value: "year", label: t("period.grains.year") },
-            ]}
-          />
-          <ToggleLink
-            label={t("showArchived")}
-            path="/accounts"
-            params={params}
-            name="archived"
-            on={showArchived}
-          />
-        </div>
-        <PeriodStepper
-          label={t("period.label")}
+        <PeriodBar period={period} path="/accounts" carry={page} locale={ctx.locale} />
+        <ToggleLink
+          label={t("showArchived")}
           path="/accounts"
           params={params}
-          offset={offset}
-          periodLabel={periodLong}
-          previousLabel={t("period.previous")}
-          nextLabel={t("period.next")}
-          latestLabel={t("period.latest")}
+          name="archived"
+          on={showArchived}
         />
       </div>
 
@@ -350,8 +325,16 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       )}
 
       <div className="grid gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        {/* Overview's chart, with its own range and grain (`chart=` here: `grain` is the table's). */}
-        <NetWorthCard ctx={ctx} query={query} path="/accounts" carry={params} grainParam="chart" now={now} />
+        {/* Overview's chart, on the page's period (`chart=` is its grain). */}
+        <NetWorthCard
+          ctx={ctx}
+          period={period}
+          path="/accounts"
+          carry={page}
+          grainParam="chart"
+          controls={false}
+          now={now}
+        />
 
         <Card padded={false} className="flex flex-col gap-3 p-4">
           <h2 className="text-lg font-semibold">{t("composition.title")}</h2>

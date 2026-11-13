@@ -6,6 +6,7 @@ import { BudgetsOverviewCard } from "@/modules/budgets/ui/overview-card";
 import { pocketsTotal } from "@/modules/pockets/queries";
 import { changeBetween, counterValue } from "@/modules/accounts/ui/display";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
+import { parsePeriodQuery } from "@/modules/accounts/ui/period";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -29,8 +30,8 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const now = new Date();
   const query = await searchParams;
   const thisMonth = monthKey(today(ctx.timeZone, now));
-  // The hero, the KPIs and the table always speak of today; only the chart follows the preset or
-  // the range the picker wrote (spec §7.1, F2.5), inside `NetWorthCard`.
+  // The hero, the KPIs and the table always speak of today; only the chart follows the period of
+  // the Expenses control (spec §7.1, F2.5, PERS-342), inside `NetWorthCard`.
   const view = await accountsView(ctx, { now });
 
   if (view.rows.length === 0) {
@@ -140,7 +141,12 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           width — a table's — and the cards would then reach past the page (400 px). */}
       {/* The cells stretch, so the accounts card ends where the net-worth card does. */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <NetWorthCard ctx={ctx} query={query} path="/" now={now} />
+        <NetWorthCard
+          ctx={ctx}
+          period={parsePeriodQuery(query, today(ctx.timeZone, now))}
+          path="/"
+          now={now}
+        />
 
         <Card padded={false}>
           <CardHeader

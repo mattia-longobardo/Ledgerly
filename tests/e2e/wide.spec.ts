@@ -85,7 +85,7 @@ for (const width of [1280, 1920, 2560]) {
  */
 for (const [path, title] of [
   ["/expenses", "Date range"],
-  ["/", "Chart range"],
+  ["/", "Date range"],
 ] as const) {
   for (const width of [1280, 2560]) {
     test(`the date picker on ${path} opens inside the column at ${width} px`, async ({ page }) => {

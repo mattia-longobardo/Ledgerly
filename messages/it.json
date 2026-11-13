@@ -1262,7 +1262,6 @@
     },
     "chart": {
       "title": "Patrimonio nel tempo",
-      "range": "Intervallo",
       "summary": "Patrimonio da {from} a {to}, fino a {value}.",
       "inPeriod": "nel periodo",
       "legend": "Conti nel grafico"
@@ -1471,7 +1470,6 @@
       "chart": {
         "title": "Saldo · {count, plural, one {# mese} other {# mesi}}",
         "summary": "{name} nel tempo, fino a {value}.",
-        "span": "Intervallo del grafico",
         "mode": "Tipo di grafico",
         "modes": {
           "line": "Linea",
@@ -1641,30 +1639,6 @@
         "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati.",
         "remove": "Rimuovi il conto"
       }
-    },
-    "period": {
-      "label": "Periodo",
-      "grain": "Granularità",
-      "grains": {
-        "month": "Mese",
-        "year": "Anno"
-      },
-      "previous": "Periodo precedente",
-      "next": "Periodo successivo",
-      "latest": "Ultimo",
-      "today": "oggi",
-      "ytd": "da inizio anno"
-    },
-    "range": {
-      "label": "Intervallo del grafico",
-      "from": "Da",
-      "to": "A",
-      "previousYear": "Anno precedente",
-      "nextYear": "Anno successivo",
-      "pickEnd": "Scegli il mese di fine",
-      "apply": "Applica",
-      "cancel": "Annulla",
-      "hint": "{from} – {to} · {count, plural, one {# mese} other {# mesi}}"
     },
     "estimated": {
       "short": "stimato",
