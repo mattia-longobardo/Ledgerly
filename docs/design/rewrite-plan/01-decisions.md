@@ -1,0 +1,115 @@
+# 1. Registro delle decisioni
+
+Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
+
+Tutte le decisioni sono di Mattia, del **13/11/2026**. La colonna «Sostituisce» cita i documenti esistenti,
+che non vengono modificati: dove questo registro e un documento più vecchio dicono cose diverse, vale questo registro.
+La colonna «Rilascio» rimanda a [`03-releases.md`](03-releases.md).
+
+## 1.1 Premesse
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| P1 | Ogni host gestisce la sua istanza e aggiunge amici e familiari con il loro account | — | Tutti |
+| P2 | Utenti non tecnici: impostazioni tecniche nascoste o sotto «Avanzate» | — | N2, R5a |
+| P3 | L'istanza è pubblica su internet (tunnel Cloudflare → Traefik). Le app la raggiungono direttamente | — | R2, C1 |
+| P4 | Una sola review di sicurezza, finale, quando Mattia dichiara tutto completo | `investments.md` §7 e §9 (review per fase) come modello per i rilasci nuovi | Z |
+| P5 | Nessuno sviluppo prima dell'OK di Mattia al piano | — | N0 |
+
+## 1.2 Prodotto (fase 1)
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| A3 | Ordine Z: prima, sul codice attuale, le sorgenti dati e Time Off. Il resto nella riscrittura | — | N1-N5, poi R0-R5 |
+| B1 | Investments: una home con 3 gruppi («Azioni e crypto», «Fondi e PAC», «Pensione»). Fusione solo di modello di lettura e interfaccia. Nessuna migrazione dei dati dei fondi | `investments-ux.md` §9 decisione 4 («totale solo servizi») e i suoi effetti in §3.1 e §8; `investments-ux.md` §1.1 (mappa delle pagine); `funds-ux.md` §6 direzione A e §10 solo per la home (il dettaglio del fondo resta) | R5b |
+| B1b | I fondi passano a `/investments/[id]`; `/funds/*` risponde con un redirect permanente. La voce di menu «Funds» sparisce | `funds-ux.md` §10-§13 per gli URL | R5b |
+| B1c | Niente «coming soon» e niente catalogo: dialog «Aggiungi investimento» a 3 scelte | `investments.md` §1.1 (D5 per le voci `planned`, D12 catalogo statico), §4.2; `investments-ux.md` §3.7 | R5b |
+| B2 | La pensione entra nel totale. Tutti i conti di investimento sono visibili in Investments, anche senza sync | `investments-ux.md` §9 decisione 4; `investments.md` §4.1 | R5b |
+| B3 | Tracking manuale: servizio «Portafoglio manuale», modulo unico «Registra operazione» con ricerca per ISIN | `investments.md` §4.4 (inserimento manuale degli asset); estende §2.6 (conto manuale, solo valore): il servizio nuovo è separato | R5d |
+| B4 | Fonti: OpenFIGI + ESMA FIRDS per l'anagrafica; EODHD, BCE, CoinGecko per i prezzi; altre fonti solo come plugin | `investments.md` §6 e D9 (prezzi solo con copertura ≥ 90% del valore): la regola diventa «per strumento» | R5d |
+| S3 | Mercato del prezzo: quello dell'ordine, Xetra di riserva | `investments.md` §6 | R5d |
+| C1 | Sorgenti bancarie: di default nessuna sync. Enable Banking, Wallet e Trek sono plugin e possono stare insieme | `investments.md` §3.1 solo per l'elenco chiuso dei provider | N1, R5c |
+| C1b | eToro e Binance restano nel core. Le loro impostazioni stanno nel tab Finance | `investments.md` §4.2 (servizi elencati anche in Integrations) | R5a |
+| C1c | Enable Banking: credenziali **per utente**. Ogni utente registra la sua applicazione. Il core le cifra; il plugin non le salva | — | N1 |
+| C1d | La prima sync parte subito dopo il consenso (storico oltre 90 giorni). Letture automatiche entro il limite della banca. «Sincronizza ora» manda gli header `Psu-*` | — | N1 |
+| S4 | La prova su una banca vera è il primo passo dello sviluppo del plugin | — | N1 |
+| C2 | Passaggio di un conto da Wallet a Enable Banking: scelta dell'utente, regola M1 | — | N4 |
+| S1 | M1 corretta dallo spike: abbinamento per gruppi (conto + importo), controllo del saldo bloccante, prova a secco | — | N4 |
+| C4 | Plugin: container separato senza stato, interrogato dal core. Installa solo l'admin. Catalogo ufficiale. Plugin fuori catalogo: solo admin, etichetta «non verificato» | — | N1, R5c |
+| C4b | Wallet in sola lettura. Trek tiene la scrittura delle ferie | — | R5c |
+| K1 | Categorizzazione: cascata (regole → memoria esatta → classificatore lineare per utente → tabelle MCC e marchi → «Da categorizzare») | — | N3 |
+| S2 | Memoria severa: «ultime 3 tutte uguali». La copertura si misura a regime | — | N3 |
+| K2 | Assegna da sola sopra la soglia di precisione 95%, con segno «automatica». Le automatiche contano subito in budget | — | N3 |
+| K3 | Dopo una correzione l'app chiede se applicare ai simili | — | N3 |
+| S2b | L'app propone di unire le categorie doppie | — | N3 |
+| K4 | Utente nuovo: circa 12 gruppi predefiniti e revisione guidata | — | N3 (tabelle e revisione), R5a (primo avvio) |
+| G10 | Movimento manuale disponibile, anche su un conto collegato a una banca, con avviso | — | N3 |
+| C5 | Sync log: stato semplice per collegamento. Registro grezzo solo per l'admin, 30 giorni | — | N2 |
+| D1 | Time Off: selezione di primo e ultimo giorno + pannello (tipo, durata), pulsante «Aggiungi assenza». Nessun gesto nascosto | — | N5 |
+| D2 | Menu a 3 gruppi («Ogni giorno», «Risparmi e investimenti», «Lavoro»), moduli attivabili, primo avvio guidato | — | R5a |
+| D2d | Tab mobile: Overview · Accounts · Expenses · Investments · More | — | R5a |
+| D3 | Settings: tab Finance e tab Plugin. Integrations e Categories spariscono | `investments.md` §4.2 | R5a |
+| O1 | Overview: lista dei conti a gruppi, subtotale = riquadro. Mostra anche i conti di investimento | — | R5b |
+
+## 1.3 Architettura (fase 2)
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| F1 | Backend separato in TypeScript: Hono + Drizzle. Il web usa solo l'API | — | R2-R4 |
+| F1b | **Refactor completo**: audit dei doppioni e del debito per modulo; refactor esplicito modulo per modulo (dominio e interfaccia). Criterio di uscita: stessi numeri, test verdi, nessun doppione dell'audit rimasto. I calcoli approvati non cambiano risultato | `investments-ux.md` §4 e `funds-ux.md` §5 restano le regole di calcolo | R0, R2, R3 |
+| F2 | Monorepo npm workspaces: `apps/` (api, worker, web), `packages/` (domain, api-contract, api-client, design-tokens, ui, plugin-contract, plugin-host), `plugins/`. Repo privato, nessun repo nuovo | — | R0 |
+| F3 | Stesso PostgreSQL e stesso schema. Migrazioni solo additive, compatibili con l'immagine precedente | — | Tutti |
+| F3b | Client: cache di sola lettura. Chiave di idempotenza sulle scritture | — | R2, C1 |
+| F4 | Login nativo: OAuth2 + PKCE nel browser di sistema. L'app chiede l'indirizzo dell'istanza al primo avvio, anche con QR dal web | — | R2, C1 |
+| F5 | Worker dedicato con coda su PostgreSQL. Il container cron sparisce | `investments.md` D15 resta valida: ccxt resta nel codice del core | R1 |
+| F5b | `/api/v1` cresce solo in modo additivo. MCP in sola lettura | — | R2 |
+| F6 | Runtime minimo dei plugin subito, con Enable Banking come primo plugin. Wallet e Trek diventano plugin nella riscrittura | — | N1, R5c |
+| F7 | Migrazione progressiva: R0 monorepo → R1 worker → R2 API completa → R3 web sull'API → R4 container separati → R5 prodotto nuovo. Ogni rilascio ha rollback: immagine `pre-*` + dump | `investments-ux.md` §10 (ramo di integrazione e rilascio unico) non è il modello dei rilasci nuovi | R0-R5 |
+| F9 | Dump dei rilasci in una cartella sotto `/home/mattia/docker/projects/`, fuori dal repo git | Il percorso `../../backups/ledgerly/` citato nei documenti `investments-phase-*.md` e `investments-ux-*.md` | N0 |
+| F8 | Due filoni (server, client) da R2. Un secondo agente di sviluppo nasce quando parte il filone client e si elimina a fine sviluppo. Secondo database di test | — | R2 |
+
+## 1.4 App (fase 3)
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| G1 | Una sola interfaccia web React solo client, in pacchetti condivisi, dentro involucri nativi: Capacitor su Android, Tauri 2 su Windows (alternativa Electron) | — | R3, C1, C4 |
+| G1b | Vincolo fissato prima di R3: niente Server Components e niente Server Actions nelle schermate | — | R3 |
+| G2 | Android «compagno»: consultazione completa, azioni rapide, conferme. Revisione delle buste paga, chiavi, import e admin restano sul web | — | C1, C2 |
+| G3 | Windows: guscio con la stessa interfaccia, dopo Android | — | C4 |
+| G6 | **Nessuna distribuzione per ora.** Nessun canale pubblico e nessun account sviluppatore. Android: APK installato a mano. Windows: build locale. La distribuzione è una fase futura, fuori dal piano | — | C1, C4 |
+| G4 | Notifiche con controllo periodico, senza servizi di terzi. Testo senza importi, banca o conto | — | R5e, C2 |
+| G5 | Sblocco con biometria. Cache cifrata (90 giorni di movimenti). «Nascondi importi» su tutti i client. Widget in una seconda versione | — | C1, C2, C3, R5e |
+| G7 | L'API accetta le chiamate dagli involucri: CORS, solo `Bearer`, origini fisse | — | R2 |
+| G7b | `GET /api/v1/meta` con livello API e capacità | — | R2 |
+| G9 | Prove tecniche degli involucri: passo zero del filone client. Ogni strumento o pacchetto di terzi nuovo (Android SDK, Capacitor, Tauri) passa prima dal Security Gatekeeper | — | C0 |
+
+## 1.5 Decisioni più vecchie che restano valide
+
+| Decisione | Documento | Nota |
+|---|---|---|
+| Regole di calcolo del P&L: Modified Dietz, XIRR nel tooltip, costo medio ponderato, taglio a 12 mesi | `investments-ux.md` §4 | Non cambiano risultato (F1b) |
+| Fondi: direzione A nel dettaglio, lettura del 1° gennaio, soglia di 31 giorni, proiezione | `funds-ux.md` §9 | Restano nel dettaglio del fondo |
+| Un solo scrittore per conto (`portfolio`) | `investments.md` §2.3, D3 | Vincolo di B1 e B3 |
+| Conto manuale: solo «Aggiorna valore» | `investments.md` §2.6 | Resta. Il Portafoglio manuale è un servizio diverso (B3) |
+| Regole sui segreti: mai in log, API, MCP, export | `investments.md` §5.1 | Estese a plugin, Wallet e Trek |
+| Chiavi in sola lettura, controllo all'inserimento | `investments.md` §5.2 | Restano. Eccezione dichiarata: Trek (`provider.write`) |
+| Controllo di pianificazione a 4 modalità | `docs/scheduler.md` | Resta, chiuso sotto «Avanzate» |
+
+## 1.6 Decisioni minori applicate con il default degli allegati
+
+Mattia ha approvato «il resto va bene»: valgono i default dei documenti di brainstorming. I più rilevanti per il piano:
+
+| Tema | Default applicato |
+|---|---|
+| Preavviso del rinnovo della banca | 14 e 3 giorni, in app e per email |
+| Letture automatiche Enable Banking | 3 al giorno, più «Sincronizza ora» |
+| Movimenti in sospeso | Esclusi: solo contabilizzati (`BOOK`) |
+| Interessi pubblicati su Wallet | Finiscono per i conti passati a Enable Banking; l'accredito arriva dalla banca |
+| Modello di categorizzazione | Salvato in PostgreSQL per utente; fuori da export, API e MCP; si ricostruisce |
+| Offline | Nessuna scrittura senza rete. Unica eccezione: un file condiviso in coda (Android) |
+| Compatibilità app-istanza | L'app sostiene i livelli API degli ultimi 6 mesi |
+| Layout | Tre classi di larghezza: < 600 px, 600-1023 px, ≥ 1024 px |
+| Tabelle su schermo piccolo | Scheda per riga sotto 600 px, colonne per priorità fino a 1023 px |
+| Widget | «Da fare» e «Questo mese», importi nascosti di default. Nessun widget del patrimonio |
+| Windows | Area di notifica e avvio automatico facoltativi, spenti di default |
+| iOS | Fuori dal piano |
