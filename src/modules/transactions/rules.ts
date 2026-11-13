@@ -196,18 +196,24 @@ export function excludeHidden<T extends Visibility>(rows: readonly T[]): T[] {
 /* Categories */
 
 /**
- * The colours a group of categories is drawn with (spec §8.3, the design's category dots). Eight,
- * because a legend with more than that stops being read as a legend.
+ * The colours a group of categories is drawn with (spec §8.3, the design's category dots), and the
+ * presets the colour picker offers. One family: in OKLCH the chroma is near-constant and the
+ * lightness is near 0.70; blue and violet are a little darker and the income yellow a little
+ * lighter, so that each reads as bright as the others. The comment after each value names the root
+ * category it was chosen for.
  */
 export const CATEGORY_COLORS = [
-  "#2563eb",
-  "#0ea5e9",
-  "#10b981",
-  "#84cc16",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#64748b",
+  "#ed4a49", // red — Food & Drinks
+  "#df911a", // dark yellow — Housing
+  "#ebc831", // yellow — Income
+  "#4db956", // green — Life & Entertainment
+  "#05b9cf", // cyan — Financial expenses
+  "#3fa9e5", // light blue — Shopping
+  "#356ddc", // blue — PC, Communication
+  "#8e57d8", // violet — Vehicle
+  "#e141aa", // magenta — Investment
+  "#5e646c", // dark grey — System categories, Others, Unknown
+  "#a8afb8", // light grey — Transportation
 ] as const;
 
 /**

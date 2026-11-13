@@ -1,22 +1,15 @@
 "use client";
 
+import { CATEGORY_COLORS } from "@/modules/transactions/rules";
 import { NULL_DISPLAY } from "@/platform/format";
 import { cn } from "@/ui/cn";
 
 /**
- * The palette of the design's category dots. The hex values are data, not interface text, so they
- * are also the accessible name of each swatch — nothing here needs a message.
+ * The palette of the design's category dots: the category colours, so a preset and an automatic
+ * colour are always the same family. The hex values are data, not interface text, so they are also
+ * the accessible name of each swatch — nothing here needs a message.
  */
-export const SWATCHES = [
-  "#2563eb",
-  "#0ea5e9",
-  "#10b981",
-  "#84cc16",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#64748b",
-] as const;
+export const SWATCHES = CATEGORY_COLORS;
 
 /** The dot in front of a name in the lists; an uncoloured row keeps the dot's space empty. */
 export function ColorDot({ color }: { color: string | null }) {
@@ -89,7 +82,7 @@ export function ColorSwatchPicker({
       <input
         id={id}
         type="color"
-        value={value ?? "#2563eb"}
+        value={value ?? SWATCHES[0]}
         disabled={disabled}
         onChange={(event) => onChange(event.currentTarget.value)}
         className="focus-ring h-6 w-9 rounded-ctl border border-border bg-card p-0.5"

@@ -2,16 +2,24 @@ import { type CivilDate, type MonthKey } from "@/platform/dates";
 import { type NumberFormat, type UiLocale, formatDate, formatMoney } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 
-/** Line colours for the account charts, in order; an account's own colour wins when it has one. */
+/**
+ * The colours of the accounts, in order; an account's own colour wins when it has one. The same
+ * family as the category colours (`CATEGORY_COLORS`), a little darker so that white text on an
+ * account card stays readable, and ordered so that neighbours never share a hue.
+ */
 export const PALETTE = [
-  "#2563eb",
-  "#0e7490",
-  "#047857",
-  "#b45309",
-  "#be123c",
-  "#6d28d9",
-  "#4d7c0f",
-  "#0369a1",
+  "#3c79f0", // blue
+  "#eb6202", // orange
+  "#35ad44", // green
+  "#da3aa4", // magenta
+  "#01a4b9", // cyan
+  "#d98b09", // amber
+  "#8f54dc", // violet
+  "#ea3c3f", // red
+  "#03a578", // emerald
+  "#0a96d6", // light blue
+  "#645fdf", // indigo
+  "#616a75", // slate
 ] as const;
 
 export function colorFor(account: { color: string | null }, index: number): string {

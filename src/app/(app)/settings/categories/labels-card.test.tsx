@@ -47,10 +47,10 @@ describe("LabelsCard", () => {
     renderCard();
     await userEvent.click(screen.getByRole("button", { name: "Add label" }));
     await userEvent.type(screen.getByLabelText("Name"), "Work");
-    await userEvent.click(screen.getByRole("button", { name: "#8b5cf6" }));
+    await userEvent.click(screen.getByRole("button", { name: "#8e57d8" }));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(create).toHaveBeenCalledWith({ name: "Work", color: "#8b5cf6" });
+    expect(create).toHaveBeenCalledWith({ name: "Work", color: "#8e57d8" });
   });
 
   it("renames the label the row's menu points at", async () => {
