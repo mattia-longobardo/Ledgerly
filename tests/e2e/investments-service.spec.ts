@@ -178,7 +178,13 @@ test("Activity: the chips count the period and leave their own rows; the eToro p
   const rows = page.getByTestId("activity-row");
   await expect(rows).toHaveCount(Math.min(count, 50));
   for (const type of await rows.locator("td:nth-child(2)").allTextContents()) {
-    expect(["Deposit", "Withdrawal", "Opening cash", "Opening position"]).toContain(type.trim());
+    expect([
+      "Deposit",
+      "Withdrawal",
+      "Opening cash",
+      "Opening position",
+      "Opening at the 12-month start",
+    ]).toContain(type.trim());
   }
   // Never the legs of an event (§3.5, S4).
   await expect(page.locator("main")).not.toContainText(/\b(base|quote)\b/);

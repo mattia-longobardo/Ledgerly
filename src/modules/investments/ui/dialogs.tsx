@@ -3,7 +3,15 @@
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useId, useState, useTransition } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { parseAmount } from "@/modules/accounts/rules";
 import {
   formatDate,
@@ -140,6 +148,7 @@ function Dialog({
   width,
   onSubmit,
   clear,
+  finalFocus,
   children,
 }: {
   open: boolean;
@@ -149,6 +158,8 @@ function Dialog({
   width?: 420 | 440 | 460 | 520;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   clear: () => void;
+  /** The opener, when the dialog is mounted apart from it (a header command). */
+  finalFocus?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) {
   return (
@@ -161,6 +172,7 @@ function Dialog({
       title={title}
       description={description}
       width={width ?? 520}
+      finalFocus={finalFocus}
     >
       <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
         {children}
@@ -1352,11 +1364,13 @@ function HeaderDialogs({
   setOpen,
   context,
   provider,
+  opener,
 }: {
   open: HeaderDialog | null;
   setOpen: (open: HeaderDialog | null) => void;
   context: ServiceContext;
   provider: ConnectableProvider | null;
+  opener: RefObject<HTMLButtonElement | null>;
 }) {
   const t = useTranslations("investments");
   const router = useRouter();
@@ -1364,7 +1378,7 @@ function HeaderDialogs({
     if (!next) setOpen(null);
   };
   if (open === null) return null;
-  if (open === "value") return <UpdateValueDialog onOpenChange={close} context={context} />;
+  if (open === "value") return <UpdateValueDialog onOpenChange={close} context={context} opener={opener} />;
   if (open === "replace")
     return provider ? (
       <ReplaceKeyDialog onOpenChange={close} accountId={context.accountId} provider={provider} />
@@ -1396,9 +1410,11 @@ function HeaderDialogs({
 function UpdateValueDialog({
   onOpenChange,
   context,
+  opener,
 }: {
   onOpenChange: (open: boolean) => void;
   context: ServiceContext;
+  opener: RefObject<HTMLButtonElement | null>;
 }) {
   const t = useTranslations("investments");
   const id = useId();
@@ -1427,6 +1443,7 @@ function UpdateValueDialog({
       title={t("valueForm.title", { name: context.name })}
       description={t("valueForm.description")}
       onSubmit={onSubmit}
+      finalFocus={opener}
     >
       <MoneyField
         id={`${id}-amount`}
@@ -1463,6 +1480,7 @@ export function ServiceActions({
 }) {
   const t = useTranslations("investments");
   const [open, setOpen] = useState<HeaderDialog | null>(null);
+  const valueButton = useRef<HTMLButtonElement>(null);
   const more = [
     ...(connected && provider
       ? [{ label: t("sync.replace"), onSelect: () => setOpen("replace" as const) }]
@@ -1476,12 +1494,18 @@ export function ServiceActions({
       {context.synced
         ? connected && <SyncNowButton accountId={context.accountId} />
         : context.valueEditable && (
-            <Button variant="primary" onClick={() => setOpen("value")}>
+            <Button ref={valueButton} variant="primary" onClick={() => setOpen("value")}>
               {t("header.updateValue")}
             </Button>
           )}
       {more.length > 0 && <ActionMenu label={t("actions.more")} items={more} />}
-      <HeaderDialogs open={open} setOpen={setOpen} context={context} provider={provider} />
+      <HeaderDialogs
+        open={open}
+        setOpen={setOpen}
+        context={context}
+        provider={provider}
+        opener={valueButton}
+      />
     </span>
   );
 }
