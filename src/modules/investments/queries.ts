@@ -3,7 +3,12 @@ import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } 
 import { type Account, balancesOn, listAccounts } from "@/modules/accounts/queries";
 import { dailyBalancesOf } from "@/modules/accounts/service";
 import { fundsView } from "@/modules/funds/queries";
-import { escapeLike, linkCandidates, transactionsByIds } from "@/modules/transactions/queries";
+import {
+  escapeLike,
+  linkCandidates,
+  movementsByAccount,
+  transactionsByIds,
+} from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
 import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -485,6 +490,7 @@ export async function catalogView(ctx: Pick<Ctx, "userId" | "timeZone">): Promis
       type: one.account.type,
       balanceCents: balances.get(one.account.id) ?? null,
       reason: one.reason,
+      synced: one.account.origin === "synced",
       manualService:
         one.reason === "managed" &&
         investments.some(
@@ -1308,6 +1314,44 @@ async function pnlView(
 // ——— The Activity tab (docs/design/investments-ux.md §3.5, U3) ————————————————————————————————————
 
 /** Rows per page of the Activity tab (§3.5): the page of 934 eToro events goes to ≈ 2,000 px. */
+/** A movement of a manual service's account, as its Activity lists it (PERS-342). */
+export interface ServiceMovement {
+  id: string;
+  on: CivilDate;
+  payee: string | null;
+  cents: Cents;
+}
+
+/**
+ * The Activity of a manual service (docs/design/investments.md §1.3, PERS-342): the movements of
+ * its account in Accounts that the service counts as deposits and withdrawals, inside the period,
+ * newest first. `null` when the account is no manual service.
+ */
+export async function serviceMovements(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountId: string,
+  span: { from: CivilDate; to: CivilDate },
+): Promise<{ rows: ServiceMovement[]; depositsCents: Cents; withdrawalsCents: Cents } | null> {
+  const investment = (await listInvestmentAccounts(ctx)).find((one) => one.accountId === accountId);
+  if (!investment || investment.provider !== "manual") return null;
+  const account = (await listAccounts(ctx, { includeArchived: true })).find((one) => one.id === accountId);
+  if (!account) return null;
+  const [book, movements] = await Promise.all([
+    loadBook(ctx, investment, account.currency),
+    movementsByAccount(ctx, [accountId]),
+  ]);
+  const counted = new Set(book.events.map((event) => event.id));
+  const rows = (movements.get(accountId) ?? [])
+    .filter((one) => counted.has(one.id) && one.on >= span.from && one.on <= span.to)
+    .map((one) => ({ id: one.id, on: one.on, payee: one.payee, cents: one.cents }))
+    .reverse();
+  return {
+    rows,
+    depositsCents: rows.reduce<Cents>((sum, row) => (row.cents > 0n ? sum + row.cents : sum), 0n),
+    withdrawalsCents: rows.reduce<Cents>((sum, row) => (row.cents < 0n ? sum + row.cents : sum), 0n),
+  };
+}
+
 export const ACTIVITY_PAGE_SIZE = 50;
 
 export interface ActivityQuery {

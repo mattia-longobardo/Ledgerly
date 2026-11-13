@@ -26,7 +26,8 @@ const { createApiClient } = await import("@/platform/auth/api-clients");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
 const { api } = await import("@/platform/api/app");
 const { handleMcp } = await import("@/platform/mcp/handler");
-const { createManualService, recordOperation } = await import("./service");
+const { recordOperation } = await import("./service");
+const { connectTarget, engineService } = await import("../../../test/investments");
 const { connectInvestmentProvider, setSourcesForTests } = await import("./sync");
 
 const ORIGIN = "http://127.0.0.1:3000";
@@ -231,7 +232,7 @@ async function seed(ctx: Ctx): Promise<{ etoro: string; manual: string }> {
     ctx,
     "etoro",
     { api_key: CANARY.apiKey, user_key: CANARY.userKey },
-    { kind: "new", name: "eToro", currency: "EUR" },
+    await connectTarget(ctx, { name: "eToro", category: "broker", currency: "EUR" }),
   );
   // The deposit really carries its external id in provider_links: the answers must not show it.
   const links = await getDb()
@@ -243,8 +244,7 @@ async function seed(ctx: Ctx): Promise<{ etoro: string; manual: string }> {
     .update(integrationConnections)
     .set({ lastError: CANARY.lastError })
     .where(eq(integrationConnections.userId, ctx.userId));
-  const { accountId: manual } = await createManualService(ctx, {
-    target: "new",
+  const { accountId: manual } = await engineService(ctx, {
     name: "Directa",
     category: "broker",
     currency: "EUR",

@@ -34,7 +34,7 @@ import { rulesOnAccount } from "@/modules/interests/queries";
 import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
-import { managedSinceOf, syncedServicesOf } from "@/modules/investments/managed";
+import { managedSinceOf, serviceAccountIds, syncedServicesOf } from "@/modules/investments/managed";
 import { lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { centsToDecimal } from "@/platform/money";
 import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -138,7 +138,9 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
         : t("origins.syncedWith", { provider: account.provider ?? "" });
   const color = colorFor(account, index);
   // A service of Investments takes no manual balance (docs/design/investments.md §1.3).
+  // A service of Investments links there; only one Investments writes locks the balances (§1.3).
   const managed = (await managedSinceOf(ctx, id)) !== null;
+  const inInvestments = (await serviceAccountIds(ctx, [id])).has(id);
 
   return (
     <Page title={account.name} parent={{ href: "/accounts", label: t("title") }}>
@@ -160,7 +162,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           )}
           {account.state !== "active" && <Badge tone="warn">{t(`states.${account.state}`)}</Badge>}
           {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
-          {managed && (
+          {inInvestments && (
             <Link
               href={`/investments/${id}` as Route}
               className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"

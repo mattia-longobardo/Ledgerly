@@ -1,8 +1,8 @@
 import "server-only";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
-import { getAccount } from "@/modules/accounts/queries";
-import { createAccount, openedNoLaterThan, takeOverEntries } from "@/modules/accounts/service";
+import { balanceDays, getAccount } from "@/modules/accounts/queries";
+import { openedNoLaterThan, takeOverEntries } from "@/modules/accounts/service";
 import type { Person } from "@/modules/users/jobs";
 import { alertAdmins } from "@/platform/alerts/gotify";
 import type { Ctx } from "@/platform/context";
@@ -611,21 +611,20 @@ async function writeEvents(
 
 // ——— Connecting (§4.2, §5.1) ————————————————————————————————————————————————————————————————
 
-export const connectTargetSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("new"),
-    name: z.string().trim().min(1).max(80),
-    currency: z.string().regex(/^[A-Z]{3}$/),
-  }),
-  z.object({ kind: z.literal("existing"), accountId: z.uuid() }),
-]);
+/** The account of Accounts a key is connected to (PERS-342): Investments creates none. */
+export const connectTargetSchema = z.object({ kind: z.literal("existing"), accountId: z.uuid() });
 export type ConnectTarget = z.input<typeof connectTargetSchema>;
 
 async function connectionOf(ctx: Pick<Ctx, "userId">, provider: string): Promise<Connection | null> {
   return (await listConnections(ctx)).find((one) => one.provider === provider) ?? null;
 }
 
-/** The account a key may be connected to (§1.3): a manual account no one else writes, or a manual service. */
+/**
+ * The account a key may be connected to (§1.3): a manual account of Accounts no one else writes, or
+ * a manual service on one. An account Wallet reads is never one: it would have two writers. An
+ * account with no balance yet — made in Accounts for this service — takes the provider's history
+ * from its first day, as a new one did (`adopt`); one with balances is handed over from today.
+ */
 async function targetOf(
   ctx: Ctx,
   provider: InvestmentProvider,
@@ -633,14 +632,11 @@ async function targetOf(
 ) {
   const allowed = (currency: string) =>
     provider.currencies === null || provider.currencies.includes(currency);
-  if (target.kind === "new") {
-    if (!allowed(target.currency)) throw new SyncError("unsupported_currency");
-    return { kind: "new" as const, currency: target.currency, name: target.name };
-  }
   const account = await getAccount(ctx, target.accountId);
   if (!account || account.state === "archived") throw new SyncError("not_eligible");
   if (!allowed(account.currency)) throw new SyncError("unsupported_currency");
   if (account.type !== accountTypeOf(provider.category)) throw new SyncError("not_eligible");
+  if (account.origin !== "manual") throw new SyncError("not_eligible");
   const investment = await requireInvestmentAccount(ctx, account.id).catch(() => null);
   if (investment) {
     if (investment.provider !== "manual") throw new SyncError("not_eligible");
@@ -648,7 +644,36 @@ async function targetOf(
   }
   const eligible = (await eligibleAccounts(ctx)).find((one) => one.account.id === account.id);
   if (!eligible || eligible.reason !== null) throw new SyncError("not_eligible");
-  return { kind: "handover" as const, currency: account.currency, accountId: account.id };
+  const empty = ((await balanceDays(ctx, [account.id])).get(account.id) ?? []).length === 0;
+  return {
+    kind: empty ? ("adopt" as const) : ("handover" as const),
+    currency: account.currency,
+    accountId: account.id,
+  };
+}
+
+/**
+ * The handover of an account (§1.3, A4): its balances from `from` go to the archive with their
+ * reason, so the provider is its one writer from that day.
+ */
+async function takeOver(ctx: Pick<Ctx, "userId">, accountId: string, from: CivilDate, tx: Tx): Promise<void> {
+  const removed = await takeOverEntries(ctx, accountId, from, tx);
+  if (removed.length === 0) return;
+  await tx.insert(investmentSupersededEntries).values(
+    removed.map((entry) =>
+      userScoped(ctx).stamp({
+        accountId: entry.accountId,
+        balanceEntryId: entry.id,
+        on: entry.on,
+        balanceCents: entry.balanceCents,
+        availableCents: entry.availableCents,
+        source: entry.source,
+        note: entry.note,
+        capturedAt: entry.capturedAt,
+        reason: "handover",
+      }),
+    ),
+  );
 }
 
 /**
@@ -709,23 +734,14 @@ export async function connectInvestmentProvider(
     const accountId = await getDb().transaction(async (tx) => {
       let investment: InvestmentAccount;
       let from: CivilDate;
-      if (target.kind === "new") {
+      if (target.kind === "adopt") {
         from = historyStart ?? todayOn;
-        const account = await createAccount(
-          ctx,
-          {
-            name: target.name,
-            type: accountTypeOf(provider.category),
-            currency: target.currency,
-            openedOn: from,
-          },
-          tx,
-        );
+        await openedNoLaterThan(ctx, target.accountId, from, tx);
         [investment] = await tx
           .insert(investmentAccounts)
           .values(
             userScoped(ctx).stamp({
-              accountId: account.id,
+              accountId: target.accountId,
               category: provider.category,
               provider: provider.id,
               managedSince: from,
@@ -747,24 +763,7 @@ export async function connectInvestmentProvider(
             }),
           )
           .returning();
-        const removed = await takeOverEntries(ctx, target.accountId, from, tx);
-        if (removed.length > 0) {
-          await tx.insert(investmentSupersededEntries).values(
-            removed.map((entry) =>
-              userScoped(ctx).stamp({
-                accountId: entry.accountId,
-                balanceEntryId: entry.id,
-                on: entry.on,
-                balanceCents: entry.balanceCents,
-                availableCents: entry.availableCents,
-                source: entry.source,
-                note: entry.note,
-                capturedAt: entry.capturedAt,
-                reason: "handover",
-              }),
-            ),
-          );
-        }
+        await takeOver(ctx, target.accountId, from, tx);
       } else {
         // Manual → synced (§2.5): from the latest of its own periods, or of the history if later.
         investment = await lockInvestmentAccount(ctx, target.accountId, tx);
@@ -773,19 +772,21 @@ export async function connectInvestmentProvider(
         from = historyStart !== null && historyStart > last ? historyStart : last;
         [investment] = await tx
           .update(investmentAccounts)
-          .set({ provider: provider.id, updatedAt: now })
+          .set({ provider: provider.id, managedSince: from, updatedAt: now })
           .where(and(eq(investmentAccounts.id, investment.id), userScoped(ctx).owns(investmentAccounts)))
           .returning();
+        // A manual service wrote nothing (PERS-342): from `from` the provider is the one writer.
+        await takeOver(ctx, target.accountId, from, tx);
       }
       await tx.insert(investmentAccountPeriods).values(
         userScoped(ctx).stamp({
           investmentAccountId: investment.id,
           fromOn: from,
-          startsAt: target.kind === "new" ? new Date(`${from}T00:00:00Z`) : now,
+          startsAt: target.kind === "adopt" ? new Date(`${from}T00:00:00Z`) : now,
           mode: "assets" as const,
           origin: "synced" as const,
           reason:
-            target.kind === "new"
+            target.kind === "adopt"
               ? ("opening" as const)
               : target.kind === "handover"
                 ? ("handover" as const)

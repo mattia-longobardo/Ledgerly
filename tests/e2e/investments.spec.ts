@@ -1,12 +1,12 @@
 // tests/e2e/investments.spec.ts — the manual account journey at 1440 px (docs/design/investments.md
-// §4; the tabs of investments-ux.md §3.2–§3.6, U3): a manual account from the catalog, its deposits
-// (one linked to the bank movement it came from) and a withdrawal, the value typed from the broker
-// and the profit or loss it gives (PERS-335: no positions), the same value in Accounts, and a
-// deletion that asks first.
-import { expect, type Locator, type Page, test } from "@playwright/test";
+// §1.3, §4; the tabs of investments-ux.md §3.2–§3.6, U3; PERS-342): a manual service is an account
+// of Accounts the section shows — Directa typed by hand, its value updated from the broker and the
+// profit or loss it gives; Fineco read by Wallet, its value and its deposit Wallet's — and Accounts
+// shows the same value.
+import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
 
-// Its own user: no service yet, and two bank movements to link (scripts/seed-e2e.ts).
+// Its own user: no service yet, two investment accounts in Accounts (scripts/seed-e2e.ts).
 test.use({ storageState: sessionState("investments") });
 
 /** The value today, on the Overview tab: every other tab is opened from there and back. */
@@ -22,13 +22,21 @@ async function openTab(page: Page, name: "Overview" | "Activity" | "Connection" 
   ).toHaveAttribute("aria-current", "page");
 }
 
-/** "Add operation" of a manual account (§3.2): one primary button, the kinds in its menu. */
-async function addOperation(page: Page, kind: "Deposit" | "Withdrawal" | "Update value") {
-  await page.getByRole("button", { name: "Add operation" }).click();
-  await page.getByRole("menuitem", { name: kind, exact: true }).click();
+/** "Add manual account" from the catalog: an account of Accounts, never a new one (PERS-342). */
+async function addManual(page: Page, account: string) {
+  await page.goto("/investments/catalog");
+  await page.getByRole("button", { name: "Add manual account" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add an account from Accounts" });
+  await expect(dialog.getByLabel("Name")).toHaveCount(0);
+  const select = dialog.getByLabel("Account");
+  const label = await select.locator("option", { hasText: account }).first().textContent();
+  await select.selectOption({ label: label ?? account });
+  await dialog.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: account, level: 1 })).toBeVisible();
 }
 
-test("a manual account follows its operations, and Accounts shows the same value", async ({ page }) => {
+test("a manual service shows an account of Accounts, and Accounts shows the same value", async ({ page }) => {
   await test.step("an empty section sends to the catalog", async () => {
     await page.goto("/investments");
     await expect(page.getByRole("heading", { name: "No services yet" })).toBeVisible();
@@ -49,59 +57,24 @@ test("a manual account follows its operations, and Accounts shows the same value
     await expect(ibkr).toContainText("Coming soon");
   });
 
-  await test.step("a manual account in euro: no mode to choose, no positions", async () => {
-    await page.getByRole("button", { name: "Create manual account" }).click();
-    const dialog = page.getByRole("dialog", { name: "Create manual account" });
-    await expect(dialog.getByRole("radio")).toHaveCount(0);
-    await dialog.getByLabel("Name").fill("Directa");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
-    await expect(dialog).toBeHidden();
-    await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
-    await expect(await value(page)).toHaveText(/^0,00\s€$/);
+  await test.step("Directa, typed by hand: its balance is the value, no positions, no deposits to type", async () => {
+    await addManual(page, "Directa");
+    await expect(await value(page)).toHaveText(/^8\.000,00\s€$/);
     await expect(
       page
         .getByRole("navigation", { name: "Sections of the service" })
         .getByRole("link", { name: "Positions" }),
     ).toHaveCount(0);
-  });
-
-  await test.step("10.000 € in two deposits, one linked to the money that left the bank", async () => {
-    await addOperation(page, "Deposit");
-    let dialog = page.getByRole("dialog", { name: "Deposit" });
-    await dialog.getByLabel("Amount").fill("8000");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
-
-    await addOperation(page, "Deposit");
-    dialog = page.getByRole("dialog", { name: "Deposit" });
-    await dialog.getByLabel("Amount").fill("2000");
-    // The link offers only the same amount within three days; a search finds any movement (D3).
-    const link = dialog.getByLabel("Linked account expense");
-    await expect(link.locator("option")).toHaveCount(1);
-    await dialog.getByLabel("Search a bank movement").fill("Bonifico eToro");
-    await link.selectOption({ label: await optionLabel(link, "Bonifico eToro") });
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
-    await openTab(page, "Activity");
-    await expect(page.getByTestId("activity-row").filter({ hasText: "Bonifico eToro" })).toHaveCount(1);
-  });
-
-  await test.step("2.000 € out: no value typed yet, so no profit or loss, and the page asks for one", async () => {
-    await addOperation(page, "Withdrawal");
-    const dialog = page.getByRole("dialog", { name: "Withdrawal" });
-    await dialog.getByLabel("Amount").fill("2000");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
-    await openTab(page, "Overview");
+    await expect(page.getByRole("button", { name: "Add operation" })).toHaveCount(0);
     const manual = page.getByTestId("manual-pnl");
+    // Opened at yesterday's 8.000 €: that is the money in.
     await expect(manual).toHaveAttribute("data-invested-cents", "800000");
-    await expect(manual).toHaveAttribute("data-pnl-cents", "");
-    await expect(page.getByTestId("manual-stale")).toContainText("No value recorded");
+    await expect(manual).toHaveAttribute("data-pnl-cents", "0");
   });
 
-  await test.step("worth 9.000 €: +1.000 €, +12,5 % of the 8.000 € left in", async () => {
-    await addOperation(page, "Update value");
-    const dialog = page.getByRole("dialog", { name: "Update value" });
+  await test.step("worth 9.000 €: +1.000 €, +12,5 % of the 8.000 € in", async () => {
+    await page.getByRole("button", { name: "Update value" }).click();
+    const dialog = page.getByRole("dialog", { name: "Update the value of Directa" });
     await dialog.getByLabel("Value").fill("9000");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
@@ -129,94 +102,33 @@ test("a manual account follows its operations, and Accounts shows the same value
     await page.goto(service);
   });
 
-  await test.step("Accounts shows the same value, and takes no manual balance for it", async () => {
+  await test.step("Accounts shows the same value, and keeps its balances editable", async () => {
     const service = page.url();
     await page.goto("/accounts");
     await expect(page.getByRole("row").filter({ hasText: "Directa" }).first()).toContainText(/9\.000,00\s€/);
     await page.goto(`${service.replace(/\?.*$/, "").replace(/\/investments\//, "/accounts/")}?tab=entries`);
-    await expect(page.getByRole("link", { name: "Open in Investments" })).toBeVisible();
-    await page.goto(service);
+    await expect(page.getByRole("link", { name: "Shown in Investments" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open in Investments" })).toHaveCount(0);
   });
 
-  await test.step("deleting an operation asks first, and says which one went", async () => {
+  await test.step("Fineco, read by Wallet: Wallet's value and deposit, nothing to type", async () => {
+    await addManual(page, "Fineco");
+    await expect(page.getByTestId("sync-state")).toHaveText("Synced by Wallet");
+    await expect(await value(page)).toHaveText(/^8\.000,00\s€$/);
+    await expect(page.getByRole("button", { name: "Update value" })).toHaveCount(0);
+    const manual = page.getByTestId("manual-pnl");
+    await expect(manual).toHaveAttribute("data-invested-cents", "800000");
+    await expect(manual).toHaveAttribute("data-pnl-cents", "0");
     await openTab(page, "Activity");
-    await page
-      .getByTestId("activity-row")
-      .first()
-      .getByRole("button", { name: /^Actions for the operation of/ })
-      .click();
-    await page.getByRole("menuitem", { name: "Delete" }).click();
-    const dialog = page.getByRole("dialog", { name: "Delete this operation?" });
-    await expect(dialog).toContainText("Account value");
-    await dialog.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText(/^Deleted: Account value/)).toBeVisible();
-    // Without the value typed, money went in and nobody valued the account: no value, never zero.
-    await expect(await value(page)).toHaveText("no value yet");
-    await expect(page.getByTestId("manual-pnl")).toHaveAttribute("data-pnl-cents", "");
-  });
-});
-
-test("a withdrawal and a deposit between two services are proposed, linked and unlinked as a transfer", async ({
-  page,
-}) => {
-  await test.step("1.000 € into a second service, 1.000 € out of Directa", async () => {
-    await page.goto("/investments/catalog");
-    await page.getByRole("button", { name: "Create manual account" }).click();
-    const create = page.getByRole("dialog", { name: "Create manual account" });
-    await create.getByLabel("Name").fill("Conto Deposito");
-    await create.getByRole("button", { name: "Create", exact: true }).click();
-    await expect(create).toBeHidden();
-    await expect(page.getByRole("heading", { name: "Conto Deposito", level: 1 })).toBeVisible();
-    await addOperation(page, "Deposit");
-    let dialog = page.getByRole("dialog", { name: "Deposit", exact: true });
-    await dialog.getByLabel("Amount").fill("1000");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
-
-    await page.goto("/investments");
-    await page.getByRole("link", { name: "Directa", exact: true }).filter({ visible: true }).first().click();
-    await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
-    await addOperation(page, "Withdrawal");
-    dialog = page.getByRole("dialog", { name: "Withdrawal", exact: true });
-    await dialog.getByLabel("Amount").fill("1000");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
+    const list = page.getByTestId("manual-activity");
+    await expect(list.getByTestId("activity-item")).toHaveCount(1);
+    await expect(list).toContainText("MATTIA LONGOBARDO");
+    await expect(list).toContainText(/\+8\.000,00\s€/);
   });
 
-  await test.step("the pair is proposed, and linked it shows on the operation", async () => {
-    await openTab(page, "Activity");
-    const proposal = page.getByTestId("transfer-proposal");
-    await expect(proposal).toHaveCount(1);
-    await expect(proposal).toContainText("Conto Deposito");
-    await proposal.getByRole("button", { name: /^Link as transfer/ }).click();
-    await expect(page.getByText("Transfer linked")).toBeVisible();
-    await expect(page.getByTestId("transfer-proposal")).toHaveCount(0);
-    const row = page.getByTestId("activity-row").filter({ hasText: "to Conto Deposito" });
-    await expect(row).toHaveCount(1);
-  });
-
-  await test.step("the home leads with the P&L of the year (docs/design/investments-ux.md §3.1)", async () => {
-    const service = page.url();
+  await test.step("the home counts both once (docs/design/investments-ux.md §3.1)", async () => {
     await page.goto("/investments");
     await expect(page.getByRole("heading", { name: /^(Profit and loss|P&L available) · / })).toBeVisible();
     await expect(page.getByTestId("pnl-hero")).toBeVisible();
-    await page.goto(service);
-  });
-
-  await test.step("unlinked, the pair is proposed again", async () => {
-    await page
-      .getByTestId("activity-row")
-      .filter({ hasText: "to Conto Deposito" })
-      .getByRole("button", { name: /^Unlink transfer/ })
-      .click();
-    await expect(page.getByText("Transfer unlinked")).toBeVisible();
-    await expect(page.getByTestId("transfer-proposal")).toHaveCount(1);
   });
 });
-
-/** The full text of the first option naming `payee`: dates and amounts make up the rest of it. */
-async function optionLabel(select: Locator, payee: string): Promise<string> {
-  const option = select.locator("option", { hasText: payee }).first();
-  await expect(option).toHaveCount(1);
-  return (await option.textContent()) ?? "";
-}

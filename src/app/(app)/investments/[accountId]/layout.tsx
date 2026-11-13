@@ -68,7 +68,9 @@ export default async function InvestmentServiceLayout({
 
   // The sync in words (S12): never "Per asset" or "Managed since", which are in Connection.
   const state = !sync
-    ? t("header.state.manual")
+    ? account.origin === "synced"
+      ? t("header.state.wallet")
+      : t("header.state.manual")
     : !sync.connected
       ? t("header.state.disconnected")
       : sync.state === "revoked"

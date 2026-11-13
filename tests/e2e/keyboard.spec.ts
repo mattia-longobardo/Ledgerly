@@ -130,39 +130,17 @@ test("a row menu opens on Enter, walks with the arrows and closes on Escape", as
   await expect(trigger).toBeFocused();
 });
 
-test("an investment dialog opened from a row menu traps the focus and gives it back", async ({ page }) => {
+test("the update value dialog of a manual service traps the focus and gives it back", async ({ page }) => {
   await page.goto("/investments");
   await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "Directa", exact: true }).filter({ visible: true }).first();
-  // A manual service keeps no positions (PERS-335): the row menu is an operation's, in Activity.
-  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/activity`);
+  // A manual service has one command (PERS-342): "Update value", the balance of its account.
+  await page.goto((await service.getAttribute("href"))!.replace(/\?.*$/, ""));
   await page.waitForTimeout(500);
 
-  const trigger = page
-    .getByRole("button", { name: /^Actions for the operation of/ })
-    .filter({ visible: true })
-    .first();
-  await trigger.focus();
-  await page.keyboard.press("Enter");
-  const menu = page.getByRole("menu").first();
-  await expect(menu).toBeVisible();
-  await page.keyboard.press("ArrowDown");
-  expect(await focusIsVisible(page), "the menu item under the arrows draws no ring").toBe(true);
-  await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
-  await expect(trigger).toBeFocused();
-
-  // "Add operation" (§3.2): a menu behind a button; its "Deposit" opens the dialog.
-  const opener = page.getByRole("button", { name: "Add operation" }).first();
+  const opener = page.getByRole("button", { name: "Update value" }).first();
   await opener.focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("menu")).toBeVisible();
-  // Opened from the keyboard, the menu takes the focus to its first item; the arrows walk on.
-  await expect(page.getByRole("menuitem", { name: "Deposit", exact: true })).toBeFocused();
-  await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("menuitem", { name: "Withdrawal", exact: true })).toBeFocused();
-  await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("menuitem", { name: "Deposit", exact: true })).toBeFocused();
+  expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();

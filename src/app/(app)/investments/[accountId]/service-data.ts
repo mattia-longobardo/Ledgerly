@@ -35,6 +35,8 @@ export function serviceContextOf(detail: ServiceDetail, ctx: Ctx): ServiceContex
     today: today(ctx.timeZone),
     mode: summary.mode,
     synced: summary.origin === "synced",
+    // A manual service writes its value only on an account typed by hand, not one Wallet reads.
+    valueEditable: summary.investment.provider === "manual" && summary.account.origin === "manual",
     valueCents: summary.valueCents,
     assets: detail.assets.map((asset) => ({
       id: asset.id,

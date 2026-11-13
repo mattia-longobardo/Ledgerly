@@ -23,7 +23,8 @@ import {
   investmentOperations,
   investmentReadings,
 } from "./schema";
-import { createManualService, insertEvent, recordOperation } from "./service";
+import { insertEvent, recordOperation } from "./service";
+import { connectTarget, engineService } from "../../../test/investments";
 import { connectInvestmentProvider, setSourcesForTests, settleCutoff } from "./sync";
 
 const KEYS = { api_key: "pers145-etoro-api-key-0001", user_key: "pers145-etoro-user-key-0001" };
@@ -214,8 +215,7 @@ describe("settleCutoff (PERS-145)", () => {
     const wallet = await createAccount(ctx, { name: "Conto corrente", type: "checking", currency: "EUR" });
     await saveBalanceEntry(ctx, wallet.id, { on: "2021-01-04", cents: 10_000n });
     await saveBalanceEntry(ctx, wallet.id, { on: addDays(todayOn, -1), cents: 12_000n });
-    const { accountId: manual } = await createManualService(ctx, {
-      target: "new",
+    const { accountId: manual } = await engineService(ctx, {
       name: "Directa",
       category: "broker",
       currency: "EUR",
@@ -223,11 +223,12 @@ describe("settleCutoff (PERS-145)", () => {
     });
     await recordOperation(ctx, manual, { kind: "deposit", on: todayOn, amountCents: 50_000n });
 
-    const { accountId } = await connectInvestmentProvider(ctx, "etoro", KEYS, {
-      kind: "new",
-      name: "eToro",
-      currency: "USD",
-    });
+    const { accountId } = await connectInvestmentProvider(
+      ctx,
+      "etoro",
+      KEYS,
+      await connectTarget(ctx, { name: "eToro", category: "broker", currency: "USD" }),
+    );
     expect((await investmentOf(accountId)).managedSince).toBe(cutoff);
     await legacyRows(accountId);
     const walletBefore = await rowsOf(wallet.id);
@@ -276,11 +277,12 @@ describe("settleCutoff (PERS-145)", () => {
   });
 
   it("opens the cash of the cut-off as a flow, and the year closes with nothing unexplained", async () => {
-    const { accountId } = await connectInvestmentProvider(ctx, "etoro", KEYS, {
-      kind: "new",
-      name: "eToro",
-      currency: "USD",
-    });
+    const { accountId } = await connectInvestmentProvider(
+      ctx,
+      "etoro",
+      KEYS,
+      await connectTarget(ctx, { name: "eToro", category: "broker", currency: "USD" }),
+    );
     // The pass of the connection settled it already: the opening is there, once.
     const investment = await investmentOf(accountId);
     const openings = await getDb()
@@ -317,11 +319,12 @@ describe("settleCutoff (PERS-145)", () => {
   });
 
   it("books a difference of the cash no entry explains as an entry with a name and a day (rule 4)", async () => {
-    const { accountId } = await connectInvestmentProvider(ctx, "etoro", KEYS, {
-      kind: "new",
-      name: "eToro",
-      currency: "USD",
-    });
+    const { accountId } = await connectInvestmentProvider(
+      ctx,
+      "etoro",
+      KEYS,
+      await connectTarget(ctx, { name: "eToro", category: "broker", currency: "USD" }),
+    );
     // 2 $ go missing one day, with no entry: the reading says so, the book does not.
     const investment = await investmentOf(accountId);
     const day = addDays(todayOn, -100);

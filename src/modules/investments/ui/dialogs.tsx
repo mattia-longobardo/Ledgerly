@@ -3,10 +3,9 @@
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useId, useMemo, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useId, useState, useTransition } from "react";
 import { parseAmount } from "@/modules/accounts/rules";
 import {
-  formatAmountInput,
   formatDate,
   formatMoney,
   type NumberFormat,
@@ -17,12 +16,11 @@ import type { Cents } from "@/platform/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, InputGroup, Select } from "@/ui/input";
-import { ActionMenu, ButtonMenu } from "@/ui/menu";
+import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
 import { notify } from "@/ui/toast";
 import {
-  addAssetAction,
   confirmKeyRevokedAction,
   confirmZeroAction,
   connectProviderAction,
@@ -34,28 +32,13 @@ import {
   replaceKeyAction,
   syncNowAction,
   verifyKeyAction,
-  type OperationFormInput,
   recordOperationAction,
   reconcileAction,
-  updateOperationAction,
   updateServiceUrlAction,
+  updateServiceValueAction,
 } from "../actions";
-import {
-  ADJUSTMENT_CLASSES,
-  type AdjustmentClass,
-  ASSET_CLASSES,
-  type AssetClass,
-  PRODUCTS,
-  type InvestmentCategory,
-} from "../rules";
-import {
-  type AssetChoice,
-  assetDialogDefaults,
-  assetMatches,
-  type LinkChoice,
-  linkCandidates,
-} from "./dialog-rules";
-import { productLabel } from "./labels";
+import { type AdjustmentClass, PRODUCTS, type InvestmentCategory } from "../rules";
+import type { AssetChoice, LinkChoice } from "./dialog-rules";
 
 export type { AssetChoice, LinkChoice } from "./dialog-rules";
 
@@ -74,6 +57,8 @@ export interface ServiceContext {
   today: string;
   mode: "assets" | "total" | null;
   synced: boolean;
+  /** A manual service on an account typed by hand: "Update value" writes its balance (PERS-342). */
+  valueEditable: boolean;
   valueCents: Cents | null;
   assets: readonly AssetChoice[];
   coveredProducts: readonly string[];
@@ -261,17 +246,6 @@ function tryAmount(input: string, format: NumberFormat): Cents | null {
   }
 }
 
-function linkLabel(choice: LinkChoice, context: ServiceContext): string {
-  return [
-    formatDate(choice.on, "long", context.locale),
-    choice.payee,
-    choice.accountName,
-    formatMoney(choice.cents, context.numberFormat),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
 function DateField({
   id,
   label,
@@ -367,6 +341,8 @@ export interface ExistingChoice {
   reason: string | null;
   /** A manual service a provider can be connected to (manual → synced, §2.5). */
   manualService?: boolean;
+  /** Read by Wallet: a manual service may show it, a provider may not write it (PERS-342). */
+  synced?: boolean;
 }
 
 export function CreateManualServiceButton({
@@ -402,7 +378,6 @@ function ManualServiceDialog({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const { error, clear, report } = useErrors();
-  const [target, setTarget] = useState<"new" | "existing">("new");
   const eligible = existing.filter((one) => one.reason === null);
   const [accountId, setAccountId] = useState(eligible[0]?.id ?? "");
 
@@ -411,20 +386,9 @@ function ManualServiceDialog({
     const data = new FormData(event.currentTarget);
     const text = (key: string) => String(data.get(key) ?? "");
     const category = text("category") as "accounts" | "broker" | "crypto";
-    const name =
-      target === "new" ? text("name").trim() : (existing.find((one) => one.id === accountId)?.name ?? "");
+    const name = existing.find((one) => one.id === accountId)?.name ?? "";
     startTransition(async () => {
-      const result = await createManualServiceAction(
-        target === "new"
-          ? {
-              target,
-              name,
-              category,
-              currency: text("currency").trim().toUpperCase(),
-              url: text("url"),
-            }
-          : { target, accountId, category, url: text("url") },
-      );
+      const result = await createManualServiceAction({ accountId, category, url: text("url") });
       if (!report(result)) return;
       notify(t("toasts.serviceCreated", { name }));
       onOpenChange(false);
@@ -442,74 +406,29 @@ function ManualServiceDialog({
       onSubmit={onSubmit}
     >
       <div className="col-span-full">
-        <Segmented
-          label={t("manualForm.destination")}
-          value={target}
-          onChange={setTarget}
-          options={[
-            { value: "new", label: t("manualForm.newAccount") },
-            { value: "existing", label: t("manualForm.existingAccount") },
-          ]}
-        />
+        <Field label={t("manualForm.existing")} htmlFor={`${id}-account`} hint={t("manualForm.existingHint")}>
+          {existing.length === 0 ? (
+            <p className="text-sm text-muted">{t("manualForm.noExisting")}</p>
+          ) : (
+            <Select
+              id={`${id}-account`}
+              value={accountId}
+              onChange={(event) => setAccountId(event.target.value)}
+            >
+              {existing.map((one) => (
+                <option key={one.id} value={one.id} disabled={one.reason !== null}>
+                  {t("manualForm.option", {
+                    name: one.name,
+                    balance: formatMoney(one.balanceCents, numberFormat, { currency: one.currency }),
+                  })}
+                  {one.reason !== null &&
+                    ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.managed")}`}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
       </div>
-      {target === "new" ? (
-        <>
-          <Field label={t("manualForm.name")} htmlFor={`${id}-name`}>
-            <Input
-              id={`${id}-name`}
-              name="name"
-              required
-              maxLength={80}
-              autoFocus
-              placeholder={t("manualForm.namePlaceholder")}
-            />
-          </Field>
-          <Field
-            label={t("manualForm.currency")}
-            htmlFor={`${id}-currency`}
-            hint={t("manualForm.currencyHint")}
-          >
-            <Input
-              id={`${id}-currency`}
-              name="currency"
-              required
-              maxLength={3}
-              defaultValue="EUR"
-              className="uppercase"
-              autoCapitalize="characters"
-            />
-          </Field>
-        </>
-      ) : (
-        <div className="col-span-full">
-          <Field
-            label={t("manualForm.existing")}
-            htmlFor={`${id}-account`}
-            hint={t("manualForm.existingHint")}
-          >
-            {existing.length === 0 ? (
-              <p className="text-sm text-muted">{t("manualForm.noExisting")}</p>
-            ) : (
-              <Select
-                id={`${id}-account`}
-                value={accountId}
-                onChange={(event) => setAccountId(event.target.value)}
-              >
-                {existing.map((one) => (
-                  <option key={one.id} value={one.id} disabled={one.reason !== null}>
-                    {t("manualForm.option", {
-                      name: one.name,
-                      balance: formatMoney(one.balanceCents, numberFormat, { currency: one.currency }),
-                    })}
-                    {one.reason !== null &&
-                      ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.managed")}`}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-        </div>
-      )}
       <Field label={t("manualForm.category")} htmlFor={`${id}-category`}>
         <Select id={`${id}-category`} name="category" defaultValue="broker">
           {(["accounts", "broker", "crypto"] as const).map((category) => (
@@ -532,443 +451,14 @@ function ManualServiceDialog({
       <ErrorLine error={error} />
       <Actions
         onCancel={() => onOpenChange(false)}
-        pending={pending || (target === "existing" && accountId === "")}
+        pending={pending || accountId === ""}
         submit={t("manualForm.submit")}
       />
     </Dialog>
   );
 }
 
-// ——— Asset picker ————————————————————————————————————————————————————————————————————————
-
-type AssetPick =
-  | { id: string }
-  | { create: { class: AssetClass; name: string; isin: string; symbol: string; currency: string } };
-
-/**
- * The asset of a buy (D1): the search starts on the class and the currency of the account, and no
- * asset is chosen until the person picks one or a search narrows the list.
- */
-function AssetPicker({
-  prefix,
-  assets,
-  onChange,
-  defaultCurrency,
-  defaults,
-}: {
-  prefix: string;
-  assets: readonly AssetChoice[];
-  onChange: (pick: AssetPick | null, currency: string) => void;
-  defaultCurrency: string;
-  defaults: { classFilter: AssetClass | ""; currencyFilter: string; draftClass: AssetClass };
-}) {
-  const t = useTranslations("investments");
-  const [source, setSource] = useState<"existing" | "create">(assets.length > 0 ? "existing" : "create");
-  const [query, setQuery] = useState("");
-  const [klass, setKlass] = useState<string>(defaults.classFilter);
-  const [currency, setCurrency] = useState<string>(defaults.currencyFilter);
-  const [selected, setSelected] = useState("");
-  const [draft, setDraft] = useState({
-    class: defaults.draftClass,
-    name: "",
-    isin: "",
-    symbol: "",
-    currency: defaultCurrency,
-  });
-  const currencies = useMemo(
-    () => [...new Set([defaults.currencyFilter, ...assets.map((asset) => asset.currency)])].sort(),
-    [assets, defaults.currencyFilter],
-  );
-  const matching = (next: { query?: string; classFilter?: string; currencyFilter?: string }) =>
-    assets.filter((asset) =>
-      assetMatches(asset, {
-        query: next.query ?? query,
-        classFilter: next.classFilter ?? klass,
-        currencyFilter: next.currencyFilter ?? currency,
-      }),
-    );
-  const filtered = matching({});
-
-  const emit = (nextSource: "existing" | "create", id: string, nextDraft: typeof draft) => {
-    if (nextSource === "existing") {
-      const asset = assets.find((one) => one.id === id);
-      onChange(asset ? { id: asset.id } : null, asset?.currency ?? defaultCurrency);
-    } else {
-      onChange(nextDraft.name.trim() === "" ? null : { create: nextDraft }, nextDraft.currency.toUpperCase());
-    }
-  };
-  /** A search keeps the asset chosen if it still matches, or takes the first; a filter only keeps. */
-  const pickFirst = (list: readonly AssetChoice[], searched: boolean) => {
-    const keep = list.some((one) => one.id === selected)
-      ? selected
-      : searched && list.length > 0
-        ? list[0].id
-        : "";
-    setSelected(keep);
-    emit("existing", keep, draft);
-  };
-  const editDraft = (patch: Partial<typeof draft>) => {
-    const next = { ...draft, ...patch };
-    setDraft(next);
-    emit("create", "", next);
-  };
-
-  return (
-    <>
-      <div className="col-span-full">
-        <Segmented
-          label={t("assetForm.source")}
-          value={source}
-          onChange={(next) => {
-            setSource(next);
-            emit(next, selected, draft);
-          }}
-          options={[
-            { value: "existing", label: t("assetForm.existing"), disabled: assets.length === 0 },
-            { value: "create", label: t("assetForm.create") },
-          ]}
-        />
-      </div>
-      {source === "existing" ? (
-        <>
-          <Field label={t("assetForm.search")} htmlFor={`${prefix}-search`}>
-            <Input
-              id={`${prefix}-search`}
-              type="search"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                pickFirst(matching({ query: event.target.value }), event.target.value.trim() !== "");
-              }}
-            />
-          </Field>
-          <Field label={t("assetForm.classFilter")} htmlFor={`${prefix}-filter`}>
-            <Select
-              id={`${prefix}-filter`}
-              value={klass}
-              onChange={(event) => {
-                setKlass(event.target.value);
-                pickFirst(matching({ classFilter: event.target.value }), false);
-              }}
-            >
-              <option value="">{t("assetForm.allClasses")}</option>
-              {ASSET_CLASSES.map((one) => (
-                <option key={one} value={one}>
-                  {t(`classes.${one}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t("assetForm.currencyFilter")} htmlFor={`${prefix}-currency-filter`}>
-            <Select
-              id={`${prefix}-currency-filter`}
-              value={currency}
-              onChange={(event) => {
-                setCurrency(event.target.value);
-                pickFirst(matching({ currencyFilter: event.target.value }), false);
-              }}
-            >
-              <option value="">{t("assetForm.allCurrencies")}</option>
-              {currencies.map((one) => (
-                <option key={one} value={one}>
-                  {one}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="col-span-full">
-            <Field label={t("assetForm.asset")} htmlFor={`${prefix}-asset`}>
-              {filtered.length === 0 ? (
-                <p className="text-sm text-muted">{t("assetForm.noMatch")}</p>
-              ) : (
-                <Select
-                  id={`${prefix}-asset`}
-                  value={selected}
-                  required
-                  onChange={(event) => {
-                    setSelected(event.target.value);
-                    emit("existing", event.target.value, draft);
-                  }}
-                >
-                  <option value="" disabled>
-                    {t("assetForm.choose")}
-                  </option>
-                  {filtered.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {[asset.name, asset.symbol, asset.isin, asset.currency].filter(Boolean).join(" · ")}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-          </div>
-        </>
-      ) : (
-        <>
-          <Field label={t("assetForm.class")} htmlFor={`${prefix}-class`}>
-            <Select
-              id={`${prefix}-class`}
-              value={draft.class}
-              onChange={(event) => editDraft({ class: event.target.value as AssetClass })}
-            >
-              {ASSET_CLASSES.map((one) => (
-                <option key={one} value={one}>
-                  {t(`classes.${one}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t("assetForm.name")} htmlFor={`${prefix}-name`}>
-            <Input
-              id={`${prefix}-name`}
-              maxLength={120}
-              value={draft.name}
-              onChange={(event) => editDraft({ name: event.target.value })}
-            />
-          </Field>
-          <Field label={t("assetForm.isin")} htmlFor={`${prefix}-isin`}>
-            <Input
-              id={`${prefix}-isin`}
-              maxLength={12}
-              className="uppercase"
-              value={draft.isin}
-              onChange={(event) => editDraft({ isin: event.target.value })}
-            />
-          </Field>
-          <Field label={t("assetForm.symbol")} htmlFor={`${prefix}-symbol`}>
-            <Input
-              id={`${prefix}-symbol`}
-              maxLength={20}
-              className="uppercase"
-              value={draft.symbol}
-              onChange={(event) => editDraft({ symbol: event.target.value })}
-            />
-          </Field>
-          <Field label={t("assetForm.currency")} htmlFor={`${prefix}-currency`}>
-            <Input
-              id={`${prefix}-currency`}
-              maxLength={3}
-              className="uppercase"
-              value={draft.currency}
-              onChange={(event) => editDraft({ currency: event.target.value.toUpperCase() })}
-            />
-          </Field>
-        </>
-      )}
-    </>
-  );
-}
-
-/**
- * The product of a manual buy (D1, D2): empty on a synced service, the person picks it; the products
- * the provider already reads are disabled, and a note says why in words.
- */
-function ProductSelect({
-  id,
-  value,
-  onChange,
-  covered,
-  provider,
-}: {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  covered: readonly string[];
-  provider: string | null;
-}) {
-  const t = useTranslations("investments");
-  return (
-    <Field
-      label={t("assetForm.product")}
-      htmlFor={id}
-      hint={
-        covered.length > 0
-          ? t("assetForm.covered", {
-              provider: provider ?? t("assetForm.theProvider"),
-              products: covered.map((one) => productLabel(one, t)).join(", "),
-            })
-          : undefined
-      }
-    >
-      <Select id={id} value={value} required onChange={(event) => onChange(event.target.value)}>
-        <option value="" disabled>
-          {t("assetForm.chooseProduct")}
-        </option>
-        {PRODUCTS.map((product) => (
-          <option key={product} value={product} disabled={covered.includes(product)}>
-            {t(`products.${product}`)}
-          </option>
-        ))}
-      </Select>
-    </Field>
-  );
-}
-
-// ——— Add asset (§4.4) ——————————————————————————————————————————————————————————————————————
-
-export function AddAssetButton({
-  context,
-  variant = "primary",
-}: {
-  context: ServiceContext;
-  variant?: "primary" | "secondary";
-}) {
-  const t = useTranslations("investments");
-  return (
-    <Opener label={t("actions.addAsset")} variant={variant}>
-      {(close) => <AddAssetDialog onOpenChange={close} context={context} />}
-    </Opener>
-  );
-}
-
-function AddAssetDialog({
-  onOpenChange,
-  context,
-}: {
-  onOpenChange: (open: boolean) => void;
-  context: ServiceContext;
-}) {
-  const t = useTranslations("investments");
-  const id = useId();
-  const [pending, startTransition] = useTransition();
-  const { error, clear, report } = useErrors();
-  const defaults = assetDialogDefaults(context);
-  const [pick, setPick] = useState<AssetPick | null>(null);
-  const [currency, setCurrency] = useState(context.currency);
-  const [product, setProduct] = useState(defaults.product);
-  const [on, setOn] = useState(context.today);
-  const [how, setHow] = useState<"quantity" | "total">("quantity");
-  const [quantity, setQuantity] = useState("");
-  const [unitPrice, setUnitPrice] = useState("");
-  const [total, setTotal] = useState("");
-  const [fee, setFee] = useState("");
-  const [fxRate, setFxRate] = useState("");
-  const [note, setNote] = useState("");
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pick === null || product === "") {
-      report({ ok: false, error: "invalid" });
-      return;
-    }
-    startTransition(async () => {
-      const result = await addAssetAction(context.accountId, {
-        asset: pick,
-        product,
-        on,
-        quantity: how === "quantity" ? quantity : "",
-        unitPrice: how === "quantity" ? unitPrice : "",
-        total: how === "total" ? total : "",
-        fee,
-        fxRate: currency === context.currency ? "" : fxRate,
-        note,
-      });
-      if (!report(result)) return;
-      notify(t("toasts.assetAdded"));
-      onOpenChange(false);
-    });
-  }
-
-  return (
-    <Dialog
-      open
-      onOpenChange={onOpenChange}
-      clear={clear}
-      title={t("assetForm.title")}
-      description={t("assetForm.description")}
-      onSubmit={onSubmit}
-    >
-      <AssetPicker
-        prefix={id}
-        assets={context.assets}
-        defaultCurrency={context.currency}
-        defaults={defaults}
-        onChange={(next, nextCurrency) => {
-          setPick(next);
-          setCurrency(nextCurrency);
-        }}
-      />
-      <ProductSelect
-        id={`${id}-product`}
-        value={product}
-        onChange={setProduct}
-        covered={context.coveredProducts}
-        provider={context.providerName}
-      />
-      <DateField id={`${id}-on`} label={t("form.date")} value={on} onChange={setOn} max={context.today} />
-      <div className="col-span-full">
-        <Segmented
-          label={t("assetForm.priceMode")}
-          value={how}
-          onChange={setHow}
-          options={[
-            { value: "quantity", label: t("assetForm.byQuantity") },
-            { value: "total", label: t("assetForm.byTotal") },
-          ]}
-        />
-      </div>
-      {how === "quantity" ? (
-        <>
-          <NumberField
-            id={`${id}-quantity`}
-            label={t("assetForm.quantity")}
-            value={quantity}
-            onChange={setQuantity}
-          />
-          <MoneyField
-            id={`${id}-price`}
-            label={t("assetForm.unitPrice")}
-            value={unitPrice}
-            onChange={setUnitPrice}
-            currency={currency}
-          />
-        </>
-      ) : (
-        <MoneyField
-          id={`${id}-total`}
-          label={t("assetForm.total")}
-          value={total}
-          onChange={setTotal}
-          currency={currency}
-        />
-      )}
-      <MoneyField
-        id={`${id}-fee`}
-        label={t("assetForm.fee")}
-        value={fee}
-        onChange={setFee}
-        currency={currency}
-      />
-      {currency !== context.currency && (
-        <Field
-          label={t("assetForm.fxRate")}
-          htmlFor={`${id}-fx`}
-          hint={t("assetForm.fxHint", { account: context.currency, asset: currency })}
-        >
-          <Input
-            id={`${id}-fx`}
-            inputMode="decimal"
-            numeric
-            value={fxRate}
-            onChange={(event) => setFxRate(event.target.value)}
-          />
-        </Field>
-      )}
-      <Field label={t("form.note")} htmlFor={`${id}-note`}>
-        <Input
-          id={`${id}-note`}
-          maxLength={200}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </Field>
-      <ErrorLine error={error} />
-      <Actions onCancel={() => onOpenChange(false)} pending={pending} submit={t("assetForm.submit")} />
-    </Dialog>
-  );
-}
-
-// ——— Account operations: deposit, withdrawal, account value, adjustment ———————————————————————
+// ——— Operations recorded before (PERS-342: none is typed in the module any more) ————————————————
 
 export interface OperationSummary {
   id: string;
@@ -986,262 +476,10 @@ export interface OperationSummary {
   adjustmentClass?: AdjustmentClass | null;
 }
 
-type AccountKind = "deposit" | "withdrawal" | "account_valuation" | "adjustment";
-
-export function OperationButton({
-  kind,
-  context,
-  variant = "secondary",
-  label,
-}: {
-  kind: AccountKind;
-  context: ServiceContext;
-  variant?: "primary" | "secondary";
-  label?: string;
-}) {
-  const t = useTranslations("investments");
-  return (
-    <Opener label={label ?? t(`operationForm.titles.${kind}`)} variant={variant}>
-      {(close) => <OperationDialog onOpenChange={close} kind={kind} context={context} operation={null} />}
-    </Opener>
-  );
-}
-
-function OperationDialog({
-  onOpenChange,
-  kind,
-  context,
-  operation,
-}: {
-  onOpenChange: (open: boolean) => void;
-  kind: AccountKind | "valuation";
-  context: ServiceContext;
-  operation: OperationSummary | null;
-}) {
-  const t = useTranslations("investments");
-  const id = useId();
-  const [pending, startTransition] = useTransition();
-  const { error, clear, report } = useErrors();
-  const absolute = operation
-    ? operation.amountCents < 0n && kind !== "adjustment"
-      ? -operation.amountCents
-      : operation.amountCents
-    : null;
-  const [amount, setAmount] = useState(
-    absolute === null ? "" : formatAmountInput(absolute, context.numberFormat),
-  );
-  const [unitPrice, setUnitPrice] = useState(
-    operation?.unitPriceText?.replace(".", numberSeparators(context.numberFormat).decimal) ?? "",
-  );
-  const [on, setOn] = useState(operation?.on ?? context.today);
-  const [validUntil, setValidUntil] = useState(operation?.validUntil ?? "");
-  const [note, setNote] = useState(operation?.note ?? "");
-  const [link, setLink] = useState(operation?.transactionId ?? "");
-  const [adjustmentClass, setAdjustmentClass] = useState<AdjustmentClass>(
-    operation?.adjustmentClass ?? "data",
-  );
-  const [linkQuery, setLinkQuery] = useState("");
-  const linkable = kind === "deposit" || kind === "withdrawal";
-  // Only the candidates — same amount, within three days — or what the search finds (D3).
-  const choices = linkable
-    ? linkCandidates(
-        kind === "deposit" ? context.linkOptions.out : context.linkOptions.in,
-        on,
-        tryAmount(amount, context.numberFormat),
-        linkQuery,
-        operation?.transactionId ?? null,
-      )
-    : [];
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const input: OperationFormInput = {
-      kind,
-      on,
-      amount: kind === "valuation" && unitPrice.trim() !== "" ? "" : amount,
-      unitPrice: kind === "valuation" ? unitPrice : undefined,
-      holdingId: operation?.holdingId ?? null,
-      validUntil: kind === "adjustment" ? validUntil || null : null,
-      adjustmentClass: kind === "adjustment" ? adjustmentClass : undefined,
-      transactionId: linkable && choices.some((choice) => choice.id === link) ? link : null,
-      note,
-    };
-    startTransition(async () => {
-      const result = operation
-        ? await updateOperationAction(context.accountId, operation.id, input)
-        : await recordOperationAction(context.accountId, input);
-      if (!report(result)) return;
-      notify(t("toasts.saved"));
-      onOpenChange(false);
-    });
-  }
-
-  const title = operation
-    ? t("operationForm.editTitle", { kind: t(`kinds.${kind}`) })
-    : t(`operationForm.titles.${kind}`);
-  return (
-    <Dialog
-      open
-      onOpenChange={onOpenChange}
-      clear={clear}
-      title={title}
-      description={t(`operationForm.descriptions.${kind}`)}
-      onSubmit={onSubmit}
-    >
-      {kind === "valuation" && operation?.unitPriceText !== null && operation?.unitPriceText !== undefined ? (
-        <MoneyField
-          id={`${id}-price`}
-          label={t("holdingForm.unitPrice")}
-          value={unitPrice}
-          onChange={setUnitPrice}
-          currency={context.currency}
-          autoFocus
-        />
-      ) : (
-        <MoneyField
-          id={`${id}-amount`}
-          label={
-            kind === "adjustment"
-              ? t("form.amount")
-              : kind === "account_valuation" || kind === "valuation"
-                ? t("operationForm.value")
-                : t("form.amount")
-          }
-          hint={kind === "adjustment" ? t("operationForm.deltaHint") : undefined}
-          value={amount}
-          onChange={setAmount}
-          currency={context.currency}
-          autoFocus
-        />
-      )}
-      <DateField
-        id={`${id}-on`}
-        label={kind === "adjustment" ? t("operationForm.from") : t("form.date")}
-        value={on}
-        onChange={setOn}
-        max={context.today}
-      />
-      {kind === "adjustment" && (
-        <Field
-          label={t("operationForm.validUntil")}
-          htmlFor={`${id}-until`}
-          hint={t("operationForm.validUntilHint")}
-        >
-          <Input
-            id={`${id}-until`}
-            type="date"
-            min={on}
-            value={validUntil}
-            onChange={(event) => setValidUntil(event.target.value)}
-          />
-        </Field>
-      )}
-      {kind === "adjustment" && (
-        <div className="col-span-full flex flex-col gap-1.5">
-          <Field label={t("operationForm.class")} htmlFor={`${id}-class`}>
-            <Select
-              id={`${id}-class`}
-              value={adjustmentClass}
-              onChange={(event) => setAdjustmentClass(event.target.value as AdjustmentClass)}
-            >
-              {ADJUSTMENT_CLASSES.map((one) => (
-                <option key={one} value={one}>
-                  {t(`operationForm.classes.${one}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <AdjustmentPreview
-            adjustmentClass={adjustmentClass}
-            cents={tryAmount(amount, context.numberFormat)}
-            on={on}
-            until={validUntil || null}
-            context={context}
-          />
-        </div>
-      )}
-      <Field
-        label={kind === "adjustment" ? t("operationForm.reason") : t("form.note")}
-        htmlFor={`${id}-note`}
-      >
-        <Input
-          id={`${id}-note`}
-          maxLength={200}
-          required={kind === "adjustment"}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </Field>
-      {linkable && (
-        <Field label={t("operationForm.linkSearch")} htmlFor={`${id}-link-search`}>
-          <Input
-            id={`${id}-link-search`}
-            type="search"
-            value={linkQuery}
-            onChange={(event) => setLinkQuery(event.target.value)}
-          />
-        </Field>
-      )}
-      {linkable && (
-        <div className="col-span-full">
-          <Field
-            label={kind === "deposit" ? t("operationForm.linkOut") : t("operationForm.linkIn")}
-            htmlFor={`${id}-link`}
-            hint={t("operationForm.linkHint")}
-          >
-            <Select id={`${id}-link`} value={link} onChange={(event) => setLink(event.target.value)}>
-              <option value="">
-                {choices.length === 0 ? t("operationForm.noCandidates") : t("operationForm.noLink")}
-              </option>
-              {choices.map((choice) => (
-                <option key={choice.id} value={choice.id}>
-                  {linkLabel(choice, context)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-      )}
-      <ErrorLine error={error} />
-      <Actions onCancel={() => onOpenChange(false)} pending={pending} submit={t("form.save")} />
-    </Dialog>
-  );
-}
-
 /**
- * What a correction will do to the P&L before it is saved (§4.9): a wrong reading of the provider or
- * a gain or loss nobody recorded moves the P&L from its first day (and back on its last); money in
- * or out that was never recorded is a flow, and the P&L stays.
+ * An operation's command: delete, only for one the person typed before (PERS-342). Nothing is
+ * edited or added here any more: a manual service's money in and out are its account's movements.
  */
-function AdjustmentPreview({
-  adjustmentClass,
-  cents,
-  on,
-  until,
-  context,
-}: {
-  adjustmentClass: AdjustmentClass;
-  cents: Cents | null;
-  on: string;
-  until: string | null;
-  context: ServiceContext;
-}) {
-  const t = useTranslations("investments.operationForm.preview");
-  if (cents === null || cents === 0n) return null;
-  const amount = formatMoney(cents, context.numberFormat, { currency: context.currency, signed: true });
-  const date = formatDate(on, "long", context.locale);
-  const end = until ? ` ${t("until", { date: formatDate(until, "long", context.locale) })}` : "";
-  return (
-    <p data-testid="adjustment-preview" className="text-sm text-muted">
-      {adjustmentClass === "capital" ? t("capital", { amount, date }) : t("pnl", { amount, date })}
-      {adjustmentClass !== "capital" && end}
-    </p>
-  );
-}
-
-const EDITABLE = new Set(["deposit", "withdrawal", "account_valuation", "valuation", "adjustment"]);
-
-/** An operation's commands: edit (single-leg kinds) and delete, only for the person's own. */
 export function OperationMenu({
   operation,
   context,
@@ -1250,32 +488,20 @@ export function OperationMenu({
   context: ServiceContext;
 }) {
   const t = useTranslations("investments");
-  const [open, setOpen] = useState<"edit" | "delete" | null>(null);
+  const [open, setOpen] = useState(false);
   if (operation.origin !== "manual") return null;
-  const close = (next: boolean) => {
-    if (!next) setOpen(null);
-  };
   const date = formatDate(operation.on, "long", context.locale);
   const kind = t(`kinds.${operation.kind}` as "kinds.deposit");
-  const items = [
-    ...(EDITABLE.has(operation.kind) ? [{ label: t("actions.edit"), onSelect: () => setOpen("edit") }] : []),
-    { label: t("actions.delete"), onSelect: () => setOpen("delete"), danger: true },
-  ];
   return (
     <>
-      <ActionMenu label={t("actions.operationMenu", { date })} items={items} />
-      {open === "edit" && (
-        <OperationDialog
-          onOpenChange={close}
-          kind={operation.kind as AccountKind}
-          context={context}
-          operation={operation}
-        />
-      )}
-      {open === "delete" && (
+      <ActionMenu
+        label={t("actions.operationMenu", { date })}
+        items={[{ label: t("actions.delete"), onSelect: () => setOpen(true), danger: true }]}
+      />
+      {open && (
         <ConfirmDialog
           open
-          onOpenChange={close}
+          onOpenChange={setOpen}
           title={t("confirm.deleteTitle")}
           description={t("confirm.deleteDescription", {
             kind,
@@ -1807,13 +1033,13 @@ function ConnectDialog({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const { error, clear, report } = useErrors();
-  const [target, setTarget] = useState<"new" | "existing">("new");
   const currencies = provider.currencies ?? [provider.defaultCurrency];
   const choices = existing.filter((one) => one.type === provider.accountType);
   // Message keys cannot hold a colon: `ccxt:binance` → `ccxt_binance`.
   const slug = provider.id.replace(/[^a-z0-9]/g, "_");
+  // A provider writes the account: never one Wallet reads (PERS-342), which would have two writers.
   const usable = (one: ExistingChoice) =>
-    (one.reason === null || one.manualService) && currencies.includes(one.currency);
+    (one.reason === null || one.manualService) && !one.synced && currencies.includes(one.currency);
   const [accountId, setAccountId] = useState(choices.find(usable)?.id ?? "");
   // Connected with a key that works from any IP (PERS-87 SEC-02): said here before the page opens.
   const [unrestricted, setUnrestricted] = useState<string | null>(null);
@@ -1851,14 +1077,8 @@ function ConnectDialog({
     const form = event.currentTarget;
     const data = new FormData(form);
     const keys = keysOf(provider, data);
-    const name = String(data.get("name") ?? "").trim();
-    const currency = String(data.get("currency") ?? provider.defaultCurrency);
     startTransition(async () => {
-      const result = await connectProviderAction(
-        provider.id,
-        keys,
-        target === "new" ? { kind: "new", name, currency } : { kind: "existing", accountId },
-      );
+      const result = await connectProviderAction(provider.id, keys, { kind: "existing", accountId });
       // The fields are cleared whatever happened: a key stays in the page no longer than needed.
       for (const field of provider.credentialFields) {
         const input = form.elements.namedItem(field);
@@ -1897,72 +1117,42 @@ function ConnectDialog({
       </p>
       <KeyFields provider={provider} id={id} />
       <div className="col-span-full">
-        <Segmented
-          label={t("manualForm.destination")}
-          value={target}
-          onChange={setTarget}
-          options={[
-            { value: "new", label: t("manualForm.newAccount") },
-            { value: "existing", label: t("manualForm.existingAccount") },
-          ]}
-        />
-      </div>
-      {target === "new" ? (
-        <>
-          <Field label={t("manualForm.name")} htmlFor={`${id}-name`}>
-            <Input id={`${id}-name`} name="name" required maxLength={80} defaultValue={provider.name} />
-          </Field>
-          <Field
-            label={t("manualForm.currency")}
-            htmlFor={`${id}-currency`}
-            hint={t("connect.currencyHint", { name: provider.name })}
-          >
-            <Select id={`${id}-currency`} name="currency" defaultValue={provider.defaultCurrency}>
-              {currencies.map((currency) => (
-                <option key={currency} value={currency}>
-                  {currency}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </>
-      ) : (
-        <div className="col-span-full">
-          <Field
-            label={t("manualForm.existing")}
-            htmlFor={`${id}-account`}
-            hint={t("connect.existingHint", { name: provider.name })}
-          >
-            {choices.length === 0 ? (
-              <p className="text-sm text-muted">{t("manualForm.noExisting")}</p>
-            ) : (
-              <Select
-                id={`${id}-account`}
-                value={accountId}
-                onChange={(event) => setAccountId(event.target.value)}
-              >
-                {choices.map((one) => (
-                  <option key={one.id} value={one.id} disabled={!usable(one)}>
-                    {t("manualForm.option", {
-                      name: one.name,
-                      balance: formatMoney(one.balanceCents, numberFormat, { currency: one.currency }),
-                    })}
-                    {!currencies.includes(one.currency)
-                      ? ` — ${t("connect.currencyNotSupported")}`
+        <Field
+          label={t("manualForm.existing")}
+          htmlFor={`${id}-account`}
+          hint={t("connect.existingHint", { name: provider.name })}
+        >
+          {choices.length === 0 ? (
+            <p className="text-sm text-muted">{t("manualForm.noExisting")}</p>
+          ) : (
+            <Select
+              id={`${id}-account`}
+              value={accountId}
+              onChange={(event) => setAccountId(event.target.value)}
+            >
+              {choices.map((one) => (
+                <option key={one.id} value={one.id} disabled={!usable(one)}>
+                  {t("manualForm.option", {
+                    name: one.name,
+                    balance: formatMoney(one.balanceCents, numberFormat, { currency: one.currency }),
+                  })}
+                  {!currencies.includes(one.currency)
+                    ? ` — ${t("connect.currencyNotSupported")}`
+                    : one.synced
+                      ? ` — ${t("manualForm.reasons.synced")}`
                       : !usable(one) && one.reason !== null
                         ? ` — ${t(`manualForm.reasons.${one.reason}` as "manualForm.reasons.managed")}`
                         : ""}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-        </div>
-      )}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+      </div>
       <ErrorLine error={error} />
       <Actions
         onCancel={() => onOpenChange(false)}
-        pending={pending || (target === "existing" && accountId === "")}
+        pending={pending || accountId === ""}
         submit={pending ? t("connect.checking") : t("connect.submit")}
       />
     </Dialog>
@@ -2154,7 +1344,7 @@ export function ConfirmRevokedButton({ accountId }: { accountId: string }) {
 
 // ——— The service's header (docs/design/investments-ux.md §3.2, U3) ———————————————————————————
 
-type HeaderDialog = "asset" | AccountKind | "replace" | "disconnect";
+type HeaderDialog = "value" | "replace" | "disconnect";
 
 /** The dialog a header command opens; one at a time, mounted only while open. */
 function HeaderDialogs({
@@ -2174,37 +1364,93 @@ function HeaderDialogs({
     if (!next) setOpen(null);
   };
   if (open === null) return null;
-  if (open === "asset") return <AddAssetDialog onOpenChange={close} context={context} />;
+  if (open === "value") return <UpdateValueDialog onOpenChange={close} context={context} />;
   if (open === "replace")
     return provider ? (
       <ReplaceKeyDialog onOpenChange={close} accountId={context.accountId} provider={provider} />
     ) : null;
-  if (open === "disconnect")
-    return (
-      <ConfirmDialog
-        open
-        onOpenChange={close}
-        title={t("confirm.disconnectTitle", { name: context.name })}
-        description={t("confirm.disconnectDescription")}
-        confirm={t("sync.disconnect")}
-        onConfirm={async () => {
-          const result = await disconnectProviderAction(context.accountId);
-          notify(
-            result.ok ? t("toasts.disconnected", { name: context.name }) : t("errors.failed"),
-            result.ok ? "success" : "error",
-          );
-          if (result.ok) router.refresh();
-          return result.ok;
-        }}
-      />
-    );
-  return <OperationDialog onOpenChange={close} kind={open} context={context} operation={null} />;
+  return (
+    <ConfirmDialog
+      open
+      onOpenChange={close}
+      title={t("confirm.disconnectTitle", { name: context.name })}
+      description={t("confirm.disconnectDescription")}
+      confirm={t("sync.disconnect")}
+      onConfirm={async () => {
+        const result = await disconnectProviderAction(context.accountId);
+        notify(
+          result.ok ? t("toasts.disconnected", { name: context.name }) : t("errors.failed"),
+          result.ok ? "success" : "error",
+        );
+        if (result.ok) router.refresh();
+        return result.ok;
+      }}
+    />
+  );
 }
 
 /**
- * The commands of a service (§3.2, H10, S8): on a synced account "Sync" stays outside and the rest
- * is in `⋯` — a manual movement, a correction, the key; on a manual account "Add operation" is the
- * one primary button, with the correction in `⋯`.
+ * "Update value" of a manual service (PERS-342): the value read at the broker on a day, saved as
+ * the account's balance in Accounts — the one source of the value.
+ */
+function UpdateValueDialog({
+  onOpenChange,
+  context,
+}: {
+  onOpenChange: (open: boolean) => void;
+  context: ServiceContext;
+}) {
+  const t = useTranslations("investments");
+  const id = useId();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const { error, clear, report } = useErrors();
+  const [on, setOn] = useState(context.today);
+  const [amount, setAmount] = useState("");
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    startTransition(async () => {
+      const result = await updateServiceValueAction(context.accountId, { on, amount });
+      if (!report(result)) return;
+      notify(t("toasts.valueUpdated", { name: context.name }));
+      onOpenChange(false);
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onOpenChange}
+      clear={clear}
+      title={t("valueForm.title", { name: context.name })}
+      description={t("valueForm.description")}
+      onSubmit={onSubmit}
+    >
+      <MoneyField
+        id={`${id}-amount`}
+        label={t("valueForm.amount")}
+        value={amount}
+        onChange={setAmount}
+        currency={context.currency}
+        autoFocus
+      />
+      <DateField id={`${id}-on`} label={t("form.date")} value={on} onChange={setOn} max={context.today} />
+      <ErrorLine error={error} />
+      <Actions
+        onCancel={() => onOpenChange(false)}
+        pending={pending || tryAmount(amount, context.numberFormat) === null}
+        submit={t("valueForm.submit")}
+      />
+    </Dialog>
+  );
+}
+
+/**
+ * The commands of a service (§3.2, PERS-342). A synced one: "Sync", and the key in `⋯` — nothing
+ * that moves its value. A manual one on an account typed by hand: "Update value", the only
+ * command. A manual one on an account Wallet reads: none, the value is Wallet's.
  */
 export function ServiceActions({
   context,
@@ -2217,76 +1463,25 @@ export function ServiceActions({
 }) {
   const t = useTranslations("investments");
   const [open, setOpen] = useState<HeaderDialog | null>(null);
-  const assets = context.mode === "assets";
-  const operations = [
-    ...(assets ? [{ key: "buy" as const, onSelect: () => setOpen("asset") }] : []),
-    { key: "deposit" as const, onSelect: () => setOpen("deposit") },
-    { key: "withdrawal" as const, onSelect: () => setOpen("withdrawal") },
-    ...(context.mode === "total" && !context.synced
-      ? [{ key: "valuation" as const, onSelect: () => setOpen("account_valuation") }]
+  const more = [
+    ...(connected && provider
+      ? [{ label: t("sync.replace"), onSelect: () => setOpen("replace" as const) }]
+      : []),
+    ...(connected
+      ? [{ label: t("sync.disconnect"), onSelect: () => setOpen("disconnect" as const), danger: true }]
       : []),
   ];
-  const more = context.synced
-    ? [
-        ...operations.map((item) => ({ label: t(`header.manual.${item.key}`), onSelect: item.onSelect })),
-        { label: t("header.correct"), onSelect: () => setOpen("adjustment") },
-        ...(connected && provider ? [{ label: t("sync.replace"), onSelect: () => setOpen("replace") }] : []),
-        ...(connected
-          ? [{ label: t("sync.disconnect"), onSelect: () => setOpen("disconnect"), danger: true }]
-          : []),
-      ]
-    : [{ label: t("header.correct"), onSelect: () => setOpen("adjustment") }];
   return (
     <span className="flex flex-wrap items-center gap-2">
-      {context.synced ? (
-        connected && <SyncNowButton accountId={context.accountId} />
-      ) : (
-        <ButtonMenu
-          text={t("header.addOperation")}
-          variant="primary"
-          items={operations.map((item) => ({
-            label: t(`header.operations.${item.key}`),
-            onSelect: item.onSelect,
-          }))}
-        />
-      )}
-      <ActionMenu label={t("actions.more")} items={more} />
+      {context.synced
+        ? connected && <SyncNowButton accountId={context.accountId} />
+        : context.valueEditable && (
+            <Button variant="primary" onClick={() => setOpen("value")}>
+              {t("header.updateValue")}
+            </Button>
+          )}
+      {more.length > 0 && <ActionMenu label={t("actions.more")} items={more} />}
       <HeaderDialogs open={open} setOpen={setOpen} context={context} provider={provider} />
     </span>
-  );
-}
-
-/**
- * "Link to the bank movement" (§3.5, S16): only on the person's own deposit or withdrawal with no
- * link and a movement of the same amount within three days; it opens the operation with the
- * candidates.
- */
-export function LinkBankButton({
-  operation,
-  context,
-}: {
-  operation: OperationSummary;
-  context: ServiceContext;
-}) {
-  const t = useTranslations("investments");
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
-      >
-        {t("activityTab.linkBank")}
-      </button>
-      {open && (
-        <OperationDialog
-          onOpenChange={setOpen}
-          kind={operation.kind as AccountKind}
-          context={context}
-          operation={operation}
-        />
-      )}
-    </>
   );
 }

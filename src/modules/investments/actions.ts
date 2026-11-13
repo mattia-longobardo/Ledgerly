@@ -11,10 +11,8 @@ import { parseAmount } from "@/modules/accounts/rules";
 import { requireSession } from "@/platform/auth/session";
 import { numberSeparators, type NumberFormat } from "@/platform/format";
 import type { Cents } from "@/platform/money";
-import { parseDecimal, plainDecimal, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "./rules";
+import { parseDecimal, plainDecimal, PRICE_SCALE, QUANTITY_SCALE } from "./rules";
 import {
-  addAsset,
-  type AssetInput,
   confirmZeroReading,
   createManualService,
   deleteOperation,
@@ -25,8 +23,8 @@ import {
   recordOperation,
   reconcileHolding,
   unlinkTransfer,
-  updateOperation,
   updateServiceUrl,
+  updateServiceValue,
 } from "./service";
 import {
   type ConnectTarget,
@@ -93,34 +91,19 @@ export async function updateServiceUrlAction(accountId: string, url: string): Pr
   }
 }
 
-export interface AssetFormInput {
-  asset: { id: string } | { create: AssetInput };
-  product: string;
-  on: string;
-  quantity: string;
-  unitPrice: string;
-  total: string;
-  fee: string;
-  fxRate: string;
-  note: string;
-}
-
-export async function addAssetAction(accountId: string, input: AssetFormInput): Promise<ActionResult> {
+/**
+ * "Update value" of a manual service (PERS-342): the value read at the broker, written as the
+ * account's manual balance in Accounts.
+ */
+export async function updateServiceValueAction(
+  accountId: string,
+  input: { on: string; amount: string },
+): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    const format = ctx.numberFormat;
-    const quantity = number(input.quantity, format, QUANTITY_SCALE);
-    await addAsset(ctx, accountId, {
-      asset: input.asset,
-      product: input.product,
-      on: input.on,
-      quantity,
-      unitPrice: quantity === null ? null : number(input.unitPrice, format, PRICE_SCALE),
-      totalCents: quantity === null ? money(input.total, format) : null,
-      feeCents: money(input.fee, format) ?? 0n,
-      fxRate: number(input.fxRate, format, RATE_SCALE),
-      note: input.note,
-    });
+    const cents = money(input.amount, ctx.numberFormat);
+    if (cents === null) return { ok: false, error: "invalid" };
+    await updateServiceValue(ctx, accountId, { on: input.on, cents });
     revalidate(accountId);
     return { ok: true };
   } catch (error) {
@@ -205,28 +188,25 @@ function operationOf(input: OperationFormInput, format: NumberFormat): Operation
   }
 }
 
+/**
+ * What the person may no longer type (PERS-342): money in and out and the value come from Accounts
+ * on a manual service, and from the provider on a synced one.
+ */
+const VALUE_KINDS: ReadonlySet<OperationFormInput["kind"]> = new Set([
+  "deposit",
+  "withdrawal",
+  "account_valuation",
+  "adjustment",
+]);
+
 export async function recordOperationAction(
   accountId: string,
   input: OperationFormInput,
 ): Promise<ActionResult> {
   const ctx = await requireSession();
+  if (VALUE_KINDS.has(input.kind)) return { ok: false, error: "not_editable" };
   try {
     await recordOperation(ctx, accountId, operationOf(input, ctx.numberFormat));
-    revalidate(accountId);
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function updateOperationAction(
-  accountId: string,
-  eventId: string,
-  input: OperationFormInput,
-): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await updateOperation(ctx, eventId, operationOf(input, ctx.numberFormat));
     revalidate(accountId);
     return { ok: true };
   } catch (error) {

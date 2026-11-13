@@ -72,7 +72,8 @@ Finance ▸ Investments
   disegna testata, tab e selettore del periodo una volta sola.
 - Collegamento e Movimenti sono tab anche per i conti manuali. Su un conto manuale "Collegamento" si
   chiama **"Impostazioni"** e contiene solo le impostazioni e le correzioni manuali (§3.6).
-- Un conto manuale non ha il tab Posizioni (PERS-335): tiene solo versamenti, prelievi e valore.
+- Un conto manuale non ha il tab Posizioni (PERS-335): mostra il valore e i movimenti del suo conto in
+  Accounts (PERS-342).
   `/positions` di un conto manuale porta alla Panoramica con lo stesso periodo.
 - Il terzo livello (dettaglio asset) **non** è una pagina nuova: una riga di Posizioni apre Movimenti
   filtrati sull'asset (`/activity?asset=<id>`). Resta il limite di due livelli (P1).
@@ -219,10 +220,11 @@ Panoramica  Posizioni  Movimenti  Collegamento (1)        [Anno|Tutto|Personaliz
 - Meta (S12): tipo del servizio, stato della sincronizzazione in parole ("Sincronizzato oggi 07:30",
   "Sincronizzazione in corso", "Errore: chiave revocata"), link al sito. "Per asset" e "Managed since"
   spariscono (vanno in Collegamento → Impostazioni).
-- **Azioni** (S8, A4): su un conto sincronizzato, "Sincronizza" (cooldown 60 s come oggi) e il menu
-  `⋯`: Aggiungi movimento manuale, Aggiungi correzione, Sostituisci chiave, Disconnetti. Su un conto
-  manuale: "Aggiungi operazione" (primario: Versamento, Prelievo, Aggiorna valore; niente acquisti né
-  vendite dal PERS-335) e il menu `⋯` con Aggiungi correzione. Nell'ordine del DOM le azioni vengono dopo l'hero (A4).
+- **Azioni** (S8, A4, PERS-342): su un conto sincronizzato, "Sincronizza" (cooldown 60 s come oggi) e
+  il menu `⋯`: Sostituisci chiave, Disconnetti — niente movimenti manuali né correzioni, il valore è in
+  sola lettura. Su un conto manuale tenuto a mano: solo "Aggiorna valore" (scrive il saldo del conto in
+  Accounts). Su un conto manuale letto da Wallet: nessuna azione, lo stato dice "Sincronizzato da
+  Wallet". Nell'ordine del DOM le azioni vengono dopo l'hero (A4).
 - Il badge sul tab Collegamento conta gli avvisi con un'azione (stesso conteggio della home).
 - Mobile: titolo, azioni sotto il titolo, tab su una riga (4 etichette corte entrano in 390 px:
   verificato nel mockup), selettore del periodo sotto i tab.
@@ -342,9 +344,9 @@ Un conto manuale ha al posto di questo tab "Impostazioni" (solo le ultime due ca
   I prodotti già coperti sono disabilitati nella `select`, con la stessa nota.
 - **Correzione** (D4): titolo "Correggi il valore", esempio nel testo ("eToro non ha letto 120 USD
   di cassa dal 3 al 10 marzo"), campi Importo, Dal, Al (facoltativo, "senza fine" spiegato), Motivo.
-- **Crea conto manuale** (D6, PERS-335): nessuna scelta di modo. Un conto manuale è sempre "Solo
-  valore": la descrizione del dialog dice che si registrano versamenti, prelievi e il valore letto dal
-  broker.
+- **Aggiungi conto manuale** (D6, PERS-335, PERS-342): si sceglie un conto di Accounts, mai un conto
+  nuovo; nessuna scelta di modo. Il valore è il saldo del conto, versamenti e prelievi i suoi movimenti
+  (tab Attività: "Movimenti del conto", con il link al conto in Accounts).
 - **Selettore del periodo** (D5): §2.1.
 - **Catalogo** (C1, C2): sottotitolo "eToro e Binance si collegano con una chiave di sola lettura";
   Kraken esce da "In arrivo"; la sezione "In arrivo" è chiusa di default con il conteggio.

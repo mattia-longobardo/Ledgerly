@@ -2,25 +2,27 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { balancesOn, getAccount, listAccounts } from "@/modules/accounts/queries";
-import { createAccount, replacePortfolioPoints, takeOverEntries } from "@/modules/accounts/service";
+import { balanceDays, balancesOn, getAccount, listAccounts } from "@/modules/accounts/queries";
+import { replacePortfolioPoints, saveBalanceEntry } from "@/modules/accounts/service";
 import { valuationAccountIds } from "@/modules/funds/queries";
-import { getTransaction } from "@/modules/transactions/queries";
+import { getTransaction, movementsByAccount } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
-import { type CivilDate, isCivilDate, today } from "@/platform/dates";
+import { addDays, type CivilDate, isCivilDate, today } from "@/platform/dates";
 import { getDb, type Tx } from "@/platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { eurPerUnitOn, type RateTable } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
 import type { Cents } from "@/platform/money";
-import { accountTypeOf, ASSET_SEED, MANUAL_PROVIDER } from "./catalog";
+import { ASSET_SEED, MANUAL_PROVIDER } from "./catalog";
 import {
+  type AccountBalanceLike,
   ADJUSTMENT_CLASSES,
   type AdjustmentClass,
   ASSET_CLASSES,
   atRate,
   type Book,
+  compareEvents,
   divRound,
   computePoints,
   type EventLike,
@@ -56,7 +58,6 @@ import {
   investmentReadings,
   investmentReadingScopes,
   investmentReconciliations,
-  investmentSupersededEntries,
 } from "./schema";
 
 export type InvestmentAccount = typeof investmentAccounts.$inferSelect;
@@ -164,7 +165,7 @@ export interface LoadedBook extends Book {
 
 /** Everything the engine needs about one account, read in one go (inside `tx` when given). */
 export async function loadBook(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   investment: InvestmentAccount,
   currency: string,
   tx?: Tx,
@@ -268,15 +269,20 @@ export async function loadBook(
     operations: opsByEvent.get(event.id) ?? [],
   }));
   const holdingRows = holdingJoin.map((row) => ({ ...row.holding, asset: row.asset }));
+  const view =
+    investment.provider === MANUAL_PROVIDER ? await accountView(ctx, investment, periodRows) : null;
   return {
     currency,
+    ...(view ? { accountBalances: view.balances } : {}),
     periods: periodRows.map((period) => ({
       fromOn: period.fromOn,
       startsAt: period.startsAt,
       mode: period.mode,
       origin: period.origin,
     })),
-    events,
+    events: view
+      ? [...events.filter((event) => event.origin !== "manual"), ...view.events].sort(compareEvents)
+      : events,
     holdings: holdingRows.map((holding) => ({
       id: holding.id,
       assetId: holding.assetId,
@@ -313,11 +319,57 @@ export async function loadBook(
       decidedAt: reconciliation.decidedAt,
     })),
     periodRows,
-    eventRows,
+    eventRows: view ? eventRows.filter((event) => event.origin !== "manual") : eventRows,
     operationRows: operations,
     holdingRows,
     readingRows,
   };
+}
+
+/**
+ * What a manual service reads from Accounts (docs/design/investments.md §1.3, PERS-342): it is a
+ * view on its account, not a writer. Its value is the account's balance (typed in Accounts or read
+ * by Wallet), and its deposits and withdrawals are the account's movements from the service's first
+ * day: money in is a deposit, money out a withdrawal. The operations typed in the module before
+ * (origin `manual`) no longer count; the history of a past connection and the openings do.
+ */
+async function accountView(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  investment: InvestmentAccount,
+  periodRows: readonly InvestmentPeriod[],
+): Promise<{ balances: AccountBalanceLike[]; events: EventLike[] }> {
+  const [balances, movements] = await Promise.all([
+    balanceDays(ctx, [investment.accountId]),
+    movementsByAccount(ctx, [investment.accountId]),
+  ]);
+  const first = periodRows.reduce<CivilDate | null>(
+    (min, period) => (min === null || period.fromOn < min ? period.fromOn : min),
+    null,
+  );
+  const events: EventLike[] = (movements.get(investment.accountId) ?? [])
+    .filter((movement) => first !== null && movement.on >= first && movement.cents !== 0n)
+    .map((movement) => ({
+      id: movement.id,
+      on: movement.on,
+      occurredAt: movement.occurredAt,
+      seq: 0n,
+      origin: "provider" as const,
+      transferGroupId: movement.transferGroupId,
+      operations: [
+        {
+          leg: "main" as const,
+          holdingId: null,
+          kind: movement.cents > 0n ? ("deposit" as const) : ("withdrawal" as const),
+          quantity: null,
+          unitPrice: null,
+          priceCurrency: null,
+          amountCents: movement.cents,
+          fxRate: null,
+          validUntil: null,
+        },
+      ],
+    }));
+  return { balances: balances.get(investment.accountId) ?? [], events };
 }
 
 /** The rates a book's values need: its account currency and every asset's quote currency. */
@@ -341,6 +393,8 @@ export async function rebuild(
   from: CivilDate,
   tx: Tx,
 ): Promise<void> {
+  // A manual service writes no balance (§1.3, PERS-342): Accounts holds its value.
+  if (investment.provider === MANUAL_PROVIDER) return;
   const book = await loadBook(ctx, investment, currency, tx);
   const todayOn = today(ctx.timeZone);
   const rates = await ratesFor(book, todayOn);
@@ -393,28 +447,18 @@ const url = z
   }, "Not a web address")
   .transform((value) => (value === "" ? null : value));
 
-export const manualServiceSchema = z.discriminatedUnion("target", [
-  z.object({
-    target: z.literal("new"),
-    name: z.string().trim().min(1).max(80),
-    category: z.enum(INVESTMENT_CATEGORIES),
-    currency: z.string().regex(/^[A-Z]{3}$/),
-    url: url.nullable().default(null),
-  }),
-  z.object({
-    target: z.literal("existing"),
-    accountId: z.uuid(),
-    category: z.enum(INVESTMENT_CATEGORIES),
-    url: url.nullable().default(null),
-  }),
-]);
+export const manualServiceSchema = z.object({
+  accountId: z.uuid(),
+  category: z.enum(INVESTMENT_CATEGORIES),
+  url: url.nullable().default(null),
+});
 export type ManualServiceInput = z.input<typeof manualServiceSchema>;
 
 /**
- * The accounts "Use the existing account" may offer (§1.3): open accounts of type investment or
+ * The accounts a service may use (§1.3, PERS-342): open accounts of Accounts of type investment or
  * crypto that no other module writes — not a fund's valuation account, not already a service. An
- * account synced by Wallet is offered too: from `managed_since` the Wallet pass leaves its balance
- * to Investments (`saveProviderBalance`), so the handover keeps one writer.
+ * account synced by Wallet is offered too: a manual service only reads it. A provider, which
+ * writes the account, still needs a manual one (`origin`, checked by the connection).
  */
 export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
   const [all, funded, managed] = await Promise.all([
@@ -440,9 +484,10 @@ export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
 }
 
 /**
- * A manual service (§4.2): a new account, or an existing one handed over (§1.3, A4). Either way
- * one transaction: the account, its service row, its first period, the handover's archive and the
- * first points — so no moment exists in which the account has two writers or none.
+ * A manual service (§4.2, PERS-342): an account of Accounts the module shows, never a new one. It
+ * writes nothing to the account: its value stays the account's balance and its deposits and
+ * withdrawals the account's movements. The opening is the balance before its first day, so a
+ * movement of that day counts once, as a deposit or a withdrawal.
  */
 export async function createManualService(
   ctx: Ctx,
@@ -451,51 +496,10 @@ export async function createManualService(
   const parsed = manualServiceSchema.parse(input);
   const todayOn = today(ctx.timeZone);
   const now = new Date();
-
-  if (parsed.target === "new") {
-    return getDb().transaction(async (tx) => {
-      const account = await createAccount(
-        ctx,
-        {
-          name: parsed.name,
-          type: accountTypeOf(parsed.category),
-          currency: parsed.currency,
-          openedOn: todayOn,
-        },
-        tx,
-      );
-      const [investment] = await tx
-        .insert(investmentAccounts)
-        .values(
-          userScoped(ctx).stamp({
-            accountId: account.id,
-            category: parsed.category,
-            provider: MANUAL_PROVIDER,
-            managedSince: todayOn,
-            url: parsed.url,
-            openedOn: todayOn,
-          }),
-        )
-        .returning();
-      await tx.insert(investmentAccountPeriods).values(
-        userScoped(ctx).stamp({
-          investmentAccountId: investment.id,
-          fromOn: todayOn,
-          startsAt: now,
-          mode: MANUAL_MODE,
-          origin: "manual" as const,
-          reason: "opening" as const,
-        }),
-      );
-      await rebuild(ctx, investment, account.currency, todayOn, tx);
-      return { accountId: account.id };
-    });
-  }
-
   const eligible = (await eligibleAccounts(ctx)).find((one) => one.account.id === parsed.accountId);
   if (!eligible || eligible.reason !== null) throw new InvestmentError("not_eligible");
-  // The balance at T, read before the handover removes the entries it is made of.
-  const opening = (await balancesOn(ctx, [parsed.accountId], todayOn)).get(parsed.accountId) ?? null;
+  const opening =
+    (await balancesOn(ctx, [parsed.accountId], addDays(todayOn, -1))).get(parsed.accountId) ?? null;
   return getDb().transaction(async (tx) => {
     const [investment] = await tx
       .insert(investmentAccounts)
@@ -517,7 +521,7 @@ export async function createManualService(
         startsAt: now,
         mode: MANUAL_MODE,
         origin: "manual" as const,
-        reason: "handover" as const,
+        reason: "opening" as const,
       }),
     );
     if (opening !== null) {
@@ -525,36 +529,38 @@ export async function createManualService(
         on: todayOn,
         occurredAt: now,
         origin: "conversion",
-        legs: [
-          {
-            leg: "main",
-            kind: "account_valuation",
-            amountCents: opening,
-          },
-        ],
+        legs: [{ leg: "main", kind: "opening_cash", amountCents: opening }],
       });
     }
-    const removed = await takeOverEntries(ctx, parsed.accountId, todayOn, tx);
-    if (removed.length > 0) {
-      await tx.insert(investmentSupersededEntries).values(
-        removed.map((entry) =>
-          userScoped(ctx).stamp({
-            accountId: entry.accountId,
-            balanceEntryId: entry.id,
-            on: entry.on,
-            balanceCents: entry.balanceCents,
-            availableCents: entry.availableCents,
-            source: entry.source,
-            note: entry.note,
-            capturedAt: entry.capturedAt,
-            reason: "handover",
-          }),
-        ),
-      );
-    }
-    await rebuild(ctx, investment, eligible.account.currency, todayOn, tx);
     return { accountId: parsed.accountId };
   });
+}
+
+/**
+ * "Update value" of a manual service (§1.3, PERS-342): a manual balance of its account in Accounts,
+ * the one source of its value. Refused on an account a provider reads (Wallet): there the value
+ * is the provider's, and a correction belongs to Accounts.
+ */
+export const serviceValueSchema = z.object({
+  on: z.string().refine(isCivilDate, "Not a civil date"),
+  cents: z.bigint().nonnegative(),
+});
+export type ServiceValueInput = z.input<typeof serviceValueSchema>;
+
+export async function updateServiceValue(
+  ctx: Ctx,
+  accountId: string,
+  input: ServiceValueInput,
+): Promise<void> {
+  const parsed = serviceValueSchema.parse(input);
+  notFuture(ctx, parsed.on);
+  const investment = await requireInvestmentAccount(ctx, accountId);
+  const account = await getAccount(ctx, accountId);
+  if (!account) throw new InvestmentError("not_found");
+  if (investment.provider !== MANUAL_PROVIDER || account.origin !== "manual") {
+    throw new InvestmentError("not_editable");
+  }
+  await saveBalanceEntry(ctx, accountId, { on: parsed.on, cents: parsed.cents });
 }
 
 export async function updateServiceUrl(
@@ -1029,8 +1035,17 @@ async function legsOf(
 }
 
 /**
- * A deposit, a withdrawal, a valuation of the account or of a position, a sale, a closing, an
- * income or an adjustment: one event with its legs, and the points rewritten from its day.
+ * A manual service is a view on its account (PERS-342): its money in and out are the account's
+ * movements and its value the account's balance, so no operation is written to it.
+ */
+function refuseValueChange(investment: InvestmentAccount): void {
+  if (investment.provider === MANUAL_PROVIDER) throw new InvestmentError("not_editable");
+}
+
+/**
+ * An operation on a service the module writes: one event with its legs, and the points rewritten
+ * from its day. The app offers only what does not move a synced value by hand (`actions.ts`); the
+ * engine takes every kind, as a provider's events and the tests deliver them.
  */
 export async function recordOperation(
   ctx: WriteCtx,
@@ -1043,6 +1058,7 @@ export async function recordOperation(
   if (!account) throw new InvestmentError("not_found");
   return getDb().transaction(async (tx) => {
     const investment = await lockInvestmentAccount(ctx, accountId, tx);
+    refuseValueChange(investment);
     const book = await loadBook(ctx, investment, account.currency, tx);
     const { legs, transactionId } = await legsOf(ctx, tx, book, parsed, account);
     const event = await insertEvent(ctx, tx, investment.id, {
@@ -1121,6 +1137,7 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
     const account = await getAccount(ctx, accountId);
     if (!account) throw new InvestmentError("not_found");
     const investment = await lockInvestmentAccount(ctx, accountId, tx);
+    refuseValueChange(investment);
     const [main] = await tx
       .select({ kind: investmentOperations.kind })
       .from(investmentOperations)

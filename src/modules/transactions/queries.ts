@@ -540,6 +540,61 @@ export async function dailyNetByAccount(
   return byAccount;
 }
 
+/** A movement of an account as Investments counts it: money in (> 0) or out (< 0) of the account. */
+export interface AccountMovement {
+  id: string;
+  on: CivilDate;
+  occurredAt: Date;
+  cents: Cents;
+  payee: string | null;
+  transferGroupId: string | null;
+}
+
+/**
+ * The movements of each account, in the user's zone and in date order: the deposits and the
+ * withdrawals of a manual service of Investments (docs/design/investments.md §1.3, PERS-342). The
+ * same rows as {@link dailyNetByAccount} — hidden ones too, a movement the provider stopped
+ * returning not — one by one, not summed by day.
+ */
+export async function movementsByAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+): Promise<Map<string, AccountMovement[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      cents: transactions.amountCents,
+      payee: transactions.payee,
+      transferGroupId: transactions.transferGroupId,
+    })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        inArray(transactions.accountId, [...accountIds]),
+        isNull(transactions.removedUpstreamAt),
+      ),
+    )
+    .orderBy(asc(transactions.accountId), asc(transactions.occurredAt), asc(transactions.id));
+  const byAccount = new Map<string, AccountMovement[]>();
+  for (const row of rows) {
+    const list = byAccount.get(row.accountId) ?? [];
+    list.push({
+      id: row.id,
+      on: civilDateIn(row.occurredAt, ctx.timeZone),
+      occurredAt: row.occurredAt,
+      cents: row.cents,
+      payee: row.payee,
+      transferGroupId: row.transferGroupId,
+    });
+    byAccount.set(row.accountId, list);
+  }
+  return byAccount;
+}
+
 /**
  * What each category spent on each account in one month (spec §7.3, F3): the sum of the absolute
  * values of the month's `expense` movements, in the user's zone, hidden and gone-from-provider rows

@@ -20,7 +20,7 @@ import { ratesOn } from "@/platform/fx/service";
 import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
-import { managedSinceOf } from "@/modules/investments/managed";
+import { managedSinceOf, serviceAccountIds } from "@/modules/investments/managed";
 import { dailyNetByAccount, transactionIdsOfAccount } from "@/modules/transactions/queries";
 import {
   type AccountCreateInput,
@@ -163,7 +163,7 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
     settings.type !== current.type &&
     settings.type !== "investment" &&
     settings.type !== "crypto" &&
-    (await managedSinceOf(ctx, id)) !== null
+    (await serviceAccountIds(ctx, [id])).has(id)
   ) {
     throw new AccountError("managed_locked");
   }

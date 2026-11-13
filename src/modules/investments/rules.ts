@@ -250,6 +250,30 @@ export interface Book {
   holdings: readonly HoldingLike[];
   readings: readonly ReadingLike[];
   reconciliations: readonly ReconciliationLike[];
+  /**
+   * The account's own balance, one row per day in date order, for a manual service (§1.3,
+   * PERS-342): Accounts holds its value — typed there, or read by Wallet — and in its manual
+   * periods V is that balance, never a value of the module's own. `undefined` for a service the
+   * module writes.
+   */
+  accountBalances?: readonly AccountBalanceLike[];
+}
+
+export interface AccountBalanceLike {
+  on: CivilDate;
+  cents: Cents;
+  /** Read by a person or a provider, not a snapshot copy or a month end rebuilt from movements. */
+  observed: boolean;
+}
+
+/** The last row of `balances` on or before `on`; `null` before the first. */
+export function balanceAt(balances: readonly AccountBalanceLike[], on: CivilDate): AccountBalanceLike | null {
+  let found: AccountBalanceLike | null = null;
+  for (const one of balances) {
+    if (one.on > on) break;
+    found = one;
+  }
+  return found;
 }
 
 /** The deterministic order of events (A2): day, then the moment, then the insertion sequence. */
@@ -634,6 +658,17 @@ export function valueOn(book: Book, on: CivilDate, rates: RateTable): DayValue {
   if (period === null) return EMPTY;
   const adjustmentCents = adjustmentsOn(events, on);
 
+  if (period.origin === "manual" && book.accountBalances !== undefined) {
+    // A manual service is a view on its account (§1.3, PERS-342): V is the account's balance.
+    const balance = balanceAt(book.accountBalances, on);
+    return {
+      ...EMPTY,
+      mode: "total",
+      origin: "manual",
+      valueCents: balance === null ? null : balance.cents,
+    };
+  }
+
   if (period.origin === "manual" && period.mode === "total") {
     // The rule of the legacy `valueOn` (§2.1): unknown — never zero — while money has gone in and
     // nobody has valued the account yet; zero when nothing has happened; never below zero.
@@ -995,9 +1030,14 @@ export function accountPnl(book: Book, on: CivilDate, valueCents: Cents | null):
   const flows = flowsOn(book, on);
   const investedCents = flows.openingCents + flows.depositedCents - flows.withdrawnCents;
   let valuedOn: CivilDate | null = null;
-  for (const event of book.events) {
-    if (event.on > on || (valuedOn !== null && event.on <= valuedOn)) continue;
-    if (event.operations.some((op) => op.kind === "account_valuation")) valuedOn = event.on;
+  if (book.accountBalances !== undefined) {
+    // A view on its account (PERS-342): the value is as old as the last balance read for it.
+    for (const one of book.accountBalances) if (one.on <= on && one.observed) valuedOn = one.on;
+  } else {
+    for (const event of book.events) {
+      if (event.on > on || (valuedOn !== null && event.on <= valuedOn)) continue;
+      if (event.operations.some((op) => op.kind === "account_valuation")) valuedOn = event.on;
+    }
   }
   // No valuation yet: the value is a guess (zero, or flows only), so there is no P&L to show.
   const pnlCents = valueCents === null || valuedOn === null ? null : valueCents - investedCents;

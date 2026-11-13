@@ -6,8 +6,8 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { listBalanceEntries } from "@/modules/accounts/queries";
-import { createAccount } from "@/modules/accounts/service";
+import { listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
+import { applyProviderAccounts, createAccount, saveBalanceEntry } from "@/modules/accounts/service";
 import type { Ctx } from "@/platform/context";
 import { addDays, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -37,7 +37,7 @@ import {
   investmentReadings,
   investmentSyncCoverage,
 } from "./schema";
-import { createManualService, recordOperation } from "./service";
+import { connectTarget, manualService } from "../../../test/investments";
 import {
   confirmKeyRevoked,
   connectInvestmentProvider,
@@ -273,7 +273,12 @@ afterAll(async () => {
 });
 
 async function connectNew(currency = "EUR") {
-  return connectInvestmentProvider(ctx, "etoro", KEYS, { kind: "new", name: "eToro", currency });
+  return connectInvestmentProvider(
+    ctx,
+    "etoro",
+    KEYS,
+    await connectTarget(ctx, { name: "eToro", category: "broker", currency }),
+  );
 }
 
 async function connection() {
@@ -381,25 +386,29 @@ describe("connectInvestmentProvider (§5.1, SEC-05)", () => {
         ctx,
         "etoro",
         { ...KEYS, httpsProxy: "http://evil.example" },
-        { kind: "new", name: "x", currency: "EUR" },
+        await connectTarget(ctx, { name: "x", category: "broker", currency: "EUR" }),
       ),
     ).rejects.toMatchObject({ code: "invalid_credentials" });
     await expect(connectNew("JPY")).rejects.toMatchObject({ code: "unsupported_currency" });
     await expect(
-      connectInvestmentProvider(ctx, "ccxt:kraken", KEYS, { kind: "new", name: "x", currency: "EUR" }),
+      connectInvestmentProvider(
+        ctx,
+        "ccxt:kraken",
+        KEYS,
+        await connectTarget(ctx, { name: "x", category: "crypto", currency: "EUR" }),
+      ),
     ).rejects.toMatchObject({ code: "unknown_provider" });
     expect(calls).toEqual([]);
   });
 
-  it("converts a manual service to synced (§2.5), as the legacy eToro account will be", async () => {
-    const { accountId } = await createManualService(ctx, {
-      target: "new",
+  it("converts a manual service to synced (§2.5): the provider takes the account over from then", async () => {
+    // A manual service is a view on its account (PERS-342): the value typed in Accounts.
+    const { accountId } = await manualService(ctx, {
       name: "eToro legacy",
       category: "broker",
       currency: "EUR",
-      url: null,
     });
-    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 50_000n });
+    await saveBalanceEntry(ctx, accountId, { on: todayOn, cents: 50_000n });
     const result = await connectInvestmentProvider(ctx, "etoro", KEYS, { kind: "existing", accountId });
     expect(result.accountId).toBe(accountId);
     const [investment] = await getDb()
@@ -416,8 +425,30 @@ describe("connectInvestmentProvider (§5.1, SEC-05)", () => {
       ["manual", "opening"],
       ["synced", "conversion"],
     ]);
+    // The provider is the one writer from the conversion: the typed balance is archived, not counted.
     const entries = await listBalanceEntries(ctx, accountId);
-    expect(entries.find((entry) => entry.on === todayOn)?.balanceCents).toBe(123_456n);
+    expect(
+      entries.filter((entry) => entry.on === todayOn).map((entry) => [entry.source, entry.balanceCents]),
+    ).toEqual([["portfolio", 123_456n]]);
+    await expect(saveBalanceEntry(ctx, accountId, { on: todayOn, cents: 1n })).rejects.toMatchObject({
+      code: "managed_locked",
+    });
+  });
+
+  it("refuses an account Wallet reads: it would have two writers (PERS-342)", async () => {
+    await applyProviderAccounts(ctx, "wallet", [
+      {
+        provider: "wallet",
+        providerAccountId: "fineco",
+        name: "Fineco",
+        type: "investment",
+        currency: "EUR",
+      },
+    ]);
+    const [fineco] = (await listAccounts(ctx)).filter((one) => one.name === "Fineco");
+    await expect(
+      connectInvestmentProvider(ctx, "etoro", KEYS, { kind: "existing", accountId: fineco.id }),
+    ).rejects.toMatchObject({ code: "not_eligible" });
   });
 
   it("refuses an account that is not of the provider's type", async () => {
@@ -699,7 +730,7 @@ describe("the key on the service page (§4.3, §5.3)", () => {
     behaviour.check = async () => {
       throw new SourceError("etoro", "unavailable", 503);
     };
-    const target = { kind: "new" as const, name: "eToro", currency: "EUR" };
+    const target = await connectTarget(ctx, { name: "eToro", category: "broker", currency: "EUR" });
     for (let attempt = 0; attempt < 4; attempt++) {
       await expect(
         connectInvestmentProvider(ctx, "etoro", KEYS, target, new Date(now.getTime() + attempt * 1_000)),
@@ -716,7 +747,13 @@ describe("the key on the service page (§4.3, §5.3)", () => {
     // Another person has a budget of their own.
     const other = contextFor((await createTestUser()).id);
     await expect(
-      connectInvestmentProvider(other, "etoro", KEYS, target, new Date(now.getTime() + 60_000)),
+      connectInvestmentProvider(
+        other,
+        "etoro",
+        KEYS,
+        await connectTarget(other, { name: "eToro", category: "broker", currency: "EUR" }),
+        new Date(now.getTime() + 60_000),
+      ),
     ).resolves.toMatchObject({ accountId: expect.any(String) });
     await replaceKey(ctx, accountId, fresh, new Date(now.getTime() + 10 * 60_000 + 1));
   });

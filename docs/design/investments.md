@@ -137,33 +137,49 @@ non sono colonne correnti: sono intervalli in `investment_account_periods` (`inv
 `from_on`, `mode`, `origin`, `reason`). Il valore di un giorno usa il periodo valido in quel giorno.
 Un cambio di modo o di origine è sempre una **conversione esplicita** (sezione 2.5).
 
-**Servizi manuali: solo valore (PERS-335, 11/11/2026).** Un servizio manuale (senza API) ha sempre
-il modo `total`: versamenti, prelievi e il valore letto dal broker ("Aggiorna valore"). Niente
-posizioni, asset, opzioni, acquisti o vendite. Il modo `assets` resta per i servizi sincronizzati e
-per i periodi già scritti. Il P/L del conto è in 2.6.
+**Servizi manuali: una vista sui conti di Accounts (PERS-342, 13/11/2026; sostituisce il PERS-324
+e la parte "versamenti, prelievi" del PERS-335).** Investments usa solo conti che esistono già in
+Accounts e non ne crea: "Aggiungi conto manuale" e "Collega" scelgono un conto di Accounts; un conto
+nuovo si crea in Accounts. Un servizio manuale (`provider = manual`) non scrive nulla sul conto:
+
+- **valore** = il saldo del conto in Accounts, lo stesso del patrimonio netto (`balanceDays`). Lo
+  scrive Wallet (conto sincronizzato) o la persona;
+- **versamenti e prelievi** = i movimenti del conto in Accounts dal primo giorno del servizio
+  (`movementsByAccount`): entrata = versamento, uscita = prelievo. Un movimento che il provider non
+  restituisce più non conta. Le operazioni scritte a mano nel modulo prima del PERS-342 (origine
+  `manual`) restano in tabella ma non contano più; contano le aperture (`conversion`) e lo storico di
+  un collegamento passato (`provider`);
+- **apertura** = il saldo del giorno prima del servizio, così un movimento del primo giorno conta una
+  volta sola;
+- **comandi**: conto sincronizzato da Wallet → nessuno, il valore è di Wallet (una correzione si fa in
+  Accounts); conto tenuto a mano → solo "Aggiorna valore", che scrive un saldo `manual` del conto in
+  Accounts. Niente versamenti, prelievi, correzioni, acquisti o asset digitati nel modulo;
+- nessun punto `portfolio`, nessun blocco: Accounts accetta saldi manuali e Wallet scrive il saldo e i
+  movimenti come per ogni conto (`managedSince` esclude i servizi manuali).
+
+Un servizio sincronizzato (eToro, Binance) resta l'unico scrittore del suo conto da `managed_since`,
+con il valore in sola lettura: niente movimenti manuali né correzioni dalla UI. Il P/L del conto
+manuale è in 2.6.
+
+Perché (PERS-342): con il PERS-324 Fineco, conto di Wallet, era passato a Investments; da
+`managed_since` la sync Wallet saltava il saldo (`skipped`) e il deposito di 8.000 € arrivato in
+Wallet non entrava in nessun calcolo di Investments, che si aspettava versamenti digitati a mano.
 
 Vincoli:
 
 - un conto che è già `valuation_account_id` di un fondo non può diventare un conto di investimento
-  (i fondi restano nel modulo `funds`);
-- **niente adozione per nome (A4).** Al collegamento e nella migrazione l'utente sceglie in modo
-  esplicito: "Crea un conto nuovo" oppure "Usa il conto esistente X". Il dialog elenca i conti dello
-  stesso tipo con saldo e fonte dell'ultima entry;
-- un conto sincronizzato da Wallet si può scegliere (PERS-324, 09/11/2026: Fineco arriva da Wallet).
-  Da `managed_since` la sync Wallet non scrive più il saldo del conto (`saveProviderBalance`
-  aggiorna solo `last_synced_at`): il valore sono i punti `portfolio`, con un solo scrittore. Prima
-  la regola escludeva il conto finché Wallet lo alimentava, e Fineco non poteva diventare un servizio;
-- **passaggio di autorità atomico (A4).** In una sola transazione, al giorno `T` = `managed_since`:
-  le entry `manual`/`import`/`provider` del conto con `on ≥ T` vengono copiate in
-  `investment_superseded_entries` (archivio con motivo) e cancellate; le entry prima di `T` restano;
-  il modulo scrive i punti `portfolio` da `T`. Dopo `T` le Server Action di Accounts rifiutano entry
-  manuali su quel conto. Test: al giorno `T` il valore è uguale in pagina del servizio, Accounts e
-  patrimonio netto.
-
-La sincronizzazione crea i conti nuovi con il ciclo di vita esistente: `applyProviderAccounts` /
-`reconcileProviderAccounts` (`src/modules/accounts/service.ts:594`, `rules.ts:442`), ma con
-l'adozione per nome disattivata per i provider del catalogo Investments: il conto di destinazione è
-quello scelto nel dialog.
+  (i fondi restano nel modulo `funds`), e un servizio non è proposto come conto di un fondo;
+- **niente adozione per nome (A4).** L'utente sceglie in modo esplicito il conto di Accounts. Il
+  dialog elenca i conti dello stesso tipo con saldo;
+- un conto sincronizzato da Wallet si può scegliere per un servizio manuale, mai per un provider
+  (`not_eligible`): avrebbe due scrittori;
+- **collegamento di un provider (A4).** Su un conto senza saldi (creato in Accounts per il servizio)
+  il provider porta i suoi 12 mesi di storico dal primo giorno, come faceva il conto nuovo. Su un conto
+  con saldi, o su un servizio manuale, è un passaggio di autorità atomico: in una sola transazione, al
+  giorno `T` = `managed_since`, le entry `manual`/`import`/`provider` del conto con `on ≥ T` vengono
+  copiate in `investment_superseded_entries` (archivio con motivo) e cancellate; le entry prima di `T`
+  restano; il modulo scrive i punti `portfolio` da `T`. Dopo `T` le Server Action di Accounts
+  rifiutano entry manuali su quel conto.
 
 ### 1.4 Asset: catalogo, posizioni e perimetro
 
@@ -632,26 +648,24 @@ Esempio (storico, prima del PERS-335): conto `total` con una valutazione di 10.0
 10/02 Mattia passa al modo `assets` e dichiara 100 VWCE @ 60 € = 6.000 €. `opening_cash` = 4.000 €.
 V(10/02) = 4.000 + 6.000 = **10.000** prima e dopo.
 
-### 2.6 P/L di un conto manuale (PERS-335)
+### 2.6 P/L di un conto manuale (PERS-335, PERS-342)
 
 ```
-Versato netto(A,d) = apertura del primo periodo + Σ deposit − Σ withdrawal      (on ≤ d)
-P/L(A,d)           = V(A,d) − Versato netto(A,d)
+Versato netto(A,d) = apertura del primo periodo + Σ entrate − Σ uscite del conto   (on ≤ d)
+P/L(A,d)           = V(A,d) − Versato netto(A,d)        V = saldo del conto in Accounts
 P/L %              = P/L ÷ Versato netto     (solo se Versato netto > 0, altrimenti "—")
 ```
 
 `accountPnl` in `rules.ts`; `ServiceSummary.manualPnl` lo espone per i servizi manuali. Con il
 periodo "Tutto" il P/L è lo stesso numero dell'hero (P&L del periodo) e della riga della home.
 
-- Senza un `account_valuation` (nessun "Aggiorna valore", nessuna apertura con un valore) niente
-  P/L: la pagina chiede il valore. Mai un P/L calcolato su un valore inventato.
-- Il valore di apertura di un handover, della migrazione o di una disconnessione è un
-  `account_valuation` con origine `conversion`: conta come valore noto a quella data.
-- La data dell'ultimo `account_valuation` è la data del valore. Più vecchia di 30 giorni
+- Senza un saldo letto del conto (manuale o del provider; non una fine mese ricostruita dai
+  movimenti) niente P/L: la pagina chiede il valore. Mai un P/L calcolato su un valore inventato.
+- La data dell'ultimo saldo letto è la data del valore. Più vecchia di 30 giorni
   (`STALE_VALUE_DAYS`): la pagina lo dice.
 
-Esempio: versati 10.000 €, prelevati 2.000 €, valore 9.000 € → versato netto 8.000 €, P/L
-**+1.000 € (+12,5 %)**.
+Esempio (Fineco, PERS-342): saldo 0 € il giorno prima del servizio, 8.000 € entrati con un bonifico,
+saldo letto da Wallet 8.000 € → versato netto 8.000 €, P/L 0 €.
 
 **Migrazione `0045_manual_value_only`.** Ogni servizio manuale ancora in modo `assets` passa a
 `total` come la conversione `assets` → `total`: nuovo periodo e `account_valuation` = ultimo punto

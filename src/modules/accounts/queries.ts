@@ -160,6 +160,43 @@ export async function observedDays(
   return byAccount;
 }
 
+/**
+ * Every day of each account with its balance, one row per day — the best source of that day, as
+ * {@link balancesOn} picks it — in date order. `observed` says whether a person or a provider read
+ * it (not a snapshot copy, not a month end rebuilt from the movements). What Investments shows a
+ * manual service's value from (docs/design/investments.md §1.3, PERS-342): the account's own
+ * balance, the one the net worth counts.
+ */
+export async function balanceDays(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, { on: CivilDate; cents: Cents; observed: boolean }[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .selectDistinctOn([balanceEntries.accountId, balanceEntries.on], {
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+      source: balanceEntries.source,
+    })
+    .from(balanceEntries)
+    .where(and(userScoped(ctx).owns(balanceEntries), inArray(balanceEntries.accountId, [...accountIds])))
+    .orderBy(
+      asc(balanceEntries.accountId),
+      asc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const notObserved: readonly string[] = NOT_OBSERVED;
+  const byAccount = new Map<string, { on: CivilDate; cents: Cents; observed: boolean }[]>();
+  for (const row of rows) {
+    const days = byAccount.get(row.accountId) ?? [];
+    days.push({ on: row.on, cents: row.balanceCents, observed: !notObserved.includes(row.source) });
+    byAccount.set(row.accountId, days);
+  }
+  return byAccount;
+}
+
 export async function listAccounts(
   ctx: Pick<Ctx, "userId">,
   options: { includeArchived?: boolean } = {},

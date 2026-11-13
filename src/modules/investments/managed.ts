@@ -4,13 +4,15 @@ import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
-import { providerOf } from "./catalog";
+import { MANUAL_PROVIDER, providerOf } from "./catalog";
 import { investmentAccounts, investmentReadings } from "./schema";
 
 /**
- * Which accounts Investments writes (docs/design/investments.md §1.3): from `managed_since` the
- * module is their only writer, and Accounts refuses a manual balance from that day on. Its own file
- * with no import of another module, so Accounts can ask without a cycle.
+ * Which accounts Investments writes (docs/design/investments.md §1.3): a service a provider feeds.
+ * From `managed_since` the module is their only writer, and Accounts refuses a manual balance and
+ * Wallet a provider balance from that day on. A manual service is no writer (PERS-342): Accounts
+ * keeps its balance, so it is not here. Its own file with no import of another module, so Accounts
+ * can ask without a cycle.
  */
 export async function managedSince(
   ctx: Pick<Ctx, "userId">,
@@ -21,18 +23,33 @@ export async function managedSince(
     .select({ accountId: investmentAccounts.accountId, managedSince: investmentAccounts.managedSince })
     .from(investmentAccounts)
     .where(
-      and(userScoped(ctx).owns(investmentAccounts), inArray(investmentAccounts.accountId, [...accountIds])),
+      and(
+        userScoped(ctx).owns(investmentAccounts),
+        inArray(investmentAccounts.accountId, [...accountIds]),
+        ne(investmentAccounts.provider, MANUAL_PROVIDER),
+      ),
     );
   return new Map(rows.map((row) => [row.accountId, row.managedSince]));
 }
 
-/** `managed_since` of one account, `null` when Investments does not manage it. */
+/** `managed_since` of one account, `null` when Investments does not write it. */
 export async function managedSinceOf(ctx: Pick<Ctx, "userId">, accountId: string): Promise<CivilDate | null> {
-  const [row] = await getDb()
-    .select({ managedSince: investmentAccounts.managedSince })
+  return (await managedSince(ctx, [accountId])).get(accountId) ?? null;
+}
+
+/** The accounts among `accountIds` that are a service of Investments, written by it or not. */
+export async function serviceAccountIds(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Set<string>> {
+  if (accountIds.length === 0) return new Set();
+  const rows = await getDb()
+    .select({ accountId: investmentAccounts.accountId })
     .from(investmentAccounts)
-    .where(and(userScoped(ctx).owns(investmentAccounts), eq(investmentAccounts.accountId, accountId)));
-  return row?.managedSince ?? null;
+    .where(
+      and(userScoped(ctx).owns(investmentAccounts), inArray(investmentAccounts.accountId, [...accountIds])),
+    );
+  return new Set(rows.map((row) => row.accountId));
 }
 
 /**

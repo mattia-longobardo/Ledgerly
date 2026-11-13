@@ -5,7 +5,6 @@ import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { accountsView, listBalanceEntries } from "@/modules/accounts/queries";
 import {
-  AccountError,
   applyProviderAccounts,
   createAccount,
   saveBalanceEntry,
@@ -16,7 +15,7 @@ import type { Ctx } from "@/platform/context";
 import { addDays, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
-import { assetsService } from "../../../test/investments";
+import { accountMovement, assetsService, engineService, manualService } from "../../../test/investments";
 import { createTestUser } from "../../../test/users";
 import {
   catalogView,
@@ -42,13 +41,13 @@ import {
   eligibleAccounts,
   InvestmentError,
   linkTransfer,
-  type ManualServiceInput,
   rebuildAll,
   recordOperation,
   reconcileHolding,
   saveReading,
   unlinkTransfer,
   updateOperation,
+  updateServiceValue,
 } from "./service";
 import { investmentEvents } from "./schema";
 
@@ -106,10 +105,9 @@ async function backdate(accountId: string, from: string, origin: "manual" | "syn
   await rebuildAll(ctx, accountId);
 }
 
+/** A service the module writes (`engineService`): the engine's examples need typed operations. */
 async function newService(mode: "assets" | "total", name = "Directa") {
-  const input = { target: "new" as const, name, category: "broker" as const, currency: "EUR", url: null };
-  return (mode === "assets" ? await assetsService(ctx, input) : await createManualService(ctx, input))
-    .accountId;
+  return (await engineService(ctx, { name, category: "broker", currency: "EUR", mode })).accountId;
 }
 
 async function holdingId(accountId: string): Promise<string> {
@@ -117,26 +115,112 @@ async function holdingId(accountId: string): Promise<string> {
   return detail?.holdings[0]?.id as string;
 }
 
-describe("a new manual service", () => {
-  it("is an investment account with its first point at zero, today", async () => {
-    const accountId = await newService("total");
-    expect(await points(accountId)).toEqual(new Map([[todayOn, 0n]]));
+describe("a manual service is a view on its account in Accounts (§1.3, PERS-342)", () => {
+  it("uses an existing account: its value is the balance, its money in and out the movements", async () => {
+    const { accountId } = await manualService(ctx, { name: "Directa", category: "broker", currency: "EUR" });
+    // Nothing written by the module: no point, no lock.
+    expect(await points(accountId)).toEqual(new Map());
+    await accountMovement(ctx, accountId, todayOn, eur(10_000));
+    await accountMovement(ctx, accountId, todayOn, eur(-2_000));
+    // A movement the provider stopped returning is no longer money in.
+    await accountMovement(ctx, accountId, todayOn, eur(500), { removed: true });
+    // Money in and no balance yet: no P&L, never a made-up one.
+    let pnl = (await serviceDetail(ctx, accountId))?.summary.manualPnl;
+    expect(pnl).toMatchObject({ valueCents: null, investedCents: eur(8_000), pnlCents: null, stale: true });
+    await updateServiceValue(ctx, accountId, { on: todayOn, cents: eur(9_000) });
     const detail = await serviceDetail(ctx, accountId);
-    expect(detail?.summary.account.type).toBe("investment");
-    expect(detail?.summary.mode).toBe("total");
-    expect(detail?.summary.valueCents).toBe(0n);
+    pnl = detail?.summary.manualPnl;
+    expect(pnl).toEqual({
+      valueCents: eur(9_000),
+      investedCents: eur(8_000),
+      pnlCents: eur(1_000),
+      rate: 0.125,
+      valuedOn: todayOn,
+      stale: false,
+    });
+    expect(detail?.summary.performance.gainCents).toBe(eur(1_000));
+    // "Update value" is the account's own manual balance: Accounts and the service say the same.
+    const entries = await listBalanceEntries(ctx, accountId);
+    expect(entries.map((entry) => [entry.on, entry.source, entry.balanceCents])).toEqual([
+      [todayOn, "manual", eur(9_000)],
+    ]);
+    const view = await accountsView(ctx);
+    expect(view.rows.find((one) => one.account.id === accountId)?.balance).toBe(eur(9_000));
+    expect(view.total).toBe(eur(9_000));
   });
 
-  it("keeps only its value (PERS-335): a mode asked for is ignored, and no position goes in", async () => {
-    const { accountId } = await createManualService(ctx, {
-      target: "new",
-      name: "Fineco",
-      category: "broker",
-      currency: "EUR",
-      url: null,
-      mode: "assets",
-    } as ManualServiceInput);
-    expect((await serviceDetail(ctx, accountId))?.summary.mode).toBe("total");
+  it("opens at the balance before its first day; the movements of that day count once", async () => {
+    const account = await createAccount(ctx, { name: "Directa", type: "investment", currency: "EUR" });
+    await saveBalanceEntry(ctx, account.id, { on: addDays(todayOn, -10), cents: eur(1_000) });
+    await accountMovement(ctx, account.id, addDays(todayOn, -5), eur(300));
+    await accountMovement(ctx, account.id, todayOn, eur(500));
+    await saveBalanceEntry(ctx, account.id, { on: todayOn, cents: eur(1_500) });
+    await createManualService(ctx, { accountId: account.id, category: "broker", url: null });
+    const detail = await serviceDetail(ctx, account.id);
+    expect(detail?.summary.mode).toBe("total");
+    // Opening 1.000 (the balance of yesterday) + 500 in today; the 300 before the start is in the opening.
+    expect(detail?.summary.manualPnl).toMatchObject({
+      valueCents: eur(1_500),
+      investedCents: eur(1_500),
+      pnlCents: 0n,
+    });
+    // The account keeps every entry: nothing is archived or taken over.
+    expect(await getDb().select().from(investmentSupersededEntries)).toEqual([]);
+    expect((await listBalanceEntries(ctx, account.id)).map((entry) => entry.source)).toEqual([
+      "manual",
+      "manual",
+    ]);
+  });
+
+  it("Fineco from Wallet: Wallet keeps writing the balance and the movements count; the value is not typed", async () => {
+    // The bug: once a service, Fineco took no Wallet balance and its deposit counted nowhere.
+    await applyProviderAccounts(ctx, "wallet", [
+      {
+        provider: "wallet",
+        providerAccountId: "fineco",
+        name: "Fineco",
+        type: "investment",
+        currency: "EUR",
+      },
+    ]);
+    const [fineco] = (await accountsView(ctx)).rows.filter((one) => one.account.name === "Fineco");
+    const accountId = fineco.account.id;
+    await saveProviderBalance(ctx, accountId, { on: addDays(todayOn, -1), cents: 0n });
+    const reasons = new Map((await eligibleAccounts(ctx)).map((one) => [one.account.id, one.reason]));
+    expect(reasons.get(accountId)).toBeNull();
+    await createManualService(ctx, { accountId, category: "broker", url: null });
+
+    // The next Wallet pass: the deposit and the balance it brings.
+    await accountMovement(ctx, accountId, todayOn, eur(8_000), { payee: "MATTIA LONGOBARDO" });
+    await expect(
+      saveProviderBalance(ctx, accountId, { on: todayOn, cents: eur(8_000) }),
+    ).resolves.not.toBeNull();
+    const detail = await serviceDetail(ctx, accountId);
+    expect(detail?.summary.valueCents).toBe(eur(8_000));
+    expect(detail?.summary.manualPnl).toMatchObject({
+      valueCents: eur(8_000),
+      investedCents: eur(8_000),
+      pnlCents: 0n,
+      valuedOn: todayOn,
+    });
+    const view = await accountsView(ctx);
+    expect(view.rows.find((one) => one.account.id === accountId)?.balance).toBe(eur(8_000));
+    // Counted once in the net worth.
+    expect(view.total).toBe(eur(8_000));
+    // Its value is Wallet's: not typed in Investments.
+    await expect(updateServiceValue(ctx, accountId, { on: todayOn, cents: eur(1) })).rejects.toMatchObject({
+      code: "not_editable",
+    });
+  });
+
+  it("takes no operation of its own: money in and out are the account's", async () => {
+    const { accountId } = await manualService(ctx, { name: "Directa", category: "broker", currency: "EUR" });
+    for (const input of [
+      { kind: "deposit" as const, on: todayOn, amountCents: eur(1) },
+      { kind: "account_valuation" as const, on: todayOn, amountCents: eur(1) },
+    ]) {
+      await expect(recordOperation(ctx, accountId, input)).rejects.toMatchObject({ code: "not_editable" });
+    }
     await expect(
       addAsset(ctx, accountId, {
         asset: { create: { class: "etf", name: "Vanguard FTSE All-World", symbol: "VWCE", currency: "EUR" } },
@@ -145,39 +229,10 @@ describe("a new manual service", () => {
         unitPrice: price("60"),
       }),
     ).rejects.toMatchObject({ code: "wrong_mode" });
-    const periods = await getDb()
-      .select({ mode: investmentAccountPeriods.mode })
-      .from(investmentAccountPeriods)
-      .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentAccountPeriods.investmentAccountId))
-      .where(eq(investmentAccounts.accountId, accountId));
-    expect(periods).toEqual([{ mode: "total" }]);
   });
 
-  it("10.000 in, 2.000 out, worth 9.000: +1.000 and +12,5% (PERS-335)", async () => {
-    const accountId = await newService("total", "Fineco");
-    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: eur(10000) });
-    await recordOperation(ctx, accountId, { kind: "withdrawal", on: todayOn, amountCents: eur(2000) });
-    // Money in and no value typed yet: no P&L, never a made-up one.
-    let pnl = (await serviceDetail(ctx, accountId))?.summary.manualPnl;
-    expect(pnl).toMatchObject({ valueCents: null, pnlCents: null, rate: null, valuedOn: null, stale: true });
-    await recordOperation(ctx, accountId, { kind: "account_valuation", on: todayOn, amountCents: eur(9000) });
-    const detail = await serviceDetail(ctx, accountId);
-    pnl = detail?.summary.manualPnl;
-    expect(pnl).toEqual({
-      valueCents: eur(9000),
-      investedCents: eur(8000),
-      pnlCents: eur(1000),
-      rate: 0.125,
-      valuedOn: todayOn,
-      stale: false,
-    });
-    // The same gain as the summary's performance, the number the home adds up.
-    expect(detail?.summary.performance.gainCents).toBe(eur(1000));
-  });
-
-  it("an exchange is a crypto account; a total account starts at zero", async () => {
-    const { accountId } = await createManualService(ctx, {
-      target: "new",
+  it("an exchange is a crypto account, with its link", async () => {
+    const { accountId } = await manualService(ctx, {
       name: "Ledger",
       category: "crypto",
       currency: "EUR",
@@ -186,7 +241,7 @@ describe("a new manual service", () => {
     const detail = await serviceDetail(ctx, accountId);
     expect(detail?.summary.account.type).toBe("crypto");
     expect(detail?.summary.investment.url).toBe("https://ledger.com");
-    expect(detail?.summary.valueCents).toBe(0n);
+    expect(detail?.summary.valueCents).toBeNull();
   });
 });
 
@@ -311,9 +366,11 @@ describe("§2.1 the Directa example, end to end", () => {
     });
     expect(home.byClass).toEqual([{ key: "cash", cents: eur(8996), share: 1 }]);
     expect(home.byService.map((slice) => slice.key)).toEqual(["Directa"]);
+    // The catalog lists the manual services under "Manual account" (PERS-342: views on Accounts).
+    const fineco = await manualService(ctx, { name: "Fineco", category: "broker", currency: "EUR" });
     const catalog = await catalogView(ctx);
     expect(catalog.providers.find((provider) => provider.id === "manual")?.connected).toEqual([
-      { accountId, name: "Directa" },
+      { accountId: fineco.accountId, name: "Fineco" },
     ]);
   });
 
@@ -377,138 +434,18 @@ describe("revisions (A2)", () => {
   });
 });
 
-describe("handover of an existing account (§1.3, A4)", () => {
+describe("the accounts a service may use (§1.3)", () => {
   async function existing() {
-    const account = await createAccount(ctx, {
-      name: "Fineco",
-      type: "investment",
-      currency: "EUR",
-      color: null,
-      reference: "",
-      purpose: "",
-      openedOn: null,
-      notes: "",
-      openingBalance: null,
-    });
-    await saveBalanceEntry(ctx, account.id, { on: addDays(todayOn, -10), cents: eur(1000) });
+    const account = await createAccount(ctx, { name: "Fineco", type: "investment", currency: "EUR" });
     await saveBalanceEntry(ctx, account.id, { on: todayOn, cents: eur(1500) });
     return account.id;
   }
 
-  it("archives the entries from T, keeps the ones before, and opens at the balance of T", async () => {
+  it("Accounts still takes a manual balance of a manual service, any day (PERS-342)", async () => {
     const accountId = await existing();
-    await createManualService(ctx, {
-      target: "existing",
-      accountId,
-      category: "broker",
-      url: null,
-    });
-
-    const archived = await getDb()
-      .select()
-      .from(investmentSupersededEntries)
-      .where(eq(investmentSupersededEntries.accountId, accountId));
-    expect(archived.map((row) => [row.on, row.balanceCents, row.source, row.reason])).toEqual([
-      [todayOn, eur(1500), "manual", "handover"],
-    ]);
-    const left = (await listBalanceEntries(ctx, accountId))
-      .map((row) => ({ on: row.on, source: row.source, cents: row.balanceCents }))
-      .sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
-    expect(left).toEqual([
-      { on: addDays(todayOn, -10), source: "manual", cents: eur(1000) },
-      { on: todayOn, source: "portfolio", cents: eur(1500) },
-    ]);
-  });
-
-  it("on T the value is the same on the service page, in Accounts and in the net worth", async () => {
-    const accountId = await existing();
-    await createManualService(ctx, {
-      target: "existing",
-      accountId,
-      category: "broker",
-      url: null,
-    });
-    const detail = await serviceDetail(ctx, accountId);
-    const view = await accountsView(ctx);
-    const row = view.rows.find((one) => one.account.id === accountId);
-    expect(detail?.summary.valueCents).toBe(eur(1500));
-    expect(row?.balance).toBe(eur(1500));
-    // The only account: counted once, never twice.
-    expect(view.total).toBe(eur(1500));
-    expect(view.buckets.investments.total).toBe(eur(1500));
-  });
-
-  it("opens with the balance of T as the first value, which is not the person's to change", async () => {
-    const accountId = await existing();
-    await createManualService(ctx, { target: "existing", accountId, category: "broker", url: null });
-    const detail = await serviceDetail(ctx, accountId);
-    expect(detail?.summary.mode).toBe("total");
-    expect(detail?.summary.manualPnl).toMatchObject({
-      valueCents: eur(1500),
-      investedCents: eur(1500),
-      pnlCents: 0n,
-      valuedOn: todayOn,
-    });
-    const opening = detail?.operations.find((row) => row.origin === "conversion");
-    expect(opening?.kind).toBe("account_valuation");
-    await expect(deleteOperation(ctx, opening?.id as string)).rejects.toMatchObject({ code: "not_editable" });
-  });
-
-  it("a Wallet account (Fineco) becomes a manual service, and Wallet stops writing its balance", async () => {
-    // The bug: an account synced by Wallet was offered disabled ("fed by a connection") and the
-    // handover refused it, so Fineco could not become a service without being counted twice.
-    await applyProviderAccounts(ctx, "wallet", [
-      {
-        provider: "wallet",
-        providerAccountId: "fineco",
-        name: "Fineco",
-        type: "investment",
-        currency: "EUR",
-      },
-    ]);
-    const [fineco] = (await accountsView(ctx)).rows.filter((one) => one.account.name === "Fineco");
-    const accountId = fineco.account.id;
-    await saveProviderBalance(ctx, accountId, { on: addDays(todayOn, -1), cents: eur(5_000) });
-    await saveProviderBalance(ctx, accountId, { on: todayOn, cents: eur(5_100) });
-
-    const reasons = new Map((await eligibleAccounts(ctx)).map((one) => [one.account.id, one.reason]));
-    expect(reasons.get(accountId)).toBeNull();
-    await createManualService(ctx, {
-      target: "existing",
-      accountId,
-      category: "broker",
-      url: null,
-    });
-    expect((await serviceDetail(ctx, accountId))?.summary.valueCents).toBe(eur(5_100));
-
-    // The next Wallet pass reads a new balance: Investments is the account's only writer from T.
-    await expect(saveProviderBalance(ctx, accountId, { on: todayOn, cents: eur(9_999) })).resolves.toBeNull();
-    const entries = await listBalanceEntries(ctx, accountId);
-    expect(entries.filter((entry) => entry.source === "provider").map((entry) => entry.on)).toEqual([
-      addDays(todayOn, -1),
-    ]);
-    const view = await accountsView(ctx);
-    expect(view.rows.find((one) => one.account.id === accountId)?.balance).toBe(eur(5_100));
-    expect(view.rows.find((one) => one.account.id === accountId)?.stale).toBe(false);
-  });
-
-  it("from T Accounts refuses a manual balance; before T it still takes one", async () => {
-    const accountId = await existing();
-    await createManualService(ctx, {
-      target: "existing",
-      accountId,
-      category: "broker",
-      url: null,
-    });
-    await expect(saveBalanceEntry(ctx, accountId, { on: todayOn, cents: eur(1) })).rejects.toBeInstanceOf(
-      AccountError,
-    );
-    await expect(saveBalanceEntry(ctx, accountId, { on: todayOn, cents: eur(1) })).rejects.toMatchObject({
-      code: "managed_locked",
-    });
-    await expect(
-      saveBalanceEntry(ctx, accountId, { on: addDays(todayOn, -3), cents: eur(1200) }),
-    ).resolves.toBeTruthy();
+    await createManualService(ctx, { accountId, category: "broker", url: null });
+    await expect(saveBalanceEntry(ctx, accountId, { on: todayOn, cents: eur(1) })).resolves.toBeTruthy();
+    expect((await serviceDetail(ctx, accountId))?.summary.valueCents).toBe(eur(1));
   });
 
   it("a fund's valuation account and a service are not offered, and are refused", async () => {
@@ -526,24 +463,16 @@ describe("handover of an existing account (§1.3, A4)", () => {
       valuationAccountId: null,
     });
     const accountId = await existing();
-    await createManualService(ctx, {
-      target: "existing",
-      accountId,
-      category: "broker",
-      url: null,
-    });
+    await createManualService(ctx, { accountId, category: "broker", url: null });
     const reasons = new Map((await eligibleAccounts(ctx)).map((one) => [one.account.id, one.reason]));
     expect(reasons.get(fund.valuationAccountId)).toBe("fund");
     expect(reasons.get(accountId)).toBe("managed");
     for (const id of [fund.valuationAccountId, accountId]) {
       await expect(
-        createManualService(ctx, {
-          target: "existing",
-          accountId: id,
-          category: "broker",
-          url: null,
-        }),
-      ).rejects.toMatchObject({ code: "not_eligible" });
+        createManualService(ctx, { accountId: id, category: "broker", url: null }),
+      ).rejects.toMatchObject({
+        code: "not_eligible",
+      });
     }
   });
 });
@@ -557,7 +486,6 @@ describe("§2.2 a synced account: example 2b with a reading and a reconciliation
 
   async function binance() {
     const { accountId } = await assetsService(ctx, {
-      target: "new",
       name: "Binance",
       category: "crypto",
       currency: "EUR",
@@ -679,8 +607,7 @@ describe("one person's services are theirs alone", () => {
 describe("§2.4 transfers between the person's services (A10)", () => {
   async function twoServices() {
     const make = (name: string) =>
-      createManualService(ctx, {
-        target: "new",
+      engineService(ctx, {
         name,
         category: "broker",
         currency: "EUR",

@@ -34,7 +34,6 @@ afterAll(closeDatabase);
 /** A manual service opened on `from` (the service always opens today; dated examples need it earlier). */
 async function serviceFrom(from: string): Promise<{ accountId: string; investmentId: string }> {
   const { accountId } = await assetsService(ctx, {
-    target: "new",
     name: "Directa",
     category: "broker",
     currency: "EUR",

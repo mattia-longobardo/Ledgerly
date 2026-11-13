@@ -14,6 +14,7 @@ import {
   applyProviderAccounts,
   createAccount,
   saveBalanceEntry,
+  saveProviderBalance,
 } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
 import {
@@ -40,9 +41,8 @@ import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "../src/modules/pockets/service";
 import { expenseLinkCandidates } from "../src/modules/pockets/queries";
-import { createManualService, recordOperation } from "../src/modules/investments/service";
+import { createManualService } from "../src/modules/investments/service";
 import { connectInvestmentProvider, setSourcesForTests } from "../src/modules/investments/sync";
-import { linkCandidates } from "../src/modules/transactions/queries";
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
 import { setLimit } from "../src/modules/budgets/service";
@@ -216,9 +216,14 @@ async function contextOf(email: string): Promise<Ctx> {
 }
 
 /** A Wallet account adopted the way the sync adopts one; returns its id. */
-async function syncedAccount(ctx: Ctx, providerAccountId: string, name: string): Promise<string> {
+async function syncedAccount(
+  ctx: Ctx,
+  providerAccountId: string,
+  name: string,
+  type: "checking" | "investment" = "checking",
+): Promise<string> {
   await applyProviderAccounts(ctx, WALLET_PROVIDER, [
-    { provider: WALLET_PROVIDER, providerAccountId, name, type: "checking", currency: "EUR" },
+    { provider: WALLET_PROVIDER, providerAccountId, name, type, currency: "EUR" },
   ]);
   const found = (
     await getDb()
@@ -360,19 +365,23 @@ async function seedPockets(): Promise<void> {
 }
 
 /**
- * Investments: no service yet — the journey creates its manual account — and the two bank movements
- * a deposit and a withdrawal can be linked to: 2.000 € sent to eToro ten days ago, 2.401,58 € back five
- * days ago, on a synced account.
+ * Investments (PERS-342): no service yet — the journey adds two from Accounts — a manual investment
+ * account, Directa, worth 8.000 € yesterday, and an investment account Wallet reads, Fineco, at zero
+ * yesterday, that took 8.000 € in today and holds them. Investments creates no account of its own.
  */
 async function seedInvestments(): Promise<void> {
   const ctx = await contextOf(USERS.investments.email);
   const on = today(ctx.timeZone);
   const account = await syncedAccount(ctx, "e2e-investments-1", "ING Conto Arancio");
   await saveBalanceEntry(ctx, account, { on, cents: 500_000n });
-  await upsertFromProvider(ctx, account, [
-    walletMovement("e2e-investments-tx-1", addDays(on, -10), -200_000n, "Bonifico eToro", null),
-    walletMovement("e2e-investments-tx-2", addDays(on, -5), 240_158n, "Accredito eToro", null),
+  const directa = await createAccount(ctx, { name: "Directa", type: "investment", currency: "EUR" });
+  await saveBalanceEntry(ctx, directa.id, { on: addDays(on, -1), cents: 800_000n });
+  const fineco = await syncedAccount(ctx, "e2e-investments-2", "Fineco", "investment");
+  await saveProviderBalance(ctx, fineco, { on: addDays(on, -1), cents: 0n });
+  await upsertFromProvider(ctx, fineco, [
+    walletMovement("e2e-investments-tx-3", on, 800_000n, "MATTIA LONGOBARDO", null),
   ]);
+  await saveProviderBalance(ctx, fineco, { on, cents: 800_000n });
 }
 
 /**
@@ -948,7 +957,11 @@ async function seedEtoro(ctx: Ctx, on: string): Promise<void> {
       ctx,
       "etoro",
       { api_key: "e2e-not-a-key-0001", user_key: "e2e-not-a-key-0002" },
-      { kind: "new", name: "eToro", currency: "USD" },
+      // Investments creates no account (PERS-342): the empty one takes the 12 months of history.
+      {
+        kind: "existing",
+        accountId: (await createAccount(ctx, { name: "eToro", type: "investment", currency: "USD" })).id,
+      },
     );
   } finally {
     setSourcesForTests(null);
@@ -1133,7 +1146,10 @@ async function seedBinance(ctx: Ctx, on: string): Promise<void> {
       ctx,
       "ccxt:binance",
       { api_key: "e2e-not-a-key-0003", secret: "e2e-not-a-key-0004" },
-      { kind: "new", name: "Binance", currency: "EUR" },
+      {
+        kind: "existing",
+        accountId: (await createAccount(ctx, { name: "Binance", type: "crypto", currency: "EUR" })).id,
+      },
     );
   } finally {
     setSourcesForTests(null);
@@ -1251,46 +1267,26 @@ async function seedLayout(): Promise<void> {
   const [gift] = await expenseLinkCandidates(ctx);
   if (gift) await linkExpense(ctx, gifts.id, gift.id);
 
-  // ——— Investments (docs/design/investments.md §4): two manual accounts — deposits, withdrawals and
-  // the value typed from the broker, no positions (PERS-335) — and the two synced ones. A service
-  // starts today, so every operation is dated today.
-  const transfer = (await linkCandidates(ctx, { direction: "out", from: `${lastMonth}-01`, to: on })).find(
-    (candidate) => candidate.payee === "Revolut",
-  );
-  if (!transfer) throw new Error("e2e: the layout user's giroconto is missing");
-  const transferCents = transfer.cents < 0n ? -transfer.cents : transfer.cents;
-  const directa = await createManualService(ctx, {
-    target: "new",
-    name: "Directa",
+  // ——— Investments (docs/design/investments.md §1.3, §4; PERS-342): two manual services on accounts
+  // of Accounts — Directa typed by hand (1.000.000 € yesterday, 1.045.000 € today), Fineco read by
+  // Wallet (zero yesterday, 512.340 € today after 500.000 € in and 100.000 € out) — and the two synced
+  // ones. A service starts today: what was there yesterday is its opening.
+  const directa = await createAccount(ctx, { name: "Directa", type: "investment", currency: "EUR" });
+  await saveBalanceEntry(ctx, directa.id, { on: addDays(on, -1), cents: 1_000_000n });
+  await saveBalanceEntry(ctx, directa.id, { on, cents: 1_045_000n });
+  await createManualService(ctx, {
+    accountId: directa.id,
     category: "broker",
-    currency: "EUR",
     url: "https://www.directa.it",
   });
-  await recordOperation(ctx, directa.accountId, { kind: "deposit", on, amountCents: 1_000_000n });
-  await recordOperation(ctx, directa.accountId, {
-    kind: "deposit",
-    on,
-    amountCents: transferCents,
-    transactionId: transfer.id,
-  });
-  await recordOperation(ctx, directa.accountId, {
-    kind: "account_valuation",
-    on,
-    amountCents: 1_000_000n + transferCents + 45_000n,
-  });
-  const fineco = await createManualService(ctx, {
-    target: "new",
-    name: "Fineco Conto Deposito",
-    category: "accounts",
-    currency: "EUR",
-    url: null,
-  });
-  await recordOperation(ctx, fineco.accountId, { kind: "deposit", on, amountCents: 500_000n });
-  await recordOperation(ctx, fineco.accountId, { kind: "account_valuation", on, amountCents: 512_340n });
-  // A transfer to confirm (§2.4): 1.000 € out of Fineco and into Directa on the same day, so both
-  // service pages show the proposal the screen checks measure.
-  await recordOperation(ctx, fineco.accountId, { kind: "withdrawal", on, amountCents: 100_000n });
-  await recordOperation(ctx, directa.accountId, { kind: "deposit", on, amountCents: 100_000n });
+  const fineco = await syncedAccount(ctx, "e2e-layout-fineco", "Fineco Conto Deposito", "investment");
+  await saveProviderBalance(ctx, fineco, { on: addDays(on, -1), cents: 0n });
+  await upsertFromProvider(ctx, fineco, [
+    walletMovement("e2e-layout-fineco-1", on, 500_000n, "Bonifico in entrata", null),
+    walletMovement("e2e-layout-fineco-2", on, -100_000n, "Bonifico in uscita", null),
+  ]);
+  await saveProviderBalance(ctx, fineco, { on, cents: 412_340n });
+  await createManualService(ctx, { accountId: fineco, category: "accounts", url: null });
   await seedEtoro(ctx, on);
   await seedBinance(ctx, on);
 

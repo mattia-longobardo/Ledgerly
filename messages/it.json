@@ -1514,7 +1514,7 @@
         "title": "I movimenti arrivano con le spese",
         "description": "I movimenti di questo conto compariranno qui quando arriverà il modulo spese."
       },
-      "managedInInvestments": "Gestito in Investimenti"
+      "managedInInvestments": "In Investimenti"
     },
     "entries": {
       "saved": "Saldo salvato",
@@ -3184,7 +3184,7 @@
       "accountSettings": "Impostazioni del conto",
       "saveUrl": "Salva link",
       "open": "Apri",
-      "createManual": "Crea conto manuale",
+      "createManual": "Aggiungi conto manuale",
       "more": "Altre azioni",
       "linkTransfer": "Collega come trasferimento",
       "unlinkTransfer": "Scollega trasferimento"
@@ -3296,27 +3296,21 @@
       "plannedSection": "In arrivo · {count}"
     },
     "manualForm": {
-      "title": "Crea conto manuale",
-      "description": "Un servizio senza collegamento: registri versamenti, prelievi e il valore che leggi dal broker. Il suo valore entra nel patrimonio da oggi.",
-      "destination": "Conto di destinazione",
-      "newAccount": "Crea un conto nuovo",
-      "existingAccount": "Usa un conto esistente",
-      "name": "Nome",
-      "namePlaceholder": "es. Directa",
+      "title": "Aggiungi un conto di Conti",
+      "description": "Investimenti mostra un conto che esiste già in Conti. Il valore è il saldo del conto; versamenti e prelievi sono i suoi movimenti. Un conto nuovo si crea in Conti.",
       "category": "Categoria",
-      "currency": "Valuta del conto",
-      "currencyHint": "Ogni saldo e operazione del conto è in questa valuta.",
       "url": "Link",
       "urlHint": "Facoltativo: l'indirizzo del sito del servizio.",
       "existing": "Conto",
-      "existingHint": "Da oggi Investimenti scrive il valore di questo conto; il saldo di oggi apre il servizio.",
+      "existingHint": "Un conto letto da Wallet resta sincronizzato; un conto a mano si aggiorna con «Aggiorna valore».",
       "noExisting": "Nessun conto di investimento o crypto da usare.",
       "option": "{name} · {balance}",
       "reasons": {
         "fund": "conto di un fondo",
-        "managed": "già un servizio"
+        "managed": "già un servizio",
+        "synced": "letto da Wallet"
       },
-      "submit": "Crea"
+      "submit": "Aggiungi"
     },
     "detail": {
       "since": "Gestito dal {date}",
@@ -3575,7 +3569,8 @@
       "disconnected": "{name} scollegato: ora il conto è manuale",
       "revoked": "Revoca registrata",
       "transferLinked": "Trasferimento collegato",
-      "transferUnlinked": "Trasferimento scollegato"
+      "transferUnlinked": "Trasferimento scollegato",
+      "valueUpdated": "Valore di {name} aggiornato"
     },
     "errors": {
       "invalid": "Controlla i campi e riprova.",
@@ -3638,7 +3633,7 @@
         "secret": "Segreto"
       },
       "currencyHint": "La valuta in cui {name} riporta il conto.",
-      "existingHint": "Un conto dello stesso tipo che nessun altro scrive, o un servizio manuale: dal collegamento in poi il suo valore sono le letture di {name}.",
+      "existingHint": "Un conto di Conti dello stesso tipo, tenuto a mano e che nessun altro scrive, o un servizio manuale: dal collegamento in poi il suo valore sono le letture di {name}. Un conto nuovo si crea in Conti.",
       "currencyNotSupported": "valuta non supportata",
       "submit": "Verifica e collega",
       "checking": "Verifica della chiave…"
@@ -3865,30 +3860,18 @@
       "sentenceColon": "{label}: {detail}"
     },
     "header": {
-      "addOperation": "Aggiungi operazione",
-      "operations": {
-        "buy": "Acquisto",
-        "deposit": "Versamento",
-        "withdrawal": "Prelievo",
-        "valuation": "Aggiorna valore"
-      },
-      "manual": {
-        "buy": "Acquisto manuale",
-        "deposit": "Versamento manuale",
-        "withdrawal": "Prelievo manuale",
-        "valuation": "Aggiorna valore"
-      },
-      "correct": "Correggi il valore",
       "state": {
         "synced": "Sincronizzato {when}",
         "never": "Non ancora sincronizzato",
         "error": "Errore: {error}",
         "revoked": "Errore: chiave rifiutata",
         "disconnected": "Disconnesso: tenuto a mano",
-        "manual": "Tenuto a mano"
+        "manual": "Tenuto a mano",
+        "wallet": "Sincronizzato da Wallet"
       },
       "today": "oggi {time}",
-      "openSite": "Apri {name}"
+      "openSite": "Apri {name}",
+      "updateValue": "Aggiorna valore"
     },
     "tabs": {
       "label": "Sezioni del servizio",
@@ -3945,12 +3928,12 @@
         "title": "Profitto e perdita del conto",
         "value": "Valore attuale",
         "valuedOn": "aggiornato il {date}",
-        "noValueNote": "nessun valore inserito",
+        "noValueNote": "nessun saldo del conto",
         "invested": "Versato netto",
-        "investedNote": "versamenti − prelievi",
+        "investedNote": "movimenti del conto in Conti: entrate − uscite",
         "pnl": "Profitto / perdita",
         "pnlNote": "dall'inizio",
-        "noValue": "Nessun valore inserito: usa Aggiungi operazione → Aggiorna valore per vedere il profitto o la perdita.",
+        "noValue": "Il conto non ha ancora un saldo: usa Aggiorna valore, o attendi la sincronizzazione di Wallet, per vedere il profitto o la perdita.",
         "stale": "L'ultimo valore è del {date}, più di {days} giorni fa: aggiornalo per vedere il profitto o la perdita di oggi."
       }
     },
@@ -3971,7 +3954,9 @@
         "flows": "Versamenti e prelievi",
         "income": "Proventi",
         "fees": "Commissioni",
-        "other": "Valutazioni e correzioni"
+        "other": "Valutazioni e correzioni",
+        "deposit": "Versamento",
+        "withdrawal": "Prelievo"
       },
       "search": "Cerca asset o descrizione",
       "searchSubmit": "Cerca",
@@ -3991,7 +3976,9 @@
       "next": "Pagina successiva",
       "empty": "Nessun movimento nel periodo.",
       "emptyFiltered": "Nessun movimento corrisponde alla ricerca.",
-      "linkBank": "Collega al movimento bancario"
+      "accountMovements": "Movimenti del conto",
+      "accountMovementsNote": "Versamenti e prelievi sono i movimenti del conto in Conti.",
+      "openAccount": "Apri in Conti"
     },
     "connection": {
       "alerts": "Da controllare",
@@ -4126,6 +4113,12 @@
       "byAsset": "Asset",
       "byClass": "Classe",
       "groupSummary": "{value} · {pnl} · {share}"
+    },
+    "valueForm": {
+      "title": "Aggiorna il valore di {name}",
+      "description": "Il valore che leggi dal broker in quel giorno. Diventa il saldo del conto in Conti.",
+      "amount": "Valore",
+      "submit": "Salva"
     }
   },
   "payroll": {

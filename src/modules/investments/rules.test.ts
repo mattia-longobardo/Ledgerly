@@ -890,3 +890,66 @@ describe("PERS-335 the P&L of a manual account: value against the net money put 
     });
   });
 });
+
+describe("PERS-342 a manual service is a view on its account", () => {
+  const view = (events: EventLike[], accountBalances: Book["accountBalances"]) =>
+    book({
+      periods: [
+        { fromOn: "2026-11-10", startsAt: new Date("2026-11-10T00:00:00Z"), mode: "total", origin: "manual" },
+      ],
+      events,
+      accountBalances,
+    });
+  // Fineco: zero when it became a service, 8.000 € in from the bank the next day, Wallet reads 8.000.
+  const fineco = view(
+    [
+      event("2026-11-10", [{ kind: "opening_cash", amountCents: 0n }], { origin: "conversion" }),
+      event("2026-11-11", [{ kind: "deposit", amountCents: eur(8000) }], { origin: "provider" }),
+    ],
+    [
+      { on: "2026-11-09", cents: 0n, observed: true },
+      { on: "2026-10-31", cents: 0n, observed: false },
+      { on: "2026-11-12", cents: eur(8000), observed: true },
+    ].sort((a, b) => (a.on < b.on ? -1 : 1)),
+  );
+
+  it("is worth the account's balance of the day, never the flows on top of it", () => {
+    expect(valueOn(fineco, "2026-11-11", NO_RATES).valueCents).toBe(0n);
+    expect(valueOn(fineco, "2026-11-12", NO_RATES)).toMatchObject({
+      valueCents: eur(8000),
+      mode: "total",
+      origin: "manual",
+    });
+    expect(valueOn(fineco, "2026-11-20", NO_RATES).valueCents).toBe(eur(8000));
+  });
+
+  it("counts the account's movements as money in, and is as old as the last balance read", () => {
+    expect(flowsOn(fineco, "2026-11-12")).toEqual({
+      openingCents: 0n,
+      depositedCents: eur(8000),
+      withdrawnCents: 0n,
+    });
+    expect(accountPnl(fineco, "2026-11-12", eur(8000))).toEqual({
+      valueCents: eur(8000),
+      investedCents: eur(8000),
+      pnlCents: 0n,
+      rate: 0,
+      valuedOn: "2026-11-12",
+      stale: false,
+    });
+  });
+
+  it("has no value before the account has a balance, and no P&L without one read", () => {
+    const empty = view(
+      [event("2026-11-11", [{ kind: "deposit", amountCents: eur(100) }])],
+      [{ on: "2026-11-11", cents: eur(100), observed: false }],
+    );
+    expect(valueOn(empty, "2026-11-10", NO_RATES).valueCents).toBeNull();
+    // A month end rebuilt from the movements is a value, not a reading: the P&L waits for one.
+    expect(accountPnl(empty, "2026-11-11", eur(100))).toMatchObject({
+      pnlCents: null,
+      valuedOn: null,
+      stale: true,
+    });
+  });
+});

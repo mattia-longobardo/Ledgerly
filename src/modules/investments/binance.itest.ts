@@ -36,6 +36,7 @@ import { NO_RATES } from "@/platform/fx/rules";
 import { pnlOf, positionsOn, replayHoldings } from "./pnl";
 import { investmentsPnl, serviceDetail, servicePnlView } from "./queries";
 import { insertEvent, loadBook, ratesFor } from "./service";
+import { connectTarget } from "../../../test/investments";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/investments/binance");
 const body = (name: string): unknown =>
@@ -170,7 +171,7 @@ async function connectNew(credentials: Record<string, string> = KEYS) {
     ctx,
     PROVIDER,
     credentials,
-    { kind: "new", name: "Binance", currency: "EUR" },
+    await connectTarget(ctx, { name: "Binance", category: "crypto", currency: "EUR" }),
     NOW,
   );
 }

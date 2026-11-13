@@ -117,11 +117,10 @@ test("a manual service: no Positions, its value against the money put in is the 
     // The old address of Positions lands on the Overview, with the period.
     await page.goto(`${base}/positions?period=all`);
     await expect(page).toHaveURL(new RegExp(`${base}\\?period=all$`));
-    // "Add operation" offers no buy: deposits, withdrawals and the value only.
-    await page.getByRole("button", { name: "Add operation" }).click();
-    const items = page.getByRole("menuitem");
-    await expect(items).toHaveText(["Deposit", "Withdrawal", "Update value"]);
-    await page.keyboard.press("Escape");
+    // No deposit or withdrawal typed here (PERS-342): "Update value" only, and only on an account
+    // typed by hand; Wallet's value is not the person's to change.
+    await expect(page.getByRole("button", { name: "Add operation" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Update value" })).toHaveCount(name === "Directa" ? 1 : 0);
   }
 });
 
@@ -167,7 +166,7 @@ test("Positions: grouped by class, the same rows under each class with its subto
 test("Activity: the chips count the period and leave their own rows; the eToro page stays short", async ({
   page,
 }) => {
-  const base = await openService(page, "Directa", "?period=all");
+  const base = await openService(page, "eToro", "?period=all");
   await tabs(page).getByRole("link", { name: "Activity" }).click();
   await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all$`));
   await expect(page.getByTestId("activity-row").first()).toBeVisible();
@@ -183,10 +182,21 @@ test("Activity: the chips count the period and leave their own rows; the eToro p
   }
   // Never the legs of an event (§3.5, S4).
   await expect(page.locator("main")).not.toContainText(/\b(base|quote)\b/);
-
-  await openService(page, "eToro", "?period=all");
-  await tabs(page).getByRole("link", { name: "Activity" }).click();
+  await page.getByRole("group", { name: "Period" }).getByRole("link", { name: "All" }).click();
   await expect(page.getByTestId("activity-range")).toBeVisible();
   const height = await page.locator("main").evaluate((main) => main.scrollHeight);
   expect(height, "the eToro Activity page is longer than 3,000 px").toBeLessThan(3000);
+});
+
+test("Activity of a manual service: the movements of its account in Accounts (PERS-342)", async ({
+  page,
+}) => {
+  await openService(page, "Fineco Conto Deposito", "?period=all");
+  await tabs(page).getByRole("link", { name: "Activity" }).click();
+  const list = page.getByTestId("manual-activity");
+  await expect(list).toBeVisible();
+  await expect(list.getByTestId("activity-item")).toHaveCount(2);
+  await expect(list).toContainText("Bonifico in entrata");
+  await expect(list).toContainText(/\+5\.000,00\s€/);
+  await expect(list.getByRole("link", { name: "Open in Accounts" })).toBeVisible();
 });

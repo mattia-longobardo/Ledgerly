@@ -152,8 +152,8 @@ async function serviceTab(page: Page, service: string, tab: "" | "positions" | "
   await settled(page);
 }
 
-/** A command of a service's header (§3.2): "Add operation" or `⋯`, then the item. */
-async function headerCommand(page: Page, menu: "Add operation" | "More actions", item: string) {
+/** A command of a service's `⋯` menu (§3.2), then the item. */
+async function headerCommand(page: Page, menu: "More actions", item: string) {
   await page.getByRole("button", { name: menu }).first().click();
   await page.getByRole("menuitem", { name: item, exact: true }).click();
 }
@@ -324,8 +324,8 @@ const PAGES: Screen[] = [
   // positions (PERS-335), and the four of the two connected ones.
   ...(
     [
-      ["Directa", "a manual account", false],
-      ["Fineco Conto Deposito", "a manual account opened today", false],
+      ["Directa", "a manual account typed by hand", false],
+      ["Fineco Conto Deposito", "a manual account Wallet reads", false],
       ["eToro", "synced with eToro", true],
       ["Binance", "synced with Binance", true],
     ] as const
@@ -516,45 +516,23 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
-    name: "the create manual account dialog",
+    name: "the add manual account dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await page.goto("/investments/catalog");
       await settled(page);
-      await page.getByRole("button", { name: "Create manual account" }).first().click();
+      await page.getByRole("button", { name: "Add manual account" }).first().click();
       await settledDialog(page);
     },
   },
   {
-    name: "the add asset dialog",
-    session: "layout",
-    roots: ['[role="dialog"]'],
-    open: async (page) => {
-      // Only a synced service adds a position by hand (PERS-335).
-      await follow(page, "/investments", /^eToro$/);
-      await headerCommand(page, "More actions", "Manual buy");
-      await settledDialog(page);
-    },
-  },
-  {
-    name: "the investment deposit dialog",
+    name: "the update value dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await follow(page, "/investments", /^Directa$/);
-      await headerCommand(page, "Add operation", "Deposit");
-      await settledDialog(page);
-    },
-  },
-  {
-    name: "the correct the value dialog, with its class and its effect",
-    session: "layout",
-    roots: ['[role="dialog"]'],
-    open: async (page) => {
-      await follow(page, "/investments", /^eToro$/);
-      await headerCommand(page, "More actions", "Correct the value");
-      await page.getByRole("dialog").getByLabel("Amount").fill("120");
+      await page.getByRole("button", { name: "Update value" }).first().click();
       await settledDialog(page);
     },
   },

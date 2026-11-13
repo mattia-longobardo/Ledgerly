@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -7,16 +8,12 @@ import {
   type ActivityRow,
   ACTIVITY_PAGE_SIZE,
   serviceActivity,
+  serviceMovements,
   servicePnlView,
 } from "@/modules/investments/queries";
-import {
-  LinkBankButton,
-  LinkTransferButton,
-  OperationMenu,
-  UnlinkTransferButton,
-} from "@/modules/investments/ui/dialogs";
+import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
-import { daysBetween, type MonthKey } from "@/platform/dates";
+import type { MonthKey } from "@/platform/dates";
 import { formatDate, formatMoney, monthName } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
@@ -61,6 +58,12 @@ export default async function InvestmentServiceActivity({
   ]);
   if (!detail || !pnl) notFound();
   const { span, period } = pnl;
+  // A manual service counts its account's movements (PERS-342): they are its activity.
+  if (detail.summary.investment.provider === "manual") {
+    const movements = await serviceMovements(ctx, accountId, span);
+    if (!movements) notFound();
+    return <ManualActivity accountId={accountId} currency={detail.currency} movements={movements} />;
+  }
   const assetName =
     assetId === null ? null : (detail.assets.find((asset) => asset.id === assetId)?.name ?? null);
   const activity = await serviceActivity(ctx, accountId, {
@@ -105,18 +108,8 @@ export default async function InvestmentServiceActivity({
       (key, values) => ta(key as "sentence", values as { label: string; detail: string }),
       ctx.numberFormat,
     );
-  /** A bank movement of the same amount within three days: only then is a link offered (S16). */
-  const linkable = (row: ActivityRow) => {
-    if (row.origin !== "manual" || row.transactionId !== null || row.transfer !== null) return false;
-    if (row.leg.kind !== "deposit" && row.leg.kind !== "withdrawal") return false;
-    const amount = row.leg.amountCents < 0n ? -row.leg.amountCents : row.leg.amountCents;
-    const options = row.leg.kind === "deposit" ? context.linkOptions.out : context.linkOptions.in;
-    return options.some((option) => option.cents === amount && Math.abs(daysBetween(option.on, row.on)) <= 3);
-  };
   const extra = (row: ActivityRow) => {
     const lines = [];
-    if (linkable(row))
-      lines.push(<LinkBankButton key="link" operation={operationOf(row)} context={context} />);
     if (row.origin === "conversion")
       lines.push(
         <span key="conversion" className="text-muted">
@@ -451,6 +444,80 @@ export default async function InvestmentServiceActivity({
             )}
           </span>
         </div>
+      </Card>
+    </>
+  );
+}
+
+/**
+ * The Activity of a manual service (PERS-342): the money in and out of the period and the movements
+ * of its account that make it, with the way to Accounts, where they are kept.
+ */
+async function ManualActivity({
+  accountId,
+  currency,
+  movements,
+}: {
+  accountId: string;
+  currency: string;
+  movements: NonNullable<Awaited<ReturnType<typeof serviceMovements>>>;
+}) {
+  const ctx = await requireSession();
+  const t = await getTranslations("investments");
+  const money = (cents: Cents | null, signed = false) =>
+    formatMoney(cents, ctx.numberFormat, { currency, signed });
+  const net = movements.depositsCents + movements.withdrawalsCents;
+  const description = (payee: string | null, cents: Cents) =>
+    payee ?? t(cents > 0n ? "activityTab.families.deposit" : "activityTab.families.withdrawal");
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-4 @lg:grid-cols-3">
+        <KpiTile
+          label={t("activityTab.deposits")}
+          value={money(movements.depositsCents, true)}
+          valueTone={toneOfSign(movements.depositsCents)}
+        />
+        <KpiTile
+          label={t("activityTab.withdrawals")}
+          value={money(movements.withdrawalsCents, true)}
+          valueTone={toneOfSign(movements.withdrawalsCents)}
+        />
+        <KpiTile label={t("activityTab.net")} value={money(net, true)} />
+      </div>
+      <Card padded={false} className="min-w-0" data-testid="manual-activity">
+        <CardHeader title={t("activityTab.accountMovements")} />
+        <p className="flex flex-wrap items-center gap-x-2 px-4 text-sm text-muted">
+          {t("activityTab.accountMovementsNote")}
+          <Link
+            href={`/accounts/${accountId}` as Route}
+            className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+          >
+            {t("activityTab.openAccount")}
+          </Link>
+        </p>
+        {movements.rows.length === 0 ? (
+          <p className="border-t border-border px-4 py-6 text-center text-sm text-muted mt-3">
+            {t("activityTab.empty")}
+          </p>
+        ) : (
+          <ul className="mt-3 flex flex-col">
+            {movements.rows.map((row) => (
+              <li
+                key={row.id}
+                data-testid="activity-item"
+                className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5 text-sm"
+              >
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate">{description(row.payee, row.cents)}</span>
+                  <span className="text-xs text-muted">{formatDate(row.on, "long", ctx.locale)}</span>
+                </span>
+                <span className={cn("shrink-0 font-medium tabular-nums", TONE_TEXT[toneOfSign(row.cents)])}>
+                  {money(row.cents, true)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </>
   );

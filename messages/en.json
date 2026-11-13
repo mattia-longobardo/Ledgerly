@@ -1514,7 +1514,7 @@
         "title": "Transactions arrive with expenses",
         "description": "This account's transactions will appear here once the expenses module lands."
       },
-      "managedInInvestments": "Managed in Investments"
+      "managedInInvestments": "Shown in Investments"
     },
     "entries": {
       "saved": "Balance saved",
@@ -3184,7 +3184,7 @@
       "accountSettings": "Account settings",
       "saveUrl": "Save link",
       "open": "Open",
-      "createManual": "Create manual account",
+      "createManual": "Add manual account",
       "more": "More actions",
       "linkTransfer": "Link as transfer",
       "unlinkTransfer": "Unlink transfer"
@@ -3296,27 +3296,21 @@
       "plannedSection": "Coming soon · {count}"
     },
     "manualForm": {
-      "title": "Create manual account",
-      "description": "A service with no connection: you record deposits, withdrawals and the value you read from the broker. Its value goes into your net worth from today.",
-      "destination": "Destination account",
-      "newAccount": "Create a new account",
-      "existingAccount": "Use an existing account",
-      "name": "Name",
-      "namePlaceholder": "e.g. Directa",
+      "title": "Add an account from Accounts",
+      "description": "Investments shows an account that already exists in Accounts. Its value is the account balance; deposits and withdrawals are its movements. A new account is created in Accounts.",
       "category": "Category",
-      "currency": "Account currency",
-      "currencyHint": "Every balance and operation of the account is in this currency.",
       "url": "Link",
       "urlHint": "Optional: the address of the service's site.",
       "existing": "Account",
-      "existingHint": "From today Investments writes this account's value; its balance today opens the service.",
+      "existingHint": "An account read by Wallet stays synced; an account kept by hand is updated with \"Update value\".",
       "noExisting": "No investment or crypto account to use.",
       "option": "{name} · {balance}",
       "reasons": {
         "fund": "a fund's account",
-        "managed": "already a service"
+        "managed": "already a service",
+        "synced": "read by Wallet"
       },
-      "submit": "Create"
+      "submit": "Add"
     },
     "detail": {
       "since": "Managed since {date}",
@@ -3575,7 +3569,8 @@
       "disconnected": "{name} disconnected: the account is manual now",
       "revoked": "Revocation noted",
       "transferLinked": "Transfer linked",
-      "transferUnlinked": "Transfer unlinked"
+      "transferUnlinked": "Transfer unlinked",
+      "valueUpdated": "{name} value updated"
     },
     "errors": {
       "invalid": "Check the fields and try again.",
@@ -3638,7 +3633,7 @@
         "secret": "Secret"
       },
       "currencyHint": "The currency {name} reports the account in.",
-      "existingHint": "An account of the same type no one else writes, or a manual service: from the connection on, {name}'s readings are its value.",
+      "existingHint": "An account of Accounts of the same type, kept by hand and written by no one else, or a manual service: from the connection on its value is what {name} reads. A new account is created in Accounts.",
       "currencyNotSupported": "currency not supported",
       "submit": "Verify and connect",
       "checking": "Checking the key…"
@@ -3865,30 +3860,18 @@
       "sentenceColon": "{label}: {detail}"
     },
     "header": {
-      "addOperation": "Add operation",
-      "operations": {
-        "buy": "Buy",
-        "deposit": "Deposit",
-        "withdrawal": "Withdrawal",
-        "valuation": "Update value"
-      },
-      "manual": {
-        "buy": "Manual buy",
-        "deposit": "Manual deposit",
-        "withdrawal": "Manual withdrawal",
-        "valuation": "Update value"
-      },
-      "correct": "Correct the value",
       "state": {
         "synced": "Synced {when}",
         "never": "Not synced yet",
         "error": "Error: {error}",
         "revoked": "Error: key refused",
         "disconnected": "Disconnected: kept by hand",
-        "manual": "Kept by hand"
+        "manual": "Kept by hand",
+        "wallet": "Synced by Wallet"
       },
       "today": "today {time}",
-      "openSite": "Open {name}"
+      "openSite": "Open {name}",
+      "updateValue": "Update value"
     },
     "tabs": {
       "label": "Sections of the service",
@@ -3945,12 +3928,12 @@
         "title": "Profit and loss of the account",
         "value": "Current value",
         "valuedOn": "updated on {date}",
-        "noValueNote": "no value recorded",
+        "noValueNote": "no account balance",
         "invested": "Net invested",
-        "investedNote": "deposits − withdrawals",
+        "investedNote": "movements of the account in Accounts: in − out",
         "pnl": "Profit / loss",
         "pnlNote": "since the start",
-        "noValue": "No value recorded: use Add operation → Update value to see the profit or loss.",
+        "noValue": "The account has no balance yet: use Update value, or wait for the Wallet sync, to see the profit or loss.",
         "stale": "The last value is from {date}, more than {days} days ago: update it to see the profit or loss of today."
       }
     },
@@ -3971,7 +3954,9 @@
         "flows": "Deposits and withdrawals",
         "income": "Income",
         "fees": "Fees",
-        "other": "Valuations and corrections"
+        "other": "Valuations and corrections",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal"
       },
       "search": "Search asset or description",
       "searchSubmit": "Search",
@@ -3991,7 +3976,9 @@
       "next": "Next page",
       "empty": "No activity in this period.",
       "emptyFiltered": "Nothing matches the search.",
-      "linkBank": "Link to the bank movement"
+      "accountMovements": "Account movements",
+      "accountMovementsNote": "Deposits and withdrawals are the movements of the account in Accounts.",
+      "openAccount": "Open in Accounts"
     },
     "connection": {
       "alerts": "To check",
@@ -4126,6 +4113,12 @@
       "byAsset": "Asset",
       "byClass": "Class",
       "groupSummary": "{value} · {pnl} · {share}"
+    },
+    "valueForm": {
+      "title": "Update the value of {name}",
+      "description": "The value you read at the broker on that day. It becomes the account balance in Accounts.",
+      "amount": "Value",
+      "submit": "Save"
     }
   },
   "payroll": {
