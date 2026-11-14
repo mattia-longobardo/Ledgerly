@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { accountsView, getAccount } from "@/modules/accounts/queries";
 import { createAccount, saveBalanceEntry } from "@/modules/accounts/service";
 import { chargeCandidates } from "@/modules/transactions/queries";
 import { upsertFromProvider } from "@/modules/transactions/service";
@@ -32,11 +33,12 @@ import {
 // payslip as the code of before wrote them, runs the migration's own SQL, and reads the result.
 // Tests SN2 (the copy of the deposits), SN7 (what a document left is not touched) and the rollback
 // file. The integration database is already at the last migration, with no fund in it: the SQL of
-// `0047` only looks at the funds that have no source yet, so it runs again here.
+// `0047` and `0048` only looks at the funds that have no source yet, so it runs again here.
 
 const migration = (file: string) =>
   readFileSync(join(process.cwd(), "drizzle", file), "utf8").replaceAll("--> statement-breakpoint", "");
 const A2 = migration("0047_migrate_fund_data.sql");
+const X2 = migration("0048_fund_account_group.sql");
 /** The rollback file without its own `BEGIN`/`COMMIT`: the test runs it in a transaction it undoes. */
 const ROLLBACK = readFileSync(join(process.cwd(), "docs/design/rewrite-plan/n6-rollback.sql"), "utf8")
   .replace(/^BEGIN;$/m, "")
@@ -426,6 +428,7 @@ describe("step A2: the funds of before move to the single model", () => {
     expect(before.operations).toHaveLength(2);
     expect(before.positions).toHaveLength(1);
     await getDb().execute(sql.raw(A2));
+    await getDb().execute(sql.raw(X2));
     expect(await history()).toEqual(before);
   });
 
@@ -436,10 +439,11 @@ describe("step A2: the funds of before move to the single model", () => {
     expect(
       debit.home.flows.map((flow) => [flow.on, flow.chargedCents, flow.feeCents, flow.recurring]),
     ).toEqual([
-      ["2026-01-02", 500_000n, 0n, false],
-      ["2026-02-05", 25_100n, 100n, true],
-      ["2026-03-05", 25_100n, 100n, true],
+      // Newest first, as the engine of before read the deposits: the sums of floats keep their order.
       ["2026-04-05", 25_100n, null, true],
+      ["2026-03-05", 25_100n, 100n, true],
+      ["2026-02-05", 25_100n, 100n, true],
+      ["2026-01-02", 500_000n, 0n, false],
     ]);
     expect(debit.month).toEqual({ kind: "found", on: "2026-04-05" });
     const payslip = await fundHomeRow(ctx, payslipFundId, now);
@@ -470,11 +474,41 @@ describe("step A2: the funds of before move to the single model", () => {
   });
 });
 
+describe("exception X2: the account of a fund is a pension account", () => {
+  it("moves the account of the fund that had a debit plan, and no other account", async () => {
+    const broker = await anAccountOf("investment", "Broker");
+    await getDb().execute(sql.raw(A2));
+    await getDb().execute(sql.raw(X2));
+    expect((await getAccount(ctx, debitAccountId))?.type).toBe("pension");
+    expect((await getAccount(ctx, broker))?.type).toBe("investment");
+    expect((await getAccount(ctx, bankId))?.type).toBe("checking");
+  });
+
+  it("leaves net worth as it was: only the group of the account changes (SN6)", async () => {
+    await getDb().execute(sql.raw(A2));
+    const now = new Date("2026-04-10T10:00:00Z");
+    const before = await accountsView(ctx, { now });
+    await getDb().execute(sql.raw(X2));
+    const after = await accountsView(ctx, { now });
+    expect(before.netWorth).not.toBeNull();
+    expect(after.netWorth).toEqual(before.netWorth);
+    expect(after.total).toEqual(before.total);
+    expect(after.rows.map((row) => [row.account.name, row.balance])).toEqual(
+      before.rows.map((row) => [row.account.name, row.balance]),
+    );
+    const typeOf = (view: typeof before) =>
+      new Map(view.rows.map((row) => [row.account.name, row.account.type]));
+    expect(typeOf(before).get("Fondo Beta")).toBe("investment");
+    expect(typeOf(after).get("Fondo Beta")).toBe("pension");
+  });
+});
+
 describe("the rollback file of the release", () => {
   class Undo extends Error {}
 
   it("puts the database back, with the payments written by hand after the release where the image before reads them", async () => {
     await getDb().execute(sql.raw(A2));
+    await getDb().execute(sql.raw(X2));
     const [source] = await getDb()
       .select()
       .from(fundContributionSources)
@@ -571,6 +605,9 @@ describe("the rollback file of the release", () => {
             )
           ).q,
         ).toBeNull();
+        expect((await one(`select type from accounts where id = '${debitAccountId}'`)).type).toBe(
+          "investment",
+        );
         throw new Undo();
       })
       .catch((error: unknown) => {

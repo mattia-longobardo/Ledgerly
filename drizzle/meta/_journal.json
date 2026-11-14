@@ -337,6 +337,13 @@
       "when": 1794689893989,
       "tag": "0047_migrate_fund_data",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794689979972,
+      "tag": "0048_fund_account_group",
+      "breakpoints": true
     }
   ]
 }

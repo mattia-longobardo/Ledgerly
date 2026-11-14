@@ -51,7 +51,11 @@ DELETE FROM fund_operations WHERE source = 'rule';
 UPDATE fund_operations SET competence_year = NULL, competence_quarter = NULL WHERE competence_quarter > 4;
 DELETE FROM reconciliation_links WHERE quarter > 4;
 
--- 4. The schema of step A1.
+-- 4. Exception X2: the account of a fund that had a debit plan goes back to its group.
+UPDATE accounts SET type = 'investment'
+WHERE type = 'pension' AND id IN (SELECT valuation_account_id FROM funds WHERE type = 'pac');
+
+-- 5. The schema of step A1.
 ALTER TABLE "fund_operations" DROP CONSTRAINT IF EXISTS "fund_operations_source_ck";
 ALTER TABLE "fund_operations" DROP CONSTRAINT IF EXISTS "fund_operations_quarter_ck";
 ALTER TABLE "reconciliation_links" DROP CONSTRAINT IF EXISTS "reconciliation_links_quarter_ck";
@@ -66,8 +70,8 @@ ALTER TABLE "funds" DROP CONSTRAINT IF EXISTS "funds_code_ck";
 ALTER TABLE "funds" DROP COLUMN IF EXISTS "code";
 ALTER TABLE "funds" ALTER COLUMN "type" DROP DEFAULT;
 
--- 5. The journal rows: `created_at` is the `when` of each migration in drizzle/meta/_journal.json
---    (0046_single_fund_model, 0047_migrate_fund_data).
-DELETE FROM drizzle.__drizzle_migrations WHERE created_at IN (1794689782475, 1794689893989);
+-- 6. The journal rows: `created_at` is the `when` of each migration in drizzle/meta/_journal.json
+--    (0046_single_fund_model, 0047_migrate_fund_data, 0048_fund_account_group).
+DELETE FROM drizzle.__drizzle_migrations WHERE created_at IN (1794689782475, 1794689893989, 1794689979972);
 
 COMMIT;
