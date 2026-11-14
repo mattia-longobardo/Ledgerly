@@ -5,9 +5,9 @@ Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Decisioni: [`01-de
 Stato: **revisione approvata da Mattia il 14/11/2026** (decisione H21). Le decisioni H12-H20 sono di Mattia
 (14/11/2026). Rilasci, modelli e default di questo file le applicano. Mattia ha risposto alle ipotesi ST-1…ST-24 con
 le sole eccezioni: ST-4, ST-6 e ST-7 sono le decisioni H18-H20; le altre sono decisioni, con il default. Ipotesi
-nuove ([`09-risks.md`](09-risks.md) §9.6): ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25: il
-default (archiviati fino a R5f) è scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in
-attesa di precisazione. Fino alla risposta nessun file si cancella e N6 non contiene la cancellazione.
+nuove ([`09-risks.md`](09-risks.md) §9.6): ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25 è una
+decisione di Mattia del 14/11/2026 (H24): i file dei documenti di Cometa già salvati e le loro righe `documents` si
+cancellano in N6, con dump e copia dei file prima (§11.2.4, passo A4).
 
 Base dell'analisi: `main` a `9be59db`, sola lettura. Sul database di produzione: solo conteggi.
 
@@ -187,13 +187,30 @@ Passi della strada A:
 | A2 dati, Fideuram | Sorgente `bank_debit` dalla regola e dal piano. 2 righe `fund_fees`. Copia dei 10 versamenti in `fund_operations`: `classification = voluntary`, importo addebitato, commissione, netto, `transaction_id`, `source` = `rule` o `manual`, `origin_key = 'deposit:' + id` | Dati | Sì: `fund_deposits`, `fund_deposit_rules` e `funds.type` non sono toccati | N6 |
 | A2 dati, Cometa | Sorgente `payroll` (lavoratore, datore, TFR; periodo `quarter`; scadenze e tolleranza dalla regola). Righe `fund_fees` dalla regola e dalla tariffa. Le 4 operazioni importate e le valutazioni lette dai documenti non sono toccate | Dati | Sì: `pension_rules` e `fund_fee_tariffs` non sono toccate | N6 |
 | A2 dati, conto | `accounts.type` del conto di Fideuram: `investment` → `pension` (decisione ST-17) | Dati | Sì: l'immagine precedente accetta i due tipi | N6 |
-| A3 rimozione | `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`; colonne `funds.type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`; colonne di commissione e `schedule` di `pension_rules`; righe `documents` di tipo `cometa_*` e i loro file (ST-25, in attesa di precisazione: fino alla risposta righe e file non si cancellano); colonne `fund_operations.document_id` e `position_snapshots.document_id`; valori `cometa_*` del tipo di documento | Contrazione | No. Dump obbligatorio | R5f |
+| A3 rimozione | `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`; colonne `funds.type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`; colonne di commissione e `schedule` di `pension_rules`; colonne `fund_operations.document_id` e `position_snapshots.document_id`; valori `cometa_*` del tipo di documento | Contrazione | No. Dump obbligatorio | R5f |
+| A4 cancellazione dei documenti di Cometa | Decisione ST-25 (H24). File dei documenti di Cometa nell'archivio S3 e righe `documents` dei tipi `cometa_*`. Le righe figlie dei documenti si cancellano con la chiave esterna; `fund_operations.document_id` e `position_snapshots.document_id` passano a `NULL`. Le 4 operazioni importate e le valutazioni lette non sono toccate | Dati, irreversibile | No, per i documenti. Dump e copia dei file obbligatori | N6, passo separato |
 
 **Rollback di N6.** Immagine `pre-n6` e un file SQL nel repo: cancella le operazioni con `origin_key like
 'deposit:%'`, riporta `accounts.type`, elimina tabelle e colonne nuove. I versamenti da regola fatti dopo il rilascio
 ritornano da soli: il job `funds-deposits` dell'immagine precedente li ricrea dai movimenti. Per i versamenti manuali
-fatti dopo il rilascio serve il dump `n6.dump`. N6 non tocca le righe e i file dei documenti di Cometa (ST-25, in
-attesa di precisazione): l'immagine `pre-n6` li legge e li carica come prima.
+fatti dopo il rilascio serve il dump `n6.dump`. Fino al passo A4, N6 non tocca le righe e i file dei documenti di
+Cometa: l'immagine `pre-n6` li legge e li carica come prima.
+
+**Passo A4: cancellazione dei documenti di Cometa (decisione ST-25, H24).** La cancellazione è irreversibile senza la
+copia. Per questo è un passo separato di N6: commit, deploy e OK di Mattia propri (`git-policy` §6 #1 e #2).
+
+1. Condizione: A1 e A2 sono in produzione e stabili. La prova SN7 è uguale prima e dopo N6.
+2. Dump del database e copia dei file dei documenti di Cometa in `projects/Ledgerly-dumps/`
+   ([`06-data.md`](06-data.md) §6.3), con le impronte dei file.
+3. Prova di ripristino: dump in un database temporaneo; numero delle righe `documents` dei tipi `cometa_*` uguale
+   alla produzione; numero e impronte dei file copiati uguali a quelli dell'archivio.
+4. OK di Mattia sul SHA del passo.
+5. Cancellazione: file nell'archivio S3, poi righe `documents` dei tipi `cometa_*`, con `WHERE` e conteggio nel
+   commento di deploy.
+6. Verifica: 0 file e 0 righe dei tipi Cometa; SN1 e SN7 uguali a prima della cancellazione.
+
+Rollback del passo A4: ripristino delle righe dal dump e dei file dalla copia. La copia resta finché Mattia non dice
+di toglierla.
 
 **Prove «stessi numeri».**
 
@@ -205,7 +222,7 @@ attesa di precisazione): l'immagine `pre-n6` li legge e li carica come prima.
 | SN4 | Commissioni di Cometa | Test: netto con le righe `fund_fees` = netto con le costanti di oggi, sui 14 periodi maturati | Uguale |
 | SN5 | File di riferimento dei calcoli approvati | Ingressi e uscite dei due fondi di prova aggiunti alla prova B3 ([`10-modularity.md`](10-modularity.md) §10.10) | Uguale |
 | SN6 | Patrimonio | Overview, somma dei conti, `GET /summary`, `get_summary` | Totale uguale. Cambia solo il subtotale del gruppo (X2) |
-| SN7 | Dati già letti dai documenti | Test e conteggio in produzione sulle 4 operazioni importate e sulle valutazioni lette dai documenti di Cometa: conteggio, somme, date e quote, prima e dopo N6 e prima e dopo la cancellazione dei file (R5f) | Uguale |
+| SN7 | Dati già letti dai documenti | Test e conteggio in produzione sulle 4 operazioni importate e sulle valutazioni lette dai documenti di Cometa: conteggio, somme, date e quote, prima e dopo N6 e prima e dopo la cancellazione dei file (N6, passo A4) | Uguale |
 
 ### 11.2.5 Eccezioni dichiarate al vincolo «comportamento invariato»
 
@@ -225,7 +242,7 @@ lista dei documenti di Cometa spariscono (H19).
 ### 11.2.6 Cosa si toglie con H18 e H19
 
 Riferimenti `percorso:riga` su `main` a `9be59db`. Le rimozioni di codice sono in N6; le rimozioni di schema e di
-dati sono in R5f.
+dati sono in R5f, salvo i file e le righe dei documenti di Cometa: N6, passo A4 (decisione ST-25).
 
 **«Deducibile» (H18)**
 
@@ -259,8 +276,8 @@ Il modello nuovo non crea il campo `deductible` delle sorgenti e non crea un lim
 | API: `POST /imports` con un tipo `cometa_*` | `src/modules/imports/api.ts:27`, `:49-72` | N6, secondo la decisione ST-26 |
 | Testo dello scope `imports` e nota dell'export sui file di Cometa | `messages/en.json:650`; `src/platform/export/service.ts:371-372` | N6 |
 | MCP | Nessuno strumento sui documenti: nulla da togliere | — |
-| Export: righe e file di Cometa nella sezione `documents` | `src/platform/export/service.ts:347-394` | Restano finché i file esistono (ST-25, in attesa di precisazione) |
-| File salvati e righe `documents` di tipo `cometa_*` | Silo S3 e tabella `documents` | ST-25, in attesa di precisazione: il default «R5f» è scartato. Fino alla risposta nessun file si cancella |
+| Export: righe e file di Cometa nella sezione `documents` | `src/platform/export/service.ts:347-394` | Restano finché i file esistono: fino al passo A4 di N6 (decisione ST-25) |
+| File salvati e righe `documents` di tipo `cometa_*` | Silo S3 e tabella `documents` | N6, passo A4 (decisione ST-25, H24): cancellazione con dump, copia dei file e OK di Mattia sul SHA |
 | Colonne `fund_operations.document_id`, `position_snapshots.document_id`; valori `cometa_*` nel check del tipo di documento | `src/modules/funds/schema.ts:341`, `:437`; `src/modules/imports/schema.ts:65` | R5f |
 
 Cosa resta: le operazioni con `source = import` e le valutazioni lette dai documenti restano dati del fondo, con gli
@@ -344,7 +361,7 @@ delle voci nuove: [`02-audit.md`](02-audit.md) §2.6. Meccanismi E1-E8: [`10-mod
 |---|---|---|---|---|
 | funds | Tipo `pac`/`pension`: due creazioni, due registri del denaro, due motori dei flussi, due serie di tab e di componenti | Fondo unico; registro unico; `fundFlows`; pagina unica (§11.2) | Configurazione | N6 |
 | funds | Scadenze, commissioni, tariffa e fonti di Cometa nel codice; tariffa scritta a ogni lettura | E2 sorgenti; E3 commissioni; modelli di fondo come dati | Configurazione + Dati | N6 |
-| funds | Lettori, azioni, pulsante e job con «Cometa» nel nome | Via (H19): nei fondi non si caricano documenti. Contributi e valori dalle sorgenti e a mano | Via | N6 (codice, pagine, job); R5f (file, colonne, valori `cometa_*`) |
+| funds | Lettori, azioni, pulsante e job con «Cometa» nel nome | Via (H19): nei fondi non si caricano documenti. Contributi e valori dalle sorgenti e a mano | Via | N6 (codice, pagine, job; file e righe `documents`, passo A4); R5f (colonne, valori `cometa_*`) |
 | funds | Limite di deducibilità italiano nel codice; classi deducibili fisse; riquadro «Deducibile» | Via (H18): nessun limite, nessun calcolo, nessun riquadro | Via | N6 |
 | funds | Legame con la busta paga: un fondo per utente, colonne fisse, trimestre calcolato in payroll con le regole di Cometa | E2: sorgente `payroll`; evento `PayslipApplied` con righe per ruolo | Configurazione | N6 (sorgente); R2 (evento) |
 | investments | Un fornitore registrato in 9 punti; rami per eToro, Binance e Wallet in pagine e codice generico; chiavi di traduzione con lo slug del fornitore | E5: un descrittore per fornitore, con capacità | Fisso | N1 (schema); R1 (registro); R2 (descrittori di eToro e Binance); R3 (testi dal descrittore) |

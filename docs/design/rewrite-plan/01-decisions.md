@@ -53,12 +53,12 @@ Mattia ha risposto alle ipotesi ST-1…ST-24 con le sole eccezioni. Le tre eccez
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
 | H18 | **Il «Deducibile» si toglie.** Nessun riquadro e nessun calcolo del limite di deducibilità, per nessun fondo (anche Cometa). Il limite fiscale non è un dato del paese | L'ipotesi ST-4; la prima forma di X1 («Deducibile» con Fideuram); il limite nel pacchetto paese (E4); `funds-ux.md` §5.3 per il «Deducibile» | N6 |
-| H19 | **Documenti.** Il lettore della busta paga resta nel core, dietro il registro E1. Il lettore dei documenti di Cometa si toglie, e si toglie la funzione: nei fondi non si caricano documenti. Contributi e valori dei fondi arrivano solo dalle sorgenti (busta paga, addebito in banca) e dall'inserimento a mano. Le operazioni e i valori già letti restano dati del fondo | Le ipotesi ST-6 e ST-19; il tipo `fund_statement`, `funds.statement_reader` e il tab «Documenti» della prima forma di questa revisione | N6 (codice); R5f (schema); file: ST-25, in attesa di precisazione; R5g (profili delle buste paga) |
+| H19 | **Documenti.** Il lettore della busta paga resta nel core, dietro il registro E1. Il lettore dei documenti di Cometa si toglie, e si toglie la funzione: nei fondi non si caricano documenti. Contributi e valori dei fondi arrivano solo dalle sorgenti (busta paga, addebito in banca) e dall'inserimento a mano. Le operazioni e i valori già letti restano dati del fondo | Le ipotesi ST-6 e ST-19; il tipo `fund_statement`, `funds.statement_reader` e il tab «Documenti» della prima forma di questa revisione | N6 (codice; file e righe `documents`: decisione ST-25, H24); R5f (schema); R5g (profili delle buste paga) |
 | H20 | **La malattia non è un tipo di assenza di Time Off e non viene contata.** Tipi predefiniti del paese `IT`: Ferie e ROL/Permessi. I tipi restano dati dell'utente | L'ipotesi ST-7 | N5 (decisione ST-27), R5g |
 
 Le altre ipotesi ST-1…ST-24 sono decisioni di Mattia del 14/11/2026, con il default del piano: il testo di ogni
 decisione è la sua riga in [`09-risks.md`](09-risks.md) §9.6. Le risposte hanno fatto nascere tre ipotesi nuove:
-ST-25, ST-26, ST-27 (stessa sezione). Cosa si toglie nel codice e nei dati:
+ST-25, ST-26, ST-27 (stessa sezione), ora decisioni H22-H24. Cosa si toglie nel codice e nei dati:
 [`11-standardization.md`](11-standardization.md) §11.2.6.
 
 ### Standardizzazione: approvazione della revisione (quarta decisione del 14/11/2026)
@@ -69,9 +69,13 @@ ST-25, ST-26, ST-27 (stessa sezione). Cosa si toglie nel codice e nei dati:
 | H22 | **ST-26, con il default.** `POST /imports`: i valori `cometa_operations` e `cometa_position` restano nel contratto. Da N6 la rotta li rifiuta con un errore dichiarato e non salva il file. Escono dal contratto con R5f | L'ipotesi ST-26 | N6, R5f |
 | H23 | **ST-27, con il default.** Il tipo `sick` esce da Time Off in N5: il pannello nuovo non lo offre. In R5g non diventa un tipo. Il valore esce dal check in R5f | L'ipotesi ST-27 | N5, R5g, R5f |
 
-**ST-25** (file dei documenti di Cometa già salvati) non è una decisione. Il default (archiviati fino a R5f) è
-scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in attesa di precisazione. Fino alla
-risposta nessun file si cancella e N6 non contiene la cancellazione.
+### Standardizzazione: file dei documenti di Cometa (quinta decisione del 14/11/2026)
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H24 | **ST-25: cancellazione in N6.** I file dei documenti di Cometa già salvati e le loro righe `documents` si cancellano nel rilascio N6. Le operazioni e i valori già letti restano dati del fondo. Prima: dump del database e copia dei file in `projects/Ledgerly-dumps/`, con una prova di ripristino. La cancellazione è un passo separato di N6, dopo la prova SN7, con l'OK di Mattia sul SHA (`git-policy` §6 #1 e #2). Rollback: ripristino dalla copia | L'ipotesi ST-25 e il suo default (archiviati fino a R5f); l'alternativa «nessuna cancellazione» | N6 |
+
+Dettaglio del passo: [`11-standardization.md`](11-standardization.md) §11.2.4, passo A4.
 
 ## 1.1 Premesse
 

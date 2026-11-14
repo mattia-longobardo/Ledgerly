@@ -10,7 +10,7 @@ Elenchi:
 - §9.5 **Punti decisi il 14/11/2026**: erano ipotesi da confermare, ora sono decisioni di Mattia.
 - §9.6 **Ipotesi · revisione sulla standardizzazione**: ST-1…ST-24 hanno la risposta di Mattia del 14/11/2026
   (decisioni, con il default, salvo ST-4, ST-6, ST-7 che sono le decisioni H18-H20); ST-26 e ST-27 sono decisioni,
-  con il default; ST-25 è in attesa di precisazione.
+  con il default; ST-25 è una decisione, con l'alternativa «cancellazione in N6» (H24).
 
 ## 9.1 Ipotesi aperte
 
@@ -49,7 +49,7 @@ Elenchi:
 | R-10 | La chiave privata Enable Banking dell'utente attraversa la rete interna a ogni chiamata | Un plugin compromesso la vede mentre gestisce la chiamata | Rete dedicata, segreto condiviso core-plugin, plugin senza stato; l'applicazione è solo AIS. La firma del JWT nel core resta un'opzione per la review finale | N1 |
 | R-11 | L'app Android è più nuova o più vecchia dell'istanza | Funzioni mancanti o errori | `GET /api/v1/meta`, capacità, API solo additiva, test di contratto contro il livello minimo | R2, C1 |
 | R-12 | Dati finanziari in cache su un telefono | Lettura da parte di terzi | Cache cifrata con chiave nel deposito del sistema; sblocco con biometria; revoca del dispositivo dal web; logout cancella tutto | C1, C2 |
-| R-13 | R5f rimuove colonne e tabelle | Unico rilascio senza rollback della sola immagine | Dump obbligatorio con ripristino di prova; query «zero usi»; ogni rimozione dopo un rilascio stabile; OK di Mattia | R5f |
+| R-13 | R5f rimuove colonne e tabelle | Rilascio senza rollback della sola immagine (come il passo A4 di N6, R-29) | Dump obbligatorio con ripristino di prova; query «zero usi»; ogni rimozione dopo un rilascio stabile; OK di Mattia | R5f |
 | R-14 | Strumenti nuovi sul server (Android SDK, toolchain Rust) | Superficie e spazio su disco | Gate del Security Gatekeeper prima di ogni installazione; strumenti nella cartella del progetto, non in `/home/mattia` | C0 |
 | R-15 | Il piano è lungo: le decisioni di prodotto invecchiano | R5 realizza un design non più voluto | Ogni rilascio R5 parte con una conferma breve di Mattia sul suo contenuto | R5 |
 | R-16 | Solo 4 movimenti hanno una categoria corretta a mano: le etichette sono quelle di Wallet | Rumore nell'addestramento | L'app propone l'unione delle categorie doppie; la soglia si alza con le correzioni | N3 |
@@ -65,6 +65,7 @@ Elenchi:
 | R-26 | Un vocabolario aperto perde il check DB con l'elenco dei valori (M13) | Un valore sbagliato entra nel database | Check di formato nel database; il registro valida il valore in scrittura; test: un valore non registrato è rifiutato dal servizio | N6, R2 |
 | R-27 | Un punto di estensione nasce più generale del bisogno | Complessità superflua (contro la priorità 2) | Un meccanismo entra solo con almeno un uso reale nello stesso rilascio; i profili e i pacchetti paese sono file di dati, non codice; le capacità non note sono ignorate | [`10-modularity.md`](10-modularity.md) §10.11 |
 | R-28 | Le righe di riferimento delle due analisi sono di `9be59db` e nessun test è stato eseguito | Una voce descrive codice già cambiato dalla fase A in corso | Ogni rilascio verifica le sue voci sul codice del momento; ST-23 e OT-9 chiedono un test prima della correzione | Tutti |
+| R-29 | Il passo A4 di N6 cancella i file e le righe dei documenti di Cometa (decisione ST-25) | Irreversibile senza la copia: l'immagine `pre-n6` non riporta i file | Dump e copia dei file in `projects/Ledgerly-dumps/` con impronte; prova di ripristino prima della cancellazione; passo separato dopo SN7; OK di Mattia sul SHA; la copia resta finché Mattia non dice di toglierla | N6; [`11-standardization.md`](11-standardization.md) §11.2.4 |
 
 ## 9.3 Ipotesi confermate il 14/11/2026
 
@@ -145,8 +146,8 @@ default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
 - ST-19 è tolta: nei fondi non si caricano documenti (H19).
 - Ogni altra riga ST-1…ST-24: **decisione di Mattia del 14/11/2026, con il default (risposta con le sole eccezioni)**.
 - OK alla revisione: dato da Mattia il 14/11/2026 ([`01-decisions.md`](01-decisions.md) §1.0, H21).
-- Ipotesi nuove, in fondo a questa sezione: ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25 è in
-  attesa di precisazione.
+- Ipotesi nuove, in fondo a questa sezione: ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25 è una
+  decisione, con l'alternativa «cancellazione in N6» (H24).
 
 **Fondo pensione (N6)**
 
@@ -198,11 +199,11 @@ sorgenti TFR e volontario (H14), commissioni impostabili (H15), nessuna funzione
 (H18), lettore della busta paga dietro E1 e nessun documento nei fondi (H19), malattia fuori da Time Off (H20).
 
 **Ipotesi nuove** (nate dalle risposte del 14/11/2026). Risposta di Mattia del 14/11/2026: ST-26 e ST-27 sono
-decisioni, con il default (H22, H23). ST-25: il default è scartato; la scelta è in attesa di precisazione.
+decisioni, con il default (H22, H23). ST-25: il default è scartato; decisione del 14/11/2026, cancellazione in N6 (H24).
 
 | ID | Domanda | Default del piano | Alternativa | Rilascio |
 |---|---|---|---|---|
-| ST-25 | I file dei documenti di Cometa già salvati, con le loro righe `documents`? | **Scartato da Mattia il 14/11/2026.** Era: restano archiviati fino a R5f, senza pagina nell'app; restano nell'export ZIP. In R5f si cancellano file e righe, con dump e OK di Mattia. Le operazioni e i valori già letti restano dati del fondo | Cancellazione subito, in N6, con dump e OK. Oppure nessuna cancellazione: i file restano in sola lettura. **Il default (archiviati fino a R5f) è scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in attesa di precisazione. Fino alla risposta nessun file si cancella e N6 non contiene la cancellazione** | In attesa |
+| ST-25 | I file dei documenti di Cometa già salvati, con le loro righe `documents`? | **Scartato da Mattia il 14/11/2026.** Era: restano archiviati fino a R5f, senza pagina nell'app; restano nell'export ZIP. In R5f si cancellano file e righe, con dump e OK di Mattia | **Decisione di Mattia del 14/11/2026 (H24): cancellazione in N6.** File nell'archivio S3 e righe `documents` dei tipi `cometa_*`. Prima: dump del database e copia dei file in `projects/Ledgerly-dumps/`, con una prova di ripristino. Passo separato del rilascio (A4), dopo la prova SN7, con l'OK di Mattia sul SHA (`git-policy` §6 #1 e #2). Rollback: ripristino dalla copia. Le operazioni e i valori già letti restano dati del fondo. Scartata: nessuna cancellazione | N6 |
 | ST-26 | `POST /imports` con i tipi `cometa_operations` e `cometa_position` (API pubblica)? | Regola «API solo additiva»: i due valori restano nel contratto. Da N6 la rotta li rifiuta con un errore dichiarato e non salva il file. Escono dal contratto con R5f | I due valori escono dal contratto in N6: un client che li usa riceve l'errore generico `invalid` | N6, R5f |
 | ST-27 | Il tipo `sick` del codice di oggi: quando esce da Time Off? | In N5: il pannello nuovo non lo offre (0 righe in produzione). In R5g non diventa un tipo. Il valore esce dal check in R5f | In R5g, con i tipi come dati: fino ad allora il pannello lo mostra | N5, R5g, R5f |
 

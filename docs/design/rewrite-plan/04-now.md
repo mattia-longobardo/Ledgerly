@@ -208,7 +208,8 @@ essere spostato. N6 chiude anche FND-1, FND-2 e FND-3 dell'audit.
 | Schermate (procedura a 4 passi, dettaglio unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria |
 
 Cosa **non** entra in N6: la fusione con Investments, i 2 gruppi, gli URL `/investments/[id]` (R5b); la rimozione delle
-tabelle vecchie e la cancellazione dei file dei documenti di Cometa (ST-25, in attesa di precisazione); i piani di acquisto (R5d).
+tabelle vecchie (R5f); i piani di acquisto (R5d). La cancellazione dei file dei documenti di Cometa entra in N6, come
+passo separato (decisione ST-25, H24).
 
 ## 4.9 Cosa resta fuori da «ora»
 
