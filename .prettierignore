@@ -10,3 +10,4 @@ docs
 .superpowers
 docker-compose.yml
 public/pdfjs
+baselines

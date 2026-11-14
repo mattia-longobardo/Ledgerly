@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
+import { measureModularity, type ModularityBaseline } from "../scripts/modularity";
+import { cycleGroups, reciprocalPairs, unitGraph, unitOf } from "../scripts/source-graph";
 
 const SRC = join(process.cwd(), "src");
 const IMPORT_SPECIFIER = /from\s+["']([^"']+)["']/g;
@@ -108,6 +110,64 @@ describe("module boundaries", () => {
       files.set(rel, readFileSync(file, "utf8"));
     }
     expect(findModuleBoundaryViolations(files)).toEqual([]);
+  });
+});
+
+/**
+ * The known lists of the rewrite plan (docs/design/rewrite-plan/10-modularity.md §10.6, rules M2 and
+ * M4; release N0). The tree is held to `baselines/modularity.json` in both directions: an import
+ * between modules, a pair of units importing each other or a cycle that is not in the file fails, and
+ * so does an entry of the file that no longer exists — so the lists can only get shorter, and the
+ * file is always what the code is. `npm run modularity` rewrites it after a violation is removed.
+ */
+describe("the known modularity violations", () => {
+  const known = JSON.parse(
+    readFileSync(join(process.cwd(), "baselines/modularity.json"), "utf8"),
+  ) as ModularityBaseline;
+  const now = measureModularity(SRC);
+  const added = (before: readonly string[], after: readonly string[]) =>
+    after.filter((entry) => !before.includes(entry));
+
+  it("gain no import between two modules (M2)", () => {
+    expect(added(known.crossModuleImports, now.crossModuleImports)).toEqual([]);
+  });
+
+  it("gain no pair of units that import each other (M4)", () => {
+    expect(added(known.reciprocalUnits, now.reciprocalUnits)).toEqual([]);
+  });
+
+  it("gain no cycle between modules, and no module joins one (M4)", () => {
+    const flat = (groups: readonly string[][]) => groups.map((group) => group.join(" · "));
+    expect(added(flat(known.moduleCycles), flat(now.moduleCycles))).toEqual([]);
+  });
+
+  it("list nothing that is gone: remove the entry with `npm run modularity`", () => {
+    expect(added(now.crossModuleImports, known.crossModuleImports)).toEqual([]);
+    expect(added(now.reciprocalUnits, known.reciprocalUnits)).toEqual([]);
+    expect(now.counts).toEqual(known.counts);
+  });
+});
+
+describe("the import graph reader", () => {
+  it("names the unit of a file", () => {
+    expect(unitOf("modules/accounts/ui/period.ts")).toBe("modules/accounts");
+    expect(unitOf("platform/integrations/wallet/sync.ts")).toBe("platform/integrations/wallet");
+    expect(unitOf("platform/integrations/service.ts")).toBe("platform/integrations");
+    expect(unitOf("platform/dates.ts")).toBe("platform/dates");
+    expect(unitOf("app/(app)/page.tsx")).toBe("app");
+  });
+
+  it("finds the units that import each other and the groups that form a cycle", () => {
+    const graph = unitGraph([
+      { from: "modules/a/service.ts", to: "modules/b/queries" },
+      { from: "modules/b/queries.ts", to: "modules/a/rules" },
+      { from: "modules/b/rules.ts", to: "modules/c/rules" },
+      { from: "modules/c/rules.ts", to: "modules/d/rules" },
+      { from: "modules/d/rules.ts", to: "modules/b/rules" },
+      { from: "modules/e/rules.ts", to: "modules/a/rules" },
+    ]);
+    expect(reciprocalPairs(graph)).toEqual(["modules/a ↔ modules/b"]);
+    expect(cycleGroups(graph)).toEqual([["modules/a", "modules/b", "modules/c", "modules/d"]]);
   });
 });
 
