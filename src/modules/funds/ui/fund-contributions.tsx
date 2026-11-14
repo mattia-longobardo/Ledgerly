@@ -621,7 +621,7 @@ export async function FundContributions({
                   .filter((one) => one !== null)
                   .join(" · ")}
               </p>
-              <Link href={`${settingsHref}#sources` as Route} className={cn(LINK, "self-start")}>
+              <Link href={`${settingsHref}#sources` as Route} className={cn(LINK, "min-w-6 self-start")}>
                 {t("debit.edit")}
               </Link>
             </Card>

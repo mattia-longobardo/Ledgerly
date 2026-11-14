@@ -32,8 +32,8 @@ export const USERS = {
   // Funds F2: years in each state of docs/design/funds-ux.md §6, with invented amounts. The `funds`
   // user starts empty on purpose, and `layout` has one year only.
   fundsHome: { email: "funds-home@example.test", password: "funds-home-password-123", name: "Funds Home" },
-  // Funds F3: a fund's new page, a PAC with a plan and a pension fund with its operations, with invented
-  // amounts. Its own user, so the years of `fundsHome` keep meaning what its spec says.
+  // Funds F3: a fund's page, a fund with a debit plan and a fund fed by the payslip with its
+  // operations, with invented amounts. Its own user, so the years of `fundsHome` keep meaning what its spec says.
   fundsDetail: {
     email: "funds-detail@example.test",
     password: "funds-detail-password-123",
@@ -51,7 +51,22 @@ export const USERS = {
     name: "Investments",
   },
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
-  cometa: { email: "cometa@example.test", password: "cometa-password-123", name: "Cometa" },
+  // Release N6: the journey of a fund fed by the payslip, with no document. It starts with no fund.
+  fundsPayslip: {
+    email: "funds-payslip@example.test",
+    password: "funds-payslip-password-123",
+    name: "Funds Payslip",
+  },
+  // Release N6: the form "Add pension fund". It starts with an account and no fund, so the payslip
+  // is free for the fund the form creates.
+  fundsNew: { email: "funds-new@example.test", password: "funds-new-password-123", name: "Funds New" },
+  // Release N6: the funds the form, the sources and the fees are driven on. Its own user, because
+  // these journeys add and remove what the pages of `fundsDetail` and `layout` are measured with.
+  fundsSetup: {
+    email: "funds-setup@example.test",
+    password: "funds-setup-password-123",
+    name: "Funds Setup",
+  },
   timeoff: { email: "timeoff@example.test", password: "timeoff-password-123", name: "Timeoff" },
   // F8: the admin journey. Its own user rather than a promoted `owner`, so every spec that signs
   // in as an ordinary one keeps meaning what it says.
@@ -60,7 +75,7 @@ export const USERS = {
   tokens: { email: "tokens@example.test", password: "tokens-password-123", name: "Tokens" },
   // F9: the one user every screen is measured on (tests/e2e/a11y.spec.ts). It is seeded with
   // something on every page — accounts, movements, budgets, pockets, subscriptions, an interest
-  // rule, a PAC, a pension fund and an applied payslip — because a layout check run against an
+  // rule, a fund with a debit plan, a fund fed by the payslip and an applied payslip — because a layout check run against an
   // empty state measures an empty state. The module journeys keep their own users, which start
   // empty on purpose, so filling this one breaks none of them.
   layout: { email: "layout@example.test", password: "layout-password-123", name: "Layout" },
@@ -104,7 +119,9 @@ export const SESSIONS = {
   fundsCopy: { user: "fundsCopy", file: "funds-copy-session.json" },
   investments: { user: "investments", file: "investments-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
-  cometa: { user: "cometa", file: "cometa-session.json" },
+  fundsPayslip: { user: "fundsPayslip", file: "funds-payslip-session.json" },
+  fundsNew: { user: "fundsNew", file: "funds-new-session.json" },
+  fundsSetup: { user: "fundsSetup", file: "funds-setup-session.json" },
   timeoff: { user: "timeoff", file: "timeoff-session.json" },
   // The seed promotes this one, so Admin › Users and Admin › Server have a journey (F8).
   admin: { user: "admin", file: "admin-session.json" },

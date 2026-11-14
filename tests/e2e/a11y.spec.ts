@@ -57,7 +57,9 @@ async function settled(page: Page): Promise<void> {
     .catch(() => undefined);
   // A skeleton is a `<main>` too, and it does not fade in: measured, it says nothing about the page.
   await page
-    .locator('[data-testid="funds-home-loading"], [data-testid="fund-detail-loading"]')
+    .locator(
+      '[data-testid="funds-home-loading"], [data-testid="fund-detail-loading"], [data-testid="fund-wizard-loading"]',
+    )
     .first()
     .waitFor({ state: "detached", timeout: 15_000 });
   await page
@@ -163,6 +165,75 @@ const go = (path: string) => async (page: Page) => {
   await settled(page);
 };
 
+type FundFormStep = "fund" | "sources" | "fees" | "review";
+
+/**
+ * The form "Add pension fund" at one of its four steps (release N6). A step past the first is only
+ * reached with the first one filled in, so each is walked to; and every step is filled with what
+ * makes it worth measuring: a value with its date, the three sources with all their fields, two
+ * fees. `layout` already has a fund fed by the payslip, so the components carry their long note.
+ */
+async function fundForm(page: Page, step: FundFormStep): Promise<void> {
+  await page.goto("/funds/new");
+  await settled(page);
+  const form = page.getByTestId("fund-wizard");
+  const card = (name: FundFormStep) => page.getByTestId(`wizard-step-${name}`);
+  await form.getByLabel("Name").fill("Fondo Pensione Complementare Gamma");
+  await form.getByLabel("Provider").fill("Esempio Previdenza");
+  await form.getByLabel("Line or compartment").fill("Bilanciata");
+  await form.getByLabel("Member since").fill(`${THIS_YEAR - 1}-03-01`);
+  await form.getByLabel("Value today").fill("1200");
+  if (step === "fund") {
+    await card("fund").locator("summary").click();
+    await finished(page);
+    return;
+  }
+  await card("fund").getByRole("button", { name: "Continue" }).click();
+  await expect(card("sources")).toBeVisible();
+  await page.getByTestId("source-switch-payroll").click();
+  await card("sources").getByRole("switch", { name: "The transfer has a due date" }).click();
+  await card("sources").getByLabel("Due day").fill("20");
+  await page.getByTestId("source-switch-bank_debit").click();
+  await card("sources").getByLabel("Expected amount").fill("100");
+  await card("sources").getByLabel("Debit day").fill("5");
+  await page.getByTestId("source-switch-manual").click();
+  if (step === "sources") {
+    await finished(page);
+    return;
+  }
+  // `layout`'s payslip already feeds "Cometa": with no component left to choose, the step goes on
+  // without that source.
+  await page.getByTestId("source-switch-payroll").click();
+  await card("sources").getByRole("button", { name: "Continue" }).click();
+  await expect(card("fees")).toBeVisible();
+  for (const [name, type, value] of [
+    ["Quota associativa", "Recurring", "12"],
+    ["Gestione", "On assets", "0,45"],
+  ] as const) {
+    await card("fees").getByRole("button", { name: "Add fee" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add fee" });
+    await dialog.getByLabel("Name").fill(name);
+    await dialog.getByLabel("Type").selectOption({ label: type });
+    await dialog.getByLabel("Value").fill(value);
+    await dialog.getByRole("button", { name: "Save fee" }).click();
+    await expect(dialog).toBeHidden();
+  }
+  if (step === "fees") {
+    await finished(page);
+    return;
+  }
+  await card("fees").getByRole("button", { name: "Continue" }).click();
+  await expect(card("review")).toBeVisible();
+  await finished(page);
+}
+
+/** A tab of one of `layout`'s two funds: "Cometa", fed by the payslip, and "Fideuram…", with a debit. */
+async function layoutFund(page: Page, fund: RegExp, query: string): Promise<void> {
+  await follow(page, "/funds", fund);
+  await page.goto(`${new URL(page.url()).pathname}${query}`);
+  await settled(page);
+}
+
 // ——— The screens ———————————————————————————————————————————————————————————————————————————
 
 const PAGES: Screen[] = [
@@ -210,6 +281,13 @@ const PAGES: Screen[] = [
     open: (page) => follow(page, "/interests", "Revolut Saving"),
   },
   { name: "/funds", session: "layout", open: go("/funds"), everyWidth: true },
+  // The form "Add pension fund" (release N6), at each of its four steps.
+  ...(["fund", "sources", "fees", "review"] as const).map((step): Screen => ({
+    name: `/funds/new?step=${step}`,
+    session: "layout",
+    open: (page) => fundForm(page, step),
+    everyWidth: true,
+  })),
   // The seeded `layout` has years of its own: one measured and one with money and no value.
   ...(
     [
@@ -251,17 +329,12 @@ const PAGES: Screen[] = [
         ["All", "?period=all"],
         ["a year before the data", `?period=${THIS_YEAR - 9}`],
         ["a custom period", `?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-03-31`],
-        ["Valuations", "?tab=valuations&period=all"],
-        ["Valuations, a past year", `?tab=valuations&period=${THIS_YEAR - 1}`],
-        ["Valuations, a year with none", `?tab=valuations&period=${THIS_YEAR - 9}`],
-        [
-          fund === "PAC Piano" ? "Deposits" : "Contributions",
-          `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=all`,
-        ],
-        [
-          fund === "PAC Piano" ? "Deposits, a past year" : "Contributions, a past year",
-          `?tab=${fund === "PAC Piano" ? "deposits" : "contributions"}&period=${THIS_YEAR - 1}`,
-        ],
+        ["Values", "?tab=valuations&period=all"],
+        ["Values, a past year", `?tab=valuations&period=${THIS_YEAR - 1}`],
+        ["Values, a year with none", `?tab=valuations&period=${THIS_YEAR - 9}`],
+        // One set of tabs for every fund (release N6): the debits are contributions like the others.
+        ["Contributions", "?tab=contributions&period=all"],
+        ["Contributions, a past year", `?tab=contributions&period=${THIS_YEAR - 1}`],
         ["Settings", "?tab=settings"],
       ] as const
     ).map(([what, query]): Screen => ({
@@ -280,7 +353,7 @@ const PAGES: Screen[] = [
       ["no value in the year running", ""],
       ["a year of payslips alone", `?period=${THIS_YEAR - 4}`],
       ["Contributions, a year of payslips alone", `?tab=contributions&period=${THIS_YEAR - 4}`],
-      ["Valuations, a year of payslips alone", `?tab=valuations&period=${THIS_YEAR - 4}`],
+      ["Values, a year of payslips alone", `?tab=valuations&period=${THIS_YEAR - 4}`],
     ] as const
   ).map(([what, query]): Screen => ({
     name: `/funds/[id], ${what}`,
@@ -292,27 +365,47 @@ const PAGES: Screen[] = [
     },
     everyWidth: true,
   })),
-  // Documents and statements of the fund: only `layout` has them.
-  ...(["contributions", "valuations"] as const).map((tab): Screen => ({
-    name: `/funds/[id], Cometa with its documents, ${tab}`,
-    session: "layout",
+  // The four tabs of `layout`'s own funds (release N6). "Cometa" is fed by the payslip, with an active
+  // source, its payslips and what two documents left before N6 — the statements already read are on
+  // nobody else's page. "Fideuram…" has a debit on an account, its two fees and the estimated cost.
+  ...(
+    [
+      ["Cometa, fed by the payslip", /^Cometa$/],
+      ["Fideuram, with a debit", /^Fideuram Master Selection$/],
+    ] as const
+  ).flatMap(([what, fund]) =>
+    (
+      [
+        ["Overview", "?period=all"],
+        ["Contributions", "?tab=contributions&period=all"],
+        ["Values", "?tab=valuations&period=all"],
+        ["Settings", "?tab=settings"],
+      ] as const
+    ).map(([tab, query]): Screen => ({
+      name: `/funds/[id], ${what}, ${tab}`,
+      session: "layout",
+      open: (page) => layoutFund(page, fund, query),
+      everyWidth: true,
+    })),
+  ),
+  // The fund of `fundsSetup` with no source, no contribution and no value: every empty state at once.
+  ...(
+    [
+      ["Overview", ""],
+      ["Contributions", "?tab=contributions"],
+      ["Values", "?tab=valuations"],
+      ["Settings", "?tab=settings"],
+    ] as const
+  ).map(([tab, query]): Screen => ({
+    name: `/funds/[id], a fund with no source, ${tab}`,
+    session: "fundsSetup",
     open: async (page) => {
-      await follow(page, "/funds", /^Cometa$/);
-      await page.goto(`${new URL(page.url()).pathname}?tab=${tab}&period=all`);
+      await follow(page, "/funds?period=all", /^Fondo Vuoto$/);
+      await page.goto(`${new URL(page.url()).pathname}${query}`);
       await settled(page);
     },
     everyWidth: true,
   })),
-  {
-    name: "/funds/[id]/documents/[docId]",
-    session: "layout",
-    open: async (page) => {
-      await follow(page, "/funds", /Cometa/);
-      // The documents card lives on the Valuations tab, not on the fund's first screen.
-      await openTab(page, "valuations");
-      await followLink(page, '[data-testid="fund-documents"] a[href*="/documents/"]');
-    },
-  },
   { name: "/investments", session: "layout", open: go("/investments") },
   {
     name: "/investments · All, the value chart, by class",
@@ -576,6 +669,109 @@ const OVERLAYS: Screen[] = [
       await follow(page, "/investments", /^Directa$/);
       await page.getByRole("button", { name: "Update value" }).first().click();
       await settledDialog(page);
+    },
+  },
+  // The four dialogs of a fund (release N6): a contribution, a value, a source, a fee.
+  {
+    // On the fund fed by the payslip: the three components and the period of the source.
+    name: "the record contribution dialog, from the payslip",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Cometa$/, "?tab=contributions&period=all");
+      await page
+        .getByTestId("fund-contributions")
+        .getByRole("button", { name: "Record contribution" })
+        .click();
+      await settledDialog(page);
+      await expect(page.getByRole("dialog").getByLabel("Period")).toBeVisible();
+    },
+  },
+  {
+    // On the fund with a debit: the amount, the fee proposed and the movement to link.
+    name: "the record contribution dialog, voluntary",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=contributions&period=all");
+      await page
+        .getByTestId("fund-contributions")
+        .getByRole("button", { name: "Record contribution" })
+        .click();
+      await settledDialog(page);
+      await expect(page.getByRole("dialog").getByLabel("Linked movement")).toBeVisible();
+    },
+  },
+  {
+    name: "the record contribution dialog, another operation",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=contributions&period=all");
+      await page
+        .getByTestId("fund-contributions")
+        .getByRole("button", { name: "Record contribution" })
+        .click();
+      await settledDialog(page);
+      await page.getByRole("dialog").getByRole("button", { name: "Other operation" }).click();
+      await expect(page.getByRole("dialog").getByLabel("Operation")).toBeVisible();
+    },
+  },
+  {
+    name: "the update value dialog of a fund",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Fideuram Master Selection$/, "");
+      await page.getByRole("banner").getByRole("button", { name: "Update value" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // The payslip source of "Cometa": its components, its period, its due date and its note.
+    name: "the source dialog, payslip",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Cometa$/, "?tab=settings");
+      await page.getByRole("button", { name: "Edit Payslip" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // A second payslip source on the fund with a debit: every component is held by "Cometa".
+    name: "the source dialog, payslip components already taken",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=settings");
+      await page.getByTestId("fund-sources").getByRole("button", { name: "Add source" }).click();
+      await page.getByRole("menuitem", { name: "Payslip" }).click();
+      await settledDialog(page);
+      await expect(page.getByRole("dialog").getByText("Already assigned to “Cometa”").first()).toBeVisible();
+    },
+  },
+  {
+    name: "the source dialog, recurring debit",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=settings");
+      await page.getByRole("button", { name: "Edit Recurring debit" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the fee dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=settings");
+      await page.getByTestId("fund-fees").getByRole("button", { name: "Add fee" }).click();
+      await settledDialog(page);
+      // "Recurring" shows every field the dialog can have: the mode, the period and what it applies to.
+      await page.getByRole("dialog").getByLabel("Type").selectOption({ label: "Recurring" });
+      await page.getByRole("dialog").locator("summary").click();
     },
   },
   {

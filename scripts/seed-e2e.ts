@@ -17,7 +17,7 @@ import {
   saveProviderBalance,
 } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
-import { recordValuation, setFundState } from "../src/modules/funds/service";
+import { createFund, recordValuation, setFundState } from "../src/modules/funds/service";
 import { pensionCompetences } from "../src/modules/funds/schema";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../src/modules/payroll/service";
 import { createRule } from "../src/modules/interests/service";
@@ -573,7 +573,7 @@ async function seedFundsHome(): Promise<void> {
 
 /**
  * A fund's new page (docs/design/funds-ux.md §6, F3): two funds over three years, counted back from this
- * one. The PAC has a plan, the pension fund has operations with their units and a quarter on the way.
+ * one. One fund has a debit plan, the other is fed by the payslip: operations with their units and a quarter on the way.
  * Every amount is invented.
  */
 async function seedFundsDetail(email: string): Promise<void> {
@@ -682,6 +682,101 @@ async function seedFundsCopy(): Promise<void> {
   await seedFundsDetail(USERS.fundsCopy.email);
   const ctx = await contextOf(USERS.fundsCopy.email);
   await updatePreferences(ctx, { ...(await getPreferences(ctx)), locale: "it" });
+}
+
+/** The form "Add pension fund" (release N6): an open account for the debit to name, and no fund. */
+async function seedFundsNew(): Promise<void> {
+  const ctx = await contextOf(USERS.fundsNew.email);
+  await syncedAccount(ctx, "e2e-new-1", "ING Conto Arancio");
+}
+
+/**
+ * The funds the form, the sources and the fees are driven on (release N6,
+ * docs/design/rewrite-plan/ux/n6-pension-fund.md §16.3). One fund per journey, so a journey that
+ * adds or removes something changes nothing another one reads. Every amount is invented.
+ */
+async function seedFundsSetup(): Promise<void> {
+  const ctx = await contextOf(USERS.fundsSetup.email);
+  const on = today(ctx.timeZone);
+  const year = Number(on.slice(0, 4));
+  // An open account, for "Paying account" to offer something besides "Any account".
+  await syncedAccount(ctx, "e2e-setup-1", "ING Conto Arancio");
+
+  // The one fund the payslip feeds: its three components are taken for every other fund. The three
+  // payslips of last year's first quarter accrued 360,00 + 540,00 + 900,00 €, with no enrolment quota,
+  // and the fund has said nothing yet: a contribution written by hand is what reconciles the quarter.
+  const fed = await payrollFund(ctx, {
+    name: "Fondo Busta",
+    provider: "Esempio",
+    startOn: `${year - 1}-01-01`,
+    receivesPayroll: true,
+  });
+  for (const month of ["01", "02", "03"]) {
+    await getDb()
+      .insert(pensionCompetences)
+      .values(
+        userScoped(ctx).stamp({
+          fundId: fed.id,
+          payslipId: randomUUID(),
+          payrollPeriod: `${year - 1}-${month}-01`,
+          payslipType: "ordinary",
+          year: year - 1,
+          quarter: 1,
+          workerCents: 12_000n,
+          employerCents: 18_000n,
+          tfrCents: 30_000n,
+        }),
+      );
+  }
+
+  // No source, no fee, no contribution and no value: every empty state of §10.4 and §10.5.
+  await createFund(ctx, {
+    fund: { name: "Fondo Vuoto", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [],
+    fees: [],
+  });
+
+  // No source yet: the journey of Settings › Contributions adds them.
+  await createFund(ctx, {
+    fund: { name: "Fondo Sorgenti", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [],
+    fees: [],
+  });
+
+  // The same, for the journey that pauses and removes a source.
+  await createFund(ctx, {
+    fund: { name: "Fondo Pausa", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [],
+    fees: [],
+  });
+
+  // No fee yet, and a value: 0,45 % a year of 9.000,00 € is the 40,50 € of the estimate.
+  await createFund(ctx, {
+    fund: { name: "Fondo Costi", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    value: { on, cents: 900_000n },
+    sources: [],
+    fees: [],
+  });
+
+  // Paid in 5.000,00 €, worth 5.600,00 € yesterday: the journey takes money out and writes the
+  // value of today, lower by as much.
+  const exit = await createFund(ctx, {
+    fund: { name: "Fondo Uscita", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [{ kind: "manual" }],
+    fees: [],
+  });
+  await addDeposit(ctx, exit.id, {
+    on: `${year - 1}-03-01`,
+    chargedCents: 500_000n,
+    feeCents: 0n,
+    note: null,
+  });
+  await recordValuation(ctx, exit.id, { on: addDays(on, -1), cents: 560_000n, units: null, note: null });
 }
 
 /**
@@ -1489,6 +1584,8 @@ await seedFunds();
 await seedFundsHome();
 await seedFundsDetail(USERS.fundsDetail.email);
 await seedFundsCopy();
+await seedFundsNew();
+await seedFundsSetup();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();

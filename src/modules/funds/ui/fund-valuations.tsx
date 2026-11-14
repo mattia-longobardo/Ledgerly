@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
@@ -33,6 +34,7 @@ export async function FundValuations({
   when,
   todayOn,
   detail,
+  updateValue = null,
 }: {
   ctx: Ctx;
   fundId: string;
@@ -48,6 +50,8 @@ export async function FundValuations({
   when: string;
   todayOn: CivilDate;
   detail: FundDetail;
+  /** "Update value", for the empty state of a fund that never had a value (§10.5). */
+  updateValue?: ReactNode;
 }) {
   const t = await getTranslations("funds.fund.valuations");
   const th = await getTranslations("funds.home");
@@ -99,6 +103,7 @@ export async function FundValuations({
             {lastValue && closesPeriodBefore(lastValue.on, period) && (
               <p data-testid="closing-note">{th("closingNote", { date: long(lastValue.on) })}</p>
             )}
+            {valuesEver === 0 && updateValue && <div className="pt-1">{updateValue}</div>}
           </div>
         ) : (
           <>

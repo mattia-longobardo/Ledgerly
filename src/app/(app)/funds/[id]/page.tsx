@@ -346,6 +346,7 @@ async function FundDetail({
         when={when}
         todayOn={todayOn}
         detail={detail}
+        updateValue={archived ? null : valuationButton(tf("recordValue"), "card")}
       />,
     );
   }
