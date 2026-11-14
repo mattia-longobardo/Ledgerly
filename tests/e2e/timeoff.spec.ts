@@ -315,3 +315,44 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(page.getByRole("heading", { name: `${YEAR} calendar` })).toBeVisible();
   });
 });
+
+test("the cards say what a month grants, and the panel what will be left on the day (N5.1)", async ({
+  page,
+}) => {
+  await test.step("with no payslip the rate is the allowance over twelve, and the card says so", async () => {
+    await page.goto("/timeoff");
+    const vacation = page.getByTestId("vacation-card-accrual");
+    // 26 days a year over twelve months.
+    await expect(vacation).toContainText("Accrues 2.17 d a month");
+    // The forecast for the end of the year is the residual of the card: one answer, not two.
+    await expect(vacation).toContainText("Forecast on 31 Dec: 24 d");
+    await expect(vacation).toContainText("Estimate: the allowance over 12 months");
+    await expect(page.getByTestId("rol-card-accrual")).toContainText("Accrues 0.33 d a month");
+  });
+
+  await test.step("the panel says the forecast on the first day of the absence, and writes nothing", async () => {
+    const writes = countWrites(page);
+    await cell(page, MON).click();
+    await cell(page, FRI).click();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    const summary = panel.getByTestId("summary");
+    // The residual of the year stays where it was; the forecast of the day is a line of its own.
+    await expect(summary).toContainText("24 d → 19 d");
+    await expect(summary).toContainText(`Vacation forecast on ${Number(MON.slice(8))} Mar ${YEAR}`);
+    // A week in March against two months of accrual: below zero, said plainly, and still confirmable.
+    await expect(panel.getByText(/the Vacation forecast is .* d under zero\. You can confirm/)).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Confirm" })).toBeEnabled();
+    await panel.getByRole("button", { name: "Cancel" }).click();
+    await expect(panel).toBeHidden();
+    expect(writes()).toBe(0);
+  });
+
+  await test.step("a year with nothing stated has no forecast, and no error", async () => {
+    await page.goto(`/timeoff?year=${YEAR + 1}`);
+    await expect(page.getByRole("heading", { name: `${YEAR + 1} calendar` })).toBeVisible();
+    await expect(page.getByTestId("vacation-card-accrual")).toHaveCount(0);
+    await expect(page.getByTestId("vacation-card")).toContainText(
+      "No payslip and no allowance for this year yet",
+    );
+  });
+});

@@ -1,16 +1,25 @@
 import "server-only";
-import { leaveEventsOf, leaveSnapshotsOf } from "@/modules/payroll/service";
+import { leaveEventsOf, leaveSnapshotHistory } from "@/modules/payroll/service";
 import { holidaysFor } from "@/platform/holidays/service";
 import { trekStatsOf } from "@/platform/integrations/trek/sync";
 import { getPreferences } from "@/modules/users/service";
 import type { Ctx } from "@/platform/context";
 import { type CivilDate, type MonthKey, addMonths, monthKey, today } from "@/platform/dates";
 import {
+  type AccrualKind,
+  type AccrualView,
+  type ForecastInput,
+  type Overdrawn,
+  accrualView,
+  forecastOpening,
+  monthlyRate,
+  overdrawn,
+} from "./accrual";
+import {
   type CalendarMonth,
   type LeaveDayKind,
   type LeaveDayView,
   type MonthBar,
-  type Overdrawn,
   type ResidualInput,
   type ResidualView,
   type MonthGroup,
@@ -22,8 +31,6 @@ import {
   allowanceMismatchDays,
   monthBars,
   monthGroups,
-  overdrawn,
-  workingDaysOf,
   residual,
   unrecordedLeave,
   yearTotals,
@@ -112,6 +119,10 @@ export interface TimeOffView {
    * panel runs the same `residual()` over the days as they would be, and reads nothing itself.
    */
   residualInputs: { vacation: ResidualInput; rol: ResidualInput };
+  /** What a month grants and what the year will hand on, per kind (release N5.1). */
+  accrual: Record<AccrualKind, AccrualView>;
+  /** What each forecast was worked out from, for the panel's "forecast on the day of the absence". */
+  forecastInputs: Record<AccrualKind, ForecastInput>;
 }
 
 const asView = (day: LeaveDay): LeaveDayView => ({
@@ -129,15 +140,33 @@ const asView = (day: LeaveDay): LeaveDayView => ({
  * card on the allowance formula while vacation is on the payslip's.
  */
 export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: number): Promise<TimeOffView> {
-  const [preferences, allowance, allowances, days, snapshots, events, trek] = await Promise.all([
+  // Every payslip's snapshot, not only this year's: the last one may be of the year before, and
+  // the monthly accrual is read across them. Read first, because it says how far back the days go.
+  const history = await leaveSnapshotHistory(ctx);
+  const snapshots = history.filter((one) => Number(one.period.slice(0, 4)) === year);
+
+  /** The last applied payslip of any year that printed a balance for this kind. */
+  const latestSnapshot = (kind: AccrualKind) => {
+    const last = history.filter((one) => one.kind === kind && one.remainingHours !== null).at(-1);
+    return last ? { period: last.period as MonthKey, remainingHours: last.remainingHours as number } : null;
+  };
+  const openings = {
+    vacation: forecastOpening(latestSnapshot("vacation"), year),
+    rol: forecastOpening(latestSnapshot("rol"), year),
+  };
+
+  // One read of the days: the year shown, and before it whatever a forecast still has to subtract.
+  const shown = yearWindow(year);
+  const from = [shown.from, openings.vacation.spentFrom, openings.rol.spentFrom].sort()[0];
+  const [preferences, allowance, allowances, everyDay, events, trek] = await Promise.all([
     getPreferences(ctx),
     allowanceOf(ctx, year),
     listAllowances(ctx),
-    listLeaveDays(ctx, yearWindow(year)),
-    leaveSnapshotsOf(ctx, year),
+    listLeaveDays(ctx, { from, to: shown.to }),
     leaveEventsOf(ctx, year),
     trekStatsOf(ctx, year),
   ]);
+  const days = everyDay.filter((day) => day.on >= shown.from);
 
   // The days this person does not work, from the calendars they keep (M3).
   const holidays = await holidaysFor(ctx, [year], preferences.patronSaint);
@@ -183,10 +212,6 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
   const carriedMinutes = carriedOf("vacation");
   const carriedRolMinutes = carriedOf("rol");
 
-  // The days this person actually works: the denominator of the accrual, and what a booked day is
-  // measured against, so the two can never be counted over different calendars (N9).
-  const workingDays = workingDaysOf(year, holidays);
-
   /** The days of a kind no payslip has counted yet — the ones an accrual has to cover (N9). */
   const plannedOf = (kind: "vacation" | "rol") =>
     views.filter((day) => day.kind === kind && dayStatus(day.on, countedThrough) === "planned");
@@ -209,6 +234,21 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
       countedThrough,
       minutesPerDay,
     },
+  };
+
+  /** What a kind's forecast starts from and grows by: the payslips' rate, or the allowance's. */
+  const forecastOf = (kind: AccrualKind, allowanceMinutes: number | null): ForecastInput => ({
+    rate: monthlyRate(
+      history.filter((one) => one.kind === kind),
+      allowanceMinutes,
+    ),
+    opening: openings[kind],
+    days: everyDay.filter((day) => day.kind === kind && day.on >= openings[kind].spentFrom).map(asView),
+    minutesPerDay,
+  });
+  const forecastInputs: TimeOffView["forecastInputs"] = {
+    vacation: forecastOf("vacation", vacationMinutes),
+    rol: forecastOf("rol", rolMinutes),
   };
 
   const vacation: KindView = {
@@ -265,19 +305,17 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
     overdrawn: [
       overdrawn("vacation", {
         view: vacation.residual,
-        allowanceMinutes: vacationMinutes,
+        forecast: forecastInputs.vacation,
         carriedMinutes,
-        workingDays,
+        year,
         planned: plannedOf("vacation"),
-        minutesPerDay,
       }),
       overdrawn("rol", {
         view: rol.residual,
-        allowanceMinutes: rolMinutes,
+        forecast: forecastInputs.rol,
         carriedMinutes: carriedRolMinutes,
-        workingDays,
+        year,
         planned: plannedOf("rol"),
-        minutesPerDay,
       }),
     ].filter((one): one is Overdrawn => one !== null),
     totals: yearTotals(views, countedThrough, minutesPerDay),
@@ -292,6 +330,11 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
     }),
     holidays: [...holidays].sort(),
     residualInputs,
+    accrual: {
+      vacation: accrualView(forecastInputs.vacation, year, vacation.residual.basis),
+      rol: accrualView(forecastInputs.rol, year, rol.residual.basis),
+    },
+    forecastInputs,
   };
 }
 

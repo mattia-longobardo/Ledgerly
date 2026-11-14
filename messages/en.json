@@ -4677,9 +4677,19 @@
       "balanceUnknown": "— · allowance not stated",
       "otherYear": "{count, plural, one {# day is} other {# days are}} in {year}: see that year's page for the balance.",
       "overdrawn": "The balance goes {amount} below zero. You can confirm: the page lists it among the overdrawn balances.",
-      "nothingBookable": "No day in this range can be booked."
+      "nothingBookable": "No day in this range can be booked.",
+      "forecast": "{kind} forecast on {date}",
+      "forecastBelowZero": "On {date} the {kind} forecast is {amount} under zero. You can confirm: the days are not accrued by then."
     },
-    "loading": "Loading Time off"
+    "loading": "Loading Time off",
+    "accrual": {
+      "perMonth": "Accrues {amount} a month",
+      "yearEnd": "Forecast on 31 Dec: {amount}",
+      "fromAllowance": "Estimate: the allowance over 12 months, with no payslip to read the rate from",
+      "none": "No forecast: no payslip and no allowance to read the accrual from",
+      "daysForecast": "days forecast on 31 Dec",
+      "basis": "Forecast from the payslip of {payslip}: its residual, plus what accrues until 31 Dec, less the planned days"
+    }
   },
   "legal": {
     "nav": "Legal pages",

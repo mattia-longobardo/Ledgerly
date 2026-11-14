@@ -16,6 +16,7 @@ import {
 import type { MonthKey } from "@/platform/dates";
 import { type UiLocale, formatDate } from "@/platform/format";
 import { notify } from "@/ui/toast";
+import type { ForecastInput } from "../accrual";
 import {
   type LeaveActionResult,
   type LeaveFormInput,
@@ -48,6 +49,8 @@ export interface LeaveBoardProps {
   /** The days of the year nobody works, the patron saint included. */
   holidays: string[];
   residuals: Partial<Record<LeaveDayKind, ResidualInput>>;
+  /** What each forecast on the page was worked out from, by kind (release N5.1). */
+  forecasts?: Partial<Record<LeaveDayKind, ForecastInput>>;
   types: LeaveTypeOption[];
   children: ReactNode;
 }
@@ -106,6 +109,7 @@ export function LeaveBoard({
   days,
   holidays,
   residuals,
+  forecasts,
   types,
   children,
 }: LeaveBoardProps) {
@@ -307,7 +311,7 @@ export function LeaveBoard({
         <LeavePanel
           key={opened}
           entry={entry}
-          data={{ year, minutesPerDay, days: views, holidays: holidaySet, residuals, types }}
+          data={{ year, minutesPerDay, days: views, holidays: holidaySet, residuals, forecasts, types }}
           saving={busy}
           error={error}
           finalFocus={opener}

@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 75835,
-    "duplicatedLines": 16626,
-    "percent": 21.92,
-    "blocks": 1130
+    "lines": 76066,
+    "duplicatedLines": 16598,
+    "percent": 21.82,
+    "blocks": 1129
   },
   "units": {
     "app": {
-      "lines": 15433,
-      "duplicatedLines": 3912,
-      "percent": 25.35,
-      "blocks": 280
+      "lines": 15432,
+      "duplicatedLines": 3887,
+      "percent": 25.19,
+      "blocks": 278
     },
     "global.d": {
       "lines": 6,
@@ -65,10 +65,10 @@
       "blocks": 133
     },
     "modules/payroll": {
-      "lines": 3461,
-      "duplicatedLines": 951,
-      "percent": 27.48,
-      "blocks": 53
+      "lines": 3469,
+      "duplicatedLines": 948,
+      "percent": 27.33,
+      "blocks": 54
     },
     "modules/pockets": {
       "lines": 1655,
@@ -83,9 +83,9 @@
       "blocks": 34
     },
     "modules/timeoff": {
-      "lines": 3277,
+      "lines": 3501,
       "duplicatedLines": 193,
-      "percent": 5.89,
+      "percent": 5.51,
       "blocks": 20
     },
     "modules/transactions": {
@@ -367,7 +367,7 @@
     "app/(app)/settings/server/smtp-card.tsx": 119,
     "app/(app)/settings/users/page.tsx": 16,
     "app/(app)/subscriptions/page.tsx": 17,
-    "app/(app)/timeoff/page.tsx": 83,
+    "app/(app)/timeoff/page.tsx": 58,
     "app/(app)/timeoff/settings/holiday-calendars.tsx": 32,
     "app/(app)/timeoff/settings/page.tsx": 18,
     "app/(auth)/forgot-password/forgot-form.tsx": 8,
@@ -460,7 +460,7 @@
     "modules/payroll/queries.ts": 19,
     "modules/payroll/rules.ts": 101,
     "modules/payroll/schema.ts": 204,
-    "modules/payroll/service.ts": 136,
+    "modules/payroll/service.ts": 133,
     "modules/payroll/ui/add-payslips.tsx": 57,
     "modules/payroll/ui/present.ts": 9,
     "modules/payroll/ui/register-table.tsx": 50,

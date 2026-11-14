@@ -70,6 +70,22 @@ function bars(values: Array<[number, number]>): MonthBar[] {
   }));
 }
 
+describe("KindCard: the accrual (release N5.1)", () => {
+  it("says what a month grants and what the year will hand on, one line each", () => {
+    renderCard({ accrualNotes: ["Accrues 2 d a month", "Forecast on 31 Dec: 14 d"] });
+    const notes = screen.getByTestId("card-accrual");
+    expect([...notes.querySelectorAll("li")].map((one) => one.textContent)).toEqual([
+      "Accrues 2 d a month",
+      "Forecast on 31 Dec: 14 d",
+    ]);
+  });
+
+  it("draws no empty list when there is nothing to say about the accrual", () => {
+    renderCard();
+    expect(screen.queryByTestId("card-accrual")).not.toBeInTheDocument();
+  });
+});
+
 describe("MonthBars", () => {
   it("draws all twelve months, empty ones included", () => {
     const { container } = render(

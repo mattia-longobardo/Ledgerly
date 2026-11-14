@@ -18,6 +18,7 @@ export function KindCard({
   takenNote,
   plannedNote,
   basisNote,
+  accrualNotes = [],
   takenShare,
   plannedShare,
   tone,
@@ -33,6 +34,8 @@ export function KindCard({
   plannedNote: string | null;
   /** Where the residual came from, in the user's own words. */
   basisNote: string;
+  /** What a month grants and what the year will hand on, one line each (N5.1); none when unknown. */
+  accrualNotes?: string[];
   /** 0–1 of the bar each part fills; they are clamped so the two together never exceed it. */
   takenShare: number;
   plannedShare: number;
@@ -62,6 +65,16 @@ export function KindCard({
         <span>{takenNote}</span>
         {plannedNote && <span>{plannedNote}</span>}
       </div>
+      {accrualNotes.length > 0 && (
+        <ul
+          className="flex flex-col gap-0.5 text-sm text-muted tabular-nums"
+          data-testid={`${testId}-accrual`}
+        >
+          {accrualNotes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      )}
       <p className="text-xs text-faint">{basisNote}</p>
     </Card>
   );

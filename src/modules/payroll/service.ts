@@ -788,13 +788,14 @@ export interface LeaveEvent {
 const hoursOf = (value: string | null): number | null => (value === null ? null : Number(value));
 
 /**
- * Every leave snapshot an **applied** payslip of `year` printed, oldest first (spec §7.8).
+ * Every leave snapshot an **applied** payslip printed, oldest first (spec §7.8); `year` keeps the
+ * payslips of one calendar year.
  *
  * Only active payslips count: a superseded one and the rectification that replaced it would
  * otherwise both offer a snapshot for the same month, and the residual would pick whichever came
  * out of the database first. The order is deterministic so the caller can take the last one.
  */
-export async function leaveSnapshotsOf(ctx: Pick<Ctx, "userId">, year: number): Promise<LeaveSnapshot[]> {
+async function appliedLeaveSnapshots(ctx: Pick<Ctx, "userId">, year?: number): Promise<LeaveSnapshot[]> {
   const rows = await getDb()
     .select({
       kind: leaveBalanceSnapshots.kind,
@@ -810,7 +811,7 @@ export async function leaveSnapshotsOf(ctx: Pick<Ctx, "userId">, year: number): 
       and(
         userScoped(ctx).owns(leaveBalanceSnapshots),
         eq(payslips.active, true),
-        sql`extract(year from ${leaveBalanceSnapshots.period}) = ${year}`,
+        year === undefined ? undefined : sql`extract(year from ${leaveBalanceSnapshots.period}) = ${year}`,
       ),
     )
     .orderBy(asc(leaveBalanceSnapshots.period), asc(leaveBalanceSnapshots.kind));
@@ -823,6 +824,20 @@ export async function leaveSnapshotsOf(ctx: Pick<Ctx, "userId">, year: number): 
     usedHours: hoursOf(row.used),
     remainingHours: hoursOf(row.remaining),
   }));
+}
+
+/** Every leave snapshot an **applied** payslip of `year` printed, oldest first (spec §7.8). */
+export function leaveSnapshotsOf(ctx: Pick<Ctx, "userId">, year: number): Promise<LeaveSnapshot[]> {
+  return appliedLeaveSnapshots(ctx, year);
+}
+
+/**
+ * Every leave snapshot of every year, oldest first: what a balance is forecast from. The last
+ * payslip may be of the year before the one on the screen, and the monthly accrual is the
+ * difference between one payslip's MAT. and the next (`docs/design/timeoff-accrual.md`).
+ */
+export function leaveSnapshotHistory(ctx: Pick<Ctx, "userId">): Promise<LeaveSnapshot[]> {
+  return appliedLeaveSnapshots(ctx);
 }
 
 /**

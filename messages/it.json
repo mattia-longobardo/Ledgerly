@@ -4677,9 +4677,19 @@
       "balanceUnknown": "— · dotazione non indicata",
       "otherYear": "{count, plural, one {# giorno è} other {# giorni sono}} nel {year}: il residuo si vede nella pagina di quell'anno.",
       "overdrawn": "Il residuo va sotto zero di {amount}. Puoi confermare: la pagina lo mostra tra i saldi sforati.",
-      "nothingBookable": "Nessun giorno prenotabile in questo intervallo."
+      "nothingBookable": "Nessun giorno prenotabile in questo intervallo.",
+      "forecast": "{kind} previsto al {date}",
+      "forecastBelowZero": "Al {date} il previsto di {kind} è sotto zero di {amount}. Puoi confermare: per quella data i giorni non sono ancora maturati."
     },
-    "loading": "Caricamento di Time Off"
+    "loading": "Caricamento di Time Off",
+    "accrual": {
+      "perMonth": "Matura {amount} al mese",
+      "yearEnd": "Previsto al 31/12: {amount}",
+      "fromAllowance": "Stima: dotazione ÷ 12 mesi, senza un cedolino da cui leggere il ritmo",
+      "none": "Nessuna previsione: mancano un cedolino e una dotazione da cui leggere la maturazione",
+      "daysForecast": "giorni previsti al 31/12",
+      "basis": "Previsto dal cedolino di {payslip}: il suo residuo, più la maturazione fino al 31/12, meno i giorni pianificati"
+    }
   },
   "legal": {
     "nav": "Pagine legali",

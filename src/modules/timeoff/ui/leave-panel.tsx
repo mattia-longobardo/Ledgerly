@@ -14,6 +14,7 @@ import { Field } from "@/ui/field";
 import { Input, Select, Textarea } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
+import { type ForecastInput, forecastChange } from "../accrual";
 import type { LeaveFormInput } from "../actions";
 import {
   type LeaveDayKind,
@@ -48,6 +49,8 @@ export interface LeavePanelData {
   holidays: ReadonlySet<string>;
   /** What each residual on the page was worked out from, by kind. */
   residuals: Partial<Record<LeaveDayKind, ResidualInput>>;
+  /** What each forecast on the page was worked out from, by kind (release N5.1). */
+  forecasts?: Partial<Record<LeaveDayKind, ForecastInput>>;
   /** The kinds of leave, as a list: the panel names none of its own (anticipation AN1). */
   types: readonly LeaveTypeOption[];
 }
@@ -193,6 +196,20 @@ export function LeavePanel({
   const signed = (minutes: number) => (minutes < 0 ? `−${days(-minutes)}` : days(minutes));
   const overdrawn =
     preview?.balances.filter((one) => one.afterMinutes !== null && one.afterMinutes < 0) ?? [];
+  /**
+   * The forecast on the day the absence starts, before and after it (release N5.1): the year-end
+   * residual says what the year adds up to, this says whether the days will be there by then.
+   */
+  const forecasts = (preview?.balances ?? []).flatMap((one) => {
+    const ofKind = (list: readonly LeaveDayView[]) => list.filter((day) => day.kind === one.kind);
+    const change = forecastChange(data.forecasts?.[one.kind], { from, to }, data.year, {
+      before: ofKind(data.days),
+      after: ofKind(preview?.after ?? []),
+    });
+    return change === null ? [] : [{ kind: one.kind, ...change }];
+  });
+  // The first day is a date here: a forecast comes only from a range the preview accepted.
+  const forecastDate = forecasts.length > 0 ? formatDate(from, "long", locale) : "";
   const otherYear = preview?.written.find((date) => Number(date.slice(0, 4)) !== data.year);
 
   return (
@@ -420,6 +437,18 @@ export function LeavePanel({
                   )}
                 </Line>
               ))}
+              {forecasts.map((one) => (
+                <Line
+                  key={`forecast-${one.kind}`}
+                  label={t("panel.forecast", { kind: nameOf(one.kind), date: forecastDate })}
+                  negative={one.afterMinutes < 0}
+                >
+                  {t("panel.balanceChange", {
+                    before: signed(one.beforeMinutes),
+                    after: signed(one.afterMinutes),
+                  })}
+                </Line>
+              ))}
             </dl>
 
             {preview.balances.length === 0 && !nothing && (
@@ -437,6 +466,17 @@ export function LeavePanel({
                 {t("panel.overdrawn", { amount: days(-(one.afterMinutes as number)) })}
               </p>
             ))}
+            {forecasts
+              .filter((one) => one.afterMinutes < 0)
+              .map((one) => (
+                <p key={one.kind} className="text-sm text-muted">
+                  {t("panel.forecastBelowZero", {
+                    kind: nameOf(one.kind),
+                    amount: days(-one.afterMinutes),
+                    date: forecastDate,
+                  })}
+                </p>
+              ))}
             {nothing && (
               <p className="text-sm text-warn">
                 {preview.excluded.length === 1

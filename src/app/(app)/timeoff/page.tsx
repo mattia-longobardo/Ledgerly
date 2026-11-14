@@ -3,8 +3,9 @@ import type { Metadata, Route } from "next";
 import { Fragment } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { type LeaveRow, timeOffView } from "@/modules/timeoff/queries";
-import type { MonthBar, MonthGroup, Overdrawn, ResidualView } from "@/modules/timeoff/rules";
+import { type KindView, type LeaveRow, timeOffView } from "@/modules/timeoff/queries";
+import type { AccrualView, Overdrawn } from "@/modules/timeoff/accrual";
+import type { MonthBar, MonthGroup, ResidualView } from "@/modules/timeoff/rules";
 import { KindCard, MonthBars } from "@/modules/timeoff/ui/kind-card";
 import { AddLeave, RowActions } from "@/modules/timeoff/ui/leave-actions";
 import { BoardCalendar, LeaveBoard } from "@/modules/timeoff/ui/leave-board";
@@ -92,11 +93,43 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
       : t("overdrawn.allowance", { kind, amount });
   };
 
-  const vacationResidual = view.vacation.residual;
-  const rolResidual = view.rol.residual;
+  /**
+   * What a card says about the accrual (release N5.1): the month's worth and the forecast for the
+   * end of the year. A rate that is the allowance over twelve says that it is an estimate; a card
+   * with no rate says why there is no forecast, where there is an allowance or a payslip to expect
+   * one from.
+   */
+  const accrualNotes = (accrual: AccrualView, residual: ResidualView): string[] => {
+    if (accrual.rate === null) return residual.basis === "unknown" ? [] : [t("accrual.none")];
+    const notes = [t("accrual.perMonth", { amount: days(accrual.rate.minutesPerMonth) })];
+    if (accrual.yearEndMinutes !== null && !accrual.leads) {
+      notes.push(t("accrual.yearEnd", { amount: days(accrual.yearEndMinutes) }));
+    }
+    if (accrual.rate.source === "allowance") notes.push(t("accrual.fromAllowance"));
+    return notes;
+  };
   /** A minute total as a card prints it: bare days, or the dash of a residual nobody can compute. */
   const asDays = (minutes: number | null) =>
     minutes === null ? NULL_DISPLAY : formatNumber(minutes / view.minutesPerDay, locale);
+
+  /**
+   * What the two headline cards have in common. A year with a payslip or an allowance of its own
+   * leads with the residual; a year with neither, read from an earlier payslip, leads with the
+   * forecast and says that it is one (decision D6).
+   */
+  const cardOf = ({ residual, allowanceMinutes, carriedMinutes }: KindView, accrual: AccrualView) => ({
+    allowanceNote: allowanceMinutes === null ? "" : t("cards.perYear", { amount: days(allowanceMinutes) }),
+    value: asDays(accrual.leads ? accrual.yearEndMinutes : residual.remainingMinutes),
+    valueUnit: accrual.leads ? t("accrual.daysForecast") : t("cards.daysRemaining"),
+    takenNote: t("cards.taken", { amount: days(residual.takenMinutes) }),
+    basisNote: accrual.leads
+      ? t("accrual.basis", { payslip: formatDate(accrual.payslipPeriod, "monthYear", locale) })
+      : basisNote(residual, carriedMinutes),
+    accrualNotes: accrualNotes(accrual, residual),
+    takenShare: shareOf(residual.takenMinutes, residual),
+    plannedShare: shareOf(residual.plannedMinutes, residual),
+  });
+  const rolPlanned = view.rol.residual.plannedMinutes;
 
   const headline = [
     view.vacation.allowanceMinutes === null
@@ -220,6 +253,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
       days={booked}
       holidays={view.holidays}
       residuals={view.residualInputs}
+      forecasts={view.forecastInputs}
       types={leaveTypeOptions((kind) => t(`kinds.${kind}` as "kinds.vacation"))}
     >
       <Page
@@ -332,39 +366,15 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
         <div className="grid gap-4 @4xl:grid-cols-2 @6xl:grid-cols-4">
           <KindCard
             label={t("cards.vacation")}
-            allowanceNote={
-              view.vacation.allowanceMinutes === null
-                ? ""
-                : t("cards.perYear", { amount: days(view.vacation.allowanceMinutes) })
-            }
-            value={asDays(vacationResidual.remainingMinutes)}
-            valueUnit={t("cards.daysRemaining")}
-            takenNote={t("cards.taken", { amount: days(vacationResidual.takenMinutes) })}
-            plannedNote={t("cards.planned", { amount: days(vacationResidual.plannedMinutes) })}
-            basisNote={basisNote(vacationResidual, view.vacation.carriedMinutes)}
-            takenShare={shareOf(vacationResidual.takenMinutes, vacationResidual)}
-            plannedShare={shareOf(vacationResidual.plannedMinutes, vacationResidual)}
+            {...cardOf(view.vacation, view.accrual.vacation)}
+            plannedNote={t("cards.planned", { amount: days(view.vacation.residual.plannedMinutes) })}
             tone="primary"
             testId="vacation-card"
           />
           <KindCard
             label={t("cards.rol")}
-            allowanceNote={
-              view.rol.allowanceMinutes === null
-                ? ""
-                : t("cards.perYear", { amount: days(view.rol.allowanceMinutes) })
-            }
-            value={asDays(rolResidual.remainingMinutes)}
-            valueUnit={t("cards.daysRemaining")}
-            takenNote={t("cards.taken", { amount: days(rolResidual.takenMinutes) })}
-            plannedNote={
-              rolResidual.plannedMinutes > 0
-                ? t("cards.planned", { amount: days(rolResidual.plannedMinutes) })
-                : null
-            }
-            basisNote={basisNote(rolResidual, view.rol.carriedMinutes)}
-            takenShare={shareOf(rolResidual.takenMinutes, rolResidual)}
-            plannedShare={shareOf(rolResidual.plannedMinutes, rolResidual)}
+            {...cardOf(view.rol, view.accrual.rol)}
+            plannedNote={rolPlanned > 0 ? t("cards.planned", { amount: days(rolPlanned) }) : null}
             tone="warn"
             testId="rol-card"
           />
