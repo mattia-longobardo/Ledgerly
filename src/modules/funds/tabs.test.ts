@@ -25,7 +25,6 @@ const flow = (on: string, chargedCents: bigint, employerCents = 0n, tfrCents = 0
 const fund = (overrides: Partial<HomeFund> = {}): HomeFund => ({
   id: "f",
   name: "Fondo",
-  type: "pac",
   archived: false,
   points: [
     { on: "2027-03-01", cents: 101_000n },
@@ -189,7 +188,7 @@ describe("the enrolment fee (funds-ux §5.3)", () => {
     origin: { youCents: 516n, employerCents: 516n, tfrCents: 0n, otherCents: 0n },
     recurring: false,
   };
-  const paying = fund({ type: "pension", flows: [flow("2027-01-10", 10_000n, 5_000n), enrolment] });
+  const paying = fund({ flows: [flow("2027-01-10", 10_000n, 5_000n), enrolment] });
   const period = { ...yearPeriod(2027, TODAY), year: 2027 };
 
   it("keeps it in the money paid in", () => {

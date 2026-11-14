@@ -19,22 +19,35 @@ import { users } from "../../platform/auth/schema";
 import { accounts, balanceEntries } from "../accounts/schema";
 import { documents } from "../imports/schema";
 import { transactions } from "../transactions/schema";
+import { COMPONENTS, DECISIONS, OPERATION_CLASSES, OPERATION_SOURCES } from "./pension/rules";
+import { FEE_BASES, FEE_PERIODS } from "./fees";
+import { FUND_STATES, VALUATION_SOURCES } from "./rules";
 import {
-  COMPONENTS,
-  DECISIONS,
-  OPERATION_CLASSES,
-  OPERATION_SOURCES,
-  PENSION_RULE_KINDS,
-  type ScheduleEntry,
-} from "./pension/rules";
-import { DEPOSIT_SOURCES, FUND_STATES, FUND_TYPES, VALUATION_SOURCES } from "./rules";
+  ACCRUAL_PERIODS,
+  type DueEntry,
+  INTERVAL_UNITS,
+  PAYROLL_COMPONENTS,
+  SOURCE_KINDS,
+  SOURCE_STATES,
+} from "./sources";
+
+/**
+ * What the tables of before the single fund model still check (release N6). The code reads and
+ * writes none of them: they stay as they are, for the image before N6, until release R5f removes
+ * them. A new fund takes the column defaults.
+ */
+const LEGACY_FUND_TYPES = ["pac", "pension"] as const;
+const LEGACY_DEPOSIT_SOURCES = ["manual", "rule"] as const;
+const LEGACY_RULE_KINDS = ["contribution", "payment_schedule"] as const;
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
 /**
- * A fund (spec §6, §7.7): a PAC in F4, a pension fund from F6. Its value is the balance of its
- * valuation account, so net worth has one source. `monthly_cents` and `deposit_fee_cents` come from
- * the design (plan F4 §3.6.4): the plan's instalment, and the fixed fee taken on each deposit.
+ * A pension fund: its name, who runs it, and the account that holds its value, so net worth has one
+ * source. Where the money comes from is in `fund_contribution_sources`, what it costs in `fund_fees`.
+ *
+ * `type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents` and
+ * `receives_payroll` are of the model before N6: nothing reads or writes them, and R5f removes them.
  */
 export const funds = pgTable(
   "funds",
@@ -46,9 +59,11 @@ export const funds = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    type: text("type", { enum: FUND_TYPES }).notNull(),
+    type: text("type", { enum: LEGACY_FUND_TYPES }).notNull().default("pension"),
     provider: text("provider"),
     isin: text("isin"),
+    /** The fund's or the position's identifier, as the person writes it. */
+    code: text("code"),
     compartment: text("compartment"),
     valuationAccountId: uuid("valuation_account_id")
       .notNull()
@@ -73,9 +88,10 @@ export const funds = pgTable(
     unique("funds_valuation_account_uq").on(table.valuationAccountId),
     unique("funds_user_name_uq").on(table.userId, table.name),
     index("funds_debit_account_idx").on(table.debitAccountId),
-    check("funds_type_ck", sql`${table.type} in (${sql.raw(inList(FUND_TYPES))})`),
+    check("funds_type_ck", sql`${table.type} in (${sql.raw(inList(LEGACY_FUND_TYPES))})`),
     check("funds_state_ck", sql`${table.state} in (${sql.raw(inList(FUND_STATES))})`),
     check("funds_name_ck", sql`length(btrim(${table.name})) between 1 and 80`),
+    check("funds_code_ck", sql`${table.code} is null or length(${table.code}) <= 40`),
     check("funds_isin_ck", sql`${table.isin} is null or ${table.isin} ~ '^[A-Z]{2}[A-Z0-9]{9}[0-9]$'`),
     check("funds_debit_day_ck", sql`${table.debitDay} is null or ${table.debitDay} between 1 and 31`),
     check("funds_ter_ck", sql`${table.ter} is null or ${table.ter} between 0 and 1`),
@@ -126,10 +142,7 @@ export const fundValuations = pgTable(
   ],
 );
 
-/**
- * A PAC deposit (spec §7.7): what was debited, the fee, and what was invested — computed, never
- * typed, and unknown while the fee is. A movement pays one deposit only.
- */
+/** Before N6: a deposit of a fund with a debit plan. Now a `voluntary` operation. Not read; removed in R5f. */
 export const fundDeposits = pgTable(
   "fund_deposits",
   {
@@ -149,7 +162,7 @@ export const fundDeposits = pgTable(
       sql`charged_cents - fee_cents`,
     ),
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
-    source: text("source", { enum: DEPOSIT_SOURCES }).notNull().default("manual"),
+    source: text("source", { enum: LEGACY_DEPOSIT_SOURCES }).notNull().default("manual"),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -160,7 +173,7 @@ export const fundDeposits = pgTable(
   (table) => [
     unique("fund_deposits_transaction_uq").on(table.transactionId),
     index("fund_deposits_fund_on_idx").on(table.fundId, table.on),
-    check("fund_deposits_source_ck", sql`${table.source} in (${sql.raw(inList(DEPOSIT_SOURCES))})`),
+    check("fund_deposits_source_ck", sql`${table.source} in (${sql.raw(inList(LEGACY_DEPOSIT_SOURCES))})`),
     check("fund_deposits_charged_ck", sql`${table.chargedCents} > 0`),
     check(
       "fund_deposits_fee_ck",
@@ -169,7 +182,7 @@ export const fundDeposits = pgTable(
   ],
 );
 
-/** The movements that become deposits by themselves (spec §7.7): one rule per fund, switchable. */
+/** Before N6: the rule of a fund's debit. Now a `bank_debit` source. Not read; removed in R5f. */
 export const fundDepositRules = pgTable(
   "fund_deposit_rules",
   {
@@ -208,9 +221,9 @@ const timestamps = {
 };
 
 /**
- * A pension rule with its validity (spec §6; GC §3.2, §4, §10): the contribution percentages of
- * the contract, shown and never used to rewrite a payslip (plan F6 §3.6.6), or the schedule of the
- * quarterly payments with the display tolerance kept apart from the due date.
+ * Before N6: the contribution percentages of a contract and the schedule of the transfers with its
+ * fees. Now the note, the due dates and the tolerance of a `payroll` source, and rows of `fund_fees`.
+ * Not read; removed in R5f.
  */
 export const pensionRules = pgTable(
   "pension_rules",
@@ -224,7 +237,7 @@ export const pensionRules = pgTable(
     fundId: uuid("fund_id")
       .notNull()
       .references(() => funds.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: PENSION_RULE_KINDS }).notNull(),
+    kind: text("kind", { enum: LEGACY_RULE_KINDS }).notNull(),
     validFrom: date("valid_from").notNull(),
     validTo: date("valid_to"),
     ccnl: text("ccnl"),
@@ -232,7 +245,7 @@ export const pensionRules = pgTable(
     workerPct: numeric("worker_pct", { precision: 7, scale: 4 }),
     employerPct: numeric("employer_pct", { precision: 7, scale: 4 }),
     tfrPct: numeric("tfr_pct", { precision: 7, scale: 4 }),
-    schedule: jsonb("schedule").$type<ScheduleEntry[]>(),
+    schedule: jsonb("schedule").$type<unknown[]>(),
     toleranceDays: smallint("tolerance_days").notNull().default(15),
     /** The fees Settings records beside the schedule (GC §6.1), for a fund with no export. */
     enrollmentFeeCents: money("enrollment_fee_cents")
@@ -247,7 +260,7 @@ export const pensionRules = pgTable(
   },
   (table) => [
     index("pension_rules_fund_idx").on(table.fundId, table.kind, table.validFrom),
-    check("pension_rules_kind_ck", sql`${table.kind} in (${sql.raw(inList(PENSION_RULE_KINDS))})`),
+    check("pension_rules_kind_ck", sql`${table.kind} in (${sql.raw(inList(LEGACY_RULE_KINDS))})`),
     check(
       "pension_rules_validity_ck",
       sql`${table.validTo} is null or ${table.validTo} >= ${table.validFrom}`,
@@ -321,10 +334,155 @@ export const pensionCompetences = pgTable(
 );
 
 /**
- * An operation of the fund (spec §6, §7.7; GC §8.4, §10): the provider's description and state
- * kept beside the interpretation, the competence quarter, the components, fees and net. Imported
- * from an export (`origin_key` = the fingerprint that deduplicates overlapping exports, plan F6
- * §3.4.4) or entered by hand (a voluntary contribution, linkable to a movement like a PAC deposit).
+ * Where a fund's money comes from (extension point E2): the payslip, a recurring debit on an
+ * account, or payments entered by hand. A source describes the plan; the paid-in amount always
+ * comes from the operations. The columns a kind does not use stay `null`.
+ */
+export const fundContributionSources = pgTable(
+  "fund_contribution_sources",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fundId: uuid("fund_id")
+      .notNull()
+      .references(() => funds.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: SOURCE_KINDS }).notNull(),
+    state: text("state", { enum: SOURCE_STATES }).notNull().default("active"),
+    /** `payroll`: which parts of the payslip go to this fund. */
+    components: text("components", { enum: PAYROLL_COMPONENTS }).array(),
+    /** `payroll`: the span one transfer is for. */
+    accrualPeriod: text("accrual_period", { enum: ACCRUAL_PERIODS }),
+    employer: text("employer"),
+    /** `payroll`: the transfer is due on this day, `due_offset_months` after the period's last month. */
+    dueDay: smallint("due_day"),
+    dueOffsetMonths: smallint("due_offset_months"),
+    /** `payroll`: explicit due dates the two fields above cannot say; they win over them. */
+    dueEntries: jsonb("due_entries").$type<DueEntry[]>(),
+    toleranceDays: smallint("tolerance_days"),
+    /** `bank_debit`: the account the debit leaves; `null` for any account. */
+    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "no action" }),
+    payeeMatch: text("payee_match"),
+    amountCents: bigint("amount_cents", { mode: "bigint" }),
+    debitDay: smallint("debit_day"),
+    /** `bank_debit`: every `interval_count` weeks, months or years. */
+    intervalCount: smallint("interval_count"),
+    intervalUnit: text("interval_unit", { enum: INTERVAL_UNITS }),
+    /** The first and the last day of the plan; `null` for the fund's own start and for no end. */
+    validFrom: date("valid_from"),
+    validTo: date("valid_to"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("fund_contribution_sources_fund_idx").on(table.fundId, table.kind),
+    index("fund_contribution_sources_account_idx").on(table.accountId),
+    uniqueIndex("fund_contribution_sources_manual_uq")
+      .on(table.fundId)
+      .where(sql`${table.kind} = 'manual'`),
+    check("fund_contribution_sources_kind_ck", sql`${table.kind} in (${sql.raw(inList(SOURCE_KINDS))})`),
+    check("fund_contribution_sources_state_ck", sql`${table.state} in (${sql.raw(inList(SOURCE_STATES))})`),
+    check(
+      "fund_contribution_sources_components_ck",
+      sql`(${table.kind} = 'payroll') = (${table.components} is not null) and (${table.components} is null or (cardinality(${table.components}) between 1 and 3 and ${table.components} <@ array[${sql.raw(inList(PAYROLL_COMPONENTS))}]::text[]))`,
+    ),
+    check(
+      "fund_contribution_sources_period_ck",
+      sql`(${table.kind} = 'payroll') = (${table.accrualPeriod} is not null) and (${table.accrualPeriod} is null or ${table.accrualPeriod} in (${sql.raw(inList(ACCRUAL_PERIODS))}))`,
+    ),
+    check(
+      "fund_contribution_sources_due_ck",
+      sql`(${table.dueDay} is null) = (${table.dueOffsetMonths} is null) and (${table.dueDay} is null or (${table.dueDay} between 1 and 31 and ${table.dueOffsetMonths} between 0 and 3)) and (${table.toleranceDays} is null or ${table.toleranceDays} between 0 and 120)`,
+    ),
+    check(
+      "fund_contribution_sources_interval_ck",
+      sql`(${table.kind} = 'bank_debit') = (${table.intervalCount} is not null) and (${table.intervalCount} is null) = (${table.intervalUnit} is null) and (${table.intervalCount} is null or (${table.intervalCount} between 1 and 120 and ${table.intervalUnit} in (${sql.raw(inList(INTERVAL_UNITS))})))`,
+    ),
+    check(
+      "fund_contribution_sources_debit_ck",
+      sql`(${table.amountCents} is null or ${table.amountCents} > 0) and (${table.debitDay} is null or ${table.debitDay} between 1 and 31) and (${table.payeeMatch} is null or length(btrim(${table.payeeMatch})) between 1 and 80)`,
+    ),
+    check(
+      "fund_contribution_sources_validity_ck",
+      sql`${table.validTo} is null or ${table.validFrom} is null or ${table.validTo} >= ${table.validFrom}`,
+    ),
+    check(
+      "fund_contribution_sources_text_ck",
+      sql`coalesce(length(${table.employer}), 0) <= 120 and coalesce(length(${table.note}), 0) <= 300`,
+    ),
+  ],
+);
+
+/**
+ * What a fund costs, one row per fee (extension point E3): a fixed amount or a percentage, on
+ * joining, on each contribution, at intervals, on the assets or on request. It explains and
+ * estimates; the fee written on an operation is the one that counts.
+ */
+export const fundFees = pgTable(
+  "fund_fees",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fundId: uuid("fund_id")
+      .notNull()
+      .references(() => funds.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    basis: text("basis", { enum: FEE_BASES }).notNull(),
+    amountCents: bigint("amount_cents", { mode: "bigint" }),
+    rate: numeric("rate", { precision: 8, scale: 6 }),
+    period: text("period", { enum: FEE_PERIODS }),
+    sourceId: uuid("source_id").references(() => fundContributionSources.id, { onDelete: "cascade" }),
+    component: text("component", { enum: PAYROLL_COMPONENTS }),
+    validFrom: date("valid_from"),
+    validTo: date("valid_to"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("fund_fees_fund_idx").on(table.fundId),
+    index("fund_fees_source_idx").on(table.sourceId),
+    check("fund_fees_label_ck", sql`length(btrim(${table.label})) between 1 and 80`),
+    check("fund_fees_basis_ck", sql`${table.basis} in (${sql.raw(inList(FEE_BASES))})`),
+    check(
+      "fund_fees_value_ck",
+      sql`(${table.amountCents} is null) <> (${table.rate} is null) and (${table.amountCents} is null or ${table.amountCents} > 0) and (${table.rate} is null or (${table.rate} > 0 and ${table.rate} <= 1))`,
+    ),
+    check(
+      "fund_fees_period_ck",
+      sql`(${table.basis} in ('periodic', 'on_assets')) = (${table.period} is not null) and (${table.period} is null or ${table.period} in (${sql.raw(inList(FEE_PERIODS))}))`,
+    ),
+    check(
+      "fund_fees_component_ck",
+      sql`${table.component} is null or ${table.component} in (${sql.raw(inList(PAYROLL_COMPONENTS))})`,
+    ),
+    check(
+      "fund_fees_validity_ck",
+      sql`${table.validTo} is null or ${table.validFrom} is null or ${table.validTo} >= ${table.validFrom}`,
+    ),
+    check("fund_fees_note_ck", sql`${table.note} is null or length(${table.note}) <= 300`),
+  ],
+);
+
+/**
+ * An operation of the fund: the one register of the money that enters and leaves it. Its class,
+ * the period it is for, the components, the fee and the net. Written by hand, by the job that
+ * finds a recurring debit among the movements (`source = rule`), or — before release N6 — read from
+ * a document (`source = import`, kept as history). `origin_key` keeps one row per origin.
  */
 export const fundOperations = pgTable(
   "fund_operations",
@@ -366,6 +524,10 @@ export const fundOperations = pgTable(
     employerName: text("employer_name"),
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     source: text("source", { enum: OPERATION_SOURCES }).notNull(),
+    /** The contribution source the operation belongs to; `null` for one that belongs to none. */
+    sourceId: uuid("source_id").references(() => fundContributionSources.id, { onDelete: "set null" }),
+    /** True while nobody has said what the operation cost: `fees_cents` is then 0 and not a fee. */
+    feesUnknown: boolean("fees_unknown").notNull().default(false),
     note: text("note"),
     ...timestamps,
   },
@@ -374,6 +536,7 @@ export const fundOperations = pgTable(
     unique("fund_operations_transaction_uq").on(table.transactionId),
     index("fund_operations_fund_idx").on(table.fundId, table.operationDate),
     index("fund_operations_document_idx").on(table.documentId),
+    index("fund_operations_source_idx").on(table.sourceId),
     check(
       "fund_operations_class_ck",
       sql`${table.classification} in (${sql.raw(inList(OPERATION_CLASSES))})`,
@@ -381,7 +544,8 @@ export const fundOperations = pgTable(
     check("fund_operations_source_ck", sql`${table.source} in (${sql.raw(inList(OPERATION_SOURCES))})`),
     check(
       "fund_operations_quarter_ck",
-      sql`(${table.competenceYear} is null) = (${table.competenceQuarter} is null) and (${table.competenceQuarter} is null or ${table.competenceQuarter} between 1 and 4)`,
+      // The period within its year: a quarter (1-4) or, for a source that accrues by month, a month.
+      sql`(${table.competenceYear} is null) = (${table.competenceQuarter} is null) and (${table.competenceQuarter} is null or ${table.competenceQuarter} between 1 and 12)`,
     ),
     check("fund_operations_fees_ck", sql`${table.feesCents} >= 0`),
     check("fund_operations_note_ck", sql`${table.note} is null or length(${table.note}) <= 200`),
@@ -420,7 +584,7 @@ export const unitMovements = pgTable(
 /**
  * The position as a statement printed it (spec §6; GC §8.5): the value at its date and the
  * summary beside it. The value itself lives in the `import` balance of the valuation account (one
- * source, as for a PAC); this row points at it and goes with it.
+ * source, as for every value); this row points at it and goes with it.
  */
 export const positionSnapshots = pgTable(
   "position_snapshots",
@@ -498,17 +662,14 @@ export const reconciliationLinks = pgTable(
   },
   (table) => [
     unique("reconciliation_links_key_uq").on(table.fundId, table.year, table.quarter, table.component),
-    check("reconciliation_links_quarter_ck", sql`${table.quarter} between 1 and 4`),
+    check("reconciliation_links_quarter_ck", sql`${table.quarter} between 1 and 12`),
     check("reconciliation_links_component_ck", sql`${table.component} in (${sql.raw(inList(COMPONENTS))})`),
     check("reconciliation_links_decision_ck", sql`${table.decision} in (${sql.raw(inList(DECISIONS))})`),
     check("reconciliation_links_note_ck", sql`length(btrim(${table.note})) between 1 and 500`),
   ],
 );
 
-/**
- * A provider's published tariff (spec §6; GC §6.1): public, not anyone's data, seeded by the
- * migration and versioned by validity. It explains the fees; the imported charges are what count.
- */
+/** Before N6: the published tariff of a provider. Now rows of `fund_fees`. Not read; removed in R5f. */
 export const fundFeeTariffs = pgTable(
   "fund_fee_tariffs",
   {

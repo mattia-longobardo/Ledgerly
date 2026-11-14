@@ -1,18 +1,12 @@
 // The numbers of a fund's tabs (docs/design/funds-ux.md §4, §5.3, §6, F4). Pure, and on top of `home.ts`:
 // a stretch here is the stretch the chart draws, so its gains add up to the gain of the Overview.
-import {
-  addDays,
-  addMonths,
-  type CivilDate,
-  lastDayOfMonth,
-  type MonthKey,
-  monthKey,
-} from "@/platform/dates";
+import { addDays, addMonths, type CivilDate, type MonthKey, monthKey } from "@/platform/dates";
 import { legacyPeriodQuery, type Query } from "@/modules/investments/period";
 import type { Cents } from "@/platform/money";
 import { type FundLine, stretchesOf } from "./home";
 import { closingDay, type FundPeriod, type ValuePoint } from "./period";
 import { periodReturns, periodStats } from "./rules";
+import { type AccrualPeriod, periodEnd, periodStart } from "./sources";
 
 /** Whether a day falls in a period, both ends included. */
 export const inPeriod = (on: string, period: FundPeriod): boolean =>
@@ -45,15 +39,17 @@ export function competenceOn(line: {
 }
 
 /**
- * Whether a quarter has something to say in a period: its three months touch it, or its deadline or a credit
- * of its money fall in it. So the fourth quarter of a year, credited in January, is in both years.
+ * Whether a period of a payslip source has something to say in a period of the page: its months touch
+ * it, or its deadline or a credit of its money fall in it. So the fourth quarter of a year, credited in
+ * January, is in both years. `accrual` says what the period is: a quarter, or a month.
  */
 export function quarterInPeriod(
   quarter: { year: number; quarter: number; due: CivilDate | null; operationDates: readonly CivilDate[] },
   period: FundPeriod,
+  accrual: AccrualPeriod = "quarter",
 ): boolean {
-  const from = quarterStart(quarter.year, quarter.quarter);
-  const to = lastDayOfMonth(addMonths(from, 2));
+  const from = periodStart(quarter.year, quarter.quarter, accrual);
+  const to = periodEnd(quarter.year, quarter.quarter, accrual);
   const touches = (period.from === null || to >= period.from) && from <= period.to;
   return (
     touches ||

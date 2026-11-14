@@ -4,7 +4,6 @@ import {
   bridge,
   currentCompartment,
   heldAt,
-  managementItem,
   type MovementLike,
   paidInAt,
   pensionMetrics,
@@ -12,7 +11,12 @@ import {
   valuePoints,
 } from "./metrics";
 import { type OperationLike, reconcile } from "./reconcile";
-import { COMETA_FEES, COMETA_SCHEDULE, DEFAULT_TOLERANCE_DAYS, netOfFees } from "./rules";
+import { DEFAULT_TOLERANCE_DAYS, netOfFees } from "./rules";
+
+/** Due on the 20th of the month after each quarter: 20 April, 20 July, 20 October, 20 January. */
+const QUARTERLY_CALENDAR = { rule: { day: 20, offsetMonths: 1 }, entries: [] };
+/** 5,16 € + 5,16 € once, 12 € a year taken 3 € a quarter. */
+const QUARTERLY_FEES = { enrollmentCents: 1032n, quarterCents: 300n };
 
 /** The twin fund of `tests/fixtures/cometa`: invented amounts that add up like the real ones. */
 
@@ -138,7 +142,8 @@ function metricsOf(
     competences: COMPETENCES,
     operations,
     decisions: [],
-    schedule: COMETA_SCHEDULE,
+    period: "quarter",
+    calendar: QUARTERLY_CALENDAR,
     toleranceDays: DEFAULT_TOLERANCE_DAYS,
     freshness: "2031-09-01",
     today: "2031-09-19",
@@ -152,12 +157,13 @@ function payslipsOnly(value: { cents: bigint; on: string; source: "statement" | 
     competences: COMPETENCES,
     operations: [],
     decisions: [],
-    schedule: COMETA_SCHEDULE,
+    period: "quarter",
+    calendar: QUARTERLY_CALENDAR,
     toleranceDays: DEFAULT_TOLERANCE_DAYS,
     freshness: null,
     today: "2032-03-31",
   });
-  return pensionMetrics({ value, operations: [], movements: [], quarters, fees: COMETA_FEES });
+  return pensionMetrics({ value, operations: [], movements: [], quarters, fees: QUARTERLY_FEES });
 }
 
 describe("the six quantities (GC §1, §9, §12)", () => {
@@ -310,7 +316,8 @@ describe("the six quantities (GC §1, §9, §12)", () => {
         competences: COMPETENCES,
         operations: [],
         decisions: [],
-        schedule: COMETA_SCHEDULE,
+        period: "quarter",
+        calendar: QUARTERLY_CALENDAR,
         toleranceDays: DEFAULT_TOLERANCE_DAYS,
         freshness: null,
         today: "2032-03-31",
@@ -338,7 +345,8 @@ describe("the six quantities (GC §1, §9, §12)", () => {
         competences: [],
         operations: [],
         decisions: [],
-        schedule: COMETA_SCHEDULE,
+        period: "quarter",
+        calendar: QUARTERLY_CALENDAR,
         toleranceDays: DEFAULT_TOLERANCE_DAYS,
         freshness: null,
         today: "2032-03-31",
@@ -358,14 +366,14 @@ describe("the six quantities (GC §1, §9, §12)", () => {
 
 describe("fees off a transfer (GC §6.1)", () => {
   it("takes the quarterly fee off a contribution and the enrolment fee off the enrolment only", () => {
-    expect(netOfFees(66_000n, 1_032n, COMETA_FEES)).toEqual({
+    expect(netOfFees(66_000n, 1_032n, QUARTERLY_FEES)).toEqual({
       grossCents: 67_032n,
       feesCents: 1_332n,
       netCents: 65_700n,
     });
-    expect(netOfFees(66_000n, 0n, COMETA_FEES).netCents).toBe(65_700n);
+    expect(netOfFees(66_000n, 0n, QUARTERLY_FEES).netCents).toBe(65_700n);
     // Never more enrolment fee than the enrolment quotas themselves.
-    expect(netOfFees(0n, 500n, COMETA_FEES)).toEqual({ grossCents: 500n, feesCents: 500n, netCents: 0n });
+    expect(netOfFees(0n, 500n, QUARTERLY_FEES)).toEqual({ grossCents: 500n, feesCents: 500n, netCents: 0n });
   });
 });
 
@@ -398,11 +406,6 @@ describe("the compartment and the units points (funds-ux §4, §5.2)", () => {
     ).toBe("CRESCITA");
     expect(currentCompartment([], "Crescita")).toBe("Crescita");
     expect(currentCompartment([], null)).toBeNull();
-  });
-
-  it("names the tariff row of a compartment, however it is written", () => {
-    expect(managementItem("CRESCITA")).toBe("management_crescita");
-    expect(managementItem("Monetario Plus")).toBe("management_monetario_plus");
   });
 
   it("drops a units point less than 3 days from a documented value, and keeps one 3 days away", () => {

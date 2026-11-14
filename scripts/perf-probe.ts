@@ -20,8 +20,7 @@ import { accounts, balanceEntries } from "../src/modules/accounts/schema";
 import { budgetsView } from "../src/modules/budgets/queries";
 import { setLimit } from "../src/modules/budgets/service";
 import { fundHomeRow, fundsHomeRows } from "../src/modules/funds/home-queries";
-import { fundDetail } from "../src/modules/funds/queries";
-import { addDeposit, createFund, recordValuation } from "../src/modules/funds/service";
+import { recordValuation } from "../src/modules/funds/service";
 import { rulesOnAccount } from "../src/modules/interests/queries";
 import { createRule } from "../src/modules/interests/service";
 import {
@@ -49,6 +48,7 @@ import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
 import { getDb, getPool } from "../src/platform/db/client";
 import * as tables from "../src/platform/db/tables";
 import { readEnv } from "../src/platform/env";
+import { addDeposit, debitFund } from "../test/funds";
 import { accountMovement, manualService } from "../test/investments";
 
 // The application's own `getDb()`, with a logger that counts: set before the first call, which is
@@ -223,10 +223,10 @@ for (const index of [0, 1, 2]) {
 }
 const funds: string[] = [];
 for (const index of [0, 1]) {
-  const fund = await createFund(ctx, {
+  const fund = await debitFund(ctx, {
     name: `Fondo ${index}`,
     provider: "Fideuram",
-    isin: `LU098765432${index}`,
+    code: `LU098765432${index}`,
     compartment: "Bilanciato",
     debitAccountId: null,
     debitDay: 5,
@@ -234,7 +234,6 @@ for (const index of [0, 1]) {
     startOn: addDays(todayOn, -720),
     monthlyCents: 25_100n,
     depositFeeCents: 100n,
-    valuationAccountId: null,
     initialCents: 500_000n,
   });
   for (let back = 23; back >= 1; back -= 1) {
@@ -341,7 +340,7 @@ const views: [string, () => Promise<unknown>, { fromCleanHeap: boolean }?][] = [
     async () => [await serviceDetail(ctx, brokers[0]), await servicePnlView(ctx, brokers[0], {})],
   ],
   ["Funds (home)", () => fundsHomeRows(ctx)],
-  ["Funds (fondo)", async () => [await fundHomeRow(ctx, funds[0]), await fundDetail(ctx, funds[0], 12)]],
+  ["Funds (fondo)", () => fundHomeRow(ctx, funds[0])],
   ["Pockets", () => pocketsView(ctx)],
   ["Budgets", () => budgetsView(ctx, thisMonth)],
   ["Subscriptions", async () => [await subscriptionsView(ctx), await suggestions(ctx)]],

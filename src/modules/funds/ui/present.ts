@@ -1,104 +1,9 @@
 import { formatAmountInput, formatDate, type NumberFormat, type UiLocale } from "@/platform/format";
-import { fractionToPercent } from "@/modules/interests/rules";
-import type { MonthStatus, ValuationRow } from "../queries";
-import type { Fund, FundDeposit } from "../service";
-import type { DepositDraft, FundDraft, ValuationDraft } from "./fund-forms";
-
-/** The two kinds of fund the design's "Fund kind" offers (`funds.type`). */
-export type FundKind = "pac" | "pension";
-
-/** Every field a fund form can hold; the kind decides which of them are actually shown. */
-export type FundField =
-  | "name"
-  | "provider"
-  | "compartment"
-  | "kind"
-  | "start"
-  | "isin"
-  | "monthly"
-  | "fee"
-  | "debit"
-  | "day"
-  | "ter"
-  | "valuation"
-  | "initial";
-
-const BOTH_KINDS: readonly FundField[] = ["name", "provider", "compartment", "kind", "start"];
-const PAC_ONLY: readonly FundField[] = [
-  "isin",
-  "monthly",
-  "fee",
-  "debit",
-  "day",
-  "ter",
-  "valuation",
-  "initial",
-];
-
-/**
- * Which fields the design's one "New fund" form shows for a kind: a PAC has a plan of its own —
- * what it buys, how much is debited each month, the fee and the account it is taken from — while a
- * pension fund is fed by the payslips and by the fund's own documents, so it only says who runs it
- * and since when. A field the kind does not own is not rendered at all, so it is never submitted
- * rather than submitted and ignored.
- */
-export function fundFormFields(kind: FundKind): ReadonlySet<FundField> {
-  return new Set(kind === "pac" ? [...BOTH_KINDS, ...PAC_ONLY] : BOTH_KINDS);
-}
-
-/** A fund as the settings form starts from it. */
-export function fundDraft(fund: Fund, format: NumberFormat): FundDraft {
-  const ter = fund.ter === null ? "" : fractionToPercent(fund.ter);
-  return {
-    name: fund.name,
-    provider: fund.provider ?? "",
-    isin: fund.isin ?? "",
-    compartment: fund.compartment ?? "",
-    debitAccountId: fund.debitAccountId ?? "",
-    debitDay: fund.debitDay === null ? "" : String(fund.debitDay),
-    ter: format === "en-US" ? ter : ter.replace(".", ","),
-    startOn: fund.startOn,
-    monthly: formatAmountInput(fund.monthlyCents, format),
-    fee: formatAmountInput(fund.depositFeeCents, format),
-  };
-}
-
-/** A new fund: starts today, charged on the 1st. */
-export function newFundDraft(today: string): FundDraft {
-  return {
-    name: "",
-    provider: "",
-    isin: "",
-    compartment: "",
-    debitAccountId: "",
-    debitDay: "1",
-    ter: "",
-    startOn: today,
-    monthly: "",
-    fee: "",
-  };
-}
-
-/** The next deposit as the inline card proposes it: today, the plan's amount and fee. */
-export function newDepositDraft(fund: Fund, today: string, format: NumberFormat): DepositDraft {
-  return {
-    id: null,
-    on: today,
-    debited: formatAmountInput(fund.monthlyCents, format),
-    fee: formatAmountInput(fund.depositFeeCents, format),
-    note: "",
-  };
-}
-
-export function depositDraft(deposit: FundDeposit, format: NumberFormat): DepositDraft {
-  return {
-    id: deposit.id,
-    on: deposit.on,
-    debited: formatAmountInput(deposit.chargedCents, format),
-    fee: formatAmountInput(deposit.feeCents, format),
-    note: deposit.note ?? "",
-  };
-}
+import type { Cents } from "@/platform/money";
+import type { MoneyOrigin } from "../period";
+import type { ValuationRow } from "../pension/operations";
+import type { DebitStatus, SourceKind } from "../sources";
+import type { ValuationDraft } from "./fund-forms";
 
 /** A recorded valuation as the "Edit" dialog starts from it. */
 export function valuationDraft(row: ValuationRow, format: NumberFormat): ValuationDraft {
@@ -110,9 +15,9 @@ export function valuationDraft(row: ValuationRow, format: NumberFormat): Valuati
   };
 }
 
-/** The design's "This month" pill: text and tone. */
+/** The state of a recurring debit's running period: text and tone. */
 export function monthPill(
-  status: MonthStatus,
+  status: DebitStatus,
   locale: UiLocale,
   labels: { found: (date: string) => string; awaited: string; missing: string; none: string },
 ): { text: string; tone: "pos" | "neg" | "muted" } {
@@ -126,4 +31,64 @@ export function monthPill(
     case "none":
       return { text: labels.none, tone: "muted" };
   }
+}
+
+/** Where a line of the register came from, as its badge says it. */
+export type OperationOrigin = "payroll" | "rule" | "manual" | "import";
+
+const ORIGIN_OF_KIND: Record<SourceKind, OperationOrigin> = {
+  payroll: "payroll",
+  bank_debit: "rule",
+  manual: "manual",
+};
+
+/**
+ * The origin of an operation: the kind of the source it belongs to, when it has one — a payslip
+ * contribution written by hand belongs to the payslip source —, otherwise who wrote it.
+ */
+export function operationOrigin(
+  operation: { source: OperationOrigin | string; sourceId: string | null },
+  sources: readonly { id: string; kind: SourceKind }[],
+): OperationOrigin {
+  const source = operation.sourceId === null ? null : sources.find((one) => one.id === operation.sourceId);
+  if (source) return ORIGIN_OF_KIND[source.kind];
+  return operation.source === "import" ? "import" : operation.source === "rule" ? "rule" : "manual";
+}
+
+interface Amounts {
+  classification: string;
+  workerCents: Cents;
+  employerCents: Cents;
+  tfrCents: Cents;
+  otherCents: Cents;
+}
+
+/** What an operation moved across the fund's boundary, gross: an exit is money out, so it is negative. */
+export function operationGross(operation: Amounts): Cents {
+  const gross = operation.workerCents + operation.employerCents + operation.tfrCents + operation.otherCents;
+  return operation.classification === "withdrawal" && gross > 0n ? -gross : gross;
+}
+
+/** What the voluntary contributions of some operations add up to: the part of "you" paid outside the payslip. */
+export function voluntaryCents(operations: readonly Amounts[]): Cents {
+  return operations
+    .filter((operation) => operation.classification === "voluntary")
+    .reduce<Cents>((sum, operation) => sum + operation.workerCents, 0n);
+}
+
+export type OriginPart = "you" | "employer" | "tfr" | "voluntary" | "other";
+
+/**
+ * Of whom the money is, one part per line and the empty ones left out. The voluntary payments are
+ * taken out of "you": they are yours, and they did not come from the payslip.
+ */
+export function originParts(origin: MoneyOrigin, voluntary: Cents): { key: OriginPart; cents: Cents }[] {
+  const parts: { key: OriginPart; cents: Cents }[] = [
+    { key: "you", cents: origin.youCents - voluntary },
+    { key: "employer", cents: origin.employerCents },
+    { key: "tfr", cents: origin.tfrCents },
+    { key: "voluntary", cents: voluntary },
+    { key: "other", cents: origin.otherCents },
+  ];
+  return parts.filter((part) => part.cents !== 0n);
 }

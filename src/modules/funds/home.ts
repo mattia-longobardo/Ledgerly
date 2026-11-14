@@ -50,7 +50,6 @@ export interface AccruedLine {
 export interface HomeFund {
   id: string;
   name: string;
-  type: "pac" | "pension";
   archived: boolean;
   points: readonly ValuePoint[];
   flows: readonly FundFlow[];

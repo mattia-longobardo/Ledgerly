@@ -283,6 +283,27 @@ Il modello nuovo non crea il campo `deductible` delle sorgenti e non crea un lim
 Cosa resta: le operazioni con `source = import` e le valutazioni lette dai documenti restano dati del fondo, con gli
 stessi numeri (prova SN7). Il valore `import` resta nel vocabolario delle sorgenti come storia: il codice non lo scrive più.
 
+### 11.2.7 Chiarimenti scritti con lo sviluppo di N6
+
+I primi 5 punti sono i chiarimenti chiesti dalla specifica delle schermate
+([`ux/n6-pension-fund.md`](ux/n6-pension-fund.md) §16.1). Nessuno è una decisione di prodotto. I punti 6-11 sono
+precisazioni tecniche nate con il codice. Le decisioni di prodotto di Mattia sulle 8 domande della specifica sono
+nella sua §15.
+
+| # | Punto | Chiarimento |
+|---|---|---|
+| 1 | «Codice» del fondo | Colonna nuova `funds.code` (testo libero, max 40), additiva, nel passo A1. Il passo A2 copia in `code` il valore di `funds.isin`. `isin` resta fermo, con il suo check, e si toglie in R5f (passo A3) |
+| 2 | Riconciliazione senza scadenze | Vale la tabella delle sezioni di §11.2.1: «In arrivo» e «Periodi» compaiono solo con una sorgente `payroll` **con scadenze**. Senza scadenze nessun periodo è in ritardo e un contributo conta nel giorno in cui è registrato. «Buste paga» e «Dal maturato al valore» compaiono con ogni sorgente `payroll` |
+| 3 | Origine «Busta paga» nel registro | L'origine mostrata viene dal tipo della sorgente (`source_id`), non da `fund_operations.source`. Una riga scritta a mano con il tipo «Dalla busta paga» ha `source = manual` e `source_id` della sorgente `payroll`. Senza `source_id` vale `source`: `import` → «Importato», `rule` → «Addebito», `manual` → «A mano» |
+| 4 | Stato «in pausa» e frequenza | Colonne della sorgente: `state` (`active`, `paused`); `interval_count` e `interval_unit` (`week`, `month`, `year`) per «ogni N»; `valid_from` e `valid_to` per inizio e fine; `debit_day` per il giorno. Sono nello schema di A1 |
+| 5 | Modulo Payroll attivo | Fino a R5a (moduli per utente) il modulo è attivo per ogni utente: «Dalla busta paga» compare sempre |
+| 6 | Periodo di competenza per mese | Una sorgente `payroll` conta i periodi per trimestre o per mese. Il periodo di un'operazione e di una decisione di riconciliazione sta nelle colonne di oggi (`competence_quarter`, `reconciliation_links.quarter`): i loro check passano da «1-4» a «1-12» (check allargato, [`06-data.md`](06-data.md) §6.2 regola 4). La competenza di una busta paga resta scritta per trimestre da `payroll`; una sorgente per mese legge il mese della busta paga. L'evento per ruolo arriva in R2 |
+| 7 | Una busta paga, un fondo | La competenza di una busta paga è una sola riga (`pension_competences`, chiave unica sulla busta paga, fino a R5f). Per questo in N6 la busta paga alimenta **un fondo per volta**: una seconda sorgente `payroll` attiva, nello stesso fondo o in un altro fondo aperto, è rifiutata con il nome del fondo che la tiene. Più sorgenti `payroll` possono esistere: una sola è attiva. Ogni fondo tiene le competenze che ha ricevuto. La divisione delle voci tra più fondi arriva con l'evento `PayslipApplied` di R2 |
+| 8 | Scadenze della sorgente | Due campi: giorno e mesi dopo la fine del periodo (0-3). Le scadenze migrate che i due campi non descrivono restano come date esplicite (`due_entries`), in sola lettura finché l'utente non le sostituisce. Un fondo senza regola leggibile aveva le scadenze del giorno 20 del mese dopo il trimestre: la migrazione scrive quei due valori, il codice non ha più un calendario di ripiego |
+| 9 | Commissioni migrate (ST-10) | Le righe della tariffa che ripetono le due commissioni della regola del fondo (adesione, quota associativa) non diventano righe: il loro importo è nella nota della riga della regola. Motivo: due righe per la stessa commissione raddoppiano la stima di un periodo e i numeri cambiano (prova SN4). Le altre righe (gestione per comparto, operazioni a richiesta) diventano righe |
+| 10 | «Aggiornato al» della riconciliazione | Senza documenti, la data che dice se un versamento mancante è in ritardo è il giorno dell'ultima riga del registro scritta a mano o letta da un documento prima di N6. Le righe scritte dal job degli addebiti non contano |
+| 11 | Commissione di un addebito trovato dal job | È la somma delle commissioni «su ogni contributo» della sorgente. Senza una riga di quel tipo, o se la somma supera l'addebito, la commissione è «sconosciuta», come oggi senza la commissione per versamento |
+
 ## 11.3 Piano di acquisto (PAC)
 
 Decisione: H13. Rilascio: **R5d, secondo passo** ([`03-releases.md`](03-releases.md)).

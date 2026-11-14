@@ -10,7 +10,7 @@
 // the commit of a refactor.
 import { createAccount, saveBalanceEntry } from "@/modules/accounts/service";
 import { setLimit } from "@/modules/budgets/service";
-import { addDeposit, createFund, recordValuation } from "@/modules/funds/service";
+import { recordValuation } from "@/modules/funds/service";
 import { createRule } from "@/modules/interests/service";
 import { updateServiceValue } from "@/modules/investments/service";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@/modules/payroll/service";
@@ -24,6 +24,7 @@ import type { Ctx } from "@/platform/context";
 import { APRIL, MARCH } from "../tests/fixtures/payroll/samples";
 import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { anAccount, movement } from "./fixtures";
+import { addDeposit, debitFund } from "./funds";
 import { accountMovement, manualService } from "./investments";
 
 export const REFERENCE_NOW = new Date("2031-10-15T10:00:00Z");
@@ -171,10 +172,10 @@ export async function seedReferenceUser(ctx: Ctx, setClock: (instant: Date) => v
   await updateServiceValue(ctx, brokerId, { on: "2031-06-30", cents: 1_030_000n });
   await updateServiceValue(ctx, brokerId, { on: "2031-10-14", cents: 1_265_000n });
 
-  const fund = await createFund(ctx, {
+  const fund = await debitFund(ctx, {
     name: "Fideuram Piano Accumulo",
     provider: "Fideuram",
-    isin: "LU0987654321",
+    code: "LU0987654321",
     compartment: "Bilanciato",
     debitAccountId: null,
     debitDay: 5,
@@ -182,7 +183,6 @@ export async function seedReferenceUser(ctx: Ctx, setClock: (instant: Date) => v
     startOn: "2030-11-01",
     monthlyCents: 25_100n,
     depositFeeCents: 100n,
-    valuationAccountId: null,
     initialCents: 500_000n,
   });
   for (const on of [

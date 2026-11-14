@@ -13,7 +13,7 @@ import { xirr, type Xirr } from "@/modules/investments/xirr";
 import { type MovementLike, valuePoints } from "./pension/metrics";
 import { accruedTotal, type OperationLike, pendingQuarters, type QuarterStatus } from "./pension/reconcile";
 import { netOfFees, NO_FEES, type PensionFees } from "./pension/rules";
-import { type DepositSource, monthlyRhythm } from "./rules";
+import { monthlyRhythm } from "./rules";
 
 /**
  * The period engine of Funds (docs/design/funds-ux.md §5.2, §5.3). Pure: the caller reads the rows.
@@ -65,7 +65,7 @@ export function documentedPoints(
   ).map(({ on, cents }) => ({ on, cents }));
 }
 
-/** Of whom the money is (§5.3). A PAC's money is yours. */
+/** Of whom the money is (§5.3). A voluntary payment is yours. */
 export interface MoneyOrigin {
   youCents: Cents;
   employerCents: Cents;
@@ -87,26 +87,20 @@ export interface FundFlow {
   recurring: boolean;
 }
 
-/** A PAC's deposits. A deposit the rule found is the plan at work; one written by hand is a one-off. */
-export function pacFlows(
-  deposits: readonly { on: CivilDate; chargedCents: Cents; feeCents: Cents | null; source: DepositSource }[],
-): FundFlow[] {
-  return deposits.map((deposit) => ({
-    on: deposit.on,
-    chargedCents: deposit.chargedCents,
-    feeCents: deposit.feeCents,
-    origin: { ...NO_ORIGIN, youCents: deposit.chargedCents },
-    recurring: deposit.source === "rule",
-  }));
-}
-
 const INFLOW_CLASSES: readonly string[] = ["contribution", "enrollment", "voluntary", "transfer_in"];
 
 /**
- * A pension fund's flows: its own operations. With no inflow operation at all, the quarters the
- * transfer schedule has carried stand in, each at its own deadline, as `paidInFlows` reads them.
+ * The money of a fund, from its one register: every operation that moves money across the fund's
+ * boundary, and the cost of one that moves none.
+ *
+ * A contribution of the payslip is recurring, and so is a voluntary payment the job found among
+ * the movements (`source = rule`): it is the plan at work. One written by hand is a one-off. A fee
+ * nobody has stated is `null`, never a zero.
+ *
+ * With no inflow operation at all, the periods the payslips accrued and the transfer schedule has
+ * carried stand in, each at its own deadline, net of the fees the fund's list estimates.
  */
-export function pensionFlows(
+export function fundFlows(
   operations: readonly OperationLike[],
   quarters: readonly QuarterStatus[] = [],
   fees: PensionFees = NO_FEES,
@@ -120,20 +114,21 @@ export function pensionFlows(
       otherCents: operation.otherCents,
     };
     const gross = origin.youCents + origin.employerCents + origin.tfrCents + origin.otherCents;
+    const feeCents = operation.feesUnknown ? null : operation.feesCents;
     if (INFLOW_CLASSES.includes(operation.classification)) {
       flows.push({
         on: operation.operationDate,
         chargedCents: gross,
-        feeCents: operation.feesCents,
+        feeCents,
         origin,
-        recurring: operation.classification === "contribution",
+        recurring: operation.classification === "contribution" || operation.source === "rule",
       });
     } else if (operation.classification === "withdrawal") {
-      // An exit's gross amount is what left the position, however the export signs it.
+      // An exit's gross amount is what left the position, however it was signed when written.
       flows.push({
         on: operation.operationDate,
         chargedCents: gross < 0n ? gross : -gross,
-        feeCents: operation.feesCents,
+        feeCents,
         origin: NO_ORIGIN,
         recurring: false,
       });
@@ -142,7 +137,7 @@ export function pensionFlows(
       flows.push({
         on: operation.operationDate,
         chargedCents: 0n,
-        feeCents: operation.feesCents,
+        feeCents,
         origin: NO_ORIGIN,
         recurring: false,
       });

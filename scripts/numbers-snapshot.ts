@@ -27,7 +27,6 @@ import { budgetsView } from "../src/modules/budgets/queries";
 import { fundSummary } from "../src/modules/funds/detail";
 import { firstDataOn, homeSummary, valueToday } from "../src/modules/funds/home";
 import { fundsHomeRows } from "../src/modules/funds/home-queries";
-import { fundDetail } from "../src/modules/funds/queries";
 import { interestsView, ruleDetail } from "../src/modules/interests/queries";
 import { periodOf } from "../src/modules/investments/pnl";
 import { investmentsHome, investmentsPnl, investmentsPnlView } from "../src/modules/investments/queries";
@@ -97,26 +96,15 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
       }),
     };
   }
-  const fundDetails: unknown[] = [];
-  for (const row of fundRows) {
-    // The detail query is the PAC's (`funds/[id]/page.tsx`); a pension fund's numbers are `pension`.
-    const detail = row.pension === null ? await fundDetail(ctx, row.fund.id, 12, now) : null;
-    fundDetails.push({
-      name: row.fund.name,
-      month: row.month,
-      onTheWayCents: row.onTheWayCents,
-      onTheWayQuarters: row.onTheWayQuarters,
-      pension: row.pension,
-      detail: detail && {
-        metrics: detail.metrics,
-        stats: detail.stats,
-        periods: detail.periods,
-        valueSeries: detail.valueSeries,
-        paidSeries: detail.paidSeries,
-        forecast: detail.forecast,
-      },
-    });
-  }
+  // One read for every fund since release N6. The key keeps the name it had when only a fund fed by
+  // the payslip had this detail, so that a snapshot of before the release compares with one of after.
+  const fundDetails = fundRows.map((row) => ({
+    name: row.fund.name,
+    month: row.month,
+    onTheWayCents: row.onTheWayCents,
+    onTheWayQuarters: row.onTheWayQuarters,
+    pension: row.detail,
+  }));
 
   const timeOffNow = await timeOffView(ctx, thisYear);
   const timeOff: Record<string, unknown> = {};

@@ -1,7 +1,7 @@
 import "server-only";
 import { balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { budgetsView } from "@/modules/budgets/queries";
-import { fundsView } from "@/modules/funds/queries";
+import { fundsOverview } from "@/modules/funds/overview";
 import { interestsView } from "@/modules/interests/queries";
 import { investmentOperationsExport, investmentServices } from "@/modules/investments/queries";
 import { DOCUMENT_KINDS } from "@/modules/imports/rules";
@@ -105,7 +105,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     subscriptionsView(ctx, now),
     pocketsView(ctx, now),
     budgetsView(ctx, month),
-    fundsView(ctx, now),
+    fundsOverview(ctx, now),
     interestsView(ctx, now),
     listAllowances(ctx),
     listLeaveDays(ctx, LEAVE_WINDOW),
@@ -227,9 +227,9 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
           kind: row.fund.type,
           provider: row.fund.provider,
           isin: row.fund.isin,
-          paidIn: amount(row.metrics.paidInCents),
-          value: amount(row.metrics.valueCents),
-          gain: amount(row.metrics.gainCents),
+          paidIn: amount(row.paidInCents),
+          value: amount(row.valueCents),
+          gain: amount(row.gainCents),
           lastValuation: row.lastValuation,
           state: row.fund.state,
         })),
@@ -368,7 +368,7 @@ opens it as it is) and once inside ledgerly.json. Amounts are plain decimal stri
 in the account's own currency, never a locale's formatting, so a script can read them. An unknown
 amount is empty in the CSV and null in the JSON; the two mean the same thing.
 
-documents/ holds the originals still kept: payslips and Cometa files, under the names you
+documents/ holds the originals still kept, under the names you
 uploaded them with, prefixed by the id they have in documents.csv. An original whose retention has
 run out is listed there and is not in the folder.
 `;

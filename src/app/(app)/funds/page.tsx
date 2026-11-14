@@ -1,9 +1,9 @@
+import { Plus } from "lucide-react";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { listAccounts } from "@/modules/accounts/queries";
 import { colorFor } from "@/modules/accounts/ui/display";
 import {
   firstDataOn,
@@ -16,12 +16,13 @@ import {
   yearRows,
 } from "@/modules/funds/home";
 import { fundsHomeRows } from "@/modules/funds/home-queries";
-import { valuationAccountOptions } from "@/modules/funds/queries";
+import { hasPayrollCalendar } from "@/modules/funds/queries";
+import { closesPeriodBefore, inPeriod } from "@/modules/funds/tabs";
 import { FundChart } from "@/modules/funds/ui/fund-chart";
-import { FundStateButton, NewFundButton, ValuationButton } from "@/modules/funds/ui/fund-forms";
+import { FundStateButton, ValuationButton } from "@/modules/funds/ui/fund-forms";
 import { Kpi } from "@/modules/funds/ui/fund-kpi";
-import { monthPill, newFundDraft } from "@/modules/funds/ui/present";
-import { closesPeriodBefore } from "@/modules/funds/tabs";
+import { monthPill, originParts, voluntaryCents } from "@/modules/funds/ui/present";
+import { frequencyText } from "@/modules/funds/ui/source-text";
 import { legacyPeriodQuery, periodQuery, periodSpan, type Query } from "@/modules/investments/period";
 import { periodOf } from "@/modules/investments/pnl";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
@@ -43,7 +44,6 @@ import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { type Params, withParams } from "@/ui/url";
 import { FundsHomeSkeleton } from "./home-skeleton";
-import { createPensionFundAction } from "./pension-setup";
 
 const PATH = "/funds";
 
@@ -56,7 +56,7 @@ const one = (value: string | string[] | undefined) => (Array.isArray(value) ? va
 /**
  * Funds · the new home (docs/design/funds-ux.md §5.3, §6, F2, mockups a-01 to a-04): the gain of the
  * period first, then what explains it, the chart, the funds, and who paid in. The period is in the
- * address and drives every number here but "On the way" and the plan, which stay as of today.
+ * address and drives every number here but "On the way" and the recurring debits, which stay as of today.
  *
  * The skeleton is a boundary of this page and not a `loading.tsx`: a `loading.tsx` here would also cover
  * `/funds/[id]`, and a fund that does not exist would answer 200 with a skeleton instead of a real 404.
@@ -96,20 +96,14 @@ async function FundsHome({
   const th = await getTranslations("funds.home");
   const tp = await getTranslations("investments.period");
   const tf = await getTranslations("funds.fund");
-  const [rows, accounts, valuationAccounts] = await Promise.all([
-    fundsHomeRows(ctx),
-    listAccounts(ctx),
-    valuationAccountOptions(ctx),
-  ]);
+  const ts = await getTranslations("funds.sources");
+  const rows = await fundsHomeRows(ctx);
+  /** "Add fund": the form that creates a fund is a page of its own. */
   const add = (label: string, size: "sm" | "md" = "sm") => (
-    <NewFundButton
-      draft={newFundDraft(todayOn)}
-      accounts={accounts.map((account) => ({ id: account.id, name: account.name }))}
-      valuationAccounts={valuationAccounts}
-      createPension={createPensionFundAction}
-      label={label}
-      size={size}
-    />
+    <ButtonLink href="/funds/new" variant="primary" size={size}>
+      <Plus aria-hidden className="size-4" />
+      {label}
+    </ButtonLink>
   );
   // The period in the address as it is, before the fund's list is drawn: an empty one is the year running.
   const archivedParams: Params = {
@@ -200,13 +194,19 @@ async function FundsHome({
 
   const { state } = summary;
   const firstOpen = open[0] ?? null;
-  const missing = open.filter((row) => row.month.kind === "missing");
+  /** Every recurring debit of an open fund that was not found by its day: always as of today. */
+  const missing = open.flatMap(({ fund, detail }) =>
+    detail.debits.flatMap(({ source, status }) =>
+      source.state === "active" && status.kind === "missing" ? [{ fund, source, by: status.by }] : [],
+    ),
+  );
   const stale = staleFunds(
     open.map((row) => row.home),
     todayOn,
   );
   const onTheWayCents = open.reduce<Cents>((sum, row) => sum + row.onTheWayCents, 0n);
-  const hasPension = open.some((row) => row.fund.type === "pension");
+  // "On the way" has something to say only for a payslip source with due dates.
+  const awaitsPayslips = open.some((row) => hasPayrollCalendar(row.detail));
   const firstYear = firstOn === null ? thisYear : Number(firstOn.slice(0, 4));
   const firstValueOn = funds.flatMap((fund) => fund.points.map((point) => point.on)).sort()[0] as
     string | undefined;
@@ -235,17 +235,17 @@ async function FundsHome({
   const alerts =
     missing.length > 0 ? (
       <section className="flex flex-col gap-2">
-        {missing.map(({ fund, month }) => (
+        {missing.map(({ fund, source, by }) => (
           <div
-            key={fund.id}
+            key={source.id}
             data-testid="fund-alert"
             className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-neg/30 bg-neg-bg px-3 py-2 text-sm"
           >
             <p>
               <strong className="font-semibold">{fund.name}</strong> —{" "}
               {t("alert.missing", {
-                date: month.kind === "missing" ? formatDate(month.by, "long", ctx.locale) : "",
-                amount: money(fund.monthlyCents),
+                date: formatDate(by, "long", ctx.locale),
+                amount: money(source.amountCents),
               })}
             </p>
             <Link
@@ -404,17 +404,25 @@ async function FundsHome({
         ? th("kpis.paidIn")
         : th("kpis.paidInPeriod");
   const { origin } = summary;
+  // The voluntary payments of the period, in the funds the summary counts: the part of "you" that
+  // did not come from a payslip.
+  const voluntary = summary.lines.reduce<Cents>(
+    (sum, line) =>
+      sum +
+      voluntaryCents(
+        rowOf
+          .get(line.fund.id)!
+          .detail.operations.filter((operation) => inPeriod(operation.operationDate, period)),
+      ),
+    0n,
+  );
+  const parts = originParts(origin, voluntary);
   const paidNote =
     summary.paidInCents === 0n
       ? firstPaidOn && firstPaidOn > period.to
         ? th("kpis.paidInFirst", { date: formatDate(firstPaidOn, "long", ctx.locale) })
         : th("kpis.nothingPaid")
-      : th(origin.otherCents === 0n ? "kpis.origin" : "kpis.originOther", {
-          you: money(origin.youCents),
-          employer: money(origin.employerCents),
-          tfr: money(origin.tfrCents),
-          other: money(origin.otherCents),
-        });
+      : parts.map((part) => th(`kpis.originParts.${part.key}`, { amount: money(part.cents) })).join(" · ");
   const accruedFund = summary.lines.find((line) => line.accruedCents !== 0n)?.fund ?? null;
   const accruedDue = accruedFund?.accrued
     .filter((line) => line.on >= span.from && line.on <= span.to)
@@ -426,7 +434,7 @@ async function FundsHome({
     <div
       className={cn(
         "grid grid-cols-2 gap-4",
-        state === "payslips_only" || hasPension ? "@4xl:grid-cols-4" : "@4xl:grid-cols-3",
+        state === "payslips_only" || awaitsPayslips ? "@4xl:grid-cols-4" : "@4xl:grid-cols-3",
       )}
     >
       <Kpi testId="kpi-paid" label={paidLabel} value={money(summary.paidInCents)} note={paidNote} />
@@ -464,7 +472,7 @@ async function FundsHome({
           }
         />
       ) : (
-        hasPension && (
+        awaitsPayslips && (
           <Kpi
             testId="kpi-on-the-way"
             label={th("kpis.onTheWay")}
@@ -624,18 +632,29 @@ async function FundsHome({
     missing: t("month.missing"),
     none: t("month.none"),
   };
+  /** What the fund's sources say as of today: what is on its way, and its recurring debit. None with no source. */
   const subline = (line: FundLine) => {
     const row = rowOf.get(line.fund.id)!;
-    if (row.fund.type === "pension") {
-      return row.onTheWayCents === 0n
-        ? null
-        : th("list.onTheWay", { amount: money(row.onTheWayCents), count: row.onTheWayQuarters });
+    const debit = row.detail.debits.find(({ source }) => source.state === "active");
+    const lines: string[] = [];
+    if (hasPayrollCalendar(row.detail) && row.onTheWayCents !== 0n) {
+      lines.push(th("list.onTheWay", { amount: money(row.onTheWayCents), count: row.onTheWayQuarters }));
     }
-    if (row.fund.monthlyCents === null) return th("list.noPlan");
-    const pill = monthPill(row.month, ctx.locale, labels);
-    return row.month.kind === "none"
-      ? th("list.planOff", { amount: money(row.fund.monthlyCents) })
-      : th("list.plan", { amount: money(row.fund.monthlyCents), status: pill.text });
+    if (debit) {
+      const values = {
+        amount: money(debit.source.amountCents),
+        frequency: frequencyText(ts, debit.plan.frequency.count, debit.plan.frequency.unit),
+      };
+      lines.push(
+        debit.status.kind === "none"
+          ? th("list.debit", values)
+          : th("list.debitStatus", {
+              ...values,
+              status: monthPill(debit.status, ctx.locale, labels).text,
+            }),
+      );
+    }
+    return lines.length === 0 ? null : lines.join(" · ");
   };
   const nameCell = (line: FundLine) => (
     <span className="flex min-w-0 items-center gap-1">
@@ -786,27 +805,31 @@ async function FundsHome({
 
   // ——— Who paid in (§5.3, a-01) ———————————————————————————————————————————————————————————————
   const paidTotal = summary.paidInCents;
-  const originParts = [
-    { key: "you", label: th("who.you"), cents: origin.youCents, color: "var(--accent)" },
-    { key: "employer", label: th("who.employer"), cents: origin.employerCents, color: "var(--pos)" },
-    { key: "tfr", label: th("who.tfr"), cents: origin.tfrCents, color: "var(--muted)" },
-    { key: "other", label: th("who.other"), cents: origin.otherCents, color: "var(--faint)" },
-  ]
+  const ORIGIN_COLOR = {
+    you: "var(--accent)",
+    employer: "var(--pos)",
+    tfr: "var(--muted)",
+    voluntary: "var(--warn)",
+    other: "var(--faint)",
+  } as const;
+  const whoParts = parts
     .filter((part) => part.cents > 0n)
     .map((part) => ({
       ...part,
+      label: th(`who.${part.key}`),
+      color: ORIGIN_COLOR[part.key],
       share: paidTotal > 0n ? Number(part.cents) / Number(paidTotal) : 0,
     }));
   const whoCard = (
     <Card data-testid="who-paid" className="flex min-w-0 flex-col gap-3">
       <h2 className="text-lg font-semibold">{th("who.title", { when })}</h2>
-      {originParts.length === 0 ? (
+      {whoParts.length === 0 ? (
         <p className="text-sm text-muted">{th("who.empty")}</p>
       ) : (
         <>
-          <CompositionBar parts={originParts} />
+          <CompositionBar parts={whoParts} />
           <ul className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-sm">
-            {originParts.map((part) => (
+            {whoParts.map((part) => (
               <li
                 key={part.key}
                 data-origin={part.key}

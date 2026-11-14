@@ -11,8 +11,8 @@ budgets, investments, payslips, pension fund and time off, in one place.
 - **Spending** — movements synced from Budget Makers Wallet, categories, labels and detected recurrences.
 - **Budgets, pockets and subscriptions** — monthly limits, money set aside without moving it, and a
   check that each subscription was really charged.
-- **Interest, funds and investments** — interest accrual per account, PAC and pension funds
-  (Fondo Cometa), eToro and Binance portfolios with the profit and loss of a period.
+- **Interest, funds and investments** — interest accrual per account, pension funds with
+  contributions from the payslip or from a recurring debit, eToro and Binance portfolios with the profit and loss of a period.
 - **Payslips** — upload a PDF, review every value next to the page it came from, then apply it.
   The payslip feeds the pension fund and the leave balance.
 - **Time off** — holiday and ROL balances from the payslip, synced with the Trek leave calendar.
@@ -21,9 +21,9 @@ budgets, investments, payslips, pension fund and time off, in one place.
 Every screen works on a phone and in the dark theme. Sign-in is by password with TOTP, or by SSO
 with Authentik. The interface is in English and Italian.
 
-| Accounts                                   | Expenses                                   | A pension fund                         |
-| ------------------------------------------ | ------------------------------------------ | -------------------------------------- |
-| ![Accounts](docs/screenshots/accounts.png) | ![Expenses](docs/screenshots/expenses.png) | ![Cometa](docs/screenshots/cometa.png) |
+| Accounts                                   | Expenses                                   | A pension fund                                 |
+| ------------------------------------------ | ------------------------------------------ | ---------------------------------------------- |
+| ![Accounts](docs/screenshots/accounts.png) | ![Expenses](docs/screenshots/expenses.png) | ![A pension fund](docs/screenshots/cometa.png) |
 
 The screenshots show an invented test user, not real data.
 

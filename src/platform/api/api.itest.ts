@@ -7,6 +7,7 @@ import { upsertFromProvider } from "@/modules/transactions/service";
 import { authAccounts } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
+import { deleteFolder, listFolder } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
@@ -313,6 +314,40 @@ describe("POST /imports", () => {
     form.set("file", new File([new TextEncoder().encode("hello")], "note.txt"));
     const response = await call("/imports", aliceToken, { method: "POST", body: form });
     expect(response.status).toBe(415);
+  });
+
+  /*
+    Release N6 (decisions H19, ST-26): a fund reads no document. The two kinds stay in the contract
+    so that a caller gets a declared refusal, and nothing of the file is kept.
+  */
+  it("refuses a fund's document with 415 and keeps nothing of it, while a payslip still uploads", async () => {
+    const { documents } = await import("@/modules/imports/schema");
+    const stored = async () => [
+      ...(await listFolder(`payslips/${alice.userId}/`)),
+      ...(await listFolder(`cometa/${alice.userId}/`)),
+    ];
+    for (const kind of ["cometa_operations", "cometa_position"]) {
+      const form = new FormData();
+      form.set("kind", kind);
+      form.set("file", aPdf(`a-fund-document-${kind}`));
+      const response = await call("/imports", aliceToken, { method: "POST", body: form });
+      expect(response.status, kind).toBe(415);
+      expect(await response.json(), kind).toEqual({ error: "unsupported_format" });
+    }
+    expect(await getDb().select().from(documents)).toEqual([]);
+    expect(await stored()).toEqual([]);
+
+    try {
+      const response = await call("/imports", aliceToken, upload("still-a-payslip"));
+      expect(response.status).toBe(201);
+      expect(await response.json()).toMatchObject({ kind: "payslip", duplicate: false });
+      expect((await getDb().select().from(documents)).map((row) => [row.userId, row.kind])).toEqual([
+        [alice.userId, "payslip"],
+      ]);
+      expect(await stored()).toHaveLength(1);
+    } finally {
+      await deleteFolder(`payslips/${alice.userId}/`);
+    }
   });
 
   it("refuses a token without the imports scope", async () => {

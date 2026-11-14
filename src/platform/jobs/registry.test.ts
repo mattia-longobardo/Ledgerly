@@ -33,7 +33,6 @@ describe("JOBS", () => {
       ["pockets-planned-cleanup", "daily"],
       ["documents-retention", "daily"],
       ["payslips-sweep", "hourly"],
-      ["cometa-sweep", "hourly"],
       ["holidays-refresh", "daily"],
       ["fx-rates-refresh", "daily"],
       ["database-backup", "daily"],
@@ -56,7 +55,6 @@ describe("JOBS", () => {
     expect(JOBS.filter((job) => runsIn(job, "hourly")).map((job) => job.name)).toEqual([
       "interests-accrual",
       "payslips-sweep",
-      "cometa-sweep",
     ]);
     expect(JOBS.filter((job) => runsIn(job, "minute")).map((job) => job.name)).toEqual(["integrations-sync"]);
     const crontab = readFileSync(new URL("../../../cron/crontab", import.meta.url), "utf8");

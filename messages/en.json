@@ -650,7 +650,7 @@
       "scopeHints": {
         "read": "accounts, balances, transactions and the summary",
         "write": "record a balance reading",
-        "imports": "upload payslips and Cometa documents",
+        "imports": "upload payslips",
         "investments:read": "investment services, their returns and holdings"
       },
       "cancel": "Cancel",
@@ -2315,10 +2315,6 @@
     "kpis": {
       "paidIn": "Paid in"
     },
-    "types": {
-      "pac": "PAC",
-      "pension": "Pension fund"
-    },
     "month": {
       "found": "Deposit found · {date}",
       "awaited": "Awaited",
@@ -2326,7 +2322,7 @@
       "none": "—"
     },
     "alert": {
-      "missing": "no deposit found by {date} ({amount} expected).",
+      "missing": "no debit found by {date} ({amount} expected).",
       "cta": "Check expenses"
     },
     "archived": {
@@ -2334,12 +2330,11 @@
       "restore": "Restore"
     },
     "empty": {
-      "title": "No investment funds",
-      "description": "Add a fund to track contributions and returns.",
+      "title": "No pension funds",
+      "description": "Add a pension fund to track contributions, value and return.",
       "cta": "Add fund"
     },
     "detail": {
-      "kind": "Accumulation plan (PAC)",
       "since": "since {date}",
       "tabs": {
         "label": "Fund"
@@ -2377,24 +2372,11 @@
       "saved": "{count, plural, one {# charge} other {# charges}} taken on; the next ones will follow by themselves.",
       "failed": "Couldn't do it. Try again."
     },
-    "deposits": {
-      "add": {
-        "title": "Add deposit",
-        "hint": "Enter the debited amount; the fee is subtracted.",
-        "date": "Date",
-        "debited": "Debited (€)",
-        "fee": "Fee (€)",
-        "invested": "Invested",
-        "note": "Note",
-        "save": "Save deposit"
-      },
-      "editTitle": "Edit deposit"
-    },
     "valuations": {
       "editTitle": "Edit value",
       "form": {
-        "title": "Record value · {name}",
-        "description": "Enter the value on the latest statement. It is saved as the balance of the fund's account.",
+        "title": "Update value · {name}",
+        "description": "Enter the value the fund reports. It is saved as the balance of the fund's account.",
         "date": "Date of the value",
         "value": "Value (€)",
         "note": "Note",
@@ -2408,56 +2390,25 @@
         "title": "General",
         "name": "Name",
         "provider": "Provider",
-        "compartment": "Type / compartment",
-        "kind": "Fund kind",
-        "kindPac": "Accumulation plan (PAC)",
-        "kindPension": "Pension fund",
-        "kindHelp": "A PAC is fed by a monthly deposit from one of your accounts, with a fee on each one; a pension fund is fed by the contributions of your payslips and by the fund's own documents.",
-        "kindFixed": "The kind is chosen when the fund is created: a PAC keeps deposits, a pension fund keeps contributions and operations, so it can't be switched afterwards.",
-        "isin": "ISIN",
-        "start": "Start date",
-        "memberSince": "Member since"
-      },
-      "plan": {
-        "description": "The monthly plan and the fee taken on each deposit.",
-        "monthly": "Monthly amount debited (€)",
-        "fee": "Fee per deposit (€)",
-        "debitAccount": "Paying account",
-        "noAccount": "None",
-        "debitDay": "Charge day",
-        "ter": "Annual management fee (%)"
-      },
-      "rule": {
-        "title": "Linked expense",
-        "description": "Create a deposit automatically when a matching expense appears on the paying account.",
-        "active": "Link expenses to deposits",
-        "match": "Payee contains",
-        "account": "On account",
-        "anyAccount": "Any account",
-        "save": "Save rule"
-      },
-      "valuations": {
-        "title": "Values",
-        "description": "The value lives on the fund's account: its settings decide net worth, snapshot and reminders.",
-        "open": "Open {account} settings"
+        "compartment": "Line or compartment",
+        "memberSince": "Member since",
+        "description": "The fund's name, provider and line.",
+        "advanced": "Advanced",
+        "code": "Code",
+        "codeHint": "Identifier of the fund or of your position.",
+        "currency": "Currency",
+        "currencyFixed": "The currency cannot change after the fund is created.",
+        "valueAccount": "The value is kept on the account “{account}”.",
+        "openAccount": "Open {account}"
       },
       "danger": {
         "title": "Danger zone",
         "description": "Archiving hides the fund but keeps its history.",
-        "text": "Archive {name}. Deposits and values stay readable.",
+        "text": "Archive {name}. Contributions and values stay readable.",
         "archive": "Archive fund",
         "restore": "Restore fund"
       },
       "save": "Save"
-    },
-    "form": {
-      "newTitle": "New fund",
-      "description": "Choose the kind, then fill in what it needs. The value is kept on an account of its own, so net worth counts it once.",
-      "valuationAccount": "Value kept on",
-      "newAccount": "A new account named after the fund",
-      "initial": "Initial capital (€)",
-      "cancel": "Cancel",
-      "save": "Save fund"
     },
     "toasts": {
       "saved": "Fund saved",
@@ -2465,47 +2416,29 @@
       "restored": "Fund restored",
       "valuation": "Value recorded",
       "valuationUpdated": "Value updated",
-      "deposit": "Deposit saved",
-      "depositDeleted": "Deposit deleted",
-      "rule": "Rule saved"
+      "deposit": "Contribution saved",
+      "depositDeleted": "Contribution deleted"
     },
     "errors": {
-      "invalid": "Check the values: a name, amounts above zero, a fee not above the amount, a management fee between 0 and 100 %.",
+      "invalid": "Check the values: a name, amounts above zero, a fee not above the amount.",
       "not_found": "That fund no longer exists.",
       "invalid_account": "Pick an open account; the value needs a manual account no other fund uses.",
       "duplicate_name": "There is already a fund with that name.",
       "archived": "An archived fund can't change. Restore it first.",
-      "linked": "This deposit comes from a movement: hide the movement in Expenses to drop it.",
+      "linked": "This contribution comes from a movement: hide the movement in Expenses to remove it.",
       "future_date": "The date can't be in the future.",
-      "movement_taken": "That movement is already tied to another operation.",
-      "failed": "Couldn't save. Try again."
+      "movement_taken": "That movement is already tied to another contribution.",
+      "failed": "Couldn't save. Try again.",
+      "load": "Funds not loaded. Try again.",
+      "undo": "Not restored. Reload the page."
     },
     "account": {
       "label": "Fund"
     },
     "pension": {
-      "kind": "Pension fund",
-      "tabs": {
-        "overview": "Overview",
-        "contributions": "Contributions",
-        "valuations": "Valuations",
-        "settings": "Settings"
-      },
-      "kpis": {
-        "paidIn": "Paid in"
-      },
       "notice": {
         "pending": "{amount} accrued in the payslips is not yet in the fund: {quarters}.",
-        "pendingQuarter": "{quarter}, {amount}, employer transfer due {date}"
-      },
-      "operations": {
-        "title": "Fund operations",
-        "empty": "No operation imported yet.",
-        "date": "Op. date",
-        "fees": "Fees",
-        "net": "Net invested",
-        "remove": "Remove",
-        "removed": "Operation removed"
+        "pendingQuarter": "{quarter}, {amount}, transfer due {date}"
       },
       "classes": {
         "contribution": "Contribution",
@@ -2540,25 +2473,6 @@
         "bonus": "Bonus",
         "settlement": "Settlement"
       },
-      "quarters": {
-        "title": "Employer transfers",
-        "hint": "Quarterly · {days} days of tolerance before a missing credit is flagged",
-        "empty": "Nothing accrued or credited yet.",
-        "due": "due {date}",
-        "credited": "credited {date}",
-        "credited2": "in the fund",
-        "accrued": "accrued",
-        "difference": "difference",
-        "accept": "Accept difference",
-        "clear": "Reopen",
-        "missing": "Payslip missing for {months}."
-      },
-      "components": {
-        "worker": "Worker",
-        "employer": "Employer",
-        "tfr": "TFR",
-        "enrollment": "Enrolment"
-      },
       "statuses": {
         "accrued_not_due": "Accrued, not due",
         "transferred": "Transferred",
@@ -2582,247 +2496,6 @@
           "submit": "Accept",
           "cancel": "Cancel"
         }
-      },
-      "voluntary": {
-        "title": "Add a voluntary contribution",
-        "description": "Payments made straight to the fund, outside payroll, are a separate flow and can be tied to the movement that paid them.",
-        "add": "Add contribution",
-        "date": "Date",
-        "amount": "Amount (€)",
-        "fee": "Fee (€)",
-        "movement": "Linked movement",
-        "noMovement": "No movement",
-        "note": "Note",
-        "submit": "Add",
-        "cancel": "Cancel",
-        "added": "Contribution added"
-      },
-      "statements": {
-        "title": "Statements",
-        "empty": "No statement imported yet.",
-        "employer": "Employer",
-        "tfr": "TFR",
-        "inflows": "Inflows",
-        "outflows": "Outflows",
-        "gain": "Reported gain"
-      },
-      "documents": {
-        "title": "Cometa documents",
-        "import": "Import documents",
-        "empty": "No document yet.",
-        "state": "State",
-        "kinds": {
-          "cometa_operations": "Operations export",
-          "cometa_position": "Position summary"
-        }
-      },
-      "documentStates": {
-        "received": "Received",
-        "scanning": "Scanning",
-        "extracting": "Reading",
-        "needs_review": "To review",
-        "needs_ocr": "Needs OCR",
-        "verified": "Verified",
-        "applied": "Applied",
-        "superseded": "Superseded",
-        "rejected": "Set aside",
-        "failed": "Failed"
-      },
-      "import": {
-        "title": "Import Cometa documents",
-        "description": "The operations export and the position summary. What each file is comes from its content.",
-        "choose": "Choose files",
-        "drop": "or drop them here · PDF, XLS table or XLSX, up to 10 MB each",
-        "submit": "Upload",
-        "cancel": "Cancel",
-        "uploaded": "{count, plural, one {# document uploaded} other {# documents uploaded}}",
-        "duplicates": "{count, plural, one {# file was already imported} other {# files were already imported}}",
-        "refused": "{name} was refused"
-      },
-      "review": {
-        "title": "Review document",
-        "back": "Fund",
-        "subtitle": "{file} · received {date}",
-        "values": "Values read",
-        "confirm": "Confirm",
-        "correct": "Correct",
-        "save": "Save",
-        "cancel": "Cancel",
-        "saved": "Saved",
-        "originalValue": "read as {value}",
-        "apply": "Apply",
-        "applied": "Applied to the fund",
-        "retry": "Retry",
-        "delete": "Delete document",
-        "deleted": "Document deleted",
-        "verification": {
-          "unverified": "To check",
-          "confirmed": "Confirmed",
-          "corrected": "Corrected"
-        },
-        "viewer": {
-          "page": "Page {page} of {pages}",
-          "previous": "Previous page",
-          "next": "Next page",
-          "zoomIn": "Zoom in",
-          "zoomOut": "Zoom out",
-          "open": "Open original",
-          "loading": "Loading the document…",
-          "failed": "The document could not be displayed.",
-          "deleted": "The original was deleted at the end of its retention; the data read from it stay."
-        },
-        "fields": {
-          "valuationDate": "Valuation date",
-          "value": "Position value",
-          "tfr": "TFR",
-          "worker": "Worker (aderente)",
-          "employer": "Employer (azienda)",
-          "transfersIn": "Transfers in",
-          "inflows": "Total inflows",
-          "advances": "Advances",
-          "redemptions": "Redemptions",
-          "rita": "R.I.T.A. instalments",
-          "outflows": "Total outflows",
-          "reportedGain": "Reported gain"
-        },
-        "preview": {
-          "title": "Operations in this export",
-          "hint": "{count, plural, one {# operation} other {# operations}} · {added} new",
-          "state": {
-            "new": "New",
-            "known": "Already in the fund",
-            "changed": "Updated"
-          },
-          "competence": "Competence",
-          "date": "Op. date",
-          "type": "As exported",
-          "worker": "Worker",
-          "employer": "Employer",
-          "tfr": "TFR",
-          "fees": "Fees",
-          "net": "Net",
-          "units": "Units",
-          "empty": "This export holds no operation.",
-          "enrollmentNote": "A contribution whose net is zero and which bought no unit is the enrolment fee."
-        },
-        "states": {
-          "reading": "The document is being read.",
-          "failed": "The document could not be read: {error}.",
-          "applied": "Applied to the fund."
-        }
-      },
-      "create": {
-        "created": "Fund created",
-        "published": "{count, plural, one {# payslip} other {# payslips}} published to the fund"
-      },
-      "settings": {
-        "general": "General",
-        "generalDescription": "Name, provider and compartment of the fund.",
-        "name": "Display name",
-        "provider": "Provider",
-        "compartment": "Compartment",
-        "start": "Member since",
-        "save": "Save",
-        "saved": "Saved",
-        "payroll": "Source: payslips",
-        "payrollDescription": "Which payslip codes feed each component, and whether this fund receives them. Specific to the Reply / TeamSystem layout.",
-        "payrollOn": "This fund takes the contributions of every applied payslip.",
-        "payrollOff": "Another fund takes the payslips' contributions.",
-        "codes": "The codes each component comes from are the payroll code map, in Payroll › Settings.",
-        "takePayroll": "Take the payslips' contributions",
-        "rebuild": "Rebuild from payslips",
-        "rebuilt": "{count, plural, one {# payslip} other {# payslips}} read again",
-        "transfers": "Employer transfers",
-        "transfersDescription": "When the contributions are expected in the fund. Calculated automatically, no confirmation needed.",
-        "schedule": "Due on {dates} of the month after the quarter.",
-        "source": "Source: {source} · verified {date}",
-        "tolerance": "Display tolerance (days)",
-        "toleranceHint": "How long after a deadline a missing credit is still shown as on its way.",
-        "rules": "Contribution rules",
-        "rulesDescription": "Optional. It only lets you compare what the contract provides with what the payslip withholds; it enters no calculation.",
-        "from": "From",
-        "ccnl": "CCNL",
-        "worker": "Worker %",
-        "employer": "Employer %",
-        "tfrShare": "TFR %",
-        "sourceColumn": "Source",
-        "removeRule": "Remove rule",
-        "addRule": "Add rule",
-        "ruleAdded": "Rule added",
-        "validFrom": "Valid from",
-        "validTo": "Valid to",
-        "base": "Base",
-        "workerPct": "Worker %",
-        "employerPct": "Employer %",
-        "tfrPct": "TFR %",
-        "verifiedOn": "Verified on",
-        "sourceHint": "The page or document the rule was read from.",
-        "valuationAccount": "Account of the value",
-        "valuationDescription": "The account the fund's value is written to.",
-        "openAccount": "Open {account}",
-        "danger": "Danger zone",
-        "dangerDescription": "Archiving hides the fund but keeps its history.",
-        "codesTitle": "Codes that feed each component",
-        "codeGroups": {
-          "worker": "Worker contribution",
-          "employer": "Employer contribution",
-          "tfr": "TFR contribution",
-          "enrollment": "Enrolment fees",
-          "adjustment": "Corrections"
-        },
-        "openCodeMap": "Open Payroll › Settings",
-        "frequency": "Frequency",
-        "frequencies": {
-          "quarterly": "Quarterly",
-          "monthly": "Monthly",
-          "custom": "Custom"
-        },
-        "dueDay": "Due day of the following month",
-        "noSchedule": "No payment rule recorded for this fund.",
-        "ruleOnly": "Frequency and due day come from the versioned rule, not from a setting: only the tolerance below is yours to change.",
-        "fees": "Fees",
-        "feesDescription": "Explicit charges come from imported operations; the tariff is for explanations and estimates only.",
-        "feeItems": {
-          "enrollmentWorker": "Enrolment · worker",
-          "enrollmentEmployer": "Enrolment · employer",
-          "association": "Membership fee",
-          "management": "Management fee"
-        },
-        "feeUnits": {
-          "once": "once",
-          "year": "per year, charged quarterly",
-          "yearOfAssets": "per year of assets"
-        },
-        "tariffFrom": "Public tariff of {provider}, valid from {date}.",
-        "feesActual": "Without an import, these fees estimate what was taken off each transfer; once operations are imported, their own charges count instead.",
-        "noTariff": "No tariff loaded for this provider.",
-        "saveRule": "Save rule",
-        "enrollmentFee": "Enrolment fee",
-        "enrollmentFeeHint": "Once, out of the enrolment quotas.",
-        "quarterFee": "Fee per quarter",
-        "quarterFeeHint": "Taken off each quarter's contribution."
-      },
-      "errors": {
-        "failed": "Something went wrong. Try again.",
-        "invalid": "Check the values entered.",
-        "not_found": "Not found.",
-        "linked": "An operation that came from a document cannot be removed.",
-        "duplicate_name": "A fund with this name already exists.",
-        "empty": "The file is empty.",
-        "too_large": "The file is larger than 10 MB.",
-        "too_many": "Too many files at once.",
-        "unsupported_format": "This file is neither a PDF nor an operations table.",
-        "invalid_state": "The document is in no state for this.",
-        "no_table": "No operations table was found in the file. Send the «Dettaglio operazioni» exported from the Cometa portal (an .xls table or an .xlsx).",
-        "missing_columns": "The table is missing columns this reader needs.",
-        "bad_value": "A value in the table could not be read.",
-        "binary_xls": "This is an old binary XLS: export it as XLSX or HTML.",
-        "storage_failed": "The file could not be stored.",
-        "not_an_export": "This spreadsheet is not Cometa's «Dettaglio operazioni»: the operations table, with a «Tipo Operazione» column, is not in it. Download the operations detail from the Cometa portal and send that one; this document can be deleted.",
-        "extraction_failed": "The document could not be read. Try again; if it keeps failing, the file is not one this reader knows.",
-        "parse_failed": "The document could not be read to the end.",
-        "original_missing": "The original is no longer in storage, so it cannot be read again.",
-        "unreadable_pdf": "This PDF could not be opened. Download the position summary from the Cometa portal again."
       }
     },
     "home": {
@@ -2857,20 +2530,25 @@
         "paidIn": "Paid in",
         "paidInYear": "Paid in during {year}",
         "paidInPeriod": "Paid in during the period",
-        "origin": "you {you} · employer {employer} · TFR {tfr}",
-        "originOther": "you {you} · employer {employer} · TFR {tfr} · other {other}",
-        "paidInFirst": "the first deposit is of {date}",
-        "nothingPaid": "no deposit",
+        "paidInFirst": "the first contribution is of {date}",
+        "nothingPaid": "no contribution",
         "market": "Market movement",
-        "marketNote": "change in value, deposits excluded",
+        "marketNote": "change in value, contributions excluded",
         "marketNeedsValue": "needs a value",
         "fees": "Fees",
-        "feesNote": "on deposits, already in the gain",
+        "feesNote": "on contributions, already in the gain",
         "feesUnknown": "a fee is unknown",
         "onTheWay": "On the way",
         "onTheWayNote": "accrued in payslips, not yet in the fund",
         "accrued": "Accrued in payslips",
-        "accruedNote": "{name}, reaches the fund in {date}"
+        "accruedNote": "{name}, reaches the fund in {date}",
+        "originParts": {
+          "you": "you {amount}",
+          "employer": "employer {amount}",
+          "tfr": "TFR {amount}",
+          "voluntary": "voluntary {amount}",
+          "other": "other {amount}"
+        }
       },
       "chart": {
         "title": "Performance",
@@ -2924,25 +2602,25 @@
         "rate": "Return",
         "value": "Value",
         "updated": "Updated",
-        "plan": "Plan {amount} a month · {status}",
-        "planOff": "Plan {amount} a month",
-        "onTheWay": "On the way {amount} · {count, plural, one {# quarter} other {# quarters}}",
-        "noPlan": "No plan",
+        "onTheWay": "On the way {amount} · {count, plural, one {# period} other {# periods}}",
         "archived": "Archived",
         "highlight": "Highlight {name} on the chart",
         "undetermined": "not determinable",
         "first": "Record the first value",
         "total": "Total",
         "xirr": "Annualised (XIRR) {rate}",
-        "updatedShort": "updated {date}"
+        "updatedShort": "updated {date}",
+        "debit": "Debit {amount} {frequency}",
+        "debitStatus": "Debit {amount} {frequency} · {status}"
       },
       "who": {
         "title": "Who paid {when}",
-        "you": "You",
+        "you": "My contribution",
         "employer": "Employer",
         "tfr": "TFR",
         "other": "Other",
-        "empty": "No money in this period."
+        "empty": "No contribution in this period.",
+        "voluntary": "Voluntary"
       },
       "when": {
         "year": "in {year}",
@@ -2962,13 +2640,7 @@
         "accrued": "Accrued in payslips so far: {amount}."
       },
       "kpis": {
-        "deposits": "{recurring, plural, one {# deposit} other {# deposits}}, {oneOff, plural, one {# one-off} other {# one-offs}}",
-        "perDeposit": "{fee} per deposit",
-        "plan": "Plan",
-        "planDay": "a month, on day {day}",
-        "planStatus": "a month, on day {day} · {status}",
-        "planMonth": "a month",
-        "noPlan": "no plan"
+        "debitDay": "{frequency}, on day {day}"
       },
       "onTheWay": {
         "link": "See the contributions"
@@ -2979,13 +2651,10 @@
         "stretch": "Between one value and the next · the line is the running total"
       },
       "recent": {
-        "title": "Latest deposits",
+        "title": "Latest contributions",
         "allContributions": "All the contributions",
-        "allDeposits": "All the deposits",
-        "sourceRule": "Found by the rule",
-        "sourceHand": "One-off",
         "fee": "fee {amount}",
-        "empty": "No deposit in this period."
+        "empty": "No contribution in this period."
       },
       "bridge": {
         "title": "From accrued to value",
@@ -3001,11 +2670,10 @@
       "tabs": {
         "overview": "Overview",
         "contributions": "Contributions",
-        "deposits": "Deposits",
-        "valuations": "Valuations",
+        "valuations": "Values",
         "settings": "Settings"
       },
-      "recordValue": "Record value",
+      "recordValue": "Update value",
       "bridgeValue": "Value",
       "bridgeNoValue": "A value is needed to connect these figures.",
       "valuations": {
@@ -3030,91 +2698,430 @@
         "bestWorst": "Best stretch {best}, to {bestOn}. Worst stretch {worst}, to {worstOn}.",
         "notInValue": "{amount} paid in after the last value: no value includes it yet.",
         "statements": {
-          "title": "Fund statements",
-          "empty": "No statement {when}.",
-          "you": "You",
+          "you": "My contribution",
           "employer": "Employer",
           "tfr": "TFR",
           "inflows": "Money in",
           "outflows": "Money out",
           "gain": "Reported gain"
         },
-        "documents": {
-          "title": "Fund documents",
-          "kinds": {
-            "cometa_operations": "Operations",
-            "cometa_position": "Statement"
-          }
+        "read": {
+          "title": "Statements already read",
+          "note": "Data read from documents before the import was removed. It stays part of the fund."
         }
       },
-      "deposits": {
-        "title": "Deposits",
-        "count": "{count, plural, one {# deposit} other {# deposits}}",
-        "date": "Date",
-        "charged": "Charged",
-        "fee": "Fee",
-        "invested": "Invested",
-        "source": "Source",
-        "sourceRule": "Found by the rule",
-        "sourceHand": "One-off",
-        "edit": "Edit",
-        "delete": "Delete",
-        "total": "Total",
-        "empty": "No deposit {when}.",
-        "rule": {
-          "title": "The rule",
-          "text": "Expenses on {account} whose payee contains {match} become a deposit, less {fee} of fee.",
-          "anyAccount": "any account",
-          "active": "Active",
-          "paused": "Paused",
-          "edit": "Edit the rule",
-          "none": "No rule: enter the deposits by hand.",
-          "textNoFee": "Expenses on {account} whose payee contains {match} become a deposit. No fee is set."
-        },
-        "feeUnknown": "A fee is unknown: the totals count it as 0."
-      },
       "contributions": {
-        "you": "You",
-        "employer": "Employer",
-        "tfr": "TFR",
         "other": "Other",
         "total": "Total",
-        "operations": {
-          "title": "Operations of the fund",
-          "count": "{count, plural, one {# operation} other {# operations}}",
-          "empty": "No operation {when}.",
-          "quarter": "Quarter",
-          "date": "Date",
-          "fees": "Fees",
-          "net": "Invested",
-          "remove": "Remove"
-        },
         "payslips": {
           "title": "Payslips",
           "hint": "enrolment fees excluded",
           "empty": "No payslip {when}.",
           "month": "Month",
-          "quarter": "Quarter",
           "status": "Status",
-          "open": "Open the payslip"
+          "open": "Open the payslip",
+          "period": "Period"
         },
         "quarters": {
-          "title": "Quarters",
+          "title": "Periods",
           "hint": "{days} days of tolerance before a missing credit is flagged",
-          "empty": "No quarter {when}.",
-          "missing": "Payslip missing for {months}."
+          "empty": "No period {when}.",
+          "missing": "Payslip missing for {months}.",
+          "due": "due {date}",
+          "credited": "credited {date}",
+          "inFund": "in the fund",
+          "accrued": "accrued",
+          "difference": "difference",
+          "accept": "Accept difference",
+          "clear": "Reopen"
         },
         "components": {
-          "worker": "You",
+          "worker": "My contribution",
           "employer": "Employer",
           "tfr": "TFR",
           "enrollment": "Enrolment"
         },
-        "voluntary": {
-          "title": "Voluntary payment",
-          "description": "Money paid directly to the fund, outside the payslip. You can link it to the movement that paid it.",
-          "add": "Add a payment"
+        "register": {
+          "title": "Contributions",
+          "count": "{count, plural, one {# contribution} other {# contributions}}",
+          "date": "Date",
+          "origin": "Origin",
+          "origins": {
+            "payroll": "Payslip",
+            "rule": "Debit",
+            "manual": "By hand",
+            "import": "Imported"
+          },
+          "period": "Period",
+          "quarter": "Q{index} {year}",
+          "voluntary": "Voluntary",
+          "charged": "Charged",
+          "fees": "Fees",
+          "invested": "Invested",
+          "actions": "Actions",
+          "edit": "Edit",
+          "delete": "Delete",
+          "editLabel": "Edit the contribution of {date}",
+          "deleteLabel": "Delete the contribution of {date}",
+          "feeUnknownCell": "Unknown fee",
+          "feeUnknown": "A fee is unknown: the totals count it as 0.",
+          "empty": "No contribution {when}.",
+          "emptyEver": "No contribution yet.",
+          "fromSources": "Contributions from the sources arrive automatically."
+        },
+        "debit": {
+          "amount": "{amount} {frequency}",
+          "day": "on day {day}",
+          "account": "from {account}",
+          "anyAccount": "from any account",
+          "match": "payee contains “{match}”",
+          "active": "Active",
+          "paused": "Paused",
+          "edit": "Edit"
         }
+      },
+      "firstSteps": {
+        "title": "First steps",
+        "text": "Record a contribution or enter today's value to see the fund."
+      }
+    },
+    "wizard": {
+      "title": "Add pension fund",
+      "steps": {
+        "label": "Steps",
+        "fund": "The fund",
+        "sources": "How you pay in",
+        "fees": "Fees",
+        "review": "Summary",
+        "done": "done"
+      },
+      "fund": {
+        "intro": "Enter what you know. You can change everything later, in the fund's settings.",
+        "name": "Name",
+        "provider": "Provider",
+        "memberSince": "Member since",
+        "line": "Line or compartment",
+        "value": "Value today",
+        "valueOn": "Date of the value",
+        "template": "Template",
+        "templateNone": "No template",
+        "templateHint": "A template copies the due dates and fees of a known fund. You can change them.",
+        "templateReplace": "The template replaces the choices of steps 2 and 3.",
+        "templateReplaceYes": "Replace",
+        "templateReplaceNo": "Keep my choices",
+        "advanced": "Advanced",
+        "currency": "Currency",
+        "currencyFixed": "The currency cannot change after the fund is created.",
+        "code": "Code",
+        "codeHint": "Identifier of the fund or of your position."
+      },
+      "fromTemplate": "From the template “{model}”. Check it and change what does not apply to you.",
+      "sources": {
+        "intro": "Choose where the money comes from. No choice is required.",
+        "payrollQuestion": "Do you pay in from your payslip?",
+        "payrollHelp": "Contributions withheld from your payslip reach the fund automatically.",
+        "payrollOff": "Without the Payroll module you also record payslip contributions by hand.",
+        "debitQuestion": "Do you have a recurring debit on an account?",
+        "debitHelp": "Ledgerly finds the debit among the account's movements and creates the contribution.",
+        "manualQuestion": "Do you make one-off payments?",
+        "manualHelp": "Adds the “Record contribution” button at the top of the fund's page."
+      },
+      "fees": {
+        "intro": "Fees explain and estimate the costs. The fee you enter on each contribution is the one that counts.",
+        "empty": "No fees. You can add them later, in the settings."
+      },
+      "review": {
+        "fund": "The fund",
+        "sources": "How you pay in",
+        "fees": "Fees",
+        "edit": "Edit",
+        "noSources": "No source: you record contributions and values by hand.",
+        "noFees": "No fees.",
+        "valueLine": "{value} on {date}"
+      },
+      "continue": "Continue",
+      "back": "Back",
+      "cancel": "Cancel",
+      "skip": "Skip for now",
+      "create": "Create fund",
+      "creating": "Creating the fund…",
+      "created": "Fund created",
+      "leave": {
+        "title": "Leave without creating the fund?",
+        "text": "What you entered will be lost.",
+        "stay": "Stay",
+        "leave": "Leave"
+      },
+      "errors": {
+        "name": "Enter a name.",
+        "memberSince": "Choose the membership date.",
+        "future": "The date cannot be in the future.",
+        "value": "Enter a value of zero or more.",
+        "valueOn": "Choose the date of the value.",
+        "valueBeforeStart": "The value cannot be dated before the membership date.",
+        "duplicate": "A fund with that name already exists.",
+        "failed": "Fund not created. Try again."
+      }
+    },
+    "sources": {
+      "title": "Contributions",
+      "description": "Where the money comes from. A source describes the plan: the paid-in amount always comes from the recorded contributions.",
+      "kinds": {
+        "payroll": "Payslip",
+        "bank_debit": "Recurring debit",
+        "manual": "One-off payments"
+      },
+      "add": "Add source",
+      "edit": "Edit",
+      "editLabel": "Edit {kind}",
+      "actions": "Actions for {kind}",
+      "dialog": {
+        "add": "A new source of this fund.",
+        "edit": "The contributions already recorded do not change."
+      },
+      "save": "Save source",
+      "cancel": "Cancel",
+      "pause": "Pause",
+      "resume": "Resume",
+      "remove": "Remove",
+      "removeBlocked": "Remove · it has {count, plural, one {# contribution} other {# contributions}}",
+      "paused": "Paused",
+      "active": "Active",
+      "empty": {
+        "title": "No source",
+        "text": "You record contributions and values by hand. Add a source if the money comes from your payslip or from a debit."
+      },
+      "components": {
+        "label": "Components",
+        "worker": "My contribution",
+        "employer": "Employer",
+        "tfr": "TFR",
+        "taken": "Already assigned to “{fund}”"
+      },
+      "period": {
+        "label": "Accrual period",
+        "month": "Month",
+        "quarter": "Quarter"
+      },
+      "employer": "Employer (optional)",
+      "employerLine": "Employer: {employer}",
+      "due": {
+        "switch": "The transfer has a due date",
+        "day": "Due day",
+        "offset": "Months after the period ends",
+        "sameMonth": "In the same month",
+        "tolerance": "Tolerance (days)",
+        "toleranceHint": "How many days after the due date a missing transfer is still “on the way”.",
+        "next": "Next due dates: {dates}",
+        "none": "With no due date a contribution counts on the day you record it.",
+        "custom": "Custom due dates: {dates}",
+        "replace": "Replace with a rule"
+      },
+      "note": "Note",
+      "debit": {
+        "amount": "Expected amount",
+        "frequency": "Frequency",
+        "every": "Every",
+        "unit": "Unit of time",
+        "units": {
+          "week": "{count, plural, one {week} other {weeks}}",
+          "month": "{count, plural, one {month} other {months}}",
+          "year": "{count, plural, one {year} other {years}}"
+        },
+        "frequencyText": "every {count, plural, one {{unit}} other {# {unit}}}",
+        "day": "Debit day",
+        "from": "Start date",
+        "fromHint": "Empty: from the membership date.",
+        "to": "End date",
+        "account": "Paying account",
+        "anyAccount": "Any account",
+        "otherAccount": "Account no longer open",
+        "match": "Payee contains",
+        "matchHint": "A part of the name shown on the movement.",
+        "kpi": "Recurring debit",
+        "kpiNote": "{frequency}, on day {day} · {status}",
+        "listLine": "Debit {amount} {frequency} · {status}"
+      },
+      "summary": {
+        "payroll": "{components} · by {period}",
+        "due": "due on day {day} {offset, plural, =0 {of the same month} one {of the next month} other {# months later}} · tolerance {days, plural, one {# day} other {# days}}",
+        "debit": "{amount} {frequency}, on day {day} · from {account} · payee contains “{match}”",
+        "debitAmount": "{amount} {frequency}",
+        "debitDay": "on day {day}",
+        "debitAccount": "from {account}",
+        "debitMatch": "payee contains “{match}”",
+        "debitFrom": "from {date}",
+        "debitTo": "until {date}",
+        "manual": "Contributions entered by hand."
+      },
+      "payrollInactive": "The Payroll module is not active: record payslip contributions by hand.",
+      "codes": {
+        "title": "Payslip codes",
+        "open": "Open Payroll › Settings",
+        "groups": {
+          "worker": "My contribution",
+          "employer": "Employer",
+          "tfr": "TFR",
+          "enrollment": "Enrolment quotas",
+          "adjustment": "Adjustments"
+        }
+      },
+      "rebuild": "Rebuild from payslips",
+      "rebuilt": "{count, plural, one {# payslip read again} other {# payslips read again}}",
+      "saved": "Source saved",
+      "removed": "Source removed",
+      "undo": "Undo",
+      "undoFailed": "Not restored. Reload the page.",
+      "detect": {
+        "button": "Find from the movements",
+        "movement": "A debit of this fund",
+        "pick": "Choose a debit…",
+        "looking": "Looking…",
+        "nothing": "This debit carries nothing to recognise it by. Choose another one, or enter the text by hand.",
+        "kinds": {
+          "creditor": "Creditor of the direct debit",
+          "mandate": "Mandate reference",
+          "payee": "Payee"
+        },
+        "charges": "Found",
+        "chargesValue": "{count, plural, one {# debit} other {# debits}} · {from} → {to}",
+        "usual": "Usually",
+        "every": "every {days, plural, one {# day} other {# days}}",
+        "use": "Use this",
+        "failed": "It did not work. Try again."
+      },
+      "errors": {
+        "component": "Choose at least one component.",
+        "componentTaken": "A component is already assigned to “{fund}”. Remove it here or from the fund “{fund}”.",
+        "onePayroll": "A fund has one active “Payslip” source. Pause the other one.",
+        "amount": "Enter the expected amount.",
+        "match": "Enter a part of the payee's name.",
+        "dueDay": "Enter the due day.",
+        "tolerance": "Enter a tolerance between 0 and 120 days.",
+        "frequency": "Enter a number between 1 and 120.",
+        "debitDay": "Enter a day between 1 and 31.",
+        "dates": "The end date cannot be before the start date.",
+        "account": "Choose an open account.",
+        "archived": "An archived fund does not change. Restore it first.",
+        "failed": "Not saved. Try again."
+      }
+    },
+    "fees": {
+      "title": "Fees",
+      "description": "Fees explain and estimate the costs. The fee entered on each contribution is the one that counts.",
+      "add": "Add fee",
+      "editTitle": "Edit fee",
+      "edit": "Edit",
+      "editLabel": "Edit {label}",
+      "removeLabel": "Remove {label}",
+      "cancel": "Cancel",
+      "advanced": "Advanced",
+      "columns": {
+        "label": "Name",
+        "basis": "Type",
+        "amount": "Amount",
+        "scope": "Applies to",
+        "validity": "Validity"
+      },
+      "basis": {
+        "one_off": "On joining",
+        "per_contribution": "On each contribution",
+        "periodic": "Recurring",
+        "on_assets": "On assets",
+        "per_request": "On request"
+      },
+      "basisHelp": {
+        "one_off": "Paid once, when you join.",
+        "per_contribution": "Taken from each contribution.",
+        "periodic": "Paid at fixed intervals, from the contributions.",
+        "on_assets": "Yearly percentage of the value. It is already inside the fund's value.",
+        "per_request": "Paid only for an operation you ask for."
+      },
+      "mode": {
+        "label": "Amount or percentage",
+        "amount": "Amount",
+        "rate": "Percentage"
+      },
+      "value": "Value",
+      "valueRate": "Value (percentage)",
+      "every": "Every",
+      "periods": {
+        "month": "month",
+        "quarter": "quarter",
+        "year": "year"
+      },
+      "amountOnce": "{amount} once",
+      "amountEach": "{amount} per contribution",
+      "amountPer": "{amount} per {period, select, year {year} quarter {quarter} other {month}}",
+      "rateEach": "{rate} of each contribution",
+      "ratePer": "{rate} per {period, select, year {year} quarter {quarter} other {month}}",
+      "amountOnRequest": "{amount} on request",
+      "scope": {
+        "all": "Everything",
+        "component": "{source} · {component}"
+      },
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "from": "from {date}",
+      "to": "to {date}",
+      "note": "Note or source",
+      "expired": "No longer valid ({count})",
+      "save": "Save fee",
+      "saved": "Fee saved",
+      "remove": "Remove",
+      "removed": "Fee removed",
+      "undo": "Undo",
+      "undoFailed": "Not restored. Reload the page.",
+      "estimate": "Estimated yearly cost on assets: about {amount} ({rate} of {value}, value of {date}). It is already inside the value: Ledgerly does not subtract it.",
+      "estimateNeedsValue": "A value is needed to estimate the cost on assets.",
+      "empty": {
+        "title": "Fees not set",
+        "text": "Ledgerly does not estimate the costs of this fund. The figures do not change: the fee of each contribution counts."
+      },
+      "errors": {
+        "label": "Enter a name.",
+        "value": "Enter a value above zero.",
+        "rate": "Enter a percentage between 0 and 100.",
+        "validity": "“Valid to” cannot be before “Valid from”.",
+        "archived": "An archived fund does not change. Restore it first.",
+        "failed": "Not saved. Try again."
+      }
+    },
+    "contribution": {
+      "record": "Record contribution",
+      "title": "Record contribution · {name}",
+      "editTitle": "Edit contribution",
+      "kind": "Contribution type",
+      "kinds": {
+        "voluntary": "Voluntary",
+        "payroll": "From the payslip",
+        "other": "Other operation"
+      },
+      "payrollHelp": "Enter what reached the fund, as the fund reports it. Ledgerly compares it with your payslips.",
+      "operation": "Operation",
+      "otherHelp": "For an exit enter what left the fund: it does not count as a loss.",
+      "date": "Date",
+      "amount": "Amount",
+      "period": "Period",
+      "noPeriod": "No period",
+      "fee": "Fee",
+      "feeUnknown": "I do not know the fee",
+      "invested": "Invested: {amount}",
+      "movement": "Linked movement",
+      "noMovement": "No movement",
+      "currentMovement": "The movement already linked",
+      "note": "Note",
+      "cancel": "Cancel",
+      "save": "Save contribution",
+      "delete": {
+        "title": "Delete contribution",
+        "text": "Delete the contribution of {date}? The fund's paid-in amount and totals change.",
+        "confirm": "Delete"
+      },
+      "errors": {
+        "amount": "Enter an amount above zero.",
+        "components": "Enter at least one amount.",
+        "fee": "The fee cannot be above the amount."
       }
     }
   },
@@ -3230,11 +3237,10 @@
     },
     "funds": {
       "title": "Funds",
-      "description": "Pension funds and PACs stay in Funds; they are shown here read only.",
+      "description": "Pension funds stay in Funds; they are shown here read only.",
       "empty": "No funds.",
       "types": {
-        "pension": "Pension fund",
-        "pac": "PAC"
+        "pension": "Pension fund"
       }
     },
     "catalog": {

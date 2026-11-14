@@ -1,11 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAccount, runSnapshot, saveBalanceEntry } from "@/modules/accounts/service";
-import { createFund, recordValuation, updateValuation } from "@/modules/funds/service";
+import { recordValuation, updateValuation } from "@/modules/funds/service";
 import { uploadPayslip } from "@/modules/payroll/service";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import { upsertFromProvider } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { closeDatabase, resetDatabase } from "../../../test/db";
+import { debitFund } from "../../../test/funds";
 import { createTestUser } from "../../../test/users";
 import { readZip } from "../../../test/zip";
 
@@ -134,10 +135,9 @@ describe("exportUser", () => {
 describe("exportFileName", () => {
   it("writes a fund's documented value, not the copy of a month end (funds-ux F5)", async () => {
     const ctx = await newContext();
-    const fund = await createFund(ctx, {
+    const fund = await debitFund(ctx, {
       name: "PAC",
       startOn: "2026-01-01",
-      valuationAccountId: null,
       initialCents: 100_000n,
     });
     const valuation = await recordValuation(ctx, fund.id, { on: "2026-09-30", cents: 110_000n });

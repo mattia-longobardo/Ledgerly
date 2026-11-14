@@ -1,8 +1,10 @@
-// The pension fund's schema, creation and payroll sink (plan F6 L0–L1), on the synthetic payslip
-// twins, against the real test database and bucket.
-import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { getAccount } from "@/modules/accounts/queries";
+// The fund fed by the payslip: where its value lives, the payroll sink and the reviewer's decisions
+// (plan F6 L0–L1; release N6), on the synthetic payslip twins, against the real test database and
+// bucket.
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { getAccount, listAccounts } from "@/modules/accounts/queries";
+import { DOCUMENT_KINDS } from "@/modules/imports/rules";
+import { listDocuments } from "@/modules/imports/service";
 import { appliedCompetences } from "@/modules/payroll/pension";
 import {
   applyPayslip,
@@ -14,38 +16,53 @@ import {
 import { chargeCandidates } from "@/modules/transactions/queries";
 import { upsertFromProvider } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
+import { civilDateIn } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
-import { hasPgError } from "@/platform/db/errors";
 import { deleteFolder, ensureBucket } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../test/fixtures";
-import { MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../tests/fixtures/payroll/samples";
+import { addVoluntaryContribution, payrollFund as fundFedByPayslip } from "../../../../test/funds";
+import { APRIL, MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../tests/fixtures/payroll/samples";
 import { twinPdf, type TwinPayslip } from "../../../../tests/fixtures/payroll/twin";
-import { fundFeeTariffs, funds, pensionCompetences } from "../schema";
-import { createFund, FundError } from "../service";
-import { COMETA_SCHEDULE } from "./rules";
+import { fundDetail } from "../queries";
+import { funds, pensionCompetences } from "../schema";
 import {
-  addContributionRule,
-  addVoluntaryContribution,
-  competencesOf,
-  createPensionFund,
+  addContribution,
+  addSource,
+  createFund,
+  feesOf,
+  requireFund,
+  setFundState,
+  setSourceState,
+  sourcesOf,
+  updateContribution,
+} from "../service";
+import {
+  competencesOf as competencesByFund,
   decideDifference,
-  decisionsOf,
-  feeTariffs,
+  decisionsOf as decisionsByFund,
   payrollFund,
-  pensionRulesOf,
   replaceCompetences,
-  requirePensionFund,
-  saveTolerance,
-  setReceivesPayroll,
 } from "./service";
 
 let ctx: Ctx;
+
+/** The payslip twins are of 2031: the clock is stopped there, so that nothing of theirs is in the future. */
+const NOW = new Date("2031-10-15T10:00:00Z");
+const stopClock = () => {
+  // Only `Date` is faked: the pool's own timers must keep running.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+};
 
 beforeAll(ensureBucket);
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
+  stopClock();
+});
+afterEach(() => {
+  vi.useRealTimers();
 });
 afterAll(async () => {
   await deleteFolder("payslips/");
@@ -60,94 +77,61 @@ const cometa = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+/** A fund fed by the payslip, as one was made before release N6 (`test/funds.ts`). */
+const createPensionFund = fundFedByPayslip;
+
+/**
+ * A payslip read, verified and applied. The payslips go through the bucket, and S3 refuses a
+ * request signed five years from now: they are read with the real clock. None of their numbers
+ * comes from the clock.
+ */
 async function applied(twin: TwinPayslip, who: Ctx = ctx) {
-  const { document } = await uploadPayslip(who, { name: `${twin.period}.pdf`, bytes: await twinPdf(twin) });
-  await processPayslip(who, document.id);
-  await verifyPayslip(who, document.id);
-  return applyPayslip(who, document.id);
+  vi.useRealTimers();
+  try {
+    const { document } = await uploadPayslip(who, { name: `${twin.period}.pdf`, bytes: await twinPdf(twin) });
+    await processPayslip(who, document.id);
+    await verifyPayslip(who, document.id);
+    return await applyPayslip(who, document.id);
+  } finally {
+    stopClock();
+  }
 }
 
+/** One fund's competences and decisions: the reads take every fund at once since release N6. */
+const competencesOf = async (who: Pick<Ctx, "userId">, fundId: string) =>
+  (await competencesByFund(who, [fundId])).get(fundId)!;
+const decisionsOf = async (who: Pick<Ctx, "userId">, fundId: string) =>
+  (await decisionsByFund(who, [fundId])).get(fundId)!;
+
+/** The fund's payslip source. */
+const payslipSourceOf = async (fundId: string) =>
+  (await sourcesOf(ctx, [fundId])).find((source) => source.kind === "payroll")!;
+
 describe("a pension fund (plan F6 L0)", () => {
-  it("lives on a pension account outside cash, with the Cometa schedule and the tariff seeded", async () => {
+  it("lives on a pension account outside cash", async () => {
     const fund = await createPensionFund(ctx, cometa());
-    expect(fund).toMatchObject({ type: "pension", receivesPayroll: true, compartment: "Crescita" });
+    expect(fund).toMatchObject({ compartment: "Crescita" });
     const account = await getAccount(ctx, fund.valuationAccountId);
     expect(account).toMatchObject({ type: "pension", countsAsLiquid: false, inNetWorth: true });
-    const [rule] = await pensionRulesOf(ctx, fund.id);
-    expect(rule).toMatchObject({ kind: "payment_schedule", toleranceDays: 15, schedule: COMETA_SCHEDULE });
-    const tariffs = await feeTariffs();
-    expect(tariffs.find((row) => row.item === "association")).toMatchObject({ amountCents: 1200n });
-    expect(tariffs.find((row) => row.item === "management_crescita")?.rate).toBe("0.000800");
   });
 
   it("gives payroll to the first pension fund only, and moves it on request", async () => {
     const first = await createPensionFund(ctx, cometa());
-    const second = await createPensionFund(ctx, cometa({ name: "Other fund" }));
-    expect(second.receivesPayroll).toBe(false);
+    const second = await createPensionFund(ctx, cometa({ name: "Other fund", receivesPayroll: false }));
     expect((await payrollFund(ctx))?.id).toBe(first.id);
-    await setReceivesPayroll(ctx, second.id);
+    // Moving the payslip is two steps since release N6: the first fund lets it go, the second takes it.
+    await setSourceState(ctx, (await payslipSourceOf(first.id)).id, "paused");
+    await setSourceState(ctx, (await payslipSourceOf(second.id)).id, "active");
     expect((await payrollFund(ctx))?.id).toBe(second.id);
-  });
-
-  it("refuses payroll on a PAC and two funds taking payroll (CHECK, partial unique index)", async () => {
-    const pac = await createFund(ctx, {
-      name: "PAC",
-      provider: null,
-      isin: null,
-      compartment: null,
-      debitAccountId: null,
-      debitDay: null,
-      ter: null,
-      startOn: "2031-01-01",
-      valuationAccountId: null,
-    });
-    await expect(getDb().update(funds).set({ receivesPayroll: true }).where(eqId(pac.id))).rejects.toSatisfy(
-      (error) => hasPgError(error, "23514", "funds_receives_payroll_ck"),
-    );
-    await createPensionFund(ctx, cometa());
-    const other = await createPensionFund(ctx, cometa({ name: "Other" }));
-    await expect(
-      getDb().update(funds).set({ receivesPayroll: true }).where(eqId(other.id)),
-    ).rejects.toSatisfy((error) => hasPgError(error, "23505", "funds_receives_payroll_uq"));
-  });
-
-  it("keeps the tariff once, however many funds seed it", async () => {
-    await createPensionFund(ctx, cometa());
-    await createPensionFund(ctx, cometa({ name: "Again" }));
-    const rows = await getDb().select().from(fundFeeTariffs);
-    expect(rows).toHaveLength(13);
-  });
-
-  it("stores contribution rules and the tolerance, validated", async () => {
-    const fund = await createPensionFund(ctx, cometa());
-    await addContributionRule(ctx, fund.id, {
-      validFrom: "2031-01-01",
-      ccnl: "Metalmeccanici",
-      base: "Minimi contrattuali",
-      workerPct: "1,2",
-      employerPct: "2.2",
-      tfrPct: "100",
-      source: "scheda",
-    });
-    await saveTolerance(ctx, fund.id, 20);
-    const rules = await pensionRulesOf(ctx, fund.id);
-    expect(rules.find((rule) => rule.kind === "contribution")).toMatchObject({
-      workerPct: "1.2000",
-      employerPct: "2.2000",
-      tfrPct: "100.0000",
-    });
-    expect(rules.find((rule) => rule.kind === "payment_schedule")?.toleranceDays).toBe(20);
-    await expect(saveTolerance(ctx, fund.id, 500)).rejects.toBeInstanceOf(FundError);
-    await expect(
-      addContributionRule(ctx, fund.id, { validFrom: "2031-02-01", validTo: "2031-01-01" }),
-    ).rejects.toBeInstanceOf(FundError);
   });
 
   it("is invisible to another user", async () => {
     const fund = await createPensionFund(ctx, cometa());
     const other = await newContext();
-    await expect(requirePensionFund(other, fund.id)).rejects.toMatchObject({ code: "not_found" });
-    expect(await pensionRulesOf(other, fund.id)).toEqual([]);
+    await expect(requireFund(other, fund.id)).rejects.toMatchObject({ code: "not_found" });
+    // Its payment schedule and its fees are its sources and its fees since release N6.
+    expect(await sourcesOf(other, [fund.id])).toEqual([]);
+    expect(await feesOf(other, [fund.id])).toEqual([]);
     expect(await competencesOf(other, fund.id)).toEqual([]);
     expect(await payrollFund(other)).toBeNull();
   });
@@ -217,7 +201,7 @@ describe("competences from applied payslips (plan F6 L1)", () => {
 
   it("does not publish to a fund that does not take payroll", async () => {
     await createPensionFund(ctx, cometa());
-    const other = await createPensionFund(ctx, cometa({ name: "Other" }));
+    const other = await createPensionFund(ctx, cometa({ name: "Other", receivesPayroll: false }));
     await expect(replaceCompetences(ctx, other.id, [])).rejects.toMatchObject({ code: "invalid" });
   });
 });
@@ -267,10 +251,6 @@ describe("a voluntary contribution tied to a movement", () => {
   });
 });
 
-function eqId(id: string) {
-  return eq(funds.id, id);
-}
-
 describe("the lines a decision names", () => {
   const decision = {
     year: 2031,
@@ -307,7 +287,7 @@ describe("the lines a decision names", () => {
 
   it("refuses a line of another fund of the same user", async () => {
     const fund = await createPensionFund(ctx, cometa());
-    const second = await createPensionFund(ctx, cometa({ name: "Second" }));
+    const second = await createPensionFund(ctx, cometa({ name: "Second", receivesPayroll: false }));
     const operation = await addVoluntaryContribution(ctx, second.id, { on: "2031-02-01", amountCents: 100n });
     await expect(
       decideDifference(ctx, fund.id, { ...decision, competenceIds: [], operationIds: [operation.id] }),
@@ -320,5 +300,171 @@ describe("the lines a decision names", () => {
       decideDifference(ctx, fund.id, { ...decision, competenceIds: ["nope"], operationIds: [] }),
     ).rejects.toThrow();
     expect(await decisionsOf(ctx, fund.id)).toEqual([]);
+  });
+});
+
+describe("a line of a payslip goes to one fund only (release N6)", () => {
+  const payslip = {
+    kind: "payroll" as const,
+    components: ["worker", "employer", "tfr"] as ("worker" | "employer" | "tfr")[],
+    accrualPeriod: "quarter" as const,
+  };
+  const aFund = (name: string, sources: (typeof payslip)[] = [payslip]) =>
+    createFund(ctx, {
+      fund: { name, provider: "Esempio Previdenza", startOn: "2031-01-01" },
+      sources,
+      fees: [],
+    });
+  const heldBy = (name: string) => ({ code: "component_taken", detail: name });
+  const pause = async (fundId: string) => setSourceState(ctx, (await payslipSourceOf(fundId)).id, "paused");
+  const resume = async (fundId: string) => setSourceState(ctx, (await payslipSourceOf(fundId)).id, "active");
+
+  it("refuses a second fund fed by the payslip, at creation and on a source added later", async () => {
+    const alfa = await aFund("Fondo Alfa");
+    await expect(aFund("Fondo Beta")).rejects.toMatchObject(heldBy("Fondo Alfa"));
+    // Nothing of the refused fund was written: neither the fund nor an account for it.
+    expect((await getDb().select().from(funds)).map((fund) => fund.name)).toEqual(["Fondo Alfa"]);
+    expect((await listAccounts(ctx, { includeArchived: true })).map((account) => account.name)).toEqual([
+      "Fondo Alfa",
+    ]);
+
+    const beta = await aFund("Fondo Beta", []);
+    await expect(addSource(ctx, beta.id, payslip)).rejects.toMatchObject(heldBy("Fondo Alfa"));
+    expect(await sourcesOf(ctx, [beta.id])).toEqual([]);
+    // And one active payslip source per fund: a second one waits for the first to be paused.
+    await expect(addSource(ctx, alfa.id, payslip)).rejects.toMatchObject({ code: "payroll_active" });
+    expect((await payrollFund(ctx))?.id).toBe(alfa.id);
+  });
+
+  it("lets another fund take the payslip once the first has paused its source", async () => {
+    const alfa = await aFund("Fondo Alfa");
+    const beta = await aFund("Fondo Beta", []);
+    await pause(alfa.id);
+    expect(await payrollFund(ctx)).toBeNull();
+    await addSource(ctx, beta.id, payslip);
+    expect((await payrollFund(ctx))?.id).toBe(beta.id);
+    // The payslip is Beta's now: Alfa does not take it back while Beta holds it.
+    await expect(resume(alfa.id)).rejects.toMatchObject(heldBy("Fondo Beta"));
+    expect((await payslipSourceOf(alfa.id)).state).toBe("paused");
+  });
+
+  it("refuses to bring back a paused source, or an archived fund with one, while another fund holds the payslip", async () => {
+    const alfa = await aFund("Fondo Alfa");
+    await pause(alfa.id);
+    const beta = await aFund("Fondo Beta");
+    await pause(beta.id);
+    await resume(alfa.id);
+
+    await expect(resume(beta.id)).rejects.toMatchObject(heldBy("Fondo Alfa"));
+    expect((await payslipSourceOf(beta.id)).state).toBe("paused");
+
+    // Beta is archived while it holds the payslip, and Alfa takes the payslip meanwhile.
+    await pause(alfa.id);
+    await resume(beta.id);
+    await setFundState(ctx, beta.id, "archived");
+    await resume(alfa.id);
+    await expect(setFundState(ctx, beta.id, "active")).rejects.toMatchObject(heldBy("Fondo Alfa"));
+    expect((await requireFund(ctx, beta.id)).state).toBe("archived");
+    expect((await payrollFund(ctx))?.id).toBe(alfa.id);
+
+    // Once Alfa lets it go, Beta comes back with it.
+    await pause(alfa.id);
+    await setFundState(ctx, beta.id, "active");
+    expect((await payrollFund(ctx))?.id).toBe(beta.id);
+  });
+
+  it("sends an applied payslip's competence to the fund that holds the payslip, and to no other", async () => {
+    const alfa = await aFund("Fondo Alfa");
+    await pause(alfa.id);
+    const beta = await aFund("Fondo Beta");
+    await pause(beta.id);
+    await resume(alfa.id);
+
+    await applied(MARCH);
+    expect((await competencesOf(ctx, alfa.id)).map((row) => row.payrollPeriod)).toEqual(["2031-03-01"]);
+    expect(await competencesOf(ctx, beta.id)).toEqual([]);
+
+    await pause(alfa.id);
+    await resume(beta.id);
+    await applied(APRIL);
+    expect((await competencesOf(ctx, beta.id)).map((row) => row.payrollPeriod)).toEqual(["2031-04-01"]);
+    expect((await competencesOf(ctx, alfa.id)).map((row) => row.payrollPeriod)).toEqual(["2031-03-01"]);
+    expect(await getDb().select().from(pensionCompetences)).toHaveLength(2);
+  });
+});
+
+describe("reconciliation on the recorded operations, with no document (release N6)", () => {
+  const fromPayslip = (workerCents: bigint) => ({
+    kind: "payroll" as const,
+    on: "2031-04-18",
+    workerCents,
+    employerCents: 4_500n,
+    tfrCents: 15_000n,
+    period: { year: 2031, index: 1 },
+    feeCents: 300n,
+  });
+  const components = async (fundId: string) =>
+    (await fundDetail(ctx, fundId)).quarters[0].components.map((one) => [
+      one.component,
+      one.accruedCents,
+      one.creditedCents,
+      one.differenceCents,
+      one.status,
+    ]);
+
+  it("reconciles a quarter with the contribution from the payslip written by hand, and dates the register by it", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    await applied(MARCH);
+    const before = await fundDetail(ctx, fund.id);
+    expect(before.freshness).toBeNull();
+    expect(before.quarters.map((one) => [one.year, one.quarter, one.status])).toEqual([
+      [2031, 1, "transferred"],
+    ]);
+
+    const operation = await addContribution(ctx, fund.id, fromPayslip(2_500n));
+    expect(operation).toMatchObject({
+      classification: "contribution",
+      source: "manual",
+      documentId: null,
+      sourceId: (await payslipSourceOf(fund.id)).id,
+      competenceYear: 2031,
+      competenceQuarter: 1,
+      netCents: 21_700n,
+    });
+    const detail = await fundDetail(ctx, fund.id);
+    expect(detail.quarters).toHaveLength(1);
+    expect(detail.quarters[0]).toMatchObject({
+      year: 2031,
+      quarter: 1,
+      status: "reconciled",
+      operationDates: ["2031-04-18"],
+      feesCents: 300n,
+      netCents: 21_700n,
+    });
+    expect(await components(fund.id)).toEqual([
+      ["worker", 2_500n, 2_500n, 0n, "reconciled"],
+      ["employer", 4_500n, 4_500n, 0n, "reconciled"],
+      ["tfr", 15_000n, 15_000n, 0n, "reconciled"],
+    ]);
+    // The day the operation was written, not the day it is dated.
+    expect(detail.freshness).toBe(civilDateIn(operation.createdAt, ctx.timeZone));
+    expect(detail.freshness).not.toBe("2031-04-18");
+    // The only document there is, is the payslip.
+    expect((await listDocuments(ctx, DOCUMENT_KINDS)).map((document) => document.kind)).toEqual(["payslip"]);
+  });
+
+  it("says a discrepancy when what was written differs from what the payslips accrued", async () => {
+    const fund = await createPensionFund(ctx, cometa());
+    await applied(MARCH);
+    const operation = await addContribution(ctx, fund.id, fromPayslip(2_400n));
+    expect((await fundDetail(ctx, fund.id)).quarters[0].status).toBe("discrepancy");
+    expect(await components(fund.id)).toEqual([
+      ["worker", 2_500n, 2_400n, -100n, "discrepancy"],
+      ["employer", 4_500n, 4_500n, 0n, "reconciled"],
+      ["tfr", 15_000n, 15_000n, 0n, "reconciled"],
+    ]);
+    // Corrected by hand, the quarter reconciles.
+    await updateContribution(ctx, operation.id, fromPayslip(2_500n));
+    expect((await fundDetail(ctx, fund.id)).quarters[0].status).toBe("reconciled");
   });
 });

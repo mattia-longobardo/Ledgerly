@@ -1,7 +1,20 @@
 import { addDays, type CivilDate } from "@/platform/dates";
 
+/**
+ * The kinds a document row can have. The two after `payslip` are of documents a fund read before
+ * release N6: nothing reads or stores one any more (decision H19), the rows already stored keep
+ * their kind, and the API still names the two values so that a caller gets a declared refusal
+ * (decision ST-26). The values leave with release R5f.
+ */
 export const DOCUMENT_KINDS = ["payslip", "cometa_operations", "cometa_position"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
+
+/** The kinds the app reads and stores. */
+export const READ_KINDS = ["payslip"] as const;
+export type ReadKind = (typeof READ_KINDS)[number];
+
+export const isReadKind = (kind: DocumentKind): kind is ReadKind =>
+  (READ_KINDS as readonly string[]).includes(kind);
 
 /** The document states of spec §7.8, one list for every kind of document (§9.3). */
 export const DOCUMENT_STATES = [
@@ -77,7 +90,7 @@ const startsWith = (bytes: Uint8Array, signature: readonly number[], at = 0) =>
 /**
  * The format read from the content, never from the name or the declared type (spec §9.3): the PDF
  * signature (anywhere in the first KiB, as readers allow), the OLE2 header of `.xls`, the ZIP
- * header of `.xlsx`, and the HTML table Cometa exports under an `.xls` name.
+ * header of `.xlsx`, and an HTML table saved under an `.xls` name.
  */
 export function sniffFormat(bytes: Uint8Array): SniffedFormat | null {
   const head = new TextDecoder("latin1").decode(bytes.subarray(0, 1024));
@@ -89,10 +102,8 @@ export function sniffFormat(bytes: Uint8Array): SniffedFormat | null {
 }
 
 /** The formats each kind of document is read from. */
-export const FORMATS_OF: Record<DocumentKind, readonly SniffedFormat[]> = {
+export const FORMATS_OF: Record<ReadKind, readonly SniffedFormat[]> = {
   payslip: ["pdf"],
-  cometa_operations: ["xls_html", "xls", "xlsx"],
-  cometa_position: ["pdf"],
 };
 
 export const MIME_OF: Record<SniffedFormat, string> = {
@@ -102,10 +113,8 @@ export const MIME_OF: Record<SniffedFormat, string> = {
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 };
 
-const FOLDER_OF: Record<DocumentKind, string> = {
+const FOLDER_OF: Record<ReadKind, string> = {
   payslip: "payslips",
-  cometa_operations: "cometa",
-  cometa_position: "cometa",
 };
 
 const EXTENSION_OF: Record<SniffedFormat, string> = { pdf: "pdf", xls_html: "xls", xls: "xls", xlsx: "xlsx" };
@@ -115,7 +124,7 @@ const EXTENSION_OF: Record<SniffedFormat, string> = { pdf: "pdf", xls_html: "xls
  * the key comes from the person: the name they gave the file stays in the database.
  */
 export function storageKeyFor(
-  kind: DocumentKind,
+  kind: ReadKind,
   userId: string,
   year: number,
   random: string,

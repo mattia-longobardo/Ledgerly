@@ -102,10 +102,13 @@ set `disabled` on its row in the `oauth_clients` table.
 ## Document import
 
 `POST /api/v1/imports` (scope `imports`) reads a document through the same pipeline as the upload
-screen. Send `multipart/form-data` with `kind` (`payslip`, `cometa_operations` or
-`cometa_position`) and `file` (at most 10 MB). The answer is `201` for a new document and `200`
-with `duplicate: true` when the same file (same SHA-256) is already there. The document is read
-after the answer goes out.
+screen. Send `multipart/form-data` with `kind` (`payslip`) and `file` (at most 10 MB). The answer is
+`201` for a new document and `200` with `duplicate: true` when the same file (same SHA-256) is
+already there. The document is read after the answer goes out.
+
+The kinds `cometa_operations` and `cometa_position` are still accepted as values, and refused: the
+answer is `415 unsupported_format` and the file is not stored. A fund's documents are not read any
+more.
 
 ```bash
 curl -sS -H "Authorization: Bearer $TOKEN" -F kind=payslip -F file=@payslip.pdf \

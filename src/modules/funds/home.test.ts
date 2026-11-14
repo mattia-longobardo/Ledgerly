@@ -30,7 +30,6 @@ const flow = (on: CivilDate, chargedCents: Cents, feeCents: Cents | null = 0n): 
 
 const fund = (overrides: Partial<HomeFund> & { id: string }): HomeFund => ({
   name: overrides.id,
-  type: "pac",
   archived: false,
   points: [],
   flows: [],
@@ -68,7 +67,6 @@ const PAC = fund({
 
 const PENSION = fund({
   id: "pension",
-  type: "pension",
   points: [
     { on: "2027-09-30", cents: 500_00n },
     { on: "2028-02-29", cents: 780_00n },

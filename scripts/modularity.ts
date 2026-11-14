@@ -1,11 +1,11 @@
 // scripts/modularity.ts — `npm run modularity`. Writes `baselines/modularity.json`: the known lists
 // that `src/architecture.test.ts` holds the tree to, and the counts the rewrite plan tracks
-// (docs/design/rewrite-plan/10-modularity.md §10.5, §10.6: rules M2, M3, M4, M6).
+// (docs/design/rewrite-plan/10-modularity.md §10.5, §10.6: rules M2, M3, M4, M6; §10.11: M12, M14).
 //
 // The lists may only get shorter. Run this after removing a violation, and commit the file with the
 // change that removed it; the test fails on a new violation and on a stale entry alike. Running it
 // to make a new violation pass is the thing the test exists to stop.
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   crossModuleImports,
@@ -23,10 +23,67 @@ export type ModularityBaseline = {
   crossModuleImports: string[];
   reciprocalUnits: string[];
   moduleCycles: string[][];
+  /** Rule M12: `<file>: <name>` for every product file that names a provider, a fund or an employer. */
+  forbiddenNames: string[];
+  /** Rule M14: the message keys that carry one of those names. */
+  forbiddenNameKeys: string[];
 };
 
+/**
+ * The names rule M12 keeps out of the code (10-modularity.md §10.11): a provider, a fund, an
+ * employer. A new name in this list is a written decision of the plan.
+ */
+export const FORBIDDEN_NAMES = [
+  "cometa",
+  "fideuram",
+  "reply",
+  "teamsystem",
+  "etoro",
+  "binance",
+  "wallet",
+  "trek",
+  "authentik",
+] as const;
+
+/** Where a name may be written: the provider's own folder (eToro and Binance: their adapter, C1b). */
+const OWN_FOLDER: Partial<Record<(typeof FORBIDDEN_NAMES)[number], string>> = {
+  etoro: "platform/integrations/etoro/",
+  binance: "platform/integrations/ccxt/",
+  wallet: "platform/integrations/wallet/",
+  trek: "platform/integrations/trek/",
+};
+
+/** Rule M12 over the product files: which file writes which name, outside the name's own folder. */
+export function forbiddenNamesIn(files: ReadonlyMap<string, string>): string[] {
+  const found: string[] = [];
+  for (const [rel, content] of files) {
+    const text = content.toLowerCase();
+    for (const name of FORBIDDEN_NAMES) {
+      const own = OWN_FOLDER[name];
+      if (own !== undefined && rel.startsWith(own)) continue;
+      if (text.includes(name)) found.push(`${rel}: ${name}`);
+    }
+  }
+  return found.sort();
+}
+
+/** Rule M14 over a catalog of messages: the dotted keys that carry a forbidden name. */
+export function forbiddenNameKeys(catalog: unknown, path = ""): string[] {
+  if (typeof catalog !== "object" || catalog === null) return [];
+  return Object.entries(catalog).flatMap(([key, value]) => {
+    const at = path === "" ? key : `${path}.${key}`;
+    const named = FORBIDDEN_NAMES.some((name) => key.toLowerCase().includes(name));
+    return [...(named ? [at] : []), ...forbiddenNameKeys(value, at)];
+  });
+}
+
 export function measureModularity(src: string): ModularityBaseline {
-  const edges = importEdges(readProductSources(src));
+  const sources = readProductSources(src);
+  const edges = importEdges(sources);
+  const named = forbiddenNamesIn(sources);
+  const namedKeys = forbiddenNameKeys(
+    JSON.parse(readFileSync(join(src, "..", "messages", "en.json"), "utf8")),
+  ).sort();
   const graph = unitGraph(edges);
   const modulesOnly = new Map(
     [...graph]
@@ -54,10 +111,14 @@ export function measureModularity(src: string): ModularityBaseline {
       platformToModuleImports: platformToModules.length,
       platformFilesImportingModules: new Set(platformToModules.map((edge) => edge.from)).size,
       uiToPlatformImports: uiToFramework.length,
+      forbiddenNameFiles: new Set(named.map((entry) => entry.split(": ")[0])).size,
+      forbiddenNameKeys: namedKeys.length,
     },
     crossModuleImports: cross.map(edgeKey),
     reciprocalUnits: pairs,
     moduleCycles: cycleGroups(modulesOnly),
+    forbiddenNames: named,
+    forbiddenNameKeys: namedKeys,
   };
 }
 

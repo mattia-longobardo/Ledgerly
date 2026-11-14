@@ -104,7 +104,7 @@ fisso. Il tick `hourly` si sposta da `:07` a `:30` e tiene solo i job che non se
 | `budgets-alerts` | dopo la sync | legge solo i movimenti |
 | `funds-deposits` | dopo la sync | legge solo i movimenti |
 | `interests-accrual` | `hourly`, solo se una regola è dovuta (`hasWork`) | ogni regola matura alla sua ora sul saldo chiuso di ieri, con una sync Wallet propria |
-| `payslips-sweep`, `cometa-sweep` | `hourly` | riprendono i documenti bloccati, non dipendono dai movimenti |
+| `payslips-sweep` | `hourly` | riprende i documenti bloccati, non dipende dai movimenti |
 
 `runAfterSync` (`src/platform/jobs/after-sync.ts`) parte una volta alla fine di ogni dispatch di
 `integrations-sync`, dopo "Sync now" e dopo la sync di `interests-accrual`. Un job è **indietro**

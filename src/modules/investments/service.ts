@@ -472,13 +472,14 @@ export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
   const taken = new Set([...funded, ...managed.map((row) => row.accountId)]);
   return all.map((account) => ({
     account,
-    reason:
-      account.type !== "investment" && account.type !== "crypto"
+    // A fund's account first: since release N6 it is a pension account, and "it holds a fund" says
+    // more than "it is not an investment account".
+    reason: funded.has(account.id)
+      ? ("fund" as const)
+      : account.type !== "investment" && account.type !== "crypto"
         ? ("type" as const)
         : taken.has(account.id)
-          ? funded.has(account.id)
-            ? ("fund" as const)
-            : ("managed" as const)
+          ? ("managed" as const)
           : null,
   }));
 }

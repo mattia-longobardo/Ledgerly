@@ -1,26 +1,24 @@
-import type { Route } from "next";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@/platform/context";
-import { type CivilDate, civilDateIn } from "@/platform/dates";
+import type { CivilDate } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
-import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
-import type { PensionDetail } from "../pension/queries";
-import type { ValuationRow } from "../queries";
+import type { ValuationRow } from "../pension/operations";
+import type { FundDetail } from "../queries";
 import { bestAndWorst, closesPeriodBefore, readsPeriod, type ValuationLine } from "../tabs";
 import type { FundPeriod } from "../period";
 import { DeleteValuation, EditValuationButton } from "./fund-forms";
 import { valuationDraft } from "./present";
 
 /**
- * The Valuations tab (docs/design/funds-ux.md §6, F4): one line per value of the period, with the stretch
- * that ends on it. It takes the place of the old returns page. The return of a stretch appears only here, and
- * its label says what it is: the return of the period is the one in the Overview.
+ * The Values tab (docs/design/funds-ux.md §6, F4; rewrite plan, ux/n6-pension-fund.md §5.4): one line per
+ * value of the period, with the stretch that ends on it. The return of a stretch appears only here, and its
+ * label says what it is: the return of the period is the one in the Overview. Under it, read only, the
+ * positions a statement stated before release N6: a new value enters with "Update value" alone.
  */
 export async function FundValuations({
   ctx,
@@ -34,7 +32,7 @@ export async function FundValuations({
   notInValueCents,
   when,
   todayOn,
-  pension,
+  detail,
 }: {
   ctx: Ctx;
   fundId: string;
@@ -49,11 +47,10 @@ export async function FundValuations({
   notInValueCents: Cents;
   when: string;
   todayOn: CivilDate;
-  pension: PensionDetail | null;
+  detail: FundDetail;
 }) {
   const t = await getTranslations("funds.fund.valuations");
   const th = await getTranslations("funds.home");
-  const tp = await getTranslations("funds.pension");
   const money = (cents: Cents | null) => formatMoney(cents, ctx.numberFormat);
   const signed = (cents: Cents | null) => formatMoney(cents, ctx.numberFormat, { signed: true });
   const percent = (value: number | null) =>
@@ -84,8 +81,7 @@ export async function FundValuations({
     );
   };
 
-  const statements = (pension?.snapshots ?? []).filter((one) => readsPeriod(one.valuationDate, period));
-  const documentHref = (id: string) => `/funds/${fundId}/documents/${id}` as Route;
+  const statements = detail.snapshots.filter((one) => readsPeriod(one.valuationDate, period));
 
   return (
     <>
@@ -212,121 +208,79 @@ export async function FundValuations({
         )}
       </Card>
 
-      {pension && (
+      {statements.length > 0 && (
         <Card padded={false} className="min-w-0" data-testid="fund-statements">
-          <CardHeader title={t("statements.title")} />
-          {statements.length === 0 ? (
-            <p className="px-4 pb-4 text-sm text-muted">{t("statements.empty", { when })}</p>
-          ) : (
-            <>
-              <div className="hidden overflow-x-auto @5xl:block">
-                <Table>
-                  <THead>
-                    <Th>{t("date")}</Th>
-                    <Th align="right">{t("value")}</Th>
-                    <Th align="right">{t("statements.you")}</Th>
-                    <Th align="right">{t("statements.employer")}</Th>
-                    <Th align="right">{t("statements.tfr")}</Th>
-                    <Th align="right">{t("statements.inflows")}</Th>
-                    <Th align="right">{t("statements.outflows")}</Th>
-                    <Th align="right">{t("statements.gain")}</Th>
-                  </THead>
-                  <TBody>
-                    {statements.map((one) => (
-                      <Tr key={one.id} data-testid="statement-line">
-                        <Td muted>{long(one.valuationDate)}</Td>
-                        <Td align="right" className="font-semibold">
-                          {money(one.valueCents)}
-                        </Td>
-                        <Td align="right">{money(one.workerCents)}</Td>
-                        <Td align="right">{money(one.employerCents)}</Td>
-                        <Td align="right">{money(one.tfrCents)}</Td>
-                        <Td align="right">{money(one.inflowsCents)}</Td>
-                        <Td align="right">{money(one.outflowsCents)}</Td>
-                        <Td align="right" className={TONE_TEXT[toneOfSign(one.reportedGainCents)]}>
-                          {one.reportedGainCents === null ? NULL_DISPLAY : signed(one.reportedGainCents)}
-                        </Td>
-                      </Tr>
-                    ))}
-                  </TBody>
-                </Table>
-              </div>
-              <ul className="flex flex-col @5xl:hidden">
-                {statements.map((one) => (
-                  <li
-                    key={one.id}
-                    data-testid="statement-line-item"
-                    className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-muted">{long(one.valuationDate)}</span>
-                      <span className="shrink-0 font-semibold tabular-nums">{money(one.valueCents)}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
-                      <span>
-                        {t("statements.you")} {money(one.workerCents)}
-                      </span>
-                      <span>
-                        {t("statements.employer")} {money(one.employerCents)}
-                      </span>
-                      <span>
-                        {t("statements.tfr")} {money(one.tfrCents)}
-                      </span>
-                      <span>
-                        {t("statements.inflows")} {money(one.inflowsCents)}
-                      </span>
-                      <span>
-                        {t("statements.outflows")} {money(one.outflowsCents)}
-                      </span>
-                      <span className={TONE_TEXT[toneOfSign(one.reportedGainCents)]}>
-                        {t("statements.gain")}{" "}
+          <CardHeader title={t("read.title")} />
+          <>
+            <div className="hidden overflow-x-auto @5xl:block">
+              <Table>
+                <THead>
+                  <Th>{t("date")}</Th>
+                  <Th align="right">{t("value")}</Th>
+                  <Th align="right">{t("statements.you")}</Th>
+                  <Th align="right">{t("statements.employer")}</Th>
+                  <Th align="right">{t("statements.tfr")}</Th>
+                  <Th align="right">{t("statements.inflows")}</Th>
+                  <Th align="right">{t("statements.outflows")}</Th>
+                  <Th align="right">{t("statements.gain")}</Th>
+                </THead>
+                <TBody>
+                  {statements.map((one) => (
+                    <Tr key={one.id} data-testid="statement-line">
+                      <Td muted>{long(one.valuationDate)}</Td>
+                      <Td align="right" className="font-semibold">
+                        {money(one.valueCents)}
+                      </Td>
+                      <Td align="right">{money(one.workerCents)}</Td>
+                      <Td align="right">{money(one.employerCents)}</Td>
+                      <Td align="right">{money(one.tfrCents)}</Td>
+                      <Td align="right">{money(one.inflowsCents)}</Td>
+                      <Td align="right">{money(one.outflowsCents)}</Td>
+                      <Td align="right" className={TONE_TEXT[toneOfSign(one.reportedGainCents)]}>
                         {one.reportedGainCents === null ? NULL_DISPLAY : signed(one.reportedGainCents)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </Card>
-      )}
-
-      {pension && (
-        <Card padded={false} className="min-w-0" data-testid="fund-documents">
-          <CardHeader title={t("documents.title")} />
-          {pension.documents.length === 0 ? (
-            <p className="px-4 pb-4 text-sm text-muted">{tp("documents.empty")}</p>
-          ) : (
-            <ul className="flex flex-col">
-              {pension.documents.map((document) => (
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+            <ul className="flex flex-col @5xl:hidden">
+              {statements.map((one) => (
                 <li
-                  key={document.id}
-                  data-testid="fund-document"
-                  className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2.5"
+                  key={one.id}
+                  data-testid="statement-line-item"
+                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
                 >
-                  <span className="flex min-w-0 flex-col">
-                    <Link
-                      href={documentHref(document.id)}
-                      className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[2px] font-medium break-all hover:underline"
-                    >
-                      {document.fileName}
-                    </Link>
-                    <span className="text-sm text-muted">
-                      {t(`documents.kinds.${document.kind}` as "documents.kinds.cometa_operations")} ·{" "}
-                      {long(civilDateIn(document.receivedAt, ctx.timeZone))}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-muted">{long(one.valuationDate)}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">{money(one.valueCents)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                    <span>
+                      {t("statements.you")} {money(one.workerCents)}
                     </span>
-                  </span>
-                  <Badge
-                    tone={
-                      document.state === "applied" ? "pos" : document.state === "failed" ? "neg" : "neutral"
-                    }
-                  >
-                    {tp(`documentStates.${document.state}` as "documentStates.applied")}
-                  </Badge>
+                    <span>
+                      {t("statements.employer")} {money(one.employerCents)}
+                    </span>
+                    <span>
+                      {t("statements.tfr")} {money(one.tfrCents)}
+                    </span>
+                    <span>
+                      {t("statements.inflows")} {money(one.inflowsCents)}
+                    </span>
+                    <span>
+                      {t("statements.outflows")} {money(one.outflowsCents)}
+                    </span>
+                    <span className={TONE_TEXT[toneOfSign(one.reportedGainCents)]}>
+                      {t("statements.gain")}{" "}
+                      {one.reportedGainCents === null ? NULL_DISPLAY : signed(one.reportedGainCents)}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
-          )}
+          </>
+          <p className="border-t border-border px-4 py-3 text-sm text-muted">{t("read.note")}</p>
         </Card>
       )}
     </>

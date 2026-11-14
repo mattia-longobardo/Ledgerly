@@ -129,7 +129,7 @@ export async function ClosedProjection({
   );
 }
 
-/** A PAC's projection: two lines on the plan, and every rate one click away. */
+/** The projection of a fund with a recurring debit: two lines on the plan, and every rate one click away. */
 export async function ShortProjection({
   ctx,
   forecast,
