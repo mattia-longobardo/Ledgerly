@@ -99,6 +99,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <ShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
+      {/* Here and not in the root layout: the manifest is behind the session, so only a signed-in
+        page may name it, and the browser has to send the cookie with the request (the comment of
+        `src/app/manifest.webmanifest/route.ts`). React moves the element into `<head>`. */}
+      <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
       <WeekStartProvider value={weekStart}>
         <div className="flex h-dvh overflow-hidden">
           <Sidebar links={links} user={user} />
