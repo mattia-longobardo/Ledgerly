@@ -9,6 +9,7 @@ import { z } from "zod";
 import { redactForLog } from "@/platform/auth/logger";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
+import { goesToTrek } from "./rules";
 import { TimeOffError, deleteLeaveDay, saveAllowance, saveLeaveDay } from "./service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
@@ -109,8 +110,8 @@ export async function saveLeaveAction(input: LeaveFormInput): Promise<ActionResu
       note: input.note.trim() || null,
     });
     revalidate();
-    // Only the two kinds Trek knows are worth a pass; ROL, sickness and "other" never leave here.
-    if (kind === "vacation" || kind === "comp") nudgeTrek(ctx);
+    // One list says what reaches Trek (`KINDS_FOR_TREK`): a kind that goes there is worth a pass.
+    if (goesToTrek(kind)) nudgeTrek(ctx);
     return { ok: true };
   } catch (error) {
     return failed(error);
