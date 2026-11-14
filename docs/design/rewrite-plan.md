@@ -1,6 +1,6 @@
 # Ledgerly · piano di riorganizzazione, riscrittura modulare e app multipiattaforma
 
-Stato: **approvato il 14/11/2026; revisione sulla standardizzazione in attesa dell'OK di Mattia.** L'OK del
+Stato: **approvato il 14/11/2026; revisione sulla standardizzazione approvata da Mattia il 14/11/2026.** L'OK del
 14/11/2026 sblocca N0: ogni rilascio parte da un'issue nuova. La revisione ([`11-standardization.md`](rewrite-plan/11-standardization.md))
 aggiunge N6, R5g, il secondo passo di R5d e tre anticipi in N1, N2 e N5; non cambia l'ordine dei rilasci esistenti.
 Base del codice e dell'audit: `main` a `5fbbdbc` (13/11/2026), tag `v0.10.1`. Dopo l'audit: `v0.10.2` (`86e3d43`), solo la
@@ -49,7 +49,7 @@ dice quali punti di `investments.md`, `investments-ux.md` e `funds-ux.md` sono s
 | 8 | [`08-agents.md`](rewrite-plan/08-agents.md) | Agenti: ruoli, confini dei pacchetti, ordine, verifica dei rilasci senza review del codice, secondo agente, secondo database di test |
 | 9 | [`09-risks.md`](rewrite-plan/09-risks.md) | Rischi, ipotesi aperte, ipotesi confermate e punti decisi il 14/11/2026 |
 | 10 | [`10-modularity.md`](rewrite-plan/10-modularity.md) | Obiettivo e priorità, pacchetti e moduli di arrivo (responsabilità, interfaccia, dipendenze), mappa delle dipendenze, accoppiamenti da sciogliere, regole con controllo automatico, duplicazione, pulizia, prestazioni, prova di comportamento invariato, punti di estensione comuni E1-E8 |
-| 11 | [`11-standardization.md`](rewrite-plan/11-standardization.md) | Standardizzazione (in attesa di OK): regola, fondo pensione standard, piano di acquisto (PAC), Investments a 2 gruppi, elenco delle funzioni su misura con meccanismo standard e rilascio, anticipi alla fase A |
+| 11 | [`11-standardization.md`](rewrite-plan/11-standardization.md) | Standardizzazione (approvata da Mattia il 14/11/2026): regola, fondo pensione standard, piano di acquisto (PAC), Investments a 2 gruppi, elenco delle funzioni su misura con meccanismo standard e rilascio, anticipi alla fase A |
 
 ## Premesse
 
@@ -151,7 +151,7 @@ flowchart LR
 | C4 | Windows: guscio con la stessa interfaccia | App Windows da build locale | `main` | No | Gate Security Gatekeeper | M |
 | Z | Review finale unica: codice e sicurezza | Nulla | — | — | La chiede Mattia | — |
 
-N6, R5g e il secondo passo di R5d sono della revisione sulla standardizzazione: in attesa dell'OK di Mattia.
+N6, R5g e il secondo passo di R5d sono della revisione sulla standardizzazione: approvata da Mattia il 14/11/2026.
 I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`03-releases.md`](rewrite-plan/03-releases.md).
 
 ## OK richiesti a Mattia
@@ -164,7 +164,8 @@ I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`
    gratuita EODHD (R5d); installazione dell'APK sul telefono (C1); build su un PC Windows (C4).
 5. **La revisione sulla standardizzazione:** OK al contenuto di [`11-standardization.md`](rewrite-plan/11-standardization.md)
    e risposta alle ipotesi ST-1…ST-24 ([`09-risks.md`](rewrite-plan/09-risks.md) §9.6). Basta «ok default» più le eccezioni.
-   Risposta del 14/11/2026: eccezioni su ST-4, ST-6 e ST-7, ora decisioni H18-H20; default confermato per le altre.
-   Restano da confermare le ipotesi nuove ST-25, ST-26, ST-27.
+   Risposta del 14/11/2026: eccezioni su ST-4, ST-6 e ST-7, ora decisioni H18-H20; le altre sono decisioni, con il
+   default. OK alla revisione dato il 14/11/2026 (decisione H21). ST-26 e ST-27: decisioni, con il default.
+   ST-25: default scartato, scelta in attesa di precisazione ([`09-risks.md`](rewrite-plan/09-risks.md) §9.6).
 6. **Ogni eccezione alle priorità:** un guadagno di velocità che costa modularità o leggibilità, prima del commit
    ([`10-modularity.md`](rewrite-plan/10-modularity.md) §10.9.3).

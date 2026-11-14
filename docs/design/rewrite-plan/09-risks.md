@@ -9,7 +9,8 @@ Elenchi:
 - §9.3 **Ipotesi confermate il 14/11/2026**: scelte che mancavano nelle decisioni. Mattia le ha confermate con l'OK al piano: vale il default.
 - §9.5 **Punti decisi il 14/11/2026**: erano ipotesi da confermare, ora sono decisioni di Mattia.
 - §9.6 **Ipotesi · revisione sulla standardizzazione**: ST-1…ST-24 hanno la risposta di Mattia del 14/11/2026
-  (default confermato, salvo ST-4, ST-6, ST-7 che sono decisioni); ST-25…ST-27 sono nuove, da confermare.
+  (decisioni, con il default, salvo ST-4, ST-6, ST-7 che sono le decisioni H18-H20); ST-26 e ST-27 sono decisioni,
+  con il default; ST-25 è in attesa di precisazione.
 
 ## 9.1 Ipotesi aperte
 
@@ -131,7 +132,7 @@ Cambiano le altre superfici. Sono le sole differenze di numeri ammesse dal vinco
 | D10 | INV-5 | L'export comprende i servizi archiviati e non converte; API, MCP e pagine li escludono e convertono | L'export tiene gli archiviati (è un'esportazione completa) con un campo `archived`, e usa la stessa conversione | I valori convertiti dell'export |
 | D11 | PLT-1 | Due percorsi di conversione: possono differire di un centesimo | Una sola conversione, quella di `platform/fx`. Gli importi già salvati sugli eventi non si ricalcolano | Possibile differenza di un centesimo su conversioni a schermo di eventi nuovi |
 
-## 9.6 Ipotesi da confermare · revisione sulla standardizzazione
+## 9.6 Ipotesi · revisione sulla standardizzazione (approvata da Mattia il 14/11/2026)
 
 Le decisioni H12-H17 sono di Mattia. Queste righe sono le scelte che le decisioni non coprono. Il piano applica il
 default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
@@ -142,12 +143,14 @@ default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
 - ST-4, ST-6 e ST-7 sono decisioni: H18, H19, H20 ([`01-decisions.md`](01-decisions.md) §1.0). Non sono più in
   questo elenco.
 - ST-19 è tolta: nei fondi non si caricano documenti (H19).
-- Ogni altra riga ST-1…ST-24: **default confermato da Mattia il 14/11/2026 (risposta con le sole eccezioni)**.
-- Restano da confermare solo le ipotesi nuove ST-25…ST-27, in fondo a questa sezione.
+- Ogni altra riga ST-1…ST-24: **decisione di Mattia del 14/11/2026, con il default (risposta con le sole eccezioni)**.
+- OK alla revisione: dato da Mattia il 14/11/2026 ([`01-decisions.md`](01-decisions.md) §1.0, H21).
+- Ipotesi nuove, in fondo a questa sezione: ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25 è in
+  attesa di precisazione.
 
 **Fondo pensione (N6)**
 
-| ID | Domanda | Default applicato nel piano (confermato il 14/11/2026) | Alternativa | Rilascio |
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
 |---|---|---|---|---|
 | ST-1 | Contributo del datore di lavoro: come si tratta? | **Scelta.** Componente della sorgente `payroll`, con lavoratore e TFR. L'interfaccia mostra ogni componente con la sua origine. Motivo: un solo meccanismo, una sola riconciliazione per versamento | Sorgente a parte «Dalla busta paga»: due sorgenti per lo stesso bonifico | N6 |
 | ST-10 | Il tariffario pubblico di Cometa (13 righe nel database)? | Le 13 righe diventano righe `fund_fees` del fondo Cometa: nessun dato perso; l'utente toglie quelle che non usa. Nessuna tariffa resta nel codice | Migra solo la commissione di gestione del comparto in uso; le voci a richiesta non migrano | N6 |
@@ -159,7 +162,7 @@ default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
 
 **Investments e piano di acquisto**
 
-| ID | Domanda | Default applicato nel piano (confermato il 14/11/2026) | Alternativa | Rilascio |
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
 |---|---|---|---|---|
 | ST-2 | Quanti gruppi ha Investments, e con quali nomi? | 2: «Azioni e crypto», «Fondi pensione». I conti con solo valore stanno nel primo | 3 gruppi per origine dei dati: «Servizi collegati», «Portafoglio manuale», «Fondi pensione»; oppure una lista unica con un'etichetta per riga | R5b |
 | ST-3 | Le 3 scelte di «Aggiungi investimento»? | «Collega un servizio» · «Segui i tuoi titoli a mano» · «Fondo pensione» | Altri nomi | R5b |
@@ -167,7 +170,7 @@ default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
 
 **Lettori, Payroll, Time Off (R5g)**
 
-| ID | Domanda | Default applicato nel piano (confermato il 14/11/2026) | Alternativa | Rilascio |
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
 |---|---|---|---|---|
 | ST-20 | Festività senza un calendario sottoscritto? | Solo fine settimana, con un avviso. Il calendario del paese si propone al primo avvio. Via il ripiego italiano nel codice | Tenere il ripiego italiano | R5a, R5g |
 | ST-21 | Busta paga di un datore senza profilo? | Inserimento a mano della busta paga generica. Lettura generica con AI, se configurata, e revisione a mano. Un profilo nuovo è un file di dati | Solo avviso «formato sconosciuto», come oggi | R5g |
@@ -176,7 +179,7 @@ default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
 
 **Altre funzioni**
 
-| ID | Domanda | Default applicato nel piano (confermato il 14/11/2026) | Alternativa | Rilascio |
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
 |---|---|---|---|---|
 | ST-8 | Import dei movimenti da file CSV nel core? | Sì, con mappa delle colonne salvata per conto. Rilascio proposto: R5c, con le sorgenti che diventano plugin | Rilascio nuovo in fase A, subito dopo N3; oppure fuori dal piano | R5c |
 | ST-9 | Valori predefiniti per paese (festività, tassa sugli interessi, tipi di assenza)? | Pacchetto paese: file di dati nel core, scelto al primo avvio. Ogni valore è modificabile. Senza valore il default non compare. Nessun limite fiscale nel pacchetto (H18) | Un plugin per paese; oppure nessun default | R0, R5a, R5g |
@@ -194,11 +197,12 @@ Già decise da Mattia, non in questo elenco: fondo unico e fine del tipo PAC (H1
 sorgenti TFR e volontario (H14), commissioni impostabili (H15), nessuna funzione su misura (H16), nessun «Deducibile»
 (H18), lettore della busta paga dietro E1 e nessun documento nei fondi (H19), malattia fuori da Time Off (H20).
 
-**Ipotesi nuove, da confermare** (nate dalle risposte del 14/11/2026)
+**Ipotesi nuove** (nate dalle risposte del 14/11/2026). Risposta di Mattia del 14/11/2026: ST-26 e ST-27 sono
+decisioni, con il default (H22, H23). ST-25: il default è scartato; la scelta è in attesa di precisazione.
 
-| ID | Domanda | Default applicato nel piano | Alternativa | Rilascio |
+| ID | Domanda | Default del piano | Alternativa | Rilascio |
 |---|---|---|---|---|
-| ST-25 | I file dei documenti di Cometa già salvati, con le loro righe `documents`? | Restano archiviati fino a R5f, senza pagina nell'app; restano nell'export ZIP. In R5f si cancellano file e righe, con dump e OK di Mattia. Le operazioni e i valori già letti restano dati del fondo | Cancellazione subito, in N6, con dump e OK. Oppure nessuna cancellazione: i file restano in sola lettura | N6, R5f |
+| ST-25 | I file dei documenti di Cometa già salvati, con le loro righe `documents`? | **Scartato da Mattia il 14/11/2026.** Era: restano archiviati fino a R5f, senza pagina nell'app; restano nell'export ZIP. In R5f si cancellano file e righe, con dump e OK di Mattia. Le operazioni e i valori già letti restano dati del fondo | Cancellazione subito, in N6, con dump e OK. Oppure nessuna cancellazione: i file restano in sola lettura. **Il default (archiviati fino a R5f) è scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in attesa di precisazione. Fino alla risposta nessun file si cancella e N6 non contiene la cancellazione** | In attesa |
 | ST-26 | `POST /imports` con i tipi `cometa_operations` e `cometa_position` (API pubblica)? | Regola «API solo additiva»: i due valori restano nel contratto. Da N6 la rotta li rifiuta con un errore dichiarato e non salva il file. Escono dal contratto con R5f | I due valori escono dal contratto in N6: un client che li usa riceve l'errore generico `invalid` | N6, R5f |
 | ST-27 | Il tipo `sick` del codice di oggi: quando esce da Time Off? | In N5: il pannello nuovo non lo offre (0 righe in produzione). In R5g non diventa un tipo. Il valore esce dal check in R5f | In R5g, con i tipi come dati: fino ad allora il pannello lo mostra | N5, R5g, R5f |
 

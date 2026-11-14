@@ -55,7 +55,7 @@ Per ogni modulo: passo R2 (filone server: contratto, rotte, refactor del dominio
 dati, componenti condivisi, cancellazione delle azioni). Il filone client lavora un modulo dietro al filone server.
 Dal più semplice al più delicato: i due motori di rendimento arrivano per ultimi, quando le primitive sono già provate.
 
-Revisione sulla standardizzazione (in attesa dell'OK di Mattia): l'ordine non cambia. N6 unifica il modulo `funds`
+Revisione sulla standardizzazione (approvata da Mattia il 14/11/2026): l'ordine non cambia. N6 unifica il modulo `funds`
 prima di R0: il refactor trova un solo motore dei fondi. I punti di estensione E1-E8 entrano nel passo del loro modulo
 ([`10-modularity.md`](10-modularity.md) §10.11); la parte che cambia il comportamento è in R5g.
 

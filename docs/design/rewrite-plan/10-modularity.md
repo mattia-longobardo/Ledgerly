@@ -31,7 +31,7 @@ Ambito del vincolo:
   criteri di accettazione. Per il codice esistente che toccano vale lo stesso vincolo.
 - Le sole differenze di numeri ammesse sono le decisioni D1-D11 ([`09-risks.md`](09-risks.md) §9.5), ognuna con un commit
   separato e un test.
-- Revisione sulla standardizzazione (in attesa dell'OK di Mattia): N6 e R5g sono cambi voluti, come N1-N5 e R5. Le
+- Revisione sulla standardizzazione (approvata da Mattia il 14/11/2026): N6 e R5g sono cambi voluti, come N1-N5 e R5. Le
   differenze di numeri in più sono solo X1-X3, dentro N6 ([`11-standardization.md`](11-standardization.md) §11.2.5).
   Punti di estensione e regole M12-M14: §10.11.
 
@@ -468,7 +468,7 @@ Un test che deve cambiare non si adatta in silenzio: lo sviluppatore lo scrive n
 
 ## 10.11 Punti di estensione comuni (E1-E8)
 
-Revisione sulla standardizzazione, in attesa dell'OK di Mattia (decisione H16). Otto meccanismi coprono tutta la
+Revisione sulla standardizzazione, approvata da Mattia il 14/11/2026 (decisione H16). Otto meccanismi coprono tutta la
 logica su misura trovata ([`11-standardization.md`](11-standardization.md) §11.5). Ognuno ha un'interfaccia, un
 pacchetto di arrivo e un rilascio. Nessuno aggiunge un pacchetto di terzi.
 

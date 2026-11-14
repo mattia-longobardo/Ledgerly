@@ -2,10 +2,12 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Decisioni: [`01-decisions.md`](01-decisions.md) §1.0, H12-H20.
 
-Stato: **revisione in attesa dell'OK di Mattia.** Le decisioni H12-H20 sono di Mattia (14/11/2026). Rilasci, modelli
-e default di questo file sono la proposta che le applica. Mattia ha risposto alle ipotesi ST-1…ST-24 con le sole
-eccezioni: ST-4, ST-6 e ST-7 sono le decisioni H18-H20; per le altre vale il default. Le ipotesi nuove, da
-confermare, sono ST-25…ST-27 ([`09-risks.md`](09-risks.md) §9.6).
+Stato: **revisione approvata da Mattia il 14/11/2026** (decisione H21). Le decisioni H12-H20 sono di Mattia
+(14/11/2026). Rilasci, modelli e default di questo file le applicano. Mattia ha risposto alle ipotesi ST-1…ST-24 con
+le sole eccezioni: ST-4, ST-6 e ST-7 sono le decisioni H18-H20; le altre sono decisioni, con il default. Ipotesi
+nuove ([`09-risks.md`](09-risks.md) §9.6): ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25: il
+default (archiviati fino a R5f) è scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in
+attesa di precisazione. Fino alla risposta nessun file si cancella e N6 non contiene la cancellazione.
 
 Base dell'analisi: `main` a `9be59db`, sola lettura. Sul database di produzione: solo conteggi.
 
@@ -156,7 +158,7 @@ Dopo la creazione l'utente arriva sul dettaglio. Lo stato vuoto di ogni tab offr
 |---|---|
 | Calendario di Cometa (20/4, 20/7, 20/10, 20/1) | Scadenze della sorgente `payroll` del fondo Cometa: trimestrale, giorno 20 |
 | Commissioni di Cometa (10,32 € di adesione, 3 € a trimestre) | 2 righe `fund_fees`: «Adesione» `one_off`; «Quota associativa» `periodic`, trimestre |
-| Tariffario di Cometa (13 righe del server) | Righe `fund_fees` del fondo Cometa (ipotesi ST-10) |
+| Tariffario di Cometa (13 righe del server) | Righe `fund_fees` del fondo Cometa (decisione ST-10) |
 | Regola con «CCNL» e tre percentuali | Componenti della sorgente `payroll`, con nota |
 | «Riceve la busta paga» (un fondo per utente) | Sorgente `payroll` del fondo |
 | File di Cometa, lettori, tipi `cometa_*`, job `cometa-sweep` | Via (H19). Le operazioni e i valori già letti restano dati del fondo |
@@ -167,7 +169,7 @@ Dopo la creazione l'utente arriva sul dettaglio. Lo stato vuoto di ogni tab offr
 
 ### 11.2.4 Dati esistenti: strada A
 
-Due strade valutate. **Scelta: strada A** (ipotesi ST-16).
+Due strade valutate. **Scelta: strada A** (decisione ST-16).
 
 | | **A · migrazione additiva con riclassificazione** | B · modello nuovo con lettura compatibile |
 |---|---|---|
@@ -184,14 +186,14 @@ Passi della strada A:
 | A1 schema | Tabelle `fund_contribution_sources`, `fund_fees`. Colonne `fund_operations.source_id` (nullable), `fund_operations.fees_unknown` (default `false`). Check `fund_operations_source_ck` allargato con `rule` | Additiva | Sì: l'immagine precedente non usa gli oggetti nuovi; il check accetta i valori vecchi | N6 |
 | A2 dati, Fideuram | Sorgente `bank_debit` dalla regola e dal piano. 2 righe `fund_fees`. Copia dei 10 versamenti in `fund_operations`: `classification = voluntary`, importo addebitato, commissione, netto, `transaction_id`, `source` = `rule` o `manual`, `origin_key = 'deposit:' + id` | Dati | Sì: `fund_deposits`, `fund_deposit_rules` e `funds.type` non sono toccati | N6 |
 | A2 dati, Cometa | Sorgente `payroll` (lavoratore, datore, TFR; periodo `quarter`; scadenze e tolleranza dalla regola). Righe `fund_fees` dalla regola e dalla tariffa. Le 4 operazioni importate e le valutazioni lette dai documenti non sono toccate | Dati | Sì: `pension_rules` e `fund_fee_tariffs` non sono toccate | N6 |
-| A2 dati, conto | `accounts.type` del conto di Fideuram: `investment` → `pension` (ipotesi ST-17) | Dati | Sì: l'immagine precedente accetta i due tipi | N6 |
-| A3 rimozione | `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`; colonne `funds.type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`; colonne di commissione e `schedule` di `pension_rules`; righe `documents` di tipo `cometa_*` e i loro file (ipotesi ST-25); colonne `fund_operations.document_id` e `position_snapshots.document_id`; valori `cometa_*` del tipo di documento | Contrazione | No. Dump obbligatorio | R5f |
+| A2 dati, conto | `accounts.type` del conto di Fideuram: `investment` → `pension` (decisione ST-17) | Dati | Sì: l'immagine precedente accetta i due tipi | N6 |
+| A3 rimozione | `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`; colonne `funds.type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`; colonne di commissione e `schedule` di `pension_rules`; righe `documents` di tipo `cometa_*` e i loro file (ST-25, in attesa di precisazione: fino alla risposta righe e file non si cancellano); colonne `fund_operations.document_id` e `position_snapshots.document_id`; valori `cometa_*` del tipo di documento | Contrazione | No. Dump obbligatorio | R5f |
 
 **Rollback di N6.** Immagine `pre-n6` e un file SQL nel repo: cancella le operazioni con `origin_key like
 'deposit:%'`, riporta `accounts.type`, elimina tabelle e colonne nuove. I versamenti da regola fatti dopo il rilascio
 ritornano da soli: il job `funds-deposits` dell'immagine precedente li ricrea dai movimenti. Per i versamenti manuali
-fatti dopo il rilascio serve il dump `n6.dump`. N6 non tocca le righe e i file dei documenti di Cometa (ipotesi
-ST-25): l'immagine `pre-n6` li legge e li carica come prima.
+fatti dopo il rilascio serve il dump `n6.dump`. N6 non tocca le righe e i file dei documenti di Cometa (ST-25, in
+attesa di precisazione): l'immagine `pre-n6` li legge e li carica come prima.
 
 **Prove «stessi numeri».**
 
@@ -254,11 +256,11 @@ Il modello nuovo non crea il campo `deductible` delle sorgenti e non crea un lim
 | Lista dei documenti nel dettaglio e testi `documents.*` | `src/modules/funds/pension/queries.ts:173`, `:205`; `src/modules/funds/ui/fund-valuations.tsx:315`; `messages/en.json:2606-2635`, `:3046` | N6 |
 | Job `cometa-sweep` e la sua riga nel registro dei job | `src/modules/funds/jobs.ts:33-39` | N6 |
 | Tipi `cometa_operations`, `cometa_position` nel codice (formati, cartella, ramo di lettura) | `src/modules/imports/rules.ts:3`, `:94-95`, `:107-108`; `src/modules/imports/api.ts:30-40`, `:65-67` | N6 |
-| API: `POST /imports` con un tipo `cometa_*` | `src/modules/imports/api.ts:27`, `:49-72` | N6, secondo l'ipotesi ST-26 |
+| API: `POST /imports` con un tipo `cometa_*` | `src/modules/imports/api.ts:27`, `:49-72` | N6, secondo la decisione ST-26 |
 | Testo dello scope `imports` e nota dell'export sui file di Cometa | `messages/en.json:650`; `src/platform/export/service.ts:371-372` | N6 |
 | MCP | Nessuno strumento sui documenti: nulla da togliere | — |
-| Export: righe e file di Cometa nella sezione `documents` | `src/platform/export/service.ts:347-394` | Restano finché i file esistono (ipotesi ST-25) |
-| File salvati e righe `documents` di tipo `cometa_*` | Silo S3 e tabella `documents` | R5f, con dump e OK di Mattia (ipotesi ST-25) |
+| Export: righe e file di Cometa nella sezione `documents` | `src/platform/export/service.ts:347-394` | Restano finché i file esistono (ST-25, in attesa di precisazione) |
+| File salvati e righe `documents` di tipo `cometa_*` | Silo S3 e tabella `documents` | ST-25, in attesa di precisazione: il default «R5f» è scartato. Fino alla risposta nessun file si cancella |
 | Colonne `fund_operations.document_id`, `position_snapshots.document_id`; valori `cometa_*` nel check del tipo di documento | `src/modules/funds/schema.ts:341`, `:437`; `src/modules/imports/schema.ts:65` | R5f |
 
 Cosa resta: le operazioni con `source = import` e le valutazioni lette dai documenti restano dati del fondo, con gli
@@ -301,7 +303,7 @@ impedisce due acquisti per una scadenza. Il job può girare due volte o riprende
 
 ### 11.3.3 Regole
 
-- Default: **operazione proposta** in «Da fare» (ipotesi ST-5). `auto` è un interruttore del singolo piano, spento.
+- Default: **operazione proposta** in «Da fare» (decisione ST-5). `auto` è un interruttore del singolo piano, spento.
   Motivo: il prezzo di chiusura non è il prezzo dell'eseguito; con `auto` quantità e P&L sono stime.
 - «Da fare» nasce in R5e. Fino a R5e la rata proposta compare nella pagina del portafoglio.
 - Un piano genera operazioni `buy` normali, con il riferimento al piano. Stesso modulo, stessi controlli, stesso P&L.
@@ -317,7 +319,7 @@ impedisce due acquisti per una scadenza. Il job può girare due volte o riprende
 
 Rilascio: R5b. Sostituisce B1 per numero e nomi dei gruppi ([`01-decisions.md`](01-decisions.md)).
 
-| Gruppo (nome: ipotesi ST-2) | Contiene | Esempi di Mattia |
+| Gruppo (nome: decisione ST-2) | Contiene | Esempi di Mattia |
 |---|---|---|
 | **Azioni e crypto** | Servizi collegati, Portafoglio manuale con i suoi piani di acquisto, conti con solo valore | eToro, Binance |
 | **Fondi pensione** | Tutti i fondi pensione | Cometa, Fideuram |
@@ -328,7 +330,7 @@ Rilascio: R5b. Sostituisce B1 per numero e nomi dei gruppi ([`01-decisions.md`](
 | Home Investments | Filtro a chip: Tutti · Azioni e crypto · Fondi pensione. 2 subtotali. Un gruppo vuoto non compare |
 | «Altri conti» | Entra in «Azioni e crypto» come riga con solo valore. Stesso totale |
 | Overview (O1) | Il gruppo degli investimenti ha 2 sottogruppi, con gli stessi subtotali della home |
-| «Aggiungi investimento» (B1c) | 3 scelte: «Collega un servizio» · «Segui i tuoi titoli a mano» · «Fondo pensione» (ipotesi ST-3). Prima di R5d la seconda scelta è «Conto con solo valore» |
+| «Aggiungi investimento» (B1c) | 3 scelte: «Collega un servizio» · «Segui i tuoi titoli a mano» · «Fondo pensione» (decisione ST-3). Prima di R5d la seconda scelta è «Conto con solo valore» |
 | Modulo `portfolio` | `kind` della riga: `service`, `manual_portfolio`, `pension_fund`. Nessun valore `pac` |
 | API e MCP | Rotte dei fondi in R2 (`GET /funds`, `GET /funds/:id` con `sources[]`, `fees[]`, operazioni). `list_funds` in sola lettura, senza tipo |
 | Testi | «PAC» sparisce da Funds e da Investments |
@@ -361,22 +363,22 @@ delle voci nuove: [`02-audit.md`](02-audit.md) §2.6. Meccanismi E1-E8: [`10-mod
 | timeoff | Trek nello schema, nelle regole e nella pagina; due liste dei tipi che vanno a Trek | Porta `LeaveCalendarSync`; «va al calendario esterno» sul tipo | Plugin | N5 (test e correzione, ST-23); R2; R5c |
 | holidays | Festività italiane calcolate nel codice come ripiego; due fonti fisse | E4: calendario proposto dal paese; E5: registro delle fonti | Dati | R2 (registro); R5a (proposta al primo avvio); R5g (fine del ripiego) |
 | interests | Tassa di default 26%; solo basi 365 e 360; finestra dell'accredito fissa | E4: default dal paese; E6: convenzioni come campi della regola | Dati + Configurazione | R2 (struttura); R5g (campi nel form) |
-| interests | Pubblicazione dell'interesse e «saldo fresco» solo con Wallet; nota con un formato personale | Porta `LedgerPosting`; capacità del plugin; «saldo fresco» da ogni sorgente | Plugin + Via | R2 (porta); R5c (ipotesi ST-14) |
+| interests | Pubblicazione dell'interesse e «saldo fresco» solo con Wallet; nota con un formato personale | Porta `LedgerPosting`; capacità del plugin; «saldo fresco» da ogni sorgente | Plugin + Via | R2 (porta); R5c (decisione ST-14) |
 | transactions | Wallet come unico ingresso dei movimenti e unica via di modifica; categorie legate agli id di Wallet | Porta `MovementsSource`; movimento manuale; E5: capacità dichiarate dal plugin | Fisso + Plugin | N3 (movimento manuale); R2 (porta); R5c (plugin) |
-| transactions | Nessun import da file | Import CSV con mappa delle colonne salvata per conto (ipotesi ST-8) | Fisso | R5c |
+| transactions | Nessun import da file | Import CSV con mappa delle colonne salvata per conto (decisione ST-8) | Fisso | R5c |
 | transactions | Chiavi di notifica e mail con il nome del fornitore | Chiavi generiche con il fornitore come parametro | Fisso | N2 |
 | transactions, accounts | Giroconti abbinati solo per IBAN; tre regole «il beneficiario contiene…» | E7: abbinatore di movimenti con strategie | Fisso | R2 (transactions) |
 | accounts | Conto manuale solo in EUR; 8 campi alla creazione | E8: valuta a scelta; 4 campi | Configurazione | R5b |
-| accounts | «Connections»: lista a mano di addebiti | Via: una sola lista in Subscriptions (ipotesi ST-13) | Via | R5a; R5f |
+| accounts | «Connections»: lista a mano di addebiti | Via: una sola lista in Subscriptions (decisione ST-13) | Via | R5a; R5f |
 | budgets, subscriptions, pockets | Solo euro: check DB, importi senza valuta, «(€)» nei testi | E8: `Money` con valuta obbligatoria | Fisso | R0 (tipo); R2 (per modulo); R5f (check) |
-| subscriptions, pockets, budgets | 4 cicli fissi; accredito solo il giorno 1; avvisi solo dopo la sync della banca; voto «utilità» | Frequenza «ogni N settimane o mesi»; giorno a scelta; avvisi a ogni cambio dei movimenti; voto facoltativo (ipotesi ST-15) | Configurazione | R5a; R5e (avvisi) |
+| subscriptions, pockets, budgets | 4 cicli fissi; accredito solo il giorno 1; avvisi solo dopo la sync della banca; voto «utilità» | Frequenza «ogni N settimane o mesi»; giorno a scelta; avvisi a ogni cambio dei movimenti; voto facoltativo (decisione ST-15) | Configurazione | R5a; R5e (avvisi) |
 | users | Default `Europe/Rome`, `it-IT`, `EUR` per ogni utente; formato dei numeri chiuso; mappa lingua → locale in 5 file | E8: default di istanza chiesti al primo avvio; una sola mappa | Configurazione | R0 (mappa); R5a |
 | integrations | Elenchi chiusi di tipi di sync e di entità nei check DB; una scheda su misura per fornitore; intervallo minimo motivato da Wallet | E5: il descrittore dichiara tipi, entità, campi e intervallo; schede dal manifest | Plugin | N1 (schema); R1; R5a; R5c |
 | fx | Una sola fonte (BCE), base EUR, elenco chiuso di valute | E5: registro delle fonti di cambio | Fisso | R2 (fx); R5d (plugin `prices`) |
 | auth | «Authentik» come id e nome dell'accesso, in circa 25 testi; nome del claim fisso | E8: nome mostrato e claim come impostazione; id neutro con redirect | Configurazione | R2 (users e impostazioni) |
-| auth, mail, storage | OIDC, SMTP e S3 obbligatori all'avvio; hostname di Mattia nel compose distribuito | E8: avvio con password, senza posta, con disco locale; compose di esempio neutro | Configurazione | Fuori dal piano (ipotesi ST-24) |
+| auth, mail, storage | OIDC, SMTP e S3 obbligatori all'avvio; hostname di Mattia nel compose distribuito | E8: avvio con password, senza posta, con disco locale; compose di esempio neutro | Configurazione | Fuori dal piano (decisione ST-24) |
 | alerts, jobs | Avvisi all'admin solo con Gotify; job `cometa-sweep`; fuso del cron | Canali di notifica; via `cometa-sweep` (H19) e job generico dei documenti per le buste paga; scheduler del worker | Configurazione + Via | N6 (via `cometa-sweep`); R1; R5e |
-| API, MCP, export | `kind` del fondo, `cometa_*` in `POST /imports`, `rolDays` nell'export, host fissi per la registrazione dei client MCP | Contratto dai tipi registrati; lista ammessa come impostazione. Tipi `cometa_*` di `POST /imports`: ipotesi ST-26 | Fisso + Configurazione | N6 (`cometa_*`); R2; R5b; R5g |
+| API, MCP, export | `kind` del fondo, `cometa_*` in `POST /imports`, `rolDays` nell'export, host fissi per la registrazione dei client MCP | Contratto dai tipi registrati; lista ammessa come impostazione. Tipi `cometa_*` di `POST /imports`: decisione ST-26 | Fisso + Configurazione | N6 (`cometa_*`); R2; R5b; R5g |
 | Overview | 3 riquadri fissi più Pockets; «Last snapshot» in evidenza | Riquadri dai gruppi e dai moduli attivi; snapshot sotto «Avanzate» | Configurazione | R5a; R5b |
 | Messaggi | Nomi di fornitori nelle chiavi e nei testi; tre parole per «movimento»; due significati di «Connection» | Regola M14; glossario unico | Fisso | R3; R5a |
 
@@ -389,7 +391,7 @@ Senza cambio di comportamento. Motivo: questi tre punti si scrivono adesso; farl
 
 | # | Cosa | Rilascio | Perché ora |
 |---|---|---|---|
-| AN1 | Il pannello di Time Off legge i tipi di assenza da un elenco, non da nomi fissi. Nessun cambio di schema: l'elenco contiene i tipi di oggi senza `sick` (H20, ipotesi ST-27) | N5 | Con i tipi fissi il pannello va riscritto in R5g |
+| AN1 | Il pannello di Time Off legge i tipi di assenza da un elenco, non da nomi fissi. Nessun cambio di schema: l'elenco contiene i tipi di oggi senza `sick` (H20, decisione ST-27) | N5 | Con i tipi fissi il pannello va riscritto in R5g |
 | AN2 | Lo schema del manifest dei plugin nasce con etichette, campi delle credenziali, intervallo minimo e capacità | N1 | È il contratto: cambiarlo dopo tocca ogni plugin |
 | AN3 | Chiavi di notifica generiche (`sync_failed`, `sync_stale`) con il fornitore come parametro | N2 | N2 riscrive lo stato dei collegamenti e questi avvisi |
 

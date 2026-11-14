@@ -2,7 +2,7 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Rilasci: N0-N6 in [`03-releases.md`](03-releases.md).
 
-Revisione sulla standardizzazione (in attesa dell'OK di Mattia): tre anticipi senza cambio di comportamento in N1,
+Revisione sulla standardizzazione (approvata da Mattia il 14/11/2026): tre anticipi senza cambio di comportamento in N1,
 N2 e N5 (§4.1, §4.3, §4.7) e il rilascio nuovo N6 (§4.8). Motivo e regola: [`11-standardization.md`](11-standardization.md).
 
 Questo lavoro si fa sul codice attuale (una sola app Next.js). Regola per limitare il lavoro doppio:
@@ -186,8 +186,8 @@ flowchart TB
 - Trek non cambia: la sync parte come oggi dopo la scrittura.
 - **Anticipo AN1: i tipi di assenza arrivano da un elenco.** Il pannello non contiene nomi di tipo. Riceve un elenco
   `{ id, nome, colore, ha un monte }` e lo mostra. In N5 l'elenco è costruito dai tipi di oggi senza `sick`
-  (decisione H20, ipotesi ST-27): nessun cambio di schema. A schermo la scelta di quel tipo non c'è più. In R5g l'elenco arriva dalla tabella `leave_types` senza riscrivere il pannello.
-- **Difetto probabile (ipotesi ST-23).** Due liste dicono quali tipi vanno a Trek: l'azione avvia la sync solo per
+  (decisione H20, decisione ST-27): nessun cambio di schema. A schermo la scelta di quel tipo non c'è più. In R5g l'elenco arriva dalla tabella `leave_types` senza riscrivere il pannello.
+- **Difetto probabile (decisione ST-23).** Due liste dicono quali tipi vanno a Trek: l'azione avvia la sync solo per
   `vacation` e `comp` (`src/modules/timeoff/actions.ts:112-113`), le regole mandano anche `rol`
   (`src/modules/timeoff/rules.ts:38`). Effetto atteso: un giorno ROL arriva a Trek solo alla sync successiva. Non è
   verificato. N5 aggiunge un test; se fallisce, la correzione è un `fix` nello stesso rilascio: una sola lista.
@@ -208,7 +208,7 @@ essere spostato. N6 chiude anche FND-1, FND-2 e FND-3 dell'audit.
 | Schermate (procedura a 4 passi, dettaglio unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria |
 
 Cosa **non** entra in N6: la fusione con Investments, i 2 gruppi, gli URL `/investments/[id]` (R5b); la rimozione delle
-tabelle vecchie e la cancellazione dei file dei documenti di Cometa (R5f, ipotesi ST-25); i piani di acquisto (R5d).
+tabelle vecchie e la cancellazione dei file dei documenti di Cometa (ST-25, in attesa di precisazione); i piani di acquisto (R5d).
 
 ## 4.9 Cosa resta fuori da «ora»
 

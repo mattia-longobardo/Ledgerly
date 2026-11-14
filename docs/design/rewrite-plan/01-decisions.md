@@ -4,7 +4,8 @@ Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**. Dove §1.0 e una decisione
 più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
-che le applicano sono una revisione **in attesa del suo OK** ([`11-standardization.md`](11-standardization.md)). Le
+che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
+([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
 che non vengono modificati: dove questo registro e un documento più vecchio dicono cose diverse, vale questo registro.
 La colonna «Rilascio» rimanda a [`03-releases.md`](03-releases.md).
@@ -52,13 +53,25 @@ Mattia ha risposto alle ipotesi ST-1…ST-24 con le sole eccezioni. Le tre eccez
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
 | H18 | **Il «Deducibile» si toglie.** Nessun riquadro e nessun calcolo del limite di deducibilità, per nessun fondo (anche Cometa). Il limite fiscale non è un dato del paese | L'ipotesi ST-4; la prima forma di X1 («Deducibile» con Fideuram); il limite nel pacchetto paese (E4); `funds-ux.md` §5.3 per il «Deducibile» | N6 |
-| H19 | **Documenti.** Il lettore della busta paga resta nel core, dietro il registro E1. Il lettore dei documenti di Cometa si toglie, e si toglie la funzione: nei fondi non si caricano documenti. Contributi e valori dei fondi arrivano solo dalle sorgenti (busta paga, addebito in banca) e dall'inserimento a mano. Le operazioni e i valori già letti restano dati del fondo | Le ipotesi ST-6 e ST-19; il tipo `fund_statement`, `funds.statement_reader` e il tab «Documenti» della prima forma di questa revisione | N6 (codice); R5f (file e schema: ipotesi ST-25); R5g (profili delle buste paga) |
-| H20 | **La malattia non è un tipo di assenza di Time Off e non viene contata.** Tipi predefiniti del paese `IT`: Ferie e ROL/Permessi. I tipi restano dati dell'utente | L'ipotesi ST-7 | N5 (ipotesi ST-27), R5g |
+| H19 | **Documenti.** Il lettore della busta paga resta nel core, dietro il registro E1. Il lettore dei documenti di Cometa si toglie, e si toglie la funzione: nei fondi non si caricano documenti. Contributi e valori dei fondi arrivano solo dalle sorgenti (busta paga, addebito in banca) e dall'inserimento a mano. Le operazioni e i valori già letti restano dati del fondo | Le ipotesi ST-6 e ST-19; il tipo `fund_statement`, `funds.statement_reader` e il tab «Documenti» della prima forma di questa revisione | N6 (codice); R5f (schema); file: ST-25, in attesa di precisazione; R5g (profili delle buste paga) |
+| H20 | **La malattia non è un tipo di assenza di Time Off e non viene contata.** Tipi predefiniti del paese `IT`: Ferie e ROL/Permessi. I tipi restano dati dell'utente | L'ipotesi ST-7 | N5 (decisione ST-27), R5g |
 
-Per le altre ipotesi ST-1…ST-24 vale il default del piano: restano in [`09-risks.md`](09-risks.md) §9.6 con la nota
-«default confermato da Mattia il 14/11/2026 (risposta con le sole eccezioni)». Le risposte fanno nascere tre ipotesi
-nuove, da confermare: ST-25, ST-26, ST-27 (stessa sezione). Cosa si toglie nel codice e nei dati:
+Le altre ipotesi ST-1…ST-24 sono decisioni di Mattia del 14/11/2026, con il default del piano: il testo di ogni
+decisione è la sua riga in [`09-risks.md`](09-risks.md) §9.6. Le risposte hanno fatto nascere tre ipotesi nuove:
+ST-25, ST-26, ST-27 (stessa sezione). Cosa si toglie nel codice e nei dati:
 [`11-standardization.md`](11-standardization.md) §11.2.6.
+
+### Standardizzazione: approvazione della revisione (quarta decisione del 14/11/2026)
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H21 | **La revisione sulla standardizzazione è approvata** (OK di Mattia del 14/11/2026). Le ipotesi ST-1…ST-24, salvo ST-4, ST-6, ST-7 e ST-19, sono decisioni, con il default del piano | Lo stato «in attesa dell'OK» della revisione; la nota «default confermato» | N1, N2, N5, N6, R5d, R5g |
+| H22 | **ST-26, con il default.** `POST /imports`: i valori `cometa_operations` e `cometa_position` restano nel contratto. Da N6 la rotta li rifiuta con un errore dichiarato e non salva il file. Escono dal contratto con R5f | L'ipotesi ST-26 | N6, R5f |
+| H23 | **ST-27, con il default.** Il tipo `sick` esce da Time Off in N5: il pannello nuovo non lo offre. In R5g non diventa un tipo. Il valore esce dal check in R5f | L'ipotesi ST-27 | N5, R5g, R5f |
+
+**ST-25** (file dei documenti di Cometa già salvati) non è una decisione. Il default (archiviati fino a R5f) è
+scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in attesa di precisazione. Fino alla
+risposta nessun file si cancella e N6 non contiene la cancellazione.
 
 ## 1.1 Premesse
 
@@ -75,9 +88,9 @@ nuove, da confermare: ST-25, ST-26, ST-27 (stessa sezione). Cosa si toglie nel c
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
 | A3 | Ordine Z: prima, sul codice attuale, le sorgenti dati e Time Off. Il resto nella riscrittura | — | N1-N5, poi R0-R5 |
-| B1 (rev.) | Investments: una home con **2 gruppi**: «Azioni e crypto» e «Fondi pensione». I nomi sono un'ipotesi da confermare (ST-2). I conti con solo valore stanno nel primo gruppo. Fusione di modello di lettura e interfaccia. I dati dei fondi sono già nel modello unico da N6 (H12). Versione del 13/11/2026, sostituita: 3 gruppi («Azioni e crypto», gruppo dei fondi e dei piani di accumulo, «Pensione»), senza migrazione dei dati dei fondi | `investments-ux.md` §9 decisione 4 («totale solo servizi») e i suoi effetti in §3.1 e §8; `investments-ux.md` §1.1 (mappa delle pagine); `funds-ux.md` §6 direzione A e §10 solo per la home (il dettaglio del fondo resta) | R5b |
+| B1 (rev.) | Investments: una home con **2 gruppi**: «Azioni e crypto» e «Fondi pensione». I nomi sono la decisione ST-2. I conti con solo valore stanno nel primo gruppo. Fusione di modello di lettura e interfaccia. I dati dei fondi sono già nel modello unico da N6 (H12). Versione del 13/11/2026, sostituita: 3 gruppi («Azioni e crypto», gruppo dei fondi e dei piani di accumulo, «Pensione»), senza migrazione dei dati dei fondi | `investments-ux.md` §9 decisione 4 («totale solo servizi») e i suoi effetti in §3.1 e §8; `investments-ux.md` §1.1 (mappa delle pagine); `funds-ux.md` §6 direzione A e §10 solo per la home (il dettaglio del fondo resta) | R5b |
 | B1b | I fondi passano a `/investments/[id]`; `/funds/*` risponde con un redirect permanente. La voce di menu «Funds» sparisce | `funds-ux.md` §10-§13 per gli URL | R5b |
-| B1c | Niente «coming soon» e niente catalogo: dialog «Aggiungi investimento» a 3 scelte. (rev.) Nomi delle scelte: «Collega un servizio», «Segui i tuoi titoli a mano», «Fondo pensione» (ipotesi ST-3) | `investments.md` §1.1 (D5 per le voci `planned`, D12 catalogo statico), §4.2; `investments-ux.md` §3.7 | R5b |
+| B1c | Niente «coming soon» e niente catalogo: dialog «Aggiungi investimento» a 3 scelte. (rev.) Nomi delle scelte: «Collega un servizio», «Segui i tuoi titoli a mano», «Fondo pensione» (decisione ST-3) | `investments.md` §1.1 (D5 per le voci `planned`, D12 catalogo statico), §4.2; `investments-ux.md` §3.7 | R5b |
 | B2 | La pensione entra nel totale. Tutti i conti di investimento sono visibili in Investments, anche senza sync | `investments-ux.md` §9 decisione 4; `investments.md` §4.1 | R5b |
 | B3 | Tracking manuale: servizio «Portafoglio manuale», modulo unico «Registra operazione» con ricerca per ISIN. (rev.) Esteso da H13: «Piano di acquisto» come secondo passo di R5d | `investments.md` §4.4 (inserimento manuale degli asset); estende §2.6 (conto manuale, solo valore): il servizio nuovo è separato | R5d |
 | B4 | Fonti: OpenFIGI + ESMA FIRDS per l'anagrafica; EODHD, BCE, CoinGecko per i prezzi; altre fonti solo come plugin | `investments.md` §6 e D9 (prezzi solo con copertura ≥ 90% del valore): la regola diventa «per strumento» | R5d |
@@ -158,7 +171,7 @@ Mattia ha approvato «il resto va bene»: valgono i default dei documenti di bra
 | Preavviso del rinnovo della banca | 14 e 3 giorni, in app e per email |
 | Letture automatiche Enable Banking | 3 al giorno, più «Sincronizza ora» |
 | Movimenti in sospeso | Esclusi: solo contabilizzati (`BOOK`) |
-| Interessi pubblicati su Wallet | Finiscono per i conti passati a Enable Banking; l'accredito arriva dalla banca. (rev.) Con R5c finiscono per tutti i conti: ipotesi ST-14 |
+| Interessi pubblicati su Wallet | Finiscono per i conti passati a Enable Banking; l'accredito arriva dalla banca. (rev.) Con R5c finiscono per tutti i conti: decisione ST-14 |
 | Modello di categorizzazione | Salvato in PostgreSQL per utente; fuori da export, API e MCP; si ricostruisce |
 | Offline | Nessuna scrittura senza rete. Unica eccezione: un file condiviso in coda (Android) |
 | Compatibilità app-istanza | L'app sostiene i livelli API degli ultimi 6 mesi |
