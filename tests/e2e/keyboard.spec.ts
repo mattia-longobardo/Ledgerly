@@ -282,7 +282,10 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
   await page.waitForTimeout(500);
   const focusedDate = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.date);
   const bar = page.getByTestId("selection-bar");
-  const table = page.getByRole("table");
+  // One Remove button per booked row: counting them is counting the rows, whatever the seed holds.
+  const removes = page.getByRole("table").getByRole("button", { name: "Remove" });
+  const seeded = await removes.count();
+  expect(seeded).toBeGreaterThan(0);
 
   // Into March from one of its days, then to the month's last day that can be booked.
   await page.locator(`[data-month="3"] button[data-date]`).first().focus();
@@ -324,14 +327,14 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
     await expect(page.getByRole("dialog", { name: "New leave" })).toHaveCount(0);
     await expect(page.getByText("Leave saved · 2 d")).toBeVisible();
     await expect(page.locator(`[data-date="${first}"]`)).toHaveAttribute("data-testid", "leave-cell");
+    await expect(removes).toHaveCount(seeded + 2);
     await expect.poll(focusedDate).toBe(last);
   });
 
   await test.step("Delete removes a booked day, and F6 reaches Undo in the toast", async () => {
-    const rows = await table.getByRole("button", { name: "Remove" }).count();
     await page.keyboard.press("Delete");
     await expect(page.getByText("Leave removed")).toBeVisible();
-    await expect(table.getByRole("button", { name: "Remove" })).toHaveCount(rows - 1);
+    await expect(removes).toHaveCount(seeded + 1);
 
     await page.keyboard.press("F6");
     await tabUntil(page, 4, async () => (await focused(page)) === 'button "Undo"');
@@ -339,15 +342,14 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
     expect(await focusIsVisible(page)).toBe(true);
     await page.keyboard.press("Enter");
     await expect(page.getByText("Undone")).toBeVisible();
-    await expect(table.getByRole("button", { name: "Remove" })).toHaveCount(rows);
+    await expect(removes).toHaveCount(seeded + 2);
   });
 
   await test.step("the two days go again, so the next spec finds the year as the seed left it", async () => {
-    for (const date of [first, last]) {
-      const rows = await table.getByRole("button", { name: "Remove" }).count();
+    for (const [index, date] of [first, last].entries()) {
       await page.locator(`[data-date="${date}"]`).focus();
       await page.keyboard.press("Delete");
-      await expect(table.getByRole("button", { name: "Remove" })).toHaveCount(rows - 1);
+      await expect(removes).toHaveCount(seeded + 1 - index);
     }
   });
 });
