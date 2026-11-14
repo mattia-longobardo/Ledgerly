@@ -162,6 +162,27 @@ describe("budgets on an account (F3)", () => {
     expect(await removeAccount(ctx, other)).toBe("archived");
   });
 
+  it("stops a budget on an account from a later month, on that account and on no other budget", async () => {
+    const other = await anAccount(ctx, "Revolut");
+    const groceries = (await createCategory(ctx, { name: "Groceries" })).id;
+    await setLimit(ctx, { categoryId: null, accountId: other, month: "2026-01-01", cents: 3_000n });
+    await setLimit(ctx, { categoryId: groceries, accountId: other, month: "2026-01-01", cents: 2_000n });
+    await setLimit(ctx, { categoryId: groceries, accountId: null, month: "2026-01-01", cents: 6_000n });
+    const budgetsIn = async (month: string) =>
+      (await budgetsView(ctx, month)).rows.map((row) => [row.name, row.accountName]);
+
+    await stopLimit(ctx, { categoryId: null, accountId: other, month: "2026-04-01" });
+    expect(await budgetsIn("2026-03-01")).toHaveLength(3);
+    expect(await budgetsIn("2026-04-01")).toEqual([
+      ["Groceries", null],
+      ["Groceries", "Revolut"],
+    ]);
+
+    await stopLimit(ctx, { categoryId: groceries, accountId: other, month: "2026-04-01" });
+    expect(await budgetsIn("2026-03-01")).toHaveLength(3);
+    expect(await budgetsIn("2026-04-01")).toEqual([["Groceries", null]]);
+  });
+
   it("needs a category or an account", async () => {
     await expect(
       setLimit(ctx, { categoryId: null, accountId: null, month: "2026-03-01", cents: 1n }),

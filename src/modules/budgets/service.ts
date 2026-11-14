@@ -106,6 +106,7 @@ export async function stopLimit(
     await tx.insert(budgetLimits).values(
       userScoped(ctx).stamp({
         categoryId: parsed.categoryId,
+        accountId: parsed.accountId,
         fromMonth: parsed.month,
         amountCents: null,
         stopped: true,
