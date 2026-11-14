@@ -150,6 +150,28 @@ una sotto-issue separata (decisione H4). È in `main` a `86e3d43`, tag `v0.10.2`
 | Dipende da | N0. Indipendente da N1-N4: si può fare mentre N1 aspetta la banca vera |
 | Dimensione | M |
 
+### N5.1 · Time Off: maturazione e residuo previsto
+
+Fuori dal piano originale: richiesta di Mattia del 14/11/2026, dopo N5. Analisi e decisioni D1-D7:
+[`../timeoff-accrual.md`](../timeoff-accrual.md).
+
+| | |
+|---|---|
+| Obiettivo | Time Off serve anche per pianificare: quanto matura ogni mese e quanto resta a una data futura |
+| Contenuto | Ritmo di maturazione letto dalle buste paga: media delle differenze di `MAT.` tra buste paga consecutive (ultime 12); senza buste paga, dotazione ÷ 12 (D1). Saldo di partenza: `RES.` dell'ultima busta paga, anche dell'anno prima; tutto il residuo passa all'anno dopo (D4). La maturazione di un mese conta a mese finito (D3). Schede Ferie e ROL: «Matura X al mese» e «Previsto al 31/12» (U1). Pannello di N5: riga «previsto alla data dell'assenza, prima → dopo», accanto al residuo di fine anno (U2). Un anno senza buste paga proprie mostra il previsto dall'ultima busta paga, con etichetta (D6). L'avviso di superamento usa lo stesso ritmo (D5). Regole pure in un file nuovo, `src/modules/timeoff/accrual.ts`; una lettura in più nel contratto di `payroll` (`leaveSnapshotHistory`), senza query in più per la vista. Fuori: la linea del residuo nel grafico (U3) |
+| Per l'utente | Vede quanto matura al mese, quanto avrà a fine anno e quanto avrà il giorno dell'assenza. Un valore sotto zero si vede e si conferma |
+| Git | `main` · `feat(timeoff)`, `test`, `docs` |
+| Migrazioni | Nessuna. Nessun cambio alla sync con Trek, nessun pacchetto nuovo |
+| Rollback | Immagine `pre-n5-1` |
+| Test e gate | G1, G2, G3, G4, G6 (`timeoff`, `a11y`, `keyboard`, mobile a 400 px, nei due temi), G7, G8, G9. Unit: ritmo, previsto a una data, cambio di anno, avviso. Integration: ritmo da due buste paga, anno senza buste paga, utente senza buste paga in un anno futuro |
+| Criteri di accettazione | 1) Le schede mostrano la maturazione mensile e il previsto al 31/12, con il ritmo delle buste paga. 2) Il pannello mostra il previsto alla data dell'assenza; un valore negativo si vede e si conferma. 3) Senza buste paga: dotazione ÷ 12, con etichetta che lo dice. 4) I residui (`residual()`) sono uguali a prima: la fotografia dei numeri differisce solo nell'avviso di superamento (D5). 5) Un utente senza buste paga e un anno futuro non danno errori. 6) `npm run perf` dà lo stesso esito in 3 esecuzioni di seguito |
+| OK di Mattia | No (nessun criterio §6 atteso). Le decisioni D1-D7 sono del 14/11/2026 |
+| Dipende da | N5. Indipendente da N1-N4 e da N6 |
+| Dimensione | M |
+
+Con questo rilascio `npm run perf` (G9) misura in 5 processi separati e confronta la mediana migliore: la soglia del
+10% e i valori di partenza non cambiano ([`../../operations.md`](../../operations.md), «Measures and baselines»).
+
 ### N6 · Fondo pensione standard
 
 Revisione sulla standardizzazione, approvata da Mattia il 14/11/2026. Dettaglio: [`11-standardization.md`](11-standardization.md) §11.2.

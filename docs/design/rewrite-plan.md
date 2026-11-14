@@ -97,6 +97,7 @@ flowchart LR
     N2 --> N3[N3 categorie automatiche + movimento manuale]
     N3 --> N4[N4 passaggio da Wallet]
     N0 --> N5[N5 Time Off]
+    N5 --> N51[N5.1 Time Off: maturazione]
     N5 --> N6[N6 fondo pensione standard]
   end
   subgraph B[Fase B · riscrittura]
@@ -131,6 +132,7 @@ flowchart LR
 | N3 | Categorie automatiche, «Da categorizzare», movimento manuale | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive | Sì (#1) | L |
 | N4 | Passaggio di un conto da Wallet a Enable Banking | Un conto cambia sorgente senza doppioni | branch + PR | Dati | Sì (#1) | M |
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
+| N5.1 | Time Off: maturazione mensile dalle buste paga e residuo previsto a una data (richiesta del 14/11/2026, [`timeoff-accrual.md`](timeoff-accrual.md)) | Quanto matura al mese, quanto resta a fine anno e alla data dell'assenza | `main` | No | No | M |
 | N6 | Fondo pensione standard: un modello, sorgenti di contributo, commissioni generiche, migrazione dei 2 fondi; via il «Deducibile» e i documenti dei fondi; cancellazione dei file di Cometa già salvati (decisione ST-25) | «Aggiungi fondo» senza tipo; un fondo nuovo si configura | branch + PR | Sì, additive + dati; cancellazione di righe e file con dump e copia | Sì (#1, #2) | L |
 | R0 | Monorepo npm workspaces, confini e regole di modularità nel gate, codice morto tolto | Nulla | `main` | No | No | M |
 | R1 | Worker dedicato, coda su PostgreSQL, fine del container cron | Nulla | branch + PR | Sì, additive | Sì (#1) | M |

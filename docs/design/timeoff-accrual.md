@@ -1,6 +1,6 @@
 # Time Off: maturazione mensile di ferie e ROL
 
-Stato: **approvata da Mattia il 14/11/2026 con tutti i default di §6** (opzione A, U1 + U2, rilascio `N5.1` dopo N5). Nessun codice di prodotto cambia con questo documento.
+Stato: **approvata da Mattia il 14/11/2026 con tutti i default di §6** (opzione A, U1 + U2, rilascio `N5.1` dopo N5). **Realizzata nel rilascio `N5.1`**: §7 dice come, e dove il codice precisa questo documento.
 
 Richiesta (14/11/2026): la pagina Time Off serve anche per pianificare. Oltre al residuo di oggi, l'utente vuole vedere quanto matura ogni mese e quanto avrà a una data futura. La sorgente è la busta paga. Un residuo negativo è un caso normale.
 
@@ -128,3 +128,27 @@ Mattia ha confermato tutti i default il 14/11/2026. U3 (linea nel grafico) non �
 | D5 | Avviso di superamento | Usa lo stesso ritmo della proiezione (data e importo dell'avviso possono cambiare) |
 | D6 | Anno senza buste paga (2027 visto oggi, gennaio) | Mostra il «previsto» dall'ultima busta paga, con etichetta chiara; non la base `allowance` |
 | D7 | Rilascio | Dopo N5 in fase A (`N5.1`), commit su `main` |
+
+## 7. Come è realizzata (rilascio N5.1)
+
+Rilascio: [`rewrite-plan/03-releases.md`](rewrite-plan/03-releases.md) «N5.1». Le regole sono pure e stanno in `src/modules/timeoff/accrual.ts`, con i test in `accrual.test.ts`; `timeOffView` le chiama e la pagina le mostra.
+
+| Cosa | Dove | Regola |
+|---|---|---|
+| Ritmo (D1) | `monthlyRate()` | Media delle ultime 12 differenze di `MAT.` tra un mese e il mese prima. Gennaio: `MAT.` stesso. Un mese senza la busta paga del mese prima non dà differenza. Una differenza negativa (rettifica) non conta. Nessuna differenza: dotazione dell'anno mostrato ÷ 12, con sorgente `allowance`. Né l'una né l'altra: nessun ritmo |
+| Partenza (D1, D4) | `forecastOpening()` | `RES.` dell'ultima busta paga applicata, di qualsiasi anno. Senza buste paga: 1° gennaio dell'anno mostrato, saldo 0 |
+| Previsto a una data (D3) | `forecastAt()` | Partenza + ritmo × mesi finiti prima della data − giorni prenotati dalla partenza alla data. Per un'assenza: maturazione al primo giorno, giorni fino all'ultimo. Nessun previsto per una data prima della partenza |
+| Previsto al 31/12 | `forecastAtYearEnd()` | Come sopra, con dicembre compreso: è il saldo che passa all'anno dopo |
+| Scheda (U1, D6) | `accrualView()`, `KindCard` | «Matura X al mese» e «Previsto al 31/12». Sorgente `allowance`: riga «Stima: dotazione ÷ 12 mesi». Anno senza buste paga proprie, con una busta paga precedente: la scheda mostra il previsto come numero principale, con la riga «Previsto dal cedolino di …» |
+| Pannello (U2) | `forecastChange()`, `LeavePanel` | Riga «\<tipo\> previsto al \<primo giorno\>: prima → dopo». Sotto zero: valore negativo, nota, «Conferma» attivo |
+| Avviso (D5) | `overdrawn()` | Stesso ritmo, contato a mese finito. Prima: dotazione ÷ giorni lavorativi dell'anno, contata giorno per giorno |
+| Lettura | `leaveSnapshotHistory()` in `payroll/service.ts` | Tutti gli snapshot delle buste paga applicate. La vista legge gli snapshot una volta sola e i giorni una volta sola: stesso numero di query di prima |
+
+Precisazioni rispetto ai paragrafi sopra:
+
+- **U2 aggiunge una riga, non sostituisce** il residuo di fine anno (§3 diceva «al posto»). Motivo: il residuo di fine anno è il numero della scheda, e le due righe rispondono a due domande diverse («l'anno torna?», «quel giorno i giorni ci sono?»).
+- **Senza buste paga il previsto non passa da un anno all'altro**: non c'è un saldo stampato da cui partire. Il previsto al 31/12 è uguale al residuo della scheda (dotazione − giorni).
+- **Un anno senza buste paga proprie (D6)**: l'avviso di superamento si misura sul previsto, come la scheda, e non sulla dotazione di quell'anno.
+- **`residual()` non cambia**: i residui delle schede sono gli stessi. La fotografia dei numeri (`scripts/numbers-snapshot.ts`) non contiene il previsto: lo aggiunge un rilascio successivo, perché una chiave nuova cambia il file di riferimento.
+- **Cosa cambia nell'avviso (D5):** l'avviso scatta sempre nello stesso caso (residuo sotto zero). Cambiano l'importo e il giorno indicati: la maturazione entra a mese finito e non giorno per giorno, e con almeno due buste paga consecutive il ritmo è quello delle buste paga e non la dotazione. Un'assenza nello stesso mese dell'ultima busta paga, o nel mese dopo, ha quindi un avviso più alto di prima.
+
