@@ -11,7 +11,7 @@ Questo lavoro si fa sul codice attuale (una sola app Next.js). Regola per limita
 |---|---|---|
 | Contratto dei plugin, kit di test, plugin Enable Banking | Sì, senza modifiche (HTTP) | In `plugins/` e in una cartella `src/platform/plugins/` senza import da Next.js |
 | Schema, dati, regole pure con i loro test (abbinamento, categorizzazione, stato del collegamento) | Sì: si spostano in `packages/domain` | Funzioni pure, servizi `(ctx, input)`, nessun import da `src/app` |
-| Schermate (tab Plugin, procedura della banca, «Da rivedere», pannello Time Off, fondo pensione unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria: le Server Actions restano solo un involucro sottile, così R3 cambia solo l'involucro |
+| Schermate (voce del plugin per utente, procedura della banca, «Da rivedere», pannello Time Off, fondo pensione unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria: le Server Actions restano solo un involucro sottile, così R3 cambia solo l'involucro |
 
 ## 4.1 Runtime minimo dei plugin (N1)
 
@@ -21,6 +21,7 @@ sequenceDiagram
   participant C as Core (web oggi, api e worker dopo R1)
   participant P as Plugin Enable Banking
   participant B as Enable Banking e banca
+  U->>C: Attiva il plugin per sé (Settings › Integrations)
   U->>C: Inserisce id applicazione e chiave (solo scrittura)
   C->>C: Cifra e salva per utente
   U->>C: Sceglie la banca
@@ -63,7 +64,8 @@ Regole del runtime minimo:
 | Scritture | Mai dal plugin. Il core valida la risposta con lo schema del contratto e scrive con `upsertFromProvider`, `applyProviderAccounts`, `linkExternal` |
 | Errori | Classe e stato HTTP da una lista chiusa. Mai il messaggio grezzo del provider |
 | Versione | Il core accetta la versione corrente del contratto e la precedente |
-| Installazione | Solo l'admin: aggiunge il servizio al compose e registra l'indirizzo nel tab Plugin. Il core non riceve il socket Docker |
+| Installazione | Il container del plugin fa parte dell'installazione standard dell'istanza (compose dello stack). Il core conosce il plugin dalla configurazione del server e ne legge il manifest da solo. Nessun passo dell'admin nell'interfaccia (H25). Il core non riceve il socket Docker |
+| Attivazione | Per utente (H25). Il plugin è disponibile a ogni utente e non è attivo. Ogni utente lo attiva e lo disattiva per sé in Settings › Integrations. Senza attivazione il core non chiama il plugin per quell'utente. Dopo la disattivazione le letture di quell'utente si fermano; conti e movimenti restano e tornano aggiornati alla riattivazione. Schermate e stati: [`ux/n1-plugin-bank.md`](ux/n1-plugin-bank.md) §2 |
 | Uscita verso internet | Dichiarata nel manifest. Limitazione agli host dichiarati: decisione I8, in R5c |
 
 **Anticipo AN2: lo schema del manifest nasce completo.** È il contratto: cambiarlo dopo tocca ogni plugin. In N1 lo
@@ -79,7 +81,7 @@ schema ha già queste parti, anche dove Enable Banking non le usa. Nessun cambio
 Lo stesso schema descrive i fornitori del core (eToro, Binance) da R2: punto di estensione E5
 ([`10-modularity.md`](10-modularity.md) §10.11). Un valore di capacità che il core non conosce è ignorato, non rifiutato.
 
-Cosa **non** entra in N1: catalogo, plugin fuori catalogo, aggiornamento e rimozione dall'interfaccia, Wallet e Trek come plugin. Arrivano in R5c.
+Cosa **non** entra in N1: tab Plugin, catalogo, plugin fuori catalogo, aggiornamento e rimozione dall'interfaccia, Wallet e Trek come plugin. Arrivano in R5c. H25 è in conflitto con alcuni di questi punti: l'elenco, con una proposta per ognuno, è in [`ux/n1-plugin-bank.md`](ux/n1-plugin-bank.md) §15. Sono domande aperte per Mattia.
 
 ## 4.2 Plugin Enable Banking (N1)
 

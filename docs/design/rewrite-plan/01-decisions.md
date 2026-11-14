@@ -77,6 +77,15 @@ ST-25, ST-26, ST-27 (stessa sezione), ora decisioni H22-H24. Cosa si toglie nel 
 
 Dettaglio del passo: [`11-standardization.md`](11-standardization.md) §11.2.4, passo A4.
 
+### Plugin attivati per utente e schermate di N1 (sesta decisione del 14/11/2026)
+
+Risposte di Mattia alle 7 domande della specifica UX di N1 ([`ux/n1-plugin-bank.md`](ux/n1-plugin-bank.md) §12).
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H25 | **I plugin si attivano per utente. L'admin non fa niente.** I plugin sono già disponibili nell'istanza, non attivi: il container del plugin fa parte dell'installazione standard e non esiste un passo dell'admin nell'interfaccia. Ogni utente attiva per sé i plugin che vuole e gestisce i suoi, come fa oggi con Trek. Dopo la disattivazione la sezione del plugin sparisce e le letture di quell'utente si fermano; conti e movimenti restano e tornano aggiornati alla riattivazione | N1: «L'admin attiva il plugin» e «tab Plugin essenziale (admin)»; `04-now.md` §4.1 «Installazione: solo l'admin … registra l'indirizzo nel tab Plugin». C4 «Installa solo l'admin», per l'interfaccia di N1. Per R5a, R5c e N2 i punti in conflitto sono domande aperte: `ux/n1-plugin-bank.md` §15 | N1 |
+| H26 | **Schermate di N1, con i default della specifica.** «Scollega» e «Rimuovi credenziali» sono in N1; la rimozione solo senza banche collegate. «Non importare» esiste per un conto esposto dalla banca. I saldi inseriti a mano restano; dalla prima data letta vale la banca. Un solo ingresso alla procedura, in Settings › Integrations. Un'applicazione Enable Banking che permette i pagamenti si rifiuta. La sezione «Banche» sta in Settings › Integrations fino a R5a | Le domande Q2-Q7 della specifica | N1 |
+
 ## 1.1 Premesse
 
 | ID | Decisione | Sostituisce | Rilascio |
@@ -106,7 +115,7 @@ Dettaglio del passo: [`11-standardization.md`](11-standardization.md) §11.2.4, 
 | S4 | La prova su una banca vera è il primo passo dello sviluppo del plugin | — | N1 |
 | C2 | Passaggio di un conto da Wallet a Enable Banking: scelta dell'utente, regola M1 | — | N4 |
 | S1 | M1 corretta dallo spike: abbinamento per gruppi (conto + importo), controllo del saldo bloccante, prova a secco | — | N4 |
-| C4 | Plugin: container separato senza stato, interrogato dal core. Installa solo l'admin. Catalogo ufficiale. Plugin fuori catalogo: solo admin, etichetta «non verificato» | — | N1, R5c |
+| C4 | Plugin: container separato senza stato, interrogato dal core. Installa solo l'admin. Catalogo ufficiale. Plugin fuori catalogo: solo admin, etichetta «non verificato». **Per N1 vale H25:** nessun passo dell'admin nell'interfaccia, attivazione per utente. Per R5c: domande aperte in `ux/n1-plugin-bank.md` §15 | — | N1, R5c |
 | C4b | Wallet in sola lettura. Trek tiene la scrittura delle ferie | — | R5c |
 | K1 | Categorizzazione: cascata (regole → memoria esatta → classificatore lineare per utente → tabelle MCC e marchi → «Da categorizzare») | — | N3 |
 | S2 | Memoria severa: «ultime 3 tutte uguali». La copertura si misura a regime | — | N3 |

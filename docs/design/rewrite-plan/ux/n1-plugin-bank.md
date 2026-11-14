@@ -1,18 +1,19 @@
-# N1 · Specifica UX: tab Plugin e «Collega una banca»
+# N1 · Specifica UX: plugin Enable Banking per utente e «Collega una banca»
 
 Indice del piano: [`../../rewrite-plan.md`](../../rewrite-plan.md). Rilascio: [`../03-releases.md`](../03-releases.md) «N1».
-Regole tecniche: [`../04-now.md`](../04-now.md) §4.1 e §4.2. Decisioni: [`../01-decisions.md`](../01-decisions.md) C1, C1c, C1d, C4, P2.
+Regole tecniche: [`../04-now.md`](../04-now.md) §4.1 e §4.2. Decisioni: [`../01-decisions.md`](../01-decisions.md) C1, C1c, C1d, C4, P2, H25, H26.
 
 Questa specifica descrive solo l'interfaccia. Il piano ha priorità: se un punto è in conflitto con il piano, vale il piano.
 
-I punti marcati **[Q1]**…**[Q7]** dipendono da una decisione di prodotto aperta (§12). Il testo dà la proposta. Lo
-sviluppo di quei punti parte dopo la risposta di Mattia.
+Revisione del 14/11/2026: applica le decisioni di Mattia sulle domande Q1-Q7 (§12). La regola nuova è H25: nessun passo
+dell'admin, ogni utente attiva il plugin per sé. I punti marcati **[A1]** e **[A2]** dipendono da una domanda ancora
+aperta (§14): il testo dà l'opzione A. I conflitti con gli altri rilasci sono in §15.
 
 ## 0. Riepilogo
 
 | Voce del «Contenuto» di N1 | Dove | Sezione |
 |---|---|---|
-| Tab Plugin essenziale (admin) | `Settings › Plugin`, `/settings/plugins` | §2 |
+| Voce del plugin per utente: «Attiva», «Disattiva» (H25; sostituisce il «tab Plugin essenziale (admin)») | `Settings › Integrations`, sezione «Sorgenti dei dati» | §2 |
 | Credenziali Enable Banking per utente | `Settings › Integrations`, sezione «Banche» | §3, §4 |
 | Elenco delle banche collegate, «Sincronizza ora», letture automatiche | La stessa sezione «Banche» | §5 |
 | Procedura guidata «Collega una banca» | Pagina `/banks/connect` | §6 |
@@ -27,20 +28,25 @@ I punti di aggancio sono in §11.
 
 ### 1.1 Visibilità (criterio di accettazione 2)
 
-| Condizione | Admin | Utente |
-|---|---|---|
-| Nessun plugin registrato, o plugin spento | Vede il tab «Plugin» | **Nessun elemento nuovo**: nessuna sezione «Banche», nessuna voce, nessun avviso. `/banks/connect` risponde 404 |
-| Plugin attivo | Tab «Plugin» + sezione «Banche» (anche l'admin è un utente) | Sezione «Banche» in `Settings › Integrations` |
+Nessun elemento di N1 è riservato all'admin. L'admin è un utente come gli altri: attiva il plugin per sé, se lo vuole.
 
-- Il tab «Plugin» compare solo con `ctx.role === "admin"`. La pagina risponde 404 a ogni altro utente (`requireAdmin`), come Users e Server.
-- La sezione «Banche» si disegna solo se il plugin è attivo. Il controllo è sul server: la pagina non manda al browser nessun dato del plugin se è spento.
-- **[Q1]** Plugin spento dopo l'uso: la sezione «Banche» sparisce anche per chi ha già una banca collegata. Credenziali e collegamenti restano salvati e tornano alla riattivazione. I conti restano visibili con la loro ultima lettura.
+| Stato per l'utente | Voce «Enable Banking» | Sezione «Banche» | `/banks/connect` |
+|---|---|---|---|
+| Plugin non presente nell'istanza | Assente | Assente | 404 |
+| Disponibile (mai attivato) | Presente, «Non attivo» | Assente | 404 |
+| Attivo | Presente, «Attivo» | Presente | Aperta |
+| Disattivato dopo l'uso | Presente, «Non attivo», con riga di dettaglio | Assente | 404 |
+
+- Un utente che non attiva il plugin vede un solo elemento nuovo: la voce «Enable Banking · Non attivo» in `Settings › Integrations`. Il resto dell'app è come prima.
+- La sezione «Banche» si disegna solo se il plugin è attivo per quell'utente. Il controllo è sul server: la pagina non manda al browser nessun dato del plugin se non è attivo.
+- L'attivazione di un utente non cambia niente per gli altri utenti.
+- Disattivato dopo l'uso: la sezione «Banche» sparisce e le letture si fermano. Conti e movimenti restano visibili con la loro ultima lettura e tornano aggiornati alla riattivazione (§2.4).
 
 ### 1.2 Parole
 
 - Vista normale: nessuna parola tecnica. Vietate: «plugin», «sync», «token», «sessione», «API», «JWT», «PEM», «callback», «redirect», «429», «ASPSP», «AIS». Si usano: «banca», «accesso alla banca», «lettura», «credenziali», «chiave privata».
 - «Enable Banking», «ID applicazione» e «chiave privata» sono i nomi che l'utente trova sul sito di Enable Banking: restano.
-- La parola «plugin» è ammessa solo nel tab «Plugin» (admin).
+- La parola «plugin» non compare nelle schermate di N1: la voce porta il nome del fornitore («Enable Banking») e la descrizione del manifest.
 - Un'azione ha lo stesso nome in pulsante, titolo del dialogo e toast: «Sincronizza ora» → «Sincronizzazione completata».
 - Mai il messaggio grezzo della banca o del plugin. Ogni errore ha un codice da una lista chiusa (§7) e un testo fisso tradotto.
 
@@ -78,123 +84,111 @@ Token: colori `bg`, `card`, `border`, `fg`, `muted`, `accent`, `primary`, `pos`,
 
 Regola di codice (piano §4, tabella iniziale): componenti client senza lettura dati propria; le Server Actions sono un involucro sottile.
 
-## 2. Tab «Plugin» (solo admin)
+## 2. Voce «Enable Banking» in Settings › Integrations (per utente)
 
-Rotta `/settings/plugins`. Voce «Plugin» in `settings/layout.tsx`, dopo «Server». Titolo del documento: «Plugin · Impostazioni».
+Decisione H25: l'admin non fa niente nell'interfaccia. Il plugin è già nell'istanza e non è attivo. Ogni utente lo
+attiva per sé e lo gestisce da solo, come fa oggi con Trek. Non esiste un tab «Plugin» in N1 e non esiste la rotta `/settings/plugins`.
 
-Una sola `SettingsSection`: titolo «Plugin», descrizione «Servizi separati che portano dati in Ledgerly. Un plugin
-attivo è disponibile a tutte le persone di questa istanza.». `padded={false}`. Azione sotto la descrizione: «Registra plugin».
+Posizione: una riga nella sezione esistente «Sorgenti dei dati», dopo Wallet e Trek. Componente client `PluginRow`
+nella cartella della rotta, non in `src/ui`. Nome e descrizione arrivano dal manifest, nella lingua dell'utente.
 
-### 2.1 Registrazione
+### 2.1 Da dove arriva il plugin
 
-Il piano: l'admin aggiunge il servizio al compose e registra l'indirizzo nel tab. In N1 esiste un solo plugin, senza catalogo.
+- Il container del plugin fa parte dell'installazione standard dell'istanza (compose dello stack).
+- Il core conosce il plugin dalla configurazione del server e ne legge il manifest da solo. L'interfaccia non chiede indirizzi e non chiede il segreto condiviso (§13, passaggi 2 e 8).
+- La voce compare a ogni utente quando il core ha letto il manifest almeno una volta. Senza manifest la voce non compare: l'app è come prima.
+- Nessun utente installa, registra, aggiorna o rimuove un plugin dall'interfaccia. L'aggiornamento arriva con l'aggiornamento dell'istanza.
 
-`Modal` 460, titolo «Registra plugin», descrizione «Inserisci l'indirizzo interno del servizio. Ledgerly legge da lì nome e versione.».
+### 2.2 Stati per utente
 
-| Campo | Tipo | Regole |
-|---|---|---|
-| Indirizzo | `Input` `type="url"`, `font-mono`, `autoFocus`, segnaposto `http://ledgerly-plugin-enablebanking:8080` | Obbligatorio. Hint: «L'indirizzo del container sulla rete dei plugin. Non è raggiungibile da internet.» |
+Lo stato è dell'utente, non dell'istanza: due utenti della stessa istanza hanno stati diversi.
 
-Pulsanti: «Annulla», «Controlla e registra» (primario). In attesa: «Controllo…», pulsante disattivato.
+| Stato | Condizione | Pallino | Parola | Tono | Riga di dettaglio | Sezione «Banche» |
+|---|---|---|---|---|---|---|
+| `available` · Disponibile | L'utente non lo ha mai attivato, oppure lo ha disattivato senza credenziali salvate | `bg-faint` | «Non attivo» | `muted` | — | Assente |
+| `active` · Attivo senza credenziali | Attivo, nessuna credenziale salvata | `bg-pos` | «Attivo» | `pos` | — | Vista A (§3.2) |
+| `active` · Attivo | Attivo, credenziali salvate | `bg-pos` | «Attivo» | `pos` | — | Viste B, C, D (§3.2) |
+| `paused` · Disattivato dopo l'uso | Non attivo, con credenziali o banche salvate | `bg-faint` | «Non attivo» | `muted` | «Le letture sono ferme dal {date}. Credenziali e collegamenti sono salvati.» | Assente |
 
-Esito: il core chiama `GET /manifest`. Se va bene, il dialogo si chiude, la riga compare con stato «Spento» e il toast dice «Plugin registrato». La registrazione **non** attiva il plugin.
-
-| Codice | Testo nel dialogo (`role="alert"`, sopra il campo) |
-|---|---|
-| `unreachable` | «Nessuna risposta da questo indirizzo. Controlla che il container sia avviato e sulla rete dei plugin.» |
-| `invalid_manifest` | «Il servizio ha risposto, ma non è un plugin di Ledgerly.» |
-| `unsupported_contract` | «Questo plugin usa una versione del contratto che questa versione di Ledgerly non conosce.» |
-| `duplicate` | «Questo plugin è già registrato.» |
-| `unauthorized` | «Il plugin ha rifiutato la richiesta. Controlla il segreto condiviso nella configurazione del server.» |
-
-Il segreto condiviso core-plugin non si inserisce dall'interfaccia: sta nella configurazione del server (§13, passaggio 2).
-
-### 2.2 Riga del plugin
-
-Una riga per plugin, griglia come `ConnectionRow` (stesse classi di contenitore; un componente `PluginRow` nella cartella della rotta, non in `src/ui`).
-
-| Colonna | Contenuto |
-|---|---|
-| Nome e stato | Pallino + nome dal manifest («Enable Banking») + parola di stato. Sotto, `text-sm text-muted`: descrizione dal manifest nella lingua dell'utente |
-| Versione | Etichetta «Versione», valore `1.0.0` |
-| Ultimo controllo | Etichetta «Ultimo controllo», valore `formatInstant` oppure «Mai» |
-| Azioni | Vedi §2.3 |
-
-Sotto la riga, solo con plugin attivo, una riga `border-t px-4 py-2.5 text-sm text-muted`: «{count, plural, =0 {Nessuna persona lo usa ancora.} one {# persona ha collegato una banca.} other {# persone hanno collegato una banca.}}».
-
-| Stato | Pallino | Parola | Tono | Quando |
-|---|---|---|---|---|
-| `disabled` | `bg-faint` | «Spento» | `muted` | Registrato, non attivo |
-| `enabled` | `bg-pos` | «Attivo» | `pos` | Attivo e ultimo controllo riuscito |
-| `unreachable` | `bg-neg` | «Non risponde» | `neg` | Attivo, ultimo controllo fallito |
-| `incompatible` | `bg-neg` | «Non compatibile» | `neg` | Versione del contratto non accettata |
-
-Con `unreachable` o `incompatible` compare la riga di errore sotto (`role="alert"`):
-«Il plugin non risponde dalle {time}. Le letture delle banche sono ferme. Controlla il container.» /
-«Il plugin usa una versione del contratto non accettata. Aggiorna il plugin o Ledgerly.»
+- La riga di dettaglio usa `border-t border-border px-4 py-2.5 text-sm text-muted`. Non è un errore: nessun `role="alert"`.
+- Un plugin che non risponde non cambia lo stato della riga. L'utente attivo vede l'errore `plugin_down` dove fa un'azione (§7). **[A2]**
 
 ### 2.3 Azioni
 
-| Stato | Pulsanti | Menu `ActionMenu` |
+| Stato | Pulsante | Menu `ActionMenu` |
 |---|---|---|
-| `disabled` | «Attiva» (primario, `sm`) | «Controlla ora», «Cambia indirizzo» |
-| `enabled` | «Disattiva» (`secondary`, `sm`) | «Controlla ora» |
-| `unreachable` | «Controlla ora» (`secondary`, `sm`), «Disattiva» | — |
-| `incompatible` | «Controlla ora» | «Cambia indirizzo» |
+| `available` | «Attiva» (`primary`, `sm`) | — |
+| `active` | — | «Disattiva» |
+| `paused` | «Attiva» (`primary`, `sm`) | — |
 
-- **Attiva:** nessuna conferma. Il core rilegge il manifest. Riuscito: stato «Attivo», toast «Enable Banking attivato». Fallito: stato invariato, errore nella riga con i codici di §2.1.
-- **Disattiva:** `Modal` 420. Titolo «Disattivare Enable Banking?». Testo: «La sezione Banche sparisce per tutti e le letture si fermano. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte.» Se `count > 0`, in più: «{count, plural, one {# persona ha una banca collegata.} other {# persone hanno una banca collegata.}}». Pulsanti: «Resta attivo», «Disattiva» (`danger`). Toast: «Enable Banking disattivato».
-- **Controlla ora:** rilegge il manifest. In attesa il pulsante dice «Controllo…». Toast: «Il plugin risponde» oppure errore nella riga.
-- **Cambia indirizzo:** lo stesso dialogo di §2.1 con titolo «Cambia indirizzo» e pulsante «Controlla e salva». Solo a plugin spento.
-- Rimozione e aggiornamento dall'interfaccia: non in N1 (piano §4.1).
+- **Attiva:** nessuna conferma e nessuna chiamata al plugin: è una preferenza dell'utente. Toast «{name} attivato». La sezione «Banche» compare sotto, il focus va al suo titolo.
+  - Da `available`: la sezione apre nella vista A (guida in 3 passi).
+  - Da `paused`: la sezione torna com'era. Parte una lettura per ogni banca collegata. Un accesso scaduto nel frattempo mostra «Accesso scaduto» e «Rinnova accesso» (§5.1).
+- **Disattiva senza credenziali salvate:** nessuna conferma. La riga torna a `available`. Toast «{name} disattivato».
+- **Disattiva con credenziali salvate:** `Modal` 420. Titolo «Disattivare {name}?». Testo: «Le letture di {name} si fermano e la sua sezione sparisce dalle impostazioni. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte.» Con banche collegate, in più: «{count, plural, one {Hai # collegamento attivo.} other {Hai # collegamenti attivi.}}». Pulsanti: «Resta attivo», «Disattiva» (`danger`). Toast «{name} disattivato». **[A1]**
+- Una lettura già in corso al momento della disattivazione finisce. Non ne partono altre.
+- Per eliminare tutto, l'utente usa prima «Scollega» (§5.4) e «Rimuovi credenziali» (§4.3), poi «Disattiva».
 
-### 2.4 Stati della pagina
+### 2.4 Effetto della disattivazione sul resto dell'app
+
+| Elemento | Con plugin disattivato dall'utente |
+|---|---|
+| Sezione «Banche» | Non si disegna. La pagina non manda al browser nessun dato del plugin |
+| Letture automatiche e «Sincronizza ora» | Ferme per quell'utente. Gli altri utenti non cambiano |
+| Conti e movimenti | Restano visibili, con l'ultima lettura. Non diventano conti tenuti a mano |
+| Credenziali e collegamenti | Restano cifrati nel core. Non sono leggibili dall'interfaccia **[A1]** |
+| `/banks/connect` | 404 |
+| Scadenza dell'accesso alla banca | Continua a scorrere: è una data della banca |
+
+### 2.5 Stati della pagina
 
 | Stato | Vista |
 |---|---|
-| Vuoto | Dentro la card: `p-4 text-muted` «Nessun plugin registrato. Aggiungi il servizio al compose, poi registra qui il suo indirizzo.» Il pulsante «Registra plugin» resta sotto la descrizione |
-| Caricamento | Rende il server: nessuno scheletro. Le azioni usano `useTransition` e disattivano i pulsanti della riga |
+| Plugin non presente nell'istanza | Nessuna riga, nessuna sezione nuova |
+| Caricamento | Rende il server: nessuno scheletro. Le azioni usano `useTransition` e disattivano i controlli della riga |
+| Azione fallita | Riga di errore sotto la voce (`role="alert"`, classi di §1.4): «Non è stato possibile salvare. Riprova.» Lo stato non cambia |
 | Errore di lettura | `error.tsx` esistente della rotta |
-| Un plugin registrato | Il pulsante «Registra plugin» sparisce (N1 ha un solo plugin). Torna in R5c |
 
-### 2.5 Layout
+### 2.6 Layout
 
-1440 px (sezione ≥ 672 px: titolo a sinistra, 240 px):
+1440 px (dentro la card di «Sorgenti dei dati», sotto Trek):
 
 ```text
-Impostazioni
-Profilo  Sicurezza  Integrazioni  Categorie  Dati  Utenti  Server  [Plugin]
-──────────────────────────────────────────────────────────────────────────────────────────────
-Plugin                     ┌──────────────────────────────────────────────────────────────────┐
-Servizi separati che       │ ● Enable Banking  Attivo    Versione   Ultimo controllo          │
-portano dati in Ledgerly…  │ Conti e movimenti dalle     1.0.0      oggi 08:10   [Disattiva] ⋯ │
-                           │ banche europee                                                   │
+Sorgenti dei dati          ┌──────────────────────────────────────────────────────────────────┐
+Da dove arrivano saldi     │ ● Budget Makers Wallet  Collegato   …                            │
+e movimenti…               ├──────────────────────────────────────────────────────────────────┤
+                           │ ● Trek  Collegato   …                                            │
                            ├──────────────────────────────────────────────────────────────────┤
-                           │ 2 persone hanno collegato una banca.                             │
+                           │ ● Enable Banking  Non attivo                           [Attiva]  │
+                           │ Conti e movimenti dalle banche europee                           │
                            └──────────────────────────────────────────────────────────────────┘
 ```
 
-400 px (tutto in colonna; le tab vanno a capo su due righe):
+Stato `paused`:
 
 ```text
-Plugin
-Servizi separati che portano dati…
-[Registra plugin]            ← solo se l'elenco è vuoto
+                           │ ● Enable Banking  Non attivo                           [Attiva]  │
+                           │ Conti e movimenti dalle banche europee                           │
+                           ├──────────────────────────────────────────────────────────────────┤
+                           │ Le letture sono ferme dal 2 mar 2027. Credenziali e collegamenti │
+                           │ sono salvati.                                                    │
+```
+
+400 px (tutto in colonna):
+
+```text
 ┌──────────────────────────────────┐
 │ ● Enable Banking  Attivo         │
 │ Conti e movimenti dalle banche…  │
-│ Versione            1.0.0        │
-│ Ultimo controllo    oggi 08:10   │
-│ [Disattiva] [⋯]                  │
-├──────────────────────────────────┤
-│ 2 persone hanno collegato…       │
+│ [⋯]                              │
 └──────────────────────────────────┘
 ```
 
 ## 3. Sezione «Banche» in Settings › Integrations
 
 Posizione: seconda `SettingsSection` della pagina, dopo «Sorgenti dei dati», prima di «Investimenti».
-Motivo: in N1 il tab Plugin è solo dell'admin; il tab Finance arriva in R5a (D3). Integrations è il posto dove l'utente trova già le altre sorgenti.
+Motivo: il tab Finance arriva in R5a (D3). Integrations è il posto dove l'utente trova già le altre sorgenti (decisione Q7).
+La sezione esiste solo con il plugin attivo per l'utente (§1.1, §2.2).
 
 - Titolo: «Banche».
 - Descrizione: «Collega i tuoi conti bancari. Ledgerly legge saldi e movimenti e non può fare pagamenti.»
@@ -436,7 +430,7 @@ Guardie all'apertura (sul server):
 
 | Condizione | Risposta |
 |---|---|
-| Plugin non attivo | 404 |
+| Plugin non attivo per l'utente (mai attivato o disattivato) | 404 |
 | Credenziali mancanti | Card con «Prima servono le tue credenziali Enable Banking.» + `ButtonLink` primario «Vai alle impostazioni» |
 | Credenziali non valide | Card con «La chiave non è più valida.» + `ButtonLink` «Sostituisci chiave» (porta a Integrations e apre §4.2 con `?replace=1`) |
 | Una banca già collegata (solo N1) e nessun `renew` o `c` | Redirect a `/settings/integrations` |
@@ -545,7 +539,7 @@ L'IBAN mostra il paese, le prime due cifre e le ultime quattro: «IT60 •••
 
 | Campo | Controllo | Regole |
 |---|---|---|
-| In Ledgerly | `Select` | Opzioni: «Crea un conto nuovo» (default); `<optgroup label="Usa un conto esistente">` con i conti ammessi; **[Q3]** «Non importare» |
+| In Ledgerly | `Select` | Opzioni: «Crea un conto nuovo» (default); `<optgroup label="Usa un conto esistente">` con i conti ammessi; «Non importare» (decisione Q3) |
 | Nome | `Input`, `maxLength` come in «Nuovo conto» | Solo con «Crea un conto nuovo». Precompilato: «{bank} {nome dato dalla banca}». Obbligatorio |
 | Tipo | `Select` con `accounts.types` | Solo con «Crea un conto nuovo». Default «Conto corrente»; «Deposito» se la banca lo dichiara |
 
@@ -553,7 +547,7 @@ Conti ammessi in «Usa un conto esistente» (stessa regola di `investments.conne
 archiviati, senza un'altra sorgente che li scrive, stessa valuta del conto della banca. Se non ce ne sono, il gruppo non compare.
 
 - Con un conto esistente scelto, sotto il `Select`: `text-sm text-muted` «Da ora saldo e movimenti di «{account}» arrivano dalla banca. I saldi già inseriti restano.»
-- **[Q4]** Regola sui saldi inseriti a mano con data dentro lo storico letto dalla banca: il testo sopra vale se restano.
+- Saldi inseriti a mano con data dentro lo storico letto dalla banca: restano. Dalla prima data letta dalla banca vale la banca (decisione Q4).
 - Lo stesso conto esistente non si sceglie due volte. Errore sul secondo `Select` (`Field` `error`): «Questo conto è già scelto per un altro conto della banca.»
 - Con tutti i conti su «Non importare» il pulsante è disattivato e sotto compare «Scegli almeno un conto.»
 - Avviso del tempo: classi dell'avviso di §1.4, sempre visibile sopra i pulsanti.
@@ -659,7 +653,7 @@ Ogni errore ha un codice da questa lista. Il testo è fisso e tradotto. Chiavi i
 
 | Stato richiesto | Codice | Dove compare | Testo | Azione |
 |---|---|---|---|---|
-| Plugin spento | — | Utente: niente. Admin: tab Plugin | «Spento» | «Attiva» |
+| Plugin non attivo per l'utente | — | Voce «Enable Banking» in «Sorgenti dei dati» (§2) | «Non attivo»; dopo l'uso, in più: «Le letture sono ferme dal {date}. Credenziali e collegamenti sono salvati.» | «Attiva» |
 | Plugin attivo ma non risponde | `plugin_down` | Riga della banca, dialoghi, procedura | «Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.» | «Riprova» |
 | Credenziali mancanti | — | Sezione «Banche» vista A; guardia della procedura | Guida in 3 passi | «Inserisci credenziali» |
 | Credenziali non valide all'inserimento | `credentials_invalid`, `key_format`, `write_not_allowed` | Dialogo §4.1 | §4.1 | Correggi e riprova |
@@ -699,61 +693,34 @@ con gli stessi nomi e gli stessi testi, così N2 non li cambia.
 | Lingua | Nomi delle banche e dei conti non si traducono |
 | Campi segreti | `autoComplete="off"`; nessun gestore di password li propone come login (`data-1p-ignore`, `data-lpignore="true"`) |
 
-Test da aggiungere alle specifiche esistenti (G6): `a11y.spec.ts` e `keyboard.spec.ts` su `/settings/plugins`, sulla
-sezione «Banche» nelle viste A, B, C e sui tre passi della procedura, a 400 e 1440 px, nei due temi.
+Test da aggiungere alle specifiche esistenti (G6): `a11y.spec.ts` e `keyboard.spec.ts` sulla voce «Enable Banking»
+nei 4 stati di §2.2, sulla sezione «Banche» nelle viste A, B, C e sui tre passi della procedura, a 400 e 1440 px, nei
+due temi. Un test con due utenti: l'attivazione del primo non cambia la pagina del secondo.
 
 ## 9. Testi e chiavi di traduzione
 
-File `messages/it.json` e `messages/en.json`. Tre gruppi nuovi: `settings.plugins` (admin), `settings.banks` (sezione e
-dialoghi), `banks.connect` (procedura). Voce nuova `settings.tabs.plugins`. «Annulla», «Riprova», «Chiudi» usano
+File `messages/it.json` e `messages/en.json`. Tre gruppi nuovi: `settings.plugins` (voce del plugin, per utente),
+`settings.banks` (sezione e dialoghi), `banks.connect` (procedura). «Annulla», «Riprova», «Chiudi» usano
 `common.cancel`, `common.retry`, `common.close`. Il nome e la descrizione del plugin arrivano dal manifest (it, en).
 
-### 9.1 `settings.tabs`, `settings.plugins`
+### 9.1 `settings.plugins`
+
+Testi generici: valgono per ogni plugin. `{name}` è il nome dal manifest. Nessuna voce nuova in `settings.tabs`.
 
 | Chiave | Italiano | English |
 |---|---|---|
-| `settings.tabs.plugins` | Plugin | Plugins |
-| `title` | Plugin | Plugins |
-| `description` | Servizi separati che portano dati in Ledgerly. Un plugin attivo è disponibile a tutte le persone di questa istanza. | Separate services that bring data into Ledgerly. An active plugin is available to everyone on this instance. |
-| `empty` | Nessun plugin registrato. Aggiungi il servizio al compose, poi registra qui il suo indirizzo. | No plugin registered. Add the service to the compose file, then register its address here. |
-| `register.open` | Registra plugin | Register plugin |
-| `register.title` | Registra plugin | Register plugin |
-| `register.description` | Inserisci l'indirizzo interno del servizio. Ledgerly legge da lì nome e versione. | Enter the internal address of the service. Ledgerly reads its name and version from there. |
-| `register.address` | Indirizzo | Address |
-| `register.addressHint` | L'indirizzo del container sulla rete dei plugin. Non è raggiungibile da internet. | The container's address on the plugin network. It is not reachable from the internet. |
-| `register.submit` | Controlla e registra | Check and register |
-| `register.checking` | Controllo… | Checking… |
-| `address.title` | Cambia indirizzo | Change address |
-| `address.submit` | Controlla e salva | Check and save |
-| `fields.version` | Versione | Version |
-| `fields.lastCheck` | Ultimo controllo | Last check |
-| `fields.never` | Mai | Never |
-| `states.disabled` | Spento | Off |
-| `states.enabled` | Attivo | Active |
-| `states.unreachable` | Non risponde | Not responding |
-| `states.incompatible` | Non compatibile | Not compatible |
-| `detail.unreachable` | Il plugin non risponde dalle {time}. Le letture delle banche sono ferme. Controlla il container. | The plugin has not responded since {time}. Bank readings are stopped. Check the container. |
-| `detail.incompatible` | Il plugin usa una versione del contratto non accettata. Aggiorna il plugin o Ledgerly. | The plugin uses a contract version that is not accepted. Update the plugin or Ledgerly. |
-| `users` | {count, plural, =0 {Nessuna persona lo usa ancora.} one {# persona ha collegato una banca.} other {# persone hanno collegato una banca.}} | {count, plural, =0 {Nobody uses it yet.} one {# person has connected a bank.} other {# people have connected a bank.}} |
+| `states.inactive` | Non attivo | Not active |
+| `states.active` | Attivo | Active |
+| `detail.paused` | Le letture sono ferme dal {date}. Credenziali e collegamenti sono salvati. | Readings have been stopped since {date}. Credentials and connections are saved. |
 | `actions.enable` | Attiva | Turn on |
 | `actions.disable` | Disattiva | Turn off |
-| `actions.check` | Controlla ora | Check now |
-| `actions.changeAddress` | Cambia indirizzo | Change address |
 | `disable.title` | Disattivare {name}? | Turn off {name}? |
-| `disable.description` | La sezione Banche sparisce per tutti e le letture si fermano. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte. | The Banks section disappears for everyone and readings stop. Credentials, connections, accounts and transactions stay saved. Everything resumes when you turn it on again. |
-| `disable.users` | {count, plural, one {# persona ha una banca collegata.} other {# persone hanno una banca collegata.}} | {count, plural, one {# person has a bank connected.} other {# people have a bank connected.}} |
+| `disable.description` | Le letture di {name} si fermano e la sua sezione sparisce dalle impostazioni. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte. | {name} readings stop and its section disappears from the settings. Credentials, connections, accounts and transactions stay saved. Everything resumes when you turn it on again. |
+| `disable.links` | {count, plural, one {Hai # collegamento attivo.} other {Hai # collegamenti attivi.}} | {count, plural, one {You have # active connection.} other {You have # active connections.}} |
 | `disable.cancel` | Resta attivo | Keep it on |
 | `disable.confirm` | Disattiva | Turn off |
-| `toasts.registered` | Plugin registrato | Plugin registered |
 | `toasts.enabled` | {name} attivato | {name} turned on |
 | `toasts.disabled` | {name} disattivato | {name} turned off |
-| `toasts.checked` | Il plugin risponde | The plugin responds |
-| `toasts.addressSaved` | Indirizzo salvato | Address saved |
-| `errors.unreachable` | Nessuna risposta da questo indirizzo. Controlla che il container sia avviato e sulla rete dei plugin. | No response from this address. Check that the container is running and on the plugin network. |
-| `errors.invalidManifest` | Il servizio ha risposto, ma non è un plugin di Ledgerly. | The service responded, but it is not a Ledgerly plugin. |
-| `errors.unsupportedContract` | Questo plugin usa una versione del contratto che questa versione di Ledgerly non conosce. | This plugin uses a contract version that this version of Ledgerly does not know. |
-| `errors.duplicate` | Questo plugin è già registrato. | This plugin is already registered. |
-| `errors.unauthorized` | Il plugin ha rifiutato la richiesta. Controlla il segreto condiviso nella configurazione del server. | The plugin refused the request. Check the shared secret in the server configuration. |
 | `errors.failed` | Non è stato possibile salvare. Riprova. | Couldn't save. Try again. |
 
 ### 9.2 `settings.banks`
@@ -922,11 +889,11 @@ dialoghi), `banks.connect` (procedura). Voce nuova `settings.tabs.plugins`. «An
 | Criterio dell'issue | Dove è coperto |
 |---|---|
 | 1 · Ogni voce di interfaccia del «Contenuto» di N1 ha una sezione, con stati e testi | §0 (mappa), §2-§7, §9 |
-| 2 · Senza plugin attivo l'utente non vede nessun elemento nuovo | §1.1, guardie di §6.1 |
+| 2 · Senza plugin attivo l'utente non vede nessun elemento nuovo. **Cambiato da H25:** vede la sola voce «Enable Banking · Non attivo»; nessun altro elemento | §1.1, §2.2, guardie di §6.1 |
 | 3 · Le credenziali non compaiono mai in chiaro dopo il salvataggio | §1.3, §4.1-§4.3 |
 
 Criteri di N1 in `03-releases.md` che l'interfaccia deve rispettare: 1 (nessun codice copiato a mano: §6.3), 2 (storico
-oltre 90 giorni: §6.4, §6.6), 5 e 6 (credenziali: §1.3; ogni utente vede solo la sua sezione), 7 (§1.1).
+oltre 90 giorni: §6.4, §6.6), 5 e 6 (credenziali: §1.3; ogni utente vede solo la sua sezione), 7 (§1.1), 9 (nessun passo dell'admin: §2).
 
 ## 11. Punti di aggancio per N2 e N4
 
@@ -937,22 +904,27 @@ oltre 90 giorni: §6.4, §6.6), 5 e 6 (credenziali: §1.3; ogni utente vede solo
 | N2 | Colonna «Letture automatiche» (§5.3) | La pianificazione va sotto «Avanzate» |
 | N2 | §5.5 | La frase «una sola banca» sparisce; «Collega una banca» torna sempre visibile; la guardia di §6.1 cade |
 | N2 | Avvisi di scadenza a 14 e 3 giorni | Usano la data «accesso valido fino al» già presente nella riga |
-| N2 | Tab Plugin | Nessun registro in N1. Il registro grezzo va in Server › Diagnostica |
+| N2 | Registro | Nessun registro in N1. Il registro grezzo va in Server › Diagnostica (§15, E3) |
+| N2 | Collegamento di un plugin disattivato dall'utente (§2.4) | In N1 il conto mostra solo l'ultima lettura. Lo stato in N2 è una domanda aperta (§15, E4) |
+| R5a, R5c | Voce del plugin (§2) | La voce passa nel tab Plugin. Chi installa e aggiorna i plugin è una domanda aperta (§15, E1) |
 | N4 | `Select` «In Ledgerly» (§6.4) | Si aggiunge il gruppo «È lo stesso conto di…» con i conti Wallet |
 
-## 12. Domande per Mattia
+## 12. Decisioni prese
 
-Decisioni di prodotto che il piano non scrive. Ogni voce ha la proposta usata nel testo.
+Decisioni di Mattia del 14/11/2026 sulle 7 domande della prima versione di questa specifica. Registro: [`../01-decisions.md`](../01-decisions.md) H25 e H26.
 
-| # | Domanda | Proposta | Alternativa |
+| # | Domanda | Decisione | Dove è applicata |
 |---|---|---|---|
-| Q1 | Plugin disattivato dopo l'uso: cosa vede chi ha già una banca collegata? | Niente: la sezione «Banche» sparisce; i dati restano e tornano alla riattivazione | La sezione resta in sola lettura con l'avviso «Le letture sono in pausa» |
-| Q2 | «Scollega» una banca e «Rimuovi credenziali» sono in N1? | Sì, tutti e due. «Rimuovi credenziali» solo senza banche collegate | Solo «Sostituisci chiave»; scollegamento e rimozione in N2 |
-| Q3 | Nella scelta dei conti esiste «Non importare» per un conto esposto dalla banca? | Sì | No: ogni conto esposto diventa un conto nuovo o un conto esistente |
-| Q4 | Conto manuale esistente collegato alla banca: cosa succede ai saldi inseriti a mano nelle date coperte dalla banca? | Restano; da quella data vale la banca | La procedura chiede una data di taglio |
-| Q5 | Un ingresso alla procedura anche da Accounts («Aggiungi conto» › «Collega una banca»)? | No in N1: un solo ingresso, in Settings › Integrations | Sì, visibile solo con plugin attivo |
-| Q6 | Applicazione Enable Banking che permette anche i pagamenti: si rifiuta? | Sì, si rifiuta, come le chiavi di eToro e Binance | Si accetta con una conferma esplicita |
-| Q7 | La sezione «Banche» sta in Settings › Integrations fino a R5a? | Sì | Il tab «Plugin» diventa visibile a tutti già in N1, con la sezione dentro |
+| Q1 | Chi attiva il plugin, e cosa succede quando si disattiva? | **Regola nuova, diversa dal piano (H25).** L'admin non fa niente. I plugin sono già disponibili nell'istanza, non attivi. Ogni utente attiva per sé i plugin che vuole e gestisce i suoi, come fa oggi con Trek. Alla disattivazione la sezione «Banche» sparisce, le letture si fermano, conti e movimenti restano e tornano alla riattivazione | §1.1, §2, §6.1, §7 |
+| Q2 | «Scollega» una banca e «Rimuovi credenziali» sono in N1? | Sì, tutti e due. «Rimuovi credenziali» solo senza banche collegate | §4.3, §5.4 |
+| Q3 | Nella scelta dei conti esiste «Non importare» per un conto esposto dalla banca? | Sì | §6.4 |
+| Q4 | Conto manuale esistente collegato alla banca: cosa succede ai saldi inseriti a mano? | Restano. Dalla prima data letta dalla banca vale la banca | §6.4 |
+| Q5 | Un ingresso alla procedura anche da Accounts? | No: un solo ingresso, in Settings › Integrations | §6.1 |
+| Q6 | Applicazione Enable Banking che permette anche i pagamenti: si rifiuta? | Sì, si rifiuta | §4.1 (`write_not_allowed`) |
+| Q7 | La sezione «Banche» sta in Settings › Integrations fino a R5a? | Sì | §3 |
+
+Regola sostituita da Q1: «L'admin attiva il plugin» e «tab Plugin essenziale (admin)» del rilascio N1; «Installa solo
+l'admin» di C4, per la parte che riguarda l'interfaccia di N1.
 
 ## 13. Passaggi per lo sviluppo
 
@@ -965,3 +937,29 @@ Non sono decisioni di prodotto: sono dati che l'interfaccia richiede e che il pi
 5. **`ConnectionRow`.** Due props facoltative per le etichette e stato con parola e tono dati dal chiamante (§5.1). Wallet e Trek non cambiano.
 6. **Movimento.** `globals.css` non ha una regola `prefers-reduced-motion` per `animate-shimmer` e `animate-in`. Non è di N1; va aperta una voce a parte.
 7. **Da misurare al passo 1 di N1:** minuti reali della finestra dello storico; limite separato per le letture con l'utente presente; costo dell'applicazione per uso personale. Tre testi dipendono da queste misure (`accounts.hurry`, `errors.rateLimitedNow`, `setup.intro`).
+8. **Plugin dalla configurazione del server (H25).** Il core conosce il plugin senza un passo nell'interfaccia: indirizzo e segreto stanno nella configurazione del server, il manifest si legge da solo (all'avvio e a intervalli). La voce compare agli utenti solo dopo una lettura riuscita del manifest (§2.1).
+9. **Attivazione per utente (H25).** Serve un dato «utente, plugin, attivo sì o no, data dell'ultima disattivazione». Le letture automatiche saltano gli utenti con il plugin non attivo. Le azioni del server controllano l'attivazione dell'utente, non solo la sessione. La forma (tabella o colonna) è una scelta dello sviluppo.
+10. **`06-data.md` §6.1.** La riga della tabella `plugins` (indirizzo, stato) e l'elenco delle migrazioni di N1 vanno allineati ai punti 8 e 9. Il file non è cambiato da questa revisione.
+
+## 14. Domande aperte di N1
+
+Punti di prodotto che le decisioni di §12 lasciano aperti. Non sono decisi. Il testo della specifica usa l'opzione A.
+Lo sviluppo di questi punti parte dopo la risposta di Mattia.
+
+| # | Domanda | Esempio | A (default) | B | Effetto |
+|---|---|---|---|---|---|
+| A1 | Alla disattivazione, credenziali Enable Banking e accesso alle banche restano salvati? | Mattia disattiva Enable Banking a marzo e lo riattiva a maggio | Restano cifrati nel core. A maggio BBVA riparte senza un nuovo accesso, se l'accesso non è scaduto | La disattivazione elimina le credenziali e chiude l'accesso alle banche. A maggio Mattia inserisce di nuovo la chiave e rifà l'accesso a ogni banca. Nel frattempo i conti sono conti tenuti a mano | A: riattivazione con un clic; i segreti restano nel database anche a plugin non attivo. B: nessun segreto salvato a plugin non attivo; riattivazione di circa 5 minuti per banca. Con A l'utente elimina tutto con «Scollega» e «Rimuovi credenziali» |
+| A2 | Il plugin non risponde: dove lo vede chi gestisce l'istanza, in N1? | Il container si ferma dopo un aggiornamento. Ogni utente attivo vede «Il collegamento con le banche non è disponibile ora» | In nessuna schermata di N1. Il container ha healthcheck e riavvio automatico; il motivo è nei log del container. Da N2 lo stato è in Server › Diagnostica | Una riga di sola lettura in Settings › Server già in N1: «Enable Banking: risponde» o «non risponde dalle {time}». L'admin legge, non agisce | A: nessuna schermata per l'admin, coerente con H25; il guasto si nota dagli errori degli utenti. B: una vista piccola in più in N1; il guasto si vede subito |
+
+## 15. Effetti sugli altri rilasci
+
+Punti del piano in conflitto con H25. Sono elencati, non risolti: i testi degli altri rilasci non sono cambiati.
+Ogni punto è una domanda per Mattia.
+
+| # | Punto del piano | Esempio | A (default) | B | Effetto |
+|---|---|---|---|---|---|
+| E1 | **R5c, tab Plugin completo dell'admin:** «installa, attiva, aggiorna, rimuovi» (`03-releases.md` R5c; C4 «Installa solo l'admin»; D3 «tab Plugin»; `07-apps.md` «Admin: … installazione dei plugin»; `11-standardization.md` «Chi lo usa lo installa»; `rewrite-plan.md` «Wallet e Trek si installano») | In R5c arriva il plugin Trek | I plugin del catalogo ufficiale fanno parte dell'installazione standard: arrivano e si aggiornano con l'istanza. Il tab Plugin è di ogni utente: elenco, «Attiva», «Disattiva». Nessun «installa, aggiorna, rimuovi» nell'interfaccia | L'admin ha una pagina tecnica in Settings › Server: installa, aggiorna, rimuovi. Il tab Plugin dell'utente ha solo «Attiva» e «Disattiva» | A: nessun compito dell'admin nell'interfaccia; ogni plugin del catalogo gira sempre, anche senza utenti. B: l'admin sceglie quali plugin girano; torna un passo dell'admin prima dell'utente |
+| E2 | **R5c, plugin fuori catalogo:** «solo admin, etichetta "non verificato"» (C4) | Un amico scrive un plugin per la sua banca | Si aggiunge solo dalla configurazione del server, mai dall'interfaccia. Compare a ogni utente con l'etichetta «non verificato»; l'attivazione chiede una conferma | Fuori dal piano: esistono solo i plugin del catalogo ufficiale | A: resta possibile, con un lavoro sul server e un rischio dichiarato all'utente. B: meno superficie; nessun plugin di terzi |
+| E3 | **N2, registro grezzo solo per l'admin** in Server › Diagnostica (`03-releases.md` N2, criterio 2; `04-now.md` §4.3) | La lettura di una banca di un altro utente fallisce | Resta com'è: è diagnosi dell'istanza, non gestione dei plugin. L'admin legge righe tecniche senza segreti, per tutti i collegamenti | Ogni utente vede il registro grezzo dei suoi collegamenti sotto «Avanzate». L'admin vede solo lo stato dei plugin | A: nessun cambio a N2; l'admin vede l'attività tecnica degli altri utenti. B: ogni utente risolve da solo; più lavoro in N2 (una vista per utente) |
+| E4 | **N2, stato a 5 valori:** non ha un caso per «plugin disattivato dall'utente» (`04-now.md` §4.3) | Mattia disattiva Enable Banking. In Accounts resta il conto BBVA | Il collegamento è «In pausa», con il testo «Enable Banking non è attivo» e l'azione «Attiva». Nessun avviso di ritardo o di scadenza mentre il plugin non è attivo | Il conto mostra solo la data dell'ultima lettura, senza stato e senza azione | A: l'utente capisce perché il conto è fermo; un testo e un'azione in più in N2. B: nessun lavoro in N2; il conto sembra fermo senza motivo |
+| E5 | **R5c, passaggio di Wallet e Trek a plugin:** «Wallet e Trek si installano; chi non li usa non li vede» | Dopo R5c Mattia ha Wallet e Trek collegati; un secondo utente non ha niente | I due plugin sono attivi da subito per chi ha già un collegamento. Per gli altri utenti sono disponibili e non attivi: vedono due voci in più | I due plugin sono non attivi per tutti. Chi li usa li riattiva a mano; fino ad allora le letture sono ferme | A: nessuna interruzione per chi li usa; «chi non li usa non li vede» diventa «li vede non attivi». B: una regola sola, ma le letture di Mattia si fermano al deploy di R5c |
