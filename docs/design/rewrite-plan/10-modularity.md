@@ -270,7 +270,7 @@ misura è un passo di N0 e il suo valore entra in questa tabella.
 | Misura | Obiettivo | Quando |
 |---|---|---|
 | Voci aperte di tipo duplicato | 0 per modulo. «Rinviata» solo se la voce dipende da R5 | Uscita del modulo: dominio a R2, interfaccia a R3 |
-| Righe duplicate (D-a) | Non crescono mai, per pacchetto. A fine R3: al massimo il 3% delle righe non di test di ogni pacchetto (ipotesi I15) | Da R0 (non cresce); fine R3 (soglia) |
+| Righe duplicate (D-a) | Non crescono mai, per pacchetto. A fine R3: al massimo il 3% delle righe non di test di ogni pacchetto (decisione I15) | Da R0 (non cresce); fine R3 (soglia) |
 | Strutture doppie note | 1 dichiarazione ciascuna: `ActionResult` 26 → 1 (`Result` nel contratto), `failed()` 14 → 1, `revalidate()` 14 → 0, `civilDate` 14 → 1, conversione valutaria 2 → 1, `requireAdminCtx` 3 → 1, costruzione di `Ctx` 3 → 1, calcoli di rendimento 8 → 5 definizioni nominate, calcoli di periodo 6 → 1, serie di fine mese 3 → 1 | R0 (primitive), R2 (per modulo) |
 | Tabelle scritte due volte | 28 → 0, su `DataTable` | R3 |
 | Serializzatori doppi tra REST e MCP | 4 risposte → 0 | R2 |
@@ -290,7 +290,7 @@ default. Uno strumento di terzi entra solo dopo il gate del Security Gatekeeper,
 ## 10.8 Pulizia e chiarezza
 
 Ogni regola ha un controllo. Dove oggi ci sono violazioni vale la lista che può solo accorciarsi (§10.6).
-Le soglie numeriche sono un'ipotesi da confermare (I15).
+Le soglie numeriche sono confermate da Mattia (decisione I15).
 
 | # | Regola | Controllo | Gate | Valore di oggi | Entra nel gate |
 |---|---|---|---|---|---|
@@ -331,7 +331,7 @@ I valori vanno in un file JSON nel repo. In produzione si leggono solo le durate
 | **Non peggiora.** Nessuna misura peggiora di oltre il 10% rispetto alla partenza | Tempo, sull'utente pesante | Ogni passo di R0-R4 |
 | **Le query non crescono.** Il numero di query di una vista o di una rotta non aumenta | Conteggio nel test, senza rumore di misura | Ogni passo di R0-R4 |
 | **Le voci di priorità 3 dell'audit sono chiuse** (9 voci: INV-4, POC-3, IMP-5, INT-7, SUB-9, TRX-11, UI-ACC-7, UI-TOF-2, UI-PAY-1). Esempio: Pockets non fa più una query per conto | Numero di query costante al crescere dei conti | Uscita del modulo |
-| Obiettivi assoluti (tempo per vista) | Non fissati ora: mancano i valori di partenza. Dopo la misura di N0 l'orchestratore porta a Mattia una proposta (ipotesi I16) | Dopo N0 |
+| Obiettivi assoluti (tempo per vista) | Non fissati ora: mancano i valori di partenza. Dopo la misura di N0 l'orchestratore porta a Mattia una proposta (decisione I16) | Dopo N0 |
 
 Un miglioramento di velocità che non tocca modularità e leggibilità è sempre ammesso: non chiede un'eccezione.
 
@@ -341,7 +341,7 @@ Vale quando una modifica rende il codice più veloce ma viola una regola di §10
 
 1. Lo sviluppatore misura prima e dopo, sull'utente pesante, con lo stesso script.
 2. Il guadagno è «significativo» se riduce di almeno il 30% il tempo di una vista o di una rotta, o di almeno 200 ms
-   il 95° percentile di una pagina (ipotesi I16). Sotto questa soglia la modifica non si fa.
+   il 95° percentile di una pagina (decisione I16). Sotto questa soglia la modifica non si fa.
 3. Lo sviluppatore non fa il commit. Scrive sulla sotto-issue: guadagno misurato (prima, dopo), regola violata, costo
    in modularità o leggibilità, alternativa che rispetta le regole e il suo guadagno.
 4. L'orchestratore porta la richiesta a Mattia. Decide Mattia.

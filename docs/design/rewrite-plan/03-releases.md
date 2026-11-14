@@ -59,14 +59,14 @@ una sotto-issue separata (decisione H4). È in `main` a `86e3d43`, tag `v0.10.2`
 | | |
 |---|---|
 | Obiettivo | Togliere gli ostacoli ai rilasci successivi |
-| Contenuto | Cartella dei dump ([`06-data.md`](06-data.md) §6.3) e aggiornamento di `docs/operations.md`, `docs/RELEASE.md` e dell'`AGENTS.md` locale. Script della fotografia dei numeri. Misure di partenza delle tre priorità, senza cambi al codice di prodotto: liste note delle violazioni di modularità in `src/architecture.test.ts` (cicli, import tra moduli), prima misura dei duplicati, `npm run perf` esteso con il file dei valori di partenza, risposte di riferimento di API e MCP, script `assertions-diff` ([`10-modularity.md`](10-modularity.md); ipotesi I14). `package.json` alla versione del tag (oggi dichiara `0.2.0`). Manifest web e icone: Ledgerly si installa dal browser |
+| Contenuto | Cartella dei dump ([`06-data.md`](06-data.md) §6.3) e aggiornamento di `docs/operations.md`, `docs/RELEASE.md` e dell'`AGENTS.md` locale. Script della fotografia dei numeri. Misure di partenza delle tre priorità, senza cambi al codice di prodotto: liste note delle violazioni di modularità in `src/architecture.test.ts` (cicli, import tra moduli), prima misura dei duplicati, `npm run perf` esteso con il file dei valori di partenza, risposte di riferimento di API e MCP, script `assertions-diff` ([`10-modularity.md`](10-modularity.md); decisione I14). `package.json` alla versione del tag (oggi dichiara `0.2.0`). Manifest web e icone: Ledgerly si installa dal browser |
 | Per l'utente | Icona e finestra propria su Android e Windows, dal browser |
 | Git | `main` · commit `chore`, `docs`, `feat(web)` |
 | Migrazioni | Nessuna |
 | Rollback | Immagine `pre-n0` |
 | Test e gate | G1, G2, G4, G6 (shell, a11y), G7, G8. Lo script della fotografia e la misura dei duplicati girano due volte di seguito con lo stesso risultato |
 | Criteri di accettazione | La cartella dei dump esiste con i permessi previsti. Un dump di prova si crea e si verifica con `pg_restore --list`. Il browser offre «Installa». La fotografia dei numeri è stabile. I valori di partenza di modularità, duplicati e prestazioni sono nel repo e in [`10-modularity.md`](10-modularity.md) |
-| OK di Mattia | Solo il percorso dei dump (ipotesi I1) |
+| OK di Mattia | Già dato il 14/11/2026: il percorso dei dump (decisione I1) |
 | Dipende da | OK al piano |
 | Dimensione | S |
 
@@ -243,7 +243,7 @@ Sei rilasci. Ognuno ha le regole comuni di §3.1.
 | | R5a · Navigazione | R5b · Investments e Overview | R5c · Wallet e Trek plugin |
 |---|---|---|---|
 | Obiettivo | Menu, moduli, primo avvio, Settings | Una home Investments a 3 gruppi; Overview a gruppi | Nessuna sorgente compilata nel core, salvo eToro e Binance |
-| Contenuto | Menu a 3 gruppi. Moduli attivabili per utente. Primo avvio in 3 passi. Tab mobile Overview · Accounts · Expenses · Investments · More. Settings: tab Finance (Banche, Investimenti, Categorie ed etichette) e tab Plugin; via Integrations e Categories. Glossario unico | Read-model unico sopra investments e funds (nessuna migrazione dei dati dei fondi). Home con totale, 4 KPI comuni, filtro a chip, gruppi con subtotale, «Altri conti». Pensione nel totale. `/funds/*` → redirect a `/investments`. Via catalogo e «coming soon»: dialog a 3 scelte. Overview: lista a gruppi, subtotale = riquadro, riga di investimento → Investments | Plugin Wallet (sola lettura) e plugin Trek (`provider.write` approvato dall'utente). Porte del dominio al posto degli import. Stato esterno generico in timeoff. Catalogo ufficiale con immagine e digest. Tab Plugin completo: installa, attiva, aggiorna, rimuovi; etichetta «non verificato» fuori catalogo. Uscita dei plugin solo verso gli host del manifest (ipotesi I8) |
+| Contenuto | Menu a 3 gruppi. Moduli attivabili per utente. Primo avvio in 3 passi. Tab mobile Overview · Accounts · Expenses · Investments · More. Settings: tab Finance (Banche, Investimenti, Categorie ed etichette) e tab Plugin; via Integrations e Categories. Glossario unico | Read-model unico sopra investments e funds (nessuna migrazione dei dati dei fondi). Home con totale, 4 KPI comuni, filtro a chip, gruppi con subtotale, «Altri conti». Pensione nel totale. `/funds/*` → redirect a `/investments`. Via catalogo e «coming soon»: dialog a 3 scelte. Overview: lista a gruppi, subtotale = riquadro, riga di investimento → Investments | Plugin Wallet (sola lettura) e plugin Trek (`provider.write` approvato dall'utente). Porte del dominio al posto degli import. Stato esterno generico in timeoff. Catalogo ufficiale con immagine e digest. Tab Plugin completo: installa, attiva, aggiorna, rimuovi; etichetta «non verificato» fuori catalogo. Uscita dei plugin solo verso gli host del manifest (decisione I8) |
 | Per l'utente | Navigazione più corta; solo i moduli scelti | Una risposta a «quanto ho guadagnato»; la voce Funds sparisce | Wallet e Trek si installano; chi non li usa non li vede |
 | Git | Branch + PR · #1 | `main`; PR solo se cambia la forma di una risposta API (campo `kind`, `include=funds`: additivi) | Branch + PR · #1, #3, #5 |
 | Migrazioni | Additive: `user_preferences.modules`, stato del primo avvio | Nessuna | Additive: colonne di stato esterno generiche in timeoff; righe del registro dei plugin. Dati: connessioni Wallet e Trek → connessioni dei plugin |
@@ -291,7 +291,7 @@ Nessun passo di distribuzione: nessun canale pubblico e nessun account sviluppat
 ## Z · Review finale unica
 
 Una sola, quando Mattia dichiara tutto completo. È l'unica review del piano: prima di Z nessun agente legge il codice
-di un altro (decisione H6). Due parti nello stesso passo (ipotesi I17):
+di un altro (decisione H6). Due parti nello stesso passo (decisione I17):
 
 - **Codice:** il risultato contro le tre priorità di [`10-modularity.md`](10-modularity.md) e contro questo piano.
 - **Sicurezza:** login nativo e client OAuth di prima parte, CORS, rete e contratto dei plugin, credenziali per utente,

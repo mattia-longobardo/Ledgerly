@@ -44,10 +44,10 @@ Prima azione del filone client. Nulla entra in `main`.
 | # | Prova | Chiude | Esito atteso |
 |---|---|---|---|
 | 0 | **Gate del Security Gatekeeper** su ogni strumento e pacchetto nuovo: Android SDK e strumenti di build, Capacitor e i suoi plugin, Tauri e la toolchain Rust, Electron se serve | Regola G9 | Via libera scritto per ogni voce, prima dell'installazione |
-| A | Capacitor: una schermata esistente compilata come pacchetto statico, login OAuth2 + PKCE con schema privato dell'app contro un'istanza di prova, token nel deposito sicuro | Vincoli 3 e 4; forma del contenitore web (ipotesi I4) | Il pacchetto statico gira; il login torna all'app |
+| A | Capacitor: una schermata esistente compilata come pacchetto statico, login OAuth2 + PKCE con schema privato dell'app contro un'istanza di prova, token nel deposito sicuro | Vincoli 3 e 4; forma del contenitore web (decisione I4) | Il pacchetto statico gira; il login torna all'app |
 | B | Lavoro in background su Android: rinnovo del token e lettura degli avvisi ogni poche ore, su due telefoni di marche diverse | Notifiche con controllo periodico, widget | Intervallo reale misurato per telefono |
-| C | Tauri 2: finestra con lo stesso pacchetto, login su `http://127.0.0.1:<porta>/callback`, build locale su Windows | Involucro Windows (ipotesi I5) | Build riuscita; se fallisce: Electron con lo stesso pacchetto |
-| D | Origini degli involucri: lettura del valore reale dell'origine di Capacitor e di Tauri | CORS di R2 (ipotesi I10) | Due origini fisse scritte nel contratto |
+| C | Tauri 2: finestra con lo stesso pacchetto, login su `http://127.0.0.1:<porta>/callback`, build locale su Windows | Involucro Windows (decisione I5) | Build riuscita; se fallisce: Electron con lo stesso pacchetto |
+| D | Origini degli involucri: lettura del valore reale dell'origine di Capacitor e di Tauri | CORS di R2 (decisione I10) | Due origini fisse scritte nel contratto |
 
 Uscita di C0: un rapporto con la decisione per punto. Se la prova A fallisce, R3 non parte: il vincolo 3 si rivede con Mattia.
 
@@ -97,7 +97,7 @@ Build e installazione, senza distribuzione:
 | Forma | Guscio (`apps/windows`, Tauri 2) con la stessa interfaccia del web. Nessuna schermata solo per Windows, salvo primo avvio e preferenze dell'app |
 | Aggiunte | Login su `127.0.0.1`, refresh token in DPAPI, cache con data, avvisi di sistema ad app aperta, trascinamento sull'icona e «Apri con» (con conferma del tipo di file), scorciatoia globale «Nuovo movimento» (spenta finché l'utente non la attiva), area di notifica e avvio con Windows (facoltativi, spenti di default) |
 | Fuori | Widget, cartella sorvegliata, sblocco obbligatorio |
-| Build | Locale, su un PC Windows (ipotesi I5). Nessun pacchetto firmato, nessun installer pubblicato |
+| Build | Locale, su un PC Windows (decisione I5). Nessun pacchetto firmato, nessun installer pubblicato |
 | Alternativa | Electron con lo stesso pacchetto web, se la prova C di C0 fallisce |
 
 ## 7.6 Interfaccia su più larghezze

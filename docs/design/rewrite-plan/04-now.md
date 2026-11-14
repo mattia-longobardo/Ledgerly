@@ -61,7 +61,7 @@ Regole del runtime minimo:
 | Errori | Classe e stato HTTP da una lista chiusa. Mai il messaggio grezzo del provider |
 | Versione | Il core accetta la versione corrente del contratto e la precedente |
 | Installazione | Solo l'admin: aggiunge il servizio al compose e registra l'indirizzo nel tab Plugin. Il core non riceve il socket Docker |
-| Uscita verso internet | Dichiarata nel manifest. Limitazione agli host dichiarati: ipotesi I8, in R5c |
+| Uscita verso internet | Dichiarata nel manifest. Limitazione agli host dichiarati: decisione I8, in R5c |
 
 Cosa **non** entra in N1: catalogo, plugin fuori catalogo, aggiornamento e rimozione dall'interfaccia, Wallet e Trek come plugin. Arrivano in R5c.
 

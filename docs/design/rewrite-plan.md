@@ -1,6 +1,6 @@
 # Ledgerly · piano di riorganizzazione, riscrittura modulare e app multipiattaforma
 
-Stato: **bozza in attesa dell'OK di Mattia**. Nessuno sviluppo parte prima di questo OK.
+Stato: **approvato da Mattia il 14/11/2026**. L'OK sblocca N0: ogni rilascio parte da un'issue nuova.
 Base del codice e dell'audit: `main` a `5fbbdbc` (13/11/2026), tag `v0.10.1`. Dopo l'audit: `v0.10.2` (`86e3d43`), solo la
 correzione del difetto BUD-1.
 Decisioni: approvate da Mattia il 13/11/2026, dopo il brainstorming delle tre fasi (prodotto, architettura, app).
@@ -42,7 +42,7 @@ dice quali punti di `investments.md`, `investments-ux.md` e `funds-ux.md` sono s
 | 6 | [`06-data.md`](rewrite-plan/06-data.md) | Migrazioni previste, regola di compatibilità, dump, test «stessi numeri» |
 | 7 | [`07-apps.md`](rewrite-plan/07-apps.md) | App Android e Windows, senza distribuzione |
 | 8 | [`08-agents.md`](rewrite-plan/08-agents.md) | Agenti: ruoli, confini dei pacchetti, ordine, verifica dei rilasci senza review del codice, secondo agente, secondo database di test |
-| 9 | [`09-risks.md`](rewrite-plan/09-risks.md) | Rischi, ipotesi aperte, ipotesi da confermare e punti decisi il 14/11/2026 |
+| 9 | [`09-risks.md`](rewrite-plan/09-risks.md) | Rischi, ipotesi aperte, ipotesi confermate e punti decisi il 14/11/2026 |
 | 10 | [`10-modularity.md`](rewrite-plan/10-modularity.md) | Obiettivo e priorità, pacchetti e moduli di arrivo (responsabilità, interfaccia, dipendenze), mappa delle dipendenze, accoppiamenti da sciogliere, regole con controllo automatico, duplicazione, pulizia, prestazioni, prova di comportamento invariato |
 
 ## Premesse
@@ -144,10 +144,10 @@ I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`
 
 ## OK richiesti a Mattia
 
-1. **Questo piano.** Sblocca N0.
+1. **Questo piano.** Sblocca N0. Dato il 14/11/2026.
 2. **Un OK per ogni rilascio con un criterio §6**, sul singolo SHA, prima del deploy (colonna «OK di Mattia»).
-3. **Le ipotesi da confermare** di [`09-risks.md`](rewrite-plan/09-risks.md) §9.3. Se Mattia non risponde, vale il default scritto lì.
-   Nuove dal 14/11/2026: I14-I19.
+3. **Le ipotesi da confermare** di [`09-risks.md`](rewrite-plan/09-risks.md) §9.3. Confermate il 14/11/2026 con il default
+   scritto lì: ora sono decisioni ([`01-decisions.md`](rewrite-plan/01-decisions.md) §1.0, H7-H11).
 4. **Passi che solo Mattia può fare:** applicazione Enable Banking di tipo Production e accesso alla banca (N1); chiave
    gratuita EODHD (R5d); installazione dell'APK sul telefono (C1); build su un PC Windows (C4).
 5. **Ogni eccezione alle priorità:** un guadagno di velocità che costa modularità o leggibilità, prima del commit

@@ -56,7 +56,7 @@ flowchart LR
 
 ## 6.3 Dump dei rilasci
 
-Proposta (ipotesi I1: Mattia conferma il percorso con l'OK al piano).
+Percorso confermato da Mattia con l'OK al piano del 14/11/2026 (decisione I1).
 
 | Punto | Proposta |
 |---|---|

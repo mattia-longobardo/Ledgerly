@@ -12,7 +12,7 @@ Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 | Design | UX/UI Designer | Specifica di ogni schermata nuova prima dello sviluppo (N1, N2, N3, N5, R5), token, controllo delle schermate fatte | Non scrive codice di prodotto, non fa deploy |
 | Pacchetti di terzi | Security Gatekeeper | Via libera a ogni strumento o pacchetto nuovo, prima dell'installazione | — |
 | Immagini | Image Studio | Icona dell'app e delle notifiche | — |
-| Review finale unica | Security Reviewer per la sicurezza; un agente di review scelto dall'orchestratore per il codice (ipotesi I17) | Una sola review, finale, quando Mattia dichiara tutto completo: codice e sicurezza | Nessuna review prima della fine |
+| Review finale unica | Security Reviewer per la sicurezza; un agente di review scelto dall'orchestratore per il codice (decisione I17) | Una sola review, finale, quando Mattia dichiara tutto completo: codice e sicurezza | Nessuna review prima della fine |
 
 ## 8.2 Confini dei pacchetti
 
@@ -228,7 +228,7 @@ sicurezza. I finding diventano correzioni con il loro rilascio.
 
 | Quando | Cosa approva |
 |---|---|
-| Ora | Questo piano e le ipotesi da confermare |
+| Dato il 14/11/2026 | Questo piano e le ipotesi di [`09-risks.md`](09-risks.md) §9.3 |
 | Ogni rilascio con un criterio §6 | Il singolo SHA, prima del deploy |
 | Ogni decisione di prodotto non scritta qui | Prima dello sviluppo |
 | Ogni eccezione alle priorità: velocità che costa modularità o leggibilità ([`10-modularity.md`](10-modularity.md) §10.9.3) | Prima del commit |

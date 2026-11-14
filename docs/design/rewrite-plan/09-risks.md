@@ -1,4 +1,4 @@
-# 9. Rischi, ipotesi aperte, ipotesi da confermare
+# 9. Rischi, ipotesi aperte, ipotesi confermate
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
@@ -6,7 +6,7 @@ Tre elenchi:
 
 - §9.1 **Ipotesi aperte**: fatti non ancora misurati. Ognuna ha il passo che la chiude e cosa succede se è falsa.
 - §9.2 **Rischi** del piano, con la mitigazione.
-- §9.3 **Ipotesi da confermare**: scelte che mancavano nelle decisioni. Il piano applica un default. Mattia le conferma con l'OK al piano, o le cambia.
+- §9.3 **Ipotesi confermate il 14/11/2026**: scelte che mancavano nelle decisioni. Mattia le ha confermate con l'OK al piano: vale il default.
 - §9.5 **Punti decisi il 14/11/2026**: erano ipotesi da confermare, ora sono decisioni di Mattia.
 
 ## 9.1 Ipotesi aperte
@@ -52,18 +52,20 @@ Tre elenchi:
 | R-16 | Solo 4 movimenti hanno una categoria corretta a mano: le etichette sono quelle di Wallet | Rumore nell'addestramento | L'app propone l'unione delle categorie doppie; la soglia si alza con le correzioni | N3 |
 | R-17 | Nessuna review del codice prima della fine (H6) | Un difetto di struttura si vede tardi; la review finale trova molto | Le regole di modularità e di pulizia sono controlli automatici nel gate; liste note che possono solo accorciarsi; verifica dell'orchestratore sugli esiti; prova di comportamento invariato a ogni commit | [`10-modularity.md`](10-modularity.md) §10.6, §10.8, §10.10; [`08-agents.md`](08-agents.md) §8.5 |
 | R-18 | Una regola automatica si aggira: si rispetta la lettera e non lo scopo (esempio: un file diviso in due senza una responsabilità chiara) | Modularità solo apparente | Responsabilità e interfaccia di ogni modulo scritte prima (§10.3); file di riferimento degli export (M7); misura dei duplicati; review finale del codice contro le tre priorità | [`10-modularity.md`](10-modularity.md) |
-| R-19 | Le soglie di dimensione e complessità sono troppo strette o troppo larghe | Divisioni forzate, oppure regola inutile | Soglie come ipotesi (I15); prima misura in R0; una modifica alle soglie è una decisione di Mattia | R0 |
+| R-19 | Le soglie di dimensione e complessità sono troppo strette o troppo larghe | Divisioni forzate, oppure regola inutile | Soglie confermate (decisione I15); prima misura in R0; una modifica alle soglie è una decisione di Mattia | R0 |
 | R-20 | Le misure di tempo sono instabili sul server condiviso | Falsi allarmi nel gate G9 | Mediana su 5 esecuzioni, margine del 10%, e il numero di query come misura senza rumore | [`10-modularity.md`](10-modularity.md) §10.9 |
 | R-21 | Porte ed eventi al posto degli import diretti aggiungono un passaggio | Codice più lungo da seguire; una scrittura in due moduli non è più in una sola transazione | Una porta solo dove oggi c'è un ciclo o una direzione sbagliata (§10.5); gli eventi di dominio girano nella stessa transazione di chi li emette, salvo i job | R2 |
 | R-22 | Le regole nuove rallentano i rilasci N1-N5, che lavorano sul codice attuale | Lavoro in più prima della riscrittura | Prima di R0 vale solo «non peggiora»: nessuna violazione nuova rispetto alle liste note | N0-N5 |
 
-## 9.3 Ipotesi da confermare
+## 9.3 Ipotesi confermate il 14/11/2026
 
-Le decisioni approvate non coprono questi punti. Il piano usa il default. Con l'OK al piano il default è confermato.
+Le decisioni del 13/11/2026 non coprivano questi punti. Mattia ha approvato il piano il 14/11/2026: il default di ogni
+riga è una decisione confermata ([`01-decisions.md`](01-decisions.md) §1.0, H7). Mattia ha confermato in modo esplicito
+I15, I16, I17 e I18 (H8-H11). La colonna «Alternativa» elenca le scelte scartate.
 
 **Scelte del piano**
 
-| # | Punto | Default del piano | Alternativa |
+| # | Punto | Decisione (default del piano) | Alternativa scartata |
 |---|---|---|---|
 | I1 | Percorso dei dump | `/home/mattia/docker/projects/Ledgerly-dumps/`, ultimi 5 rilasci ([`06-data.md`](06-data.md) §6.3) | Un altro nome sotto `projects/` |
 | I2 | Rotta di ritorno dalla banca | `/api/v1/plugins/<id>/callback`, come già registrato nell'applicazione di prova. È l'unica rotta sotto `/api/v1` che usa la sessione del browser e non un token: resta fuori dal contratto OpenAPI | `/api/plugins/<id>/callback`, fuori da `/api/v1`. Chiede una registrazione diversa nell'applicazione Production |
