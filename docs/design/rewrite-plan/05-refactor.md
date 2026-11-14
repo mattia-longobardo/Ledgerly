@@ -55,6 +55,10 @@ Per ogni modulo: passo R2 (filone server: contratto, rotte, refactor del dominio
 dati, componenti condivisi, cancellazione delle azioni). Il filone client lavora un modulo dietro al filone server.
 Dal più semplice al più delicato: i due motori di rendimento arrivano per ultimi, quando le primitive sono già provate.
 
+Revisione sulla standardizzazione (in attesa dell'OK di Mattia): l'ordine non cambia. N6 unifica il modulo `funds`
+prima di R0: il refactor trova un solo motore dei fondi. I punti di estensione E1-E8 entrano nel passo del loro modulo
+([`10-modularity.md`](10-modularity.md) §10.11); la parte che cambia il comportamento è in R5g.
+
 ## 5.3 R0 · refactor trasversale (nessun numero cambia)
 
 | Lavoro | Voci chiuse |
@@ -128,17 +132,18 @@ con una decisione di Mattia (D = [`09-risks.md`](09-risks.md) §9.5, decise il 1
 | Modulo | R2 | R3 | Voci | Rinviato |
 |---|---|---|---|---|
 | timeoff | Una formula del residuo con `basis` esplicito; porta `LeaveCalendarSync`; evento `LeaveChanged`; impostazioni ferie nel modulo; `GET /timeoff/:year` su `timeOffView`; un solo file di azioni fino a R3 | Pannello di N5 in `packages/ui`; `MonthGrid` condiviso con il selettore di intervallo; `KindCard` con slot; mutazione ottimistica | TOF-1, TOF-3…TOF-7, UI-TOF-2…UI-TOF-6 | TOF-2 (colonne e vocabolario Trek) → R5c e R5f |
-| payroll | Evento `PayslipApplied`: payroll emette la competenza, funds decide trimestre e scrittura; contratto `LeaveBalanceSource` con un solo vocabolario dei tipi; rotte di lettura e di revisione | `DataTable` con intestazione fissa; polling del documento; `StatusBadge`; originale PDF con URL firmato | PAY-5, PAY-6, PAY-8, FND-11, UI-PAY-1…UI-PAY-4 | PAY-9 (profilo unico del parser): resta, annotato |
+| payroll | Evento `PayslipApplied`: payroll emette la competenza, funds decide trimestre e scrittura; contratto `LeaveBalanceSource` con un solo vocabolario dei tipi; rotte di lettura e di revisione | `DataTable` con intestazione fissa; polling del documento; `StatusBadge`; originale PDF con URL firmato | PAY-5, PAY-6, PAY-8, FND-11, UI-PAY-1…UI-PAY-4 | PAY-9 (profilo unico del parser) → R5g: profili dichiarativi dietro il registro dei lettori (E1). In R2: evento con righe per ruolo, senza regole del fondo in payroll |
 | imports | Registro `DocumentKind → { formati, cartella, parser }`; pipeline unica `claim → read → parse → evidence → needs_review`; un caso d'uso `uploadDocuments(kind, files)`; `saveEvidence` a blocchi | Upload multipart; selettore di file per piattaforma | IMP-1, IMP-2, IMP-4, IMP-5, PAY-2, PAY-3, API-4, UI-FND-6 | — |
 
 ### funds
 
 | Passo | Lavoro | Voci |
 |---|---|---|
-| R2 | Resta solo il motore di periodo (`period.ts` + `home.ts`); export e riga dei fondi leggono quello; una funzione `pensionFlows` da cui deriva il «versato»; un servizio `fundValueAt` sulle letture documentate; `moneyWeighted` del dominio comune; una regola «il giorno 1 chiude il mese prima» con il suo inverso; helper condivisi; rotte per le 26 azioni e per le letture | FND-1, FND-3, FND-4, FND-6, FND-10, FND-12 (parte dominio) |
+| N6 (prima del refactor) | Fondo pensione unico: sorgenti di contributo, commissioni generiche, registro unico, `fundFlows`, pagina unica, lettore dietro l'interfaccia. Via il motore vecchio e il codice del PAC ([`11-standardization.md`](11-standardization.md) §11.2) | FND-1, FND-2, FND-3 (motori e «versato»); voci nuove OT-1, OT-10, OT-11 |
+| R2 | Resta solo il motore di periodo (`period.ts` + `home.ts`); export e riga dei fondi leggono quello; una funzione `fundFlows` da cui deriva il «versato» (da N6); la sorgente `payroll` riceve l'evento `PayslipApplied` e decide componente e periodo; lettore dei documenti nel registro di `documents`; un servizio `fundValueAt` sulle letture documentate; `moneyWeighted` del dominio comune; una regola «il giorno 1 chiude il mese prima» con il suo inverso; helper condivisi; rotte per le 26 azioni e per le letture | FND-1, FND-3, FND-4, FND-6, FND-10, FND-12 (parte dominio) |
 | R3 | `PortfolioDetail` condiviso con investments; una route per tab; `KpiTile` unico; tabelle su `DataTable` con una sola soglia; un file per flusso | UI-FND-1…UI-FND-5, FND-9, FND-12 |
 | Decisione (presa) | FND-1 (quale motore è il riferimento per export e riga dei fondi), FND-2 (`transfer_in` nel «versato»), FND-3 (valore del fondo a oggi) | D8 |
-| Vincolo | I numeri delle pagine Funds di oggi sono il riferimento. Nessuna migrazione dei dati dei fondi | — |
+| Vincolo | I numeri delle pagine Funds di oggi sono il riferimento. I dati dei fondi migrano una sola volta, in N6 (H12). Dopo N6 il refactor non migra dati dei fondi. Eccezioni dichiarate: X1-X3 | — |
 
 ### investments
 

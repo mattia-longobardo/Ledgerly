@@ -147,3 +147,53 @@ modulo, con un commit separato e un test.
 | BUD-1 | `stopLimit` scrive la riga `stopped` senza `accountId` (`src/modules/budgets/service.ts:106-113`) | Un budget per conto si ferma sull'ambito sbagliato. **Corretto** (H4) in `main` a `86e3d43`, tag `v0.10.2`, con un test di integrazione. Le righe già scritte non sono toccate |
 | FND-2 | Una delle tre funzioni del «versato» esclude `transfer_in` (`src/modules/funds/queries.ts:96`) | Export e riga «Fondi» di Investments possono differire dalle pagine Funds |
 | JOB-2 | Una riga `running` rimasta dopo un riavvio non viene mai chiusa (`src/platform/jobs/housekeeping.ts:18-23`) | 4 righe ferme in produzione. Si chiude in N2 e R1 |
+
+## 2.6 Voci nuove della revisione sulla standardizzazione
+
+Revisione in attesa dell'OK di Mattia (decisione H17). Base: `main` a `9be59db`, sola lettura, nessun test eseguito.
+Sono solo voci **non** presenti nei tre file di dettaglio. I totali di §2.0 e §2.1 restano quelli dell'audit di
+`5fbbdbc`. Voci nuove: 28 (14 di priorità 1, 12 di priorità 2, 2 di priorità 3).
+
+La logica su misura per fornitore, fondo, datore o paese è un elenco a parte, con meccanismo standard e rilascio:
+[`11-standardization.md`](11-standardization.md) §11.5.
+
+**Prodotto e interfaccia** (`OP-1`…`OP-16`)
+
+| ID | P | Voce | Dove | Proposta | Rilascio che la chiude |
+|---|---|---|---|---|---|
+| OP-1 | 2 | Tre parole per «movimento»: «Expenses» (pagina e menu), «Transactions» (tab del conto), «Movements» (mail e dialog). La pagina contiene anche entrate e giroconti | `messages/en.json:1457`, `:80`, `:1635` | Una parola nel glossario | R5a |
+| OP-2 | 2 | «Connection» ha due significati: addebiti di un conto e collegamento a un fornitore. In più: «provider», «service», «integration» | `messages/en.json:1648`; `src/app/(app)/settings/integrations/page.tsx:80` | «Collegamento» per il legame, «sorgente» per il fornitore | R5a |
+| OP-3 | 1 | Stati diversi per la stessa idea: `active/paused/cancelled`, `active/paused/archived`, `active/paused`, `active/archived` | `src/modules/subscriptions/rules.ts:7`; `src/modules/pockets/rules.ts:5`; `src/modules/interests/rules.ts:8`; `src/modules/funds/rules.ts:5` | Un tipo comune in `shared`: attivo · in pausa · concluso. I valori salvati non cambiano | R2 (tipo, per modulo); R5a (etichette) |
+| OP-4 | 1 | «Connections» del conto duplica Subscriptions: la prima è scritta a mano, la seconda rilevata | `src/modules/accounts/rules.ts:31` | Una sola lista, in Subscriptions, con il filtro per conto (ipotesi ST-13) | R5a; R5f (tabella) |
+| OP-5 | 1 | Tre regole «il beneficiario contiene…»: versamenti dei fondi, abbonamenti, interessi | `src/modules/funds/schema.ts:173-199`; `src/modules/subscriptions/rules.ts:170`; `messages/en.json:2203` | Un abbinatore di movimenti (E7) e un componente «Collega a un movimento» | R2 (transactions); R3 (componente) |
+| OP-6 | 2 | Tre parole per la ricorrenza: «Billing», «Payout», «Accrues on»; «Accrual» significa tre cose | `messages/en.json:2076`, `:2198`, `:1879`, `:1823`, `:2150` | Un controllo «Frequenza» con le stesse opzioni (estende UI-INT-1) | R3 (`RecurrenceField`); R5a (testi) |
+| OP-7 | 1 | Creazione con forme diverse: conto = pagina intera; budget e fondo = dialog | `src/app/(app)/accounts/new/page.tsx:20`; `src/modules/budgets/ui/add-budget.tsx:69` | Una forma: dialog a passi, campi facoltativi dopo (estende UI-DS-11) | R3 |
+| OP-8 | 2 | Il conto nuovo chiede 8 campi | `src/modules/accounts/ui/account-form.tsx:71-110` | 4 campi: nome, tipo, valuta, saldo. Il resto in Impostazioni | R5b |
+| OP-9 | 2 | Stati vuoti con uscite diverse: Overview porta a «Aggiungi conto», Expenses a una scheda tecnica | `src/app/(app)/page.tsx:44-46`; `src/app/(app)/expenses/page.tsx:230` | Regola: ogni stato vuoto offre per prima l'azione manuale | N3 (Expenses); R3 (regola) |
+| OP-10 | 2 | «Archive» e «Remove» quasi uguali sul conto; «Remove» archivia o cancella secondo riferimenti nascosti | `src/modules/accounts/ui/settings-form.tsx:117-140` | Un'azione con l'esito scritto prima della conferma | R5b |
+| OP-11 | 2 | La ricerca rapida trova solo pockets, fondi e abbonamenti | `src/app/(app)/palette-actions.ts:19-23` | Aggiungere conti, movimenti, budget, categorie | R5a |
+| OP-12 | 1 | Scelte di notifica in tre posti: per budget, in Profile, per conto | `src/modules/budgets/jobs.ts:72`; `messages/en.json:1620` | Una pagina «Avvisi» | R5e |
+| OP-13 | 2 | Payroll e Time Off usano parole diverse per le stesse assenze; giorni e ore nella stessa pagina | `messages/en.json:4144`, `:4542`, `:4474`, `:4487` | Nomi dai tipi di assenza dell'utente; un'unità per tipo | R5g |
+| OP-14 | 2 | La revisione della busta paga mostra parole del lettore («TRATTENUTE CORPO», «Line 8003») | `messages/en.json:4237`, `:4370` | Testi del profilo, non del core | R5g |
+| OP-15 | 1 | Dettaglio con forme diverse: Pockets e Interests hanno una pagina `[id]`; Subscriptions una pagina sola con dialog | `src/app/(app)/pockets`, `src/app/(app)/subscriptions` | Regola unica: lista più pagina di dettaglio quando l'oggetto ha uno storico | R3 |
+| OP-16 | 1 | Tolleranza di Subscriptions dichiarata due volte | `src/app/(app)/subscriptions/page.tsx:26`; `src/modules/subscriptions/schema.ts:47` | Un solo valore | R2 (subscriptions) |
+
+**Codice e dati** (`OT-1`…`OT-12`)
+
+| ID | P | Voce | Dove | Proposta | Rilascio che la chiude |
+|---|---|---|---|---|---|
+| OT-1 | 1 | Due servizi di creazione e due file di azioni per lo stesso oggetto (il fondo) | `src/modules/funds/service.ts:120-151`; `src/modules/funds/pension/service.ts:106-158`; `src/modules/funds/actions.ts`; `src/modules/funds/pension/actions.ts` | Un servizio `createFund` con le sorgenti | N6 |
+| OT-2 | 1 | Check DB generati da liste TypeScript sui vocabolari aperti (tipo di documento, fonte festiva, fonte di cambio, tipi di sync ed entità, prodotti): un'estensione non può aggiungere un valore senza una migrazione | `src/modules/imports/schema.ts:65`; `src/platform/holidays/schema.ts:61`; `src/platform/fx/schema.ts:28` | Check di formato più registro (regola M13) | N6 (tipo di documento); R2 (per modulo); R5f |
+| OT-3 | 1 | Chiavi di traduzione costruite a runtime con lo slug del fornitore o del tipo, con cast | `messages/it.json:3585-3607`; `src/modules/investments/ui/dialogs.tsx:984`, `:1050-1051`, `:1119-1122`; `src/modules/funds/ui/fund-valuations.tsx:315` | Testi dal descrittore (E5; regola M14) | N6 (funds); R3 (investments) |
+| OT-4 | 1 | Due liste dello stesso concetto («va a Trek»), con un difetto probabile | `src/modules/timeoff/actions.ts:112-113`; `src/modules/timeoff/rules.ts:38` | Una lista; test (ipotesi ST-23) | N5 |
+| OT-5 | 1 | Ogni lettura di un fondo pensione carica tutta la mappa dei codici e tutte le buste paga di payroll | `src/modules/funds/pension/queries.ts:160-178` | Con l'evento `PayslipApplied` il fondo ha già i suoi dati | R2 (payroll, funds) |
+| OT-6 | 1 | Indirizzo e formato della chiave del servizio AI dichiarati in 3 punti | `src/modules/payroll/llm.ts:11`; `src/platform/settings/llm-probe.ts:19`; `src/platform/settings/service.ts:48-58` | Un solo client, con l'indirizzo dalle impostazioni (E8) | R2 (users e impostazioni) |
+| OT-7 | 1 | Mappa lingua → locale ripetuta in 5 file | `src/modules/users/rules.ts:26-27`; `src/modules/subscriptions/ui/present.ts:99`; `src/modules/timeoff/ui/settings-forms.tsx:191`; `src/app/(app)/settings/profile/preferences-form.tsx:42`; `src/app/(app)/settings/integrations/schedule-control.tsx:152` | Una funzione in `shared` | R0 |
+| OT-8 | 2 | Codice e testi senza uso (`isHoliday`, `isBookable`, chiavi dei tipi di fondo); commento «impostazione dell'admin» su una costante | `src/platform/holidays/rules.ts:100-107`; `messages/it.json:3243-3249`; `src/modules/imports/rules.ts:70` | Rimozione; commento corretto | R0 |
+| OT-9 | 2 | Il commento dice «24 mesi per ccxt», la costante vale 365 giorni. Non verificato quale è in vigore | `src/platform/integrations/investments/source.ts:119`; `src/platform/integrations/ccxt/binance.ts:1186` | Verifica con un test; una sola costante dichiarata dal descrittore | R2 (investments) |
+| OT-10 | 2 | Indirizzi di un sito esterno salvati come dati di ogni fondo | `src/modules/funds/pension/rules.ts:95-101` | Nel modello di fondo | N6 |
+| OT-11 | 3 | La lettura della tariffa esegue un `INSERT … on conflict do nothing` di 13 righe a ogni lettura di un fondo pensione | `src/modules/funds/pension/service.ts:90-97` | Sparisce con `fund_fees` | N6 |
+| OT-12 | 3 | Time Off legge saldi ed eventi di payroll a ogni vista per decidere «goduto» | `src/modules/timeoff/queries.ts:129-155` | Con `LeaveBalanceSource` il saldo arriva già calcolato; misura prima e dopo | R2 (payroll) |
+
+Limiti di questa analisi: i riferimenti di riga sono di `9be59db`; non sono letti per intero `sync.ts` di investments,
+le cartelle dei provider e le migrazioni SQL. OT-4 e OT-9 chiedono un test prima di ogni correzione.

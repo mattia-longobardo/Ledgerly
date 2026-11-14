@@ -3,7 +3,9 @@
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**. Dove §1.0 e una decisione
-più vecchia dicono cose diverse, vale §1.0. La colonna «Sostituisce» cita i documenti esistenti,
+più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H17 (standardizzazione) sono di Mattia; rilasci e default
+che le applicano sono una revisione **in attesa del suo OK** ([`11-standardization.md`](11-standardization.md)). Le
+righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
 che non vengono modificati: dove questo registro e un documento più vecchio dicono cose diverse, vale questo registro.
 La colonna «Rilascio» rimanda a [`03-releases.md`](03-releases.md).
 
@@ -25,6 +27,24 @@ Dettaglio, regole e controlli: [`10-modularity.md`](10-modularity.md).
 | H10 | **Review finale unica in due parti** (I17), confermata in modo esplicito: un solo passo Z con il codice (un agente di review scelto dall'orchestratore) e la sicurezza (Security Reviewer) | L'ipotesi I17 | Z |
 | H11 | **Nessun pacchetto nuovo per le misure** (I18), confermato in modo esplicito: duplicati, codice morto, complessità e cicli si misurano con script propri sullo scanner di `typescript`, regole del nucleo di ESLint e `architecture.test.ts` esteso. Strumenti di terzi solo come alternativa, dopo il gate del Security Gatekeeper | L'ipotesi I18 | N0, R0 |
 
+### Standardizzazione (seconda decisione del 14/11/2026)
+
+Mattia ha riguardato la pagina Funds: per aggiungere un fondo come Cometa o Fideuram serve una pagina su misura.
+Dettaglio, modelli e rilasci: [`11-standardization.md`](11-standardization.md). Punti di estensione comuni:
+[`10-modularity.md`](10-modularity.md) §10.11.
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H12 | **Fondo pensione unico.** Cometa e Fideuram sono tutti e due fondi pensione. Il tipo «PAC» sparisce da Funds: un solo modello, un solo motore, una sola serie di schermate | B1 per il numero e i nomi dei gruppi della home; la riga «Nessuna migrazione dei dati dei fondi, in nessun rilascio» di `06-data.md` §6.1 e di `05-refactor.md` §5.5; `funds-ux.md` per la sola distinzione tra i due tipi (KPI, periodo e direzione A restano) | N6 |
+| H13 | **Un PAC è un acquisto periodico di strumenti finanziari.** È una funzione del Portafoglio manuale: «Piano di acquisto» | La regola «un PAC resta un fondo con il suo piano» (proposte tecniche della fase 1, §4.4). Estende B3 | R5d, secondo passo |
+| H14 | Un fondo pensione può essere legato al **TFR** oppure a un **contributo volontario**: sorgenti di contributo configurabili | Il legame fisso «un fondo riceve la busta paga»; il piano mensile fisso del PAC | N6 |
+| H15 | Le **commissioni sono generiche e impostabili**: una lista per fondo | Le 4 colonne di commissione e il tariffario per gestore nel codice | N6 |
+| H16 | **Regola generale:** nessuna funzione richiede codice o una pagina su misura per un fornitore, una banca, un fondo o un datore di lavoro. Aggiungere un fondo nuovo non richiede una pagina custom | Estende C4, F6 e H1 (modularità): vale anche per lettori di documenti, tipi di assenza, regole per paese, descrittori dei fornitori | N1, N2, N5, N6, R0-R3, R5 |
+| H17 | Il piano comprende, oltre ai miglioramenti già segnati, **tutte le altre ottimizzazioni utili all'obiettivo**, nell'ordine di H1: modularità, poi pulizia, poi prestazioni | Estende l'audit: 28 voci nuove ([`02-audit.md`](02-audit.md) §2.6) | Il rilascio di ogni voce |
+
+Effetto di H12-H17 su H3 («comportamento invariato»): N6 e R5g sono cambi voluti, con i loro criteri di accettazione.
+Le sole differenze di numeri in più sono X1-X3 ([`11-standardization.md`](11-standardization.md) §11.2.5).
+
 ## 1.1 Premesse
 
 | ID | Decisione | Sostituisce | Rilascio |
@@ -40,11 +60,11 @@ Dettaglio, regole e controlli: [`10-modularity.md`](10-modularity.md).
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
 | A3 | Ordine Z: prima, sul codice attuale, le sorgenti dati e Time Off. Il resto nella riscrittura | — | N1-N5, poi R0-R5 |
-| B1 | Investments: una home con 3 gruppi («Azioni e crypto», «Fondi e PAC», «Pensione»). Fusione solo di modello di lettura e interfaccia. Nessuna migrazione dei dati dei fondi | `investments-ux.md` §9 decisione 4 («totale solo servizi») e i suoi effetti in §3.1 e §8; `investments-ux.md` §1.1 (mappa delle pagine); `funds-ux.md` §6 direzione A e §10 solo per la home (il dettaglio del fondo resta) | R5b |
+| B1 (rev.) | Investments: una home con **2 gruppi**: «Azioni e crypto» e «Fondi pensione». I nomi sono un'ipotesi da confermare (ST-2). I conti con solo valore stanno nel primo gruppo. Fusione di modello di lettura e interfaccia. I dati dei fondi sono già nel modello unico da N6 (H12). Versione del 13/11/2026, sostituita: 3 gruppi («Azioni e crypto», gruppo dei fondi e dei piani di accumulo, «Pensione»), senza migrazione dei dati dei fondi | `investments-ux.md` §9 decisione 4 («totale solo servizi») e i suoi effetti in §3.1 e §8; `investments-ux.md` §1.1 (mappa delle pagine); `funds-ux.md` §6 direzione A e §10 solo per la home (il dettaglio del fondo resta) | R5b |
 | B1b | I fondi passano a `/investments/[id]`; `/funds/*` risponde con un redirect permanente. La voce di menu «Funds» sparisce | `funds-ux.md` §10-§13 per gli URL | R5b |
-| B1c | Niente «coming soon» e niente catalogo: dialog «Aggiungi investimento» a 3 scelte | `investments.md` §1.1 (D5 per le voci `planned`, D12 catalogo statico), §4.2; `investments-ux.md` §3.7 | R5b |
+| B1c | Niente «coming soon» e niente catalogo: dialog «Aggiungi investimento» a 3 scelte. (rev.) Nomi delle scelte: «Collega un servizio», «Segui i tuoi titoli a mano», «Fondo pensione» (ipotesi ST-3) | `investments.md` §1.1 (D5 per le voci `planned`, D12 catalogo statico), §4.2; `investments-ux.md` §3.7 | R5b |
 | B2 | La pensione entra nel totale. Tutti i conti di investimento sono visibili in Investments, anche senza sync | `investments-ux.md` §9 decisione 4; `investments.md` §4.1 | R5b |
-| B3 | Tracking manuale: servizio «Portafoglio manuale», modulo unico «Registra operazione» con ricerca per ISIN | `investments.md` §4.4 (inserimento manuale degli asset); estende §2.6 (conto manuale, solo valore): il servizio nuovo è separato | R5d |
+| B3 | Tracking manuale: servizio «Portafoglio manuale», modulo unico «Registra operazione» con ricerca per ISIN. (rev.) Esteso da H13: «Piano di acquisto» come secondo passo di R5d | `investments.md` §4.4 (inserimento manuale degli asset); estende §2.6 (conto manuale, solo valore): il servizio nuovo è separato | R5d |
 | B4 | Fonti: OpenFIGI + ESMA FIRDS per l'anagrafica; EODHD, BCE, CoinGecko per i prezzi; altre fonti solo come plugin | `investments.md` §6 e D9 (prezzi solo con copertura ≥ 90% del valore): la regola diventa «per strumento» | R5d |
 | S3 | Mercato del prezzo: quello dell'ordine, Xetra di riserva | `investments.md` §6 | R5d |
 | C1 | Sorgenti bancarie: di default nessuna sync. Enable Banking, Wallet e Trek sono plugin e possono stare insieme | `investments.md` §3.1 solo per l'elenco chiuso dei provider | N1, R5c |
@@ -68,7 +88,7 @@ Dettaglio, regole e controlli: [`10-modularity.md`](10-modularity.md).
 | D2 | Menu a 3 gruppi («Ogni giorno», «Risparmi e investimenti», «Lavoro»), moduli attivabili, primo avvio guidato | — | R5a |
 | D2d | Tab mobile: Overview · Accounts · Expenses · Investments · More | — | R5a |
 | D3 | Settings: tab Finance e tab Plugin. Integrations e Categories spariscono | `investments.md` §4.2 | R5a |
-| O1 | Overview: lista dei conti a gruppi, subtotale = riquadro. Mostra anche i conti di investimento | — | R5b |
+| O1 | Overview: lista dei conti a gruppi, subtotale = riquadro. Mostra anche i conti di investimento. (rev.) Il gruppo degli investimenti ha i 2 sottogruppi di B1 | — | R5b |
 
 ## 1.3 Architettura (fase 2)
 
@@ -107,7 +127,7 @@ Dettaglio, regole e controlli: [`10-modularity.md`](10-modularity.md).
 | Decisione | Documento | Nota |
 |---|---|---|
 | Regole di calcolo del P&L: Modified Dietz, XIRR nel tooltip, costo medio ponderato, taglio a 12 mesi | `investments-ux.md` §4 | Non cambiano risultato (F1b) |
-| Fondi: direzione A nel dettaglio, lettura del 1° gennaio, soglia di 31 giorni, proiezione | `funds-ux.md` §9 | Restano nel dettaglio del fondo |
+| Fondi: direzione A nel dettaglio, lettura del 1° gennaio, soglia di 31 giorni, proiezione | `funds-ux.md` §9 | Restano nel dettaglio del fondo. Valgono per ogni fondo pensione (H12) |
 | Un solo scrittore per conto (`portfolio`) | `investments.md` §2.3, D3 | Vincolo di B1 e B3 |
 | Conto manuale: solo «Aggiorna valore» | `investments.md` §2.6 | Resta. Il Portafoglio manuale è un servizio diverso (B3) |
 | Regole sui segreti: mai in log, API, MCP, export | `investments.md` §5.1 | Estese a plugin, Wallet e Trek |
@@ -123,7 +143,7 @@ Mattia ha approvato «il resto va bene»: valgono i default dei documenti di bra
 | Preavviso del rinnovo della banca | 14 e 3 giorni, in app e per email |
 | Letture automatiche Enable Banking | 3 al giorno, più «Sincronizza ora» |
 | Movimenti in sospeso | Esclusi: solo contabilizzati (`BOOK`) |
-| Interessi pubblicati su Wallet | Finiscono per i conti passati a Enable Banking; l'accredito arriva dalla banca |
+| Interessi pubblicati su Wallet | Finiscono per i conti passati a Enable Banking; l'accredito arriva dalla banca. (rev.) Con R5c finiscono per tutti i conti: ipotesi ST-14 |
 | Modello di categorizzazione | Salvato in PostgreSQL per utente; fuori da export, API e MCP; si ricostruisce |
 | Offline | Nessuna scrittura senza rete. Unica eccezione: un file condiviso in coda (Android) |
 | Compatibilità app-istanza | L'app sostiene i livelli API degli ultimi 6 mesi |

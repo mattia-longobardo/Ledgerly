@@ -1,6 +1,9 @@
 # 4. Lavoro «ora», prima di R0
 
-Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Rilasci: N0-N5 in [`03-releases.md`](03-releases.md).
+Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Rilasci: N0-N6 in [`03-releases.md`](03-releases.md).
+
+Revisione sulla standardizzazione (in attesa dell'OK di Mattia): tre anticipi senza cambio di comportamento in N1,
+N2 e N5 (§4.1, §4.3, §4.7) e il rilascio nuovo N6 (§4.8). Motivo e regola: [`11-standardization.md`](11-standardization.md).
 
 Questo lavoro si fa sul codice attuale (una sola app Next.js). Regola per limitare il lavoro doppio:
 
@@ -8,7 +11,7 @@ Questo lavoro si fa sul codice attuale (una sola app Next.js). Regola per limita
 |---|---|---|
 | Contratto dei plugin, kit di test, plugin Enable Banking | Sì, senza modifiche (HTTP) | In `plugins/` e in una cartella `src/platform/plugins/` senza import da Next.js |
 | Schema, dati, regole pure con i loro test (abbinamento, categorizzazione, stato del collegamento) | Sì: si spostano in `packages/domain` | Funzioni pure, servizi `(ctx, input)`, nessun import da `src/app` |
-| Schermate (tab Plugin, procedura della banca, «Da rivedere», pannello Time Off) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria: le Server Actions restano solo un involucro sottile, così R3 cambia solo l'involucro |
+| Schermate (tab Plugin, procedura della banca, «Da rivedere», pannello Time Off, fondo pensione unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria: le Server Actions restano solo un involucro sottile, così R3 cambia solo l'involucro |
 
 ## 4.1 Runtime minimo dei plugin (N1)
 
@@ -41,7 +44,7 @@ sequenceDiagram
 
 | Chiamata | Chi chiama | Scopo |
 |---|---|---|
-| `GET /manifest` | Core | `id`, `version`, `contract`, nomi e testi (en, it), `capabilities`, schema dei campi (`userSettings` per le credenziali dell'utente, campi del collegamento), host di uscita, pianificazione consigliata, «do categorie: sì o no» |
+| `GET /manifest` | Core | `id`, `version`, `contract`, nomi e testi (en, it), `capabilities`, schema dei campi (`userSettings` per le credenziali dell'utente, campi del collegamento), host di uscita, pianificazione consigliata, intervallo minimo tra due sync, «do categorie: sì o no» |
 | `POST /verify` | Core | Credenziali → `read-only`, `write`, `unverifiable` |
 | `POST /auth/start` | Core | Banca, paese, `state` → indirizzo dove mandare il browser |
 | `POST /auth/complete` | Core | `code` → sessione, `expiresAt`, conti |
@@ -62,6 +65,19 @@ Regole del runtime minimo:
 | Versione | Il core accetta la versione corrente del contratto e la precedente |
 | Installazione | Solo l'admin: aggiunge il servizio al compose e registra l'indirizzo nel tab Plugin. Il core non riceve il socket Docker |
 | Uscita verso internet | Dichiarata nel manifest. Limitazione agli host dichiarati: decisione I8, in R5c |
+
+**Anticipo AN2: lo schema del manifest nasce completo.** È il contratto: cambiarlo dopo tocca ogni plugin. In N1 lo
+schema ha già queste parti, anche dove Enable Banking non le usa. Nessun cambio di comportamento.
+
+| Parte del manifest | Contenuto | Serve a |
+|---|---|---|
+| Etichette | Nome del fornitore, testi dei passi di collegamento, testo di attestazione, nomi dei prodotti (en, it) | Nessun nome di fornitore nelle chiavi di traduzione del core (regola M14) |
+| Campi delle credenziali | Nome, tipo, obbligo, «solo scrittura», testo di aiuto | Le schede di Settings nascono dal manifest, non da una pagina per fornitore |
+| Intervallo minimo | Minuti tra due sync automatiche | Oggi è una costante motivata da un solo fornitore |
+| Capacità | Vocabolario aperto, controllato dal registro: `provider.write`, `categories`, `editRecord`, `deleteCategory`, `ledgerPosting`, `dailyRates`, `windowedHistory`, `totalOnlyHistory`, `costMethod`, `documents.read` | Il core chiede «il fornitore sa fare X?», non «il fornitore è Y?» |
+
+Lo stesso schema descrive i fornitori del core (eToro, Binance) da R2: punto di estensione E5
+([`10-modularity.md`](10-modularity.md) §10.11). Un valore di capacità che il core non conosce è ignorato, non rifiutato.
 
 Cosa **non** entra in N1: catalogo, plugin fuori catalogo, aggiornamento e rimozione dall'interfaccia, Wallet e Trek come plugin. Arrivano in R5c.
 
@@ -95,6 +111,11 @@ Cosa **non** entra in N1: catalogo, plugin fuori catalogo, aggiornamento e rimoz
 - Lo stato è una funzione pura del dominio, con un solo vocabolario. Chiude UI-ACC-1 (stato di sync composto a mano in 5 punti) per i punti toccati; gli altri si chiudono in R3.
 - Vale per tutti i collegamenti: plugin, Wallet, Trek, eToro, Binance.
 - Registro grezzo: Server › Diagnostica, solo admin, filtro per collegamento, 30 giorni.
+- **Anticipo AN3: chiavi di notifica generiche.** N2 riscrive questi avvisi. Le chiavi `wallet_sync_failed` e
+  `wallet_sync_stale` diventano `sync_failed` e `sync_stale`, con il fornitore come parametro. Un solo modello di
+  mail: «{collegamento} non sincronizzato». Per Mattia gli avvisi e i testi sono gli stessi. Oggi le chiavi
+  sono costanti del codice (`src/modules/transactions/jobs.ts:48-49`). Se una riga salvata le contiene, la migrazione
+  dei dati di N2 la porta alla chiave nuova: da verificare all'inizio di N2.
 
 ## 4.4 Categorizzazione automatica (N3)
 
@@ -163,8 +184,35 @@ flowchart TB
 - Chiude UI-TOF-1 e UI-TOF-2 (gesti e round trip per clic). Il pannello è un componente client senza lettura dati propria: in R3 passa a `packages/ui` senza riscrittura.
 - Il caso d'uso «scrivi un intervallo» è un servizio `(ctx, input)` nuovo nel modulo timeoff; R2 gli dà la rotta.
 - Trek non cambia: la sync parte come oggi dopo la scrittura.
+- **Anticipo AN1: i tipi di assenza arrivano da un elenco.** Il pannello non contiene nomi di tipo. Riceve un elenco
+  `{ id, nome, colore, ha un monte }` e lo mostra. In N5 l'elenco è costruito dai 5 tipi di oggi: nessun cambio di
+  schema e nessun cambio a schermo. In R5g l'elenco arriva dalla tabella `leave_types` senza riscrivere il pannello.
+- **Difetto probabile (ipotesi ST-23).** Due liste dicono quali tipi vanno a Trek: l'azione avvia la sync solo per
+  `vacation` e `comp` (`src/modules/timeoff/actions.ts:112-113`), le regole mandano anche `rol`
+  (`src/modules/timeoff/rules.ts:38`). Effetto atteso: un giorno ROL arriva a Trek solo alla sync successiva. Non è
+  verificato. N5 aggiunge un test; se fallisce, la correzione è un `fix` nello stesso rilascio: una sola lista.
 
-## 4.8 Cosa resta fuori da «ora»
+## 4.8 Fondo pensione standard (N6)
 
-Investments unificata, Portafoglio manuale, menu e moduli, tab Finance completo, Wallet e Trek come plugin, catalogo dei plugin:
+Dettaglio: [`11-standardization.md`](11-standardization.md) §11.2. Rilascio: [`03-releases.md`](03-releases.md), N6.
+
+Perché in fase A e non nella riscrittura: R0, R2 e R3 spostano e rifanno ogni file del modulo `funds`. Con N6 prima,
+rifanno un motore solo. Il codice del PAC (circa 1.500 righe, stima dalle dimensioni dei file) sparisce prima di
+essere spostato. N6 chiude anche FND-1, FND-2 e FND-3 dell'audit.
+
+| Parte | Sopravvive alla riscrittura | Come si scrive ora |
+|---|---|---|
+| Schema (`fund_contribution_sources`, `fund_fees`, registro unico) e migrazione dei dati | Sì | Migrazione additiva; le tabelle vecchie restano ferme fino a R5f |
+| Regole pure: `fundFlows`, `feesFor`, scadenze dalla sorgente | Sì: vanno in `packages/domain` | Funzioni pure senza database; `FeeRule` in un file senza import dal modulo, così R0 lo sposta in `shared/fees` |
+| Lettore dei documenti del fondo | Sì | Dietro un'interfaccia `{ id, label, accepts(file), read(file) }` nel modulo; R2 la sposta nel registro di `documents` |
+| Limite di deducibilità | Sì | File di dati per paese nel modulo; R0 lo sposta in `shared/country` |
+| Schermate (procedura a 4 passi, dettaglio unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria |
+
+Cosa **non** entra in N6: la fusione con Investments, i 2 gruppi, gli URL `/investments/[id]` (R5b); il job unico dei
+documenti (R1); il registro dei lettori in `documents` (R2); la rimozione delle tabelle vecchie (R5f); i piani di
+acquisto (R5d).
+
+## 4.9 Cosa resta fuori da «ora»
+
+Investments unificata, Portafoglio manuale e piani di acquisto, «Lavoro standard» (R5g), menu e moduli, tab Finance completo, Wallet e Trek come plugin, catalogo dei plugin:
 il design è approvato, lo sviluppo è in R5. Motivo: sono soprattutto interfaccia e runtime, che la riscrittura rifà.
