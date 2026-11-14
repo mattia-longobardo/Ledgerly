@@ -19,6 +19,7 @@
     "perf": "sh scripts/perf-on-test.sh",
     "modularity": "tsx scripts/modularity.ts",
     "duplication": "tsx scripts/duplication.ts",
+    "numbers": "sh scripts/numbers-on-homelab.sh",
     "e2e": "playwright test",
     "docs:shots": "playwright test --config playwright.shots.config.ts",
     "db:generate": "drizzle-kit generate",

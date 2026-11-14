@@ -1,0 +1,620 @@
+{
+ "GET /accounts": {
+  "status": 200,
+  "body": {
+   "accounts": [
+    {
+     "id": "<id-1>",
+     "name": "ING Conto Arancio",
+     "type": "checking",
+     "currency": "EUR",
+     "origin": "manual",
+     "state": "active",
+     "inNetWorth": true,
+     "countsAsLiquid": true,
+     "balance": "11302.40",
+     "lastSyncedAt": null
+    },
+    {
+     "id": "<id-2>",
+     "name": "Revolut Saving",
+     "type": "savings",
+     "currency": "EUR",
+     "origin": "manual",
+     "state": "active",
+     "inNetWorth": true,
+     "countsAsLiquid": true,
+     "balance": "12000.00",
+     "lastSyncedAt": null
+    },
+    {
+     "id": "<id-3>",
+     "name": "Directa",
+     "type": "investment",
+     "currency": "EUR",
+     "origin": "manual",
+     "state": "active",
+     "inNetWorth": true,
+     "countsAsLiquid": false,
+     "balance": "12650.00",
+     "lastSyncedAt": null
+    },
+    {
+     "id": "<id-4>",
+     "name": "Fideuram Piano Accumulo",
+     "type": "investment",
+     "currency": "EUR",
+     "origin": "manual",
+     "state": "active",
+     "inNetWorth": true,
+     "countsAsLiquid": false,
+     "balance": "7719.00",
+     "lastSyncedAt": null
+    }
+   ]
+  }
+ },
+ "GET /accounts/<id-1>/balances": {
+  "status": 200,
+  "body": {
+   "balances": [
+    {
+     "id": "<id-5>",
+     "on": "2031-10-14",
+     "balance": "11302.40",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    },
+    {
+     "id": "<id-6>",
+     "on": "2031-09-30",
+     "balance": "11545.84",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    },
+    {
+     "id": "<id-7>",
+     "on": "2031-08-31",
+     "balance": "9434.38",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    },
+    {
+     "id": "<id-8>",
+     "on": "2031-07-31",
+     "balance": "7322.92",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    },
+    {
+     "id": "<id-9>",
+     "on": "2031-06-30",
+     "balance": "5211.46",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    },
+    {
+     "id": "<id-10>",
+     "on": "2031-05-31",
+     "balance": "3100.00",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    }
+   ]
+  }
+ },
+ "GET /accounts/<id-1>/balances?limit=2": {
+  "status": 200,
+  "body": {
+   "balances": [
+    {
+     "id": "<id-5>",
+     "on": "2031-10-14",
+     "balance": "11302.40",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    },
+    {
+     "id": "<id-6>",
+     "on": "2031-09-30",
+     "balance": "11545.84",
+     "available": null,
+     "source": "manual",
+     "note": null,
+     "capturedAt": "2031-10-15T10:00:00.000Z"
+    }
+   ]
+  }
+ },
+ "GET /transactions?from=2031-09-01&to=2031-10-15": {
+  "status": 200,
+  "body": {
+   "transactions": [
+    {
+     "id": "<id-11>",
+     "on": "2031-10-13",
+     "occurredAt": "2031-10-13T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-48.00",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-12>",
+     "categoryName": "Restaurants",
+     "payee": "Trattoria",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-13>",
+     "on": "2031-10-12",
+     "occurredAt": "2031-10-12T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-61.75",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-14>",
+     "categoryName": "Groceries",
+     "payee": "Esselunga",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-15>",
+     "on": "2031-10-08",
+     "occurredAt": "2031-10-08T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-36.50",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-16>",
+     "categoryName": "Transport",
+     "payee": "Trenitalia",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-17>",
+     "on": "2031-10-05",
+     "occurredAt": "2031-10-05T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-84.20",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-14>",
+     "categoryName": "Groceries",
+     "payee": "Esselunga",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-18>",
+     "on": "2031-10-03",
+     "occurredAt": "2031-10-03T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-12.99",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-19>",
+     "categoryName": "Streaming",
+     "payee": "Netflix",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-20>",
+     "on": "2031-09-27",
+     "occurredAt": "2031-09-27T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "2450.00",
+     "currency": "EUR",
+     "type": "income",
+     "state": "cleared",
+     "categoryId": "<id-21>",
+     "categoryName": "Salary",
+     "payee": "ACME S.p.A.",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-22>",
+     "on": "2031-09-21",
+     "occurredAt": "2031-09-21T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-93.10",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-14>",
+     "categoryName": "Groceries",
+     "payee": "Esselunga",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-23>",
+     "on": "2031-09-13",
+     "occurredAt": "2031-09-13T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-48.00",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-12>",
+     "categoryName": "Restaurants",
+     "payee": "Trattoria",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-24>",
+     "on": "2031-09-12",
+     "occurredAt": "2031-09-12T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-61.75",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-14>",
+     "categoryName": "Groceries",
+     "payee": "Esselunga",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-25>",
+     "on": "2031-09-08",
+     "occurredAt": "2031-09-08T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-36.50",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-16>",
+     "categoryName": "Transport",
+     "payee": "Trenitalia",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-26>",
+     "on": "2031-09-05",
+     "occurredAt": "2031-09-05T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-84.20",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-14>",
+     "categoryName": "Groceries",
+     "payee": "Esselunga",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-27>",
+     "on": "2031-09-03",
+     "occurredAt": "2031-09-03T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "-12.99",
+     "currency": "EUR",
+     "type": "expense",
+     "state": "cleared",
+     "categoryId": "<id-19>",
+     "categoryName": "Streaming",
+     "payee": "Netflix",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    }
+   ],
+   "summary": {
+    "count": 12,
+    "income": "2450.00",
+    "expense": "-579.98",
+    "net": "1870.02"
+   }
+  }
+ },
+ "GET /transactions?account=<id-1>&type=income&limit=2": {
+  "status": 200,
+  "body": {
+   "transactions": [
+    {
+     "id": "<id-20>",
+     "on": "2031-09-27",
+     "occurredAt": "2031-09-27T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "2450.00",
+     "currency": "EUR",
+     "type": "income",
+     "state": "cleared",
+     "categoryId": "<id-21>",
+     "categoryName": "Salary",
+     "payee": "ACME S.p.A.",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-28>",
+     "on": "2031-08-27",
+     "occurredAt": "2031-08-27T09:00:00.000Z",
+     "accountId": "<id-1>",
+     "accountName": "ING Conto Arancio",
+     "amount": "2450.00",
+     "currency": "EUR",
+     "type": "income",
+     "state": "cleared",
+     "categoryId": "<id-21>",
+     "categoryName": "Salary",
+     "payee": "ACME S.p.A.",
+     "note": null,
+     "labels": [],
+     "hidden": false
+    }
+   ],
+   "summary": {
+    "count": 4,
+    "income": "9800.00",
+    "expense": "0.00",
+    "net": "9800.00"
+   }
+  }
+ },
+ "GET /summary": {
+  "status": 200,
+  "body": {
+   "month": "2031-10-01",
+   "currency": "EUR",
+   "netWorth": "43671.40",
+   "netWorthPartial": false,
+   "previousNetWorth": null,
+   "cash": "11302.40",
+   "cashPartial": false,
+   "income": "0.00",
+   "expense": "-243.44",
+   "net": "-243.44",
+   "transactions": 5,
+   "accounts": 4,
+   "lastSnapshotMonth": null
+  }
+ },
+ "GET /investments": {
+  "status": 200,
+  "body": {
+   "on": "2031-10-15",
+   "currency": "EUR",
+   "totals": {
+    "value": "12650.00",
+    "valuePartial": false,
+    "invested": "12000.00",
+    "gain": "650.00",
+    "simpleReturn": 0.054167,
+    "xirr": 0.097847,
+    "xirrStatus": "ok",
+    "includesExchangeEffect": false
+   },
+   "services": [
+    {
+     "accountId": "<id-3>",
+     "name": "Directa",
+     "category": "broker",
+     "provider": "manual",
+     "origin": "manual",
+     "mode": "total",
+     "currency": "EUR",
+     "value": "12650.00",
+     "displayValue": "12650.00",
+     "change30Days": "2350.00",
+     "invested": "12000.00",
+     "gain": "650.00",
+     "simpleReturn": 0.054167,
+     "xirr": 0.097847,
+     "xirrStatus": "ok",
+     "reliable": true,
+     "reliableFrom": null,
+     "weight": 1,
+     "lastUpdate": null
+    }
+   ],
+   "pnl": {
+    "period": {
+     "kind": "year",
+     "from": "2031-01-01",
+     "to": "2031-10-15"
+    },
+    "currency": "EUR",
+    "status": "verified",
+    "pnl": "650.00",
+    "realized": "0.00",
+    "unrealized": "650.00",
+    "income": "0.00",
+    "fees": "0.00",
+    "corrections": "0.00",
+    "fx": "0.00",
+    "transfers": "0.00",
+    "services": [
+     {
+      "accountId": "<id-3>",
+      "status": "verified",
+      "from": "2031-01-01",
+      "to": "2031-10-15",
+      "openPositions": 1,
+      "display": {
+       "pnl": "650.00",
+       "realized": "0.00",
+       "unrealized": "650.00",
+       "income": "0.00",
+       "fees": "0.00",
+       "corrections": "0.00",
+       "fx": "0.00"
+      },
+      "local": {
+       "currency": "EUR",
+       "pnl": "650.00",
+       "realized": "0.00",
+       "unrealized": "650.00",
+       "income": "0.00",
+       "fees": "0.00",
+       "corrections": "0.00",
+       "fx": "0.00"
+      }
+     }
+    ]
+   }
+  }
+ },
+ "GET /investments?period=all": {
+  "status": 200,
+  "body": {
+   "on": "2031-10-15",
+   "currency": "EUR",
+   "totals": {
+    "value": "12650.00",
+    "valuePartial": false,
+    "invested": "12000.00",
+    "gain": "650.00",
+    "simpleReturn": 0.054167,
+    "xirr": 0.097847,
+    "xirrStatus": "ok",
+    "includesExchangeEffect": false
+   },
+   "services": [
+    {
+     "accountId": "<id-3>",
+     "name": "Directa",
+     "category": "broker",
+     "provider": "manual",
+     "origin": "manual",
+     "mode": "total",
+     "currency": "EUR",
+     "value": "12650.00",
+     "displayValue": "12650.00",
+     "change30Days": "2350.00",
+     "invested": "12000.00",
+     "gain": "650.00",
+     "simpleReturn": 0.054167,
+     "xirr": 0.097847,
+     "xirrStatus": "ok",
+     "reliable": true,
+     "reliableFrom": null,
+     "weight": 1,
+     "lastUpdate": null
+    }
+   ],
+   "pnl": {
+    "period": {
+     "kind": "all",
+     "from": null,
+     "to": "2031-10-15"
+    },
+    "currency": "EUR",
+    "status": "verified",
+    "pnl": "650.00",
+    "realized": "0.00",
+    "unrealized": "650.00",
+    "income": "0.00",
+    "fees": "0.00",
+    "corrections": "0.00",
+    "fx": "0.00",
+    "transfers": "0.00",
+    "services": [
+     {
+      "accountId": "<id-3>",
+      "status": "verified",
+      "from": "2031-03-01",
+      "to": "2031-10-15",
+      "openPositions": 1,
+      "display": {
+       "pnl": "650.00",
+       "realized": "0.00",
+       "unrealized": "650.00",
+       "income": "0.00",
+       "fees": "0.00",
+       "corrections": "0.00",
+       "fx": "0.00"
+      },
+      "local": {
+       "currency": "EUR",
+       "pnl": "650.00",
+       "realized": "0.00",
+       "unrealized": "650.00",
+       "income": "0.00",
+       "fees": "0.00",
+       "corrections": "0.00",
+       "fx": "0.00"
+      }
+     }
+    ]
+   }
+  }
+ },
+ "GET /investments/<id-3>/holdings": {
+  "status": 200,
+  "body": {
+   "accountId": "<id-3>",
+   "name": "Directa",
+   "currency": "EUR",
+   "on": "2031-10-15",
+   "holdings": []
+  }
+ },
+ "GET /nothing-here": {
+  "status": 404,
+  "body": {
+   "error": "not_found"
+  }
+ },
+ "POST /accounts/<id-2>/balances": {
+  "status": 201,
+  "body": {
+   "id": "<id-29>",
+   "on": "2031-10-15",
+   "balance": "12050.00",
+   "source": "manual"
+  }
+ }
+}
