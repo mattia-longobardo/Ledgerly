@@ -101,19 +101,6 @@ test.describe("the tabs", () => {
     await expect(main(page)).not.toContainText("Stretch return");
   });
 
-  test("the deductible is you + employer, no TFR, with the note on the certified year", async ({ page }) => {
-    const path = await fundPath(page, "Pensione Beta");
-    await page.goto(`${path}?period=${Y - 1}`);
-    const kpi = (await page.getByTestId("kpi-deductible").locator("span").nth(1).textContent())!.trim();
-    await page.goto(`${path}?tab=contributions&period=${Y - 1}`);
-    // Two operations of 100,00 + 150,00, with 350,00 of TFR each that must not count.
-    await expect(page.getByTestId("deductible-line")).toHaveCount(1);
-    await expect(page.getByTestId("deductible-line")).toHaveAttribute("data-cents", "50000");
-    await expect(page.getByTestId("deductible-line")).toContainText(kpi);
-    await expect(page.getByTestId("deductible-note")).toContainText("TFR and enrolment fee excluded");
-    await expect(page.getByTestId("deductible-note")).toContainText("certifies can differ");
-  });
-
   test("Contributions: payslips, quarters and operations follow the period", async ({ page }) => {
     const path = await fundPath(page, "Pensione Beta");
     await page.goto(`${path}?tab=contributions&period=${Y - 1}`);
@@ -123,7 +110,7 @@ test.describe("the tabs", () => {
     await page.goto(`${path}?tab=contributions&period=all`);
     await expect(page.getByTestId("payslip-line")).toHaveCount(3);
     await expect(page.getByTestId("operation-line")).toHaveCount(5);
-    await expect(page.getByTestId("deductible-line")).toHaveCount(3);
+    await expect(page.getByTestId("fund-deductible")).toHaveCount(0);
   });
 
   test.describe("the phone", () => {

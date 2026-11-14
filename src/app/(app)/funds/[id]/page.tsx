@@ -320,7 +320,6 @@ async function FundDetail({
       <PensionContributions
         ctx={ctx}
         detail={pension}
-        flows={home.flows}
         archived={archived}
         period={period}
         when={when}
@@ -505,7 +504,7 @@ async function FundDetail({
         ? th("kpis.paidIn")
         : th("kpis.paidInPeriod");
   const counts = flowCounts(home.flows, period);
-  const { origin, deductible } = summary;
+  const { origin } = summary;
   const nothingPaid =
     firstPaidOn && firstPaidOn > period.to
       ? th("kpis.paidInFirst", { date: long(firstPaidOn) })
@@ -535,12 +534,11 @@ async function FundDetail({
         : row.month.kind === "none"
           ? tf("kpis.planDay", { day: fund.debitDay })
           : tf("kpis.planStatus", { day: fund.debitDay, status: pill.text });
-  const showDeductible = deductible !== null && period.kind === "year" && state !== "payslips_only";
   const kpis = (
     <div
       className={cn(
         "grid grid-cols-2 gap-4",
-        !isPension || showDeductible || state === "payslips_only" ? "@4xl:grid-cols-4" : "@4xl:grid-cols-3",
+        !isPension || state === "payslips_only" ? "@4xl:grid-cols-4" : "@4xl:grid-cols-3",
       )}
     >
       <Kpi testId="kpi-paid" label={paidLabel} value={money(summary.paidInCents)} note={paidNote} />
@@ -565,22 +563,6 @@ async function FundDetail({
                 : th("kpis.feesNote")
         }
       />
-      {showDeductible && (
-        <Kpi
-          testId="kpi-deductible"
-          label={tf("kpis.deductible")}
-          value={money(deductible.usedCents)}
-          note={
-            deductible.usedCents <= deductible.limitCents
-              ? tf("kpis.deductibleNote", { limit: money(deductible.limitCents), year: period.year! })
-              : tf("kpis.deductibleOver", {
-                  limit: money(deductible.limitCents),
-                  year: period.year!,
-                  over: money(deductible.usedCents - deductible.limitCents),
-                })
-          }
-        />
-      )}
       {state === "payslips_only" && (
         <Kpi testId="kpi-accrued" label={th("kpis.accrued")} value={money(summary.accruedCents)} />
       )}

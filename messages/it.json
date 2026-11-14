@@ -2942,11 +2942,7 @@
         "employer": "Azienda",
         "tfr": "TFR",
         "other": "Altro",
-        "empty": "Nessun versamento in questo periodo.",
-        "deductible": "Deducibile usato nel {year}",
-        "deductibleOf": "{used} di {limit}",
-        "deductibleNote": "Tu e azienda, senza TFR. Per data operazione: l'anno certificato può differire. Resta spazio per {left}.",
-        "deductibleOver": "Tu e azienda, senza TFR. Per data operazione: l'anno certificato può differire. Oltre il limite di {over}."
+        "empty": "Nessun versamento in questo periodo."
       },
       "when": {
         "year": "nel {year}",
@@ -2968,9 +2964,6 @@
       "kpis": {
         "deposits": "{recurring, plural, one {# versamento} other {# versamenti}}, {oneOff, plural, one {# una tantum} other {# una tantum}}",
         "perDeposit": "{fee} per versamento",
-        "deductible": "Deducibile usato",
-        "deductibleNote": "di {limit} nel {year}, senza TFR e quota di iscrizione, per data operazione",
-        "deductibleOver": "di {limit} nel {year}: oltre di {over}. Senza TFR e quota di iscrizione, per data operazione",
         "plan": "Piano",
         "planDay": "al mese, il giorno {day}",
         "planStatus": "al mese, il giorno {day} · {status}",
@@ -3116,14 +3109,6 @@
           "employer": "Azienda",
           "tfr": "TFR",
           "enrollment": "Iscrizione"
-        },
-        "deductible": {
-          "title": "Deducibile per anno",
-          "empty": "Nessuna somma deducibile {when}.",
-          "year": "Anno",
-          "used": "Usato",
-          "limit": "Limite",
-          "note": "Tu + azienda, senza TFR e quota di iscrizione, per data dell'operazione. L'anno certificato dal fondo può differire: per la dichiarazione usa la certificazione del fondo."
         },
         "voluntary": {
           "title": "Versamento volontario",

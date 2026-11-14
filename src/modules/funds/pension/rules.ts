@@ -153,21 +153,6 @@ export function quarterKey(year: number, quarter: Quarter): string {
   return `${year}-Q${quarter}`;
 }
 
-/**
- * The yearly deductibility limit of pension contributions (GC §7): worker + employer, TFR excluded.
- * Public data, versioned by the year it applies from.
- */
-export const DEDUCTIBILITY_LIMITS: readonly { from: number; cents: Cents }[] = [
-  { from: 2007, cents: 516_457n },
-  { from: 2026, cents: 530_000n },
-];
-
-export function deductibilityLimit(year: number): Cents | null {
-  let found: Cents | null = null;
-  for (const limit of DEDUCTIBILITY_LIMITS) if (year >= limit.from) found = limit.cents;
-  return found;
-}
-
 export interface Tariff {
   item: string;
   amountCents: Cents | null;

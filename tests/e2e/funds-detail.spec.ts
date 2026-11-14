@@ -158,10 +158,8 @@ test.describe("a fund's page", () => {
 
     await page.goto(`${path}?period=${Y - 1}`);
     expect(await notice.textContent()).toBe(coming);
-    await expect(page.getByTestId("kpi-deductible")).toContainText("500,00");
     await expect(page.getByTestId("recent-flow")).toHaveCount(2);
     await expect(page.getByTestId("recent-flow").first()).toContainText(`II ${Y - 1}`);
-    await page.goto(`${path}?period=all`);
     await expect(page.getByTestId("kpi-deductible")).toHaveCount(0);
   });
 

@@ -11,8 +11,7 @@ import {
 import { legacyPeriodQuery, type Query } from "@/modules/investments/period";
 import type { Cents } from "@/platform/money";
 import { type FundLine, stretchesOf } from "./home";
-import { closingDay, type FundFlow, type FundPeriod, type ValuePoint } from "./period";
-import { deductibilityLimit } from "./pension/rules";
+import { closingDay, type FundPeriod, type ValuePoint } from "./period";
 import { periodReturns, periodStats } from "./rules";
 
 /** Whether a day falls in a period, both ends included. */
@@ -61,48 +60,6 @@ export function quarterInPeriod(
     (quarter.due !== null && inPeriod(quarter.due, period)) ||
     quarter.operationDates.some((on) => inPeriod(on, period))
   );
-}
-
-export interface DeductibleYear {
-  year: number;
-  youCents: Cents;
-  employerCents: Cents;
-  /** You + employer, TFR excluded: the same figure as the "Deductible used" KPI of that year. */
-  usedCents: Cents;
-  limitCents: Cents | null;
-}
-
-/**
- * The deductible money by calendar year, newest first (§5.3), from the flows the KPI reads, so the two cannot
- * differ: an enrolment fee is in neither. A custom period shows the whole of each year it touches, because the
- * limit is a limit of the whole year. Money dated after today is not there yet, for the KPI too.
- */
-export function deductibleYears(
-  flows: readonly FundFlow[],
-  period: FundPeriod,
-  todayOn: CivilDate,
-): DeductibleYear[] {
-  const firstYear = period.from === null ? null : Number(period.from.slice(0, 4));
-  const lastYear = Number(period.to.slice(0, 4));
-  const years = new Map<number, DeductibleYear>();
-  for (const { on, origin, deductible } of flows) {
-    if (!deductible || on > todayOn) continue;
-    const year = Number(on.slice(0, 4));
-    if (year > lastYear || (firstYear !== null && year < firstYear)) continue;
-    if (origin.youCents === 0n && origin.employerCents === 0n) continue;
-    const row = years.get(year) ?? {
-      year,
-      youCents: 0n,
-      employerCents: 0n,
-      usedCents: 0n,
-      limitCents: deductibilityLimit(year),
-    };
-    row.youCents += origin.youCents;
-    row.employerCents += origin.employerCents;
-    row.usedCents = row.youCents + row.employerCents;
-    years.set(year, row);
-  }
-  return [...years.values()].sort((a, b) => b.year - a.year);
 }
 
 export interface ValuationLine {

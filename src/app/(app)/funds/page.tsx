@@ -37,7 +37,6 @@ import { CompositionBar } from "@/ui/chart";
 import { cn } from "@/ui/cn";
 import { HighlightScope, SeriesToggle } from "@/ui/highlight";
 import { Popover } from "@/ui/popover";
-import { ProgressBar } from "@/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
@@ -798,7 +797,6 @@ async function FundsHome({
       ...part,
       share: paidTotal > 0n ? Number(part.cents) / Number(paidTotal) : 0,
     }));
-  const { deductible } = summary;
   const whoCard = (
     <Card data-testid="who-paid" className="flex min-w-0 flex-col gap-3">
       <h2 className="text-lg font-semibold">{th("who.title", { when })}</h2>
@@ -829,28 +827,6 @@ async function FundsHome({
             ))}
           </ul>
         </>
-      )}
-      {deductible && period.kind === "year" && (
-        <div data-testid="deductible" className="flex flex-col gap-1.5 border-t border-border pt-3">
-          <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
-            <span className="font-medium">{th("who.deductible", { year: period.year! })}</span>
-            <span className="tabular-nums">
-              {th("who.deductibleOf", {
-                used: money(deductible.usedCents),
-                limit: money(deductible.limitCents),
-              })}
-            </span>
-          </p>
-          <ProgressBar
-            value={Math.min(1, Number(deductible.usedCents) / Number(deductible.limitCents))}
-            label={th("who.deductible", { year: period.year! })}
-          />
-          <p className="text-sm text-muted">
-            {deductible.usedCents <= deductible.limitCents
-              ? th("who.deductibleNote", { left: money(deductible.limitCents - deductible.usedCents) })
-              : th("who.deductibleOver", { over: money(deductible.usedCents - deductible.limitCents) })}
-          </p>
-        </div>
       )}
     </Card>
   );

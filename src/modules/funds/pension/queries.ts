@@ -55,14 +55,7 @@ import {
   valuePoints,
 } from "./metrics";
 import { type OperationLike, type QuarterStatus, reconcile } from "./reconcile";
-import {
-  type Component,
-  DEDUCTIBILITY_LIMITS,
-  NO_FEES,
-  parseSchedule,
-  type PensionFees,
-  type Quarter,
-} from "./rules";
+import { type Component, NO_FEES, parseSchedule, type PensionFees, type Quarter } from "./rules";
 import {
   type Competence,
   competencesOf,
@@ -344,5 +337,5 @@ export interface PensionSummary {
   valueOn: CivilDate | null;
 }
 
-export { DEDUCTIBILITY_LIMITS, lastDayOfMonth };
+export { lastDayOfMonth };
 export type { Quarter };

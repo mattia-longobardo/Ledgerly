@@ -10,10 +10,10 @@ import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
-import type { FundFlow, FundPeriod } from "../period";
+import type { FundPeriod } from "../period";
 import type { PensionDetail } from "../pension/queries";
 import { type ComponentStatus, MAIN_COMPONENTS, type QuarterStatus } from "../pension/reconcile";
-import { competenceOn, deductibleYears, inPeriod, quarterInPeriod } from "../tabs";
+import { competenceOn, inPeriod, quarterInPeriod } from "../tabs";
 import {
   AcceptDifferenceButton,
   AddVoluntaryButton,
@@ -24,14 +24,13 @@ import { quarterLabel, STATUS_TONE } from "./pension-present";
 
 /**
  * The Contributions tab of a pension fund (docs/design/funds-ux.md §5.3, §6, F4): payslips, quarters,
- * operations and the deductible by year, all in the period. The tables have a list on a narrow page, with the same
+ * operations, all in the period. The tables have a list on a narrow page, with the same
  * figures and the same controls (§4, n. 10). The switch is at the width of the page and not at `md`: with the
  * sidebar, these columns do not fit a tablet.
  */
 export async function PensionContributions({
   ctx,
   detail,
-  flows,
   archived,
   period,
   when,
@@ -40,7 +39,6 @@ export async function PensionContributions({
 }: {
   ctx: Ctx;
   detail: PensionDetail;
-  flows: readonly FundFlow[];
   archived: boolean;
   period: FundPeriod;
   when: string;
@@ -103,8 +101,6 @@ export async function PensionContributions({
         />
       </span>
     ) : null;
-
-  const years = deductibleYears(flows, period, todayOn);
 
   return (
     <>
@@ -389,64 +385,6 @@ export async function PensionContributions({
       </Card>
 
       <div className="grid min-w-0 gap-4 @4xl:grid-cols-2">
-        <Card className="flex h-full min-w-0 flex-col gap-3" data-testid="fund-deductible">
-          <h2 className="text-lg font-semibold">{t("deductible.title")}</h2>
-          {years.length === 0 ? (
-            <p className="text-sm text-muted">{t("deductible.empty", { when })}</p>
-          ) : (
-            <>
-              <Table className="hidden @5xl:table">
-                <THead>
-                  <Th>{t("deductible.year")}</Th>
-                  <Th align="right">{t("you")}</Th>
-                  <Th align="right">{t("employer")}</Th>
-                  <Th align="right">{t("deductible.used")}</Th>
-                  <Th align="right">{t("deductible.limit")}</Th>
-                </THead>
-                <TBody>
-                  {years.map((year) => (
-                    <Tr key={year.year} data-testid="deductible-line" data-cents={String(year.usedCents)}>
-                      <Td>{year.year}</Td>
-                      <Td align="right">{money(year.youCents)}</Td>
-                      <Td align="right">{money(year.employerCents)}</Td>
-                      <Td align="right" className="font-semibold">
-                        {money(year.usedCents)}
-                      </Td>
-                      <Td align="right" muted>
-                        {money(year.limitCents)}
-                      </Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </Table>
-              <ul className="flex flex-col gap-2 @5xl:hidden">
-                {years.map((year) => (
-                  <li key={year.year} data-testid="deductible-item" className="flex flex-col gap-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-medium">{year.year}</span>
-                      <span className="font-semibold tabular-nums">{money(year.usedCents)}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
-                      <span>
-                        {t("you")} {money(year.youCents)}
-                      </span>
-                      <span>
-                        {t("employer")} {money(year.employerCents)}
-                      </span>
-                      <span className="text-muted">
-                        {t("deductible.limit")} {money(year.limitCents)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          <p className="text-sm text-muted" data-testid="deductible-note">
-            {t("deductible.note")}
-          </p>
-        </Card>
-
         <Card className="flex h-full min-w-0 flex-col items-start gap-3" data-testid="fund-voluntary">
           <h2 className="text-lg font-semibold">{t("voluntary.title")}</h2>
           <p className="text-sm text-muted">{t("voluntary.description")}</p>

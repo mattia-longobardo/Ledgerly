@@ -128,8 +128,6 @@ test("a pension fund takes the payslips, the export and the statement, and recon
     await expect(page.getByTestId("fund-value")).toContainText("950,00 €");
     await expect(page.getByTestId("kpi-paid")).toContainText("890,32 €");
     await expect(page.getByTestId("funds-hero")).toContainText("+59,68 €");
-    // The enrolment fee is in the money paid in, and not in the deductible: 100,00 + 180,00.
-    await expect(page.getByTestId("kpi-deductible")).toContainText("280,00 €");
     const bridge = page.getByTestId("fund-bridge");
     await expect(bridge).toContainText("Accrued in payslips");
     await expect(bridge).toContainText("885,00 €");
@@ -143,8 +141,6 @@ test("a pension fund takes the payslips, the export and the statement, and recon
     const quarters = page.getByTestId("fund-quarters");
     await expect(quarters).toContainText(`I ${LAST_YEAR}`);
     await expect(quarters).toContainText("Reconciled");
-    // The same deductible as the KPI: the table and the KPI read the same flows.
-    await expect(page.getByTestId("deductible-line")).toHaveAttribute("data-cents", "28000");
   });
 
   await test.step("the statement and the documents are listed, and the list shows the fund", async () => {

@@ -23,7 +23,6 @@ import {
   type ValuePoint,
   yearPeriod,
 } from "./period";
-import { deductibilityLimit } from "./pension/rules";
 
 /**
  * What the address cannot mean (§6): a year still to come goes back to the year running. A year older
@@ -134,8 +133,6 @@ export interface HomeSummary {
   valueTo: CivilDate | null;
   notInValueCents: Cents;
   accruedCents: Cents;
-  /** Tu + azienda on the pension funds against the year's limit; only for a calendar year. */
-  deductible: { usedCents: Cents; limitCents: Cents } | null;
 }
 
 /**
@@ -269,9 +266,6 @@ export function homeSummary(input: {
   }
   const paidInCents = sum(lines.map((line) => line.measure.paidInCents));
   const accruedCents = sum(lines.map((line) => line.accruedCents));
-  const year = period.year ?? null;
-  const limitCents = year === null ? null : deductibilityLimit(year);
-  const pensions = lines.filter((line) => line.fund.type === "pension");
   const { rate, xirr: yearly } = aggregateReturn(lines);
   return {
     state: stateOf({ lines, period, todayOn, firstOn, paidInCents, accruedCents }),
@@ -293,13 +287,6 @@ export function homeSummary(input: {
     // A fund with no value at all has nothing the money could be "after": its row says so instead.
     notInValueCents: sum(seen.map((line) => line.measure.notInValueCents)),
     accruedCents,
-    deductible:
-      limitCents === null || pensions.length === 0
-        ? null
-        : {
-            usedCents: sum(pensions.map((line) => line.measure.deductibleCents)),
-            limitCents,
-          },
   };
 }
 

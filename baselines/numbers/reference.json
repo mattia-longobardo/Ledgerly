@@ -795,7 +795,6 @@
         "flows": {
          "2030-11-01": {
           "chargedCents": "500000",
-          "deductible": false,
           "feeCents": "0",
           "on": "2030-11-01",
           "origin": {
@@ -808,7 +807,6 @@
          },
          "2030-12-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2030-12-05",
           "origin": {
@@ -821,7 +819,6 @@
          },
          "2031-01-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-01-05",
           "origin": {
@@ -834,7 +831,6 @@
          },
          "2031-02-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-02-05",
           "origin": {
@@ -847,7 +843,6 @@
          },
          "2031-03-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-03-05",
           "origin": {
@@ -860,7 +855,6 @@
          },
          "2031-04-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-04-05",
           "origin": {
@@ -873,7 +867,6 @@
          },
          "2031-05-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-05-05",
           "origin": {
@@ -886,7 +879,6 @@
          },
          "2031-06-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-06-05",
           "origin": {
@@ -899,7 +891,6 @@
          },
          "2031-07-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-07-05",
           "origin": {
@@ -912,7 +903,6 @@
          },
          "2031-08-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-08-05",
           "origin": {
@@ -925,7 +915,6 @@
          },
          "2031-09-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-09-05",
           "origin": {
@@ -938,7 +927,6 @@
          },
          "2031-10-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-10-05",
           "origin": {
@@ -970,7 +958,6 @@
         }
        },
        "measure": {
-        "deductibleCents": "0",
         "end": {
          "cents": "528000",
          "on": "2030-12-31"
@@ -999,7 +986,6 @@
       },
       "summary": {
        "accruedCents": "0",
-       "deductible": null,
        "feesCents": "100",
        "feesPartial": false,
        "gainCents": "2900",
@@ -1022,7 +1008,6 @@
     },
     "home": {
      "accruedCents": "0",
-     "deductible": null,
      "feesCents": "100",
      "feesPartial": false,
      "gainCents": "2900",
@@ -1053,7 +1038,6 @@
         "flows": {
          "2030-11-01": {
           "chargedCents": "500000",
-          "deductible": false,
           "feeCents": "0",
           "on": "2030-11-01",
           "origin": {
@@ -1066,7 +1050,6 @@
          },
          "2030-12-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2030-12-05",
           "origin": {
@@ -1079,7 +1062,6 @@
          },
          "2031-01-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-01-05",
           "origin": {
@@ -1092,7 +1074,6 @@
          },
          "2031-02-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-02-05",
           "origin": {
@@ -1105,7 +1086,6 @@
          },
          "2031-03-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-03-05",
           "origin": {
@@ -1118,7 +1098,6 @@
          },
          "2031-04-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-04-05",
           "origin": {
@@ -1131,7 +1110,6 @@
          },
          "2031-05-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-05-05",
           "origin": {
@@ -1144,7 +1122,6 @@
          },
          "2031-06-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-06-05",
           "origin": {
@@ -1157,7 +1134,6 @@
          },
          "2031-07-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-07-05",
           "origin": {
@@ -1170,7 +1146,6 @@
          },
          "2031-08-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-08-05",
           "origin": {
@@ -1183,7 +1158,6 @@
          },
          "2031-09-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-09-05",
           "origin": {
@@ -1196,7 +1170,6 @@
          },
          "2031-10-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-10-05",
           "origin": {
@@ -1228,7 +1201,6 @@
         }
        },
        "measure": {
-        "deductibleCents": "0",
         "end": {
          "cents": "771900",
          "on": "2031-09-30"
@@ -1257,7 +1229,6 @@
       },
       "summary": {
        "accruedCents": "0",
-       "deductible": null,
        "feesCents": "900",
        "feesPartial": false,
        "gainCents": "18000",
@@ -1280,7 +1251,6 @@
     },
     "home": {
      "accruedCents": "0",
-     "deductible": null,
      "feesCents": "900",
      "feesPartial": false,
      "gainCents": "18000",
@@ -1311,7 +1281,6 @@
         "flows": {
          "2030-11-01": {
           "chargedCents": "500000",
-          "deductible": false,
           "feeCents": "0",
           "on": "2030-11-01",
           "origin": {
@@ -1324,7 +1293,6 @@
          },
          "2030-12-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2030-12-05",
           "origin": {
@@ -1337,7 +1305,6 @@
          },
          "2031-01-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-01-05",
           "origin": {
@@ -1350,7 +1317,6 @@
          },
          "2031-02-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-02-05",
           "origin": {
@@ -1363,7 +1329,6 @@
          },
          "2031-03-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-03-05",
           "origin": {
@@ -1376,7 +1341,6 @@
          },
          "2031-04-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-04-05",
           "origin": {
@@ -1389,7 +1353,6 @@
          },
          "2031-05-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-05-05",
           "origin": {
@@ -1402,7 +1365,6 @@
          },
          "2031-06-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-06-05",
           "origin": {
@@ -1415,7 +1377,6 @@
          },
          "2031-07-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-07-05",
           "origin": {
@@ -1428,7 +1389,6 @@
          },
          "2031-08-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-08-05",
           "origin": {
@@ -1441,7 +1401,6 @@
          },
          "2031-09-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-09-05",
           "origin": {
@@ -1454,7 +1413,6 @@
          },
          "2031-10-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-10-05",
           "origin": {
@@ -1486,7 +1444,6 @@
         }
        },
        "measure": {
-        "deductibleCents": "0",
         "end": {
          "cents": "771900",
          "on": "2031-09-30"
@@ -1515,7 +1472,6 @@
       },
       "summary": {
        "accruedCents": "0",
-       "deductible": null,
        "feesCents": "1000",
        "feesPartial": false,
        "gainCents": "20900",
@@ -1538,7 +1494,6 @@
     },
     "home": {
      "accruedCents": "0",
-     "deductible": null,
      "feesCents": "1000",
      "feesPartial": false,
      "gainCents": "20900",

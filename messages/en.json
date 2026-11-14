@@ -2942,11 +2942,7 @@
         "employer": "Employer",
         "tfr": "TFR",
         "other": "Other",
-        "empty": "No money in this period.",
-        "deductible": "Deductible used in {year}",
-        "deductibleOf": "{used} of {limit}",
-        "deductibleNote": "You and employer, TFR excluded. By operation date: the certified year may differ. Room left: {left}.",
-        "deductibleOver": "You and employer, TFR excluded. By operation date: the certified year may differ. Over the limit by {over}."
+        "empty": "No money in this period."
       },
       "when": {
         "year": "in {year}",
@@ -2968,9 +2964,6 @@
       "kpis": {
         "deposits": "{recurring, plural, one {# deposit} other {# deposits}}, {oneOff, plural, one {# one-off} other {# one-offs}}",
         "perDeposit": "{fee} per deposit",
-        "deductible": "Deductible used",
-        "deductibleNote": "of {limit} in {year}, TFR and enrolment fee excluded, by operation date",
-        "deductibleOver": "of {limit} in {year}: over by {over}. TFR and enrolment fee excluded, by operation date",
         "plan": "Plan",
         "planDay": "a month, on day {day}",
         "planStatus": "a month, on day {day} · {status}",
@@ -3116,14 +3109,6 @@
           "employer": "Employer",
           "tfr": "TFR",
           "enrollment": "Enrolment"
-        },
-        "deductible": {
-          "title": "Deductible by year",
-          "empty": "No deductible money {when}.",
-          "year": "Year",
-          "used": "Used",
-          "limit": "Limit",
-          "note": "You + employer, TFR and enrolment fee excluded, by operation date. The year the fund certifies can differ: for your tax return, use the fund's certificate."
         },
         "voluntary": {
           "title": "Voluntary payment",
