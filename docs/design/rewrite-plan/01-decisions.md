@@ -3,7 +3,7 @@
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**. Dove §1.0 e una decisione
-più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H17 (standardizzazione) sono di Mattia; rilasci e default
+più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **in attesa del suo OK** ([`11-standardization.md`](11-standardization.md)). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
 che non vengono modificati: dove questo registro e un documento più vecchio dicono cose diverse, vale questo registro.
@@ -44,6 +44,21 @@ Dettaglio, modelli e rilasci: [`11-standardization.md`](11-standardization.md). 
 
 Effetto di H12-H17 su H3 («comportamento invariato»): N6 e R5g sono cambi voluti, con i loro criteri di accettazione.
 Le sole differenze di numeri in più sono X1-X3 ([`11-standardization.md`](11-standardization.md) §11.2.5).
+
+### Standardizzazione: risposte alle ipotesi (terza decisione del 14/11/2026)
+
+Mattia ha risposto alle ipotesi ST-1…ST-24 con le sole eccezioni. Le tre eccezioni sono decisioni:
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H18 | **Il «Deducibile» si toglie.** Nessun riquadro e nessun calcolo del limite di deducibilità, per nessun fondo (anche Cometa). Il limite fiscale non è un dato del paese | L'ipotesi ST-4; la prima forma di X1 («Deducibile» con Fideuram); il limite nel pacchetto paese (E4); `funds-ux.md` §5.3 per il «Deducibile» | N6 |
+| H19 | **Documenti.** Il lettore della busta paga resta nel core, dietro il registro E1. Il lettore dei documenti di Cometa si toglie, e si toglie la funzione: nei fondi non si caricano documenti. Contributi e valori dei fondi arrivano solo dalle sorgenti (busta paga, addebito in banca) e dall'inserimento a mano. Le operazioni e i valori già letti restano dati del fondo | Le ipotesi ST-6 e ST-19; il tipo `fund_statement`, `funds.statement_reader` e il tab «Documenti» della prima forma di questa revisione | N6 (codice); R5f (file e schema: ipotesi ST-25); R5g (profili delle buste paga) |
+| H20 | **La malattia non è un tipo di assenza di Time Off e non viene contata.** Tipi predefiniti del paese `IT`: Ferie e ROL/Permessi. I tipi restano dati dell'utente | L'ipotesi ST-7 | N5 (ipotesi ST-27), R5g |
+
+Per le altre ipotesi ST-1…ST-24 vale il default del piano: restano in [`09-risks.md`](09-risks.md) §9.6 con la nota
+«default confermato da Mattia il 14/11/2026 (risposta con le sole eccezioni)». Le risposte fanno nascere tre ipotesi
+nuove, da confermare: ST-25, ST-26, ST-27 (stessa sezione). Cosa si toglie nel codice e nei dati:
+[`11-standardization.md`](11-standardization.md) §11.2.6.
 
 ## 1.1 Premesse
 

@@ -131,7 +131,7 @@ flowchart LR
 | N3 | Categorie automatiche, «Da categorizzare», movimento manuale | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive | Sì (#1) | L |
 | N4 | Passaggio di un conto da Wallet a Enable Banking | Un conto cambia sorgente senza doppioni | branch + PR | Dati | Sì (#1) | M |
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
-| N6 | Fondo pensione standard: un modello, sorgenti di contributo, commissioni generiche, migrazione dei 2 fondi | «Aggiungi fondo» senza tipo; un fondo nuovo si configura | branch + PR | Sì, additive + dati | Sì (#1) | L |
+| N6 | Fondo pensione standard: un modello, sorgenti di contributo, commissioni generiche, migrazione dei 2 fondi; via il «Deducibile» e i documenti dei fondi | «Aggiungi fondo» senza tipo; un fondo nuovo si configura | branch + PR | Sì, additive + dati | Sì (#1) | L |
 | R0 | Monorepo npm workspaces, confini e regole di modularità nel gate, codice morto tolto | Nulla | `main` | No | No | M |
 | R1 | Worker dedicato, coda su PostgreSQL, fine del container cron | Nulla | branch + PR | Sì, additive | Sì (#1) | M |
 | R2 | API completa, chiamate dagli involucri, refactor del dominio modulo per modulo | Nulla | `main`; PR per auth e schema | Sì, additive | Sì per le parti #1 e #4 | L |
@@ -164,5 +164,7 @@ I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`
    gratuita EODHD (R5d); installazione dell'APK sul telefono (C1); build su un PC Windows (C4).
 5. **La revisione sulla standardizzazione:** OK al contenuto di [`11-standardization.md`](rewrite-plan/11-standardization.md)
    e risposta alle ipotesi ST-1…ST-24 ([`09-risks.md`](rewrite-plan/09-risks.md) §9.6). Basta «ok default» più le eccezioni.
+   Risposta del 14/11/2026: eccezioni su ST-4, ST-6 e ST-7, ora decisioni H18-H20; default confermato per le altre.
+   Restano da confermare le ipotesi nuove ST-25, ST-26, ST-27.
 6. **Ogni eccezione alle priorità:** un guadagno di velocità che costa modularità o leggibilità, prima del commit
    ([`10-modularity.md`](rewrite-plan/10-modularity.md) §10.9.3).

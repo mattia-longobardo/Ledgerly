@@ -1,10 +1,11 @@
 # 11. Standardizzazione delle funzioni
 
-Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Decisioni: [`01-decisions.md`](01-decisions.md) §1.0, H12-H17.
+Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Decisioni: [`01-decisions.md`](01-decisions.md) §1.0, H12-H20.
 
-Stato: **revisione in attesa dell'OK di Mattia.** Le decisioni H12-H17 sono di Mattia (14/11/2026). Rilasci, modelli
-e default di questo file sono la proposta che le applica. Le scelte non ancora confermate sono in
-[`09-risks.md`](09-risks.md) §9.6 (ST-1…ST-24).
+Stato: **revisione in attesa dell'OK di Mattia.** Le decisioni H12-H20 sono di Mattia (14/11/2026). Rilasci, modelli
+e default di questo file sono la proposta che le applica. Mattia ha risposto alle ipotesi ST-1…ST-24 con le sole
+eccezioni: ST-4, ST-6 e ST-7 sono le decisioni H18-H20; per le altre vale il default. Le ipotesi nuove, da
+confermare, sono ST-25…ST-27 ([`09-risks.md`](09-risks.md) §9.6).
 
 Base dell'analisi: `main` a `9be59db`, sola lettura. Sul database di produzione: solo conteggi.
 
@@ -56,12 +57,11 @@ erDiagram
   fund_contribution_sources ||--o{ fund_operations : "source_id"
   fund_operations ||--o{ unit_movements : "quote"
   funds ||--o{ pension_competences : "maturato da busta paga"
-  funds }o--o| statement_readers : "lettore (E1, facoltativo)"
 ```
 
 **Anagrafica.** Nome (obbligatorio), gestore (testo libero: non sceglie regole), linea o comparto, data di adesione
-(obbligatoria), valuta (default: valuta di visualizzazione), valore di oggi e data (facoltativi), limite annuo di
-deducibilità e codice (sotto «Avanzate»). Il conto che tiene il valore nasce da solo, di tipo `pension`.
+(obbligatoria), valuta (default: valuta di visualizzazione), valore di oggi e data (facoltativi), codice (sotto
+«Avanzate»). Il conto che tiene il valore nasce da solo, di tipo `pension`.
 
 **Sorgenti di contributo** (`fund_contribution_sources`, 0 o più per fondo; meccanismo E2):
 
@@ -76,7 +76,6 @@ deducibilità e codice (sotto «Avanzate»). Il conto che tiene il valore nasce 
 - **Contributo del datore di lavoro:** è una componente della sorgente `payroll`, non una sorgente a parte (ipotesi
   ST-1). Arriva con lo stesso bonifico e dalla stessa busta paga. L'interfaccia mostra ogni componente con la sua
   origine: «Il mio contributo», «Datore di lavoro», «TFR», «Volontario».
-- Ogni componente ha `deductible` (default: sì per lavoratore, datore e volontario; no per il TFR).
 - Più fondi possono avere una sorgente `payroll`. Vincolo: una voce di busta paga va a un solo fondo.
 - «Dalla busta paga» compare solo con il modulo Payroll attivo. Senza Payroll le stesse voci si registrano a mano.
 - Una sorgente descrive il piano. Il «versato» viene sempre dalle operazioni registrate, mai dal piano.
@@ -93,8 +92,8 @@ deducibilità e codice (sotto «Avanzate»). Il conto che tiene il valore nasce 
 | `valid_from`, `valid_to` | Validità, per i cambi di tariffa |
 | Nota e fonte | Testo libero o indirizzo web |
 
-- La commissione configurata spiega e stima. Quella letta da un documento o scritta dall'utente su un'operazione è il
-  dato che conta. È la regola di oggi.
+- La commissione configurata spiega e stima. Quella scritta dall'utente su un'operazione è il dato che conta. Vale
+  anche per le commissioni già lette da un documento prima di N6. È la regola di oggi.
 - Le commissioni prelevate dal versamento danno l'investito. Le commissioni sul patrimonio sono già dentro il valore:
   l'app le mostra come costo annuo stimato e non le sottrae.
 - Nessun tariffario per gestore nel codice.
@@ -109,20 +108,22 @@ deducibilità e codice (sotto «Avanzate»). Il conto che tiene il valore nasce 
 **Valutazioni.** Un solo flusso «Aggiorna valore». Le regole approvate restano: lettura del 1° gennaio, soglia di
 31 giorni, proiezione ([`01-decisions.md`](01-decisions.md) §1.5).
 
-**Lettore di documenti** (facoltativo; meccanismo E1). Tipo di documento generico `fund_statement`. Senza lettore
-l'utente allega il file e inserisce i dati a mano. Il primo lettore è quello di Cometa, con il codice di oggi dietro
-l'interfaccia. Il pulsante «Importa documento del fondo» compare solo se il fondo ha un lettore.
+**Nessun documento nei fondi** (decisione H19). Nei fondi non si caricano file: nessun lettore, nessun tipo di
+documento del fondo, nessun tab «Documenti». Contributi e valori arrivano solo dalle sorgenti (busta paga, addebito
+in banca) e dall'inserimento a mano. Le operazioni e i valori già letti dai documenti di Cometa restano dati del
+fondo. Cosa si toglie: §11.2.6.
 
-**Modelli di fondo** (dati, non codice). Scadenze, commissioni e lettore di un fondo noto stanno in un file di dati.
+**Modelli di fondo** (dati, non codice). Scadenze e commissioni di un fondo noto stanno in un file di dati.
 Alla creazione l'utente può scegliere un modello: il modulo copia le righe. Senza modello il fondo nasce vuoto.
 
-**Limite di deducibilità** (meccanismo E4). Campo del fondo, con il default del pacchetto paese (`IT`: 5.164,57 € dal
-2007, 5.300 € dal 2026). Senza limite il KPI «Deducibile» non compare.
+**Nessun «Deducibile»** (decisione H18). Il riquadro e il calcolo del limite di deducibilità non esistono più, per
+nessun fondo. Il fondo non ha un limite e il pacchetto paese non ha limiti fiscali. Cosa si toglie: §11.2.6.
 
 **Riconciliazione busta paga ↔ fondo.** Resta. Compare solo con una sorgente `payroll`. Il periodo segue il
-calendario della sorgente, non il trimestre fisso.
+calendario della sorgente, non il trimestre fisso. Confronta le competenze della busta paga con le operazioni
+registrate nel fondo (a mano, o già lette prima di N6): nessun documento del fondo (H19).
 
-**Pagina unica.** Una home e un dettaglio. Tab: Panoramica · Contributi · Valori · Documenti · Impostazioni.
+**Pagina unica.** Una home e un dettaglio. Tab: Panoramica · Contributi · Valori · Impostazioni.
 Impostazioni: Generale · Contributi (sorgenti e calendario) · Commissioni · Zona pericolosa. Le sezioni dipendono
 dalla configurazione, non dal tipo:
 
@@ -132,8 +133,6 @@ dalla configurazione, non dal tipo:
 | «In arrivo» e riconciliazione per periodo | Esiste una sorgente `payroll` con scadenze |
 | Stato del versamento del mese | Esiste una sorgente `bank_debit` attiva |
 | Quote e comparti | Esistono movimenti di quote |
-| «Importa documento del fondo» | Il fondo ha un lettore |
-| Deducibile | Esiste un limite per l'anno |
 
 ### 11.2.2 Procedura «Aggiungi fondo pensione»
 
@@ -149,7 +148,7 @@ solo obbligatorio.
 4. **Riepilogo.** Una riga per scelta, pulsante «Crea fondo».
 
 Dopo la creazione l'utente arriva sul dettaglio. Lo stato vuoto di ogni tab offre per prima l'azione manuale
-(«Registra contributo», «Aggiorna valore»). Nessun passo chiede il tipo del fondo.
+(«Registra contributo», «Aggiorna valore»). Nessun passo chiede il tipo del fondo e nessun passo chiede un file.
 
 ### 11.2.3 Come Cometa e Fideuram diventano configurazione
 
@@ -160,11 +159,11 @@ Dopo la creazione l'utente arriva sul dettaglio. Lo stato vuoto di ogni tab offr
 | Tariffario di Cometa (13 righe del server) | Righe `fund_fees` del fondo Cometa (ipotesi ST-10) |
 | Regola con «CCNL» e tre percentuali | Componenti della sorgente `payroll`, con nota |
 | «Riceve la busta paga» (un fondo per utente) | Sorgente `payroll` del fondo |
-| File di Cometa, tipi `cometa_*`, job `cometa-sweep` | Lettore «Cometa» dietro il registro E1; tipo `fund_statement`; un solo job dei documenti (R1) |
+| File di Cometa, lettori, tipi `cometa_*`, job `cometa-sweep` | Via (H19). Le operazioni e i valori già letti restano dati del fondo |
 | PAC Fideuram: rata, giorno, conto, regola sul beneficiario | Fondo pensione «Fideuram» con 1 sorgente `bank_debit` |
 | Commissione per versamento e TER di Fideuram | 2 righe `fund_fees`: `per_contribution`; `on_assets`, anno |
 | 10 versamenti di Fideuram (`fund_deposits`) | 10 operazioni `voluntary` nel registro unico |
-| Limite di deducibilità nel codice | Dato del pacchetto paese `IT`; campo del fondo |
+| Limite di deducibilità nel codice, riquadro «Deducibile» | Via (H18) |
 
 ### 11.2.4 Dati esistenti: strada A
 
@@ -182,41 +181,88 @@ Passi della strada A:
 
 | Passo | Contenuto | Tipo | Compatibile con l'immagine precedente | Rilascio |
 |---|---|---|---|---|
-| A1 schema | Tabelle `fund_contribution_sources`, `fund_fees`. Colonne `fund_operations.source_id` (nullable), `fund_operations.fees_unknown` (default `false`), `funds.statement_reader` (nullable). Check `fund_operations_source_ck` allargato con `rule`. Check `documents_kind_ck` allargato con `fund_statement` | Additiva | Sì: l'immagine precedente non usa gli oggetti nuovi; i check accettano i valori vecchi | N6 |
+| A1 schema | Tabelle `fund_contribution_sources`, `fund_fees`. Colonne `fund_operations.source_id` (nullable), `fund_operations.fees_unknown` (default `false`). Check `fund_operations_source_ck` allargato con `rule` | Additiva | Sì: l'immagine precedente non usa gli oggetti nuovi; il check accetta i valori vecchi | N6 |
 | A2 dati, Fideuram | Sorgente `bank_debit` dalla regola e dal piano. 2 righe `fund_fees`. Copia dei 10 versamenti in `fund_operations`: `classification = voluntary`, importo addebitato, commissione, netto, `transaction_id`, `source` = `rule` o `manual`, `origin_key = 'deposit:' + id` | Dati | Sì: `fund_deposits`, `fund_deposit_rules` e `funds.type` non sono toccati | N6 |
-| A2 dati, Cometa | Sorgente `payroll` (lavoratore, datore, TFR; periodo `quarter`; scadenze e tolleranza dalla regola). Righe `fund_fees` dalla regola e dalla tariffa. `statement_reader = 'cometa'` | Dati | Sì: `pension_rules` e `fund_fee_tariffs` non sono toccate | N6 |
+| A2 dati, Cometa | Sorgente `payroll` (lavoratore, datore, TFR; periodo `quarter`; scadenze e tolleranza dalla regola). Righe `fund_fees` dalla regola e dalla tariffa. Le 4 operazioni importate e le valutazioni lette dai documenti non sono toccate | Dati | Sì: `pension_rules` e `fund_fee_tariffs` non sono toccate | N6 |
 | A2 dati, conto | `accounts.type` del conto di Fideuram: `investment` → `pension` (ipotesi ST-17) | Dati | Sì: l'immagine precedente accetta i due tipi | N6 |
-| A3 rimozione | `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`; colonne `funds.type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`; colonne di commissione e `schedule` di `pension_rules`; valori `cometa_*` del tipo di documento | Contrazione | No. Dump obbligatorio | R5f |
+| A3 rimozione | `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`; colonne `funds.type`, `isin`, `debit_account_id`, `debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`; colonne di commissione e `schedule` di `pension_rules`; righe `documents` di tipo `cometa_*` e i loro file (ipotesi ST-25); colonne `fund_operations.document_id` e `position_snapshots.document_id`; valori `cometa_*` del tipo di documento | Contrazione | No. Dump obbligatorio | R5f |
 
 **Rollback di N6.** Immagine `pre-n6` e un file SQL nel repo: cancella le operazioni con `origin_key like
 'deposit:%'`, riporta `accounts.type`, elimina tabelle e colonne nuove. I versamenti da regola fatti dopo il rilascio
 ritornano da soli: il job `funds-deposits` dell'immagine precedente li ricrea dai movimenti. Per i versamenti manuali
-fatti dopo il rilascio serve il dump `n6.dump`.
+fatti dopo il rilascio serve il dump `n6.dump`. N6 non tocca le righe e i file dei documenti di Cometa (ipotesi
+ST-25): l'immagine `pre-n6` li legge e li carica come prima.
 
 **Prove «stessi numeri».**
 
 | # | Prova | Come | Atteso |
 |---|---|---|---|
-| SN1 | Fotografia prima e dopo, in produzione | `npm run numbers`: per fondo e per periodo (ogni anno, «Tutto») valore, versato, commissioni, guadagno, Modified Dietz, XIRR | Cometa: uguale byte per byte. Fideuram: uguale, salvo X1 |
+| SN1 | Fotografia prima e dopo, in produzione | `npm run numbers`: per fondo e per periodo (ogni anno, «Tutto») valore, versato, commissioni, guadagno, Modified Dietz, XIRR | Cometa e Fideuram: uguale byte per byte. Se la fotografia contiene il «Deducibile», quel campo esce dal confronto (X1) |
 | SN2 | Parità della copia, dentro la migrazione | 10 righe; somma degli addebiti uguale; somma delle commissioni uguale; 9 `transaction_id` uguali. La migrazione fallisce se una uguaglianza non vale | Uguale |
-| SN3 | Flussi | Test: `fundFlows` sul fondo migrato = `pacFlows` sui versamenti vecchi, campo per campo | Uguale, salvo `deductible` (X1) |
+| SN3 | Flussi | Test: `fundFlows` sul fondo migrato = `pacFlows` sui versamenti vecchi, campo per campo | Uguale. Il campo `deductible` non esiste più e non entra nel confronto (X1) |
 | SN4 | Commissioni di Cometa | Test: netto con le righe `fund_fees` = netto con le costanti di oggi, sui 14 periodi maturati | Uguale |
 | SN5 | File di riferimento dei calcoli approvati | Ingressi e uscite dei due fondi di prova aggiunti alla prova B3 ([`10-modularity.md`](10-modularity.md) §10.10) | Uguale |
 | SN6 | Patrimonio | Overview, somma dei conti, `GET /summary`, `get_summary` | Totale uguale. Cambia solo il subtotale del gruppo (X2) |
+| SN7 | Dati già letti dai documenti | Test e conteggio in produzione sulle 4 operazioni importate e sulle valutazioni lette dai documenti di Cometa: conteggio, somme, date e quote, prima e dopo N6 e prima e dopo la cancellazione dei file (R5f) | Uguale |
 
 ### 11.2.5 Eccezioni dichiarate al vincolo «comportamento invariato»
 
-N6 è un cambio voluto, con i suoi criteri di accettazione. I numeri di Cometa non cambiano. Cambiano solo questi
-numeri, per decisione di prodotto. Ognuno ha un commit separato e un test.
+N6 è un cambio voluto, con i suoi criteri di accettazione. Versato, valore, commissioni e rendimento di Cometa non
+cambiano. Cambiano solo questi punti, per decisione di prodotto. Ognuno ha un commit separato e un test.
 
 | # | Cosa cambia | Motivo | Ipotesi |
 |---|---|---|---|
-| X1 | **«Deducibile» con Fideuram.** I contributi a Fideuram contano nel limite di deducibilità. Oggi no | Fideuram è un fondo pensione (H12): i suoi versamenti sono contributi volontari | ST-4 |
+| X1 | **Il «Deducibile» non esiste più.** Il riquadro «Deducibile» e il suo calcolo spariscono da home, dettaglio e tab Contributi, per ogni fondo (anche Cometa). Sostituisce la prima forma di X1 («Deducibile» con Fideuram) | Decisione di Mattia del 14/11/2026 (H18) | — |
 | X2 | **Gruppo del conto di Fideuram.** Il conto passa dal tipo `investment` al tipo `pension`. Il patrimonio è uguale; cambia il subtotale del gruppo | Tutti i fondi su conti `pension`: il gruppo si legge dal tipo del conto | ST-17 |
 | X3 | **Export, sezione `funds`.** `kind` vale `pension` per ogni fondo. Sezioni nuove `fund-sources` e `fund-fees` (additive) | Il tipo `pac` non esiste più | — |
 
 Cosa cambia a schermo, senza cambio di numeri: «Aggiungi fondo» non chiede il tipo; Fideuram mostra «Contributi» al
-posto di «Versamenti», con le stesse righe; le commissioni sono una lista modificabile.
+posto di «Versamenti», con le stesse righe; le commissioni sono una lista modificabile; il pulsante di import e la
+lista dei documenti di Cometa spariscono (H19).
+
+### 11.2.6 Cosa si toglie con H18 e H19
+
+Riferimenti `percorso:riga` su `main` a `9be59db`. Le rimozioni di codice sono in N6; le rimozioni di schema e di
+dati sono in R5f.
+
+**«Deducibile» (H18)**
+
+| Cosa | Dove oggi | Rilascio |
+|---|---|---|
+| Limite per anno: `DEDUCTIBILITY_LIMITS`, `deductibilityLimit` | `src/modules/funds/pension/rules.ts:157-168`; riesportazione in `src/modules/funds/pension/queries.ts:60`, `:347` | N6 |
+| Classi deducibili e campo `deductible` dei flussi; `deductibleCents` della misura di periodo | `src/modules/funds/period.ts:92`, `:110`, `:137`, `:256-257`, `:318-321` | N6 |
+| `deductible` del riepilogo della home | `src/modules/funds/home.ts:138`, `:273`, `:296-300` | N6 |
+| `DeductibleYear`, `deductibleYears` | `src/modules/funds/tabs.ts:66-98` | N6 |
+| Barra «Deducibile» nella home | `src/app/(app)/funds/page.tsx:801-851` | N6 |
+| KPI «Deducibile» nel dettaglio | `src/app/(app)/funds/[id]/page.tsx:508-579` | N6 |
+| Scheda «Deducibile per anno» nel tab Contributi | `src/modules/funds/ui/pension-contributions.tsx:107`, `:392-446` | N6 |
+| Testi | `messages/en.json:2943-2946`, `:2968-2970`, `:3117` e seguenti; le stesse chiavi in `messages/it.json` | N6 |
+| Test del calcolo | `home.test.ts`, `period.test.ts`, `tabs.test.ts`, `detail.test.ts` in `src/modules/funds/` | N6 |
+| Schema e dati | Nessuna colonna, tabella o riga: il limite è una costante del codice. Nessuna rimozione in R5f | — |
+| API, MCP, export | Nessun campo: il «Deducibile» esiste solo nelle pagine. Nessun campo pubblico sparisce | — |
+
+Il modello nuovo non crea il campo `deductible` delle sorgenti e non crea un limite sul fondo.
+
+**Documenti dei fondi (H19)**
+
+| Cosa | Dove oggi | Rilascio |
+|---|---|---|
+| Pulsante e dialog di import | `ImportCometaButton` in `src/modules/funds/ui/pension-forms.tsx:81-190`; uso in `src/app/(app)/funds/[id]/page.tsx:207` | N6 |
+| Azioni di caricamento, applicazione, cancellazione e nuovo tentativo | `src/modules/funds/pension/actions.ts:83-185` | N6 |
+| Lettura e applicazione dei documenti | `src/modules/funds/pension/imports.ts`; lettori in `src/modules/funds/parse/` | N6 |
+| Pagina del documento e originale | `src/app/(app)/funds/[id]/documents/[docId]/page.tsx`, `…/original/route.ts` | N6 |
+| Lista dei documenti nel dettaglio e testi `documents.*` | `src/modules/funds/pension/queries.ts:173`, `:205`; `src/modules/funds/ui/fund-valuations.tsx:315`; `messages/en.json:2606-2635`, `:3046` | N6 |
+| Job `cometa-sweep` e la sua riga nel registro dei job | `src/modules/funds/jobs.ts:33-39` | N6 |
+| Tipi `cometa_operations`, `cometa_position` nel codice (formati, cartella, ramo di lettura) | `src/modules/imports/rules.ts:3`, `:94-95`, `:107-108`; `src/modules/imports/api.ts:30-40`, `:65-67` | N6 |
+| API: `POST /imports` con un tipo `cometa_*` | `src/modules/imports/api.ts:27`, `:49-72` | N6, secondo l'ipotesi ST-26 |
+| Testo dello scope `imports` e nota dell'export sui file di Cometa | `messages/en.json:650`; `src/platform/export/service.ts:371-372` | N6 |
+| MCP | Nessuno strumento sui documenti: nulla da togliere | — |
+| Export: righe e file di Cometa nella sezione `documents` | `src/platform/export/service.ts:347-394` | Restano finché i file esistono (ipotesi ST-25) |
+| File salvati e righe `documents` di tipo `cometa_*` | Silo S3 e tabella `documents` | R5f, con dump e OK di Mattia (ipotesi ST-25) |
+| Colonne `fund_operations.document_id`, `position_snapshots.document_id`; valori `cometa_*` nel check del tipo di documento | `src/modules/funds/schema.ts:341`, `:437`; `src/modules/imports/schema.ts:65` | R5f |
+
+Cosa resta: le operazioni con `source = import` e le valutazioni lette dai documenti restano dati del fondo, con gli
+stessi numeri (prova SN7). Il valore `import` resta nel vocabolario delle sorgenti come storia: il codice non lo scrive più.
 
 ## 11.3 Piano di acquisto (PAC)
 
@@ -296,8 +342,8 @@ delle voci nuove: [`02-audit.md`](02-audit.md) §2.6. Meccanismi E1-E8: [`10-mod
 |---|---|---|---|---|
 | funds | Tipo `pac`/`pension`: due creazioni, due registri del denaro, due motori dei flussi, due serie di tab e di componenti | Fondo unico; registro unico; `fundFlows`; pagina unica (§11.2) | Configurazione | N6 |
 | funds | Scadenze, commissioni, tariffa e fonti di Cometa nel codice; tariffa scritta a ogni lettura | E2 sorgenti; E3 commissioni; modelli di fondo come dati | Configurazione + Dati | N6 |
-| funds | Lettori, azioni, pulsante e job con «Cometa» nel nome | E1: tipo `fund_statement` più lettore; un solo job dei documenti | Dati | N6 (tipo, lettore dietro l'interfaccia); R1 (job); R2 (registro in `documents`) |
-| funds | Limite di deducibilità italiano nel codice; classi deducibili fisse | E4: dato del paese, campo del fondo; `deductible` per componente | Dati + Configurazione | N6; R0 (`shared/country`) |
+| funds | Lettori, azioni, pulsante e job con «Cometa» nel nome | Via (H19): nei fondi non si caricano documenti. Contributi e valori dalle sorgenti e a mano | Via | N6 (codice, pagine, job); R5f (file, colonne, valori `cometa_*`) |
+| funds | Limite di deducibilità italiano nel codice; classi deducibili fisse; riquadro «Deducibile» | Via (H18): nessun limite, nessun calcolo, nessun riquadro | Via | N6 |
 | funds | Legame con la busta paga: un fondo per utente, colonne fisse, trimestre calcolato in payroll con le regole di Cometa | E2: sorgente `payroll`; evento `PayslipApplied` con righe per ruolo | Configurazione | N6 (sorgente); R2 (evento) |
 | investments | Un fornitore registrato in 9 punti; rami per eToro, Binance e Wallet in pagine e codice generico; chiavi di traduzione con lo slug del fornitore | E5: un descrittore per fornitore, con capacità | Fisso | N1 (schema); R1 (registro); R2 (descrittori di eToro e Binance); R3 (testi dal descrittore) |
 | investments | Seme di 12 asset, voci `planned`, «Coming soon» | Via: anagrafica di R5d; dialog a 3 scelte | Via | R5b; R5d |
@@ -308,8 +354,8 @@ delle voci nuove: [`02-audit.md`](02-audit.md) §2.6. Meccanismi E1-E8: [`10-mod
 | payroll | Mensilità 13ª, 14ª, 15ª; una busta al mese; assenze del mese precedente | E6: configurazione del datore (mensilità extra, frequenza); ritardo delle assenze nel profilo | Configurazione | R5g |
 | payroll | Regole del fondo dentro payroll (codici → contributi, trimestre) | E2: payroll emette le righe per ruolo; decide la sorgente del fondo | Configurazione | R2 (payroll, funds) |
 | payroll | AI solo con un fornitore, indirizzo fisso in 3 punti | E8: indirizzo e modello come impostazione del server; un solo client | Configurazione | R2 (users e impostazioni) |
-| documents (oggi `imports`) | Tipi `cometa_*` nell'enum, nel check DB e nell'API; ramo «non è una busta paga, quindi è Cometa»; cartelle per fornitore; conservazione fissa a 10 anni | E1: tipo generico più lettore; cartelle dai tipi registrati; conservazione come impostazione | Dati + Configurazione | N6; R2 (imports); R5f |
-| timeoff | Tipi fissi (`vacation`, `rol`, `comp`, `sick`, `other`); monte con due colonne; due schede fisse; solo giornata o mezza | E6: tipi di assenza come dati, dal pacchetto paese; monte per (anno, tipo); granularità per tipo | Configurazione | N5 (il pannello legge un elenco); R5g |
+| documents (oggi `imports`) | Tipi `cometa_*` nell'enum, nel check DB e nell'API; ramo «non è una busta paga, quindi è Cometa»; cartelle per fornitore; conservazione fissa a 10 anni | Via i tipi `cometa_*` e il ramo (H19). E1 per le buste paga: tipo più lettore; cartelle dai tipi registrati; conservazione come impostazione | Via + Dati + Configurazione | N6 (via il ramo e il caricamento dei fondi); R2 (imports); R5f (valori `cometa_*`) |
+| timeoff | Tipi fissi (`vacation`, `rol`, `comp`, `sick`, `other`); monte con due colonne; due schede fisse; solo giornata o mezza | E6: tipi di assenza come dati, dal pacchetto paese (`IT`: Ferie, ROL/Permessi); monte per (anno, tipo); granularità per tipo. Il tipo `sick` si toglie: non è un'assenza di Time Off (H20) | Configurazione + Via | N5 (il pannello legge un elenco, senza `sick`); R5g; R5f (valore nel check) |
 | timeoff | «Goduto» e riporto solo dalla busta paga | Porta `LeaveBalanceSource` con due adattatori; riporto a mano | Fisso + Configurazione | R2 (porta); R5g |
 | timeoff | Anno ferie = anno solare; fine settimana fisso; patrono come preferenza | E6: inizio dell'anno ferie, giorni lavorativi, giorni non lavorativi personali | Configurazione | R5g |
 | timeoff | Trek nello schema, nelle regole e nella pagina; due liste dei tipi che vanno a Trek | Porta `LeaveCalendarSync`; «va al calendario esterno» sul tipo | Plugin | N5 (test e correzione, ST-23); R2; R5c |
@@ -329,8 +375,8 @@ delle voci nuove: [`02-audit.md`](02-audit.md) §2.6. Meccanismi E1-E8: [`10-mod
 | fx | Una sola fonte (BCE), base EUR, elenco chiuso di valute | E5: registro delle fonti di cambio | Fisso | R2 (fx); R5d (plugin `prices`) |
 | auth | «Authentik» come id e nome dell'accesso, in circa 25 testi; nome del claim fisso | E8: nome mostrato e claim come impostazione; id neutro con redirect | Configurazione | R2 (users e impostazioni) |
 | auth, mail, storage | OIDC, SMTP e S3 obbligatori all'avvio; hostname di Mattia nel compose distribuito | E8: avvio con password, senza posta, con disco locale; compose di esempio neutro | Configurazione | Fuori dal piano (ipotesi ST-24) |
-| alerts, jobs | Avvisi all'admin solo con Gotify; job `cometa-sweep`; fuso del cron | Canali di notifica; job generico dei documenti; scheduler del worker | Configurazione | R1; R5e |
-| API, MCP, export | `kind` del fondo, `cometa_*` in `POST /imports`, `rolDays` nell'export, host fissi per la registrazione dei client MCP | Contratto dai tipi registrati; lista ammessa come impostazione | Fisso + Configurazione | R2; R5b; R5g |
+| alerts, jobs | Avvisi all'admin solo con Gotify; job `cometa-sweep`; fuso del cron | Canali di notifica; via `cometa-sweep` (H19) e job generico dei documenti per le buste paga; scheduler del worker | Configurazione + Via | N6 (via `cometa-sweep`); R1; R5e |
+| API, MCP, export | `kind` del fondo, `cometa_*` in `POST /imports`, `rolDays` nell'export, host fissi per la registrazione dei client MCP | Contratto dai tipi registrati; lista ammessa come impostazione. Tipi `cometa_*` di `POST /imports`: ipotesi ST-26 | Fisso + Configurazione | N6 (`cometa_*`); R2; R5b; R5g |
 | Overview | 3 riquadri fissi più Pockets; «Last snapshot» in evidenza | Riquadri dai gruppi e dai moduli attivi; snapshot sotto «Avanzate» | Configurazione | R5a; R5b |
 | Messaggi | Nomi di fornitori nelle chiavi e nei testi; tre parole per «movimento»; due significati di «Connection» | Regola M14; glossario unico | Fisso | R3; R5a |
 
@@ -343,7 +389,7 @@ Senza cambio di comportamento. Motivo: questi tre punti si scrivono adesso; farl
 
 | # | Cosa | Rilascio | Perché ora |
 |---|---|---|---|
-| AN1 | Il pannello di Time Off legge i tipi di assenza da un elenco, non da nomi fissi. Nessun cambio di schema: l'elenco contiene i tipi di oggi | N5 | Con i tipi fissi il pannello va riscritto in R5g |
+| AN1 | Il pannello di Time Off legge i tipi di assenza da un elenco, non da nomi fissi. Nessun cambio di schema: l'elenco contiene i tipi di oggi senza `sick` (H20, ipotesi ST-27) | N5 | Con i tipi fissi il pannello va riscritto in R5g |
 | AN2 | Lo schema del manifest dei plugin nasce con etichette, campi delle credenziali, intervallo minimo e capacità | N1 | È il contratto: cambiarlo dopo tocca ogni plugin |
 | AN3 | Chiavi di notifica generiche (`sync_failed`, `sync_stale`) con il fornitore come parametro | N2 | N2 riscrive lo stato dei collegamenti e questi avvisi |
 

@@ -185,8 +185,8 @@ flowchart TB
 - Il caso d'uso «scrivi un intervallo» è un servizio `(ctx, input)` nuovo nel modulo timeoff; R2 gli dà la rotta.
 - Trek non cambia: la sync parte come oggi dopo la scrittura.
 - **Anticipo AN1: i tipi di assenza arrivano da un elenco.** Il pannello non contiene nomi di tipo. Riceve un elenco
-  `{ id, nome, colore, ha un monte }` e lo mostra. In N5 l'elenco è costruito dai 5 tipi di oggi: nessun cambio di
-  schema e nessun cambio a schermo. In R5g l'elenco arriva dalla tabella `leave_types` senza riscrivere il pannello.
+  `{ id, nome, colore, ha un monte }` e lo mostra. In N5 l'elenco è costruito dai tipi di oggi senza `sick`
+  (decisione H20, ipotesi ST-27): nessun cambio di schema. A schermo la scelta di quel tipo non c'è più. In R5g l'elenco arriva dalla tabella `leave_types` senza riscrivere il pannello.
 - **Difetto probabile (ipotesi ST-23).** Due liste dicono quali tipi vanno a Trek: l'azione avvia la sync solo per
   `vacation` e `comp` (`src/modules/timeoff/actions.ts:112-113`), le regole mandano anche `rol`
   (`src/modules/timeoff/rules.ts:38`). Effetto atteso: un giorno ROL arriva a Trek solo alla sync successiva. Non è
@@ -204,13 +204,11 @@ essere spostato. N6 chiude anche FND-1, FND-2 e FND-3 dell'audit.
 |---|---|---|
 | Schema (`fund_contribution_sources`, `fund_fees`, registro unico) e migrazione dei dati | Sì | Migrazione additiva; le tabelle vecchie restano ferme fino a R5f |
 | Regole pure: `fundFlows`, `feesFor`, scadenze dalla sorgente | Sì: vanno in `packages/domain` | Funzioni pure senza database; `FeeRule` in un file senza import dal modulo, così R0 lo sposta in `shared/fees` |
-| Lettore dei documenti del fondo | Sì | Dietro un'interfaccia `{ id, label, accepts(file), read(file) }` nel modulo; R2 la sposta nel registro di `documents` |
-| Limite di deducibilità | Sì | File di dati per paese nel modulo; R0 lo sposta in `shared/country` |
+| «Deducibile» (H18); caricamento, lettori e pagine dei documenti dei fondi, job `cometa-sweep` (H19) | No: si tolgono | Rimozione in N6: la riscrittura non li sposta e non li rifà ([`11-standardization.md`](11-standardization.md) §11.2.6) |
 | Schermate (procedura a 4 passi, dettaglio unico) | L'interazione sì, il codice in parte | Componenti client senza lettura dati propria |
 
-Cosa **non** entra in N6: la fusione con Investments, i 2 gruppi, gli URL `/investments/[id]` (R5b); il job unico dei
-documenti (R1); il registro dei lettori in `documents` (R2); la rimozione delle tabelle vecchie (R5f); i piani di
-acquisto (R5d).
+Cosa **non** entra in N6: la fusione con Investments, i 2 gruppi, gli URL `/investments/[id]` (R5b); la rimozione delle
+tabelle vecchie e la cancellazione dei file dei documenti di Cometa (R5f, ipotesi ST-25); i piani di acquisto (R5d).
 
 ## 4.9 Cosa resta fuori da «ora»
 
