@@ -37,34 +37,51 @@ release, not during one.
 
 ## 1. The gate
 
-Nothing is released that has not passed all of it. The last two need the new build to be deployed,
-so they come back in step 4.
+Nothing is released that has not passed all of it. The checks that need the new build deployed come
+back in step 4. The names `G1`…`G9` are those of the rewrite plan
+([`design/rewrite-plan/03-releases.md`](design/rewrite-plan/03-releases.md) §3.1).
 
 ```bash
-npm run format:check && npm run lint && npm run typecheck && npm test
-npm run test:integration          # container on db_internal, `ledgerly_test` only
+npm run format:check && npm run lint && npm run typecheck   # G1
+npm test                          # G2 and G4: the unit tests, with `src/architecture.test.ts`
+npm run assertions-diff           # G2: no refactor commit changed a test besides its imports
+npm run test:integration          # G3 and G5: container on db_internal, `ledgerly_test` only
+npm run perf                      # G9: no view or route slower or with more queries than its baseline
 npm run db:generate               # must report no new migration to write
 ```
 
 `npm run db:generate` printing a new migration file means the schema in the code and the migrations
 on disk have drifted: commit the generated migration before going further, never after.
 
-## 2. Back the database up, and keep the backup
+What the gate compares against lives in `baselines/` and is described in
+[`operations.md`](operations.md#measures-and-baselines). A baseline is rewritten only by the commit
+that removes a violation or by a written decision — never to make a step pass.
 
-This is §13 step 1, against the database that actually exists.
+**The version.** The commit that closes a release sets `version` in `package.json` (and in
+`package-lock.json`) to the tag its deploy will create (`git-policy` §9): the Maintenance card
+prints that number, so it has to be the one in production.
 
-The application backs itself up every day (`database-backup`), but a release is exactly the moment
-the automatic backup is too old. Take one by hand: as an admin, **Settings → Server →
-Maintenance → Back up now**, and wait for the card to show the new backup with its size. The dump
-lands in the bucket under `backups/`, in `pg_dump -Fc` custom format, which is what `pg_restore`
-takes.
+## 2. Keep the way back: image, dump, numbers
 
-Then write down, on paper or in your notes:
+`<id>` is the release (`n1`, `r2`, …). Three things, in this order, just before the build.
 
-- the tag of the image now running: `docker inspect --format '{{.Image}}' ledgerly`
-- the name and size of the backup the card shows.
+```bash
+docker tag ledgerly:latest ledgerly:pre-<id>          # and ledgerly-cron, if `cron/` changed
+folder=$(sh scripts/release-dump.sh <id> | tail -n 1) # add --no-dump for a release with no migration
+npm run numbers -- "$folder" before                   # prints the instant: keep it for step 4
+```
 
-Those two lines are the rollback plan. Do not skip them.
+- **The image** `pre-<id>` is the rollback of the code (step 8). The last five are kept.
+- **The dump** is `pg_dump -Fc` of `ledgerly`, taken and verified (`pg_restore --list`) by the
+  script, in `../Ledgerly-dumps/<id>-<sha7>/` with its `sha256` and a `MANIFEST.txt`. It is
+  mandatory when the release has a migration or changes data; `--no-dump` makes the folder only.
+  Where the folder is, who may read it and how long a dump is kept:
+  [`operations.md`](operations.md#release-dumps).
+- **The numbers snapshot** "before" (`numbers-before.json`, in the same folder) is every number the
+  app shows, for every real user, read in one transaction that is rolled back. Step 4 takes it again.
+
+The application also backs itself up every day (`database-backup`, in the bucket under `backups/`).
+That is another thing: it is not the release's dump and a release does not rely on it.
 
 > §13 step 2 — recovering the production environment values from `docker inspect dashboard-app` —
 > **has no object**: `.env.homelab` exists and is the file Compose reads. Check it is still
@@ -99,9 +116,16 @@ container will not serve a half-configured app.
 ## 4. Check it, from outside
 
 ```bash
-curl -s https://dash.longobardo.me/api/health     # status ok, db up
-npm run e2e                                        # drives the deployed site
+curl -s https://dash.longobardo.me/api/health     # G8: status ok, db up
+npm run numbers -- "$folder" after --as-of <the instant step 2 printed>
+npm run numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json"   # G5: "uguale"
+npm run e2e                                        # G6: drives the deployed site
 ```
+
+The two snapshots must be equal: `uguale`. Anything else prints how many numbers differ and their
+names, never their values — a difference stops the release until it is explained (a sync that ran
+between the two is an explanation; a number the release was not meant to move is a rollback). Only
+the verdict and the names go in a comment: the files stay in the folder.
 
 `npm run e2e` is the real check: it creates its `@example.test` users, walks every journey,
 measures **every screen** at 1440 and 400 px in both themes, crosses the app from the keyboard, and
@@ -146,23 +170,23 @@ As the admin, in the app:
 ## 8. If it goes wrong — rollback
 
 ```bash
-# 1. back to the image you wrote down in step 2
-docker stop ledgerly && docker rm ledgerly
-docker tag <the image id you wrote down> ledgerly:latest
-docker compose up -d ledgerly ledgerly-cron
+# 1. back to the image of step 2
+docker tag ledgerly:pre-<id> ledgerly:latest
+docker compose up -d --no-build ledgerly
 
-# 2. if the database has to go back too, restore the dump you took in step 2
-#    (download it from the bucket under `backups/` first)
-docker exec -i postgres pg_restore -U ledgerly -d ledgerly --clean --if-exists < <the dump>
+# 2. only if a change to the data is wrong: restore the dump of step 2
+docker stop ledgerly
+(cd "$folder" && sha256sum -c ledgerly.dump.sha256)
+docker compose run --rm --no-deps -T --entrypoint sh ledgerly \
+  -c 'pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL"' < "$folder/ledgerly.dump"
+docker compose up -d --no-build ledgerly
 ```
 
-Restoring the database undoes everything that happened after the backup, including anything you
-imported in step 7. Restore only when the alternative is worse, and never while the app is
-serving: stop `ledgerly` first.
-
-> §13's rollback speaks of "the previous image and the `dashboard` database". The previous image is
-> the one you wrote down; the `dashboard` database no longer exists, and its place is taken by the
-> backup you took in step 2. That is why step 2 is not optional.
+The image alone is enough for almost every release: a migration is always compatible with the
+image before it ([`design/rewrite-plan/06-data.md`](design/rewrite-plan/06-data.md) §6.2), so the
+schema stays and only the code goes back. Restoring the database undoes everything that happened
+after the dump, including anything imported since. Restore only when the alternative is worse, and
+never while the app is serving: stop `ledgerly` first.
 
 ## 9. After
 

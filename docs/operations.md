@@ -51,15 +51,67 @@ An admin can see each job with its last run in **Settings → Integrations**, an
 ## Deploy
 
 Full procedure, with lock, health check and rollback: the repo's `AGENTS.md` (local, not in Git)
-and [`RELEASE.md`](RELEASE.md). In short:
+and [`RELEASE.md`](RELEASE.md). In short, for a release `<id>`:
 
 ```bash
+docker tag ledgerly:latest ledgerly:pre-<id>
+folder=$(sh scripts/release-dump.sh <id> | tail -n 1)   # --no-dump: no migration, no data change
+npm run numbers -- "$folder" before
 docker compose build ledgerly && docker compose up -d --wait ledgerly
 curl -s https://dash.longobardo.me/api/health    # {"status":"ok","db":"up",…}
+npm run numbers -- "$folder" after --as-of <the instant "before" printed>
+npm run numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json"   # uguale
 npm run e2e
 ```
 
-Rebuild `ledgerly-cron` only when `cron/` changes.
+Rebuild `ledgerly-cron` only when `cron/` changes, and tag it `ledgerly-cron:pre-<id>` first.
+
+### Release dumps
+
+Every release has a folder in `/home/mattia/docker/projects/Ledgerly-dumps/` — beside this
+checkout, outside this repository and outside the Homelab one. It has no compose file, so
+`projects/stack.sh` skips it.
+
+| What        | Rule                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| Folder      | `<id>-<sha7>/`, made by `scripts/release-dump.sh <id>`                                       |
+| Files       | `ledgerly.dump` (`pg_dump -Fc`), `ledgerly.dump.sha256`, `MANIFEST.txt`, `numbers-*.json`    |
+| Permissions | Folders `700`, files `600`, owner `1000:1000`                                                |
+| Check       | `pg_restore --list` right after the dump (the script does it and fails on an empty list)     |
+| Kept        | The last 5 releases that have a dump. Never delete the release in production or the one before it |
+| Who deletes | The agent that deploys, after a successful deploy, naming what it removed in the deploy comment |
+| `pre-*`     | Same window: the images of the last 5 releases. The Docker cleanup does not touch them while a rollback is possible |
+| Secrets     | A dump and a numbers snapshot hold personal data and encrypted credentials: they never leave the server, and never go in a comment or an attachment |
+
+`MANIFEST.txt` says the release, the SHA, the tag before it, the date, the last migration and the
+`pre-*` images. The daily `database-backup` (below) is another thing and stays as it is.
+
+### Measures and baselines
+
+`baselines/` holds what the gate compares the code against (rewrite plan,
+[`design/rewrite-plan/10-modularity.md`](design/rewrite-plan/10-modularity.md)). Each file is
+written by a command and checked by another.
+
+| File                                 | Written by                                                    | Checked by                                  |
+| ------------------------------------ | ------------------------------------------------------------- | ------------------------------------------- |
+| `modularity.json`                    | `npm run modularity`                                          | `npm test` (`src/architecture.test.ts`)     |
+| `duplication.json`                   | `npm run duplication`                                         | `npm run duplication -- --check`            |
+| `performance.json`                   | `npm run perf -- --write`                                     | `npm run perf`                              |
+| `numbers/reference.json`             | `npm run test:integration -- src/baselines.itest.ts -u`       | `npm run test:integration`                  |
+| `contract/api.json`, `contract/mcp.json` | the same command                                          | `npm run test:integration`                  |
+| `assertions-exceptions.json`         | by hand, with the decision that allows the change             | `npm run assertions-diff`                   |
+
+- **Modularity:** the known imports between modules, the units that import each other and the
+  cycles. The lists only get shorter: a new violation fails the test, and so does an entry that
+  is gone until `npm run modularity` removes it.
+- **Duplication:** the lines that are a copy of other lines (50 tokens and 6 lines, names and
+  literals made equal), per unit. A measure, with no threshold yet.
+- **Performance:** median time and number of queries of the widest views and of every route of
+  `/api/v1`, on the heavy user of `ledgerly_test`. `npm run perf` fails when a view or a route
+  sends more queries, or when its median is more than 10% (and 3 ms) worse.
+- **Numbers and contract:** what the read services, the REST API and the MCP tools answer about the
+  reference user (`test/reference-user.ts`) with the clock stopped. Byte for byte.
+- **Numbers of production:** `npm run numbers`, before and after a deploy. See above.
 
 ## Configuration
 

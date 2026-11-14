@@ -162,6 +162,14 @@ Le frecce tratteggiate non sono import: sono un evento o l'adattatore di una por
 Misura di partenza (`main` a `5fbbdbc`, file non di test): 155 import tra moduli, nessun `index.ts`, 6 coppie di
 moduli che si importano a vicenda, 80 import `platform → modules` in 21 file.
 
+**Misura di N0** (`main` dopo `v0.10.2`, `npm run modularity`, file `baselines/modularity.json`): 154 import tra
+moduli, tutti profondi (0 `index.ts`); 6 coppie di moduli che si importano a vicenda; 1 gruppo di cicli tra moduli,
+con 7 moduli (`accounts`, `funds`, `imports`, `interests`, `investments`, `payroll`, `transactions`); 54 coppie di
+unità che si importano a vicenda contando anche le aree di `platform` (tra queste `users ↔ platform/auth` e
+`timeoff ↔ platform/integrations/trek`); 79 import `platform → modules` in 21 file; 5 import `ui → platform`.
+Un'unità è `modules/<nome>`, `platform/<area>` o `platform/integrations/<provider>`. Da N0 `src/architecture.test.ts`
+tiene il codice a queste liste: una violazione nuova fallisce, e fallisce una voce che non esiste più.
+
 | # | Accoppiamento di oggi | Dove (`percorso:riga`) | Come si scioglie | Rilascio | Voci |
 |---|---|---|---|---|---|
 | C1 | Ciclo `accounts ↔ transactions` | `src/modules/accounts/service.ts:23-24`, `src/modules/accounts/actions.ts:10`, `src/modules/transactions/service.ts:11`, `src/modules/transactions/queries.ts:25` | Porta `MovementsPort` dichiarata da `accounts`; `transactions` la realizza | R2 (accounts) | ACC-8, TR-7 |
@@ -203,9 +211,9 @@ Una violazione nuova fa fallire il test. Una voce della lista che non esiste pi�
 | # | Regola | Controllo automatico | Valore di oggi | Obiettivo | Entra nel gate |
 |---|---|---|---|---|---|
 | M1 | **Confini tra pacchetti.** Un pacchetto importa solo i pacchetti del suo `package.json`, e solo quelli ammessi in §10.2 | Test: tabella delle dipendenze ammesse contro gli import reali e contro i `package.json` | — (non ci sono pacchetti) | 0 violazioni | R0 |
-| M2 | **Confini tra moduli.** Un modulo importa solo i moduli ammessi in §10.3 | Test: matrice delle dipendenze ammesse contro gli import reali | 155 import tra moduli, 6 coppie reciproche | 0 import fuori matrice | N0 con la lista nota; R0 con la matrice; lista vuota a fine R2 |
+| M2 | **Confini tra moduli.** Un modulo importa solo i moduli ammessi in §10.3 | Test: matrice delle dipendenze ammesse contro gli import reali | 155 import tra moduli, 6 coppie reciproche. N0: 154 e 6, lista nota in `baselines/modularity.json` | 0 import fuori matrice | N0 con la lista nota; R0 con la matrice; lista vuota a fine R2 |
 | M3 | **Nessun import profondo.** Da fuori, un modulo si importa solo dal suo `index.ts`; un pacchetto solo dai suoi `exports` | Test (stesso scanner) e regola ESLint `no-restricted-imports`, già in uso | 155 su 155 sono profondi (nessun `index.ts`) | 0 | R0 |
-| M4 | **Nessun ciclo** tra moduli e tra pacchetti | Test: grafo degli import, ricerca dei componenti fortemente connessi | 7 gruppi di cicli (`02-audit.md` §2.1) | 0 tra pacchetti da R0; 0 tra moduli a fine R2; Trek e Wallet a R5c | N0 con la lista nota; R0 |
+| M4 | **Nessun ciclo** tra moduli e tra pacchetti | Test: grafo degli import, ricerca dei componenti fortemente connessi | 7 gruppi di cicli (`02-audit.md` §2.1). N0: 1 gruppo di 7 moduli; 54 coppie reciproche tra unità (6 tra moduli), lista nota | 0 tra pacchetti da R0; 0 tra moduli a fine R2; Trek e Wallet a R5c | N0 con la lista nota; R0 |
 | M5 | **Nessun accesso alle tabelle di un altro modulo.** Solo il modulo proprietario importa il suo `schema.ts` | Test esistente (regola 1), più due aggiunte: nessun nome di tabella di un altro modulo dentro `getDb().query.*` o SQL scritto a mano; il barrel delle tabelle resta solo per le migrazioni | 0 violazioni per import; accesso indiretto non controllato («parked», `src/architecture.test.ts:37`) | 0 anche per l'accesso indiretto | Oggi (import); R0 (accesso indiretto, con lista nota); lista vuota a fine R2 |
 | M6 | **Direzione degli strati.** `domain` non importa `next`, `react`, `hono`. `ui` non importa `domain` né `next/*`. `api-contract` importa solo `zod` | Test M1, più una lista di pacchetti esterni vietati per pacchetto | `src/ui`: 19 import di Next, 5 di `@/platform`; `platform → modules`: 80 | 0 | R0 (`domain`, `api-contract`); passo zero del filone client (`ui`) |
 | M7 | **Interfaccia pubblica esplicita.** `index.ts` ha solo export nominati. L'elenco dei nomi esportati di ogni modulo è in un file di riferimento | Test: confronto tra gli export reali e il file di riferimento. Una modifica all'interfaccia cambia il file nello stesso commit | — | Ogni modulo ha il suo file; nessun `export *` | R0 |
@@ -262,8 +270,33 @@ Voci aperte di tipo duplicato (D-a, D-b, D-c, D-d) per modulo. Tra parentesi que
 | platform (`PLT`) | 6 (1) | | | |
 | **Totale** | **88** (27) | | **Totale** | **51** |
 
-La percentuale di righe duplicate (D-a) non è ancora misurata: l'audit è una lettura, senza strumenti. La prima
-misura è un passo di N0 e il suo valore entra in questa tabella.
+**Righe duplicate (D-a), misura di N0** (`npm run duplication`, file `baselines/duplication.json`; `main` dopo
+`v0.10.2`). Definizione di §10.7.1: 50 token e 6 righe, nomi e valori letterali resi uguali; senza test e senza righe
+di `import`. Le righe sono quelle con almeno un token.
+
+| Unità | Righe | Righe duplicate | % | Blocchi |
+|---|---|---|---|---|
+| `app` | 15.306 | 3.915 | 25,6% | 280 |
+| `modules/accounts` | 3.524 | 1.069 | 30,3% | 72 |
+| `modules/budgets` | 1.212 | 238 | 19,6% | 19 |
+| `modules/funds` | 9.573 | 2.719 | 28,4% | 176 |
+| `modules/imports` | 856 | 252 | 29,4% | 14 |
+| `modules/interests` | 2.084 | 525 | 25,2% | 36 |
+| `modules/investments` | 10.466 | 2.028 | 19,4% | 134 |
+| `modules/payroll` | 3.461 | 951 | 27,5% | 53 |
+| `modules/pockets` | 1.655 | 754 | 45,6% | 40 |
+| `modules/subscriptions` | 1.877 | 518 | 27,6% | 34 |
+| `modules/timeoff` | 2.355 | 324 | 13,8% | 27 |
+| `modules/transactions` | 5.291 | 981 | 18,5% | 74 |
+| `modules/users` | 1.271 | 317 | 24,9% | 24 |
+| `platform` (tutte le aree) | 12.249 | 1.799 | 14,7% | 133 |
+| `ui` | 3.517 | 382 | 10,9% | 22 |
+| **Totale** | **74.744** | **16.772** | **22,4%** | **1.138** |
+
+Il valore per ogni area di `platform` e per file è nel file JSON. Con i nomi e i valori letterali resi uguali la
+misura conta anche le strutture ripetute (schemi di tabelle, moduli di form, JSX con la stessa forma): per questo è
+molto sopra il 3% di §10.7.4. La soglia del 3% è da rivedere con questo valore (decisione I15: «altri valori, dopo la
+prima misura»).
 
 ### 10.7.4 Obiettivo
 
@@ -323,6 +356,69 @@ I valori vanno in un file JSON nel repo. In produzione si leggono solo le durate
 | Pagine | Overview, Accounts, Expenses, Investments, Funds, Time Off | Tempo di risposta del server; da R3: peso del JavaScript iniziale per schermata |
 | Job | I 20 del registro; i più lunghi: sync Wallet, sync Investments, gruppo `daily`, backup | Durata, dalle righe già salvate dei job |
 | Build | Immagine e avvio | Dimensione dell'immagine, tempo fino a `GET /api/health` |
+
+**Valori di partenza, misura di N0** (`npm run perf -- --write`, file `baselines/performance.json`; `main` dopo
+`v0.10.2`; utente pesante su `ledgerly_test`). Tempo in ms: mediana e 95° percentile su 5 esecuzioni per le viste e
+su 20 per le rotte. Le query sono quelle di una esecuzione.
+
+| Vista | Mediana | p95 | Query |
+|---|---|---|---|
+| expensesView (mese corrente) | 11.1 | 13.1 | 14 |
+| expensesView (tre anni) | 46.1 | 51.7 | 14 |
+| accountsView (24 mesi) | 28.8 | 30.4 | 5 |
+| Overview | 54.6 | 59.7 | 25 |
+| Account (dettaglio) | 30.4 | 33.4 | 9 |
+| Investments (home) | 55.1 | 57.1 | 82 |
+| Investments (servizio) | 18.8 | 20.9 | 33 |
+| Funds (home) | 1.7 | 2.8 | 5 |
+| Funds (fondo) | 31.8 | 32.8 | 17 |
+| Pockets | 24.7 | 26.2 | 14 |
+| Budgets | 1.5 | 2.8 | 6 |
+| Subscriptions | 3 | 3.4 | 9 |
+| Time Off (anno) | 3.8 | 4.7 | 9 |
+
+| Rotta `/api/v1` | Mediana | p95 | Query |
+|---|---|---|---|
+| GET /accounts | 6 | 6.5 | 5 |
+| GET /accounts/:id/balances | 2.5 | 2.8 | 5 |
+| POST /accounts/:id/balances | 2.7 | 3.2 | 7 |
+| GET /transactions | 9.6 | 11.6 | 7 |
+| GET /summary | 36.4 | 36.9 | 9 |
+| GET /investments | 21.9 | 24.3 | 73 |
+| GET /investments/:accountId/holdings | 4.9 | 5.4 | 16 |
+
+`POST /imports` non è misurata: chiede un documento, il bucket e `after()` di Next. Le pagine (tempo di risposta del
+server) non sono misurate in N0: l'utente pesante esiste solo in `ledgerly_test` e l'anteprima locale non accetta il
+login con password. Ogni «pagina» della tabella è l'insieme delle letture del suo `page.tsx`.
+
+Job in produzione (`v0.10.2`, esecuzioni riuscite degli ultimi 30 giorni, lette dalle righe già salvate):
+
+| Job | Esecuzioni | Mediana (ms) | Massimo (ms) |
+|---|---|---|---|
+| `integrations-sync` | 509 | 151727 | 195717 |
+| `interests-rematch` | 30 | 3322 | 4866 |
+| `wallet-sync` | 277 | 1063 | 1703 |
+| `trek-sync` | 277 | 455 | 52027 |
+| `database-backup` | 30 | 267 | 357 |
+| `fx-rates-refresh` | 18 | 159 | 1839 |
+| `holidays-refresh` | 30 | 159 | 2291 |
+| `subscriptions-check` | 435 | 104 | 261 |
+| `monthly-summary` | 1 | 73 | 73 |
+| `funds-deposits` | 419 | 32 | 182 |
+| `housekeeping` | 30 | 24 | 136 |
+| `accounts-alerts` | 30 | 23 | 87 |
+| `recurrences-refresh` | 142 | 15 | 141 |
+| `accounts-snapshot` | 1 | 13 | 13 |
+| `budgets-alerts` | 313 | 13 | 338 |
+| `pockets-accrual` | 1 | 5 | 5 |
+| `payslips-sweep` | 721 | 3 | 100 |
+| `pockets-planned-cleanup` | 30 | 2 | 12 |
+| `interests-accrual` | 373 | 2 | 2701 |
+| `documents-retention` | 30 | 2 | 27 |
+| `cometa-sweep` | 721 | 1 | 77 |
+
+`npm run perf` (gate G9) fallisce se una vista o una rotta fa più query della partenza, o se la sua mediana peggiora
+di oltre il 10% e di oltre 3 ms (sotto 3 ms la differenza è rumore di misura).
 
 ### 10.9.2 Obiettivi
 
