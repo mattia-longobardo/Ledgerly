@@ -75,8 +75,8 @@ beforeEach(() => {
 });
 
 describe("FundWizard", () => {
-  it("shows no template field while the templates file is empty", () => {
-    renderWizard();
+  it("shows no template field with no template", () => {
+    renderWizard({ templates: [] });
     expect(screen.getByTestId("fund-wizard")).toBeInTheDocument();
     expect(screen.queryByLabelText("Template")).not.toBeInTheDocument();
     expect(screen.getByTestId("wizard-step-fund")).toBeVisible();

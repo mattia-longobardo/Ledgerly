@@ -6,8 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createFundAction } from "@/app/(app)/funds/fund-setup";
 import { parseAmount } from "@/modules/accounts/rules";
-import type { CivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@/platform/format";
+import { type CivilDate, isCivilDate } from "@/platform/dates";
+import {
+  formatDate,
+  formatMoney,
+  type NumberFormat,
+  numberSeparators,
+  type UiLocale,
+} from "@/platform/format";
 import { DISPLAY_CURRENCIES } from "@/platform/fx/rules";
 import { Button, ButtonLink, LinkButton } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -80,8 +86,8 @@ interface Draft {
 }
 
 /** The rows of a template as the draft keeps them: `#<index>` becomes the kind of that source. */
-function templateRows(template: FundTemplate | undefined, taken: TakenComponents) {
-  const { sources, fees } = template ? applyTemplate(template) : { sources: [], fees: [] };
+function templateRows(template: FundTemplate | undefined, taken: TakenComponents, decimal: string) {
+  const { sources, fees } = template ? applyTemplate(template, decimal) : { sources: [], fees: [] };
   const free = freeComponents(taken);
   const payroll = sources.find((source) => source.kind === "payroll");
   return {
@@ -131,7 +137,7 @@ export function FundWizard({
     valueOn: todayOn,
     currency,
     templateId: "",
-    ...templateRows(undefined, taken),
+    ...templateRows(undefined, taken, "."),
   }));
   /** True once steps 2 or 3 hold a choice of the person's: a template then asks before replacing it. */
   const [touched, setTouched] = useState(false);
@@ -160,7 +166,8 @@ export function FundWizard({
   function fundProblems(): Partial<Record<FundField, string>> {
     const errors: Partial<Record<FundField, string>> = {};
     if (draft.fund.name.trim() === "") errors.name = t("errors.name");
-    if (draft.fund.startOn === "") errors.startOn = t("errors.memberSince");
+    // A date half typed ("0002-03-01", the year's first digit) is no date yet.
+    if (!isCivilDate(draft.fund.startOn)) errors.startOn = t("errors.memberSince");
     else if (draft.fund.startOn > todayOn) errors.startOn = t("errors.future");
     if (draft.value.trim() !== "") {
       try {
@@ -168,7 +175,7 @@ export function FundWizard({
       } catch {
         errors.value = t("errors.value");
       }
-      if (draft.valueOn === "") errors.valueOn = t("errors.valueOn");
+      if (!isCivilDate(draft.valueOn)) errors.valueOn = t("errors.valueOn");
       else if (draft.valueOn > todayOn) errors.valueOn = t("errors.future");
       else if (draft.fund.startOn !== "" && draft.valueOn < draft.fund.startOn) {
         errors.valueOn = t("errors.valueBeforeStart");
@@ -246,6 +253,7 @@ export function FundWizard({
       ...templateRows(
         templates.find((one) => one.id === templateId),
         taken,
+        numberSeparators(format).decimal,
       ),
     });
     setTouched(false);
@@ -451,7 +459,7 @@ export function FundWizard({
       return text;
     }
   };
-  const day = (on: string) => (on === "" ? "" : formatDate(on, "long", locale));
+  const day = (on: string) => (isCivilDate(on) ? formatDate(on, "long", locale) : "");
   const accountName = accounts.find((account) => account.id === draft.debit.accountId)?.name ?? null;
   const summaryOptions = { format, locale, currency: draft.currency };
 

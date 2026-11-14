@@ -1,1 +1,111 @@
-[]
+[
+  {
+    "id": "cometa",
+    "name": "Cometa",
+    "sources": [
+      {
+        "kind": "payroll",
+        "accrualPeriod": "quarter",
+        "hasDue": true,
+        "dueDay": "20",
+        "dueOffsetMonths": "1",
+        "toleranceDays": "15"
+      }
+    ],
+    "fees": [
+      {
+        "label": "Adesione",
+        "basis": "one_off",
+        "value": "10.32",
+        "scope": "#0",
+        "note": "5,16 € lavoratore + 5,16 € datore di lavoro · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Quota associativa",
+        "basis": "periodic",
+        "value": "12",
+        "period": "year",
+        "scope": "#0",
+        "note": "Prelevata in rate trimestrali · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Gestione · Monetario Plus",
+        "basis": "on_assets",
+        "mode": "rate",
+        "value": "0.04",
+        "period": "year",
+        "validFrom": "2026-07-31",
+        "note": "https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Gestione · Sicurezza",
+        "basis": "on_assets",
+        "mode": "rate",
+        "value": "0.58",
+        "period": "year",
+        "validFrom": "2026-07-31",
+        "note": "https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Gestione · Reddito",
+        "basis": "on_assets",
+        "mode": "rate",
+        "value": "0.06",
+        "period": "year",
+        "validFrom": "2026-07-31",
+        "note": "https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Gestione · Crescita",
+        "basis": "on_assets",
+        "mode": "rate",
+        "value": "0.08",
+        "period": "year",
+        "validFrom": "2026-07-31",
+        "note": "https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Anticipazione",
+        "basis": "per_request",
+        "value": "10",
+        "validFrom": "2026-07-31",
+        "note": "Metà importo per una richiesta online · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Trasferimento",
+        "basis": "per_request",
+        "value": "10",
+        "validFrom": "2026-07-31",
+        "note": "Metà importo per una richiesta online · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Riscatto",
+        "basis": "per_request",
+        "value": "10",
+        "validFrom": "2026-07-31",
+        "note": "Metà importo per una richiesta online · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Cambio di comparto",
+        "basis": "per_request",
+        "value": "10",
+        "validFrom": "2026-07-31",
+        "note": "Il primo è gratuito · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Designazione dei beneficiari",
+        "basis": "per_request",
+        "value": "5",
+        "validFrom": "2026-07-31",
+        "note": "La prima è gratuita · https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      },
+      {
+        "label": "Cessione",
+        "basis": "per_request",
+        "value": "20",
+        "validFrom": "2026-07-31",
+        "note": "https://www.cometafondo.it/wp-content/uploads/2024/03/2024-02-09-parte-I-scheda-i-costi.pdf"
+      }
+    ]
+  }
+]

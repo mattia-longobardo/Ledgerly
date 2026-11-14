@@ -18,8 +18,28 @@ const TEMPLATE: FundTemplate = {
 };
 
 describe("fund templates", () => {
-  it("ships with no template: the form shows no template field", () => {
-    expect(FUND_TEMPLATES).toEqual([]);
+  it("ships with one template, whose rows the form can hold (decision 6 of release N6)", () => {
+    expect(FUND_TEMPLATES).toHaveLength(1);
+    const [template] = FUND_TEMPLATES;
+    const { sources, fees } = applyTemplate(template, ",");
+    expect(
+      sources.map((source) => [source.kind, source.accrualPeriod, source.dueDay, source.dueOffsetMonths]),
+    ).toEqual([["payroll", "quarter", "20", "1"]]);
+    // The two fees of a transfer apply to the payslip source; the amounts take the person's separator.
+    expect(fees.filter((fee) => fee.scope === "#0").map((fee) => [fee.basis, fee.value, fee.period])).toEqual(
+      [
+        ["one_off", "10,32", "year"],
+        ["periodic", "12", "year"],
+      ],
+    );
+    expect(fees.filter((fee) => fee.basis === "on_assets").every((fee) => fee.mode === "rate")).toBe(true);
+    expect(fees).toHaveLength(12);
+  });
+
+  it("hands the amounts over with the decimal separator asked for", () => {
+    const fee = { label: "X", basis: "one_off" as const, value: "10.32" };
+    expect(applyTemplate({ id: "x", name: "X", fees: [fee] }).fees[0].value).toBe("10.32");
+    expect(applyTemplate({ id: "x", name: "X", fees: [fee] }, ",").fees[0].value).toBe("10,32");
   });
 
   it("gives the sources in the order of the form, each a whole source form", () => {
