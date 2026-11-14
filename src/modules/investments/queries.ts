@@ -414,7 +414,8 @@ export async function investmentsHome(
       id: row.fund.id,
       name: row.fund.name,
       valueCents: row.valueCents,
-      kind: row.fund.type,
+      // Every fund is a pension fund (rewrite plan, decision H12): the field stays for its readers.
+      kind: "pension",
     })),
   };
 }

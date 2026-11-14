@@ -1,6 +1,6 @@
 import "server-only";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { listBalanceEntries } from "@/modules/accounts/queries";
+import { listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import type { Ctx } from "@/platform/context";
 import { type CivilDate, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
@@ -13,7 +13,7 @@ import { netOfFees } from "./pension/rules";
 import { competenceFor } from "./pension/service";
 import { calendarOf, payrollSourceOf } from "./queries";
 import { fundOperations, funds, pensionCompetences, unitMovements } from "./schema";
-import { feesOf, type Fund, sourcesOf } from "./service";
+import { feesOf, type Fund, type FundFee, type FundSource, sourcesOf } from "./service";
 import { competencePeriod, dueOn } from "./sources";
 
 /** One open fund as another module lists it: what it is worth, what went in, what it gained. */
@@ -191,4 +191,42 @@ export async function fundsOverview(
     });
   }
   return { rows, archived: all.filter((fund) => fund.state === "archived") };
+}
+
+/** A fund's sources and fees with the names an export needs: the fund's, the account's, the source's kind. */
+export interface FundsConfiguration {
+  sources: (FundSource & { fundName: string; accountName: string | null })[];
+  fees: (FundFee & { fundName: string; sourceKind: FundSource["kind"] | null })[];
+}
+
+/** How every fund of a person is configured, open and archived: what the export lists beside the funds. */
+export async function fundsConfiguration(ctx: Pick<Ctx, "userId">): Promise<FundsConfiguration> {
+  const all = await getDb()
+    .select({ id: funds.id, name: funds.name })
+    .from(funds)
+    .where(userScoped(ctx).owns(funds))
+    .orderBy(asc(funds.name), asc(funds.id));
+  const ids = all.map((fund) => fund.id);
+  const [sources, fees, accounts] = await Promise.all([
+    sourcesOf(ctx, ids),
+    feesOf(ctx, ids),
+    listAccounts(ctx, { includeArchived: true }),
+  ]);
+  const fundName = new Map(all.map((fund) => [fund.id, fund.name]));
+  const accountName = new Map(accounts.map((account) => [account.id, account.name]));
+  const kindOf = new Map(sources.map((source) => [source.id, source.kind]));
+  const byFund = <T extends { fundId: string }>(rows: T[]) =>
+    [...rows].sort((a, b) => ids.indexOf(a.fundId) - ids.indexOf(b.fundId));
+  return {
+    sources: byFund(sources).map((source) => ({
+      ...source,
+      fundName: fundName.get(source.fundId) ?? "",
+      accountName: source.accountId === null ? null : (accountName.get(source.accountId) ?? null),
+    })),
+    fees: byFund(fees).map((fee) => ({
+      ...fee,
+      fundName: fundName.get(fee.fundId) ?? "",
+      sourceKind: fee.sourceId === null ? null : (kindOf.get(fee.sourceId) ?? null),
+    })),
+  };
 }

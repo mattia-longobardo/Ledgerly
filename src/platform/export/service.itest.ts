@@ -6,7 +6,7 @@ import type { IncomingTransaction } from "@/modules/transactions/rules";
 import { upsertFromProvider } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { closeDatabase, resetDatabase } from "../../../test/db";
-import { debitFund } from "../../../test/funds";
+import { debitFund, payrollFund } from "../../../test/funds";
 import { createTestUser } from "../../../test/users";
 import { readZip } from "../../../test/zip";
 
@@ -148,6 +148,63 @@ describe("exportFileName", () => {
     expect(row).toContain("1200.00");
     expect(row).toContain("2026-09-30");
     expect(row).not.toContain("1100.00");
+  });
+
+  it("says every fund is a pension fund, and lists its sources and its fees (release N6, exception X3)", async () => {
+    const ctx = await newContext();
+    await debitFund(ctx, {
+      name: "Fondo Beta",
+      provider: "Esempio Previdenza",
+      code: "LU0987654321",
+      startOn: "2026-01-01",
+      monthlyCents: 25_100n,
+      debitDay: 5,
+      depositFeeCents: 100n,
+      ter: "0.012",
+    });
+    await payrollFund(ctx, { name: "Fondo Alfa", startOn: "2026-01-01" });
+    const zip = await readZip(await exportUserBytes(ctx, NOW));
+    const json = JSON.parse(zip.get("ledgerly.json")!.toString("utf8")) as Record<
+      string,
+      Record<string, unknown>[]
+    >;
+    // `kind` has one value, whatever the fund was before; the old column `isin` holds the fund's code.
+    expect(json.funds.map((fund) => [fund.name, fund.kind, fund.isin])).toEqual([
+      ["Fondo Alfa", "pension", null],
+      ["Fondo Beta", "pension", "LU0987654321"],
+    ]);
+    expect(json["fund-sources"]).toEqual([
+      expect.objectContaining({
+        fund: "Fondo Alfa",
+        kind: "payroll",
+        state: "active",
+        components: "worker employer tfr",
+        accrualPeriod: "quarter",
+        dueDay: 20,
+        dueOffsetMonths: 1,
+        toleranceDays: 15,
+      }),
+      expect.objectContaining({
+        fund: "Fondo Beta",
+        kind: "bank_debit",
+        amount: "251.00",
+        debitDay: 5,
+        every: 1,
+        unit: "month",
+      }),
+    ]);
+    expect(
+      json["fund-fees"].map((fee) => [fee.fund, fee.basis, fee.amount, fee.rate, fee.period, fee.source]),
+    ).toEqual([
+      ["Fondo Alfa", "one_off", "10.32", null, null, "payroll"],
+      ["Fondo Alfa", "periodic", "3.00", null, "quarter", "payroll"],
+      ["Fondo Beta", "per_contribution", "1.00", null, null, "bank_debit"],
+      ["Fondo Beta", "on_assets", null, "0.012000", "year", null],
+    ]);
+    expect(zip.has("fund-sources.csv")).toBe(true);
+    expect(zip.has("fund-fees.csv")).toBe(true);
+    // No value of the type of before is written anywhere in the archive's tables.
+    expect(zip.get("funds.csv")!.toString("utf8")).not.toMatch(/\bpac\b/i);
   });
 
   it("carries the day it was made", () => {
