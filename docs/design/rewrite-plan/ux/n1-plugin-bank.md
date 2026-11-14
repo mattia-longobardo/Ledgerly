@@ -6,8 +6,8 @@ Regole tecniche: [`../04-now.md`](../04-now.md) §4.1 e §4.2. Decisioni: [`../0
 Questa specifica descrive solo l'interfaccia. Il piano ha priorità: se un punto è in conflitto con il piano, vale il piano.
 
 Revisione del 14/11/2026: applica le decisioni di Mattia sulle domande Q1-Q7 (§12). La regola nuova è H25: nessun passo
-dell'admin, ogni utente attiva il plugin per sé. I punti marcati **[A1]** e **[A2]** dipendono da una domanda ancora
-aperta (§14): il testo dà l'opzione A. I conflitti con gli altri rilasci sono in §15.
+dell'admin, ogni utente attiva il plugin per sé. Le domande nate da H25 sono decise: punti di N1 in §14, effetti sugli altri
+rilasci in §15 (decisioni H27-H30). Nessuna domanda è aperta.
 
 ## 0. Riepilogo
 
@@ -111,7 +111,7 @@ Lo stato è dell'utente, non dell'istanza: due utenti della stessa istanza hanno
 | `paused` · Disattivato dopo l'uso | Non attivo, con credenziali o banche salvate | `bg-faint` | «Non attivo» | `muted` | «Le letture sono ferme dal {date}. Credenziali e collegamenti sono salvati.» | Assente |
 
 - La riga di dettaglio usa `border-t border-border px-4 py-2.5 text-sm text-muted`. Non è un errore: nessun `role="alert"`.
-- Un plugin che non risponde non cambia lo stato della riga. L'utente attivo vede l'errore `plugin_down` dove fa un'azione (§7). **[A2]**
+- Un plugin che non risponde non cambia lo stato della riga. L'utente attivo vede l'errore `plugin_down` dove fa un'azione (§7). Nessuna schermata di N1 mostra lo stato del plugin a chi gestisce l'istanza (decisione A2).
 
 ### 2.3 Azioni
 
@@ -125,7 +125,7 @@ Lo stato è dell'utente, non dell'istanza: due utenti della stessa istanza hanno
   - Da `available`: la sezione apre nella vista A (guida in 3 passi).
   - Da `paused`: la sezione torna com'era. Parte una lettura per ogni banca collegata. Un accesso scaduto nel frattempo mostra «Accesso scaduto» e «Rinnova accesso» (§5.1).
 - **Disattiva senza credenziali salvate:** nessuna conferma. La riga torna a `available`. Toast «{name} disattivato».
-- **Disattiva con credenziali salvate:** `Modal` 420. Titolo «Disattivare {name}?». Testo: «Le letture di {name} si fermano e la sua sezione sparisce dalle impostazioni. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte.» Con banche collegate, in più: «{count, plural, one {Hai # collegamento attivo.} other {Hai # collegamenti attivi.}}». Pulsanti: «Resta attivo», «Disattiva» (`danger`). Toast «{name} disattivato». **[A1]**
+- **Disattiva con credenziali salvate:** `Modal` 420. Titolo «Disattivare {name}?». Testo: «Le letture di {name} si fermano e la sua sezione sparisce dalle impostazioni. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte.» Con banche collegate, in più: «{count, plural, one {Hai # collegamento attivo.} other {Hai # collegamenti attivi.}}». Pulsanti: «Resta attivo», «Disattiva» (`danger`). Toast «{name} disattivato».
 - Una lettura già in corso al momento della disattivazione finisce. Non ne partono altre.
 - Per eliminare tutto, l'utente usa prima «Scollega» (§5.4) e «Rimuovi credenziali» (§4.3), poi «Disattiva».
 
@@ -136,7 +136,7 @@ Lo stato è dell'utente, non dell'istanza: due utenti della stessa istanza hanno
 | Sezione «Banche» | Non si disegna. La pagina non manda al browser nessun dato del plugin |
 | Letture automatiche e «Sincronizza ora» | Ferme per quell'utente. Gli altri utenti non cambiano |
 | Conti e movimenti | Restano visibili, con l'ultima lettura. Non diventano conti tenuti a mano |
-| Credenziali e collegamenti | Restano cifrati nel core. Non sono leggibili dall'interfaccia **[A1]** |
+| Credenziali e collegamenti | Restano cifrati nel core. Non sono leggibili dall'interfaccia (decisione A1) |
 | `/banks/connect` | 404 |
 | Scadenza dell'accesso alla banca | Continua a scorrere: è una data della banca |
 
@@ -340,7 +340,7 @@ Una `ConnectionRow` per banca, sotto la riga delle credenziali (`border-t`).
 Stati di N1 (pallino + parola; il modello a 5 valori è di N2, §11):
 
 | `state` | Pallino | Parola | Tono | Riga di dettaglio sotto | Azione in evidenza |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | `pending` | `bg-warn` | «Da completare» | `warn` | «Hai dato l'accesso, ma non hai ancora scelto i conti.» | «Scegli i conti» (primario) al posto di «Sincronizza ora» |
 | `active` | `bg-pos` | «Collegata» | `pos` | — | «Sincronizza ora» |
 | `active` + `rate_limited` | `bg-pos` | «Collegata» | `pos` | «La banca ha raggiunto il limite di letture automatiche. Prossima lettura alle {time}.» (`text-muted`, non è un errore) | «Sincronizza ora» |
@@ -904,14 +904,14 @@ oltre 90 giorni: §6.4, §6.6), 5 e 6 (credenziali: §1.3; ogni utente vede solo
 | N2 | Colonna «Letture automatiche» (§5.3) | La pianificazione va sotto «Avanzate» |
 | N2 | §5.5 | La frase «una sola banca» sparisce; «Collega una banca» torna sempre visibile; la guardia di §6.1 cade |
 | N2 | Avvisi di scadenza a 14 e 3 giorni | Usano la data «accesso valido fino al» già presente nella riga |
-| N2 | Registro | Nessun registro in N1. Il registro grezzo va in Server › Diagnostica (§15, E3) |
-| N2 | Collegamento di un plugin disattivato dall'utente (§2.4) | In N1 il conto mostra solo l'ultima lettura. Lo stato in N2 è una domanda aperta (§15, E4) |
-| R5a, R5c | Voce del plugin (§2) | La voce passa nel tab Plugin. Chi installa e aggiorna i plugin è una domanda aperta (§15, E1) |
+| N2 | Registro | Nessun registro in N1. Il registro grezzo è per utente, sotto «Avanzate»; l'admin vede solo lo stato dei plugin in Server › Diagnostica (H29) |
+| N2 | Collegamento di un plugin disattivato dall'utente (§2.4) | In N1 il conto mostra solo l'ultima lettura. In N2 lo stato è «In pausa», con il testo «Enable Banking non è attivo» e l'azione «Attiva» (H30) |
+| R5a, R5c | Voce del plugin (§2) | La voce passa nel tab Plugin, che è di ogni utente: elenco, «Attiva», «Disattiva». I plugin arrivano e si aggiornano con l'istanza (H27) |
 | N4 | `Select` «In Ledgerly» (§6.4) | Si aggiunge il gruppo «È lo stesso conto di…» con i conti Wallet |
 
 ## 12. Decisioni prese
 
-Decisioni di Mattia del 14/11/2026 sulle 7 domande della prima versione di questa specifica. Registro: [`../01-decisions.md`](../01-decisions.md) H25 e H26.
+Decisioni di Mattia del 14/11/2026 sulle 7 domande della prima versione di questa specifica. Registro: [`../01-decisions.md`](../01-decisions.md) H25 e H26. Le decisioni sui punti nati da Q1 sono in §14 e §15.
 
 | # | Domanda | Decisione | Dove è applicata |
 |---|---|---|---|
@@ -941,25 +941,26 @@ Non sono decisioni di prodotto: sono dati che l'interfaccia richiede e che il pi
 9. **Attivazione per utente (H25).** Serve un dato «utente, plugin, attivo sì o no, data dell'ultima disattivazione». Le letture automatiche saltano gli utenti con il plugin non attivo. Le azioni del server controllano l'attivazione dell'utente, non solo la sessione. La forma (tabella o colonna) è una scelta dello sviluppo.
 10. **`06-data.md` §6.1.** La riga della tabella `plugins` (indirizzo, stato) e l'elenco delle migrazioni di N1 vanno allineati ai punti 8 e 9. Il file non è cambiato da questa revisione.
 
-## 14. Domande aperte di N1
+## 14. Punti di N1 nati da H25: decisi
 
-Punti di prodotto che le decisioni di §12 lasciano aperti. Non sono decisi. Il testo della specifica usa l'opzione A.
-Lo sviluppo di questi punti parte dopo la risposta di Mattia.
+Punti di prodotto che le decisioni di §12 lasciavano aperti. Mattia ha scelto il default (A) per tutti e due, il
+14/11/2026. Il testo della specifica applica l'opzione A.
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
-|---|---|---|---|---|---|
-| A1 | Alla disattivazione, credenziali Enable Banking e accesso alle banche restano salvati? | Mattia disattiva Enable Banking a marzo e lo riattiva a maggio | Restano cifrati nel core. A maggio BBVA riparte senza un nuovo accesso, se l'accesso non è scaduto | La disattivazione elimina le credenziali e chiude l'accesso alle banche. A maggio Mattia inserisce di nuovo la chiave e rifà l'accesso a ogni banca. Nel frattempo i conti sono conti tenuti a mano | A: riattivazione con un clic; i segreti restano nel database anche a plugin non attivo. B: nessun segreto salvato a plugin non attivo; riattivazione di circa 5 minuti per banca. Con A l'utente elimina tutto con «Scollega» e «Rimuovi credenziali» |
-| A2 | Il plugin non risponde: dove lo vede chi gestisce l'istanza, in N1? | Il container si ferma dopo un aggiornamento. Ogni utente attivo vede «Il collegamento con le banche non è disponibile ora» | In nessuna schermata di N1. Il container ha healthcheck e riavvio automatico; il motivo è nei log del container. Da N2 lo stato è in Server › Diagnostica | Una riga di sola lettura in Settings › Server già in N1: «Enable Banking: risponde» o «non risponde dalle {time}». L'admin legge, non agisce | A: nessuna schermata per l'admin, coerente con H25; il guasto si nota dagli errori degli utenti. B: una vista piccola in più in N1; il guasto si vede subito |
+| # | Domanda | Esempio | A (default) | B | Effetto | Decisione |
+|---|---|---|---|---|---|---|
+| A1 | Alla disattivazione, credenziali Enable Banking e accesso alle banche restano salvati? | Mattia disattiva Enable Banking a marzo e lo riattiva a maggio | Restano cifrati nel core. A maggio BBVA riparte senza un nuovo accesso, se l'accesso non è scaduto | La disattivazione elimina le credenziali e chiude l'accesso alle banche. A maggio Mattia inserisce di nuovo la chiave e rifà l'accesso a ogni banca. Nel frattempo i conti sono conti tenuti a mano | A: riattivazione con un clic; i segreti restano nel database anche a plugin non attivo. B: nessun segreto salvato a plugin non attivo; riattivazione di circa 5 minuti per banca. Con A l'utente elimina tutto con «Scollega» e «Rimuovi credenziali» | **A** |
+| A2 | Il plugin non risponde: dove lo vede chi gestisce l'istanza, in N1? | Il container si ferma dopo un aggiornamento. Ogni utente attivo vede «Il collegamento con le banche non è disponibile ora» | In nessuna schermata di N1. Il container ha healthcheck e riavvio automatico; il motivo è nei log del container. Da N2 lo stato è in Server › Diagnostica | Una riga di sola lettura in Settings › Server già in N1: «Enable Banking: risponde» o «non risponde dalle {time}». L'admin legge, non agisce | A: nessuna schermata per l'admin, coerente con H25; il guasto si nota dagli errori degli utenti. B: una vista piccola in più in N1; il guasto si vede subito | **A** |
 
 ## 15. Effetti sugli altri rilasci
 
-Punti del piano in conflitto con H25. Sono elencati, non risolti: i testi degli altri rilasci non sono cambiati.
-Ogni punto è una domanda per Mattia.
+Punti del piano in conflitto con H25. Mattia li ha decisi il 14/11/2026: E2 e E3 con l'opzione B, gli altri con il
+default. Le righe del piano toccate sono aggiornate: `03-releases.md` (N2, R5c), `04-now.md` §4.1 e §4.3,
+`01-decisions.md` (H27-H30, C4, C5), `07-apps.md`, `11-standardization.md` §11.1, `rewrite-plan.md`.
 
-| # | Punto del piano | Esempio | A (default) | B | Effetto |
-|---|---|---|---|---|---|
-| E1 | **R5c, tab Plugin completo dell'admin:** «installa, attiva, aggiorna, rimuovi» (`03-releases.md` R5c; C4 «Installa solo l'admin»; D3 «tab Plugin»; `07-apps.md` «Admin: … installazione dei plugin»; `11-standardization.md` «Chi lo usa lo installa»; `rewrite-plan.md` «Wallet e Trek si installano») | In R5c arriva il plugin Trek | I plugin del catalogo ufficiale fanno parte dell'installazione standard: arrivano e si aggiornano con l'istanza. Il tab Plugin è di ogni utente: elenco, «Attiva», «Disattiva». Nessun «installa, aggiorna, rimuovi» nell'interfaccia | L'admin ha una pagina tecnica in Settings › Server: installa, aggiorna, rimuovi. Il tab Plugin dell'utente ha solo «Attiva» e «Disattiva» | A: nessun compito dell'admin nell'interfaccia; ogni plugin del catalogo gira sempre, anche senza utenti. B: l'admin sceglie quali plugin girano; torna un passo dell'admin prima dell'utente |
-| E2 | **R5c, plugin fuori catalogo:** «solo admin, etichetta "non verificato"» (C4) | Un amico scrive un plugin per la sua banca | Si aggiunge solo dalla configurazione del server, mai dall'interfaccia. Compare a ogni utente con l'etichetta «non verificato»; l'attivazione chiede una conferma | Fuori dal piano: esistono solo i plugin del catalogo ufficiale | A: resta possibile, con un lavoro sul server e un rischio dichiarato all'utente. B: meno superficie; nessun plugin di terzi |
-| E3 | **N2, registro grezzo solo per l'admin** in Server › Diagnostica (`03-releases.md` N2, criterio 2; `04-now.md` §4.3) | La lettura di una banca di un altro utente fallisce | Resta com'è: è diagnosi dell'istanza, non gestione dei plugin. L'admin legge righe tecniche senza segreti, per tutti i collegamenti | Ogni utente vede il registro grezzo dei suoi collegamenti sotto «Avanzate». L'admin vede solo lo stato dei plugin | A: nessun cambio a N2; l'admin vede l'attività tecnica degli altri utenti. B: ogni utente risolve da solo; più lavoro in N2 (una vista per utente) |
-| E4 | **N2, stato a 5 valori:** non ha un caso per «plugin disattivato dall'utente» (`04-now.md` §4.3) | Mattia disattiva Enable Banking. In Accounts resta il conto BBVA | Il collegamento è «In pausa», con il testo «Enable Banking non è attivo» e l'azione «Attiva». Nessun avviso di ritardo o di scadenza mentre il plugin non è attivo | Il conto mostra solo la data dell'ultima lettura, senza stato e senza azione | A: l'utente capisce perché il conto è fermo; un testo e un'azione in più in N2. B: nessun lavoro in N2; il conto sembra fermo senza motivo |
-| E5 | **R5c, passaggio di Wallet e Trek a plugin:** «Wallet e Trek si installano; chi non li usa non li vede» | Dopo R5c Mattia ha Wallet e Trek collegati; un secondo utente non ha niente | I due plugin sono attivi da subito per chi ha già un collegamento. Per gli altri utenti sono disponibili e non attivi: vedono due voci in più | I due plugin sono non attivi per tutti. Chi li usa li riattiva a mano; fino ad allora le letture sono ferme | A: nessuna interruzione per chi li usa; «chi non li usa non li vede» diventa «li vede non attivi». B: una regola sola, ma le letture di Mattia si fermano al deploy di R5c |
+| # | Punto del piano | Esempio | A (default) | B | Effetto | Decisione |
+|---|---|---|---|---|---|---|
+| E1 | **R5c, tab Plugin completo dell'admin:** «installa, attiva, aggiorna, rimuovi» (`03-releases.md` R5c; C4 «Installa solo l'admin»; D3 «tab Plugin»; `07-apps.md` «Admin: … installazione dei plugin»; `11-standardization.md` «Chi lo usa lo installa»; `rewrite-plan.md` «Wallet e Trek si installano») | In R5c arriva il plugin Trek | I plugin del catalogo ufficiale fanno parte dell'installazione standard: arrivano e si aggiornano con l'istanza. Il tab Plugin è di ogni utente: elenco, «Attiva», «Disattiva». Nessun «installa, aggiorna, rimuovi» nell'interfaccia | L'admin ha una pagina tecnica in Settings › Server: installa, aggiorna, rimuovi. Il tab Plugin dell'utente ha solo «Attiva» e «Disattiva» | A: nessun compito dell'admin nell'interfaccia; ogni plugin del catalogo gira sempre, anche senza utenti. B: l'admin sceglie quali plugin girano; torna un passo dell'admin prima dell'utente | **A** (H27) |
+| E2 | **R5c, plugin fuori catalogo:** «solo admin, etichetta "non verificato"» (C4) | Un amico scrive un plugin per la sua banca | Si aggiunge solo dalla configurazione del server, mai dall'interfaccia. Compare a ogni utente con l'etichetta «non verificato»; l'attivazione chiede una conferma | Fuori dal piano: esistono solo i plugin del catalogo ufficiale | A: resta possibile, con un lavoro sul server e un rischio dichiarato all'utente. B: meno superficie; nessun plugin di terzi | **B** (H28) |
+| E3 | **N2, registro grezzo solo per l'admin** in Server › Diagnostica (`03-releases.md` N2, criterio 2; `04-now.md` §4.3) | La lettura di una banca di un altro utente fallisce | Resta com'è: è diagnosi dell'istanza, non gestione dei plugin. L'admin legge righe tecniche senza segreti, per tutti i collegamenti | Ogni utente vede il registro grezzo dei suoi collegamenti sotto «Avanzate». L'admin vede solo lo stato dei plugin | A: nessun cambio a N2; l'admin vede l'attività tecnica degli altri utenti. B: ogni utente risolve da solo; più lavoro in N2 (una vista per utente) | **B** (H29) |
+| E4 | **N2, stato a 5 valori:** non ha un caso per «plugin disattivato dall'utente» (`04-now.md` §4.3) | Mattia disattiva Enable Banking. In Accounts resta il conto BBVA | Il collegamento è «In pausa», con il testo «Enable Banking non è attivo» e l'azione «Attiva». Nessun avviso di ritardo o di scadenza mentre il plugin non è attivo | Il conto mostra solo la data dell'ultima lettura, senza stato e senza azione | A: l'utente capisce perché il conto è fermo; un testo e un'azione in più in N2. B: nessun lavoro in N2; il conto sembra fermo senza motivo | **A** (H30) |
+| E5 | **R5c, passaggio di Wallet e Trek a plugin:** «Wallet e Trek si installano; chi non li usa non li vede» | Dopo R5c Mattia ha Wallet e Trek collegati; un secondo utente non ha niente | I due plugin sono attivi da subito per chi ha già un collegamento. Per gli altri utenti sono disponibili e non attivi: vedono due voci in più | I due plugin sono non attivi per tutti. Chi li usa li riattiva a mano; fino ad allora le letture sono ferme | A: nessuna interruzione per chi li usa; «chi non li usa non li vede» diventa «li vede non attivi». B: una regola sola, ma le letture di Mattia si fermano al deploy di R5c | **A** (H30): è la conseguenza di H25. Ogni utente ha attivi solo i plugin che usa |

@@ -128,7 +128,7 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | N0 | Cartella dei dump, icona installabile, correzioni di servizio, misure di partenza | Ledgerly si installa dal browser | `main` | No | Solo percorso dei dump | S |
 | N1 | Runtime minimo dei plugin, plugin Enable Banking, prima banca | Collega una banca | branch + PR | Sì, additive | Sì (#1, #3, #4, #5) | L |
-| N2 | Stato semplice per collegamento, registro per l'admin, più banche | Una riga chiara per collegamento | branch + PR | Sì | Sì (#1) | S |
+| N2 | Stato semplice per collegamento, registro per utente, più banche | Una riga chiara per collegamento | branch + PR | Sì | Sì (#1) | S |
 | N3 | Categorie automatiche, «Da categorizzare», movimento manuale | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive | Sì (#1) | L |
 | N4 | Passaggio di un conto da Wallet a Enable Banking | Un conto cambia sorgente senza doppioni | branch + PR | Dati | Sì (#1) | M |
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
@@ -141,7 +141,7 @@ flowchart LR
 | R4 | `api` e `web` in container separati | Nulla | branch + PR | No | Sì (#3) | S |
 | R5a | Menu a 3 gruppi, moduli attivabili, primo avvio, Settings | Navigazione nuova | branch + PR | Sì, additive | Sì (#1) | M |
 | R5b | Investments unificata, Overview a gruppi | Una home con 2 gruppi | `main`; PR se cambia l'API | No | Solo se #4 | L |
-| R5c | Wallet e Trek come plugin, tab Plugin completo | Wallet e Trek si installano | branch + PR | Sì | Sì (#1, #3, #5) | L |
+| R5c | Wallet e Trek come plugin, tab Plugin per utente | Wallet e Trek si attivano per utente | branch + PR | Sì | Sì (#1, #3, #5) | L |
 | R5d | Portafoglio manuale, prezzi per ISIN; secondo passo: piano di acquisto (PAC) | «Registra operazione»; acquisti periodici | branch + PR | Sì, additive | Sì (#1, #5) | L |
 | R5e | Avvisi, blocco «Da fare», «Nascondi importi» | Avvisi solo quando serve un'azione | branch + PR | Sì, additive | Sì (#1) | M |
 | R5g | Lavoro standard: tipi di assenza come dati, profili delle buste paga, configurazione del datore | Payroll e Time Off senza codice per un altro datore o contratto | branch + PR | Sì, additive + dati | Sì (#1) | L |

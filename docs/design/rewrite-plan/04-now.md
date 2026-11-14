@@ -81,7 +81,7 @@ schema ha già queste parti, anche dove Enable Banking non le usa. Nessun cambio
 Lo stesso schema descrive i fornitori del core (eToro, Binance) da R2: punto di estensione E5
 ([`10-modularity.md`](10-modularity.md) §10.11). Un valore di capacità che il core non conosce è ignorato, non rifiutato.
 
-Cosa **non** entra in N1: tab Plugin, catalogo, plugin fuori catalogo, aggiornamento e rimozione dall'interfaccia, Wallet e Trek come plugin. Arrivano in R5c. H25 è in conflitto con alcuni di questi punti: l'elenco, con una proposta per ognuno, è in [`ux/n1-plugin-bank.md`](ux/n1-plugin-bank.md) §15. Sono domande aperte per Mattia.
+Cosa **non** entra in N1: tab Plugin, catalogo, Wallet e Trek come plugin. Arrivano in R5a e R5c. Aggiornamento e rimozione dall'interfaccia e plugin fuori catalogo non arrivano in nessun rilascio (H27, H28).
 
 ## 4.2 Plugin Enable Banking (N1)
 
@@ -112,7 +112,8 @@ Cosa **non** entra in N1: tab Plugin, catalogo, plugin fuori catalogo, aggiornam
 - Codici di errore: `auth`, `consent_expired`, `rate_limited`, `provider_down`, `invalid_data`. Testo fisso tradotto.
 - Lo stato è una funzione pura del dominio, con un solo vocabolario. Chiude UI-ACC-1 (stato di sync composto a mano in 5 punti) per i punti toccati; gli altri si chiudono in R3.
 - Vale per tutti i collegamenti: plugin, Wallet, Trek, eToro, Binance.
-- Registro grezzo: Server › Diagnostica, solo admin, filtro per collegamento, 30 giorni.
+- Registro grezzo: per utente, sotto «Avanzate», solo i propri collegamenti, filtro per collegamento, 30 giorni. L'admin vede solo lo stato dei plugin in Server › Diagnostica (H29).
+- Plugin disattivato dall'utente: il collegamento è «In pausa», con il testo «{fornitore} non è attivo» e l'azione «Attiva». Nessun avviso di ritardo o di scadenza finché il plugin non è attivo (H30).
 - **Anticipo AN3: chiavi di notifica generiche.** N2 riscrive questi avvisi. Le chiavi `wallet_sync_failed` e
   `wallet_sync_stale` diventano `sync_failed` e `sync_stale`, con il fornitore come parametro. Un solo modello di
   mail: «{collegamento} non sincronizzato». Per Mattia gli avvisi e i testi sono gli stessi. Oggi le chiavi

@@ -23,7 +23,7 @@ Ogni cosa che oggi è su misura passa a una di queste classi:
 | **Fisso** | Resta nel core, uguale per tutti |
 | **Configurazione** | L'utente o l'admin lo imposta dall'interfaccia, senza codice |
 | **Dati** | Un file di dati nel core (profilo, pacchetto paese, modello di fondo). Aggiungere una voce non chiede codice |
-| **Plugin** | Esce dal core. Chi lo usa lo installa |
+| **Plugin** | Esce dal core. Fa parte dell'installazione standard; chi lo usa lo attiva (H25, H27) |
 | **Via** | Si toglie |
 
 I meccanismi comuni sono 8 punti di estensione, E1-E8: [`10-modularity.md`](10-modularity.md) §10.11.

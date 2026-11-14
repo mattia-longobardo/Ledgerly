@@ -79,7 +79,7 @@ Cosa fa l'app Android («compagno»):
 | Consultazione completa di tutti i moduli attivi | Revisione delle buste paga con il PDF accanto |
 | Movimento manuale, cambio di categoria, assenza, «Aggiorna valore» | Chiavi: eToro, Binance, applicazione Enable Banking |
 | Collegare una banca, scegliere i conti, «Rinnova accesso» | Import di estratti e CSV; modifica in blocco |
-| Budget, abbonamenti, pocket: creazione e modifica | Admin: Utenti, Server, diagnostica, installazione dei plugin |
+| Budget, abbonamenti, pocket: creazione e modifica | Admin: Utenti, Server, diagnostica |
 | Profilo, moduli attivi, dispositivi collegati | Password, 2FA, esportazione dei dati, impostazioni di Payroll e Time Off |
 
 Build e installazione, senza distribuzione:

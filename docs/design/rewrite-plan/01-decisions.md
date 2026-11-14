@@ -79,12 +79,17 @@ Dettaglio del passo: [`11-standardization.md`](11-standardization.md) §11.2.4, 
 
 ### Plugin attivati per utente e schermate di N1 (sesta decisione del 14/11/2026)
 
-Risposte di Mattia alle 7 domande della specifica UX di N1 ([`ux/n1-plugin-bank.md`](ux/n1-plugin-bank.md) §12).
+Risposte di Mattia alle 7 domande della specifica UX di N1 ([`ux/n1-plugin-bank.md`](ux/n1-plugin-bank.md) §12) e ai
+punti nati da H25 (§14 e §15 della stessa specifica).
 
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
-| H25 | **I plugin si attivano per utente. L'admin non fa niente.** I plugin sono già disponibili nell'istanza, non attivi: il container del plugin fa parte dell'installazione standard e non esiste un passo dell'admin nell'interfaccia. Ogni utente attiva per sé i plugin che vuole e gestisce i suoi, come fa oggi con Trek. Dopo la disattivazione la sezione del plugin sparisce e le letture di quell'utente si fermano; conti e movimenti restano e tornano aggiornati alla riattivazione | N1: «L'admin attiva il plugin» e «tab Plugin essenziale (admin)»; `04-now.md` §4.1 «Installazione: solo l'admin … registra l'indirizzo nel tab Plugin». C4 «Installa solo l'admin», per l'interfaccia di N1. Per R5a, R5c e N2 i punti in conflitto sono domande aperte: `ux/n1-plugin-bank.md` §15 | N1 |
+| H25 | **I plugin si attivano per utente. L'admin non fa niente.** I plugin sono già disponibili nell'istanza, non attivi: il container del plugin fa parte dell'installazione standard e non esiste un passo dell'admin nell'interfaccia. Ogni utente attiva per sé i plugin che vuole e gestisce i suoi, come fa oggi con Trek. Dopo la disattivazione la sezione del plugin sparisce e le letture di quell'utente si fermano; conti e movimenti restano e tornano aggiornati alla riattivazione | N1: «L'admin attiva il plugin» e «tab Plugin essenziale (admin)»; `04-now.md` §4.1 «Installazione: solo l'admin … registra l'indirizzo nel tab Plugin». C4 «Installa solo l'admin», per l'interfaccia di N1. Per R5a, R5c e N2: H27-H30 | N1 |
 | H26 | **Schermate di N1, con i default della specifica.** «Scollega» e «Rimuovi credenziali» sono in N1; la rimozione solo senza banche collegate. «Non importare» esiste per un conto esposto dalla banca. I saldi inseriti a mano restano; dalla prima data letta vale la banca. Un solo ingresso alla procedura, in Settings › Integrations. Un'applicazione Enable Banking che permette i pagamenti si rifiuta. La sezione «Banche» sta in Settings › Integrations fino a R5a | Le domande Q2-Q7 della specifica | N1 |
+| H27 | **I plugin del catalogo ufficiale fanno parte dell'installazione standard.** Arrivano e si aggiornano con l'istanza. Il tab Plugin è di ogni utente: elenco, «Attiva», «Disattiva». Nessun «installa, aggiorna, rimuovi» nell'interfaccia, per nessun ruolo | C4 «Installa solo l'admin»; R5c «Tab Plugin completo: installa, attiva, aggiorna, rimuovi»; `07-apps.md` «installazione dei plugin» tra le funzioni dell'admin | R5a, R5c |
+| H28 | **Nessun plugin fuori catalogo.** Esistono solo i plugin del catalogo ufficiale | C4 «Plugin fuori catalogo: solo admin, etichetta "non verificato"» | R5c |
+| H29 | **Il registro grezzo è per utente.** Ogni utente vede il registro grezzo dei suoi collegamenti, sotto «Avanzate». L'admin non vede il registro degli altri utenti: in Server › Diagnostica vede solo lo stato dei plugin | C5 «Registro grezzo solo per l'admin»; N2, criterio 2 | N2 |
+| H30 | **Disattivazione e passaggio, con i default.** Alla disattivazione le credenziali e l'accesso alle banche restano cifrati nel core. In N1 nessuna schermata mostra lo stato del plugin a chi gestisce l'istanza. In N2 il collegamento di un plugin disattivato è «In pausa», con l'azione «Attiva», senza avvisi di ritardo o di scadenza. In R5c i plugin Wallet e Trek sono attivi da subito per chi ha già un collegamento e non attivi per gli altri | — | N1, N2, R5c |
 
 ## 1.1 Premesse
 
@@ -115,7 +120,7 @@ Risposte di Mattia alle 7 domande della specifica UX di N1 ([`ux/n1-plugin-bank.
 | S4 | La prova su una banca vera è il primo passo dello sviluppo del plugin | — | N1 |
 | C2 | Passaggio di un conto da Wallet a Enable Banking: scelta dell'utente, regola M1 | — | N4 |
 | S1 | M1 corretta dallo spike: abbinamento per gruppi (conto + importo), controllo del saldo bloccante, prova a secco | — | N4 |
-| C4 | Plugin: container separato senza stato, interrogato dal core. Installa solo l'admin. Catalogo ufficiale. Plugin fuori catalogo: solo admin, etichetta «non verificato». **Per N1 vale H25:** nessun passo dell'admin nell'interfaccia, attivazione per utente. Per R5c: domande aperte in `ux/n1-plugin-bank.md` §15 | — | N1, R5c |
+| C4 | Plugin: container separato senza stato, interrogato dal core. Catalogo ufficiale. **(H25, H27, H28)** Nessun passo dell'admin nell'interfaccia: i plugin del catalogo fanno parte dell'installazione standard e ogni utente attiva i suoi. Nessun plugin fuori catalogo | — | N1, R5c |
 | C4b | Wallet in sola lettura. Trek tiene la scrittura delle ferie | — | R5c |
 | K1 | Categorizzazione: cascata (regole → memoria esatta → classificatore lineare per utente → tabelle MCC e marchi → «Da categorizzare») | — | N3 |
 | S2 | Memoria severa: «ultime 3 tutte uguali». La copertura si misura a regime | — | N3 |
@@ -124,11 +129,11 @@ Risposte di Mattia alle 7 domande della specifica UX di N1 ([`ux/n1-plugin-bank.
 | S2b | L'app propone di unire le categorie doppie | — | N3 |
 | K4 | Utente nuovo: circa 12 gruppi predefiniti e revisione guidata | — | N3 (tabelle e revisione), R5a (primo avvio) |
 | G10 | Movimento manuale disponibile, anche su un conto collegato a una banca, con avviso | — | N3 |
-| C5 | Sync log: stato semplice per collegamento. Registro grezzo solo per l'admin, 30 giorni | — | N2 |
+| C5 | Sync log: stato semplice per collegamento. Registro grezzo per utente, sotto «Avanzate», 30 giorni; l'admin vede solo lo stato dei plugin (H29) | — | N2 |
 | D1 | Time Off: selezione di primo e ultimo giorno + pannello (tipo, durata), pulsante «Aggiungi assenza». Nessun gesto nascosto | — | N5 |
 | D2 | Menu a 3 gruppi («Ogni giorno», «Risparmi e investimenti», «Lavoro»), moduli attivabili, primo avvio guidato | — | R5a |
 | D2d | Tab mobile: Overview · Accounts · Expenses · Investments · More | — | R5a |
-| D3 | Settings: tab Finance e tab Plugin. Integrations e Categories spariscono | `investments.md` §4.2 | R5a |
+| D3 | Settings: tab Finance e tab Plugin (di ogni utente: H27). Integrations e Categories spariscono | `investments.md` §4.2 | R5a |
 | O1 | Overview: lista dei conti a gruppi, subtotale = riquadro. Mostra anche i conti di investimento. (rev.) Il gruppo degli investimenti ha i 2 sottogruppi di B1 | — | R5b |
 
 ## 1.3 Architettura (fase 2)
