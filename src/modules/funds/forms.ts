@@ -408,11 +408,16 @@ export function contributionInputOf(form: ContributionForm, format: NumberFormat
       note: form.note,
     };
   }
+  const [otherYear, otherIndex] = form.period.split("-").map(Number);
   return {
     kind: "other",
     classification: form.classification,
     on: form.on,
     amountCents: amount(form.amount),
+    period:
+      form.classification === "enrollment" && form.period !== ""
+        ? { year: otherYear, index: otherIndex }
+        : null,
     feeCents,
     note: form.note,
   };

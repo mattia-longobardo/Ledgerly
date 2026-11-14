@@ -491,7 +491,12 @@ export function FundWizard({
     <div className="flex flex-col gap-1 border-t border-border pt-3 first:border-t-0 first:pt-0">
       <dt className="flex items-center justify-between gap-3">
         <span className="font-medium">{title}</span>
-        <LinkButton aria-label={`${t("review.edit")}: ${title}`} onClick={() => go(name)}>
+        {/* A short word is narrower than a target may be: the button keeps 24 px of width. */}
+        <LinkButton
+          className="min-w-6 justify-center"
+          aria-label={`${t("review.edit")}: ${title}`}
+          onClick={() => go(name)}
+        >
           {t("review.edit")}
         </LinkButton>
       </dt>

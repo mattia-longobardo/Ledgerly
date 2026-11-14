@@ -843,6 +843,10 @@ export async function deleteValuation(
 // ——— Contributions and the other operations written by hand ————————————————————————————————————
 
 const fee = z.bigint().nonnegative().nullable();
+const periodOfSource = z
+  .object({ year: z.number().int().min(1990).max(2200), index: z.number().int().min(1).max(12) })
+  .nullable()
+  .default(null);
 
 /**
  * What a person writes in the register. A contribution is voluntary (one amount, which may be tied
@@ -866,10 +870,7 @@ export const contributionSchema = z.discriminatedUnion("kind", [
     employerCents: z.bigint().nonnegative(),
     tfrCents: z.bigint().nonnegative(),
     /** The period the transfer is for, counted as the fund's payslip source counts it. */
-    period: z
-      .object({ year: z.number().int().min(1990).max(2200), index: z.number().int().min(1).max(12) })
-      .nullable()
-      .default(null),
+    period: periodOfSource,
     feeCents: fee,
     note: optionalText(200),
   }),
@@ -878,6 +879,8 @@ export const contributionSchema = z.discriminatedUnion("kind", [
     classification: z.enum(["enrollment", "transfer_in", "switch", "withdrawal"]),
     on: civilDate,
     amountCents: z.bigint().nonnegative(),
+    /** Joining only: the period whose payslips accrued the enrolment quota, so the two reconcile. */
+    period: periodOfSource,
     feeCents: fee,
     note: optionalText(200),
   }),
@@ -904,6 +907,16 @@ async function operationValues(ctx: Pick<Ctx, "userId" | "timeZone">, fund: Fund
     transactionId: null as string | null,
     sourceId: null as string | null,
   };
+  /** The fund's payslip source, and a period it can count: a quarter, or a month. */
+  const payrollSource = async (period: { index: number } | null) => {
+    const payroll = (await sourcesOf(ctx, [fund.id])).filter((one) => one.kind === "payroll");
+    const source = payroll.find((one) => one.state === "active") ?? payroll[0] ?? null;
+    if (period !== null) {
+      const limit = source?.accrualPeriod ? periodsPerYear(source.accrualPeriod) : 4;
+      if (period.index > limit) throw new FundError("invalid");
+    }
+    return source;
+  };
   if (parsed.kind === "voluntary") {
     if (feesCents > parsed.amountCents) throw new FundError("invalid");
     // The foreign key knows the movement exists, not whose it is: only the user's own can be tied.
@@ -922,12 +935,7 @@ async function operationValues(ctx: Pick<Ctx, "userId" | "timeZone">, fund: Fund
   if (parsed.kind === "payroll") {
     const gross = parsed.workerCents + parsed.employerCents + parsed.tfrCents;
     if (gross <= 0n || feesCents > gross) throw new FundError("invalid");
-    const payroll = (await sourcesOf(ctx, [fund.id])).filter((one) => one.kind === "payroll");
-    const source = payroll.find((one) => one.state === "active") ?? payroll[0] ?? null;
-    if (parsed.period !== null) {
-      const limit = source?.accrualPeriod ? periodsPerYear(source.accrualPeriod) : 4;
-      if (parsed.period.index > limit) throw new FundError("invalid");
-    }
+    const source = await payrollSource(parsed.period);
     return {
       ...base,
       ...amounts,
@@ -953,7 +961,22 @@ async function operationValues(ctx: Pick<Ctx, "userId" | "timeZone">, fund: Fund
     return { ...base, ...amounts, classification, otherCents: amountCents, netCents: -amountCents };
   }
   if (feesCents > amountCents) throw new FundError("invalid");
-  return { ...base, ...amounts, classification, otherCents: amountCents, netCents: amountCents - feesCents };
+  const credited = {
+    ...base,
+    ...amounts,
+    classification,
+    otherCents: amountCents,
+    netCents: amountCents - feesCents,
+  };
+  if (classification !== "enrollment" || parsed.period === null) return credited;
+  // The enrolment quota of the payslips is credited in the period that accrued it.
+  const source = await payrollSource(parsed.period);
+  return {
+    ...credited,
+    competenceYear: parsed.period.year,
+    competenceQuarter: parsed.period.index,
+    sourceId: source?.id ?? null,
+  };
 }
 
 const movementTaken = (error: unknown): never => {

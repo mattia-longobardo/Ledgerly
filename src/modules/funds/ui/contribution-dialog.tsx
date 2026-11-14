@@ -90,6 +90,29 @@ export function ContributionDialog({
   const editing = form.id !== null;
   const { kind } = form;
   const moneyless = kind === "other" && form.classification === "switch";
+  /** Joining names the period whose payslips accrued the enrolment quota, as a payslip contribution does. */
+  const joining = kind === "other" && form.classification === "enrollment";
+  const withPeriod = setup.hasPayroll && setup.periods.length > 0;
+  const periodField = (
+    <Field label={t("contribution.period")} htmlFor={`${id}-period`}>
+      <Select
+        id={`${id}-period`}
+        value={form.period}
+        onChange={(event) => set({ period: event.target.value })}
+      >
+        <option value="">{t("contribution.noPeriod")}</option>
+        {/* A period older than the list still has to read as itself in an edit. */}
+        {form.period !== "" && !setup.periods.some((one) => one.value === form.period) && (
+          <option value={form.period}>{form.period}</option>
+        )}
+        {setup.periods.map((one) => (
+          <option key={one.value} value={one.value}>
+            {one.label}
+          </option>
+        ))}
+      </Select>
+    </Field>
+  );
   const exit = kind === "other" && form.classification === "withdrawal";
 
   const worker = cents(form.worker, format);
@@ -241,30 +264,11 @@ export function ContributionDialog({
           />
         </Field>
 
+        {joining && withPeriod && periodField}
+
         {kind === "payroll" ? (
           <>
-            {setup.hasPayroll && setup.periods.length > 0 ? (
-              <Field label={t("contribution.period")} htmlFor={`${id}-period`}>
-                <Select
-                  id={`${id}-period`}
-                  value={form.period}
-                  onChange={(event) => set({ period: event.target.value })}
-                >
-                  <option value="">{t("contribution.noPeriod")}</option>
-                  {/* A period older than the list still has to read as itself in an edit. */}
-                  {form.period !== "" && !setup.periods.some((one) => one.value === form.period) && (
-                    <option value={form.period}>{form.period}</option>
-                  )}
-                  {setup.periods.map((one) => (
-                    <option key={one.value} value={one.value}>
-                      {one.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ) : (
-              <span className="max-sm:hidden" />
-            )}
+            {withPeriod ? periodField : <span className="max-sm:hidden" />}
             <fieldset className="col-span-full grid grid-cols-3 gap-3 max-sm:grid-cols-1">
               <legend className="sr-only">{t("contribution.amount")}</legend>
               {amountField("worker", true)}

@@ -144,6 +144,8 @@ test.describe("a fund fed by the payslip", () => {
       dialog = await recordContribution(page);
       await dialog.getByRole("button", { name: "Other operation" }).click();
       await dialog.getByLabel("Operation").selectOption({ label: "Enrolment" });
+      // Joining names the quarter whose payslips accrued the quota: the two reconcile.
+      await dialog.getByLabel("Period").selectOption({ label: `Q1 ${LAST_YEAR}` });
       await dialog.getByLabel("Date").fill(`${LAST_YEAR}-04-18`);
       await dialog.getByLabel("Amount").fill("10,32");
       await dialog.getByLabel("Fee", { exact: true }).fill("10,32");
@@ -227,14 +229,8 @@ test.describe("a fund fed by the payslip", () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
 
-  // FIXME(domain): this is the assertion of the journey of before N6 ("the quarters reconcile"), and it
-  // fails. January's payslip accrues the enrolment quota (5,16 + 5,16 €) in the first quarter. An
-  // enrolment written by hand ("Other operation" › "Enrolment") has no period: `operationValues` in
-  // src/modules/funds/service.ts writes `competenceYear` and `competenceQuarter` as null for the kind
-  // "other", and `reconcile` in src/modules/funds/pension/reconcile.ts only credits operations that have
-  // both. So the quarter's hidden "enrollment" component stays accrued-and-never-credited, and the
-  // quarter reads "To verify after the deadline" for ever, with its three components equal to the cent.
-  // Before N6 the export gave the enrolment its quarter. Last in the serial group, so it stops nothing.
+  // The assertion of the journey of before N6 ("the quarters reconcile"): January's payslip accrues
+  // the enrolment quota in the first quarter, and the enrolment written by hand names that quarter.
   test("the quarter with the enrolment quota reconciles", async ({ page }) => {
     await page.goto(`/funds?period=${LAST_YEAR}`);
     await page

@@ -207,8 +207,13 @@ test.describe("the form of a fund on a phone", () => {
       const toggle = page.getByTestId(`source-switch-${kind}`);
       await toggle.tap();
       await expect(toggle).toHaveAttribute("aria-checked", "true");
-      const row = await toggle.locator("xpath=..").boundingBox();
-      expect(row!.height, `the row of ${kind} is under 44 px`).toBeGreaterThanOrEqual(44);
+      // The row is the nearest ancestor that has a box of its own: a wrapper may be `display: contents`.
+      const height = await toggle.evaluate((element) => {
+        let row = element.parentElement;
+        while (row && row.getBoundingClientRect().height === 0) row = row.parentElement;
+        return row?.getBoundingClientRect().height ?? 0;
+      });
+      expect(height, `the row of ${kind} is under 44 px`).toBeGreaterThanOrEqual(44);
     }
     await expect(steps.locator('[aria-current="step"]')).toContainText("How you pay in");
     await expect(steps.getByText("The fund")).toHaveClass(/sr-only/);
