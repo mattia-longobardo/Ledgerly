@@ -1,10 +1,14 @@
 # Ledgerly · piano di riorganizzazione, riscrittura modulare e app multipiattaforma
 
-Stato: **approvato da Mattia il 14/11/2026**. L'OK sblocca N0: ogni rilascio parte da un'issue nuova.
+Stato: **approvato il 14/11/2026; revisione sulla standardizzazione approvata da Mattia il 14/11/2026.** L'OK del
+14/11/2026 sblocca N0: ogni rilascio parte da un'issue nuova. La revisione ([`11-standardization.md`](rewrite-plan/11-standardization.md))
+aggiunge N6, R5g, il secondo passo di R5d e tre anticipi in N1, N2 e N5; non cambia l'ordine dei rilasci esistenti.
 Base del codice e dell'audit: `main` a `5fbbdbc` (13/11/2026), tag `v0.10.1`. Dopo l'audit: `v0.10.2` (`86e3d43`), solo la
 correzione del difetto BUD-1.
 Decisioni: approvate da Mattia il 13/11/2026, dopo il brainstorming delle tre fasi (prodotto, architettura, app).
 Revisione del 14/11/2026: la modularità è l'obiettivo principale del refactor; nessuna review del codice fino alla fine.
+Seconda revisione del 14/11/2026 (standardizzazione): un solo fondo pensione; il PAC è un piano di acquisto del
+Portafoglio manuale; nessuna funzione su misura per un fornitore, una banca, un fondo o un datore di lavoro.
 
 ## Obiettivo e priorità del refactor
 
@@ -22,7 +26,8 @@ che il guadagno sia significativo e misurato. In quel caso lo sviluppatore lo se
 del commit, e decide Mattia.
 
 **Vincolo: il comportamento funzionale del codice resta invariato.** Prova: test esistenti verdi senza asserzioni
-adattate, test «stessi numeri», e2e.
+adattate, test «stessi numeri», e2e. N6 e R5g sono cambi voluti, con i loro criteri; le eccezioni sui numeri sono
+dichiarate una per una (X1-X3).
 
 Architettura modulare di arrivo, regole con il loro controllo automatico, misure e procedura di eccezione:
 [`10-modularity.md`](rewrite-plan/10-modularity.md).
@@ -43,7 +48,8 @@ dice quali punti di `investments.md`, `investments-ux.md` e `funds-ux.md` sono s
 | 7 | [`07-apps.md`](rewrite-plan/07-apps.md) | App Android e Windows, senza distribuzione |
 | 8 | [`08-agents.md`](rewrite-plan/08-agents.md) | Agenti: ruoli, confini dei pacchetti, ordine, verifica dei rilasci senza review del codice, secondo agente, secondo database di test |
 | 9 | [`09-risks.md`](rewrite-plan/09-risks.md) | Rischi, ipotesi aperte, ipotesi confermate e punti decisi il 14/11/2026 |
-| 10 | [`10-modularity.md`](rewrite-plan/10-modularity.md) | Obiettivo e priorità, pacchetti e moduli di arrivo (responsabilità, interfaccia, dipendenze), mappa delle dipendenze, accoppiamenti da sciogliere, regole con controllo automatico, duplicazione, pulizia, prestazioni, prova di comportamento invariato |
+| 10 | [`10-modularity.md`](rewrite-plan/10-modularity.md) | Obiettivo e priorità, pacchetti e moduli di arrivo (responsabilità, interfaccia, dipendenze), mappa delle dipendenze, accoppiamenti da sciogliere, regole con controllo automatico, duplicazione, pulizia, prestazioni, prova di comportamento invariato, punti di estensione comuni E1-E8 |
+| 11 | [`11-standardization.md`](rewrite-plan/11-standardization.md) | Standardizzazione (approvata da Mattia il 14/11/2026): regola, fondo pensione standard, piano di acquisto (PAC), Investments a 2 gruppi, elenco delle funzioni su misura con meccanismo standard e rilascio, anticipi alla fase A |
 
 ## Premesse
 
@@ -91,13 +97,16 @@ flowchart LR
     N2 --> N3[N3 categorie automatiche + movimento manuale]
     N3 --> N4[N4 passaggio da Wallet]
     N0 --> N5[N5 Time Off]
+    N5 --> N6[N6 fondo pensione standard]
   end
   subgraph B[Fase B · riscrittura]
     R0[R0 monorepo] --> R1[R1 worker]
     R1 --> R2[R2 API completa]
     R2 --> R3[R3 web sull'API]
     R3 --> R4[R4 container separati]
-    R4 --> R5[R5 prodotto nuovo a-f]
+    R4 --> R5[R5 prodotto nuovo a-e]
+    R5 --> R5G[R5g lavoro standard]
+    R5G --> R5F[R5f pulizia dello schema]
   end
   subgraph C[Fase C · app]
     C0[C0 prove tecniche] --> C1[C1 Android: involucro]
@@ -106,11 +115,11 @@ flowchart LR
     C2 --> C4[C4 Windows]
   end
   N4 --> R0
-  N5 --> R0
+  N6 --> R0
   R1 --> C0
   R3 --> C1
   R4 --> C2
-  R5 --> Z[Z review finale unica]
+  R5F --> Z[Z review finale unica]
   C4 --> Z
 ```
 
@@ -122,16 +131,18 @@ flowchart LR
 | N3 | Categorie automatiche, «Da categorizzare», movimento manuale | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive | Sì (#1) | L |
 | N4 | Passaggio di un conto da Wallet a Enable Banking | Un conto cambia sorgente senza doppioni | branch + PR | Dati | Sì (#1) | M |
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
+| N6 | Fondo pensione standard: un modello, sorgenti di contributo, commissioni generiche, migrazione dei 2 fondi; via il «Deducibile» e i documenti dei fondi | «Aggiungi fondo» senza tipo; un fondo nuovo si configura | branch + PR | Sì, additive + dati | Sì (#1) | L |
 | R0 | Monorepo npm workspaces, confini e regole di modularità nel gate, codice morto tolto | Nulla | `main` | No | No | M |
 | R1 | Worker dedicato, coda su PostgreSQL, fine del container cron | Nulla | branch + PR | Sì, additive | Sì (#1) | M |
 | R2 | API completa, chiamate dagli involucri, refactor del dominio modulo per modulo | Nulla | `main`; PR per auth e schema | Sì, additive | Sì per le parti #1 e #4 | L |
 | R3 | Web sull'API, schermate solo client, refactor dell'interfaccia | Nulla di visibile | `main` | No | No | L |
 | R4 | `api` e `web` in container separati | Nulla | branch + PR | No | Sì (#3) | S |
 | R5a | Menu a 3 gruppi, moduli attivabili, primo avvio, Settings | Navigazione nuova | branch + PR | Sì, additive | Sì (#1) | M |
-| R5b | Investments unificata, Overview a gruppi | Una home con 3 gruppi | `main`; PR se cambia l'API | No | Solo se #4 | L |
+| R5b | Investments unificata, Overview a gruppi | Una home con 2 gruppi | `main`; PR se cambia l'API | No | Solo se #4 | L |
 | R5c | Wallet e Trek come plugin, tab Plugin completo | Wallet e Trek si installano | branch + PR | Sì | Sì (#1, #3, #5) | L |
-| R5d | Portafoglio manuale, prezzi per ISIN | «Registra operazione» | branch + PR | Sì, additive | Sì (#1, #5) | L |
+| R5d | Portafoglio manuale, prezzi per ISIN; secondo passo: piano di acquisto (PAC) | «Registra operazione»; acquisti periodici | branch + PR | Sì, additive | Sì (#1, #5) | L |
 | R5e | Avvisi, blocco «Da fare», «Nascondi importi» | Avvisi solo quando serve un'azione | branch + PR | Sì, additive | Sì (#1) | M |
+| R5g | Lavoro standard: tipi di assenza come dati, profili delle buste paga, configurazione del datore | Payroll e Time Off senza codice per un altro datore o contratto | branch + PR | Sì, additive + dati | Sì (#1) | L |
 | R5f | Pulizia dello schema | Nulla | branch + PR | Sì, rimozioni | Sì (#1) | S |
 | C0 | Prove tecniche degli involucri | Nulla | fuori da `main` | No | Gate Security Gatekeeper | S |
 | C1 | Android: involucro, login, cache cifrata | App Android installata a mano | `main` | No | No | M |
@@ -140,6 +151,7 @@ flowchart LR
 | C4 | Windows: guscio con la stessa interfaccia | App Windows da build locale | `main` | No | Gate Security Gatekeeper | M |
 | Z | Review finale unica: codice e sicurezza | Nulla | — | — | La chiede Mattia | — |
 
+N6, R5g e il secondo passo di R5d sono della revisione sulla standardizzazione: approvata da Mattia il 14/11/2026.
 I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`03-releases.md`](rewrite-plan/03-releases.md).
 
 ## OK richiesti a Mattia
@@ -150,5 +162,10 @@ I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`
    scritto lì: ora sono decisioni ([`01-decisions.md`](rewrite-plan/01-decisions.md) §1.0, H7-H11).
 4. **Passi che solo Mattia può fare:** applicazione Enable Banking di tipo Production e accesso alla banca (N1); chiave
    gratuita EODHD (R5d); installazione dell'APK sul telefono (C1); build su un PC Windows (C4).
-5. **Ogni eccezione alle priorità:** un guadagno di velocità che costa modularità o leggibilità, prima del commit
+5. **La revisione sulla standardizzazione:** OK al contenuto di [`11-standardization.md`](rewrite-plan/11-standardization.md)
+   e risposta alle ipotesi ST-1…ST-24 ([`09-risks.md`](rewrite-plan/09-risks.md) §9.6). Basta «ok default» più le eccezioni.
+   Risposta del 14/11/2026: eccezioni su ST-4, ST-6 e ST-7, ora decisioni H18-H20; le altre sono decisioni, con il
+   default. OK alla revisione dato il 14/11/2026 (decisione H21). ST-26 e ST-27: decisioni, con il default.
+   ST-25: default scartato, scelta in attesa di precisazione ([`09-risks.md`](rewrite-plan/09-risks.md) §9.6).
+6. **Ogni eccezione alle priorità:** un guadagno di velocità che costa modularità o leggibilità, prima del commit
    ([`10-modularity.md`](rewrite-plan/10-modularity.md) §10.9.3).

@@ -232,14 +232,14 @@ Spazio tra i campi: `gap-4` (come `LeaveDialog`). «Dal» e «Al»: `grid grid-c
 |---|---|---|---|
 | Dal | `Input type="date"` in `Field` | Qualsiasi data | Primo giorno scelto; da «Aggiungi assenza»: oggi |
 | Al | `Input type="date"` in `Field`, `min` = «Dal» | ≥ «Dal» | Ultimo giorno scelto; da «Aggiungi assenza»: uguale a «Dal» |
-| Tipo | `Select` in `Field` | I 5 tipi di `LEAVE_DAY_KINDS`, nell'ordine attuale | `vacation` |
+| Tipo | `Select` in `Field` | I tipi di `LEAVE_DAY_KINDS` senza `sick` (decisione H20), nell'ordine attuale | `vacation` |
 | Durata | `Segmented` in `Field` | «Giornata intera» (1), «Mezza giornata» (0,5) | Giornata intera |
 | Nota | `Textarea` in `Field`, `rows={2}`, `maxLength={200}` | Testo libero | Vuota |
 
 - «Al» non è più facoltativo e non ha più il suggerimento «Lascia vuoto». Un giorno solo = «Dal» uguale a «Al».
 - Se l'utente porta «Dal» oltre «Al», «Al» prende il valore di «Dal».
 - «Durata» vale per ogni giorno dell'intervallo: mezza giornata su 5 giorni = 2,5 gg.
-- Suggerimento sotto «Nota»: `dialog.noteHint` per ferie, ROL, recupero; `dialog.localOnly` per malattia e altro
+- Suggerimento sotto «Nota»: `dialog.noteHint` per ferie, ROL, recupero; `dialog.localOnly` per altro
   (regola di oggi, `noteHint()` in `leave-actions.tsx`).
 - `Segmented` è alto 24 px: rispetta il minimo di 24 px. Sotto 768 px i suoi pulsanti passano a `h-8` (32 px) con
   una classe passata dal pannello, non con una variante nuova del componente.
@@ -256,7 +256,7 @@ Etichette `text-sm text-muted`; valori `text-base tabular-nums`.
 | Sostituisce | Se ce n'è almeno uno | Numero, poi elenco dei giorni con il tipo attuale tra parentesi. Stessa regola delle 6 voci |
 | Residuo {tipo} | Tipo ferie o ROL | «prima → dopo», in giorni, formato di `units.days` |
 | Residuo {altro tipo} | Se una sostituzione libera giorni di ferie o di ROL | Una riga in più per quel tipo, stesso formato |
-| Residuo | Tipo recupero, malattia, altro, senza sostituzioni | «Questo tipo non consuma il residuo.» |
+| Residuo | Tipo recupero, altro, senza sostituzioni | «Questo tipo non consuma il residuo.» |
 
 Regole di calcolo del riepilogo (nessuna regola nuova sui residui):
 

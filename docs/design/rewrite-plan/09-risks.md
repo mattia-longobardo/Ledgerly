@@ -2,12 +2,15 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
-Tre elenchi:
+Elenchi:
 
 - §9.1 **Ipotesi aperte**: fatti non ancora misurati. Ognuna ha il passo che la chiude e cosa succede se è falsa.
 - §9.2 **Rischi** del piano, con la mitigazione.
 - §9.3 **Ipotesi confermate il 14/11/2026**: scelte che mancavano nelle decisioni. Mattia le ha confermate con l'OK al piano: vale il default.
 - §9.5 **Punti decisi il 14/11/2026**: erano ipotesi da confermare, ora sono decisioni di Mattia.
+- §9.6 **Ipotesi · revisione sulla standardizzazione**: ST-1…ST-24 hanno la risposta di Mattia del 14/11/2026
+  (decisioni, con il default, salvo ST-4, ST-6, ST-7 che sono le decisioni H18-H20); ST-26 e ST-27 sono decisioni,
+  con il default; ST-25 è in attesa di precisazione.
 
 ## 9.1 Ipotesi aperte
 
@@ -56,6 +59,12 @@ Tre elenchi:
 | R-20 | Le misure di tempo sono instabili sul server condiviso | Falsi allarmi nel gate G9 | Mediana su 5 esecuzioni, margine del 10%, e il numero di query come misura senza rumore | [`10-modularity.md`](10-modularity.md) §10.9 |
 | R-21 | Porte ed eventi al posto degli import diretti aggiungono un passaggio | Codice più lungo da seguire; una scrittura in due moduli non è più in una sola transazione | Una porta solo dove oggi c'è un ciclo o una direzione sbagliata (§10.5); gli eventi di dominio girano nella stessa transazione di chi li emette, salvo i job | R2 |
 | R-22 | Le regole nuove rallentano i rilasci N1-N5, che lavorano sul codice attuale | Lavoro in più prima della riscrittura | Prima di R0 vale solo «non peggiora»: nessuna violazione nuova rispetto alle liste note | N0-N5 |
+| R-23 | N6 migra dati finanziari dei 2 fondi in produzione | Un numero dei fondi cambia senza volerlo | Migrazione additiva: le tabelle vecchie restano intatte; parità della copia dentro la migrazione; prove SN1-SN6; fotografia prima e dopo; file SQL di rollback e dump `n6.dump` | N6; [`11-standardization.md`](11-standardization.md) §11.2.4 |
+| R-24 | N6 allunga la fase A: R0 parte dopo | La riscrittura inizia più tardi | N6 non dipende da N1-N4: si fa mentre N1 aspetta la banca vera. Il lavoro tolto a R0, R2 e R3 (un motore in meno) compensa. Alternativa scritta: ST-18 | N6 |
+| R-25 | La revisione aggiunge molto lavoro (N6, R5g, 28 voci, 8 meccanismi) | Il piano si allunga; R5a cresce | Ogni voce ha un rilascio; i meccanismi entrano nel passo del modulo che già si rifà; R5g è un rilascio a parte, non dentro il refactor; conferma breve di Mattia prima di ogni rilascio R5 (R-15) | Tutti |
+| R-26 | Un vocabolario aperto perde il check DB con l'elenco dei valori (M13) | Un valore sbagliato entra nel database | Check di formato nel database; il registro valida il valore in scrittura; test: un valore non registrato è rifiutato dal servizio | N6, R2 |
+| R-27 | Un punto di estensione nasce più generale del bisogno | Complessità superflua (contro la priorità 2) | Un meccanismo entra solo con almeno un uso reale nello stesso rilascio; i profili e i pacchetti paese sono file di dati, non codice; le capacità non note sono ignorate | [`10-modularity.md`](10-modularity.md) §10.11 |
+| R-28 | Le righe di riferimento delle due analisi sono di `9be59db` e nessun test è stato eseguito | Una voce descrive codice già cambiato dalla fase A in corso | Ogni rilascio verifica le sue voci sul codice del momento; ST-23 e OT-9 chiedono un test prima della correzione | Tutti |
 
 ## 9.3 Ipotesi confermate il 14/11/2026
 
@@ -122,3 +131,81 @@ Cambiano le altre superfici. Sono le sole differenze di numeri ammesse dal vinco
 | D9 | INV-1 | API, MCP ed export pubblicano il rendimento semplice; le pagine mostrano Modified Dietz | Il campo esistente resta (rendimento semplice, con il suo nome). Si aggiunge il campo Modified Dietz del periodo | Nessun numero esistente; un campo in più |
 | D10 | INV-5 | L'export comprende i servizi archiviati e non converte; API, MCP e pagine li escludono e convertono | L'export tiene gli archiviati (è un'esportazione completa) con un campo `archived`, e usa la stessa conversione | I valori convertiti dell'export |
 | D11 | PLT-1 | Due percorsi di conversione: possono differire di un centesimo | Una sola conversione, quella di `platform/fx`. Gli importi già salvati sugli eventi non si ricalcolano | Possibile differenza di un centesimo su conversioni a schermo di eventi nuovi |
+
+## 9.6 Ipotesi · revisione sulla standardizzazione (approvata da Mattia il 14/11/2026)
+
+Le decisioni H12-H17 sono di Mattia. Queste righe sono le scelte che le decisioni non coprono. Il piano applica il
+default. Le due analisi (prodotto e codice) sono unite qui senza doppioni.
+«Scelta» = l'orchestratore ha scelto tra due proposte diverse.
+
+**Risposta di Mattia del 14/11/2026.** Mattia ha risposto con le sole eccezioni:
+
+- ST-4, ST-6 e ST-7 sono decisioni: H18, H19, H20 ([`01-decisions.md`](01-decisions.md) §1.0). Non sono più in
+  questo elenco.
+- ST-19 è tolta: nei fondi non si caricano documenti (H19).
+- Ogni altra riga ST-1…ST-24: **decisione di Mattia del 14/11/2026, con il default (risposta con le sole eccezioni)**.
+- OK alla revisione: dato da Mattia il 14/11/2026 ([`01-decisions.md`](01-decisions.md) §1.0, H21).
+- Ipotesi nuove, in fondo a questa sezione: ST-26 e ST-27 sono decisioni, con il default (H22, H23). ST-25 è in
+  attesa di precisazione.
+
+**Fondo pensione (N6)**
+
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
+|---|---|---|---|---|
+| ST-1 | Contributo del datore di lavoro: come si tratta? | **Scelta.** Componente della sorgente `payroll`, con lavoratore e TFR. L'interfaccia mostra ogni componente con la sua origine. Motivo: un solo meccanismo, una sola riconciliazione per versamento | Sorgente a parte «Dalla busta paga»: due sorgenti per lo stesso bonifico | N6 |
+| ST-10 | Il tariffario pubblico di Cometa (13 righe nel database)? | Le 13 righe diventano righe `fund_fees` del fondo Cometa: nessun dato perso; l'utente toglie quelle che non usa. Nessuna tariffa resta nel codice | Migra solo la commissione di gestione del comparto in uso; le voci a richiesta non migrano | N6 |
+| ST-11 | La riconciliazione busta paga ↔ fondo? | Resta. Compare solo con una sorgente `payroll`; il periodo segue il calendario della sorgente. Il lato del fondo sono le operazioni registrate: nessun documento del fondo (H19) | Trimestre fisso come oggi | N6 |
+| ST-12 | Un fondo nuovo senza Payroll e senza modello? | Funziona e nasce vuoto: nessuna scadenza, nessuna commissione; contributi e valori a mano. Il modello «Cometa» è una scelta facoltativa | Ogni fondo nuovo parte da un modello | N6 |
+| ST-16 | Strada per i dati dei 2 fondi in produzione? | Strada A: migrazione additiva con riclassificazione; rimozione del vecchio in R5f | Strada B: nessuna migrazione, adattatore di lettura. Lascia due forme di archivio | N6, R5f |
+| ST-17 | Il conto di Fideuram passa dal tipo `investment` al tipo `pension`? | Sì: il patrimonio non cambia, cambia il subtotale del gruppo (eccezione X2) | No: il gruppo si legge dal fondo, con una regola in più | N6 |
+| ST-18 | Quando si fa il fondo unico? | **Scelta.** N6, ultimo rilascio della fase A. Motivo: R0, R2 e R3 non spostano e non rifanno il codice del PAC | In R2, prima del refactor di `funds`; oppure un rilascio nuovo prima di R5b | N6 |
+
+**Investments e piano di acquisto**
+
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
+|---|---|---|---|---|
+| ST-2 | Quanti gruppi ha Investments, e con quali nomi? | 2: «Azioni e crypto», «Fondi pensione». I conti con solo valore stanno nel primo | 3 gruppi per origine dei dati: «Servizi collegati», «Portafoglio manuale», «Fondi pensione»; oppure una lista unica con un'etichetta per riga | R5b |
+| ST-3 | Le 3 scelte di «Aggiungi investimento»? | «Collega un servizio» · «Segui i tuoi titoli a mano» · «Fondo pensione» | Altri nomi | R5b |
+| ST-5 | A ogni scadenza di un piano di acquisto? | L'app propone l'operazione; l'utente conferma. «Registra in automatico» è un interruttore del piano, spento | Sempre in automatico, con il prezzo di chiusura: quantità e P&L sono stime | R5d, secondo passo |
+
+**Lettori, Payroll, Time Off (R5g)**
+
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
+|---|---|---|---|---|
+| ST-20 | Festività senza un calendario sottoscritto? | Solo fine settimana, con un avviso. Il calendario del paese si propone al primo avvio. Via il ripiego italiano nel codice | Tenere il ripiego italiano | R5a, R5g |
+| ST-21 | Busta paga di un datore senza profilo? | Inserimento a mano della busta paga generica. Lettura generica con AI, se configurata, e revisione a mano. Un profilo nuovo è un file di dati | Solo avviso «formato sconosciuto», come oggi | R5g |
+| ST-22 | Rilascio R5g «Lavoro standard»? | Sì, dopo R5c e prima di R5f | Dentro i passi R2 e R3 di `timeoff` e `payroll`: cambi di modello dentro il refactor «a comportamento invariato» | R5g |
+| ST-23 | Difetto probabile: un giorno ROL non avvia la sync verso Trek (due liste diverse, non verificato)? | Verifica con un test in N5. Se il test fallisce, correzione come `fix` nello stesso rilascio | Correzione in R5c, con Trek come plugin | N5 |
+
+**Altre funzioni**
+
+| ID | Domanda | Decisione del 14/11/2026 (default del piano) | Alternativa scartata | Rilascio |
+|---|---|---|---|---|
+| ST-8 | Import dei movimenti da file CSV nel core? | Sì, con mappa delle colonne salvata per conto. Rilascio proposto: R5c, con le sorgenti che diventano plugin | Rilascio nuovo in fase A, subito dopo N3; oppure fuori dal piano | R5c |
+| ST-9 | Valori predefiniti per paese (festività, tassa sugli interessi, tipi di assenza)? | Pacchetto paese: file di dati nel core, scelto al primo avvio. Ogni valore è modificabile. Senza valore il default non compare. Nessun limite fiscale nel pacchetto (H18) | Un plugin per paese; oppure nessun default | R0, R5a, R5g |
+| ST-13 | «Connections» del conto (lista a mano di addebiti)? | Si toglie. Le righe passano in Subscriptions, con il filtro per conto | Resta com'è | R5a; R5f |
+| ST-14 | Pubblicazione degli interessi su Wallet? | Finisce con R5c per tutti i conti, anche quelli non passati a Enable Banking (Wallet in sola lettura, C4b) | Resta per i conti ancora su Wallet, come capacità `ledgerPosting` del plugin | R5c |
+| ST-15 | Il voto «utilità» degli abbonamenti? | Resta, facoltativo e spento per gli utenti nuovi | Si toglie | R5a |
+| ST-24 | Avvio senza OIDC, senza posta e senza S3; compose di esempio neutro? | Fuori dal piano: entra con la guida di installazione per un altro host (§9.4). Il piano tiene solo il nome dell'accesso come impostazione (R2) | Dentro R5a | — |
+
+Corrispondenza con le due analisi: ST-1…ST-15 sono le domande dell'analisi di prodotto; le 13 domande dell'analisi
+del codice sono unite così: Q1 → ST-16, Q2 → ST-4 (ora H18), Q3 → ST-17, Q4 → ST-18, Q5 → ST-1, Q6 → ST-12,
+Q7 → ST-19 (tolta: H19), Q8 → ST-9, Q9 → ST-5, Q10 → ST-20, Q11 → ST-21, Q12 → ST-7 (ora H20), Q13 → ST-22.
+ST-23 e ST-24 sono nuove.
+
+Già decise da Mattia, non in questo elenco: fondo unico e fine del tipo PAC (H12), PAC nel Portafoglio manuale (H13),
+sorgenti TFR e volontario (H14), commissioni impostabili (H15), nessuna funzione su misura (H16), nessun «Deducibile»
+(H18), lettore della busta paga dietro E1 e nessun documento nei fondi (H19), malattia fuori da Time Off (H20).
+
+**Ipotesi nuove** (nate dalle risposte del 14/11/2026). Risposta di Mattia del 14/11/2026: ST-26 e ST-27 sono
+decisioni, con il default (H22, H23). ST-25: il default è scartato; la scelta è in attesa di precisazione.
+
+| ID | Domanda | Default del piano | Alternativa | Rilascio |
+|---|---|---|---|---|
+| ST-25 | I file dei documenti di Cometa già salvati, con le loro righe `documents`? | **Scartato da Mattia il 14/11/2026.** Era: restano archiviati fino a R5f, senza pagina nell'app; restano nell'export ZIP. In R5f si cancellano file e righe, con dump e OK di Mattia. Le operazioni e i valori già letti restano dati del fondo | Cancellazione subito, in N6, con dump e OK. Oppure nessuna cancellazione: i file restano in sola lettura. **Il default (archiviati fino a R5f) è scartato da Mattia. Scelta tra cancellazione in N6 e nessuna cancellazione: in attesa di precisazione. Fino alla risposta nessun file si cancella e N6 non contiene la cancellazione** | In attesa |
+| ST-26 | `POST /imports` con i tipi `cometa_operations` e `cometa_position` (API pubblica)? | Regola «API solo additiva»: i due valori restano nel contratto. Da N6 la rotta li rifiuta con un errore dichiarato e non salva il file. Escono dal contratto con R5f | I due valori escono dal contratto in N6: un client che li usa riceve l'errore generico `invalid` | N6, R5f |
+| ST-27 | Il tipo `sick` del codice di oggi: quando esce da Time Off? | In N5: il pannello nuovo non lo offre (0 righe in produzione). In R5g non diventa un tipo. Il valore esce dal check in R5f | In R5g, con i tipi come dati: fino ad allora il pannello lo mostra | N5, R5g, R5f |
+
+Campi pubblici: il «Deducibile» non ha campi in API, MCP ed export, quindi nessun campo sparisce (verificato su `main` a
+`9be59db`). Se un controllo in N6 trova un campo pubblico legato a H18 o H19, vale il default «il campo resta e vale
+`null`».
