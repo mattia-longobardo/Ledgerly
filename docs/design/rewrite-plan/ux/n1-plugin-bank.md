@@ -340,7 +340,7 @@ Una `ConnectionRow` per banca, sotto la riga delle credenziali (`border-t`).
 Stati di N1 (pallino + parola; il modello a 5 valori è di N2, §11):
 
 | `state` | Pallino | Parola | Tono | Riga di dettaglio sotto | Azione in evidenza |
-|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|
 | `pending` | `bg-warn` | «Da completare» | `warn` | «Hai dato l'accesso, ma non hai ancora scelto i conti.» | «Scegli i conti» (primario) al posto di «Sincronizza ora» |
 | `active` | `bg-pos` | «Collegata» | `pos` | — | «Sincronizza ora» |
 | `active` + `rate_limited` | `bg-pos` | «Collegata» | `pos` | «La banca ha raggiunto il limite di letture automatiche. Prossima lettura alle {time}.» (`text-muted`, non è un errore) | «Sincronizza ora» |
