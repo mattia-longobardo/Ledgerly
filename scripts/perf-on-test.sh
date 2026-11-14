@@ -1,18 +1,52 @@
 #!/bin/sh
-# scripts/perf-on-test.sh — runs scripts/perf-probe.ts against `ledgerly_test`, never `ledgerly`.
+# scripts/perf-on-test.sh — `npm run perf`: runs scripts/perf-probe.ts against `ledgerly_test`, never
+# `ledgerly`, in several processes, and holds the best of them to the baseline
+# (scripts/perf-compare.ts says why several). `npm run perf -- --write` records a new baseline.
 set -eu
 cd "$(dirname "$0")/.."
+# How many processes one measure is the best of.
+PROCESSES=5
 value() { sed -n "s/^$1=//p" .env.homelab | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
 database_url=$(value DATABASE_URL)
 DATABASE_URL="${database_url%/*}/ledgerly_test"
 case "$DATABASE_URL" in */ledgerly_test) ;; *) echo "refusing: not ledgerly_test" >&2; exit 1 ;; esac
 export DATABASE_URL
+
+# The samples, one file per process: under `test-results/`, which the repository ignores.
+samples=test-results/perf
+rm -rf "$samples"
+mkdir -p "$samples"
+
 # `docker run --env-file` keeps the quotes around a quoted value, which Compose drops: the file is
 # passed on stdin with one pair of quotes removed (as in `scripts/on-homelab.sh`). `-e DATABASE_URL`
 # comes after it and wins: the test database, never the one in the file.
-sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" .env.homelab |
-  exec docker run --rm -i --network db_internal \
-  --user "$(id -u):$(id -g)" -e HOME=/tmp \
-  --env-file /dev/stdin -e DATABASE_URL \
-  -v "$PWD":/app -w /app \
-  node:26-bookworm-slim node --conditions=react-server --import tsx scripts/perf-probe.ts "$@"
+probe() {
+  sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" .env.homelab |
+    docker run --rm -i --network db_internal \
+    --user "$(id -u):$(id -g)" -e HOME=/tmp \
+    --env-file /dev/stdin -e DATABASE_URL \
+    -v "$PWD":/app -w /app \
+    node:26-bookworm-slim node --expose-gc --conditions=react-server --import tsx scripts/perf-probe.ts "$@"
+}
+
+# One round: PROCESSES more samples, numbered after the ones that are there.
+round() {
+  last=$(($1 + PROCESSES))
+  process=$(($1 + 1))
+  while [ "$process" -le "$last" ]; do
+    # The two query plans are the same in every process: the first round's last one prints them.
+    if [ "$process" -eq "$PROCESSES" ]; then plans=--plans; else plans=; fi
+    probe --out "$samples/$process.json" $plans
+    process=$((process + 1))
+  done
+}
+compare() { node --import tsx scripts/perf-compare.ts "$@" "$samples"/*.json; }
+
+round 0
+if compare "$@"; then exit 0; fi
+# The host is shared: a busy minute slows every process of a round alike. A second round, once, tells
+# a busy minute from a slower step — the measure is still the best median, now of twice the samples.
+echo "
+G9: una seconda serie di $PROCESSES processi, per distinguere il carico dell'host da un peggioramento" >&2
+round "$PROCESSES"
+compare "$@"

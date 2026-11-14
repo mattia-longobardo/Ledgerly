@@ -108,7 +108,12 @@ written by a command and checked by another.
   literals made equal), per unit. A measure, with no threshold yet.
 - **Performance:** median time and number of queries of the widest views and of every route of
   `/api/v1`, on the heavy user of `ledgerly_test`. `npm run perf` fails when a view or a route
-  sends more queries, or when its median is more than 10% (and 3 ms) worse.
+  sends more queries, or when its median is more than 10% (and 3 ms) worse. The measure is the
+  best median of 5 processes (`scripts/perf-on-test.sh` runs `scripts/perf-probe.ts` 5 times,
+  `scripts/perf-compare.ts` compares): the same code gave one process 45 ms and the next 55, each
+  steady, so more runs in one process did not help. When a round fails, one second round of 5
+  tells a busy host from a slower step. The run takes about 75 s. The 10% and the baseline did not
+  change.
 - **Numbers and contract:** what the read services, the REST API and the MCP tools answer about the
   reference user (`test/reference-user.ts`) with the clock stopped. Byte for byte.
 - **Numbers of production:** `npm run numbers`, before and after a deploy. See above.

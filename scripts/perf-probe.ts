@@ -4,16 +4,15 @@
 // against it, so "it is fast enough" is a number and not a feeling. Ends with the query plans of
 // the two statements that carry the most rows.
 //
-// The numbers are held to `baselines/performance.json` (rewrite plan, 10-modularity.md §10.9; gate
-// G9): a view or a route may not send more queries than its baseline, and its median time may not
-// be more than 10% worse. `npm run perf -- --write` records a new baseline — after a measured
-// improvement, or with a decision that accepts a cost; never to make a slower step pass.
+// One run of this file is one sample, written to `--out <file>`. `npm run perf`
+// (`scripts/perf-on-test.sh`) takes several, each in a process of its own, and
+// `scripts/perf-compare.ts` holds them to `baselines/performance.json` (gate G9).
 //
 // It never touches `ledgerly`: the guard below refuses any database whose name does not end in
 // `_test`, and `scripts/perf-on-test.sh` builds the URL for that database and checks it again.
 // The user it makes is removed at the end, and every row it owns goes with it.
 import { randomUUID } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { accountsView, listBalanceEntries } from "../src/modules/accounts/queries";
@@ -51,11 +50,6 @@ import { getDb, getPool } from "../src/platform/db/client";
 import * as tables from "../src/platform/db/tables";
 import { readEnv } from "../src/platform/env";
 import { accountMovement, manualService } from "../test/investments";
-
-const BASELINE = "baselines/performance.json";
-/** A median this many ms over its baseline is noise, whatever the percentage says. */
-const NOISE_MS = 3;
-const WORSE = 1.1;
 
 // The application's own `getDb()`, with a logger that counts: set before the first call, which is
 // what `getDb()` then hands to every module. No product code knows it is being counted.
@@ -275,14 +269,27 @@ const measured: { views: Record<string, Measure>; routes: Record<string, Measure
   routes: {},
 };
 
-/** `runs` timed runs after one warm run; the queries are those of one run, which is exact. */
-async function timed(runs: number, run: () => Promise<unknown>): Promise<Measure> {
+/** `node --expose-gc`, which `scripts/perf-on-test.sh` passes. */
+const collect = (globalThis as { gc?: () => void }).gc;
+
+/**
+ * `runs` timed runs after one warm run; the queries are those of one run, which is exact.
+ *
+ * `fromCleanHeap` collects the garbage before every timed run. It is for a view that builds so many
+ * objects that its time is the collector's as much as its own: whether a collection of the old
+ * space falls inside a run depends on what the runs before it left behind, and that alone moved
+ * such a view by a quarter. From a collected heap every run pays the same. It is not for every
+ * measure: a collection also empties the caches a small view runs on, and would slow those down.
+ */
+async function timed(runs: number, run: () => Promise<unknown>, fromCleanHeap = false): Promise<Measure> {
+  if (fromCleanHeap && collect === undefined) throw new Error("run with `node --expose-gc`");
   await run(); // warm
   queries = 0;
   await run();
   const count = queries;
   const times: number[] = [];
   for (let index = 0; index < runs; index += 1) {
+    if (fromCleanHeap) collect?.();
     const at = performance.now();
     await run();
     times.push(performance.now() - at);
@@ -298,9 +305,14 @@ async function timed(runs: number, run: () => Promise<unknown>): Promise<Measure
 
 const month = civil(15).slice(0, 7);
 const now = new Date();
-const views: [string, () => Promise<unknown>][] = [
+const views: [string, () => Promise<unknown>, { fromCleanHeap: boolean }?][] = [
   ["expensesView (mese corrente)", () => expensesView(ctx, { from: `${month}-01`, to: `${month}-28` })],
-  ["expensesView (tre anni)", () => expensesView(ctx, { from: civil(1_095), to: civil(0) })],
+  // Sixty thousand movements read and summed: the one view whose time the collector decides.
+  [
+    "expensesView (tre anni)",
+    () => expensesView(ctx, { from: civil(1_095), to: civil(0) }),
+    { fromCleanHeap: true },
+  ],
   ["accountsView (24 mesi)", () => accountsView(ctx, {})],
   // Each page below is the reads of its `page.tsx`, in its order.
   [
@@ -335,7 +347,9 @@ const views: [string, () => Promise<unknown>][] = [
   ["Subscriptions", async () => [await subscriptionsView(ctx), await suggestions(ctx)]],
   ["Time Off (anno)", () => timeOffView(ctx, thisYear)],
 ];
-for (const [name, run] of views) measured.views[name] = await timed(5, run);
+for (const [name, run, options] of views) {
+  measured.views[name] = await timed(5, run, options?.fromCleanHeap);
+}
 
 // The routes, with an access token of the person as a client gets one (client_credentials).
 const origin = new URL(readEnv().BETTER_AUTH_URL).origin;
@@ -343,6 +357,8 @@ const minted = await createApiClientWith(auth, session, {
   name: "perf",
   scopes: ["read", "write", "imports", "investments:read"],
 });
+// The token endpoint counts its calls in the database: several processes in a row would reach the limit.
+await getDb().execute(sql`delete from rate_limits`);
 const tokenResponse = await auth.handler(
   new Request(`${origin}/api/auth/oauth2/token`, {
     method: "POST",
@@ -386,46 +402,20 @@ for (const [name, run] of routes) {
 }
 await deleteApiClient(ctx, minted.clientId);
 
-// ——— Against the baseline —————————————————————————————————————————————————————————————————————
+// ——— Handing the measures over ————————————————————————————————————————————————————————————————
 
-const write = process.argv.includes("--write");
-const baseline = (() => {
-  try {
-    return JSON.parse(readFileSync(BASELINE, "utf8")) as typeof measured;
-  } catch {
-    return null;
-  }
-})();
-const worse: string[] = [];
-for (const group of ["views", "routes"] as const) {
-  console.log(
-    `\n${group === "views" ? "VISTE" : "ROTTE /api/v1"}${" ".repeat(26)}mediana    p95   query   (partenza: mediana, query)`,
-  );
-  for (const [name, now] of Object.entries(measured[group])) {
-    const before = baseline?.[group][name];
-    const slower =
-      before && now.medianMs > before.medianMs * WORSE && now.medianMs - before.medianMs > NOISE_MS;
-    const more = before && now.queries > before.queries;
-    if (slower) worse.push(`${name}: mediana ${before.medianMs} → ${now.medianMs} ms`);
-    if (more) worse.push(`${name}: query ${before.queries} → ${now.queries}`);
-    console.log(
-      `PERF ${name.padEnd(36)} ${now.medianMs.toFixed(1).padStart(7)} ${now.p95Ms.toFixed(1).padStart(7)} ${String(now.queries).padStart(6)}` +
-        (before
-          ? `   (${before.medianMs}, ${before.queries})${slower || more ? "  PEGGIO" : ""}`
-          : "   (nuova)"),
-    );
-  }
-}
-if (write) {
-  const heavyUser = {
-    accounts: ACCOUNTS,
-    movements: MOVEMENTS,
-    balanceEntries: ACCOUNTS * ENTRIES_PER_ACCOUNT,
-  };
-  // `production` (job durations, image) is read by hand at a deploy and kept as it is.
-  writeFileSync(BASELINE, `${JSON.stringify({ ...baseline, heavyUser, ...measured }, null, 2)}\n`);
-  console.log(`\n${BASELINE} scritto`);
-}
+// One process is one sample: `scripts/perf-on-test.sh` takes several and `scripts/perf-compare.ts`
+// holds them to the baseline. `--plans` prints the two query plans, once is enough.
+const out = process.argv[process.argv.indexOf("--out") + 1];
+if (!process.argv.includes("--out") || out === undefined)
+  throw new Error("usage: perf-probe.ts --out <file>");
+const heavyUser = {
+  accounts: ACCOUNTS,
+  movements: MOVEMENTS,
+  balanceEntries: ACCOUNTS * ENTRIES_PER_ACCOUNT,
+};
+writeFileSync(out, `${JSON.stringify({ heavyUser, ...measured })}\n`);
+const plans = process.argv.includes("--plans");
 
 /** The plan of the list query itself, which is the widest single statement of the application. */
 const plan = await getDb().execute<{ "QUERY PLAN": string }>(
@@ -439,8 +429,10 @@ const plan = await getDb().execute<{ "QUERY PLAN": string }>(
       order by t.occurred_at desc, t.id desc
       limit 200`,
 );
-console.log("\nEXPLAIN — la lista dei movimenti di un mese:");
-for (const row of plan.rows) console.log("   " + row["QUERY PLAN"]);
+if (plans) {
+  console.log("\nEXPLAIN — la lista dei movimenti di un mese:");
+  for (const row of plan.rows) console.log("   " + row["QUERY PLAN"]);
+}
 
 // The shape `balancesOn` really sends: the account list is in the WHERE, which is what lets
 // `balance_entries_account_on_idx` lead. Without it the planner has no choice but a seq scan —
@@ -456,21 +448,12 @@ const plan2 = await getDb().execute<{ "QUERY PLAN": string }>(
       where b.user_id = ${user.id} and b.account_id in (${ids}) and b.on <= ${civil(0)}::date
       order by b.account_id, b.on desc`,
 );
-console.log("\nEXPLAIN — l'ultimo saldo noto di ogni conto:");
-for (const row of plan2.rows) console.log("   " + row["QUERY PLAN"]);
+if (plans) {
+  console.log("\nEXPLAIN — l'ultimo saldo noto di ogni conto:");
+  for (const row of plan2.rows) console.log("   " + row["QUERY PLAN"]);
+}
 
 await getDb()
   .delete(users)
   .where(sql`${users.id} = ${user.id}`);
-console.log("\nutente di prova rimosso");
-if (!write && worse.length > 0) {
-  console.error(`\nG9: ${worse.length} misure peggiori della partenza:\n  ${worse.join("\n  ")}`);
-  process.exit(1);
-}
-if (!write)
-  console.log(
-    baseline
-      ? "G9: nessuna misura peggiore della partenza"
-      : "nessun file di partenza: `npm run perf -- --write`",
-  );
 process.exit(0);
