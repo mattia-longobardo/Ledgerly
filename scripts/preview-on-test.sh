@@ -21,16 +21,22 @@ case "$DATABASE_URL" in
   *) echo "refusing to run: the database is not ledgerly_test" >&2; exit 1 ;;
 esac
 
+# `docker run --env-file` keeps the quotes around a quoted value, which Compose drops: the file is
+# passed on stdin with one pair of quotes removed (as in `scripts/on-homelab.sh`).
+environment() {
+  sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" "$env_file"
+}
+
 script() {
-  docker run --rm --network db_internal --user "$(id -u):$(id -g)" -e HOME=/tmp \
-    --env-file "$env_file" -e DATABASE_URL -e S3_KEY_PREFIX -e E2E_BASE_URL \
+  environment | docker run --rm -i --network db_internal --user "$(id -u):$(id -g)" -e HOME=/tmp \
+    --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e E2E_BASE_URL \
     -v "$PWD":/app -w /app node:26-bookworm-slim node --conditions=react-server --import tsx "$@"
 }
 
 case "${1:-}" in
   up)
-    docker run -d --name ledgerly-preview --network db_internal --user 1000:1000 \
-      --env-file "$env_file" -e DATABASE_URL -e S3_KEY_PREFIX \
+    environment | docker run -d --name ledgerly-preview --network db_internal --user 1000:1000 \
+      --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX \
       -p 127.0.0.1:3999:3000 "$2"
     ;;
   seed)

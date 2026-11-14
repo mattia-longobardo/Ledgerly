@@ -1,0 +1,225 @@
+{
+  "heavyUser": {
+    "accounts": 12,
+    "movements": 60000,
+    "balanceEntries": 14400
+  },
+  "views": {
+    "expensesView (mese corrente)": {
+      "medianMs": 11.1,
+      "p95Ms": 13.1,
+      "queries": 14
+    },
+    "expensesView (tre anni)": {
+      "medianMs": 46.1,
+      "p95Ms": 51.7,
+      "queries": 14
+    },
+    "accountsView (24 mesi)": {
+      "medianMs": 28.8,
+      "p95Ms": 30.4,
+      "queries": 5
+    },
+    "Overview": {
+      "medianMs": 54.6,
+      "p95Ms": 59.7,
+      "queries": 25
+    },
+    "Account (dettaglio)": {
+      "medianMs": 30.4,
+      "p95Ms": 33.4,
+      "queries": 9
+    },
+    "Investments (home)": {
+      "medianMs": 55.1,
+      "p95Ms": 57.1,
+      "queries": 82
+    },
+    "Investments (servizio)": {
+      "medianMs": 18.8,
+      "p95Ms": 20.9,
+      "queries": 33
+    },
+    "Funds (home)": {
+      "medianMs": 1.7,
+      "p95Ms": 2.8,
+      "queries": 5
+    },
+    "Funds (fondo)": {
+      "medianMs": 31.8,
+      "p95Ms": 32.8,
+      "queries": 17
+    },
+    "Pockets": {
+      "medianMs": 24.7,
+      "p95Ms": 26.2,
+      "queries": 14
+    },
+    "Budgets": {
+      "medianMs": 1.5,
+      "p95Ms": 2.8,
+      "queries": 6
+    },
+    "Subscriptions": {
+      "medianMs": 3,
+      "p95Ms": 3.4,
+      "queries": 9
+    },
+    "Time Off (anno)": {
+      "medianMs": 3.8,
+      "p95Ms": 4.7,
+      "queries": 9
+    }
+  },
+  "routes": {
+    "GET /accounts": {
+      "medianMs": 6,
+      "p95Ms": 6.5,
+      "queries": 5
+    },
+    "GET /accounts/:id/balances": {
+      "medianMs": 2.5,
+      "p95Ms": 2.8,
+      "queries": 5
+    },
+    "POST /accounts/:id/balances": {
+      "medianMs": 2.7,
+      "p95Ms": 3.2,
+      "queries": 7
+    },
+    "GET /transactions": {
+      "medianMs": 9.6,
+      "p95Ms": 11.6,
+      "queries": 7
+    },
+    "GET /summary": {
+      "medianMs": 36.4,
+      "p95Ms": 36.9,
+      "queries": 9
+    },
+    "GET /investments": {
+      "medianMs": 21.9,
+      "p95Ms": 24.3,
+      "queries": 73
+    },
+    "GET /investments/:accountId/holdings": {
+      "medianMs": 4.9,
+      "p95Ms": 5.4,
+      "queries": 16
+    }
+  },
+  "production": {
+    "readOn": "2026-11-14",
+    "tag": "v0.10.2",
+    "jobs": {
+      "window": "successful runs of the last 30 days",
+      "durations": {
+        "integrations-sync": {
+          "runs": 509,
+          "medianMs": 151727,
+          "maxMs": 195717
+        },
+        "interests-rematch": {
+          "runs": 30,
+          "medianMs": 3322,
+          "maxMs": 4866
+        },
+        "wallet-sync": {
+          "runs": 277,
+          "medianMs": 1063,
+          "maxMs": 1703
+        },
+        "trek-sync": {
+          "runs": 277,
+          "medianMs": 455,
+          "maxMs": 52027
+        },
+        "database-backup": {
+          "runs": 30,
+          "medianMs": 267,
+          "maxMs": 357
+        },
+        "fx-rates-refresh": {
+          "runs": 18,
+          "medianMs": 159,
+          "maxMs": 1839
+        },
+        "holidays-refresh": {
+          "runs": 30,
+          "medianMs": 159,
+          "maxMs": 2291
+        },
+        "subscriptions-check": {
+          "runs": 435,
+          "medianMs": 104,
+          "maxMs": 261
+        },
+        "monthly-summary": {
+          "runs": 1,
+          "medianMs": 73,
+          "maxMs": 73
+        },
+        "funds-deposits": {
+          "runs": 419,
+          "medianMs": 32,
+          "maxMs": 182
+        },
+        "housekeeping": {
+          "runs": 30,
+          "medianMs": 24,
+          "maxMs": 136
+        },
+        "accounts-alerts": {
+          "runs": 30,
+          "medianMs": 23,
+          "maxMs": 87
+        },
+        "recurrences-refresh": {
+          "runs": 142,
+          "medianMs": 15,
+          "maxMs": 141
+        },
+        "accounts-snapshot": {
+          "runs": 1,
+          "medianMs": 13,
+          "maxMs": 13
+        },
+        "budgets-alerts": {
+          "runs": 313,
+          "medianMs": 13,
+          "maxMs": 338
+        },
+        "pockets-accrual": {
+          "runs": 1,
+          "medianMs": 5,
+          "maxMs": 5
+        },
+        "payslips-sweep": {
+          "runs": 721,
+          "medianMs": 3,
+          "maxMs": 100
+        },
+        "pockets-planned-cleanup": {
+          "runs": 30,
+          "medianMs": 2,
+          "maxMs": 12
+        },
+        "interests-accrual": {
+          "runs": 373,
+          "medianMs": 2,
+          "maxMs": 2701
+        },
+        "documents-retention": {
+          "runs": 30,
+          "medianMs": 2,
+          "maxMs": 27
+        },
+        "cometa-sweep": {
+          "runs": 721,
+          "medianMs": 1,
+          "maxMs": 77
+        }
+      }
+    }
+  }
+}
