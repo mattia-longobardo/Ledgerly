@@ -13,3 +13,13 @@ export function BrandMark({ size = 24 }: { size?: 24 | 28 }) {
     </span>
   );
 }
+
+/** The mark with the product's name beside it: the head of a card seen before sign-in. */
+export function BrandLockup({ name }: { name: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <BrandMark size={28} />
+      <span className="text-lg font-semibold">{name}</span>
+    </div>
+  );
+}

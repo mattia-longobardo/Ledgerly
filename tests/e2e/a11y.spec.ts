@@ -397,6 +397,8 @@ const PAGES: Screen[] = [
   { name: "/sign-in", session: null, open: go("/sign-in") },
   { name: "/forgot-password", session: null, open: go("/forgot-password") },
   { name: "/sign-in/two-factor", session: null, open: go("/sign-in/two-factor") },
+  { name: "/privacy", session: null, open: go("/privacy") },
+  { name: "/terms", session: null, open: go("/terms?lang=it") },
 
   // TOTP setup (docs/auth-design.md D2): a seeded password user who has not set it up yet.
   { name: "/sign-in/two-factor/setup", session: "pending", open: go("/sign-in/two-factor/setup") },

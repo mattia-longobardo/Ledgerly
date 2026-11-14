@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 74744,
+    "lines": 74866,
     "duplicatedLines": 16772,
-    "percent": 22.44,
+    "percent": 22.4,
     "blocks": 1138
   },
   "units": {
     "app": {
-      "lines": 15306,
+      "lines": 15418,
       "duplicatedLines": 3915,
-      "percent": 25.58,
+      "percent": 25.39,
       "blocks": 280
     },
     "global.d": {
@@ -149,7 +149,7 @@
       "blocks": 1
     },
     "platform/env": {
-      "lines": 129,
+      "lines": 130,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -299,9 +299,9 @@
       "blocks": 0
     },
     "ui": {
-      "lines": 3517,
+      "lines": 3526,
       "duplicatedLines": 382,
-      "percent": 10.86,
+      "percent": 10.83,
       "blocks": 22
     }
   },

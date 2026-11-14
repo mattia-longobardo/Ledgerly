@@ -89,6 +89,10 @@ export const envSchema = z
     // them `alertAdmins` does nothing at all (plan F8 §3.4.15).
     GOTIFY_URL: z.preprocess(blankAsUndefined, z.url().optional()),
     GOTIFY_TOKEN: z.preprocess(blankAsUndefined, z.string().min(1).optional()),
+    // How to reach the host of the instance, shown as plain text on `/privacy` and `/terms`: an
+    // address, a name, a sentence. Optional — without it the pages say to ask whoever gave the
+    // account. Public by definition: never a secret.
+    INSTANCE_CONTACT: z.preprocess(blankAsUndefined, z.string().trim().min(1).max(200).optional()),
     CRON_SECRET: z.string().min(32),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/ledgerly-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
