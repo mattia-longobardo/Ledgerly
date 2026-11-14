@@ -752,11 +752,17 @@ async function seedTimeOff(): Promise<void> {
   await saveLeaveDay(ctx, { from: workingDay(on, -7), kind: "rol", fraction: 0.5 });
 }
 
-/** The first bookable day at least `delta` days from `from`, walking the same way as `delta`. */
+/**
+ * The first bookable day at least `delta` days from `from`, walking the same way as `delta`.
+ *
+ * Milan's patron saint is left out as well: `holidays.spec.ts` subscribes this user to Milan's
+ * calendar and then looks at 7 December, which must not be a day the seed happened to book — as it
+ * was whenever the suite ran three weeks before it.
+ */
 function workingDay(from: string, delta: number): string {
   const step = delta >= 0 ? 1 : -1;
   let date = addDays(from, delta);
-  while (!isBookable(date)) date = addDays(date, step);
+  while (!isBookable(date, { month: 12, day: 7 })) date = addDays(date, step);
   return date;
 }
 
