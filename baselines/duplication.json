@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 77063,
-    "duplicatedLines": 15694,
-    "percent": 20.37,
-    "blocks": 1088
+    "lines": 77098,
+    "duplicatedLines": 15677,
+    "percent": 20.33,
+    "blocks": 1086
   },
   "units": {
     "app": {
       "lines": 15279,
-      "duplicatedLines": 3742,
-      "percent": 24.49,
+      "duplicatedLines": 3741,
+      "percent": 24.48,
       "blocks": 269
     },
     "global.d": {
@@ -41,10 +41,10 @@
       "blocks": 18
     },
     "modules/funds": {
-      "lines": 10545,
-      "duplicatedLines": 2137,
-      "percent": 20.27,
-      "blocks": 154
+      "lines": 10580,
+      "duplicatedLines": 2121,
+      "percent": 20.05,
+      "blocks": 152
     },
     "modules/imports": {
       "lines": 855,
@@ -364,7 +364,7 @@
     "app/(app)/settings/users/page.tsx": 16,
     "app/(app)/subscriptions/page.tsx": 8,
     "app/(app)/timeoff/page.tsx": 58,
-    "app/(app)/timeoff/settings/holiday-calendars.tsx": 42,
+    "app/(app)/timeoff/settings/holiday-calendars.tsx": 41,
     "app/(app)/timeoff/settings/page.tsx": 18,
     "app/(auth)/forgot-password/forgot-form.tsx": 8,
     "app/(auth)/invite/[token]/invite-form.tsx": 10,
@@ -406,10 +406,10 @@
     "modules/funds/pension/service.ts": 98,
     "modules/funds/queries.ts": 43,
     "modules/funds/schema.ts": 474,
-    "modules/funds/service.ts": 225,
+    "modules/funds/service.ts": 211,
     "modules/funds/sources.ts": 13,
     "modules/funds/ui/compact-empty.tsx": 7,
-    "modules/funds/ui/contribution-dialog.tsx": 108,
+    "modules/funds/ui/contribution-dialog.tsx": 106,
     "modules/funds/ui/fee-dialog.tsx": 100,
     "modules/funds/ui/fee-list.tsx": 40,
     "modules/funds/ui/fee-text.ts": 10,

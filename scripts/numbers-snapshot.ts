@@ -104,7 +104,9 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     month: row.month,
     onTheWayCents: row.onTheWayCents,
     onTheWayQuarters: row.onTheWayQuarters,
-    pension: row.detail,
+    // Without `freshness`: it is the day a row was written, by the database's own clock, and not a
+    // number of the product. With it the file of a test user would change every day.
+    pension: { ...row.detail, freshness: undefined },
   }));
 
   const timeOffNow = await timeOffView(ctx, thisYear);
