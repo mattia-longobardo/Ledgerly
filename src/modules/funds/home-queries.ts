@@ -25,7 +25,11 @@ export interface HomeFundRow {
   onTheWayQuarters: number;
   /** The periods behind it, with their deadlines. */
   onTheWay: PendingQuarter[];
-  /** Everything else a fund's page reads: its sources, its fees, its register. */
+  /**
+   * Everything else a fund's page reads: its sources, its fees, its register. In the rows of the
+   * home the valuations with their notes and the positions of the statements are empty, unless
+   * asked for: only a fund's own page (`fundHomeRow`) shows them.
+   */
   detail: FundDetail;
 }
 
@@ -33,13 +37,15 @@ export interface HomeFundRow {
 export async function fundsHomeRows(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   now: Date = new Date(),
+  /** The home does not show a fund's valuations and statements, so it does not read them. */
+  options: { history: boolean } = { history: false },
 ): Promise<HomeFundRow[]> {
   const all = await getDb()
     .select()
     .from(funds)
     .where(userScoped(ctx).owns(funds))
     .orderBy(asc(funds.name), asc(funds.id));
-  return rowsOf(ctx, all, now);
+  return rowsOf(ctx, all, now, options);
 }
 
 /**
@@ -51,16 +57,17 @@ export async function fundHomeRow(
   id: string,
   now: Date = new Date(),
 ): Promise<HomeFundRow> {
-  return (await rowsOf(ctx, [await requireFund(ctx, id)], now))[0];
+  return (await rowsOf(ctx, [await requireFund(ctx, id)], now, { history: true }))[0];
 }
 
 async function rowsOf(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   list: readonly Fund[],
   now: Date,
+  options: { history: boolean },
 ): Promise<HomeFundRow[]> {
   const todayOn = today(ctx.timeZone, now);
-  const details = await fundDetails(ctx, list, now);
+  const details = await fundDetails(ctx, list, now, options);
   return details.map((detail) => {
     const { fund } = detail;
     const period = detail.payroll?.period ?? "quarter";

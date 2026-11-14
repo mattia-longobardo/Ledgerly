@@ -190,6 +190,8 @@ export function debitPlanOf(source: FundSource, fund: Pick<Fund, "startOn">): De
   };
 }
 
+type ValuationRecord = Parameters<typeof recordedValuations>[0][number];
+
 /** A fund's values over its whole life: the sum of the years depends on every one of them. */
 const ALL_ENTRIES = 100_000;
 
@@ -215,28 +217,31 @@ export async function fundDetails(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   list: readonly Fund[],
   now: Date = new Date(),
+  /**
+   * `history: false` leaves out what only a fund's own page shows — the valuations with their notes
+   * and the positions a statement stated: the home reads neither, and no number depends on them.
+   */
+  options: { history?: boolean } = {},
 ): Promise<FundDetail[]> {
   if (list.length === 0) return [];
   const todayOn = today(ctx.timeZone, now);
   const ids = list.map((fund) => fund.id);
-  const [
-    accounts,
-    sources,
-    fees,
-    competencesOfFund,
-    registers,
-    snapshotsOfFund,
-    decisionsOfFund,
-    valuationRows,
-  ] = await Promise.all([
+  const history = options.history ?? true;
+  const [accounts, sources, fees, registers, snapshotsOfFund, valuationRows] = await Promise.all([
     listAccounts(ctx, { includeArchived: true }),
     sourcesOf(ctx, ids),
     feesOf(ctx, ids),
-    competencesOf(ctx, ids),
     operationsOf(ctx, ids),
-    snapshotsOf(ctx, ids),
-    decisionsOf(ctx, ids),
-    valuationsOf(ctx, ids),
+    history ? snapshotsOf(ctx, ids) : new Map<string, PositionSnapshot[]>(),
+    history ? valuationsOf(ctx, ids) : new Map<string, ValuationRecord[]>(),
+  ]);
+  // The payslip side is read only for the funds that have a payslip source.
+  const fed = [
+    ...new Set(sources.filter((source) => source.kind === "payroll").map((source) => source.fundId)),
+  ];
+  const [competencesOfFund, decisionsOfFund] = await Promise.all([
+    competencesOf(ctx, fed),
+    decisionsOf(ctx, fed),
   ]);
   const accountOf = new Map(accounts.map((account) => [account.id, account]));
 
@@ -244,7 +249,7 @@ export async function fundDetails(
   // with no payslip source ask payroll nothing.
   const codes: FundCodes = {};
   let payslipDocuments = new Map<string, string>();
-  if (sources.some((source) => source.kind === "payroll")) {
+  if (fed.length > 0) {
     const [codeMap, payslips] = await Promise.all([listCodeMap(ctx), payslipsOf(ctx)]);
     for (const entry of codeMap) {
       if (!FUND_ROLES.includes(entry.role)) continue;
@@ -294,7 +299,7 @@ function assemble(input: {
   movements: UnitMovement[];
   snapshots: PositionSnapshot[];
   decisions: ReconciliationLink[];
-  valuationRows: Parameters<typeof recordedValuations>[0];
+  valuationRows: readonly ValuationRecord[];
   entries: Awaited<ReturnType<typeof listBalanceEntries>>;
   codes: FundCodes;
   payslipDocuments: Map<string, string>;

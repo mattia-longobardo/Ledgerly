@@ -81,7 +81,8 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     investmentPeriods[period] = pnl.portfolio;
   }
 
-  const fundRows = await fundsHomeRows(ctx, now);
+  // With the history: the valuations and what the statements left are numbers of a fund too.
+  const fundRows = await fundsHomeRows(ctx, now, { history: true });
   const homes = fundRows.map((row) => row.home);
   const firstFundOn = firstDataOn(homes);
   const fundPeriods: Record<string, unknown> = {};
@@ -201,15 +202,13 @@ function diff(): void {
 }
 
 /**
- * Every real user of the database this process points at, inside one transaction that is never
- * committed: a pool of one connection, opened on a single `repeatable read` picture so that every
- * number is of the same instant, and rolled back at the end.
+ * Every real user of the database this process points at, inside one read-only transaction that is
+ * never committed: a pool of one connection, opened on a single `repeatable read` picture so that
+ * every number is of the same instant, and rolled back at the end.
  *
- * Not `read only`, though the plan asks for it: one read path writes. The pension figures call
- * `seedTariffs` (`src/modules/funds/pension/service.ts`), an `insert … on conflict do nothing` of
- * the public tariff, and a read-only transaction refuses even an insert that inserts nothing. The
- * guarantee is kept another way: the connection refuses `commit`, so nothing a read service does
- * on the way can stay.
+ * `read only`, as the plan asks: since release N6 no read service writes (the fund pages used to
+ * write the public tariff on every read, and a read-only transaction refuses even an insert that
+ * inserts nothing). The connection refuses `commit` as well, so nothing could stay in any case.
  */
 async function write(): Promise<void> {
   const out = argument("--out");
@@ -229,7 +228,7 @@ async function write(): Promise<void> {
     if (/^\s*(commit|end)\b/i.test(text ?? "")) throw new Error("the numbers snapshot never commits");
     return (send as (...rest: unknown[]) => unknown)(...args);
   }) as typeof client.query;
-  await send("begin transaction isolation level repeatable read");
+  await send("begin transaction isolation level repeatable read read only");
   client.release();
 
   const { getPreferences } = await import("../src/modules/users/service");
