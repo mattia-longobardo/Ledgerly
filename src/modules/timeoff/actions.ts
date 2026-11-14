@@ -9,8 +9,9 @@ import { z } from "zod";
 import { redactForLog } from "@/platform/auth/logger";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
-import { goesToTrek } from "./rules";
-import { TimeOffError, deleteLeaveDay, saveAllowance, saveLeaveDay } from "./service";
+import { isCivilDate } from "@/platform/dates";
+import { LEAVE_DAY_KINDS, type LeaveUndo } from "./rules";
+import { TimeOffError, removeLeave, restoreLeave, saveAllowance, saveLeaveRange } from "./service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
 export interface RefusedDate {
@@ -86,7 +87,7 @@ export async function saveAllowanceAction(input: AllowanceFormInput): Promise<Ac
   }
 }
 
-/** The "Add leave" modal: one day or a range, and one unit or the other. */
+/** The leave panel's fields, as typed: both ends, one kind, one size for every day. */
 export interface LeaveFormInput {
   from: string;
   to: string;
@@ -94,37 +95,74 @@ export interface LeaveFormInput {
   /** "1" or "0.5" — every kind, ROL included since N0. */
   fraction: string;
   note: string;
+  /** Set when the panel edits a row: the kind that row has now. */
+  editedKind?: string | null;
 }
 
-const KINDS = z.enum(["vacation", "rol", "comp", "sick", "other"]);
+export type LeaveActionResult =
+  | { ok: true; undo: LeaveUndo; days: number; removed: number; pending: number }
+  | { ok: false; error: string; refused?: RefusedDate[] };
 
-export async function saveLeaveAction(input: LeaveFormInput): Promise<ActionResult> {
+const KINDS = z.enum(LEAVE_DAY_KINDS);
+
+/**
+ * "Confirm" in the leave panel: one call writes the whole range (rewrite plan N5). The answer
+ * carries what the touched days held before, which is what the toast's "Undo" sends back.
+ */
+export async function saveLeaveRangeAction(input: LeaveFormInput): Promise<LeaveActionResult> {
   const ctx = await requireSession();
   try {
-    const kind = KINDS.parse(input.kind);
-    await saveLeaveDay(ctx, {
+    const result = await saveLeaveRange(ctx, {
       from: input.from,
-      to: input.to.trim() || null,
-      kind,
+      to: input.to,
+      kind: KINDS.parse(input.kind),
       fraction: optionalNumber(input.fraction) ?? 1,
       note: input.note.trim() || null,
+      editedKind: input.editedKind == null ? null : KINDS.parse(input.editedKind),
     });
     revalidate();
-    // One list says what reaches Trek (`KINDS_FOR_TREK`): a kind that goes there is worth a pass.
-    if (goesToTrek(kind)) nudgeTrek(ctx);
-    return { ok: true };
+    // The service knows whether the next pass has work: one list says what reaches Trek.
+    if (result.trek) nudgeTrek(ctx);
+    return { ok: true, undo: result.undo, days: result.totalDays, removed: 0, pending: 0 };
   } catch (error) {
     return failed(error);
   }
 }
 
-export async function deleteLeaveAction(id: string): Promise<ActionResult> {
+const removalSchema = z.union([
+  z.object({ id: z.uuid() }),
+  z.object({ date: z.string().refine(isCivilDate, "not a civil date") }),
+]);
+
+/** "Remove": one row by its id, or everything on one date (Delete on a day of the calendar). */
+export async function removeLeaveAction(
+  target: { id: string } | { date: string },
+): Promise<LeaveActionResult> {
   const ctx = await requireSession();
   try {
-    const outcome = await deleteLeaveDay(ctx, z.uuid().parse(id));
+    const removed = await removeLeave(ctx, removalSchema.parse(target));
     revalidate();
     // Only a removal Trek has to be told about is worth a pass; a day it never had is just gone.
-    if (outcome === "pending") nudgeTrek(ctx);
+    if (removed.pending > 0) nudgeTrek(ctx);
+    return {
+      ok: true,
+      undo: removed.undo,
+      days: 0,
+      removed: removed.deleted + removed.pending,
+      pending: removed.pending,
+    };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/** "Undo" in the toast: the touched days go back to what they held, in one transaction. */
+export async function undoLeaveAction(undo: LeaveUndo): Promise<ActionResult> {
+  const ctx = await requireSession();
+  try {
+    const restored = await restoreLeave(ctx, undo);
+    revalidate();
+    if (restored.trek) nudgeTrek(ctx);
     return { ok: true };
   } catch (error) {
     return failed(error);

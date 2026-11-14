@@ -13,13 +13,36 @@ test.use({ storageState: sessionState("timeoff") });
 
 const YEAR = new Date().getFullYear();
 
-/** The press the calendar reads as "make this half a day": down, wait past the threshold, up. */
-async function hold(page: Page, date: string, button: "left" | "right" = "left"): Promise<void> {
-  const cell = page.locator(`[data-date="${date}"]`);
-  await cell.hover();
-  await page.mouse.down({ button });
-  await page.waitForTimeout(700);
-  await page.mouse.up({ button });
+/**
+ * The Monday of the first whole working week of March, as `YYYY-MM-DD`, and the days after it. No
+ * Italian holiday falls there, so the five days are five working days whatever the year.
+ */
+function marchWeek(): string[] {
+  const monday = new Date(Date.UTC(YEAR, 2, 8));
+  while (monday.getUTCDay() !== 1) monday.setUTCDate(monday.getUTCDate() + 1);
+  return Array.from({ length: 5 }, (_, index) => {
+    const day = new Date(monday);
+    day.setUTCDate(monday.getUTCDate() + index);
+    return day.toISOString().slice(0, 10);
+  });
+}
+const [MON, TUE, WED, THU, FRI] = marchWeek();
+
+const cell = (page: Page, date: string) => page.locator(`[data-date="${date}"]`);
+/** The rows of the table that are about one of the week's days: "10 Mar 2026". */
+const rowsOf = (page: Page, date: string) =>
+  page.getByRole("row").filter({ hasText: `${Number(date.slice(8))} Mar ${YEAR}` });
+
+/**
+ * Every write this page can make is a Server Action — a POST carrying `next-action` — so counting
+ * those is counting the writes (rewrite plan N5, criterion 3).
+ */
+function countWrites(page: Page): () => number {
+  let writes = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.headers()["next-action"] !== undefined) writes += 1;
+  });
+  return () => writes;
 }
 
 test("time off counts the year, says where each number comes from, and refuses a day nobody works", async ({
@@ -64,9 +87,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(page.getByRole("heading", { name: `${YEAR} calendar` })).toBeVisible();
     await expect(page.getByTestId("leave-cell")).toHaveCount(3);
     // The one sentence that explains the whole control.
-    await expect(
-      page.getByText("Hold the right button instead for half vacation and half ROL"),
-    ).toBeVisible();
+    await expect(page.getByText("Pick the first and the last day.")).toBeVisible();
   });
 
   await test.step("the table groups by month and puts the payslip beside what is recorded (N7)", async () => {
@@ -76,27 +97,172 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(page.getByRole("row").filter({ hasText: "Vacation" }).first()).toContainText("1 d");
   });
 
-  await test.step("one click books a day, another makes it ROL, the right button clears it (N3)", async () => {
-    const free = page.locator(`button[data-date="${YEAR}-03-10"]`);
-    await expect(free).toHaveCount(1);
+  await test.step("a week of vacation is two clicks and Confirm, and nothing is written before it", async () => {
+    const writes = countWrites(page);
+    await cell(page, MON).click();
+    // The first day is chosen: the bar says so, and offers the two ways out.
+    const bar = page.getByTestId("selection-bar");
+    await expect(bar).toContainText("pick the last day");
+    await expect(bar.getByRole("button", { name: "This day only" })).toBeVisible();
+    await expect(bar.getByRole("button", { name: "Cancel" })).toBeVisible();
 
-    await free.click();
-    await expect(page.locator(`[data-date="${YEAR}-03-10"][data-testid="leave-cell"]`)).toBeVisible();
-    await expect(page.getByRole("row").filter({ hasText: "Vacation" })).not.toHaveCount(0);
+    await cell(page, FRI).click();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId("summary")).toContainText("5 d (5 working days)");
+    // 26 granted − 2 booked = 24 left before; the week takes five of them.
+    await expect(panel.getByTestId("summary")).toContainText("24 d → 19 d");
+    await panel.getByLabel("Note").fill("a week away");
+    await page.waitForTimeout(500);
+    expect(writes(), "picking the days and filling the panel writes nothing").toBe(0);
 
-    // A second click walks it on to ROL, without a dialog ever appearing.
-    await page.locator(`[data-date="${YEAR}-03-10"]`).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(
-      page
-        .getByRole("row")
-        .filter({ hasText: `10 Mar ${YEAR}` })
-        .filter({ hasText: "ROL" }),
-    ).toHaveCount(1);
+    await panel.getByRole("button", { name: "Confirm" }).click();
+    await expect(panel).toBeHidden();
+    await expect(page.getByText("Leave saved · 5 d")).toBeVisible();
+    expect(writes(), "Confirm is one call").toBe(1);
+    for (const date of [MON, TUE, WED, THU, FRI]) {
+      await expect(cell(page, date)).toHaveAttribute("data-testid", "leave-cell");
+      await expect(rowsOf(page, date).filter({ hasText: "Vacation" })).toHaveCount(1);
+    }
+    await expect(page.getByTestId("vacation-card")).toContainText("19");
+  });
 
-    // The right button takes it away again.
-    await page.locator(`[data-date="${YEAR}-03-10"]`).click({ button: "right" });
-    await expect(page.getByRole("row").filter({ hasText: `10 Mar ${YEAR}` })).toHaveCount(0);
+  await test.step("Undo in the toast takes the whole week back, in one call", async () => {
+    const writes = countWrites(page);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByText("Undone")).toBeVisible();
+    for (const date of [MON, FRI]) await expect(rowsOf(page, date)).toHaveCount(0);
+    await expect(page.getByTestId("vacation-card")).toContainText("24");
+    expect(writes()).toBe(1);
+  });
+
+  await test.step("a range can be dragged with the mouse, and Cancel in the panel writes nothing", async () => {
+    const writes = countWrites(page);
+    await cell(page, TUE).hover();
+    await page.mouse.down();
+    await cell(page, WED).hover();
+    await cell(page, THU).hover();
+    await page.mouse.up();
+
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByLabel("From")).toHaveValue(TUE);
+    await expect(panel.getByLabel("To")).toHaveValue(THU);
+    // The range stays drawn behind the panel.
+    await expect(cell(page, WED)).toHaveAttribute("data-selected", "inside");
+    await panel.getByRole("button", { name: "Cancel" }).click();
+    await expect(panel).toBeHidden();
+    await expect(cell(page, WED)).not.toHaveAttribute("data-selected");
+    await expect(page.getByRole("status")).toHaveCount(0);
+    expect(writes()).toBe(0);
+  });
+
+  await test.step("the right button, a long press and Alt are nobody's shortcut any more", async () => {
+    const writes = countWrites(page);
+    await cell(page, TUE).click({ button: "right" });
+    await cell(page, TUE).hover();
+    await page.mouse.down();
+    await page.waitForTimeout(700);
+    await page.mouse.up();
+    // A press let go on the day it began on is a plain click: the first day of a range, no more.
+    await expect(page.getByTestId("selection-bar")).toBeVisible();
+    await expect(page.getByTestId("leave-panel")).toHaveCount(0);
+    await page.getByTestId("selection-bar").getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByTestId("selection-bar")).toHaveCount(0);
+    await expect(rowsOf(page, TUE)).toHaveCount(0);
+    expect(writes()).toBe(0);
+  });
+
+  await test.step("half a day and the other half are fields and a button of the panel", async () => {
+    await page.getByRole("banner").getByRole("button", { name: "Add leave" }).click();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await panel.getByLabel("From").fill(WED);
+    await expect(panel.getByLabel("To")).toHaveValue(WED);
+    await panel.getByRole("button", { name: "Half day" }).click();
+    await panel.getByLabel("Note").fill("afternoon");
+    await expect(panel.getByTestId("summary")).toContainText("0.5 d (1 half day)");
+    await panel.getByRole("button", { name: "Confirm" }).click();
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole("row").filter({ hasText: "afternoon" })).toContainText("0.5 d");
+    await expect(cell(page, WED)).toHaveAttribute("data-partial", "true");
+
+    // The booked day opens the same panel, on its row; the other half is one button away.
+    await cell(page, WED).click();
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await expect(edit.getByLabel("Note")).toHaveValue("afternoon");
+    await edit.getByRole("button", { name: "Add the other half" }).click();
+    const other = page.getByRole("dialog", { name: "New leave" });
+    await expect(other.getByLabel("Type")).toHaveValue("rol");
+    await other.getByRole("button", { name: "Confirm" }).click();
+    await expect(other).toBeHidden();
+    // Two halves are a whole day off: both kinds named, and no half-day wedge.
+    await expect(cell(page, WED)).toHaveAttribute("aria-label", /Vacation, ROL/);
+    await expect(cell(page, WED)).not.toHaveAttribute("data-partial", "true");
+    await expect(rowsOf(page, WED)).toHaveCount(2);
+  });
+
+  await test.step("a day with two rows asks which one, and Remove takes that one only", async () => {
+    await cell(page, WED).click();
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    const which = edit.getByRole("group", { name: "Which leave" });
+    await which.getByRole("button", { name: "ROL ½" }).click();
+    await expect(edit.getByLabel("Type")).toHaveValue("rol");
+    await edit.getByRole("button", { name: "Remove" }).click();
+    await expect(edit).toBeHidden();
+    await expect(page.getByText("Leave removed")).toBeVisible();
+    await expect(rowsOf(page, WED)).toHaveCount(1);
+    await expect(rowsOf(page, WED)).toContainText("Vacation");
+  });
+
+  await test.step("a range over a booked day says what it replaces before Confirm", async () => {
+    await cell(page, TUE).click();
+    await cell(page, THU).click();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await panel.getByLabel("Type").selectOption("rol");
+    await expect(panel.getByTestId("summary")).toContainText("Replaces");
+    await expect(panel.getByTestId("summary")).toContainText("(Vacation ½)");
+    // ROL: 4 granted, half a day planned. Three more days leave half a day.
+    await expect(panel.getByTestId("summary")).toContainText("3.5 d → 0.5 d");
+    await panel.getByRole("button", { name: "Confirm" }).click();
+    await expect(panel).toBeHidden();
+    await expect(rowsOf(page, WED)).toHaveCount(1);
+    await expect(rowsOf(page, WED)).toContainText("ROL");
+    await expect(page.getByTestId("rol-card")).toContainText("0.5");
+  });
+
+  await test.step("a balance below zero is a number to plan with, not an error", async () => {
+    await cell(page, MON).click();
+    await cell(page, MON).click();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await panel.getByLabel("Type").selectOption("rol");
+    await expect(panel.getByTestId("summary")).toContainText("0.5 d → −0.5 d");
+    await expect(panel.getByText(/goes 0.5 d below zero/)).toBeVisible();
+    await panel.getByRole("button", { name: "Confirm" }).click();
+    await expect(panel).toBeHidden();
+    // The card says the same number, and the page lists it among the overdrawn balances.
+    await expect(page.getByTestId("rol-card")).toContainText("-0.5");
+    await expect(page.getByTestId("overdrawn")).toContainText("ROL");
+  });
+
+  await test.step("the table's Remove asks nothing, and its Edit opens the same panel", async () => {
+    let asked = false;
+    page.on("dialog", (confirm) => {
+      asked = true;
+      void confirm.accept();
+    });
+    await rowsOf(page, MON).getByRole("button", { name: "Edit" }).click();
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await expect(edit.getByLabel("Type")).toHaveValue("rol");
+    await edit.getByRole("button", { name: "Cancel" }).click();
+
+    for (const date of [MON, TUE, WED, THU]) {
+      await rowsOf(page, date).getByRole("button", { name: "Remove" }).click();
+      await expect(rowsOf(page, date)).toHaveCount(0);
+    }
+    expect(asked, "no browser dialog stands between Remove and the removal").toBe(false);
+    await expect(page.getByTestId("overdrawn")).toHaveCount(0);
+    await expect(page.getByTestId("rol-card")).toContainText("3.5");
+    await expect(page.getByTestId("leave-cell")).toHaveCount(3);
   });
 
   await test.step("a day still to come is drawn hollow, not as one already counted (N8)", async () => {
@@ -111,79 +277,10 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(legend).toContainText("Counted");
   });
 
-  await test.step("holding a booked day down makes it half a day, and holding again a whole one (N8)", async () => {
-    const day = page.locator(`button[data-date="${YEAR}-03-12"]`);
-    await day.click();
-    await expect(page.locator(`[data-date="${YEAR}-03-12"][data-testid="leave-cell"]`)).toBeVisible();
-
-    await hold(page, `${YEAR}-03-12`);
-    await expect(page.locator(`[data-date="${YEAR}-03-12"][data-partial="true"]`)).toBeVisible();
-    await expect(
-      page
-        .getByRole("row")
-        .filter({ hasText: `12 Mar ${YEAR}` })
-        .filter({ hasText: "0.5 d" }),
-    ).toHaveCount(1);
-
-    await hold(page, `${YEAR}-03-12`);
-    await expect(page.locator(`[data-date="${YEAR}-03-12"][data-partial="true"]`)).toHaveCount(0);
-
-    await page.locator(`[data-date="${YEAR}-03-12"]`).click({ button: "right" });
-    await expect(page.getByRole("row").filter({ hasText: `12 Mar ${YEAR}` })).toHaveCount(0);
-  });
-
-  await test.step("holding the right button makes a day half vacation and half ROL (N10)", async () => {
-    const date = `${YEAR}-03-13`;
-    await hold(page, date, "right");
-    // Two kinds on one date is the shape no click can reach, so it has a gesture of its own. The
-    // day is not "partial": two halves still add up to a day off, and the cell says so by naming
-    // both kinds rather than by wearing the half-day wedge.
-    const cell = page.locator(`[data-date="${date}"]`);
-    await expect(cell).toHaveAttribute("aria-label", /Vacation/);
-    await expect(cell).toHaveAttribute("aria-label", /ROL/);
-    await expect(cell).not.toHaveAttribute("data-partial", "true");
-    const rows = page.getByRole("row").filter({ hasText: `13 Mar ${YEAR}` });
-    await expect(rows.filter({ hasText: "Vacation" })).toHaveCount(1);
-    await expect(rows.filter({ hasText: "ROL" })).toHaveCount(1);
-
-    // Held again it is a whole day of vacation once more: a gesture you cannot undo is one
-    // nobody dares try.
-    await hold(page, date, "right");
-    await expect(page.getByRole("row").filter({ hasText: `13 Mar ${YEAR}` })).toHaveCount(1);
-
-    // And a quick right-click still takes the day away, as it always did.
-    await page.locator(`[data-date="${date}"]`).click({ button: "right" });
-    await expect(page.getByRole("row").filter({ hasText: `13 Mar ${YEAR}` })).toHaveCount(0);
-  });
-
   await test.step("a weekend is not even a button: it cannot be booked", async () => {
     // 13 June 2026 is a Saturday.
     await expect(page.locator('button[data-date="2026-06-13"]')).toHaveCount(0);
     await expect(page.locator('[data-date="2026-06-13"]')).toHaveCount(1);
-  });
-
-  await test.step("a held click opens the dialog, which is the way to half a day", async () => {
-    await page.locator(`button[data-date="${YEAR}-03-11"]`).click({ modifiers: ["Alt"] });
-    const dialog = page.getByRole("dialog", { name: "Add leave" });
-    await expect(dialog).toBeVisible();
-    await dialog.getByLabel("Duration").selectOption("0.5");
-    await dialog.getByLabel("Note").fill("afternoon");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(dialog).toBeHidden();
-
-    const row = page.getByRole("row").filter({ hasText: "afternoon" });
-    await expect(row).toContainText("0.5 d");
-    await expect(page.locator(`[data-date="${YEAR}-03-11"][data-partial="true"]`)).toBeVisible();
-  });
-
-  await test.step("a booked day can still be edited from the table", async () => {
-    page.once("dialog", (confirm) => confirm.accept());
-    await page
-      .getByRole("row")
-      .filter({ hasText: "afternoon" })
-      .getByRole("button", { name: "Remove" })
-      .click();
-    await expect(page.getByRole("row").filter({ hasText: "afternoon" })).toHaveCount(0);
   });
 
   await test.step("the allowance takes the contract's total, and never asks what last year left over", async () => {

@@ -11,6 +11,7 @@ import {
   type LeaveDayView,
   type MonthBar,
   type Overdrawn,
+  type ResidualInput,
   type ResidualView,
   type MonthGroup,
   type UnrecordedLeave,
@@ -104,6 +105,13 @@ export interface TimeOffView {
   totalAllowanceMinutes: number | null;
   /** How far the two parts are from that total, in days; `null` when there is nothing to compare. */
   allowanceMismatch: number | null;
+  /** The days of the year this person does not work, ascending: what the leave panel leaves out. */
+  holidays: CivilDate[];
+  /**
+   * What each card's residual was worked out from, for the leave panel's "before → after": the
+   * panel runs the same `residual()` over the days as they would be, and reads nothing itself.
+   */
+  residualInputs: { vacation: ResidualInput; rol: ResidualInput };
 }
 
 const asView = (day: LeaveDay): LeaveDayView => ({
@@ -183,21 +191,16 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
   const plannedOf = (kind: "vacation" | "rol") =>
     views.filter((day) => day.kind === kind && dayStatus(day.on, countedThrough) === "planned");
 
-  const vacation: KindView = {
-    residual: residual({
+  const residualInputs: TimeOffView["residualInputs"] = {
+    vacation: {
       snapshot: lastSnapshot("vacation"),
       allowanceMinutes: vacationMinutes,
       carriedMinutes,
       days: views.filter((day) => day.kind === "vacation"),
       countedThrough,
       minutesPerDay,
-    }),
-    allowanceMinutes: vacationMinutes,
-    carriedMinutes,
-  };
-
-  const rol: KindView = {
-    residual: residual({
+    },
+    rol: {
       snapshot: lastSnapshot("rol"),
       allowanceMinutes: rolMinutes,
       // ROL rolls over like vacation does (N1), and like vacation the figure is the payslip's (N9).
@@ -205,7 +208,17 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
       days: views.filter((day) => day.kind === "rol"),
       countedThrough,
       minutesPerDay,
-    }),
+    },
+  };
+
+  const vacation: KindView = {
+    residual: residual(residualInputs.vacation),
+    allowanceMinutes: vacationMinutes,
+    carriedMinutes,
+  };
+
+  const rol: KindView = {
+    residual: residual(residualInputs.rol),
     allowanceMinutes: rolMinutes,
     carriedMinutes: carriedRolMinutes,
   };
@@ -277,6 +290,8 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
       vacationDays: allowance?.vacationDays == null ? null : Number(allowance.vacationDays),
       rolDays: allowance?.rolDays == null ? null : Number(allowance.rolDays),
     }),
+    holidays: [...holidays].sort(),
+    residualInputs,
   };
 }
 

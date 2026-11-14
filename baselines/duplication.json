@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 74866,
-    "duplicatedLines": 16772,
-    "percent": 22.4,
-    "blocks": 1138
+    "lines": 75835,
+    "duplicatedLines": 16626,
+    "percent": 21.92,
+    "blocks": 1130
   },
   "units": {
     "app": {
-      "lines": 15418,
-      "duplicatedLines": 3915,
-      "percent": 25.39,
+      "lines": 15433,
+      "duplicatedLines": 3912,
+      "percent": 25.35,
       "blocks": 280
     },
     "global.d": {
@@ -60,9 +60,9 @@
     },
     "modules/investments": {
       "lines": 10466,
-      "duplicatedLines": 2028,
-      "percent": 19.38,
-      "blocks": 134
+      "duplicatedLines": 2016,
+      "percent": 19.26,
+      "blocks": 133
     },
     "modules/payroll": {
       "lines": 3461,
@@ -83,10 +83,10 @@
       "blocks": 34
     },
     "modules/timeoff": {
-      "lines": 2355,
-      "duplicatedLines": 324,
-      "percent": 13.76,
-      "blocks": 27
+      "lines": 3277,
+      "duplicatedLines": 193,
+      "percent": 5.89,
+      "blocks": 20
     },
     "modules/transactions": {
       "lines": 5291,
@@ -299,9 +299,9 @@
       "blocks": 0
     },
     "ui": {
-      "lines": 3526,
+      "lines": 3558,
       "duplicatedLines": 382,
-      "percent": 10.83,
+      "percent": 10.74,
       "blocks": 22
     }
   },
@@ -319,7 +319,7 @@
     "app/(app)/funds/home-skeleton.tsx": 20,
     "app/(app)/funds/page.tsx": 230,
     "app/(app)/funds/pension-buttons.tsx": 24,
-    "app/(app)/funds/pension-setup.ts": 21,
+    "app/(app)/funds/pension-setup.ts": 19,
     "app/(app)/interests/[id]/page.tsx": 62,
     "app/(app)/interests/page.tsx": 57,
     "app/(app)/investments/[accountId]/activity/page.tsx": 97,
@@ -367,8 +367,8 @@
     "app/(app)/settings/server/smtp-card.tsx": 119,
     "app/(app)/settings/users/page.tsx": 16,
     "app/(app)/subscriptions/page.tsx": 17,
-    "app/(app)/timeoff/page.tsx": 69,
-    "app/(app)/timeoff/settings/holiday-calendars.tsx": 47,
+    "app/(app)/timeoff/page.tsx": 83,
+    "app/(app)/timeoff/settings/holiday-calendars.tsx": 32,
     "app/(app)/timeoff/settings/page.tsx": 18,
     "app/(auth)/forgot-password/forgot-form.tsx": 8,
     "app/(auth)/invite/[token]/invite-form.tsx": 10,
@@ -438,7 +438,7 @@
     "modules/interests/schema.ts": 149,
     "modules/interests/service.ts": 90,
     "modules/interests/ui/rule-dialog.tsx": 136,
-    "modules/investments/actions.ts": 129,
+    "modules/investments/actions.ts": 120,
     "modules/investments/activity.ts": 15,
     "modules/investments/api.ts": 16,
     "modules/investments/catalog.ts": 82,
@@ -449,7 +449,7 @@
     "modules/investments/schema.ts": 446,
     "modules/investments/service.ts": 257,
     "modules/investments/sync.ts": 438,
-    "modules/investments/ui/dialogs.tsx": 425,
+    "modules/investments/ui/dialogs.tsx": 422,
     "modules/investments/ui/period-control.tsx": 24,
     "modules/investments/ui/period-picker.tsx": 15,
     "modules/payroll/actions.ts": 82,
@@ -482,11 +482,11 @@
     "modules/subscriptions/ui/subscription-dialog.tsx": 120,
     "modules/subscriptions/ui/subscriptions-table.tsx": 58,
     "modules/subscriptions/ui/suggestions-dialog.tsx": 15,
-    "modules/timeoff/actions.ts": 34,
-    "modules/timeoff/day-actions.ts": 68,
+    "modules/timeoff/actions.ts": 8,
     "modules/timeoff/schema.ts": 62,
-    "modules/timeoff/service.ts": 59,
-    "modules/timeoff/ui/leave-actions.tsx": 61,
+    "modules/timeoff/service.ts": 57,
+    "modules/timeoff/ui/leave-board.tsx": 12,
+    "modules/timeoff/ui/leave-panel.tsx": 14,
     "modules/timeoff/ui/settings-forms.tsx": 40,
     "modules/transactions/actions.ts": 53,
     "modules/transactions/api.ts": 26,

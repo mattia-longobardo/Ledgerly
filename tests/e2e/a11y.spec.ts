@@ -376,6 +376,20 @@ const PAGES: Screen[] = [
   },
   { name: "/timeoff", session: "layout", open: go("/timeoff") },
   { name: "/timeoff/settings", session: "layout", open: go("/timeoff/settings") },
+  {
+    // A range with its first day chosen: the preview under the pointer and the bar (rewrite plan N5).
+    name: "/timeoff, a range in progress",
+    session: "layout",
+    open: async (page) => {
+      await page.goto("/timeoff");
+      await settled(page);
+      const free = page.locator('[data-month="3"] [data-testid="free-cell"]');
+      await free.nth(0).click();
+      await free.nth(6).hover();
+      await expect(page.getByTestId("selection-bar")).toBeVisible();
+      await finished(page);
+    },
+  },
   { name: "/payroll/settings", session: "layout", open: go("/payroll/settings") },
   { name: "/settings/profile", session: "layout", open: go("/settings/profile") },
   { name: "/settings/security", session: "layout", open: go("/settings/security") },
@@ -446,6 +460,32 @@ const OVERLAYS: Screen[] = [
         .getByLabel(/Days$|Giorni$/)
         .nth(1)
         .selectOption("monthDays");
+    },
+  },
+  {
+    // The leave panel on a range that crosses a weekend, so the summary has every kind of line.
+    name: "the leave panel, a new range",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/timeoff");
+      await settled(page);
+      const free = page.locator('[data-month="3"] [data-testid="free-cell"]');
+      await free.nth(0).click();
+      await free.nth(6).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // The same panel on a booked day: the row's badges, Remove, and the residual of an edit.
+    name: "the leave panel, a booked day",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/timeoff");
+      await settled(page);
+      await page.getByTestId("leave-cell").first().click();
+      await settledDialog(page);
     },
   },
   {

@@ -24,10 +24,7 @@ import {
   recordFromTrek,
   saveAllowance,
   clearDay,
-  cycleDay,
-  halveDay,
   saveLeaveDay,
-  splitDay,
   yearWindow,
 } from "./service";
 
@@ -373,81 +370,6 @@ describe("listing", () => {
 });
 
 describe("what a click on the calendar does (N3)", () => {
-  it("walks a day round: nothing, vacation, ROL, vacation again", async () => {
-    expect(await cycleDay(ctx, TUESDAY)).toEqual({ kind: "vacation" });
-    expect((await listLeaveDays(ctx, WINDOW))[0]).toMatchObject({
-      kind: "vacation",
-      fraction: "1.0",
-      pending: "upsert",
-    });
-
-    expect(await cycleDay(ctx, TUESDAY)).toEqual({ kind: "rol" });
-    let rows = await listLeaveDays(ctx, WINDOW);
-    // One row, not two: the day changed kind, it did not gain one.
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ kind: "rol", fraction: "1.0" });
-
-    expect(await cycleDay(ctx, TUESDAY)).toEqual({ kind: "vacation" });
-    rows = await listLeaveDays(ctx, WINDOW);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].kind).toBe("vacation");
-  });
-
-  it("keeps the size when the kind changes: a half day stays a half day", async () => {
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 0.5 });
-    await cycleDay(ctx, TUESDAY);
-    expect((await listLeaveDays(ctx, WINDOW))[0]).toMatchObject({ kind: "rol", fraction: "0.5" });
-  });
-
-  it("refuses a day nobody can work, and says which reason", async () => {
-    const error = await cycleDay(ctx, SATURDAY).catch((e: unknown) => e);
-    expect((error as TimeOffError).code).toBe("not_bookable");
-    expect((error as TimeOffError).refused).toEqual([{ on: SATURDAY, reason: "weekend" }]);
-  });
-
-  it("will not speak for a day that carries something a dialog stated", async () => {
-    // Sickness is not part of the cycle, and a click must never overwrite it.
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "sick", fraction: 1 });
-    await expect(cycleDay(ctx, TUESDAY)).rejects.toThrow(TimeOffError);
-    expect((await listLeaveDays(ctx, WINDOW))[0].kind).toBe("sick");
-  });
-
-  it("will not speak for a day already split between two kinds", async () => {
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 0.5 });
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "rol", fraction: 0.5 });
-    await expect(cycleDay(ctx, TUESDAY)).rejects.toThrow(TimeOffError);
-    expect(await listLeaveDays(ctx, WINDOW)).toHaveLength(2);
-  });
-
-  it("holding turns a whole day into a half, and back again", async () => {
-    await cycleDay(ctx, TUESDAY);
-    expect(await halveDay(ctx, TUESDAY)).toEqual({ fraction: 0.5 });
-    expect((await listLeaveDays(ctx, WINDOW))[0]).toMatchObject({
-      fraction: "0.5",
-      // The size changed, so Trek has something to hear about again.
-      pending: "upsert",
-    });
-
-    expect(await halveDay(ctx, TUESDAY)).toEqual({ fraction: 1 });
-    expect((await listLeaveDays(ctx, WINDOW))[0].fraction).toBe("1.0");
-  });
-
-  it("holding keeps what Trek was observed holding, which a removal still needs", async () => {
-    const [day] = await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 1 });
-    await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
-    await halveDay(ctx, TUESDAY);
-
-    const [after] = await listLeaveDays(ctx, WINDOW);
-    expect(after).toMatchObject({ fraction: "0.5", trekFraction: "1.0", trekKind: "vacation" });
-    expect(after.syncedAt).not.toBeNull();
-  });
-
-  it("holding refuses what a click refuses", async () => {
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "sick", fraction: 1 });
-    await expect(halveDay(ctx, TUESDAY)).rejects.toThrow(TimeOffError);
-    await expect(halveDay(ctx, "2026-06-17")).rejects.toThrow(TimeOffError);
-  });
-
   it("the right button takes everything off a day, whatever is on it", async () => {
     await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 0.5 });
     await saveLeaveDay(ctx, { from: TUESDAY, kind: "rol", fraction: 0.5 });
@@ -465,63 +387,5 @@ describe("what a click on the calendar does (N3)", () => {
   it("clearing a day with nothing on it removes nothing and says so", async () => {
     // The caller no longer guesses whether a day is empty from a stale prop: it asks.
     expect(await clearDay(ctx, TUESDAY)).toEqual({ deleted: 0, pending: 0 });
-  });
-});
-
-describe("the right button held down (N10)", () => {
-  it("makes a day half vacation and half ROL, and holding again puts it back together", async () => {
-    expect(await splitDay(ctx, TUESDAY)).toEqual({ split: true });
-    const halves = await listLeaveDays(ctx, WINDOW);
-    expect(halves.map((row) => [row.kind, row.fraction])).toEqual([
-      ["rol", "0.5"],
-      ["vacation", "0.5"],
-    ]);
-    // Both halves go to Trek, which has no ROL and takes them as vacation.
-    expect(halves.every((row) => row.pending === "upsert")).toBe(true);
-
-    expect(await splitDay(ctx, TUESDAY)).toEqual({ split: false });
-    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.fraction])).toEqual([
-      ["vacation", "1.0"],
-    ]);
-  });
-
-  it("splits a day that already carries one of the two kinds, whole or half", async () => {
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "rol", fraction: 1 });
-    await splitDay(ctx, TUESDAY);
-    expect((await listLeaveDays(ctx, WINDOW)).map((row) => row.fraction)).toEqual(["0.5", "0.5"]);
-  });
-
-  it("keeps the note somebody wrote on the day", async () => {
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 1, note: "dentist" });
-    await splitDay(ctx, TUESDAY);
-    expect((await listLeaveDays(ctx, WINDOW)).every((row) => row.note === "dentist")).toBe(true);
-  });
-
-  it("keeps what Trek was observed holding, which a removal still needs", async () => {
-    const [day] = await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 1 });
-    await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
-    await splitDay(ctx, TUESDAY);
-
-    const vacation = (await listLeaveDays(ctx, WINDOW)).find((row) => row.kind === "vacation");
-    expect(vacation).toMatchObject({ fraction: "0.5", trekFraction: "1.0", trekKind: "vacation" });
-    // The ROL half is new: Trek never held it, and a toggle sent for it would create, not remove.
-    const rol = (await listLeaveDays(ctx, WINDOW)).find((row) => row.kind === "rol");
-    expect(rol).toMatchObject({ trekFraction: null, trekKind: null, syncedAt: null });
-  });
-
-  it("refuses what every other shortcut refuses", async () => {
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "sick", fraction: 1 });
-    await expect(splitDay(ctx, TUESDAY)).rejects.toThrow(TimeOffError);
-    // A day nobody works is refused with its reason, as a click on one is.
-    const error = await splitDay(ctx, SATURDAY).catch((e: unknown) => e);
-    expect((error as TimeOffError).code).toBe("not_bookable");
-  });
-
-  it("will not speak for a day split some other way", async () => {
-    // Half vacation and half sickness is somebody's statement, not this gesture's doing.
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 0.5 });
-    await saveLeaveDay(ctx, { from: TUESDAY, kind: "sick", fraction: 0.5 });
-    await expect(splitDay(ctx, TUESDAY)).rejects.toThrow(TimeOffError);
-    expect(await listLeaveDays(ctx, WINDOW)).toHaveLength(2);
   });
 });

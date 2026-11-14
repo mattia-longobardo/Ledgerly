@@ -4505,9 +4505,10 @@
       "planned": "Pianificato",
       "holiday": "Festivo",
       "dayLabel": "{date}: {kinds}",
-      "bookLabel": "Prenota il {date}",
-      "howTo": "Clicca un giorno per segnarlo come ferie, clicca ancora per farlo ROL. Tienilo premuto per farlo mezza giornata, e premi ancora per tornare a una intera. Tieni premuto il tasto destro per farlo mezze ferie e mezzo ROL. Tasto destro per toglierlo (o Canc); Alt+clic per una nota o un altro tipo.",
-      "counted": "Contabilizzato"
+      "bookLabel": "{date}: libero",
+      "howTo": "Scegli il primo e l'ultimo giorno. Tocca un giorno prenotato per modificarlo.",
+      "counted": "Contabilizzato",
+      "today": "oggi"
     },
     "kinds": {
       "vacation": "Ferie",
@@ -4550,36 +4551,31 @@
       "monthMissing": "{amount} non segnati"
     },
     "empty": {
-      "title": "Ancora nessuna ferie",
-      "description": "Aggiungi una giornata, o indica la dotazione dell'anno: comparirà qui e nel calendario."
+      "title": "Ancora nessuna assenza",
+      "description": "Scegli i giorni sul calendario o usa «Aggiungi assenza»."
     },
     "actions": {
-      "add": "Aggiungi",
+      "add": "Aggiungi assenza",
       "edit": "Modifica",
-      "remove": "Elimina",
+      "remove": "Rimuovi",
       "cancel": "Annulla",
-      "save": "Salva",
-      "confirmDelete": "Eliminare la giornata del {date}?",
+      "save": "Conferma",
       "setAllowance": "Imposta il monte ferie"
     },
     "dialog": {
-      "addTitle": "Aggiungi giornata",
-      "editTitle": "Modifica giornata",
-      "description": "Sabato, domenica e festivi non si prenotano.",
+      "addTitle": "Nuova assenza",
+      "editTitle": "Modifica assenza",
+      "description": "Sabato, domenica e festivi non si contano.",
       "kind": "Tipo",
       "date": "Data",
       "from": "Dal",
       "to": "Al",
-      "toHint": "Lascia vuoto per un solo giorno. I weekend e i festivi in mezzo vengono saltati.",
-      "workingDaysOnly": "Solo giorni lavorativi.",
-      "hours": "Ore",
       "duration": "Durata",
       "wholeDay": "Giornata intera",
       "halfDay": "Mezza giornata",
       "note": "Nota",
       "noteHint": "Per esempio mattina o pomeriggio: resta qui e non arriva mai a Trek.",
-      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie.",
-      "rolLocal": "Il ROL resta qui: non viene mai inviato a Trek."
+      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie."
     },
     "allowance": {
       "description": "Quello che il contratto concede quest'anno. Lascia vuoto un campo per non dichiarare nulla; il residuo dell'anno scorso arriva dal cedolino.",
@@ -4588,10 +4584,13 @@
       "totalDays": "Giorni concessi in totale"
     },
     "toasts": {
-      "saved": "Giornata salvata",
-      "removed": "Giornata eliminata",
+      "saved": "Assenza salvata · {days}",
+      "removed": "{count, plural, one {Assenza rimossa} other {# assenze rimosse}}",
       "allowanceSaved": "Dotazione salvata",
-      "removalPending": "Tolta qui; a Trek lo si dice al prossimo passaggio"
+      "removalPending": "Rimossa qui; Trek lo saprà al prossimo passaggio",
+      "undo": "Annulla",
+      "undone": "Annullato",
+      "undoFailed": "Non è stato possibile annullare. Riprova dalla tabella."
     },
     "errors": {
       "invalid": "Controlla i valori e riprova.",
@@ -4601,14 +4600,13 @@
       "range_too_long": "L'intervallo è troppo lungo per essere aggiunto in una volta.",
       "weekend": "Il {date} è sabato o domenica.",
       "holiday": "Il {date} è un giorno festivo.",
-      "failed": "Non ha funzionato. Riprova.",
-      "not_cyclable": "Quel giorno porta qualcosa su cui un clic non può decidere. Usa Modifica nella tabella."
+      "failed": "Non ha funzionato. Riprova."
     },
     "trekCheck": "Trek dice: {total} giorni, {used} usati, {remaining} residui",
     "unrecorded": {
       "title": "{count, plural, one {Un mese ha giornate godute che qui non risultano} other {# mesi hanno giornate godute che qui non risultano}}",
       "row": "{month}: il cedolino conta {payroll} di {kind}, qui ne risultano {recorded} — ne mancano {missing}",
-      "hint": "Clicca i giorni sul calendario per segnarli. Il cedolino è il conteggio dell'azienda, e arriva con un mese di ritardo."
+      "hint": "Scegli i giorni sul calendario per segnarli. Il cedolino è il conteggio dell'azienda, e arriva con un mese di ritardo."
     },
     "overdrawn": {
       "title": "{count, plural, one {Un saldo è sforato} other {# saldi sono sforati}}",
@@ -4649,7 +4647,39 @@
         "manage": "Gestisci in Integrazioni",
         "connect": "Collega in Integrazioni"
       }
-    }
+    },
+    "selection": {
+      "from": "Dal {date} · scegli l'ultimo giorno",
+      "single": "Solo questo giorno",
+      "cancel": "Annulla",
+      "firstLabel": "{date}: primo giorno",
+      "lastLabel": "{date}: ultimo giorno",
+      "announce": "Intervallo dal {from} al {to}: {days}"
+    },
+    "panel": {
+      "rangeTitle": "{from} – {to}",
+      "which": "Quale assenza",
+      "half": "{kind} ½",
+      "otherHalf": "Aggiungi l'altra metà",
+      "saving": "Salvataggio…",
+      "summary": "Riepilogo",
+      "duration": "Durata",
+      "durationWhole": "{total} ({count, plural, one {# giorno lavorativo} other {# giorni lavorativi}})",
+      "durationHalf": "{total} ({count, plural, one {# mezza giornata} other {# mezze giornate}})",
+      "excluded": "Giorni esclusi",
+      "excludedHoliday": "{day} (festivo)",
+      "more": "+ altri {count}",
+      "replaces": "Sostituisce",
+      "replacedDay": "{day} ({kind})",
+      "balance": "Residuo {kind}",
+      "balanceChange": "{before} → {after}",
+      "balanceNone": "Questo tipo non consuma il residuo.",
+      "balanceUnknown": "— · dotazione non indicata",
+      "otherYear": "{count, plural, one {# giorno è} other {# giorni sono}} nel {year}: il residuo si vede nella pagina di quell'anno.",
+      "overdrawn": "Il residuo va sotto zero di {amount}. Puoi confermare: la pagina lo mostra tra i saldi sforati.",
+      "nothingBookable": "Nessun giorno prenotabile in questo intervallo."
+    },
+    "loading": "Caricamento di Time Off"
   },
   "legal": {
     "nav": "Pagine legali",

@@ -9,8 +9,12 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteLeaveDay,
   listLeaveDays,
+  markSynced,
   pendingCount,
+  removeLeave,
+  restoreLeave,
   saveLeaveDay,
+  saveLeaveRange,
   yearWindow,
 } from "@/modules/timeoff/service";
 import type { Ctx } from "@/platform/context";
@@ -531,5 +535,116 @@ describe("the pass and the connection", () => {
 
     release?.();
     await first;
+  });
+});
+
+/**
+ * The leave panel's writes (rewrite plan N5): a range, a replacement, a removal and its undo. None
+ * of them calls Trek; each leaves `pending` states behind, and the pass does what it always did.
+ */
+describe("a pass after the leave panel", () => {
+  it("sends every day of a range, ROL as readily as vacation (decision ST-23)", async () => {
+    const trek = fakeTrek();
+    await saveLeaveRange(ctx, { from: TUE, to: THU, kind: "rol", fraction: 1 });
+
+    const result = await pass(trek);
+    expect(result?.counts.applied).toBe(3);
+    expect(trek.dates).toEqual([TUE, WED, THU]);
+    expect(await pendingCount(ctx)).toBe(0);
+    // And a second pass has nothing left to say.
+    await pass(trek);
+    expect(trek.toggles).toHaveLength(3);
+  });
+
+  it("keeps Trek's day when a range replaces its kind: the date is still a day away", async () => {
+    const trek = fakeTrek();
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
+    await pass(trek);
+    expect((await rowOn(TUE))?.id).toBe(rol.id);
+
+    await saveLeaveRange(ctx, { from: TUE, to: WED, kind: "vacation", fraction: 1 });
+    await pass(trek);
+    expect(trek.dates).toEqual([TUE, WED]);
+    expect(trek.entryOn(TUE)).toMatchObject({ fraction: 1, kind: "vacation" });
+    // The replaced ROL row is gone for good, and nothing is left pending.
+    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.on, row.kind, row.pending])).toEqual([
+      [TUE, "vacation", "none"],
+      [WED, "vacation", "none"],
+    ]);
+  });
+
+  it("takes Trek's day back when a range replaces it with a kind that stays here", async () => {
+    const trek = fakeTrek();
+    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await pass(trek);
+    expect(trek.dates).toEqual([TUE]);
+
+    await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 1 });
+    await pass(trek);
+    expect(trek.dates).toEqual([]);
+    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
+      ["other", "none"],
+    ]);
+  });
+
+  it("a row Trek knows, removed and then restored, costs Trek nothing: the day never leaves it", async () => {
+    const trek = fakeTrek();
+    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await pass(trek);
+    const sent = trek.toggles.length;
+
+    const removed = await removeLeave(ctx, { id: day.id });
+    expect((await rowOn(TUE))?.pending).toBe("delete");
+    await restoreLeave(ctx, removed.undo);
+    expect((await rowOn(TUE))?.pending).toBe("upsert");
+
+    // The pass reads first, finds Trek holding exactly what is wanted, and sends nothing.
+    await pass(trek);
+    expect(trek.toggles).toHaveLength(sent);
+    expect(trek.dates).toEqual([TUE]);
+    expect(await rowOn(TUE)).toMatchObject({ id: day.id, pending: "none", trekFraction: "1.0" });
+  });
+
+  it("a row Trek knows, removed, sent, and then restored comes back to Trek", async () => {
+    const trek = fakeTrek();
+    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
+    await pass(trek);
+    const removed = await removeLeave(ctx, { id: day.id });
+    await pass(trek);
+    expect(trek.dates).toEqual([]);
+    expect(await rowOn(TUE)).toBeNull();
+
+    await restoreLeave(ctx, removed.undo);
+    await pass(trek);
+    expect(trek.entryOn(TUE)).toMatchObject({ fraction: 0.5, kind: "vacation" });
+    expect(await rowOn(TUE)).toMatchObject({ pending: "none", fraction: "0.5" });
+  });
+
+  it("a row created and undone before the sync never reaches Trek", async () => {
+    const trek = fakeTrek();
+    const result = await saveLeaveRange(ctx, { from: TUE, to: THU, kind: "vacation", fraction: 1 });
+    await restoreLeave(ctx, result.undo);
+
+    await pass(trek);
+    expect(trek.toggles).toHaveLength(0);
+    expect(trek.dates).toEqual([]);
+    expect(await listLeaveDays(ctx, WINDOW)).toEqual([]);
+  });
+
+  it("an undone replacement leaves Trek holding the day it held", async () => {
+    const trek = fakeTrek();
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
+    await markSynced(ctx, [{ id: rol.id, fraction: 1, kind: "vacation" }]);
+    await pass(trek);
+    const sent = trek.toggles.length;
+
+    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 1 });
+    await restoreLeave(ctx, result.undo);
+    await pass(trek);
+    expect(trek.toggles).toHaveLength(sent);
+    expect(trek.dates).toEqual([TUE]);
+    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
+      ["rol", "none"],
+    ]);
   });
 });

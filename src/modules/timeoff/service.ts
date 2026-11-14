@@ -9,12 +9,19 @@ import { userScoped } from "@/platform/db/scope";
 import {
   type AllowanceInput,
   type LeaveDayKind,
+  type LeaveDayView,
   type LeaveInput,
+  type LeaveRangeFields,
+  type LeaveUndo,
+  MAX_RANGE_DAYS,
   allowanceInputSchema,
   bookable,
   datesBetween,
   goesToTrek,
   leaveInputSchema,
+  leaveRangeInputSchema,
+  leaveUndoSchema,
+  previewLeaveRange,
 } from "./rules";
 import { leaveDays, timeoffAllowances } from "./schema";
 
@@ -27,12 +34,9 @@ export type TimeOffErrorCode =
   /** The date is a weekend or a public holiday: the reason travels with the error. */
   | "not_bookable"
   /** A range that would write more days than anyone books in one go. */
-  | "range_too_long"
-  /** A click cannot decide what that day should become: it carries something a dialog stated. */
-  | "not_cyclable";
+  | "range_too_long";
 
-/** How many days one "Add leave" may write at once: a year of working days, and no more. */
-export const MAX_RANGE_DAYS = 260;
+export { MAX_RANGE_DAYS };
 
 export class TimeOffError extends Error {
   constructor(
@@ -413,69 +417,10 @@ export async function closePendingDeletes(ctx: Pick<Ctx, "userId">): Promise<num
   return removed.length;
 }
 
-/* What a click on the calendar does (N3) */
-
-/** The two kinds a click walks between: the ones a person books over and over. */
-const CLICK_KINDS = ["vacation", "rol"] as const;
+/* A whole day, and a whole range (rewrite plan N5) */
 
 /**
- * One click on a day (N3): nothing becomes a whole day of vacation, vacation becomes ROL, ROL
- * becomes vacation again.
- *
- * The decision is made here, from what is stored, and not in the browser from what it last drew:
- * two clicks racing each other then settle into one order instead of disagreeing about what the
- * day was. A day carrying anything else — sickness, a recovery day, two halves — is left exactly
- * as it is and reported, because a click is a shortcut for the ordinary case and must never
- * quietly throw away something a person took the trouble to state.
- */
-export async function cycleDay(
-  ctx: Pick<Ctx, "userId">,
-  date: CivilDate,
-): Promise<{ kind: LeaveDayKind | null }> {
-  const { patronSaint } = await getPreferences(ctx);
-  const holidays = await holidaysFor(ctx, [Number(date.slice(0, 4))], patronSaint);
-  const verdict = bookable(date, holidays);
-  if (!verdict.ok) throw new TimeOffError("not_bookable", [{ on: date, reason: verdict.reason }]);
-
-  const existing = await getDb()
-    .select()
-    .from(leaveDays)
-    .where(and(userScoped(ctx).owns(leaveDays), eq(leaveDays.on, date)));
-
-  if (existing.length > 1) throw new TimeOffError("not_cyclable");
-  const current = existing[0] ?? null;
-  if (current !== null && !(CLICK_KINDS as readonly string[]).includes(current.kind)) {
-    throw new TimeOffError("not_cyclable");
-  }
-
-  const next: LeaveDayKind = current === null ? "vacation" : current.kind === "vacation" ? "rol" : "vacation";
-  // The fraction is kept: a half day that was clicked to change its kind is still a half day.
-  const fraction = current?.fraction ?? "1.0";
-
-  await getDb().transaction(async (tx) => {
-    if (current !== null) {
-      await tx.delete(leaveDays).where(and(eq(leaveDays.id, current.id), userScoped(ctx).owns(leaveDays)));
-    }
-    await tx.insert(leaveDays).values(
-      userScoped(ctx).stamp({
-        on: date,
-        kind: next,
-        fraction,
-        note: current?.note ?? null,
-        pending: goesToTrek(next) ? ("upsert" as const) : ("none" as const),
-        // The row that was there is gone, so what Trek held is no longer this row's to claim.
-        // The pass re-reads the year anyway; this only keeps the two from contradicting.
-        syncedAt: current?.syncedAt ?? null,
-        trekFraction: current?.trekFraction ?? null,
-        trekKind: current?.trekKind ?? null,
-      }),
-    );
-  });
-  return { kind: next };
-}
-
-/**
- * The right button: everything on that day goes (N3).
+ * Everything on one day goes: what Delete on a day of the calendar asks for.
  *
  * Whatever Trek knows about goes the long way round — marked for removal and taken away once Trek
  * confirms — and whatever it never had simply goes. The counts come back so the caller knows
@@ -499,105 +444,211 @@ export async function clearDay(
   return { deleted, pending };
 }
 
-/**
- * Held down, a day of vacation or ROL becomes half a day — and held again, a whole one back (N3).
- *
- * Only those two kinds and only one row: a day carrying something a dialog stated, or two halves
- * already, is refused rather than guessed at, exactly as {@link cycleDay} refuses it. Holding is
- * a shortcut for the one thing people do constantly, not a second way to edit anything.
- *
- * The row is updated rather than replaced, so what Trek was observed holding survives: the pass
- * still needs it to take the day back if the half turns out to be wrong.
- */
-/**
- * The right button held down: half a day of vacation and half of ROL, the one day off that takes
- * two rows to say (N10).
- *
- * It is the commonest shape a click cannot reach — a morning of ROL and an afternoon of vacation
- * is two kinds on one date, and every other shortcut here deals in exactly one. Held again it goes
- * back to a whole day of vacation, the way holding the left button goes back to a whole day: a
- * gesture that cannot be undone by itself is a gesture people are afraid to try.
- *
- * What it refuses is what the other two refuse — sickness, a recovery day, anything a dialog
- * stated — because a shortcut must never quietly throw away something somebody took the trouble
- * to write down.
- */
-export async function splitDay(ctx: Pick<Ctx, "userId">, date: CivilDate): Promise<{ split: boolean }> {
-  const { patronSaint } = await getPreferences(ctx);
-  const holidays = await holidaysFor(ctx, [Number(date.slice(0, 4))], patronSaint);
-  const verdict = bookable(date, holidays);
-  if (!verdict.ok) throw new TimeOffError("not_bookable", [{ on: date, reason: verdict.reason }]);
+type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
-  const rows = await getDb()
-    .select()
-    .from(leaveDays)
-    .where(and(userScoped(ctx).owns(leaveDays), eq(leaveDays.on, date)));
+const asView = (row: LeaveDay): LeaveDayView => ({
+  on: row.on,
+  kind: row.kind,
+  fraction: Number(row.fraction),
+});
 
-  if (rows.length > 2) throw new TimeOffError("not_cyclable");
-  if (rows.some((row) => !(CLICK_KINDS as readonly string[]).includes(row.kind))) {
-    throw new TimeOffError("not_cyclable");
-  }
-
-  // Already the two halves this gesture makes: holding again puts the day back together.
-  const halves =
-    rows.length === 2 && rows.every((row) => Number(row.fraction) === 0.5)
-      ? new Set(rows.map((row) => row.kind))
-      : null;
-  const undo = halves !== null && halves.has("vacation") && halves.has("rol");
-  if (rows.length === 2 && !undo) throw new TimeOffError("not_cyclable");
-
-  const note = rows.find((row) => row.note !== null)?.note ?? null;
-  const wanted = undo
-    ? [{ kind: "vacation" as const, fraction: "1.0" }]
-    : [
-        { kind: "vacation" as const, fraction: "0.5" },
-        { kind: "rol" as const, fraction: "0.5" },
-      ];
-
-  await getDb().transaction(async (tx) => {
-    for (const row of rows) {
-      await tx.delete(leaveDays).where(and(eq(leaveDays.id, row.id), userScoped(ctx).owns(leaveDays)));
-    }
-    for (const one of wanted) {
-      // What Trek was observed holding belongs to the row of that kind, when there was one: the
-      // pass needs the observed pair to take a day back, and a toggle sent blind recreates it.
-      const previous = rows.find((row) => row.kind === one.kind) ?? null;
-      await tx.insert(leaveDays).values(
-        userScoped(ctx).stamp({
-          on: date,
-          kind: one.kind,
-          fraction: one.fraction,
-          note,
-          pending: goesToTrek(one.kind) ? ("upsert" as const) : ("none" as const),
-          syncedAt: previous?.syncedAt ?? null,
-          trekFraction: previous?.trekFraction ?? null,
-          trekKind: previous?.trekKind ?? null,
-        }),
-      );
-    }
-  });
-  return { split: !undo };
+/** The rows a person still means to keep, as "Undo" will be handed them back. */
+function stateOf(dates: readonly CivilDate[], rows: readonly LeaveDay[]): LeaveUndo {
+  return {
+    dates: [...dates],
+    rows: rows
+      // A row waiting for Trek to let it go is already removed as far as its owner is concerned.
+      .filter((row) => row.pending !== "delete" && dates.includes(row.on))
+      .map((row) => ({ on: row.on, kind: row.kind, fraction: Number(row.fraction), note: row.note })),
+  };
 }
 
-export async function halveDay(ctx: Pick<Ctx, "userId">, date: CivilDate): Promise<{ fraction: number }> {
-  const rows = await getDb()
+/** {@link deleteLeaveDay} for a row already read, inside the caller's transaction. */
+async function takeAway(
+  tx: Transaction,
+  ctx: Pick<Ctx, "userId">,
+  row: LeaveDay,
+): Promise<"deleted" | "pending"> {
+  const mine = and(eq(leaveDays.id, row.id), userScoped(ctx).owns(leaveDays));
+  if (row.origin !== "trek" && row.syncedAt === null) {
+    await tx.delete(leaveDays).where(mine);
+    return "deleted";
+  }
+  await tx.update(leaveDays).set({ pending: "delete", updatedAt: new Date() }).where(mine);
+  return "pending";
+}
+
+async function rowsOn(
+  tx: Transaction,
+  ctx: Pick<Ctx, "userId">,
+  where: ReturnType<typeof and>,
+): Promise<LeaveDay[]> {
+  return tx
     .select()
     .from(leaveDays)
-    .where(and(userScoped(ctx).owns(leaveDays), eq(leaveDays.on, date)));
+    .where(and(userScoped(ctx).owns(leaveDays), where))
+    .orderBy(asc(leaveDays.on), asc(leaveDays.kind), asc(leaveDays.id))
+    .for("update");
+}
 
-  if (rows.length !== 1) throw new TimeOffError("not_cyclable");
-  const [current] = rows;
-  if (!(CLICK_KINDS as readonly string[]).includes(current.kind)) throw new TimeOffError("not_cyclable");
+export interface LeaveRangeResult {
+  /** The rows written, one per working day of the range. */
+  days: LeaveDay[];
+  /** What the range comes to, in days. */
+  totalDays: number;
+  /** What the touched days held before, for "Undo". */
+  undo: LeaveUndo;
+  /** Whether the next Trek pass has something to do, and so is worth starting now. */
+  trek: boolean;
+}
 
-  const next = Number(current.fraction) === 1 ? "0.5" : "1.0";
-  await getDb()
-    .update(leaveDays)
-    .set({
-      fraction: next,
-      // The size changed, so Trek has something to hear about again.
-      pending: goesToTrek(current.kind) ? "upsert" : "none",
-      updatedAt: new Date(),
-    })
-    .where(and(eq(leaveDays.id, current.id), userScoped(ctx).owns(leaveDays)));
-  return { fraction: Number(next) };
+/**
+ * Writes a range of leave in one transaction: every row, or none (rewrite plan N5).
+ *
+ * What it does is what {@link previewLeaveRange} says it will, worked out again here from the rows
+ * as they are stored — the panel showed the same answer from the page's data, and the server's is
+ * the one that counts. Weekends and holidays inside the range are left out; a range with no day
+ * anybody works is refused, with the days and their reasons.
+ *
+ * A row of another kind that no longer fits the day goes the way a removed day goes: at once when
+ * Trek never heard of it, marked for removal when it did. Nothing is said to Trek from here.
+ */
+export async function saveLeaveRange(
+  ctx: Pick<Ctx, "userId">,
+  input: LeaveRangeFields,
+): Promise<LeaveRangeResult> {
+  const parsed = leaveRangeInputSchema.safeParse(input);
+  if (!parsed.success) throw new TimeOffError("invalid_input");
+  const { from, to, kind, fraction } = parsed.data;
+  const note = parsed.data.note ?? null;
+
+  const span = datesBetween(from, to);
+  if (span.length > MAX_RANGE_DAYS) throw new TimeOffError("range_too_long");
+  const { patronSaint } = await getPreferences(ctx);
+  // A range can cross new year, so both years are asked for.
+  const years = [...new Set(span.map((date) => Number(date.slice(0, 4))))];
+  const holidays = await holidaysFor(ctx, years, patronSaint);
+
+  return getDb().transaction(async (tx) => {
+    const existing = await rowsOn(tx, ctx, and(gte(leaveDays.on, from), lte(leaveDays.on, to)));
+    const preview = previewLeaveRange(
+      { from, to, kind, fraction, editedKind: parsed.data.editedKind ?? null },
+      { days: existing.map(asView), holidays },
+    );
+    if (preview.written.length === 0) throw new TimeOffError("not_bookable", preview.excluded);
+
+    let toldTrek = goesToTrek(kind);
+    for (const gone of preview.removed) {
+      const row = existing.find((one) => one.on === gone.on && one.kind === gone.kind);
+      if (row !== undefined && (await takeAway(tx, ctx, row)) === "pending") toldTrek = true;
+    }
+
+    const pending = goesToTrek(kind) ? ("upsert" as const) : ("none" as const);
+    const values = { kind, fraction: fraction.toFixed(1), note, pending };
+    const days = await tx
+      .insert(leaveDays)
+      .values(preview.written.map((on) => userScoped(ctx).stamp({ on, ...values })))
+      .onConflictDoUpdate({
+        target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
+        set: { fraction: values.fraction, note, pending, updatedAt: new Date() },
+      })
+      .returning();
+
+    return {
+      days,
+      totalDays: preview.totalDays,
+      undo: stateOf(preview.written, existing),
+      trek: toldTrek,
+    };
+  });
+}
+
+/**
+ * Removes one row, or everything on one day, and says what the day held before.
+ *
+ * The removal itself is {@link deleteLeaveDay} and {@link clearDay}, unchanged: what Trek knows
+ * goes the long way round. Only the state before is new, for the toast's "Undo".
+ */
+export async function removeLeave(
+  ctx: Pick<Ctx, "userId">,
+  target: { id: string } | { date: CivilDate },
+): Promise<{ deleted: number; pending: number; undo: LeaveUndo }> {
+  let date: CivilDate;
+  if ("id" in target) {
+    const [row] = await getDb()
+      .select({ on: leaveDays.on })
+      .from(leaveDays)
+      .where(and(eq(leaveDays.id, target.id), userScoped(ctx).owns(leaveDays)));
+    if (!row) throw new TimeOffError("not_found");
+    date = row.on;
+  } else {
+    date = target.date;
+  }
+  const before = await listLeaveDays(ctx, { from: date, to: date });
+  const undo = stateOf([date], before);
+
+  if ("id" in target) {
+    const outcome = await deleteLeaveDay(ctx, target.id);
+    return { deleted: outcome === "deleted" ? 1 : 0, pending: outcome === "pending" ? 1 : 0, undo };
+  }
+  return { ...(await clearDay(ctx, date)), undo };
+}
+
+/**
+ * "Undo": puts the touched days back as they were, in one transaction.
+ *
+ * Trek is never called from here. A row that was created and is not wanted goes the way any
+ * removed row goes; a row that is wanted again comes back `pending = 'upsert'` when its kind
+ * reaches Trek — whether it was waiting for removal or had been deleted outright — and the next
+ * pass, which always reads before it writes, settles it against what Trek really holds. What Trek
+ * was observed holding is never restated: it is still on the row, or the row is new to Trek.
+ */
+export async function restoreLeave(ctx: Pick<Ctx, "userId">, input: LeaveUndo): Promise<{ trek: boolean }> {
+  const parsed = leaveUndoSchema.safeParse(input);
+  if (!parsed.success) throw new TimeOffError("invalid_input");
+  const { dates, rows: wanted } = parsed.data;
+
+  const { patronSaint } = await getPreferences(ctx);
+  const years = [...new Set(dates.map((date) => Number(date.slice(0, 4))))];
+  const holidays = await holidaysFor(ctx, years, patronSaint);
+
+  return getDb().transaction(async (tx) => {
+    const current = await rowsOn(tx, ctx, inArray(leaveDays.on, dates));
+    let toldTrek = false;
+
+    for (const row of current) {
+      const kept = wanted.some((one) => one.on === row.on && one.kind === row.kind);
+      if (kept || row.pending === "delete") continue;
+      if ((await takeAway(tx, ctx, row)) === "pending") toldTrek = true;
+    }
+
+    for (const one of wanted) {
+      const row = current.find((held) => held.on === one.on && held.kind === one.kind);
+      const fraction = one.fraction.toFixed(1);
+      if (
+        row !== undefined &&
+        row.pending !== "delete" &&
+        row.fraction === fraction &&
+        row.note === one.note
+      ) {
+        continue;
+      }
+      // A row that is not there any more was never Trek's: it is booked again, and only on a day
+      // that can be booked — an undo is not a way round the calendar.
+      if (row === undefined) {
+        const verdict = bookable(one.on, holidays);
+        if (!verdict.ok) throw new TimeOffError("not_bookable", [{ on: one.on, reason: verdict.reason }]);
+      }
+      const pending = goesToTrek(one.kind) ? ("upsert" as const) : ("none" as const);
+      if (pending === "upsert") toldTrek = true;
+      await tx
+        .insert(leaveDays)
+        .values(userScoped(ctx).stamp({ on: one.on, kind: one.kind, fraction, note: one.note, pending }))
+        .onConflictDoUpdate({
+          target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
+          set: { fraction, note: one.note, pending, updatedAt: new Date() },
+        });
+    }
+    return { trek: toldTrek };
+  });
 }

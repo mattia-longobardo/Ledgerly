@@ -212,4 +212,91 @@ test.describe("time off on a phone", () => {
     );
     expect(overflow).toBeLessThanOrEqual(0);
   });
+
+  test("opens this year on this month, where a phone would otherwise start twelve months up (Q5)", async ({
+    page,
+  }) => {
+    await page.goto("/timeoff");
+    const month = page.locator(`[data-month="${new Date().getMonth() + 1}"]`);
+    await expect(month).toBeInViewport();
+    // And clear of the top bar: the month's name is what was scrolled to.
+    const top = (await month.boundingBox())?.y ?? -1;
+    const header = (await page.getByRole("banner").boundingBox())?.height ?? 0;
+    expect(top).toBeGreaterThanOrEqual(header);
+
+    // Another year has no "this month": it opens at the top, as before.
+    await page.goto(`/timeoff?year=${new Date().getFullYear() - 1}`);
+    await expect(page.getByRole("heading", { name: "Work & Time off", level: 1 })).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
+  test("books with two taps on days a thumb can hit, and the bar stays above the tab bar (N5)", async ({
+    page,
+  }) => {
+    await page.goto("/timeoff");
+    let writes = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.headers()["next-action"] !== undefined) writes += 1;
+    });
+
+    // Every day of the year is at least 40 × 40 px: a button or not, it is drawn the same size.
+    const sizes = await page
+      .locator("[data-date]")
+      .evaluateAll((cells) =>
+        cells.map((cell) => cell.getBoundingClientRect()).map((box) => [box.width, box.height]),
+      );
+    expect(sizes).toHaveLength(new Date(new Date().getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365);
+    for (const [width, height] of sizes) {
+      expect(Math.round(width)).toBeGreaterThanOrEqual(40);
+      expect(Math.round(height)).toBeGreaterThanOrEqual(40);
+    }
+
+    // Two free days of the month the page opened on, or of the one after it.
+    const free = page.locator(`[data-month="3"] [data-testid="free-cell"]`);
+    await free.nth(0).scrollIntoViewIfNeeded();
+    await free.nth(0).tap();
+    const bar = page.getByTestId("selection-bar");
+    await expect(bar).toBeVisible();
+    await expect(bar).toBeInViewport({ ratio: 1 });
+    const tabs = page
+      .getByRole("navigation", { name: "Primary" })
+      .filter({ has: page.getByRole("button", { name: "More" }) });
+    const barBox = await bar.boundingBox();
+    const tabsBox = await tabs.boundingBox();
+    expect(barBox!.y + barBox!.height).toBeLessThanOrEqual(tabsBox!.y);
+    // The bar's two buttons are a thumb's size too.
+    for (const name of ["This day only", "Cancel"]) {
+      // Rounded: at a phone's scale a 36 px button measures 35.9999.
+      const height = (await bar.getByRole("button", { name }).boundingBox())!.height;
+      expect(Math.round(height)).toBeGreaterThanOrEqual(36);
+    }
+
+    await free.nth(2).tap();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId("summary")).toContainText("3 d (3 working days)");
+    // The panel is inside the screen, buttons included.
+    const box = await panel.boundingBox();
+    const viewport = page.viewportSize()!;
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+    await expect(panel.getByRole("button", { name: "Confirm" })).toBeInViewport({ ratio: 1 });
+    expect(writes, "two taps and an open panel write nothing").toBe(0);
+
+    await panel.getByRole("button", { name: "Cancel" }).tap();
+    await expect(panel).toBeHidden();
+    await expect(bar).toHaveCount(0);
+
+    // "Add leave" is on the page itself at this width, with its words.
+    await expect(page.getByRole("main").getByRole("button", { name: "Add leave" })).toBeVisible();
+    await expect(page.getByRole("banner").getByRole("button", { name: "Add leave" })).toBeHidden();
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    expect(writes).toBe(0);
+  });
 });

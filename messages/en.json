@@ -4505,9 +4505,10 @@
       "planned": "Planned",
       "holiday": "Public holiday",
       "dayLabel": "{date}: {kinds}",
-      "bookLabel": "Book {date}",
-      "howTo": "Click a day to book it as vacation, click it again to make it ROL. Hold it down to make it half a day, and hold again for a whole one. Hold the right button instead for half vacation and half ROL. Right-click to clear it (or press Delete); Alt-click for a note or another kind.",
-      "counted": "Counted"
+      "bookLabel": "{date}: free",
+      "howTo": "Pick the first and the last day. Select a booked day to edit it.",
+      "counted": "Counted",
+      "today": "today"
     },
     "kinds": {
       "vacation": "Vacation",
@@ -4551,35 +4552,30 @@
     },
     "empty": {
       "title": "No time off yet",
-      "description": "Add a day off, or state this year's allowance, and it will show up here and in the calendar."
+      "description": "Pick the days on the calendar, or use \"Add leave\"."
     },
     "actions": {
       "add": "Add leave",
       "edit": "Edit",
       "remove": "Remove",
       "cancel": "Cancel",
-      "save": "Save",
-      "confirmDelete": "Remove the leave on {date}?",
+      "save": "Confirm",
       "setAllowance": "Set allowance"
     },
     "dialog": {
-      "addTitle": "Add leave",
+      "addTitle": "New leave",
       "editTitle": "Edit leave",
-      "description": "Weekends and public holidays cannot be booked.",
+      "description": "Weekends and public holidays are not counted.",
       "kind": "Type",
       "date": "Date",
       "from": "From",
       "to": "To",
-      "toHint": "Leave empty for a single day. Weekends and holidays in between are skipped.",
-      "workingDaysOnly": "Working days only.",
-      "hours": "Hours",
       "duration": "Duration",
       "wholeDay": "Whole day",
       "halfDay": "Half day",
       "note": "Note",
       "noteHint": "Morning or afternoon, for instance — this stays here and never goes to Trek.",
-      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance.",
-      "rolLocal": "ROL stays here: it is never sent to Trek."
+      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance."
     },
     "allowance": {
       "description": "What the contract grants this year. Leave a field empty to state nothing; what last year left over comes from your payslip.",
@@ -4588,10 +4584,13 @@
       "totalDays": "Days granted in total"
     },
     "toasts": {
-      "saved": "Leave saved",
-      "removed": "Leave removed",
+      "saved": "Leave saved · {days}",
+      "removed": "{count, plural, one {Leave removed} other {# leaves removed}}",
       "allowanceSaved": "Allowance saved",
-      "removalPending": "Removed here; Trek will be told at the next pass"
+      "removalPending": "Removed here; Trek will be told at the next pass",
+      "undo": "Undo",
+      "undone": "Undone",
+      "undoFailed": "The undo did not work. Try again from the table."
     },
     "errors": {
       "invalid": "Check the values and try again.",
@@ -4601,14 +4600,13 @@
       "range_too_long": "That range is too long to add in one go.",
       "weekend": "{date} is a weekend.",
       "holiday": "{date} is a public holiday.",
-      "failed": "It did not work. Try again.",
-      "not_cyclable": "That day carries something a click cannot decide about. Use Edit in the table."
+      "failed": "It did not work. Try again."
     },
     "trekCheck": "Trek says: {total} days, {used} used, {remaining} left",
     "unrecorded": {
       "title": "{count, plural, one {One month has leave that is not recorded here} other {# months have leave that is not recorded here}}",
       "row": "{month}: the payslip counts {payroll} of {kind}, this calendar holds {recorded} — {missing} missing",
-      "hint": "Click the days in the calendar to record them. The payslip is the employer's own count, and it arrives a month late."
+      "hint": "Pick the days in the calendar to record them. The payslip is the employer's own count, and it arrives a month late."
     },
     "overdrawn": {
       "title": "{count, plural, one {One balance is overdrawn} other {# balances are overdrawn}}",
@@ -4649,7 +4647,39 @@
         "manage": "Manage in Integrations",
         "connect": "Connect in Integrations"
       }
-    }
+    },
+    "selection": {
+      "from": "From {date} · pick the last day",
+      "single": "This day only",
+      "cancel": "Cancel",
+      "firstLabel": "{date}: first day",
+      "lastLabel": "{date}: last day",
+      "announce": "Range from {from} to {to}: {days}"
+    },
+    "panel": {
+      "rangeTitle": "{from} – {to}",
+      "which": "Which leave",
+      "half": "{kind} ½",
+      "otherHalf": "Add the other half",
+      "saving": "Saving…",
+      "summary": "Summary",
+      "duration": "Duration",
+      "durationWhole": "{total} ({count, plural, one {# working day} other {# working days}})",
+      "durationHalf": "{total} ({count, plural, one {# half day} other {# half days}})",
+      "excluded": "Days left out",
+      "excludedHoliday": "{day} (holiday)",
+      "more": "+ {count} more",
+      "replaces": "Replaces",
+      "replacedDay": "{day} ({kind})",
+      "balance": "{kind} balance",
+      "balanceChange": "{before} → {after}",
+      "balanceNone": "This type does not use the balance.",
+      "balanceUnknown": "— · allowance not stated",
+      "otherYear": "{count, plural, one {# day is} other {# days are}} in {year}: see that year's page for the balance.",
+      "overdrawn": "The balance goes {amount} below zero. You can confirm: the page lists it among the overdrawn balances.",
+      "nothingBookable": "No day in this range can be booked."
+    },
+    "loading": "Loading Time off"
   },
   "legal": {
     "nav": "Legal pages",

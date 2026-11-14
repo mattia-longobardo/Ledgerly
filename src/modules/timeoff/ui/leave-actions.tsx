@@ -1,26 +1,10 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input, Select, Textarea } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
-import { type ActionResult, deleteLeaveAction, saveLeaveAction } from "../actions";
-import { LEAVE_DAY_KINDS, type LeaveDayKind } from "../rules";
-
-/** A day as the edit dialog needs it back: the values the person would retype. */
-export interface LeaveSummary {
-  id: string;
-  on: string;
-  kind: LeaveDayKind;
-  /** Half a day or a whole one, every kind alike (N0). */
-  fraction: number;
-  note: string | null;
-  origin: "manual" | "trek";
-}
+import { cn } from "@/ui/cn";
+import { useLeaveBoard } from "./leave-board";
 
 /** The year's allowance as the dialog shows it, in the units a contract states. */
 export interface AllowanceSummary {
@@ -32,223 +16,35 @@ export interface AllowanceSummary {
   note: string;
 }
 
-const KNOWN_ERRORS = ["invalid", "invalid_input", "not_found", "not_bookable", "range_too_long"];
-
-function useErrors() {
-  const t = useTranslations("timeoff");
-  const [error, setError] = useState<string | null>(null);
-  return {
-    error,
-    clear: () => setError(null),
-    report: (result: ActionResult): boolean => {
-      if (result.ok) return true;
-      // A refusal names its dates, which is the whole point of carrying them back from the
-      // service: "16 June is a Saturday" beats "that date will not do".
-      if (result.error === "not_bookable" && result.refused && result.refused.length > 0) {
-        const first = result.refused[0];
-        setError(t(`errors.${first.reason}` as "errors.weekend", { date: first.on }));
-        return false;
-      }
-      setError(
-        t(`errors.${KNOWN_ERRORS.includes(result.error) ? result.error : "failed"}` as "errors.failed"),
-      );
-      return false;
-    },
-  };
-}
-
-function ErrorLine({ error }: { error: string | null }) {
-  return error ? (
-    <p role="alert" className="text-sm text-neg">
-      {error}
-    </p>
-  ) : null;
-}
-
-/* Add or edit a day off (the design's "Add leave" modal) */
-
-export function LeaveDialog({
-  open,
-  onOpenChange,
-  day,
-  today,
-  date,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  day: LeaveSummary | null;
-  today: string;
-  /** The day the calendar was clicked on, when that is where this came from (M1). */
-  date?: string;
-}) {
-  const t = useTranslations("timeoff");
-  const router = useRouter();
-  const id = useId();
-  const [pending, start] = useTransition();
-  const { error, clear, report } = useErrors();
-
-  const [from, setFrom] = useState(day?.on ?? date ?? today);
-  const [to, setTo] = useState("");
-  const [kind, setKind] = useState<LeaveDayKind>(day?.kind ?? "vacation");
-  const [fraction, setFraction] = useState(day?.fraction === 0.5 ? "0.5" : "1");
-  const [note, setNote] = useState(day?.note ?? "");
-
-  const editing = day !== null;
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    clear();
-    start(async () => {
-      const result = await saveLeaveAction({
-        from,
-        // Editing touches the one day the row stands for; only a new entry may span a range.
-        to: editing ? "" : to,
-        kind,
-        fraction,
-        note,
-      });
-      if (!report(result)) return;
-      notify(t("toasts.saved"));
-      onOpenChange(false);
-      router.refresh();
-    });
-  }
-
-  return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={editing ? t("dialog.editTitle") : t("dialog.addTitle")}
-      description={t("dialog.description")}
-      footer={
-        <>
-          <Button onClick={() => onOpenChange(false)} disabled={pending}>
-            {t("actions.cancel")}
-          </Button>
-          <Button variant="primary" onClick={submit} disabled={pending} form={`${id}-form`} type="submit">
-            {t("actions.save")}
-          </Button>
-        </>
-      }
-    >
-      <form id={`${id}-form`} onSubmit={submit} className="flex flex-col gap-4">
-        <Field label={t("dialog.kind")} htmlFor={`${id}-kind`}>
-          <Select
-            id={`${id}-kind`}
-            value={kind}
-            onChange={(event) => setKind(event.target.value as LeaveDayKind)}
-          >
-            {LEAVE_DAY_KINDS.map((one) => (
-              <option key={one} value={one}>
-                {t(`kinds.${one}` as "kinds.vacation")}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <Field
-          label={editing ? t("dialog.date") : t("dialog.from")}
-          htmlFor={`${id}-from`}
-          hint={t("dialog.workingDaysOnly")}
-        >
-          <Input
-            id={`${id}-from`}
-            type="date"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-            required
-          />
-        </Field>
-
-        {!editing && (
-          <Field label={t("dialog.to")} htmlFor={`${id}-to`} hint={t("dialog.toHint")}>
-            <Input id={`${id}-to`} type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-          </Field>
-        )}
-
-        {/* One control for every kind since N0: leave comes in halves and wholes, ROL included. */}
-        <Field label={t("dialog.duration")} htmlFor={`${id}-fraction`}>
-          <Select
-            id={`${id}-fraction`}
-            value={fraction}
-            onChange={(event) => setFraction(event.target.value)}
-          >
-            <option value="1">{t("dialog.wholeDay")}</option>
-            <option value="0.5">{t("dialog.halfDay")}</option>
-          </Select>
-        </Field>
-
-        <Field label={t("dialog.note")} htmlFor={`${id}-note`} hint={noteHint(kind, t)}>
-          <Textarea
-            id={`${id}-note`}
-            rows={2}
-            maxLength={200}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </Field>
-
-        <ErrorLine error={error} />
-      </form>
-    </Modal>
-  );
-}
-
-/**
- * What the note field says under itself, which depends on the kind: a half day's "morning" or
- * "afternoon" has nowhere else to live (plan F7 §3.6.5), and sickness and "other" do not go to
- * Trek and do not spend the vacation allowance (§3.6.7).
- */
-function noteHint(kind: LeaveDayKind, t: ReturnType<typeof useTranslations<"timeoff">>): string {
-  if (kind === "sick" || kind === "other") return t("dialog.localOnly");
-  return t("dialog.noteHint");
-}
-
 /* The buttons the page places */
 
-/** "Add leave" — the topbar action and the empty state's. */
-export function AddLeave({ today, label }: { today: string; label: string }) {
-  const [open, setOpen] = useState(false);
+/** "Add leave" — in the header in every state of the page, and in the empty state. */
+export function AddLeave({ label, className }: { label: string; className?: string }) {
+  const board = useLeaveBoard();
   return (
-    <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        {label}
-      </Button>
-      {open && <LeaveDialog open={open} onOpenChange={setOpen} day={null} today={today} />}
-    </>
+    <Button
+      variant="primary"
+      icon={<Plus aria-hidden className="size-4" />}
+      className={cn("max-md:h-9", className)}
+      onClick={board.openAdd}
+    >
+      {label}
+    </Button>
   );
 }
 
-/** One table row's Edit and Remove. */
-export function RowActions({ day, today }: { day: LeaveSummary; today: string }) {
+/** One table row's Edit and Remove: the same panel, and the same removal with its "Undo". */
+export function RowActions({ id, on }: { id: string; on: string }) {
   const t = useTranslations("timeoff");
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [pending, start] = useTransition();
-  const { report } = useErrors();
-
-  function remove() {
-    if (!window.confirm(t("actions.confirmDelete", { date: day.on }))) return;
-    start(async () => {
-      const result = await deleteLeaveAction(day.id);
-      if (!report(result)) {
-        notify(t("errors.failed"), "error");
-        return;
-      }
-      notify(t("toasts.removed"));
-      router.refresh();
-    });
-  }
-
+  const board = useLeaveBoard();
   return (
     <div className="flex justify-end gap-1.5">
-      <Button size="xs" onClick={() => setOpen(true)} disabled={pending}>
+      <Button size="xs" onClick={() => board.openEdit(on, id)} disabled={board.busy}>
         {t("actions.edit")}
       </Button>
-      <Button size="xs" variant="danger" onClick={remove} disabled={pending}>
+      <Button size="xs" variant="danger" onClick={() => board.remove({ id })} disabled={board.busy}>
         {t("actions.remove")}
       </Button>
-      {open && <LeaveDialog open={open} onOpenChange={setOpen} day={day} today={today} />}
     </div>
   );
 }

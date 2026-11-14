@@ -182,6 +182,11 @@ each number comes from.
 
 - Holiday and ROL are counted apart. A day is whole or half. Only working days can be booked:
   weekends, public holidays and an optional company calendar are excluded.
+- **Booking.** Pick the first and the last day on the calendar, or use **Add leave**: a panel shows
+  the type, the duration, the days left out, the days it replaces and the balance before and after.
+  Nothing is saved before **Confirm**. A booked day opens the same panel to change or remove it.
+  After each change a message offers **Undo** for a few seconds. A balance can go below zero: the
+  page is also for planning.
 - **The balance comes from the payslip.** The app starts from what the last payslip says is left,
   then subtracts the days booked here. The screen says which payslip it used.
 - **Trek** is the leave calendar that Ledgerly syncs with. Ledgerly never deletes a day in Trek by
