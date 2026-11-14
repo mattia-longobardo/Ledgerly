@@ -8,8 +8,8 @@ Questa specifica descrive solo l'interazione e le schermate. Non cambia le regol
 (`residual()` in `src/modules/timeoff/rules.ts`) e non cambia la sync con Trek. Se questa specifica e il piano
 sono in conflitto, vale il piano.
 
-Le decisioni di prodotto che il piano non scrive sono nella §14 «Domande per Mattia», ognuna con un default. Lo
-sviluppo può partire con i default: ogni default è isolato e si cambia senza rifare il resto.
+Le decisioni di prodotto che il piano non scrive sono nella §14 «Decisioni prese»: Mattia le ha prese il
+14/11/2026. La specifica è scritta con quelle decisioni.
 
 ## 1. Cosa cambia, in breve
 
@@ -36,7 +36,9 @@ Cambiano l'intestazione, la card del calendario e i pulsanti di riga della tabel
 
 - Il pulsante «Aggiungi assenza» (`Button variant="primary" size="md"`, icona `Plus` di lucide) entra in
   `Page.actions`, a destra del selettore dell'anno. È presente in ogni stato della pagina.
-- A 400 px `Page.actions` va a capo sotto il titolo: selettore dell'anno a sinistra, pulsante a destra, stessa riga.
+- Sotto 768 px la barra in alto ha una riga sola e non contiene il pulsante con il testo. Il pulsante sta nella
+  riga del titolo della pagina («Lavoro e ferie»), a destra, con icona e testo, alto 36 px. Il selettore dell'anno
+  resta nella barra in alto. Sopra 768 px il pulsante è solo nella barra in alto.
 - Il pulsante dello stato vuoto (§10.1) apre lo stesso pannello.
 
 ### 2.2 Card del calendario
@@ -76,6 +78,16 @@ schermo è stretto.
 - A 400 px (`p-4`, card `p-4`): contenuto 336 px, 1 colonna, 12 mesi in sequenza.
 - Sotto 360 px di viewport la cella è larga meno di 40 px (36 px a 320 px) e resta alta 40 px. Il minimo WCAG 2.5.8
   (24 px) resta rispettato.
+
+### 2.4 Apertura su telefono (decisione Q5)
+
+Sotto 768 px, per l'anno corrente, la pagina scorre da sola al mese corrente all'apertura. Il nome del mese sta
+sotto la barra in alto (`scroll-margin-top`). Motivo: 12 mesi in colonna sono circa 3.600 px, e il mese utile è
+quasi sempre quello corrente.
+
+- Solo all'apertura della pagina e al cambio d'anno verso l'anno corrente. Non dopo «Conferma», «Rimuovi» o «Annulla».
+- Un altro anno si apre in alto, come prima.
+- Sopra 768 px la pagina non scorre: i 12 mesi stanno in una o due schermate.
 
 ## 3. Cella del giorno
 
@@ -195,7 +207,7 @@ Il pannello usa `Modal` (`src/ui/modal.tsx`), `width={460}`, su ogni larghezza.
   restano fermi. Comportamento già presente nel componente.
 - Motivo della scelta: componente esistente, focus intrappolato, Esc, ritorno del focus, nessuno stile nuovo.
   Alternativa scartata: pannello agganciato a destra del calendario (desktop) e foglio dal basso (mobile). Chiede
-  due contenitori nuovi e una gestione propria del focus; in N5 non dà un vantaggio che la giustifichi (§14, Q6).
+  due contenitori nuovi e una gestione propria del focus; in N5 non dà un vantaggio che la giustifichi (decisione Q6, §14).
 - Alla chiusura il focus torna al giorno di partenza (`finalFocus`), o al pulsante «Aggiungi assenza».
 - Durante il pannello la selezione resta disegnata sul calendario, dietro lo sfondo.
 
@@ -238,6 +250,8 @@ Spazio tra i campi: `gap-4` (come `LeaveDialog`). «Dal» e «Al»: `grid grid-c
 
 - «Al» non è più facoltativo e non ha più il suggerimento «Lascia vuoto». Un giorno solo = «Dal» uguale a «Al».
 - Se l'utente porta «Dal» oltre «Al», «Al» prende il valore di «Dal».
+- Finché «Dal» e «Al» sono lo stesso giorno, «Al» segue «Dal»: un giorno solo resta un giorno solo. Dopo una
+  modifica di «Al» i due campi sono indipendenti.
 - «Durata» vale per ogni giorno dell'intervallo: mezza giornata su 5 giorni = 2,5 gg.
 - Suggerimento sotto «Nota»: `dialog.noteHint` per ferie, ROL, recupero; `dialog.localOnly` per altro
   (regola di oggi, `noteHint()` in `leave-actions.tsx`).
@@ -273,7 +287,7 @@ Regole di calcolo del riepilogo (nessuna regola nuova sui residui):
 
 ### 5.5 Sostituzioni
 
-Regola proposta (default di Q1, §14). Dopo la scrittura un giorno non contiene mai più di una giornata intera:
+Regola decisa (Q1, §14). Dopo la scrittura un giorno non contiene mai più di una giornata intera:
 
 1. Sullo stesso giorno, la riga dello stesso tipo viene aggiornata (come oggi).
 2. Se la nuova riga più le righe di altro tipo superano una giornata, le righe di altro tipo vengono rimosse.
@@ -302,7 +316,7 @@ Il piede di `Modal` è allineato a destra: «Rimuovi» va a sinistra con `mr-aut
 4. Esito negativo: il pannello resta aperto con i valori; l'errore compare sopra il piede (§10.3).
 
 «Conferma» è disabilitato solo se l'intervallo non contiene nessun giorno prenotabile (§10.4) o se è in corso il
-salvataggio. Il residuo insufficiente non lo disabilita (§10.5).
+salvataggio. Il residuo sotto zero non lo disabilita (§10.5).
 
 ### 5.7 Titoli
 
@@ -446,15 +460,17 @@ Gli errori di campo usano `Field` con `aria-invalid` e `aria-describedby`. Il fo
 - **Un solo giorno, escluso**: stesso messaggio, con il motivo: «Il 15 agosto è un giorno festivo.» (`errors.weekend`,
   `errors.holiday` esistenti).
 
-### 10.5 Residuo insufficiente
+### 10.5 Residuo sotto zero (decisione Q2)
 
+Il residuo negativo è un caso normale: la pagina serve anche per pianificare le assenze, non solo per prenderle.
 Quando il residuo dopo è sotto zero:
 
-- Riga del residuo in `text-neg`, con l'icona `TriangleAlert` (16 px): «Residuo ferie 2 gg → −3 gg».
-- Sotto il riepilogo, un avviso `rounded-card border border-neg/40 bg-neg-bg p-3 text-sm`: «Superi il residuo di
-  3 gg. Puoi confermare lo stesso: la pagina lo segnala tra i saldi sforati.»
-- «Conferma» resta attivo. Motivo: oggi l'app non blocca una prenotazione oltre il residuo, la segnala con la card
-  «saldi sforati» (`overdrawn`). Bloccare sarebbe una regola nuova (Q2, §14).
+- La riga del residuo mostra il valore negativo in chiaro, con il segno meno: «Residuo ferie 3 gg → −2 gg».
+  Il valore è in `text-neg`, con l'icona `TriangleAlert` (16 px).
+- Sotto il riepilogo, una riga di testo `text-sm text-muted`: «Il residuo va sotto zero di 2 gg. Puoi confermare:
+  la pagina lo mostra tra i saldi sforati.» Nessun riquadro rosso: non è un errore.
+- «Conferma» resta attivo. Dopo la conferma la card del tipo mostra lo stesso valore negativo e la card «saldi
+  sforati» (`overdrawn`) lo elenca, come prima.
 - Il colore non è l'unico segnale: ci sono l'icona, il segno meno e il testo.
 
 ### 10.6 Altri stati
@@ -574,7 +590,8 @@ dell'azione: un'assenza può durare più giorni.
 | `panel.balanceNone` | Questo tipo non consuma il residuo. | This type does not use the balance. |
 | `panel.balanceUnknown` | — · dotazione non indicata | — · allowance not stated |
 | `panel.otherYear` | {count, plural, one {# giorno è} other {# giorni sono}} nel {year}: il residuo si vede nella pagina di quell'anno. | {count, plural, one {# day is} other {# days are}} in {year}: see that year's page for the balance. |
-| `panel.overdrawn` | Superi il residuo di {amount}. Puoi confermare lo stesso: la pagina lo segnala tra i saldi sforati. | This is {amount} over the balance. You can still confirm: the page lists it among the overdrawn balances. |
+| `panel.overdrawn` | Il residuo va sotto zero di {amount}. Puoi confermare: la pagina lo mostra tra i saldi sforati. | The balance goes {amount} below zero. You can confirm: the page lists it among the overdrawn balances. |
+| `panel.half` | {kind} ½ | {kind} ½ |
 | `panel.nothingBookable` | Nessun giorno prenotabile in questo intervallo. | No day in this range can be booked. |
 | `toasts.undo` | Annulla | Undo |
 | `toasts.undone` | Annullato | Undone |
@@ -628,19 +645,29 @@ codice e si tolgono nello stesso commit: `dialog.hours`, `dialog.rolLocal`. `dia
 
 Nessuna libreria nuova. Nessun token nuovo in `globals.css`.
 
-## 14. Domande per Mattia
+## 14. Decisioni prese
 
-Decisioni di prodotto che il piano non scrive. Ogni voce ha il default usato in questa specifica.
+Decisioni di prodotto che il piano non scrive. Mattia le ha prese il 14/11/2026.
 
-| # | Domanda | Default proposto | Se la risposta è diversa |
+| # | Domanda | Decisione | Dove |
 |---|---|---|---|
-| Q1 | Un intervallo che passa sopra giorni già prenotati li sostituisce? | Sì, con la regola di §5.5; il pannello li elenca prima di «Conferma» | Alternativa: i giorni già prenotati restano e vanno tra gli «esclusi». Cambia solo §5.5 e una riga del riepilogo |
-| Q2 | Il residuo insufficiente blocca «Conferma»? | No: avviso rosso, conferma possibile (come oggi, che segnala e non blocca) | Blocco: «Conferma» disabilitato in §10.5 |
-| Q3 | Il tocco su un giorno prenotato modifica solo quel giorno, o tutto il periodo contiguo dello stesso tipo? | Solo quel giorno (come oggi). Togliere una settimana = 5 rimozioni, o Canc su ogni giorno | Aggiunta in §7.1 di una scelta «Solo questo giorno / Tutto il periodo (10–14 ago)»: «Rimuovi» e i campi valgono per il periodo |
-| Q4 | Dopo «Rimuovi» serve una conferma, oltre al toast con «Annulla»? | No: il toast con «Annulla» (8 s) sostituisce `window.confirm` | Conferma nel pannello prima della rimozione |
-| Q5 | Su telefono il calendario si apre sul mese corrente? | No: si apre in alto, come oggi (12 mesi in colonna, circa 3.600 px) | Scorrimento automatico al mese corrente all'apertura, solo sotto 768 px e solo per l'anno corrente |
-| Q6 | Il pannello è una finestra centrata (`Modal`) anche su desktop? | Sì: componente esistente, nessuno stile nuovo | Pannello agganciato a destra del calendario su desktop e foglio dal basso su telefono: due contenitori nuovi, circa +1 giorno di lavoro |
-| Q7 | La parola per l'azione: «assenza» in italiano? | Sì: «Aggiungi assenza», «Nuova assenza», «Assenza rimossa» (il piano scrive «Aggiungi assenza») | Tornare a «giornata» nei testi di §12 |
+| Q1 | Un intervallo che passa sopra giorni già prenotati li sostituisce? | Sì, con la regola di §5.5; il pannello li elenca prima di «Conferma» | §5.5 |
+| Q2 | Il residuo insufficiente blocca «Conferma»? | No. Il residuo negativo è un caso normale: la pagina serve anche per pianificare. Il valore negativo si vede in chiaro («3 gg → −2 gg») | §10.5 |
+| Q3 | Il tocco su un giorno prenotato modifica solo quel giorno, o tutto il periodo contiguo dello stesso tipo? | Solo quel giorno | §7.1 |
+| Q4 | Dopo «Rimuovi» serve una conferma, oltre al toast con «Annulla»? | No: il toast con «Annulla» (8 s) sostituisce `window.confirm` | §7.4, §8 |
+| Q5 | Su telefono il calendario si apre sul mese corrente? | Sì: sotto 768 px, per l'anno corrente, la pagina scorre da sola al mese corrente all'apertura (diversa dal default proposto) | §2.4 |
+| Q6 | Il pannello è una finestra centrata (`Modal`) anche su desktop? | Sì | §5.1 |
+| Q7 | La parola per l'azione: «assenza» in italiano? | Sì | §12 |
+
+Scelte dello sviluppo, dentro le decisioni sopra:
+
+- I tipi di assenza arrivano al pannello come elenco (anticipo AN1 del piano): `{ id, nome, colore, ha un monte,
+  selezionabile, resta qui }`. Il pannello non contiene nomi di tipo. `sick` non è selezionabile (decisione H20);
+  una riga che lo porta già lo mostra e lo conserva.
+- L'azione avvia la sync verso Trek quando il servizio dice che Trek deve sapere qualcosa: una sola lista
+  (`KINDS_FOR_TREK`). Prima un giorno ROL aspettava la sync successiva (decisione ST-23): corretto con un `fix`.
+- «Annulla» manda al server solo tipo, durata e nota dei giorni toccati. Lo stato osservato su Trek resta nel
+  database: il client non lo può riscrivere.
 
 Nota fuori da N5: `src/app/globals.css` non ha una regola `prefers-reduced-motion` per `animate-in` e
 `animate-shimmer`. Vale per tutta l'app; va in una issue propria.
@@ -677,7 +704,7 @@ Il menu contestuale del browser torna disponibile sul calendario.
   prenotato → «Rimuovi» → «Annulla»; nessuna richiesta di scrittura prima di «Conferma».
 - `tests/e2e/keyboard.spec.ts`: Invio, frecce (anche tra due mesi), Invio, «Conferma»; Esc; Canc e «Annulla» da F6.
 - `tests/e2e/mobile.spec.ts` a 400 px: cella ≥ 40 × 40 px (`boundingBox`), tocco-tocco, barra di selezione sopra la
-  barra delle schede, nessuno scorrimento orizzontale, pannello dentro lo schermo.
+  barra delle schede, nessuno scorrimento orizzontale, pannello dentro lo schermo, apertura sul mese corrente (Q5).
 - `tests/e2e/a11y.spec.ts`: axe sulla pagina con la selezione in corso e con il pannello aperto, nei due temi.
 - Aggiornare `year-calendar.test.tsx`: via i test dei gesti; dentro gli stati di §3.2.
 
@@ -701,6 +728,7 @@ Il menu contestuale del browser torna disponibile sul calendario.
 |---|---|
 | 1) Ogni azione ha un controllo visibile | §4.4 (barra), §5 (pannello), §6 (pulsante), §7 («Rimuovi», «Aggiungi l'altra metà»), §8 («Annulla»), §15.1 (tabella gesto → controllo) |
 | 2) Cella del giorno ≥ 40 px su mobile | §2.3, §3.1 |
-| 3) Nessuna scrittura prima di «Conferma» | §4.1, §5.6: scegliere i giorni e aprire il pannello non scrive nulla. «Rimuovi» e Canc sono comandi espliciti, con «Annulla» nel toast (§7.4, Q4) |
+| 3) Nessuna scrittura prima di «Conferma» | §4.1, §5.6: scegliere i giorni e aprire il pannello non scrive nulla. «Rimuovi» e Canc sono comandi espliciti, con «Annulla» nel toast (§7.4, decisione Q4) |
 | 4) Residui uguali a prima a parità di giorni | §5.4: il riepilogo usa `residual()` senza modifiche; nessuna formula nuova |
 | 5) La sync con Trek funziona come prima | §5.5, §8, §15: le scritture passano dagli stati `pending` di oggi |
+| 6) Nessun nome di tipo di assenza scritto nel pannello | §14: i tipi arrivano dall'elenco (AN1) |
