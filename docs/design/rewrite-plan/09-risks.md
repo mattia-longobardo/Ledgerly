@@ -7,6 +7,7 @@ Tre elenchi:
 - §9.1 **Ipotesi aperte**: fatti non ancora misurati. Ognuna ha il passo che la chiude e cosa succede se è falsa.
 - §9.2 **Rischi** del piano, con la mitigazione.
 - §9.3 **Ipotesi da confermare**: scelte che mancavano nelle decisioni. Il piano applica un default. Mattia le conferma con l'OK al piano, o le cambia.
+- §9.5 **Punti decisi il 14/11/2026**: erano ipotesi da confermare, ora sono decisioni di Mattia.
 
 ## 9.1 Ipotesi aperte
 
@@ -34,7 +35,7 @@ Tre elenchi:
 | # | Rischio | Effetto | Mitigazione | Dove |
 |---|---|---|---|---|
 | R-1 | Il refactor cambia un numero senza che nessuno lo veda | Viola il vincolo principale | Fotografia dei numeri prima e dopo ogni passo; test di parità; file di riferimento dei calcoli; asserzioni dei test non adattate | [`06-data.md`](06-data.md) §6.4, [`05-refactor.md`](05-refactor.md) §5.6 |
-| R-2 | Le voci «stesso numero in due modi» obbligano a scegliere un valore: una superficie cambia | API, MCP, export o mail mostrano un valore diverso da oggi | Decisione scritta per voce (§9.3, D1-D11) prima del passo; commit separato; riga in `docs/api-changelog.md` | R2 |
+| R-2 | Le voci «stesso numero in due modi» obbligano a scegliere un valore: una superficie cambia | API, MCP, export o mail mostrano un valore diverso da oggi | Decisione presa per ogni voce (§9.5, D1-D11: il numero delle pagine); commit separato; riga in `docs/api-changelog.md` | R2 |
 | R-3 | Login nativo, CORS e rete dei plugin vanno in produzione prima della review di sicurezza, su un'istanza pubblica | Superficie nuova non rivista | Regole di oggi invariate (registrazione dinamica chiusa a `/api/v1`, PKCE obbligatorio, redirect fissi); test di sicurezza esistenti nel gate; OK di Mattia sul SHA per i criteri #3 e #4; elenco dei dispositivi con revoca | R2, R4, N1 |
 | R-4 | Per un periodo convivono Server Actions e rotte API | Due strade per la stessa scrittura | Le azioni chiamano lo stesso caso d'uso della rotta; parità per modulo; l'azione si cancella nel passo R3 dello stesso modulo | R2, R3 |
 | R-5 | Due agenti sullo stesso repo | Conflitti, deploy incrociati | Confini dei pacchetti; contratto prima; il client lavora un modulo dietro; un solo agente fa i deploy; secondo database di test | [`08-agents.md`](08-agents.md) |
@@ -49,6 +50,12 @@ Tre elenchi:
 | R-14 | Strumenti nuovi sul server (Android SDK, toolchain Rust) | Superficie e spazio su disco | Gate del Security Gatekeeper prima di ogni installazione; strumenti nella cartella del progetto, non in `/home/mattia` | C0 |
 | R-15 | Il piano è lungo: le decisioni di prodotto invecchiano | R5 realizza un design non più voluto | Ogni rilascio R5 parte con una conferma breve di Mattia sul suo contenuto | R5 |
 | R-16 | Solo 4 movimenti hanno una categoria corretta a mano: le etichette sono quelle di Wallet | Rumore nell'addestramento | L'app propone l'unione delle categorie doppie; la soglia si alza con le correzioni | N3 |
+| R-17 | Nessuna review del codice prima della fine (H6) | Un difetto di struttura si vede tardi; la review finale trova molto | Le regole di modularità e di pulizia sono controlli automatici nel gate; liste note che possono solo accorciarsi; verifica dell'orchestratore sugli esiti; prova di comportamento invariato a ogni commit | [`10-modularity.md`](10-modularity.md) §10.6, §10.8, §10.10; [`08-agents.md`](08-agents.md) §8.5 |
+| R-18 | Una regola automatica si aggira: si rispetta la lettera e non lo scopo (esempio: un file diviso in due senza una responsabilità chiara) | Modularità solo apparente | Responsabilità e interfaccia di ogni modulo scritte prima (§10.3); file di riferimento degli export (M7); misura dei duplicati; review finale del codice contro le tre priorità | [`10-modularity.md`](10-modularity.md) |
+| R-19 | Le soglie di dimensione e complessità sono troppo strette o troppo larghe | Divisioni forzate, oppure regola inutile | Soglie come ipotesi (I15); prima misura in R0; una modifica alle soglie è una decisione di Mattia | R0 |
+| R-20 | Le misure di tempo sono instabili sul server condiviso | Falsi allarmi nel gate G9 | Mediana su 5 esecuzioni, margine del 10%, e il numero di query come misura senza rumore | [`10-modularity.md`](10-modularity.md) §10.9 |
+| R-21 | Porte ed eventi al posto degli import diretti aggiungono un passaggio | Codice più lungo da seguire; una scrittura in due moduli non è più in una sola transazione | Una porta solo dove oggi c'è un ciclo o una direzione sbagliata (§10.5); gli eventi di dominio girano nella stessa transazione di chi li emette, salvo i job | R2 |
+| R-22 | Le regole nuove rallentano i rilasci N1-N5, che lavorano sul codice attuale | Lavoro in più prima della riscrittura | Prima di R0 vale solo «non peggiora»: nessuna violazione nuova rispetto alle liste note | N0-N5 |
 
 ## 9.3 Ipotesi da confermare
 
@@ -64,30 +71,17 @@ Le decisioni approvate non coprono questi punti. Il piano usa il default. Con l'
 | I4 | Forma di `apps/web` dopo R3 | Un sito statico solo client, lo stesso pacchetto degli involucri. La tecnologia del contenitore (Next.js con export statico, oppure un bundler con router client) si decide con la prova A di C0 | Next.js con rendering sul server solo per il contenitore |
 | I5 | Dove si costruisce l'app Windows | Su un PC Windows di Mattia, con uno script del repo | Un runner Windows di GitHub Actions che produce un file da scaricare. Nessuna pubblicazione in nessun caso |
 | I6 | N5 (Time Off) prima di N1 | Sì, se l'applicazione Production o l'accesso alla banca ritardano: N5 non dipende da N1-N4 | Ordine fisso N1 → N5 |
-| I7 | Revisore del codice nei rilasci con un solo sviluppatore (N0-N5, R0, R1) | Un agente di review già presente nel workspace, scelto dall'orchestratore | Nessuna review del codice prima di R2 |
 | I8 | Uscita dei plugin verso internet | In N1 libera e dichiarata nel manifest; in R5c limitata agli host dichiarati, se la prova A15 riesce | Limitazione già in N1 |
 | I9 | Categorie predefinite per Mattia | Corrispondenza proposta tra le sue 55 categorie usate e i 12 gruppi predefiniti, da confermare una volta nell'interfaccia | Nessuna corrispondenza: le tabelle statiche valgono solo per gli utenti nuovi |
 | I10 | Origini CORS degli involucri | I due valori letti nella prova D di C0, scritti come costanti | — |
 | I11 | Contenuto di R5f | L'elenco di [`06-data.md`](06-data.md) §6.1. Ogni voce parte solo con «zero righe, zero usi» | Tenere tutto: nessuna rimozione |
 | I12 | Catalogo ufficiale dei plugin | `plugins/catalog.json` nel repo privato. Basta per l'istanza di Mattia | Un indice pubblico: si decide quando un altro host installa Ledgerly |
-| I13 | Difetti probabili trovati dall'audit (BUD-1, FND-2 come difetto, ACC-2) | Si correggono nel passo R2 del loro modulo, con un commit separato e un test | Correzione subito, prima di N1, come `fix` |
-
-**Numeri oggi calcolati in due modi.** Il refactor deve tenerne uno solo. Il default tiene il valore che l'utente vede
-oggi nelle pagine; cambiano le altre superfici.
-
-| # | Voce | Oggi | Default del piano | Cosa cambia |
-|---|---|---|---|---|
-| D1 | ACC-2 | `previousNetWorth` è sempre `null` su `GET /summary`, `get_summary`, mail mensile; Overview mostra la variazione | Il valore di Overview | API, MCP e mail ricevono un valore al posto di `null` (additivo) |
-| D2 | ACC-3 | Il totale salvato dallo snapshot mensile usa i conti `inSnapshot`; il patrimonio usa `inNetWorth` | Restano due filtri, con due nomi distinti e visibili | Nessun numero; solo l'etichetta in Settings › Dati |
-| D3 | TRX-1 | `net` include i trasferimenti; entrate e uscite no | `net` resta com'è; nasce un secondo campo «entrate − uscite» con un nome suo | Nessun numero esistente; un campo in più |
-| D4 | TR-4, TRX-2, POC-2, SUB-4 | Solo accounts converte nella valuta di visualizzazione. Movimenti, budget, pocket e abbonamenti sommano centesimi senza valuta | Con una sola valuta (il caso di oggi) nulla cambia. Con valute diverse: conversione al cambio BCE del giorno del movimento, come per i conti | Nessun numero finché tutti i conti di spesa sono in EUR |
-| D5 | BUD-1 | Lo stop di un budget per conto scrive una riga senza conto | Correzione: la riga porta il conto | I budget per conto fermati dopo la correzione |
-| D6 | SUB-1 | «Prossimi 30 giorni» parte da oggi nel KPI e da domani nella proiezione | Da oggi, in entrambi | La proiezione per conto comprende un addebito con scadenza oggi |
-| D7 | INT-3 | «Lettura vecchia»: 1 ora in Interests, soglia del conto (36 ore) in Accounts | Restano due soglie, con due nomi distinti | Nessun numero |
-| D8 | FND-1, FND-2, FND-3 | Export e riga dei fondi in Investments usano il motore vecchio; le pagine Funds il motore di periodo. Il «versato» dell'export esclude `transfer_in` | Il motore di periodo e i numeri delle pagine Funds | Export e riga dei fondi si allineano alle pagine Funds |
-| D9 | INV-1 | API, MCP ed export pubblicano il rendimento semplice; le pagine mostrano Modified Dietz | Il campo esistente resta (rendimento semplice, con il suo nome). Si aggiunge il campo Modified Dietz del periodo | Nessun numero esistente; un campo in più |
-| D10 | INV-5 | L'export comprende i servizi archiviati e non converte; API, MCP e pagine li escludono e convertono | L'export tiene gli archiviati (è un'esportazione completa) con un campo `archived`, e usa la stessa conversione | I valori convertiti dell'export |
-| D11 | PLT-1 | Due percorsi di conversione: possono differire di un centesimo | Una sola conversione, quella di `platform/fx`. Gli importi già salvati sugli eventi non si ricalcolano | Possibile differenza di un centesimo su conversioni a schermo di eventi nuovi |
+| I14 | Misure di partenza in N0 | N0 aggiunge solo test e script, senza cambi al codice di prodotto: liste note delle violazioni, prima misura dei duplicati, valori di partenza delle prestazioni, risposte di riferimento di API e MCP, `assertions-diff`. Da N0 vale «non peggiora» | Tutto in R0: i rilasci N1-N5 senza questi controlli |
+| I15 | Soglie di pulizia e di duplicazione | File 400 righe, funzione 60 righe, 4 parametri, complessità ciclomatica 12, annidamento 4, righe duplicate al massimo 3% per pacchetto a fine R3 | Altri valori, dopo la prima misura di R0 |
+| I16 | Guadagno di velocità «significativo» e obiettivi assoluti | Significativo: almeno il 30% del tempo di una vista o di una rotta, o almeno 200 ms sul 95° percentile di una pagina. Obiettivi assoluti: una proposta dopo le misure di N0. Fino ad allora vale «non peggiora di oltre il 10%» | Un'altra soglia; obiettivi assoluti fissati ora |
+| I17 | Forma della review finale unica | Un solo passo Z con due parti: il codice (un agente di review scelto dall'orchestratore) e la sicurezza (Security Reviewer) | Un solo agente per le due parti |
+| I18 | Strumenti per duplicati, codice morto, complessità e cicli | Nessun pacchetto nuovo: script propri sullo scanner di `typescript`, regole del nucleo di ESLint, `architecture.test.ts` esteso ([`10-modularity.md`](10-modularity.md) §10.7.5) | `jscpd`, `knip`, `dependency-cruiser`, `eslint-plugin-sonarjs`: ognuno dopo il gate del Security Gatekeeper, prima dell'installazione |
+| I19 | Elenco, nomi e livelli dei moduli di arrivo | Quelli di [`10-modularity.md`](10-modularity.md) §10.3. Nomi nuovi: `identity` (oggi `users`), `documents` (oggi `imports`), `connections`, `portfolio`, `shared/*` | Tenere i nomi di oggi (`users`, `imports`) |
 
 ## 9.4 Fuori dal piano
 
@@ -99,3 +93,30 @@ oggi nelle pagine; cambiano le altre superfici.
 - Import dell'estratto di un broker per il Portafoglio manuale.
 - Notifiche immediate con un servizio di consegna di terzi.
 - Scritture senza rete.
+
+## 9.5 Punti decisi il 14/11/2026
+
+Erano ipotesi da confermare. Mattia le ha decise il 14/11/2026 ([`01-decisions.md`](01-decisions.md) §1.0).
+
+| # | Punto | Decisione | Effetto sul piano |
+|---|---|---|---|
+| I7 | Revisore del codice | **Nessuna review del codice fino alla fine, in nessun rilascio** (H6). Nessuna review incrociata tra i due sviluppatori, nessun revisore intermedio | Gate di ogni rilascio: test, controlli automatici, verifica dell'orchestratore. Alla fine una review finale unica (Z). [`08-agents.md`](08-agents.md) §8.5 |
+| I13 | Difetti probabili trovati dall'audit | **BUD-1 si corregge subito**, come `fix`, in una sotto-issue separata (H4). ACC-2 e FND-2 restano nel passo R2 del loro modulo, con un commit separato e un test | BUD-1 esce da R2: corretto in `main` a `86e3d43`, tag `v0.10.2`. La correzione non tocca le righe già scritte: una correzione dei dati chiede un OK separato |
+| D1-D11 | Numeri oggi calcolati in due modi | **Vale il numero delle pagine** (H5): il default della tabella qui sotto | Nessuna domanda aperta prima dei passi di R2. Ogni cambio ha un commit separato e un test |
+
+**Numeri oggi calcolati in due modi.** Il refactor ne tiene uno solo: il valore che l'utente vede oggi nelle pagine.
+Cambiano le altre superfici. Sono le sole differenze di numeri ammesse dal vincolo «comportamento invariato».
+
+| # | Voce | Oggi | Decisione | Cosa cambia |
+|---|---|---|---|---|
+| D1 | ACC-2 | `previousNetWorth` è sempre `null` su `GET /summary`, `get_summary`, mail mensile; Overview mostra la variazione | Il valore di Overview | API, MCP e mail ricevono un valore al posto di `null` (additivo) |
+| D2 | ACC-3 | Il totale salvato dallo snapshot mensile usa i conti `inSnapshot`; il patrimonio usa `inNetWorth` | Restano due filtri, con due nomi distinti e visibili | Nessun numero; solo l'etichetta in Settings › Dati |
+| D3 | TRX-1 | `net` include i trasferimenti; entrate e uscite no | `net` resta com'è; nasce un secondo campo «entrate − uscite» con un nome suo | Nessun numero esistente; un campo in più |
+| D4 | TR-4, TRX-2, POC-2, SUB-4 | Solo accounts converte nella valuta di visualizzazione. Movimenti, budget, pocket e abbonamenti sommano centesimi senza valuta | Con una sola valuta (il caso di oggi) nulla cambia. Con valute diverse: conversione al cambio BCE del giorno del movimento, come per i conti | Nessun numero finché tutti i conti di spesa sono in EUR |
+| D5 | BUD-1 | Lo stop di un budget per conto scrive una riga senza conto | Correzione: la riga porta il conto. **Subito, come `fix`, fuori dai rilasci del piano** (H4) | I budget per conto fermati dopo la correzione |
+| D6 | SUB-1 | «Prossimi 30 giorni» parte da oggi nel KPI e da domani nella proiezione | Da oggi, in entrambi | La proiezione per conto comprende un addebito con scadenza oggi |
+| D7 | INT-3 | «Lettura vecchia»: 1 ora in Interests, soglia del conto (36 ore) in Accounts | Restano due soglie, con due nomi distinti | Nessun numero |
+| D8 | FND-1, FND-2, FND-3 | Export e riga dei fondi in Investments usano il motore vecchio; le pagine Funds il motore di periodo. Il «versato» dell'export esclude `transfer_in` | Il motore di periodo e i numeri delle pagine Funds | Export e riga dei fondi si allineano alle pagine Funds |
+| D9 | INV-1 | API, MCP ed export pubblicano il rendimento semplice; le pagine mostrano Modified Dietz | Il campo esistente resta (rendimento semplice, con il suo nome). Si aggiunge il campo Modified Dietz del periodo | Nessun numero esistente; un campo in più |
+| D10 | INV-5 | L'export comprende i servizi archiviati e non converte; API, MCP e pagine li escludono e convertono | L'export tiene gli archiviati (è un'esportazione completa) con un campo `archived`, e usa la stessa conversione | I valori convertiti dell'export |
+| D11 | PLT-1 | Due percorsi di conversione: possono differire di un centesimo | Una sola conversione, quella di `platform/fx`. Gli importi già salvati sugli eventi non si ricalcolano | Possibile differenza di un centesimo su conversioni a schermo di eventi nuovi |

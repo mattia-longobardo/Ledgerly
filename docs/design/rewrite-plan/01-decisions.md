@@ -2,9 +2,23 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
-Tutte le decisioni sono di Mattia, del **13/11/2026**. La colonna «Sostituisce» cita i documenti esistenti,
+Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**. Dove §1.0 e una decisione
+più vecchia dicono cose diverse, vale §1.0. La colonna «Sostituisce» cita i documenti esistenti,
 che non vengono modificati: dove questo registro e un documento più vecchio dicono cose diverse, vale questo registro.
 La colonna «Rilascio» rimanda a [`03-releases.md`](03-releases.md).
+
+## 1.0 Obiettivo, priorità e decisioni del 14/11/2026
+
+Dettaglio, regole e controlli: [`10-modularity.md`](10-modularity.md).
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H1 | **Obiettivo del refactor:** ottimizzazione del codice, intesa soprattutto come qualità della sua organizzazione. Non un refactor generico. Priorità in ordine: **1. Modularità** (moduli con responsabilità singole e ben definite, interfacce chiare, basso accoppiamento, nessuna duplicazione); **2. Pulizia e chiarezza** (codice leggibile, nomi espliciti, struttura coerente, niente codice morto o complessità superflua); **3. Prestazioni** (esecuzione più veloce, solo dopo i due punti precedenti) | Precisa F1b: la modularità è l'obiettivo, non un effetto del refactor | R0-R4 |
+| H2 | **Regola di conflitto:** vince la priorità più alta. Non si sacrifica modularità o leggibilità per la velocità, a meno che il guadagno sia significativo. In quel caso va segnalato in modo esplicito a Mattia, che decide, prima del commit | — | R0-R4 |
+| H3 | **Il comportamento funzionale del codice resta invariato.** Prova: test esistenti verdi senza asserzioni adattate, test «stessi numeri», e2e | Rafforza F1b e la premessa 6 del piano | R0-R4 |
+| H4 | Il difetto BUD-1 («lo stop di un budget per conto scrive una riga senza conto») si corregge subito come `fix`, in una sotto-issue separata, fuori dai rilasci del piano. Non tocca le righe già scritte. Gli altri due difetti dell'audit (ACC-2, FND-2) restano nel passo R2 del loro modulo | L'ipotesi I13 | Subito (BUD-1); R2 (ACC-2, FND-2) |
+| H5 | Per i numeri calcolati in due modi (D1-D11) vale il default del piano: il numero che l'utente vede nelle pagine. Da ipotesi diventano decisioni | Le ipotesi D1-D11 | R2 |
+| H6 | **Nessuna review del codice fino alla fine, in nessun rilascio.** Niente review incrociata tra i due sviluppatori e nessun revisore intermedio. Gate di ogni rilascio: test, controlli automatici, verifica dell'orchestratore. Alla fine: una review finale unica | L'ipotesi I7; il gate G7 «Review del codice»; `08-agents.md` §8.5 nella versione del 13/11. Estende P4 al codice | Tutti; Z |
 
 ## 1.1 Premesse
 
@@ -13,7 +27,7 @@ La colonna «Rilascio» rimanda a [`03-releases.md`](03-releases.md).
 | P1 | Ogni host gestisce la sua istanza e aggiunge amici e familiari con il loro account | — | Tutti |
 | P2 | Utenti non tecnici: impostazioni tecniche nascoste o sotto «Avanzate» | — | N2, R5a |
 | P3 | L'istanza è pubblica su internet (tunnel Cloudflare → Traefik). Le app la raggiungono direttamente | — | R2, C1 |
-| P4 | Una sola review di sicurezza, finale, quando Mattia dichiara tutto completo | `investments.md` §7 e §9 (review per fase) come modello per i rilasci nuovi | Z |
+| P4 | Una sola review di sicurezza, finale, quando Mattia dichiara tutto completo (con H6: è la review finale unica, codice e sicurezza) | `investments.md` §7 e §9 (review per fase) come modello per i rilasci nuovi | Z |
 | P5 | Nessuno sviluppo prima dell'OK di Mattia al piano | — | N0 |
 
 ## 1.2 Prodotto (fase 1)
@@ -56,7 +70,7 @@ La colonna «Rilascio» rimanda a [`03-releases.md`](03-releases.md).
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
 | F1 | Backend separato in TypeScript: Hono + Drizzle. Il web usa solo l'API | — | R2-R4 |
-| F1b | **Refactor completo**: audit dei doppioni e del debito per modulo; refactor esplicito modulo per modulo (dominio e interfaccia). Criterio di uscita: stessi numeri, test verdi, nessun doppione dell'audit rimasto. I calcoli approvati non cambiano risultato | `investments-ux.md` §4 e `funds-ux.md` §5 restano le regole di calcolo | R0, R2, R3 |
+| F1b | **Refactor completo**: audit dei doppioni e del debito per modulo; refactor esplicito modulo per modulo (dominio e interfaccia). Criterio di uscita nell'ordine delle priorità di H1 ([`05-refactor.md`](05-refactor.md) §5.1): modularità, pulizia, prestazioni, comportamento invariato. I calcoli approvati non cambiano risultato | `investments-ux.md` §4 e `funds-ux.md` §5 restano le regole di calcolo | R0, R2, R3 |
 | F2 | Monorepo npm workspaces: `apps/` (api, worker, web), `packages/` (domain, api-contract, api-client, design-tokens, ui, plugin-contract, plugin-host), `plugins/`. Repo privato, nessun repo nuovo | — | R0 |
 | F3 | Stesso PostgreSQL e stesso schema. Migrazioni solo additive, compatibili con l'immagine precedente | — | Tutti |
 | F3b | Client: cache di sola lettura. Chiave di idempotenza sulle scritture | — | R2, C1 |

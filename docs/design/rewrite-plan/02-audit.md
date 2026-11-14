@@ -2,7 +2,8 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
-L'audit è l'ingresso del refactor ([`05-refactor.md`](05-refactor.md)). Ogni voce ha un ID, il tipo, i riferimenti
+L'audit è l'ingresso del refactor ([`05-refactor.md`](05-refactor.md)) e dà i valori di partenza delle regole di
+[`10-modularity.md`](10-modularity.md). Ogni voce ha un ID, il tipo, i riferimenti
 `percorso:riga` e una proposta. Base: `main` a `5fbbdbc`, sola lettura, nessun test eseguito.
 
 | File di dettaglio | Aree | Voci |
@@ -10,6 +11,49 @@ L'audit è l'ingresso del refactor ([`05-refactor.md`](05-refactor.md)). Ogni vo
 | [`audit-domain.md`](audit-domain.md) | accounts, transactions, budgets, subscriptions, pockets, interests, imports, users, trasversali | 83 (`ACC`, `TRX`, `BUD`, `SUB`, `POC`, `INT`, `IMP`, `USR`, `TR`) |
 | [`audit-platform.md`](audit-platform.md) | investments, funds, payroll, timeoff, integrations, jobs, API, MCP, platform | 82 (`INV`, `FND`, `PAY`, `TOF`, `INTG`, `JOB`, `API`, `MCP`, `PLT`) |
 | [`audit-ui.md`](audit-ui.md) | design system, shell, tutte le schermate, messaggi | 70 circa (`UI-*`) |
+
+## 2.0 Priorità di ogni voce
+
+Ogni voce dei tre file di dettaglio ha la colonna **P**: la priorità del refactor che tocca
+([`10-modularity.md`](10-modularity.md) §10.1). Una voce ha una sola priorità: la più alta che tocca.
+
+| P | Priorità | Tipi di voce | Voci |
+|---|---|---|---|
+| 1 | Modularità | doppione, stesso numero in due modi, componente simile (nessuna duplicazione); confine debole, accoppiamento server (basso accoppiamento, interfacce chiare); funzione con più compiti (responsabilità singola) | 199 |
+| 2 | Pulizia e chiarezza | file grande, residuo, token, debito, nota | 49 |
+| 3 | Prestazioni | Voci il cui effetto principale è il costo di esecuzione: query in ciclo, dati caricati due volte, un giro di rete per gesto | 9: INV-4, POC-3, IMP-5, INT-7, SUB-9, TRX-11, UI-ACC-7, UI-TOF-2, UI-PAY-1 |
+
+Regole di classificazione:
+
+- Il tipo decide la priorità. Eccezioni: le 9 voci di priorità 3, e UI-INV-10 («debito», ma è un confine: priorità 1).
+- Un «file grande» è priorità 2 per la dimensione. La sua divisione segue le responsabilità: il lavoro è nel passo di
+  modularità dello stesso modulo.
+- Una voce di priorità 3 che è anche un doppione si chiude prima come doppione, poi si misura.
+- Le voci «probabile bug» (§2.5) non sono refactor: sono correzioni, con una decisione di Mattia.
+
+Voci per modulo e priorità:
+
+| Dominio e platform | P1 | P2 | P3 | | Interfaccia | P1 | P2 | P3 |
+|---|---|---|---|---|---|---|---|---|
+| accounts (`ACC`) | 10 | 2 | 0 | | `UI-DS` | 17 | 6 | 0 |
+| transactions (`TRX`) | 9 | 2 | 1 | | `UI-NAV` | 5 | 2 | 0 |
+| budgets (`BUD`) | 7 | 1 | 0 | | `UI-OVR` | 3 | 0 | 0 |
+| subscriptions (`SUB`) | 8 | 0 | 1 | | `UI-ACC` | 6 | 1 | 1 |
+| pockets (`POC`) | 5 | 2 | 1 | | `UI-EXP` | 3 | 1 | 0 |
+| interests (`INT`) | 7 | 0 | 1 | | `UI-BUD` | 2 | 0 | 0 |
+| imports (`IMP`) | 6 | 1 | 1 | | `UI-SUB` | 0 | 2 | 0 |
+| users (`USR`) | 7 | 1 | 0 | | `UI-PCK` | 1 | 1 | 0 |
+| trasversali (`TR`) | 9 | 1 | 0 | | `UI-INT` | 1 | 0 | 0 |
+| investments (`INV`) | 9 | 2 | 1 | | `UI-INV` | 8 | 2 | 0 |
+| funds (`FND`) | 10 | 2 | 0 | | `UI-FND` | 3 | 3 | 0 |
+| payroll (`PAY`) | 7 | 2 | 0 | | `UI-PAY` | 2 | 1 | 1 |
+| timeoff (`TOF`) | 7 | 1 | 0 | | `UI-TOF` | 3 | 2 | 1 |
+| integrations (`INTG`) | 8 | 2 | 0 | | `UI-SET` | 6 | 2 | 0 |
+| jobs (`JOB`) | 6 | 3 | 0 | | `UI-AUT` | 2 | 0 | 0 |
+| API (`API`) | 7 | 0 | 0 | | `UI-MSG` | 2 | 2 | 0 |
+| MCP (`MCP`) | 4 | 1 | 0 | | | | | |
+| platform (`PLT`) | 9 | 1 | 0 | | | | | |
+| **Totale** | **135** | **24** | **6** | | **Totale** | **64** | **25** | **3** |
 
 Tipi di voce: **doppione** (lo stesso codice in più copie), **stesso numero in due modi** (rischio diretto per il
 vincolo «stessi numeri»), **confine debole** (dipendenza nella direzione sbagliata o ciclo), **file grande**,
@@ -40,8 +84,8 @@ vincolo «stessi numeri»), **confine debole** (dipendenza nella direzione sbagl
 
 ## 2.2 Sintesi per modulo
 
-Le voci in **grassetto** toccano un numero che l'utente vede: vanno chiuse con una decisione
-([`09-risks.md`](09-risks.md) §9.3) prima del refactor del modulo.
+Le voci in **grassetto** toccano un numero che l'utente vede. La decisione è presa (14/11/2026, H5): vale il numero
+delle pagine ([`09-risks.md`](09-risks.md) §9.5, D1-D11).
 
 | Modulo | Doppioni principali | Stesso numero in due modi | Confini deboli | File grandi |
 |---|---|---|---|---|
@@ -93,11 +137,13 @@ Elenco completo con i riferimenti: `audit-ui.md` §16. Le strutture di dominio:
 
 ## 2.5 Difetti probabili trovati dall'audit
 
-Non sono parte del refactor: sono correzioni. Entrano nel piano solo con l'OK di Mattia ([`09-risks.md`](09-risks.md) §9.3).
+Non sono parte del refactor: sono correzioni. Decisione di Mattia del 14/11/2026 (H4, [`09-risks.md`](09-risks.md) §9.5):
+BUD-1 si corregge subito, come `fix`, in una sotto-issue separata; ACC-2 e FND-2 si correggono nel passo R2 del loro
+modulo, con un commit separato e un test.
 
 | Voce | Difetto | Effetto |
 |---|---|---|
 | ACC-2 | `previousNetWorth` è sempre `null` in `GET /summary`, `get_summary` e nella mail mensile (`src/platform/reports/monthly.ts:44`, `src/modules/accounts/queries.ts:414`) | API, MCP e mail non hanno la variazione che Overview mostra |
-| BUD-1 | `stopLimit` scrive la riga `stopped` senza `accountId` (`src/modules/budgets/service.ts:106-113`) | Un budget per conto si ferma sull'ambito sbagliato. Da verificare con un test |
+| BUD-1 | `stopLimit` scrive la riga `stopped` senza `accountId` (`src/modules/budgets/service.ts:106-113`) | Un budget per conto si ferma sull'ambito sbagliato. **Corretto** (H4) in `main` a `86e3d43`, tag `v0.10.2`, con un test di integrazione. Le righe già scritte non sono toccate |
 | FND-2 | Una delle tre funzioni del «versato» esclude `transfer_in` (`src/modules/funds/queries.ts:96`) | Export e riga «Fondi» di Investments possono differire dalle pagine Funds |
 | JOB-2 | Una riga `running` rimasta dopo un riavvio non viene mai chiusa (`src/platform/jobs/housekeeping.ts:18-23`) | 4 righe ferme in produzione. Si chiude in N2 e R1 |
