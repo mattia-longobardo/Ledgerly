@@ -3,7 +3,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { contentSecurityPolicy } from "@/platform/auth/csp";
 import { identityProviderUrl } from "@/platform/auth/provider";
 
-const PUBLIC_PREFIXES = ["/sign-in", "/forgot-password", "/reset-password", "/invite"];
+// `/privacy` and `/terms` are the instance's public documents (`src/app/(legal)`): static text, no
+// session and no user data. A service that registers this instance, a bank aggregator for one,
+// asks for both addresses and reads them without an account.
+const PUBLIC_PREFIXES = ["/sign-in", "/forgot-password", "/reset-password", "/invite", "/privacy", "/terms"];
 
 /**
  * Convenience only — never the security boundary: every page and action calls

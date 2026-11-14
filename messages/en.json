@@ -196,7 +196,10 @@
       "redirects": "After your answer, the browser goes back to:",
       "unverified": "Unverified client.",
       "unverifiedHint": "It registered itself and chose its own name. Allow it only if you started this connection and you recognise the address below."
-    }
+    },
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "legal": "Legal pages"
   },
   "settings": {
     "title": "Settings",
@@ -4646,6 +4649,67 @@
         "manage": "Manage in Integrations",
         "connect": "Connect in Integrations"
       }
+    }
+  },
+  "legal": {
+    "nav": "Legal pages",
+    "signIn": "Sign in",
+    "language": {
+      "en": "English",
+      "it": "Italiano"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "intro": "This page says how this Ledgerly instance handles personal data. Ledgerly is self-hosted software: each instance has its own host, and this text applies to the instance at this address.",
+      "host": {
+        "title": "Who runs this instance",
+        "body": "The host of this instance runs it for personal and household use. The host decides who has an account: there is no public registration. The host is responsible for the data that this instance stores."
+      },
+      "data": {
+        "title": "The data it handles",
+        "body": "Your account data (name, email address, sign-in data and preferences). The financial accounts that you add, with their balances, movements and categories. The documents that you upload, for example payslips and statements, and the values read from them. Technical records of the sign-ins and of the synchronisations."
+      },
+      "where": {
+        "title": "Where the data is",
+        "body": "The data stays on the server of the host: a database and a file store that the host operates. Ledgerly has no central service. The authors of the software do not receive data from this instance. The credentials of the services that you connect are stored encrypted."
+      },
+      "external": {
+        "title": "External services",
+        "body": "This instance contacts an external service for your data only if you connect it in Settings: banks through Enable Banking, with read-only access, eToro, Binance and the other integrations listed there. Each connection reads your data from that service and stores it here. You can remove a connection at any time. If the host has turned on the optional reading aid, the text of an uploaded document that Ledgerly cannot read by itself is sent to OpenAI to extract its values."
+      },
+      "sharing": {
+        "title": "No sale and no sharing",
+        "body": "Your data is not sold, not used for advertising and not shared with third parties. It leaves the server only towards the services described above, and only to do what you asked."
+      },
+      "rights": {
+        "title": "Export and deletion",
+        "body": "You can export your data from Settings. To get a full copy of your data, to correct it or to delete your account and its data, ask the host of this instance."
+      }
+    },
+    "terms": {
+      "title": "Terms",
+      "intro": "These terms apply to the use of this Ledgerly instance. If you use it, you accept them.",
+      "service": {
+        "title": "The service",
+        "body": "The host of this instance provides it as it is, without warranty of any kind: no guarantee of availability, of correctness or of fitness for a purpose. The host can suspend the instance or an account at any time. To the extent the law allows, the host is not liable for damage that results from the use of the instance."
+      },
+      "advice": {
+        "title": "Not financial advice",
+        "body": "The balances, the totals, the charts and the estimates shown here are information for your own records. They can be incomplete, late or wrong. They are not financial, tax or legal advice. Check them against the statements of your bank or broker before you decide anything."
+      },
+      "responsibility": {
+        "title": "Your responsibility",
+        "body": "You are responsible for your password and your second factor, for the credentials of the services that you connect and for each connection that you turn on. Connect only accounts that are yours or that you have the right to read. Tell the host immediately if you think that someone else used your account."
+      },
+      "readOnly": {
+        "title": "Bank access is read-only",
+        "body": "The connection to a bank account only reads balances and movements. Ledgerly cannot start a payment, move money or change anything in your bank account. A bank consent has an expiry date, and you can withdraw it at any time, here or at your bank."
+      }
+    },
+    "contact": {
+      "title": "Contact",
+      "set": "To reach the host of this instance: {contact}",
+      "unset": "The host of this instance is the person who gave you your account. Contact that person directly."
     }
   }
 }

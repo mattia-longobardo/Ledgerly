@@ -196,7 +196,10 @@
       "redirects": "Dopo la risposta, il browser torna a:",
       "unverified": "Client non verificato.",
       "unverifiedHint": "Si è registrato da solo e ha scelto il proprio nome. Consenti solo se hai avviato tu questo collegamento e riconosci l'indirizzo qui sotto."
-    }
+    },
+    "privacy": "Privacy",
+    "terms": "Termini",
+    "legal": "Pagine legali"
   },
   "settings": {
     "title": "Impostazioni",
@@ -4646,6 +4649,67 @@
         "manage": "Gestisci in Integrazioni",
         "connect": "Collega in Integrazioni"
       }
+    }
+  },
+  "legal": {
+    "nav": "Pagine legali",
+    "signIn": "Accedi",
+    "language": {
+      "en": "English",
+      "it": "Italiano"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "intro": "Questa pagina spiega come questa istanza di Ledgerly tratta i dati personali. Ledgerly è un software self-hosted: ogni istanza ha il suo host, e questo testo vale per l'istanza a questo indirizzo.",
+      "host": {
+        "title": "Chi gestisce questa istanza",
+        "body": "L'host di questa istanza la gestisce per uso personale e domestico. L'host decide chi ha un account: non esiste una registrazione pubblica. L'host è responsabile dei dati che questa istanza conserva."
+      },
+      "data": {
+        "title": "I dati trattati",
+        "body": "I dati del tuo account (nome, indirizzo email, dati di accesso e preferenze). I conti finanziari che aggiungi, con saldi, movimenti e categorie. I documenti che carichi, per esempio buste paga ed estratti conto, e i valori letti da questi documenti. I registri tecnici degli accessi e delle sincronizzazioni."
+      },
+      "where": {
+        "title": "Dove stanno i dati",
+        "body": "I dati restano sul server dell'host: un database e un archivio di file gestiti dall'host. Ledgerly non ha un servizio centrale. Gli autori del software non ricevono dati da questa istanza. Le credenziali dei servizi che colleghi sono salvate cifrate."
+      },
+      "external": {
+        "title": "Servizi esterni",
+        "body": "Questa istanza contatta un servizio esterno per i tuoi dati solo se lo colleghi nelle Impostazioni: le banche tramite Enable Banking, con accesso in sola lettura, eToro, Binance e le altre integrazioni elencate lì. Ogni collegamento legge i tuoi dati da quel servizio e li salva qui. Puoi rimuovere un collegamento in ogni momento. Se l'host ha attivato l'aiuto opzionale alla lettura, il testo di un documento caricato che Ledgerly non riesce a leggere da solo viene inviato a OpenAI per estrarne i valori."
+      },
+      "sharing": {
+        "title": "Nessuna vendita e nessuna condivisione",
+        "body": "I tuoi dati non sono venduti, non sono usati per la pubblicità e non sono condivisi con terzi. Escono dal server solo verso i servizi descritti sopra, e solo per fare ciò che hai chiesto."
+      },
+      "rights": {
+        "title": "Esportazione e cancellazione",
+        "body": "Puoi esportare i tuoi dati dalle Impostazioni. Per avere una copia completa dei tuoi dati, per correggerli o per cancellare il tuo account e i suoi dati, chiedi all'host di questa istanza."
+      }
+    },
+    "terms": {
+      "title": "Termini",
+      "intro": "Questi termini valgono per l'uso di questa istanza di Ledgerly. Se la usi, li accetti.",
+      "service": {
+        "title": "Il servizio",
+        "body": "L'host di questa istanza la fornisce così com'è, senza garanzia di alcun tipo: nessuna garanzia di disponibilità, di correttezza o di idoneità a uno scopo. L'host può sospendere l'istanza o un account in ogni momento. Nei limiti consentiti dalla legge, l'host non risponde dei danni che derivano dall'uso dell'istanza."
+      },
+      "advice": {
+        "title": "Nessuna consulenza finanziaria",
+        "body": "I saldi, i totali, i grafici e le stime mostrati qui sono informazioni per il tuo archivio personale. Possono essere incompleti, in ritardo o sbagliati. Non sono consulenza finanziaria, fiscale o legale. Confrontali con i documenti della tua banca o del tuo intermediario prima di prendere una decisione."
+      },
+      "responsibility": {
+        "title": "La tua responsabilità",
+        "body": "Sei responsabile della tua password e del tuo secondo fattore, delle credenziali dei servizi che colleghi e di ogni collegamento che attivi. Collega solo conti che sono tuoi o che hai il diritto di leggere. Avvisa subito l'host se pensi che un'altra persona abbia usato il tuo account."
+      },
+      "readOnly": {
+        "title": "L'accesso alle banche è in sola lettura",
+        "body": "Il collegamento a un conto bancario legge solo saldi e movimenti. Ledgerly non può avviare un pagamento, spostare denaro o cambiare qualcosa nel tuo conto. Il consenso di una banca ha una scadenza, e puoi revocarlo in ogni momento, qui o presso la tua banca."
+      }
+    },
+    "contact": {
+      "title": "Contatto",
+      "set": "Per contattare l'host di questa istanza: {contact}",
+      "unset": "L'host di questa istanza è la persona che ti ha dato il tuo account. Contatta direttamente quella persona."
     }
   }
 }

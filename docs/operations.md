@@ -127,6 +127,9 @@ All settings are in `.env.homelab` (template: `.env.example`). Do not commit thi
 - `TRUSTED_PROXY_IPS`: the address of Traefik on the Docker network. The app trusts
   `X-Forwarded-For` from that address only, for the sign-in rate limit (5 attempts per minute per
   client). If Traefik's address changes, update this value.
+- `INSTANCE_CONTACT` (optional): how to reach the host, shown on the public pages `/privacy` and
+  `/terms`. Anybody can read it. Empty: the pages tell the reader to ask whoever gave the account.
+  Restart the container after a change.
 - `GOTIFY_URL`, `GOTIFY_TOKEN` (optional): failed jobs send a notification to the admins.
 - Authentik and mail settings saved in **Admin → Server** override `.env.homelab`.
 
