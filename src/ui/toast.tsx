@@ -8,9 +8,49 @@ export type ToastTone = "success" | "error";
 /** One manager for the whole app, so a toast can be raised after a Server Action returns. */
 export const toastManager = Toast.createToastManager();
 
-/** An error toast is announced assertively; a success one politely. */
-export function notify(message: string, tone: ToastTone = "success"): void {
-  toastManager.add({ title: message, type: tone, priority: tone === "error" ? "high" : "low" });
+/** What a toast can offer beside its message: one thing to do about it, such as "Undo". */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+/** A toast with something to press stays long enough to be read and pressed (WCAG 2.2.1). */
+const ACTION_TIMEOUT_MS = 8000;
+
+/** The toast whose action is still on offer: there is one "Undo" at a time. */
+let actionToast: string | null = null;
+
+/**
+ * An error toast is announced assertively; a success one politely.
+ *
+ * With an `action` the toast carries a button and stays for eight seconds instead of the usual
+ * three; the pointer and the focus stop the clock. A new toast with an action closes the one
+ * before it, so the action a person presses is always about the last thing they did.
+ */
+export function notify(message: string, tone: ToastTone = "success", action?: ToastAction): void {
+  const priority = tone === "error" ? "high" : "low";
+  if (action === undefined) {
+    toastManager.add({ title: message, type: tone, priority });
+    return;
+  }
+  if (actionToast !== null) toastManager.close(actionToast);
+  const id = toastManager.add({
+    title: message,
+    type: tone,
+    priority,
+    timeout: ACTION_TIMEOUT_MS,
+    actionProps: {
+      children: action.label,
+      onClick: () => {
+        toastManager.close(id);
+        action.onClick();
+      },
+    },
+    onClose: () => {
+      if (actionToast === id) actionToast = null;
+    },
+  });
+  actionToast = id;
 }
 
 function ToastList({ closeLabel }: { closeLabel: string }) {
@@ -27,6 +67,7 @@ function ToastList({ closeLabel }: { closeLabel: string }) {
         <Check aria-hidden className="size-3.5 shrink-0 text-pos" />
       )}
       <Toast.Title className="min-w-0" />
+      <Toast.Action className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[4px] px-1 text-base font-semibold text-card underline underline-offset-2" />
       <Toast.Close aria-label={closeLabel} className="focus-ring rounded-[4px] opacity-70 hover:opacity-100">
         <X aria-hidden className="size-3.5" />
       </Toast.Close>
