@@ -127,6 +127,8 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
       vacation: view.vacation,
       rol: view.rol,
       totals: view.totals,
+      // Release N5.1: what a month grants and the forecast at the year's end, per kind.
+      accrual: view.accrual,
       overdrawn: view.overdrawn,
       totalAllowanceMinutes: view.totalAllowanceMinutes,
       months: view.months,

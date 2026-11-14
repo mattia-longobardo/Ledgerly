@@ -2945,6 +2945,24 @@
  },
  "timeOff": {
   "2031": {
+   "accrual": {
+    "rol": {
+     "leads": false,
+     "payslipPeriod": "2031-04-01",
+     "rate": {
+      "minutesPerMonth": 399.6
+     },
+     "yearEndMinutes": 4917
+    },
+    "vacation": {
+     "leads": false,
+     "payslipPeriod": "2031-04-01",
+     "rate": {
+      "minutesPerMonth": 399.5999999999998
+     },
+     "yearEndMinutes": 4857
+    }
+   },
    "allowance": {
     "note": null,
     "totalDays": null,
