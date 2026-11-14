@@ -154,6 +154,14 @@ Server Action: 13 in `src/modules/users/actions.ts` (6 personali, 7 di amministr
 | USR-7 | confine debole | 1 | `src/modules/users/actions.ts:7`, `src/modules/users/actions.ts:61-65`, `src/modules/users/actions.ts:93`, `src/modules/users/actions.ts:106` | Logica applicativa dentro le Server Action: ripianificazione delle connessioni al cambio di fuso (`rescheduleConnections`), scrittura dei cookie, chiamate dirette a Better Auth. Una futura API non la eredita. | Caso d'uso `changePreferences` nel dominio che emette l'evento "fuso cambiato"; cookie solo in `apps/web`. |
 | USR-8 | confine debole | 1 | `src/modules/users/rules.ts:68-91`, `src/modules/users/rules.ts:127-135`, `src/modules/users/two-factor.ts:28-52` | Helper di presentazione nel modulo di dominio: `describeUserAgent`, `initialsOf`, chiavi di errore 2FA, formattazione del segreto TOTP, file dei codici di recupero. | Spostare in `apps/web` o `packages/ui`. |
 
+## funds
+
+Il modulo funds non è nell'ambito di questo audit. Questa sezione raccoglie le voci trovate durante i rilasci.
+
+| ID | Tipo | P | Dove | Cosa | Proposta di refactor |
+|---|---|---|---|---|---|
+| FND-1 | confine debole | 2 | `src/modules/funds/pension/service.ts:91` | `feeTariffs` chiama `seedTariffs` in lettura (`funds/pension/service.ts:91`): una lettura scrive. Trovata in N5 (14/11/2026); il codice non è cambiato. | Correzione in R2 (funds). |
+
 ## Trasversali
 
 | ID | Tipo | P | Dove | Cosa | Proposta di refactor |
