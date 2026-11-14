@@ -1,6 +1,6 @@
 # Time Off: maturazione mensile di ferie e ROL
 
-Stato: **proposta, in attesa della decisione di Mattia**. Nessun codice di prodotto cambia con questo documento.
+Stato: **approvata da Mattia il 14/11/2026 con tutti i default di §6** (opzione A, U1 + U2, rilascio `N5.1` dopo N5). Nessun codice di prodotto cambia con questo documento.
 
 Richiesta (14/11/2026): la pagina Time Off serve anche per pianificare. Oltre al residuo di oggi, l'utente vuole vedere quanto matura ogni mese e quanto avrà a una data futura. La sorgente è la busta paga. Un residuo negativo è un caso normale.
 
@@ -115,9 +115,11 @@ Costo accettato: l'avviso di superamento cambia ritmo. È una decisione scritta 
 
 Alternativa: farla in R2. Meno codice da portare, ma la funzione arriva dopo tutta la fase A.
 
-## 6. Decisioni per Mattia
+## 6. Decisioni
 
-| # | Decisione | Default |
+Mattia ha confermato tutti i default il 14/11/2026. U3 (linea nel grafico) non è nel primo rilascio.
+
+| # | Decisione | Deciso (default) |
 |---|---|---|
 | D1 | Sorgente del ritmo | A: buste paga, con ripiego sulla dotazione |
 | D2 | Cosa si vede nel primo rilascio | U1 + U2. U3 (linea nel grafico) nello stesso rilascio solo se confermi |
