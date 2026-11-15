@@ -36,8 +36,8 @@
       "queries": 77
     },
     "Investments (servizio)": {
-      "medianMs": 18.8,
-      "p95Ms": 20.9,
+      "medianMs": 22.1,
+      "p95Ms": 25.5,
       "queries": 33
     },
     "Funds (home)": {

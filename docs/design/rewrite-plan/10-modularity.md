@@ -405,6 +405,18 @@ di prima. Misura di N6, stesso utente pesante:
 La riga di Funds (home) peggiora per numero di query: è l'effetto della priorità 1 (un solo modello) sulla priorità
 3, dichiarato a Mattia nella richiesta di OK di N6 (§10.9.3). Le altre misure del file non sono state riscritte.
 
+**Base cambiata dopo il passo 1 di N1, solo per «Investments (servizio)»** (decisione scritta di Mattia del
+15/11/2026). La base di N0 era del metodo a un processo; il gate misura la mediana migliore di 5 processi. Su `main`,
+senza modifiche a quella vista, la misura era a 0,6 ms dal limite e il gate dava un rosso falso con l'host carico.
+Rimisura a 5 processi su `v0.18.0`, stesso utente pesante: tre misure di seguito (19,7, 22,1 e 22,7 ms), base = quella
+di mezzo.
+
+| Vista | Prima (N0) | Dopo la rimisura | Motivo |
+|---|---|---|---|
+| Investments (servizio) | 18,8 ms · p95 20,9 · 33 query | 22,1 ms · p95 25,5 · 33 query | Metodo di misura diverso. Stesso numero di query |
+
+Nessun'altra riga del file è cambiata. La soglia del 10% resta.
+
 `POST /imports` non è misurata: chiede un documento, il bucket e `after()` di Next. Le pagine (tempo di risposta del
 server) non sono misurate in N0: l'utente pesante esiste solo in `ledgerly_test` e l'anteprima locale non accetta il
 login con password. Ogni «pagina» della tabella è l'insieme delle letture del suo `page.tsx`.
