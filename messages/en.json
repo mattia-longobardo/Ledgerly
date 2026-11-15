@@ -1044,6 +1044,122 @@
       "confirmDescription": "Its refresh tokens are deleted and the next connection asks for your consent again.",
       "cancel": "Cancel",
       "failed": "It could not be done. Try again."
+    },
+    "plugins": {
+      "states": {
+        "inactive": "Not active",
+        "active": "Active"
+      },
+      "detail": {
+        "paused": "Readings have been stopped since {date}. Credentials and connections are saved."
+      },
+      "actions": {
+        "enable": "Turn on",
+        "disable": "Turn off"
+      },
+      "disable": {
+        "title": "Turn off {name}?",
+        "description": "{name} readings stop and its section disappears from the settings. Credentials, connections, accounts and transactions stay saved. Everything resumes when you turn it on again.",
+        "links": "{count, plural, one {You have # active connection.} other {You have # active connections.}}",
+        "cancel": "Keep it on",
+        "confirm": "Turn off"
+      },
+      "toasts": {
+        "enabled": "{name} turned on",
+        "disabled": "{name} turned off"
+      },
+      "errors": {
+        "failed": "Couldn't save. Try again."
+      }
+    },
+    "banks": {
+      "title": "Banks",
+      "description": "Connect your bank accounts. Ledgerly reads balances and transactions and cannot make payments.",
+      "setup": {
+        "intro": "To connect a bank you need your own Enable Banking application. You create it once.",
+        "step1": "Open <link>enablebanking.com</link> and create an account.",
+        "step2": "Register a Production application with this return address:",
+        "step3": "Copy the application ID and download the private key.",
+        "returnAddress": "Return address",
+        "copy": "Copy",
+        "copied": "Copied",
+        "newTab": "(opens in a new tab)",
+        "open": "Enter credentials"
+      },
+      "credentials": {
+        "title": "Enable Banking credentials",
+        "description": "They are encrypted and saved for your account only. They are never shown again after saving.",
+        "appId": "Application ID",
+        "appIdHint": "You find it on your application's page on Enable Banking.",
+        "appIdKeep": "Leave empty to keep the saved ID.",
+        "key": "Private key",
+        "keyHint": "Paste the whole content of the file, from the first line to the last.",
+        "keyFile": "Or choose the key file",
+        "readOnlyNote": "Ledgerly uses the key only to read your accounts. The application does not allow payments.",
+        "submit": "Verify and save",
+        "checking": "Verifying…"
+      },
+      "replace": {
+        "title": "Replace key",
+        "description": "The new key replaces the saved one. Connected banks stay connected.",
+        "submit": "Verify and replace",
+        "unchanged": "The saved key has not changed."
+      },
+      "application": {
+        "name": "Enable Banking application",
+        "savedOn": "Credentials saved on {date}",
+        "remove": "Remove credentials",
+        "removeBlocked": "To remove the credentials, disconnect the banks first."
+      },
+      "remove": {
+        "title": "Remove the credentials?",
+        "description": "The application ID and the private key are deleted from Ledgerly. The application on Enable Banking stays: you can delete it on their site.",
+        "cancel": "Keep",
+        "confirm": "Remove"
+      },
+      "invalidKey": "The key is no longer valid. Bank readings are stopped.",
+      "empty": "No bank connected.",
+      "connect": "Connect a bank",
+      "oneBank": "For now you can connect one bank only.",
+      "row": {
+        "role": "{count, plural, one {# account} other {# accounts}}",
+        "validUntil": "access valid until {date}",
+        "lastSync": "Last reading",
+        "schedule": "Automatic readings"
+      },
+      "states": {
+        "active": "Connected",
+        "error": "Error",
+        "expired": "Access expired"
+      },
+      "detail": {
+        "expired": "Access to the bank has expired."
+      },
+      "actions": {
+        "disconnect": "Disconnect",
+        "replaceKey": "Replace key"
+      },
+      "disconnect": {
+        "title": "Disconnect {bank}?",
+        "description": "Access to the bank is closed. Accounts and transactions stay in Ledgerly and are no longer updated.",
+        "cancel": "Stay connected",
+        "confirm": "Disconnect"
+      },
+      "toasts": {
+        "saved": "Credentials saved",
+        "replaced": "Key replaced",
+        "removed": "Credentials removed",
+        "disconnected": "{bank} disconnected"
+      },
+      "errors": {
+        "missing": "Enter the application ID and the private key.",
+        "keyFormat": "This does not look like the private key file. Use the file downloaded from Enable Banking, unchanged.",
+        "credentialsInvalid": "Enable Banking does not recognise these credentials. Check that the ID and the key belong to the same application and that the application is active.",
+        "writeNotAllowed": "This application also allows payments. Ledgerly accepts read-only applications only.",
+        "unreachable": "Enable Banking is not responding. Nothing was saved. Try again in a minute.",
+        "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",
+        "failed": "Something went wrong. Try again."
+      }
     }
   },
   "errors": {
@@ -4731,6 +4847,71 @@
       "title": "Contact",
       "set": "To reach the host of this instance: {contact}",
       "unset": "The host of this instance is the person who gave you your account. Contact that person directly."
+    }
+  },
+  "banks": {
+    "connect": {
+      "title": "Connect a bank",
+      "parent": "Integrations",
+      "steps": {
+        "label": "Steps",
+        "bank": "Bank",
+        "done": "Done",
+        "completed": "completed"
+      },
+      "guard": {
+        "noCredentials": "First you need your Enable Banking credentials.",
+        "openSettings": "Go to settings",
+        "invalidKey": "The key is no longer valid.",
+        "replaceKey": "Replace key"
+      },
+      "bank": {
+        "heading": "Choose your bank",
+        "country": "Country",
+        "search": "Search",
+        "searchPlaceholder": "Bank name",
+        "list": "Banks",
+        "loading": "Loading banks…",
+        "loadFailed": "Couldn't read the list of banks.",
+        "noneForCountry": "No bank available for this country.",
+        "noMatch": "No bank matching \"{query}\". Check the name or change the country.",
+        "privacy": "We take you to the bank's site to sign in. Ledgerly does not see your username and password.",
+        "duration": "Access lasts up to {days} days.",
+        "continue": "Continue",
+        "continueTo": "Continue on the {bank} site",
+        "opening": "Opening the bank…"
+      },
+      "return": {
+        "denied": "You did not give access to {bank}. No data was read. You can try again.",
+        "expired": "Too much time has passed. Start again from the choice of the bank.",
+        "session": "This request did not start from this session. Start again from the choice of the bank.",
+        "unreachable": "The bank did not respond. Try again in a minute.",
+        "bankUnavailable": "{bank} is not available now. Try again later or choose another bank."
+      },
+      "noAccounts": {
+        "title": "{bank} shared no accounts",
+        "description": "During sign-in the bank asks which accounts to share. Try again and choose at least one account. Some accounts, for example savings pots, are not shared by the bank.",
+        "retry": "Try again with {bank}",
+        "other": "Choose another bank"
+      },
+      "done": {
+        "heading": "{bank} is connected",
+        "validUntil": "Access is valid until {date}, then you renew it.",
+        "toSettings": "Back to settings"
+      },
+      "trial": {
+        "accounts": "{count, plural, one {The bank shared # account.} other {The bank shared # accounts.}}",
+        "transactions": "{count, plural, one {# transaction read, since {date}.} other {# transactions read, since {date}.}}",
+        "noTransactions": "No transactions read.",
+        "note": "This is a trial reading: accounts and transactions were not imported.",
+        "failed": "The first reading failed."
+      },
+      "errors": {
+        "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",
+        "oneBank": "For now you can connect one bank only.",
+        "network": "No connection. Check the network and try again.",
+        "failed": "Something went wrong. Try again."
+      }
     }
   }
 }

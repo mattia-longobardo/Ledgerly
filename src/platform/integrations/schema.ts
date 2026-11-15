@@ -25,7 +25,13 @@ export const integrationConnections = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     provider: text("provider").notNull(),
+    // Which of a provider's connections this is, for a provider that allows more than one per
+    // person (a plugin: one per bank). Empty for the providers with one connection (rewrite plan,
+    // 06-data.md §6.1).
+    instanceKey: text("instance_key").notNull().default(""),
     credentials: bytea("credentials").notNull(),
+    // When the access the person gave ends, for a provider whose access has an end.
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     state: text("state", { enum: CONNECTION_STATES }).notNull().default("active"),
     lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
     lastError: text("last_error"),
@@ -41,7 +47,15 @@ export const integrationConnections = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    // The old key stays until N2 (first half of a two-step change): the image before N1 writes
+    // with `ON CONFLICT (user_id, provider)`. While it stays, a person has one connection per
+    // provider.
     unique("integration_connections_user_provider_uq").on(table.userId, table.provider),
+    unique("integration_connections_user_provider_instance_uq").on(
+      table.userId,
+      table.provider,
+      table.instanceKey,
+    ),
     check("integration_connections_state_ck", sql`${table.state} in (${sql.raw(inList(CONNECTION_STATES))})`),
     check("integration_connections_provider_ck", sql`length(btrim(${table.provider})) between 1 and 40`),
     check(

@@ -13,9 +13,11 @@ import {
   credentialsSchema,
   entityTypeSchema,
   isKnownProvider,
+  isPluginProvider,
   nextRunAt,
   normalizeCounts,
   outcomeState,
+  pluginConnectionBagSchema,
   type ProviderLink,
   providerLinkSchema,
   type SyncKind,
@@ -45,6 +47,7 @@ export type IntegrationErrorCode =
   | "invalid_credentials"
   | "invalid_link"
   | "link_conflict"
+  | "connection_limit"
   | "run_closed"
   | "invalid_schedule";
 
@@ -66,6 +69,10 @@ export class IntegrationError extends Error {
 export interface Connection {
   id: string;
   provider: string;
+  /** Which of the provider's connections this is; empty for a provider with one. */
+  instanceKey: string;
+  /** When the access the person gave ends; null for a provider whose access has no end. */
+  expiresAt: Date | null;
   state: ConnectionState;
   lastOkAt: Date | null;
   lastError: string | null;
@@ -80,6 +87,8 @@ export interface Connection {
 const CONNECTION_COLUMNS = {
   id: integrationConnections.id,
   provider: integrationConnections.provider,
+  instanceKey: integrationConnections.instanceKey,
+  expiresAt: integrationConnections.expiresAt,
   state: integrationConnections.state,
   lastOkAt: integrationConnections.lastOkAt,
   lastError: integrationConnections.lastError,
@@ -152,6 +161,70 @@ export async function saveConnection(
     })
     .returning(CONNECTION_COLUMNS);
   return toConnection(row);
+}
+
+/**
+ * Stores the access a plugin got for one of a person's connections, sealed like every credential.
+ * A plugin has one connection per `instanceKey` (a bank), so saving again for the same key
+ * replaces the access: that is what renewing is. While the old unique key stays (until N2) a
+ * person has one connection per provider, and a second one is refused as `connection_limit`.
+ *
+ * The connection is not scheduled here: its schedule has no rule, so the dispatcher never asks
+ * for a pass nobody has registered.
+ */
+export async function savePluginConnection(
+  ctx: Pick<Ctx, "userId">,
+  input: {
+    provider: string;
+    instanceKey: string;
+    credentials: Record<string, string>;
+    expiresAt: Date | null;
+  },
+  now: Date = new Date(),
+): Promise<Connection> {
+  const provider = input.provider.trim();
+  const instanceKey = input.instanceKey.trim();
+  if (!isPluginProvider(provider)) throw new IntegrationError("unknown_provider");
+  if (instanceKey.length < 1 || instanceKey.length > 200) throw new IntegrationError("invalid_credentials");
+  const parsed = pluginConnectionBagSchema.safeParse(input.credentials);
+  if (!parsed.success) throw new IntegrationError("invalid_credentials");
+  const credentials = sealJson(keyRing(), parsed.data);
+  try {
+    const [row] = await getDb()
+      .insert(integrationConnections)
+      .values(
+        userScoped(ctx).stamp({
+          provider,
+          instanceKey,
+          credentials,
+          expiresAt: input.expiresAt,
+          state: "active" as const,
+          schedule: { rules: [] },
+          nextSyncAt: null,
+        }),
+      )
+      .onConflictDoUpdate({
+        target: [
+          integrationConnections.userId,
+          integrationConnections.provider,
+          integrationConnections.instanceKey,
+        ],
+        set: {
+          credentials,
+          expiresAt: input.expiresAt,
+          state: "active" as const,
+          lastError: null,
+          updatedAt: now,
+        },
+      })
+      .returning(CONNECTION_COLUMNS);
+    return toConnection(row);
+  } catch (error) {
+    if (isUniqueViolation(error, "integration_connections_user_provider_uq")) {
+      throw new IntegrationError("connection_limit");
+    }
+    throw error;
+  }
 }
 
 /**

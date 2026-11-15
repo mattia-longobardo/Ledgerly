@@ -495,6 +495,10 @@ const PAGES: Screen[] = [
   { name: "/settings/categories", session: "layout", open: go("/settings/categories") },
   { name: "/settings/data", session: "layout", open: go("/settings/data") },
   { name: "/settings/integrations", session: "layout", open: go("/settings/integrations") },
+  // Release N1: the layout user has the bank plugin on with nothing saved, so the page above has
+  // the plugin's row "Active" and the section "Banks" on its guide; the admin's has "Not active".
+  // The procedure, for the same user, stops at its guard.
+  { name: "/banks/connect (no credentials)", session: "layout", open: go("/banks/connect") },
 
   // Admin. For anybody else Users and Server answer 404, which is the point of them; Integrations
   // answers for everybody but shows the jobs card only here — the page F8 broke and F9 found.
@@ -519,6 +523,18 @@ const PAGES: Screen[] = [
 
 /** Overlays: they live in a portal, outside `<main>`, so each says what to measure. */
 const OVERLAYS: Screen[] = [
+  {
+    // Release N1: the credentials of the bank plugin, on the layout user (plugin on, nothing saved).
+    name: "the bank credentials dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/integrations");
+      await settled(page);
+      await page.getByRole("button", { name: /Enter credentials|Inserisci credenziali/ }).click();
+      await settledDialog(page);
+    },
+  },
   {
     // The sync schedule of the layout user's Trek link (seeded on manual only).
     name: "the sync schedule dialog",

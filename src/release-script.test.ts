@@ -109,6 +109,37 @@ describe("scripts/release.sh", () => {
     expect(run.stdout).toContain("uguale");
   });
 
+  it("tags, builds and starts a plugin with the app when asked", () => {
+    const run = release("ok", ["--plugin", "enablebanking"]);
+    expect(run.status).toBe(0);
+    expect(run.calls).toContain(
+      "docker tag ledgerly-plugin-enablebanking:latest ledgerly-plugin-enablebanking:pre-t1",
+    );
+    expect(run.calls).toContain("docker compose build ledgerly ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain("docker compose up -d --wait ledgerly ledgerly-plugin-enablebanking");
+  });
+
+  it("keeps no image for a service deployed for the first time, and goes on", () => {
+    const docker = join(work, "bin", "docker");
+    writeFileSync(
+      docker,
+      `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\n[ "$1 $2" = "image inspect" ] && [ "$3" = "ledgerly-plugin-enablebanking:latest" ] && exit 1\nexit 0\n`,
+    );
+    chmodSync(docker, 0o755);
+    const run = release("ok", ["--plugin", "enablebanking"]);
+    expect(run.status).toBe(0);
+    expect(run.calls).toContain("docker tag ledgerly:latest ledgerly:pre-t1");
+    expect(run.calls.some((call) => call.startsWith("docker tag ledgerly-plugin-enablebanking"))).toBe(false);
+    expect(run.stdout).toContain("no image ledgerly-plugin-enablebanking:latest yet");
+    expect(run.calls).toContain("docker compose up -d --wait ledgerly ledgerly-plugin-enablebanking");
+  });
+
+  it("refuses a plugin id that is not one", () => {
+    const run = release("ok", ["--plugin", "../x"]);
+    expect(run.status).toBe(1);
+    expect(built(run.calls)).toBe(false);
+  });
+
   it('reads the snapshot "before" with the code of another checkout when asked', () => {
     const run = release("ok", ["--before-from", work]);
     expect(run.status).toBe(0);

@@ -1,0 +1,79 @@
+// src/app/api/v1/plugins/[plugin]/callback/route.ts — where a provider sends the browser back
+// after the person gave, or refused, access (rewrite plan, 04-now.md §4.1; ux/n1-plugin-bank.md
+// §6.3). It draws nothing: it hands the return to the core and answers with a redirect, so nobody
+// copies a code by hand.
+//
+// The route is under `/api/v1` because that is the address registered with the provider, but it
+// is not part of the token API: it is reached by a browser, with the session cookie, and the
+// return is accepted only for the session that started it.
+import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { redactForLog } from "@/platform/auth/logger";
+import { getOptionalSession } from "@/platform/auth/session";
+import { readEnv } from "@/platform/env";
+import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
+import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
+
+export const dynamic = "force-dynamic";
+
+const MAX_PARAM_LENGTH = 2000;
+const address = z.union([z.ipv4(), z.ipv6()]);
+
+/** A query parameter, or null when it is absent, empty or longer than anything a provider sends. */
+function param(url: URL, name: string): string | null {
+  const value = url.searchParams.get(name);
+  return value === null || value === "" || value.length > MAX_PARAM_LENGTH ? null : value;
+}
+
+/** The person's own address as the reverse proxy reports it; null when it is not an address. */
+function clientIp(request: NextRequest): string | null {
+  const first = (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  return address.safeParse(first).success ? first : null;
+}
+
+/**
+ * Back to the procedure, with nothing of the provider in the address: a step, the connection's
+ * id, or a code of error and the name of the bank (§6.3).
+ */
+function back(outcome: ReturnOutcome): NextResponse {
+  const target = new URL("/banks/connect", readEnv().BETTER_AUTH_URL);
+  if (outcome.ok) {
+    target.searchParams.set("step", "done");
+    target.searchParams.set("c", outcome.connectionId);
+  } else {
+    target.searchParams.set("step", "bank");
+    target.searchParams.set("error", outcome.error);
+    if (outcome.bank !== null) target.searchParams.set("bank", outcome.bank);
+  }
+  const response = NextResponse.redirect(target, 303);
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  return response;
+}
+
+export async function GET(
+  request: NextRequest,
+  context: RouteContext<"/api/v1/plugins/[plugin]/callback">,
+): Promise<NextResponse> {
+  const { plugin } = await context.params;
+  const session = await getOptionalSession();
+  // No session: the page behind this redirect sends to sign-in, and nothing was exchanged.
+  if (!session || !PLUGIN_ID.test(plugin)) return back({ ok: false, error: "session", bank: null });
+  const url = new URL(request.url);
+  try {
+    return back(
+      await completeAccess(session.ctx, {
+        pluginId: plugin,
+        sessionId: session.sessionId,
+        query: { state: param(url, "state"), code: param(url, "code"), error: param(url, "error") },
+        presence: {
+          ip: clientIp(request),
+          userAgent: request.headers.get("user-agent")?.slice(0, 400) ?? null,
+        },
+      }),
+    );
+  } catch (error) {
+    console.error("[plugins] a return could not be completed", redactForLog(error));
+    return back({ ok: false, error: "unreachable", bank: null });
+  }
+}

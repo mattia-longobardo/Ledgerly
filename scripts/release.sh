@@ -1,12 +1,14 @@
 #!/bin/sh
 # scripts/release.sh — one release of Ledgerly, from the way back to the numbers "after".
 #
-# Usage: sh scripts/release.sh <release-id> [--no-dump] [--cron] [--before-from <checkout>]
-#        e.g. `n5-1 --no-dump`, `r1 --cron`, `n6 --before-from ../ledgerly-v0.14.0`
+# Usage: sh scripts/release.sh <release-id> [--no-dump] [--cron] [--plugin <id>] [--before-from <checkout>]
+#        e.g. `n5-1 --no-dump`, `r1 --cron`, `n6 --before-from ../ledgerly-v0.14.0`,
+#        `n1 --plugin enablebanking --before-from ../ledgerly-v0.17.0`
 #
 # The steps of docs/RELEASE.md §2-§4, in the one order that keeps a way back:
 #   1. the lock, a clean tree, HEAD = origin/main;
-#   2. the image `pre-<id>` (and `ledgerly-cron:pre-<id>` with `--cron`);
+#   2. the image `pre-<id>` (and `ledgerly-cron:pre-<id>` with `--cron`, the image of a plugin
+#      with `--plugin <id>`; a service deployed for the first time has no image to keep);
 #   3. the release's folder and its dump (`scripts/release-dump.sh`; `--no-dump`: the folder only);
 #   4. the numbers snapshot "before" (`npm run numbers`), with its checksum verified;
 #   5. the build and the start, waiting for the health check;
@@ -33,7 +35,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-release=${1:?usage: release.sh <release-id> [--no-dump] [--cron] [--before-from <checkout>]}
+release=${1:?usage: release.sh <release-id> [--no-dump] [--cron] [--plugin <id>] [--before-from <checkout>]}
 shift
 dump_mode=""
 services="ledgerly"
@@ -41,7 +43,14 @@ before_from="$PWD"
 while [ $# -gt 0 ]; do
   case "$1" in
     --no-dump) dump_mode="--no-dump" ;;
-    --cron) services="ledgerly ledgerly-cron" ;;
+    --cron) services="$services ledgerly-cron" ;;
+    --plugin)
+      shift
+      case "${1:-}" in
+        "" | *[!a-z0-9-]*) echo "--plugin needs the id of a plugin" >&2; exit 1 ;;
+      esac
+      services="$services ledgerly-plugin-$1"
+      ;;
     --before-from)
       shift
       before_from=$(cd "${1:?--before-from needs a checkout}" && pwd)
@@ -69,7 +78,12 @@ sha=$(git rev-parse HEAD)
 
 # ——— 2. The image to go back to ———————————————————————————————————————————————————————————————
 for service in $services; do
-  docker tag "$service:latest" "$service:pre-$release" || stop "docker tag $service:pre-$release failed"
+  # A service deployed for the first time has no image yet: its way back is to stop it.
+  if docker image inspect "$service:latest" > /dev/null 2>&1; then
+    docker tag "$service:latest" "$service:pre-$release" || stop "docker tag $service:pre-$release failed"
+  else
+    echo "no image $service:latest yet: nothing to keep for this service"
+  fi
 done
 
 # ——— 3. The folder and the dump ———————————————————————————————————————————————————————————————

@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { parseKeyRing } from "@/platform/keyring";
+import { parsePluginConfig } from "@/platform/plugin-config";
 
 /** Compose passes unset variables as "", which must behave like "absent". */
 const blankAsUndefined = (value: unknown) => (value === "" ? undefined : value);
@@ -93,6 +94,11 @@ export const envSchema = z
     // address, a name, a sentence. Optional — without it the pages say to ask whoever gave the
     // account. Public by definition: never a secret.
     INSTANCE_CONTACT: z.preprocess(blankAsUndefined, z.string().trim().min(1).max(200).optional()),
+    // The plugins of this instance (rewrite plan, 04-now.md §4.1): `id=url[,id=url…]` and, for
+    // each, the secret the core and that plugin share, `id=secret[,…]`. Both optional — without
+    // them the app has no plugin and behaves as it did before. Checked together below.
+    PLUGIN_URLS: z.preprocess(blankAsUndefined, z.string().optional()),
+    PLUGIN_SECRETS: z.preprocess(blankAsUndefined, z.string().optional()),
     CRON_SECRET: z.string().min(32),
     HEARTBEAT_FILE: z.string().min(1).default("/tmp/ledgerly-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
@@ -111,6 +117,15 @@ export const envSchema = z
       .pipe(z.array(ipOrCidr)),
   })
   .superRefine((env, ctx) => {
+    try {
+      parsePluginConfig(env.PLUGIN_URLS, env.PLUGIN_SECRETS);
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PLUGIN_URLS"],
+        message: error instanceof Error ? error.message : "Invalid plugin configuration",
+      });
+    }
     if (env.NODE_ENV !== "production") return;
     for (const key of ["BETTER_AUTH_URL", "OIDC_DISCOVERY_URL"] as const) {
       if (!isHttpsOrLoopback(env[key])) {

@@ -1,5 +1,9 @@
 // Every module's Drizzle tables, re-exported for the client and for Better Auth.
 // Each task that adds a `schema.ts` adds one `export * from` line here.
+// `platform/plugins/schema` is not here on purpose: its tables are read with the query builder,
+// which needs no barrel, and a line here would make the plugin runtime and the database client
+// import each other — a pair the known lists of `baselines/modularity.json` may not gain (M4).
+// The migrations find every `schema.ts` by themselves (`drizzle.config.ts`).
 export * from "@/platform/auth/schema";
 export * from "@/platform/auth/oauth/schema";
 export * from "@/modules/users/schema";
