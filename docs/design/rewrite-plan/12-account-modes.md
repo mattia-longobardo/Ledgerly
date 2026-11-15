@@ -9,7 +9,8 @@ sugli altri rilasci (§12.5), la proposta sul perimetro di N3 (§12.6) e le altr
 §12.6 e §12.7 erano domande per Mattia: **decise il 15/11/2026** (D1 B; D2 e D3 con il default). Decisioni H36-H38.
 
 Le stime tecniche di questo file sono una prima lettura del designer. I punti con il segno **[DEV]** vanno confermati
-dallo sviluppatore prima dello sviluppo.
+dallo sviluppatore prima dello sviluppo. **Confermati o corretti il 16/11/2026: §12.8.** Dove §12.8 e una riga più
+vecchia di questo file dicono cose diverse, vale §12.8.
 
 ## 12.1 Le tre modalità di conto (H32)
 
@@ -150,3 +151,29 @@ Nate dal controllo degli effetti (§12.5). **Mattia ha scelto il default (A) per
 | D3 | Passaggio di un conto da Wallet alla banca (N4) con movimenti a mano non ancora inviati | Sul conto Wallet «BBVA» hai una spesa a mano di 20 € «Da inviare». Avvii il passaggio a Enable Banking | Il passaggio aggiorna prima Wallet e invia la spesa. Se un movimento resta non inviato, la prova a secco lo elenca e il passaggio si ferma finché lo invii o lo elimini | Il passaggio parte. La spesa resta in Ledgerly come movimento a mano sul conto, ora «sola lettura»; Wallet non la riceve | A: lo storico di Wallet è completo e il controllo del saldo è pulito; un passo in più. B: più rapido; Wallet non ha quel movimento e la spesa può risultare doppia quando la banca la legge. Tocca N4 | **A** (H38) |
 
 Nessuna domanda è aperta.
+
+## 12.8 Conferme dello sviluppatore (16/11/2026)
+
+Lette sul codice di `v0.20.0` (`1e235ab`). Nessuna conferma cambia il perimetro di N3 o di N3.1 e nessuna chiede una
+decisione di prodotto. Una sola è una correzione: la regola del saldo (punto 1).
+
+| # | Punto **[DEV]** | Esito | Dettaglio |
+|---|---|---|---|
+| 1 | §12.6 punto 1 · la regola del saldo non chiede una migrazione | **Corretto** | Nessun dato si sposta, ma serve un cambio di schema: il check `balance_entries_source_ck` si allarga con la fonte `movement` (check allargato: eccezione di [`06-data.md`](06-data.md) §6.2 regola 4). Motivo: oggi il saldo è sempre una riga di `balance_entries`, letta da più di 10 punti (Accounts, Overview, patrimonio, snapshot, Pockets, Subscriptions, export, API, MCP). Calcolare «ultimo saldo + movimenti a mano» in ogni lettura vuol dire toccarle tutte, con una query in più o con SQL sulla tabella di un altro modulo. La regola è invece una funzione pura (`accounts/rules.ts`) che scrive i punti del saldo dopo ogni movimento a mano e dopo ogni saldo nuovo, come già fa `deriveMonthEnds` con la fonte `derived`. Ogni lettura resta com'è e vede lo stesso numero. `deriveMonthEnds` non cambia: i movimenti a mano restano fuori dalla ricostruzione dei mesi passati di un conto con una sorgente |
+| 2 | §12.6 punto 1 · «stessa data» | Precisato | «Dopo quella data» = un giorno dopo, oppure lo stesso giorno se il movimento è stato scritto dopo la lettura del saldo. Esempio: scrivi che «Contanti» ha 80 € la mattina e paghi 4,50 € al bar lo stesso giorno: il saldo scende. Una lettura della banca fatta la sera comprende i movimenti scritti prima |
+| 3 | §12.6 punto 2 · dimensione M di N3.1 | Confermato | La scrittura di un record su Wallet esiste già nel client (`createRecord`) ed è usata dagli interessi. La parte più grande è la corrispondenza delle categorie sopra la sync dei nomi nei due sensi di oggi |
+| 4 | §12.6 punto 3 · il riempimento della corrispondenza lascia uguali i numeri | Confermato | Una riga di corrispondenza per ogni legame `category` di oggi, verso la stessa categoria. Nessuna riga di `transactions` cambia `category_id` |
+| 5 | §12.6 punto 4 · tra N3 e N3.1 il dialogo non offre i conti «lettura e scrittura» | Confermato | La modalità è già calcolata in N3 (punto 9). Il dialogo e il servizio rifiutano la modalità `two_way`, non un nome di fornitore |
+| 6 | §12.6 punto 5 · criterio §6 #8 per la scrittura su Wallet | Confermato: **sì, in N3.1** | Ledgerly crea record su un servizio esterno e non li può ritirare. N3 non scrive fuori da Ledgerly: #8 no |
+| 7 | §12.5 N2 · un invio fallito conta nei «fallimenti consecutivi»? | Confermato, con un limite | Conta un errore del collegamento (rete, accesso rifiutato): è un fallimento del passo dei movimenti. Non conta il rifiuto di un singolo movimento: resta «Non inviato» sulla riga |
+| 8 | §12.5 N4 punto 2 · quale saldo legge il controllo | Confermato | Il controllo non esiste ancora. Leggerà solo le righe con fonte `provider`: i movimenti a mano stanno in righe con fonte `movement` (punto 1) e restano fuori senza altra logica |
+| 9 | §12.5 Contratto dei plugin · nome della capacità e dove si dichiara in N3 | Confermato | Nome: `createRecord`, accanto a `editRecord` (stesso nome del metodo del client di oggi). Per un plugin arriva dal manifest. Per i fornitori ancora nel core si dichiara in `src/platform/integrations/rules.ts`, accanto a `KINDS_OF`: la cartella dei fornitori. La regola `accountMode` del dominio riceve solo «ha una sorgente» e «la sorgente sa creare un movimento»: la lista nota di M12 non cresce. Risposta di `POST /push` (N3.1): per ogni record l'id esterno e la chiave di idempotenza ricevuta |
+| 10 | §12.5 R1 · ordine dei due passi | Confermato | Prima l'invio, poi la lettura. L'invio salva il legame esterno; la lettura riconosce il record dal legame. Se la risposta dell'invio si perde, vale il segno nella nota, come per gli interessi (`postingMarker`) |
+| 11 | §12.5 R2 · scope OAuth per la scrittura dei movimenti | Confermato: esistente | Lo scope `write` esiste già (`src/platform/auth/scopes.ts`). Nessuno scope nuovo: criterio §6 #4 no |
+| 12 | §12.5 R5f · elenco delle colonne | Confermato | Candidata: `categories.provider_name`, con il segno `name` in `categories.locally_edited` per le categorie non più «aggiunte». I legami `category` e `category_group` di `provider_links` restano: sono la base della corrispondenza. Si decide dopo un rilascio stabile di N3.1 |
+| 13 | §12.5 · il percorso degli interessi è riusabile per un movimento a mano | Confermato in parte | Riusabili: `createRecord` del client e il segno contro i doppioni. Non riusabile: `interests/posting.ts`, che è scritto sulle righe degli interessi |
+| 14 | `03-releases.md` N3 · dimensione L | Confermato | Due PR in sequenza, ognuna con il suo OK: prima il movimento a mano con le modalità e la regola del saldo, poi le categorie automatiche. La prima è la parte che tocca i saldi: da sola ha una fotografia dei numeri più facile da leggere |
+
+Effetto della correzione 1 sul rollback di N3: l'immagine precedente legge le righe con fonte `movement` come un
+saldo qualunque, ma non le aggiorna. File di recupero: `n3-rollback.sql`, che le cancella; i movimenti a mano restano.
+

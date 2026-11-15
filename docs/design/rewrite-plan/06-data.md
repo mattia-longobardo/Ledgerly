@@ -24,6 +24,7 @@ I nomi sono indicativi: il numero e il nome definitivi nascono con `npm run db:g
 | N2 | Dati: righe `running` di `sync_runs` e `job_runs` più vecchie di un'ora → `failed` con motivo `orphaned`; cancellazione delle righe di `sync_runs` oltre 30 giorni | Dati | Sì. Dump prima |
 | N3 | `transactions.category_origin` (`user`, `provider`, `memory`, `model`, `table`, null), `category_confidence`, `category_model_version`; valore `manual` per l'origine del movimento | Additiva | Sì |
 | N3 | Tabelle `category_memory` e `category_models`, per utente, `on delete cascade` | Additiva | Sì |
+| N3 | Check `balance_entries_source_ck` allargato con la fonte `movement`: il saldo dopo un movimento a mano ([`12-account-modes.md`](12-account-modes.md) §12.8, punto 1) | Additiva (un check più largo, §6.2 regola 4) | Sì: il check accetta i valori vecchi. L'immagine precedente legge le righe nuove e non le aggiorna: `n3-rollback.sql` le cancella |
 | N3 | Categoria suggerita e codice del motivo (con i parametri) sul movimento, nullable. Nomi delle colonne: li sceglie lo sviluppatore | Additiva | Sì |
 | N3.1 | Stato dell'invio sul movimento a mano (`da inviare`, `non inviato`, null), nullable. Il link esterno dopo l'invio usa `provider_links` | Additiva | Sì. Un movimento già inviato resta sulla sorgente |
 | N3.1 | Corrispondenza «categoria della sorgente → categoria di Ledgerly», per utente e per sorgente, `on delete cascade`; categoria della sorgente sul movimento, nullable | Additiva | Sì |
