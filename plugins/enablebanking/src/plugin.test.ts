@@ -14,7 +14,16 @@ import {
 import { errorBodySchema } from "../../../src/platform/plugins/contract/errors";
 import { manifestSchema } from "../../../src/platform/plugins/contract/manifest";
 import { PluginFailure } from "./failure";
-import { authComplete, authRevoke, authStart, institutions, sync, toTransaction, verify } from "./handlers";
+import {
+  authComplete,
+  authRevoke,
+  authStart,
+  institutions,
+  stableIdOf,
+  sync,
+  toTransaction,
+  verify,
+} from "./handlers";
 import { parsePrivateKey, signToken } from "./jwt";
 import { MANIFEST } from "./manifest";
 import { errorName, failureCode, type Fetch } from "./provider";
@@ -257,6 +266,49 @@ describe("auth", () => {
     });
   });
 
+  it("gives an account whose fields the bank left empty, or filled too long, in the contract's shape", async () => {
+    const long = "h".repeat(300);
+    const { fetchFn } = fakeProvider({
+      "POST /sessions": {
+        body: {
+          session_id: "s-1",
+          aspsp: { name: "Zeta Bank", country: "IT" },
+          access: {},
+          accounts: [
+            {
+              uid: "u-1",
+              account_id: { iban: "" },
+              name: "  ",
+              product: "Pocket",
+              currency: "EUR",
+              cash_account_type: "",
+              identification_hash: "",
+            },
+            { uid: "u-2", name: "n".repeat(300), currency: "EUR", identification_hash: long },
+            { uid: "u-3", currency: "EUR", identification_hash: `${long}x` },
+          ],
+        },
+      },
+    });
+    const answer = authCompleteResponseSchema.parse(
+      await authComplete({ credentials: CREDENTIALS, code: "c-1" }, { fetchFn }),
+    );
+    expect(answer.accounts[0]).toEqual({
+      externalId: "u-1",
+      stableId: null,
+      name: "Pocket",
+      identifier: null,
+      currency: "EUR",
+      kind: null,
+    });
+    expect(answer.accounts[1].name).toHaveLength(200);
+    expect(answer.accounts[1].stableId).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(answer.accounts[2].stableId).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(answer.accounts[2].stableId).not.toBe(answer.accounts[1].stableId);
+    expect(stableIdOf(long)).toBe(answer.accounts[1].stableId);
+    expect(stableIdOf("short-hash")).toBe("short-hash");
+  });
+
   it("closes an access, and counts one that has already ended as closed", async () => {
     const open = fakeProvider({ "DELETE /sessions/s-1": { body: { message: "OK" } } });
     expect(await authRevoke({ credentials: CREDENTIALS, session: { id: "s-1" } }, open)).toEqual({
@@ -301,6 +353,23 @@ describe("a movement", () => {
       merchantCategoryCode: "5411",
       bankTransactionCode: "PMNT · POSD · Card",
     });
+  });
+
+  it("takes empty texts of the bank as absent, so the answer stays in the contract", () => {
+    const bare = toTransaction("u-1", {
+      ...ROW,
+      entry_reference: "",
+      creditor: { name: " " },
+      merchant_category_code: "",
+      bank_transaction_code: { code: "", sub_code: null, description: "" },
+    });
+    expect(bare).toMatchObject({
+      externalId: null,
+      counterparty: null,
+      merchantCategoryCode: null,
+      bankTransactionCode: null,
+    });
+    expect(syncResponseSchema.shape.transactions.element.safeParse(bare).success).toBe(true);
   });
 
   it("names the debtor of a credit, keeps a pending one, drops the other states", () => {

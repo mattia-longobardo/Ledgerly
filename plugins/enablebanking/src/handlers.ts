@@ -3,6 +3,7 @@
  * schema, speaks to the provider with the credentials of that body, and answers with the
  * contract's shape. Nothing is kept between two calls.
  */
+import { createHash } from "node:crypto";
 import type { z } from "zod";
 import {
   authCompleteRequestSchema,
@@ -112,6 +113,26 @@ export async function authStart(body: unknown, deps: Deps = {}): Promise<AuthSta
   return { url: started.url };
 }
 
+/**
+ * A text of the provider as the contract carries it: `null` when it is absent or empty, cut when
+ * it is longer than the contract allows. A bank fills these fields as it likes — a real bank gave
+ * accounts with an empty hash — and an answer must not fail for a field that is only missing.
+ */
+export function textOrNull(value: string | null | undefined, max: number): string | null {
+  const text = (value ?? "").trim();
+  return text === "" ? null : text.slice(0, max);
+}
+
+/**
+ * The id of an account that stays the same across accesses. A value longer than the contract
+ * allows is not cut — two long values could then look the same — but replaced by its digest.
+ */
+export function stableIdOf(value: string | null | undefined): string | null {
+  const text = (value ?? "").trim();
+  if (text === "") return null;
+  return text.length <= 200 ? text : `sha256:${createHash("sha256").update(text).digest("hex")}`;
+}
+
 function instantOrNull(value: string | null | undefined): string | null {
   if (!value) return null;
   const time = Date.parse(value);
@@ -130,11 +151,11 @@ export async function authComplete(body: unknown, deps: Deps = {}): Promise<Auth
         ? [
             {
               externalId: account.uid,
-              stableId: account.identification_hash ?? null,
-              name: account.name ?? account.product ?? null,
-              identifier: account.account_id?.iban ?? null,
+              stableId: stableIdOf(account.identification_hash),
+              name: textOrNull(account.name, 200) ?? textOrNull(account.product, 200),
+              identifier: textOrNull(account.account_id?.iban, 64),
               currency: account.currency,
-              kind: account.cash_account_type ?? null,
+              kind: textOrNull(account.cash_account_type, 40),
             },
           ]
         : [],
@@ -169,7 +190,7 @@ export function toTransaction(account: string, row: ProviderTransaction): Plugin
   const bankCode = code ? [code.code, code.sub_code, code.description].filter(Boolean).join(" · ") : "";
   return {
     accountExternalId: account,
-    externalId: row.entry_reference || null,
+    externalId: textOrNull(row.entry_reference, 200),
     status,
     bookingDate: dateOrNull(row.booking_date),
     valueDate: dateOrNull(row.value_date) ?? dateOrNull(row.transaction_date),
@@ -177,10 +198,9 @@ export function toTransaction(account: string, row: ProviderTransaction): Plugin
     direction,
     currency: row.transaction_amount.currency,
     text: (row.remittance_information ?? []).map((line) => line.slice(0, 2000)).slice(0, 40),
-    counterparty:
-      ((direction === "debit" ? row.creditor?.name : row.debtor?.name) ?? "").slice(0, 400) || null,
-    merchantCategoryCode: row.merchant_category_code?.slice(0, 10) || null,
-    bankTransactionCode: bankCode.slice(0, 120) || null,
+    counterparty: textOrNull(direction === "debit" ? row.creditor?.name : row.debtor?.name, 400),
+    merchantCategoryCode: textOrNull(row.merchant_category_code, 10),
+    bankTransactionCode: textOrNull(bankCode, 120),
   };
 }
 
@@ -240,7 +260,7 @@ export async function sync(body: unknown, deps: Deps = {}): Promise<SyncResponse
         answer.accounts.push({
           externalId: account,
           balances: balances.map((balance) => ({
-            type: balance.balance_type.slice(0, 40),
+            type: textOrNull(balance.balance_type, 40) ?? "OTHR",
             amount: balance.balance_amount.amount,
             currency: balance.balance_amount.currency,
             date: dateOrNull(balance.reference_date),
