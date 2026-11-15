@@ -31,8 +31,11 @@ import {
 const SECONDS_PER_DAY = 86_400;
 /** The pages of movements one call reads before it hands back a cursor. */
 const PAGES_PER_CALL = 60;
-/** The time one call may spend before it hands back a cursor: the core waits 60 seconds. */
-const BUDGET_MS = 40_000;
+/**
+ * The time one call may spend before it hands back a cursor. The core waits 60 seconds, and one
+ * more page — started just inside the budget — can take the provider's own 30.
+ */
+const BUDGET_MS = 25_000;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface Deps {

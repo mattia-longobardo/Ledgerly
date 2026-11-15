@@ -552,6 +552,11 @@ export async function completeAccess(
 const SYNC_TIMEOUT_MS = 60_000;
 /** The calls one reading makes at most: a reading that does not end is cut, not left running. */
 const MAX_SYNC_CALLS = 12;
+/**
+ * After this long the first reading starts no new call: it runs inside the person's return from
+ * the bank, and a browser — or a proxy in front of the app — does not wait for ever.
+ */
+const FIRST_READING_BUDGET_MS = 30_000;
 
 /**
  * Step 1 of N1: reads everything the bank gives right after the access and records what it found
@@ -572,8 +577,9 @@ async function measureFirstReading(
   const run = await recordRun(ctx, { connectionId: input.connection.id, kind: "accounts" });
   const batches: SyncResponse[] = [];
   let failure: string | undefined;
+  let cursor: string | null = null;
+  const started = Date.now();
   try {
-    let cursor: string | null = null;
     do {
       const batch: SyncResponse = await callPlugin(
         input.plugin.config,
@@ -595,14 +601,20 @@ async function measureFirstReading(
       );
       batches.push(batch);
       cursor = batch.cursor;
-    } while (cursor !== null && batches.length < MAX_SYNC_CALLS);
+    } while (
+      cursor !== null &&
+      batches.length < MAX_SYNC_CALLS &&
+      Date.now() - started < FIRST_READING_BUDGET_MS
+    );
   } catch (error) {
     if (!(error instanceof PluginCallError)) throw error;
     if (error.code === "auth") await markCredentialsInvalid(ctx, input.plugin.config.id, now);
     failure = error.code;
   }
   const today = civilDateIn(now, ctx.timeZone);
-  await finishRun(ctx, run.id, { counts: measureReading(accounts, batches, today), error: failure }, now);
+  // `incomplete`: the reading was cut before the plugin had given everything.
+  const counts = { ...measureReading(accounts, batches, today), incomplete: cursor === null ? 0 : 1 };
+  await finishRun(ctx, run.id, { counts, error: failure }, now);
 }
 
 /** What a page may know of a bank's connection: no access, no account number in full. */

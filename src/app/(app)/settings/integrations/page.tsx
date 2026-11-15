@@ -15,7 +15,7 @@ import { civilDateIn } from "@/platform/dates";
 import { formatDate } from "@/platform/format";
 import { credentialsStatus, listPluginConnections, listUserPlugins } from "@/platform/plugins/queries";
 import { bankState, institutionOf } from "@/platform/plugins/rules";
-import { connectionSummary, refreshManifests, returnAddress } from "@/platform/plugins/service";
+import { connectionSummary, keepManifestsFresh, returnAddress } from "@/platform/plugins/service";
 import { providerOf } from "@/modules/investments/catalog";
 import { listInvestmentAccounts } from "@/modules/investments/service";
 import { pendingCount } from "@/modules/timeoff/service";
@@ -90,7 +90,9 @@ export default async function SettingsIntegrationsPage({
 
   // The plugins of the instance (rewrite plan N1, decision H25): each person sees them, and turns
   // on their own. With no plugin configured both lists are empty and the page is what it was.
-  await refreshManifests();
+  // The manifests are read in the background (the health check asks too): the page never waits
+  // for a plugin.
+  keepManifestsFresh();
   const userPlugins = await listUserPlugins(ctx);
   // The section "Banks" exists only for a person who has the plugin on; for anybody else the
   // page reads nothing of it, so there is nothing of it to send to the browser.
