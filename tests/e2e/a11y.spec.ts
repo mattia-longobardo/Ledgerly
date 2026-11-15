@@ -178,6 +178,12 @@ async function fundForm(page: Page, step: FundFormStep): Promise<void> {
   await settled(page);
   const form = page.getByTestId("fund-wizard");
   const card = (name: FundFormStep) => page.getByTestId(`wizard-step-${name}`);
+  // A step changes the address, and the page's title is streamed again with it: for an instant the
+  // document has none. The screen is measured at rest, with its title back.
+  const atRest = async () => {
+    await expect(page).toHaveTitle(/\S/);
+    await finished(page);
+  };
   await form.getByLabel("Name").fill("Fondo Pensione Complementare Gamma");
   await form.getByLabel("Provider").fill("Esempio Previdenza");
   await form.getByLabel("Line or compartment").fill("Bilanciata");
@@ -185,7 +191,7 @@ async function fundForm(page: Page, step: FundFormStep): Promise<void> {
   await form.getByLabel("Value today").fill("1200");
   if (step === "fund") {
     await card("fund").locator("summary").click();
-    await finished(page);
+    await atRest();
     return;
   }
   await card("fund").getByRole("button", { name: "Continue" }).click();
@@ -198,7 +204,7 @@ async function fundForm(page: Page, step: FundFormStep): Promise<void> {
   await card("sources").getByLabel("Debit day").fill("5");
   await page.getByTestId("source-switch-manual").click();
   if (step === "sources") {
-    await finished(page);
+    await atRest();
     return;
   }
   // `layout`'s payslip already feeds "Cometa": with no component left to choose, the step goes on
@@ -219,12 +225,12 @@ async function fundForm(page: Page, step: FundFormStep): Promise<void> {
     await expect(dialog).toBeHidden();
   }
   if (step === "fees") {
-    await finished(page);
+    await atRest();
     return;
   }
   await card("fees").getByRole("button", { name: "Continue" }).click();
   await expect(card("review")).toBeVisible();
-  await finished(page);
+  await atRest();
 }
 
 /** A tab of one of `layout`'s two funds: "Cometa", fed by the payslip, and "Fideuram…", with a debit. */
