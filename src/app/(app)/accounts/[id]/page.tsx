@@ -23,6 +23,8 @@ import {
   type ConnectionRow,
 } from "@/modules/accounts/ui/connections";
 import { providerName } from "../../banks/provider-name";
+import { ConnectionRow as ConnectionStatus } from "../../settings/integrations/connection-row";
+import { accountConnectionRow } from "./connection-status";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
@@ -134,6 +136,13 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
       : account.origin === "manual"
         ? t("origins.manual")
         : t("origins.syncedWith", { provider: providerLabel ?? "" });
+  // The connection the account comes from, in the short form of its row (ux n2 §3.3).
+  const connection = await accountConnectionRow(
+    ctx,
+    account,
+    service !== null ? `/investments/${id}/connection` : null,
+    now,
+  );
   const color = colorFor(account, index);
   // A service of Investments takes no manual balance (docs/design/investments.md §1.3).
   // A service of Investments links there; only one Investments writes locks the balances (§1.3).
@@ -169,6 +178,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
             </Link>
           )}
         </p>
+        {connection !== null && <ConnectionStatus {...connection} compact />}
         <h1 className="text-title font-semibold tracking-[-0.02em]">{account.name}</h1>
         <p className="flex flex-wrap items-baseline gap-3">
           <span className="text-hero-sm font-semibold tracking-[-0.02em]">

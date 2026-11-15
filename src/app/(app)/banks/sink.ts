@@ -86,8 +86,8 @@ export const bankSink: BankSink = {
     return new Map([...linked].map(([key, account]) => [key, { id: account.id, name: account.name }]));
   },
 
-  async releaseAccounts(ctx, provider) {
-    await releaseProviderAccounts(ctx, provider);
+  async releaseAccounts(ctx, provider, providerAccountIds) {
+    await releaseProviderAccounts(ctx, provider, providerAccountIds);
   },
 
   async writeBalance(ctx, accountId, reading, now) {

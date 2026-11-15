@@ -4,13 +4,13 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { NULL_DISPLAY } from "@/platform/format";
-import { Button, ButtonLink, LinkButton } from "@/ui/button";
+import { Button, ButtonLink } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, Textarea } from "@/ui/input";
 import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { BankRow, type BankRowProps } from "./bank-row";
+import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
 import {
   disconnectBankAction,
   type PluginActionResult,
@@ -26,17 +26,21 @@ export interface BanksCardProps {
   pluginId: string;
   credentials: { saved: boolean; savedAt: string | null; invalid: boolean };
   returnAddress: string;
-  banks: BankRowProps[];
+  /** One row per bank, built by the page: the same row every connection has. */
+  banks: ConnectionRowProps[];
   /** Opens "Replace key" at once: where the procedure sends a person whose key was refused. */
   openReplace: boolean;
 }
 
 const FORM_ID = "bank-credentials-form";
+/** What this card does itself, with a dialog of its own; the rest is the row's. */
+const HANDLED: readonly ActionKind[] = ["replaceKey", "disconnect"];
 const CONNECT: Route = "/banks/connect";
 
 /**
- * Settings › Integrations, the section "Banks" (§3-§5): the guide to the person's own application
- * while there are no credentials, then the credentials' row and one row per bank.
+ * Settings › Integrations, the section "Banks" (§3-§5; ux/n2-connection-status.md §7): the guide
+ * to the person's own application while there are no credentials, then the credentials' row, one
+ * row per bank and "Connect a bank" — a person has as many banks as they connect.
  *
  * The two secret fields have no `value` and no `defaultValue`; they are read once from the
  * submitted form and the form unmounts with its dialog, so a secret is never in React state, never
@@ -247,12 +251,6 @@ export function BanksCard({ pluginId, credentials, returnAddress, banks, openRep
 
   return (
     <div className="flex flex-col" data-testid="banks-card" data-view={banks.length > 0 ? "banks" : "ready"}>
-      {credentials.invalid && (
-        <p role="status" className="m-4 mb-0 rounded-ctl bg-warn-bg px-3 py-2 text-sm text-warn">
-          {t("invalidKey")} <LinkButton onClick={() => open("replace")}>{t("actions.replaceKey")}</LinkButton>
-        </p>
-      )}
-
       <div className="flex flex-wrap items-start justify-between gap-x-5 gap-y-3 px-4 py-3.5">
         <div className="min-w-0">
           <div className="font-semibold">{t("application.name")}</div>
@@ -275,38 +273,39 @@ export function BanksCard({ pluginId, credentials, returnAddress, banks, openRep
       </div>
 
       {banks.length === 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 border-t border-border px-4 py-3.5">
-          <p className="text-muted">{t("empty")}</p>
-          {credentials.invalid ? (
-            <Button variant="primary" size="sm" disabled>
-              {t("connect")}
-            </Button>
-          ) : (
-            <ButtonLink href={CONNECT} variant="primary" size="sm">
-              {t("connect")}
-            </ButtonLink>
-          )}
-        </div>
+        <p className="border-t border-border px-4 py-3.5 text-muted">{t("empty")}</p>
       ) : (
-        <>
-          <ul className="flex flex-col">
-            {banks.map((bank) => (
-              <li key={bank.id} className="border-t border-border">
-                <BankRow
-                  pluginId={pluginId}
-                  bank={bank}
-                  disabled={credentials.invalid}
-                  onDisconnect={() => {
-                    setError(null);
-                    setDisconnecting(bank.id);
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
-          <p className="border-t border-border px-4 py-2.5 text-sm text-muted">{t("oneBank")}</p>
-        </>
+        <ul className="flex flex-col">
+          {banks.map((bank) => (
+            <li key={bank.id} className="border-t border-border" data-testid="bank-row">
+              <ConnectionRow
+                {...bank}
+                handled={HANDLED}
+                disabled={pending}
+                onAction={(kind) => {
+                  setError(null);
+                  if (kind === "disconnect") setDisconnecting(bank.id);
+                  else open("replace");
+                }}
+              />
+            </li>
+          ))}
+        </ul>
       )}
+
+      {/* Always there: the first bank, and every bank after it (§7). A key the provider refuses
+          has to be replaced first. */}
+      <div className="flex justify-end border-t border-border px-4 py-3">
+        {credentials.invalid ? (
+          <Button variant={banks.length === 0 ? "primary" : "secondary"} size="sm" disabled>
+            {t("connect")}
+          </Button>
+        ) : (
+          <ButtonLink href={CONNECT} variant={banks.length === 0 ? "primary" : "secondary"} size="sm">
+            {t("connect")}
+          </ButtonLink>
+        )}
+      </div>
 
       {credentialsDialog}
 

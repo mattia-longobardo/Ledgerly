@@ -397,7 +397,12 @@ async function trekPass(ctx: Ctx, connection: Connection, options: TrekSyncOptio
     return { years, counts, stats, refused: null, conflicts };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await finishRun(ctx, run.id, { counts: { applied, adopted, settled }, error: message }, now);
+    await finishRun(
+      ctx,
+      run.id,
+      { counts: { applied, adopted, settled }, error: message, cause: error },
+      now,
+    );
     if (isTokenRejected(error)) await markConnection(ctx, connection.id, "revoked", message, now);
     throw error;
   }

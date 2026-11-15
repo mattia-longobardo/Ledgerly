@@ -6,17 +6,19 @@ import type { AllowanceSummary } from "@/modules/timeoff/ui/leave-actions";
 import { AllowanceForm, PatronSaintForm, WorkingHoursForm } from "@/modules/timeoff/ui/settings-forms";
 import { YearPicker } from "@/modules/timeoff/ui/year-picker";
 import { getPreferences } from "@/modules/users/service";
-import { ConnectionRow } from "@/app/(app)/settings/integrations/connection-row";
-import { formatInstant } from "@/app/(app)/settings/integrations/format-instant";
-import { recommendedSchedule } from "@/app/(app)/settings/integrations/recommended-schedule";
-import { ScheduleControl } from "@/app/(app)/settings/integrations/schedule-control";
+import {
+  connectionRows,
+  OWN_DIALOGS,
+  RUNS_PER_CONNECTION,
+} from "@/app/(app)/settings/integrations/connection-view";
+import { TrekCard } from "@/app/(app)/settings/integrations/trek-card";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today as todayIn } from "@/platform/dates";
 import { formatDate } from "@/platform/format";
 import { countDaysByCalendar, listCalendars } from "@/platform/holidays/service";
 import { TREK_PROVIDER } from "@/platform/integrations/rules";
-import { listConnections } from "@/platform/integrations/service";
-import { ButtonLink } from "@/ui/button";
+import { labelOf } from "@/platform/integrations/registry";
+import { listConnections, recentRuns, SYNC_RUN_RETENTION_DAYS } from "@/platform/integrations/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Page } from "@/ui/shell/page";
 import { TabLinks } from "@/ui/tab-links";
@@ -85,6 +87,27 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
 
   const trek = connections.find((connection) => connection.provider === TREK_PROVIDER) ?? null;
   const waiting = trek ? await pendingCount(ctx) : 0;
+  // The row of the connection: the same one Settings › Integrations shows (ux n2 §3.3).
+  const now = new Date();
+  const rows = await connectionRows(ctx, now);
+  const name = integrations("providers.trek.name");
+  const role = integrations("providers.trek.role");
+  const trekRow =
+    trek === null
+      ? rows.absent(TREK_PROVIDER, name, role)
+      : rows.row({
+          connection: trek,
+          label: await labelOf(trek, ctx.locale),
+          detail: role,
+          runs: (
+            await recentRuns(
+              ctx,
+              RUNS_PER_CONNECTION,
+              new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * 86_400_000),
+            )
+          ).filter((run) => run.connectionId === trek.id),
+          capabilities: OWN_DIALOGS,
+        });
   const hrefFor = (one: number) => `/timeoff/settings?year=${one}` as Route;
 
   return (
@@ -140,43 +163,8 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
             description={t("settings.trek.description")}
             padded={false}
           >
-            {trek ? (
-              <>
-                <ConnectionRow
-                  name={integrations("providers.trek.name")}
-                  role={integrations("providers.trek.role")}
-                  state={trek.state}
-                  lastSync={trek.lastOkAt ? formatInstant(trek.lastOkAt, ctx) : null}
-                  schedule={
-                    <ScheduleControl
-                      provider={trek.provider}
-                      name={integrations("providers.trek.name")}
-                      schedule={trek.schedule}
-                      recommended={recommendedSchedule(trek.provider)}
-                      next={trek.nextSyncAt ? formatInstant(trek.nextSyncAt, ctx) : null}
-                      timeZone={ctx.timeZone}
-                    />
-                  }
-                  actions={
-                    <ButtonLink href="/settings/integrations" size="sm">
-                      {t("settings.trek.manage")}
-                    </ButtonLink>
-                  }
-                />
-                {waiting > 0 && (
-                  <p className="border-t border-border px-4 py-2.5 text-sm text-muted">
-                    {integrations("trek.pending", { count: waiting })}
-                  </p>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <p className="text-sm text-muted">{integrations("trek.notLinked")}</p>
-                <ButtonLink href="/settings/integrations" size="sm">
-                  {t("settings.trek.connect")}
-                </ButtonLink>
-              </div>
-            )}
+            {/* The same row and the same dialogs as on Settings › Integrations. */}
+            <TrekCard row={trekRow} connected={trek !== null} pending={waiting} />
           </SettingsSection>
         </SettingsGrid>
       </UnsavedChangesProvider>

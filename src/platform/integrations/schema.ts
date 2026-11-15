@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { check, customType, index, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "../auth/schema";
 import { CONNECTION_STATES, ENTITY_TYPES, SYNC_KINDS, SYNC_STATES } from "./rules";
 import { DEFAULT_SYNC_SCHEDULE, type SyncSchedule } from "./schedule";
@@ -35,6 +46,11 @@ export const integrationConnections = pgTable(
     state: text("state", { enum: CONNECTION_STATES }).notNull().default("active"),
     lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
     lastError: text("last_error"),
+    // Why the last reading failed, as a code of the closed list (`status.ts`); null when the
+    // connection works or the failure has no code. Never what a provider said.
+    errorCode: text("error_code"),
+    // The readings that failed in a row (`failureStreak`): 0 after a good one.
+    consecutiveFailures: integer("consecutive_failures").notNull().default(0),
     // When the dispatcher syncs this connection (docs/scheduler.md): a list of rules, checked by
     // `syncScheduleSchema` and, as a list, by the constraint below; `next_sync_at` is null when
     // there is no rule (manual only).
@@ -47,10 +63,8 @@ export const integrationConnections = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    // The old key stays until N2 (first half of a two-step change): the image before N1 writes
-    // with `ON CONFLICT (user_id, provider)`. While it stays, a person has one connection per
-    // provider.
-    unique("integration_connections_user_provider_uq").on(table.userId, table.provider),
+    // One connection per provider and instance: a person has as many banks as they connect. The
+    // key on the provider alone went with N2 (second half of a two-step change).
     unique("integration_connections_user_provider_instance_uq").on(
       table.userId,
       table.provider,
@@ -157,6 +171,13 @@ export const syncRuns = pgTable(
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     counts: jsonb("counts").$type<Record<string, number>>(),
     error: text("error"),
+    // Who started the reading: the schedule (`auto`) or the person (`manual`).
+    origin: text("origin"),
+    // The code of a failed reading, the HTTP status the provider answered with, and the version
+    // of the app that made the reading: what the log under "Advanced" shows.
+    errorCode: text("error_code"),
+    httpStatus: integer("http_status"),
+    appVersion: text("app_version"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

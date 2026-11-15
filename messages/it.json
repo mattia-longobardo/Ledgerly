@@ -86,6 +86,17 @@
     "budgetOver": {
       "subject": "{budget}: budget superato",
       "body": "{budget} ({account}) ha superato il budget di {month}: {spent} su {limit}, {excess} oltre.\n\nApri il budget:\n{url}\n"
+    },
+    "connection": {
+      "subject": "{name} non sincronizzato",
+      "failedBody": "L'ultimo aggiornamento di {name} non è riuscito. {reason} {todo} Apri Impostazioni › Integrazioni: {url}",
+      "staleBody": "{name} non si aggiorna dal {since}. Apri Impostazioni › Integrazioni: {url}",
+      "todo": {
+        "renew": "Rinnova l'accesso.",
+        "replaceKey": "Sostituisci la chiave."
+      },
+      "expiringSubject": "{days, plural, =0 {L'accesso a {name} scade oggi} one {L'accesso a {name} scade domani} other {L'accesso a {name} scade tra # giorni}}",
+      "expiringBody": "Dopo il {date} Ledgerly non può più leggere {name}. Rinnova l'accesso: serve circa un minuto. {url}"
     }
   },
   "auth": {
@@ -1177,6 +1188,186 @@
         "busy": "Una lettura è già in corso. Riprova tra poco.",
         "network": "Connessione assente. Controlla la rete e riprova."
       }
+    },
+    "connections": {
+      "status": {
+        "ok": "Aggiornato",
+        "running": "In corso",
+        "late": "In ritardo",
+        "action": "Serve un'azione",
+        "paused": "In pausa",
+        "absent": "Non collegato"
+      },
+      "text": {
+        "ok": "Aggiornato {when}",
+        "running": "Aggiornamento in corso…",
+        "late": "Ultimo aggiornamento {when}. Nuovo tentativo {next}.",
+        "lateNever": "Nessun aggiornamento riuscito finora. Nuovo tentativo {next}.",
+        "lateLimit": "{name} ha raggiunto il limite di letture automatiche. Nuovo tentativo {next}.",
+        "consentExpired": "L'accesso a {name} è scaduto.",
+        "keyInvalid": "La chiave di {provider} non è più valida.",
+        "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
+        "pausedSchedule": "Aggiornamento automatico spento.",
+        "pausedProvider": "{provider} non è attivo.",
+        "absent": "Non collegato."
+      },
+      "when": {
+        "now": "ora",
+        "minutes": "{count, plural, one {# minuto fa} other {# minuti fa}}",
+        "hours": "{count, plural, one {# ora fa} other {# ore fa}}",
+        "yesterday": "ieri alle {time}",
+        "date": "il {date} alle {time}"
+      },
+      "next": {
+        "soon": "tra poco",
+        "today": "alle {time}",
+        "tomorrow": "domani alle {time}",
+        "date": "il {date} alle {time}"
+      },
+      "actions": {
+        "update": "Aggiorna ora",
+        "updating": "Aggiornamento…",
+        "renew": "Rinnova accesso",
+        "replaceKey": "Sostituisci chiave",
+        "chooseAccounts": "Scegli i conti",
+        "resume": "Riattiva",
+        "enable": "Attiva",
+        "connect": "Collega",
+        "test": "Prova il collegamento",
+        "settings": "Impostazioni del collegamento",
+        "advanced": "Avanzate",
+        "disconnect": "Scollega"
+      },
+      "toasts": {
+        "updated": "Aggiornamento completato",
+        "updatedNew": "Aggiornamento completato: {count, plural, one {# movimento nuovo} other {# movimenti nuovi}}",
+        "resumed": "Aggiornamento automatico riattivato",
+        "enabled": "{provider} attivato",
+        "tested": "{name} ha risposto: il collegamento funziona",
+        "historyRead": "Storico scaricato di nuovo"
+      },
+      "codes": {
+        "auth": "La chiave di {provider} non è più valida.",
+        "consentExpired": "L'accesso a {name} è scaduto.",
+        "rateLimited": "{name} ha raggiunto il limite di letture automatiche.",
+        "providerDown": "{name} non risponde.",
+        "invalidData": "{name} ha risposto con dati che Ledgerly non sa leggere. Niente è stato cambiato.",
+        "busy": "Un aggiornamento è già in corso. Riprova tra poco.",
+        "network": "Connessione assente. Controlla la rete e riprova.",
+        "unavailable": "Il collegamento non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
+        "failed": "Qualcosa non ha funzionato."
+      },
+      "expiry": {
+        "days": "{days, plural, =0 {L'accesso a {name} scade oggi.} one {L'accesso a {name} scade domani.} other {L'accesso a {name} scade tra # giorni.}}"
+      },
+      "detail": {
+        "accounts": "{count, plural, one {# conto} other {# conti}}",
+        "validUntil": "accesso valido fino al {date}",
+        "readOnlyKey": "Chiave in sola lettura"
+      },
+      "history": {
+        "toggle": "Cronologia",
+        "label": "Cronologia di {name}",
+        "empty": "Nessun aggiornamento finora.",
+        "ok": "Riuscito",
+        "failed": "Non riuscito",
+        "running": "In corso",
+        "skipped": "Saltato",
+        "nothing": "Nessuna novità",
+        "nothingToRead": "Niente da leggere.",
+        "byYou": "avviato da te",
+        "all": "Tutte le letture in Avanzate",
+        "today": "oggi {time}",
+        "yesterday": "ieri {time}",
+        "date": "{date} {time}",
+        "news": {
+          "accountsNew": "{count, plural, one {# conto nuovo} other {# conti nuovi}}",
+          "balancesUpdated": "{count, plural, one {# saldo aggiornato} other {# saldi aggiornati}}",
+          "movementsNew": "{count, plural, one {# movimento nuovo} other {# movimenti nuovi}}",
+          "movementsUpdated": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
+          "daysSent": "{count, plural, one {# giorno inviato} other {# giorni inviati}}",
+          "daysReceived": "{count, plural, one {# giorno ricevuto} other {# giorni ricevuti}}",
+          "positionsRead": "{count, plural, one {# posizione letta} other {# posizioni lette}}",
+          "operationsNew": "{count, plural, one {# operazione nuova} other {# operazioni nuove}}"
+        }
+      },
+      "banks": {
+        "alreadyConnected": "Già collegata. Per aggiungere un conto usa «Rinnova accesso»."
+      },
+      "advanced": {
+        "title": "Avanzate",
+        "intro": "Questa pagina mostra dati tecnici dei tuoi collegamenti. Servono per capire un problema o per chiedere aiuto.",
+        "empty": "Nessun collegamento",
+        "emptyHint": "Collega una sorgente dei dati in Integrazioni.",
+        "back": "Torna a Integrazioni",
+        "schedule": {
+          "title": "Pianificazione",
+          "description": "Quando Ledgerly aggiorna ogni collegamento da solo.",
+          "fixed": "{count, plural, one {# volta al giorno} other {# volte al giorno}} · Prossimo: {time}",
+          "fixedNoNext": "{count, plural, one {# volta al giorno} other {# volte al giorno}}",
+          "off": "Aggiornamento automatico spento"
+        },
+        "log": {
+          "title": "Registro",
+          "description": "Ogni lettura degli ultimi 30 giorni, dalla più recente.",
+          "caption": "Registro delle letture",
+          "filter": "Collegamento",
+          "all": "Tutti i collegamenti",
+          "apply": "Filtra",
+          "columns": {
+            "started": "Avvio",
+            "connection": "Collegamento",
+            "data": "Dati",
+            "origin": "Origine",
+            "result": "Esito",
+            "code": "Codice",
+            "http": "HTTP",
+            "counts": "Conteggi",
+            "version": "Versione"
+          },
+          "origin": {
+            "auto": "Automatica",
+            "manual": "Manuale"
+          },
+          "states": {
+            "running": "In corso",
+            "success": "OK",
+            "failed": "Fallita",
+            "skipped": "Saltata"
+          },
+          "duration": "{seconds} s",
+          "more": "Mostra altre 50",
+          "empty": "Nessuna lettura negli ultimi 30 giorni.",
+          "emptyFor": "Nessuna lettura per {name} negli ultimi 30 giorni."
+        },
+        "report": {
+          "copy": "Copia rapporto",
+          "copied": "Copiato",
+          "failed": "Copia non riuscita. Seleziona il testo e copialo.",
+          "label": "Rapporto"
+        },
+        "history": {
+          "label": "Storico",
+          "months": "{count, plural, one {# mese} other {# mesi}}",
+          "action": "Scarica di nuovo",
+          "hint": "Importa soltanto: non toglie mai nulla di ciò che c'è già."
+        }
+      }
+    },
+    "diagnostics": {
+      "title": "Diagnostica",
+      "description": "Stato dei plugin di questa istanza. Nessun dato degli utenti.",
+      "up": "Risponde",
+      "down": "Non risponde",
+      "never": "Mai raggiunto",
+      "incompatible": "Contratto non compatibile",
+      "checked": "Ultimo controllo {time}",
+      "since": "dalle {time}",
+      "neverDetail": "Il manifest non è mai stato letto.",
+      "incompatibleDetail": "Il plugin usa il contratto {version}.",
+      "version": "v{version} · contratto v{contract}",
+      "empty": "Nessun plugin in questa istanza.",
+      "unavailable": "Stato non disponibile. Ricarica la pagina."
     }
   },
   "errors": {
@@ -4919,7 +5110,7 @@
         "toSettings": "Torna alle impostazioni",
         "renewed": "Accesso a {bank} rinnovato",
         "account": "{count, plural, =0 {Nessun movimento} one {# movimento dal {date}} other {# movimenti dal {date}}} · saldo {balance}",
-        "schedule": "Ledgerly legge la banca 3 volte al giorno. Per una lettura subito usa «Sincronizza ora» in Impostazioni.",
+        "schedule": "Ledgerly legge la banca 3 volte al giorno. Per una lettura subito usa «Aggiorna ora» in Impostazioni.",
         "toAccounts": "Vai ai conti",
         "syncFailedHeading": "{bank} è collegata, ma la prima lettura non è riuscita",
         "syncFailed": "I conti sono collegati, ma i movimenti non sono stati letti. Riprova ora: una banca dà lo storico completo solo nei primi minuti.",

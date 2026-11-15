@@ -7,6 +7,8 @@
 import "server-only";
 import { registerPass } from "@/platform/integrations/registry";
 import { PLUGIN_KINDS } from "@/platform/integrations/rules";
+import { findInstancePlugin } from "@/platform/plugins/queries";
+import { institutionOf } from "@/platform/plugins/rules";
 import { runBankPass } from "@/platform/plugins/sync";
 import { bankSink } from "./(app)/banks/sink";
 
@@ -15,4 +17,12 @@ registerPass({
   provider: "plugin:",
   kinds: PLUGIN_KINDS,
   run: (_person, ctx, due, now) => runBankPass(ctx, due, bankSink, now),
+  // A connection is a bank, named as the bank; the provider's name is the manifest's.
+  async label(connection, locale) {
+    const plugin = await findInstancePlugin(connection.provider.slice("plugin:".length));
+    return {
+      name: institutionOf(connection.instanceKey).name || connection.provider,
+      provider: plugin?.manifest.labels.name[locale] ?? connection.provider,
+    };
+  },
 });

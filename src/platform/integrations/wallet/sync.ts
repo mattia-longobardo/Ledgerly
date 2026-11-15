@@ -752,7 +752,7 @@ async function walletPass(
       const message = describeError(error);
       // A refused verdict still imported everything it read: the run says so, and says why.
       const counts = error instanceof RemovalRefusedError ? error.counts : {};
-      await finishRun(ctx, run.id, { counts, error: message }, now);
+      await finishRun(ctx, run.id, { counts, error: message, cause: error }, now);
       if (isTokenRejected(error)) {
         await markConnection(ctx, connectionId, "revoked", message, now);
         refused = true;
