@@ -156,7 +156,14 @@ export async function saveConnection(
       userScoped(ctx).stamp({ provider, credentials, state: "active" as const, nextSyncAt: new Date() }),
     )
     .onConflictDoUpdate({
-      target: [integrationConnections.userId, integrationConnections.provider],
+      // The key on (user, provider, instance): a provider of the core has one connection, whose
+      // instance key is the empty one. The key on (user, provider) alone goes in N2 (second half
+      // of the two-step change, 06-data.md §6.1), and the image before N2 must not need it.
+      target: [
+        integrationConnections.userId,
+        integrationConnections.provider,
+        integrationConnections.instanceKey,
+      ],
       set: { credentials, state: "active" as const, lastError: null, updatedAt: new Date() },
     })
     .returning(CONNECTION_COLUMNS);
