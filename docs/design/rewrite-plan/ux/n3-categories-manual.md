@@ -6,8 +6,10 @@ Regole tecniche: [`../04-now.md`](../04-now.md) §4.4 e §4.5. Decisioni: [`../0
 Questa specifica descrive solo l'interfaccia. Il piano ha priorità: se un punto è in conflitto con il piano, vale il piano.
 La soglia, il modello e la regola che decide «automatica» o «suggerita» sono del dominio: qui non sono descritti.
 
-Le decisioni di prodotto che il piano non scrive sono in §17 «Domande per Mattia». Il testo applica sempre l'opzione A
-(default). Una risposta B cambia solo le sezioni indicate nella domanda.
+Revisione del 15/11/2026: applica le risposte di Mattia alle 9 domande della prima versione (§17). Due risposte sono
+regole nuove, diverse dalle due opzioni: un movimento a mano cambia il saldo, su ogni conto, secondo la modalità del conto
+(§9.7, §9.8); le categorie di una sorgente che le dà già, come Wallet, si associano alle categorie di Ledgerly (§6.4).
+Tre punti nati da queste regole sono aperti in §17.2: il testo applica l'opzione A. I punti del piano in conflitto sono in §18.1.
 
 ## 0. Riepilogo
 
@@ -18,9 +20,11 @@ Le decisioni di prodotto che il piano non scrive sono in §17 «Domande per Matt
 | Vista «Da rivedere» a gruppi: conferma, correzione, azioni di gruppo | Pagina `/expenses/review` | §4 |
 | Dopo una correzione: «Applico a N movimenti simili?» | Dialogo, da ogni punto dove si sceglie una categoria | §5 |
 | Proposta di unione delle categorie doppie | `Settings › Categories`, con un rimando da «Da rivedere» | §6 |
+| Categorie di una sorgente che le dà già (Wallet): «associa» o «aggiungi» (regola nuova) | `Settings › Categories` | §6.4 |
 | Circa 12 gruppi predefiniti | Primo passo della revisione guidata; stato vuoto di `Settings › Categories` | §7 |
 | Revisione guidata alla prima sync | Esito di «Collega una banca», poi `/expenses/review?guide=<id>` | §8 |
 | Movimento manuale: crea, modifica, cancella; avviso sul conto collegato a una banca; doppio invio | Dialogo in `Expenses` | §9 |
+| Saldo e modalità del conto: a mano, lettura e scrittura, sola lettura (regola nuova) | Dialogo, riga del movimento | §9.7, §9.8 |
 | Categoria automatica e suggerimento in Expenses e Budgets | `Expenses`, `Budgets` | §10 |
 | Stati: vuoto, caricamento, errore, nessun suggerimento | Tabella unica | §11 |
 | Layout a 400 e 1440 px, due temi | — | §12 |
@@ -46,6 +50,8 @@ Una parola per un significato, uguale in pulsante, titolo e toast.
 | **Movimenti simili** | Movimenti con lo stesso testo, senza le cifre | stessa chiave di memoria |
 | **A mano** | Movimento scritto dalla persona in Ledgerly | origine `manual` |
 | **Proposta di unione** | Ledgerly propone di unire due categorie doppie | — |
+| **Associare** | Dire a quale categoria di Ledgerly corrisponde una categoria di una sorgente | corrispondenza delle categorie |
+| **Da inviare** | Movimento a mano su un conto in lettura e scrittura, non ancora scritto sulla sorgente | scrittura in attesa |
 
 Parole vietate nella vista normale: «modello», «confidenza», «soglia», «classificatore», «addestramento», «precisione»,
 «MCC», «regola», «cascata», «origine», «provider», «sync». Nessuna percentuale di sicurezza, in nessun punto.
@@ -78,11 +84,15 @@ nascosto non compare in «Da rivedere».
 
 ### 1.3 Dove vale (criterio 1 di N3)
 
-- Gli stati 3 e 4 esistono solo sui conti la cui sorgente non dà categorie: conti collegati a una banca e movimenti a mano.
-- Sui conti Wallet le categorie restano quelle di Wallet. Nessun segno, nessun suggerimento, nessuna azione di N3 scrive
-  la categoria di un movimento Wallet al posto della persona.
-- «Da rivedere» non mostra i movimenti dei conti Wallet (domanda 1).
-- «Applico a N movimenti simili?» non conta e non tocca i movimenti dei conti Wallet.
+- Gli stati 3 e 4 esistono solo sui conti la cui sorgente non dà categorie: conti collegati a una banca e conti tenuti a mano.
+- **I movimenti che arrivano da una sorgente che dà le categorie, come Wallet, non si ricategorizzano mai** (decisione
+  di Mattia, 15/11/2026). Nessun segno, nessun suggerimento, nessuna azione di N3 scrive la loro categoria.
+- La categoria di questi movimenti è quella della sorgente, vista attraverso la corrispondenza di §6.4: la persona
+  decide a quale categoria di Ledgerly corrisponde ogni categoria della sorgente. Cambia il nome sotto cui il movimento
+  compare e conta, non la categoria che la sorgente ha dato.
+- «Da rivedere» non mostra i movimenti dei conti Wallet (domanda 1, default).
+- «Applico a N movimenti simili?» non conta e non tocca i movimenti arrivati da Wallet.
+- Un movimento scritto a mano su un conto Wallet (§9.8) è una scelta della persona: la sua categoria è quella scelta nel dialogo.
 
 ### 1.4 Componenti e token esistenti
 
@@ -463,13 +473,77 @@ suggerimento, scelta su «Da categorizzare»), se esistono altri movimenti simil
 - Il testo sotto cambia con la scelta e usa i numeri veri. Righe che compaiono solo se servono:
   - budget: «I limiti dei budget delle due categorie si sommano.» (domanda 7);
   - sottocategorie: «Le sottocategorie di «{name}» passano a «{kept}».» (solo per un gruppo);
-  - Wallet: «I movimenti dei conti Wallet restano in «{name}»: lì decide Wallet.» (domanda 6). In questo caso la riga
-    «viene archiviata» diventa ««{name}» resta per i movimenti di Wallet e non viene più suggerita.»
+  - sorgente: «I movimenti di {provider} con la categoria «{name}» compaiono in «{kept}». Su {provider} le due
+    categorie restano.» (§6.4). Compare se la categoria che non resta arriva da una sorgente.
 - «Unisci» (`primary`): toast «Categorie unite: {count} movimenti spostati». La proposta sparisce. L'albero si aggiorna.
 - L'unione non crea il dialogo di §5 e non cambia lo stato dei movimenti: un movimento automatico resta automatico, con la categoria nuova.
+- Se la categoria che non resta arriva da una sorgente, l'unione è un'associazione (§6.4): la categoria della sorgente
+  passa a corrispondere alla categoria che resta. I movimenti di quella sorgente non si ricategorizzano: compaiono e
+  contano sotto la categoria che resta. L'associazione si cambia dopo, nella sezione di §6.4.
 - Errore: `role="alert"` nel dialogo, «Non è stato possibile unire le categorie. Riprova.» Nessun cambio parziale.
 - L'unione non ha «Annulla» nel toast: tocca categorie, budget e movimenti insieme. Per questo il dialogo dice prima
   ogni effetto.
+
+### 6.4 Categorie di una sorgente che le dà già (regola nuova)
+
+Decisione di Mattia del 15/11/2026, al posto delle opzioni A e B della domanda 6. Per una sorgente che dà già una
+categoria ai suoi movimenti (oggi Wallet) la persona ha due scelte per ogni categoria della sorgente, anche miste:
+
+1. **Associare** la categoria a una categoria che esiste in Ledgerly.
+2. **Aggiungere** la categoria a Ledgerly come categoria nuova.
+
+I movimenti di quella sorgente non si ricategorizzano: tengono la categoria della sorgente e compaiono sotto la
+categoria di Ledgerly che le corrisponde.
+
+**Dove.** `Settings › Categories`, una `SettingsSection` per sorgente, sotto l'albero: «Categorie di {provider}». Si
+disegna solo se l'utente ha un collegamento con una sorgente che dà le categorie.
+
+```text
+Categorie di Wallet
+Wallet dà già una categoria ai suoi movimenti. Scegli a quale categoria di Ledgerly corrisponde ognuna.
+Ledgerly non cambia la categoria di questi movimenti.
+
+[ Tutte | Nuove (1) ]
+
+Su Wallet                            In Ledgerly
+──────────────────────────────────────────────────────────────────────
+Groceries · 310 movimenti            [■ Spesa alimentare            ▾]
+Alcohol, tobacco · 48 movimenti      [■ Alcohol, tobacco            ▾]
+Tobacco · 12 movimenti               [■ Alcohol, tobacco            ▾]
+Pets · 4 movimenti  [Nuova]          [＋ Aggiunta come «Pets»       ▾]
+```
+
+- Tabella a due colonne; sotto 768 px ogni riga è una scheda: nome e conteggio sopra, selettore a tutta larghezza sotto.
+- Colonna «Su {provider}»: nome della categoria sulla sorgente e numero dei movimenti. Le sottocategorie sono rientrate sotto il loro gruppo.
+- Colonna «In Ledgerly»: `CategoryPicker` con un trigger largo come la colonna. Prima voce dell'elenco: «Aggiungi come
+  categoria nuova»; poi le categorie di Ledgerly del tipo giusto. Il trigger mostra «Aggiunta come «{name}»» oppure la
+  categoria associata, con il suo colore.
+- Più categorie della sorgente possono corrispondere alla stessa categoria di Ledgerly (esempio: «Tobacco» e «Alcohol,
+  tobacco»). Una categoria della sorgente corrisponde a una sola categoria di Ledgerly.
+- `Segmented` «Tutte» · «Nuove ({count})»: «Nuove» mostra le categorie arrivate dalla sorgente e non ancora guardate.
+- **Categoria nuova dalla sorgente** (punto aperto 11): entra da sola come «aggiunta», con il `Badge` `accent` «Nuova».
+  Nessuna lettura si ferma per aspettare una scelta. Il badge sparisce quando la persona sceglie una voce o preme
+  «Va bene così» (`LinkButton` nella riga).
+- **Stato di partenza al rilascio:** ogni categoria di Wallet è «aggiunta» con il suo nome, come oggi. Nessun numero
+  cambia finché la persona non associa una categoria.
+
+**Cambio di una riga.**
+
+| Scelta | Effetto | Conferma |
+|---|---|---|
+| Da «aggiunta» a «associata a X» | I movimenti della sorgente con quella categoria compaiono e contano in X. La categoria aggiunta, se non ha altri movimenti, viene archiviata. I suoi budget seguono la domanda 7 (i limiti si sommano) | Toast «{name} ora corrisponde a {category}: {count} movimenti» con l'azione «Annulla» |
+| Da «associata a X» a «associata a Y» | I movimenti passano da X a Y | Lo stesso toast |
+| Da «associata» a «aggiunta» | Torna una categoria con il nome della sorgente; i movimenti passano lì | Toast «{name} aggiunta come categoria: {count} movimenti» con «Annulla» |
+
+- Il cambio vale subito in Expenses, Budgets e nei grafici. È reversibile: per questo non serve un dialogo.
+- Durante il salvataggio il selettore della riga è `disabled`. Errore: `role="alert"` sotto la riga, «Non è stato
+  possibile salvare. Riprova.»; la riga torna al valore di prima.
+- Una categoria di Ledgerly che corrisponde a una o più categorie di una sorgente mostra nell'albero, sotto il nome:
+  «Da {provider}: {names}» (`text-sm text-muted`).
+- Stato vuoto (la sorgente non ha ancora categorie): «Ancora nessuna categoria da {provider}. Compaiono dopo il primo aggiornamento.»
+- Sulla riga di un movimento, in Expenses, non cambia niente: il chip mostra la categoria di Ledgerly, senza segno.
+- Correzione a mano di un movimento della sorgente (come oggi da Expenses): resta possibile ed è una scelta della
+  persona su quel movimento. Non cambia la corrispondenza.
 
 ## 7. Gruppi predefiniti
 
@@ -487,7 +561,7 @@ Due ingressi:
 ### 7.2 Elenco proposto
 
 12 gruppi: 11 di spesa e 1 di entrata. I nomi si creano nella lingua dell'utente al momento della creazione; poi sono
-categorie normali. L'elenco è la domanda 5.
+categorie normali. Elenco confermato da Mattia (decisione 5).
 
 | # | Italiano | English | Tipo | Esempi (testo di aiuto) |
 |---|---|---|---|---|
@@ -633,6 +707,7 @@ Un solo dialogo per creare e per modificare: `ManualTransactionDialog`.
 - Menu della riga di un movimento a mano: «Modifica categoria», «Modifica movimento», «Nascondi» / «Ripristina», «Elimina».
 - Doppio clic e «Modifica movimento» aprono il dialogo di §9.3 in modifica, non il pannello «Modifica dettagli».
 - Il badge «Modificato qui» non compare mai su un movimento a mano.
+- Su un conto in lettura e scrittura la riga ha anche lo stato dell'invio: «Da inviare» o «Non inviato a {provider}» (§9.8).
 
 ### 9.3 Dialogo
 
@@ -671,8 +746,8 @@ Un solo dialogo per creare e per modificare: `ManualTransactionDialog`.
 | Tipo | `Segmented` «Uscita» · «Entrata» | Default «Uscita». Nessun «Giroconto»: il piano scrive «uscita o entrata» |
 | Importo | `Input` `numeric`, `inputMode="decimal"`, obbligatorio | Senza segno, maggiore di zero, nel formato numerico dell'utente. Focus iniziale qui. Valuta del conto a destra del campo |
 | Data | `Input type="date"`, obbligatorio | Default oggi (fuso dell'utente). `max` = oggi: nessuna data futura |
-| Conto | `Select`, obbligatorio | Solo i conti permessi (domanda 2). Due `optgroup`: «Conti tenuti a mano», «Conti collegati a una banca». Default: l'ultimo conto usato in questo dialogo (preferenza del browser); altrimenti il primo conto tenuto a mano |
-| Beneficiario | `Input`, facoltativo, `maxLength={255}` | Domanda 4 |
+| Conto | `Select`, obbligatorio | Ogni conto con movimenti, non i conti di investimento. Tre `optgroup`, uno per modalità (§9.8): «Conti tenuti a mano», «Conti collegati a {provider}» (lettura e scrittura), «Conti collegati a una banca» (sola lettura). Default: l'ultimo conto usato in questo dialogo (preferenza del browser); altrimenti il primo conto tenuto a mano. Sotto il campo: la riga del saldo e la nota della modalità (§9.8) |
+| Beneficiario | `Input`, facoltativo, `maxLength={255}` | Confermato (decisione 4) |
 | Categoria | `CategoryPicker` con un trigger largo come il campo | Elenca le categorie del tipo scelto. Vuota = «Da categorizzare» |
 | Nota | `Textarea` `rows={2}`, facoltativa | — |
 | Etichette | Il `fieldset` di `details-modal.tsx` | Solo in modifica |
@@ -693,7 +768,7 @@ Un solo dialogo per creare e per modificare: `ManualTransactionDialog`.
 > Questo conto riceve i movimenti dalla banca. Un movimento a mano può risultare doppio.
 
 - Classi dell'avviso dentro una card (§1.4), dentro una regione `aria-live="polite"`: un lettore di schermo lo sente
-  quando cambia il conto.
+  quando cambia il conto. Nella stessa regione stanno la riga del saldo e la nota della modalità (§9.8).
 - L'avviso non blocca: il pulsante primario resta attivo e non serve una conferma in più.
 - L'avviso compare anche in modifica.
 
@@ -733,10 +808,54 @@ progetto lo usa già nei dialoghi; altrimenti nessuna conferma. Il primario è �
 - La barra di selezione non cambia: «Nascondi» e «Ripristina» valgono per ogni riga. Nessuna eliminazione di gruppo.
 - «Nascondi» resta disponibile anche per un movimento a mano.
 
-### 9.7 Cosa non cambia
+### 9.7 Saldo (regola nuova)
 
-- La sync non tocca un movimento a mano: l'interfaccia non mostra mai «Sparito dal provider» su queste righe.
-- Un movimento a mano non cambia il saldo del conto (domanda 3).
+Decisione di Mattia del 15/11/2026, al posto delle opzioni A e B della domanda 3: **un movimento a mano cambia il saldo
+del conto, su ogni conto.** Il cambio si vede subito. Quando diventa definitivo dipende dalla modalità del conto (§9.8).
+
+- Dopo il salvataggio il saldo nuovo vale in Accounts, Overview e nel patrimonio, senza attese.
+- Modifica ed eliminazione di un movimento a mano correggono il saldo allo stesso modo.
+- Un movimento nascosto non conta nel saldo, come non conta nei totali.
+- Movimento con una data prima dell'ultimo saldo conosciuto del conto: il saldo di oggi non cambia (punto aperto 12).
+
+Riga del saldo nel dialogo, sotto «Conto», appena importo, tipo, data e conto sono validi (`text-sm text-muted`, numeri `tabular-nums`):
+
+| Caso | Testo |
+|---|---|
+| Il saldo cambia | Saldo di «{account}»: da {before} a {after}. |
+| Data prima dell'ultimo saldo conosciuto | Il saldo di «{account}» è stato scritto il {date} e comprende già questo giorno: non cambia. |
+| Il conto non ha ancora un saldo | Nessuna riga |
+
+La riga rispetta «Nascondi importi». Non è un avviso: informa prima del salvataggio.
+
+### 9.8 Modalità del conto (regola nuova)
+
+Il progetto ha tre modalità. La modalità decide la nota nel dialogo, lo stato della riga e cosa succede all'aggiornamento successivo.
+
+| Modalità | Esempio | Nel dialogo, sotto la riga del saldo | Riga del movimento | All'aggiornamento successivo |
+|---|---|---|---|---|
+| **A mano** (nessun aggiornamento) | «Contanti» | Nessuna nota | `Badge` «A mano» | Non esiste: il saldo nuovo è definitivo subito |
+| **Lettura e scrittura** | Conto Wallet | Nota `bg-hover`: «Ledgerly manda questo movimento a {provider} al prossimo aggiornamento.» | `Badge` «A mano» + `Badge` `neutral` «Da inviare» | Ledgerly scrive il movimento sulla sorgente. Poi il movimento è un movimento della sorgente: i due badge spariscono e il saldo è quello della sorgente |
+| **Sola lettura** | Conto di una banca | Avviso `warn` del piano (§9.3) + «Il saldo cambia subito. Alla prossima lettura vale il saldo della banca.» | `Badge` «A mano» | Il saldo torna quello letto dalla banca. Il movimento resta, a mano (punto aperto 10) |
+
+Regole per la modalità «lettura e scrittura»:
+
+- Finché è «Da inviare» il movimento si modifica e si elimina in Ledgerly, come ogni movimento a mano (§9.3, §9.6).
+- Dopo l'invio vale il pannello «Modifica dettagli» di oggi per i movimenti Wallet; l'eliminazione segue le regole di
+  oggi per i movimenti sincronizzati.
+- **Invio non riuscito:** la riga mostra `Badge` `warn` «Non inviato a {provider}». Il menu della riga ha «Riprova
+  l'invio» e «Elimina». Il movimento e il saldo nuovo restano in Ledgerly; il prossimo aggiornamento riprova da solo.
+  Nessun toast e nessuna email per il singolo movimento: lo stato del collegamento è quello di N2.
+- **Categoria:** la sorgente riceve la categoria che corrisponde a quella scelta (§6.4). Se nessuna categoria della
+  sorgente corrisponde, il movimento parte senza categoria sulla sorgente e in Ledgerly tiene la categoria scelta (§18, punto 20).
+- Il suggerimento nel dialogo (§9.3) vale anche qui: è un aiuto a chi scrive, non una ricategorizzazione.
+- Un collegamento in pausa o da rinnovare (N2): la nota diventa «{provider} non è aggiornato ora. Ledgerly manda questo
+  movimento quando il collegamento riparte.»
+
+Cosa non cambia:
+
+- La lettura da una sorgente non modifica e non elimina un movimento a mano su un conto a mano o in sola lettura:
+  l'interfaccia non mostra mai «Sparito dal provider» su queste righe.
 - Il pannello «Modifica dettagli» dei movimenti sincronizzati resta com'è.
 
 ## 10. Expenses e Budgets
@@ -803,6 +922,11 @@ movimento conta (criterio 6 di N3).
 | Gruppi predefiniti | Errore | `role="alert"` (§7.3) |
 | Movimento manuale | Salvataggio, errori, nessun conto | §9.4, §9.5 |
 | Movimento manuale | Nessuna categoria | Il campo «Categoria» mostra «Da categorizzare» e sotto il link «Crea le categorie in Impostazioni» |
+| Movimento manuale | Conto in lettura e scrittura, in attesa | `Badge` «Da inviare» sulla riga (§9.8) |
+| Movimento manuale | Invio alla sorgente non riuscito | `Badge` `warn` «Non inviato a {provider}»; «Riprova l'invio» nel menu della riga |
+| Categorie di una sorgente | Nessuna categoria dalla sorgente | Testo vuoto di §6.4 |
+| Categorie di una sorgente | Categoria nuova | `Badge` «Nuova» nella riga; conteggio nel `Segmented` |
+| Categorie di una sorgente | Salvataggio, errore | Selettore `disabled`; `role="alert"` sotto la riga |
 | Expenses | Nessun movimento | §10.1, ultima riga |
 | Expenses, Budgets | Nessun movimento «Da categorizzare» | La riga di avviso non compare |
 
@@ -1021,7 +1145,16 @@ Blocco nell'esito di «Collega una banca» (gruppo `banks.connect.done` di N1):
 | `categoryHint` | Suggerimento di Ledgerly. Cambialo se non va bene. | Ledgerly's suggestion. Change it if it is not right. |
 | `noCategories` | Crea le categorie in Impostazioni | Create categories in Settings |
 | `note` | Nota (facoltativa) | Note (optional) |
+| `accounts.twoWay` | Conti collegati a {provider} | Accounts connected to {provider} |
 | `bankWarning` | Questo conto riceve i movimenti dalla banca. Un movimento a mano può risultare doppio. | This account gets its transactions from the bank. A transaction added by hand can appear twice. |
+| `bankBalance` | Il saldo cambia subito. Alla prossima lettura vale il saldo della banca. | The balance changes now. At the next reading the bank's balance applies. |
+| `twoWayNote` | Ledgerly manda questo movimento a {provider} al prossimo aggiornamento. | Ledgerly sends this transaction to {provider} at the next update. |
+| `twoWayPaused` | {provider} non è aggiornato ora. Ledgerly manda questo movimento quando il collegamento riparte. | {provider} is not updated now. Ledgerly sends this transaction when the connection resumes. |
+| `balance.change` | Saldo di «{account}»: da {before} a {after}. | Balance of “{account}”: from {before} to {after}. |
+| `balance.unchanged` | Il saldo di «{account}» è stato scritto il {date} e comprende già questo giorno: non cambia. | The balance of “{account}” was recorded on {date} and already includes this day: it does not change. |
+| `badges.toSend` | Da inviare | To send |
+| `badges.notSent` | Non inviato a {provider} | Not sent to {provider} |
+| `row.retrySend` | Riprova l'invio | Retry sending |
 | `saving` | Salvataggio… | Saving… |
 | `toasts.added` | Movimento aggiunto | Transaction added |
 | `toasts.addedElsewhere` | Movimento aggiunto il {date}, fuori da quello che vedi ora | Transaction added on {date}, outside what you see now |
@@ -1057,11 +1190,27 @@ Blocco nell'esito di «Collega una banca» (gruppo `banks.connect.done` di N1):
 | `merge.dialog.archived` | «{from}» viene archiviata. | “{from}” is archived. |
 | `merge.dialog.budgets` | I limiti dei budget delle due categorie si sommano. | The budget limits of the two categories are added together. |
 | `merge.dialog.children` | Le sottocategorie di «{from}» passano a «{to}». | The sub-categories of “{from}” move to “{to}”. |
-| `merge.dialog.wallet` | I movimenti dei conti Wallet restano in «{from}»: lì decide Wallet. | The transactions of Wallet accounts stay in “{from}”: Wallet decides there. |
-| `merge.dialog.walletKept` | «{from}» resta per i movimenti di Wallet e non viene più suggerita. | “{from}” stays for Wallet transactions and is no longer suggested. |
 | `merge.dialog.confirm` | Unisci | Merge |
 | `merge.done` | Categorie unite: {count, plural, one {# movimento spostato} other {# movimenti spostati}} | Categories merged: {count, plural, one {# transaction moved} other {# transactions moved}} |
 | `merge.failed` | Non è stato possibile unire le categorie. Riprova. | Couldn't merge the categories. Try again. |
+| `merge.dialog.source` | I movimenti di {provider} con la categoria «{from}» compaiono in «{to}». Su {provider} le due categorie restano. | {provider} transactions with the category “{from}” appear in “{to}”. On {provider} the two categories stay. |
+| `source.title` | Categorie di {provider} | {provider} categories |
+| `source.description` | {provider} dà già una categoria ai suoi movimenti. Scegli a quale categoria di Ledgerly corrisponde ognuna. Ledgerly non cambia la categoria di questi movimenti. | {provider} already gives a category to its transactions. Choose which Ledgerly category each one matches. Ledgerly does not change the category of these transactions. |
+| `source.columns.theirs` | Su {provider} | On {provider} |
+| `source.columns.ours` | In Ledgerly | In Ledgerly |
+| `source.filters.all` | Tutte | All |
+| `source.filters.new` | Nuove ({count}) | New ({count}) |
+| `source.row` | {name} · {count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}} | {name} · {count, plural, =0 {no transactions} one {# transaction} other {# transactions}} |
+| `source.new` | Nuova | New |
+| `source.keep` | Va bene così | Keep as it is |
+| `source.addOption` | Aggiungi come categoria nuova | Add as a new category |
+| `source.added` | Aggiunta come «{name}» | Added as “{name}” |
+| `source.pickerLabel` | Categoria di Ledgerly per «{name}» | Ledgerly category for “{name}” |
+| `source.fromProvider` | Da {provider}: {names} | From {provider}: {names} |
+| `source.empty` | Ancora nessuna categoria da {provider}. Compaiono dopo il primo aggiornamento. | No categories from {provider} yet. They appear after the first update. |
+| `source.toasts.linked` | {name} ora corrisponde a {category}: {count, plural, one {# movimento} other {# movimenti}} | {name} now matches {category}: {count, plural, one {# transaction} other {# transactions}} |
+| `source.toasts.added` | {name} aggiunta come categoria: {count, plural, one {# movimento} other {# movimenti}} | {name} added as a category: {count, plural, one {# transaction} other {# transactions}} |
+| `source.failed` | Non è stato possibile salvare. Riprova. | Couldn't save. Try again. |
 | `defaults.open` | Usa i gruppi predefiniti | Use the default groups |
 | `defaults.title` | Scegli i gruppi delle tue spese | Choose the groups for your spending |
 | `defaults.description` | Ledgerly usa questi gruppi per dare una categoria ai movimenti. Puoi cambiarli quando vuoi in Impostazioni › Categorie. | Ledgerly uses these groups to give a category to transactions. You can change them at any time in Settings › Categories. |
@@ -1088,10 +1237,10 @@ Blocco nell'esito di «Collega una banca» (gruppo `banks.connect.done` di N1):
 
 | Criterio di N3 (`03-releases.md`) | Dove è coperto |
 |---|---|
-| 1 · Sui conti Wallet le categorie restano quelle di Wallet | §1.3; §5.1 (N non conta Wallet); §6.3 (unione); §9.3 (conti del movimento manuale); domande 1, 2, 6 |
+| 1 · Sui conti Wallet le categorie restano quelle di Wallet | §1.3; §5.1 (N non conta Wallet); §6.3 e §6.4 (i movimenti della sorgente non si ricategorizzano: cambia solo la corrispondenza, scelta dalla persona). Da riscrivere nel piano: §18.1 |
 | 2 · Un'automatica conta in Budgets ed Expenses; un suggerimento non confermato conta come «Da categorizzare» | §1.2; §3.1; §10.1; §10.2 |
 | 5 · Un doppio invio dello stesso movimento manuale crea una sola riga | §9.4 |
-| 6 · Fotografia dei numeri invariata (per la parte dell'interfaccia) | §10.1, ultima frase; domanda 3 |
+| 6 · Fotografia dei numeri invariata (per la parte dell'interfaccia) | §10.1, ultima frase. Vale al rilascio: nessun numero cambia finché la persona non scrive un movimento a mano (§9.7) o non associa una categoria (§6.4) |
 
 Altri vincoli del piano rispettati: nessuna parola tecnica nella vista normale (§1.1, P2); il modello e la confidenza non
 arrivano mai al browser (§18, punto 2); «solo su movimenti automatici o senza categoria» (§5.1).
@@ -1120,21 +1269,36 @@ Scelte di interazione, non di prodotto. Si cambiano senza toccare il piano.
 | 16 | Gruppi predefiniti offerti anche nello stato vuoto di `Settings › Categories` | Serve a chi non collega una banca; il primo avvio guidato arriva solo in R5a |
 | 17 | Nessuna voce di menu e nessun contatore nel menu per «Da rivedere» | Il menu cambia in R5a |
 
-## 17. Domande per Mattia
+## 17. Decisioni prese e punti aperti
 
-Decisioni di prodotto che il piano non scrive. A è il default: la specifica lo applica. «ok default» basta.
+### 17.1 Decisioni prese (Mattia, 15/11/2026)
+
+Risposte alle 9 domande della prima versione di questa specifica.
+
+| # | Domanda | Decisione | Dove è applicata |
+|---|---|---|---|
+| 1 | I movimenti dei conti Wallet senza categoria entrano in «Da rivedere»? | **A.** No: solo i conti dove Ledgerly dà le categorie | §1.3, §4.1, §11 |
+| 2 | Su quali conti si scrive un movimento a mano? | **Sostituita dalla risposta 3:** su ogni conto con movimenti, anche Wallet. Non i conti di investimento | §9.3, §9.8 |
+| 3 | Un movimento a mano cambia il saldo del conto? | **Regola nuova.** Sì, su ogni conto, a mano o Wallet. Tre modalità: a mano (nessun aggiornamento), bidirezionale (Wallet: legge e scrive), monodirezionale (Enable Banking: legge). Nelle prime due una scrittura a mano si vede subito e diventa effettiva all'aggiornamento successivo | §9.7, §9.8 |
+| 4 | Il movimento a mano ha il campo «Beneficiario»? | **A.** Sì, facoltativo | §9.3 |
+| 5 | Quali sono i gruppi predefiniti? | **A.** I 12 gruppi di §7.2 | §7.2 |
+| 6 | Unione di due categorie quando una ha movimenti dei conti Wallet | **Regola nuova.** Per una sorgente che dà le categorie la persona associa ogni categoria a una di Ledgerly oppure la aggiunge come nuova, anche in modo misto. I movimenti di quella sorgente non si ricategorizzano | §1.3, §6.3, §6.4 |
+| 7 | Unione di due categorie che hanno un budget | **A.** I limiti si sommano | §6.3, §6.4 |
+| 8 | «Annulla» dopo un'azione di gruppo | **A.** Sì | §4.3, §4.4, §5.2 |
+| 9 | Le categorie automatiche compaiono in «Da rivedere»? | **A.** No | §4.2 |
+
+La domanda 2 aveva il default «non i conti Wallet». La risposta 3 dice «su tutti i conti, a mano oppure Wallet» e
+descrive la scrittura su Wallet: vale la risposta 3.
+
+### 17.2 Punti aperti nati dalle regole nuove
+
+Il testo applica l'opzione A. «ok default» basta.
 
 | # | Domanda | Esempio | A (default) | B | Effetto |
 |---|---|---|---|---|---|
-| 1 | I movimenti dei conti Wallet senza categoria entrano in «Da rivedere»? | Un prelievo su un conto Wallet arriva senza categoria | No. «Da rivedere» mostra solo i conti dove Ledgerly dà le categorie (banche, movimenti a mano). Il prelievo resta visibile in Spese con il filtro «Da categorizzare» | Sì, senza suggerimenti. La categoria scelta lì è una modifica locale, come oggi da Spese | A: la vista è vuota finché non colleghi una banca; criterio 1 senza eccezioni. B: una coda unica; più lavoro a mano su dati che Wallet può riscrivere. Tocca §1.3, §4.1, §11 |
-| 2 | Su quali conti si scrive un movimento a mano? | Paghi 12,50 € in contanti e hai «Contanti» (a mano), «BBVA» (banca), «Revolut» (Wallet) | Conti tenuti a mano e conti collegati a una banca (con l'avviso). Non i conti Wallet, non i conti di investimento | Anche i conti Wallet, con un avviso: «Wallet non riceve questo movimento» | A: un movimento Wallet si scrive su Wallet, come oggi. B: Ledgerly e Wallet mostrano spese diverse per lo stesso conto. Tocca §9.3 |
-| 3 | Un movimento a mano cambia il saldo del conto? | «Contanti» ha saldo 80 €. Scrivi una spesa di 12,50 € | No. Il saldo resta 80 € finché non lo aggiorni. Il movimento conta solo in Spese e Budget | Sì, solo sui conti tenuti a mano: il saldo diventa 67,50 € dalla data del movimento | A: patrimonio e saldi invariati (criterio 6), ma «Contanti» si aggiorna a mano. B: il saldo segue le spese; cambia la regola dei saldi dei conti a mano e serve una decisione sui saldi già scritti. Tocca §9.7 |
-| 4 | Il movimento a mano ha il campo «Beneficiario»? | Scrivi «Bar Centrale · 4,20 €» | Sì, facoltativo. La riga in Spese mostra «Bar Centrale» e Ledgerly lo usa per il suggerimento | No: solo i campi del piano (importo, tipo, conto, categoria, data, nota). La riga mostra «Senza beneficiario»; il suggerimento usa solo la nota | A: un campo in più; righe leggibili e suggerimenti migliori. B: dialogo più corto; tutte le spese a mano hanno lo stesso titolo. Tocca §9.3 |
-| 5 | Quali sono i gruppi predefiniti? | Un familiare nuovo collega la sua banca e non ha categorie | I 12 gruppi di §7.2 (11 di spesa, 1 di entrata), senza sottocategorie | Un elenco tuo: dimmi i nomi | A: si parte subito. B: l'elenco segue le tue abitudini; le tabelle del dominio (tipo di esercizio → gruppo) seguono l'elenco scelto. Tocca §7.2 |
-| 6 | Unione di due categorie quando una ha movimenti dei conti Wallet | «Tobacco» e «Alcohol, tobacco» arrivano tutte e due da Wallet | L'unione sposta solo i movimenti dove decide Ledgerly e gli esempi. I movimenti Wallet restano in «Tobacco», che resta visibile per loro e non viene più suggerita | L'unione sposta anche i movimenti Wallet, come modifica locale («Modificato qui»). Wallet tiene le sue due categorie | A: criterio 1 rispettato; finché usi Wallet vedi ancora i due nomi. B: un solo nome in Ledgerly; Ledgerly e Wallet non sono più uguali. Tocca §6.3 |
-| 7 | Unione di due categorie che hanno tutte e due un budget | «Tobacco» ha 30 € al mese, «Alcohol, tobacco» ha 100 € | I limiti si sommano: 130 € | Resta solo il limite della categoria che tieni: 100 € | A: «Totale del mese» non cambia. B: il limite totale scende di 30 € senza un'azione tua. Tocca §6.3 |
-| 8 | «Annulla» dopo un'azione di gruppo | Confermi 24 movimenti di «ESSELUNGA» nella categoria sbagliata | Sì: «Annulla» nella riga di esito (gruppi) e nel toast per 8 secondi («Applica a N», selezione). Riporta i movimenti allo stato di prima | No: correggi con una nuova scelta di categoria sul gruppo | A: un errore si ripara con un clic; serve una funzione in più nel server. B: meno codice; i movimenti corretti a mano diventano «scelti da te» e non tornano automatici. Tocca §4.3, §4.4, §5.2 |
-| 9 | Le categorie automatiche compaiono in «Da rivedere»? | Ledgerly mette da sola 40 movimenti in «Spesa alimentare» | No. Le vedi in Spese con il segno; la conferma è facoltativa | Sì: una quarta sezione «Automatiche degli ultimi 30 giorni», con «Conferma» per gruppo | A: «Da rivedere» è solo lavoro da fare e si svuota. B: controlli le scelte di Ledgerly in un posto, ma la vista non è mai vuota. Tocca §4.2 |
+| 10 | Conto di una banca (sola lettura): cosa succede al saldo dopo la lettura successiva? | «BBVA» ha 1.000 €. Scrivi a mano una spesa di 50 €: il saldo diventa 950 €. La sera la banca dice 1.000 € | Vale il saldo della banca: 1.000 €. Il movimento a mano resta in Spese e nei budget | Il movimento a mano continua a spostare il saldo: 950 €, finché non lo elimini | A: il saldo di un conto di banca è sempre quello della banca; il cambio a mano dura fino alla lettura. B: saldo di Ledgerly e saldo della banca restano diversi se la banca non riceve mai quel movimento. Tocca §9.8 |
+| 11 | Arriva una categoria nuova da Wallet: cosa fa Ledgerly prima della tua scelta? | Crei «Pets» su Wallet e registri una spesa | La aggiunge da sola come categoria nuova, con il segno «Nuova» nella sezione «Categorie di Wallet». Puoi associarla dopo | I movimenti restano «Da categorizzare» finché non scegli «associa» o «aggiungi» | A: come oggi, niente si ferma; se non guardi, hai una categoria in più. B: nessuna categoria entra senza una tua scelta; i budget non contano quei movimenti finché non scegli. Tocca §6.4 |
+| 12 | Movimento a mano con una data prima dell'ultimo saldo scritto del conto | Il 10 novembre scrivi che «Contanti» ha 80 €. Il 15 aggiungi una spesa del 5 novembre | Il saldo di oggi non cambia: gli 80 € del 10 comprendono già quella spesa | Ogni movimento a mano sposta il saldo di oggi: 67,50 € | A: un saldo scritto è un dato certo e una spesa dimenticata non lo sporca. B: regola più semplice da ricordare, ma un saldo contato da te cambia per una spesa che aveva già dentro. Tocca §9.7 |
 
 ## 18. Passaggi per lo sviluppo
 
@@ -1168,9 +1332,44 @@ Non sono decisioni di prodotto: sono dati e regole che l'interfaccia richiede e 
 12. **Movimento manuale e `Expenses`.** `RowView` riceve `manual: boolean`, lo stato della categoria e il motivo.
     `transactions-table.tsx` è già a 596 righe (UI-EXP-4): `CategoryCell` e il menu della riga vanno in file propri,
     non dentro la tabella.
-13. **Unione e categorie Wallet** (domanda 6). Serve sapere, per una categoria, quanti movimenti dei conti Wallet la usano.
+13. **Unione e categorie di una sorgente** (§6.3, §6.4). Serve sapere, per una categoria, se arriva da una sorgente e quanti movimenti di quella sorgente la usano.
 14. **«Senza categoria» oggi.** Da verificare che il conteggio di oggi di «Senza categoria» non comprenda i giroconti.
     Se li comprende, la fetta «Da categorizzare» li tiene come oggi (criterio 6) e solo «Da rivedere» li esclude.
 15. **Scorciatoie a un carattere** (§13). Voce a parte, fuori da N3.
 16. **Attributi per i test.** `data-testid` proposti: `review-group`, `review-group-confirm`, `review-done-row`,
-    `auto-mark`, `suggestion-chip`, `similar-dialog`, `manual-dialog`, `manual-bank-warning`, `merge-proposal`.
+    `auto-mark`, `suggestion-chip`, `similar-dialog`, `manual-dialog`, `manual-bank-warning`, `manual-balance-line`,
+    `merge-proposal`, `source-categories`, `source-category-row`.
+17. **Modalità del conto.** L'interfaccia riceve per ogni conto la modalità (`manual`, `two_way`, `read_only`) e il nome
+    del fornitore. È una proprietà della sorgente, non un elenco di nomi nel codice dell'interfaccia.
+18. **Saldo dopo un movimento a mano** (§9.7). Serve una regola del dominio: saldo = ultimo saldo conosciuto + movimenti
+    a mano dopo quella data. Il dialogo riceve saldo di prima e saldo di dopo dalla stessa regola, non li calcola nel browser.
+    Oggi i saldi sono letture (`accounts/rules.ts`): la regola nuova tocca `deriveMonthEnds` e il patrimonio.
+19. **Scrittura su una sorgente bidirezionale** (§9.8). Oggi esiste la modifica di un movimento Wallet
+    (`editWalletTransaction`), non la creazione. Servono: creazione sulla sorgente durante l'aggiornamento, stato
+    dell'invio sul movimento (`da inviare`, `non inviato`), legame esterno dopo l'invio, nessun doppione quando la
+    sorgente restituisce il movimento appena creato. La chiave di idempotenza di §9.4 vale anche per l'invio.
+20. **Categoria verso la sorgente.** Un movimento a mano su un conto Wallet porta la categoria della sorgente che
+    corrisponde a quella scelta. Con più categorie della sorgente sulla stessa categoria di Ledgerly serve una regola
+    (proposta: quella con lo stesso nome, altrimenti la più usata).
+21. **Corrispondenza delle categorie** (§6.4). Serve un dato «categoria della sorgente → categoria di Ledgerly» per
+    utente e per sorgente, e la categoria della sorgente salvata sul movimento. Oggi la categoria di Wallet è adottata
+    per nome ed è la stessa riga di `categories` (`provider_name`, sync dei nomi nei due sensi, eliminazione anche su
+    Wallet). Con più categorie della sorgente su una categoria di Ledgerly il rinomina nei due sensi vale solo per le
+    categorie «aggiunte» una a una: è una regola da scrivere.
+22. **Esempi per l'addestramento.** Un movimento della sorgente con una categoria associata è un'etichetta della
+    sorgente sotto la categoria di Ledgerly. Dopo un cambio di corrispondenza gli esempi seguono la categoria nuova.
+
+### 18.1 Punti del piano in conflitto con le decisioni del 15/11/2026
+
+Questa specifica cambia solo il suo file. Le righe del piano qui sotto vanno aggiornate da chi tiene il piano, prima dello sviluppo di N3.
+
+| Punto del piano | Testo di oggi | Conflitto |
+|---|---|---|
+| `04-now.md` §4.5 | «La sync non tocca mai un movimento manuale. Un movimento manuale non ha un link esterno.» | Su un conto bidirezionale il movimento a mano si scrive sulla sorgente e riceve un legame esterno (risposta 3) |
+| `04-now.md` §4.5 | Nessuna riga sul saldo | Un movimento a mano cambia il saldo di ogni conto (risposta 3) |
+| `03-releases.md` N3, «Migrazioni» | Solo le colonne della categoria, `category_memory`, `category_models`, origine `manual` | Servono anche: categoria suggerita e motivo (punti 1 e 3), stato dell'invio (punto 19), corrispondenza delle categorie (punto 21) |
+| `03-releases.md` N3, criterio 1 e `04-now.md` §4.4 «Dove gira» | «Sui conti Wallet restano le categorie di Wallet» | Da riscrivere: i movimenti di una sorgente che dà le categorie non si ricategorizzano; la persona associa o aggiunge le categorie (risposta 6) |
+| `03-releases.md` N3, criterio 6 e «Rollback» | «Fotografia dei numeri invariata»; «I movimenti manuali creati restano visibili come movimenti normali» | Vale al rilascio. Dopo un movimento a mano il saldo cambia; l'immagine precedente non conosce la regola del saldo e mostra il saldo di prima |
+| `03-releases.md` N3, «Dimensione» | L | Le due regole nuove aggiungono lavoro su saldi, scrittura su Wallet e categorie di Wallet. Da valutare: stesso rilascio o un rilascio a parte per §6.4 e §9.8 |
+| `01-decisions.md` C4b, R5c | «Wallet in sola lettura» | In conflitto con la scrittura di un movimento a mano su Wallet (risposta 3: Wallet è bidirezionale) |
+| `01-decisions.md` G10 | «Movimento manuale disponibile, anche su un conto collegato a una banca, con avviso» | Da estendere: su ogni conto, con le tre modalità |
