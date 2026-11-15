@@ -4,12 +4,13 @@ How Ledgerly runs on the homelab, how to configure it, and the admin tasks.
 
 ## Architecture
 
-`docker-compose.yml` starts two containers. Both read `.env.homelab`.
+`docker-compose.yml` starts three containers. The app and the cron container read `.env.homelab`.
 
-| Container       | Role                                                                          |
-| --------------- | ----------------------------------------------------------------------------- |
-| `ledgerly`      | The app (Next.js). Applies pending migrations at start, then serves on 3000.  |
-| `ledgerly-cron` | Calls `http://ledgerly:3000/api/jobs/tick` every minute, hour, day and month. |
+| Container                       | Role                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `ledgerly`                      | The app (Next.js). Applies pending migrations at start, then serves on 3000.  |
+| `ledgerly-cron`                 | Calls `http://ledgerly:3000/api/jobs/tick` every minute, hour, day and month. |
+| `ledgerly-plugin-enablebanking` | A plugin: reads banks through Enable Banking when the app asks. See below.    |
 
 - The app is on `proxy_public` (Traefik) and `db_internal` (Postgres, S3). The cron container is on
   `db_internal` only.
@@ -18,6 +19,31 @@ How Ledgerly runs on the homelab, how to configure it, and the admin tasks.
 - The cron container sends `CRON_SECRET` in the `X-Cron-Secret` header. The value must be the same
   in both containers.
 - `projects/stack.sh` finds both containers, so `./stack.sh up` starts them with the other projects.
+
+### Plugins
+
+A plugin is a small container of the standard installation. It speaks to one provider and keeps
+nothing: no database, no encryption key, no volume, a read-only file system. Contract and rules:
+`docs/design/rewrite-plan/04-now.md` §4.1; code: `plugins/<id>/` and `src/platform/plugins/`.
+
+- **Only the app calls a plugin**, on the network `ledgerly_plugins`. A plugin is not on
+  `db_internal`, `proxy_public` or `mail_internal`, and has no port on the host. It calls its
+  provider on the internet (`api.enablebanking.com`).
+- **Nobody installs a plugin in the interface.** The app knows its plugins from `PLUGIN_URLS` and
+  reads each manifest by itself (again after one hour). A plugin with no manifest read is not shown.
+- **Each person turns a plugin on for themselves**, in Settings › Integrations, and enters their own
+  credentials. The app seals them (`APP_ENCRYPTION_KEY`) and sends them to the plugin in the body of
+  each call. Turning the plugin off stops every call for that person; what is saved stays.
+- **The shared secret** proves to the plugin that the app is calling. It is in two files, with the
+  same value: `PLUGIN_SECRETS=<id>=<secret>` in `.env.homelab`, and `PLUGIN_SHARED_SECRET=<secret>`
+  in `.env.plugin-<id>` (one line, mode `600`, not committed). The plugin does not read
+  `.env.homelab`. To rotate: write a new value in both files, then
+  `docker compose up -d ledgerly ledgerly-plugin-<id>`.
+- **The return address** of a provider is `https://<host>/api/v1/plugins/<id>/callback`. It takes
+  the session cookie, not a token: a return is accepted only for the session that started it.
+- **A plugin that does not answer:** people see "The connection to banks is not available now".
+  Read `docker logs ledgerly-plugin-<id>`; the container restarts by itself (`autoheal`). To stop a
+  plugin for everybody: `docker compose stop ledgerly-plugin-<id>`. The app keeps working.
 
 ### Network access
 
@@ -135,6 +161,8 @@ All settings are in `.env.homelab` (template: `.env.example`). Do not commit thi
 - `INSTANCE_CONTACT` (optional): how to reach the host, shown on the public pages `/privacy` and
   `/terms`. Anybody can read it. Empty: the pages tell the reader to ask whoever gave the account.
   Restart the container after a change.
+- `PLUGIN_URLS`, `PLUGIN_SECRETS` (optional): the plugins of the instance and the secret shared
+  with each (32+ characters). See "Plugins". Empty: the app has no plugin.
 - `GOTIFY_URL`, `GOTIFY_TOKEN` (optional): failed jobs send a notification to the admins.
 - Authentik and mail settings saved in **Admin → Server** override `.env.homelab`.
 

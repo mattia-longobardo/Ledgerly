@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { redactForLog } from "@/platform/auth/logger";
 import { getDb } from "@/platform/db/client";
 import { HEARTBEAT_MAX_AGE_MS, heartbeatAgeMs } from "@/platform/jobs/heartbeat";
+import { keepManifestsFresh } from "@/platform/plugins/service";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export async function GET() {
     dbUp = false;
     console.error("[health] database check failed", redactForLog(error));
   }
+  // The health check is the one caller that comes round from the start of the process on: it is
+  // what keeps the manifests of the plugins read. Not awaited, and no part of the answer.
+  if (dbUp) keepManifestsFresh();
   const age = await heartbeatAgeMs();
   const heartbeatStale = age === null || age > HEARTBEAT_MAX_AGE_MS;
   const healthy = dbUp && !(process.uptime() * 1000 > HEARTBEAT_MAX_AGE_MS && heartbeatStale);

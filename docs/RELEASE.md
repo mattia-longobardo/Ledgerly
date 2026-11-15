@@ -65,7 +65,7 @@ prints that number, so it has to be the one in production.
 
 `<id>` is the release (`n1`, `r2`, …). Three things, in this order, just before the build.
 
-`sh scripts/release.sh <id> [--no-dump] [--cron] [--before-from <checkout>]` runs this step and
+`sh scripts/release.sh <id> [--no-dump] [--cron] [--plugin <id>] [--before-from <checkout>]` runs this step and
 steps 3 and 4 (health and numbers) in one go, under the deploy lock. It **stops before the build**
 when the image, the dump or the snapshot "before" fails, or when `numbers-before.json` is missing,
 empty or different from its checksum: a snapshot taken after the build says nothing about a

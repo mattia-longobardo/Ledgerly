@@ -46,6 +46,9 @@ import { isBookable } from "../src/platform/holidays/rules";
 import { deleteFolder } from "../src/platform/storage";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "../src/platform/integrations/rules";
 import { listConnections, saveConnection, saveSchedule } from "../src/platform/integrations/service";
+import { findInstancePlugin } from "../src/platform/plugins/queries";
+import { setPluginActive } from "../src/platform/plugins/service";
+import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../src/app/(app)/banks/plugin";
 import {
   BASE_URL,
   E2E_MCP_CLIENT_NAME,
@@ -1211,6 +1214,11 @@ async function seedBinance(ctx: Ctx, on: string): Promise<void> {
 
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
+  // The bank plugin, turned on with nothing saved: the section "Banks" opens on its guide and the
+  // procedure on its guard, both on screen for the check. Only where the instance has the plugin —
+  // the seed cannot reach a plugin itself, so it relies on the manifest the app has already read.
+  if (await findInstancePlugin(BANK_PLUGIN))
+    await setPluginActive(ctx, { pluginId: BANK_PLUGIN, active: true });
   // A Trek link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
   // check, and the dispatcher never tries to reach the address, which does not exist.
   const trek = await saveConnection(ctx, {

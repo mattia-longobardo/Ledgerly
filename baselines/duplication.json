@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 77098,
-    "duplicatedLines": 15677,
-    "percent": 20.33,
-    "blocks": 1086
+    "lines": 79638,
+    "duplicatedLines": 16014,
+    "percent": 20.11,
+    "blocks": 1107
   },
   "units": {
     "app": {
-      "lines": 15279,
-      "duplicatedLines": 3741,
-      "percent": 24.48,
-      "blocks": 269
+      "lines": 16453,
+      "duplicatedLines": 3924,
+      "percent": 23.85,
+      "blocks": 278
     },
     "global.d": {
       "lines": 6,
@@ -29,10 +29,10 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 3524,
-      "duplicatedLines": 1052,
-      "percent": 29.85,
-      "blocks": 71
+      "lines": 3569,
+      "duplicatedLines": 1038,
+      "percent": 29.08,
+      "blocks": 70
     },
     "modules/budgets": {
       "lines": 1212,
@@ -41,40 +41,40 @@
       "blocks": 18
     },
     "modules/funds": {
-      "lines": 10580,
-      "duplicatedLines": 2121,
-      "percent": 20.05,
+      "lines": 10642,
+      "duplicatedLines": 2130,
+      "percent": 20.02,
       "blocks": 152
     },
     "modules/imports": {
-      "lines": 855,
-      "duplicatedLines": 235,
-      "percent": 27.49,
-      "blocks": 14
+      "lines": 918,
+      "duplicatedLines": 245,
+      "percent": 26.69,
+      "blocks": 15
     },
     "modules/interests": {
       "lines": 2084,
-      "duplicatedLines": 505,
-      "percent": 24.23,
+      "duplicatedLines": 504,
+      "percent": 24.18,
       "blocks": 37
     },
     "modules/investments": {
-      "lines": 10465,
-      "duplicatedLines": 1997,
-      "percent": 19.08,
-      "blocks": 133
+      "lines": 10373,
+      "duplicatedLines": 1969,
+      "percent": 18.98,
+      "blocks": 131
     },
     "modules/payroll": {
       "lines": 3469,
-      "duplicatedLines": 799,
-      "percent": 23.03,
-      "blocks": 42
+      "duplicatedLines": 817,
+      "percent": 23.55,
+      "blocks": 43
     },
     "modules/pockets": {
       "lines": 1655,
-      "duplicatedLines": 763,
-      "percent": 46.1,
-      "blocks": 41
+      "duplicatedLines": 772,
+      "percent": 46.65,
+      "blocks": 42
     },
     "modules/subscriptions": {
       "lines": 1877,
@@ -89,9 +89,9 @@
       "blocks": 21
     },
     "modules/transactions": {
-      "lines": 5291,
-      "duplicatedLines": 978,
-      "percent": 18.48,
+      "lines": 5242,
+      "duplicatedLines": 958,
+      "percent": 18.28,
       "blocks": 74
     },
     "modules/users": {
@@ -113,9 +113,9 @@
       "blocks": 2
     },
     "platform/auth": {
-      "lines": 1499,
+      "lines": 1506,
       "duplicatedLines": 356,
-      "percent": 23.75,
+      "percent": 23.64,
       "blocks": 22
     },
     "platform/backup": {
@@ -149,7 +149,7 @@
       "blocks": 1
     },
     "platform/env": {
-      "lines": 130,
+      "lines": 141,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -174,8 +174,8 @@
     },
     "platform/holidays": {
       "lines": 578,
-      "duplicatedLines": 102,
-      "percent": 17.65,
+      "duplicatedLines": 104,
+      "percent": 17.99,
       "blocks": 9
     },
     "platform/i18n": {
@@ -185,10 +185,10 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 1131,
-      "duplicatedLines": 254,
-      "percent": 22.46,
-      "blocks": 19
+      "lines": 1215,
+      "duplicatedLines": 270,
+      "percent": 22.22,
+      "blocks": 20
     },
     "platform/integrations/ccxt": {
       "lines": 1570,
@@ -256,6 +256,24 @@
       "percent": 25.64,
       "blocks": 1
     },
+    "platform/plugin-config": {
+      "lines": 42,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
+    "platform/plugins": {
+      "lines": 1134,
+      "duplicatedLines": 144,
+      "percent": 12.7,
+      "blocks": 10
+    },
+    "platform/ranges": {
+      "lines": 59,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
     "platform/reports": {
       "lines": 95,
       "duplicatedLines": 0,
@@ -264,9 +282,9 @@
     },
     "platform/settings": {
       "lines": 626,
-      "duplicatedLines": 54,
-      "percent": 8.63,
-      "blocks": 6
+      "duplicatedLines": 63,
+      "percent": 10.06,
+      "blocks": 7
     },
     "platform/storage": {
       "lines": 97,
@@ -309,23 +327,24 @@
     "app/(app)/accounts/[id]/page.tsx": 63,
     "app/(app)/accounts/new/page.tsx": 7,
     "app/(app)/accounts/page.tsx": 133,
+    "app/(app)/banks/connect/bank-step.tsx": 13,
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/budgets/page.tsx": 8,
     "app/(app)/expenses/page.tsx": 30,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
-    "app/(app)/funds/[id]/page.tsx": 115,
+    "app/(app)/funds/[id]/page.tsx": 126,
     "app/(app)/funds/fund-setup.ts": 11,
     "app/(app)/funds/home-skeleton.tsx": 20,
-    "app/(app)/funds/page.tsx": 236,
+    "app/(app)/funds/page.tsx": 243,
     "app/(app)/interests/[id]/page.tsx": 52,
     "app/(app)/interests/page.tsx": 57,
-    "app/(app)/investments/[accountId]/activity/page.tsx": 93,
+    "app/(app)/investments/[accountId]/activity/page.tsx": 95,
     "app/(app)/investments/[accountId]/connection/page.tsx": 35,
-    "app/(app)/investments/[accountId]/page.tsx": 187,
-    "app/(app)/investments/[accountId]/positions/page.tsx": 112,
+    "app/(app)/investments/[accountId]/page.tsx": 204,
+    "app/(app)/investments/[accountId]/positions/page.tsx": 103,
     "app/(app)/investments/[accountId]/service-data.ts": 21,
     "app/(app)/investments/catalog/page.tsx": 32,
-    "app/(app)/investments/page.tsx": 264,
+    "app/(app)/investments/page.tsx": 312,
     "app/(app)/layout.tsx": 17,
     "app/(app)/navigation.ts": 108,
     "app/(app)/page.tsx": 73,
@@ -341,10 +360,13 @@
     "app/(app)/settings/categories/page.tsx": 18,
     "app/(app)/settings/data/page.tsx": 30,
     "app/(app)/settings/integrations/actions.ts": 127,
+    "app/(app)/settings/integrations/banks-card.tsx": 73,
     "app/(app)/settings/integrations/page.tsx": 15,
+    "app/(app)/settings/integrations/plugin-actions.ts": 6,
+    "app/(app)/settings/integrations/plugin-row.tsx": 8,
     "app/(app)/settings/integrations/schedule-control.tsx": 61,
     "app/(app)/settings/integrations/trek-card.tsx": 193,
-    "app/(app)/settings/integrations/wallet-card.tsx": 194,
+    "app/(app)/settings/integrations/wallet-card.tsx": 195,
     "app/(app)/settings/profile/name-form.tsx": 15,
     "app/(app)/settings/profile/page.tsx": 7,
     "app/(app)/settings/profile/preferences-form.tsx": 103,
@@ -356,6 +378,7 @@
     "app/(app)/settings/security/password-form.tsx": 10,
     "app/(app)/settings/security/sessions-list.tsx": 10,
     "app/(app)/settings/security/two-factor-card.tsx": 10,
+    "app/(app)/settings/server/actions.ts": 6,
     "app/(app)/settings/server/jobs-card.tsx": 39,
     "app/(app)/settings/server/llm-card.tsx": 74,
     "app/(app)/settings/server/oidc-card.tsx": 80,
@@ -383,7 +406,6 @@
     "modules/accounts/ui/connections.tsx": 39,
     "modules/accounts/ui/display.ts": 18,
     "modules/accounts/ui/net-worth-card.tsx": 10,
-    "modules/accounts/ui/period-bar.tsx": 14,
     "modules/accounts/ui/period.ts": 10,
     "modules/accounts/ui/settings-form.tsx": 91,
     "modules/budgets/actions.ts": 11,
@@ -413,9 +435,9 @@
     "modules/funds/ui/fee-dialog.tsx": 100,
     "modules/funds/ui/fee-list.tsx": 40,
     "modules/funds/ui/fee-text.ts": 10,
-    "modules/funds/ui/fund-chart.tsx": 65,
+    "modules/funds/ui/fund-chart.tsx": 86,
     "modules/funds/ui/fund-contributions.tsx": 95,
-    "modules/funds/ui/fund-fees-client.tsx": 20,
+    "modules/funds/ui/fund-fees-client.tsx": 8,
     "modules/funds/ui/fund-forms.tsx": 78,
     "modules/funds/ui/fund-settings-form.tsx": 52,
     "modules/funds/ui/fund-settings.tsx": 37,
@@ -431,6 +453,7 @@
     "modules/funds/ui/source-text.ts": 13,
     "modules/imports/jobs.ts": 10,
     "modules/imports/pdf/layout.ts": 49,
+    "modules/imports/retired.ts": 10,
     "modules/imports/rules.ts": 9,
     "modules/imports/schema.ts": 91,
     "modules/imports/service.ts": 76,
@@ -439,7 +462,7 @@
     "modules/interests/posting.ts": 30,
     "modules/interests/queries.ts": 30,
     "modules/interests/rules.ts": 20,
-    "modules/interests/schema.ts": 149,
+    "modules/interests/schema.ts": 148,
     "modules/interests/service.ts": 79,
     "modules/interests/ui/present.ts": 9,
     "modules/interests/ui/rule-dialog.tsx": 136,
@@ -453,10 +476,8 @@
     "modules/investments/rules.ts": 53,
     "modules/investments/schema.ts": 447,
     "modules/investments/service.ts": 264,
-    "modules/investments/sync.ts": 437,
+    "modules/investments/sync.ts": 448,
     "modules/investments/ui/dialogs.tsx": 407,
-    "modules/investments/ui/period-control.tsx": 24,
-    "modules/investments/ui/period-picker.tsx": 15,
     "modules/payroll/actions.ts": 70,
     "modules/payroll/fields.ts": 55,
     "modules/payroll/parse/reply-teamsystem.ts": 53,
@@ -464,14 +485,14 @@
     "modules/payroll/queries.ts": 19,
     "modules/payroll/rules.ts": 101,
     "modules/payroll/schema.ts": 208,
-    "modules/payroll/service.ts": 116,
+    "modules/payroll/service.ts": 134,
     "modules/payroll/ui/present.ts": 9,
     "modules/payroll/ui/register-table.tsx": 50,
     "modules/payroll/ui/review-actions.tsx": 88,
     "modules/payroll/ui/review-workspace.tsx": 17,
     "modules/pockets/actions.ts": 95,
     "modules/pockets/jobs.ts": 19,
-    "modules/pockets/queries.ts": 65,
+    "modules/pockets/queries.ts": 74,
     "modules/pockets/schema.ts": 129,
     "modules/pockets/service.ts": 112,
     "modules/pockets/ui/pocket-actions.tsx": 343,
@@ -496,15 +517,15 @@
     "modules/transactions/jobs.ts": 79,
     "modules/transactions/queries.ts": 214,
     "modules/transactions/rules.ts": 10,
-    "modules/transactions/schema.ts": 142,
+    "modules/transactions/schema.ts": 144,
     "modules/transactions/service.ts": 99,
     "modules/transactions/taxonomy.ts": 127,
     "modules/transactions/ui/breakdown-card.tsx": 6,
     "modules/transactions/ui/details-modal.tsx": 53,
-    "modules/transactions/ui/filter-bar.tsx": 68,
+    "modules/transactions/ui/filter-bar.tsx": 54,
     "modules/transactions/ui/filters.ts": 10,
-    "modules/transactions/ui/range-picker.tsx": 14,
-    "modules/transactions/ui/spending-card.tsx": 23,
+    "modules/transactions/ui/range-picker.tsx": 9,
+    "modules/transactions/ui/spending-card.tsx": 20,
     "modules/transactions/ui/transactions-table.tsx": 54,
     "modules/users/actions.ts": 83,
     "modules/users/admin.ts": 15,
@@ -525,16 +546,16 @@
     "platform/fx/rules.ts": 38,
     "platform/fx/schema.ts": 14,
     "platform/fx/sources.ts": 9,
-    "platform/holidays/schema.ts": 59,
+    "platform/holidays/schema.ts": 61,
     "platform/holidays/service.ts": 32,
     "platform/holidays/sources.ts": 11,
     "platform/integrations/ccxt/binance.ts": 251,
     "platform/integrations/ccxt/client.ts": 31,
     "platform/integrations/ccxt/source.ts": 25,
     "platform/integrations/etoro/mapping.ts": 28,
-    "platform/integrations/rules.ts": 12,
-    "platform/integrations/schema.ts": 127,
-    "platform/integrations/service.ts": 115,
+    "platform/integrations/rules.ts": 29,
+    "platform/integrations/schema.ts": 124,
+    "platform/integrations/service.ts": 117,
     "platform/integrations/trek/client.ts": 63,
     "platform/integrations/trek/sync.ts": 18,
     "platform/integrations/wallet/categories.ts": 84,
@@ -546,7 +567,10 @@
     "platform/mcp/tools.ts": 103,
     "platform/money.ts": 9,
     "platform/notifications/schema.ts": 20,
-    "platform/settings/schema.ts": 10,
+    "platform/plugins/queries.ts": 14,
+    "platform/plugins/schema.ts": 86,
+    "platform/plugins/service.ts": 44,
+    "platform/settings/schema.ts": 19,
     "platform/settings/service.ts": 44,
     "ui/category-picker.tsx": 9,
     "ui/chart.tsx": 243,

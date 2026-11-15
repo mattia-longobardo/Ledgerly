@@ -141,6 +141,25 @@ export async function refreshManifests(now: Date = new Date(), deps: Deps = {}):
   }
 }
 
+const MANIFEST_CHECK_EVERY_MS = 300_000;
+let nextManifestCheck = 0;
+
+/**
+ * The same reading, for a caller that comes round often (the health check, every few seconds): it
+ * asks the database at most once in five minutes per process, never waits and never throws. This
+ * is what reads a manifest "at start and at intervals" without a job of its own.
+ */
+export function keepManifestsFresh(now: Date = new Date()): void {
+  if (now.getTime() < nextManifestCheck) return;
+  nextManifestCheck = now.getTime() + MANIFEST_CHECK_EVERY_MS;
+  refreshManifests(now).catch((error: unknown) => {
+    console.error(
+      "[plugins] the manifests could not be read",
+      error instanceof Error ? error.name : "unknown",
+    );
+  });
+}
+
 async function requirePlugin(pluginId: string): Promise<InstancePlugin> {
   const plugin = await findInstancePlugin(pluginId);
   if (!plugin) throw new PluginActionError("not_found");

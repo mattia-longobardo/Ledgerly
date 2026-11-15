@@ -44,6 +44,7 @@ services:
       - proxy_public
       - db_internal
       - mail_internal
+      - ledgerly_plugins
 
 # Ledgerly Cron # --------------------------------------------------------------------------------------------------------------
 
@@ -76,7 +77,52 @@ services:
     networks:
       - db_internal
 
+# Ledgerly Plugin Enable Banking # --------------------------------------------------------------------------------------------------------------
+
+  # A plugin of the standard installation (docs/operations.md, "Plugins"): stateless, called only by
+  # `ledgerly` on `ledgerly_plugins`. It has no database address, no encryption key and no volume;
+  # its one variable is the secret it shares with the core, in a file of its own.
+  ledgerly-plugin-enablebanking:
+    build:
+      context: .
+      dockerfile: plugins/enablebanking/Dockerfile
+    image: ledgerly-plugin-enablebanking:latest
+    container_name: ledgerly-plugin-enablebanking
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Not required: without the file the plugin refuses to start, and the rest of the stack — the
+    # app first — still does. A missing file must never stop `docker compose` for `ledgerly`.
+    env_file:
+      - path: .env.plugin-enablebanking
+        required: false
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "autoheal=true"
+    networks:
+      - ledgerly_plugins
+
 networks:
+  # The core and its plugins, and nothing else: a plugin is not on `db_internal`, `proxy_public` or
+  # `mail_internal`. Not `internal`: a plugin calls its provider on the internet.
+  ledgerly_plugins:
+    name: ledgerly_plugins
   proxy_public:
     external: true
   db_internal:
