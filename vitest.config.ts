@@ -20,7 +20,11 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: "unit-node", environment: "node", include: ["src/**/*.test.ts"] },
+        test: {
+          name: "unit-node",
+          environment: "node",
+          include: ["src/**/*.test.ts", "plugins/**/*.test.ts"],
+        },
       },
       {
         extends: true,
