@@ -1043,7 +1043,7 @@
         "step1": "Apri <link>enablebanking.com</link> e crea un account.",
         "step2": "Registra un'applicazione di tipo Production con questo indirizzo di ritorno:",
         "step3": "Copia l'ID applicazione e scarica la chiave privata.",
-        "step4": "Nel pannello di Enable Banking collega i conti che vuoi leggere («Link accounts»). Con un'applicazione gratuita Ledgerly legge solo i conti collegati lì.",
+        "step4": "Se l'applicazione è in stato «Restricted» (gratuita, non ancora verificata da Enable Banking), collega prima i conti che vuoi leggere nel pannello di Enable Banking («Link accounts»): Ledgerly legge solo i conti collegati lì.",
         "returnAddress": "Indirizzo di ritorno",
         "copy": "Copia",
         "copied": "Copiato",
