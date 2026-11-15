@@ -42,6 +42,9 @@ export const KNOWN_CAPABILITIES = [
   "provider.write",
   "categories",
   "editRecord",
+  // The provider creates on its side a movement written in the core: its accounts are "read and
+  // write" (rewrite plan, 12-account-modes.md §12.1).
+  "createRecord",
   "deleteCategory",
   "ledgerPosting",
   "dailyRates",

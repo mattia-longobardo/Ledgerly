@@ -1393,6 +1393,7 @@
       "cancel": "Cancel"
     },
     "badges": {
+      "manual": "Manual",
       "hidden": "Hidden",
       "removedUpstream": "Gone from provider",
       "edited": "Edited here",
@@ -1419,8 +1420,8 @@
       "action": "Clear filters"
     },
     "unsynced": {
-      "title": "Nothing synced yet",
-      "description": "Connect Budget Makers Wallet to pull in your transactions.",
+      "title": "No transactions yet",
+      "description": "Connect a source or add your first transaction by hand.",
       "action": "Open Integrations"
     },
     "toasts": {
@@ -1484,6 +1485,60 @@
         "refused": "Wallet refused the change: nothing changed here.",
         "failed": "Wallet did not answer: nothing changed here. Try again in a minute."
       }
+    },
+    "manual": {
+      "add": "Add transaction",
+      "addShort": "Add",
+      "editTitle": "Edit transaction",
+      "type": "Type",
+      "types": {
+        "expense": "Money out",
+        "income": "Money in"
+      },
+      "amount": "Amount",
+      "amountHint": "No sign: the type decides it.",
+      "date": "Date",
+      "account": "Account",
+      "accounts": {
+        "manual": "Accounts kept by hand",
+        "bank": "Accounts connected to a bank"
+      },
+      "payee": "Payee (optional)",
+      "category": "Category",
+      "noCategories": "Create categories in Settings",
+      "note": "Note (optional)",
+      "bankWarning": "This account gets its transactions from the bank. A transaction added by hand can appear twice.",
+      "bankBalance": "The balance changes now. At the next reading the bank's balance applies.",
+      "balance": {
+        "change": "Balance of “{account}”: from {before} to {after}.",
+        "unchanged": "The balance of “{account}” was recorded on {date} and already includes this day: it does not change."
+      },
+      "saving": "Saving…",
+      "toasts": {
+        "added": "Transaction added",
+        "addedElsewhere": "Transaction added on {date}, outside what you see now",
+        "show": "Show",
+        "saved": "Transaction saved"
+      },
+      "delete": {
+        "title": "Delete this transaction?",
+        "description": "You added it by hand on {date}. It is removed permanently."
+      },
+      "noAccount": {
+        "title": "You need an account",
+        "description": "Create an account to add transactions by hand.",
+        "action": "Create an account"
+      },
+      "errors": {
+        "amount": "Enter an amount greater than zero.",
+        "date": "Choose a date up to today.",
+        "account": "This account no longer exists. Choose another.",
+        "failed": "Couldn't save. Try again."
+      },
+      "row": {
+        "edit": "Edit transaction"
+      },
+      "palette": "Add transaction"
     }
   },
   "overview": {
@@ -1800,7 +1855,8 @@
         "system": "Snapshot",
         "import": "Import",
         "derived": "Rebuilt",
-        "portfolio": "Portfolio"
+        "portfolio": "Portfolio",
+        "movement": "Manual transactions"
       },
       "updated": "Balance updated",
       "edit": {

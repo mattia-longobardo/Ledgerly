@@ -17,11 +17,13 @@ import { CategoryPicker } from "@/ui/category-picker";
 import { type CommandResult, hide, removeHidden, restore, setCategory } from "./commands";
 import { TransactionDetails } from "./details-modal";
 import type { RowBadge } from "./display";
+import { useManualMovement } from "./manual-movement";
 import { DEFAULT_DIRECTION, type SortDirection, type SortKey } from "./filters";
 import type { CategoryOption, GroupView, LabelOption, RowView } from "./view";
 
 /** Hidden and gone-from-the-provider are facts about the data; "edited here" is one about the user. */
 const BADGE_TONE: Record<RowBadge, "neutral" | "warn" | "accent"> = {
+  manual: "neutral",
   hidden: "neutral",
   removedUpstream: "warn",
   edited: "accent",
@@ -115,6 +117,8 @@ export function TransactionsTable({
   const [detailsFor, setDetailsFor] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  /** The manual movement's dialogs and writes, where the page set them up. */
+  const manual = useManualMovement();
 
   /**
    * Double-click a row to open it for editing (owner, 2026-09-20). The same panel the row menu's
@@ -125,10 +129,12 @@ export function TransactionsTable({
    * doing. The text selection a double-click leaves behind is cleared, because it was a gesture
    * here and not a request to select a word.
    */
-  function openOnDoubleClick(event: MouseEvent<HTMLElement>, id: string) {
+  function openOnDoubleClick(event: MouseEvent<HTMLElement>, row: RowView) {
     if ((event.target as HTMLElement).closest("button, a, input, select, [role='menu']")) return;
     window.getSelection()?.removeAllRanges();
-    setDetailsFor(id);
+    // A movement written by hand opens its own dialog: every field of it is the person's.
+    if (row.manual && manual) manual.openEdit(row);
+    else setDetailsFor(row.id);
   }
 
   const rows = useMemo(() => groups.flatMap((group) => group.rows), [groups]);
@@ -216,13 +222,13 @@ export function TransactionsTable({
   function onVisibility(ids: readonly string[], hidden: boolean) {
     if (hidden) {
       run(
-        () => restore(ids),
+        () => (manual ? manual.visibility(ids, "restore") : restore(ids)),
         (count) => t("toasts.restored", { count }),
       );
       return;
     }
     run(
-      () => hide(ids),
+      () => (manual ? manual.visibility(ids, "hide") : hide(ids)),
       (count) => t("toasts.hidden", { count }),
     );
   }
@@ -286,6 +292,23 @@ export function TransactionsTable({
   }
 
   function rowMenu(row: RowView, variant: "table" | "list") {
+    if (row.manual && manual) {
+      // A manual movement is changed in its own dialog and deleted without being hidden first.
+      return (
+        <ActionMenu
+          label={t("row.menu")}
+          items={[
+            { label: t("row.editCategory"), onSelect: () => setEditing(`${variant}:${row.id}`) },
+            { label: t("manual.row.edit"), onSelect: () => manual.openEdit(row) },
+            {
+              label: row.hidden ? t("selection.restore") : t("selection.hide"),
+              onSelect: () => onVisibility([row.id], row.hidden),
+            },
+            { label: t("selection.delete"), onSelect: () => manual.openDelete(row), danger: true },
+          ]}
+        />
+      );
+    }
     return (
       <ActionMenu
         label={t("row.menu")}
@@ -356,7 +379,7 @@ export function TransactionsTable({
                 setDeleting(null);
                 if (id)
                   run(
-                    () => removeHidden([id]),
+                    () => (manual ? manual.visibility([id], "delete") : removeHidden([id])),
                     (count) => t("toasts.deleted", { count }),
                   );
               }}
@@ -478,7 +501,7 @@ export function TransactionsTable({
                     id={domId(row.id)}
                     tabIndex={-1}
                     selected={selection.includes(row.id)}
-                    onDoubleClick={(event) => openOnDoubleClick(event, row.id)}
+                    onDoubleClick={(event) => openOnDoubleClick(event, row)}
                     className={cn(
                       "focus:outline-1 focus:-outline-offset-1 focus:outline-accent",
                       row.hidden && "opacity-60",
@@ -539,7 +562,7 @@ export function TransactionsTable({
               {group.rows.map((row) => (
                 <li
                   key={row.id}
-                  onDoubleClick={(event) => openOnDoubleClick(event, row.id)}
+                  onDoubleClick={(event) => openOnDoubleClick(event, row)}
                   className={cn(
                     "flex items-start gap-3 border-b border-border px-4 py-2.5",
                     selection.includes(row.id) && "bg-sel",

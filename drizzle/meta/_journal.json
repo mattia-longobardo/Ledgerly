@@ -372,6 +372,13 @@
       "when": 1794771586068,
       "tag": "0052_connection_status_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794784244732,
+      "tag": "0053_manual_movement",
+      "breakpoints": true
     }
   ]
 }

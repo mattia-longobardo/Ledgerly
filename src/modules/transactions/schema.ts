@@ -14,11 +14,12 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema";
 import { users } from "../../platform/auth/schema";
-import { CATEGORY_TYPES, TRANSACTION_STATES, TRANSACTION_TYPES } from "./rules";
+import { CATEGORY_TYPES, TRANSACTION_ORIGINS, TRANSACTION_STATES, TRANSACTION_TYPES } from "./rules";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
@@ -163,6 +164,11 @@ export const transactions = pgTable(
     transferGroupId: uuid("transfer_group_id").references((): AnyPgColumn => transactions.id, {
       onDelete: "set null",
     }),
+    // Who wrote the row (rewrite plan N3). The default keeps every row an image without this
+    // column writes what it is: a provider's.
+    origin: text("origin", { enum: TRANSACTION_ORIGINS }).notNull().default("provider"),
+    // The key the dialog sent a manual movement with: the same key sent twice is one row.
+    idempotencyKey: text("idempotency_key"),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     removedUpstreamAt: timestamp("removed_upstream_at", { withTimezone: true }),
     locallyEdited: text("locally_edited")
@@ -180,6 +186,10 @@ export const transactions = pgTable(
     index("transactions_account_occurred_idx").on(table.accountId, table.occurredAt.desc()),
     index("transactions_user_category_idx").on(table.userId, table.categoryId),
     index("transactions_transfer_group_idx").on(table.transferGroupId),
+    uniqueIndex("transactions_user_idempotency_uq")
+      .on(table.userId, table.idempotencyKey)
+      .where(sql`${table.idempotencyKey} is not null`),
+    check("transactions_origin_ck", sql`${table.origin} in (${sql.raw(inList(TRANSACTION_ORIGINS))})`),
     check("transactions_type_ck", sql`${table.type} in (${sql.raw(inList(TRANSACTION_TYPES))})`),
     check("transactions_state_ck", sql`${table.state} in (${sql.raw(inList(TRANSACTION_STATES))})`),
     check("transactions_currency_ck", sql`${table.currency} ~ '^[A-Z]{3}$'`),

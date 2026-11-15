@@ -21,7 +21,11 @@ import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
 import { type Cents, sumCents } from "@/platform/money";
 import { managedSinceOf, serviceAccountIds } from "@/modules/investments/managed";
-import { dailyNetByAccount, transactionIdsOfAccount } from "@/modules/transactions/queries";
+import {
+  dailyNetByAccount,
+  manualMovementsByAccount,
+  transactionIdsOfAccount,
+} from "@/modules/transactions/queries";
 import {
   type AccountCreateInput,
   accountCreateSchema,
@@ -37,11 +41,20 @@ import {
   deriveMonthEnds,
   isFutureDate,
   isStale,
+  movementBalances,
   type RemoteAccount,
   reconcileProviderAccounts,
   settingsForSynced,
+  withMovementPoints,
 } from "./rules";
-import { type Account, type BalanceEntry, balancesOn, listAccounts, observedDays } from "./queries";
+import {
+  type Account,
+  type BalanceEntry,
+  balancesOn,
+  listAccounts,
+  movementBasis,
+  observedDays,
+} from "./queries";
 import { accountConnections, accounts, balanceEntries, snapshotRuns } from "./schema";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
@@ -478,8 +491,8 @@ export async function dailyBalancesOf(
     wanted.has(account.id),
   );
   const syncedIds = owned.filter((account) => account.origin === "synced").map((account) => account.id);
-  const [observed, daily] = await Promise.all([
-    observedDays(
+  const [basis, daily] = await Promise.all([
+    movementBasis(
       ctx,
       owned.map((account) => account.id),
     ),
@@ -488,15 +501,17 @@ export async function dailyBalancesOf(
   const days: CivilDate[] = [];
   for (let day = window.from; day <= window.to; day = addDays(day, 1)) days.push(day);
   const series = new Map(
-    owned.map((account) => [
-      account.id,
-      dailySeries(
-        observed.get(account.id) ?? [],
+    owned.map((account) => {
+      const { readings = [], points = [] } = basis.get(account.id) ?? {};
+      const read = dailySeries(
+        readings,
         daily.get(account.id) ?? [],
         days,
         account.origin === "synced" ? "movements" : "hold",
-      ),
-    ]),
+      );
+      // The movements written by hand are in neither the readings nor the provider's movements.
+      return [account.id, { ...read, values: withMovementPoints(read.values, days, readings, points) }];
+    }),
   );
   return { days, series };
 }
@@ -525,6 +540,56 @@ export async function accountDailyBalances(
  * reads are over.
  */
 export async function rebuildDerivedBalances(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds?: readonly string[],
+): Promise<{ written: number }> {
+  const monthEnds = await rebuildMonthEnds(ctx, accountIds);
+  // After the month ends: a rebuilt end that follows a manual movement has to show it too.
+  await rebuildMovementBalances(ctx, accountIds);
+  return monthEnds;
+}
+
+/**
+ * The balance after the movements a person wrote by hand (rewrite plan, 12-account-modes.md
+ * §12.2), from scratch like the month ends: every `movement` row of the accounts goes and
+ * `movementBalances` writes the ones the readings and the manual movements support, in one
+ * transaction. It runs wherever a reading or a manual movement changes, so every read of a
+ * balance — Accounts, Overview, the net worth, the API — finds the number already there.
+ */
+async function rebuildMovementBalances(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds?: readonly string[],
+): Promise<void> {
+  const manual = await manualMovementsByAccount(ctx, accountIds);
+  const basis = await movementBasis(ctx, [...manual.keys()]);
+  const capturedAt = new Date();
+  const rows = [...manual].flatMap(([accountId, movements]) => {
+    const { readings = [], copies = [] } = basis.get(accountId) ?? {};
+    return movementBalances(readings, movements, copies).map((point) =>
+      userScoped(ctx).stamp({
+        accountId,
+        on: point.on,
+        balanceCents: point.cents,
+        source: "movement" as const,
+        capturedAt,
+      }),
+    );
+  });
+  await getDb().transaction(async (tx) => {
+    await tx
+      .delete(balanceEntries)
+      .where(
+        and(
+          userScoped(ctx).owns(balanceEntries),
+          eq(balanceEntries.source, "movement"),
+          accountIds === undefined ? undefined : inArray(balanceEntries.accountId, [...accountIds]),
+        ),
+      );
+    if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+  });
+}
+
+async function rebuildMonthEnds(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountIds?: readonly string[],
 ): Promise<{ written: number }> {

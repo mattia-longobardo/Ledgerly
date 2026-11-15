@@ -21,6 +21,8 @@ import {
 } from "@/modules/transactions/ui/display";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
+import { AddMovementButton, ManualMovement } from "@/modules/transactions/ui/manual-movement";
+import type { ManualCommands } from "@/modules/transactions/ui/manual-types";
 import { ShortcutsCard } from "@/modules/transactions/ui/shortcuts-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import type {
@@ -39,6 +41,27 @@ import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import {
+  changeVisibilityAction,
+  createManualAction,
+  deleteManualAction,
+  manualFormAction,
+  previewManualAction,
+  updateManualAction,
+} from "./manual-actions";
+
+/**
+ * The writes and the reads of the manual movement, handed to the components: each joins the
+ * accounts and the movements, so it is an action of the application (`manual.ts`).
+ */
+const MANUAL_COMMANDS: ManualCommands = {
+  form: manualFormAction,
+  preview: previewManualAction,
+  create: createManualAction,
+  update: updateManualAction,
+  remove: deleteManualAction,
+  visibility: changeVisibilityAction,
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("expenses"))("title") };
@@ -58,7 +81,8 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
   const ctx = await requireSession();
   const t = await getTranslations("expenses");
   const todayOn = today(ctx.timeZone);
-  const query = parseExpensesQuery(await searchParams, todayOn);
+  const raw = await searchParams;
+  const query = parseExpensesQuery(raw, todayOn);
   const filters = filtersOf(query);
   const [view, spending] = await Promise.all([
     expensesView(ctx, filters),
@@ -133,6 +157,19 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
       note: row.note,
       labels: row.labels.map((label) => label.name),
       labelIds: row.labels.map((label) => label.id),
+      manual:
+        row.origin === "manual" && row.type !== "transfer"
+          ? {
+              kind: row.type,
+              amount: formatAmountInput(
+                row.amountCents < 0n ? -row.amountCents : row.amountCents,
+                ctx.numberFormat,
+              ),
+              on: row.on,
+              accountId: row.accountId,
+              payee: row.payee ?? "",
+            }
+          : null,
       wallet: walletIds.has(row.id)
         ? {
             type: row.type,
@@ -219,129 +256,155 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     };
   });
 
+  /** What the manual movement's dialog offers and what it needs to say where a new movement went. */
+  const manual = {
+    commands: MANUAL_COMMANDS,
+    categories: view.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      color: colorOf.get(category.id) as string,
+      depth: category.depth,
+      type: category.type,
+    })),
+    labels: view.labels,
+    shown: {
+      from: query.range.from,
+      to: query.range.to,
+      accountIds: query.accountSelection,
+      narrowed: query.categorySelection.length > 0 || query.typeSelection.length > 0 || query.search !== "",
+    },
+    // The palette's command arrives as an address.
+    openOnMount: raw.add === "1",
+  };
+
   if (!view.hasAny) {
     return (
-      <Page title={t("title")}>
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
-        <EmptyState
-          title={t("unsynced.title")}
-          description={t("unsynced.description")}
-          actions={
-            <ButtonLink href="/settings/integrations" variant="primary">
-              {t("unsynced.action")}
-            </ButtonLink>
-          }
-        />
-      </Page>
+      <ManualMovement {...manual}>
+        <Page title={t("title")}>
+          <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+          <EmptyState
+            title={t("unsynced.title")}
+            description={t("unsynced.description")}
+            actions={
+              <>
+                <AddMovementButton />
+                <ButtonLink href="/settings/integrations">{t("unsynced.action")}</ButtonLink>
+              </>
+            }
+          />
+        </Page>
+      </ManualMovement>
     );
   }
 
   return (
-    <Page title={t("title")}>
-      {/* Income and spending leave the giroconti out: moving money between two of the person's own
+    <ManualMovement {...manual}>
+      <Page title={t("title")} actions={<AddMovementButton short />}>
+        {/* Income and spending leave the giroconti out: moving money between two of the person's own
           accounts is neither (spec §7.2, F2.5). The net is the cash flow, every movement summed, as
           Wallet shows it. What the totals leave out is said right under them. */}
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
-          <p className="text-muted">{t("summary", { count: view.summary.count })}</p>
-          <dl aria-label={t("totals.label")} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            {(
-              [
-                ["income", view.summary.incomeCents],
-                ["expenses", view.summary.expenseCents],
-                ["net", view.summary.netCents],
-              ] as const
-            ).map(([key, cents]) => (
-              <div key={key} className="flex items-baseline gap-1.5">
-                <dt className="text-sm text-muted">{t(`totals.${key}`)}</dt>
-                <dd className={`font-medium tabular-nums ${TONE_TEXT[toneOfSign(cents)]}`}>
-                  {formatMoney(cents, ctx.numberFormat, { signed: key === "net" })}
-                </dd>
-              </div>
-            ))}
-          </dl>
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
+            <p className="text-muted">{t("summary", { count: view.summary.count })}</p>
+            <dl aria-label={t("totals.label")} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              {(
+                [
+                  ["income", view.summary.incomeCents],
+                  ["expenses", view.summary.expenseCents],
+                  ["net", view.summary.netCents],
+                ] as const
+              ).map(([key, cents]) => (
+                <div key={key} className="flex items-baseline gap-1.5">
+                  <dt className="text-sm text-muted">{t(`totals.${key}`)}</dt>
+                  <dd className={`font-medium tabular-nums ${TONE_TEXT[toneOfSign(cents)]}`}>
+                    {formatMoney(cents, ctx.numberFormat, { signed: key === "net" })}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          {view.summary.transferCount > 0 && (
+            <p className="text-sm text-muted">
+              {t("totals.transfers", { count: view.summary.transferCount })}
+              {view.summary.unpairedTransferCount > 0 &&
+                ` · ${t("totals.unpaired", { count: view.summary.unpairedTransferCount })}`}
+            </p>
+          )}
         </div>
-        {view.summary.transferCount > 0 && (
-          <p className="text-sm text-muted">
-            {t("totals.transfers", { count: view.summary.transferCount })}
-            {view.summary.unpairedTransferCount > 0 &&
-              ` · ${t("totals.unpaired", { count: view.summary.unpairedTransferCount })}`}
-          </p>
-        )}
-      </div>
 
-      <FilterBar
-        query={query}
-        categories={categoryFilters}
-        accounts={accountFilters}
-        uncategorisedCount={categoryCount.get(UNCATEGORISED) ?? 0}
-        typeCounts={typeCounts}
-        locale={ctx.locale}
-      />
+        <FilterBar
+          query={query}
+          categories={categoryFilters}
+          accounts={accountFilters}
+          uncategorisedCount={categoryCount.get(UNCATEGORISED) ?? 0}
+          typeCounts={typeCounts}
+          locale={ctx.locale}
+        />
 
-      <SpendingCard
-        bands={bands}
-        totals={layers.totals}
-        labels={buckets.map((bucket) =>
-          formatDate(bucket, query.grain === "day" ? "long" : "monthYear", ctx.locale),
-        )}
-        xLabels={query.grain === "day" ? dayLabels(buckets, ctx.locale) : monthLabels(buckets, ctx.locale)}
-        grain={query.grain}
-        path="/expenses"
-        params={query.params}
-        numberFormat={ctx.numberFormat}
-      />
+        <SpendingCard
+          bands={bands}
+          totals={layers.totals}
+          labels={buckets.map((bucket) =>
+            formatDate(bucket, query.grain === "day" ? "long" : "monthYear", ctx.locale),
+          )}
+          xLabels={query.grain === "day" ? dayLabels(buckets, ctx.locale) : monthLabels(buckets, ctx.locale)}
+          grain={query.grain}
+          path="/expenses"
+          params={query.params}
+          numberFormat={ctx.numberFormat}
+        />
 
-      {/* Two columns from a medium width; past the wide threshold the table takes the extra room,
+        {/* Two columns from a medium width; past the wide threshold the table takes the extra room,
           which is where the long names are (spec §8.2). A third band for the shortcuts left the
           table narrower on the widest screens, not wider. */}
-      <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)] @wide:grid-cols-[minmax(0,9fr)_minmax(0,3fr)]">
-        {view.rows.length === 0 ? (
-          <EmptyState
-            title={t("empty.title")}
-            description={t("empty.description")}
-            actions={
-              <ButtonLink href={withParams("/expenses", query.clearedParams, {})} variant="primary">
-                {t("empty.action")}
-              </ButtonLink>
-            }
-          />
-        ) : (
-          <div className="flex min-w-0 flex-col gap-2">
-            <Card padded={false} className="overflow-clip">
-              <TransactionsTable
-                groups={groups}
-                categories={options}
-                labels={view.labels}
-                params={query.params}
-                sort={query.sort}
-                direction={query.direction}
-              />
-            </Card>
-            {/* The read stops at its own page size: say so rather than let the header's count
+        <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)] @wide:grid-cols-[minmax(0,9fr)_minmax(0,3fr)]">
+          {view.rows.length === 0 ? (
+            <EmptyState
+              title={t("empty.title")}
+              description={t("empty.description")}
+              actions={
+                <ButtonLink href={withParams("/expenses", query.clearedParams, {})} variant="primary">
+                  {t("empty.action")}
+                </ButtonLink>
+              }
+            />
+          ) : (
+            <div className="flex min-w-0 flex-col gap-2">
+              <Card padded={false} className="overflow-clip">
+                <TransactionsTable
+                  groups={groups}
+                  categories={options}
+                  labels={view.labels}
+                  params={query.params}
+                  sort={query.sort}
+                  direction={query.direction}
+                />
+              </Card>
+              {/* The read stops at its own page size: say so rather than let the header's count
                 disagree with the rows silently (spec §8.4 point 5). It counts against
                 `listCount`, the rows the range holds for the list: `summary.count` leaves the
                 hidden ones out, and with "Show hidden" on the notice would claim fewer than the
                 table is already showing. */}
-            {view.truncated && (
-              <p className="text-sm text-warn">
-                {t("truncated", { shown: view.rows.length, count: view.listCount })}
-              </p>
-            )}
-          </div>
-        )}
+              {view.truncated && (
+                <p className="text-sm text-warn">
+                  {t("truncated", { shown: view.rows.length, count: view.listCount })}
+                </p>
+              )}
+            </div>
+          )}
 
-        {/* The shortcuts are short and fixed; the card below them grows with the categories. */}
-        <div className="flex flex-col gap-4">
-          <ShortcutsCard />
-          <BreakdownCard
-            groups={breakdown.groups}
-            total={money(breakdown.totalCents)}
-            numberFormat={ctx.numberFormat}
-          />
+          {/* The shortcuts are short and fixed; the card below them grows with the categories. */}
+          <div className="flex flex-col gap-4">
+            <ShortcutsCard />
+            <BreakdownCard
+              groups={breakdown.groups}
+              total={money(breakdown.totalCents)}
+              numberFormat={ctx.numberFormat}
+            />
+          </div>
         </div>
-      </div>
-    </Page>
+      </Page>
+    </ManualMovement>
   );
 }
