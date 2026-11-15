@@ -506,6 +506,10 @@ const PAGES: Screen[] = [
     open: go("/settings/integrations/advanced"),
   },
 
+  // Release N3 (ux/n3-categories-manual.md §9, §12): the `manual` user has a movement written by
+  // hand, so the row with its badge is measured, in the table and in the phone's list.
+  { name: "/expenses (a manual movement)", session: "manual", open: go("/expenses?preset=last3Months") },
+
   // Release N2 (ux/n2-connection-status.md §12): the `connections` user has a connection in each
   // of the five states, a warning that an access is about to end, and more than one bank.
   {
@@ -726,6 +730,43 @@ const OVERLAYS: Screen[] = [
       await page.goto("/investments/catalog");
       await settled(page);
       await page.getByRole("button", { name: "Add manual account" }).first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // Release N3: the manual movement's dialog, on the account a bank reads — the warning, the
+    // balance line and every field are on screen.
+    name: "the add transaction dialog",
+    session: "manual",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /^(Add transaction|Aggiungi movimento|Add|Aggiungi)$/ })
+        .first()
+        .click();
+      await settledDialog(page);
+      const form = page.getByTestId("manual-dialog");
+      await expect(form.getByLabel(/^(Account|Conto)$/)).toBeEnabled();
+      await form.getByLabel(/^(Account|Conto)$/).selectOption({ label: "Zeta Bank conto" });
+      await form.getByLabel(/^(Amount|Importo)$/).fill("12,34");
+      await expect(page.getByTestId("manual-balance-line")).toBeVisible();
+    },
+  },
+  {
+    name: "the delete manual transaction dialog",
+    session: "manual",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page
+        .locator('button[aria-label="Row actions"], button[aria-label="Azioni sulla riga"]')
+        .locator("visible=true")
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: /^(Delete|Elimina)$/ }).click();
       await settledDialog(page);
     },
   },

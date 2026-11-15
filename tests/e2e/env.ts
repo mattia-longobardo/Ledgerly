@@ -87,6 +87,10 @@ export const USERS = {
     password: "connections-password-123",
     name: "Connections",
   },
+  // Release N3: the movement written by hand (ux/n3-categories-manual.md §9). Its own user, with
+  // an account kept by hand, an account a bank only reads and one manual movement: the journey
+  // changes balances, and no other journey's numbers may move with it.
+  manual: { email: "manual@example.test", password: "manual-password-123", name: "Manual" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
   // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
   // the instance's real users too, and a spec must never touch one.
@@ -138,6 +142,8 @@ export const SESSIONS = {
   layout: { user: "layout", file: "layout-session.json" },
   // Release N2: the rows of the connections, in every state (tests/e2e/connections.spec.ts).
   connections: { user: "connections", file: "connections-session.json" },
+  // Release N3: the manual movement (tests/e2e/manual-movement.spec.ts).
+  manual: { user: "manual", file: "manual-session.json" },
   // TOTP: sessions of users who still have to set it up, so they land on the setup page.
   enroll: { user: "enroll", file: "enroll-session.json" },
   pending: { user: "pending", file: "pending-session.json" },

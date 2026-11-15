@@ -32,7 +32,8 @@ import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
 import { setLimit } from "../src/modules/budgets/service";
 import { upsertFromProvider } from "../src/modules/transactions/service";
-import { listCategories } from "../src/modules/transactions/taxonomy";
+import { createCategory, listCategories } from "../src/modules/transactions/taxonomy";
+import { createManual } from "../src/app/(app)/expenses/manual";
 import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { createAuth } from "../src/platform/auth/auth";
 import { oauthClients } from "../src/platform/auth/oauth/schema";
@@ -1363,6 +1364,50 @@ async function seedConnections(): Promise<void> {
   ]);
 }
 
+/**
+ * Release N3 (ux/n3-categories-manual.md §9): what the manual movement's journey starts from. An
+ * account kept by hand with a balance written five days ago, an account a bank only reads with the
+ * balance read yesterday, two categories and one movement already written by hand, so the row with
+ * its badge and its own menu is on screen for the check. The bank's account is tied to the plugin's
+ * provider with nothing behind it: no connection, so no reading ever starts.
+ */
+async function seedManual(): Promise<void> {
+  const ctx = await contextOf(USERS.manual.email);
+  const on = today(ctx.timeZone);
+  const cash = await createAccount(ctx, {
+    name: "Contanti",
+    type: "cash",
+    currency: "EUR",
+    openingBalance: { on: addDays(on, -5), cents: 8_000n },
+  });
+  const provider = pluginProvider(BANK_PLUGIN);
+  await applyProviderAccounts(ctx, provider, [
+    {
+      provider,
+      providerAccountId: "e2e-manual-bank-1",
+      name: "Zeta Bank conto",
+      type: "checking",
+      currency: "EUR",
+    },
+  ]);
+  const [bank] = await getDb()
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(userScoped(ctx).owns(accounts), eq(accounts.name, "Zeta Bank conto")));
+  await saveProviderBalance(ctx, bank.id, { on: addDays(on, -1), cents: 100_000n });
+  const bars = await createCategory(ctx, { name: "Ristoranti e bar", type: "expense" });
+  await createCategory(ctx, { name: "Entrate", type: "income" });
+  await createManual(ctx, {
+    kind: "expense",
+    amountCents: 1_250n,
+    on: addDays(on, -2),
+    accountId: cash.id,
+    categoryId: bars.id,
+    payee: "Edicola",
+    note: "",
+  });
+}
+
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
   // The bank plugin, turned on with nothing saved: the section "Banks" opens on its guide and the
@@ -1749,6 +1794,7 @@ await seedInvestments();
 await seedTimeOff();
 await seedLayout();
 await seedConnections();
+await seedManual();
 await seedCurrency();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { type FormEvent, type RefObject, useEffect, useId, useState, useTransition } from "react";
+import { type FormEvent, type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button, ButtonLink } from "@/ui/button";
 import { CategoryPicker } from "@/ui/category-picker";
 import { cn } from "@/ui/cn";
@@ -98,7 +98,9 @@ export function ManualTransactionDialog({
   const [preview, setPreview] = useState<ManualPreviewView>(null);
   const [fieldError, setFieldError] = useState<"amount" | "date" | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  /** Set before the first render that shows `pending`: a second click in the same instant sends nothing. */
+  const sending = useRef(false);
 
   // What the dialog may offer is read once, when it opens.
   useEffect(() => {
@@ -173,9 +175,32 @@ export function ManualTransactionDialog({
     return t("manual.errors.failed");
   }
 
+  async function save(): Promise<void> {
+    const result =
+      row === null ? await commands.create(form, idempotencyKey) : await commands.update(row.id, form);
+    if (!result.ok) {
+      if (result.error === "amount" || result.error === "date") {
+        setFieldError(result.error);
+        if (result.error === "amount") focusAmount();
+      } else {
+        setFormError(messageFor(result.error));
+      }
+      return;
+    }
+    if (row !== null && !sameLabels(row.labelIds, chosenLabels)) {
+      const saved = await setLabels(row.id, chosenLabels);
+      if (!saved.ok) {
+        setFormError(t("manual.errors.failed"));
+        return;
+      }
+    }
+    rememberAccount(form.accountId);
+    onSaved(result, row !== null && row.categoryId !== form.categoryId);
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (sending.current) return;
     if (form.amount.trim() === "") {
       setFieldError("amount");
       focusAmount();
@@ -185,32 +210,15 @@ export function ManualTransactionDialog({
       setFieldError("date");
       return;
     }
-    startTransition(async () => {
-      try {
-        const result =
-          row === null ? await commands.create(form, idempotencyKey) : await commands.update(row.id, form);
-        if (!result.ok) {
-          if (result.error === "amount" || result.error === "date") {
-            setFieldError(result.error);
-            if (result.error === "amount") focusAmount();
-          } else {
-            setFormError(messageFor(result.error));
-          }
-          return;
-        }
-        if (row !== null && !sameLabels(row.labelIds, chosenLabels)) {
-          const saved = await setLabels(row.id, chosenLabels);
-          if (!saved.ok) {
-            setFormError(t("manual.errors.failed"));
-            return;
-          }
-        }
-        rememberAccount(form.accountId);
-        onSaved(result, row !== null && row.categoryId !== form.categoryId);
-      } catch {
-        setFormError(t("manual.errors.failed"));
-      }
-    });
+    sending.current = true;
+    setPending(true);
+    setFormError(null);
+    save()
+      .catch(() => setFormError(t("manual.errors.failed")))
+      .finally(() => {
+        sending.current = false;
+        setPending(false);
+      });
   }
 
   const account = accounts?.find((one) => one.id === form.accountId) ?? null;
