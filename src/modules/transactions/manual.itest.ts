@@ -249,6 +249,7 @@ describe("a provider's reading and a manual movement", () => {
     expect(manual.get(account.id)).toEqual([
       { id: transaction.id, on: TODAY, cents: -450n, writtenAt: transaction.createdAt },
     ]);
-    expect(await manualMovementsByAccount(await newContext())).toEqual(new Map());
+    // Another person asking for the same account gets nothing.
+    expect(await manualMovementsByAccount(await newContext(), [account.id])).toEqual(new Map());
   });
 });

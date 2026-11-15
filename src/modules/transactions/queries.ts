@@ -549,13 +549,13 @@ export async function dailyNetByAccount(
 /**
  * The movements a person wrote by hand, by account and in date order: what the accounts module
  * works the balance after them out from (rewrite plan, 12-account-modes.md §12.2). A hidden one is
- * out of the balance as it is out of the totals. With no `accountIds`, every account of the user.
+ * out of the balance as it is out of the totals.
  */
 export async function manualMovementsByAccount(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  accountIds?: readonly string[],
+  accountIds: readonly string[],
 ): Promise<Map<string, { id: string; on: CivilDate; cents: Cents; writtenAt: Date }[]>> {
-  if (accountIds?.length === 0) return new Map();
+  if (accountIds.length === 0) return new Map();
   const rows = await getDb()
     .select({
       id: transactions.id,
@@ -570,7 +570,7 @@ export async function manualMovementsByAccount(
         userScoped(ctx).owns(transactions),
         eq(transactions.origin, "manual"),
         isNull(transactions.hiddenAt),
-        accountIds === undefined ? undefined : inArray(transactions.accountId, [...accountIds]),
+        inArray(transactions.accountId, [...accountIds]),
       ),
     )
     .orderBy(asc(transactions.accountId), asc(transactions.occurredAt), asc(transactions.id));

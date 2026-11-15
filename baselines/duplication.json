@@ -4,8 +4,8 @@
     "minLines": 6
   },
   "total": {
-    "lines": 84212,
-    "duplicatedLines": 16330,
+    "lines": 84235,
+    "duplicatedLines": 16334,
     "percent": 19.39,
     "blocks": 1146
   },
@@ -29,9 +29,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 3931,
+      "lines": 3951,
       "duplicatedLines": 1065,
-      "percent": 27.09,
+      "percent": 26.96,
       "blocks": 71
     },
     "modules/budgets": {
@@ -89,9 +89,9 @@
       "blocks": 21
     },
     "modules/transactions": {
-      "lines": 6059,
-      "duplicatedLines": 1040,
-      "percent": 17.16,
+      "lines": 6062,
+      "duplicatedLines": 1044,
+      "percent": 17.22,
       "blocks": 83
     },
     "modules/users": {
@@ -524,9 +524,9 @@
     "modules/transactions/api.ts": 26,
     "modules/transactions/jobs.ts": 56,
     "modules/transactions/manual.ts": 6,
-    "modules/transactions/queries.ts": 239,
+    "modules/transactions/queries.ts": 240,
     "modules/transactions/rules.ts": 9,
-    "modules/transactions/schema.ts": 162,
+    "modules/transactions/schema.ts": 165,
     "modules/transactions/service.ts": 95,
     "modules/transactions/taxonomy.ts": 127,
     "modules/transactions/ui/breakdown-card.tsx": 6,

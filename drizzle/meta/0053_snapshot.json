@@ -1,5 +1,5 @@
 {
-  "id": "026027af-1b6e-4531-9168-7c493337faea",
+  "id": "08304fd2-429e-4c12-9596-1c40f0acb126",
   "prevId": "28a3beec-e943-40af-9556-d3788729ec51",
   "version": "7",
   "dialect": "postgresql",
@@ -3836,6 +3836,13 @@
         },
         "retyped_locally": {
           "name": "retyped_locally",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "has_manual_movements": {
+          "name": "has_manual_movements",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -13674,6 +13681,28 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "transactions_manual_idx": {
+          "name": "transactions_manual_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"transactions\".\"origin\" = 'manual'",
           "concurrently": false,
           "method": "btree",
           "with": {}

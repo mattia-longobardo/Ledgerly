@@ -186,6 +186,11 @@ export const transactions = pgTable(
     index("transactions_account_occurred_idx").on(table.accountId, table.occurredAt.desc()),
     index("transactions_user_category_idx").on(table.userId, table.categoryId),
     index("transactions_transfer_group_idx").on(table.transferGroupId),
+    // The manual movements of an account, for the balance after them: a handful of rows found
+    // without walking the thousands a provider wrote on the same account.
+    index("transactions_manual_idx")
+      .on(table.accountId, table.occurredAt)
+      .where(sql`${table.origin} = 'manual'`),
     uniqueIndex("transactions_user_idempotency_uq")
       .on(table.userId, table.idempotencyKey)
       .where(sql`${table.idempotencyKey} is not null`),

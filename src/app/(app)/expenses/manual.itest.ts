@@ -228,6 +228,38 @@ describe("an account kept by hand", () => {
     expect(await balance(ctx, account.id)).toBe(9_000n);
   });
 
+  it("marks the account while it has a manual movement, and only then", async () => {
+    const ctx = await newContext();
+    const account = await cash(ctx, 8_000n);
+    const marked = async () =>
+      (await listAccounts(ctx)).find((one) => one.id === account.id)?.hasManualMovements;
+    expect(await marked()).toBe(false);
+
+    const { transaction } = await createManual(ctx, movement(account.id));
+    expect(await marked()).toBe(true);
+
+    // Hidden: out of the balance, so nothing is left to rebuild from.
+    await changeVisibility(ctx, [transaction.id], "hide");
+    expect(await marked()).toBe(false);
+    await changeVisibility(ctx, [transaction.id], "restore");
+    expect(await marked()).toBe(true);
+
+    await deleteManual(ctx, transaction.id);
+    expect(await marked()).toBe(false);
+  });
+
+  it("follows a balance written later without being told the manual movements changed", async () => {
+    const ctx = await newContext();
+    const account = await cash(ctx, 8_000n, day(3));
+    await createManual(ctx, movement(account.id, { on: day(1) }));
+    expect(await balance(ctx, account.id)).toBe(7_550n);
+
+    // The person corrects the balance of two days ago: the movement of yesterday adds to it.
+    await saveBalanceEntry(ctx, account.id, { on: day(2), cents: 9_000n, note: "" });
+
+    expect(await balance(ctx, account.id)).toBe(8_550n);
+  });
+
   it("leaves every other person's balance alone", async () => {
     const mine = await newContext();
     const theirs = await newContext();

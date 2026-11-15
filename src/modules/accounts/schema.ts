@@ -82,6 +82,12 @@ export const accounts = pgTable(
     renamedLocally: boolean("renamed_locally").notNull().default(false),
     /** The provider's type is followed until the type is changed here, like the name. */
     retypedLocally: boolean("retyped_locally").notNull().default(false),
+    /**
+     * Whether a person wrote a movement by hand on the account (rewrite plan, 12-account-modes.md
+     * §12.2). Kept by the rebuild of the balances after those movements, and read with the account:
+     * a balance written on an account with none starts no rebuild and costs no read.
+     */
+    hasManualMovements: boolean("has_manual_movements").notNull().default(false),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     notes: text("notes"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),

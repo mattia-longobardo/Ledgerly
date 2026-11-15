@@ -114,7 +114,7 @@ export async function createManual(
 ): Promise<{ transaction: Transaction; created: boolean }> {
   const accountId = await requireManualAccount(ctx, input);
   const result = await createManualTransaction(ctx, input, idempotencyKey);
-  if (result.created) await rebuildDerivedBalances(ctx, [accountId]);
+  if (result.created) await rebuildDerivedBalances(ctx, [accountId], { manualChanged: true });
   return result;
 }
 
@@ -122,14 +122,14 @@ export async function createManual(
 export async function updateManual(ctx: ManualCtx, id: string, input: unknown): Promise<Transaction> {
   const accountId = await requireManualAccount(ctx, input);
   const { transaction, previousAccountId } = await updateManualTransaction(ctx, id, input);
-  await rebuildDerivedBalances(ctx, [...new Set([accountId, previousAccountId])]);
+  await rebuildDerivedBalances(ctx, [...new Set([accountId, previousAccountId])], { manualChanged: true });
   return transaction;
 }
 
 /** Deletes a manual movement and takes it out of the balance. */
 export async function deleteManual(ctx: ManualCtx, id: string): Promise<void> {
   const { accountId } = await deleteManualTransaction(ctx, id);
-  await rebuildDerivedBalances(ctx, [accountId]);
+  await rebuildDerivedBalances(ctx, [accountId], { manualChanged: true });
 }
 
 /**
@@ -151,7 +151,7 @@ export async function changeVisibility(
       : change === "restore"
         ? await restoreTransactions(ctx, ids)
         : await deleteHiddenTransactions(ctx, ids);
-  if (count > 0 && accounts.length > 0) await rebuildDerivedBalances(ctx, accounts);
+  if (count > 0 && accounts.length > 0) await rebuildDerivedBalances(ctx, accounts, { manualChanged: true });
   return count;
 }
 

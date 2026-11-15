@@ -542,10 +542,22 @@ export async function accountDailyBalances(
 export async function rebuildDerivedBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountIds?: readonly string[],
+  options: { manualChanged?: boolean } = {},
 ): Promise<{ written: number }> {
-  const monthEnds = await rebuildMonthEnds(ctx, accountIds);
-  // After the month ends: a rebuilt end that follows a manual movement has to show it too.
-  await rebuildMovementBalances(ctx, accountIds);
+  const wanted = (await listAccounts(ctx, { includeArchived: true })).filter(
+    (account) => accountIds === undefined || accountIds.includes(account.id),
+  );
+  const monthEnds = await rebuildMonthEnds(ctx, wanted);
+  // After the month ends: a rebuilt end that follows a manual movement has to show it too. Only
+  // the accounts that have a manual movement, or whose manual movements the caller just changed:
+  // a balance written on any other account starts nothing here.
+  const manual = options.manualChanged ? wanted : wanted.filter((account) => account.hasManualMovements);
+  if (manual.length > 0) {
+    await rebuildMovementBalances(
+      ctx,
+      manual.map((account) => ({ id: account.id, marked: account.hasManualMovements })),
+    );
+  }
   return monthEnds;
 }
 
@@ -554,13 +566,15 @@ export async function rebuildDerivedBalances(
  * §12.2), from scratch like the month ends: every `movement` row of the accounts goes and
  * `movementBalances` writes the ones the readings and the manual movements support, in one
  * transaction. It runs wherever a reading or a manual movement changes, so every read of a
- * balance — Accounts, Overview, the net worth, the API — finds the number already there.
+ * balance — Accounts, Overview, the net worth, the API — finds the number already there. The same
+ * transaction keeps `has_manual_movements` true to the account.
  */
 async function rebuildMovementBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  accountIds?: readonly string[],
+  wanted: readonly { id: string; marked: boolean }[],
 ): Promise<void> {
-  const manual = await manualMovementsByAccount(ctx, accountIds);
+  const ids = wanted.map((account) => account.id);
+  const manual = await manualMovementsByAccount(ctx, ids);
   const basis = await movementBasis(ctx, [...manual.keys()]);
   const capturedAt = new Date();
   const rows = [...manual].flatMap(([accountId, movements]) => {
@@ -582,22 +596,29 @@ async function rebuildMovementBalances(
         and(
           userScoped(ctx).owns(balanceEntries),
           eq(balanceEntries.source, "movement"),
-          accountIds === undefined ? undefined : inArray(balanceEntries.accountId, [...accountIds]),
+          inArray(balanceEntries.accountId, ids),
         ),
       );
     if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+    for (const has of [true, false]) {
+      const changed = wanted
+        .filter((account) => manual.has(account.id) === has && account.marked !== has)
+        .map((account) => account.id);
+      if (changed.length === 0) continue;
+      await tx
+        .update(accounts)
+        .set({ hasManualMovements: has })
+        .where(and(userScoped(ctx).owns(accounts), inArray(accounts.id, changed)));
+    }
   });
 }
 
 async function rebuildMonthEnds(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  accountIds?: readonly string[],
+  wanted: readonly Account[],
 ): Promise<{ written: number }> {
-  const synced = (await listAccounts(ctx, { includeArchived: true })).filter(
-    (account) =>
-      account.origin === "synced" &&
-      syncsTransactions(account.provider) &&
-      (accountIds === undefined || accountIds.includes(account.id)),
+  const synced = wanted.filter(
+    (account) => account.origin === "synced" && syncsTransactions(account.provider),
   );
   if (synced.length === 0) return { written: 0 };
   const ids = synced.map((account) => account.id);
