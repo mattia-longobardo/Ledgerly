@@ -61,6 +61,18 @@ export const getOptionalCtx = cache(async (): Promise<Ctx | null> => {
   return signedIn && !signedIn.setupPending ? ctxFrom(signedIn.user, signedIn.preferences) : null;
 });
 
+/**
+ * The signed-in user's context with the id of the session they hold, or null. For the one flow
+ * that leaves the app and comes back (an access to a bank): what comes back must have left from
+ * this very session, so the id is what the flow is tied to. The id never goes to a browser.
+ */
+export async function getOptionalSession(): Promise<{ ctx: Ctx; sessionId: string } | null> {
+  const ctx = await getOptionalCtx();
+  if (!ctx) return null;
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
+  return session ? { ctx, sessionId: session.session.id } : null;
+}
+
 /** The person on the TOTP setup page: signed in, with the setup still to do. */
 export async function requireTwoFactorSetup(): Promise<{ email: string; preferences: Preferences }> {
   const signedIn = await getSignedIn();

@@ -11,6 +11,11 @@ import {
   type SyncRun,
 } from "@/platform/integrations/service";
 import { backfillDepth } from "@/platform/integrations/wallet/depth";
+import { civilDateIn } from "@/platform/dates";
+import { formatDate } from "@/platform/format";
+import { credentialsStatus, listPluginConnections, listUserPlugins } from "@/platform/plugins/queries";
+import { bankState, institutionOf } from "@/platform/plugins/rules";
+import { connectionSummary, refreshManifests, returnAddress } from "@/platform/plugins/service";
 import { providerOf } from "@/modules/investments/catalog";
 import { listInvestmentAccounts } from "@/modules/investments/service";
 import { pendingCount } from "@/modules/timeoff/service";
@@ -19,8 +24,11 @@ import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { BANK_PLUGIN_ID } from "../../banks/plugin";
+import { BanksCard } from "./banks-card";
 import { ConnectionRow } from "./connection-row";
 import { formatInstant } from "./format-instant";
+import { PluginRow } from "./plugin-row";
 import { recommendedSchedule } from "./recommended-schedule";
 import { ScheduleControl } from "./schedule-control";
 import { TrekCard, type TrekCardState } from "./trek-card";
@@ -72,9 +80,34 @@ function durationSeconds(run: SyncRun): number | null {
  * column is only ever opened by `readCredentials`, and only inside a Server Action. Nothing on
  * this page knows the token, so nothing on this page can send it to the browser.
  */
-export default async function SettingsIntegrationsPage() {
+export default async function SettingsIntegrationsPage({
+  searchParams,
+}: PageProps<"/settings/integrations">) {
   const ctx = await requireSession();
   const t = await getTranslations("settings.integrations");
+  const banksText = await getTranslations("settings.banks");
+  const day = (instant: Date) => formatDate(civilDateIn(instant, ctx.timeZone), "long", ctx.locale);
+
+  // The plugins of the instance (rewrite plan N1, decision H25): each person sees them, and turns
+  // on their own. With no plugin configured both lists are empty and the page is what it was.
+  await refreshManifests();
+  const userPlugins = await listUserPlugins(ctx);
+  // The section "Banks" exists only for a person who has the plugin on; for anybody else the
+  // page reads nothing of it, so there is nothing of it to send to the browser.
+  const bankPlugin = userPlugins.find((plugin) => plugin.id === BANK_PLUGIN_ID && plugin.state === "active");
+  const banks = bankPlugin
+    ? {
+        credentials: await credentialsStatus(ctx, bankPlugin.id),
+        connections: await Promise.all(
+          (await listPluginConnections(ctx, bankPlugin.id)).map(async (connection) => ({
+            connection,
+            summary: await connectionSummary(ctx, connection.id),
+          })),
+        ),
+        openReplace: (await searchParams).replace === "1",
+      }
+    : null;
+  const now = new Date();
   const [connections, runs] = await Promise.all([listConnections(ctx), listRuns(ctx, { limit: RUNS_LIMIT })]);
 
   const wallet = connections.find((connection) => connection.provider === WALLET_PROVIDER) ?? null;
@@ -128,7 +161,43 @@ export default async function SettingsIntegrationsPage() {
         />
         <div className="border-t border-border" />
         <TrekCard state={trekState} lastSync={trekLastSync} pending={waiting} schedule={scheduleOf(trek)} />
+        {userPlugins.map((plugin) => (
+          <div key={plugin.id} className="border-t border-border">
+            <PluginRow
+              id={plugin.id}
+              name={plugin.name}
+              description={plugin.description}
+              state={plugin.state}
+              pausedSince={plugin.pausedSince ? day(plugin.pausedSince) : null}
+              hasCredentials={plugin.hasCredentials}
+              connections={plugin.connections}
+            />
+          </div>
+        ))}
       </SettingsSection>
+
+      {bankPlugin && banks && (
+        <SettingsSection title={banksText("title")} description={banksText("description")} padded={false}>
+          <BanksCard
+            pluginId={bankPlugin.id}
+            credentials={{
+              saved: banks.credentials.saved,
+              savedAt: banks.credentials.savedAt ? day(banks.credentials.savedAt) : null,
+              invalid: banks.credentials.invalid,
+            }}
+            returnAddress={returnAddress(bankPlugin.id)}
+            banks={banks.connections.map(({ connection, summary }) => ({
+              id: connection.id,
+              name: institutionOf(connection.instanceKey).name,
+              state: bankState(connection, now),
+              accounts: summary.accounts,
+              lastSync: connection.lastOkAt ? formatInstant(connection.lastOkAt, ctx) : null,
+              validUntil: connection.expiresAt ? day(connection.expiresAt) : null,
+            }))}
+            openReplace={banks.openReplace}
+          />
+        </SettingsSection>
+      )}
 
       {invested.length > 0 && (
         <SettingsSection

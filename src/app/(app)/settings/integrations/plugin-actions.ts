@@ -1,0 +1,79 @@
+// src/app/(app)/settings/integrations/plugin-actions.ts — the plugin of a person and the section
+// "Banks" (ux/n1-plugin-bank.md §2-§5). Thin wrappers: the rules are in `platform/plugins`.
+//
+// Every action is the signed-in person's own. None returns a credential: a result is `ok` or a
+// code, so there is no field a key could travel in.
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redactForLog } from "@/platform/auth/logger";
+import { requireSession } from "@/platform/auth/session";
+import {
+  disconnectBank,
+  type PluginActionCode,
+  PluginActionError,
+  removeUserCredentials,
+  saveUserCredentials,
+  setPluginActive,
+} from "@/platform/plugins/service";
+
+export type PluginActionResult = { ok: true } | { ok: false; error: PluginActionCode };
+
+/** Runs one service call and turns its refusal into a code; anything else is `failed`, logged redacted. */
+async function attempt(work: () => Promise<void>): Promise<PluginActionResult> {
+  try {
+    await work();
+  } catch (error) {
+    if (error instanceof PluginActionError) return { ok: false, error: error.code };
+    console.error("[plugins] an action failed", redactForLog(error));
+    return { ok: false, error: "failed" };
+  }
+  revalidatePath("/settings/integrations");
+  return { ok: true };
+}
+
+export async function setPluginActiveAction(pluginId: string, active: boolean): Promise<PluginActionResult> {
+  const ctx = await requireSession();
+  return attempt(() => setPluginActive(ctx, { pluginId, active }));
+}
+
+const MAX_KEY_FILE_BYTES = 16_384;
+
+/**
+ * Checks and saves the credentials of the form (§4.1, §4.2). The key comes as text or as a file;
+ * with both, the file wins. The file is read here, on the server: the browser never reads it.
+ */
+export async function saveBankCredentialsAction(
+  pluginId: string,
+  form: FormData,
+): Promise<PluginActionResult> {
+  const ctx = await requireSession();
+  const file = form.get("keyFile");
+  const typed = form.get("privateKey");
+  let privateKey = typeof typed === "string" ? typed : "";
+  if (file instanceof File && file.size > 0) {
+    if (file.size > MAX_KEY_FILE_BYTES) return { ok: false, error: "key_format" };
+    privateKey = await file.text();
+  }
+  const applicationId = form.get("applicationId");
+  return attempt(() =>
+    saveUserCredentials(ctx, {
+      pluginId,
+      applicationId: typeof applicationId === "string" ? applicationId : "",
+      privateKey,
+    }),
+  );
+}
+
+export async function removeBankCredentialsAction(pluginId: string): Promise<PluginActionResult> {
+  const ctx = await requireSession();
+  return attempt(() => removeUserCredentials(ctx, pluginId));
+}
+
+export async function disconnectBankAction(
+  pluginId: string,
+  connectionId: string,
+): Promise<PluginActionResult> {
+  const ctx = await requireSession();
+  return attempt(() => disconnectBank(ctx, { pluginId, connectionId }));
+}

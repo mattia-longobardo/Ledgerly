@@ -1044,6 +1044,122 @@
       "confirmDescription": "I suoi refresh token vengono cancellati e il prossimo collegamento chiede di nuovo il tuo consenso.",
       "cancel": "Annulla",
       "failed": "Non è stato possibile. Riprova."
+    },
+    "plugins": {
+      "states": {
+        "inactive": "Non attivo",
+        "active": "Attivo"
+      },
+      "detail": {
+        "paused": "Le letture sono ferme dal {date}. Credenziali e collegamenti sono salvati."
+      },
+      "actions": {
+        "enable": "Attiva",
+        "disable": "Disattiva"
+      },
+      "disable": {
+        "title": "Disattivare {name}?",
+        "description": "Le letture di {name} si fermano e la sua sezione sparisce dalle impostazioni. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte.",
+        "links": "{count, plural, one {Hai # collegamento attivo.} other {Hai # collegamenti attivi.}}",
+        "cancel": "Resta attivo",
+        "confirm": "Disattiva"
+      },
+      "toasts": {
+        "enabled": "{name} attivato",
+        "disabled": "{name} disattivato"
+      },
+      "errors": {
+        "failed": "Non è stato possibile salvare. Riprova."
+      }
+    },
+    "banks": {
+      "title": "Banche",
+      "description": "Collega i tuoi conti bancari. Ledgerly legge saldi e movimenti e non può fare pagamenti.",
+      "setup": {
+        "intro": "Per collegare una banca serve una tua applicazione Enable Banking. Si crea una volta sola.",
+        "step1": "Apri <link>enablebanking.com</link> e crea un account.",
+        "step2": "Registra un'applicazione di tipo Production con questo indirizzo di ritorno:",
+        "step3": "Copia l'ID applicazione e scarica la chiave privata.",
+        "returnAddress": "Indirizzo di ritorno",
+        "copy": "Copia",
+        "copied": "Copiato",
+        "newTab": "(si apre in una nuova scheda)",
+        "open": "Inserisci credenziali"
+      },
+      "credentials": {
+        "title": "Credenziali Enable Banking",
+        "description": "Sono cifrate e salvate solo per il tuo account. Dopo il salvataggio non vengono più mostrate.",
+        "appId": "ID applicazione",
+        "appIdHint": "Lo trovi nella pagina della tua applicazione su Enable Banking.",
+        "appIdKeep": "Lascia vuoto per tenere l'ID salvato.",
+        "key": "Chiave privata",
+        "keyHint": "Incolla tutto il contenuto del file, dalla prima all'ultima riga.",
+        "keyFile": "Oppure scegli il file della chiave",
+        "readOnlyNote": "Ledgerly usa la chiave solo per leggere i tuoi conti. L'applicazione non permette pagamenti.",
+        "submit": "Verifica e salva",
+        "checking": "Verifica…"
+      },
+      "replace": {
+        "title": "Sostituisci chiave",
+        "description": "La chiave nuova sostituisce quella salvata. Le banche collegate restano collegate.",
+        "submit": "Verifica e sostituisci",
+        "unchanged": "La chiave salvata non è cambiata."
+      },
+      "application": {
+        "name": "Applicazione Enable Banking",
+        "savedOn": "Credenziali salvate il {date}",
+        "remove": "Rimuovi credenziali",
+        "removeBlocked": "Per rimuovere le credenziali, scollega prima le banche."
+      },
+      "remove": {
+        "title": "Rimuovere le credenziali?",
+        "description": "ID applicazione e chiave privata vengono eliminati da Ledgerly. L'applicazione su Enable Banking resta: puoi eliminarla dal loro sito.",
+        "cancel": "Tieni",
+        "confirm": "Rimuovi"
+      },
+      "invalidKey": "La chiave non è più valida. Le letture delle banche sono ferme.",
+      "empty": "Nessuna banca collegata.",
+      "connect": "Collega una banca",
+      "oneBank": "Per ora puoi collegare una sola banca.",
+      "row": {
+        "role": "{count, plural, one {# conto} other {# conti}}",
+        "validUntil": "accesso valido fino al {date}",
+        "lastSync": "Ultima lettura",
+        "schedule": "Letture automatiche"
+      },
+      "states": {
+        "active": "Collegata",
+        "error": "Errore",
+        "expired": "Accesso scaduto"
+      },
+      "detail": {
+        "expired": "L'accesso alla banca è scaduto."
+      },
+      "actions": {
+        "disconnect": "Scollega",
+        "replaceKey": "Sostituisci chiave"
+      },
+      "disconnect": {
+        "title": "Scollegare {bank}?",
+        "description": "L'accesso alla banca viene chiuso. Conti e movimenti restano in Ledgerly e non vengono più aggiornati.",
+        "cancel": "Resta collegata",
+        "confirm": "Scollega"
+      },
+      "toasts": {
+        "saved": "Credenziali salvate",
+        "replaced": "Chiave sostituita",
+        "removed": "Credenziali rimosse",
+        "disconnected": "{bank} scollegata"
+      },
+      "errors": {
+        "missing": "Inserisci l'ID applicazione e la chiave privata.",
+        "keyFormat": "Questo non sembra il file della chiave privata. Usa il file scaricato da Enable Banking, senza modifiche.",
+        "credentialsInvalid": "Enable Banking non riconosce queste credenziali. Controlla che ID e chiave siano della stessa applicazione e che l'applicazione sia attiva.",
+        "writeNotAllowed": "Questa applicazione permette anche i pagamenti. Ledgerly accetta solo applicazioni di sola lettura.",
+        "unreachable": "Enable Banking non risponde. Niente è stato salvato. Riprova tra un minuto.",
+        "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
+        "failed": "Qualcosa non ha funzionato. Riprova."
+      }
     }
   },
   "errors": {
@@ -4731,6 +4847,71 @@
       "title": "Contatto",
       "set": "Per contattare l'host di questa istanza: {contact}",
       "unset": "L'host di questa istanza è la persona che ti ha dato il tuo account. Contatta direttamente quella persona."
+    }
+  },
+  "banks": {
+    "connect": {
+      "title": "Collega una banca",
+      "parent": "Integrazioni",
+      "steps": {
+        "label": "Passi",
+        "bank": "Banca",
+        "done": "Fatto",
+        "completed": "completato"
+      },
+      "guard": {
+        "noCredentials": "Prima servono le tue credenziali Enable Banking.",
+        "openSettings": "Vai alle impostazioni",
+        "invalidKey": "La chiave non è più valida.",
+        "replaceKey": "Sostituisci chiave"
+      },
+      "bank": {
+        "heading": "Scegli la tua banca",
+        "country": "Paese",
+        "search": "Cerca",
+        "searchPlaceholder": "Nome della banca",
+        "list": "Banche",
+        "loading": "Caricamento delle banche…",
+        "loadFailed": "Non è stato possibile leggere l'elenco delle banche.",
+        "noneForCountry": "Nessuna banca disponibile per questo paese.",
+        "noMatch": "Nessuna banca con \"{query}\". Controlla il nome o cambia paese.",
+        "privacy": "Ti portiamo sul sito della banca per l'accesso. Ledgerly non vede il tuo nome utente e la tua password.",
+        "duration": "L'accesso vale fino a {days} giorni.",
+        "continue": "Continua",
+        "continueTo": "Continua sul sito di {bank}",
+        "opening": "Apertura della banca…"
+      },
+      "return": {
+        "denied": "Non hai dato l'accesso a {bank}. Nessun dato è stato letto. Puoi riprovare.",
+        "expired": "È passato troppo tempo. Riparti dalla scelta della banca.",
+        "session": "Questa richiesta non è partita da questa sessione. Riparti dalla scelta della banca.",
+        "unreachable": "La banca non ha risposto. Riprova tra un minuto.",
+        "bankUnavailable": "{bank} non è disponibile ora. Riprova più tardi o scegli un'altra banca."
+      },
+      "noAccounts": {
+        "title": "{bank} non ha condiviso nessun conto",
+        "description": "Durante l'accesso la banca chiede quali conti condividere. Riprova e scegli almeno un conto. Alcuni conti, per esempio i salvadanai, non sono condivisi dalla banca.",
+        "retry": "Riprova con {bank}",
+        "other": "Scegli un'altra banca"
+      },
+      "done": {
+        "heading": "{bank} è collegata",
+        "validUntil": "L'accesso vale fino al {date}, poi va rinnovato.",
+        "toSettings": "Torna alle impostazioni"
+      },
+      "trial": {
+        "accounts": "{count, plural, one {La banca ha condiviso # conto.} other {La banca ha condiviso # conti.}}",
+        "transactions": "{count, plural, one {# movimento letto, dal {date}.} other {# movimenti letti, dal {date}.}}",
+        "noTransactions": "Nessun movimento letto.",
+        "note": "Questa è una prova di lettura: conti e movimenti non sono stati importati.",
+        "failed": "La prima lettura non è riuscita."
+      },
+      "errors": {
+        "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
+        "oneBank": "Per ora puoi collegare una sola banca.",
+        "network": "Connessione assente. Controlla la rete e riprova.",
+        "failed": "Qualcosa non ha funzionato. Riprova."
+      }
     }
   }
 }

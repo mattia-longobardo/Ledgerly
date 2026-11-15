@@ -77,6 +77,20 @@ export function syncsTransactions(provider: string | null): boolean {
   );
 }
 
+/**
+ * The provider of a plugin's connections: `plugin:<id>` (rewrite plan, 04-now.md §4.1). The id is
+ * the plugin's own, from its manifest, so the core never lists the plugins it can speak to.
+ */
+const PLUGIN_PROVIDER = /^plugin:[a-z][a-z0-9-]{1,30}$/;
+
+export function pluginProvider(pluginId: string): string {
+  return `plugin:${pluginId}`;
+}
+
+export function isPluginProvider(provider: string): boolean {
+  return PLUGIN_PROVIDER.test(provider);
+}
+
 export const entityTypeSchema = z.enum(ENTITY_TYPES);
 
 const CREDENTIAL_KEY = /^[a-z][a-z0-9_]{0,39}$/i;
@@ -90,6 +104,17 @@ const MAX_CREDENTIALS = 20;
  */
 export const credentialsSchema = z
   .record(z.string().regex(CREDENTIAL_KEY), z.string().min(1).max(4096))
+  .refine((bag) => {
+    const size = Object.keys(bag).length;
+    return size >= 1 && size <= MAX_CREDENTIALS;
+  });
+
+/**
+ * What a plugin's connection seals: the access the provider gave and what it said about it (the
+ * accounts it exposes). Wider values than a pasted token, because a list of accounts is one value.
+ */
+export const pluginConnectionBagSchema = z
+  .record(z.string().regex(CREDENTIAL_KEY), z.string().min(1).max(100_000))
   .refine((bag) => {
     const size = Object.keys(bag).length;
     return size >= 1 && size <= MAX_CREDENTIALS;
