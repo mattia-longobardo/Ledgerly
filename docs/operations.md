@@ -41,6 +41,12 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   `docker compose up -d ledgerly ledgerly-plugin-<id>`.
 - **The return address** of a provider is `https://<host>/api/v1/plugins/<id>/callback`. It takes
   the session cookie, not a token: a return is accepted only for the session that started it.
+- **What a bank exposes:** `scripts/plugin-probe.ts` reads every plugin connection through its
+  plugin and prints numbers only (accounts, kinds of balance, ids, codes, depth of the history);
+  `--from <day>` reads from a day, `--fixture` prints a sample with every name, number, amount and
+  text replaced by its shape. It writes nothing. It needs the database and the plugin, so it runs
+  with the two networks: the command of `scripts/on-homelab.sh` with
+  `--network db_internal --network ledgerly_plugins`.
 - **A plugin that does not answer:** people see "The connection to banks is not available now".
   Read `docker logs ledgerly-plugin-<id>`; the container restarts by itself (`autoheal`). To stop a
   plugin for everybody: `docker compose stop ledgerly-plugin-<id>`. The app keeps working.
