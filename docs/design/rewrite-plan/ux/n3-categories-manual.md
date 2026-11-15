@@ -1364,7 +1364,7 @@ Non sono decisioni di prodotto: sono dati e regole che l'interfaccia richiede e 
 Questa specifica cambia solo il suo file. Le righe del piano qui sotto vanno aggiornate da chi tiene il piano, prima dello sviluppo di N3.
 
 **Aggiornate il 15/11/2026** (decisioni H31-H35): elenco dei cambi in [`../12-account-modes.md`](../12-account-modes.md) §12.4.
-La tabella resta come traccia del testo di prima. La dimensione di N3 dipende dalla domanda sul perimetro (§12.6 dello stesso file).
+La tabella resta come traccia del testo di prima. Perimetro (H36): §6.4 e la modalità «lettura e scrittura» di §9.8 sono del rilascio N3.1; fino ad allora il dialogo non offre quei conti.
 
 | Punto del piano | Testo di oggi | Conflitto |
 |---|---|---|

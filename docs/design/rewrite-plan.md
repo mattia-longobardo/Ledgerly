@@ -11,7 +11,7 @@ Seconda revisione del 14/11/2026 (standardizzazione): un solo fondo pensione; il
 Portafoglio manuale; nessuna funzione su misura per un fornitore, una banca, un fondo o un datore di lavoro.
 Revisione del 15/11/2026 (decisioni H31-H35): tre modalità di conto («a mano», «lettura e scrittura», «sola lettura»);
 un movimento a mano cambia il saldo; le categorie di una sorgente che le dà già si associano o si aggiungono. Il
-perimetro di N3 è una domanda aperta ([`12-account-modes.md`](rewrite-plan/12-account-modes.md) §12.6).
+invio alla sorgente e l'associazione delle categorie sono un rilascio nuovo, N3.1 (H36).
 
 ## Obiettivo e priorità del refactor
 
@@ -53,7 +53,7 @@ dice quali punti di `investments.md`, `investments-ux.md` e `funds-ux.md` sono s
 | 9 | [`09-risks.md`](rewrite-plan/09-risks.md) | Rischi, ipotesi aperte, ipotesi confermate e punti decisi il 14/11/2026 |
 | 10 | [`10-modularity.md`](rewrite-plan/10-modularity.md) | Obiettivo e priorità, pacchetti e moduli di arrivo (responsabilità, interfaccia, dipendenze), mappa delle dipendenze, accoppiamenti da sciogliere, regole con controllo automatico, duplicazione, pulizia, prestazioni, prova di comportamento invariato, punti di estensione comuni E1-E8 |
 | 11 | [`11-standardization.md`](rewrite-plan/11-standardization.md) | Standardizzazione (approvata da Mattia il 14/11/2026): regola, fondo pensione standard, piano di acquisto (PAC), Investments a 2 gruppi, elenco delle funzioni su misura con meccanismo standard e rilascio, anticipi alla fase A |
-| 12 | [`12-account-modes.md`](rewrite-plan/12-account-modes.md) | Decisioni del 15/11/2026: tre modalità di conto, movimento a mano e saldo, categorie delle sorgenti; effetti sugli altri rilasci; proposta sul perimetro di N3 e domande aperte |
+| 12 | [`12-account-modes.md`](rewrite-plan/12-account-modes.md) | Decisioni del 15/11/2026: tre modalità di conto, movimento a mano e saldo, categorie delle sorgenti; effetti sugli altri rilasci; perimetro di N3 e domande D1-D3, decise (H36-H38) |
 
 ## Premesse
 
@@ -99,7 +99,8 @@ flowchart LR
     N0[N0 preparazione] --> N1[N1 plugin + Enable Banking]
     N1 --> N2[N2 stato dei collegamenti]
     N2 --> N3[N3 categorie automatiche + movimento manuale]
-    N3 --> N4[N4 passaggio da Wallet]
+    N3 --> N31[N3.1 invio a mano + categorie delle sorgenti]
+    N31 --> N4[N4 passaggio da Wallet]
     N0 --> N5[N5 Time Off]
     N5 --> N51[N5.1 Time Off: maturazione]
     N5 --> N6[N6 fondo pensione standard]
@@ -133,7 +134,8 @@ flowchart LR
 | N0 | Cartella dei dump, icona installabile, correzioni di servizio, misure di partenza | Ledgerly si installa dal browser | `main` | No | Solo percorso dei dump | S |
 | N1 | Runtime minimo dei plugin, plugin Enable Banking, prima banca | Collega una banca | branch + PR | Sì, additive | Sì (#1, #3, #4, #5) | L |
 | N2 | Stato semplice per collegamento, registro per utente, più banche | Una riga chiara per collegamento | branch + PR | Sì | Sì (#1) | S |
-| N3 | Categorie automatiche, «Da categorizzare», movimento manuale su ogni conto con effetto sul saldo (H32, H33). Invio alla sorgente e associazione delle categorie (H34): in N3 o in un rilascio N3.1, domanda aperta ([`12-account-modes.md`](rewrite-plan/12-account-modes.md) §12.6) | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive + dati | Sì (#1) | L (da rivedere con il perimetro) |
+| N3 | Categorie automatiche, «Da categorizzare», movimento manuale sui conti «a mano» e «sola lettura», con effetto sul saldo (H32, H33) | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive | Sì (#1) | L |
+| N3.1 | Invio dei movimenti a mano alla sorgente di un conto «lettura e scrittura»; associazione delle categorie di una sorgente che le dà già (H34, H36) | Una spesa scritta in Ledgerly arriva su Wallet; le categorie di Wallet si associano | branch + PR | Sì, additive + dati | Sì (#1; #8 da valutare) | M |
 | N4 | Passaggio di un conto da Wallet a Enable Banking | Un conto cambia sorgente senza doppioni | branch + PR | Dati | Sì (#1) | M |
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
 | N5.1 | Time Off: maturazione mensile dalle buste paga e residuo previsto a una data (richiesta del 14/11/2026, [`timeoff-accrual.md`](timeoff-accrual.md)) | Quanto matura al mese, quanto resta a fine anno e alla data dell'assenza | `main` | No | No | M |

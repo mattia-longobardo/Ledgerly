@@ -140,7 +140,7 @@ flowchart LR
 | Regola | Dettaglio |
 |---|---|
 | Dove gira | Nel core, non in un plugin. Lavora sui conti la cui sorgente non dà categorie. I movimenti di una sorgente che dà le categorie non si ricategorizzano: tengono la categoria della sorgente (H34) |
-| Categorie di una sorgente | Per ogni categoria di una sorgente che le dà già, la persona la associa a una categoria di Ledgerly oppure la aggiunge come categoria nuova, anche in modo misto. Il movimento conta nella categoria di Ledgerly che corrisponde. Una categoria nuova della sorgente entra da sola come «aggiunta». Stato di partenza: ogni categoria della sorgente è «aggiunta» con il suo nome, come oggi (H34, H35). Dettaglio: [`12-account-modes.md`](12-account-modes.md) §12.3 |
+| Categorie di una sorgente (N3.1, H36) | Per ogni categoria di una sorgente che le dà già, la persona la associa a una categoria di Ledgerly oppure la aggiunge come categoria nuova, anche in modo misto. Il movimento conta nella categoria di Ledgerly che corrisponde. Una categoria nuova della sorgente entra da sola come «aggiunta». Stato di partenza: ogni categoria della sorgente è «aggiunta» con il suo nome, come oggi (H34, H35). Dettaglio: [`12-account-modes.md`](12-account-modes.md) §12.3 |
 | Addestramento | Solo etichette confermate da una persona o dalla sorgente. Una previsione automatica non entra mai nell'addestramento. Riaddestramento completo dopo una sync con movimenti nuovi, dopo un gruppo di correzioni, o la notte. Per utente |
 | Memoria | Chiave = testo normalizzato senza cifre. Automatica solo se le ultime 3 conferme sono uguali |
 | Classificatore | Regressione logistica multiclasse scritta nel progetto, senza pacchetti nuovi. TF-IDF di n-grammi di caratteri 3-5, parole, conto, segno, fascia di importo. Minimo 50 etichette e 3 per categoria |
@@ -159,16 +159,19 @@ flowchart LR
 Regole del 15/11/2026 (H32, H33, H35). Concetto e dettaglio: [`12-account-modes.md`](12-account-modes.md) §12.1 e §12.2.
 
 - Crea, modifica e cancella un movimento locale: importo, uscita o entrata, conto, categoria, data, beneficiario (facoltativo), nota.
-- È permesso su ogni conto con una modalità: «a mano», «lettura e scrittura», «sola lettura». Non sui conti di investimento.
+- È permesso su ogni conto con una modalità: «a mano», «lettura e scrittura», «sola lettura». Non sui conti di investimento. In N3: conti «a mano» e «sola lettura». I conti «lettura e scrittura» arrivano con N3.1 (H36): fino ad allora il dialogo non li offre.
 - **Saldo.** Un movimento a mano cambia il saldo del conto, subito. Regola del dominio: saldo = ultimo saldo conosciuto + movimenti a mano dopo quella data. Un movimento con una data prima dell'ultimo saldo conosciuto non cambia il saldo di oggi.
 - **Conto «a mano».** Il saldo nuovo è definitivo subito.
 - **Conto «sola lettura».** Resta l'avviso: «Questo conto riceve i movimenti dalla banca. Un movimento a mano può risultare doppio.» Alla lettura successiva vale il saldo della sorgente. La lettura non tocca il movimento a mano, che non ha un link esterno.
-- **Conto «lettura e scrittura».** All'aggiornamento successivo il core scrive il movimento sulla sorgente. Dopo l'invio il movimento ha un link esterno ed è un movimento della sorgente. Fino all'invio la lettura non lo tocca. Un invio non riuscito si ripete all'aggiornamento successivo. La sorgente non deve restituire un doppione del movimento appena creato.
+- **Conto «lettura e scrittura» (N3.1).** All'aggiornamento successivo il core scrive il movimento sulla sorgente. Dopo l'invio il movimento ha un link esterno ed è un movimento della sorgente. Fino all'invio la lettura non lo tocca. Un invio non riuscito si ripete all'aggiornamento successivo. La sorgente non deve restituire un doppione del movimento appena creato.
 - Sostituita: la regola del 13/11/2026 «La sync non tocca mai un movimento manuale. Un movimento manuale non ha un link esterno», per i conti «lettura e scrittura».
 - La categoria proposta arriva dalla cascata.
 - Il caso d'uso accetta già una chiave di idempotenza (campo facoltativo ora, obbligatorio dall'API in R2).
 
 ## 4.6 Passaggio di un conto da Wallet a Enable Banking (N4)
+
+Con N3.1 già rilasciato (H38): il passaggio aggiorna prima la sorgente di partenza e invia i movimenti a mano non
+ancora inviati. Se un movimento resta non inviato, la prova a secco lo elenca e il passaggio si ferma.
 
 ```mermaid
 flowchart TB

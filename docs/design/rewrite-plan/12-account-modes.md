@@ -1,12 +1,12 @@
 # 12. Modalità dei conti e categorie delle sorgenti
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Decisioni: [`01-decisions.md`](01-decisions.md) §1.0, H31-H35
-(Mattia, 15/11/2026). Interfaccia: [`ux/n3-categories-manual.md`](ux/n3-categories-manual.md) §6.4, §9.7, §9.8, §17.
+(Mattia, 15/11/2026); H36-H38 per le domande D1-D3. Interfaccia: [`ux/n3-categories-manual.md`](ux/n3-categories-manual.md) §6.4, §9.7, §9.8, §17.
 Regole tecniche: [`04-now.md`](04-now.md) §4.4 e §4.5.
 
 Questo file contiene: il concetto delle tre modalità (§12.1-§12.3), le righe del piano aggiornate (§12.4), gli effetti
 sugli altri rilasci (§12.5), la proposta sul perimetro di N3 (§12.6) e le altre domande aperte (§12.7).
-§12.6 e §12.7 sono **domande per Mattia**: il piano non le decide.
+§12.6 e §12.7 erano domande per Mattia: **decise il 15/11/2026** (D1 B; D2 e D3 con il default). Decisioni H36-H38.
 
 Le stime tecniche di questo file sono una prima lettura del designer. I punti con il segno **[DEV]** vanno confermati
 dallo sviluppatore prima dello sviluppo.
@@ -71,10 +71,10 @@ Le 8 righe in conflitto elencate in `ux/n3-categories-manual.md` §18.1.
 |---|---|---|
 | 1 | `04-now.md` §4.5, link esterno | Su un conto «lettura e scrittura» il movimento a mano riceve un link esterno dopo l'invio |
 | 2 | `04-now.md` §4.5, saldo | Regola del saldo aggiunta |
-| 3 | `03-releases.md` N3 «Migrazioni»; `06-data.md` §6.1 | Aggiunte: categoria suggerita e motivo; stato dell'invio; corrispondenza delle categorie. Le ultime due seguono il perimetro (§12.6) |
+| 3 | `03-releases.md` N3 «Migrazioni»; `06-data.md` §6.1 | Aggiunte: categoria suggerita e motivo; stato dell'invio; corrispondenza delle categorie. Le ultime due sono di N3.1 (H36) |
 | 4 | `03-releases.md` N3 criterio 1; `04-now.md` §4.4 «Dove gira» | «Non si ricategorizzano; la persona associa o aggiunge» |
 | 5 | `03-releases.md` N3 criterio 6 e «Rollback» | La fotografia dei numeri vale al rilascio. Nota sul saldo con l'immagine precedente |
-| 6 | `03-releases.md` N3 «Dimensione» | Rimando alla domanda sul perimetro (§12.6) |
+| 6 | `03-releases.md` N3 «Dimensione» | N3 resta L; nasce N3.1, M (H36) |
 | 7 | `01-decisions.md` C4b; `03-releases.md` R5c | Wallet è «lettura e scrittura». Il criterio «il plugin Wallet non scrive sul provider» è sostituito |
 | 8 | `01-decisions.md` G10 | Movimento a mano su ogni conto con una modalità |
 
@@ -88,13 +88,13 @@ Questa sezione elenca gli effetti. Non riscrive i rilasci: ogni rilascio si aggi
 | Rilascio | Effetto | Da confermare |
 |---|---|---|
 | **N2** | Nessun cambio di perimetro. Un invio non riuscito non crea un avviso proprio: lo stato del collegamento resta quello di N2. Un collegamento «In pausa» non invia: il movimento parte quando il collegamento riparte | **[DEV]** Un invio fallito conta nei «fallimenti consecutivi» del collegamento? Proposta: sì, è un fallimento dell'aggiornamento |
-| **N4** | 1) Il passaggio porta un conto da «lettura e scrittura» a «sola lettura». 2) Il controllo bloccante «saldo banca = saldo locale» deve usare il saldo della sorgente, senza i movimenti a mano non ancora inviati. 3) La prova a secco copia sul testo della banca la categoria di Ledgerly che corrisponde alla categoria della sorgente. 4) Dopo il passaggio i movimenti vecchi tengono la categoria della sorgente; i movimenti nuovi passano dalla cascata. 5) Movimenti «da inviare» al momento del passaggio: domanda aperta (§12.7, D3) | **[DEV]** Punto 2: quale saldo legge oggi il controllo |
+| **N4** | 1) Il passaggio porta un conto da «lettura e scrittura» a «sola lettura». 2) Il controllo bloccante «saldo banca = saldo locale» deve usare il saldo della sorgente, senza i movimenti a mano non ancora inviati. 3) La prova a secco copia sul testo della banca la categoria di Ledgerly che corrisponde alla categoria della sorgente. 4) Dopo il passaggio i movimenti vecchi tengono la categoria della sorgente; i movimenti nuovi passano dalla cascata. 5) Movimenti «da inviare» al momento del passaggio: prima l'invio, poi il passaggio (H38) | **[DEV]** Punto 2: quale saldo legge oggi il controllo |
 | **N6, N5, N5.1** | Nessun effetto | — |
 | **R1** | L'invio alla sorgente è un passo dell'aggiornamento: nel worker diventa un passo del job di sync, dopo la lettura o prima | **[DEV]** Ordine dei due passi, per non leggere un doppione del movimento appena creato |
 | **R2** | 1) Rotte nuove, additive: creazione, modifica ed eliminazione di un movimento a mano, con chiave di idempotenza. 2) Campi nuovi, additivi: modalità del conto in `GET /accounts`; stato dell'invio e origine `manual` sul movimento; saldo di prima e di dopo nella risposta della creazione. 3) Rotte di lettura e di scrittura della corrispondenza delle categorie. 4) Porta `MovementsSource`: oltre alla lettura, la creazione di un movimento. 5) MCP resta in sola lettura (F5b). 6) Il descrittore del fornitore (E5) porta la capacità che decide la modalità | **[DEV]** Scope OAuth per la scrittura dei movimenti: esistente o nuovo (criterio §6 #4 se nuovo) |
 | **R3** | Le schermate di N3 (dialogo, «Categorie di {sorgente}») passano a `packages/ui` come le altre. Nessun client calcola il saldo: è un campo dell'API | — |
 | **R5a** | 1) «Categorie di {sorgente}» si sposta con Categories nel tab Finance, «Categorie ed etichette». 2) Il glossario unico comprende i tre nomi delle modalità | — |
-| **R5c** | 1) Il plugin Wallet dichiara la capacità di creare un movimento e usa `POST /push` del contratto. C4b è rivista: non «sola lettura». 2) Il criterio «il plugin Wallet non scrive sul provider» è sostituito. 3) La corrispondenza delle categorie resta un dato del core, per utente e per sorgente; il plugin dà solo le categorie della sorgente (capacità `categories`). 4) Kit di test del contratto: un caso per `POST /push` con chiave di idempotenza. 5) La pubblicazione degli interessi su Wallet (ST-14): domanda aperta (§12.7, D2). 6) Import CSV (ST-8): un movimento importato su un conto «a mano» cambia il saldo come un movimento a mano? Da decidere con la specifica di R5c; non blocca N3 | **[DEV]** Il nome della capacità (vedi «Contratto dei plugin») |
+| **R5c** | 1) Il plugin Wallet dichiara la capacità di creare un movimento e usa `POST /push` del contratto. C4b è rivista: non «sola lettura». 2) Il criterio «il plugin Wallet non scrive sul provider» è sostituito. 3) La corrispondenza delle categorie resta un dato del core, per utente e per sorgente; il plugin dà solo le categorie della sorgente (capacità `categories`). 4) Kit di test del contratto: un caso per `POST /push` con chiave di idempotenza. 5) La pubblicazione degli interessi su Wallet finisce con R5c: ST-14 resta (H37); il plugin Wallet non dichiara `ledgerPosting`. 6) Import CSV (ST-8): un movimento importato su un conto «a mano» cambia il saldo come un movimento a mano? Da decidere con la specifica di R5c; non blocca N3 | **[DEV]** Il nome della capacità (vedi «Contratto dei plugin») |
 | **R5f** | Candidati alla rimozione dopo un rilascio stabile: i campi di oggi che legano una categoria di Ledgerly a una categoria di Wallet per nome (`categories.provider_name` e la sync dei nomi nei due sensi), se la corrispondenza li rende inutili | **[DEV]** Elenco delle colonne |
 | **R5g** | Nessun effetto sul contenuto. La modalità è un concetto dei conti con movimenti. Trek resta con `provider.write` per le ferie | — |
 | **C1, C2 (Android)** | «Aggiungi un movimento a mano» è un'azione rapida possibile (G2). Senza rete nessuna scrittura (F3b): la regola non cambia | Scelta di prodotto alla specifica di C2 |
@@ -106,10 +106,12 @@ non parte da zero. **[DEV]** Da confermare che lo stesso percorso è riusabile p
 
 ## 12.6 Domanda D1 · perimetro di N3
 
+**Decisione di Mattia del 15/11/2026: opzione B (H36).** Rilascio nuovo: [`03-releases.md`](03-releases.md) «N3.1». Il testo sotto resta come traccia delle due opzioni.
+
 **Esempio.** Sei al bar. Scrivi in Ledgerly una spesa di 4,50 € sul conto Wallet «Contanti», categoria «Ristoranti».
 Su Wallet la categoria si chiama «Bar, cafe».
 
-| | **A · Tutto in N3** | **B · N3 più il rilascio N3.1** (raccomandata) |
+| | A · Tutto in N3 | **B · N3 più il rilascio N3.1 (decisa)** |
 |---|---|---|
 | Contenuto | N3 = categorie automatiche + movimento a mano con il saldo + invio a Wallet + associazione delle categorie | N3 = categorie automatiche + movimento a mano con il saldo, sui conti «a mano» e «sola lettura». N3.1 = invio dei movimenti a mano alla sorgente + associazione delle categorie |
 | L'esempio | Dal rilascio N3: il saldo di «Contanti» scende subito di 4,50 €. Al prossimo aggiornamento Ledgerly scrive la spesa su Wallet con «Bar, cafe». In Settings associ «Bar, cafe» a «Ristoranti» | Dopo N3: il dialogo non offre i conti Wallet; scrivi la spesa su Wallet, come oggi. Le categorie di Wallet restano come oggi. Dopo N3.1: come A |
@@ -121,30 +123,30 @@ Su Wallet la categoria si chiama «Bar, cafe».
 | Rischi | Un difetto nell'invio o nella corrispondenza ferma anche le categorie automatiche. La fotografia dei numeri deve reggere due cambi insieme (categorie, saldi). Il primo rilascio con scrittura di movimenti su Wallet è anche il più grande | Per un periodo il movimento a mano non esiste sui conti Wallet. Due deploy e due finestre di rilascio. N4 aspetta un rilascio in più, se N3.1 resta prima di N4 |
 | Effetto sui tempi | Le categorie automatiche e il movimento a mano arrivano più tardi, insieme al resto | Le categorie automatiche e il movimento a mano arrivano prima. L'invio a Wallet arriva dopo |
 
-Ordine proposto con B: N3 → N3.1 → N4. N4 dipende solo da N3: se il passaggio dei conti alla banca è più urgente
+Ordine: N3 → N3.1 → N4. N4 dipende solo da N3: se il passaggio dei conti alla banca è più urgente
 dell'invio a Wallet, N4 può andare prima di N3.1.
 
 Perché B: N3 è già un rilascio L. L'invio a Wallet è la prima scrittura di movimenti dell'utente su un servizio
 esterno e ha un rollback diverso dal resto. In un rilascio a parte ha un suo OK, un suo dump e un criterio di
 accettazione proprio.
 
-Punti che lo sviluppatore deve confermare **[DEV]**, per tutte e due le opzioni:
+Punti che lo sviluppatore deve confermare **[DEV]**:
 
 1. La regola del saldo non chiede una migrazione: il saldo si ricava dall'ultimo saldo conosciuto (`balance_entries`)
    più i movimenti a mano dopo quella data. Tocca `deriveMonthEnds` e il patrimonio.
-2. La dimensione M di N3.1 e la dimensione «oltre L» di A.
+2. La dimensione M di N3.1.
 3. Il riempimento della corrispondenza lascia uguale la fotografia dei numeri.
-4. Con B: nel periodo tra N3 e N3.1 il dialogo del movimento a mano non offre i conti «lettura e scrittura». L'alternativa
+4. Nel periodo tra N3 e N3.1 il dialogo del movimento a mano non offre i conti «lettura e scrittura». L'alternativa
    (offrirli senza invio) dà un saldo che la lettura successiva di Wallet cancella: per questo è scartata.
 5. Il criterio §6 #8 per la scrittura su Wallet.
 
-## 12.7 Altre domande aperte
+## 12.7 Altre domande: decise
 
-Nate dal controllo degli effetti (§12.5). Stesso formato di D1. Il piano applica il default finché Mattia non risponde.
+Nate dal controllo degli effetti (§12.5). **Mattia ha scelto il default (A) per tutte e due, il 15/11/2026** (H37, H38).
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
-|---|---|---|---|---|---|
-| D2 | Dopo R5c Ledgerly scrive ancora su Wallet gli interessi maturati? La decisione ST-14 dice «no», con il motivo «Wallet in sola lettura». Con H32 il motivo non vale più | Il conto deposito matura 3,20 € a novembre. Oggi Ledgerly scrive l'accredito su Wallet | ST-14 resta: da R5c nessuna pubblicazione. L'accredito arriva dalla banca o si scrive a mano | La pubblicazione resta per i conti ancora su Wallet, come capacità `ledgerPosting` del plugin | A: una scrittura in meno verso Wallet; sui conti ancora su Wallet l'accredito va scritto a mano. B: come oggi; il plugin Wallet ha una capacità in più da scrivere e da provare. Tocca R5c e `interests` in R2 |
-| D3 | Passaggio di un conto da Wallet alla banca (N4) con movimenti a mano non ancora inviati | Sul conto Wallet «BBVA» hai una spesa a mano di 20 € «Da inviare». Avvii il passaggio a Enable Banking | Il passaggio aggiorna prima Wallet e invia la spesa. Se un movimento resta non inviato, la prova a secco lo elenca e il passaggio si ferma finché lo invii o lo elimini | Il passaggio parte. La spesa resta in Ledgerly come movimento a mano sul conto, ora «sola lettura»; Wallet non la riceve | A: lo storico di Wallet è completo e il controllo del saldo è pulito; un passo in più. B: più rapido; Wallet non ha quel movimento e la spesa può risultare doppia quando la banca la legge. Tocca N4 |
+| # | Domanda | Esempio | A (default) | B | Effetto | Decisione |
+|---|---|---|---|---|---|---|
+| D2 | Dopo R5c Ledgerly scrive ancora su Wallet gli interessi maturati? La decisione ST-14 dice «no», con il motivo «Wallet in sola lettura». Con H32 il motivo non vale più | Il conto deposito matura 3,20 € a novembre. Oggi Ledgerly scrive l'accredito su Wallet | ST-14 resta: da R5c nessuna pubblicazione. L'accredito arriva dalla banca o si scrive a mano | La pubblicazione resta per i conti ancora su Wallet, come capacità `ledgerPosting` del plugin | A: una scrittura in meno verso Wallet; sui conti ancora su Wallet l'accredito va scritto a mano. B: come oggi; il plugin Wallet ha una capacità in più da scrivere e da provare. Tocca R5c e `interests` in R2 | **A** (H37) |
+| D3 | Passaggio di un conto da Wallet alla banca (N4) con movimenti a mano non ancora inviati | Sul conto Wallet «BBVA» hai una spesa a mano di 20 € «Da inviare». Avvii il passaggio a Enable Banking | Il passaggio aggiorna prima Wallet e invia la spesa. Se un movimento resta non inviato, la prova a secco lo elenca e il passaggio si ferma finché lo invii o lo elimini | Il passaggio parte. La spesa resta in Ledgerly come movimento a mano sul conto, ora «sola lettura»; Wallet non la riceve | A: lo storico di Wallet è completo e il controllo del saldo è pulito; un passo in più. B: più rapido; Wallet non ha quel movimento e la spesa può risultare doppia quando la banca la legge. Tocca N4 | **A** (H38) |
 
-D2 non blocca N3. D3 non blocca N3: serve prima della specifica di N4.
+Nessuna domanda è aperta.
