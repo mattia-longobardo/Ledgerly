@@ -173,21 +173,13 @@ export async function saveConnection(
       userScoped(ctx).stamp({ provider, credentials, state: "active" as const, nextSyncAt: new Date() }),
     )
     .onConflictDoUpdate({
-<<<<<<< HEAD
-      // The key on (user, provider, instance): a provider of the core has one connection, whose
-      // instance key is the empty one. The key on (user, provider) alone goes in N2 (second half
-      // of the two-step change, 06-data.md §6.1), and the image before N2 must not need it.
-=======
-      // A provider of the core has one connection: its instance key is always the empty one.
->>>>>>> aa5d05f (feat(integrations): show one state for each connection and allow more banks)
+      // A provider of the core has one connection: its instance key is always the empty one. The
+      // key on (user, provider) alone went with N2 (06-data.md §6.1).
       target: [
         integrationConnections.userId,
         integrationConnections.provider,
         integrationConnections.instanceKey,
       ],
-<<<<<<< HEAD
-      set: { credentials, state: "active" as const, lastError: null, updatedAt: new Date() },
-=======
       set: {
         credentials,
         state: "active" as const,
@@ -196,7 +188,6 @@ export async function saveConnection(
         consecutiveFailures: 0,
         updatedAt: new Date(),
       },
->>>>>>> aa5d05f (feat(integrations): show one state for each connection and allow more banks)
     })
     .returning(CONNECTION_COLUMNS);
   return toConnection(row);
