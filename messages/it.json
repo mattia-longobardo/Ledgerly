@@ -237,19 +237,6 @@
           "role": "Giorni di ferie"
         }
       },
-      "states": {
-        "absent": "Non collegato",
-        "active": "Collegato",
-        "error": "Errore",
-        "revoked": "Token rifiutato"
-      },
-      "fields": {
-        "lastSync": "Ultima sincronizzazione",
-        "schedule": "Pianificazione",
-        "never": "Mai"
-      },
-      "schedule": "Ogni ora",
-      "firstSync": "La prima sincronizzazione recupera 12 mesi. Dopo, ogni esecuzione rilegge gli ultimi 7 giorni.",
       "connect": {
         "title": "Collega Wallet",
         "description": "Incolla il token API del tuo account Wallet. Viene sigillato con la chiave di cifratura dell'app e non torna mai al browser.",
@@ -259,29 +246,12 @@
         "replace": "Sostituisci il token",
         "cancel": "Annulla"
       },
-      "actions": {
-        "test": "Prova la connessione",
-        "sync": "Sincronizza ora",
-        "disconnect": "Scollega",
-        "configure": "Configura"
-      },
+      "actions": {},
       "disconnect": {
         "title": "Scollegare Wallet?",
         "description": "Il token viene eliminato. Conti e movimenti sincronizzati restano, e non vengono più aggiornati.",
         "confirm": "Scollega",
         "cancel": "Resta collegato"
-      },
-      "runs": {
-        "title": "Registro delle sincronizzazioni",
-        "description": "Una riga per esecuzione, dalla più recente.",
-        "started": "Avvio",
-        "kind": "Job",
-        "result": "Esito",
-        "counts": "Conteggi",
-        "detail": "Dettaglio",
-        "empty": "Nessuna sincronizzazione è ancora stata eseguita.",
-        "running": "In corso…",
-        "duration": "{seconds} s"
       },
       "kinds": {
         "accounts": "Conti e saldi",
@@ -290,12 +260,6 @@
         "documents": "Documenti",
         "holdings": "Posizioni e valore",
         "flows": "Trade e movimenti"
-      },
-      "runStates": {
-        "running": "In corso",
-        "success": "OK",
-        "failed": "Fallita",
-        "skipped": "Saltata"
       },
       "counts": {
         "created": "{count} nuovi",
@@ -312,10 +276,7 @@
       "toasts": {
         "connected": "Wallet collegato",
         "replaced": "Token sostituito",
-        "disconnected": "Wallet scollegato",
-        "synced": "Sincronizzazione completata",
-        "tested": "Wallet ha risposto: il token funziona",
-        "redownloaded": "Storico scaricato di nuovo"
+        "disconnected": "Wallet scollegato"
       },
       "errors": {
         "rejected": "Wallet ha rifiutato il token.",
@@ -326,18 +287,6 @@
         "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
         "failed": "Non è stato possibile salvare. Riprova.",
         "schedule": "Questo orario non è valido."
-      },
-      "notifications": {
-        "failedSubject": "Sincronizzazione Wallet fallita",
-        "failedBody": "L'ultima sincronizzazione «{kind}» di Budget Makers Wallet è fallita: {error}. Controlla il token in Impostazioni › Integrazioni.",
-        "staleSubject": "La sincronizzazione Wallet è vecchia",
-        "staleBody": "Budget Makers Wallet non si sincronizza dal {since}. Controlla il collegamento in Impostazioni › Integrazioni."
-      },
-      "history": {
-        "label": "Storico",
-        "months": "{count, plural, one {# mese} other {# mesi}}",
-        "action": "Scarica di nuovo",
-        "hint": "Importa soltanto: non toglie mai nulla di ciò che c'è già."
       },
       "trek": {
         "notLinked": "Non collegato. Le giornate restano in Ledgerly finché Trek non è collegato.",
@@ -455,6 +404,9 @@
         "title": "Connessioni di investimento",
         "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Connessione del servizio: lì ci sono la chiave e i controlli.",
         "role": "Chiave API in sola lettura"
+      },
+      "fields": {
+        "schedule": "Pianificazione"
       }
     },
     "categories": {
@@ -1129,36 +1081,10 @@
         "cancel": "Tieni",
         "confirm": "Rimuovi"
       },
-      "invalidKey": "La chiave non è più valida. Le letture delle banche sono ferme.",
       "empty": "Nessuna banca collegata.",
       "connect": "Collega una banca",
-      "oneBank": "Per ora puoi collegare una sola banca.",
-      "row": {
-        "role": "{count, plural, one {# conto} other {# conti}}",
-        "validUntil": "accesso valido fino al {date}",
-        "lastSync": "Ultima lettura",
-        "schedule": "Letture automatiche",
-        "scheduleValue": "3 volte al giorno",
-        "next": "Prossima: {time}"
-      },
-      "states": {
-        "active": "Collegata",
-        "error": "Errore",
-        "expired": "Accesso scaduto",
-        "pending": "Da completare"
-      },
-      "detail": {
-        "expired": "L'accesso alla banca è scaduto.",
-        "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
-        "rateLimited": "La banca ha raggiunto il limite di letture automatiche. Prossima lettura alle {time}."
-      },
       "actions": {
-        "disconnect": "Scollega",
-        "replaceKey": "Sostituisci chiave",
-        "sync": "Sincronizza ora",
-        "syncing": "Sincronizzazione…",
-        "renew": "Rinnova accesso",
-        "chooseAccounts": "Scegli i conti"
+        "replaceKey": "Sostituisci chiave"
       },
       "disconnect": {
         "title": "Scollegare {bank}?",
@@ -1170,9 +1096,7 @@
         "saved": "Credenziali salvate",
         "replaced": "Chiave sostituita",
         "removed": "Credenziali rimosse",
-        "disconnected": "{bank} scollegata",
-        "synced": "Sincronizzazione completata",
-        "syncedNew": "Sincronizzazione completata: {count, plural, one {# movimento nuovo} other {# movimenti nuovi}}"
+        "disconnected": "{bank} scollegata"
       },
       "errors": {
         "missing": "Inserisci l'ID applicazione e la chiave privata.",
@@ -1181,12 +1105,7 @@
         "writeNotAllowed": "Questa applicazione permette anche i pagamenti. Ledgerly accetta solo applicazioni di sola lettura.",
         "unreachable": "Enable Banking non risponde. Niente è stato salvato. Riprova tra un minuto.",
         "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
-        "failed": "Qualcosa non ha funzionato. Riprova.",
-        "providerDown": "La banca non risponde. Ledgerly riprova alla prossima lettura automatica.",
-        "rateLimitedNow": "La banca non accetta altre letture per ora. Riprova dopo le {time}.",
-        "invalidData": "La banca ha risposto con dati che Ledgerly non sa leggere. Niente è stato cambiato.",
-        "busy": "Una lettura è già in corso. Riprova tra poco.",
-        "network": "Connessione assente. Controlla la rete e riprova."
+        "failed": "Qualcosa non ha funzionato. Riprova."
       }
     },
     "connections": {
@@ -1208,8 +1127,7 @@
         "keyInvalid": "La chiave di {provider} non è più valida.",
         "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
         "pausedSchedule": "Aggiornamento automatico spento.",
-        "pausedProvider": "{provider} non è attivo.",
-        "absent": "Non collegato."
+        "pausedProvider": "{provider} non è attivo."
       },
       "when": {
         "now": "ora",
@@ -5122,7 +5040,6 @@
       },
       "errors": {
         "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
-        "oneBank": "Per ora puoi collegare una sola banca.",
         "network": "Connessione assente. Controlla la rete e riprova.",
         "failed": "Qualcosa non ha funzionato. Riprova."
       },

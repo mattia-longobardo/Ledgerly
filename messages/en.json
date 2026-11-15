@@ -237,19 +237,6 @@
           "role": "Leave days"
         }
       },
-      "states": {
-        "absent": "Not connected",
-        "active": "Connected",
-        "error": "Error",
-        "revoked": "Token rejected"
-      },
-      "fields": {
-        "lastSync": "Last sync",
-        "schedule": "Schedule",
-        "never": "Never"
-      },
-      "schedule": "Every hour",
-      "firstSync": "The first sync fetches 12 months. After that each run re-reads the last 7 days.",
       "connect": {
         "title": "Connect Wallet",
         "description": "Paste the API token from your Wallet account. It is sealed with the app's encryption key and never returned to the browser.",
@@ -259,29 +246,12 @@
         "replace": "Replace token",
         "cancel": "Cancel"
       },
-      "actions": {
-        "test": "Test connection",
-        "sync": "Sync now",
-        "disconnect": "Disconnect",
-        "configure": "Configure"
-      },
+      "actions": {},
       "disconnect": {
         "title": "Disconnect Wallet?",
         "description": "The token is deleted. Synced accounts and transactions stay, and stop being updated.",
         "confirm": "Disconnect",
         "cancel": "Keep connected"
-      },
-      "runs": {
-        "title": "Sync log",
-        "description": "One row per sync run, newest first.",
-        "started": "Started",
-        "kind": "Job",
-        "result": "Result",
-        "counts": "Counts",
-        "detail": "Detail",
-        "empty": "No sync has run yet.",
-        "running": "Running…",
-        "duration": "{seconds}s"
       },
       "kinds": {
         "accounts": "Accounts and balances",
@@ -290,12 +260,6 @@
         "documents": "Documents",
         "holdings": "Holdings and value",
         "flows": "Trades and movements"
-      },
-      "runStates": {
-        "running": "Running",
-        "success": "OK",
-        "failed": "Failed",
-        "skipped": "Skipped"
       },
       "counts": {
         "created": "{count} new",
@@ -312,10 +276,7 @@
       "toasts": {
         "connected": "Wallet connected",
         "replaced": "Token replaced",
-        "disconnected": "Wallet disconnected",
-        "synced": "Sync finished",
-        "tested": "Wallet answered: the token works",
-        "redownloaded": "History downloaded again"
+        "disconnected": "Wallet disconnected"
       },
       "errors": {
         "rejected": "Wallet rejected that token.",
@@ -326,18 +287,6 @@
         "busy": "A sync is already running. Try again in a moment.",
         "failed": "Couldn't save. Try again.",
         "schedule": "That schedule is not valid."
-      },
-      "notifications": {
-        "failedSubject": "Wallet sync failed",
-        "failedBody": "The last {kind} sync for Budget Makers Wallet failed: {error}. Check the token in Settings › Integrations.",
-        "staleSubject": "Wallet sync is out of date",
-        "staleBody": "Budget Makers Wallet has not synced since {since}. Check the connection in Settings › Integrations."
-      },
-      "history": {
-        "label": "History",
-        "months": "{count, plural, one {# month} other {# months}}",
-        "action": "Download again",
-        "hint": "It only imports: nothing already here is ever removed by it."
       },
       "trek": {
         "notLinked": "Not linked. Leave days stay in Ledgerly until Trek is connected.",
@@ -455,6 +404,9 @@
         "title": "Investment connections",
         "description": "Same row and same schedule as the others. Configure opens the service's Connection tab: the key and its checks are there.",
         "role": "Read-only API key"
+      },
+      "fields": {
+        "schedule": "Schedule"
       }
     },
     "categories": {
@@ -1129,36 +1081,10 @@
         "cancel": "Keep",
         "confirm": "Remove"
       },
-      "invalidKey": "The key is no longer valid. Bank readings are stopped.",
       "empty": "No bank connected.",
       "connect": "Connect a bank",
-      "oneBank": "For now you can connect one bank only.",
-      "row": {
-        "role": "{count, plural, one {# account} other {# accounts}}",
-        "validUntil": "access valid until {date}",
-        "lastSync": "Last reading",
-        "schedule": "Automatic readings",
-        "scheduleValue": "3 times a day",
-        "next": "Next: {time}"
-      },
-      "states": {
-        "active": "Connected",
-        "error": "Error",
-        "expired": "Access expired",
-        "pending": "To complete"
-      },
-      "detail": {
-        "expired": "Access to the bank has expired.",
-        "pending": "You gave access, but you have not chosen the accounts yet.",
-        "rateLimited": "The bank reached its limit of automatic readings. Next reading at {time}."
-      },
       "actions": {
-        "disconnect": "Disconnect",
-        "replaceKey": "Replace key",
-        "sync": "Sync now",
-        "syncing": "Syncing…",
-        "renew": "Renew access",
-        "chooseAccounts": "Choose accounts"
+        "replaceKey": "Replace key"
       },
       "disconnect": {
         "title": "Disconnect {bank}?",
@@ -1170,9 +1096,7 @@
         "saved": "Credentials saved",
         "replaced": "Key replaced",
         "removed": "Credentials removed",
-        "disconnected": "{bank} disconnected",
-        "synced": "Sync completed",
-        "syncedNew": "Sync completed: {count, plural, one {# new transaction} other {# new transactions}}"
+        "disconnected": "{bank} disconnected"
       },
       "errors": {
         "missing": "Enter the application ID and the private key.",
@@ -1181,12 +1105,7 @@
         "writeNotAllowed": "This application also allows payments. Ledgerly accepts read-only applications only.",
         "unreachable": "Enable Banking is not responding. Nothing was saved. Try again in a minute.",
         "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",
-        "failed": "Something went wrong. Try again.",
-        "providerDown": "The bank is not responding. Ledgerly tries again at the next automatic reading.",
-        "rateLimitedNow": "The bank accepts no more readings for now. Try again after {time}.",
-        "invalidData": "The bank answered with data that Ledgerly cannot read. Nothing was changed.",
-        "busy": "A reading is already running. Try again shortly.",
-        "network": "No connection. Check the network and try again."
+        "failed": "Something went wrong. Try again."
       }
     },
     "connections": {
@@ -1208,8 +1127,7 @@
         "keyInvalid": "The {provider} key is no longer valid.",
         "pending": "You gave access, but you have not chosen the accounts yet.",
         "pausedSchedule": "Automatic update is off.",
-        "pausedProvider": "{provider} is not active.",
-        "absent": "Not connected."
+        "pausedProvider": "{provider} is not active."
       },
       "when": {
         "now": "just now",
@@ -5122,7 +5040,6 @@
       },
       "errors": {
         "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",
-        "oneBank": "For now you can connect one bank only.",
         "network": "No connection. Check the network and try again.",
         "failed": "Something went wrong. Try again."
       },

@@ -235,7 +235,7 @@ export function ConnectionRow({
       data-status={status.value}
       className="@container flex flex-col"
     >
-      <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 px-4 py-3.5 @min-[560px]:@max-[819px]:grid-cols-2 @min-[820px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+      <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 px-4 py-3.5 @min-[560px]:@max-[819px]:grid-cols-2 @min-[820px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_176px]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2">
             <span aria-hidden className={cn("size-[7px] shrink-0 rounded-full", DOT[status.value])} />
@@ -246,12 +246,10 @@ export function ConnectionRow({
         </div>
 
         <div className="min-w-0 text-sm">
+          {/* Always there, also empty: it is the live region that says when the state changes. */}
           <p
             aria-live="polite"
-            className={cn(
-              "break-words",
-              status.value === "paused" || status.value === "absent" ? "text-muted" : undefined,
-            )}
+            className={cn("break-words empty:hidden", status.value === "paused" && "text-muted")}
           >
             {statusText}
           </p>

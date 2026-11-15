@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import "@/app/plugin-wiring";
 import { requireSession } from "@/platform/auth/session";
+import type { Ctx } from "@/platform/context";
 import { NULL_DISPLAY } from "@/platform/format";
 import { labelOf, passFor } from "@/platform/integrations/registry";
 import { connectionReport, scheduleSummary } from "@/platform/integrations/report";
@@ -65,17 +66,9 @@ function durationSeconds(run: SyncRun): number | null {
 }
 
 /** An instant with its seconds, in the person's zone: two runs of one pass start seconds apart. */
-function withSeconds(instant: Date, locale: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-    timeZone,
-  }).format(instant);
+function withSeconds(instant: Date, ctx: Pick<Ctx, "locale" | "timeZone">): string {
+  const seconds = String(instant.getUTCSeconds()).padStart(2, "0");
+  return `${formatInstant(instant, ctx)}:${seconds}`;
 }
 
 /**
@@ -341,9 +334,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
                   <TBody>
                     {shown.map((run) => (
                       <Tr key={run.id}>
-                        <Td className="whitespace-nowrap">
-                          {withSeconds(run.startedAt, ctx.locale, ctx.timeZone)}
-                        </Td>
+                        <Td className="whitespace-nowrap">{withSeconds(run.startedAt, ctx)}</Td>
                         <Td>{nameOf(run.connectionId)}</Td>
                         <Td>{old(`kinds.${run.kind}`)}</Td>
                         <Td muted>{origin(run)}</Td>
@@ -366,7 +357,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
                     className="flex flex-col gap-1 border-b border-border px-4 py-3 text-sm last:border-0"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span>{withSeconds(run.startedAt, ctx.locale, ctx.timeZone)}</span>
+                      <span>{withSeconds(run.startedAt, ctx)}</span>
                       {result(run)}
                     </div>
                     <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-muted">

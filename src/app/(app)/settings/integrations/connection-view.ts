@@ -280,7 +280,8 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       id,
       name,
       detail,
-      status: { value: "absent", text: t("text.absent"), at: null, title: null, action: action("connect") },
+      // The word "Not connected" beside the name says it all: no sentence under it.
+      status: { value: "absent", text: "", at: null, title: null, action: action("connect") },
       notice: null,
       history: null,
       historyMore: null,

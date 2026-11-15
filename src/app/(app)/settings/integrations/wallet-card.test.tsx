@@ -68,7 +68,7 @@ const ABSENT: ConnectionRowProps = {
   detail: T.providers.wallet.role,
   status: {
     value: "absent",
-    text: C.text.absent,
+    text: "",
     at: null,
     title: null,
     action: { kind: "connect", label: C.actions.connect },

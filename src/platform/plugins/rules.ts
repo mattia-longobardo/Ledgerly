@@ -46,10 +46,7 @@ export function maskIdentifier(identifier: string | null): string | null {
   return `${compact.slice(0, 4)} •••• ${compact.slice(-4)}`;
 }
 
-/** A connection of a bank as its row says it (§5.1). */
-export type BankState = "pending" | "active" | "error" | "expired";
-
-/** The codes a bank's row can show under its state (§7): the ones N2 keeps. */
+/** Why a reading of a bank did nothing, as the runtime says it: the closed list of a plugin's codes. */
 export const READING_ERRORS = [
   "auth",
   "consent_expired",
@@ -60,31 +57,6 @@ export const READING_ERRORS = [
   "failed",
 ] as const;
 export type ReadingError = (typeof READING_ERRORS)[number];
-
-export function isReadingError(value: string | null | undefined): value is ReadingError {
-  return (READING_ERRORS as readonly string[]).includes(value ?? "");
-}
-
-/**
- * The state of a bank's row. An access past its end, or refused, is `expired` whatever else is
- * true; a connection whose accounts were never chosen is `pending`; a bank that only asked to
- * wait (`rate_limited`) is still `active` — the wait is a detail of the row, not an error (§5.1).
- */
-export function bankState(
-  connection: {
-    state: "active" | "error" | "revoked";
-    expiresAt: Date | null;
-    lastError: string | null;
-    chosen: boolean;
-  },
-  now: Date,
-): BankState {
-  if (connection.state === "revoked") return "expired";
-  if (connection.expiresAt !== null && connection.expiresAt.getTime() <= now.getTime()) return "expired";
-  if (!connection.chosen) return "pending";
-  if (connection.state === "error" && connection.lastError !== "rate_limited") return "error";
-  return "active";
-}
 
 /** How long the automatic readings wait after a bank said it accepts no more (04-now.md §4.2). */
 export const RATE_LIMIT_WAIT_HOURS = 6;
