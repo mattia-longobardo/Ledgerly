@@ -706,6 +706,42 @@ describe("an access to a bank", () => {
     expect(plugin.calls).toEqual([]);
   });
 
+  it("says in the log why a return was refused, with codes and nothing of the return itself", async () => {
+    const ctx = await readyContext();
+    const lines: string[] = [];
+    const warn = console.warn;
+    console.warn = (line: string) => void lines.push(line);
+    try {
+      const complete = async (query: ReturnType<typeof returned>, plugin = fakePlugin()) =>
+        completeAccess(ctx, { pluginId: PLUGIN, sessionId: "s", query, presence: null }, NOW, plugin.deps);
+      await complete(returned(await started(ctx, "s"), { code: null, error: "access_denied" }));
+      await complete(
+        returned(await started(ctx, "s"), { code: null, error: "Zeta <b>Bank</b> said no to Mario" }),
+      );
+      await complete(returned("a-state-nobody-started-000000"));
+      await complete(
+        returned(await started(ctx, "s")),
+        fakePlugin({ [PLUGIN_PATHS.authComplete]: failure("invalid_data", 502) }),
+      );
+      await complete(
+        returned(await started(ctx, "s")),
+        fakePlugin({
+          [PLUGIN_PATHS.authComplete]: { body: { session: { id: "x" }, accounts: [{ externalId: "u" }] } },
+        }),
+      );
+    } finally {
+      console.warn = warn;
+    }
+    expect(lines).toEqual([
+      "[plugins] return of enablebanking refused: denied (provider said access_denied)",
+      "[plugins] return of enablebanking refused: denied (provider said an error)",
+      "[plugins] return of enablebanking refused: session (state not pending for this session)",
+      "[plugins] return of enablebanking refused: unreachable (exchange failed with invalid_data)",
+      "[plugins] enablebanking /auth/complete: answer outside the contract at session.expiresAt, institution, accounts.0.stableId, accounts.0.name, accounts.0.identifier",
+      "[plugins] return of enablebanking refused: unreachable (exchange failed with invalid_data)",
+    ]);
+  });
+
   it("closes the access and saves nothing when the bank shared no account", async () => {
     const ctx = await readyContext();
     const state = await started(ctx, "s");

@@ -410,6 +410,14 @@ export interface ReturnQuery {
 }
 
 /**
+ * The provider's word for a failed return (`access_denied`), for the log: kept only when it has the
+ * shape of an error name, so a text somebody typed into the address never reaches a log.
+ */
+function errorWord(value: string): string {
+  return /^[a-z_]{3,40}$/.test(value) ? value : "an error";
+}
+
+/**
  * Takes the pending access `state` names, once. `null` when there is none for this person and
  * this session — a state nobody started, somebody else's, one already used.
  */
@@ -483,31 +491,34 @@ export async function completeAccess(
   now: Date = new Date(),
   deps: Deps = {},
 ): Promise<ReturnOutcome> {
-  const refused = (error: ReturnError, bank: string | null = null): ReturnOutcome => ({
-    ok: false,
-    error,
-    bank,
-  });
+  // Why a return ended with no connection, for whoever reads the log: the code the person sees
+  // and the step that gave it. Codes only — never a name, a state, a code of the provider's.
+  const refused = (error: ReturnError, bank: string | null, step: string): ReturnOutcome => {
+    console.warn(`[plugins] return of ${input.pluginId} refused: ${error} (${step})`);
+    return { ok: false, error, bank };
+  };
   let plugin: InstancePlugin;
   try {
     plugin = await requireActivePlugin(ctx, input.pluginId);
   } catch (error) {
-    if (error instanceof PluginActionError) return refused("session");
+    if (error instanceof PluginActionError) return refused("session", null, `plugin ${error.code}`);
     throw error;
   }
-  if (input.query.state === null) return refused("session");
+  if (input.query.state === null) return refused("session", null, "no state");
   const pending = await consumeState(
     ctx,
     { pluginId: input.pluginId, sessionId: input.sessionId, state: input.query.state },
     now,
   );
-  if (pending === null) return refused("session");
+  if (pending === null) return refused("session", null, "state not pending for this session");
   const bank = pending.payload.name ?? null;
-  if (pending.expired) return refused("expired", bank);
-  if (input.query.error !== null || input.query.code === null) return refused("denied", bank);
+  if (pending.expired) return refused("expired", bank, "state past its time");
+  if (input.query.error !== null)
+    return refused("denied", bank, `provider said ${errorWord(input.query.error)}`);
+  if (input.query.code === null) return refused("denied", bank, "no code");
 
   const credentials = await readUserCredentials(ctx, input.pluginId);
-  if (credentials === null) return refused("session", bank);
+  if (credentials === null) return refused("session", bank, "no credentials");
 
   let access;
   try {
@@ -518,12 +529,13 @@ export async function completeAccess(
   } catch (error) {
     if (!(error instanceof PluginCallError)) throw error;
     if (error.code === "auth") await markCredentialsInvalid(ctx, input.pluginId, now);
-    if (error.code === "consent_expired") return refused("expired", bank);
-    return refused(error.code === "institution_unavailable" ? "bank_unavailable" : "unreachable", bank);
+    const step = `exchange failed with ${error.code}`;
+    if (error.code === "consent_expired") return refused("expired", bank, step);
+    return refused(error.code === "institution_unavailable" ? "bank_unavailable" : "unreachable", bank, step);
   }
   if (access.accounts.length === 0) {
     await revokeQuietly(plugin, credentials, access.session.id, deps);
-    return refused("no_accounts", bank);
+    return refused("no_accounts", bank, "no readable account in the access");
   }
 
   let connection: Connection;
@@ -541,7 +553,7 @@ export async function completeAccess(
   } catch (error) {
     if (!(error instanceof IntegrationError)) throw error;
     await revokeQuietly(plugin, credentials, access.session.id, deps);
-    return refused("unreachable", bank);
+    return refused("unreachable", bank, `connection not saved: ${error.code}`);
   }
   await measureFirstReading(ctx, { plugin, connection, credentials, presence: input.presence }, now, deps);
   return { ok: true, connectionId: connection.id };

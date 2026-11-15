@@ -67,6 +67,11 @@ export async function callPlugin<T>(
     throw new PluginCallError(failure.data.error.code, failure.data.error.retryAfterSeconds);
   }
   const parsed = schema.safeParse(json);
-  if (!parsed.success) throw new PluginCallError("invalid_data");
+  if (!parsed.success) {
+    // Where the answer leaves the contract, as paths: a path names a field, never its value.
+    const where = parsed.error.issues.slice(0, 5).map((issue) => issue.path.join(".") || "(root)");
+    console.warn(`[plugins] ${plugin.id} ${path}: answer outside the contract at ${where.join(", ")}`);
+    throw new PluginCallError("invalid_data");
+  }
   return parsed.data;
 }

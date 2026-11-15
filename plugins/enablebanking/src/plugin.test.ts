@@ -17,7 +17,7 @@ import { PluginFailure } from "./failure";
 import { authComplete, authRevoke, authStart, institutions, sync, toTransaction, verify } from "./handlers";
 import { parsePrivateKey, signToken } from "./jwt";
 import { MANIFEST } from "./manifest";
-import { failureCode, type Fetch } from "./provider";
+import { errorName, failureCode, type Fetch } from "./provider";
 
 process.env.PLUGIN_NO_LISTEN = "1";
 
@@ -480,6 +480,45 @@ describe("sync", () => {
         userPresent: null,
       }),
     ).rejects.toMatchObject({ code: "invalid_request" });
+  });
+});
+
+describe("the plugin's log", () => {
+  it("names the call, the status and the provider's error name, and never its message or an id", async () => {
+    const lines: string[] = [];
+    const warn = console.warn;
+    console.warn = (line: string) => void lines.push(line);
+    try {
+      const { fetchFn } = fakeProvider({
+        "GET /accounts/u-secret-id/balances": {
+          status: 400,
+          body: { error: "ASPSP_ERROR", message: "raw words about IT60X0542811101000000123456" },
+        },
+        "GET /application": { body: { active: "yes" } },
+      });
+      await sync(
+        {
+          credentials: CREDENTIALS,
+          session: { id: "s-1" },
+          accounts: ["u-secret-id"],
+          from: null,
+          cursor: null,
+          userPresent: null,
+        },
+        { fetchFn },
+      );
+      await expect(verify({ credentials: CREDENTIALS }, { fetchFn })).rejects.toMatchObject({
+        code: "invalid_data",
+      });
+    } finally {
+      console.warn = warn;
+    }
+    expect(lines).toEqual([
+      "[plugin] GET /accounts: provider answered 400 ASPSP_ERROR → provider_down",
+      "[plugin] GET /application: answer not readable at active",
+    ]);
+    expect(errorName("Something a person typed")).toBe("-");
+    expect(errorName(null)).toBe("-");
   });
 });
 

@@ -121,6 +121,14 @@ export function failureCode(status: number, name: string | null): PluginErrorCod
   return "failed";
 }
 
+/**
+ * The provider's error name for the log, kept only when it has the shape of one of its documented
+ * names (`ASPSP_ERROR`). Its message is never logged: it can quote what it was given.
+ */
+export function errorName(name: string | null): string {
+  return name !== null && /^[A-Z_]{3,40}$/.test(name) ? name : "-";
+}
+
 /** The person's address and browser, sent when they asked for the reading themselves. */
 export interface Presence {
   ip: string | null;
@@ -184,13 +192,22 @@ export function createProvider(applicationId: string, key: KeyObject, fetchFn: F
     } catch {
       json = null;
     }
+    // For the log: which call, by its first segment only — the rest carries ids.
+    const what = `${request.method} /${request.path.split(/[/?]/)[1] ?? ""}`;
     if (!response.ok) {
       const named = errorSchema.safeParse(json);
       const name = named.success ? (named.data.error ?? null) : null;
-      throw new PluginFailure(failureCode(response.status, name), retryAfter(response));
+      const code = failureCode(response.status, name);
+      console.warn(`[plugin] ${what}: provider answered ${response.status} ${errorName(name)} → ${code}`);
+      throw new PluginFailure(code, retryAfter(response));
     }
     const parsed = schema.safeParse(json);
-    if (!parsed.success) throw new PluginFailure("invalid_data");
+    if (!parsed.success) {
+      // Paths only: a path names a field of the answer, never its value.
+      const where = parsed.error.issues.slice(0, 5).map((issue) => issue.path.join(".") || "(root)");
+      console.warn(`[plugin] ${what}: answer not readable at ${where.join(", ")}`);
+      throw new PluginFailure("invalid_data");
+    }
     return parsed.data;
   }
 
