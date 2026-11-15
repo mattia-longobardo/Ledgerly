@@ -4,7 +4,7 @@ import Link from "next/link";
 import { permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { colorFor } from "@/modules/accounts/ui/display";
+import { colorFor, PALETTE } from "@/modules/accounts/ui/display";
 import {
   firstDataOn,
   type FundLine,
@@ -803,14 +803,14 @@ async function FundsHome({
     </Card>
   );
 
-  // ——— Who paid in (§5.3, a-01) ———————————————————————————————————————————————————————————————
+  // ——— Who paid in (§5.3, a-01), in the palette of Accounts and Expenses ———————————————————————————————————————————————————————————————
   const paidTotal = summary.paidInCents;
   const ORIGIN_COLOR = {
-    you: "var(--accent)",
-    employer: "var(--pos)",
-    tfr: "var(--muted)",
-    voluntary: "var(--warn)",
-    other: "var(--faint)",
+    you: PALETTE[0],
+    employer: PALETTE[1],
+    tfr: PALETTE[6],
+    voluntary: PALETTE[4],
+    other: PALETTE[11],
   } as const;
   const whoParts = parts
     .filter((part) => part.cents > 0n)

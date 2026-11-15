@@ -22,6 +22,10 @@ export const PALETTE = [
   "#616a75", // slate
 ] as const;
 
+/** A gain and a loss where a chart of one thing colours its bars by sign: the palette's own. */
+export const GAIN_COLOR = PALETTE[2];
+export const LOSS_COLOR = PALETTE[7];
+
 export function colorFor(account: { color: string | null }, index: number): string {
   return account.color ?? PALETTE[index % PALETTE.length];
 }

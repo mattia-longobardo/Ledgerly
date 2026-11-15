@@ -632,6 +632,7 @@ async function FundDetail({
         ctx={ctx}
         lines={[line]}
         colorOf={() => color}
+        bySign
         period={period}
         span={span}
         when={when}

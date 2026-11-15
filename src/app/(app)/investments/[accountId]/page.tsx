@@ -2,7 +2,14 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { asNumbers, axisLabels, colorFor, dayLabels } from "@/modules/accounts/ui/display";
+import {
+  asNumbers,
+  axisLabels,
+  colorFor,
+  dayLabels,
+  GAIN_COLOR,
+  LOSS_COLOR,
+} from "@/modules/accounts/ui/display";
 import { describeEvent } from "@/modules/investments/activity";
 import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
 import { contributionsOf } from "@/modules/investments/positions";
@@ -419,8 +426,14 @@ export default async function InvestmentServiceOverview({
                 {
                   key: accountId,
                   label: summary.account.name,
-                  color,
-                  values: asNumbers(bars),
+                  color: GAIN_COLOR,
+                  values: asNumbers(bars).map((value) => (value !== null && value >= 0 ? value : null)),
+                },
+                {
+                  key: `${accountId}-loss`,
+                  label: summary.account.name,
+                  color: LOSS_COLOR,
+                  values: asNumbers(bars).map((value) => (value !== null && value < 0 ? value : null)),
                 },
               ]}
               line={asNumbers(cumulative)}

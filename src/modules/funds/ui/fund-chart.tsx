@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { asNumbers, axisLabels } from "@/modules/accounts/ui/display";
+import { asNumbers, axisLabels, GAIN_COLOR, LOSS_COLOR } from "@/modules/accounts/ui/display";
 import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
 import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
@@ -31,6 +31,7 @@ export async function FundChart({
   path,
   params,
   gainNote,
+  bySign = false,
 }: {
   ctx: Pick<Ctx, "numberFormat" | "locale">;
   /** Most gain first: the list's order, the reverse of the chart's stack. */
@@ -45,6 +46,8 @@ export async function FundChart({
   /** Every parameter but the chart's view. */
   params: Params;
   gainNote: (grain: GainGrain) => string;
+  /** A fund's own page: its bars are green for a gain and red for a loss, not the fund's colour. */
+  bySign?: boolean;
 }) {
   const th = await getTranslations("funds.home");
   const money = (cents: Cents | null, signed = false) => formatMoney(cents, ctx.numberFormat, { signed });
@@ -95,12 +98,29 @@ export async function FundChart({
         </p>
       ) : (
         <StackedBars
-          layers={stack.map((line, index) => ({
-            key: line.fund.id,
-            label: line.fund.name,
-            color: colorOf(line.fund.id),
-            values: layerValues[index],
-          }))}
+          layers={
+            bySign
+              ? stack.flatMap((line, index) => [
+                  {
+                    key: line.fund.id,
+                    label: line.fund.name,
+                    color: GAIN_COLOR,
+                    values: layerValues[index].map((value) => (value !== null && value >= 0 ? value : null)),
+                  },
+                  {
+                    key: `${line.fund.id}-loss`,
+                    label: line.fund.name,
+                    color: LOSS_COLOR,
+                    values: layerValues[index].map((value) => (value !== null && value < 0 ? value : null)),
+                  },
+                ])
+              : stack.map((line, index) => ({
+                  key: line.fund.id,
+                  label: line.fund.name,
+                  color: colorOf(line.fund.id),
+                  values: layerValues[index],
+                }))
+          }
           line={asNumbers(cumulative)}
           yLabels={axisLabels(
             [...cumulative, ...layers.top.map(toCents), ...layers.bottom.map(toCents)],
@@ -118,7 +138,7 @@ export async function FundChart({
                 to: day(stretch.to),
               })}`,
               value: money(stretch.gainCents, true),
-              color: colorOf(stretch.fundId),
+              color: bySign ? (stretch.gainCents < 0n ? LOSS_COLOR : GAIN_COLOR) : colorOf(stretch.fundId),
             })),
           }))}
           summary={gainSummary}
