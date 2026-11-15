@@ -621,7 +621,10 @@ function TimeInput({
       placeholder="HH:MM"
       value={value}
       onChange={(event) => onValue(event.target.value)}
-      onBlur={() => onValue(normalizeTime(value) ?? value)}
+      // The field's own text, not `value`: a blur that comes before the render of the last
+      // keystroke — typing and pressing "Add" at once — would put the text of the render before
+      // back, and the time just typed would be lost.
+      onBlur={(event) => onValue(normalizeTime(event.currentTarget.value) ?? event.currentTarget.value)}
       className={cn("w-[72px] tabular-nums", className)}
     />
   );

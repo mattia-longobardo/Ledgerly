@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -207,6 +207,21 @@ describe("ScheduleControl", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Remove rule 1" }));
     expect(within(dialog).getByText(T.manualHint)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: T.save })).toBeEnabled();
+  });
+
+  // A blur can come before the render of the last keystroke (typing, then "Add" at once): the
+  // field then holds a text its own `value` does not have yet. The time added is the field's.
+  it("adds the time the field holds when it is left, not the one of the render before", async () => {
+    renderControl();
+    const dialog = await openDialog();
+    await userEvent.click(within(dialog).getByRole("radio", { name: new RegExp(T.modes.times) }));
+    const input = within(dialog).getByLabelText(T.newTimeSimple) as HTMLInputElement;
+    const write = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    write?.call(input, "643");
+    fireEvent.blur(input);
+    await userEvent.click(within(dialog).getByRole("button", { name: T.addTime }));
+    expect(within(dialog).getByRole("button", { name: "Remove 06:43" })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Remove 12:00" })).not.toBeInTheDocument();
   });
 
   it("fills in what is recommended for this connection", async () => {
