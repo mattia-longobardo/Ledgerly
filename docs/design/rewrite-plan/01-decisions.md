@@ -2,8 +2,8 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
-Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**. Dove §1.0 e una decisione
-più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
+Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026** e del **15/11/2026**
+(H31-H35). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
 ([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
@@ -91,6 +91,21 @@ punti nati da H25 (§14 e §15 della stessa specifica).
 | H29 | **Il registro grezzo è per utente.** Ogni utente vede il registro grezzo dei suoi collegamenti, sotto «Avanzate». L'admin non vede il registro degli altri utenti: in Server › Diagnostica vede solo lo stato dei plugin | C5 «Registro grezzo solo per l'admin»; N2, criterio 2 | N2 |
 | H30 | **Disattivazione e passaggio, con i default.** Alla disattivazione le credenziali e l'accesso alle banche restano cifrati nel core. In N1 nessuna schermata mostra lo stato del plugin a chi gestisce l'istanza. In N2 il collegamento di un plugin disattivato è «In pausa», con l'azione «Attiva», senza avvisi di ritardo o di scadenza. In R5c i plugin Wallet e Trek sono attivi da subito per chi ha già un collegamento e non attivi per gli altri | — | N1, N2, R5c |
 
+### Stato dei collegamenti, modalità dei conti e categorie delle sorgenti (decisione del 15/11/2026)
+
+Risposte di Mattia alle 5 domande della specifica UX di N2 ([`ux/n2-connection-status.md`](ux/n2-connection-status.md) §14)
+e alle 9 domande e ai 3 punti della specifica UX di N3 ([`ux/n3-categories-manual.md`](ux/n3-categories-manual.md) §17).
+Due risposte sono regole nuove (H32-H34). Concetto, effetti sugli altri rilasci e domande aperte:
+[`12-account-modes.md`](12-account-modes.md).
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H31 | **N2, con i default della specifica (Q1-Q5).** Q1: un avviso arriva per mail e come stato sulla riga del collegamento; nessun avviso in Overview. Q2: il limite di letture della banca non conta nei «3 fallimenti»: la riga dice «In ritardo», senza mail. Q3: lo stato del collegamento si vede anche nel dettaglio del conto; gli elenchi di Accounts e Investments restano come oggi fino a R3. Q4: un plugin che non risponde non manda un avviso all'admin: lo stato è solo in Server › Diagnostica. Q5: «Riattiva» su un collegamento «In pausa» applica la pianificazione consigliata del fornitore, con un clic | Le domande Q1-Q5 della specifica. Precisa C5 e H30 | N2 |
+| H32 | **Tre modalità di conto.** Ogni conto con movimenti ha una modalità: **«a mano»** (nessuna sorgente, nessun aggiornamento); **«lettura e scrittura»** (la sorgente legge i movimenti e riceve quelli scritti in Ledgerly); **«sola lettura»** (la sorgente legge soltanto). La modalità deriva dalla sorgente del conto e dalle capacità che la sorgente dichiara: nessun nome di fornitore nella regola o nel codice (H16). Oggi: un conto senza collegamento è «a mano», un conto Wallet è «lettura e scrittura», un conto Enable Banking è «sola lettura». I conti di investimento non hanno una modalità | C4b «Wallet in sola lettura»: la sorgente Wallet è «lettura e scrittura», anche come plugin in R5c. Il vincolo «chiavi dei provider in sola lettura» (§1.5; premessa 5 dell'indice): le sorgenti «lettura e scrittura» sono un'eccezione dichiarata, come Trek | N3 (perimetro: [`12-account-modes.md`](12-account-modes.md) §12.6), R5c |
+| H33 | **Un movimento a mano cambia il saldo del conto, su ogni conto con una modalità.** Il cambio si vede subito in Accounts, Overview e nel patrimonio. Diventa effettivo all'aggiornamento successivo: su un conto «a mano» è definitivo subito; su un conto «lettura e scrittura» Ledgerly scrive il movimento sulla sorgente all'aggiornamento successivo e da lì il movimento è della sorgente; su un conto «sola lettura» alla lettura successiva vale il saldo della sorgente e il movimento resta, a mano, in Expenses e nei budget (H35, punto 10) | Estende G10: da «anche su un conto collegato a una banca» a «su ogni conto, secondo la modalità». La regola «un movimento manuale non ha un link esterno» e l'assenza di una regola sul saldo in `04-now.md` §4.5. La domanda 2 della specifica («non i conti Wallet») e le opzioni A e B della domanda 3. Il criterio 6 di N3 «fotografia dei numeri invariata»: vale al rilascio, non dopo un movimento a mano | N3 (perimetro: §12.6) |
+| H34 | **Categorie di una sorgente che le dà già.** Per ogni categoria della sorgente la persona sceglie: **associare** la categoria a una categoria di Ledgerly, oppure **aggiungerla** come categoria nuova. Le due scelte possono stare insieme. I movimenti che arrivano da quella sorgente non si ricategorizzano: tengono la categoria della sorgente e contano nella categoria di Ledgerly che le corrisponde. Una correzione a mano su un singolo movimento resta possibile | Il criterio 1 di N3 e `04-now.md` §4.4 «Dove gira» («sui conti Wallet restano le categorie di Wallet»). Le opzioni A e B della domanda 6 della specifica. Precisa S2b: l'unione vale tra categorie di Ledgerly; per le categorie di una sorgente vale l'associazione | N3 (perimetro: §12.6), R5c |
+| H35 | **N3, le altre risposte, con i default della specifica.** 1: i movimenti senza categoria di una sorgente che dà le categorie non entrano in «Da rivedere». 4: il movimento a mano ha il campo «Beneficiario», facoltativo. 5: i 12 gruppi predefiniti della specifica (§7.2). 7: nell'unione di due categorie con un budget i limiti si sommano. 8: «Annulla» dopo un'azione di gruppo. 9: le categorie automatiche non compaiono in «Da rivedere». 10: su un conto «sola lettura», dopo la lettura successiva vale il saldo della sorgente. 11: una categoria nuova della sorgente entra da sola come «aggiunta», con il segno «Nuova»; nessuna lettura si ferma. 12: un movimento a mano con una data prima dell'ultimo saldo scritto del conto non cambia il saldo di oggi | Le domande 1, 4, 5, 7, 8, 9 e i punti 10, 11, 12 della specifica. La domanda 2 è sostituita da H33 | N3 |
+
 ## 1.1 Premesse
 
 | ID | Decisione | Sostituisce | Rilascio |
@@ -121,14 +136,14 @@ punti nati da H25 (§14 e §15 della stessa specifica).
 | C2 | Passaggio di un conto da Wallet a Enable Banking: scelta dell'utente, regola M1 | — | N4 |
 | S1 | M1 corretta dallo spike: abbinamento per gruppi (conto + importo), controllo del saldo bloccante, prova a secco | — | N4 |
 | C4 | Plugin: container separato senza stato, interrogato dal core. Catalogo ufficiale. **(H25, H27, H28)** Nessun passo dell'admin nell'interfaccia: i plugin del catalogo fanno parte dell'installazione standard e ogni utente attiva i suoi. Nessun plugin fuori catalogo | — | N1, R5c |
-| C4b | Wallet in sola lettura. Trek tiene la scrittura delle ferie | — | R5c |
+| C4b (rev.) | **(H32)** La sorgente Wallet è «lettura e scrittura»: il plugin Wallet legge i movimenti e riceve quelli scritti a mano in Ledgerly. Trek tiene la scrittura delle ferie. Versione del 13/11/2026, sostituita: «Wallet in sola lettura». La pubblicazione degli interessi su Wallet (ST-14) è una domanda aperta: [`12-account-modes.md`](12-account-modes.md) §12.7 | — | R5c |
 | K1 | Categorizzazione: cascata (regole → memoria esatta → classificatore lineare per utente → tabelle MCC e marchi → «Da categorizzare») | — | N3 |
 | S2 | Memoria severa: «ultime 3 tutte uguali». La copertura si misura a regime | — | N3 |
 | K2 | Assegna da sola sopra la soglia di precisione 95%, con segno «automatica». Le automatiche contano subito in budget | — | N3 |
 | K3 | Dopo una correzione l'app chiede se applicare ai simili | — | N3 |
-| S2b | L'app propone di unire le categorie doppie | — | N3 |
+| S2b | L'app propone di unire le categorie doppie. **(H34)** Per le categorie di una sorgente che le dà già vale l'associazione, non l'unione | — | N3 |
 | K4 | Utente nuovo: circa 12 gruppi predefiniti e revisione guidata | — | N3 (tabelle e revisione), R5a (primo avvio) |
-| G10 | Movimento manuale disponibile, anche su un conto collegato a una banca, con avviso | — | N3 |
+| G10 (rev.) | Movimento manuale disponibile su ogni conto con una modalità (H32): «a mano», «lettura e scrittura», «sola lettura». Su un conto «sola lettura» resta l'avviso. Il movimento cambia il saldo (H33). Non vale per i conti di investimento | — | N3 |
 | C5 | Sync log: stato semplice per collegamento. Registro grezzo per utente, sotto «Avanzate», 30 giorni; l'admin vede solo lo stato dei plugin (H29) | — | N2 |
 | D1 | Time Off: selezione di primo e ultimo giorno + pannello (tipo, durata), pulsante «Aggiungi assenza». Nessun gesto nascosto | — | N5 |
 | D2 | Menu a 3 gruppi («Ogni giorno», «Risparmi e investimenti», «Lavoro»), moduli attivabili, primo avvio guidato | — | R5a |
@@ -177,7 +192,7 @@ punti nati da H25 (§14 e §15 della stessa specifica).
 | Un solo scrittore per conto (`portfolio`) | `investments.md` §2.3, D3 | Vincolo di B1 e B3 |
 | Conto manuale: solo «Aggiorna valore» | `investments.md` §2.6 | Resta. Il Portafoglio manuale è un servizio diverso (B3) |
 | Regole sui segreti: mai in log, API, MCP, export | `investments.md` §5.1 | Estese a plugin, Wallet e Trek |
-| Chiavi in sola lettura, controllo all'inserimento | `investments.md` §5.2 | Restano. Eccezione dichiarata: Trek (`provider.write`) |
+| Chiavi in sola lettura, controllo all'inserimento | `investments.md` §5.2 | Restano. Eccezioni dichiarate: Trek (`provider.write`) e le sorgenti «lettura e scrittura» (H32) |
 | Controllo di pianificazione a 4 modalità | `docs/scheduler.md` | Resta, chiuso sotto «Avanzate» |
 
 ## 1.6 Decisioni minori applicate con il default degli allegati

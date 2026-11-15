@@ -24,6 +24,10 @@ I nomi sono indicativi: il numero e il nome definitivi nascono con `npm run db:g
 | N2 | Dati: righe `running` di `sync_runs` e `job_runs` più vecchie di un'ora → `failed` con motivo `orphaned`; cancellazione delle righe di `sync_runs` oltre 30 giorni | Dati | Sì. Dump prima |
 | N3 | `transactions.category_origin` (`user`, `provider`, `memory`, `model`, `table`, null), `category_confidence`, `category_model_version`; valore `manual` per l'origine del movimento | Additiva | Sì |
 | N3 | Tabelle `category_memory` e `category_models`, per utente, `on delete cascade` | Additiva | Sì |
+| N3 | Categoria suggerita e codice del motivo (con i parametri) sul movimento, nullable. Nomi delle colonne: li sceglie lo sviluppatore | Additiva | Sì |
+| N3 o N3.1 (perimetro: [`12-account-modes.md`](12-account-modes.md) §12.6) | Stato dell'invio sul movimento a mano (`da inviare`, `non inviato`, null), nullable. Il link esterno dopo l'invio usa `provider_links` | Additiva | Sì. Un movimento già inviato resta sulla sorgente |
+| N3 o N3.1 (perimetro: §12.6) | Corrispondenza «categoria della sorgente → categoria di Ledgerly», per utente e per sorgente, `on delete cascade`; categoria della sorgente sul movimento, nullable | Additiva | Sì |
+| N3 o N3.1 (perimetro: §12.6) | Dati: una riga di corrispondenza «aggiunta» per ogni categoria della sorgente di oggi; categoria della sorgente sui movimenti esistenti. Nessun numero cambia | Dati | Sì. Dump prima |
 | N3 | Dati: `category_origin = 'provider'` per i movimenti con categoria; `'user'` dove `locally_edited` contiene la categoria | Dati | Sì. Dump prima |
 | N4 | Nessuna di schema. Dati su richiesta dell'utente: `accounts.provider`, righe di `provider_links` | Dati | Sì; annullabile dall'interfaccia |
 | N5 | Nessuna | — | — |

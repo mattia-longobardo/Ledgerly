@@ -139,14 +139,15 @@ flowchart LR
 
 | Regola | Dettaglio |
 |---|---|
-| Dove gira | Nel core, non in un plugin. Lavora sui conti la cui sorgente non dà categorie. Sui conti Wallet restano le categorie di Wallet |
+| Dove gira | Nel core, non in un plugin. Lavora sui conti la cui sorgente non dà categorie. I movimenti di una sorgente che dà le categorie non si ricategorizzano: tengono la categoria della sorgente (H34) |
+| Categorie di una sorgente | Per ogni categoria di una sorgente che le dà già, la persona la associa a una categoria di Ledgerly oppure la aggiunge come categoria nuova, anche in modo misto. Il movimento conta nella categoria di Ledgerly che corrisponde. Una categoria nuova della sorgente entra da sola come «aggiunta». Stato di partenza: ogni categoria della sorgente è «aggiunta» con il suo nome, come oggi (H34, H35). Dettaglio: [`12-account-modes.md`](12-account-modes.md) §12.3 |
 | Addestramento | Solo etichette confermate da una persona o dalla sorgente. Una previsione automatica non entra mai nell'addestramento. Riaddestramento completo dopo una sync con movimenti nuovi, dopo un gruppo di correzioni, o la notte. Per utente |
 | Memoria | Chiave = testo normalizzato senza cifre. Automatica solo se le ultime 3 conferme sono uguali |
 | Classificatore | Regressione logistica multiclasse scritta nel progetto, senza pacchetti nuovi. TF-IDF di n-grammi di caratteri 3-5, parole, conto, segno, fascia di importo. Minimo 50 etichette e 3 per categoria |
 | Soglia | Calcolata a ogni addestramento sulle previsioni fuori campione, per una precisione del 95%. Se le correzioni degli ultimi 30 giorni superano il 10%, la soglia sale |
 | Effetto | Automatica: conta subito in Budgets ed Expenses, con segno e motivo. Suggerita: conta come «Da categorizzare» finché non è confermata |
 | Correzione | «Applico a N movimenti simili?»: solo su movimenti automatici o senza categoria |
-| Categorie doppie | L'app propone l'unione (esempio dello spike: «Tobacco» e «Alcohol, tobacco»). L'unione rietichetta gli esempi |
+| Categorie doppie | L'app propone l'unione tra categorie di Ledgerly. L'unione rietichetta gli esempi. Due categorie di una sorgente che vogliono dire la stessa cosa (esempio dello spike: «Tobacco» e «Alcohol, tobacco») si associano alla stessa categoria di Ledgerly (H34) |
 | Utente nuovo | Circa 12 gruppi predefiniti, modificabili. Revisione guidata per gruppi di testo simile alla prima sync |
 | Tabelle statiche | MCC → categoria, marchio → categoria, codice ISO → struttura. File versionati nell'immagine, uguali per tutti |
 | Dati | Memoria e modello in PostgreSQL per utente (`on delete cascade`). Fuori da log, export, API, MCP. API e MCP espongono solo l'origine (`user`, `provider`, `auto`) |
@@ -155,9 +156,15 @@ flowchart LR
 
 ## 4.5 Movimento manuale (N3)
 
-- Crea, modifica e cancella un movimento locale: importo, uscita o entrata, conto, categoria, data, nota.
-- Su un conto collegato a una banca è permesso, con l'avviso: «Questo conto riceve i movimenti dalla banca. Un movimento a mano può risultare doppio.»
-- La sync non tocca mai un movimento manuale. Un movimento manuale non ha un link esterno.
+Regole del 15/11/2026 (H32, H33, H35). Concetto e dettaglio: [`12-account-modes.md`](12-account-modes.md) §12.1 e §12.2.
+
+- Crea, modifica e cancella un movimento locale: importo, uscita o entrata, conto, categoria, data, beneficiario (facoltativo), nota.
+- È permesso su ogni conto con una modalità: «a mano», «lettura e scrittura», «sola lettura». Non sui conti di investimento.
+- **Saldo.** Un movimento a mano cambia il saldo del conto, subito. Regola del dominio: saldo = ultimo saldo conosciuto + movimenti a mano dopo quella data. Un movimento con una data prima dell'ultimo saldo conosciuto non cambia il saldo di oggi.
+- **Conto «a mano».** Il saldo nuovo è definitivo subito.
+- **Conto «sola lettura».** Resta l'avviso: «Questo conto riceve i movimenti dalla banca. Un movimento a mano può risultare doppio.» Alla lettura successiva vale il saldo della sorgente. La lettura non tocca il movimento a mano, che non ha un link esterno.
+- **Conto «lettura e scrittura».** All'aggiornamento successivo il core scrive il movimento sulla sorgente. Dopo l'invio il movimento ha un link esterno ed è un movimento della sorgente. Fino all'invio la lettura non lo tocca. Un invio non riuscito si ripete all'aggiornamento successivo. La sorgente non deve restituire un doppione del movimento appena creato.
+- Sostituita: la regola del 13/11/2026 «La sync non tocca mai un movimento manuale. Un movimento manuale non ha un link esterno», per i conti «lettura e scrittura».
 - La categoria proposta arriva dalla cascata.
 - Il caso d'uso accetta già una chiave di idempotenza (campo facoltativo ora, obbligatorio dall'API in R2).
 
