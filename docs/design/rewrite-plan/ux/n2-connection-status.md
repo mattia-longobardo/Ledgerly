@@ -5,7 +5,8 @@ Regole tecniche: [`../04-now.md`](../04-now.md) §4.3. Decisioni: [`../01-decisi
 Anticipo AN3: [`../11-standardization.md`](../11-standardization.md). Specifica precedente: [`n1-plugin-bank.md`](n1-plugin-bank.md) §11.
 
 Questa specifica descrive solo l'interfaccia. Il piano ha priorità: se un punto è in conflitto con il piano, vale il piano.
-Le decisioni di prodotto che il piano non scrive sono in §14 «Domande per Mattia». Il testo applica l'opzione A di ogni domanda.
+Le decisioni di prodotto che il piano non scrive sono in §14. Mattia ha scelto il default (A) per tutte le 5 domande il 15/11/2026:
+il testo applica l'opzione A. Nessuna domanda è aperta.
 
 ## 0. Riepilogo
 
@@ -120,7 +121,7 @@ Il testo è dentro un `<time dateTime>` con `title` = data e ora complete (`form
 | «Rinnova accesso» | Apre la procedura del fornitore (banche: `/banks/connect?renew=<id>`, N1 §6.7) | No | Quello della procedura |
 | «Sostituisci chiave» | Apre il dialogo o la pagina del fornitore (banche: N1 §4.2; Wallet e Trek: dialogo della chiave; investimenti: tab Connessione) | No | «Chiave sostituita» |
 | «Scegli i conti» | Apre `/banks/connect?step=accounts&c=<id>` | No | — |
-| «Riattiva» | Rimette la pianificazione consigliata del fornitore (domanda Q5) | No | «Aggiornamento automatico riattivato» |
+| «Riattiva» | Rimette la pianificazione consigliata del fornitore (decisione Q5) | No | «Aggiornamento automatico riattivato» |
 | «Attiva» | Attiva il fornitore per l'utente, come N1 §2.3. Parte una lettura per ogni suo collegamento | No | «{provider} attivato» |
 
 - Azione fallita: nessun toast. Riga di errore sotto il collegamento (`role="alert"`, classi di N1 §1.4) con il testo di §5. Il focus resta sul pulsante.
@@ -184,7 +185,7 @@ Voci del menu, in questo ordine; compaiono solo quelle che il fornitore dichiara
 | `Settings › Integrations`: «Banche» | Riga nuova per ogni banca (§7) |
 | `Settings › Integrations`: «Investimenti» | Riga nuova |
 | `Time Off › Impostazioni`: Trek | Riga nuova, la stessa di Integrations |
-| `/accounts/[id]`: intestazione di un conto che arriva da un collegamento | Forma compatta: pallino, parola, testo, azione come link (domanda Q3) |
+| `/accounts/[id]`: intestazione di un conto che arriva da un collegamento | Forma compatta: pallino, parola, testo, azione come link (decisione Q3) |
 | Elenco di Accounts, intestazione di un servizio di Investments | Non cambiano: si chiudono in R3 (UI-ACC-1) |
 
 Elementi che lasciano la riga di Wallet: il blocco «Storico · Scarica di nuovo» passa nella pagina «Avanzate» (§8.2). La frase «prima lettura» resta come testo dello stato «Nessun aggiornamento riuscito finora».
@@ -277,7 +278,7 @@ Lista del piano (§4.3). Un testo fisso per codice, uguale in riga, cronologia e
 |---|---|---|---|
 | `auth` | «La chiave di {provider} non è più valida.» | `action` | Avviso subito |
 | `consent_expired` | «L'accesso a {name} è scaduto.» | `action` | Avviso subito |
-| `rate_limited` | «{name} ha raggiunto il limite di letture automatiche.» | `late` | No (domanda Q2) |
+| `rate_limited` | «{name} ha raggiunto il limite di letture automatiche.» | `late` | No (decisione Q2) |
 | `provider_down` | «{name} non risponde.» | `late` | Sì |
 | `invalid_data` | «{name} ha risposto con dati che Ledgerly non sa leggere. Niente è stato cambiato.» | `late` | Sì |
 
@@ -297,7 +298,7 @@ Codici che esistono solo come risposta a un'azione dell'utente (N1 §7), non sal
 | Fermo | Come oggi: nessuna lettura riuscita oltre la soglia esistente | `sync_stale` | Come sopra |
 | Scadenza dell'accesso | 14 giorni e 3 giorni prima di `expires_at` | `consent_expiring` | Una volta per soglia e per scadenza |
 
-- Canale: mail, come oggi (`notifyOnce`), più lo stato della riga. Nessun altro punto dell'app mostra l'avviso (domanda Q1).
+- Canale: mail, come oggi (`notifyOnce`), più lo stato della riga. Nessun altro punto dell'app mostra l'avviso (decisione Q1).
 - L'interruttore esistente degli avvisi di sincronizzazione in `Settings › Server` vale per tutte e tre le chiavi.
 - Un collegamento che torna «Aggiornato» azzera gli avvisi: il prossimo problema avvisa subito. Nessuna mail «tutto a posto».
 - Un rinnovo riuscito azzera `consent_expiring`: la scadenza nuova avvisa di nuovo a 14 e 3 giorni.
@@ -342,7 +343,7 @@ Un solo modello per `sync_failed` e `sync_stale`. Il fornitore e il collegamento
 |---|---|
 | Plugin disattivato dall'utente | H30: nessun avviso di ritardo o di scadenza. La scadenza continua a scorrere; alla riattivazione la riga mostra lo stato vero |
 | «In pausa» senza pianificazione | L'utente ha spento l'aggiornamento automatico |
-| `rate_limited` | Non conta nei 3 fallimenti (domanda Q2) |
+| `rate_limited` | Non conta nei 3 fallimenti (decisione Q2) |
 | Collegamento «Da completare» | L'utente è già nella procedura; la riga mostra «Scegli i conti» |
 
 ## 7. Più banche
@@ -462,7 +463,7 @@ runs (last 50):
 - Nessun plugin nella configurazione: «Nessun plugin in questa istanza.» (`p-4 text-muted`).
 - Stato non leggibile: «Stato non disponibile. Ricarica la pagina.» (`role="alert"`).
 - 400 px: nome e stato sulla prima riga, versione e seconda riga sotto.
-- Nessun avviso all'admin quando un plugin non risponde (domanda Q4).
+- Nessun avviso all'admin quando un plugin non risponde (decisione Q4).
 
 ## 10. Testi e chiavi di traduzione
 
@@ -666,14 +667,14 @@ Dati che l'interfaccia richiede e che il piano non elenca. Non sono decisioni di
 10. **Chiavi di notifica.** Migrazione delle righe salvate con `wallet_sync_failed` e `wallet_sync_stale` (piano §4.3, AN3).
 11. **N1.** La specifica di N1 non cambia: §5.1, §5.3, §5.5 e §4.4 di N1 sono sostituite da §2, §3, §7 e §8.2 di questo documento al rilascio di N2.
 
-## 14. Domande per Mattia
+## 14. Decisioni prese
 
-Il testo applica l'opzione A. «ok default» è una risposta sufficiente.
+Decisioni di Mattia del 15/11/2026 sulle 5 domande di questa specifica: default (A) per tutte. Il testo applica l'opzione A.
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
-|---|---|---|---|---|---|
-| Q1 | Dove arriva un avviso, oltre alla mail? | BBVA fallisce 3 volte di seguito. Mattia non apre le impostazioni | Mail (come oggi) + stato sulla riga del collegamento | In più, un avviso in Overview: «BBVA non si aggiorna da ieri» con il link alle impostazioni | A: nessuna schermata nuova; chi non legge la mail lo scopre in Impostazioni o nel conto. B: il problema si vede all'apertura dell'app; una vista in più in N2 |
-| Q2 | Il limite di letture della banca conta nei «3 fallimenti»? | BBVA risponde «limite raggiunto» a 3 letture automatiche di seguito; la quarta riesce | No: la riga dice «In ritardo» con il motivo e l'ora del nuovo tentativo; nessuna mail | Sì: alla terza parte la mail «BBVA non sincronizzato» | A: nessuna mail per un problema che si risolve da solo; un limite che dura giorni si vede solo sulla riga (e con l'avviso «fermo»). B: più mail, alcune senza un'azione possibile |
-| Q3 | Lo stato del collegamento si vede anche fuori da Impostazioni? | Mattia disattiva Enable Banking e apre il conto BBVA in Accounts | Sì, nel dettaglio del conto: «In pausa · Enable Banking non è attivo · Attiva». Elenco di Accounts e Investments restano come oggi fino a R3 | No: solo in `Settings › Integrations`. Il conto mostra la data dell'ultima lettura | A: l'utente capisce perché il conto è fermo (esempio di H30); una vista in più in N2. B: meno lavoro; il conto sembra fermo senza motivo |
-| Q4 | Un plugin non risponde: l'admin riceve un avviso? | Il container di Enable Banking si ferma alle 14:02 | No: lo stato è solo in `Server › Diagnostica` (testo del piano) | Sì: un avviso all'admin dopo 15 minuti senza risposta, sul canale degli avvisi dell'admin | A: il guasto si nota dagli errori degli utenti o aprendo Diagnostica. B: l'admin lo sa subito; una regola di avviso in più |
-| Q5 | «Riattiva» su un collegamento «In pausa»: quale pianificazione torna? | Mattia ha tolto ogni orario a Trek. Poi preme «Riattiva» | La pianificazione consigliata del fornitore, con un clic | Si apre il dialogo della pianificazione: l'utente sceglie gli orari | A: un clic; per orari diversi l'utente va in «Avanzate». B: un passo in più; nessuna sorpresa sugli orari |
+| # | Domanda | Esempio | A (default) | B | Effetto | Decisione |
+|---|---|---|---|---|---|---|
+| Q1 | Dove arriva un avviso, oltre alla mail? | BBVA fallisce 3 volte di seguito. Mattia non apre le impostazioni | Mail (come oggi) + stato sulla riga del collegamento | In più, un avviso in Overview: «BBVA non si aggiorna da ieri» con il link alle impostazioni | A: nessuna schermata nuova; chi non legge la mail lo scopre in Impostazioni o nel conto. B: il problema si vede all'apertura dell'app; una vista in più in N2 | **A** |
+| Q2 | Il limite di letture della banca conta nei «3 fallimenti»? | BBVA risponde «limite raggiunto» a 3 letture automatiche di seguito; la quarta riesce | No: la riga dice «In ritardo» con il motivo e l'ora del nuovo tentativo; nessuna mail | Sì: alla terza parte la mail «BBVA non sincronizzato» | A: nessuna mail per un problema che si risolve da solo; un limite che dura giorni si vede solo sulla riga (e con l'avviso «fermo»). B: più mail, alcune senza un'azione possibile | **A** |
+| Q3 | Lo stato del collegamento si vede anche fuori da Impostazioni? | Mattia disattiva Enable Banking e apre il conto BBVA in Accounts | Sì, nel dettaglio del conto: «In pausa · Enable Banking non è attivo · Attiva». Elenco di Accounts e Investments restano come oggi fino a R3 | No: solo in `Settings › Integrations`. Il conto mostra la data dell'ultima lettura | A: l'utente capisce perché il conto è fermo (esempio di H30); una vista in più in N2. B: meno lavoro; il conto sembra fermo senza motivo | **A** |
+| Q4 | Un plugin non risponde: l'admin riceve un avviso? | Il container di Enable Banking si ferma alle 14:02 | No: lo stato è solo in `Server › Diagnostica` (testo del piano) | Sì: un avviso all'admin dopo 15 minuti senza risposta, sul canale degli avvisi dell'admin | A: il guasto si nota dagli errori degli utenti o aprendo Diagnostica. B: l'admin lo sa subito; una regola di avviso in più | **A** |
+| Q5 | «Riattiva» su un collegamento «In pausa»: quale pianificazione torna? | Mattia ha tolto ogni orario a Trek. Poi preme «Riattiva» | La pianificazione consigliata del fornitore, con un clic | Si apre il dialogo della pianificazione: l'utente sceglie gli orari | A: un clic; per orari diversi l'utente va in «Avanzate». B: un passo in più; nessuna sorpresa sugli orari | **A** |
