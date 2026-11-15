@@ -88,7 +88,7 @@ test.describe("a fund fed by the payslip", () => {
       await expect(page.getByRole("heading", { name: "Cometa", level: 1 })).toBeVisible();
       // 4 × (25,00 + 45,00 + 150,00) + the 13th's 5,00 = 885,00 € accrued, nothing credited yet.
       // The contributions tab has them, with their periods, before the fund has said anything.
-      await page.goto(`${fundUrl}?tab=contributions&period=all`);
+      await page.goto(`${fundUrl}?tab=contributions&preset=all`);
       await expect(page.getByTestId("payslip-line")).toHaveCount(5);
       await expect(page.getByTestId("fund-payslips")).toContainText("885,00 €");
       await expect(page.getByTestId("fund-quarters")).toContainText(`Q1 ${LAST_YEAR}`);
@@ -164,7 +164,7 @@ test.describe("a fund fed by the payslip", () => {
     });
 
     await test.step("the six quantities are shown apart, and the panel reconciles them", async () => {
-      await page.goto(`${fundUrl}?period=${LAST_YEAR}`);
+      await page.goto(`${fundUrl}?off=1`);
       // Value 950,00 · paid in 890,32 · gain +59,68.
       await expect(page.getByTestId("fund-value")).toContainText("950,00 €");
       await expect(page.getByTestId("kpi-paid")).toContainText("890,32 €");
@@ -208,7 +208,7 @@ test.describe("a fund fed by the payslip", () => {
     });
 
     await test.step("the list shows the fund", async () => {
-      await page.goto(`/funds?period=${LAST_YEAR}`);
+      await page.goto(`/funds?off=1`);
       const row = page.getByTestId("fund-home-row").filter({ hasText: "Cometa" });
       await expect(row).toContainText("950,00 €");
       await expect(row).toContainText("890,32 €");
@@ -217,7 +217,7 @@ test.describe("a fund fed by the payslip", () => {
 
   test("the fund reads at 400 px", async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 900 });
-    await page.goto(`/funds?period=${LAST_YEAR}`);
+    await page.goto(`/funds?off=1`);
     const item = page.getByTestId("fund-home-item").filter({ hasText: "Cometa" });
     await expect(item).toBeVisible();
     await item.getByRole("link", { name: "Cometa" }).click();
@@ -232,7 +232,7 @@ test.describe("a fund fed by the payslip", () => {
   // The assertion of the journey of before N6 ("the quarters reconcile"): January's payslip accrues
   // the enrolment quota in the first quarter, and the enrolment written by hand names that quarter.
   test("the quarter with the enrolment quota reconciles", async ({ page }) => {
-    await page.goto(`/funds?period=${LAST_YEAR}`);
+    await page.goto(`/funds?off=1`);
     await page
       .getByTestId("fund-home-row")
       .filter({ hasText: "Cometa" })
@@ -251,13 +251,13 @@ test.describe("a quarter the payslips accrued, with no enrolment quota", () => {
   test.use({ storageState: sessionState("fundsSetup") });
 
   test("a contribution from the payslip, written by hand, reconciles the period", async ({ page }) => {
-    await page.goto("/funds?period=all");
+    await page.goto("/funds?preset=all");
     const href = await page
       .getByTestId("fund-home-row")
       .filter({ hasText: "Fondo Busta" })
       .getByRole("link", { name: "Fondo Busta" })
       .getAttribute("href");
-    await page.goto(`${href!.split("?")[0]}?tab=contributions&period=all`);
+    await page.goto(`${href!.split("?")[0]}?tab=contributions&preset=all`);
     const quarter = page.getByTestId("quarter-line").filter({ hasText: `Q1 ${LAST_YEAR}` });
     await expect(quarter).toContainText("accrued 360,00 € · in the fund —");
     await expect(quarter).not.toContainText("Reconciled");
@@ -313,7 +313,7 @@ test.describe("what a document left before release N6", () => {
   test.use({ storageState: sessionState("layout") });
 
   test("the statements already read are read only, with no link to a file", async ({ page }) => {
-    await page.goto(`/funds?period=${LAST_YEAR}`);
+    await page.goto(`/funds?off=1`);
     const href = await page
       .getByTestId("fund-home-row")
       .filter({ hasText: "Cometa" })
@@ -321,7 +321,7 @@ test.describe("what a document left before release N6", () => {
       .getAttribute("href");
     const path = href!.split("?")[0];
 
-    await page.goto(`${path}?tab=valuations&period=all`);
+    await page.goto(`${path}?tab=valuations&preset=all`);
     const statements = page.getByTestId("fund-statements");
     await expect(statements.getByRole("heading", { name: "Statements already read" })).toBeVisible();
     await expect(statements).toContainText(
@@ -341,7 +341,7 @@ test.describe("what a document left before release N6", () => {
     await expect(page.getByRole("banner").getByRole("button", { name: "Update value" })).toBeVisible();
 
     // The rows the export left are in the register as history: "Imported", with no action.
-    await page.goto(`${path}?tab=contributions&period=all`);
+    await page.goto(`${path}?tab=contributions&preset=all`);
     const imported = page.getByTestId("contribution-row").filter({ hasText: "Imported" });
     await expect(imported).toHaveCount(3);
     await expect(imported.getByRole("button")).toHaveCount(0);

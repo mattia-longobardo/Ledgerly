@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 139,
+    "crossModuleImports": 138,
     "moduleIndexFiles": 0,
     "reciprocalModulePairs": 5,
     "reciprocalUnitPairs": 54,
@@ -17,7 +17,6 @@
     "modules/accounts/service.ts → modules/investments/managed",
     "modules/accounts/service.ts → modules/transactions/queries",
     "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/display",
-    "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/filters",
     "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/range-picker",
     "modules/accounts/ui/period.ts → modules/transactions/ui/filters",
     "modules/budgets/actions.ts → modules/accounts/rules",

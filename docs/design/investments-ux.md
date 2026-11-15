@@ -99,6 +99,29 @@ I link salvati restano validi.
 
 ### 2.1 Controllo
 
+> **Dal 15/11/2026 (decisione di Mattia, sostituisce la scelta 1 di §9).** Investments e Funds usano il controllo
+> del periodo di Expenses, Overview e Accounts (`PeriodBarView`, `src/modules/accounts/ui/period-bar.tsx`): un solo
+> modo di parlare del tempo in tutta l'app. Le regole dei periodi sono in `src/platform/ranges.ts`; la lettura
+> dell'indirizzo per queste due sezioni è `sectionPeriod` (`src/modules/investments/period.ts`).
+>
+> ```text
+> ‹  2026 · da inizio anno  ›    [ Questo mese | Mese scorso | Ultimi 3 mesi | Da inizio anno | Tutto ]
+> ```
+>
+> - Parametri: `preset` (`thisMonth|lastMonth|last3Months|ytd|all`), `from`/`to` a giorni (vincono sui preset),
+>   `off` (quanti periodi indietro). Apertura: `ytd`, senza parametri.
+> - Le frecce spostano il periodo della sua stessa lunghezza, come in Expenses. «Da inizio anno» fa un passo di
+>   un anno solare: `off=1` è l'anno scorso intero, che è il P&L che si chiede. «Avanti» si ferma al periodo in corso.
+> - L'etichetta è il bottone che apre il calendario a giorni. Un anno solare si chiama con il suo nome
+>   («2025», «2026 · da inizio anno»), come un mese in Expenses («novembre 2026»).
+> - «Tutto» esiste solo qui: dal primo giorno con dati a oggi, senza frecce; il testo «dal 28 ott 2024» apre il
+>   calendario.
+> - I motori non cambiano: un intervallo che è un anno solare resta un periodo `year`, «Tutto» resta `all`, il
+>   resto è `custom` fino a oggi. Gli indirizzi di prima (`period=2025`, `period=all`) vanno a quelli nuovi con
+>   un redirect permanente (`legacyPeriodQuery`).
+>
+> Il testo che segue descrive il controllo precedente e resta come storia.
+
 Il controllo riusa i due pattern che Ledgerly ha già (audit §3): `Segmented` + `PeriodStepper` di
 Accounts e `DateRangePicker` a giorni (`src/ui/date-range-picker.tsx`, `RangeGrain = "day"`).
 
@@ -416,6 +439,14 @@ Il P&L del periodo si scompone in parti **additive**; la somma è uguale al P&L 
 - La cassa nel conto non ha P&L (se non il cambio, §4.5).
 
 ### 4.3 Rendimento %
+
+> **Vista «Rendimento %» del grafico (15/11/2026).** Terza vista accanto a P&L e Valore, nella home, nel servizio,
+> nella home di Funds e nel fondo. Ogni barra è il P&L dell'intervallo diviso per il capitale medio del periodo
+> (lo stesso denominatore del Modified Dietz): è la parte del rendimento del periodo fatta in quell'intervallo. La
+> linea è il cumulato e finisce sulla % in testata. Il capitale si legge da P&L ÷ rendimento del periodo
+> (`returnScale`, `src/modules/investments/ui/chart-data.ts`); senza rendimento o con P&L zero la vista dice che
+> non è determinabile. Nelle pagine di dettaglio (un fondo, un servizio) le barre sono verdi per un guadagno e
+> rosse per una perdita; nelle home tengono il colore del fondo o del servizio.
 
 **Modified Dietz** sul periodo coperto `[s', e]` (§9, decisione 2; `s'` = inizio del periodo
 affidabile, §4.6), `N` = giorni di `[s', e]`:

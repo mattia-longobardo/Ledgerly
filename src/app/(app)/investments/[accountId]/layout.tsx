@@ -4,12 +4,8 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAccount } from "@/modules/accounts/queries";
 import { ServiceActions } from "@/modules/investments/ui/dialogs";
-import {
-  ServiceCrumb,
-  ServicePeriodControl,
-  type ServiceTab,
-  ServiceTabs,
-} from "@/modules/investments/ui/service-nav";
+import { ServiceCrumb, type ServiceTab, ServiceTabs } from "@/modules/investments/ui/service-nav";
+import { ServicePeriodControl } from "./service-period";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
 import { Badge } from "@/ui/badge";

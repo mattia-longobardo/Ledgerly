@@ -21,9 +21,9 @@ test("the period drives the hero, the parts, the chart and the rows, which add u
   page,
 }) => {
   await page.goto("/investments");
-  const year = page.getByRole("group", { name: "Period" });
-  await expect(year.getByRole("link", { name: "Year" })).toHaveAttribute("aria-current", "true");
-  await expect(page.getByTestId("period-text")).toHaveText(/ · year to date$/);
+  const year = page.getByRole("group", { name: "Date range" });
+  await expect(year.getByRole("link", { name: "Year to date" })).toHaveAttribute("aria-current", "true");
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(/ · year to date$/);
 
   const ytd = await hero(page).getAttribute("data-cents");
   expect(ytd).not.toBe("");
@@ -34,7 +34,9 @@ test("the period drives the hero, the parts, the chart and the rows, which add u
   // January, before any of the seeded data: every number of the page moves with the period, and
   // a P&L that cannot be measured says so — never a zero.
   await page.goto("/investments?from=2026-01-01&to=2026-01-31");
-  await expect(year.getByRole("link", { name: "Custom" })).toHaveAttribute("aria-current", "true");
+  // The days the picker wrote win over the presets: none of them is the current one.
+  await expect(year.locator('a[aria-current="true"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText("January 2026");
   await expect(page.getByRole("heading", { name: /· 1 Jan 2026 – 31 Jan 2026/ })).toBeVisible();
   const january = await hero(page).getAttribute("data-cents");
   expect(january).not.toBe(ytd);
@@ -50,25 +52,41 @@ test("the period drives the hero, the parts, the chart and the rows, which add u
 
   // All: from the first day with data, no stepper.
   await year.getByRole("link", { name: "All" }).click();
-  await expect(page).toHaveURL(/[?&]period=all/);
-  await expect(page.getByTestId("period-text")).toHaveText(/^since /);
+  await expect(page).toHaveURL(/[?&]preset=all/);
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(/^since /);
   const all = await hero(page).getAttribute("data-cents");
   if (all !== "") expect(await rowsTotal(page)).toBe(BigInt(all!));
 });
 
-test("the stepper stops at the first year with data and at the year running", async ({ page }) => {
+test("the stepper stops at the year running, and walks the year to date by calendar year", async ({
+  page,
+}) => {
   await page.goto("/investments");
-  const stepper = page.getByRole("group", { name: "Year" });
-  await expect(stepper.getByRole("button", { name: "Next year" })).toBeDisabled();
-  // eToro's 12 months start a year ago (PERS-145): the year before is the first with data.
-  await stepper.getByRole("link", { name: "Previous year" }).click();
-  await expect(page).toHaveURL(/[?&]period=\d{4}/);
-  await expect(stepper.getByRole("button", { name: "Previous year" })).toBeDisabled();
+  const stepper = page.getByRole("group", { name: "Date range" });
+  await expect(stepper.getByRole("button", { name: "Next period" })).toBeDisabled();
+  await stepper.getByRole("link", { name: "Previous period" }).click();
+  await expect(page).toHaveURL(/[?&]off=1$/);
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(
+    String(new Date().getFullYear() - 1),
+  );
+  await stepper.getByRole("link", { name: "Latest" }).click();
+  await expect(page).toHaveURL(/\/investments$/);
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(/ · year to date$/);
+
+  // A month steps by month, as in Expenses.
+  await stepper.getByRole("link", { name: "This month" }).click();
+  await expect(page).toHaveURL(/[?&]preset=thisMonth$/);
+  await stepper.getByRole("link", { name: "Previous period" }).click();
+  await expect(page).toHaveURL(/preset=thisMonth&off=1|off=1&preset=thisMonth/);
 });
 
 test("the charts' old address lands on the new one, and its links stay", async ({ page }) => {
+  await page.goto("/investments?period=all");
+  await expect(page).toHaveURL(/\/investments\?preset=all$/);
+  await page.goto(`/investments?period=${new Date().getFullYear() - 1}&view=value`);
+  await expect(page).toHaveURL(/view=value&off=1$/);
   await page.goto("/investments?range=all&grain=day");
-  await expect(page).toHaveURL(/\/investments\?period=all$/);
+  await expect(page).toHaveURL(/\/investments\?preset=all$/);
   await page.goto("/investments?from=2026-03&to=2026-05&view=value");
   await expect(page).toHaveURL(/from=2026-03-01/);
   await expect(page).toHaveURL(/to=2026-05-31/);
@@ -76,20 +94,44 @@ test("the charts' old address lands on the new one, and its links stay", async (
   await expect(page).not.toHaveURL(/grain=/);
 });
 
-test("the period picker opens, offers the shortcuts and closes from the keyboard", async ({ page }) => {
+test("the Return view shows the P&L of each interval as a part of the return, on the home and in a service", async ({
+  page,
+}) => {
+  await page.goto("/investments?view=return");
+  const view = page.getByRole("group", { name: "Chart", exact: true });
+  await expect(view.getByRole("link", { name: "Return %" })).toHaveAttribute("aria-current", "true");
+  await expect(view.getByRole("link", { name: "P&L" })).toBeVisible();
+  await expect(view.getByRole("link", { name: "Value" })).toHaveAttribute("href", /view=value/);
+  // The view rides along with the period.
+  await page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "All" }).click();
+  await expect(page).toHaveURL(/view=return&preset=all|preset=all&view=return/);
+
+  const href = await page
+    .getByTestId("service-row")
+    .locator("a[href^='/investments/']")
+    .first()
+    .getAttribute("href");
+  await page.goto(`${href!.split("?")[0]}?view=return`);
+  await expect(
+    page.getByRole("group", { name: "Chart", exact: true }).getByRole("link", { name: "Return %" }),
+  ).toHaveAttribute("aria-current", "true");
+});
+
+test("the period picker opens and closes from the keyboard", async ({ page }) => {
   await page.goto("/investments?from=2026-01-01&to=2026-06-30");
-  const summary = page.locator('summary[title="Pick the days"]');
+  const summary = page.locator('summary[title="Date range"]');
   await summary.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("link", { name: "Last 12 months" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Apply" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Apply" })).toBeHidden();
   await expect(summary).toBeFocused();
 
-  await summary.click();
-  await page.getByRole("link", { name: "Last 12 months" }).click();
-  await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
+  // All has no window to step, and its words open the same picker.
+  await page.goto("/investments?preset=all");
+  await expect(page.getByRole("link", { name: "Previous period" })).toHaveCount(0);
+  await page.locator('summary[title="Date range"]').click();
+  await expect(page.getByRole("button", { name: "Apply" })).toBeVisible();
 });
 
 test("a service is highlighted in the chart from the keyboard, apart from the link that opens it", async ({
@@ -121,8 +163,8 @@ test("a service is highlighted in the chart from the keyboard, apart from the li
 test("PERS-145: the home's hero is the sum of the service pages, in 2026 and 2025, with no estimate and no Other", async ({
   page,
 }) => {
-  for (const year of ["2026", "2025"]) {
-    await page.goto(`/investments?period=${year}`);
+  for (const back of ["", "?off=1"]) {
+    await page.goto(`/investments${back}`);
     const heroCents = await hero(page).getAttribute("data-cents");
     const links = await page
       .getByTestId("service-row")
@@ -138,7 +180,7 @@ test("PERS-145: the home's hero is the sum of the service pages, in 2026 and 202
       await expectNothingEstimated(page);
     }
     // A service that cannot be measured is left out of both, never counted as zero.
-    if (heroCents) expect(services, year).toBe(BigInt(heroCents));
+    if (heroCents) expect(services, back || "the year running").toBe(BigInt(heroCents));
   }
 });
 

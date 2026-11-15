@@ -1,9 +1,9 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ACTIVITY_FAMILIES, type ActivityFamily, describeEvent } from "@/modules/investments/activity";
-import { periodQuery, type Query } from "@/modules/investments/period";
+import { legacyPeriodQuery, type Query, sectionPeriod } from "@/modules/investments/period";
 import {
   type ActivityRow,
   ACTIVITY_PAGE_SIZE,
@@ -13,7 +13,7 @@ import {
 } from "@/modules/investments/queries";
 import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
-import type { MonthKey } from "@/platform/dates";
+import { type MonthKey, today as todayOn } from "@/platform/dates";
 import { formatDate, formatMoney, monthName } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
@@ -41,6 +41,9 @@ export default async function InvestmentServiceActivity({
   const ctx = await requireSession();
   const { accountId } = await params;
   const query = (await searchParams) as Query;
+  // The period before the presets (`period=all`, a year) goes to the new one, once.
+  const legacy = legacyPeriodQuery(query, todayOn(ctx.timeZone));
+  if (legacy) permanentRedirect(withParams(`/investments/${accountId}/activity`, {}, legacy));
   const t = await getTranslations("investments");
   const ta = await getTranslations("investments.activity");
   const base = `/investments/${accountId}/activity`;
@@ -54,10 +57,10 @@ export default async function InvestmentServiceActivity({
 
   const [detail, pnl] = await Promise.all([
     loadService(accountId),
-    servicePnlView(ctx, accountId, { period: one(query.period), from: one(query.from), to: one(query.to) }),
+    servicePnlView(ctx, accountId, sectionPeriod(query, todayOn(ctx.timeZone)).period),
   ]);
   if (!detail || !pnl) notFound();
-  const { span, period } = pnl;
+  const { span } = pnl;
   // A manual service counts its account's movements (PERS-342): they are its activity.
   if (detail.summary.investment.provider === "manual") {
     const movements = await serviceMovements(ctx, accountId, span);
@@ -83,7 +86,7 @@ export default async function InvestmentServiceActivity({
 
   /** Every parameter of the tab as it stands: a link changes one and keeps the rest. */
   const current: Params = {
-    ...periodQuery(period, pnl.todayOn),
+    ...sectionPeriod(query, pnl.todayOn).params,
     type: family ?? undefined,
     q: q ?? undefined,
     asset: assetName === null ? undefined : (assetId ?? undefined),

@@ -17,7 +17,7 @@ test("the address of the preview does not answer any more", async ({ page }) => 
 test("the Contributions tab says a fee is unknown, and a debit with no amount reads well", async ({
   page,
 }) => {
-  await page.goto(`${PATH}?period=all`);
+  await page.goto(`${PATH}?preset=all`);
   await page.getByRole("link", { name: "PAC Delta" }).filter({ visible: true }).first().click();
   await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Contributions" }).click();
   await expect(page.getByTestId("fee-unknown")).toContainText("A fee is unknown");
@@ -43,9 +43,9 @@ test.describe("the home", () => {
     page,
   }) => {
     await page.goto(PATH);
-    const period = page.getByRole("group", { name: "Period", exact: true });
-    await expect(period.getByRole("link", { name: "Year" })).toHaveAttribute("aria-current", "true");
-    await expect(page.getByTestId("period-text")).toHaveText(`${Y} · year to date`);
+    const period = page.getByRole("group", { name: "Date range" });
+    await expect(period.getByRole("link", { name: "Year to date" })).toHaveAttribute("aria-current", "true");
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(`${Y} · year to date`);
     await expect(hero(page)).toHaveAttribute("data-state", "partial");
     expect(await rowsTotal(page)).toBe(await heroCents(page));
     const paid = await page.getByTestId("kpi-paid").textContent();
@@ -55,7 +55,7 @@ test.describe("the home", () => {
     const who = await page.getByTestId("who-paid").textContent();
     const onTheWay = await page.getByTestId("kpi-on-the-way").textContent();
 
-    await page.goto(`${PATH}?period=${Y - 3}`);
+    await page.goto(`${PATH}?off=3`);
     await expect(hero(page)).toHaveAttribute("data-state", "measured");
     expect(await rowsTotal(page)).toBe(await heroCents(page));
     expect(await page.getByTestId("kpi-paid").textContent()).not.toBe(paid);
@@ -68,8 +68,8 @@ test.describe("the home", () => {
   });
 
   test("All: the years add up to it, to the cent", async ({ page }) => {
-    await page.goto(`${PATH}?period=all`);
-    await expect(page.getByTestId("period-text")).toHaveText(/^since /);
+    await page.goto(`${PATH}?preset=all`);
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(/^since /);
     const cents = await page
       .getByTestId("year-row")
       .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-cents") ?? ""));
@@ -87,7 +87,7 @@ test.describe("the home", () => {
   });
 
   test("a year with payslips alone: not determinable, never zero, with where to go", async ({ page }) => {
-    await page.goto(`${PATH}?period=${Y - 4}`);
+    await page.goto(`${PATH}?off=4`);
     await expect(hero(page)).toHaveAttribute("data-state", "payslips_only");
     await expect(hero(page)).toHaveAttribute("data-cents", "");
     await expect(hero(page)).toHaveText("Not determinable");
@@ -101,7 +101,7 @@ test.describe("the home", () => {
   });
 
   test("a year with money and no value: not determinable, the money stands", async ({ page }) => {
-    await page.goto(`${PATH}?period=${Y - 2}`);
+    await page.goto(`${PATH}?off=2`);
     await expect(hero(page)).toHaveAttribute("data-state", "paid_no_value");
     await expect(hero(page)).toHaveText("Not determinable");
     await expect(page.getByTestId("kpi-paid")).toContainText("500,00");
@@ -111,7 +111,7 @@ test.describe("the home", () => {
   });
 
   test("a year with nothing: no value, and the last one known with its date", async ({ page }) => {
-    await page.goto(`${PATH}?period=${Y - 1}`);
+    await page.goto(`${PATH}?off=1`);
     await expect(hero(page)).toHaveAttribute("data-state", "quiet");
     await expect(hero(page)).toHaveText(`No value in ${Y - 1}`);
     await expect(page.getByText(/Last value/)).toBeVisible();
@@ -134,34 +134,41 @@ test.describe("the home", () => {
   test("a year before the data has a link to the first; a year to come goes back to this one", async ({
     page,
   }) => {
-    await page.goto(`${PATH}?period=${Y - 9}`);
+    await page.goto(`${PATH}?off=9`);
     await expect(page.getByText(`No data in ${Y - 9}`)).toBeVisible();
     await expect(page.getByRole("link", { name: `Go to ${Y - 4}` })).toBeVisible();
     await page.goto(`${PATH}?period=${Y + 1}`);
     await expect(page).toHaveURL(new RegExp(`${PATH}$`));
-    await expect(page.getByTestId("period-text")).toHaveText(`${Y} · year to date`);
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(`${Y} · year to date`);
   });
 
-  test("the stepper stops at the payslips' year and at the year running", async ({ page }) => {
-    await page.goto(`${PATH}?period=${Y - 4}`);
-    const stepper = page.getByRole("group", { name: "Year", exact: true });
-    await expect(stepper.getByRole("button", { name: "Previous year" })).toBeDisabled();
+  test("the stepper stops at the year running, and a month steps by month", async ({ page }) => {
+    const stepper = page.getByRole("group", { name: "Date range" });
     await page.goto(PATH);
-    await expect(stepper.getByRole("button", { name: "Next year" })).toBeDisabled();
-    await stepper.getByRole("link", { name: "Previous year" }).click();
-    await expect(page).toHaveURL(new RegExp(`period=${Y - 1}`));
+    await expect(stepper.getByRole("button", { name: "Next period" })).toBeDisabled();
+    await stepper.getByRole("link", { name: "Previous period" }).click();
+    await expect(page).toHaveURL(new RegExp(`off=1`));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
+    await stepper.getByRole("link", { name: "Last 3 months" }).click();
+    await expect(page).toHaveURL(/preset=last3Months$/);
+    await expect(stepper.getByRole("link", { name: "Last 3 months" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    await stepper.getByRole("link", { name: "Previous period" }).click();
+    await expect(page).toHaveURL(/preset=last3Months&off=1|off=1&preset=last3Months/);
   });
 
   test("a value of the 1st of January closes the year before; the money stays on its own day", async ({
     page,
   }) => {
     // PAC Beta reads 2.100,00 € on 1 Jan Y−2: that closes Y−3, on 2.000,00 € paid in.
-    await page.goto(`${PATH}?period=${Y - 3}`);
+    await page.goto(`${PATH}?off=3`);
     const beta = page.getByTestId("fund-home-row").filter({ hasText: "PAC Beta" });
     expect(BigInt((await beta.getByTestId("fund-gain").getAttribute("data-cents"))!)).toBe(10_000n);
     await expect(beta).toContainText("01 Jan");
     // So Y−2 has money and no value of its own, even with a reading on its first day.
-    await page.goto(`${PATH}?period=${Y - 2}`);
+    await page.goto(`${PATH}?off=2`);
     await expect(hero(page)).toHaveAttribute("data-state", "paid_no_value");
     // The money stays on its own day: 300,00 € of 1 Jan Y is in Y, in the gain up to today's value.
     await page.goto(PATH);
@@ -169,10 +176,31 @@ test.describe("the home", () => {
     expect(BigInt((await beta.getByTestId("fund-gain").getAttribute("data-cents"))!)).toBe(40_000n);
   });
 
+  test("the Return view shows each interval's part of the return, in percent", async ({ page }) => {
+    await page.goto(`${PATH}?preset=all&view=return`);
+    const chart = page.getByTestId("fund-performance");
+    await expect(chart.getByRole("link", { name: "Return %" })).toHaveAttribute("aria-current", "true");
+    // The period stays when the view changes, and the view stays when the period does.
+    await expect(chart.getByRole("link", { name: "Gain" })).toHaveAttribute("href", /preset=all/);
+    await expect(
+      page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "Year to date" }),
+    ).toHaveAttribute("href", /view=return/);
+    const rate = page.getByTestId("funds-rate");
+    if ((await rate.count()) === 0) {
+      await expect(chart.getByTestId("chart-empty")).toBeVisible();
+      return;
+    }
+    await chart.getByText("Chart data").click();
+    await expect(chart.getByRole("columnheader", { name: "Return %" })).toBeVisible();
+    const cells = await chart.locator("tbody tr td:nth-child(2)").allTextContents();
+    expect(cells.length).toBeGreaterThan(0);
+    for (const cell of cells) expect(cell).toMatch(/%$|^—$/);
+  });
+
   test("the Value view shows the readings, and a deposit between two of them is not a loss", async ({
     page,
   }) => {
-    await page.goto(`${PATH}?period=all&view=value`);
+    await page.goto(`${PATH}?preset=all&view=value`);
     await page.getByText("Chart data").click();
     const dates = page.locator("details table tbody tr");
     const count = await dates.count();
@@ -189,7 +217,7 @@ test.describe("the home", () => {
     const beta = page.getByTestId("fund-home-item").filter({ hasText: "PAC Beta" });
     await expect(beta.getByRole("button", { name: /Highlight PAC Beta/ })).toBeVisible();
     await expect(beta.getByRole("link", { name: "PAC Beta" })).toBeVisible();
-    await expect(page.getByRole("group", { name: "Period", exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Date range" }).first()).toBeVisible();
     await expect(page.getByTestId("fund-home-row").first()).toBeHidden();
   });
 });

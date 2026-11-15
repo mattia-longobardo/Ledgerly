@@ -142,13 +142,14 @@ describe("the Contributions tab", () => {
 describe("the old addresses", () => {
   it("leaves a new address alone", () => {
     expect(legacyFundQuery({}, TODAY)).toBeNull();
-    expect(legacyFundQuery({ period: "2027", tab: "valuations" }, TODAY)).toBeNull();
+    expect(legacyFundQuery({ off: "1", tab: "valuations" }, TODAY)).toBeNull();
+    expect(legacyFundQuery({ preset: "all" }, TODAY)).toBeNull();
     expect(legacyFundQuery({ from: "2027-01-01", to: "2027-03-31" }, TODAY)).toBeNull();
   });
 
   it("sends `span` to the new parameter, and keeps the rest", () => {
     expect(legacyFundQuery({ span: "12", tab: "valuations" }, TODAY)).toEqual({ tab: "valuations" });
-    expect(legacyFundQuery({ span: "60" }, TODAY)).toEqual({ period: "all" });
+    expect(legacyFundQuery({ span: "60" }, TODAY)).toEqual({ preset: "all" });
     expect(legacyFundQuery({ span: "6" }, TODAY)).toEqual({ from: "2028-01-01", to: TODAY });
     expect(legacyFundQuery({ span: "24" }, TODAY)).toEqual({ from: "2026-07-01", to: TODAY });
     expect(legacyFundQuery({ span: "nonsense", tab: "settings" }, TODAY)).toEqual({ tab: "settings" });
@@ -166,14 +167,14 @@ describe("the old addresses", () => {
         to: "2027-03-31",
       },
     );
-    expect(legacyFundQuery({ period: "2027", span: "60" }, TODAY)).toEqual({ period: "2027" });
+    expect(legacyFundQuery({ period: "2027", span: "60" }, TODAY)).toEqual({ off: "1" });
   });
 
   it("sends the returns page to the Valuations tab, with the period", () => {
     const base = "/funds/abc";
     expect(returnsTarget(base, {}, TODAY)).toBe("/funds/abc?tab=valuations");
-    expect(returnsTarget(base, { period: "2027" }, TODAY)).toBe("/funds/abc?tab=valuations&period=2027");
-    expect(returnsTarget(base, { span: "60" }, TODAY)).toBe("/funds/abc?tab=valuations&period=all");
+    expect(returnsTarget(base, { period: "2027" }, TODAY)).toBe("/funds/abc?tab=valuations&off=1");
+    expect(returnsTarget(base, { span: "60" }, TODAY)).toBe("/funds/abc?tab=valuations&preset=all");
     expect(returnsTarget(base, { from: "2027-01", to: "2027-03", view: "value" }, TODAY)).toBe(
       "/funds/abc?tab=valuations&from=2027-01-01&to=2027-03-31",
     );

@@ -1,10 +1,18 @@
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, GAIN_COLOR, LOSS_COLOR } from "@/modules/accounts/ui/display";
-import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
+import {
+  asReturns,
+  bestAndWorst,
+  percentAxisLabels,
+  returnScale,
+  runningTotal,
+  sampled,
+  toCents,
+} from "@/modules/investments/ui/chart-data";
 import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Card } from "@/ui/card";
 import { MultiLine, StackedBars, stackLayers } from "@/ui/chart";
@@ -27,6 +35,7 @@ export async function FundChart({
   span,
   when,
   totalCents,
+  rate,
   view,
   path,
   params,
@@ -41,7 +50,9 @@ export async function FundChart({
   span: { from: CivilDate; to: CivilDate };
   when: string;
   totalCents: Cents | null;
-  view: "gain" | "value";
+  /** The period's return, as the header shows it: what the Return view's bars add up to. */
+  rate: number | null;
+  view: "gain" | "value" | "return";
   path: string;
   /** Every parameter but the chart's view. */
   params: Params;
@@ -90,60 +101,90 @@ export async function FundChart({
   const seriesPaid = series.map((point) => point.paidCents);
   const lastPoint = series.at(-1);
 
-  const chartBody =
-    view === "gain" ? (
-      totals.every((cents) => cents === null) ? (
-        <p data-testid="chart-empty" className="text-sm text-muted">
-          {th("chart.empty", { when })}
-        </p>
-      ) : (
-        <StackedBars
-          layers={
-            bySign
-              ? stack.flatMap((line, index) => [
-                  {
-                    key: line.fund.id,
-                    label: line.fund.name,
-                    color: GAIN_COLOR,
-                    values: layerValues[index].map((value) => (value !== null && value >= 0 ? value : null)),
-                  },
-                  {
-                    key: `${line.fund.id}-loss`,
-                    label: line.fund.name,
-                    color: LOSS_COLOR,
-                    values: layerValues[index].map((value) => (value !== null && value < 0 ? value : null)),
-                  },
-                ])
-              : stack.map((line, index) => ({
+  // ——— The bars: money for Gain, the share of the period's return for Return ————————————————————
+  const scale = view === "return" ? returnScale(totalCents, rate) : null;
+  const percent = (value: number | null) => formatPercent(value, ctx.numberFormat, { signed: true });
+  const asBars = (cents: readonly (Cents | null)[]) =>
+    view === "return" ? asReturns(cents, scale ?? 0) : asNumbers(cents);
+  const shown = (cents: Cents | null) =>
+    view === "return" ? percent(cents === null ? null : Number(cents) * (scale ?? 0)) : money(cents, true);
+  const barLayers = stack.map((line) => asBars(bars.map((bar) => bar.byFund.get(line.fund.id) ?? null)));
+  const barStack = stackLayers(barLayers, bars.length);
+  const barLine = asBars(cumulative);
+  const barsBody =
+    totals.every((cents) => cents === null) || (view === "return" && scale === null) ? (
+      <p data-testid="chart-empty" className="text-sm text-muted">
+        {view === "return" && totals.some((cents) => cents !== null)
+          ? th("chart.returnEmpty")
+          : th("chart.empty", { when })}
+      </p>
+    ) : (
+      <StackedBars
+        layers={
+          bySign
+            ? stack.flatMap((line, index) => [
+                {
                   key: line.fund.id,
                   label: line.fund.name,
-                  color: colorOf(line.fund.id),
-                  values: layerValues[index],
-                }))
-          }
-          line={asNumbers(cumulative)}
-          yLabels={axisLabels(
-            [...cumulative, ...layers.top.map(toCents), ...layers.bottom.map(toCents)],
-            ctx.numberFormat,
-            4,
-          )}
-          xLabels={barLabels}
-          hover={bars.map((bar, index) => ({
-            label: barName(index),
-            value: money(totals[index], true),
-            note: th("chart.cumulative", { amount: money(cumulative[index], true) }),
-            rows: bar.stretches.map((stretch) => ({
-              label: `${nameOf.get(stretch.fundId) ?? ""} · ${th("chart.stretch", {
-                from: day(stretch.from),
-                to: day(stretch.to),
-              })}`,
-              value: money(stretch.gainCents, true),
-              color: bySign ? (stretch.gainCents < 0n ? LOSS_COLOR : GAIN_COLOR) : colorOf(stretch.fundId),
-            })),
-          }))}
-          summary={gainSummary}
-        />
-      )
+                  color: GAIN_COLOR,
+                  values: barLayers[index].map((value) => (value !== null && value >= 0 ? value : null)),
+                },
+                {
+                  key: `${line.fund.id}-loss`,
+                  label: line.fund.name,
+                  color: LOSS_COLOR,
+                  values: barLayers[index].map((value) => (value !== null && value < 0 ? value : null)),
+                },
+              ])
+            : stack.map((line, index) => ({
+                key: line.fund.id,
+                label: line.fund.name,
+                color: colorOf(line.fund.id),
+                values: barLayers[index],
+              }))
+        }
+        line={barLine}
+        yLabels={
+          view === "return"
+            ? percentAxisLabels([...barLine, ...barStack.top, ...barStack.bottom], ctx.numberFormat)
+            : axisLabels(
+                [...cumulative, ...layers.top.map(toCents), ...layers.bottom.map(toCents)],
+                ctx.numberFormat,
+                4,
+              )
+        }
+        xLabels={barLabels}
+        hover={bars.map((bar, index) => ({
+          label: barName(index),
+          value: shown(totals[index]),
+          note: th("chart.cumulative", { amount: shown(cumulative[index]) }),
+          rows: bar.stretches.map((stretch) => ({
+            label: `${nameOf.get(stretch.fundId) ?? ""} · ${th("chart.stretch", {
+              from: day(stretch.from),
+              to: day(stretch.to),
+            })}`,
+            value: shown(stretch.gainCents),
+            color: bySign ? (stretch.gainCents < 0n ? LOSS_COLOR : GAIN_COLOR) : colorOf(stretch.fundId),
+          })),
+        }))}
+        summary={
+          view === "return"
+            ? th("chart.returnSummary", {
+                when,
+                total: percent(rate),
+                best: extremes ? `${barName(extremes.best)} (${shown(totals[extremes.best])})` : NULL_DISPLAY,
+                worst: extremes
+                  ? `${barName(extremes.worst)} (${shown(totals[extremes.worst])})`
+                  : NULL_DISPLAY,
+              })
+            : gainSummary
+        }
+      />
+    );
+
+  const chartBody =
+    view !== "value" ? (
+      barsBody
     ) : series.length < 2 ? (
       <p data-testid="chart-empty" className="text-sm text-muted">
         {series.length === 0 ? th("chart.empty", { when }) : th("chart.emptyValue")}
@@ -188,7 +229,13 @@ export async function FundChart({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 className="text-lg font-semibold">{th("chart.title")}</h2>
-          <p className="text-sm text-muted">{view === "gain" ? gainNote(grain) : th("chart.valueNote")}</p>
+          <p className="text-sm text-muted">
+            {view === "gain"
+              ? gainNote(grain)
+              : view === "return"
+                ? th("chart.returnNote")
+                : th("chart.valueNote")}
+          </p>
         </div>
         <LinkTabs
           label={th("chart.view")}
@@ -198,13 +245,14 @@ export async function FundChart({
           current={view}
           options={[
             { value: "gain", label: th("chart.gain") },
+            { value: "return", label: th("chart.return") },
             { value: "value", label: th("chart.value") },
           ]}
         />
       </div>
       {chartBody}
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-        {view === "gain" ? (
+        {view !== "value" ? (
           <span className="flex items-center gap-1.5">
             <span aria-hidden className="h-0.5 w-4 bg-fg" /> {th("chart.line")}
           </span>
@@ -222,7 +270,7 @@ export async function FundChart({
           </>
         )}
       </p>
-      {view === "gain" && totals.some((cents) => cents !== null) && (
+      {view !== "value" && totals.some((cents) => cents !== null) && (view === "gain" || scale !== null) && (
         <details className="text-sm">
           <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
             {th("chart.data")}
@@ -230,7 +278,7 @@ export async function FundChart({
           <Table className="mt-2">
             <THead>
               <Th>{th("chart.interval")}</Th>
-              <Th align="right">{th("chart.gain")}</Th>
+              <Th align="right">{view === "return" ? th("chart.return") : th("chart.gain")}</Th>
               <Th align="right">{th("chart.cumulativeHeader")}</Th>
             </THead>
             <TBody>
@@ -238,9 +286,9 @@ export async function FundChart({
                 <Tr key={bar.from + bar.to}>
                   <Td>{barName(index)}</Td>
                   <Td align="right" className={TONE_TEXT[toneOfSign(totals[index])]}>
-                    {money(totals[index], true)}
+                    {shown(totals[index])}
                   </Td>
-                  <Td align="right">{money(cumulative[index], true)}</Td>
+                  <Td align="right">{shown(cumulative[index])}</Td>
                 </Tr>
               ))}
             </TBody>

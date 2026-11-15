@@ -297,9 +297,9 @@ const PAGES: Screen[] = [
   // The seeded `layout` has years of its own: one measured and one with money and no value.
   ...(
     [
-      ["last year", `?period=${THIS_YEAR - 1}`],
-      ["a year with money and no value", `?period=${THIS_YEAR - 2}`],
-      ["All", "?period=all"],
+      ["last year", `?off=1`],
+      ["a year with money and no value", `?off=2`],
+      ["All", "?preset=all"],
     ] as const
   ).map(([what, query]): Screen => ({
     name: `/funds, as \`layout\`, ${what}`,
@@ -311,13 +311,13 @@ const PAGES: Screen[] = [
     [
       ["the year running", ""],
       ["the value chart", "?view=value"],
-      ["All, with the years", "?period=all"],
-      ["All, the value chart", "?period=all&view=value"],
-      ["a measured year", `?period=${THIS_YEAR - 3}`],
-      ["a year with money and no value", `?period=${THIS_YEAR - 2}`],
-      ["a year with nothing", `?period=${THIS_YEAR - 1}`],
-      ["a year with payslips alone", `?period=${THIS_YEAR - 4}`],
-      ["a year before the data", `?period=${THIS_YEAR - 9}`],
+      ["All, with the years", "?preset=all"],
+      ["All, the value chart", "?preset=all&view=value"],
+      ["a measured year", `?off=3`],
+      ["a year with money and no value", `?off=2`],
+      ["a year with nothing", `?off=1`],
+      ["a year with payslips alone", `?off=4`],
+      ["a year before the data", `?off=9`],
       ["a custom period", `?from=${THIS_YEAR - 3}-01-01&to=${THIS_YEAR - 3}-03-31`],
     ] as const
   ).map(([what, query]): Screen => ({
@@ -331,16 +331,16 @@ const PAGES: Screen[] = [
       [
         ["the year running", ""],
         ["the value chart", "?view=value"],
-        ["a past year", `?period=${THIS_YEAR - 1}`],
-        ["All", "?period=all"],
-        ["a year before the data", `?period=${THIS_YEAR - 9}`],
+        ["a past year", `?off=1`],
+        ["All", "?preset=all"],
+        ["a year before the data", `?off=9`],
         ["a custom period", `?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-03-31`],
-        ["Values", "?tab=valuations&period=all"],
-        ["Values, a past year", `?tab=valuations&period=${THIS_YEAR - 1}`],
-        ["Values, a year with none", `?tab=valuations&period=${THIS_YEAR - 9}`],
+        ["Values", "?tab=valuations&preset=all"],
+        ["Values, a past year", `?tab=valuations&off=1`],
+        ["Values, a year with none", `?tab=valuations&off=9`],
         // One set of tabs for every fund (release N6): the debits are contributions like the others.
-        ["Contributions", "?tab=contributions&period=all"],
-        ["Contributions, a past year", `?tab=contributions&period=${THIS_YEAR - 1}`],
+        ["Contributions", "?tab=contributions&preset=all"],
+        ["Contributions, a past year", `?tab=contributions&off=1`],
         ["Settings", "?tab=settings"],
       ] as const
     ).map(([what, query]): Screen => ({
@@ -357,9 +357,9 @@ const PAGES: Screen[] = [
   ...(
     [
       ["no value in the year running", ""],
-      ["a year of payslips alone", `?period=${THIS_YEAR - 4}`],
-      ["Contributions, a year of payslips alone", `?tab=contributions&period=${THIS_YEAR - 4}`],
-      ["Values, a year of payslips alone", `?tab=valuations&period=${THIS_YEAR - 4}`],
+      ["a year of payslips alone", `?off=4`],
+      ["Contributions, a year of payslips alone", `?tab=contributions&off=4`],
+      ["Values, a year of payslips alone", `?tab=valuations&off=4`],
     ] as const
   ).map(([what, query]): Screen => ({
     name: `/funds/[id], ${what}`,
@@ -382,9 +382,9 @@ const PAGES: Screen[] = [
   ).flatMap(([what, fund]) =>
     (
       [
-        ["Overview", "?period=all"],
-        ["Contributions", "?tab=contributions&period=all"],
-        ["Values", "?tab=valuations&period=all"],
+        ["Overview", "?preset=all"],
+        ["Contributions", "?tab=contributions&preset=all"],
+        ["Values", "?tab=valuations&preset=all"],
         ["Settings", "?tab=settings"],
       ] as const
     ).map(([tab, query]): Screen => ({
@@ -406,7 +406,7 @@ const PAGES: Screen[] = [
     name: `/funds/[id], a fund with no source, ${tab}`,
     session: "fundsSetup",
     open: async (page) => {
-      await follow(page, "/funds?period=all", /^Fondo Vuoto$/);
+      await follow(page, "/funds?preset=all", /^Fondo Vuoto$/);
       await page.goto(`${new URL(page.url()).pathname}${query}`);
       await settled(page);
     },
@@ -416,7 +416,7 @@ const PAGES: Screen[] = [
   {
     name: "/investments · All, the value chart, by class",
     session: "layout",
-    open: go("/investments?period=all&view=value&by=class"),
+    open: go("/investments?preset=all&view=value&by=class"),
   },
   { name: "/investments/catalog", session: "layout", open: go("/investments/catalog") },
   // The tabs of a service (§3.2–§3.6, U3): the three of the two manual accounts, which keep no
@@ -652,7 +652,7 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/investments?from=2026-01-01&to=2026-06-30");
       await settled(page);
-      await page.locator('summary[title="Pick the days"]').click();
+      await page.locator('summary[title="Date range"]').click();
       await page.waitForTimeout(300);
     },
   },
@@ -684,7 +684,7 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await layoutFund(page, /^Cometa$/, "?tab=contributions&period=all");
+      await layoutFund(page, /^Cometa$/, "?tab=contributions&preset=all");
       await page
         .getByTestId("fund-contributions")
         .getByRole("button", { name: "Record contribution" })
@@ -699,7 +699,7 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=contributions&period=all");
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=contributions&preset=all");
       await page
         .getByTestId("fund-contributions")
         .getByRole("button", { name: "Record contribution" })
@@ -713,7 +713,7 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=contributions&period=all");
+      await layoutFund(page, /^Fideuram Master Selection$/, "?tab=contributions&preset=all");
       await page
         .getByTestId("fund-contributions")
         .getByRole("button", { name: "Record contribution" })

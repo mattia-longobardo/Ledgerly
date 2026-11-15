@@ -21,7 +21,7 @@ test.describe("a fund's page", () => {
   }
 
   for (const name of ["PAC Piano", "Pensione Beta"]) {
-    for (const query of ["", `?period=${Y - 1}`, `?period=${Y - 2}`, "?period=all"]) {
+    for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
       test(`${name}: the same gain and the same return as the home, ${query || "the year running"}`, async ({
         page,
       }) => {
@@ -55,59 +55,59 @@ test.describe("a fund's page", () => {
   test("the period stays from the home to the fund, from tab to tab, and back to the home", async ({
     page,
   }) => {
-    await page.goto(`${HOME}?period=${Y - 1}`);
+    await page.goto(`${HOME}?off=1`);
     await row(page, "PAC Piano").getByRole("link", { name: "PAC Piano" }).click();
-    await expect(page).toHaveURL(new RegExp(`period=${Y - 1}$`));
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+    await expect(page).toHaveURL(new RegExp(`off=1$`));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
     const tabs = page.getByRole("navigation", { name: "Fund" });
     await tabs.getByRole("link", { name: "Values" }).click();
-    await expect(page).toHaveURL(new RegExp(`period=${Y - 1}&tab=valuations|tab=valuations&period=${Y - 1}`));
+    await expect(page).toHaveURL(new RegExp(`off=1&tab=valuations|tab=valuations&off=1`));
     await tabs.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(new RegExp(`period=${Y - 1}`));
+    await expect(page).toHaveURL(new RegExp(`off=1`));
     await tabs.getByRole("link", { name: "Overview" }).click();
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
-    await page.locator(`header a[href="${HOME}?period=${Y - 1}"]`).click();
-    await expect(page).toHaveURL(new RegExp(`/funds\\?period=${Y - 1}$`));
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
+    await page.locator(`header a[href="${HOME}?off=1"]`).click();
+    await expect(page).toHaveURL(new RegExp(`/funds\\?off=1$`));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
   });
 
   test("Back walks the tabs and the periods", async ({ page }) => {
     const path = await fundPath(page, "Pensione Beta");
     await page.goto(path);
-    await expect(page.getByTestId("period-text")).toHaveText(`${Y} · year to date`);
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(`${Y} · year to date`);
     const start = await hero(page).textContent();
 
     await page
-      .getByRole("group", { name: "Year", exact: true })
-      .getByRole("link", { name: "Previous year" })
+      .getByRole("group", { name: "Date range" })
+      .getByRole("link", { name: "Previous period" })
       .click();
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
     const last = await hero(page).getAttribute("data-cents");
-    await page.getByRole("group", { name: "Period", exact: true }).getByRole("link", { name: "All" }).click();
-    await expect(page).toHaveURL(/period=all/);
+    await page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "All" }).click();
+    await expect(page).toHaveURL(/preset=all/);
     await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Contributions" }).click();
     await expect(page.getByTestId("fund-contributions")).toBeVisible();
 
     await page.goBack();
-    await expect(page).toHaveURL(/period=all$/);
+    await expect(page).toHaveURL(/preset=all$/);
     await expect(page.getByTestId("funds-hero")).toBeVisible();
     await page.goBack();
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
     await expect(hero(page)).toHaveAttribute("data-cents", last!);
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await expect(hero(page)).toHaveText(start!);
     await page.goForward();
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
   });
 
   test("one return on the page, with XIRR in its tooltip from 365 days", async ({ page }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}?period=${Y - 2}`);
+    await page.goto(`${path}?off=2`);
     const rate = page.getByTestId("funds-rate");
     await expect(rate).toHaveCount(1);
     await expect(rate).not.toHaveAttribute("title");
-    await page.goto(`${path}?period=all`);
+    await page.goto(`${path}?preset=all`);
     await expect(rate).toHaveAttribute("title", /XIRR/);
     // Not the compound of the old page either.
     await expect(page.getByTestId("pension-returns")).toHaveCount(0);
@@ -126,7 +126,7 @@ test.describe("a fund's page", () => {
     const projection = await page.getByTestId("fund-projection").textContent();
     await expect(page.getByTestId("fund-value-today")).toHaveCount(0);
 
-    await page.goto(`${path}?period=${Y - 1}`);
+    await page.goto(`${path}?off=1`);
     expect(await page.getByTestId("kpi-debit").textContent()).toBe(plan);
     expect(await page.getByTestId("fund-projection").textContent()).toBe(projection);
     await expect(page.getByTestId("fund-value")).toContainText("Value at year end");
@@ -157,7 +157,7 @@ test.describe("a fund's page", () => {
     await expect(page.getByTestId("fund-bridge")).toContainText("From accrued to value");
     await expect(page.getByTestId("fund-projection")).not.toHaveAttribute("open", "");
 
-    await page.goto(`${path}?period=${Y - 1}`);
+    await page.goto(`${path}?off=1`);
     expect(await notice.textContent()).toBe(coming);
     await expect(page.getByTestId("recent-flow")).toHaveCount(2);
     await expect(page.getByTestId("recent-flow").first()).toContainText(`Q2 ${Y - 1}`);
@@ -166,7 +166,7 @@ test.describe("a fund's page", () => {
 
   test("a reading behind the money is not a loss", async ({ page }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}?period=all&view=value`);
+    await page.goto(`${path}?preset=all&view=value`);
     await page.getByTestId("fund-performance").getByText("Chart data").click();
     // One point per reading, nothing in between, and the money that reading could see.
     await expect(page.getByTestId("fund-performance").locator("details table tbody tr")).toHaveCount(3);
@@ -175,8 +175,8 @@ test.describe("a fund's page", () => {
 
   test("Settings do not follow the period, and work as today", async ({ page }) => {
     const path = await fundPath(page, "Pensione Beta");
-    await page.goto(`${path}?tab=settings&period=${Y - 1}`);
-    await expect(page.getByRole("group", { name: "Period", exact: true })).toHaveCount(0);
+    await page.goto(`${path}?tab=settings&off=1`);
+    await expect(page.getByRole("group", { name: "Date range" })).toHaveCount(0);
     await expect(
       page
         .getByRole("button", { name: "Archive this fund" })
@@ -189,7 +189,7 @@ test.describe("a fund's page", () => {
     page,
   }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}?period=${Y - 9}`);
+    await page.goto(`${path}?off=9`);
     await expect(page.getByText(`No data in ${Y - 9}`)).toBeVisible();
     await expect(page.getByRole("link", { name: `Go to ${Y - 2}` })).toBeVisible();
     await page.goto(`${path}?period=${Y + 1}`);
@@ -197,7 +197,7 @@ test.describe("a fund's page", () => {
     await page.goto(`${path}?span=12`);
     await expect(page).toHaveURL(new RegExp(`${path}$`));
     await page.goto(`${path}?span=60`);
-    await expect(page).toHaveURL(new RegExp(`${path}\\?period=all$`));
+    await expect(page).toHaveURL(new RegExp(`${path}\\?preset=all$`));
     await page.goto(`${path}?from=${Y - 1}-01&to=${Y - 1}-03`);
     await expect(page).toHaveURL(new RegExp(`from=${Y - 1}-01-01&to=${Y - 1}-03-31`));
   });
@@ -233,7 +233,7 @@ test.describe("a fund's page", () => {
     test("an archived fund: its badge, its gain, and a last value that is not held today", async ({
       page,
     }) => {
-      await page.goto(`${HOME}?period=all`);
+      await page.goto(`${HOME}?preset=all`);
       const gamma = page.getByTestId("fund-home-row").filter({ hasText: "PAC Gamma" });
       const cents = await gamma.getByTestId("fund-gain").getAttribute("data-cents");
       await gamma.getByRole("link", { name: "PAC Gamma" }).click();
@@ -244,7 +244,7 @@ test.describe("a fund's page", () => {
     });
 
     test("a past year with no value: the last one known, and today's", async ({ page }) => {
-      await page.goto(`${HOME}?period=${Y - 1}`);
+      await page.goto(`${HOME}?off=1`);
       await page
         .getByTestId("fund-home-row")
         .filter({ hasText: "PAC Beta" })
@@ -256,12 +256,12 @@ test.describe("a fund's page", () => {
     });
 
     test("a year of payslips alone: not determinable, with where to go", async ({ page }) => {
-      await page.goto(`${HOME}?period=${Y - 4}`);
+      await page.goto(`${HOME}?off=4`);
       await page
         .getByTestId("payslips-only")
         .getByRole("link", { name: `Open the contributions of ${Y - 4}` })
         .click();
-      await expect(page).toHaveURL(new RegExp(`period=${Y - 4}`));
+      await expect(page).toHaveURL(new RegExp(`off=4`));
       await expect(page.getByTestId("fund-payslips")).toBeVisible();
       await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Overview" }).click();
       await expect(hero(page)).toHaveText("Not determinable");
@@ -278,7 +278,7 @@ test.describe("a fund's page", () => {
     test("no payslip section, no debit section, and the two actions in the empty states", async ({
       page,
     }) => {
-      await page.goto(`${HOME}?period=all`);
+      await page.goto(`${HOME}?preset=all`);
       const href = await page
         .getByRole("link", { name: "Fondo Vuoto", exact: true })
         .filter({ visible: true })
@@ -371,7 +371,7 @@ test.describe("a fund's page", () => {
       .getByRole("link", { name: "Pensione Beta" })
       .getAttribute("href");
     await page.goto(href!);
-    await expect(page.getByRole("group", { name: "Period", exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Date range" }).first()).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Settings" }),
     ).toBeVisible();

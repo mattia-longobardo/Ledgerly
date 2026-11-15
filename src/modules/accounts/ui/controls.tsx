@@ -30,14 +30,18 @@ export function LinkTabs({
   options: readonly { value: string; label: string; count?: number }[];
 }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex gap-0.5 rounded-[7px] bg-hover p-0.5">
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex max-w-full flex-wrap gap-0.5 rounded-[7px] bg-hover p-0.5"
+    >
       {options.map((option) => (
         <Link
           key={option.value}
           href={withParams(path, params, { [name]: option.value })}
           aria-current={option.value === current ? "true" : undefined}
           className={cn(
-            "focus-ring inline-flex h-6 items-center rounded-[5px] px-2.5 text-sm font-medium",
+            "focus-ring inline-flex h-6 items-center rounded-[5px] px-2.5 text-sm font-medium whitespace-nowrap",
             option.value === current
               ? "bg-card text-fg shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
               : "text-muted hover:text-fg",

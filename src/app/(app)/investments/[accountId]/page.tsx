@@ -11,11 +11,19 @@ import {
   LOSS_COLOR,
 } from "@/modules/accounts/ui/display";
 import { describeEvent } from "@/modules/investments/activity";
-import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
+import { legacyPeriodQuery, sectionPeriod, type Query } from "@/modules/investments/period";
 import { contributionsOf } from "@/modules/investments/positions";
 import { STALE_VALUE_DAYS } from "@/modules/investments/rules";
 import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
-import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
+import {
+  asReturns,
+  bestAndWorst,
+  percentAxisLabels,
+  returnScale,
+  runningTotal,
+  sampled,
+  toCents,
+} from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
@@ -55,10 +63,10 @@ export default async function InvestmentServiceOverview({
   const t = await getTranslations("investments");
   const tp = await getTranslations("investments.period");
   const ta = await getTranslations("investments.activity");
-  const view = one(query.view) === "value" ? "value" : "pnl";
+  const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const [detail, pnl] = await Promise.all([
     loadService(accountId),
-    servicePnlView(ctx, accountId, { period: one(query.period), from: one(query.from), to: one(query.to) }),
+    servicePnlView(ctx, accountId, sectionPeriod(query, today(ctx.timeZone)).period),
   ]);
   if (!detail || !pnl) notFound();
   const service = pnl.portfolio.services[0];
@@ -70,7 +78,7 @@ export default async function InvestmentServiceOverview({
     formatMoney(cents, ctx.numberFormat, { currency: code, signed });
   const percent = (value: number | null) => formatPercent(value, ctx.numberFormat, { signed: true });
   const name = periodText(period, span, todayOn, ctx.locale, tp);
-  const periodParams = periodQuery(period, todayOn);
+  const periodParams = sectionPeriod(query, todayOn).params;
   const tab = (path: string, extra: Record<string, string | undefined> = {}) =>
     withParams(`${base}${path}`, {}, { ...periodParams, ...extra });
 
@@ -134,6 +142,14 @@ export default async function InvestmentServiceOverview({
   const color = colorFor(summary.account, pnl.colorIndex.get(accountId) ?? 0);
   const bars = series?.bars ?? [];
   const cumulative = runningTotal(bars);
+  // The Return view: the same bars as fractions of the period's capital, so they add up to the rate.
+  const scale = view === "return" ? returnScale(heroCents, rate) : null;
+  const asBars = (cents: readonly (Cents | null)[]) =>
+    view === "return" ? asReturns(cents, scale ?? 0) : asNumbers(cents);
+  const shown = (cents: Cents | null) =>
+    view === "return"
+      ? percent(cents === null ? null : Number(cents) * (scale ?? 0))
+      : money(cents, true, display);
   const missingSlots =
     service.from === null ? bars.length : pnl.intervals.filter((one) => one.to < service.from!).length;
   const markers = pnl.intervals.map((interval) => {
@@ -402,7 +418,9 @@ export default async function InvestmentServiceOverview({
             <p className="text-sm text-muted">
               {view === "pnl"
                 ? t(`home.chart.pnlNote.${pnl.barGrain}`, { period: name })
-                : t(`home.chart.valueNote.${pnl.valueGrain}`)}
+                : view === "return"
+                  ? t("home.chart.returnNote")
+                  : t(`home.chart.valueNote.${pnl.valueGrain}`)}
             </p>
           </div>
           <LinkTabs
@@ -413,13 +431,18 @@ export default async function InvestmentServiceOverview({
             current={view}
             options={[
               { value: "pnl", label: t("home.chart.pnl") },
+              { value: "return", label: t("home.chart.return") },
               { value: "value", label: t("home.chart.value") },
             ]}
           />
         </div>
-        {view === "pnl" ? (
-          bars.every((cents) => cents === null) ? (
-            <p className="text-sm text-muted">{t("chart.empty")}</p>
+        {view !== "value" ? (
+          bars.every((cents) => cents === null) || (view === "return" && scale === null) ? (
+            <p className="text-sm text-muted">
+              {view === "return" && bars.some((cents) => cents !== null)
+                ? t("home.chart.returnEmpty")
+                : t("chart.empty")}
+            </p>
           ) : (
             <StackedBars
               layers={[
@@ -427,22 +450,29 @@ export default async function InvestmentServiceOverview({
                   key: accountId,
                   label: summary.account.name,
                   color: GAIN_COLOR,
-                  values: asNumbers(bars).map((value) => (value !== null && value >= 0 ? value : null)),
+                  values: asBars(bars).map((value) => (value !== null && value >= 0 ? value : null)),
                 },
                 {
                   key: `${accountId}-loss`,
                   label: summary.account.name,
                   color: LOSS_COLOR,
-                  values: asNumbers(bars).map((value) => (value !== null && value < 0 ? value : null)),
+                  values: asBars(bars).map((value) => (value !== null && value < 0 ? value : null)),
                 },
               ]}
-              line={asNumbers(cumulative)}
-              yLabels={axisLabels(
-                [...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)],
-                ctx.numberFormat,
-                4,
-                display,
-              )}
+              line={asBars(cumulative)}
+              yLabels={
+                view === "return"
+                  ? percentAxisLabels(
+                      asBars([...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)]),
+                      ctx.numberFormat,
+                    )
+                  : axisLabels(
+                      [...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)],
+                      ctx.numberFormat,
+                      4,
+                      display,
+                    )
+              }
               xLabels={sampled(pnl.intervals.length).map((index) =>
                 pnl.barGrain === "year"
                   ? pnl.intervals[index].from.slice(0, 4)
@@ -452,8 +482,8 @@ export default async function InvestmentServiceOverview({
               )}
               hover={pnl.intervals.map((_, index) => ({
                 label: intervalName(index),
-                value: money(bars[index], true, display),
-                note: t("home.chart.cumulative", { amount: money(cumulative[index], true, display) }),
+                value: shown(bars[index]),
+                note: t("home.chart.cumulative", { amount: shown(cumulative[index]) }),
               }))}
               unavailable={
                 service.from !== null && missingSlots > 0
@@ -496,12 +526,12 @@ export default async function InvestmentServiceOverview({
           />
         )}
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-          {view === "pnl" && (
+          {view !== "value" && (
             <span className="flex items-center gap-1.5">
               <span aria-hidden className="h-0.5 w-4 bg-fg" /> {t("home.chart.line")}
             </span>
           )}
-          {view === "pnl" && markers.some(Boolean) && <span>{t("service.chart.markers")}</span>}
+          {view !== "value" && markers.some(Boolean) && <span>{t("service.chart.markers")}</span>}
         </p>
       </Card>
 

@@ -21,7 +21,7 @@ test.describe("the tabs", () => {
   }
   /** A loading skeleton is a `<main>` too, and it says nothing about the page. */
   const main = (page: Page) => page.locator('main:not([data-testid$="-loading"])');
-  const periodControl = (page: Page) => page.getByRole("group", { name: "Period", exact: true });
+  const periodControl = (page: Page) => page.getByRole("group", { name: "Date range" }).first();
 
   for (const [name, tab, testId] of [
     ["PAC Piano", "contributions", "contribution-row"],
@@ -31,7 +31,7 @@ test.describe("the tabs", () => {
   ] as const) {
     test(`${name}, ${tab}: the period filters the rows, with the control in view`, async ({ page }) => {
       const path = await fundPath(page, name);
-      await page.goto(`${path}?tab=${tab}&period=all`);
+      await page.goto(`${path}?tab=${tab}&preset=all`);
       await expect(periodControl(page)).toBeVisible();
       const rows = page.getByTestId(testId);
       const all = await rows.count();
@@ -40,12 +40,12 @@ test.describe("the tabs", () => {
       // Walk the stepper from the control itself: the tab stays, and the rows change.
       await page.goto(`${path}?tab=${tab}`);
       await page
-        .getByRole("group", { name: "Year", exact: true })
-        .getByRole("link", { name: "Previous year" })
+        .getByRole("group", { name: "Date range" })
+        .getByRole("link", { name: "Previous period" })
         .click();
-      await expect(page).toHaveURL(new RegExp(`period=${Y - 1}`));
+      await expect(page).toHaveURL(new RegExp(`off=1`));
       await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
-      await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+      await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
       const year = await rows.count();
       expect(year).toBeGreaterThan(0);
       expect(year).toBeLessThan(all);
@@ -64,18 +64,18 @@ test.describe("the tabs", () => {
     page,
   }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}?period=${Y - 1}`);
+    await page.goto(`${path}?off=1`);
     const paid = (await page.getByTestId("kpi-paid").locator("span").nth(1).textContent())!.trim();
-    await page.goto(`${path}?tab=contributions&period=${Y - 1}`);
+    await page.goto(`${path}?tab=contributions&off=1`);
     // What was charged, before the fees: the column the Overview's "Paid in" adds up.
     await expect(page.getByTestId("contributions-voluntary-total")).toHaveText(paid);
     await expect(page.getByTestId("fund-deposit-rule")).toBeVisible();
-    await page.goto(`${path}?tab=contributions&period=${Y - 9}`);
+    await page.goto(`${path}?tab=contributions&off=9`);
     await expect(page.getByText(`No data in ${Y - 9}`)).toBeVisible();
   });
 
   for (const name of ["PAC Piano", "Pensione Beta"]) {
-    for (const query of ["", `?period=${Y - 1}`, `?period=${Y - 2}`, "?period=all"]) {
+    for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
       test(`${name}: Σ of the stretches = the gain of the Overview, ${query || "the year running"}`, async ({
         page,
       }) => {
@@ -93,23 +93,23 @@ test.describe("the tabs", () => {
 
   test("the stretch return says what it is, and appears only in Values", async ({ page }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}?tab=valuations&period=all`);
+    await page.goto(`${path}?tab=valuations&preset=all`);
     await expect(page.getByRole("columnheader", { name: "Stretch return" })).toBeVisible();
     await expect(page.getByTestId("stretch-rate-note")).toContainText("not the return of the period");
     await expect(page.getByTestId("line-rate").first()).toHaveText(/%$/);
-    await page.goto(`${path}?period=all`);
+    await page.goto(`${path}?preset=all`);
     await expect(main(page)).not.toContainText("Stretch return");
-    await page.goto(`${path}?tab=contributions&period=all`);
+    await page.goto(`${path}?tab=contributions&preset=all`);
     await expect(main(page)).not.toContainText("Stretch return");
   });
 
   test("Contributions: payslips, periods and operations follow the period", async ({ page }) => {
     const path = await fundPath(page, "Pensione Beta");
-    await page.goto(`${path}?tab=contributions&period=${Y - 1}`);
+    await page.goto(`${path}?tab=contributions&off=1`);
     await expect(page.getByTestId("payslip-line")).toHaveCount(2);
     await expect(page.getByTestId("contribution-row")).toHaveCount(2);
     await expect(page.getByTestId("quarter-line").first()).toContainText(`${Y - 1}`);
-    await page.goto(`${path}?tab=contributions&period=all`);
+    await page.goto(`${path}?tab=contributions&preset=all`);
     await expect(page.getByTestId("payslip-line")).toHaveCount(3);
     await expect(page.getByTestId("contribution-row")).toHaveCount(5);
     await expect(page.getByTestId("fund-deductible")).toHaveCount(0);
@@ -139,14 +139,14 @@ test.describe("the tabs", () => {
       test(`${name}, ${tab}: the same controls at 400 px as at 1440 px`, async ({ page }) => {
         const path = await fundPath(page, name);
         await page.setViewportSize({ width: 1440, height: 900 });
-        await page.goto(`${path}?tab=${tab}&period=all`);
+        await page.goto(`${path}?tab=${tab}&preset=all`);
         await expect(page.getByTestId(row).first()).toBeVisible();
         await expect(page.getByTestId(item).first()).toBeHidden();
         const wide = await controls(page);
         const rows = await page.getByTestId(row).count();
 
         await page.setViewportSize({ width: 400, height: 860 });
-        await page.goto(`${path}?tab=${tab}&period=all`);
+        await page.goto(`${path}?tab=${tab}&preset=all`);
         await expect(page.getByTestId(item).first()).toBeVisible();
         await expect(page.getByTestId(row).first()).toBeHidden();
         await expect(page.getByTestId(item)).toHaveCount(rows);
@@ -158,7 +158,7 @@ test.describe("the tabs", () => {
     test("Contributions keeps its Delete in the list", async ({ page }) => {
       const path = await fundPath(page, "Pensione Beta");
       await page.setViewportSize({ width: 400, height: 860 });
-      await page.goto(`${path}?tab=contributions&period=${Y - 2}`);
+      await page.goto(`${path}?tab=contributions&off=2`);
       // The one row written by hand: a row a document left before release N6 has no action.
       await expect(
         page.getByTestId("contribution-item").getByRole("button", { name: /^Delete the contribution of/ }),
@@ -185,11 +185,11 @@ test.describe("the tabs", () => {
 
   test("the old returns page goes to Values, with its period", async ({ page }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}/returns?period=${Y - 1}`);
-    await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&period=${Y - 1}$`));
+    await page.goto(`${path}/returns?off=1`);
+    await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&off=1$`));
     await expect(page.getByTestId("fund-valuations")).toBeVisible();
     await page.goto(`${path}/returns?span=60`);
-    await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&period=all$`));
+    await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&preset=all$`));
     await page.goto(`${path}/returns?from=${Y - 1}-01&to=${Y - 1}-03`);
     await expect(page).toHaveURL(new RegExp(`from=${Y - 1}-01-01&to=${Y - 1}-03-31`));
   });
@@ -206,12 +206,12 @@ test.describe("the tabs", () => {
       expect(Object.fromEntries(url.searchParams)).toEqual({ tab: "contributions", ...expected });
     };
     await page.goto(`${path}?tab=deposits&period=${Y - 1}`);
-    await landed({ period: String(Y - 1) });
-    await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
+    await landed({ off: "1" });
+    await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
     await expect(page.getByTestId("fund-contributions")).toBeVisible();
     await expect(page.getByTestId("contribution-row")).toHaveCount(1);
     await page.goto(`${path}?tab=deposits&period=all`);
-    await landed({ period: "all" });
+    await landed({ preset: "all" });
     await page.goto(`${path}?tab=deposits&from=${Y - 1}-01-01&to=${Y - 1}-03-31`);
     await landed({ from: `${Y - 1}-01-01`, to: `${Y - 1}-03-31` });
     await page.goto(`${path}?tab=deposits`);
@@ -233,7 +233,7 @@ test.describe("the tabs", () => {
     expect((await page.goto(`${path}/documents/${id}`))?.status()).toBe(404);
     await expect(page.getByTestId("funds-hero")).toHaveCount(0);
     for (const tab of ["overview", "contributions", "valuations", "settings"]) {
-      await page.goto(`${path}?tab=${tab}&period=all`);
+      await page.goto(`${path}?tab=${tab}&preset=all`);
       await expect(main(page)).toBeVisible();
       await expect(page.getByRole("button", { name: /Import/ }), tab).toHaveCount(0);
       await expect(page.locator('a[href*="/documents/"]'), tab).toHaveCount(0);
@@ -248,7 +248,7 @@ test.describe("the tabs", () => {
     test("an exit is in the register with a minus sign, and the gain does not fall by its amount", async ({
       page,
     }) => {
-      await page.goto(`${HOME}?period=all`);
+      await page.goto(`${HOME}?preset=all`);
       const href = await page
         .getByTestId("fund-home-row")
         .filter({ hasText: "Fondo Uscita" })
@@ -256,13 +256,13 @@ test.describe("the tabs", () => {
         .getAttribute("href");
       const path = href!.split("?")[0];
       const gain = async () => {
-        await page.goto(`${path}?period=all`);
+        await page.goto(`${path}?preset=all`);
         return BigInt((await page.getByTestId("funds-hero").getAttribute("data-cents")) || "0");
       };
       const before = await gain();
       expect(before).toBe(60_000n);
 
-      await page.goto(`${path}?tab=contributions&period=all`);
+      await page.goto(`${path}?tab=contributions&preset=all`);
       await expect(page.getByTestId("contribution-row")).toHaveCount(1);
       await page
         .getByTestId("fund-contributions")
@@ -311,7 +311,7 @@ test.describe("the tabs", () => {
     page,
   }) => {
     const path = await fundPath(page, "PAC Piano");
-    await page.goto(`${path}?tab=valuations&period=all`);
+    await page.goto(`${path}?tab=valuations&preset=all`);
     await page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" }).click();
     await expect(page.getByRole("dialog")).toContainText("Edit value");
     await expect(page.getByRole("dialog")).toContainText("Value (€)");
@@ -339,12 +339,12 @@ test.describe("the tabs", () => {
           test(`${name}: no technical word on any tab, nor in the value dialog`, async ({ page }) => {
             const path = await fundPath(page, name);
             for (const tab of TABS) {
-              await page.goto(`${path}?tab=${tab}&period=all`);
+              await page.goto(`${path}?tab=${tab}&preset=all`);
               await expect(main(page)).toBeVisible();
               const text = await main(page).innerText();
               expect(text, `${tab}: ${text.match(WORDS[language])?.[0]}`).not.toMatch(WORDS[language]);
             }
-            await page.goto(`${path}?period=all`);
+            await page.goto(`${path}?preset=all`);
             await page
               .getByRole("button", { name: language === "en" ? "Update value" : "Aggiorna valore" })
               .first()
@@ -355,7 +355,7 @@ test.describe("the tabs", () => {
         }
 
         test("the home has no technical word", async ({ page }) => {
-          await page.goto(`${HOME}?period=all`);
+          await page.goto(`${HOME}?preset=all`);
           await expect(main(page)).toBeVisible();
           expect(await main(page).innerText()).not.toMatch(WORDS[language]);
         });

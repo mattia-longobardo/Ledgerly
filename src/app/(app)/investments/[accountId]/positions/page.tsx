@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { priceText, quantityText } from "@/modules/investments/activity";
-import { periodQuery, type Query } from "@/modules/investments/period";
+import { legacyPeriodQuery, type Query, sectionPeriod } from "@/modules/investments/period";
 import type { HoldingPnl, PositionAt } from "@/modules/investments/pnl";
 import {
   type ClosedGroup,
@@ -19,7 +19,7 @@ import { type HoldingSummary, HoldingMenu, ReconcileButton } from "@/modules/inv
 import { productLabel } from "@/modules/investments/ui/labels";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import { addDays } from "@/platform/dates";
+import { addDays, today as civilToday } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import type { Cents } from "@/platform/money";
 import { Badge } from "@/ui/badge";
@@ -47,6 +47,9 @@ export default async function InvestmentServicePositions({
   const ctx = await requireSession();
   const { accountId } = await params;
   const query = (await searchParams) as Query;
+  // The period before the presets (`period=all`, a year) goes to the new one, once.
+  const legacy = legacyPeriodQuery(query, civilToday(ctx.timeZone));
+  if (legacy) permanentRedirect(withParams(`/investments/${accountId}/positions`, {}, legacy));
   const asked = one(query.status);
   const status: Status = STATUSES.includes(asked as Status) ? (asked as Status) : "open";
   // "Group by Asset | Class" of the open positions (§3.4, mockup 05): by asset is the plain list.
@@ -56,12 +59,12 @@ export default async function InvestmentServicePositions({
   const tp = await getTranslations("investments.period");
   const [detail, view] = await Promise.all([
     loadService(accountId),
-    servicePositions(ctx, accountId, { period: one(query.period), from: one(query.from), to: one(query.to) }),
+    servicePositions(ctx, accountId, sectionPeriod(query, civilToday(ctx.timeZone)).period),
   ]);
   if (!detail || !view) notFound();
   // A manual service keeps no positions (PERS-335): its value and P&L are on the Overview.
   if (detail.summary.origin === "manual") {
-    redirect(withParams(`/investments/${accountId}`, {}, periodQuery(view.period, view.todayOn)));
+    redirect(withParams(`/investments/${accountId}`, {}, sectionPeriod(query, view.todayOn).params));
   }
   const { period, span, todayOn, service, assets, holdings } = view;
   const context = serviceContextOf(detail, ctx);
@@ -70,7 +73,7 @@ export default async function InvestmentServicePositions({
   const synced = detail.summary.origin === "synced";
   const etoro = detail.summary.investment.provider === "etoro";
   const base = `/investments/${accountId}`;
-  const periodParams = periodQuery(period, todayOn);
+  const periodParams = sectionPeriod(query, todayOn).params;
   const name = periodText(period, span, todayOn, ctx.locale, tp);
   const short = period.kind === "year" ? String(period.year) : null;
   const past = period.to < todayOn;

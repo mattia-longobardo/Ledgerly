@@ -23,9 +23,16 @@ import { FundStateButton, ValuationButton } from "@/modules/funds/ui/fund-forms"
 import { Kpi } from "@/modules/funds/ui/fund-kpi";
 import { monthPill, originParts, voluntaryCents } from "@/modules/funds/ui/present";
 import { frequencyText } from "@/modules/funds/ui/source-text";
-import { legacyPeriodQuery, periodQuery, periodSpan, type Query } from "@/modules/investments/period";
-import { periodOf } from "@/modules/investments/pnl";
-import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
+import {
+  legacyPeriodQuery,
+  periodSpan,
+  SECTION_PRESETS,
+  sectionPeriod,
+  type Query,
+  yearQuery,
+} from "@/modules/investments/period";
+import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { type CivilDate, today } from "@/platform/dates";
@@ -69,7 +76,7 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds"
 
   const legacy = legacyPeriodQuery(query, todayOn);
   if (legacy) permanentRedirect(withParams(PATH, {}, legacy));
-  const view = one(query.view) === "value" ? "value" : "gain";
+  const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "gain";
   const kept: Params = { view: view === "gain" ? undefined : view };
   if (isFutureYear(one(query.period), todayOn)) redirect(withParams(PATH, kept, {}));
   return (
@@ -89,7 +96,7 @@ async function FundsHome({
   ctx: Ctx;
   query: Query;
   todayOn: CivilDate;
-  view: "gain" | "value";
+  view: "gain" | "value" | "return";
   kept: Params;
 }) {
   const t = await getTranslations("funds");
@@ -156,7 +163,7 @@ async function FundsHome({
   // ——— The period (§6) ————————————————————————————————————————————————————————————————————————
   const funds = rows.map((row) => row.home);
   const firstOn = firstDataOn(funds);
-  const period = periodOf({ period: one(query.period), from: one(query.from), to: one(query.to) }, todayOn);
+  const period = sectionPeriod(query, todayOn).period;
   const span = periodSpan(period, firstOn);
   const summary = homeSummary({ funds, period, todayOn, firstOn });
   const name = periodText(period, span, todayOn, ctx.locale, tp);
@@ -169,7 +176,7 @@ async function FundsHome({
             from: formatDate(span.from, "long", ctx.locale),
             to: formatDate(span.to, "long", ctx.locale),
           });
-  const periodParams = periodQuery(period, todayOn);
+  const periodParams = sectionPeriod(query, todayOn).params;
   const thisYear = Number(todayOn.slice(0, 4));
   const money = (cents: Cents | null, signed = false) => formatMoney(cents, ctx.numberFormat, { signed });
   const percent = (value: number | null, signed = true) => formatPercent(value, ctx.numberFormat, { signed });
@@ -213,21 +220,19 @@ async function FundsHome({
   const firstPaidOn = funds
     .flatMap((fund) => fund.flows.filter((flow) => flow.chargedCents > 0n).map((flow) => flow.on))
     .sort()[0] as string | undefined;
-  const yearHref = (year: number) =>
-    withParams(PATH, kept, year === thisYear ? {} : { period: String(year) }) as Route;
+  const yearHref = (year: number) => withParams(PATH, kept, yearQuery(year, todayOn)) as Route;
 
   const pageHeader = (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
-      <PeriodControl
-        period={period}
-        span={span}
-        todayOn={todayOn}
-        firstOn={firstOn}
+      <PeriodBar
+        period={sectionPeriod(query, todayOn)}
         path={PATH}
-        params={kept}
+        carry={kept}
         locale={ctx.locale}
-        t={tp}
+        presets={SECTION_PRESETS}
+        name={period.kind === "year" ? name : undefined}
+        whole={{ range: span, text: name }}
       />
     </div>
   );
@@ -511,6 +516,7 @@ async function FundsHome({
         span={span}
         when={when}
         totalCents={heroCents}
+        rate={summary.rate}
         view={view}
         path={PATH}
         params={periodParams}

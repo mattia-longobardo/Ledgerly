@@ -257,6 +257,10 @@ tabella copre il valore di B quando gli anni saranno più di uno.
 
 ### Elementi comuni
 
+**Periodo (dal 15/11/2026).** Il controllo e i parametri sono quelli di Investments §2.1: `preset`, `from`/`to`,
+`off`, e `view=gain|return|value` (la vista «Rendimento %» è in Investments §4.3). «Who paid» usa la palette di
+Accounts ed Expenses. Il testo sotto descrive i parametri di prima, che ora passano da un redirect.
+
 **Navigazione per anni.** Parametri come Investments §1.2: `period=2026|…|all`, `from`/`to`, `view`.
 Default: anno in corso. Il parametro resta tra home, fondo e tab. `span` e `from`/`to` a mesi passano a un
 redirect verso il parametro nuovo.

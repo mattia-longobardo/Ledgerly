@@ -9,7 +9,7 @@ const Y = Number(TODAY.slice(0, 4));
 
 /** The Settings tab of a fund, by its name: the id is read from the home, never written down. */
 async function openSettings(page: Page, name: string): Promise<string> {
-  await page.goto("/funds?period=all");
+  await page.goto("/funds?preset=all");
   const href = await page
     .getByRole("link", { name, exact: true })
     .filter({ visible: true })
@@ -39,7 +39,7 @@ test.describe("the settings of a fund", () => {
       await expect(page.locator(`#${anchor}`)).toBeVisible();
     }
     // Settings do not follow the period, and say no fund kind.
-    await expect(page.getByRole("group", { name: "Period", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Date range" })).toHaveCount(0);
     await expect(page.locator("main")).not.toContainText(/PAC|Fund kind|Deductible/);
     await expect(page.getByText("The value is kept on the account “Fondo Vuoto”.")).toBeVisible();
   });

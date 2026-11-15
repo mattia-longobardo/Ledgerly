@@ -1081,7 +1081,8 @@
         "thisMonth": "Questo mese",
         "lastMonth": "Mese scorso",
         "last3Months": "Ultimi 3 mesi",
-        "ytd": "Da inizio anno"
+        "ytd": "Da inizio anno",
+        "all": "Tutto"
       },
       "categories": {
         "title": "Categorie",
@@ -2555,21 +2556,25 @@
         "view": "Cosa mostra il grafico",
         "gain": "Guadagno",
         "value": "Valore",
+        "return": "Rendimento %",
         "gainNote": {
           "month": "Per mese e per fondo · la linea è il totale progressivo {when}",
           "year": "Per anno e per fondo · la linea è il totale progressivo",
           "stretch": "Tra un valore e l'altro, per fondo · la linea è il totale progressivo"
         },
         "valueNote": "Valore e versato a ogni valutazione · nessun valore tra due letture",
+        "returnNote": "Ogni barra è la parte del rendimento del periodo fatta nel suo intervallo · la linea le somma fino al rendimento in testata",
         "line": "Totale progressivo del periodo",
         "paid": "Versato",
         "band": "Guadagno, lo spazio tra le due",
         "cumulative": "Totale progressivo {amount}",
         "stretch": "{from} – {to}",
         "summary": "Guadagno {when}: {total}. Migliore {best}, peggiore {worst}. Per fondo: {funds}.",
+        "returnSummary": "Rendimento {when}: {total}. Migliore {best}, peggiore {worst}.",
         "valueSummary": "Valore e versato a ogni valutazione {when}. Ultimo valore {value} al {date}, versato {paid}.",
         "paidRow": "Versato {amount}",
         "empty": "Niente da disegnare {when}",
+        "returnEmpty": "Il rendimento di questo periodo non è determinabile.",
         "emptyValue": "Serve un secondo valore per disegnare la linea.",
         "data": "Dati del grafico",
         "interval": "Intervallo",
@@ -3681,28 +3686,9 @@
       "in": "Entrata il {date} ← {name}, uscita il {other}"
     },
     "period": {
-      "label": "Periodo",
-      "stepper": "Anno",
-      "kinds": {
-        "year": "Anno",
-        "all": "Tutto",
-        "custom": "Personalizzato"
-      },
       "yearToDate": "{year} · da inizio anno",
       "since": "dal {date}",
-      "range": "{from} – {to}",
-      "previous": "Anno precedente",
-      "next": "Anno successivo",
-      "last12": "Ultimi 12 mesi",
-      "pick": "Scegli i giorni",
-      "from": "Dal",
-      "to": "Al",
-      "previousMonth": "Mese precedente",
-      "nextMonth": "Mese successivo",
-      "pickEnd": "Scegli la data di fine",
-      "apply": "Applica",
-      "cancel": "Annulla",
-      "hint": "{from} – {to} · {count, plural, one {# giorno} other {# giorni}}"
+      "range": "{from} – {to}"
     },
     "home": {
       "empty": "Collega eToro o Binance, o crea un conto manuale.",
@@ -3750,6 +3736,7 @@
         "view": "Grafico",
         "pnl": "P&L",
         "value": "Valore",
+        "return": "Rendimento %",
         "pnlNote": {
           "week": "P&L per settimana e per servizio · la linea è il cumulato di {period}",
           "month": "P&L per mese e per servizio · la linea è il cumulato di {period}",
@@ -3759,10 +3746,13 @@
           "day": "Valore per giorno e per servizio",
           "month": "Valore a fine mese, per servizio"
         },
+        "returnNote": "Ogni barra è la parte del rendimento del periodo fatta nel suo intervallo · la linea le somma fino al rendimento in testata",
+        "returnEmpty": "Il rendimento di questo periodo non è determinabile.",
         "line": "Cumulato",
         "legend": "I colori sono i servizi della lista sotto.",
         "cumulative": "cumulato {amount}",
         "summary": "P&L {period}: {total}. Migliore {best}, peggiore {worst}. {services}.",
+        "returnSummary": "Rendimento {period}: {total}. Migliore {best}, peggiore {worst}.",
         "valueSummary": "Valore a fine periodo {value}.",
         "data": "Dati del grafico",
         "interval": "Intervallo",

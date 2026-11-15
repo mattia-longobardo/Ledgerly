@@ -63,7 +63,7 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
   });
 
   await test.step("the initial capital is a contribution written by hand", async () => {
-    await page.goto(`${fundUrl}?tab=contributions&period=all`);
+    await page.goto(`${fundUrl}?tab=contributions&preset=all`);
     await page.getByRole("button", { name: "Record contribution" }).first().click();
     const dialog = page.getByRole("dialog", { name: /Record contribution/ });
     await dialog.getByLabel("Date").fill(start);
@@ -76,7 +76,7 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
 
   await test.step("the debit source turns the debits into contributions, less the fee", async () => {
     // The whole life of the fund: the three months may cross a new year.
-    await page.goto(`${fundUrl}?tab=contributions&period=all`);
+    await page.goto(`${fundUrl}?tab=contributions&preset=all`);
     await expect(page.getByTestId("contribution-row")).toHaveCount(3);
     const matched = page.getByTestId("contribution-row").filter({ hasText: "Debit" });
     await expect(matched).toHaveCount(2);
@@ -92,14 +92,14 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
     await dialog.getByRole("button", { name: "Save value" }).click();
     await expect(dialog).toBeHidden();
     // 5.600 − (5.000 + 2 × 251) = +98,00 €.
-    await page.goto(`${fundUrl}?period=all`);
+    await page.goto(`${fundUrl}?preset=all`);
     await expect(page.getByTestId("funds-hero")).toContainText("+98,00 €");
     await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Values" }).click();
     await expect(page.getByTestId("valuation-line")).toHaveCount(1);
   });
 
   await test.step("the list shows the fund and the palette finds it", async () => {
-    await page.goto("/funds?period=all");
+    await page.goto("/funds?preset=all");
     const row = page.getByTestId("fund-home-row");
     await expect(row).toContainText("Fideuram Piano Accumulo");
     await expect(row).toContainText("5.600,00 €");

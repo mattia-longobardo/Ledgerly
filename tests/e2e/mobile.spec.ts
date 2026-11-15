@@ -238,7 +238,7 @@ test.describe("a fund's page on a phone", () => {
 
   for (const fund of ["PAC Piano", "Pensione Beta"]) {
     test(`${fund}: the four tabs are on one row, and no tab scrolls the page sideways`, async ({ page }) => {
-      await page.goto("/funds?period=all");
+      await page.goto("/funds?preset=all");
       const href = await page
         .getByTestId("fund-home-item")
         .filter({ hasText: fund })
@@ -257,7 +257,7 @@ test.describe("a fund's page on a phone", () => {
       // "Update value" stays in the top bar; no fund kind, no "Deductible" and nothing to import anywhere.
       await expect(page.getByRole("banner").getByRole("button", { name: "Update value" })).toBeVisible();
       for (const tab of ["overview", "contributions", "valuations", "settings"]) {
-        await page.goto(`${path}?tab=${tab}&period=all`);
+        await page.goto(`${path}?tab=${tab}&preset=all`);
         await expect(page.getByRole("heading", { name: fund, level: 1 })).toBeVisible();
         const sideways = await page.evaluate(
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -267,7 +267,7 @@ test.describe("a fund's page on a phone", () => {
         await expect(page.getByRole("button", { name: /Import/ }), tab).toHaveCount(0);
       }
       // The register is a list here, with the same commands as the table of a wide screen.
-      await page.goto(`${path}?tab=contributions&period=all`);
+      await page.goto(`${path}?tab=contributions&preset=all`);
       await expect(page.getByTestId("contribution-item").first()).toBeVisible();
       await expect(page.getByTestId("contribution-row").first()).toBeHidden();
       await expect(

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { barIntervals, legacyPeriodQuery, periodQuery, periodSpan, valueDays, yearsOf } from "./period";
+import {
+  barIntervals,
+  legacyPeriodQuery,
+  periodQuery,
+  periodSpan,
+  sectionPeriod,
+  valueDays,
+  yearQuery,
+  yearsOf,
+} from "./period";
 import { periodOf } from "./pnl";
 
 const TODAY = "2026-10-29";
@@ -7,13 +16,14 @@ const TODAY = "2026-10-29";
 describe("legacyPeriodQuery (§1.2)", () => {
   it("leaves a new address alone", () => {
     expect(legacyPeriodQuery({}, TODAY)).toBeNull();
-    expect(legacyPeriodQuery({ period: "2025", view: "value" }, TODAY)).toBeNull();
+    expect(legacyPeriodQuery({ off: "1", view: "value" }, TODAY)).toBeNull();
+    expect(legacyPeriodQuery({ preset: "all" }, TODAY)).toBeNull();
     expect(legacyPeriodQuery({ from: "2026-06-10", to: "2026-09-30" }, TODAY)).toBeNull();
   });
 
   it("sends each preset to the nearest period", () => {
     expect(legacyPeriodQuery({ range: "1y" }, TODAY)).toEqual({});
-    expect(legacyPeriodQuery({ range: "all" }, TODAY)).toEqual({ period: "all" });
+    expect(legacyPeriodQuery({ range: "all" }, TODAY)).toEqual({ preset: "all" });
     expect(legacyPeriodQuery({ range: "3m" }, TODAY)).toEqual({ from: "2026-08-01", to: TODAY });
     expect(legacyPeriodQuery({ range: "nonsense" }, TODAY)).toEqual({});
   });
@@ -34,38 +44,120 @@ describe("legacyPeriodQuery (§1.2)", () => {
       view: "value",
       by: "ccy",
     });
-    expect(legacyPeriodQuery({ grain: "day", period: "2025" }, TODAY)).toEqual({ period: "2025" });
+    expect(legacyPeriodQuery({ grain: "day", period: "2025" }, TODAY)).toEqual({ off: "1" });
     expect(legacyPeriodQuery({ grain: "month", from: "2026-06-10", to: "2026-09-30" }, TODAY)).toEqual({
       from: "2026-06-10",
       to: "2026-09-30",
     });
     expect(legacyPeriodQuery({ range: ["all", "1y"], grain: "day", from: "2025-01" }, TODAY)).toEqual({
-      period: "all",
+      preset: "all",
     });
   });
 
+  it("sends the period before the presets to the new one: a year, All, the year running", () => {
+    expect(legacyPeriodQuery({ period: "2025", view: "value" }, TODAY)).toEqual({ view: "value", off: "1" });
+    expect(legacyPeriodQuery({ period: "2024" }, TODAY)).toEqual({ off: "2" });
+    expect(legacyPeriodQuery({ period: "all", by: "ccy" }, TODAY)).toEqual({ by: "ccy", preset: "all" });
+    expect(legacyPeriodQuery({ period: "2026" }, TODAY)).toEqual({});
+    expect(legacyPeriodQuery({ period: "nonsense" }, TODAY)).toEqual({});
+  });
+
   it("lands on a period periodOf reads as the one meant", () => {
-    const read = (query: Record<string, string>) => periodOf(legacyPeriodQuery(query, TODAY)!, TODAY);
+    const read = (query: Record<string, string>) =>
+      sectionPeriod(legacyPeriodQuery(query, TODAY)!, TODAY).period;
     expect(read({ range: "1y" })).toMatchObject({ kind: "year", year: 2026 });
     expect(read({ range: "all", grain: "day" })).toMatchObject({ kind: "all" });
-    expect(read({ from: "2025-01", to: "2025-12" })).toMatchObject({
+    expect(read({ period: "2025" })).toMatchObject({ kind: "year", year: 2025, to: "2025-12-31" });
+    expect(read({ from: "2025-01", to: "2025-03" })).toMatchObject({
       kind: "custom",
       from: "2025-01-01",
-      to: "2025-12-31",
+      to: "2025-03-31",
     });
   });
 });
 
-describe("periodQuery", () => {
-  it("writes a period back as the parameters that ask for it", () => {
+describe("sectionPeriod: the period of Funds and Investments, read as Expenses reads its own", () => {
+  it("opens on the year running, which the engines measure as a year up to today", () => {
+    const section = sectionPeriod({}, TODAY);
+    expect(section).toMatchObject({
+      preset: "ytd",
+      offset: 0,
+      range: { from: "2026-01-01", to: "2026-10-31" },
+      params: {},
+    });
+    expect(section.period).toEqual(periodOf({}, TODAY));
+  });
+
+  it("reads the four presets of Expenses as their days, up to today", () => {
+    expect(sectionPeriod({ preset: "thisMonth" }, TODAY)).toMatchObject({
+      preset: "thisMonth",
+      range: { from: "2026-10-01", to: "2026-10-31" },
+      period: { kind: "custom", from: "2026-10-01", to: TODAY },
+    });
+    expect(sectionPeriod({ preset: "lastMonth" }, TODAY).period).toMatchObject({
+      kind: "custom",
+      from: "2026-09-01",
+      to: "2026-09-30",
+    });
+    expect(sectionPeriod({ preset: "last3Months", off: "1" }, TODAY)).toMatchObject({
+      offset: 1,
+      range: { from: "2026-05-01", to: "2026-07-31" },
+      params: { preset: "last3Months", off: "1" },
+      stepperParams: { preset: "last3Months" },
+    });
+  });
+
+  it("steps the year to date by calendar year: the one before is the whole year before", () => {
+    const before = sectionPeriod({ off: "1" }, TODAY);
+    expect(before.range).toEqual({ from: "2025-01-01", to: "2025-12-31" });
+    expect(before.period).toEqual(periodOf({ period: "2025" }, TODAY));
+    expect(sectionPeriod({ off: "2" }, TODAY).period).toMatchObject({ kind: "year", year: 2024 });
+  });
+
+  it("has All, with no window and no step", () => {
+    expect(sectionPeriod({ preset: "all", off: "3" }, TODAY)).toMatchObject({
+      preset: "all",
+      offset: 0,
+      range: null,
+      params: { preset: "all" },
+      period: { kind: "all", from: null, to: TODAY },
+    });
+  });
+
+  it("lets the days the picker wrote win over a preset; a whole year is a year", () => {
+    expect(sectionPeriod({ preset: "all", from: "2026-06-10", to: "2026-09-30" }, TODAY)).toMatchObject({
+      preset: null,
+      period: { kind: "custom", from: "2026-06-10", to: "2026-09-30" },
+      params: { from: "2026-06-10", to: "2026-09-30" },
+    });
+    expect(sectionPeriod({ from: "2025-01-01", to: "2025-12-31" }, TODAY).period).toMatchObject({
+      kind: "year",
+      year: 2025,
+    });
+  });
+
+  it("falls back to the default on anything it cannot read", () => {
     for (const query of [
-      {},
-      { period: "2025" },
-      { period: "all" },
-      { from: "2026-06-10", to: "2026-09-30" },
+      { preset: "nonsense" },
+      { from: "2027-01-01", to: "2027-02-01" },
+      { from: "2026-09-30", to: "2026-06-10" },
+      { off: "-4" },
     ]) {
-      expect(periodQuery(periodOf(query, TODAY), TODAY)).toEqual(query);
+      expect(sectionPeriod(query, TODAY)).toMatchObject({ preset: "ytd", offset: 0 });
     }
+  });
+});
+
+describe("periodQuery and yearQuery", () => {
+  it("writes a period back as the parameters that ask for it", () => {
+    for (const query of [{}, { off: "1" }, { preset: "all" }, { from: "2026-06-10", to: "2026-09-30" }]) {
+      expect(periodQuery(sectionPeriod(query, TODAY).period, TODAY)).toEqual(query);
+    }
+  });
+
+  it("asks for a year as steps back from the year running", () => {
+    expect(yearQuery(2026, TODAY)).toEqual({});
+    expect(yearQuery(2024, TODAY)).toEqual({ off: "2" });
   });
 });
 

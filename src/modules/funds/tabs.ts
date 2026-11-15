@@ -161,9 +161,13 @@ export function legacyFundQuery(query: Query, todayOn: CivilDate): Record<string
   if (span === undefined) return legacy;
   // Past a century it is not a span of months: `addMonths` would write a date that does not exist.
   const months = /^[1-9]\d{0,3}$/.test(span) && Number(span) <= 1200 ? Number(span) : null;
-  const named = rest.period !== undefined || rest.from !== undefined || rest.to !== undefined;
+  const named =
+    rest.period !== undefined ||
+    rest.preset !== undefined ||
+    rest.from !== undefined ||
+    rest.to !== undefined;
   if (legacy !== null || named || months === null || months === 12) return legacy ?? flat(rest);
-  if (months === 60) return { ...flat(rest), period: "all" };
+  if (months === 60) return { ...flat(rest), preset: "all" };
   return { ...flat(rest), from: addMonths(monthKey(todayOn), -(months - 1)), to: todayOn };
 }
 
@@ -173,7 +177,7 @@ export function legacyFundQuery(query: Query, todayOn: CivilDate): Record<string
 export function returnsTarget(base: string, query: Query, todayOn: CivilDate): string {
   const period = legacyFundQuery(query, todayOn) ?? flat(query);
   const params = new URLSearchParams({ tab: "valuations" });
-  for (const name of ["period", "from", "to"]) {
+  for (const name of ["preset", "from", "to", "off"]) {
     if (period[name] !== undefined) params.set(name, period[name]);
   }
   return `${base}?${params}`;

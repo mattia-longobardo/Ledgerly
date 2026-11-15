@@ -1081,7 +1081,8 @@
         "thisMonth": "This month",
         "lastMonth": "Last month",
         "last3Months": "Last 3 months",
-        "ytd": "Year to date"
+        "ytd": "Year to date",
+        "all": "All"
       },
       "categories": {
         "title": "Categories",
@@ -2555,21 +2556,25 @@
         "view": "What the chart shows",
         "gain": "Gain",
         "value": "Value",
+        "return": "Return %",
         "gainNote": {
           "month": "By month and by fund · the line is the running total {when}",
           "year": "By year and by fund · the line is the running total",
           "stretch": "Between values, by fund · the line is the running total"
         },
         "valueNote": "Value and paid in at each valuation · no value between two readings",
+        "returnNote": "Each bar is the part of the period's return its interval made · the line adds them up to the return in the header",
         "line": "Running total of the period",
         "paid": "Paid in",
         "band": "Gain, the gap between the two",
         "cumulative": "Running total {amount}",
         "stretch": "{from} – {to}",
         "summary": "Gain {when}: {total}. Best {best}, worst {worst}. By fund: {funds}.",
+        "returnSummary": "Return {when}: {total}. Best {best}, worst {worst}.",
         "valueSummary": "Value and paid in at each valuation {when}. Last value {value} on {date}, paid in {paid}.",
         "paidRow": "Paid in {amount}",
         "empty": "Nothing to draw {when}",
+        "returnEmpty": "The return of this period cannot be determined.",
         "emptyValue": "A second value is needed to draw the line.",
         "data": "Chart data",
         "interval": "Interval",
@@ -3681,28 +3686,9 @@
       "in": "In on {date} ← {name}, out on {other}"
     },
     "period": {
-      "label": "Period",
-      "stepper": "Year",
-      "kinds": {
-        "year": "Year",
-        "all": "All",
-        "custom": "Custom"
-      },
       "yearToDate": "{year} · year to date",
       "since": "since {date}",
-      "range": "{from} – {to}",
-      "previous": "Previous year",
-      "next": "Next year",
-      "last12": "Last 12 months",
-      "pick": "Pick the days",
-      "from": "From",
-      "to": "To",
-      "previousMonth": "Previous month",
-      "nextMonth": "Next month",
-      "pickEnd": "Pick the end date",
-      "apply": "Apply",
-      "cancel": "Cancel",
-      "hint": "{from} – {to} · {count, plural, one {# day} other {# days}}"
+      "range": "{from} – {to}"
     },
     "home": {
       "empty": "Connect eToro or Binance, or create a manual account.",
@@ -3750,6 +3736,7 @@
         "view": "Chart",
         "pnl": "P&L",
         "value": "Value",
+        "return": "Return %",
         "pnlNote": {
           "week": "P&L by week and by service · the line is the running total of {period}",
           "month": "P&L by month and by service · the line is the running total of {period}",
@@ -3759,10 +3746,13 @@
           "day": "Value by day and by service",
           "month": "Value at each month end, by service"
         },
+        "returnNote": "Each bar is the part of the period's return its interval made · the line adds them up to the return in the header",
+        "returnEmpty": "The return of this period cannot be determined.",
         "line": "Running total",
         "legend": "The colours are the services of the list below.",
         "cumulative": "running total {amount}",
         "summary": "P&L {period}: {total}. Best {best}, worst {worst}. {services}.",
+        "returnSummary": "Return {period}: {total}. Best {best}, worst {worst}.",
         "valueSummary": "Value at the end of the period {value}.",
         "data": "Chart data",
         "interval": "Interval",

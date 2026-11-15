@@ -190,7 +190,7 @@ test("the replace key dialog of a connected service traps the focus and gives it
 });
 
 test("a service's tabs are walked from the keyboard, each one a page, the period kept", async ({ page }) => {
-  await page.goto("/investments?period=all");
+  await page.goto("/investments?preset=all");
   await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
   await page.goto((await service.getAttribute("href"))!);
@@ -206,17 +206,17 @@ test("a service's tabs are walked from the keyboard, each one a page, the period
     expect(await focusIsVisible(page), `the ${name} tab draws no ring`).toBe(true);
   }
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/connection\?period=all$/);
+  await expect(page).toHaveURL(/\/connection\?preset=all$/);
   await expect(tabs.getByRole("link", { name: /^Connection/ })).toHaveAttribute("aria-current", "page");
 });
 
 test("Positions: the open, closed and all-closed views are links walked from the keyboard (§3.4)", async ({
   page,
 }) => {
-  await page.goto("/investments?period=all");
+  await page.goto("/investments?preset=all");
   await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
-  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions?period=all`);
+  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions?preset=all`);
   await page.waitForTimeout(500);
 
   const status = page.getByRole("group", { name: "Which positions" });
@@ -228,14 +228,14 @@ test("Positions: the open, closed and all-closed views are links walked from the
   await expect(status.getByRole("link", { name: /^All closed/ })).toBeFocused();
   expect(await focusIsVisible(page), "the All closed link draws no ring").toBe(true);
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/positions\?period=all&status=all$/);
+  await expect(page).toHaveURL(/\/positions\?preset=all&status=all$/);
   await expect(status.getByRole("link", { name: /^All closed/ })).toHaveAttribute("aria-current", "true");
   // A row's asset opens its Activity: a link of its own, apart from the row.
   const asset = page.getByTestId("closed-row").first().getByRole("link").first();
   await asset.focus();
   expect(await focusIsVisible(page), "the asset link draws no ring").toBe(true);
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/activity\?period=all&asset=/);
+  await expect(page).toHaveURL(/\/activity\?preset=all&asset=/);
 });
 
 test("a sortable table sorts from the keyboard, and the column says which way", async ({ page }) => {
@@ -363,13 +363,13 @@ test.describe("the Funds home", () => {
     await page.goto("/funds");
     await page.waitForTimeout(500);
 
-    const period = page.getByRole("group", { name: "Period", exact: true });
-    await period.getByRole("link", { name: "Year" }).focus();
+    const period = page.getByRole("group", { name: "Date range" });
+    await period.getByRole("link", { name: "Year to date" }).focus();
     expect(await focusIsVisible(page), "the Year link draws no ring").toBe(true);
     await page.keyboard.press("Tab");
     await expect(period.getByRole("link", { name: "All" })).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/funds\?period=all$/);
+    await expect(page).toHaveURL(/\/funds\?preset=all$/);
 
     const value = page
       .getByRole("group", { name: "What the chart shows" })
@@ -377,15 +377,15 @@ test.describe("the Funds home", () => {
     await value.focus();
     expect(await focusIsVisible(page), "the Value link draws no ring").toBe(true);
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/period=all&view=value|view=value&period=all/);
+    await expect(page).toHaveURL(/preset=all&view=value|view=value&preset=all/);
 
     // The stepper keeps the chart's view from one year to the next.
     await page.goto("/funds?view=value");
     await page.waitForTimeout(500);
-    const stepper = page.getByRole("group", { name: "Year", exact: true });
-    await stepper.getByRole("link", { name: "Previous year" }).focus();
+    const stepper = page.getByRole("group", { name: "Date range" });
+    await stepper.getByRole("link", { name: "Previous period" }).focus();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/period=\d{4}/);
+    await expect(page).toHaveURL(/off=\d+/);
     await expect(page).toHaveURL(/view=value/);
 
     // A row's series toggle, its name and its action are three stops, each with its ring.
@@ -413,7 +413,7 @@ test.describe("the Funds home", () => {
   });
 
   test("a year of Year by year opens from the keyboard", async ({ page }) => {
-    await page.goto("/funds?period=all");
+    await page.goto("/funds?preset=all");
     await page.waitForTimeout(500);
     const year = new Date().getFullYear() - 3;
     const link = page
@@ -423,7 +423,7 @@ test.describe("the Funds home", () => {
     await link.focus();
     expect(await focusIsVisible(page), "the year's link draws no ring").toBe(true);
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(new RegExp(`period=${year}$`));
+    await expect(page).toHaveURL(/off=3$/);
   });
 });
 
@@ -442,12 +442,12 @@ test.describe("a fund's new page", () => {
     await expect(page).toHaveURL(/\/funds\/[0-9a-f-]+$/);
     await page.waitForTimeout(500);
 
-    const period = page.getByRole("group", { name: "Period", exact: true });
+    const period = page.getByRole("group", { name: "Date range" });
     const all = period.getByRole("link", { name: "All" });
     await all.focus();
     expect(await focusIsVisible(page), "the All link draws no ring").toBe(true);
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/period=all$/);
+    await expect(page).toHaveURL(/preset=all$/);
 
     const tabs = page.getByRole("navigation", { name: "Fund" });
     const contributions = tabs.getByRole("link", { name: "Contributions" });
@@ -455,7 +455,7 @@ test.describe("a fund's new page", () => {
     expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/tab=contributions/);
-    await expect(page).toHaveURL(/period=all/);
+    await expect(page).toHaveURL(/preset=all/);
 
     await tabs.getByRole("link", { name: "Overview" }).focus();
     await page.keyboard.press("Enter");
@@ -507,11 +507,11 @@ test.describe("a fund's new page", () => {
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(new RegExp(`tab=${period}`));
 
-      const all = page.getByRole("group", { name: "Period", exact: true }).getByRole("link", { name: "All" });
+      const all = page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "All" });
       await all.focus();
       expect(await focusIsVisible(page), "the All link draws no ring").toBe(true);
       await page.keyboard.press("Enter");
-      await expect(page).toHaveURL(new RegExp(`tab=${period}.*period=all|period=all.*tab=${period}`));
+      await expect(page).toHaveURL(new RegExp(`tab=${period}.*preset=all|preset=all.*tab=${period}`));
       await page.waitForTimeout(500);
 
       const control = page
@@ -531,7 +531,7 @@ test.describe("a fund's new page", () => {
       .filter({ hasText: "PAC Piano" })
       .getByRole("link", { name: "PAC Piano" })
       .getAttribute("href");
-    await page.goto(`${href}?tab=valuations&period=all`);
+    await page.goto(`${href}?tab=valuations&preset=all`);
     await page.waitForTimeout(500);
     const edit = page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" });
     await edit.focus();
@@ -549,7 +549,7 @@ test.describe("a fund's new page", () => {
 test.describe("a fund's dialogs and the form that creates one", () => {
   /** A tab of one of `layout`'s funds, by the fund's name. */
   async function openFund(page: Page, name: string, query: string): Promise<void> {
-    await page.goto("/funds?period=all");
+    await page.goto("/funds?preset=all");
     await page.waitForTimeout(500);
     const href = await page
       .getByTestId("fund-home-row")
@@ -595,7 +595,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   test("the contribution dialog traps the focus, closes on Escape and gives the focus back", async ({
     page,
   }) => {
-    await openFund(page, "Cometa", "?tab=contributions&period=all");
+    await openFund(page, "Cometa", "?tab=contributions&preset=all");
     const opener = page
       .getByTestId("fund-contributions")
       .getByRole("button", { name: "Record contribution" });

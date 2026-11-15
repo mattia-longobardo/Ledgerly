@@ -28,9 +28,15 @@ import {
 } from "@/modules/funds/ui/present";
 import { ClosedProjection, ShortProjection } from "@/modules/funds/ui/projection";
 import { frequencyText } from "@/modules/funds/ui/source-text";
-import { periodQuery, periodSpan, type Query } from "@/modules/investments/period";
-import { periodOf } from "@/modules/investments/pnl";
-import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
+import {
+  periodSpan,
+  SECTION_PRESETS,
+  sectionPeriod,
+  type Query,
+  yearQuery,
+} from "@/modules/investments/period";
+import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { periodText } from "@/modules/investments/ui/period-control";
 import { chargeCandidates } from "@/modules/transactions/queries";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
@@ -92,18 +98,23 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
   if (legacy) permanentRedirect(withParams(base, {}, legacy));
   // The tab of the deposits is the tab of the contributions now: an address saved before still opens it.
   if (one(query.tab) === "deposits") {
-    const { period, from, to, view } = query;
     redirect(
       withParams(
         base,
-        { period: one(period), from: one(from), to: one(to), view: one(view) },
+        { ...sectionPeriod(query, todayOn).params, view: one(query.view) },
         { tab: "contributions" },
       ),
     );
   }
   if (isFutureYear(one(query.period), todayOn)) {
     const tab = TABS.find((name) => name === one(query.tab) && name !== "overview");
-    redirect(withParams(base, { tab, view: one(query.view) === "value" ? "value" : undefined }, {}));
+    redirect(
+      withParams(
+        base,
+        { tab, view: (["value", "return"] as const).find((key) => key === one(query.view)) },
+        {},
+      ),
+    );
   }
   return (
     <Suspense fallback={<FundDetailSkeleton />}>
@@ -131,7 +142,7 @@ async function FundDetail({
   const tp = await getTranslations("funds.pension");
   const ts = await getTranslations("funds.sources");
   const tPeriod = await getTranslations("investments.period");
-  const view = one(query.view) === "value" ? "value" : "gain";
+  const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "gain";
   const row = await fundHomeRow(ctx, id);
   const { detail } = row;
   const tab = TABS.find((name) => name === one(query.tab)) ?? "overview";
@@ -141,10 +152,10 @@ async function FundDetail({
   };
 
   const { fund, home } = row;
-  const period = periodOf({ period: one(query.period), from: one(query.from), to: one(query.to) }, todayOn);
+  const period = sectionPeriod(query, todayOn).period;
   const { firstOn, summary, line, beforeFirst } = fundSummary({ fund: home, period, todayOn });
   const span = periodSpan(period, firstOn);
-  const periodParams = periodQuery(period, todayOn);
+  const periodParams = sectionPeriod(query, todayOn).params;
   const name = periodText(period, span, todayOn, ctx.locale, tPeriod);
   const when =
     period.kind === "year"
@@ -244,15 +255,14 @@ async function FundDetail({
         }))}
       />
       {followsPeriod && (
-        <PeriodControl
-          period={period}
-          span={span}
-          todayOn={todayOn}
-          firstOn={firstOn}
+        <PeriodBar
+          period={sectionPeriod(query, todayOn)}
           path={base}
-          params={kept}
+          carry={kept}
           locale={ctx.locale}
-          t={tPeriod}
+          presets={SECTION_PRESETS}
+          name={period.kind === "year" ? name : undefined}
+          whole={{ range: span, text: name }}
         />
       )}
     </div>
@@ -300,8 +310,7 @@ async function FundDetail({
   // ——— A year before anything there is (§6) ——————————————————————————————————————————————————————
   const { state } = summary;
   const firstYear = firstOn === null ? Number(todayOn.slice(0, 4)) : Number(firstOn.slice(0, 4));
-  const yearHref = (year: number) =>
-    withParams(base, kept, year === Number(todayOn.slice(0, 4)) ? {} : { period: String(year) });
+  const yearHref = (year: number) => withParams(base, kept, yearQuery(year, todayOn));
   if (beforeFirst) {
     return shell(
       <EmptyState
@@ -637,6 +646,7 @@ async function FundDetail({
         span={span}
         when={when}
         totalCents={gainCents}
+        rate={measure.rate}
         view={view}
         path={base}
         params={periodParams}

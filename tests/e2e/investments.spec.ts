@@ -90,15 +90,15 @@ test("a manual service shows an account of Accounts, and Accounts shows the same
   await test.step("the chart's old address lands on the period, and the tabs carry it (§1.2)", async () => {
     const service = page.url().replace(/\?.*$/, "");
     await page.goto(`${service}?range=all&grain=day`);
-    await expect(page).toHaveURL(/[?&]period=all/);
+    await expect(page).toHaveURL(/[?&]preset=all/);
     await expect(page).not.toHaveURL(/range=|grain=/);
     await expect(
-      page.getByRole("group", { name: "Period" }).getByRole("link", { name: "All" }),
+      page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "All" }),
     ).toHaveAttribute("aria-current", "true");
     await openTab(page, "Activity");
-    await expect(page).toHaveURL(/\/activity\?period=all$/);
+    await expect(page).toHaveURL(/\/activity\?preset=all$/);
     await page.goBack();
-    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]+\?period=all$/);
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]+\?preset=all$/);
     await page.goto(service);
   });
 

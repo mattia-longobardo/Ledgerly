@@ -4,11 +4,20 @@ import { permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels, PALETTE } from "@/modules/accounts/ui/display";
-import { legacyPeriodQuery, periodQuery, type Query } from "@/modules/investments/period";
+import { legacyPeriodQuery, SECTION_PRESETS, sectionPeriod, type Query } from "@/modules/investments/period";
 import type { PnlParts, ServicePnl } from "@/modules/investments/pnl";
 import { investmentsHome, investmentsPnlView } from "@/modules/investments/queries";
-import { bestAndWorst, runningTotal, sampled, toCents } from "@/modules/investments/ui/chart-data";
-import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
+import {
+  asReturns,
+  bestAndWorst,
+  percentAxisLabels,
+  returnScale,
+  runningTotal,
+  sampled,
+  toCents,
+} from "@/modules/investments/ui/chart-data";
+import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@/platform/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
@@ -50,11 +59,11 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
   const legacy = legacyPeriodQuery(query, todayOn);
   if (legacy) permanentRedirect(withParams("/investments", {}, legacy));
 
-  const view = one(query.view) === "value" ? "value" : "pnl";
+  const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const by = (["class", "ccy"] as const).find((key) => key === one(query.by)) ?? "service";
   const [home, pnl] = await Promise.all([
     investmentsHome(ctx),
-    investmentsPnlView(ctx, { period: one(query.period), from: one(query.from), to: one(query.to) }),
+    investmentsPnlView(ctx, sectionPeriod(query, today(ctx.timeZone)).period),
   ]);
   const currency = pnl.currency;
   const money = (cents: Cents | null, signed = false, code = currency) =>
@@ -65,7 +74,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
 
   /** What the period's links carry: the period, the chart's view and the composition's grouping. */
   const kept: Params = { view: view === "pnl" ? undefined : view, by: by === "service" ? undefined : by };
-  const periodParams = periodQuery(period, todayOn);
+  const periodParams = sectionPeriod(query, todayOn).params;
   const serviceHref = (id: string) => withParams(`/investments/${id}`, {}, periodParams);
   /** An alert opens the Connection tab of its service, where the thing to check is (§3.1, U3). */
   const alertHref = (id: string) => withParams(`/investments/${id}/connection`, {}, periodParams);
@@ -164,6 +173,12 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
     return known.length === 0 ? null : known.reduce<Cents>((sum, cents) => sum + cents!, 0n);
   });
   const cumulative = runningTotal(barTotals);
+  // The Return view: the same bars as fractions of the period's capital, so they add up to the rate.
+  const scale = view === "return" ? returnScale(heroCents, portfolio.rate) : null;
+  const asBars = (cents: readonly (Cents | null)[]) =>
+    view === "return" ? asReturns(cents, scale ?? 0) : asNumbers(cents);
+  const shown = (cents: Cents | null) =>
+    view === "return" ? percent(cents === null ? null : Number(cents) * (scale ?? 0)) : money(cents, true);
   const intervalName = (index: number) => {
     const interval = pnl.intervals[index];
     if (pnl.barGrain === "year") return interval.from.slice(0, 4);
@@ -347,15 +362,14 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
-      <PeriodControl
-        period={period}
-        span={span}
-        todayOn={todayOn}
-        firstOn={pnl.firstOn}
+      <PeriodBar
+        period={sectionPeriod(query, todayOn)}
         path="/investments"
-        params={kept}
+        carry={kept}
         locale={ctx.locale}
-        t={tp}
+        presets={SECTION_PRESETS}
+        name={period.kind === "year" ? name : undefined}
+        whole={{ range: span, text: name }}
       />
     </div>
   );
@@ -487,7 +501,9 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
               <p className="text-sm text-muted">
                 {view === "pnl"
                   ? t(`home.chart.pnlNote.${pnl.barGrain}`, { period: name })
-                  : t(`home.chart.valueNote.${pnl.valueGrain}`)}
+                  : view === "return"
+                    ? t("home.chart.returnNote")
+                    : t(`home.chart.valueNote.${pnl.valueGrain}`)}
               </p>
             </div>
             <LinkTabs
@@ -498,13 +514,18 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
               current={view}
               options={[
                 { value: "pnl", label: t("home.chart.pnl") },
+                { value: "return", label: t("home.chart.return") },
                 { value: "value", label: t("home.chart.value") },
               ]}
             />
           </div>
-          {view === "pnl" ? (
-            barTotals.every((cents) => cents === null) ? (
-              <p className="text-sm text-muted">{t("chart.empty")}</p>
+          {view !== "value" ? (
+            barTotals.every((cents) => cents === null) || (view === "return" && scale === null) ? (
+              <p className="text-sm text-muted">
+                {view === "return" && barTotals.some((cents) => cents !== null)
+                  ? t("home.chart.returnEmpty")
+                  : t("chart.empty")}
+              </p>
             ) : (
               <StackedBars
                 layers={chartRows.map((row) => {
@@ -513,30 +534,50 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
                     key: row.summary.account.id,
                     label: row.summary.account.name,
                     color: row.color,
-                    values: asNumbers(service?.bars ?? []),
+                    values: asBars(service?.bars ?? []),
                   };
                 })}
-                line={asNumbers(cumulative)}
-                yLabels={axisLabels(
-                  [...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)],
-                  ctx.numberFormat,
-                  4,
-                  currency,
-                )}
+                line={asBars(cumulative)}
+                yLabels={
+                  view === "return"
+                    ? percentAxisLabels(
+                        asBars([...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)]),
+                        ctx.numberFormat,
+                      )
+                    : axisLabels(
+                        [...cumulative, ...stack.top.map(toCents), ...stack.bottom.map(toCents)],
+                        ctx.numberFormat,
+                        4,
+                        currency,
+                      )
+                }
                 xLabels={barLabels}
                 hover={pnl.intervals.map((_, index) => ({
                   label: intervalName(index),
-                  value: money(barTotals[index], true),
-                  note: t("home.chart.cumulative", { amount: money(cumulative[index], true) }),
+                  value: shown(barTotals[index]),
+                  note: t("home.chart.cumulative", { amount: shown(cumulative[index]) }),
                   rows: rows
                     .filter((row) => (chartOf.get(row.summary.account.id)?.bars[index] ?? null) !== null)
                     .map((row) => ({
                       label: row.summary.account.name,
-                      value: money(chartOf.get(row.summary.account.id)!.bars[index], true),
+                      value: shown(chartOf.get(row.summary.account.id)!.bars[index]),
                       color: row.color,
                     })),
                 }))}
-                summary={summary}
+                summary={
+                  view === "return"
+                    ? t("home.chart.returnSummary", {
+                        period: name,
+                        total: percent(portfolio.rate),
+                        best: best
+                          ? `${intervalName(best.best)} (${shown(barTotals[best.best])})`
+                          : NULL_DISPLAY,
+                        worst: best
+                          ? `${intervalName(best.worst)} (${shown(barTotals[best.worst])})`
+                          : NULL_DISPLAY,
+                      })
+                    : summary
+                }
               />
             )
           ) : valueTotals.every((cents) => cents === null) ? (
@@ -574,38 +615,40 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
             />
           )}
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-            {view === "pnl" && (
+            {view !== "value" && (
               <span className="flex items-center gap-1.5">
                 <span aria-hidden className="h-0.5 w-4 bg-fg" /> {t("home.chart.line")}
               </span>
             )}
             <span>{t("home.chart.legend")}</span>
           </p>
-          {view === "pnl" && barTotals.some((cents) => cents !== null) && (
-            <details className="text-sm">
-              <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
-                {t("home.chart.data")}
-              </summary>
-              <Table className="mt-2">
-                <THead>
-                  <Th>{t("home.chart.interval")}</Th>
-                  <Th align="right">{t("home.chart.pnl")}</Th>
-                  <Th align="right">{t("home.chart.cumulativeHeader")}</Th>
-                </THead>
-                <TBody>
-                  {pnl.intervals.map((interval, index) => (
-                    <Tr key={interval.from}>
-                      <Td>{intervalName(index)}</Td>
-                      <Td align="right" className={TONE_TEXT[toneOfSign(barTotals[index])]}>
-                        {money(barTotals[index], true)}
-                      </Td>
-                      <Td align="right">{money(cumulative[index], true)}</Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </Table>
-            </details>
-          )}
+          {view !== "value" &&
+            barTotals.some((cents) => cents !== null) &&
+            (view === "pnl" || scale !== null) && (
+              <details className="text-sm">
+                <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
+                  {t("home.chart.data")}
+                </summary>
+                <Table className="mt-2">
+                  <THead>
+                    <Th>{t("home.chart.interval")}</Th>
+                    <Th align="right">{view === "return" ? t("home.chart.return") : t("home.chart.pnl")}</Th>
+                    <Th align="right">{t("home.chart.cumulativeHeader")}</Th>
+                  </THead>
+                  <TBody>
+                    {pnl.intervals.map((interval, index) => (
+                      <Tr key={interval.from}>
+                        <Td>{intervalName(index)}</Td>
+                        <Td align="right" className={TONE_TEXT[toneOfSign(barTotals[index])]}>
+                          {shown(barTotals[index])}
+                        </Td>
+                        <Td align="right">{shown(cumulative[index])}</Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </Table>
+              </details>
+            )}
         </Card>
 
         <div className="grid items-start gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

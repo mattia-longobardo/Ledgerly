@@ -20,40 +20,40 @@ async function openService(page: Page, name: string, query = ""): Promise<string
 }
 
 test("the four tabs are pages that carry the period, and Back walks them", async ({ page }) => {
-  const base = await openService(page, "eToro", "?period=all");
-  await expect(page).toHaveURL(new RegExp(`${base}\\?period=all$`));
+  const base = await openService(page, "eToro", "?preset=all");
+  await expect(page).toHaveURL(new RegExp(`${base}\\?preset=all$`));
   await tabs(page).getByRole("link", { name: "Positions" }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?preset=all$`));
   await tabs(page).getByRole("link", { name: "Activity" }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?preset=all$`));
   await tabs(page)
     .getByRole("link", { name: /^Connection/ })
     .click();
-  await expect(page).toHaveURL(new RegExp(`${base}/connection\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/connection\\?preset=all$`));
   // Connection is always "today" (§2.3): no period to pick there.
-  await expect(page.getByRole("group", { name: "Period" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Date range" })).toHaveCount(0);
 
   await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?preset=all$`));
   await expect(tabs(page).getByRole("link", { name: "Activity" })).toHaveAttribute("aria-current", "page");
   await page.goBack();
   await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`${base}\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}\\?preset=all$`));
   await expect(tabs(page).getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
 
   // A new period from a tab stays on that tab.
   await tabs(page).getByRole("link", { name: "Activity" }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all$`));
-  await page.getByRole("group", { name: "Period" }).getByRole("link", { name: "Year" }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/activity$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?preset=all$`));
+  await page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "Year to date" }).click();
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?preset=ytd$`));
 });
 
 test("the service's P&L in the display currency is its row on the home, to the cent", async ({ page }) => {
   for (const [name, query] of [
     ["eToro", ""],
     ["Directa", ""],
-    ["Directa", "?period=all"],
-    ["Binance", "?period=all"],
+    ["Directa", "?preset=all"],
+    ["Binance", "?preset=all"],
   ] as const) {
     await page.goto(`/investments${query}`);
     const row = page.getByTestId("service-row").filter({ hasText: name }).first();
@@ -68,8 +68,8 @@ test("home → service → positions: the rows of Positions add up to the Overvi
   page,
 }) => {
   for (const [name, query] of [
-    ["eToro", "?period=all"],
-    ["Binance", "?period=all"],
+    ["eToro", "?preset=all"],
+    ["Binance", "?preset=all"],
   ] as const) {
     const base = await openService(page, name, query);
     const hero = page.getByTestId("pnl-hero");
@@ -105,7 +105,7 @@ test("a manual service: no Positions, its value against the money put in is the 
   page,
 }) => {
   for (const name of ["Directa", "Fineco Conto Deposito"]) {
-    const base = await openService(page, name, "?period=all");
+    const base = await openService(page, name, "?preset=all");
     await expect(tabs(page).getByRole("link", { name: "Positions" }), name).toHaveCount(0);
     const manual = page.getByTestId("manual-pnl");
     await expect(manual, name).toBeVisible();
@@ -115,8 +115,8 @@ test("a manual service: no Positions, its value against the money put in is the 
     await expect(manual, name).toHaveAttribute("data-pnl-cents", local ?? "");
     await expect(page.getByTestId("top-positions")).toHaveCount(0);
     // The old address of Positions lands on the Overview, with the period.
-    await page.goto(`${base}/positions?period=all`);
-    await expect(page).toHaveURL(new RegExp(`${base}\\?period=all$`));
+    await page.goto(`${base}/positions?preset=all`);
+    await expect(page).toHaveURL(new RegExp(`${base}\\?preset=all$`));
     // No deposit or withdrawal typed here (PERS-342): "Update value" only, and only on an account
     // typed by hand; Wallet's value is not the person's to change.
     await expect(page.getByRole("button", { name: "Add operation" })).toHaveCount(0);
@@ -127,22 +127,22 @@ test("a manual service: no Positions, its value against the money put in is the 
 test("Positions: open with a cost, closed in the period and ever, a past year on its last day", async ({
   page,
 }) => {
-  const base = await openService(page, "eToro", "?period=all");
+  const base = await openService(page, "eToro", "?preset=all");
   await tabs(page).getByRole("link", { name: "Positions" }).click();
   const voo = page.getByTestId("open-row").filter({ hasText: "Vanguard S&P 500" });
   // 0,5 × 540 $ worth 2.695,00 USD, 2.500,00 USD invested: +7,8 % on cost.
   await expect(voo).toContainText(/\+7,8\s?%/);
   const status = page.getByRole("group", { name: "Which positions" });
   await status.getByRole("link", { name: /^All closed/ }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?period=all&status=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?preset=all&status=all$`));
   const tesla = page.getByTestId("closed-row").filter({ hasText: "Tesla" });
   await expect(tesla).toContainText("+100,00 USD");
   await expect(tesla).toContainText("1 position");
   await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/positions\\?preset=all$`));
 
   // A year before the data: the positions on its last day, and a link to today's.
-  await page.goto(`${base}/positions?period=${new Date().getFullYear() - 1}`);
+  await page.goto(`${base}/positions?off=1`);
   await expect(status.getByRole("link", { name: /^Open on/ })).toHaveAttribute("aria-current", "true");
   await page.getByRole("link", { name: /^Today's positions/ }).click();
   await expect(page).toHaveURL(new RegExp(`${base}/positions\\?status=open$`));
@@ -166,14 +166,14 @@ test("Positions: grouped by class, the same rows under each class with its subto
 test("Activity: the chips count the period and leave their own rows; the eToro page stays short", async ({
   page,
 }) => {
-  const base = await openService(page, "eToro", "?period=all");
+  const base = await openService(page, "eToro", "?preset=all");
   await tabs(page).getByRole("link", { name: "Activity" }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?preset=all$`));
   await expect(page.getByTestId("activity-row").first()).toBeVisible();
   const chip = page.getByTestId("activity-chip").filter({ hasText: "Deposits and withdrawals" });
   const count = Number((await chip.textContent())!.replace(/.*·\s*/, ""));
   await chip.click();
-  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?period=all&type=flows$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/activity\\?preset=all&type=flows$`));
   await expect(chip).toHaveAttribute("aria-current", "true");
   const rows = page.getByTestId("activity-row");
   await expect(rows).toHaveCount(Math.min(count, 50));
@@ -188,7 +188,7 @@ test("Activity: the chips count the period and leave their own rows; the eToro p
   }
   // Never the legs of an event (§3.5, S4).
   await expect(page.locator("main")).not.toContainText(/\b(base|quote)\b/);
-  await page.getByRole("group", { name: "Period" }).getByRole("link", { name: "All" }).click();
+  await page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "All" }).click();
   await expect(page.getByTestId("activity-range")).toBeVisible();
   const height = await page.locator("main").evaluate((main) => main.scrollHeight);
   expect(height, "the eToro Activity page is longer than 3,000 px").toBeLessThan(3000);
@@ -197,7 +197,7 @@ test("Activity: the chips count the period and leave their own rows; the eToro p
 test("Activity of a manual service: the movements of its account in Accounts (PERS-342)", async ({
   page,
 }) => {
-  await openService(page, "Fineco Conto Deposito", "?period=all");
+  await openService(page, "Fineco Conto Deposito", "?preset=all");
   await tabs(page).getByRole("link", { name: "Activity" }).click();
   const list = page.getByTestId("manual-activity");
   await expect(list).toBeVisible();
