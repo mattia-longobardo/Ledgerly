@@ -95,7 +95,7 @@ una sotto-issue separata (decisione H4). È in `main` a `86e3d43`, tag `v0.10.2`
 | Per l'utente | Una riga chiara per collegamento, con una sola azione quando serve |
 | Git | Branch + PR · `feat(integrations)` · criterio #1 |
 | Migrazioni | Additive: `error_code`, `consecutive_failures` su `integration_connections`; `origin`, `error_code`, `http_status`, `app_version` su `sync_runs`. Contrazione: rimozione di `integration_connections_user_provider_uq` (seconda metà della migrazione in due tempi). Dati: righe `running` vecchie → `failed`; conservazione di `sync_runs` da 90 a 30 giorni |
-| Rollback | Immagine `pre-n2`: l'immagine N1 usa già la chiave nuova. Dump `n2.dump` per la modifica ai dati |
+| Rollback | Immagine `pre-n2` = `v0.19.1`: usa la chiave nuova in ogni salvataggio (la `v0.19.0` no: [`06-data.md`](06-data.md) §6.1, «Correzione al primo tempo»). Dump `n2.dump` per la modifica ai dati; [`n2-rollback.sql`](n2-rollback.sql) |
 | Test e gate | G1-G9. Unit: stato derivato per ogni combinazione di `state`, `last_ok_at`, `next_sync_at`, fallimenti. Integration: chiusura delle righe orfane, conservazione. E2E: pagina dei collegamenti a 400 e 1440 px, nei due temi |
 | Criteri di accettazione | 1) Nessuna parola tecnica nella vista normale. 2) Un utente raggiunge solo il registro grezzo dei suoi collegamenti; l'admin non raggiunge il registro di un altro utente. 3) Zero righe `running` più vecchie di un'ora dopo il deploy. 4) Nessun messaggio grezzo del provider salvato dai collegamenti nuovi. 5) Una seconda banca si collega |
 | OK di Mattia | Sì, sul SHA |

@@ -44,8 +44,18 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
   cron expression, on chosen days. The editor shows the next five runs. The default is every hour.
   Details: [`scheduler.md`](scheduler.md).
 - **What a sync reads.** The first sync reads the last 12 months. Each later sync reads the last
-  7 days again. If Wallet rejects the token, the link is marked as revoked. The sync log on the
-  same page lists every attempt.
+  7 days again. If Wallet rejects the token, the row of the link says that the key is no longer
+  valid and offers "Replace key".
+- **One state for each connection.** Every connection — Wallet, Trek, a bank, an investment
+  service — has the same row, with one state of five: up to date, in progress, delayed, action
+  needed, paused. The row says when the last update was and when the next attempt is, and it has
+  one button when something has to be done. "History" shows the last ten updates. A failure is a
+  fixed sentence, never what the provider said. You get a mail at the third failure in a row, at
+  once when only you can repair it (a key, an access that ended), and 14 and 3 days before an
+  access to a bank ends.
+- **Advanced.** The link at the bottom of the page opens the schedule of each connection and the
+  log of every reading of the last 30 days, yours only. "Copy report" copies a text with no
+  secret in it, to ask for help.
 - **What belongs to whom.** Payee, amount and date come from Wallet. Category, labels, note and
   visibility are yours.
 - **Hide** removes a movement from the totals. You can undo it. A movement that Wallet stops
@@ -203,8 +213,10 @@ each number comes from.
 
 - **Profile and Security.** Change your password, set up two-factor authentication (TOTP with
   recovery codes), manage connected apps and API clients. SSO-only accounts have no password form.
-- **Integrations.** Wallet, Trek and the other links, each with its schedule and sync log. Admins
-  also see every background job with its last run, and can run a job now.
+- **Integrations.** Wallet, Trek, the banks and the other links, each with its state; the schedule
+  and the log of the readings are under "Advanced". Admins also see, in Server, every background
+  job with its last run and whether each plugin of the instance answers ("Diagnostics") —
+  nothing of another person's connections.
 - **Data.** Categories, labels, monthly snapshots and **Export my data**: a ZIP with every table as
   CSV and JSON, plus your original documents.
 - **Admin → Users** (admins only). Invite a user (single-use link, valid seven days), change roles,

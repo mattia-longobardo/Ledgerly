@@ -667,6 +667,25 @@ Dati che l'interfaccia richiede e che il piano non elenca. Non sono decisioni di
 10. **Chiavi di notifica.** Migrazione delle righe salvate con `wallet_sync_failed` e `wallet_sync_stale` (piano §4.3, AN3).
 11. **N1.** La specifica di N1 non cambia: §5.1, §5.3, §5.5 e §4.4 di N1 sono sostituite da §2, §3, §7 e §8.2 di questo documento al rilascio di N2.
 
+## 13.1 Note dello sviluppo (15/11/2026)
+
+Scelte fatte nello sviluppo di N2, dentro i punti di §13. Non cambiano le decisioni di §14.
+
+- **«L'intervallo» (punto 2).** Un collegamento è in ritardo quando la lettura dovuta dalla sua pianificazione manca
+  da oltre 15 minuti, oppure l'ultima lettura è fallita. La soglia dell'avviso `sync_stale` resta 36 ore.
+- **Cronologia (punto 6).** Un fornitore legge più tipi di dato in un passaggio (conti e movimenti): le letture di
+  un passaggio sono una riga sola, con l'esito peggiore e la somma delle novità.
+- **Fallimento senza codice.** Un errore che non rientra nei 5 codici si salva senza codice: la riga è «In ritardo»
+  e la cronologia dice «Non riuscito» senza testo. Non si salva un codice inventato.
+- **Collegamento assente.** La riga dice «Non collegato» una volta sola, accanto al nome: nessuna frase sotto.
+- **Mail di scadenza.** L'oggetto ha anche il caso «scade oggi», per il giorno stesso.
+- **Descrittore del fornitore (punto 3).** Il nome di un collegamento e la capacità «rileggi lo storico» stanno nel
+  registro dei passaggi (`platform/integrations/registry.ts`); le azioni della riga sono una sola Server Action
+  (`connection-actions.ts`). Nessun file nuovo contiene un nome di fornitore.
+- **«Attiva» dalla riga.** Rende dovuti subito i collegamenti pianificati del plugin: li legge il dispatcher entro
+  un minuto.
+- **Filtro del registro.** Il modulo porta all'ancora `#log`: il lettore riparte dal registro.
+
 ## 14. Decisioni prese
 
 Decisioni di Mattia del 15/11/2026 sulle 5 domande di questa specifica: default (A) per tutte. Il testo applica l'opzione A.
