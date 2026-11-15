@@ -9,7 +9,7 @@ La soglia, il modello e la regola che decide «automatica» o «suggerita» sono
 Revisione del 15/11/2026: applica le risposte di Mattia alle 9 domande della prima versione (§17). Due risposte sono
 regole nuove, diverse dalle due opzioni: un movimento a mano cambia il saldo, su ogni conto, secondo la modalità del conto
 (§9.7, §9.8); le categorie di una sorgente che le dà già, come Wallet, si associano alle categorie di Ledgerly (§6.4).
-Tre punti nati da queste regole sono aperti in §17.2: il testo applica l'opzione A. I punti del piano in conflitto sono in §18.1.
+I tre punti nati da queste regole sono decisi con il default (§17.2). Nessuna domanda è aperta. I punti del piano in conflitto sono in §18.1.
 
 ## 0. Riepilogo
 
@@ -521,7 +521,7 @@ Pets · 4 movimenti  [Nuova]          [＋ Aggiunta come «Pets»       ▾]
 - Più categorie della sorgente possono corrispondere alla stessa categoria di Ledgerly (esempio: «Tobacco» e «Alcohol,
   tobacco»). Una categoria della sorgente corrisponde a una sola categoria di Ledgerly.
 - `Segmented` «Tutte» · «Nuove ({count})»: «Nuove» mostra le categorie arrivate dalla sorgente e non ancora guardate.
-- **Categoria nuova dalla sorgente** (punto aperto 11): entra da sola come «aggiunta», con il `Badge` `accent` «Nuova».
+- **Categoria nuova dalla sorgente** (decisione 11): entra da sola come «aggiunta», con il `Badge` `accent` «Nuova».
   Nessuna lettura si ferma per aspettare una scelta. Il badge sparisce quando la persona sceglie una voce o preme
   «Va bene così» (`LinkButton` nella riga).
 - **Stato di partenza al rilascio:** ogni categoria di Wallet è «aggiunta» con il suo nome, come oggi. Nessun numero
@@ -816,7 +816,7 @@ del conto, su ogni conto.** Il cambio si vede subito. Quando diventa definitivo 
 - Dopo il salvataggio il saldo nuovo vale in Accounts, Overview e nel patrimonio, senza attese.
 - Modifica ed eliminazione di un movimento a mano correggono il saldo allo stesso modo.
 - Un movimento nascosto non conta nel saldo, come non conta nei totali.
-- Movimento con una data prima dell'ultimo saldo conosciuto del conto: il saldo di oggi non cambia (punto aperto 12).
+- Movimento con una data prima dell'ultimo saldo conosciuto del conto: il saldo di oggi non cambia (decisione 12).
 
 Riga del saldo nel dialogo, sotto «Conto», appena importo, tipo, data e conto sono validi (`text-sm text-muted`, numeri `tabular-nums`):
 
@@ -836,7 +836,7 @@ Il progetto ha tre modalità. La modalità decide la nota nel dialogo, lo stato 
 |---|---|---|---|---|
 | **A mano** (nessun aggiornamento) | «Contanti» | Nessuna nota | `Badge` «A mano» | Non esiste: il saldo nuovo è definitivo subito |
 | **Lettura e scrittura** | Conto Wallet | Nota `bg-hover`: «Ledgerly manda questo movimento a {provider} al prossimo aggiornamento.» | `Badge` «A mano» + `Badge` `neutral` «Da inviare» | Ledgerly scrive il movimento sulla sorgente. Poi il movimento è un movimento della sorgente: i due badge spariscono e il saldo è quello della sorgente |
-| **Sola lettura** | Conto di una banca | Avviso `warn` del piano (§9.3) + «Il saldo cambia subito. Alla prossima lettura vale il saldo della banca.» | `Badge` «A mano» | Il saldo torna quello letto dalla banca. Il movimento resta, a mano (punto aperto 10) |
+| **Sola lettura** | Conto di una banca | Avviso `warn` del piano (§9.3) + «Il saldo cambia subito. Alla prossima lettura vale il saldo della banca.» | `Badge` «A mano» | Il saldo torna quello letto dalla banca. Il movimento resta, a mano (decisione 10) |
 
 Regole per la modalità «lettura e scrittura»:
 
@@ -1269,7 +1269,7 @@ Scelte di interazione, non di prodotto. Si cambiano senza toccare il piano.
 | 16 | Gruppi predefiniti offerti anche nello stato vuoto di `Settings › Categories` | Serve a chi non collega una banca; il primo avvio guidato arriva solo in R5a |
 | 17 | Nessuna voce di menu e nessun contatore nel menu per «Da rivedere» | Il menu cambia in R5a |
 
-## 17. Decisioni prese e punti aperti
+## 17. Decisioni prese
 
 ### 17.1 Decisioni prese (Mattia, 15/11/2026)
 
@@ -1290,15 +1290,15 @@ Risposte alle 9 domande della prima versione di questa specifica.
 La domanda 2 aveva il default «non i conti Wallet». La risposta 3 dice «su tutti i conti, a mano oppure Wallet» e
 descrive la scrittura su Wallet: vale la risposta 3.
 
-### 17.2 Punti aperti nati dalle regole nuove
+### 17.2 Punti nati dalle regole nuove: decisi
 
-Il testo applica l'opzione A. «ok default» basta.
+Mattia ha scelto il default (A) per tutti e tre, il 15/11/2026. Il testo applica l'opzione A.
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
-|---|---|---|---|---|---|
-| 10 | Conto di una banca (sola lettura): cosa succede al saldo dopo la lettura successiva? | «BBVA» ha 1.000 €. Scrivi a mano una spesa di 50 €: il saldo diventa 950 €. La sera la banca dice 1.000 € | Vale il saldo della banca: 1.000 €. Il movimento a mano resta in Spese e nei budget | Il movimento a mano continua a spostare il saldo: 950 €, finché non lo elimini | A: il saldo di un conto di banca è sempre quello della banca; il cambio a mano dura fino alla lettura. B: saldo di Ledgerly e saldo della banca restano diversi se la banca non riceve mai quel movimento. Tocca §9.8 |
-| 11 | Arriva una categoria nuova da Wallet: cosa fa Ledgerly prima della tua scelta? | Crei «Pets» su Wallet e registri una spesa | La aggiunge da sola come categoria nuova, con il segno «Nuova» nella sezione «Categorie di Wallet». Puoi associarla dopo | I movimenti restano «Da categorizzare» finché non scegli «associa» o «aggiungi» | A: come oggi, niente si ferma; se non guardi, hai una categoria in più. B: nessuna categoria entra senza una tua scelta; i budget non contano quei movimenti finché non scegli. Tocca §6.4 |
-| 12 | Movimento a mano con una data prima dell'ultimo saldo scritto del conto | Il 10 novembre scrivi che «Contanti» ha 80 €. Il 15 aggiungi una spesa del 5 novembre | Il saldo di oggi non cambia: gli 80 € del 10 comprendono già quella spesa | Ogni movimento a mano sposta il saldo di oggi: 67,50 € | A: un saldo scritto è un dato certo e una spesa dimenticata non lo sporca. B: regola più semplice da ricordare, ma un saldo contato da te cambia per una spesa che aveva già dentro. Tocca §9.7 |
+| # | Domanda | Esempio | A (default) | B | Effetto | Decisione |
+|---|---|---|---|---|---|---|
+| 10 | Conto di una banca (sola lettura): cosa succede al saldo dopo la lettura successiva? | «BBVA» ha 1.000 €. Scrivi a mano una spesa di 50 €: il saldo diventa 950 €. La sera la banca dice 1.000 € | Vale il saldo della banca: 1.000 €. Il movimento a mano resta in Spese e nei budget | Il movimento a mano continua a spostare il saldo: 950 €, finché non lo elimini | A: il saldo di un conto di banca è sempre quello della banca; il cambio a mano dura fino alla lettura. B: saldo di Ledgerly e saldo della banca restano diversi se la banca non riceve mai quel movimento. Tocca §9.8 | **A** |
+| 11 | Arriva una categoria nuova da Wallet: cosa fa Ledgerly prima della tua scelta? | Crei «Pets» su Wallet e registri una spesa | La aggiunge da sola come categoria nuova, con il segno «Nuova» nella sezione «Categorie di Wallet». Puoi associarla dopo | I movimenti restano «Da categorizzare» finché non scegli «associa» o «aggiungi» | A: come oggi, niente si ferma; se non guardi, hai una categoria in più. B: nessuna categoria entra senza una tua scelta; i budget non contano quei movimenti finché non scegli. Tocca §6.4 | **A** |
+| 12 | Movimento a mano con una data prima dell'ultimo saldo scritto del conto | Il 10 novembre scrivi che «Contanti» ha 80 €. Il 15 aggiungi una spesa del 5 novembre | Il saldo di oggi non cambia: gli 80 € del 10 comprendono già quella spesa | Ogni movimento a mano sposta il saldo di oggi: 67,50 € | A: un saldo scritto è un dato certo e una spesa dimenticata non lo sporca. B: regola più semplice da ricordare, ma un saldo contato da te cambia per una spesa che aveva già dentro. Tocca §9.7 | **A** |
 
 ## 18. Passaggi per lo sviluppo
 
