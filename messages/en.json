@@ -1080,6 +1080,7 @@
         "step1": "Open <link>enablebanking.com</link> and create an account.",
         "step2": "Register a Production application with this return address:",
         "step3": "Copy the application ID and download the private key.",
+        "step4": "In the Enable Banking panel link the accounts you want to read (\"Link accounts\"). With a free application Ledgerly reads only the accounts linked there.",
         "returnAddress": "Return address",
         "copy": "Copy",
         "copied": "Copied",
@@ -1125,19 +1126,28 @@
         "role": "{count, plural, one {# account} other {# accounts}}",
         "validUntil": "access valid until {date}",
         "lastSync": "Last reading",
-        "schedule": "Automatic readings"
+        "schedule": "Automatic readings",
+        "scheduleValue": "3 times a day",
+        "next": "Next: {time}"
       },
       "states": {
         "active": "Connected",
         "error": "Error",
-        "expired": "Access expired"
+        "expired": "Access expired",
+        "pending": "To complete"
       },
       "detail": {
-        "expired": "Access to the bank has expired."
+        "expired": "Access to the bank has expired.",
+        "pending": "You gave access, but you have not chosen the accounts yet.",
+        "rateLimited": "The bank reached its limit of automatic readings. Next reading at {time}."
       },
       "actions": {
         "disconnect": "Disconnect",
-        "replaceKey": "Replace key"
+        "replaceKey": "Replace key",
+        "sync": "Sync now",
+        "syncing": "Syncing…",
+        "renew": "Renew access",
+        "chooseAccounts": "Choose accounts"
       },
       "disconnect": {
         "title": "Disconnect {bank}?",
@@ -1149,7 +1159,9 @@
         "saved": "Credentials saved",
         "replaced": "Key replaced",
         "removed": "Credentials removed",
-        "disconnected": "{bank} disconnected"
+        "disconnected": "{bank} disconnected",
+        "synced": "Sync completed",
+        "syncedNew": "Sync completed: {count, plural, one {# new transaction} other {# new transactions}}"
       },
       "errors": {
         "missing": "Enter the application ID and the private key.",
@@ -1158,7 +1170,12 @@
         "writeNotAllowed": "This application also allows payments. Ledgerly accepts read-only applications only.",
         "unreachable": "Enable Banking is not responding. Nothing was saved. Try again in a minute.",
         "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",
-        "failed": "Something went wrong. Try again."
+        "failed": "Something went wrong. Try again.",
+        "providerDown": "The bank is not responding. Ledgerly tries again at the next automatic reading.",
+        "rateLimitedNow": "The bank accepts no more readings for now. Try again after {time}.",
+        "invalidData": "The bank answered with data that Ledgerly cannot read. Nothing was changed.",
+        "busy": "A reading is already running. Try again shortly.",
+        "network": "No connection. Check the network and try again."
       }
     }
   },
@@ -4857,7 +4874,8 @@
         "label": "Steps",
         "bank": "Bank",
         "done": "Done",
-        "completed": "completed"
+        "completed": "completed",
+        "accounts": "Accounts"
       },
       "guard": {
         "noCredentials": "First you need your Enable Banking credentials.",
@@ -4886,7 +4904,8 @@
         "expired": "Too much time has passed. Start again from the choice of the bank.",
         "session": "This request did not start from this session. Start again from the choice of the bank.",
         "unreachable": "The bank did not respond. Try again in a minute.",
-        "bankUnavailable": "{bank} is not available now. Try again later or choose another bank."
+        "bankUnavailable": "{bank} is not available now. Try again later or choose another bank.",
+        "unreadable": "The bank answered with data that Ledgerly cannot read. No account was connected."
       },
       "noAccounts": {
         "title": "{bank} shared no accounts",
@@ -4897,20 +4916,60 @@
       "done": {
         "heading": "{bank} is connected",
         "validUntil": "Access is valid until {date}, then you renew it.",
-        "toSettings": "Back to settings"
-      },
-      "trial": {
-        "accounts": "{count, plural, one {The bank shared # account.} other {The bank shared # accounts.}}",
-        "transactions": "{count, plural, one {# transaction read, since {date}.} other {# transactions read, since {date}.}}",
-        "noTransactions": "No transactions read.",
-        "note": "This is a trial reading: accounts and transactions were not imported.",
-        "failed": "The first reading failed."
+        "toSettings": "Back to settings",
+        "renewed": "Access to {bank} renewed",
+        "account": "{count, plural, =0 {No transactions} one {# transaction since {date}} other {# transactions since {date}}} · balance {balance}",
+        "schedule": "Ledgerly reads the bank 3 times a day. For a reading right now use \"Sync now\" in Settings.",
+        "toAccounts": "Go to accounts",
+        "syncFailedHeading": "{bank} is connected, but the first reading failed",
+        "syncFailed": "The accounts are connected, but the transactions were not read. Try again now: a bank gives its full history only in the first minutes.",
+        "retryNow": "Try again now",
+        "retrying": "Reading in progress…",
+        "rateLimited": "The bank reached its reading limit. The next reading starts by itself at {time}.",
+        "partial": "Some accounts were not read. Ledgerly tries again at the next automatic reading.",
+        "accountGone": "The bank no longer shares this account. It stays in Ledgerly and is no longer updated."
       },
       "errors": {
         "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",
         "oneBank": "For now you can connect one bank only.",
         "network": "No connection. Check the network and try again.",
         "failed": "Something went wrong. Try again."
+      },
+      "accounts": {
+        "heading": "Choose the accounts of {bank}",
+        "count": "{count, plural, one {The bank shared # account.} other {The bank shared # accounts.}}",
+        "target": "In Ledgerly",
+        "new": "Create a new account",
+        "existingGroup": "Use an existing account",
+        "existing": "Use \"{account}\"",
+        "skip": "Do not import",
+        "name": "Name",
+        "type": "Type",
+        "unnamed": "Account",
+        "existingNote": "From now on the balance and the transactions of \"{account}\" come from the bank. The balances already entered stay.",
+        "duplicate": "This account is already chosen for another account of the bank.",
+        "none": "Choose at least one account.",
+        "hurry": "Confirm at once: a bank gives its full history only in the first minutes after sign-in.",
+        "submit": "{count, plural, =0 {Import} one {Import # account} other {Import # accounts}}",
+        "linked": "Already linked to \"{account}\"",
+        "nameRequired": "Enter a name for the account.",
+        "failed": "Couldn't import the accounts. Try again."
+      },
+      "cancel": {
+        "title": "Cancel the connection?",
+        "description": "Access to {bank} is closed and no account is created.",
+        "back": "Keep choosing",
+        "confirm": "Cancel connection"
+      },
+      "sync": {
+        "heading": "Reading transactions from {bank}…",
+        "progress": "Reading in progress",
+        "wait": "It can take up to a minute. Do not close this page."
+      },
+      "renew": {
+        "heading": "Renew access to {bank}",
+        "description": "We take you to the bank's site. The accounts stay the same: you do not choose them again.",
+        "cancel": "Cancel"
       }
     }
   }

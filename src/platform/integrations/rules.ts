@@ -70,12 +70,14 @@ export const KINDS_OF = {
  * writer, the `portfolio` source (docs/design/investments.md §1.7).
  */
 export function syncsTransactions(provider: string | null): boolean {
-  return (
-    provider !== null &&
-    isKnownProvider(provider) &&
-    (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions")
-  );
+  if (provider === null) return false;
+  // A plugin's accounts take their movements from the plugin: the kinds of a plugin's pass.
+  if (isPluginProvider(provider)) return (PLUGIN_KINDS as readonly SyncKind[]).includes("transactions");
+  return isKnownProvider(provider) && (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions");
 }
+
+/** What the pass of a plugin syncs, in order: the accounts' balances, then the movements. */
+export const PLUGIN_KINDS = ["accounts", "transactions"] as const satisfies readonly SyncKind[];
 
 /**
  * The provider of a plugin's connections: `plugin:<id>` (rewrite plan, 04-now.md §4.1). The id is
@@ -126,7 +128,10 @@ export const pluginConnectionBagSchema = z
  * than the one before it does not erase what it does not carry.
  */
 export const providerLinkSchema = z.object({
-  provider: z.string().trim().refine(isKnownProvider),
+  provider: z
+    .string()
+    .trim()
+    .refine((provider) => isKnownProvider(provider) || isPluginProvider(provider)),
   entityType: entityTypeSchema,
   entityId: z.uuid(),
   externalId: z.string().trim().min(1).max(200),

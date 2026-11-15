@@ -7,17 +7,18 @@
 // is not part of the token API: it is reached by a browser, with the session cookie, and the
 // return is accepted only for the session that started it.
 import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { redactForLog } from "@/platform/auth/logger";
 import { getOptionalSession } from "@/platform/auth/session";
 import { readEnv } from "@/platform/env";
 import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
 import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
+import { exposedAccounts, readBank } from "@/platform/plugins/sync";
+import { presenceOf } from "@/app/(app)/banks/presence";
+import { bankSink } from "@/app/(app)/banks/sink";
 
 export const dynamic = "force-dynamic";
 
 const MAX_PARAM_LENGTH = 2000;
-const address = z.union([z.ipv4(), z.ipv6()]);
 
 /** A query parameter, or null when it is absent, empty or longer than anything a provider sends. */
 function param(url: URL, name: string): string | null {
@@ -25,21 +26,16 @@ function param(url: URL, name: string): string | null {
   return value === null || value === "" || value.length > MAX_PARAM_LENGTH ? null : value;
 }
 
-/** The person's own address as the reverse proxy reports it; null when it is not an address. */
-function clientIp(request: NextRequest): string | null {
-  const first = (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
-  return address.safeParse(first).success ? first : null;
-}
-
 /**
  * Back to the procedure, with nothing of the provider in the address: a step, the connection's
  * id, or a code of error and the name of the bank (§6.3).
  */
-function back(outcome: ReturnOutcome): NextResponse {
+function back(outcome: ReturnOutcome, step: "accounts" | "done" = "accounts"): NextResponse {
   const target = new URL("/banks/connect", readEnv().BETTER_AUTH_URL);
   if (outcome.ok) {
-    target.searchParams.set("step", "done");
+    target.searchParams.set("step", step);
     target.searchParams.set("c", outcome.connectionId);
+    if (step === "done") target.searchParams.set("renewed", "1");
   } else {
     target.searchParams.set("step", "bank");
     target.searchParams.set("error", outcome.error);
@@ -60,18 +56,26 @@ export async function GET(
   // No session: the page behind this redirect sends to sign-in, and nothing was exchanged.
   if (!session || !PLUGIN_ID.test(plugin)) return back({ ok: false, error: "session", bank: null });
   const url = new URL(request.url);
+  const presence = presenceOf(request.headers);
   try {
-    return back(
-      await completeAccess(session.ctx, {
-        pluginId: plugin,
-        sessionId: session.sessionId,
-        query: { state: param(url, "state"), code: param(url, "code"), error: param(url, "error") },
-        presence: {
-          ip: clientIp(request),
-          userAgent: request.headers.get("user-agent")?.slice(0, 400) ?? null,
-        },
-      }),
+    const outcome = await completeAccess(session.ctx, {
+      pluginId: plugin,
+      sessionId: session.sessionId,
+      query: { state: param(url, "state"), code: param(url, "code"), error: param(url, "error") },
+      presence,
+    });
+    // A first access goes to the choice of the accounts, at once: the bank gives its full history
+    // only in the first minutes. A renewed one reads the bank now and shows the outcome — unless
+    // the bank exposes an account the person has not been asked about yet (§6.7).
+    if (!outcome.ok || !outcome.renewed) return back(outcome);
+    const target = { pluginId: plugin, connectionId: outcome.connectionId };
+    const exposed = await exposedAccounts(session.ctx, target, bankSink);
+    const unasked = exposed.accounts.some(
+      (account) => account.linked === null && !exposed.skipped.includes(account.providerAccountId),
     );
+    if (unasked) return back(outcome);
+    await readBank(session.ctx, { ...target, presence }, bankSink);
+    return back(outcome, "done");
   } catch (error) {
     console.error("[plugins] a return could not be completed", redactForLog(error));
     return back({ ok: false, error: "unreachable", bank: null });

@@ -1,0 +1,163 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import messages from "../../../../../messages/en.json";
+import { AccountsStep, type AccountsStepProps } from "./accounts-step";
+
+const importAccounts = vi.fn();
+const cancelConnection = vi.fn();
+const push = vi.fn();
+
+vi.mock("./actions", () => ({
+  importBankAccountsAction: (...args: unknown[]) => importAccounts(...args),
+  cancelBankConnectionAction: (...args: unknown[]) => cancelConnection(...args),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
+
+const PROPS: AccountsStepProps = {
+  connectionId: "c-1",
+  bank: "Zeta Bank",
+  accounts: [
+    {
+      providerAccountId: "a-1",
+      legend: "Conto · IT60 •••• 3456 · EUR",
+      currency: "EUR",
+      defaultName: "Zeta Bank Checking",
+      defaultType: "checking",
+    },
+    {
+      providerAccountId: "a-2",
+      legend: "Deposito · EUR",
+      currency: "EUR",
+      defaultName: "Zeta Bank Savings",
+      defaultType: "savings",
+    },
+  ],
+  linked: [],
+  existing: [
+    { id: "x-1", name: "Risparmi", currency: "EUR" },
+    { id: "x-2", name: "Dollars", currency: "USD" },
+  ],
+  types: [
+    { value: "checking", label: "Checking" },
+    { value: "savings", label: "Savings" },
+  ],
+  cancellable: true,
+};
+
+function renderStep(props: Partial<AccountsStepProps> = {}) {
+  render(
+    <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+      <AccountsStep {...PROPS} {...props} />
+    </NextIntlClientProvider>,
+  );
+}
+
+const group = (legend: string) => screen.getByRole("group", { name: legend });
+const targetOf = (legend: string) => group(legend).querySelector("select") as HTMLSelectElement;
+
+beforeEach(() => {
+  importAccounts.mockReset().mockResolvedValue({ ok: true });
+  cancelConnection.mockReset().mockResolvedValue({ ok: true });
+  push.mockReset();
+});
+
+describe("the choice of the accounts of a bank", () => {
+  it("starts on a valid choice for every account, so one press imports them all", async () => {
+    renderStep();
+    expect(screen.getByRole("heading", { name: "Choose the accounts of Zeta Bank" })).toBeTruthy();
+    expect(screen.getByText("The bank shared 2 accounts.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Import 2 accounts" }));
+    expect(importAccounts).toHaveBeenCalledWith("c-1", [
+      {
+        providerAccountId: "a-1",
+        currency: "EUR",
+        target: { kind: "new", name: "Zeta Bank Checking", type: "checking" },
+      },
+      {
+        providerAccountId: "a-2",
+        currency: "EUR",
+        target: { kind: "new", name: "Zeta Bank Savings", type: "savings" },
+      },
+    ]);
+    expect(push).toHaveBeenCalledWith("/banks/connect?step=done&c=c-1");
+  });
+
+  it("offers the person's own accounts of the same currency only, and says what happens to one", async () => {
+    renderStep();
+    const select = targetOf(PROPS.accounts[0].legend);
+    expect([...select.options].map((option) => option.textContent)).toEqual([
+      "Create a new account",
+      'Use "Risparmi"',
+      "Do not import",
+    ]);
+    await userEvent.selectOptions(select, "x-1");
+    expect(
+      screen.getByText(/the balance and the transactions of "Risparmi" come from the bank/),
+    ).toBeTruthy();
+    await userEvent.selectOptions(targetOf(PROPS.accounts[1].legend), "skip");
+    await userEvent.click(screen.getByRole("button", { name: "Import 1 account" }));
+    expect(importAccounts).toHaveBeenCalledWith("c-1", [
+      { providerAccountId: "a-1", currency: "EUR", target: { kind: "existing", accountId: "x-1" } },
+      { providerAccountId: "a-2", target: { kind: "skip" } },
+    ]);
+  });
+
+  it("does not import the same account of the person twice", async () => {
+    renderStep();
+    await userEvent.selectOptions(targetOf(PROPS.accounts[0].legend), "x-1");
+    await userEvent.selectOptions(targetOf(PROPS.accounts[1].legend), "x-1");
+    expect(
+      screen.getAllByText("This account is already chosen for another account of the bank."),
+    ).toHaveLength(2);
+    await userEvent.click(screen.getByRole("button", { name: "Import 2 accounts" }));
+    expect(importAccounts).not.toHaveBeenCalled();
+  });
+
+  it("asks for at least one account, and for a name of a new one", async () => {
+    renderStep();
+    await userEvent.selectOptions(targetOf(PROPS.accounts[0].legend), "skip");
+    await userEvent.selectOptions(targetOf(PROPS.accounts[1].legend), "skip");
+    expect(screen.getByText("Choose at least one account.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Import" }) as HTMLButtonElement).disabled).toBe(true);
+
+    await userEvent.selectOptions(targetOf(PROPS.accounts[0].legend), "new");
+    await userEvent.clear(screen.getByLabelText("Name"));
+    await userEvent.click(screen.getByRole("button", { name: "Import 1 account" }));
+    expect(screen.getByText("Enter a name for the account.")).toBeTruthy();
+    expect(importAccounts).not.toHaveBeenCalled();
+  });
+
+  it("says so when the import fails, and keeps what was chosen", async () => {
+    importAccounts.mockResolvedValue({ ok: false, error: "failed" });
+    renderStep();
+    await userEvent.selectOptions(targetOf(PROPS.accounts[1].legend), "skip");
+    await userEvent.click(screen.getByRole("button", { name: "Import 1 account" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Couldn't import the accounts. Try again.");
+    expect(targetOf(PROPS.accounts[1].legend).value).toBe("skip");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("asks before it closes a first access, and only leaves the page for a renewal", async () => {
+    renderStep();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    const dialog = screen.getByRole("dialog", { name: "Cancel the connection?" });
+    expect(dialog.textContent).toContain("Access to Zeta Bank is closed and no account is created.");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel connection" }));
+    expect(cancelConnection).toHaveBeenCalledWith("c-1");
+    expect(push).toHaveBeenCalledWith("/settings/integrations");
+  });
+
+  it("shows the accounts already tied to the bank and does not ask about them", async () => {
+    renderStep({
+      accounts: [PROPS.accounts[1]],
+      linked: [{ legend: "Conto · EUR", account: "Zeta Conto" }],
+      cancellable: false,
+    });
+    expect(screen.getByText('Already linked to "Zeta Conto"')).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(cancelConnection).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith("/settings/integrations");
+  });
+});

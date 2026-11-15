@@ -9,7 +9,10 @@ import {
   looksLikePrivateKey,
   maskIdentifier,
   measureReading,
+  movementIds,
   normalizePrivateKey,
+  pickBalance,
+  providerAccountIdOf,
   userPluginState,
 } from "./rules";
 
@@ -55,15 +58,104 @@ describe("an account number on a screen", () => {
 
 describe("the state of a bank", () => {
   const now = new Date("2026-11-15T10:00:00Z");
+  const base = {
+    state: "active" as const,
+    expiresAt: new Date("2027-01-01T00:00:00Z"),
+    lastError: null,
+    chosen: true,
+  };
 
   it("is expired past the end of the access, or when the access was refused", () => {
-    expect(bankState({ state: "active", expiresAt: new Date("2026-11-15T09:59:59Z") }, now)).toBe("expired");
-    expect(bankState({ state: "revoked", expiresAt: null }, now)).toBe("expired");
+    expect(bankState({ ...base, expiresAt: new Date("2026-11-15T09:59:59Z") }, now)).toBe("expired");
+    expect(bankState({ ...base, state: "revoked", expiresAt: null }, now)).toBe("expired");
+    expect(bankState({ ...base, state: "revoked", chosen: false }, now)).toBe("expired");
   });
 
-  it("is active or in error otherwise", () => {
-    expect(bankState({ state: "active", expiresAt: new Date("2027-01-01T00:00:00Z") }, now)).toBe("active");
-    expect(bankState({ state: "error", expiresAt: null }, now)).toBe("error");
+  it("is pending until the accounts are chosen", () => {
+    expect(bankState({ ...base, chosen: false }, now)).toBe("pending");
+  });
+
+  it("is active, in error, or active while the bank only asks to wait", () => {
+    expect(bankState(base, now)).toBe("active");
+    expect(bankState({ ...base, state: "error", lastError: "provider_down" }, now)).toBe("error");
+    expect(bankState({ ...base, state: "error", lastError: "rate_limited" }, now)).toBe("active");
+  });
+});
+
+describe("the identity of a movement", () => {
+  const movement = {
+    accountExternalId: "u-1",
+    externalId: "ref-1" as string | null,
+    status: "booked" as "booked" | "pending",
+    bookingDate: "2026-01-10" as string | null,
+    valueDate: "2026-01-10" as string | null,
+    amount: "2.50",
+    direction: "debit" as const,
+    currency: "EUR",
+    text: ["Bar  Centrale"],
+    counterparty: "Bar Centrale" as string | null,
+    merchantCategoryCode: null,
+    bankTransactionCode: null,
+  };
+  const ids = (key: string, list: (typeof movement)[]) => movementIds(key, list).map((one) => one.externalId);
+
+  it("is the bank's reference, under the account", () => {
+    const [id] = ids("account-a", [movement]);
+    expect(id).toMatch(/^[0-9a-f]{16}:ref-1$/);
+    expect(ids("account-b", [movement])[0]).not.toBe(id);
+    expect(ids("account-a", [movement])[0]).toBe(id);
+  });
+
+  it("is a hash when the bank gives no reference: the same at every reading, different for a different fact", () => {
+    const bare = { ...movement, externalId: null };
+    const [id] = ids("account-a", [bare]);
+    expect(id).toMatch(/^[0-9a-f]{16}:x:[0-9a-f]{40}$/);
+    expect(ids("account-a", [{ ...bare, text: ["BAR centrale"], counterparty: "bar  CENTRALE" }])[0]).toBe(
+      id,
+    );
+    for (const other of [
+      { amount: "2.51" },
+      { bookingDate: "2026-01-11" },
+      { direction: "credit" as const },
+      { counterparty: "Bar Sport" },
+    ]) {
+      expect(ids("account-a", [{ ...bare, ...other } as typeof movement])[0]).not.toBe(id);
+    }
+  });
+
+  it("tells two equal movements of the same day apart, by their order", () => {
+    const bare = { ...movement, externalId: null };
+    const twice = ids("account-a", [bare, bare, bare]);
+    expect(new Set(twice).size).toBe(3);
+    expect(ids("account-a", [bare, bare, bare])).toEqual(twice);
+    expect(ids("account-a", [bare])[0]).toBe(twice[0]);
+  });
+
+  it("leaves a pending movement out, and counts a repeated reference once", () => {
+    expect(ids("account-a", [{ ...movement, status: "pending" }])).toEqual([]);
+    expect(ids("account-a", [movement, { ...movement, amount: "9.00" }])).toHaveLength(1);
+  });
+
+  it("keeps a very long reference inside the room of an id", () => {
+    const [id] = ids("account-a", [{ ...movement, externalId: "r".repeat(200) }]);
+    expect(id.length).toBeLessThanOrEqual(200);
+    expect(id).toMatch(/:h:[0-9a-f]{40}$/);
+  });
+});
+
+describe("the balance of an account", () => {
+  it("is the booked one when the bank gives it, the available one otherwise", () => {
+    expect(pickBalance([{ type: "ITAV" }, { type: "CLBD" }, { type: "XPCD" }])?.type).toBe("CLBD");
+    expect(pickBalance([{ type: "ITAV" }])?.type).toBe("ITAV");
+    expect(pickBalance([{ type: "SOMETHING" }, { type: "OTHR" }])?.type).toBe("OTHR");
+    expect(pickBalance([])).toBeNull();
+  });
+});
+
+describe("the id of a bank's account", () => {
+  it("is the one that survives a new access, when the bank has one", () => {
+    expect(providerAccountIdOf({ externalId: "u-1", stableId: "h-1" })).toBe("h-1");
+    expect(providerAccountIdOf({ externalId: "u-1", stableId: null })).toBe("u-1");
   });
 });
 

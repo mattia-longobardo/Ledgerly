@@ -134,6 +134,9 @@ function fakePlugin(overrides: Record<string, Answer> = {}) {
   return { calls, of, deps: { fetchFn } };
 }
 
+/** The accounts of the bank are another test's subject (`src/app/(app)/banks/sink.itest.ts`). */
+const NO_ACCOUNTS = { releaseAccounts: async () => {} };
+
 const failure = (code: string, status: number): Answer => ({ status, body: { error: { code } } });
 
 function contextFor(userId: string): Ctx {
@@ -470,7 +473,12 @@ describe("the credentials of a person", () => {
     );
     expect(await rejection(removeUserCredentials(ctx, PLUGIN))).toBe("connected");
     const [connection] = await listPluginConnections(ctx, PLUGIN);
-    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: connection.id }, fakePlugin().deps);
+    await disconnectBank(
+      ctx,
+      { pluginId: PLUGIN, connectionId: connection.id },
+      NO_ACCOUNTS,
+      fakePlugin().deps,
+    );
     await removeUserCredentials(ctx, PLUGIN);
     expect(await getDb().select().from(pluginUserCredentials)).toEqual([]);
   });
@@ -507,53 +515,32 @@ describe("an access to a bank", () => {
     expect(JSON.stringify(row)).not.toContain(state);
   });
 
-  it("ends with the bank's connection, sealed, and a first reading measured as numbers", async () => {
+  it("ends with the bank's connection, sealed and to complete: nothing is read before the accounts are chosen", async () => {
     const ctx = await readyContext();
     const state = await started(ctx, "session-a");
     const plugin = fakePlugin();
     const outcome = await completeAccess(
       ctx,
-      {
-        pluginId: PLUGIN,
-        sessionId: "session-a",
-        query: returned(state),
-        presence: { ip: "203.0.113.7", userAgent: "Browser/1" },
-      },
+      { pluginId: PLUGIN, sessionId: "session-a", query: returned(state), presence: null },
       NOW,
       plugin.deps,
     );
     const [connection] = await listPluginConnections(ctx, PLUGIN);
-    expect(outcome).toEqual({ ok: true, connectionId: connection.id });
+    expect(outcome).toEqual({ ok: true, connectionId: connection.id, renewed: false });
     expect(connection).toMatchObject({
       provider: pluginProvider(PLUGIN),
       instanceKey: "IT:Zeta Bank",
       expiresAt: new Date("2027-05-14T09:59:00.000Z"),
       state: "active",
-      lastOkAt: NOW,
-      // Not scheduled: no pass is registered for a plugin yet.
+      lastOkAt: null,
+      // Not scheduled until the accounts are chosen.
       nextSyncAt: null,
       schedule: { rules: [] },
     });
-    expect(await connectionSummary(ctx, connection.id)).toEqual({ accounts: 1 });
-
+    expect(await connectionSummary(ctx, connection.id)).toEqual({ accounts: 1, chosen: false });
     expect(plugin.of(PLUGIN_PATHS.authComplete)[0].body).toMatchObject({ code: "code-1" });
-    expect(plugin.of(PLUGIN_PATHS.sync)[0].body).toMatchObject({
-      session: { id: "session-1" },
-      accounts: ["u-1"],
-      from: null,
-      cursor: null,
-      userPresent: { ip: "203.0.113.7", userAgent: "Browser/1" },
-    });
-
-    const [run] = await listRuns(ctx, { connectionId: connection.id });
-    expect(run).toMatchObject({ kind: "accounts", state: "success", error: null });
-    expect(run.counts).toMatchObject({
-      accounts: 1,
-      transactions: 1,
-      withExternalId: 1,
-      oldestBooking: 20250110,
-      historyDays: 674,
-    });
+    expect(plugin.of(PLUGIN_PATHS.sync)).toEqual([]);
+    expect(await listRuns(ctx, { connectionId: connection.id })).toEqual([]);
 
     const [row] = await getDb()
       .select()
@@ -562,53 +549,20 @@ describe("an access to a bank", () => {
     const stored = row.credentials.toString("latin1");
     for (const secret of ["session-1", "IT60X0542811101000000123456", "Conto"])
       expect(stored).not.toContain(secret);
-    // Nothing of the reading is kept: not a text, not an amount, not a name.
-    expect(JSON.stringify(run)).not.toMatch(/PAGAMENTO|Negozio|12\.30|ref-1/);
   });
 
-  it("carries on a reading that does not fit one call", async () => {
+  it("names an exchange whose answer cannot be read as unreadable, not as a bank that did not answer", async () => {
     const ctx = await readyContext();
     const state = await started(ctx, "s");
-    let calls = 0;
-    const plugin = fakePlugin();
-    const fetchFn: Fetch = async (input, init) => {
-      if (new URL(String(input)).pathname !== PLUGIN_PATHS.sync) return plugin.deps.fetchFn(input, init);
-      calls += 1;
-      const body = JSON.parse(String(init?.body)) as { cursor: string | null };
-      expect(body.cursor).toBe(calls === 1 ? null : "next");
-      return new Response(
-        JSON.stringify({
-          accounts: [],
-          transactions: [{ ...TRANSACTION, externalId: `ref-${calls}` }],
-          cursor: calls === 1 ? "next" : null,
-          coverage: { from: null, to: null },
-        }),
-      );
-    };
-    await completeAccess(
-      ctx,
-      { pluginId: PLUGIN, sessionId: "s", query: returned(state), presence: null },
-      NOW,
-      { fetchFn },
-    );
-    const [run] = await listRuns(ctx);
-    expect(run.counts).toMatchObject({ calls: 2, transactions: 2, distinctExternalIds: 2 });
-  });
-
-  it("records a first reading that fails, with a code and not with words, and keeps the connection", async () => {
-    const ctx = await readyContext();
-    const state = await started(ctx, "s");
-    const plugin = fakePlugin({ [PLUGIN_PATHS.sync]: failure("rate_limited", 429) });
-    const outcome = await completeAccess(
-      ctx,
-      { pluginId: PLUGIN, sessionId: "s", query: returned(state), presence: null },
-      NOW,
-      plugin.deps,
-    );
-    expect(outcome.ok).toBe(true);
-    const [run] = await listRuns(ctx);
-    expect(run).toMatchObject({ state: "failed", error: "rate_limited" });
-    expect((await listPluginConnections(ctx, PLUGIN))[0].state).toBe("error");
+    const plugin = fakePlugin({ [PLUGIN_PATHS.authComplete]: failure("invalid_data", 502) });
+    expect(
+      await completeAccess(
+        ctx,
+        { pluginId: PLUGIN, sessionId: "s", query: returned(state), presence: null },
+        NOW,
+        plugin.deps,
+      ),
+    ).toEqual({ ok: false, error: "unreadable", bank: "Zeta Bank" });
   });
 
   it("is refused when the return does not come from the session that started it", async () => {
@@ -736,9 +690,9 @@ describe("an access to a bank", () => {
       "[plugins] return of enablebanking refused: denied (provider said access_denied)",
       "[plugins] return of enablebanking refused: denied (provider said an error)",
       "[plugins] return of enablebanking refused: session (state not pending for this session)",
-      "[plugins] return of enablebanking refused: unreachable (exchange failed with invalid_data)",
+      "[plugins] return of enablebanking refused: unreadable (exchange failed with invalid_data)",
       "[plugins] enablebanking /auth/complete: answer outside the contract at session.expiresAt, institution, accounts.0.stableId, accounts.0.name, accounts.0.identifier",
-      "[plugins] return of enablebanking refused: unreachable (exchange failed with invalid_data)",
+      "[plugins] return of enablebanking refused: unreadable (exchange failed with invalid_data)",
     ]);
   });
 
@@ -831,13 +785,18 @@ describe("an access to a bank", () => {
     const other = await readyContext();
     expect(
       await rejection(
-        disconnectBank(other, { pluginId: PLUGIN, connectionId: connection.id }, fakePlugin().deps),
+        disconnectBank(
+          other,
+          { pluginId: PLUGIN, connectionId: connection.id },
+          NO_ACCOUNTS,
+          fakePlugin().deps,
+        ),
       ),
     ).toBe("not_found");
 
     // A provider that does not answer does not keep the person connected.
     const plugin = fakePlugin({ [PLUGIN_PATHS.authRevoke]: failure("provider_down", 502) });
-    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: connection.id }, plugin.deps);
+    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: connection.id }, NO_ACCOUNTS, plugin.deps);
     expect(plugin.of(PLUGIN_PATHS.authRevoke)[0].body).toMatchObject({ session: { id: "session-1" } });
     expect(await listPluginConnections(ctx, PLUGIN)).toEqual([]);
     expect((await credentialsStatus(ctx, PLUGIN)).saved).toBe(true);

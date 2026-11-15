@@ -22,6 +22,7 @@ import {
   ConnectionsSummary,
   type ConnectionRow,
 } from "@/modules/accounts/ui/connections";
+import { providerName } from "../../banks/provider-name";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
@@ -125,12 +126,14 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
   const service = (await syncedServicesOf(ctx, [id])).get(id) ?? null;
   const synced = since(service?.lastSyncedAt ?? account.lastSyncedAt, now);
+  // A plugin's provider is shown by its own name, not by its id.
+  const providerLabel = await providerName(ctx, account.provider);
   const source =
     service !== null
       ? t("origins.syncedWith", { provider: service.provider })
       : account.origin === "manual"
         ? t("origins.manual")
-        : t("origins.syncedWith", { provider: account.provider ?? "" });
+        : t("origins.syncedWith", { provider: providerLabel ?? "" });
   const color = colorFor(account, index);
   // A service of Investments takes no manual balance (docs/design/investments.md §1.3).
   // A service of Investments links there; only one Investments writes locks the balances (§1.3).
@@ -236,7 +239,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
               name: account.name,
               type: account.type,
               currency: account.currency,
-              provider: account.provider,
+              provider: providerLabel,
               origin: account.origin,
               state: account.state,
               color: account.color,

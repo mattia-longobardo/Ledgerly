@@ -98,6 +98,16 @@ export interface IncomingTransaction {
   categoryGroupExternalId: string | null;
   categoryGroupName: string | null;
   labels: readonly string[];
+  /**
+   * What a bank wrote about the movement, untouched, when the provider reads a bank: the free
+   * text, the other party and the two codes. Written once, with the movement.
+   */
+  raw?: {
+    text: string | null;
+    counterparty: string | null;
+    merchantCategoryCode: string | null;
+    bankTransactionCode: string | null;
+  };
 }
 
 /** What the service resolved for an incoming movement before the rules decide anything. */

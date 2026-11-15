@@ -154,6 +154,12 @@ export const transactions = pgTable(
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     payee: text("payee"),
     note: text("note"),
+    // What a bank wrote about the movement, as it wrote it (rewrite plan, 06-data.md §6.1): kept
+    // for the automatic categories of N3. Filled by a provider that reads a bank; null elsewhere.
+    rawText: text("raw_text"),
+    counterpartyName: text("counterparty_name"),
+    merchantCategoryCode: text("merchant_category_code"),
+    bankTransactionCode: text("bank_transaction_code"),
     transferGroupId: uuid("transfer_group_id").references((): AnyPgColumn => transactions.id, {
       onDelete: "set null",
     }),

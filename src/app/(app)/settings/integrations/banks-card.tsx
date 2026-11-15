@@ -10,17 +10,13 @@ import { Input, Textarea } from "@/ui/input";
 import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import type { Tone } from "@/ui/tone";
-import { ConnectionRow } from "./connection-row";
+import { BankRow, type BankRowProps } from "./bank-row";
 import {
   disconnectBankAction,
   type PluginActionResult,
   removeBankCredentialsAction,
   saveBankCredentialsAction,
 } from "./plugin-actions";
-
-/** A bank's connection as its row says it (§5.1). `pending` joins with the choice of the accounts. */
-export type BankRowState = "active" | "error" | "expired";
 
 /**
  * Everything the browser is told about the section (ux/n1-plugin-bank.md §3.1). **Never a value of
@@ -30,26 +26,13 @@ export interface BanksCardProps {
   pluginId: string;
   credentials: { saved: boolean; savedAt: string | null; invalid: boolean };
   returnAddress: string;
-  banks: {
-    id: string;
-    name: string;
-    state: BankRowState;
-    accounts: number;
-    lastSync: string | null;
-    validUntil: string | null;
-  }[];
+  banks: BankRowProps[];
   /** Opens "Replace key" at once: where the procedure sends a person whose key was refused. */
   openReplace: boolean;
 }
 
 const FORM_ID = "bank-credentials-form";
 const CONNECT: Route = "/banks/connect";
-
-const STATUS: Record<BankRowState, { tone: Tone; dot: string }> = {
-  active: { tone: "pos", dot: "bg-pos" },
-  error: { tone: "neg", dot: "bg-neg" },
-  expired: { tone: "neg", dot: "bg-neg" },
-};
 
 /**
  * Settings › Integrations, the section "Banks" (§3-§5): the guide to the person's own application
@@ -250,6 +233,7 @@ export function BanksCard({ pluginId, credentials, returnAddress, banks, openRep
             </div>
           </li>
           <li>{t("setup.step3")}</li>
+          <li>{t("setup.step4")}</li>
         </ol>
         <div>
           <Button variant="primary" size="sm" onClick={() => open("new")}>
@@ -307,39 +291,16 @@ export function BanksCard({ pluginId, credentials, returnAddress, banks, openRep
         <>
           <ul className="flex flex-col">
             {banks.map((bank) => (
-              <li key={bank.id} className="border-t border-border" data-testid="bank-row">
-                <ConnectionRow
-                  name={bank.name}
-                  role={
-                    bank.validUntil === null
-                      ? t("row.role", { count: bank.accounts })
-                      : `${t("row.role", { count: bank.accounts })} · ${t("row.validUntil", { date: bank.validUntil })}`
-                  }
-                  state="active"
-                  status={{ word: t(`states.${bank.state}`), ...STATUS[bank.state] }}
-                  lastSync={bank.lastSync}
-                  lastSyncLabel={t("row.lastSync")}
-                  scheduleLabel={t("row.schedule")}
-                  schedule={<div className="mt-0.5 font-medium">{NULL_DISPLAY}</div>}
-                  actions={
-                    <ActionMenu
-                      label={bank.name}
-                      items={[
-                        {
-                          label: t("actions.disconnect"),
-                          onSelect: () => {
-                            setError(null);
-                            setDisconnecting(bank.id);
-                          },
-                          danger: true,
-                        },
-                      ]}
-                    />
-                  }
+              <li key={bank.id} className="border-t border-border">
+                <BankRow
+                  pluginId={pluginId}
+                  bank={bank}
+                  disabled={credentials.invalid}
+                  onDisconnect={() => {
+                    setError(null);
+                    setDisconnecting(bank.id);
+                  }}
                 />
-                {bank.state === "expired" && (
-                  <p className="border-t border-border px-4 py-2.5 text-sm text-neg">{t("detail.expired")}</p>
-                )}
               </li>
             ))}
           </ul>

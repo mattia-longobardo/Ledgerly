@@ -1080,6 +1080,7 @@
         "step1": "Apri <link>enablebanking.com</link> e crea un account.",
         "step2": "Registra un'applicazione di tipo Production con questo indirizzo di ritorno:",
         "step3": "Copia l'ID applicazione e scarica la chiave privata.",
+        "step4": "Nel pannello di Enable Banking collega i conti che vuoi leggere («Link accounts»). Con un'applicazione gratuita Ledgerly legge solo i conti collegati lì.",
         "returnAddress": "Indirizzo di ritorno",
         "copy": "Copia",
         "copied": "Copiato",
@@ -1125,19 +1126,28 @@
         "role": "{count, plural, one {# conto} other {# conti}}",
         "validUntil": "accesso valido fino al {date}",
         "lastSync": "Ultima lettura",
-        "schedule": "Letture automatiche"
+        "schedule": "Letture automatiche",
+        "scheduleValue": "3 volte al giorno",
+        "next": "Prossima: {time}"
       },
       "states": {
         "active": "Collegata",
         "error": "Errore",
-        "expired": "Accesso scaduto"
+        "expired": "Accesso scaduto",
+        "pending": "Da completare"
       },
       "detail": {
-        "expired": "L'accesso alla banca è scaduto."
+        "expired": "L'accesso alla banca è scaduto.",
+        "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
+        "rateLimited": "La banca ha raggiunto il limite di letture automatiche. Prossima lettura alle {time}."
       },
       "actions": {
         "disconnect": "Scollega",
-        "replaceKey": "Sostituisci chiave"
+        "replaceKey": "Sostituisci chiave",
+        "sync": "Sincronizza ora",
+        "syncing": "Sincronizzazione…",
+        "renew": "Rinnova accesso",
+        "chooseAccounts": "Scegli i conti"
       },
       "disconnect": {
         "title": "Scollegare {bank}?",
@@ -1149,7 +1159,9 @@
         "saved": "Credenziali salvate",
         "replaced": "Chiave sostituita",
         "removed": "Credenziali rimosse",
-        "disconnected": "{bank} scollegata"
+        "disconnected": "{bank} scollegata",
+        "synced": "Sincronizzazione completata",
+        "syncedNew": "Sincronizzazione completata: {count, plural, one {# movimento nuovo} other {# movimenti nuovi}}"
       },
       "errors": {
         "missing": "Inserisci l'ID applicazione e la chiave privata.",
@@ -1158,7 +1170,12 @@
         "writeNotAllowed": "Questa applicazione permette anche i pagamenti. Ledgerly accetta solo applicazioni di sola lettura.",
         "unreachable": "Enable Banking non risponde. Niente è stato salvato. Riprova tra un minuto.",
         "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
-        "failed": "Qualcosa non ha funzionato. Riprova."
+        "failed": "Qualcosa non ha funzionato. Riprova.",
+        "providerDown": "La banca non risponde. Ledgerly riprova alla prossima lettura automatica.",
+        "rateLimitedNow": "La banca non accetta altre letture per ora. Riprova dopo le {time}.",
+        "invalidData": "La banca ha risposto con dati che Ledgerly non sa leggere. Niente è stato cambiato.",
+        "busy": "Una lettura è già in corso. Riprova tra poco.",
+        "network": "Connessione assente. Controlla la rete e riprova."
       }
     }
   },
@@ -4857,7 +4874,8 @@
         "label": "Passi",
         "bank": "Banca",
         "done": "Fatto",
-        "completed": "completato"
+        "completed": "completato",
+        "accounts": "Conti"
       },
       "guard": {
         "noCredentials": "Prima servono le tue credenziali Enable Banking.",
@@ -4886,7 +4904,8 @@
         "expired": "È passato troppo tempo. Riparti dalla scelta della banca.",
         "session": "Questa richiesta non è partita da questa sessione. Riparti dalla scelta della banca.",
         "unreachable": "La banca non ha risposto. Riprova tra un minuto.",
-        "bankUnavailable": "{bank} non è disponibile ora. Riprova più tardi o scegli un'altra banca."
+        "bankUnavailable": "{bank} non è disponibile ora. Riprova più tardi o scegli un'altra banca.",
+        "unreadable": "La banca ha risposto con dati che Ledgerly non sa leggere. Nessun conto è stato collegato."
       },
       "noAccounts": {
         "title": "{bank} non ha condiviso nessun conto",
@@ -4897,20 +4916,60 @@
       "done": {
         "heading": "{bank} è collegata",
         "validUntil": "L'accesso vale fino al {date}, poi va rinnovato.",
-        "toSettings": "Torna alle impostazioni"
-      },
-      "trial": {
-        "accounts": "{count, plural, one {La banca ha condiviso # conto.} other {La banca ha condiviso # conti.}}",
-        "transactions": "{count, plural, one {# movimento letto, dal {date}.} other {# movimenti letti, dal {date}.}}",
-        "noTransactions": "Nessun movimento letto.",
-        "note": "Questa è una prova di lettura: conti e movimenti non sono stati importati.",
-        "failed": "La prima lettura non è riuscita."
+        "toSettings": "Torna alle impostazioni",
+        "renewed": "Accesso a {bank} rinnovato",
+        "account": "{count, plural, =0 {Nessun movimento} one {# movimento dal {date}} other {# movimenti dal {date}}} · saldo {balance}",
+        "schedule": "Ledgerly legge la banca 3 volte al giorno. Per una lettura subito usa «Sincronizza ora» in Impostazioni.",
+        "toAccounts": "Vai ai conti",
+        "syncFailedHeading": "{bank} è collegata, ma la prima lettura non è riuscita",
+        "syncFailed": "I conti sono collegati, ma i movimenti non sono stati letti. Riprova ora: una banca dà lo storico completo solo nei primi minuti.",
+        "retryNow": "Riprova ora",
+        "retrying": "Lettura in corso…",
+        "rateLimited": "La banca ha raggiunto il limite di letture. La prossima lettura parte da sola alle {time}.",
+        "partial": "Alcuni conti non sono stati letti. Ledgerly riprova alla prossima lettura automatica.",
+        "accountGone": "La banca non condivide più questo conto. Resta in Ledgerly e non viene più aggiornato."
       },
       "errors": {
         "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
         "oneBank": "Per ora puoi collegare una sola banca.",
         "network": "Connessione assente. Controlla la rete e riprova.",
         "failed": "Qualcosa non ha funzionato. Riprova."
+      },
+      "accounts": {
+        "heading": "Scegli i conti di {bank}",
+        "count": "{count, plural, one {La banca ha condiviso # conto.} other {La banca ha condiviso # conti.}}",
+        "target": "In Ledgerly",
+        "new": "Crea un conto nuovo",
+        "existingGroup": "Usa un conto esistente",
+        "existing": "Usa «{account}»",
+        "skip": "Non importare",
+        "name": "Nome",
+        "type": "Tipo",
+        "unnamed": "Conto",
+        "existingNote": "Da ora saldo e movimenti di «{account}» arrivano dalla banca. I saldi già inseriti restano.",
+        "duplicate": "Questo conto è già scelto per un altro conto della banca.",
+        "none": "Scegli almeno un conto.",
+        "hurry": "Conferma subito: una banca dà lo storico completo solo nei primi minuti dopo l'accesso.",
+        "submit": "{count, plural, =0 {Importa} one {Importa # conto} other {Importa # conti}}",
+        "linked": "Già collegato a «{account}»",
+        "nameRequired": "Scrivi un nome per il conto.",
+        "failed": "Non è stato possibile importare i conti. Riprova."
+      },
+      "cancel": {
+        "title": "Annullare il collegamento?",
+        "description": "L'accesso a {bank} viene chiuso e nessun conto viene creato.",
+        "back": "Continua a scegliere",
+        "confirm": "Annulla collegamento"
+      },
+      "sync": {
+        "heading": "Lettura dei movimenti da {bank}…",
+        "progress": "Lettura in corso",
+        "wait": "Può servire fino a un minuto. Non chiudere questa pagina."
+      },
+      "renew": {
+        "heading": "Rinnova l'accesso a {bank}",
+        "description": "Ti portiamo sul sito della banca. I conti restano gli stessi: non devi sceglierli di nuovo.",
+        "cancel": "Annulla"
       }
     }
   }

@@ -26,6 +26,7 @@ import {
   type AccountCreateInput,
   accountCreateSchema,
   type AccountSettingsInput,
+  type AccountType,
   accountSettingsSchema,
   type BalanceEntryInput,
   balanceEntrySchema,
@@ -769,6 +770,144 @@ export async function runSnapshot(
 /** The month the snapshot of `on` covers: the month before it (spec §10.2, the 1st at 00:05). */
 export function snapshotMonthFor(on: CivilDate): MonthKey {
   return addMonths(monthKey(on), -1);
+}
+
+/* Accounts a person ties to a provider by hand (rewrite plan N1: the accounts of a bank) */
+
+/** What a person chose for one account a provider exposes: a new account here, or one of theirs. */
+export interface ProviderAccountChoice {
+  /** The provider's own id of the account, the one that stays the same across accesses. */
+  providerAccountId: string;
+  currency: string;
+  target: { kind: "new"; name: string; type: AccountType } | { kind: "existing"; accountId: string };
+}
+
+const choiceNameSchema = z.string().trim().min(1).max(80);
+
+/**
+ * The accounts a person may hand to a provider that reads a bank: kept by hand, active, not one
+ * a service of Investments manages, and of a kind a bank holds. The currency is the caller's to
+ * compare: an account keeps its own.
+ */
+export async function accountsOpenToProvider(ctx: Pick<Ctx, "userId">): Promise<Account[]> {
+  const all = await listAccounts(ctx);
+  const managed = await serviceAccountIds(
+    ctx,
+    all.map((account) => account.id),
+  );
+  return all.filter(
+    (account) =>
+      account.origin === "manual" &&
+      account.state === "active" &&
+      !managed.has(account.id) &&
+      (account.type === "checking" ||
+        account.type === "savings" ||
+        account.type === "cash" ||
+        account.type === "credit" ||
+        account.type === "other"),
+  );
+}
+
+/**
+ * Ties the accounts a provider exposes to accounts here, as the person chose: a new account, or
+ * an existing one kept by hand — whose balances stay, with the provider's readings beside them
+ * (decision H26). One transaction: either every choice is applied or none.
+ *
+ * An account already tied to this provider's id is left as it is, so applying the same choices
+ * twice changes nothing. Returns the local account of each provider id.
+ */
+export async function linkProviderAccounts(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  choices: readonly ProviderAccountChoice[],
+  now: Date = new Date(),
+): Promise<Map<string, string>> {
+  const linked = new Map<string, string>();
+  const existing = choices.flatMap((choice) =>
+    choice.target.kind === "existing" ? [choice.target.accountId] : [],
+  );
+  if (new Set(existing).size !== existing.length) throw new AccountError("invalid");
+  if (new Set(choices.map((choice) => choice.providerAccountId)).size !== choices.length) {
+    throw new AccountError("invalid");
+  }
+  const open = new Map((await accountsOpenToProvider(ctx)).map((account) => [account.id, account]));
+  const already = new Map(
+    (await listAccounts(ctx, { includeArchived: true }))
+      .filter((account) => account.provider === provider && account.providerAccountId !== null)
+      .map((account) => [account.providerAccountId as string, account.id]),
+  );
+  let sortOrder = await nextSortOrder(ctx);
+
+  await getDb().transaction(async (tx) => {
+    for (const choice of choices) {
+      const known = already.get(choice.providerAccountId);
+      if (known !== undefined) {
+        linked.set(choice.providerAccountId, known);
+        continue;
+      }
+      const tie = {
+        origin: "synced" as const,
+        provider,
+        providerAccountId: choice.providerAccountId,
+        lastSyncedAt: now,
+      };
+      if (choice.target.kind === "existing") {
+        const account = open.get(choice.target.accountId);
+        if (!account || account.currency !== choice.currency) throw new AccountError("invalid");
+        await tx
+          .update(accounts)
+          .set(tie)
+          .where(and(eq(accounts.id, account.id), userScoped(ctx).owns(accounts)));
+        linked.set(choice.providerAccountId, account.id);
+        continue;
+      }
+      const name = choiceNameSchema.safeParse(choice.target.name);
+      if (!name.success) throw new AccountError("invalid");
+      const type = choice.target.type;
+      const [row] = await tx
+        .insert(accounts)
+        .values(
+          userScoped(ctx).stamp({
+            ...tie,
+            name: name.data,
+            type,
+            currency: choice.currency,
+            state: "active" as const,
+            countsAsLiquid: type === "checking" || type === "cash" || type === "savings",
+            staleAfterHours: DEFAULT_STALE_AFTER_HOURS,
+            sortOrder: sortOrder++,
+          }),
+        )
+        .returning({ id: accounts.id });
+      linked.set(choice.providerAccountId, row.id);
+    }
+  });
+  return linked;
+}
+
+/** The accounts tied to a provider, by the provider's own id of each. */
+export async function accountsOfProvider(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+): Promise<Map<string, Account>> {
+  return new Map(
+    (await listAccounts(ctx, { includeArchived: true }))
+      .filter((account) => account.provider === provider && account.providerAccountId !== null)
+      .map((account) => [account.providerAccountId as string, account]),
+  );
+}
+
+/**
+ * Gives the accounts of a provider back to the person: they become accounts kept by hand, with
+ * every balance and movement they have (rewrite plan N1, "Disconnect"). Nothing is deleted.
+ */
+export async function releaseProviderAccounts(ctx: Pick<Ctx, "userId">, provider: string): Promise<number> {
+  const released = await getDb()
+    .update(accounts)
+    .set({ origin: "manual", provider: null, providerAccountId: null })
+    .where(and(userScoped(ctx).owns(accounts), eq(accounts.provider, provider)))
+    .returning({ id: accounts.id });
+  return released.length;
 }
 
 /**

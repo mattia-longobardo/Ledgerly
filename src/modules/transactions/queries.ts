@@ -1231,3 +1231,32 @@ export async function expensesView(
     labels: labelList,
   };
 }
+
+/**
+ * How many movements each account has and the day of its first one, in the person's zone: what
+ * the outcome of a bank's first reading says for every account (rewrite plan N1). An account
+ * with no movement is absent from the map.
+ */
+export async function movementSpanByAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+): Promise<Map<string, { count: number; first: CivilDate }>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      accountId: transactions.accountId,
+      count: sql<number>`count(*)::int`,
+      first: sql<string>`to_char(min(${transactions.occurredAt}) at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        inArray(transactions.accountId, [...accountIds]),
+        isNull(transactions.removedUpstreamAt),
+      ),
+    )
+    .groupBy(transactions.accountId)
+    .orderBy(asc(transactions.accountId));
+  return new Map(rows.map((row) => [row.accountId, { count: row.count, first: row.first }]));
+}

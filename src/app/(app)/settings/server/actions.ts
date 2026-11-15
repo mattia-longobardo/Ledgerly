@@ -3,6 +3,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+// "Run now" can start the sync of every connection: the plugins' passes have to be registered.
+import "@/app/plugin-wiring";
 import { after } from "next/server";
 import { redactForLog } from "@/platform/auth/logger";
 import { requireAdmin } from "@/platform/auth/session";
