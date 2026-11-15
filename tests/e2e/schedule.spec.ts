@@ -1,16 +1,18 @@
-// tests/e2e/schedule.spec.ts — the sync schedule editor of Settings › Integrations
-// (docs/scheduler.md), on the seeded `layout` user's Trek link, which starts on manual only and
-// is put back there at the end. The address of that link does not exist, so a pass the dispatcher
-// makes in between only records a failed run on a test user. Its control is the first on the page:
-// the seeded eToro link (manual only too) has its own further down, and is never touched here.
+// tests/e2e/schedule.spec.ts — the sync schedule editor (docs/scheduler.md), under "Advanced" of
+// Settings › Integrations from release N2 (ux/n2-connection-status.md §8.2), on the seeded
+// `layout` user's Trek link, which starts on manual only and is put back there at the end. The
+// address of that link does not exist, so a pass the dispatcher makes in between only records a
+// failed run on a test user. The rows are in order of name, so Trek's control is found by its
+// row: the seeded eToro and Binance links (manual only too) have their own, never touched here.
 import { expect, test } from "@playwright/test";
 import { sessionState } from "./env";
 
 test.use({ storageState: sessionState("layout") });
 
 test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async ({ page }) => {
-  await page.goto("/settings/integrations");
-  await page.getByRole("button", { name: "Change the sync schedule" }).first().click();
+  await page.goto("/settings/integrations/advanced");
+  const trek = page.getByTestId("schedule-row").filter({ hasText: "Trek" });
+  await trek.getByRole("button", { name: "Change the sync schedule" }).click();
   const dialog = page.getByRole("dialog", { name: "Sync schedule" });
   await expect(dialog).toBeVisible();
 
@@ -48,25 +50,28 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
   await test.step("saved: the card sums it up and names the next pass", async () => {
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByText("At 06:43 · Mon–Fri +1")).toBeVisible();
-    await expect(page.getByText(/^Next: .*(6:43|18:30)/)).toBeVisible();
+    await expect(trek.getByText("At 06:43 · Mon–Fri +1")).toBeVisible();
+    await expect(trek.getByText(/^Next: .*(6:43|18:30)/)).toBeVisible();
   });
 
   await test.step("back to manual only", async () => {
-    await page.getByRole("button", { name: "Change the sync schedule" }).first().click();
+    await trek.getByRole("button", { name: "Change the sync schedule" }).click();
     await dialog.getByRole("radio", { name: /Manual only/ }).check();
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByText("No automatic sync").first()).toBeVisible();
+    await expect(trek.getByText("No automatic sync")).toBeVisible();
   });
 });
 
 test("a service's Connection tab shows its real schedule, with the same control", async ({ page }) => {
   await page.goto("/settings/integrations");
   const row = page.getByTestId("investment-connection").filter({ hasText: "eToro" });
-  // Seeded on manual only: the tab used to say 07:30 and 22:30 whatever the schedule was.
-  await expect(row.getByText("Manual only")).toBeVisible();
-  await row.getByRole("link", { name: "Configure" }).click();
+  // Seeded on manual only: the row says the automatic update is off, and the tab used to say
+  // 07:30 and 22:30 whatever the schedule was.
+  await expect(row.getByText("Paused")).toBeVisible();
+  await expect(row.getByText("Automatic update is off.")).toBeVisible();
+  await row.getByRole("button", { name: "eToro" }).click();
+  await page.getByRole("menuitem", { name: "Connection settings" }).click();
   const card = page.getByTestId("service-connection");
   await expect(card.getByText("Manual only")).toBeVisible();
   await expect(card.getByText("07:30")).toHaveCount(0);

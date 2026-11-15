@@ -10,6 +10,7 @@ import { jobStatuses } from "@/platform/jobs/queries";
 import { llmFallbackView, oidcView, smtpView } from "@/platform/settings/service";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { formatInstant } from "../integrations/format-instant";
+import { DiagnosticsCard } from "./diagnostics-card";
 import { type JobRow, JobsCard } from "./jobs-card";
 import { LlmCard } from "./llm-card";
 import { MaintenanceCard } from "./maintenance-card";
@@ -35,6 +36,7 @@ export default async function SettingsServerPage() {
   ]);
   const [backup, postgres] = await Promise.all([lastBackup(), postgresVersion()]);
   const tJobs = await getTranslations("settings.jobs");
+  const tDiagnostics = await getTranslations("settings.diagnostics");
   const jobs: JobRow[] = (await jobStatuses(ctx)).map((job) => ({
     name: job.name,
     tier: job.tier,
@@ -89,6 +91,9 @@ export default async function SettingsServerPage() {
       </SettingsSection>
       <SettingsSection title={tJobs("title")} description={tJobs("description")} padded={false}>
         <JobsCard jobs={jobs} />
+      </SettingsSection>
+      <SettingsSection title={tDiagnostics("title")} description={tDiagnostics("description")} padded={false}>
+        <DiagnosticsCard ctx={ctx} />
       </SettingsSection>
       <SettingsSection title={tMaintenance("title")} description={tMaintenance("description")}>
         <MaintenanceCard

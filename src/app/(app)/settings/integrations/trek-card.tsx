@@ -1,18 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type FormEvent, type ReactNode, useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { connectTrekAction, disconnectTrekAction, syncTrekNowAction, testTrekAction } from "./actions";
-import { ConnectionRow, type ConnectionState } from "./connection-row";
-
-/** The same four states the Wallet card has; the names are the `states.*` catalogue keys. */
-export type TrekCardState = ConnectionState;
+import { connectTrekAction, disconnectTrekAction } from "./actions";
+import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
 
 /**
  * Everything the browser is told about the Trek link. **No token and no URL**: both live in the
@@ -21,19 +17,21 @@ export type TrekCardState = ConnectionState;
  * link means stating both again, which is the honest cost of never sending them to the browser.
  */
 export interface TrekCardProps {
-  state: TrekCardState;
-  lastSync: string | null;
+  row: ConnectionRowProps;
+  connected: boolean;
   /** Days still waiting to reach Trek: the one number that says the two calendars disagree. */
   pending: number;
-  /** The connection's own sync schedule control (D7); the fixed label when there is no link. */
-  schedule?: ReactNode;
 }
+
+/** What this card does itself, with a dialog of its own; the rest is the row's. */
+const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect"];
 
 const FORM_ID = "trek-token-form";
 
 /**
- * Settings › Integrations, the Trek card of spec §9.2: state, last pass, schedule, and the four
- * things a user can do with the link — paste a URL and a token, prove they work, sync now, unlink.
+ * The Trek card of spec §9.2, on Settings › Integrations and on Time off › Settings: the row
+ * every connection has (ux/n2-connection-status.md §3) and the two dialogs that are this
+ * provider's own — paste a URL and a client, unlink.
  *
  * The credential is a **machine client** (OAuth 2.1, `client_credentials`): Trek's static tokens
  * are deprecated and its own instance already refuses them. The secret field carries no `value`
@@ -41,14 +39,12 @@ const FORM_ID = "trek-token-form";
  * unmounts on close: it is never in React state, never in a prop, and never in the DOM a moment
  * longer than the dialog is open.
  */
-export function TrekCard({ state, lastSync, pending: waiting, schedule }: TrekCardProps) {
+export function TrekCard({ row, connected, pending: waiting }: TrekCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  const connected = state !== "absent";
 
   function messageFor(code: string): string {
     if (code === "rejected") return t("errors.rejected");
@@ -94,60 +90,14 @@ export function TrekCard({ state, lastSync, pending: waiting, schedule }: TrekCa
   return (
     <div className="flex flex-col">
       <ConnectionRow
-        name={t("providers.trek.name")}
-        role={t("providers.trek.role")}
-        state={state}
-        lastSync={lastSync}
-        schedule={schedule}
-        actions={
-          <>
-            {connected && (
-              <Button
-                size="sm"
-                disabled={pending}
-                onClick={() => {
-                  setError(null);
-                  run(syncTrekNowAction, t("toasts.synced"));
-                }}
-              >
-                {t("actions.sync")}
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant={connected ? "secondary" : "primary"}
-              disabled={pending}
-              onClick={() => {
-                setError(null);
-                setConnecting(true);
-              }}
-            >
-              {t("actions.configure")}
-            </Button>
-            {connected && (
-              <ActionMenu
-                label={t("providers.trek.name")}
-                items={[
-                  {
-                    label: t("actions.test"),
-                    onSelect: () => {
-                      setError(null);
-                      run(testTrekAction, t("toasts.tested"));
-                    },
-                  },
-                  {
-                    label: t("actions.disconnect"),
-                    onSelect: () => {
-                      setError(null);
-                      setDisconnecting(true);
-                    },
-                    danger: true,
-                  },
-                ]}
-              />
-            )}
-          </>
-        }
+        {...row}
+        handled={HANDLED}
+        disabled={pending}
+        onAction={(kind) => {
+          setError(null);
+          if (kind === "disconnect") setDisconnecting(true);
+          else setConnecting(true);
+        }}
       />
 
       {/* The one number worth showing on this card: days the app holds that Trek has not been

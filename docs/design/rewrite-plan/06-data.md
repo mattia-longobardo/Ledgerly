@@ -60,6 +60,18 @@ Migrazioni di N1 nel repo: `0049_plugin_runtime` (passo 1: tabelle dei plugin, `
 nuova) e `0050_bank_raw_fields` (le quattro colonne grezze di `transactions`). Le tabelle dei plugin non sono nel barrel `src/platform/db/tables.ts`: si leggono con il query builder, e una
 riga nel barrel aggiungerebbe una coppia di import reciproci alle liste note (M4).
 
+Migrazioni di N2 nel repo: `0051_connection_status` (additiva: le colonne della tabella sopra, più
+`plugins.unreachable_since` per la Diagnostica, dato richiesto dalla specifica UX §13 punto 8) e
+`0052_connection_status_cleanup` (contrazione e dati: rimozione di `integration_connections_user_provider_uq`; codice
+dei collegamenti dei plugin da `last_error` a `error_code`; righe `running` orfane; `sync_runs` a 30 giorni; chiavi
+`wallet_sync_failed` e `wallet_sync_stale` di `notifications_log` portate a `sync_failed` e `sync_stale`).
+
+**Correzione al primo tempo (15/11/2026).** La `v0.19.0` salvava i collegamenti di Wallet, Trek e investimenti con
+`ON CONFLICT (user_id, provider)`: solo i collegamenti dei plugin usavano la chiave nuova. Con quell'immagine, dopo
+la rimozione della chiave vecchia, il salvataggio di una credenziale sarebbe fallito. La `v0.19.1` (`df0d650`) usa la
+chiave nuova in ogni salvataggio: è l'immagine precedente a N2, e con lei vale la regola 2 di §6.2. File di recupero:
+[`n2-rollback.sql`](n2-rollback.sql).
+
 Migrazioni di N6 nel repo: `0046_single_fund_model` (A1), `0047_migrate_fund_data` (A2, con la parità della copia
 dentro la migrazione), `0048_fund_account_group` (A2, conto: eccezione X2). File di rollback:
 [`n6-rollback.sql`](n6-rollback.sql). Il test `src/platform/db/migrations.test.ts` applica la regola 4 di §6.2 a ogni

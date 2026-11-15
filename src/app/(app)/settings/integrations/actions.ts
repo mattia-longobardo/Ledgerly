@@ -332,6 +332,27 @@ export async function disconnectTrekAction(): Promise<IntegrationActionResult> {
   return { ok: true };
 }
 
+/* The row of a connection (ux/n2-connection-status.md §2.4) */
+
+/**
+ * "Update now" and "Test the connection" for the two providers of this file, by provider id: the
+ * action of every connection (`connection-actions.ts`) names no provider and asks here.
+ */
+export async function coreConnectionAction(
+  provider: string,
+  kind: "update" | "test" | "history",
+  months?: number,
+): Promise<IntegrationActionResult> {
+  if (provider === WALLET_PROVIDER) {
+    if (kind === "history") return redownloadWalletHistoryAction(months ?? 0);
+    return kind === "update" ? syncWalletNowAction() : testWalletAction();
+  }
+  if (provider === TREK_PROVIDER && kind !== "history") {
+    return kind === "update" ? syncTrekNowAction() : testTrekAction();
+  }
+  return { ok: false, error: "notConnected" };
+}
+
 /* The schedule of any connection (D7) */
 
 /** Saves when one of the person's own connections syncs; the provider names which one. */

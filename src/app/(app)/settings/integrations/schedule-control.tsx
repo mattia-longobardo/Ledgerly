@@ -3,7 +3,15 @@
 import { Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { type ComponentProps, type KeyboardEvent, useId, useMemo, useState, useTransition } from "react";
+import {
+  type ComponentProps,
+  type KeyboardEvent,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { civilDateIn } from "@/platform/dates";
 import {
   LAST_DAY,
@@ -778,6 +786,17 @@ function TimesEditor({
   const id = useId();
   const [time, setTime] = useState("12:00");
   const [refused, setRefused] = useState(false);
+  const entry = useRef<HTMLDivElement>(null);
+
+  /**
+   * Removes a time and puts the focus on the field for a new one, before the button that was
+   * pressed leaves the page: a focus left on nothing is a place lost for whoever uses the
+   * keyboard, and the dialog takes it back a moment later, from whatever is being typed by then.
+   */
+  function remove(one: string) {
+    entry.current?.querySelector("input")?.focus();
+    onChange(times.filter((other) => other !== one));
+  }
 
   function add() {
     const normal = normalizeTime(time);
@@ -810,7 +829,7 @@ function TimesEditor({
               <button
                 type="button"
                 aria-label={n ? t("removeTime", { time: one, n }) : t("removeTimeSimple", { time: one })}
-                onClick={() => onChange(times.filter((other) => other !== one))}
+                onClick={() => remove(one)}
                 className="focus-ring inline-grid size-6 place-items-center rounded-full text-muted hover:bg-hover hover:text-fg"
               >
                 <X className="size-3.5" aria-hidden />
@@ -820,7 +839,7 @@ function TimesEditor({
         </ul>
       )}
       {times.length < MAX_TIMES && (
-        <div className="flex items-center gap-1.5">
+        <div ref={entry} className="flex items-center gap-1.5">
           <TimeInput
             aria-label={n ? t("newTime", { n }) : t("newTimeSimple")}
             value={time}

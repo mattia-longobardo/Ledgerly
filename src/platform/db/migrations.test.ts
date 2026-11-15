@@ -13,11 +13,17 @@ const FOLDER = join(process.cwd(), "drizzle");
 const LAST_BEFORE_PLAN = 45;
 
 /**
- * The statements a written decision allows, by file and by the words that open them. Empty: the
- * plan names N2 (one unique key), R5f (the clean-up) and step A4 of N6 (rows of documents), and
- * each adds its line here with the commit that writes its migration.
+ * The statements a written decision allows, by file and by the words that open them. The plan
+ * names N2 (one unique key), R5f (the clean-up) and step A4 of N6 (rows of documents), and each
+ * adds its line here with the commit that writes its migration.
  */
-const ALLOWED: Record<string, readonly string[]> = {};
+const ALLOWED: Record<string, readonly string[]> = {
+  // N2, second half of the two-step change (06-data.md §6.1): the image of N1 already writes
+  // with the key on (user, provider, instance).
+  "0052_connection_status_cleanup.sql": [
+    'ALTER TABLE "integration_connections" DROP CONSTRAINT "integration_connections_user_provider_uq"',
+  ],
+};
 
 const migrations = readdirSync(FOLDER)
   .filter((name) => /^\d{4}_.*\.sql$/.test(name) && Number(name.slice(0, 4)) > LAST_BEFORE_PLAN)
@@ -62,7 +68,10 @@ describe("the migrations of the rewrite plan (06-data.md §6.2)", () => {
     // A wider check takes every value the old one took (N6: `rule`, a month as a period): the old
     // image keeps working. It is allowed only when the migration writes the new check itself, in
     // its own transaction, so the column is never left unchecked.
-    const text = statementsOf(file).join(";\n");
+    const allowed = ALLOWED[file] ?? [];
+    const text = statementsOf(file)
+      .filter((statement) => !allowed.some((start) => statement.startsWith(start)))
+      .join(";\n");
     const dropped = [...text.matchAll(/DROP CONSTRAINT (?:IF EXISTS )?"([^"]+)"/gi)].map((match) => match[1]);
     const added = new Set([...text.matchAll(/ADD CONSTRAINT "([^"]+)"/gi)].map((match) => match[1]));
     expect(dropped.filter((name) => !added.has(name))).toEqual([]);

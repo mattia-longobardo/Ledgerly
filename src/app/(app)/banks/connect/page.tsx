@@ -139,14 +139,18 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
     // The outcome (§6.6): what the last reading did, account by account.
     if (!exposed.chosen) redirect(`${HERE}?step=accounts&c=${connection.id}` as Route);
     const [run] = await listRuns(ctx, { connectionId: connection.id, limit: 1 });
-    const linked = [...(await accountsOfProvider(ctx, connection.provider)).entries()];
+    const stillShared = new Set(exposed.accounts.map((account) => account.providerAccountId));
+    // With more than one bank the provider's accounts are of several banks: this bank's are the
+    // ones its access shares. With one bank they are all its own, also one it no longer shares.
+    const linked = [...(await accountsOfProvider(ctx, connection.provider)).entries()].filter(
+      ([providerAccountId]) => connections.length <= 1 || stillShared.has(providerAccountId),
+    );
     const ids = linked.map(([, account]) => account.id);
     const [spans, balances, job] = await Promise.all([
       movementSpanByAccount(ctx, ids),
       balancesOn(ctx, ids, today(ctx.timeZone)),
       readSyncJob(ctx, connection.id, "transactions"),
     ]);
-    const stillShared = new Set(exposed.accounts.map((account) => account.providerAccountId));
     const failed = run?.state === "failed";
     const wait =
       failed && run.error === "rate_limited" && job?.cursor?.retryAfter
@@ -253,9 +257,6 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       </Card>,
     );
   }
-  // Until N2 a person connects one bank (§5.5): with one connected there is nothing to choose.
-  if (connections.length > 0) redirect(SETTINGS);
-
   const regions = new Intl.DisplayNames([ctx.locale], { type: "region" });
   const countries = (
     plugin.manifest.connectionFields.find((field) => field.name === "country")?.options ?? []

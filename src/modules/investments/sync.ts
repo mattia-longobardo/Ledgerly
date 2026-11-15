@@ -55,6 +55,7 @@ import {
   credentialSchemaOf,
   type InvestmentProvider,
   PROVIDER_SCHEDULE,
+  providerOf,
 } from "./catalog";
 import { cashGaps, GAP_NOTES, openingCashAt } from "./cutoff";
 import { estimateHistory, HISTORY_RATE_SCALE, type HistoryLeg, historyMoves } from "./history";
@@ -1716,7 +1717,7 @@ async function runFlows(ctx: WriteCtx, linked: Linked, now: Date): Promise<boole
     await finishRun(
       ctx,
       run.id,
-      { counts: {}, error: sourceErrorText(linked.connection.provider, error) },
+      { counts: {}, error: sourceErrorText(linked.connection.provider, error), cause: error },
       now,
     );
     console.error("[investments] flows failed", sourceErrorLog(linked.connection.provider, error));
@@ -1748,7 +1749,12 @@ async function runHoldings(
       check: null,
       now,
     });
-    await finishRun(ctx, run.id, { counts: {}, error: sourceErrorText(connection.provider, error) }, now);
+    await finishRun(
+      ctx,
+      run.id,
+      { counts: {}, error: sourceErrorText(connection.provider, error), cause: error },
+      now,
+    );
     return noteFailure(ctx, linked, error, now, "check");
   }
   await insertKeyCheck(ctx, getDb(), {
@@ -1762,7 +1768,8 @@ async function runHoldings(
   if (check.result !== "read-only") {
     // §5.2: refused, nothing read, the administrator told which permission was found.
     const text = `${connection.provider} · key_${check.result.replace("-", "_")}`;
-    await finishRun(ctx, run.id, { counts: {}, error: text }, now);
+    // A key that can do more than read is a key to replace: the code of a key that does not work.
+    await finishRun(ctx, run.id, { counts: {}, error: text, cause: { code: "auth" } }, now);
     await markConnection(ctx, connection.id, "error", text, now);
     // What the key may do beyond reading: eToro's scopes, Binance's flags that are on (§5.2).
     const found = Object.entries(check.permissions)
@@ -1784,7 +1791,12 @@ async function runHoldings(
       await todayLookup(ctx, linked.currency, now),
     );
   } catch (error) {
-    await finishRun(ctx, run.id, { counts: {}, error: sourceErrorText(connection.provider, error) }, now);
+    await finishRun(
+      ctx,
+      run.id,
+      { counts: {}, error: sourceErrorText(connection.provider, error), cause: error },
+      now,
+    );
     return noteFailure(ctx, linked, error, now, "read");
   }
   const todayOn = today(ctx.timeZone, now);
@@ -2192,4 +2204,9 @@ export async function syncStatus(
     reliableFrom: complete ? null : reliableFrom,
     complete,
   };
+}
+
+/** The name of an investment provider as a person knows it; its id when the catalogue has none. */
+export function investmentProviderName(provider: string): string {
+  return providerOf(provider)?.name ?? provider;
 }

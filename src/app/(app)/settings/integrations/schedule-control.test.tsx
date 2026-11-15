@@ -209,6 +209,20 @@ describe("ScheduleControl", () => {
     expect(within(dialog).getByRole("button", { name: T.save })).toBeEnabled();
   });
 
+  // The button that removes a time leaves the page with its time: the focus must not be left on
+  // nothing (the dialog would take it back a moment later, from whatever is typed by then).
+  it("moves the focus to the field for a new time when a time is removed", async () => {
+    renderControl();
+    const dialog = await openDialog();
+    await userEvent.click(within(dialog).getByRole("radio", { name: new RegExp(T.modes.times) }));
+    const input = within(dialog).getByLabelText(T.newTimeSimple);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove 07:30" }));
+    expect(input).toHaveFocus();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove 22:30" }));
+    expect(input).toHaveFocus();
+    expect(within(dialog).queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+  });
+
   it("fills in what is recommended for this connection", async () => {
     renderControl({ rules: [] });
     const dialog = await openDialog();

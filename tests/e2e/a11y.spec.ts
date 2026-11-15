@@ -499,6 +499,50 @@ const PAGES: Screen[] = [
   // the plugin's row "Active" and the section "Banks" on its guide; the admin's has "Not active".
   // The procedure, for the same user, stops at its guard.
   { name: "/banks/connect (no credentials)", session: "layout", open: go("/banks/connect") },
+  // Release N2: "Advanced", with the schedule of each of this user's links and the log.
+  {
+    name: "/settings/integrations/advanced",
+    session: "layout",
+    open: go("/settings/integrations/advanced"),
+  },
+
+  // Release N2 (ux/n2-connection-status.md §12): the `connections` user has a connection in each
+  // of the five states, a warning that an access is about to end, and more than one bank.
+  {
+    name: "/settings/integrations (five states)",
+    session: "connections",
+    open: go("/settings/integrations"),
+  },
+  {
+    name: "/settings/integrations (history open)",
+    session: "connections",
+    open: async (page) => {
+      await page.goto("/settings/integrations");
+      await settled(page);
+      for (const toggle of await page.getByRole("button", { name: /^(History|Cronologia)$/ }).all()) {
+        await toggle.click();
+      }
+    },
+  },
+  {
+    name: "/settings/integrations/advanced (log)",
+    session: "connections",
+    open: go("/settings/integrations/advanced"),
+  },
+  {
+    name: "/accounts/[id] (from a connection)",
+    session: "connections",
+    open: async (page) => {
+      await page.goto("/accounts");
+      await settled(page);
+      await page
+        .getByRole("link", { name: /Alfa Bank current account/ })
+        .first()
+        .click();
+      await expect(page.getByTestId("connection-status")).toBeVisible();
+      await settled(page);
+    },
+  },
 
   // Admin. For anybody else Users and Server answer 404, which is the point of them; Integrations
   // answers for everybody but shows the jobs card only here — the page F8 broke and F9 found.
@@ -541,9 +585,10 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/integrations");
+      // From release N2 the schedule is under "Advanced" (ux/n2-connection-status.md §8.2).
+      await page.goto("/settings/integrations/advanced");
       await settled(page);
-      // The first control is Trek's; the seeded eToro link has one too, further down.
+      // The rows are in order of name; every seeded link of this user is on manual only.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
         .first()
@@ -557,9 +602,10 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/integrations");
+      // From release N2 the schedule is under "Advanced" (ux/n2-connection-status.md §8.2).
+      await page.goto("/settings/integrations/advanced");
       await settled(page);
-      // The first control is Trek's; the seeded eToro link has one too, further down.
+      // The rows are in order of name; every seeded link of this user is on manual only.
       await page
         .getByRole("button", { name: /Change the sync schedule|Cambia l'orario di sincronizzazione/ })
         .first()

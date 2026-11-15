@@ -38,6 +38,8 @@ export const plugins = pgTable(
     /** Whether the plugin is of the official catalog. Every plugin is (decision H28). */
     verified: boolean("verified").notNull().default(true),
     manifestReadAt: timestamp("manifest_read_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Since when the plugin has not answered, in the current series of failed checks. */
+    unreachableSince: timestamp("unreachable_since", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

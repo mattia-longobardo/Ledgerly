@@ -358,6 +358,20 @@
       "when": 1794767407448,
       "tag": "0050_bank_raw_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1794771565873,
+      "tag": "0051_connection_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794771586068,
+      "tag": "0052_connection_status_cleanup",
+      "breakpoints": true
     }
   ]
 }

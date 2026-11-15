@@ -1,12 +1,12 @@
 {
   "counts": {
-    "crossModuleImports": 138,
+    "crossModuleImports": 137,
     "moduleIndexFiles": 0,
     "reciprocalModulePairs": 5,
     "reciprocalUnitPairs": 54,
     "moduleCycleGroups": 1,
-    "platformToModuleImports": 79,
-    "platformFilesImportingModules": 21,
+    "platformToModuleImports": 80,
+    "platformFilesImportingModules": 22,
     "uiToPlatformImports": 5,
     "forbiddenNameFiles": 111,
     "forbiddenNameKeys": 18
@@ -139,7 +139,6 @@
     "modules/timeoff/service.ts → modules/users/service",
     "modules/timeoff/ui/settings-forms.tsx → modules/users/actions",
     "modules/transactions/actions.ts → modules/accounts/rules",
-    "modules/transactions/jobs.ts → modules/accounts/rules",
     "modules/transactions/jobs.ts → modules/users/jobs",
     "modules/transactions/queries.ts → modules/accounts/queries",
     "modules/transactions/schema.ts → modules/accounts/schema",
@@ -238,7 +237,6 @@
     "app/(app)/settings/integrations/page.tsx: trek",
     "app/(app)/settings/integrations/page.tsx: wallet",
     "app/(app)/settings/integrations/trek-card.tsx: trek",
-    "app/(app)/settings/integrations/trek-card.tsx: wallet",
     "app/(app)/settings/integrations/wallet-card.tsx: wallet",
     "app/(app)/settings/security/page.tsx: authentik",
     "app/(app)/settings/security/sign-in-method.tsx: authentik",

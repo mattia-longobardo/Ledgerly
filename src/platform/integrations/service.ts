@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -7,6 +7,8 @@ import { civilDateIn } from "@/platform/dates";
 import { UNIQUE_VIOLATION, hasPgError } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
+import { APP_VERSION } from "@/platform/version";
+import { currentOrigin } from "./origin";
 import {
   type ConnectionState,
   connectionStateAfter,
@@ -32,6 +34,7 @@ import {
   type SyncSchedule,
   syncScheduleSchema,
 } from "./schedule";
+import { classifyFailure, failureStreak, isSyncErrorCode, ORPHAN_AFTER_MS } from "./status";
 import { users } from "@/platform/auth/schema";
 import { integrationConnections, providerLinks, syncJobs, syncRuns } from "./schema";
 
@@ -47,7 +50,6 @@ export type IntegrationErrorCode =
   | "invalid_credentials"
   | "invalid_link"
   | "link_conflict"
-  | "connection_limit"
   | "run_closed"
   | "invalid_schedule";
 
@@ -76,6 +78,10 @@ export interface Connection {
   state: ConnectionState;
   lastOkAt: Date | null;
   lastError: string | null;
+  /** Why the last reading failed, as a code of the closed list; null when there is none. */
+  errorCode: string | null;
+  /** The readings that failed in a row. */
+  consecutiveFailures: number;
   schedule: SyncSchedule;
   /** The next pass the dispatcher owes (D7); null for a `manual` schedule. */
   nextSyncAt: Date | null;
@@ -92,6 +98,8 @@ const CONNECTION_COLUMNS = {
   state: integrationConnections.state,
   lastOkAt: integrationConnections.lastOkAt,
   lastError: integrationConnections.lastError,
+  errorCode: integrationConnections.errorCode,
+  consecutiveFailures: integrationConnections.consecutiveFailures,
   schedule: integrationConnections.schedule,
   nextSyncAt: integrationConnections.nextSyncAt,
   createdAt: integrationConnections.createdAt,
@@ -119,13 +127,22 @@ function toConnection(row: Omit<Connection, "schedule"> & { schedule: unknown })
   return { ...row, schedule: parseSyncSchedule(row.schedule) };
 }
 
-async function requireConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<Connection> {
+/** One connection of the person, or `null`: an id that is somebody else's is an id that is not there. */
+export async function findConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<Connection | null> {
+  if (!UUID.test(id)) return null;
   const [row] = await getDb()
     .select(CONNECTION_COLUMNS)
     .from(integrationConnections)
     .where(and(eq(integrationConnections.id, id), userScoped(ctx).owns(integrationConnections)));
-  if (!row) throw new IntegrationError("not_found");
-  return toConnection(row);
+  return row ? toConnection(row) : null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function requireConnection(ctx: Pick<Ctx, "userId">, id: string): Promise<Connection> {
+  const connection = await findConnection(ctx, id);
+  if (!connection) throw new IntegrationError("not_found");
+  return connection;
 }
 
 /**
@@ -156,15 +173,21 @@ export async function saveConnection(
       userScoped(ctx).stamp({ provider, credentials, state: "active" as const, nextSyncAt: new Date() }),
     )
     .onConflictDoUpdate({
-      // The key on (user, provider, instance): a provider of the core has one connection, whose
-      // instance key is the empty one. The key on (user, provider) alone goes in N2 (second half
-      // of the two-step change, 06-data.md §6.1), and the image before N2 must not need it.
+      // A provider of the core has one connection: its instance key is always the empty one. The
+      // key on (user, provider) alone went with N2 (06-data.md §6.1).
       target: [
         integrationConnections.userId,
         integrationConnections.provider,
         integrationConnections.instanceKey,
       ],
-      set: { credentials, state: "active" as const, lastError: null, updatedAt: new Date() },
+      set: {
+        credentials,
+        state: "active" as const,
+        lastError: null,
+        errorCode: null,
+        consecutiveFailures: 0,
+        updatedAt: new Date(),
+      },
     })
     .returning(CONNECTION_COLUMNS);
   return toConnection(row);
@@ -173,8 +196,7 @@ export async function saveConnection(
 /**
  * Stores the access a plugin got for one of a person's connections, sealed like every credential.
  * A plugin has one connection per `instanceKey` (a bank), so saving again for the same key
- * replaces the access: that is what renewing is. While the old unique key stays (until N2) a
- * person has one connection per provider, and a second one is refused as `connection_limit`.
+ * replaces the access: that is what renewing is. A person has as many connections as banks.
  *
  * The connection is not scheduled here: its schedule has no rule, so the dispatcher never asks
  * for a pass nobody has registered.
@@ -196,42 +218,37 @@ export async function savePluginConnection(
   const parsed = pluginConnectionBagSchema.safeParse(input.credentials);
   if (!parsed.success) throw new IntegrationError("invalid_credentials");
   const credentials = sealJson(keyRing(), parsed.data);
-  try {
-    const [row] = await getDb()
-      .insert(integrationConnections)
-      .values(
-        userScoped(ctx).stamp({
-          provider,
-          instanceKey,
-          credentials,
-          expiresAt: input.expiresAt,
-          state: "active" as const,
-          schedule: { rules: [] },
-          nextSyncAt: null,
-        }),
-      )
-      .onConflictDoUpdate({
-        target: [
-          integrationConnections.userId,
-          integrationConnections.provider,
-          integrationConnections.instanceKey,
-        ],
-        set: {
-          credentials,
-          expiresAt: input.expiresAt,
-          state: "active" as const,
-          lastError: null,
-          updatedAt: now,
-        },
-      })
-      .returning(CONNECTION_COLUMNS);
-    return toConnection(row);
-  } catch (error) {
-    if (isUniqueViolation(error, "integration_connections_user_provider_uq")) {
-      throw new IntegrationError("connection_limit");
-    }
-    throw error;
-  }
+  const [row] = await getDb()
+    .insert(integrationConnections)
+    .values(
+      userScoped(ctx).stamp({
+        provider,
+        instanceKey,
+        credentials,
+        expiresAt: input.expiresAt,
+        state: "active" as const,
+        schedule: { rules: [] },
+        nextSyncAt: null,
+      }),
+    )
+    .onConflictDoUpdate({
+      target: [
+        integrationConnections.userId,
+        integrationConnections.provider,
+        integrationConnections.instanceKey,
+      ],
+      set: {
+        credentials,
+        expiresAt: input.expiresAt,
+        state: "active" as const,
+        lastError: null,
+        // A new access ends what the old one's end had said; any other code waits for a reading.
+        errorCode: sql`nullif(${integrationConnections.errorCode}, 'consent_expired')`,
+        updatedAt: now,
+      },
+    })
+    .returning(CONNECTION_COLUMNS);
+  return toConnection(row);
 }
 
 /**
@@ -319,6 +336,27 @@ export async function rescheduleConnections(
       .where(and(eq(integrationConnections.id, connection.id), userScoped(ctx).owns(integrationConnections)));
   }
   return connections.length;
+}
+
+/**
+ * Makes every scheduled connection of the person with one provider due now: the next tick of the
+ * dispatcher reads them. For a provider the person has just turned on again (decision H30).
+ */
+export async function makeDueNow(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  now: Date = new Date(),
+): Promise<void> {
+  await getDb()
+    .update(integrationConnections)
+    .set({ nextSyncAt: now })
+    .where(
+      and(
+        userScoped(ctx).owns(integrationConnections),
+        eq(integrationConnections.provider, provider),
+        sql`${integrationConnections.nextSyncAt} is not null`,
+      ),
+    );
 }
 
 /** A connection the dispatcher owes a pass: whose, which provider, on what schedule, since when. */
@@ -428,6 +466,8 @@ export async function recordRun(
         connectionId: input.connectionId,
         kind: input.kind,
         state: "running" as const,
+        origin: currentOrigin(),
+        appVersion: APP_VERSION,
       }),
     )
     .returning();
@@ -446,11 +486,23 @@ export async function recordRun(
 export async function finishRun(
   ctx: Pick<Ctx, "userId">,
   runId: string,
-  outcome: { counts: Record<string, number>; error?: string },
+  outcome: {
+    counts: Record<string, number>;
+    error?: string;
+    /** What was thrown, for its code and its HTTP status (`classifyFailure`); never stored. */
+    cause?: unknown;
+  },
   now: Date = new Date(),
 ): Promise<void> {
   const error = outcome.error === undefined ? null : syncErrorText(outcome.error) || null;
   const state = outcomeState({ error });
+  // A caller that speaks in codes (a plugin) gives the code as its error.
+  const failure =
+    state === "success"
+      ? { code: null, httpStatus: null }
+      : isSyncErrorCode(error) && outcome.cause === undefined
+        ? { code: error, httpStatus: null }
+        : classifyFailure(outcome.cause ?? { code: error });
   await getDb().transaction(async (tx) => {
     const [run] = await tx
       .select({ state: syncRuns.state, connectionId: syncRuns.connectionId, kind: syncRuns.kind })
@@ -461,7 +513,14 @@ export async function finishRun(
 
     await tx
       .update(syncRuns)
-      .set({ state, finishedAt: now, counts: normalizeCounts(outcome.counts), error })
+      .set({
+        state,
+        finishedAt: now,
+        counts: normalizeCounts(outcome.counts),
+        error,
+        errorCode: failure.code,
+        httpStatus: failure.httpStatus,
+      })
       .where(and(eq(syncRuns.id, runId), userScoped(ctx).owns(syncRuns)));
 
     await tx
@@ -479,13 +538,23 @@ export async function finishRun(
         set: { lastRunAt: now, nextRunAt: nextRunAt(now), updatedAt: now },
       });
 
+    // The streak is read back from the runs, this one included: a pass is one run per kind, and
+    // only the runs say which kinds are failing now.
+    const recent = await tx
+      .select({ kind: syncRuns.kind, state: syncRuns.state, errorCode: syncRuns.errorCode })
+      .from(syncRuns)
+      .where(and(eq(syncRuns.connectionId, run.connectionId), userScoped(ctx).owns(syncRuns)))
+      .orderBy(desc(syncRuns.startedAt), desc(syncRuns.id))
+      .limit(STREAK_RUNS);
+    const streak = failureStreak(recent);
+
     const health =
       connectionStateAfter({ error }) === "active"
         ? { state: "active" as const, lastOkAt: now, lastError: null }
         : { state: "error" as const, lastError: error };
     await tx
       .update(integrationConnections)
-      .set(health)
+      .set({ ...health, errorCode: streak.errorCode, consecutiveFailures: streak.failures })
       .where(
         and(
           eq(integrationConnections.id, run.connectionId),
@@ -495,6 +564,9 @@ export async function finishRun(
       );
   });
 }
+
+/** How many runs back the streak of failures is counted: more than any warning asks for. */
+const STREAK_RUNS = 40;
 
 /**
  * Closes a run that had nothing to attempt: a `revoked` connection has no work to do, and
@@ -756,8 +828,17 @@ export async function markConnection(
     .update(integrationConnections)
     .set(
       state === "active"
-        ? { state, lastOkAt: now, lastError: null }
-        : { state, lastError: error === undefined ? null : syncErrorText(error) || null },
+        ? { state, lastOkAt: now, lastError: null, errorCode: null, consecutiveFailures: 0 }
+        : {
+            state,
+            lastError: error === undefined ? null : syncErrorText(error) || null,
+            // A refused credential is `auth`, unless the caller named the code itself.
+            ...(isSyncErrorCode(error)
+              ? { errorCode: error }
+              : state === "revoked"
+                ? { errorCode: "auth" }
+                : {}),
+          },
     )
     .where(and(eq(integrationConnections.id, connectionId), userScoped(ctx).owns(integrationConnections)))
     .returning(CONNECTION_COLUMNS);
@@ -768,10 +849,10 @@ export async function markConnection(
 const DEFAULT_RUN_PAGE = 20;
 const MAX_RUN_PAGE = 200;
 
-/** The sync history Settings › Integrations shows (spec §10.3), newest first. */
+/** The log of the readings under "Advanced" (ux §8.3), newest first: the person's own runs only. */
 export async function listRuns(
   ctx: Pick<Ctx, "userId">,
-  input: { connectionId?: string; limit?: number } = {},
+  input: { connectionId?: string; limit?: number; since?: Date } = {},
 ): Promise<SyncRun[]> {
   const limit = Math.min(Math.max(input.limit ?? DEFAULT_RUN_PAGE, 1), MAX_RUN_PAGE);
   return getDb()
@@ -781,17 +862,111 @@ export async function listRuns(
       and(
         userScoped(ctx).owns(syncRuns),
         input.connectionId === undefined ? undefined : eq(syncRuns.connectionId, input.connectionId),
+        input.since === undefined ? undefined : gte(syncRuns.startedAt, input.since),
       ),
     )
     .orderBy(desc(syncRuns.startedAt), desc(syncRuns.id))
     .limit(limit);
 }
 
+/** A run as the history of a connection reads it: no message, no error text. */
+export interface RecentRun {
+  connectionId: string;
+  kind: SyncKind;
+  state: SyncRun["state"];
+  origin: string | null;
+  errorCode: string | null;
+  counts: Record<string, number> | null;
+  startedAt: Date;
+}
+
 /**
- * Drops the sync runs past the retention window (spec §10.2: "executions and logs older than 90
- * days" — a sync run is an execution). Nothing else collects them, and a connection that attempts
- * nothing still records: a revoked token writes two skipped runs an hour, for ever, because
- * {@link skipRun} deliberately does not move `next_run_at`.
+ * The last runs of every connection of the person, newest first, at most `perConnection` each:
+ * what the rows of the connections draw their history and "in progress" from, in one query.
+ */
+export async function recentRuns(
+  ctx: Pick<Ctx, "userId">,
+  perConnection: number,
+  since: Date,
+): Promise<RecentRun[]> {
+  const ranked = getDb()
+    .select({
+      connectionId: syncRuns.connectionId,
+      kind: syncRuns.kind,
+      state: syncRuns.state,
+      origin: syncRuns.origin,
+      errorCode: syncRuns.errorCode,
+      counts: syncRuns.counts,
+      startedAt: syncRuns.startedAt,
+      id: syncRuns.id,
+      place:
+        sql<number>`row_number() over (partition by ${syncRuns.connectionId} order by ${syncRuns.startedAt} desc, ${syncRuns.id} desc)`.as(
+          "place",
+        ),
+    })
+    .from(syncRuns)
+    .where(and(userScoped(ctx).owns(syncRuns), gte(syncRuns.startedAt, since)))
+    .as("ranked");
+  const rows = await getDb()
+    .select()
+    .from(ranked)
+    .where(lte(ranked.place, perConnection))
+    .orderBy(desc(ranked.startedAt), desc(ranked.id));
+  return rows.map(({ connectionId, kind, state, origin, errorCode, counts, startedAt }) => ({
+    connectionId,
+    kind,
+    state,
+    origin,
+    errorCode,
+    counts,
+    startedAt,
+  }));
+}
+
+/**
+ * Closes the runs nobody is running any more: a process that died in the middle of a pass left
+ * its run `running` for ever. Past an hour it is a failed run with the reason `orphaned` — no
+ * pass lasts that long. The connection's health is left alone: nothing was learnt about it.
+ */
+export async function closeOrphanRuns(now: Date = new Date()): Promise<number> {
+  const closed = await getDb()
+    .update(syncRuns)
+    .set({ state: "failed", finishedAt: now, error: "orphaned" })
+    .where(
+      and(eq(syncRuns.state, "running"), lt(syncRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS))),
+    )
+    .returning({ id: syncRuns.id });
+  return closed.length;
+}
+
+/**
+ * Forgets a code the person has just repaired, on every connection of theirs with a provider: a
+ * new key answers `auth` for all the banks it opens.
+ */
+export async function clearErrorCode(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  code: string,
+): Promise<void> {
+  await getDb()
+    .update(integrationConnections)
+    .set({ errorCode: null })
+    .where(
+      and(
+        userScoped(ctx).owns(integrationConnections),
+        eq(integrationConnections.provider, provider),
+        eq(integrationConnections.errorCode, code),
+      ),
+    );
+}
+
+/** How long a run is kept (rewrite plan, N2: 30 days, the window of the log under "Advanced"). */
+export const SYNC_RUN_RETENTION_DAYS = 30;
+
+/**
+ * Drops the sync runs past the retention window. Nothing else collects them, and a connection
+ * that attempts nothing still records: a revoked token writes two skipped runs an hour, for
+ * ever, because {@link skipRun} deliberately does not move `next_run_at`.
  *
  * A run with no `finished_at` — a process killed mid-pass — ages out by `started_at`, exactly as
  * `job_runs` does, so an orphan cannot be kept for ever by the absence of its own end.

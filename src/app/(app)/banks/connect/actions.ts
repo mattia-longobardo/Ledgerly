@@ -10,7 +10,7 @@ import { redactForLog } from "@/platform/auth/logger";
 import { getOptionalSession } from "@/platform/auth/session";
 import { runAfterSync } from "@/platform/jobs/after-sync";
 import { listPluginConnections } from "@/platform/plugins/queries";
-import { institutionOf } from "@/platform/plugins/rules";
+import { instanceKeyOf, institutionOf } from "@/platform/plugins/rules";
 import {
   disconnectBank,
   listInstitutions,
@@ -27,6 +27,8 @@ export interface BankChoice {
   name: string;
   /** How many days an access to this bank lasts, at most; null when the bank does not say. */
   maxAccessDays: number | null;
+  /** The person already has a connection to this bank: it is renewed, not connected again. */
+  connected: boolean;
 }
 
 type Refusal = { ok: false; error: PluginActionCode };
@@ -50,7 +52,17 @@ export async function listBanksAction(country: string): Promise<{ ok: true; bank
   if (!COUNTRY.test(country)) return { ok: false, error: "failed" };
   try {
     const institutions = await listInstitutions(session.ctx, { pluginId: BANK_PLUGIN_ID, country });
-    return { ok: true, banks: institutions.map(({ name, maxAccessDays }) => ({ name, maxAccessDays })) };
+    const connected = new Set(
+      (await listPluginConnections(session.ctx, BANK_PLUGIN_ID)).map((connection) => connection.instanceKey),
+    );
+    return {
+      ok: true,
+      banks: institutions.map(({ name, maxAccessDays }) => ({
+        name,
+        maxAccessDays,
+        connected: connected.has(instanceKeyOf({ name, country })),
+      })),
+    };
   } catch (error) {
     return refusal(error);
   }

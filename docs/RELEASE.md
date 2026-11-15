@@ -177,8 +177,8 @@ ADMIN_PASSWORD='…' npm run user:create-admin -- you@example.com "Your Name"
 As the admin, in the app:
 
 1. **Settings → Integrations → Wallet**: paste the Budget Makers Wallet token. The first sync
-   fetches **twelve months** in monthly windows and takes a while; the sync log on the same card
-   shows every attempt, skipped ones included. Every pass after that re-reads the last seven days.
+   fetches **twelve months** in monthly windows and takes a while; the row says "Update in
+   progress…", and the log under "Advanced" shows every attempt, skipped ones included. Every pass after that re-reads the last seven days.
 2. **Settings → Integrations → Trek**: connect the leave calendar. The first pass brings days in
    and never deletes one it does not know about.
 3. **Settings → Profile**: your time zone, number format and, if you want it, a company holiday

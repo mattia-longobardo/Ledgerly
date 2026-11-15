@@ -41,6 +41,7 @@ function fold(text: string): string {
 export function BankStep({ countries, defaultCountry, returned }: BankStepProps) {
   const t = useTranslations("banks.connect");
   const common = useTranslations("common");
+  const connections = useTranslations("settings.connections");
   const [country, setCountry] = useState(defaultCountry);
   const [banks, setBanks] = useState<BankChoice[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -73,7 +74,7 @@ export function BankStep({ countries, defaultCountry, returned }: BankStepProps)
     const wanted = fold(query.trim());
     return (banks ?? []).filter((bank) => wanted === "" || fold(bank.name).includes(wanted));
   }, [banks, query]);
-  const selected = banks?.find((bank) => bank.name === chosen) ?? null;
+  const selected = banks?.find((bank) => bank.name === chosen && !bank.connected) ?? null;
 
   function reload(next: string) {
     setCountry(next);
@@ -99,7 +100,6 @@ export function BankStep({ countries, defaultCountry, returned }: BankStepProps)
     if (code === "auth" || code === "missing") return t("guard.invalidKey");
     if (code === "bank_unavailable") return t("return.bankUnavailable", { bank });
     if (code === "plugin_down") return t("errors.pluginDown");
-    if (code === "one_bank") return t("errors.oneBank");
     if (code === "provider_down" || code === "rate_limited" || code === "unreachable")
       return t("return.unreachable");
     return t("errors.failed");
@@ -232,20 +232,31 @@ export function BankStep({ countries, defaultCountry, returned }: BankStepProps)
               <label
                 key={bank.name}
                 className={cn(
-                  "flex min-h-11 cursor-pointer items-center gap-2.5 px-3 break-words hover:bg-hover has-[:focus-visible]:focus-ring-inset",
+                  "flex min-h-11 items-center gap-2.5 px-3 py-1.5 break-words has-[:focus-visible]:focus-ring-inset",
+                  bank.connected ? "text-muted" : "cursor-pointer hover:bg-hover",
                   bank.name === chosen && "bg-sel",
                 )}
               >
+                {/* A bank already connected stays in the list and cannot be chosen (n2 §7): it
+                    can be reached and read, so it is `aria-disabled`, not `disabled`. */}
                 <input
                   type="radio"
                   name="bank"
                   value={bank.name}
                   checked={bank.name === chosen}
                   disabled={opening}
-                  onChange={() => setChosen(bank.name)}
+                  aria-disabled={bank.connected || undefined}
+                  onChange={() => {
+                    if (!bank.connected) setChosen(bank.name);
+                  }}
                   className="size-4 shrink-0 accent-accent"
                 />
-                <span className="min-w-0">{bank.name}</span>
+                <span className="min-w-0">
+                  {bank.name}
+                  {bank.connected && (
+                    <span className="block text-sm">{connections("banks.alreadyConnected")}</span>
+                  )}
+                </span>
               </label>
             ))}
           </div>

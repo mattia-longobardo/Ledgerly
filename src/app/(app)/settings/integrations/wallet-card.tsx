@@ -1,64 +1,46 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type FormEvent, type ReactNode, useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
-import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
-import { Input, Select } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
+import { Input } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import {
-  connectWalletAction,
-  disconnectWalletAction,
-  redownloadWalletHistoryAction,
-  syncWalletNowAction,
-  testWalletAction,
-} from "./actions";
-import { ConnectionRow, type ConnectionState } from "./connection-row";
-
-/**
- * What the card says the link is, including the state the database has no row for. The names are
- * the `settings.integrations.states.*` keys, so the label is a lookup rather than a branch.
- */
-export type WalletCardState = ConnectionState;
+import { connectWalletAction, disconnectWalletAction } from "./actions";
+import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
 
 /**
  * Everything the browser is told about the link. **No token, and no field one could travel in**
  * (spec §9.4): once saved, a credential never comes back — the form below only ever replaces it.
- * `lastSync` arrives formatted, because the page owns the locale and the time zone.
+ * The row arrives built by the page, which owns the locale, the zone and the state.
  */
 export interface WalletCardProps {
-  state: WalletCardState;
-  lastSync: string | null;
-  /** How many months the last (or next) backfill reads (F2.5): what the history picker starts on. */
-  history: number;
-  /** The connection's own sync schedule control (D7); the fixed label when there is no link. */
-  schedule?: ReactNode;
+  row: ConnectionRowProps;
+  connected: boolean;
 }
+
+/** What this card does itself, with a dialog of its own; the rest is the row's. */
+const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect"];
 
 const FORM_ID = "wallet-token-form";
 
 /**
- * Settings › Integrations, the Budget Makers Wallet card of spec §9.1: state, last sync, schedule,
- * and the four things a user can do with the link — paste a token, prove it works, sync now
- * (spec §10.3), disconnect.
+ * Settings › Integrations, the Budget Makers Wallet card of spec §9.1: the row every connection
+ * has (ux/n2-connection-status.md §3) and the two dialogs that are this provider's own — paste a
+ * token, disconnect.
  *
  * The token field is the whole point of the design here. It has no `value` and no `defaultValue`,
  * it is read once out of the submitted `FormData` into a local binding, and the dialog it lives in
  * unmounts on close — so the secret is never in React state, never in a prop and never in the DOM
  * a moment longer than the dialog is open.
  */
-export function WalletCard({ state, lastSync, history, schedule }: WalletCardProps) {
+export function WalletCard({ row, connected }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
-  const [months, setMonths] = useState(history);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  const connected = state !== "absent";
 
   /** An action's refusal code, spelled out one branch at a time so the catalogue keys stay literal. */
   function messageFor(code: string): string {
@@ -101,106 +83,15 @@ export function WalletCard({ state, lastSync, history, schedule }: WalletCardPro
   return (
     <div className="flex flex-col">
       <ConnectionRow
-        name={t("providers.wallet.name")}
-        role={t("providers.wallet.role")}
-        state={state}
-        lastSync={lastSync}
-        schedule={schedule}
-        actions={
-          <>
-            {connected && (
-              <Button
-                size="sm"
-                disabled={pending}
-                onClick={() => {
-                  setError(null);
-                  run(syncWalletNowAction, t("toasts.synced"));
-                }}
-              >
-                {t("actions.sync")}
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant={connected ? "secondary" : "primary"}
-              disabled={pending}
-              onClick={() => {
-                setError(null);
-                setConnecting(true);
-              }}
-            >
-              {t("actions.configure")}
-            </Button>
-            {connected && (
-              <ActionMenu
-                label={t("providers.wallet.name")}
-                items={[
-                  {
-                    label: t("actions.test"),
-                    onSelect: () => {
-                      setError(null);
-                      run(testWalletAction, t("toasts.tested"));
-                    },
-                  },
-                  {
-                    label: t("actions.disconnect"),
-                    onSelect: () => {
-                      setError(null);
-                      setDisconnecting(true);
-                    },
-                    danger: true,
-                  },
-                ]}
-              />
-            )}
-          </>
-        }
+        {...row}
+        handled={HANDLED}
+        disabled={pending}
+        onAction={(kind) => {
+          setError(null);
+          if (kind === "disconnect") setDisconnecting(true);
+          else setConnecting(true);
+        }}
       />
-
-      {/* How far back the movements go (spec §9.1, F2.5). The re-download only imports, which is
-          what makes it safe to offer as a plain button: it never removes a movement. */}
-      {connected && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-4 py-2.5 text-sm">
-          <label htmlFor="wallet-history" className="text-muted">
-            {t("history.label")}
-          </label>
-          <Select
-            id="wallet-history"
-            value={String(months)}
-            onChange={(event) => setMonths(Number(event.currentTarget.value))}
-            className="w-auto"
-          >
-            {BACKFILL_CHOICES.map((choice) => (
-              <option key={choice} value={choice}>
-                {t("history.months", { count: choice })}
-              </option>
-            ))}
-          </Select>
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() => {
-              setError(null);
-              run(() => redownloadWalletHistoryAction(months), t("toasts.redownloaded"));
-            }}
-          >
-            {t("history.action")}
-          </Button>
-          <span className="text-muted">{t("history.hint")}</span>
-        </div>
-      )}
-
-      {/* The first pass fetches a year (spec §9.1), which is worth saying before it is asked for
-          and while it has not happened yet. */}
-      {lastSync === null && (
-        <p className="border-t border-border px-4 py-2.5 text-sm text-muted">{t("firstSync")}</p>
-      )}
-
-      {error && !connecting && !disconnecting && (
-        <p role="alert" className="border-t border-border px-4 py-2.5 text-sm text-neg">
-          {error}
-        </p>
-      )}
 
       <Modal
         open={connecting}

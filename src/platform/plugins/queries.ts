@@ -63,6 +63,59 @@ export async function listInstancePlugins(): Promise<InstancePlugin[]> {
   });
 }
 
+/** What the diagnostics of the server say about one plugin (ux/n2-connection-status.md §9). */
+export interface PluginDiagnostic {
+  id: string;
+  /** The plugin's own name, or its id while its manifest was never read. */
+  name: string;
+  version: string | null;
+  contract: string | null;
+  state: "up" | "down" | "never" | "incompatible";
+  /** The last good check (`up`) or the first failed one of the current series (`down`). */
+  at: Date | null;
+}
+
+/**
+ * The plugins of the server's configuration and whether each one answers. Nothing of any person:
+ * no connection, no reading, no error of a connection (decision H29).
+ */
+export async function pluginDiagnostics(locale: "en" | "it"): Promise<PluginDiagnostic[]> {
+  const known = configuredPlugins();
+  if (known.length === 0) return [];
+  const rows = await getDb()
+    .select({
+      id: plugins.id,
+      manifest: plugins.manifest,
+      contract: plugins.contract,
+      state: plugins.state,
+      readAt: plugins.manifestReadAt,
+      unreachableSince: plugins.unreachableSince,
+    })
+    .from(plugins)
+    .where(
+      inArray(
+        plugins.id,
+        known.map((plugin) => plugin.id),
+      ),
+    )
+    .orderBy(asc(plugins.id));
+  return known.map((plugin) => {
+    const row = rows.find((one) => one.id === plugin.id);
+    if (!row)
+      return { id: plugin.id, name: plugin.id, version: null, contract: null, state: "never", at: null };
+    const facts = {
+      id: plugin.id,
+      name: row.manifest.labels.name[locale],
+      version: row.manifest.version,
+      contract: row.contract,
+    };
+    if (!acceptsContract(row.contract)) return { ...facts, state: "incompatible", at: row.readAt };
+    return row.state === "unreachable"
+      ? { ...facts, state: "down", at: row.unreachableSince }
+      : { ...facts, state: "up", at: row.readAt };
+  });
+}
+
 export async function findInstancePlugin(pluginId: string): Promise<InstancePlugin | null> {
   return (await listInstancePlugins()).find((plugin) => plugin.config.id === pluginId) ?? null;
 }

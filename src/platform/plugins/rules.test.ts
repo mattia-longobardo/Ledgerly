@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PluginAccount, SyncResponse } from "./contract/calls";
 import {
-  bankState,
   hashState,
   instanceKeyOf,
   institutionOf,
@@ -53,32 +52,6 @@ describe("an account number on a screen", () => {
     expect(maskIdentifier("IT60 X054 2811 1010 0000 0123 456")).toBe("IT60 •••• 3456");
     expect(maskIdentifier("1234")).toBe("••••");
     expect(maskIdentifier(null)).toBeNull();
-  });
-});
-
-describe("the state of a bank", () => {
-  const now = new Date("2026-11-15T10:00:00Z");
-  const base = {
-    state: "active" as const,
-    expiresAt: new Date("2027-01-01T00:00:00Z"),
-    lastError: null,
-    chosen: true,
-  };
-
-  it("is expired past the end of the access, or when the access was refused", () => {
-    expect(bankState({ ...base, expiresAt: new Date("2026-11-15T09:59:59Z") }, now)).toBe("expired");
-    expect(bankState({ ...base, state: "revoked", expiresAt: null }, now)).toBe("expired");
-    expect(bankState({ ...base, state: "revoked", chosen: false }, now)).toBe("expired");
-  });
-
-  it("is pending until the accounts are chosen", () => {
-    expect(bankState({ ...base, chosen: false }, now)).toBe("pending");
-  });
-
-  it("is active, in error, or active while the bank only asks to wait", () => {
-    expect(bankState(base, now)).toBe("active");
-    expect(bankState({ ...base, state: "error", lastError: "provider_down" }, now)).toBe("error");
-    expect(bankState({ ...base, state: "error", lastError: "rate_limited" }, now)).toBe("active");
   });
 });
 

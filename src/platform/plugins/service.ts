@@ -9,7 +9,7 @@
  */
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
@@ -19,6 +19,7 @@ import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
 import { pluginProvider } from "@/platform/integrations/rules";
 import {
+  clearErrorCode,
   type Connection,
   deleteConnection,
   IntegrationError,
@@ -37,7 +38,7 @@ import {
   type PluginAccount,
   verifyResponseSchema,
 } from "./contract/calls";
-import { acceptsContract, manifestSchema } from "./contract/manifest";
+import { manifestSchema } from "./contract/manifest";
 import {
   configuredPlugins,
   findInstancePlugin,
@@ -51,6 +52,7 @@ import {
   instanceKeyOf,
   looksLikePrivateKey,
   normalizePrivateKey,
+  providerAccountIdOf,
   type ReturnError,
 } from "./rules";
 import { pluginActivations, pluginAuthStates, plugins, pluginUserCredentials } from "./schema";
@@ -72,7 +74,6 @@ export type PluginActionCode =
   | "bank_unavailable"
   | "invalid_data"
   | "connected"
-  | "one_bank"
   | "no_choice"
   | "failed";
 
@@ -117,14 +118,17 @@ export async function refreshManifests(now: Date = new Date(), deps: Deps = {}):
         timeoutMs: MANIFEST_TIMEOUT_MS,
         fetchFn: deps.fetchFn,
       });
-      // A plugin answers for its own id only, and only in a contract this core speaks.
-      if (manifest.id !== plugin.id || !acceptsContract(manifest.contract)) continue;
+      // A plugin answers for its own id only. One that speaks a contract this core does not is
+      // kept as it answered, so the diagnostics can say so: nobody can use it (`acceptsContract`
+      // is asked again by every reader).
+      if (manifest.id !== plugin.id) continue;
       const values = {
         url: plugin.url,
         manifest,
         contract: manifest.contract,
         state: "ready",
         manifestReadAt: now,
+        unreachableSince: null,
       };
       await getDb()
         .insert(plugins)
@@ -132,7 +136,13 @@ export async function refreshManifests(now: Date = new Date(), deps: Deps = {}):
         .onConflictDoUpdate({ target: plugins.id, set: { ...values, updatedAt: now } });
     } catch (error) {
       if (!(error instanceof PluginCallError)) throw error;
-      if (row) await getDb().update(plugins).set({ state: "unreachable" }).where(eq(plugins.id, plugin.id));
+      // The start of the series of failed checks is kept: a later failure does not move it.
+      if (row) {
+        await getDb()
+          .update(plugins)
+          .set({ state: "unreachable", unreachableSince: sql`coalesce(${plugins.unreachableSince}, ${now})` })
+          .where(eq(plugins.id, plugin.id));
+      }
     }
   }
 }
@@ -289,6 +299,8 @@ export async function saveUserCredentials(
       target: [pluginUserCredentials.userId, pluginUserCredentials.pluginId],
       set: { credentials: sealed, savedAt: now, invalidAt: null, updatedAt: now },
     });
+  // The key the provider refused is replaced: the banks it opens no longer ask for one.
+  await clearErrorCode(ctx, pluginProvider(input.pluginId), "auth");
 }
 
 /** Deletes a person's credentials. Only with no bank connected: a connection needs them (§4.3). */
@@ -350,8 +362,6 @@ export function returnAddress(pluginId: string): string {
  * Starts an access to a bank and returns the address of the bank's site. The `state` that comes
  * back with the person is random, kept only as a hash, tied to the session that asked and good
  * for a quarter of an hour: a return that does not match all of that is refused.
- *
- * Until N2 a person connects one bank: a second one is refused here, before the provider is asked.
  */
 export async function startAccess(
   ctx: Pick<Ctx, "userId">,
@@ -361,10 +371,6 @@ export async function startAccess(
 ): Promise<{ url: string }> {
   const plugin = await requireActivePlugin(ctx, input.pluginId);
   const credentials = await requireUserCredentials(ctx, input.pluginId);
-  const key = instanceKeyOf(input.institution);
-  const others = (await listPluginConnections(ctx, input.pluginId)).filter((one) => one.instanceKey !== key);
-  if (others.length > 0) throw new PluginActionError("one_bank");
-
   await deleteExpiredStates(now);
   const state = randomBytes(32).toString("base64url");
   let url: string;
@@ -622,6 +628,24 @@ export async function connectionSummary(
 }
 
 /**
+ * The connection of a plugin whose access shares one account, by the provider's own id of the
+ * account: which bank an account of the person comes from. `null` when no access shares it.
+ */
+export async function connectionSharing(
+  ctx: Pick<Ctx, "userId">,
+  pluginId: string,
+  providerAccountId: string,
+): Promise<{ connection: Connection; chosen: boolean } | null> {
+  for (const connection of await listPluginConnections(ctx, pluginId)) {
+    const bag = readBag(await readCredentials(ctx, connection.id));
+    if (bag.accounts.some((account) => providerAccountIdOf(account) === providerAccountId)) {
+      return { connection, chosen: bag.chosen };
+    }
+  }
+  return null;
+}
+
+/**
  * Disconnects a bank (§5.4): closes the access at the provider, forgets it here, and gives its
  * accounts back to the person as accounts kept by hand — balances and movements stay. The access
  * is forgotten even when the provider does not answer: a person who disconnects must end up
@@ -639,11 +663,11 @@ export async function disconnectBank(
   );
   if (!connection) throw new PluginActionError("not_found");
   const credentials = await readUserCredentials(ctx, input.pluginId);
-  const { sessionId } = readBag(await readCredentials(ctx, connection.id));
+  const { sessionId, accounts } = readBag(await readCredentials(ctx, connection.id));
   if (credentials !== null && sessionId !== "") await revokeQuietly(plugin, credentials, sessionId, deps);
   await deleteConnection(ctx, connection.id);
-  // Until N2 a person has one connection per plugin, so the provider's accounts are this bank's.
-  await sink.releaseAccounts(ctx, connection.provider);
+  // This bank's accounts only: the other banks of the person keep theirs.
+  await sink.releaseAccounts(ctx, connection.provider, accounts.map(providerAccountIdOf));
 }
 
 /** Drops the pending accesses nobody came back for. Called when one is started: no job of its own. */

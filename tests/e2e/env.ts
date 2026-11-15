@@ -79,6 +79,14 @@ export const USERS = {
   // empty state measures an empty state. The module journeys keep their own users, which start
   // empty on purpose, so filling this one breaks none of them.
   layout: { email: "layout@example.test", password: "layout-password-123", name: "Layout" },
+  // Release N2: one connection in each of the five states (ux/n2-connection-status.md §2), the
+  // history, "Advanced" and more than one bank. Its own user: the `layout` user keeps the section
+  // "Banks" on its guide, with nothing saved.
+  connections: {
+    email: "connections@example.test",
+    password: "connections-password-123",
+    name: "Connections",
+  },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
   // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
   // the instance's real users too, and a spec must never touch one.
@@ -128,6 +136,8 @@ export const SESSIONS = {
   tokens: { user: "tokens", file: "tokens-session.json" },
   // F9: the layout and accessibility check (tests/e2e/a11y.spec.ts).
   layout: { user: "layout", file: "layout-session.json" },
+  // Release N2: the rows of the connections, in every state (tests/e2e/connections.spec.ts).
+  connections: { user: "connections", file: "connections-session.json" },
   // TOTP: sessions of users who still have to set it up, so they land on the setup page.
   enroll: { user: "enroll", file: "enroll-session.json" },
   pending: { user: "pending", file: "pending-session.json" },

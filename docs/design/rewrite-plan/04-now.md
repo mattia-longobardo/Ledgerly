@@ -110,6 +110,8 @@ Cosa **non** entra in N1: tab Plugin, catalogo, Wallet e Trek come plugin. Arriv
 | In pausa | Nessuna regola di pianificazione | «Aggiornamento automatico spento» | «Riattiva» |
 
 - Codici di errore: `auth`, `consent_expired`, `rate_limited`, `provider_down`, `invalid_data`. Testo fisso tradotto.
+- «Oltre l'intervallo» ha una sola definizione: la lettura dovuta dalla pianificazione del collegamento è in ritardo
+  di oltre 15 minuti. La soglia dell'avviso «fermo» resta 36 ore.
 - Lo stato è una funzione pura del dominio, con un solo vocabolario. Chiude UI-ACC-1 (stato di sync composto a mano in 5 punti) per i punti toccati; gli altri si chiudono in R3.
 - Vale per tutti i collegamenti: plugin, Wallet, Trek, eToro, Binance.
 - Registro grezzo: per utente, sotto «Avanzate», solo i propri collegamenti, filtro per collegamento, 30 giorni. L'admin vede solo lo stato dei plugin in Server › Diagnostica (H29).

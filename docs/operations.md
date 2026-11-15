@@ -37,11 +37,24 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
 - **Reading a bank.** After the access the person chooses what each account of the bank is here
   (a new account, one of theirs kept by hand, or nothing), and the app reads the bank at once.
   Then it reads three times a day (07:10, 13:10, 19:10 in the person's zone) through the same
-  dispatcher as every other connection, and when the person presses "Sync now". A bank that
-  answers "no more calls" puts the automatic readings on hold for six hours; "Sync now" still
-  works. A movement is recognised by the bank's reference, or by a hash when it gives none, so a
-  second reading writes nothing twice. "Disconnect" closes the access and leaves the accounts,
-  with their balances and movements, as accounts kept by hand.
+  dispatcher as every other connection, and when the person presses "Update now". A bank that
+  answers "no more calls" puts the automatic readings on hold for six hours; "Update now" still
+  works. A person connects as many banks as they want: one connection per bank (from N2). A movement is recognised by the bank's reference, or by a hash when it gives none, so a
+  second reading writes nothing twice. "Disconnect" closes the access of that bank and leaves its
+  accounts, with their balances and movements, as accounts kept by hand.
+- **The state of a connection (from N2).** One pure rule for every provider
+  (`src/platform/integrations/status.ts`): five values, a closed list of error codes
+  (`auth`, `consent_expired`, `rate_limited`, `provider_down`, `invalid_data`) and the streak of
+  failures, kept on `integration_connections.error_code` and `consecutive_failures`. A connection
+  is late when a reading failed or the reading its schedule owed is more than 15 minutes overdue.
+  The warnings are generic (`sync_failed`, `sync_stale`, `consent_expiring` in
+  `notifications_log`, with the connection as the key) and are sent by the dispatcher after each
+  pass (`alerts.ts`). `sync_runs` is kept for 30 days and says who started each run (`origin`),
+  its code, the HTTP status and the app's version; nothing new stores what a provider said. A
+  run left `running` for more than an hour is closed as `failed` with the reason `orphaned`, by
+  the dispatcher at each pass and by `housekeeping`.
+- **Diagnostics.** Admin › Server shows, for each plugin of `PLUGIN_URLS`, whether it answers
+  (`plugins.state`, `manifest_read_at`, `unreachable_since`). It shows nothing of any person.
 - **Where the pieces join.** The runtime (`src/platform/plugins/`) states a port for the writes;
   `src/app/(app)/banks/sink.ts` fills it with the services of the accounts and of the
   transactions; `src/app/plugin-wiring.ts` registers the dispatcher's pass. The tick route and
