@@ -62,7 +62,6 @@ describe("storageKeyFor", () => {
     expect(storageKeyFor("payslip", "0190a1b2-0000-7000-8000-000000000001", 2026, "ab12", "pdf")).toBe(
       "payslips/0190a1b2-0000-7000-8000-000000000001/2026/ab12.pdf",
     );
-    expect(storageKeyFor("cometa_operations", "u", 2026, "cd34", "xls_html")).toBe("cometa/u/2026/cd34.xls");
   });
 });
 

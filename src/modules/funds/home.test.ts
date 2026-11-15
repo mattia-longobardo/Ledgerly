@@ -26,12 +26,10 @@ const flow = (on: CivilDate, chargedCents: Cents, feeCents: Cents | null = 0n): 
   feeCents,
   origin: { youCents: chargedCents, employerCents: 0n, tfrCents: 0n, otherCents: 0n },
   recurring: true,
-  deductible: true,
 });
 
 const fund = (overrides: Partial<HomeFund> & { id: string }): HomeFund => ({
   name: overrides.id,
-  type: "pac",
   archived: false,
   points: [],
   flows: [],
@@ -69,7 +67,6 @@ const PAC = fund({
 
 const PENSION = fund({
   id: "pension",
-  type: "pension",
   points: [
     { on: "2027-09-30", cents: 500_00n },
     { on: "2028-02-29", cents: 780_00n },
@@ -108,7 +105,7 @@ describe("the portfolio over a period", () => {
     expect(rows.map((row) => row.year)).toEqual([2028, 2027, 2026]);
   });
 
-  it("drives the paid-in, its origin and the deductible from the calendar of the period", () => {
+  it("drives the paid-in and its origin from the calendar of the period", () => {
     const summary = summaryOf([PAC, PENSION], year(2027));
     expect(summary.paidInCents).toBe(510_00n);
     expect(summary.origin).toEqual({
@@ -117,13 +114,6 @@ describe("the portfolio over a period", () => {
       tfrCents: 300_00n,
       otherCents: 0n,
     });
-    // A PAC's money is yours, but only the pension fund is deductible.
-    expect(summary.deductible).toEqual({ usedCents: 190_00n, limitCents: 530_000n });
-  });
-
-  it("has no deductible without a year or without a pension fund", () => {
-    expect(summaryOf([PAC, PENSION], allPeriod(TODAY)).deductible).toBeNull();
-    expect(summaryOf([PAC], year(2027)).deductible).toBeNull();
   });
 
   it("states the money after the last value, only for a fund that has one", () => {

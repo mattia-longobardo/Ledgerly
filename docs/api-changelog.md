@@ -3,6 +3,15 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-14 · one pension fund model (release N6)
+
+Funds has one kind of fund. A fund's documents are not read any more.
+
+- `POST /api/v1/imports`: the kinds `cometa_operations` and `cometa_position` stay in the contract
+  and are refused with `415 unsupported_format`. The file is not stored. `payslip` is unchanged.
+- No other route or tool changes: no route and no tool returns a fund, and the deductible figure
+  and the fund's documents had no field.
+
 ## 2026-10-30 · the P&L of a period (PERS-145)
 
 `GET /api/v1/investments` and the MCP tool `list_investments` add `pnl`: the profit and loss of a

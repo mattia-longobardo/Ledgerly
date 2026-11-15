@@ -13,7 +13,7 @@ import { xirr, type Xirr } from "@/modules/investments/xirr";
 import { type MovementLike, valuePoints } from "./pension/metrics";
 import { accruedTotal, type OperationLike, pendingQuarters, type QuarterStatus } from "./pension/reconcile";
 import { netOfFees, NO_FEES, type PensionFees } from "./pension/rules";
-import { type DepositSource, monthlyRhythm } from "./rules";
+import { monthlyRhythm } from "./rules";
 
 /**
  * The period engine of Funds (docs/design/funds-ux.md §5.2, §5.3). Pure: the caller reads the rows.
@@ -65,7 +65,7 @@ export function documentedPoints(
   ).map(({ on, cents }) => ({ on, cents }));
 }
 
-/** Of whom the money is (§5.3). A PAC's money is yours. */
+/** Of whom the money is (§5.3). A voluntary payment is yours. */
 export interface MoneyOrigin {
   youCents: Cents;
   employerCents: Cents;
@@ -85,35 +85,22 @@ export interface FundFlow {
   origin: MoneyOrigin;
   /** False for a one-off: an initial capital, an enrolment, a voluntary payment, a transfer, an exit. */
   recurring: boolean;
-  /**
-   * Whether its "you" and "employer" count against the yearly limit: a contribution or a voluntary payment.
-   * An enrolment fee does not (§5.3), and neither does a transfer in from another fund.
-   */
-  deductible: boolean;
-}
-
-/** A PAC's deposits. A deposit the rule found is the plan at work; one written by hand is a one-off. */
-export function pacFlows(
-  deposits: readonly { on: CivilDate; chargedCents: Cents; feeCents: Cents | null; source: DepositSource }[],
-): FundFlow[] {
-  return deposits.map((deposit) => ({
-    on: deposit.on,
-    chargedCents: deposit.chargedCents,
-    feeCents: deposit.feeCents,
-    origin: { ...NO_ORIGIN, youCents: deposit.chargedCents },
-    recurring: deposit.source === "rule",
-    deductible: false,
-  }));
 }
 
 const INFLOW_CLASSES: readonly string[] = ["contribution", "enrollment", "voluntary", "transfer_in"];
-const DEDUCTIBLE_CLASSES: readonly string[] = ["contribution", "voluntary"];
 
 /**
- * A pension fund's flows: its own operations. With no inflow operation at all, the quarters the
- * transfer schedule has carried stand in, each at its own deadline, as `paidInFlows` reads them.
+ * The money of a fund, from its one register: every operation that moves money across the fund's
+ * boundary, and the cost of one that moves none.
+ *
+ * A contribution of the payslip is recurring, and so is a voluntary payment the job found among
+ * the movements (`source = rule`): it is the plan at work. One written by hand is a one-off. A fee
+ * nobody has stated is `null`, never a zero.
+ *
+ * With no inflow operation at all, the periods the payslips accrued and the transfer schedule has
+ * carried stand in, each at its own deadline, net of the fees the fund's list estimates.
  */
-export function pensionFlows(
+export function fundFlows(
   operations: readonly OperationLike[],
   quarters: readonly QuarterStatus[] = [],
   fees: PensionFees = NO_FEES,
@@ -127,34 +114,32 @@ export function pensionFlows(
       otherCents: operation.otherCents,
     };
     const gross = origin.youCents + origin.employerCents + origin.tfrCents + origin.otherCents;
+    const feeCents = operation.feesUnknown ? null : operation.feesCents;
     if (INFLOW_CLASSES.includes(operation.classification)) {
       flows.push({
         on: operation.operationDate,
         chargedCents: gross,
-        feeCents: operation.feesCents,
+        feeCents,
         origin,
-        recurring: operation.classification === "contribution",
-        deductible: DEDUCTIBLE_CLASSES.includes(operation.classification),
+        recurring: operation.classification === "contribution" || operation.source === "rule",
       });
     } else if (operation.classification === "withdrawal") {
-      // An exit's gross amount is what left the position, however the export signs it.
+      // An exit's gross amount is what left the position, however it was signed when written.
       flows.push({
         on: operation.operationDate,
         chargedCents: gross < 0n ? gross : -gross,
-        feeCents: operation.feesCents,
+        feeCents,
         origin: NO_ORIGIN,
         recurring: false,
-        deductible: false,
       });
     } else if (operation.feesCents !== 0n) {
       // A switch moves no money across the boundary, but what it costs is still a cost.
       flows.push({
         on: operation.operationDate,
         chargedCents: 0n,
-        feeCents: operation.feesCents,
+        feeCents,
         origin: NO_ORIGIN,
         recurring: false,
-        deductible: false,
       });
     }
   }
@@ -178,7 +163,6 @@ export function pensionFlows(
           tfrCents: accrued("tfr"),
         },
         recurring: true,
-        deductible: true,
       });
     }
     if (enrollment !== 0n) {
@@ -189,7 +173,6 @@ export function pensionFlows(
         // The payslips' enrolment quota has one line for both sides: it is its own line here too.
         origin: { ...NO_ORIGIN, otherCents: enrollment },
         recurring: false,
-        deductible: false,
       });
     }
   }
@@ -253,8 +236,6 @@ export interface PeriodMeasure {
   feesPaidCents: Cents;
   /** Of whom that money is. */
   origin: MoneyOrigin;
-  /** You + employer of the deductible flows of the period (§5.3). */
-  deductibleCents: Cents;
   /** Flows of the period dated after `a(p)`: no value has seen them yet. */
   notInValueCents: Cents;
 }
@@ -315,10 +296,7 @@ export function measurePeriod(input: {
   const notInValueCents = calendar
     .filter((flow) => end === null || flow.on > end.on)
     .reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);
-  const deductibleCents = calendar
-    .filter((flow) => flow.deductible)
-    .reduce<Cents>((sum, flow) => sum + flow.origin.youCents + flow.origin.employerCents, 0n);
-  const common = { paidInCents, feesPaidCents, origin, deductibleCents, notInValueCents };
+  const common = { paidInCents, feesPaidCents, origin, notInValueCents };
 
   const start = end === null ? null : startOf(before, points, flows);
   // No new value since the previous period: its flows wait for the next value, so the sum still holds.

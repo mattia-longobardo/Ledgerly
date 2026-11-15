@@ -1,4 +1,5 @@
-// tests/e2e/funds-detail.spec.ts — a fund's page (docs/design/funds-ux.md §5.3, §6, F3), with the invented
+// tests/e2e/funds-detail.spec.ts — a fund's page (docs/design/funds-ux.md §5.3, §6, F3; one model for
+// every fund since release N6, docs/design/rewrite-plan/ux/n6-pension-fund.md), with the invented
 // funds of the `fundsDetail` seed.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
@@ -59,7 +60,7 @@ test.describe("a fund's page", () => {
     await expect(page).toHaveURL(new RegExp(`period=${Y - 1}$`));
     await expect(page.getByTestId("period-text")).toHaveText(String(Y - 1));
     const tabs = page.getByRole("navigation", { name: "Fund" });
-    await tabs.getByRole("link", { name: "Valuations" }).click();
+    await tabs.getByRole("link", { name: "Values" }).click();
     await expect(page).toHaveURL(new RegExp(`period=${Y - 1}&tab=valuations|tab=valuations&period=${Y - 1}`));
     await tabs.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(new RegExp(`period=${Y - 1}`));
@@ -85,7 +86,7 @@ test.describe("a fund's page", () => {
     await page.getByRole("group", { name: "Period", exact: true }).getByRole("link", { name: "All" }).click();
     await expect(page).toHaveURL(/period=all/);
     await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Contributions" }).click();
-    await expect(page.getByTestId("fund-operations")).toBeVisible();
+    await expect(page.getByTestId("fund-contributions")).toBeVisible();
 
     await page.goBack();
     await expect(page).toHaveURL(/period=all$/);
@@ -114,26 +115,26 @@ test.describe("a fund's page", () => {
     await expect(page.locator("main").getByText(/^[+−-]\d.*%$/)).toHaveCount(1);
   });
 
-  test("the plan and this month's status stay as of today; a past year says its value and today's", async ({
+  test("the debit and this month's status stay as of today; a past year says its value and today's", async ({
     page,
   }) => {
     const path = await fundPath(page, "PAC Piano");
     await page.goto(path);
-    const plan = await page.getByTestId("kpi-plan").textContent();
+    const plan = await page.getByTestId("kpi-debit").textContent();
     expect(plan).toContain("250,00");
     expect(plan).toContain("Deposit found");
     const projection = await page.getByTestId("fund-projection").textContent();
     await expect(page.getByTestId("fund-value-today")).toHaveCount(0);
 
     await page.goto(`${path}?period=${Y - 1}`);
-    expect(await page.getByTestId("kpi-plan").textContent()).toBe(plan);
+    expect(await page.getByTestId("kpi-debit").textContent()).toBe(plan);
     expect(await page.getByTestId("fund-projection").textContent()).toBe(projection);
     await expect(page.getByTestId("fund-value")).toContainText("Value at year end");
     await expect(page.getByTestId("fund-value")).toContainText("1.600,00");
     await expect(page.getByTestId("fund-value-today")).toContainText("1.900,00");
   });
 
-  test("the projection of a PAC stands on its plan", async ({ page }) => {
+  test("the projection of a fund with a debit stands on its plan", async ({ page }) => {
     await page.goto(await fundPath(page, "PAC Piano"));
     await expect(page.getByTestId("fund-projection")).toContainText("If the plan stays at 250,00");
     await page.getByTestId("fund-projection").getByText("See all the rates").click();
@@ -142,7 +143,7 @@ test.describe("a fund's page", () => {
     await expect(page.getByTestId("fund-projection").locator("thead th")).toHaveCount(5);
   });
 
-  test("the pension fund: on the way by quarter, as of today; the bridge; the projection closed", async ({
+  test("the fund fed by the payslip: on the way by period, as of today; the bridge; the projection closed", async ({
     page,
   }) => {
     const path = await fundPath(page, "Pensione Beta");
@@ -158,10 +159,8 @@ test.describe("a fund's page", () => {
 
     await page.goto(`${path}?period=${Y - 1}`);
     expect(await notice.textContent()).toBe(coming);
-    await expect(page.getByTestId("kpi-deductible")).toContainText("500,00");
     await expect(page.getByTestId("recent-flow")).toHaveCount(2);
-    await expect(page.getByTestId("recent-flow").first()).toContainText(`II ${Y - 1}`);
-    await page.goto(`${path}?period=all`);
+    await expect(page.getByTestId("recent-flow").first()).toContainText(`Q2 ${Y - 1}`);
     await expect(page.getByTestId("kpi-deductible")).toHaveCount(0);
   });
 
@@ -228,7 +227,7 @@ test.describe("a fund's page", () => {
       await expect(hero(page)).toHaveAttribute("data-cents", "");
       await expect(hero(page)).toHaveText(`No value yet in ${Y}`);
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
-      await expect(page.getByRole("button", { name: "Record value" }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Update value" }).first()).toBeVisible();
     });
 
     test("an archived fund: its badge, its gain, and a last value that is not held today", async ({
@@ -241,7 +240,7 @@ test.describe("a fund's page", () => {
       await expect(hero(page)).toHaveAttribute("data-cents", cents!);
       await expect(page.locator("h1")).toContainText("Archived");
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
-      await expect(page.getByRole("button", { name: "Record value" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Update value" })).toHaveCount(0);
     });
 
     test("a past year with no value: the last one known, and today's", async ({ page }) => {
@@ -271,6 +270,98 @@ test.describe("a fund's page", () => {
     });
   });
 
+  // Release N6 (docs/design/rewrite-plan/ux/n6-pension-fund.md §10.4, §10.5): the sections come from the
+  // fund's sources, never from a kind, and in every empty state the action by hand comes first.
+  test.describe("a fund with no source", () => {
+    test.use({ storageState: sessionState("fundsSetup") });
+
+    test("no payslip section, no debit section, and the two actions in the empty states", async ({
+      page,
+    }) => {
+      await page.goto(`${HOME}?period=all`);
+      const href = await page
+        .getByRole("link", { name: "Fondo Vuoto", exact: true })
+        .filter({ visible: true })
+        .first()
+        .getAttribute("href");
+      const path = href!.split("?")[0];
+      const banner = page.getByRole("banner");
+
+      await test.step("Overview: the first steps, and nothing a source would add", async () => {
+        await page.goto(path);
+        await expect(page.getByTestId("fund-meta")).toHaveText(/^Esempio · since /);
+        // Only "Update value" at the top: "Record contribution" goes there with "One-off payments".
+        await expect(banner.getByRole("button", { name: "Update value" })).toBeVisible();
+        await expect(banner.getByRole("button", { name: "Record contribution" })).toHaveCount(0);
+        const first = page.getByTestId("fund-first-steps");
+        await expect(first.getByRole("button", { name: "Record contribution" })).toBeVisible();
+        await expect(first.getByRole("button", { name: "Update value" })).toBeVisible();
+        for (const id of [
+          "fund-alert",
+          "fund-on-the-way",
+          "kpi-debit",
+          "kpi-accrued",
+          "kpi-deductible",
+          "fund-bridge",
+        ]) {
+          await expect(page.getByTestId(id), id).toHaveCount(0);
+        }
+        await expect(page.getByTestId("kpi-paid")).toContainText("0,00 €");
+        await expect(page.getByTestId("kpi-paid")).toContainText("no contribution");
+        await expect(page.getByTestId("kpi-market")).toContainText("needs a value");
+        const recent = page.getByTestId("fund-recent");
+        await expect(recent).toContainText("No contribution in this period.");
+        await expect(recent.getByRole("button", { name: "Record contribution" })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Import/ })).toHaveCount(0);
+      });
+
+      await test.step("Contributions: the register alone, with its action", async () => {
+        await page.goto(`${path}?tab=contributions`);
+        const empty = page.getByTestId("contributions-empty");
+        await expect(empty).toContainText("No contribution yet.");
+        // No source feeds this fund: nothing "arrives automatically".
+        await expect(empty).not.toContainText("arrive automatically");
+        for (const id of ["fund-payslips", "fund-quarters", "fund-deposit-rule", "fund-deductible"]) {
+          await expect(page.getByTestId(id), id).toHaveCount(0);
+        }
+        await empty.getByRole("button", { name: "Record contribution" }).click();
+        const dialog = page.getByRole("dialog", { name: "Record contribution · Fondo Vuoto" });
+        await expect(dialog.getByRole("button", { name: "Voluntary" })).toHaveAttribute(
+          "aria-pressed",
+          "true",
+        );
+        // The period is the payslip source's: with no such source the field is not there.
+        await dialog.getByRole("button", { name: "From the payslip" }).click();
+        await expect(dialog.getByLabel("My contribution")).toBeVisible();
+        await expect(dialog.getByLabel("Period")).toHaveCount(0);
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+      });
+
+      await test.step("Values: the empty state offers the first value", async () => {
+        await page.goto(`${path}?tab=valuations`);
+        const empty = page.getByTestId("valuations-empty");
+        await expect(empty).toContainText("No value yet. Record the first one to measure the fund.");
+        await empty.getByRole("button", { name: "Update value" }).click();
+        await expect(page.getByRole("dialog", { name: "Update value · Fondo Vuoto" })).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(page.getByTestId("fund-statements")).toHaveCount(0);
+        await expect(page.getByTestId("fund-documents")).toHaveCount(0);
+      });
+
+      await test.step("Settings: no source and no fee, each with its action", async () => {
+        await page.goto(`${path}?tab=settings`);
+        const sources = page.getByTestId("fund-sources");
+        await expect(sources).toContainText("No source");
+        await expect(sources.getByRole("button", { name: "Add source" })).toBeVisible();
+        await expect(page.getByTestId("source-row")).toHaveCount(0);
+        const fees = page.getByTestId("fund-fees");
+        await expect(fees).toContainText("Fees not set");
+        await expect(fees.getByRole("button", { name: "Add fee" })).toBeVisible();
+      });
+    });
+  });
+
   test("the phone has the same controls", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(HOME);
@@ -287,9 +378,10 @@ test.describe("a fund's page", () => {
     await expect(page.getByTestId("fund-bridge")).toBeVisible();
     await expect(page.getByTestId("fund-projection").locator("summary")).toBeVisible();
     await expect(
-      page.getByTestId("recent-flow").or(page.getByText("No deposit in this period.")),
+      page.getByTestId("recent-flow").or(page.getByText("No contribution in this period.")),
     ).not.toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Record value/ }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Import/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Update value/ }).first()).toBeVisible();
+    // A fund reads no document any more (release N6): nothing offers to import one.
+    await expect(page.getByRole("button", { name: /Import/ })).toHaveCount(0);
   });
 });

@@ -149,11 +149,6 @@ export function currentCompartment(
   return largest ?? fallback;
 }
 
-/** The tariff row of a compartment's management cost: "Monetario Plus" → `management_monetario_plus`. */
-export function managementItem(compartment: string | null): string {
-  return `management_${(compartment ?? "").trim().toLowerCase().replace(/\s+/g, "_")}`;
-}
-
 export function operationUnits(movements: readonly MovementLike[]): string {
   return sumUnits(movements.map((movement) => movement.units)) ?? "0";
 }

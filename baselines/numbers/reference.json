@@ -629,7 +629,98 @@
  "funds": {
   "funds": {
    "Fideuram Piano Accumulo": {
-    "detail": {
+    "month": {
+     "on": "2031-10-05"
+    },
+    "onTheWayCents": "0",
+    "onTheWayQuarters": 0,
+    "pension": {
+     "bridge": {
+      "accrued": {
+       "cents": "0"
+      },
+      "enrollment": {
+       "cents": "0"
+      },
+      "fees": {
+       "cents": "-1100"
+      },
+      "invested": {
+       "cents": "749900",
+       "total": true
+      },
+      "market": {
+       "cents": "22000"
+      },
+      "paidIn": {
+       "cents": "751000",
+       "total": true
+      },
+      "pending": {
+       "cents": "0"
+      },
+      "value": {
+       "cents": "771900",
+       "total": true
+      },
+      "voluntary": {
+       "cents": "751000"
+      }
+     },
+     "color": null,
+     "competences": [],
+     "debits": [
+      {
+       "accountName": null,
+       "plan": {
+        "day": 5,
+        "endOn": null,
+        "frequency": {
+         "count": 1
+        },
+        "startOn": "2030-11-01"
+       },
+       "source": {
+        "accountId": null,
+        "accrualPeriod": null,
+        "amountCents": "25100",
+        "components": null,
+        "debitDay": 5,
+        "dueDay": null,
+        "dueEntries": null,
+        "dueOffsetMonths": null,
+        "employer": null,
+        "intervalCount": 1,
+        "note": null,
+        "toleranceDays": null,
+        "validFrom": null,
+        "validTo": null
+       },
+       "status": {
+        "on": "2031-10-05"
+       }
+      }
+     ],
+     "decisions": [],
+     "fees": [
+      {
+       "amountCents": "100",
+       "component": null,
+       "note": null,
+       "period": null,
+       "rate": null,
+       "validFrom": null,
+       "validTo": null
+      },
+      {
+       "amountCents": null,
+       "component": null,
+       "note": null,
+       "sourceId": null,
+       "validFrom": null,
+       "validTo": null
+      }
+     ],
      "forecast": {
       "monthlyCents": "25100",
       "ownRate": null,
@@ -677,110 +768,353 @@
        }
       ]
      },
+     "fund": {
+      "archivedAt": null,
+      "debitAccountId": null,
+      "debitDay": null,
+      "depositFeeCents": null,
+      "isin": null,
+      "monthlyCents": null,
+      "receivesPayroll": false,
+      "startOn": "2030-11-01",
+      "ter": null
+     },
      "metrics": {
+      "accruedCents": "0",
+      "compartments": [],
+      "coveredUntil": null,
+      "enrollmentCents": "0",
+      "feesAssociationCents": "1100",
       "feesCents": "1100",
+      "feesEnrollmentCents": "0",
+      "feesOtherCents": "0",
       "gainBasisCents": "751000",
       "gainCents": "20900",
       "gainFraction": 0.02782956,
+      "gainReason": null,
       "investedCents": "775000",
-      "investedPartial": false,
-      "paidInAfterValueCents": "25100",
-      "paidInCents": "776100",
-      "valueCents": "771900"
+      "lastPrice": null,
+      "laterCents": "25100",
+      "paidInCents": "751000",
+      "pending": [],
+      "pendingCents": "0",
+      "standsOnPayslips": false,
+      "transferredCents": "0",
+      "transfersInCents": "0",
+      "units": null,
+      "value": {
+       "cents": "771900",
+       "on": "2031-09-30"
+      },
+      "voluntaryCents": "751000",
+      "withdrawalsCents": "0"
      },
-     "paidSeries": [
-      "500000",
-      "525100",
-      "550200",
-      "575300",
-      "600400",
-      "625500",
-      "650600",
-      "675700",
-      "700800",
-      "725900",
-      "751000",
-      "776100"
-     ],
-     "periods": [
+     "months": [],
+     "movements": [],
+     "operations": [
       {
-       "days": 90,
-       "flowsCents": "75300",
-       "fraction": 0.013591911,
-       "from": "2030-12-31",
-       "fromCents": "528000",
-       "gainCents": "8200",
-       "to": "2031-03-31",
-       "toCents": "611500"
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "0",
+       "feesUnknown": false,
+       "netCents": "500000",
+       "note": null,
+       "operationDate": "2030-11-01",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "500000"
       },
       {
-       "days": 91,
-       "flowsCents": "75300",
-       "fraction": 0.022568433,
-       "from": "2031-03-31",
-       "fromCents": "611500",
-       "gainCents": "15500",
-       "to": "2031-06-30",
-       "toCents": "702300"
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2030-12-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
       },
       {
-       "days": 92,
-       "flowsCents": "75300",
-       "fraction": -0.007330246,
-       "from": "2031-06-30",
-       "fromCents": "702300",
-       "gainCents": "-5700",
-       "to": "2031-09-30",
-       "toCents": "771900"
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-01-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-02-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-03-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-04-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-05-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-06-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-07-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-08-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-09-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
+      },
+      {
+       "competenceQuarter": null,
+       "competenceYear": null,
+       "documentId": null,
+       "employerCents": "0",
+       "employerName": null,
+       "employerTaxCode": null,
+       "feesCents": "100",
+       "feesUnknown": false,
+       "netCents": "25000",
+       "note": null,
+       "operationDate": "2031-10-05",
+       "originalState": null,
+       "otherCents": "0",
+       "sourceId": null,
+       "tfrCents": "0",
+       "transactionId": null,
+       "workerCents": "25100"
       }
      ],
-     "stats": {
-      "best": {
-       "days": 91,
-       "flowsCents": "75300",
-       "fraction": 0.022568433,
-       "from": "2031-03-31",
-       "fromCents": "611500",
-       "gainCents": "15500",
-       "to": "2031-06-30",
-       "toCents": "702300"
+     "payroll": null,
+     "points": {
+      "2030-12-31": {
+       "cents": "528000",
+       "on": "2030-12-31"
       },
-      "compounded": 0.028869533376507883,
-      "counted": 3,
-      "days": 273,
-      "positive": 2,
-      "worst": {
-       "days": 92,
-       "flowsCents": "75300",
-       "fraction": -0.007330246,
-       "from": "2031-06-30",
-       "fromCents": "702300",
-       "gainCents": "-5700",
-       "to": "2031-09-30",
-       "toCents": "771900"
+      "2031-03-31": {
+       "cents": "611500",
+       "on": "2031-03-31"
+      },
+      "2031-06-30": {
+       "cents": "702300",
+       "on": "2031-06-30"
+      },
+      "2031-09-30": {
+       "cents": "771900",
+       "on": "2031-09-30"
       }
      },
-     "valueSeries": [
-      null,
-      "528000",
-      "528000",
-      "528000",
-      "611500",
-      "611500",
-      "611500",
-      "702300",
-      "702300",
-      "702300",
-      "771900",
-      "771900"
-     ]
-    },
-    "month": {
-     "on": "2031-10-05"
-    },
-    "onTheWayCents": "0",
-    "onTheWayQuarters": 0,
-    "pension": null
+     "quarters": [],
+     "snapshots": [],
+     "sourceContributions": {
+      "#1": 0
+     },
+     "sources": {
+      "bank_debit": {
+       "accountId": null,
+       "accrualPeriod": null,
+       "amountCents": "25100",
+       "components": null,
+       "debitDay": 5,
+       "dueDay": null,
+       "dueEntries": null,
+       "dueOffsetMonths": null,
+       "employer": null,
+       "intervalCount": 1,
+       "note": null,
+       "toleranceDays": null,
+       "validFrom": null,
+       "validTo": null
+      }
+     },
+     "valuations": {
+      "2030-12-31": {
+       "note": null,
+       "on": "2030-12-31",
+       "paidInCents": "525100",
+       "units": null,
+       "valueCents": "528000"
+      },
+      "2031-03-31": {
+       "note": null,
+       "on": "2031-03-31",
+       "paidInCents": "600400",
+       "units": null,
+       "valueCents": "611500"
+      },
+      "2031-06-30": {
+       "note": null,
+       "on": "2031-06-30",
+       "paidInCents": "675700",
+       "units": null,
+       "valueCents": "702300"
+      },
+      "2031-09-30": {
+       "note": null,
+       "on": "2031-09-30",
+       "paidInCents": "751000",
+       "units": null,
+       "valueCents": "771900"
+      }
+     },
+     "valueOlderThanOperations": true
+    }
    }
   },
   "periods": {
@@ -795,7 +1129,6 @@
         "flows": {
          "2030-11-01": {
           "chargedCents": "500000",
-          "deductible": false,
           "feeCents": "0",
           "on": "2030-11-01",
           "origin": {
@@ -808,7 +1141,6 @@
          },
          "2030-12-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2030-12-05",
           "origin": {
@@ -821,7 +1153,6 @@
          },
          "2031-01-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-01-05",
           "origin": {
@@ -834,7 +1165,6 @@
          },
          "2031-02-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-02-05",
           "origin": {
@@ -847,7 +1177,6 @@
          },
          "2031-03-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-03-05",
           "origin": {
@@ -860,7 +1189,6 @@
          },
          "2031-04-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-04-05",
           "origin": {
@@ -873,7 +1201,6 @@
          },
          "2031-05-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-05-05",
           "origin": {
@@ -886,7 +1213,6 @@
          },
          "2031-06-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-06-05",
           "origin": {
@@ -899,7 +1225,6 @@
          },
          "2031-07-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-07-05",
           "origin": {
@@ -912,7 +1237,6 @@
          },
          "2031-08-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-08-05",
           "origin": {
@@ -925,7 +1249,6 @@
          },
          "2031-09-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-09-05",
           "origin": {
@@ -938,7 +1261,6 @@
          },
          "2031-10-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-10-05",
           "origin": {
@@ -970,7 +1292,6 @@
         }
        },
        "measure": {
-        "deductibleCents": "0",
         "end": {
          "cents": "528000",
          "on": "2030-12-31"
@@ -999,7 +1320,6 @@
       },
       "summary": {
        "accruedCents": "0",
-       "deductible": null,
        "feesCents": "100",
        "feesPartial": false,
        "gainCents": "2900",
@@ -1022,7 +1342,6 @@
     },
     "home": {
      "accruedCents": "0",
-     "deductible": null,
      "feesCents": "100",
      "feesPartial": false,
      "gainCents": "2900",
@@ -1053,7 +1372,6 @@
         "flows": {
          "2030-11-01": {
           "chargedCents": "500000",
-          "deductible": false,
           "feeCents": "0",
           "on": "2030-11-01",
           "origin": {
@@ -1066,7 +1384,6 @@
          },
          "2030-12-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2030-12-05",
           "origin": {
@@ -1079,7 +1396,6 @@
          },
          "2031-01-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-01-05",
           "origin": {
@@ -1092,7 +1408,6 @@
          },
          "2031-02-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-02-05",
           "origin": {
@@ -1105,7 +1420,6 @@
          },
          "2031-03-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-03-05",
           "origin": {
@@ -1118,7 +1432,6 @@
          },
          "2031-04-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-04-05",
           "origin": {
@@ -1131,7 +1444,6 @@
          },
          "2031-05-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-05-05",
           "origin": {
@@ -1144,7 +1456,6 @@
          },
          "2031-06-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-06-05",
           "origin": {
@@ -1157,7 +1468,6 @@
          },
          "2031-07-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-07-05",
           "origin": {
@@ -1170,7 +1480,6 @@
          },
          "2031-08-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-08-05",
           "origin": {
@@ -1183,7 +1492,6 @@
          },
          "2031-09-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-09-05",
           "origin": {
@@ -1196,7 +1504,6 @@
          },
          "2031-10-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-10-05",
           "origin": {
@@ -1228,7 +1535,6 @@
         }
        },
        "measure": {
-        "deductibleCents": "0",
         "end": {
          "cents": "771900",
          "on": "2031-09-30"
@@ -1257,7 +1563,6 @@
       },
       "summary": {
        "accruedCents": "0",
-       "deductible": null,
        "feesCents": "900",
        "feesPartial": false,
        "gainCents": "18000",
@@ -1280,7 +1585,6 @@
     },
     "home": {
      "accruedCents": "0",
-     "deductible": null,
      "feesCents": "900",
      "feesPartial": false,
      "gainCents": "18000",
@@ -1311,7 +1615,6 @@
         "flows": {
          "2030-11-01": {
           "chargedCents": "500000",
-          "deductible": false,
           "feeCents": "0",
           "on": "2030-11-01",
           "origin": {
@@ -1324,7 +1627,6 @@
          },
          "2030-12-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2030-12-05",
           "origin": {
@@ -1337,7 +1639,6 @@
          },
          "2031-01-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-01-05",
           "origin": {
@@ -1350,7 +1651,6 @@
          },
          "2031-02-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-02-05",
           "origin": {
@@ -1363,7 +1663,6 @@
          },
          "2031-03-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-03-05",
           "origin": {
@@ -1376,7 +1675,6 @@
          },
          "2031-04-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-04-05",
           "origin": {
@@ -1389,7 +1687,6 @@
          },
          "2031-05-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-05-05",
           "origin": {
@@ -1402,7 +1699,6 @@
          },
          "2031-06-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-06-05",
           "origin": {
@@ -1415,7 +1711,6 @@
          },
          "2031-07-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-07-05",
           "origin": {
@@ -1428,7 +1723,6 @@
          },
          "2031-08-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-08-05",
           "origin": {
@@ -1441,7 +1735,6 @@
          },
          "2031-09-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-09-05",
           "origin": {
@@ -1454,7 +1747,6 @@
          },
          "2031-10-05": {
           "chargedCents": "25100",
-          "deductible": false,
           "feeCents": "100",
           "on": "2031-10-05",
           "origin": {
@@ -1486,7 +1778,6 @@
         }
        },
        "measure": {
-        "deductibleCents": "0",
         "end": {
          "cents": "771900",
          "on": "2031-09-30"
@@ -1515,7 +1806,6 @@
       },
       "summary": {
        "accruedCents": "0",
-       "deductible": null,
        "feesCents": "1000",
        "feesPartial": false,
        "gainCents": "20900",
@@ -1538,7 +1828,6 @@
     },
     "home": {
      "accruedCents": "0",
-     "deductible": null,
      "feesCents": "1000",
      "feesPartial": false,
      "gainCents": "20900",

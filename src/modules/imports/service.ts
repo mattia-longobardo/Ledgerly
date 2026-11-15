@@ -11,6 +11,7 @@ import {
   cleanFileName,
   documentName,
   type DocumentKind,
+  type ReadKind,
   type DocumentState,
   type EvidenceOrigin,
   type EvidenceUnit,
@@ -46,7 +47,7 @@ export class ImportError extends Error {
 }
 
 export interface Upload {
-  kind: DocumentKind;
+  kind: ReadKind;
   fileName: string;
   bytes: Uint8Array;
 }

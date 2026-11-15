@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flowCounts, fundSummary, hypothesesOnly, isFundId, recentFlows } from "./detail";
+import { fundSummary, hypothesesOnly, isFundId } from "./detail";
 import { gainBars, type HomeFund, homeSummary, valueSeries } from "./home";
 import { allPeriod, type FundFlow, yearPeriod } from "./period";
 import type { FundForecast } from "./rules";
@@ -11,12 +11,10 @@ const flow = (on: string, chargedCents: bigint, recurring = true): FundFlow => (
   feeCents: 100n,
   origin: { youCents: chargedCents, employerCents: 0n, tfrCents: 0n, otherCents: 0n },
   recurring,
-  deductible: true,
 });
 const fund = (overrides: Partial<HomeFund> = {}): HomeFund => ({
   id: "f",
   name: "Fondo",
-  type: "pac",
   archived: false,
   points: [
     { on: "2027-06-30", cents: 101_000n },
@@ -102,38 +100,6 @@ describe("a reading behind the money", () => {
     expect(line.measure.gainCents).toBe(1_000n);
     expect(line.measure.notInValueCents).toBe(50_000n);
     expect(valueSeries([line]).at(-1)).toMatchObject({ valueCents: 100_000n, paidCents: 99_000n });
-  });
-});
-
-describe("recentFlows", () => {
-  it("lists the money of the period, newest first, up to the limit", () => {
-    const flows = [
-      flow("2027-01-10", 1n),
-      flow("2028-02-10", 2n),
-      flow("2028-03-10", 3n),
-      flow("2028-04-10", 4n),
-    ];
-    expect(recentFlows(flows, yearPeriod(2028, TODAY), 2).map((one) => one.on)).toEqual([
-      "2028-04-10",
-      "2028-03-10",
-    ]);
-    expect(recentFlows(flows, allPeriod(TODAY))).toHaveLength(4);
-  });
-
-  it("leaves out a switch's cost, which moved no money", () => {
-    expect(recentFlows([flow("2028-02-10", 0n)], allPeriod(TODAY))).toEqual([]);
-  });
-});
-
-describe("flowCounts", () => {
-  it("counts the plan's deposits and the one-offs of the period, and no exit", () => {
-    const flows = [
-      flow("2028-02-10", 2n),
-      flow("2028-03-10", 3n, false),
-      flow("2028-04-10", -4n, false),
-      flow("2027-01-01", 1n),
-    ];
-    expect(flowCounts(flows, yearPeriod(2028, TODAY))).toEqual({ recurring: 1, oneOff: 1 });
   });
 });
 

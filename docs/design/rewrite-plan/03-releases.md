@@ -191,6 +191,18 @@ Revisione sulla standardizzazione, approvata da Mattia il 14/11/2026. Dettaglio:
 | Dipende da | N0 (fotografia dei numeri). Ultimo della fase A: parte dopo N5. Indipendente da N1-N4 |
 | Dimensione | L |
 
+Note di realizzazione di N6:
+
+- Decisioni di Mattia del 14/11/2026 sulle 8 domande delle schermate: [`ux/n6-pension-fund.md`](ux/n6-pension-fund.md)
+  §15, «Decisioni prese». Domanda 6 (modelli di fondo): A, un solo modello nel file di dati.
+- Chiarimenti del piano nati con il codice: [`11-standardization.md`](11-standardization.md) §11.2.7. Due limiti da
+  conoscere: la busta paga alimenta un fondo per volta fino a R2 (punto 7); le righe della tariffa che ripetono le
+  commissioni della regola non diventano righe (punto 9).
+- Migrazioni `0046`, `0047`, `0048` e file di rollback: [`06-data.md`](06-data.md) §6.1.
+- Base delle prestazioni delle tre viste dei fondi: [`10-modularity.md`](10-modularity.md) §10.9.1.
+- Il rilascio si fa con `scripts/release.sh n6 --before-from <checkout della versione in produzione>`: la fotografia
+  «prima» si legge con il codice di prima, perché il codice nuovo chiede tabelle che ancora non esistono.
+
 ---
 
 ## Fase B · riscrittura progressiva

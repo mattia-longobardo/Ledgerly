@@ -54,11 +54,11 @@ test("the screens of the README", async ({ page }) => {
   const payslip = await follow(page, "/payroll", /^(Open|Review)$/);
   await shot(page, "payroll-review", payslip);
 
-  // A pension fund with its bridge and its operations (F6).
+  // A fund fed by the payslip, with its bridge and its contributions (F6; one fund model since N6).
   const pension = await follow(page, "/funds", /Cometa/);
   await shot(page, "cometa", pension);
 
-  // An investment PAC with its deposits and its returns (F4).
+  // A fund with a recurring debit, with its contributions and its values (F4; one fund model since N6).
   const pac = await follow(page, "/funds", /Fideuram/);
   await shot(page, "fund", pac);
 });

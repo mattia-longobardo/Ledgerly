@@ -69,36 +69,42 @@ A budget is a monthly limit on a category, an account, or both.
 
 ## Funds
 
-**Funds** holds your PAC funds and your pension fund. Each fund has its own account, so net worth
-counts its value once.
+**Funds** holds your pension funds. Each fund has its own account, so net worth counts its value
+once. There is one kind of fund: what a fund's page shows depends on how the money reaches it, and
+you say that when you add the fund.
 
-![A PAC and its returns](screenshots/fund.png)
+![A fund and its returns](screenshots/fund.png)
 
-### PAC funds
+- **Add a fund** in four steps: the fund, how you pay in, its fees, a summary. Only the first step
+  is required. A fund with no source and no fee is a fund whose contributions and values you write
+  by hand.
+- **Contribution sources** (Settings › Contributions):
+  - **Payslip.** When you apply a payslip, the contributions it withholds — yours, your employer's,
+    the TFR — go to the fund. You choose the components, whether a transfer covers a month or a
+    quarter, and when it is due. A payslip feeds one fund at a time.
+  - **Recurring debit.** After each sync the app finds the debit among the movements of the paying
+    account and records the contribution. The debit can be every N weeks, months or years, with a
+    start and an optional end. If the debit of the running period is missing three days after the
+    expected day, the app shows an alert.
+  - **Payments by hand.** Adds **Record contribution** to the top of the fund's page. The button is
+    always in the Contributions tab too.
+  A source with contributions is paused, never removed, so its contributions keep their origin.
+- **Record contribution** writes a voluntary payment, a contribution from the payslip as the fund
+  states it, or another operation: joining, a transfer in, a change of compartment, an exit. An exit
+  is money that left the fund, not a loss.
+- **Value.** **Update value** writes the balance of the fund's account. A fund has no daily price:
+  its gain runs between the dates of two values.
+- **Fees** are a list you edit: on joining, on each contribution, recurring, on the assets, on
+  request. The list explains and estimates; the fee written on each contribution is the one that
+  counts. The yearly cost on the assets is shown, never subtracted: it is already inside the value.
+- **Reconciliation by period**, for a fund fed by the payslip with due dates: it compares what the
+  payslips accrued with what you recorded as received. Money not received yet shows the date by
+  which it is due, so "not yet" and "late" are different states.
 
-- **Value.** **Record valuation** writes the balance of the fund's account.
-- **Deposits** are entered by hand, or matched after each sync from the debits of the paying account.
-  The fund's fee per deposit is subtracted.
-- **Gain** is value minus money paid in. The monthly return is Simple Dietz between two month-end
-  values.
-- If a deposit is missing three days after the charge day, the app shows an alert.
+![A fund fed by the payslip](screenshots/cometa.png)
 
-### Pension fund (Fondo Cometa)
-
-A pension fund shows six numbers that are not the same and are never added together: accrued in
-your payslips, credited by the fund, invested in units, value at its date, gain after the known
-costs, and what is still to reconcile.
-
-![A pension fund](screenshots/cometa.png)
-
-- **Accrued** comes from your payslips. When you apply a payslip, its contributions go to the fund.
-- **Two Cometa documents** can be imported. The operations export (`.xls`) gives one operation per
-  row; you see each row as new, known or changed before you apply it. The position summary (PDF)
-  gives the value at its date.
-- **Reconciliation is per quarter.** It compares what the payslips accrued with what the fund
-  credited. Money not credited yet shows the date by which the fund must credit it, so "not yet"
-  and "late" are different states.
-- **Costs** are the fund's published tariff, with the date it was checked.
+A fund's documents are not imported any more. What was read from them before stays part of the
+fund, read only.
 
 ## Investments
 
@@ -152,7 +158,7 @@ A pocket sets money aside without moving it.
 
 ## Payroll
 
-Every document Ledgerly reads — a payslip, a Cometa export or statement — follows the same steps:
+Every payslip Ledgerly reads follows the same steps:
 **upload → read → review → verify → apply**. The original file is kept in storage and never
 overwritten. A second upload of the same file is recognised as a duplicate.
 

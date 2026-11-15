@@ -6,7 +6,10 @@ import {
   reconcile,
   type ReconcileInput,
 } from "./reconcile";
-import { COMETA_SCHEDULE, DEFAULT_TOLERANCE_DAYS } from "./rules";
+import { DEFAULT_TOLERANCE_DAYS } from "./rules";
+
+/** Due on the 20th of the month after each quarter: 20 April, 20 July, 20 October, 20 January. */
+const QUARTERLY_CALENDAR = { rule: { day: 20, offsetMonths: 1 }, entries: [] };
 
 /** Every amount here is invented; the shapes are the guide's cases (GC §11, §13). */
 
@@ -56,7 +59,8 @@ function run(input: Partial<ReconcileInput> & Pick<ReconcileInput, "today">) {
     competences: [],
     operations: [],
     decisions: [],
-    schedule: COMETA_SCHEDULE,
+    period: "quarter",
+    calendar: QUARTERLY_CALENDAR,
     toleranceDays: DEFAULT_TOLERANCE_DAYS,
     freshness: null,
     ...input,

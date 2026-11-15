@@ -10,11 +10,11 @@ import {
   saveBalanceEntry,
   saveProviderBalance,
 } from "@/modules/accounts/service";
-import { createFund } from "@/modules/funds/service";
 import type { Ctx } from "@/platform/context";
 import { addDays, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
+import { debitFund } from "../../../test/funds";
 import { accountMovement, assetsService, engineService, manualService } from "../../../test/investments";
 import { createTestUser } from "../../../test/users";
 import {
@@ -449,10 +449,10 @@ describe("the accounts a service may use (§1.3)", () => {
   });
 
   it("a fund's valuation account and a service are not offered, and are refused", async () => {
-    const fund = await createFund(ctx, {
+    const fund = await debitFund(ctx, {
       name: "Fideuram PAC",
       provider: null,
-      isin: null,
+      code: null,
       compartment: null,
       debitAccountId: null,
       debitDay: null,
@@ -460,7 +460,6 @@ describe("the accounts a service may use (§1.3)", () => {
       startOn: "2026-01-01",
       monthlyCents: null,
       depositFeeCents: null,
-      valuationAccountId: null,
     });
     const accountId = await existing();
     await createManualService(ctx, { accountId, category: "broker", url: null });

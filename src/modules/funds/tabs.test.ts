@@ -6,7 +6,6 @@ import {
   bestAndWorst,
   closesPeriodBefore,
   competenceOn,
-  deductibleYears,
   inPeriod,
   legacyFundQuery,
   quarterInPeriod,
@@ -22,12 +21,10 @@ const flow = (on: string, chargedCents: bigint, employerCents = 0n, tfrCents = 0
   feeCents: 100n,
   origin: { youCents: chargedCents, employerCents, tfrCents, otherCents: 0n },
   recurring: true,
-  deductible: true,
 });
 const fund = (overrides: Partial<HomeFund> = {}): HomeFund => ({
   id: "f",
   name: "Fondo",
-  type: "pac",
   archived: false,
   points: [
     { on: "2027-03-01", cents: 101_000n },
@@ -140,52 +137,6 @@ describe("the Contributions tab", () => {
     expect(quarterInPeriod(fourth, { from: "2026-12-01", to: "2026-12-31" })).toBe(true);
     expect(quarterInPeriod(fourth, { from: "2026-07-01", to: "2026-09-30" })).toBe(false);
   });
-
-  const paying = fund({
-    type: "pension",
-    flows: [
-      flow("2026-07-10", 10_000n, 15_000n, 35_000n),
-      flow("2027-01-10", 10_000n, 15_000n, 35_000n),
-      flow("2027-07-10", 10_000n, 15_000n, 35_000n),
-    ],
-  });
-
-  it("counts you + employer and never the TFR", () => {
-    const [year] = deductibleYears(paying.flows, yearPeriod(2027, TODAY), TODAY);
-    expect(year).toMatchObject({ year: 2027, youCents: 20_000n, employerCents: 30_000n, usedCents: 50_000n });
-    expect(year.limitCents).toBe(530_000n);
-  });
-
-  it("is the same figure as the KPI of that year", () => {
-    const period = { ...yearPeriod(2027, TODAY), year: 2027 };
-    const { deductible } = homeSummary({ funds: [paying], period, todayOn: TODAY, firstOn: "2026-07-10" });
-    expect(deductibleYears(paying.flows, period, TODAY)[0].usedCents).toBe(deductible!.usedCents);
-  });
-
-  it("leaves out money dated after today, as the KPI of that year does", () => {
-    const dated = fund({
-      type: "pension",
-      flows: [flow("2028-02-10", 10_000n, 5_000n), flow("2028-09-01", 7_000n)],
-    });
-    const period = { ...yearPeriod(2028, TODAY), year: 2028 };
-    const { deductible } = homeSummary({ funds: [dated], period, todayOn: TODAY, firstOn: "2028-02-10" });
-    expect(deductible!.usedCents).toBe(15_000n);
-    expect(deductibleYears(dated.flows, period, TODAY)[0].usedCents).toBe(15_000n);
-    expect(deductibleYears(dated.flows, allPeriod(TODAY), TODAY)[0].usedCents).toBe(15_000n);
-  });
-
-  it("shows the years the period touches, newest first", () => {
-    expect(deductibleYears(paying.flows, allPeriod(TODAY), TODAY).map((row) => row.year)).toEqual([
-      2027, 2026,
-    ]);
-    expect(deductibleYears(paying.flows, yearPeriod(2026, TODAY), TODAY).map((row) => row.year)).toEqual([
-      2026,
-    ]);
-    expect(
-      deductibleYears(paying.flows, { from: "2026-12-01", to: "2027-01-31" }, TODAY).map((row) => row.year),
-    ).toEqual([2027, 2026]);
-    expect(deductibleYears(paying.flows, yearPeriod(2028, TODAY), TODAY)).toEqual([]);
-  });
 });
 
 describe("the old addresses", () => {
@@ -229,32 +180,20 @@ describe("the old addresses", () => {
   });
 });
 
-describe("the enrolment fee and the deductible (funds-ux §5.3)", () => {
+describe("the enrolment fee (funds-ux §5.3)", () => {
   const enrolment: FundFlow = {
     on: "2027-02-10",
     chargedCents: 1_032n,
     feeCents: 1_032n,
     origin: { youCents: 516n, employerCents: 516n, tfrCents: 0n, otherCents: 0n },
     recurring: false,
-    deductible: false,
   };
-  const paying = fund({ type: "pension", flows: [flow("2027-01-10", 10_000n, 5_000n), enrolment] });
+  const paying = fund({ flows: [flow("2027-01-10", 10_000n, 5_000n), enrolment] });
   const period = { ...yearPeriod(2027, TODAY), year: 2027 };
-
-  it("leaves it out of the tab and of the KPI, which do not differ", () => {
-    const [year] = deductibleYears(paying.flows, period, TODAY);
-    expect(year).toMatchObject({ youCents: 10_000n, employerCents: 5_000n, usedCents: 15_000n });
-    const { deductible } = homeSummary({ funds: [paying], period, todayOn: TODAY, firstOn: "2027-01-10" });
-    expect(deductible!.usedCents).toBe(15_000n);
-  });
 
   it("keeps it in the money paid in", () => {
     const { paidInCents } = homeSummary({ funds: [paying], period, todayOn: TODAY, firstOn: "2027-01-10" });
     expect(paidInCents).toBe(16_032n);
-  });
-
-  it("has no deductible year for an enrolment fee alone", () => {
-    expect(deductibleYears([enrolment], period, TODAY)).toEqual([]);
   });
 });
 

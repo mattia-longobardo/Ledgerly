@@ -8,13 +8,19 @@ import {
 } from "@/platform/dates";
 import type { Cents } from "@/platform/money";
 import {
+  type AccrualPeriod,
+  competencePeriod,
+  type DueCalendar,
+  dueOn,
+  monthsPerPeriod,
+  periodStart,
+} from "../sources";
+import {
   type Component,
   type Decision,
-  dueDate,
   type OperationClass,
-  type Quarter,
+  type OperationSource,
   quarterKey,
-  type ScheduleEntry,
 } from "./rules";
 
 /**
@@ -66,6 +72,10 @@ export interface OperationLike {
   netCents: Cents;
   /** Units bought, summed over its movements, as decimal text ("30.427"); "0" when none. */
   units: string;
+  /** Who wrote it; an operation the job found among the movements is the plan at work. */
+  source?: OperationSource;
+  /** True while nobody has said what it cost: `feesCents` is then 0 and not a fee. */
+  feesUnknown?: boolean;
 }
 
 export interface DecisionLike {
@@ -81,7 +91,10 @@ export interface ReconcileInput {
   competences: readonly CompetenceLike[];
   operations: readonly OperationLike[];
   decisions: readonly DecisionLike[];
-  schedule: readonly ScheduleEntry[];
+  /** The span one transfer is for: the periods below are quarters or months. */
+  period: AccrualPeriod;
+  /** When a period's transfer is due; with no due dates nothing is ever late. */
+  calendar: DueCalendar;
   toleranceDays: number;
   /**
    * When the latest applied export was received (plan F6 §3.6.7): an export lists every operation
@@ -108,7 +121,8 @@ export interface ComponentStatus {
 
 export interface QuarterStatus {
   year: number;
-  quarter: Quarter;
+  /** The period within its year: a quarter, or a month for a source that accrues by month. */
+  quarter: number;
   due: CivilDate | null;
   /** The due date plus the display tolerance: before it, a missing credit is not late. */
   toleranceUntil: CivilDate | null;
@@ -174,11 +188,12 @@ function hasUnits(units: string): boolean {
 
 /** Every quarter a payslip or a contribution speaks of, oldest first. */
 export function reconcile(input: ReconcileInput): QuarterStatus[] {
-  const keys = new Map<string, { year: number; quarter: Quarter }>();
+  const keys = new Map<string, { year: number; quarter: number }>();
+  const periodOf = (competence: CompetenceLike) => competencePeriod(competence, input.period);
   for (const competence of input.competences) {
-    keys.set(quarterKey(competence.year, competence.quarter as Quarter), {
+    keys.set(quarterKey(competence.year, periodOf(competence)), {
       year: competence.year,
-      quarter: competence.quarter as Quarter,
+      quarter: periodOf(competence),
     });
   }
   const credits = input.operations.filter(
@@ -189,7 +204,7 @@ export function reconcile(input: ReconcileInput): QuarterStatus[] {
   );
   for (const operation of credits) {
     const year = operation.competenceYear!;
-    const quarter = operation.competenceQuarter as Quarter;
+    const quarter = operation.competenceQuarter!;
     keys.set(quarterKey(year, quarter), { year, quarter });
   }
 
@@ -203,10 +218,10 @@ export function reconcile(input: ReconcileInput): QuarterStatus[] {
   return [...keys.values()]
     .sort((a, b) => a.year - b.year || a.quarter - b.quarter)
     .map(({ year, quarter }) => {
-      const due = dueDate(year, quarter, input.schedule);
+      const due = dueOn(year, quarter, input.period, input.calendar);
       const toleranceUntil = due === null ? null : addDays(due, input.toleranceDays);
       const competences = input.competences.filter(
-        (competence) => competence.year === year && competence.quarter === quarter,
+        (competence) => competence.year === year && periodOf(competence) === quarter,
       );
       const operations = credits.filter(
         (operation) => operation.competenceYear === year && operation.competenceQuarter === quarter,
@@ -216,8 +231,8 @@ export function reconcile(input: ReconcileInput): QuarterStatus[] {
 
       const missingMonths: MonthKey[] = [];
       if (firstMonth !== null) {
-        const start: MonthKey = `${year}-${String((quarter - 1) * 3 + 1).padStart(2, "0")}-01`;
-        for (let offset = 0; offset < 3; offset += 1) {
+        const start: MonthKey = periodStart(year, quarter, input.period);
+        for (let offset = 0; offset < monthsPerPeriod(input.period); offset += 1) {
           const month = addMonths(start, offset);
           if (month >= firstMonth && lastDayOfMonth(month) < input.today && !known.has(month)) {
             missingMonths.push(month);
@@ -318,7 +333,7 @@ export function awaitingCredit(quarter: QuarterStatus): boolean {
 /** A quarter accrued in the payslips and not yet in the fund. */
 export interface PendingQuarter {
   year: number;
-  quarter: Quarter;
+  quarter: number;
   due: CivilDate | null;
   cents: Cents;
 }

@@ -1,0 +1,1018 @@
+{
+ "Fondo Alfa": {
+  "in": {
+   "accrued": {
+    "2030-10-01": {
+     "cents": "36032",
+     "dueOn": "2031-01-20",
+     "on": "2030-10-01"
+    },
+    "2030-11-01": {
+     "cents": "35000",
+     "dueOn": "2031-01-20",
+     "on": "2030-11-01"
+    },
+    "2030-12-01": {
+     "cents": "35000",
+     "dueOn": "2031-01-20",
+     "on": "2030-12-01"
+    },
+    "2031-01-01": {
+     "cents": "35000",
+     "dueOn": "2031-04-20",
+     "on": "2031-01-01"
+    },
+    "2031-02-01": {
+     "cents": "35000",
+     "dueOn": "2031-04-20",
+     "on": "2031-02-01"
+    },
+    "2031-03-01": {
+     "cents": "35000",
+     "dueOn": "2031-04-20",
+     "on": "2031-03-01"
+    },
+    "2031-04-01": {
+     "cents": "35000",
+     "dueOn": "2031-07-20",
+     "on": "2031-04-01"
+    },
+    "2031-05-01": {
+     "cents": "35000",
+     "dueOn": "2031-07-20",
+     "on": "2031-05-01"
+    },
+    "2031-06-01": {
+     "cents": "35000",
+     "dueOn": "2031-07-20",
+     "on": "2031-06-01"
+    },
+    "2031-07-01": {
+     "cents": "35000",
+     "dueOn": "2031-10-20",
+     "on": "2031-07-01"
+    },
+    "2031-08-01": {
+     "cents": "35000",
+     "dueOn": "2031-10-20",
+     "on": "2031-08-01"
+    },
+    "2031-09-01": {
+     "cents": "35000",
+     "dueOn": "2031-10-20",
+     "on": "2031-09-01"
+    }
+   },
+   "flows": [
+    {
+     "chargedCents": "1032",
+     "feeCents": "1032",
+     "on": "2031-01-20",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "1032",
+      "tfrCents": "0",
+      "youCents": "0"
+     },
+     "recurring": false
+    },
+    {
+     "chargedCents": "105000",
+     "feeCents": "300",
+     "on": "2031-01-20",
+     "origin": {
+      "employerCents": "18000",
+      "otherCents": "0",
+      "tfrCents": "63000",
+      "youCents": "24000"
+     },
+     "recurring": true
+    },
+    {
+     "chargedCents": "105000",
+     "feeCents": "300",
+     "on": "2031-04-20",
+     "origin": {
+      "employerCents": "18000",
+      "otherCents": "0",
+      "tfrCents": "63000",
+      "youCents": "24000"
+     },
+     "recurring": true
+    },
+    {
+     "chargedCents": "50000",
+     "feeCents": "0",
+     "on": "2031-05-10",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "50000"
+     },
+     "recurring": false
+    },
+    {
+     "chargedCents": "104500",
+     "feeCents": "300",
+     "on": "2031-07-21",
+     "origin": {
+      "employerCents": "18000",
+      "otherCents": "0",
+      "tfrCents": "63000",
+      "youCents": "23500"
+     },
+     "recurring": true
+    },
+    {
+     "chargedCents": "-30000",
+     "feeCents": "0",
+     "on": "2031-08-04",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "0"
+     },
+     "recurring": false
+    },
+    {
+     "chargedCents": "0",
+     "feeCents": "1000",
+     "on": "2031-09-01",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "0"
+     },
+     "recurring": false
+    }
+   ],
+   "points": {
+    "2031-01-31": {
+     "cents": "104700",
+     "on": "2031-01-31"
+    },
+    "2031-04-30": {
+     "cents": "212300",
+     "on": "2031-04-30"
+    },
+    "2031-06-30": {
+     "cents": "265900",
+     "on": "2031-06-30"
+    },
+    "2031-09-30": {
+     "cents": "341800",
+     "on": "2031-09-30"
+    }
+   }
+  },
+  "out": {
+   "bridge": {
+    "accrued": {
+     "cents": "420000"
+    },
+    "enrollment": {
+     "cents": "1032"
+    },
+    "fees": {
+     "cents": "-1932"
+    },
+    "invested": {
+     "cents": "363600",
+     "total": true
+    },
+    "market": {
+     "cents": "-21800"
+    },
+    "other": {
+     "cents": "-500"
+    },
+    "paidIn": {
+     "cents": "365532",
+     "total": true
+    },
+    "pending": {
+     "cents": "-105000"
+    },
+    "value": {
+     "cents": "341800",
+     "total": true
+    },
+    "voluntary": {
+     "cents": "50000"
+    }
+   },
+   "debit": [],
+   "forecast": {
+    "monthlyCents": "26208",
+    "ownRate": null,
+    "rates": [
+     0.02,
+     0.04,
+     0.06
+    ],
+    "rows": [
+     {
+      "paidInCents": "680028",
+      "valueCents": [
+       "666005",
+       "675693",
+       "685362"
+      ],
+      "years": 1
+     },
+     {
+      "paidInCents": "1309020",
+      "valueCents": [
+       "1333996",
+       "1384080",
+       "1435563"
+      ],
+      "years": 3
+     },
+     {
+      "paidInCents": "1938012",
+      "valueCents": [
+       "2028974",
+       "2150272",
+       "2278489"
+      ],
+      "years": 5
+     },
+     {
+      "paidInCents": "3510492",
+      "valueCents": [
+       "3891750",
+       "4350554",
+       "4870216"
+      ],
+      "years": 10
+     }
+    ]
+   },
+   "metrics": {
+    "accruedCents": "420000",
+    "compartments": [],
+    "coveredUntil": "2031-06-01",
+    "enrollmentCents": "1032",
+    "feesAssociationCents": "900",
+    "feesCents": "2932",
+    "feesEnrollmentCents": "1032",
+    "feesOtherCents": "1000",
+    "gainBasisCents": "365532",
+    "gainCents": "6268",
+    "gainFraction": 0.017147609,
+    "gainReason": null,
+    "investedCents": "332600",
+    "lastPrice": null,
+    "laterCents": "0",
+    "paidInCents": "365532",
+    "pending": {
+     "2031": {
+      "cents": "105000",
+      "due": "2031-10-20",
+      "quarter": 3,
+      "year": 2031
+     }
+    },
+    "pendingCents": "105000",
+    "standsOnPayslips": false,
+    "transferredCents": "0",
+    "transfersInCents": "0",
+    "units": null,
+    "value": {
+     "cents": "341800",
+     "on": "2031-09-30"
+    },
+    "voluntaryCents": "50000",
+    "withdrawalsCents": "30000"
+   },
+   "onTheWayCents": "105000",
+   "onTheWayPeriods": 1,
+   "periods": {
+    "2030": {
+     "measure": {
+      "end": null,
+      "feesCents": null,
+      "feesPaidCents": "0",
+      "feesPartial": false,
+      "flowsCents": null,
+      "gainCents": null,
+      "marketCents": null,
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "0"
+      },
+      "paidInCents": "0",
+      "rate": null,
+      "start": null,
+      "xirr": null
+     },
+     "status": false,
+     "summary": {
+      "accruedCents": "106032",
+      "feesCents": "0",
+      "feesPartial": false,
+      "gainCents": null,
+      "marketCents": null,
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "0"
+      },
+      "paidInCents": "0",
+      "rate": null,
+      "valueCents": null,
+      "valueFrom": null,
+      "valueTo": null,
+      "xirr": null
+     }
+    },
+    "2031": {
+     "measure": {
+      "end": {
+       "cents": "341800",
+       "on": "2031-09-30"
+      },
+      "feesCents": "2932",
+      "feesPaidCents": "2932",
+      "feesPartial": false,
+      "flowsCents": "335532",
+      "gainCents": "6268",
+      "marketCents": "9200",
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "54000",
+       "otherCents": "1032",
+       "tfrCents": "189000",
+       "youCents": "121500"
+      },
+      "paidInCents": "365532",
+      "rate": 0.02802914251111027,
+      "start": {
+       "cents": "0",
+       "on": "2031-01-19"
+      },
+      "xirr": null
+     },
+     "status": true,
+     "summary": {
+      "accruedCents": "315000",
+      "feesCents": "2932",
+      "feesPartial": false,
+      "gainCents": "6268",
+      "marketCents": "9200",
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "54000",
+       "otherCents": "1032",
+       "tfrCents": "189000",
+       "youCents": "121500"
+      },
+      "paidInCents": "365532",
+      "rate": 0.02802914251111027,
+      "valueCents": "341800",
+      "valueFrom": "2031-09-30",
+      "valueTo": "2031-09-30",
+      "xirr": null
+     }
+    },
+    "all": {
+     "measure": {
+      "end": {
+       "cents": "341800",
+       "on": "2031-09-30"
+      },
+      "feesCents": "2932",
+      "feesPaidCents": "2932",
+      "feesPartial": false,
+      "flowsCents": "335532",
+      "gainCents": "6268",
+      "marketCents": "9200",
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "54000",
+       "otherCents": "1032",
+       "tfrCents": "189000",
+       "youCents": "121500"
+      },
+      "paidInCents": "365532",
+      "rate": 0.02802914251111027,
+      "start": {
+       "cents": "0",
+       "on": "2031-01-19"
+      },
+      "xirr": null
+     },
+     "status": true,
+     "summary": {
+      "accruedCents": "421032",
+      "feesCents": "2932",
+      "feesPartial": false,
+      "gainCents": "6268",
+      "marketCents": "9200",
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "54000",
+       "otherCents": "1032",
+       "tfrCents": "189000",
+       "youCents": "121500"
+      },
+      "paidInCents": "365532",
+      "rate": 0.02802914251111027,
+      "valueCents": "341800",
+      "valueFrom": "2031-09-30",
+      "valueTo": "2031-09-30",
+      "xirr": null
+     }
+    }
+   },
+   "quarters": {
+    "2030-4": {
+     "components": {
+      "employer": {
+       "accruedCents": "18000",
+       "creditedCents": "18000",
+       "differenceCents": "0"
+      },
+      "enrollment": {
+       "accruedCents": "1032",
+       "creditedCents": null,
+       "differenceCents": null
+      },
+      "tfr": {
+       "accruedCents": "63000",
+       "creditedCents": "63000",
+       "differenceCents": "0"
+      },
+      "worker": {
+       "accruedCents": "24000",
+       "creditedCents": "24000",
+       "differenceCents": "0"
+      }
+     },
+     "due": "2031-01-20",
+     "feesCents": "300",
+     "netCents": "104700"
+    },
+    "2031-1": {
+     "components": {
+      "employer": {
+       "accruedCents": "18000",
+       "creditedCents": "18000",
+       "differenceCents": "0"
+      },
+      "tfr": {
+       "accruedCents": "63000",
+       "creditedCents": "63000",
+       "differenceCents": "0"
+      },
+      "worker": {
+       "accruedCents": "24000",
+       "creditedCents": "24000",
+       "differenceCents": "0"
+      }
+     },
+     "due": "2031-04-20",
+     "feesCents": "300",
+     "netCents": "104700"
+    },
+    "2031-2": {
+     "components": {
+      "employer": {
+       "accruedCents": "18000",
+       "creditedCents": "18000",
+       "differenceCents": "0"
+      },
+      "tfr": {
+       "accruedCents": "63000",
+       "creditedCents": "63000",
+       "differenceCents": "0"
+      },
+      "worker": {
+       "accruedCents": "24000",
+       "creditedCents": "23500",
+       "differenceCents": "-500"
+      }
+     },
+     "due": "2031-07-20",
+     "feesCents": "300",
+     "netCents": "104200"
+    },
+    "2031-3": {
+     "components": {
+      "employer": {
+       "accruedCents": "18000",
+       "creditedCents": null,
+       "differenceCents": null
+      },
+      "tfr": {
+       "accruedCents": "63000",
+       "creditedCents": null,
+       "differenceCents": null
+      },
+      "worker": {
+       "accruedCents": "24000",
+       "creditedCents": null,
+       "differenceCents": null
+      }
+     },
+     "due": "2031-10-20",
+     "feesCents": "0",
+     "netCents": "0"
+    }
+   },
+   "valuations": {
+    "2031-01-31": {
+     "on": "2031-01-31",
+     "paidInCents": "106032",
+     "valueCents": "104700"
+    },
+    "2031-04-30": {
+     "on": "2031-04-30",
+     "paidInCents": "211032",
+     "valueCents": "212300"
+    },
+    "2031-06-30": {
+     "on": "2031-06-30",
+     "paidInCents": "261032",
+     "valueCents": "265900"
+    },
+    "2031-09-30": {
+     "on": "2031-09-30",
+     "paidInCents": "365532",
+     "valueCents": "341800"
+    }
+   }
+  }
+ },
+ "Fondo Beta": {
+  "in": {
+   "accrued": [],
+   "flows": {
+    "2030-11-01": {
+     "chargedCents": "500000",
+     "feeCents": "0",
+     "on": "2030-11-01",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "500000"
+     },
+     "recurring": false
+    },
+    "2030-12-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2030-12-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-01-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-01-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-02-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-02-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-03-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-03-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-04-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-04-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-05-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-05-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-06-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-06-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-07-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-07-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-08-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-08-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-09-05": {
+     "chargedCents": "25100",
+     "feeCents": "100",
+     "on": "2031-09-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    },
+    "2031-10-05": {
+     "chargedCents": "25100",
+     "feeCents": null,
+     "on": "2031-10-05",
+     "origin": {
+      "employerCents": "0",
+      "otherCents": "0",
+      "tfrCents": "0",
+      "youCents": "25100"
+     },
+     "recurring": false
+    }
+   },
+   "points": {
+    "2030-12-31": {
+     "cents": "528000",
+     "on": "2030-12-31"
+    },
+    "2031-03-31": {
+     "cents": "611500",
+     "on": "2031-03-31"
+    },
+    "2031-06-30": {
+     "cents": "702300",
+     "on": "2031-06-30"
+    },
+    "2031-09-30": {
+     "cents": "771900",
+     "on": "2031-09-30"
+    }
+   }
+  },
+  "out": {
+   "bridge": {
+    "accrued": {
+     "cents": "0"
+    },
+    "enrollment": {
+     "cents": "0"
+    },
+    "fees": {
+     "cents": "-1000"
+    },
+    "invested": {
+     "cents": "750000",
+     "total": true
+    },
+    "market": {
+     "cents": "21900"
+    },
+    "paidIn": {
+     "cents": "751000",
+     "total": true
+    },
+    "pending": {
+     "cents": "0"
+    },
+    "value": {
+     "cents": "771900",
+     "total": true
+    },
+    "voluntary": {
+     "cents": "751000"
+    }
+   },
+   "debit": [
+    {
+     "amountCents": "25100",
+     "status": {
+      "on": "2031-10-05"
+     }
+    }
+   ],
+   "forecast": {
+    "monthlyCents": "25100",
+    "ownRate": null,
+    "rates": [
+     0.02,
+     0.04,
+     0.06
+    ],
+    "rows": [
+     {
+      "paidInCents": "1077300",
+      "valueCents": [
+       "1091289",
+       "1109459",
+       "1127610"
+      ],
+      "years": 1
+     },
+     {
+      "paidInCents": "1679700",
+      "valueCents": [
+       "1749358",
+       "1825624",
+       "1904338"
+      ],
+      "years": 3
+     },
+     {
+      "paidInCents": "2282100",
+      "valueCents": [
+       "2434014",
+       "2600228",
+       "2777070"
+      ],
+      "years": 5
+     },
+     {
+      "paidInCents": "3788100",
+      "valueCents": [
+       "4269122",
+       "4824668",
+       "5460439"
+      ],
+      "years": 10
+     }
+    ]
+   },
+   "metrics": {
+    "accruedCents": "0",
+    "compartments": [],
+    "coveredUntil": null,
+    "enrollmentCents": "0",
+    "feesAssociationCents": "1000",
+    "feesCents": "1000",
+    "feesEnrollmentCents": "0",
+    "feesOtherCents": "0",
+    "gainBasisCents": "751000",
+    "gainCents": "20900",
+    "gainFraction": 0.02782956,
+    "gainReason": null,
+    "investedCents": "775100",
+    "lastPrice": null,
+    "laterCents": "25100",
+    "paidInCents": "751000",
+    "pending": [],
+    "pendingCents": "0",
+    "standsOnPayslips": false,
+    "transferredCents": "0",
+    "transfersInCents": "0",
+    "units": null,
+    "value": {
+     "cents": "771900",
+     "on": "2031-09-30"
+    },
+    "voluntaryCents": "751000",
+    "withdrawalsCents": "0"
+   },
+   "onTheWayCents": "0",
+   "onTheWayPeriods": 0,
+   "periods": {
+    "2030": {
+     "measure": {
+      "end": {
+       "cents": "528000",
+       "on": "2030-12-31"
+      },
+      "feesCents": "100",
+      "feesPaidCents": "100",
+      "feesPartial": false,
+      "flowsCents": "525100",
+      "gainCents": "2900",
+      "marketCents": "3000",
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "525100"
+      },
+      "paidInCents": "525100",
+      "rate": 0.005771125451022099,
+      "start": {
+       "cents": "0",
+       "on": "2030-10-31"
+      },
+      "xirr": null
+     },
+     "status": true,
+     "summary": {
+      "accruedCents": "0",
+      "feesCents": "100",
+      "feesPartial": false,
+      "gainCents": "2900",
+      "marketCents": "3000",
+      "notInValueCents": "0",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "525100"
+      },
+      "paidInCents": "525100",
+      "rate": 0.005771125451022099,
+      "valueCents": "528000",
+      "valueFrom": "2030-12-31",
+      "valueTo": "2030-12-31",
+      "xirr": null
+     }
+    },
+    "2031": {
+     "measure": {
+      "end": {
+       "cents": "771900",
+       "on": "2031-09-30"
+      },
+      "feesCents": "900",
+      "feesPaidCents": "900",
+      "feesPartial": false,
+      "flowsCents": "225900",
+      "gainCents": "18000",
+      "marketCents": "18900",
+      "notInValueCents": "25100",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "251000"
+      },
+      "paidInCents": "251000",
+      "rate": 0.02769987852413875,
+      "start": {
+       "cents": "528000",
+       "on": "2030-12-31"
+      },
+      "xirr": null
+     },
+     "status": true,
+     "summary": {
+      "accruedCents": "0",
+      "feesCents": "900",
+      "feesPartial": false,
+      "gainCents": "18000",
+      "marketCents": "18900",
+      "notInValueCents": "25100",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "251000"
+      },
+      "paidInCents": "251000",
+      "rate": 0.02769987852413875,
+      "valueCents": "771900",
+      "valueFrom": "2031-09-30",
+      "valueTo": "2031-09-30",
+      "xirr": null
+     }
+    },
+    "all": {
+     "measure": {
+      "end": {
+       "cents": "771900",
+       "on": "2031-09-30"
+      },
+      "feesCents": "1000",
+      "feesPaidCents": "1000",
+      "feesPartial": false,
+      "flowsCents": "751000",
+      "gainCents": "20900",
+      "marketCents": "21900",
+      "notInValueCents": "25100",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "776100"
+      },
+      "paidInCents": "776100",
+      "rate": 0.033680011425130656,
+      "start": {
+       "cents": "0",
+       "on": "2030-10-31"
+      },
+      "xirr": null
+     },
+     "status": true,
+     "summary": {
+      "accruedCents": "0",
+      "feesCents": "1000",
+      "feesPartial": false,
+      "gainCents": "20900",
+      "marketCents": "21900",
+      "notInValueCents": "25100",
+      "origin": {
+       "employerCents": "0",
+       "otherCents": "0",
+       "tfrCents": "0",
+       "youCents": "776100"
+      },
+      "paidInCents": "776100",
+      "rate": 0.033680011425130656,
+      "valueCents": "771900",
+      "valueFrom": "2031-09-30",
+      "valueTo": "2031-09-30",
+      "xirr": null
+     }
+    }
+   },
+   "quarters": [],
+   "valuations": {
+    "2030-12-31": {
+     "on": "2030-12-31",
+     "paidInCents": "525100",
+     "valueCents": "528000"
+    },
+    "2031-03-31": {
+     "on": "2031-03-31",
+     "paidInCents": "600400",
+     "valueCents": "611500"
+    },
+    "2031-06-30": {
+     "on": "2031-06-30",
+     "paidInCents": "675700",
+     "valueCents": "702300"
+    },
+    "2031-09-30": {
+     "on": "2031-09-30",
+     "paidInCents": "751000",
+     "valueCents": "771900"
+    }
+   }
+  }
+ }
+}

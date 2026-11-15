@@ -141,9 +141,25 @@ describe("the known modularity violations", () => {
     expect(added(flat(known.moduleCycles), flat(now.moduleCycles))).toEqual([]);
   });
 
+  it("gain no file that names a provider, a fund or an employer (M12)", () => {
+    expect(added(known.forbiddenNames, now.forbiddenNames)).toEqual([]);
+  });
+
+  it("gain no message key that carries such a name (M14)", () => {
+    expect(added(known.forbiddenNameKeys, now.forbiddenNameKeys)).toEqual([]);
+  });
+
+  it("name no provider, fund or employer in Funds: the list of that module is empty from N6 (M12)", () => {
+    const inFunds = (entry: string) => /^(modules\/funds\/|app\/\(app\)\/funds\/)/.test(entry);
+    expect(now.forbiddenNames.filter(inFunds)).toEqual([]);
+    expect(now.forbiddenNameKeys.filter((key) => key.startsWith("funds."))).toEqual([]);
+  });
+
   it("list nothing that is gone: remove the entry with `npm run modularity`", () => {
     expect(added(now.crossModuleImports, known.crossModuleImports)).toEqual([]);
     expect(added(now.reciprocalUnits, known.reciprocalUnits)).toEqual([]);
+    expect(added(now.forbiddenNames, known.forbiddenNames)).toEqual([]);
+    expect(added(now.forbiddenNameKeys, known.forbiddenNameKeys)).toEqual([]);
     expect(now.counts).toEqual(known.counts);
   });
 });

@@ -14,8 +14,9 @@ questa specifica e il piano sono in conflitto, vale il piano.
 Tutti i nomi e gli importi di questo documento sono dati di esempio: «Fondo Alfa» (contributi dalla busta paga),
 «Fondo Beta» (addebito periodico), «Fondo Gamma» (fondo nuovo senza sorgenti).
 
-Le decisioni di prodotto che il piano non scrive sono nella §15 «Domande per Mattia». La specifica è scritta con
-l'opzione A di ogni domanda. Le scelte di sola interfaccia prese senza conferma sono nella §14.
+Le decisioni di prodotto che il piano non scrive sono nella §15. Mattia ha risposto il 14/11/2026: le risposte sono
+nella tabella «Decisioni prese» in testa alla §15 e **valgono sul testo delle altre sezioni**, scritto con l'opzione A
+di ogni domanda. Le scelte di sola interfaccia prese senza conferma sono nella §14.
 
 ## 1. Cosa cambia, in breve
 
@@ -970,7 +971,22 @@ Scelte di sola interfaccia. Non cambiano dati o calcoli.
 | D10 | Le righe lette dai documenti restano visibili in «Estratti già letti», in sola lettura | H19: i dati già letti restano dati del fondo |
 | D11 | Le percentuali della vecchia «regola contributiva» stanno nella nota della sorgente | Piano §11.2.3: «componenti della sorgente, con nota» |
 
-## 15. Domande per Mattia
+## 15. Decisioni prese e domande
+
+### Decisioni prese (Mattia, 14/11/2026)
+
+| # | Domanda | Decisione | Cosa cambia nel testo sopra |
+|---|---|---|---|
+| 1 | «Registra contributo» senza «Versamenti liberi» | **A** | Nulla: il pulsante c'è sempre nel tab Contributi e negli stati vuoti |
+| 2 | Più sorgenti dello stesso tipo | **A** | Nulla. Limite tecnico di N6, scritto nel piano ([`../11-standardization.md`](../11-standardization.md) §11.2.7, punto 7): una sola sorgente «Busta paga» **attiva** per fondo, e la busta paga alimenta un fondo per volta |
+| 3 | Rimozione di una sorgente con contributi | **A** | Nulla: pausa; «Rimuovi» solo senza contributi |
+| 4 | Operazioni diverse da un contributo | **B** | §8.1: il controllo «Tipo di contributo» ha una terza voce, «Altra operazione», con il campo «Operazione»: iscrizione, trasferimento in ingresso, cambio di comparto, uscita. Campi: data, importo (non per il cambio di comparto), commissione, nota. Un'uscita non conta come perdita. Le righe compaiono nel registro del tab Contributi con il nome dell'operazione |
+| 5 | Quote scritte a mano | **A** | Nulla: nessun campo per le quote |
+| 6 | Modelli di fondo | **A** | N6 esce con un solo modello nel file di dati (`src/modules/funds/templates.json`): scadenze e commissioni pubbliche del fondo negoziale che Mattia usa oggi. Il campo «Modello» compare nel passo 1 (§3.2). Il nome del gestore sta solo nel file di dati: non nel codice del modulo e non nei testi. Il modello non si applica ai fondi esistenti. Importi e percentuali del file sono scritti con il punto; la procedura li mostra con il separatore dell'utente |
+| 7 | Frequenze di un addebito periodico | **Più libertà possibile** (diversa da A e da B) | §3.3 B, §6.2: al posto del `Select` a 3 valori, «Ogni» + numero (1-120) + unità (settimane, mesi, anni); «Giorno di addebito» (non per le settimane); «Data di inizio» (vuota = adesione al fondo) e «Data di fine» facoltativa. Lo stato «atteso / trovato / non trovato», l'avviso e il job lavorano per periodo. È la stessa forma di frequenza di Subscriptions in R5a: una sola primitiva. Le chiavi `debit.frequencies.*` di §12.2 non esistono: al loro posto `debit.every`, `debit.units.*`, `debit.frequencyText`, `debit.from`, `debit.to` |
+| 8 | Valuta del fondo | **A** | Nulla: «Valuta» in «Avanzate», fissa dopo la creazione |
+
+### Le domande, come erano
 
 Decisioni di prodotto che il piano non scrive. La specifica usa l'opzione A. Con una risposta B cambia solo la
 parte indicata.
@@ -1058,7 +1074,8 @@ parte indicata.
 
 ### 16.1 Punti del piano da chiarire prima del codice
 
-Non sono decisioni di prodotto. Il piano non dà il dettaglio che l'interfaccia chiede.
+Non sono decisioni di prodotto. Il piano non dà il dettaglio che l'interfaccia chiede. **Chiariti nel piano con lo
+sviluppo di N6:** [`../11-standardization.md`](../11-standardization.md) §11.2.7, punti 1-5.
 
 1. **«Codice» del fondo.** Il piano lo mette nell'anagrafica (§11.2.1), ma il passo A1 non aggiunge una colonna e il
    passo A3 toglie `funds.isin`. La specifica mostra nel campo «Codice» il valore di oggi di `isin`.

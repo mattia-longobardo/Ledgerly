@@ -14,12 +14,18 @@ test("the address of the preview does not answer any more", async ({ page }) => 
   await expect(page.getByTestId("funds-hero")).toHaveCount(0);
 });
 
-test("the Deposits tab says a fee is unknown, and a rule with no fee reads well", async ({ page }) => {
+test("the Contributions tab says a fee is unknown, and a debit with no amount reads well", async ({
+  page,
+}) => {
   await page.goto(`${PATH}?period=all`);
   await page.getByRole("link", { name: "PAC Delta" }).filter({ visible: true }).first().click();
-  await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Deposits" }).click();
+  await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Contributions" }).click();
   await expect(page.getByTestId("fee-unknown")).toContainText("A fee is unknown");
-  await expect(page.getByTestId("fund-deposit-rule")).toContainText("become a deposit. No fee is set.");
+  // The debit's own card: what it looks for, with no amount and no fee in the sentence.
+  const debit = page.getByTestId("fund-deposit-rule");
+  await expect(debit).toContainText("Active");
+  await expect(debit).toContainText("every month · from any account · payee contains “Delta”");
+  await expect(debit).not.toContainText("€");
 });
 
 test.describe("the home", () => {

@@ -4,7 +4,7 @@ import type { Cents } from "@/platform/money";
 /**
  * What makes one charge the same charge as another (owner, 2026-09-20).
  *
- * A PAC is paid by direct debit, and a direct debit carries its own names in the bank's text: the
+ * A recurring payment into a fund is made by direct debit, and a direct debit carries its own names in the bank's text: the
  * **creditor identifier** the fund is registered under, and the **mandate reference** of the
  * signature that authorised it. Neither changes when the bank rewrites the payee, when the amount
  * is raised, or when the fund is renamed — which is exactly what a payee match cannot survive.

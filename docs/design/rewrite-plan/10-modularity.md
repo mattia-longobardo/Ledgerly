@@ -392,6 +392,19 @@ su 20 per le rotte. Le query sono quelle di una esecuzione.
 | GET /investments | 21.9 | 24.3 | 73 |
 | GET /investments/:accountId/holdings | 4.9 | 5.4 | 16 |
 
+**Base cambiata con N6 (fondo pensione unico), solo per le tre viste che leggono i fondi.** Il modello unico legge
+tre tabelle in più per ogni fondo (sorgenti, commissioni, movimenti di quote) e una lettura sola al posto delle due
+di prima. Misura di N6, stesso utente pesante:
+
+| Vista | Prima (N0) | N6 | Motivo |
+|---|---|---|---|
+| Funds (home) | 1,7 ms · 5 query | 3,4 ms · 8 query | +3 tabelle del modello unico. Una query per tabella per tutti i fondi: il numero non cresce con i fondi |
+| Funds (fondo) | 31,8 ms · 17 query | 2,7 ms · 9 query | Una sola lettura del fondo, senza la vista dei conti a 13 mesi |
+| Investments (home) | 55,1 ms · 82 query | 25,7 ms · 77 query | L'elenco dei fondi non legge più la vista dei conti |
+
+La riga di Funds (home) peggiora per numero di query: è l'effetto della priorità 1 (un solo modello) sulla priorità
+3, dichiarato a Mattia nella richiesta di OK di N6 (§10.9.3). Le altre misure del file non sono state riscritte.
+
 `POST /imports` non è misurata: chiede un documento, il bucket e `after()` di Next. Le pagine (tempo di risposta del
 server) non sono misurate in N0: l'utente pesante esiste solo in `ledgerly_test` e l'anteprima locale non accetta il
 login con password. Ogni «pagina» della tabella è l'insieme delle letture del suo `page.tsx`.
@@ -490,9 +503,9 @@ modulo. R0 lo sposta nel pacchetto di arrivo senza riscrittura (stessa regola di
 
 | # | Regola | Controllo automatico | Valore di oggi | Obiettivo | Entra nel gate |
 |---|---|---|---|---|---|
-| M12 | **Nomi vietati.** Fuori dalle cartelle dei fornitori, dei profili e dei pacchetti paese non compare il nome di un fornitore, di un fondo o di un datore: `cometa`, `fideuram`, `reply`, `teamsystem`, `etoro`, `binance`, `wallet`, `trek`, `authentik`. Vale per codice, schema, nomi dei job e chiavi di traduzione | `architecture.test.ts`: ricerca dei nomi, con la lista nota per file. La lista può solo accorciarsi; un nome nuovo nell'elenco dei vietati è una decisione scritta | Da misurare all'ingresso | 0 fuori dalle cartelle ammesse a fine R5g. Eccezione scritta: eToro e Binance nel loro descrittore (C1b) | **N6**, con la lista nota. N0 è già chiuso: se un rilascio di fase A parte prima di N6 dopo l'OK a questa revisione, la regola entra con quello. Lista vuota per modulo: `funds` a N6 (salvo il modello); `payroll` e `timeoff` a R5g; Wallet e Trek a R5c |
+| M12 | **Nomi vietati.** Fuori dalle cartelle dei fornitori, dei profili e dei pacchetti paese non compare il nome di un fornitore, di un fondo o di un datore: `cometa`, `fideuram`, `reply`, `teamsystem`, `etoro`, `binance`, `wallet`, `trek`, `authentik`. Vale per codice, schema, nomi dei job e chiavi di traduzione | `architecture.test.ts`: ricerca dei nomi, con la lista nota per file. La lista può solo accorciarsi; un nome nuovo nell'elenco dei vietati è una decisione scritta | Ingresso (N6): 111 file, 142 voci `file: nome` in `baselines/modularity.json` (`wallet` 51, `authentik` 24, `etoro` 17, `trek` 15, `binance` 12, `reply` 12, `teamsystem` 9, `cometa` 2). In `funds`: 0 | 0 fuori dalle cartelle ammesse a fine R5g. Eccezione scritta: eToro e Binance nel loro descrittore (C1b) | **N6**, con la lista nota. N0 è già chiuso: se un rilascio di fase A parte prima di N6 dopo l'OK a questa revisione, la regola entra con quello. Lista vuota per modulo: `funds` a N6 (salvo il modello); `payroll` e `timeoff` a R5g; Wallet e Trek a R5c |
 | M13 | **Un vocabolario aperto non ha un check DB con l'elenco dei valori.** Il check controlla il formato; il registro controlla il valore. Un vocabolario è aperto se un'estensione (lettore, plugin, pacchetto paese, utente) lo può allargare | Test: per l'elenco dei vocabolari aperti, lo schema non contiene un check generato da una lista TypeScript | 75 check in 13 file `schema.ts` sono generati da liste; i vocabolari aperti sono una parte (tipo di documento, fonte festiva, fonte di cambio, tipi di sync ed entità, prodotti, tipi di assenza) | 0 check con elenco sui vocabolari aperti | R2 per modulo, con lista nota; rimozione dei check vecchi in R5f |
-| M14 | **Nessun nome di fornitore in una chiave di traduzione.** I testi del fornitore arrivano dal descrittore o dal profilo. Nessuna chiave costruita a runtime con lo slug di un fornitore | Test sulle chiavi dei cataloghi `messages/*.json`, con la stessa lista di M12 | `connect.steps.<slug>`, chiavi `wallet_*`, `cometa*` | 0 | Con M12: N6 con la lista nota; lista vuota a fine R3 per i fornitori del core, a R5c per Wallet e Trek |
+| M14 | **Nessun nome di fornitore in una chiave di traduzione.** I testi del fornitore arrivano dal descrittore o dal profilo. Nessuna chiave costruita a runtime con lo slug di un fornitore | Test sulle chiavi dei cataloghi `messages/*.json`, con la stessa lista di M12 | `connect.steps.<slug>`, chiavi `wallet_*`, `cometa*`. Ingresso (N6): 18 chiavi, nessuna in `funds` | 0 | Con M12: N6 con la lista nota; lista vuota a fine R3 per i fornitori del core, a R5c per Wallet e Trek |
 
 Un vocabolario **chiuso** resta un enum con il suo check: gli stati (`active`, `paused`), i tipi di sorgente di
 contributo, le basi di una commissione. Lo decide il modulo proprietario; l'elenco dei vocabolari aperti è nel test.

@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { type Account, balancesOn, listAccounts } from "@/modules/accounts/queries";
 import { dailyBalancesOf } from "@/modules/accounts/service";
-import { fundsView } from "@/modules/funds/queries";
+import { fundsOverview } from "@/modules/funds/overview";
 import {
   escapeLike,
   linkCandidates,
@@ -403,7 +403,7 @@ export async function investmentsHome(
     if (total - placed > 0n) add(byClass, "cash", total - placed);
   }
 
-  const funds = await fundsView(ctx, now);
+  const funds = await fundsOverview(ctx, now);
   return {
     currency,
     services,
@@ -413,8 +413,9 @@ export async function investmentsHome(
     funds: funds.rows.map((row) => ({
       id: row.fund.id,
       name: row.fund.name,
-      valueCents: row.metrics.valueCents,
-      kind: row.fund.type,
+      valueCents: row.valueCents,
+      // Every fund is a pension fund (rewrite plan, decision H12): the field stays for its readers.
+      kind: "pension",
     })),
   };
 }

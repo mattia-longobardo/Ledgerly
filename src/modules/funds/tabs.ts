@@ -1,19 +1,12 @@
 // The numbers of a fund's tabs (docs/design/funds-ux.md §4, §5.3, §6, F4). Pure, and on top of `home.ts`:
 // a stretch here is the stretch the chart draws, so its gains add up to the gain of the Overview.
-import {
-  addDays,
-  addMonths,
-  type CivilDate,
-  lastDayOfMonth,
-  type MonthKey,
-  monthKey,
-} from "@/platform/dates";
+import { addDays, addMonths, type CivilDate, type MonthKey, monthKey } from "@/platform/dates";
 import { legacyPeriodQuery, type Query } from "@/modules/investments/period";
 import type { Cents } from "@/platform/money";
 import { type FundLine, stretchesOf } from "./home";
-import { closingDay, type FundFlow, type FundPeriod, type ValuePoint } from "./period";
-import { deductibilityLimit } from "./pension/rules";
+import { closingDay, type FundPeriod, type ValuePoint } from "./period";
 import { periodReturns, periodStats } from "./rules";
+import { type AccrualPeriod, periodEnd, periodStart } from "./sources";
 
 /** Whether a day falls in a period, both ends included. */
 export const inPeriod = (on: string, period: FundPeriod): boolean =>
@@ -46,63 +39,23 @@ export function competenceOn(line: {
 }
 
 /**
- * Whether a quarter has something to say in a period: its three months touch it, or its deadline or a credit
- * of its money fall in it. So the fourth quarter of a year, credited in January, is in both years.
+ * Whether a period of a payslip source has something to say in a period of the page: its months touch
+ * it, or its deadline or a credit of its money fall in it. So the fourth quarter of a year, credited in
+ * January, is in both years. `accrual` says what the period is: a quarter, or a month.
  */
 export function quarterInPeriod(
   quarter: { year: number; quarter: number; due: CivilDate | null; operationDates: readonly CivilDate[] },
   period: FundPeriod,
+  accrual: AccrualPeriod = "quarter",
 ): boolean {
-  const from = quarterStart(quarter.year, quarter.quarter);
-  const to = lastDayOfMonth(addMonths(from, 2));
+  const from = periodStart(quarter.year, quarter.quarter, accrual);
+  const to = periodEnd(quarter.year, quarter.quarter, accrual);
   const touches = (period.from === null || to >= period.from) && from <= period.to;
   return (
     touches ||
     (quarter.due !== null && inPeriod(quarter.due, period)) ||
     quarter.operationDates.some((on) => inPeriod(on, period))
   );
-}
-
-export interface DeductibleYear {
-  year: number;
-  youCents: Cents;
-  employerCents: Cents;
-  /** You + employer, TFR excluded: the same figure as the "Deductible used" KPI of that year. */
-  usedCents: Cents;
-  limitCents: Cents | null;
-}
-
-/**
- * The deductible money by calendar year, newest first (§5.3), from the flows the KPI reads, so the two cannot
- * differ: an enrolment fee is in neither. A custom period shows the whole of each year it touches, because the
- * limit is a limit of the whole year. Money dated after today is not there yet, for the KPI too.
- */
-export function deductibleYears(
-  flows: readonly FundFlow[],
-  period: FundPeriod,
-  todayOn: CivilDate,
-): DeductibleYear[] {
-  const firstYear = period.from === null ? null : Number(period.from.slice(0, 4));
-  const lastYear = Number(period.to.slice(0, 4));
-  const years = new Map<number, DeductibleYear>();
-  for (const { on, origin, deductible } of flows) {
-    if (!deductible || on > todayOn) continue;
-    const year = Number(on.slice(0, 4));
-    if (year > lastYear || (firstYear !== null && year < firstYear)) continue;
-    if (origin.youCents === 0n && origin.employerCents === 0n) continue;
-    const row = years.get(year) ?? {
-      year,
-      youCents: 0n,
-      employerCents: 0n,
-      usedCents: 0n,
-      limitCents: deductibilityLimit(year),
-    };
-    row.youCents += origin.youCents;
-    row.employerCents += origin.employerCents;
-    row.usedCents = row.youCents + row.employerCents;
-    years.set(year, row);
-  }
-  return [...years.values()].sort((a, b) => b.year - a.year);
 }
 
 export interface ValuationLine {

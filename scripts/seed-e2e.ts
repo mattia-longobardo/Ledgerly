@@ -6,7 +6,7 @@
 //
 // Both touch only users whose address ends in `@example.test`: the site's real users and their
 // data are never read or written here.
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { and, eq, isNull, like } from "drizzle-orm";
 import {
@@ -17,25 +17,10 @@ import {
   saveProviderBalance,
 } from "../src/modules/accounts/service";
 import { createSubscription } from "../src/modules/subscriptions/service";
-import {
-  addDeposit,
-  createFund,
-  recordValuation,
-  saveDepositRule,
-  setFundState,
-} from "../src/modules/funds/service";
-import { fundOperations, pensionCompetences, unitMovements } from "../src/modules/funds/schema";
-import { addVoluntaryContribution, createPensionFund } from "../src/modules/funds/pension/service";
-import {
-  applyOperations,
-  applyPosition,
-  processCometaDocument,
-  uploadCometaDocument,
-} from "../src/modules/funds/pension/imports";
+import { createFund, recordValuation, setFundState } from "../src/modules/funds/service";
+import { pensionCompetences } from "../src/modules/funds/schema";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../src/modules/payroll/service";
 import { createRule } from "../src/modules/interests/service";
-import { EXPORT_AUGUST, inYear, POSITION_AUGUST } from "../tests/fixtures/cometa/samples";
-import { twinOperationsHtml, twinPositionPdf } from "../tests/fixtures/cometa/twin";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/payroll/samples";
 import { twinPdf } from "../tests/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
@@ -73,6 +58,15 @@ import {
   sessionState,
 } from "../tests/e2e/env";
 import { totpCode } from "../tests/e2e/totp";
+import {
+  addDeposit,
+  addVoluntaryContribution,
+  debitFund,
+  importedOperation,
+  importedPosition,
+  payrollFund,
+  saveDepositRule,
+} from "../test/funds";
 
 const mode = process.argv[2];
 if (mode !== "seed" && mode !== "remove") throw new Error("usage: seed-e2e.ts seed|remove");
@@ -494,18 +488,10 @@ async function seedFundsHome(): Promise<void> {
   const on = today(ctx.timeZone);
   const year = Number(on.slice(0, 4));
 
-  const beta = await createFund(ctx, {
+  const beta = await debitFund(ctx, {
     name: "PAC Beta",
     provider: "Esempio",
-    isin: null,
-    compartment: null,
-    debitAccountId: null,
-    debitDay: null,
-    ter: null,
     startOn: `${year - 3}-01-10`,
-    monthlyCents: null,
-    depositFeeCents: null,
-    valuationAccountId: null,
   });
   for (const [day, chargedCents, feeCents] of [
     [`${year - 3}-01-10`, 100_000n, 100n],
@@ -524,7 +510,8 @@ async function seedFundsHome(): Promise<void> {
     await recordValuation(ctx, beta.id, { on: day, cents, units: null, note: null });
   }
 
-  const pension = await createPensionFund(ctx, {
+  // Its payslip source is paused: the rows below are its own, and it takes no payslip of anybody.
+  const pension = await payrollFund(ctx, {
     name: "Pensione Alfa",
     provider: "Esempio",
     compartment: "Crescita",
@@ -560,18 +547,10 @@ async function seedFundsHome(): Promise<void> {
     note: null,
   });
 
-  const gamma = await createFund(ctx, {
+  const gamma = await debitFund(ctx, {
     name: "PAC Gamma",
     provider: "Esempio",
-    isin: null,
-    compartment: null,
-    debitAccountId: null,
-    debitDay: null,
-    ter: null,
     startOn: `${year - 3}-03-10`,
-    monthlyCents: null,
-    depositFeeCents: null,
-    valuationAccountId: null,
   });
   await addDeposit(ctx, gamma.id, {
     on: `${year - 3}-03-10`,
@@ -582,27 +561,19 @@ async function seedFundsHome(): Promise<void> {
   await recordValuation(ctx, gamma.id, { on: `${year - 3}-09-30`, cents: 41_000n, units: null, note: null });
   await setFundState(ctx, gamma.id, "archived");
 
-  const delta = await createFund(ctx, {
+  const delta = await debitFund(ctx, {
     name: "PAC Delta",
     provider: "Esempio",
-    isin: null,
-    compartment: null,
-    debitAccountId: null,
-    debitDay: null,
-    ter: null,
     startOn: `${year}-01-01`,
-    monthlyCents: null,
-    depositFeeCents: null,
-    valuationAccountId: null,
   });
-  // A fee nobody knows, and a rule with no fee set: what the Deposits tab has to say out loud.
+  // A fee nobody knows, and a debit with no fee set: what the Contributions tab has to say out loud.
   await addDeposit(ctx, delta.id, { on: `${year}-01-01`, chargedCents: 20_000n, feeCents: null, note: null });
   await saveDepositRule(ctx, delta.id, { payeeMatch: "Delta", accountId: null, active: true });
 }
 
 /**
  * A fund's new page (docs/design/funds-ux.md §6, F3): two funds over three years, counted back from this
- * one. The PAC has a plan, the pension fund has operations with their units and a quarter on the way.
+ * one. One fund has a debit plan, the other is fed by the payslip: operations with their units and a quarter on the way.
  * Every amount is invented.
  */
 async function seedFundsDetail(email: string): Promise<void> {
@@ -611,18 +582,13 @@ async function seedFundsDetail(email: string): Promise<void> {
   const year = Number(on.slice(0, 4));
   const thisMonth = `${on.slice(0, 7)}-01`;
 
-  const pac = await createFund(ctx, {
+  const pac = await debitFund(ctx, {
     name: "PAC Piano",
     provider: "Esempio",
-    isin: null,
-    compartment: null,
-    debitAccountId: null,
     debitDay: 1,
-    ter: null,
     startOn: `${year - 2}-01-05`,
     monthlyCents: 25_000n,
     depositFeeCents: 100n,
-    valuationAccountId: null,
   });
   for (const [day, chargedCents] of [
     [`${year - 2}-01-05`, 100_000n],
@@ -640,7 +606,7 @@ async function seedFundsDetail(email: string): Promise<void> {
     await recordValuation(ctx, pac.id, { on: day, cents, units: null, note: null });
   }
 
-  const pension = await createPensionFund(ctx, {
+  const pension = await payrollFund(ctx, {
     name: "Pensione Beta",
     provider: "Esempio",
     compartment: "Crescita",
@@ -654,39 +620,22 @@ async function seedFundsDetail(email: string): Promise<void> {
     [year - 1, 4, `${year}-01-02`, "12.500000"],
   ] as const;
   for (const [competenceYear, competenceQuarter, operationDate, unitPrice] of contributions) {
-    const [operation] = await getDb()
-      .insert(fundOperations)
-      .values(
-        userScoped(ctx).stamp({
-          fundId: pension.id,
-          originKey: `e2e:${operationDate}`,
-          originalType: "Contributo",
-          classification: "contribution" as const,
-          originalState: "QUOTATO",
-          competenceYear,
-          competenceQuarter,
-          operationDate,
-          workerCents: 10_000n,
-          employerCents: 15_000n,
-          tfrCents: 35_000n,
-          feesCents: 300n,
-          netCents: 59_700n,
-          source: "import" as const,
-        }),
-      )
-      .returning();
-    await getDb()
-      .insert(unitMovements)
-      .values(
-        userScoped(ctx).stamp({
-          operationId: operation.id,
-          position: 1,
-          compartment: "Crescita",
-          units: "50.000000",
-          unitPrice,
-          unitPriceDate: operationDate,
-        }),
-      );
+    // What a document left before release N6: the app reads these rows, and writes none.
+    await importedOperation(ctx, pension.id, {
+      originKey: `e2e:${operationDate}`,
+      originalType: "Contributo",
+      classification: "contribution",
+      originalState: "QUOTATO",
+      competenceYear,
+      competenceQuarter,
+      operationDate,
+      workerCents: 10_000n,
+      employerCents: 15_000n,
+      tfrCents: 35_000n,
+      feesCents: 300n,
+      netCents: 59_700n,
+      movements: [{ compartment: "Crescita", units: "50.000000", unitPrice, unitPriceDate: operationDate }],
+    });
   }
   for (const [day, cents] of [
     [`${year - 2}-06-30`, 62_000n],
@@ -733,6 +682,101 @@ async function seedFundsCopy(): Promise<void> {
   await seedFundsDetail(USERS.fundsCopy.email);
   const ctx = await contextOf(USERS.fundsCopy.email);
   await updatePreferences(ctx, { ...(await getPreferences(ctx)), locale: "it" });
+}
+
+/** The form "Add pension fund" (release N6): an open account for the debit to name, and no fund. */
+async function seedFundsNew(): Promise<void> {
+  const ctx = await contextOf(USERS.fundsNew.email);
+  await syncedAccount(ctx, "e2e-new-1", "ING Conto Arancio");
+}
+
+/**
+ * The funds the form, the sources and the fees are driven on (release N6,
+ * docs/design/rewrite-plan/ux/n6-pension-fund.md §16.3). One fund per journey, so a journey that
+ * adds or removes something changes nothing another one reads. Every amount is invented.
+ */
+async function seedFundsSetup(): Promise<void> {
+  const ctx = await contextOf(USERS.fundsSetup.email);
+  const on = today(ctx.timeZone);
+  const year = Number(on.slice(0, 4));
+  // An open account, for "Paying account" to offer something besides "Any account".
+  await syncedAccount(ctx, "e2e-setup-1", "ING Conto Arancio");
+
+  // The one fund the payslip feeds: its three components are taken for every other fund. The three
+  // payslips of last year's first quarter accrued 360,00 + 540,00 + 900,00 €, with no enrolment quota,
+  // and the fund has said nothing yet: a contribution written by hand is what reconciles the quarter.
+  const fed = await payrollFund(ctx, {
+    name: "Fondo Busta",
+    provider: "Esempio",
+    startOn: `${year - 1}-01-01`,
+    receivesPayroll: true,
+  });
+  for (const month of ["01", "02", "03"]) {
+    await getDb()
+      .insert(pensionCompetences)
+      .values(
+        userScoped(ctx).stamp({
+          fundId: fed.id,
+          payslipId: randomUUID(),
+          payrollPeriod: `${year - 1}-${month}-01`,
+          payslipType: "ordinary",
+          year: year - 1,
+          quarter: 1,
+          workerCents: 12_000n,
+          employerCents: 18_000n,
+          tfrCents: 30_000n,
+        }),
+      );
+  }
+
+  // No source, no fee, no contribution and no value: every empty state of §10.4 and §10.5.
+  await createFund(ctx, {
+    fund: { name: "Fondo Vuoto", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [],
+    fees: [],
+  });
+
+  // No source yet: the journey of Settings › Contributions adds them.
+  await createFund(ctx, {
+    fund: { name: "Fondo Sorgenti", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [],
+    fees: [],
+  });
+
+  // The same, for the journey that pauses and removes a source.
+  await createFund(ctx, {
+    fund: { name: "Fondo Pausa", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [],
+    fees: [],
+  });
+
+  // No fee yet, and a value: 0,45 % a year of 9.000,00 € is the 40,50 € of the estimate.
+  await createFund(ctx, {
+    fund: { name: "Fondo Costi", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    value: { on, cents: 900_000n },
+    sources: [],
+    fees: [],
+  });
+
+  // Paid in 5.000,00 €, worth 5.600,00 € yesterday: the journey takes money out and writes the
+  // value of today, lower by as much.
+  const exit = await createFund(ctx, {
+    fund: { name: "Fondo Uscita", provider: "Esempio", startOn: `${year - 1}-03-01` },
+    currency: "EUR",
+    sources: [{ kind: "manual" }],
+    fees: [],
+  });
+  await addDeposit(ctx, exit.id, {
+    on: `${year - 1}-03-01`,
+    chargedCents: 500_000n,
+    feeCents: 0n,
+    note: null,
+  });
+  await recordValuation(ctx, exit.id, { on: addDays(on, -1), cents: 560_000n, units: null, note: null });
 }
 
 /**
@@ -1347,10 +1391,10 @@ async function seedLayout(): Promise<void> {
 
   // ——— An investment PAC with its deposits and valuations ———
   const layoutYear = Number(on.slice(0, 4));
-  const pac = await createFund(ctx, {
+  const pac = await debitFund(ctx, {
     name: "Fideuram Master Selection",
     provider: "Fideuram",
-    isin: "IT0005247157",
+    code: "IT0005247157",
     compartment: "Bilanciato",
     debitAccountId: current,
     debitDay: 5,
@@ -1358,7 +1402,6 @@ async function seedLayout(): Promise<void> {
     startOn: `${layoutYear - 2}-03-05`,
     monthlyCents: 25_100n,
     depositFeeCents: 100n,
-    valuationAccountId: null,
   });
   // Two years before this one (funds-ux §8, F5): money with no value, then a year with a value.
   await addDeposit(ctx, pac.id, {
@@ -1406,7 +1449,8 @@ async function seedLayout(): Promise<void> {
 
   // ——— Payroll: the synthetic twins of a whole year, read, verified and applied ———
   // Last year: a fund's pages read nothing after today, and the twins are dated 2031.
-  const lastYear = <T>(twin: T): T => inYear(twin, layoutYear - 1);
+  const lastYear = <T>(twin: T): T =>
+    JSON.parse(JSON.stringify(twin).replaceAll("2031", String(layoutYear - 1))) as T;
   for (const twin of [JANUARY, FEBRUARY, MARCH, APRIL, THIRTEENTH].map(lastYear)) {
     const { document } = await uploadPayslip(ctx, {
       name: `${twin.period.replace(/\s+/g, "-").toLowerCase()}.pdf`,
@@ -1417,26 +1461,111 @@ async function seedLayout(): Promise<void> {
     await applyPayslip(ctx, document.id);
   }
 
-  // ——— The pension fund, its operations export and its statement ———
-  const pension = await createPensionFund(ctx, {
+  // ——— The fund fed by the payslip, with what its two documents left before release N6 ———
+  // A fund reads no document any more: the rows the operations export and the statement of August
+  // wrote are written here as they were read — the twins `EXPORT_AUGUST` and `POSITION_AUGUST` of
+  // `tests/fixtures/cometa/samples.ts`, moved to last year.
+  const pension = await payrollFund(ctx, {
     name: "Cometa",
     provider: "Cometa",
     compartment: "Crescita",
     startOn: `${layoutYear - 1}-01-01`,
     receivesPayroll: true,
   });
-  const operations = await uploadCometaDocument(ctx, "cometa_operations", {
-    name: "DettaglioOperazioni.xls",
-    bytes: twinOperationsHtml(EXPORT_AUGUST.map(lastYear)),
+  const exportYear = layoutYear - 1;
+  const employer = { employerTaxCode: "01234567890", employerName: "ACME SPA" };
+  const price = (unitPrice: string, month: string) => ({
+    unitPrice,
+    unitPriceDate: `${exportYear}-${month}`,
   });
-  await processCometaDocument(ctx, operations.document.id);
-  await applyOperations(ctx, pension.id, operations.document.id);
-  const position = await uploadCometaDocument(ctx, "cometa_position", {
-    name: "riepilogo_posizione.pdf",
-    bytes: await twinPositionPdf(lastYear(POSITION_AUGUST)),
+  const exported = [
+    // II: one operation over two compartments — its amounts count once.
+    {
+      operationDate: `${exportYear}-07-18`,
+      competenceQuarter: 2,
+      workerCents: 2_500n,
+      employerCents: 4_500n,
+      tfrCents: 15_000n,
+      feesCents: 300n,
+      netCents: 21_700n,
+      classification: "contribution" as const,
+      movements: [
+        { compartment: "CRESCITA", units: "5.000", ...price("21.700", "07-31") },
+        { compartment: "SICUREZZA", units: "5.000", ...price("21.700", "07-31") },
+      ],
+    },
+    // I: three months, 660,00 gross and 3,00 of fees, into 30 units.
+    {
+      operationDate: `${exportYear}-04-18`,
+      competenceQuarter: 1,
+      workerCents: 7_500n,
+      employerCents: 13_500n,
+      tfrCents: 45_000n,
+      feesCents: 300n,
+      netCents: 65_700n,
+      classification: "contribution" as const,
+      movements: [{ compartment: "CRESCITA", units: "30.000", ...price("21.900", "04-30") }],
+    },
+    // The enrolment: a "Contributo" too, with a net of zero, no units and fees equal to its amounts.
+    {
+      operationDate: `${exportYear}-04-18`,
+      competenceQuarter: 1,
+      workerCents: 516n,
+      employerCents: 516n,
+      tfrCents: 0n,
+      feesCents: 1_032n,
+      netCents: 0n,
+      classification: "enrollment" as const,
+      movements: [{ compartment: "CRESCITA", units: "0.000", ...price("21.900", "04-30") }],
+    },
+  ];
+  for (const operation of exported) {
+    // The key the export's reader gave an operation: its fingerprint and its occurrence in the file.
+    const print = createHash("sha256")
+      .update(
+        [
+          "contributo",
+          operation.operationDate,
+          `${exportYear}-${operation.competenceQuarter}`,
+          ...[
+            operation.workerCents,
+            operation.employerCents,
+            operation.tfrCents,
+            0n,
+            operation.feesCents,
+            operation.netCents,
+          ].map(String),
+          employer.employerTaxCode,
+        ].join("\u001f"),
+      )
+      .digest("hex")
+      .slice(0, 32);
+    await importedOperation(ctx, pension.id, {
+      originKey: `${print}#1`,
+      originalType: "Contributo",
+      originalState: "QUOTATO",
+      competenceYear: exportYear,
+      otherCents: 0n,
+      ...employer,
+      ...operation,
+    });
+  }
+  // The position at 31 August: inflows 890,32, value 950,00, a reported gain of 59,68.
+  await importedPosition(ctx, pension, {
+    valuationDate: `${exportYear}-08-31`,
+    valueCents: 95_000n,
+    tfrCents: 60_000n,
+    workerCents: 10_516n,
+    employerCents: 18_516n,
+    transfersInCents: 0n,
+    inflowsCents: 89_032n,
+    advancesCents: 0n,
+    redemptionsCents: 0n,
+    ritaCents: 0n,
+    outflowsCents: 0n,
+    reportedGainCents: 5_968n,
+    note: "riepilogo_posizione.pdf",
   });
-  await processCometaDocument(ctx, position.document.id);
-  await applyPosition(ctx, pension.id, position.document.id);
 
   // ——— Time off ———
   const year = Number(on.slice(0, 4));
@@ -1455,6 +1584,8 @@ await seedFunds();
 await seedFundsHome();
 await seedFundsDetail(USERS.fundsDetail.email);
 await seedFundsCopy();
+await seedFundsNew();
+await seedFundsSetup();
 await seedInvestments();
 await seedTimeOff();
 await seedLayout();

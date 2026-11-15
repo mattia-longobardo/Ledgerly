@@ -3,25 +3,31 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
+import { listAccounts } from "@/modules/accounts/queries";
 import { colorFor } from "@/modules/accounts/ui/display";
-import { flowCounts, fundSummary, hypothesesOnly, isFundId, recentFlows } from "@/modules/funds/detail";
+import { fundSummary, hypothesesOnly, isFundId } from "@/modules/funds/detail";
 import { isFutureYear, valueToday } from "@/modules/funds/home";
 import { fundHomeRow } from "@/modules/funds/home-queries";
-import { closesPeriodBefore, legacyFundQuery, valuationLines } from "@/modules/funds/tabs";
-import { fundDetail } from "@/modules/funds/queries";
-import { FundError, requireFund } from "@/modules/funds/service";
-import { PacDeposits } from "@/modules/funds/ui/pac-deposits";
-import { PensionContributions } from "@/modules/funds/ui/pension-contributions";
+import { hasPayrollCalendar } from "@/modules/funds/queries";
+import { FundError, requireFund, takenComponents } from "@/modules/funds/service";
+import { closesPeriodBefore, inPeriod, legacyFundQuery, valuationLines } from "@/modules/funds/tabs";
+import { ContributionButton } from "@/modules/funds/ui/contribution-dialog";
 import { FundChart } from "@/modules/funds/ui/fund-chart";
-import { FundValuations } from "@/modules/funds/ui/fund-valuations";
+import { contributionSetup, FundContributions } from "@/modules/funds/ui/fund-contributions";
+import { ValuationButton } from "@/modules/funds/ui/fund-forms";
 import { Kpi } from "@/modules/funds/ui/fund-kpi";
-import { ValuationButton, FundStateButton } from "@/modules/funds/ui/fund-forms";
-import { PacSettings } from "@/modules/funds/ui/pac-settings";
-import { ImportCometaButton, PensionSettingsForm } from "@/modules/funds/ui/pension-forms";
-import { quarterLabel } from "@/modules/funds/ui/pension-present";
-import { PENSION_TABS, PensionSettings } from "@/modules/funds/ui/pension-settings";
-import { monthPill } from "@/modules/funds/ui/present";
+import { FundSettings } from "@/modules/funds/ui/fund-settings";
+import { FundValuations } from "@/modules/funds/ui/fund-valuations";
+import { periodLabel } from "@/modules/funds/ui/pension-present";
+import {
+  monthPill,
+  operationGross,
+  operationOrigin,
+  originParts,
+  voluntaryCents,
+} from "@/modules/funds/ui/present";
 import { ClosedProjection, ShortProjection } from "@/modules/funds/ui/projection";
+import { frequencyText } from "@/modules/funds/ui/source-text";
 import { periodQuery, periodSpan, type Query } from "@/modules/investments/period";
 import { periodOf } from "@/modules/investments/pnl";
 import { PeriodControl, periodText } from "@/modules/investments/ui/period-control";
@@ -40,11 +46,12 @@ import { EmptyState } from "@/ui/states";
 import { TabLinks } from "@/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import { type Params, withParams } from "@/ui/url";
-import { RebuildCompetencesButton } from "../pension-buttons";
+import { RebuildCompetencesButton } from "../fund-buttons";
 import { FundDetailSkeleton } from "./fund-skeleton";
 
 const HOME = "/funds";
-const PAC_TABS = ["overview", "deposits", "valuations", "settings"] as const;
+/** The tabs of a fund: the same four for every fund. */
+const TABS = ["overview", "contributions", "valuations", "settings"] as const;
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
@@ -61,13 +68,15 @@ export async function generateMetadata({ params }: PageProps<"/funds/[id]">): Pr
 }
 
 /**
- * A fund's new page (docs/design/funds-ux.md §5.3, §6, F3, mockups a-05 and a-06): the header, the tabs,
- * the period, the Overview of a pension fund or of a PAC, and the tabs that follow the period (F4). The period is in the address and stays from
- * the home to the fund and from a tab to the next. "On the way", the plan, this month's deposit and the
- * projection stay as of today.
+ * A fund's page (docs/design/funds-ux.md §5.3, §6, F3; rewrite plan, ux/n6-pension-fund.md §5): the header,
+ * the tabs, the period, the Overview and the tabs that follow the period. One page for every fund: a section
+ * appears when the fund's configuration calls for it — a payslip source, its due dates, a recurring debit,
+ * payments by hand, unit movements — and never by a kind of fund. The period is in the address and stays from
+ * the home to the fund and from a tab to the next. "On the way", the recurring debit and the projection stay
+ * as of today.
  *
  * The skeleton is a boundary of this page and not a `loading.tsx`: a `loading.tsx` here would also cover the
- * fund's documents, and a document that does not exist would answer 200 with a skeleton instead of a real 404.
+ * addresses under the fund, and one that does not exist would answer 200 with a skeleton instead of a real 404.
  * The redirects stay above the boundary, so that they are real redirects.
  */
 export default async function FundDetailPage({ params, searchParams }: PageProps<"/funds/[id]">) {
@@ -81,8 +90,19 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
 
   const legacy = legacyFundQuery(query, todayOn);
   if (legacy) permanentRedirect(withParams(base, {}, legacy));
+  // The tab of the deposits is the tab of the contributions now: an address saved before still opens it.
+  if (one(query.tab) === "deposits") {
+    const { period, from, to, view } = query;
+    redirect(
+      withParams(
+        base,
+        { period: one(period), from: one(from), to: one(to), view: one(view) },
+        { tab: "contributions" },
+      ),
+    );
+  }
   if (isFutureYear(one(query.period), todayOn)) {
-    const tab = [...PENSION_TABS, ...PAC_TABS].find((name) => name === one(query.tab) && name !== "overview");
+    const tab = TABS.find((name) => name === one(query.tab) && name !== "overview");
     redirect(withParams(base, { tab, view: one(query.view) === "value" ? "value" : undefined }, {}));
   }
   return (
@@ -109,12 +129,12 @@ async function FundDetail({
   const th = await getTranslations("funds.home");
   const tf = await getTranslations("funds.fund");
   const tp = await getTranslations("funds.pension");
+  const ts = await getTranslations("funds.sources");
   const tPeriod = await getTranslations("investments.period");
   const view = one(query.view) === "value" ? "value" : "gain";
   const row = await fundHomeRow(ctx, id);
-  const isPension = row.pension !== null;
-  const tabs: readonly string[] = isPension ? PENSION_TABS : PAC_TABS;
-  const tab = tabs.find((name) => name === one(query.tab)) ?? "overview";
+  const { detail } = row;
+  const tab = TABS.find((name) => name === one(query.tab)) ?? "overview";
   const kept: Params = {
     tab: tab === "overview" ? undefined : tab,
     view: view === "gain" ? undefined : view,
@@ -142,33 +162,74 @@ async function FundDetail({
   const tabHref = (name: string) =>
     withParams(base, periodParams, { tab: name === "overview" ? undefined : name });
   const archived = home.archived;
-  const pac = isPension ? null : await fundDetail(ctx, id, 12);
-  const pension = row.pension;
-  const compartment = pension?.compartment ?? fund.compartment;
-  const lastLine =
-    pac && pac.valuations[0]
-      ? t("valuations.form.last", {
-          value: money(pac.valuations[0].valueCents),
-          date: long(pac.valuations[0].on),
-        })
-      : null;
+  const lastLine = detail.valuations[0]
+    ? t("valuations.form.last", {
+        value: money(detail.valuations[0].valueCents),
+        date: long(detail.valuations[0].on),
+      })
+    : null;
+
+  // ——— What the fund is made of (§5): its sources decide the sections, never a kind of fund ———————
+  const { payroll } = detail;
+  const withCalendar = hasPayrollCalendar(detail);
+  const debit = detail.debits.find((one) => one.source.state === "active") ?? null;
+  const byHand = detail.sources.some((source) => source.kind === "manual");
+  const label = (year: number, index: number) =>
+    periodLabel(payroll?.period ?? "quarter", year, index, ctx.locale, (values) =>
+      tf("contributions.register.quarter", values),
+    );
+  /** The movements a contribution or a recurring debit can be tied to: the last 60 that left an account. */
+  const movementsOf = async (accountId: string | null) =>
+    (
+      await chargeCandidates(ctx, {
+        accountId,
+        from: fund.startOn,
+        to: todayOn,
+        types: ["expense", "transfer"],
+      })
+    )
+      .slice(-60)
+      .reverse()
+      .map((candidate) => ({
+        id: candidate.id,
+        label: `${formatDate(candidate.on, "dayMonth", ctx.locale)} · ${candidate.payee ?? ""} · ${money(candidate.cents)}`,
+      }));
+  const movements = archived ? [] : await movementsOf(debit?.source.accountId ?? null);
+  const setup = archived ? null : await contributionSetup(ctx, detail, todayOn, movements);
+  const recordContribution = (variant: "primary" | "secondary", size: "sm" | "md" | "lg" = "sm") =>
+    setup && (
+      <ContributionButton setup={setup} label={t("contribution.record")} variant={variant} size={size} />
+    );
+  const valuationButton = (text: string, place: "page" | "card") => (
+    <ValuationButton
+      fundId={fund.id}
+      fundName={fund.name}
+      today={todayOn}
+      lastLine={lastLine}
+      label={text}
+      place={place}
+    />
+  );
 
   const header = (
     <div className="flex flex-col gap-1">
       <p data-testid="fund-meta" className="text-sm text-muted">
         {[
-          isPension ? tp("kind") : t("detail.kind"),
           fund.provider,
-          compartment,
+          detail.compartment ?? fund.compartment,
           t("detail.since", { date: formatDate(fund.startOn, "monthYear", ctx.locale) }),
         ]
           .filter(Boolean)
           .join(" · ")}
       </p>
-      <h1 className="flex flex-wrap items-center gap-2 text-title font-semibold tracking-[-0.02em]">
-        {fund.name}
-        {archived && <Badge tone="neutral">{th("list.archived")}</Badge>}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="flex flex-wrap items-center gap-2 text-title font-semibold tracking-[-0.02em]">
+          {fund.name}
+          {archived && <Badge tone="neutral">{th("list.archived")}</Badge>}
+        </h1>
+        {/* On a phone the top bar has room for one command: the second sits beside the title (§11.1). */}
+        {byHand && <span className="md:hidden">{recordContribution("secondary", "lg")}</span>}
+      </div>
     </div>
   );
   const followsPeriod = tab !== "settings";
@@ -176,7 +237,7 @@ async function FundDetail({
     <div className="flex flex-wrap items-end justify-between gap-3">
       <TabLinks
         label={t("detail.tabs.label")}
-        tabs={tabs.map((name) => ({
+        tabs={TABS.map((name) => ({
           href: tabHref(name),
           label: tf(`tabs.${name}` as "tabs.overview"),
           active: name === tab,
@@ -204,14 +265,8 @@ async function FundDetail({
       actions={
         !archived && (
           <span className="flex gap-2">
-            {isPension && <ImportCometaButton fundId={fund.id} label={tp("documents.import")} />}
-            <ValuationButton
-              fundId={fund.id}
-              fundName={fund.name}
-              today={todayOn}
-              lastLine={lastLine}
-              label={tf("recordValue")}
-            />
+            {byHand && <span className="max-md:hidden">{recordContribution("secondary")}</span>}
+            {valuationButton(tf("recordValue"), "page")}
           </span>
         )
       }
@@ -222,47 +277,23 @@ async function FundDetail({
     </Page>
   );
 
-  // ——— Settings, as today (§6): they do not follow the period ———————————————————————————————————
+  // ——— Settings (§6): they do not follow the period ——————————————————————————————————————————————
   if (tab === "settings") {
+    const [accounts, taken] = await Promise.all([
+      listAccounts(ctx),
+      takenComponents(ctx, { fundId: fund.id }),
+    ]);
     return shell(
-      pension ? (
-        <PensionSettings
-          ctx={ctx}
-          detail={pension}
-          today={todayOn}
-          rebuild={<RebuildCompetencesButton fundId={fund.id} label={tp("settings.rebuild")} />}
-          settingsForm={
-            <PensionSettingsForm
-              fundId={fund.id}
-              draft={{
-                name: fund.name,
-                provider: fund.provider ?? "",
-                compartment: fund.compartment ?? "",
-                startOn: fund.startOn,
-              }}
-            />
-          }
-          archiveButton={
-            archived ? (
-              <FundStateButton
-                fundId={fund.id}
-                state="active"
-                label={t("settings.danger.restore")}
-                toast={t("toasts.restored")}
-              />
-            ) : (
-              <FundStateButton
-                fundId={fund.id}
-                state="archived"
-                label={t("settings.danger.archive")}
-                toast={t("toasts.archived")}
-              />
-            )
-          }
-        />
-      ) : (
-        <PacSettings ctx={ctx} detail={pac!} />
-      ),
+      <FundSettings
+        ctx={ctx}
+        detail={detail}
+        archived={archived}
+        todayOn={todayOn}
+        accounts={accounts.map((account) => ({ id: account.id, name: account.name }))}
+        movements={movements}
+        taken={Object.fromEntries(taken)}
+        rebuild={<RebuildCompetencesButton fundId={fund.id} label={ts("rebuild")} />}
+      />,
     );
   }
 
@@ -286,46 +317,16 @@ async function FundDetail({
   }
 
   // ——— The tabs that follow the period (§6): the same lines the Overview reads ——————————————————————
-  const movementsOf = async (accountId: string | null) =>
-    (
-      await chargeCandidates(ctx, {
-        accountId,
-        from: fund.startOn,
-        to: todayOn,
-        types: ["expense", "transfer"],
-      })
-    )
-      .slice(-60)
-      .reverse()
-      .map((candidate) => ({
-        id: candidate.id,
-        label: `${formatDate(candidate.on, "dayMonth", ctx.locale)} · ${candidate.payee ?? ""} · ${money(candidate.cents)}`,
-      }));
-  if (tab === "deposits" && pac) {
+  if (tab === "contributions") {
     return shell(
-      <PacDeposits
+      <FundContributions
         ctx={ctx}
-        detail={pac}
+        detail={detail}
+        setup={setup}
         archived={archived}
         period={period}
         when={when}
-        todayOn={todayOn}
-        movements={await movementsOf(fund.debitAccountId)}
         settingsHref={tabHref("settings")}
-      />,
-    );
-  }
-  if (tab === "contributions" && pension) {
-    return shell(
-      <PensionContributions
-        ctx={ctx}
-        detail={pension}
-        flows={home.flows}
-        archived={archived}
-        period={period}
-        when={when}
-        todayOn={todayOn}
-        movements={await movementsOf(null)}
       />,
     );
   }
@@ -338,13 +339,14 @@ async function FundDetail({
         archived={archived}
         period={period}
         lines={valuationLines(line, period)}
-        recorded={pension ? pension.valuations : pac!.valuations}
+        recorded={detail.valuations}
         valuesEver={home.points.length}
         lastValue={newest}
         notInValueCents={line.measure.notInValueCents}
         when={when}
         todayOn={todayOn}
-        pension={pension}
+        detail={detail}
+        updateValue={archived ? null : valuationButton(tf("recordValue"), "card")}
       />,
     );
   }
@@ -368,8 +370,10 @@ async function FundDetail({
   const todayPoint = [...home.points].sort((a, b) => (a.on < b.on ? 1 : -1))[0] ?? null;
   const end = measure.end;
   const past = period.to < todayOn;
-  const units = pension?.metrics.units ?? null;
-  const lastPrice = pension?.metrics.lastPrice ?? null;
+  // Units and their price are said only by a fund that has unit movements.
+  const hasUnits = detail.movements.length > 0;
+  const units = hasUnits ? detail.metrics.units : null;
+  const lastPrice = hasUnits ? detail.metrics.lastPrice : null;
   // Today's value beside a past period's, whatever that period could measure (§6).
   const todayPart =
     past && heldToday !== null && todayPoint ? (
@@ -436,8 +440,8 @@ async function FundDetail({
     !archived && !measured && (state === "paid_no_value" || state === "running_no_value")
       ? th("recordToMeasure", { when })
       : null,
-    noValueYet && line.status === "never_valued" && pension && pension.metrics.accruedCents !== 0n
-      ? tf("hero.accrued", { amount: money(pension.metrics.accruedCents) })
+    noValueYet && line.status === "never_valued" && payroll !== null && detail.metrics.accruedCents !== 0n
+      ? tf("hero.accrued", { amount: money(detail.metrics.accruedCents) })
       : null,
     !measured && end !== null && closesPeriodBefore(end.on, period)
       ? th("closingNote", { date: long(end.on) })
@@ -447,16 +451,18 @@ async function FundDetail({
       : null,
   ].filter((note) => note !== null);
 
-  const alert =
-    row.month.kind === "missing" ? (
+  // ——— A recurring debit not found, always as of today (§5.2) ————————————————————————————————————
+  const alerts = detail.debits.map(({ source, status }) =>
+    source.state === "active" && status.kind === "missing" ? (
       <div
+        key={source.id}
         data-testid="fund-alert"
         className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-neg/30 bg-neg-bg px-3 py-2 text-sm"
       >
         <p>
           {t("alert.missing", {
-            date: formatDate(row.month.by, "long", ctx.locale),
-            amount: money(fund.monthlyCents),
+            date: formatDate(status.by, "long", ctx.locale),
+            amount: money(source.amountCents),
           })}
         </p>
         <Link
@@ -466,11 +472,12 @@ async function FundDetail({
           {t("alert.cta")}
         </Link>
       </div>
-    ) : null;
+    ) : null,
+  );
 
   // ——— On the way, always as of today (§5.3) ————————————————————————————————————————————————————
   const onTheWay =
-    row.onTheWay.length > 0 ? (
+    withCalendar && row.onTheWay.length > 0 ? (
       <p
         data-testid="fund-on-the-way"
         data-cents={String(row.onTheWayCents)}
@@ -481,7 +488,7 @@ async function FundDetail({
           quarters: row.onTheWay
             .map((pending) =>
               tp("notice.pendingQuarter", {
-                quarter: quarterLabel(pending.year, pending.quarter),
+                quarter: label(pending.year, pending.quarter),
                 amount: money(pending.cents),
                 date: long(pending.due),
               }),
@@ -504,94 +511,99 @@ async function FundDetail({
       : period.kind === "all"
         ? th("kpis.paidIn")
         : th("kpis.paidInPeriod");
-  const counts = flowCounts(home.flows, period);
-  const { origin, deductible } = summary;
+  const { origin } = summary;
+  const operations = detail.operations.filter((operation) => inPeriod(operation.operationDate, period));
+  /** Of whom the money is, the empty parts left out: "you 80,00 € · employer 60,00 €". */
+  const originText = (parts: ReturnType<typeof originParts>) =>
+    parts.map((part) => th(`kpis.originParts.${part.key}`, { amount: money(part.cents) })).join(" · ");
   const nothingPaid =
     firstPaidOn && firstPaidOn > period.to
       ? th("kpis.paidInFirst", { date: long(firstPaidOn) })
       : th("kpis.nothingPaid");
   const paidNote =
-    measure.paidInCents === 0n
-      ? nothingPaid
-      : isPension
-        ? th(origin.otherCents === 0n ? "kpis.origin" : "kpis.originOther", {
-            you: money(origin.youCents),
-            employer: money(origin.employerCents),
-            tfr: money(origin.tfrCents),
-            other: money(origin.otherCents),
-          })
-        : tf("kpis.deposits", { recurring: counts.recurring, oneOff: counts.oneOff });
-  const pill = monthPill(row.month, ctx.locale, {
-    found: (date) => t("month.found", { date }),
-    awaited: t("month.awaited"),
-    missing: t("month.missing"),
-    none: t("month.none"),
-  });
-  const planNote =
-    fund.monthlyCents === null
-      ? tf("kpis.noPlan")
-      : fund.debitDay === null
-        ? tf("kpis.planMonth")
-        : row.month.kind === "none"
-          ? tf("kpis.planDay", { day: fund.debitDay })
-          : tf("kpis.planStatus", { day: fund.debitDay, status: pill.text });
-  const showDeductible = deductible !== null && period.kind === "year" && state !== "payslips_only";
+    measure.paidInCents === 0n ? nothingPaid : originText(originParts(origin, voluntaryCents(operations)));
+  const pill = debit
+    ? monthPill(debit.status, ctx.locale, {
+        found: (date) => t("month.found", { date }),
+        awaited: t("month.awaited"),
+        missing: t("month.missing"),
+        none: t("month.none"),
+      })
+    : null;
+  const debitNote = () => {
+    if (!debit || !pill) return undefined;
+    const frequency = frequencyText(ts, debit.plan.frequency.count, debit.plan.frequency.unit);
+    const { day: debitDay } = debit.plan;
+    if (debitDay !== null && debit.status.kind !== "none")
+      return ts("debit.kpiNote", { frequency, day: debitDay, status: pill.text });
+    if (debitDay !== null) return tf("kpis.debitDay", { frequency, day: debitDay });
+    return debit.status.kind === "none" ? frequency : `${frequency} · ${pill.text}`;
+  };
+  const tiles = [
+    <Kpi key="paid" testId="kpi-paid" label={paidLabel} value={money(summary.paidInCents)} note={paidNote} />,
+    <Kpi
+      key="market"
+      testId="kpi-market"
+      label={th("kpis.market")}
+      value={summary.marketCents === null ? NULL_DISPLAY : money(summary.marketCents, true)}
+      tone={toneOfSign(summary.marketCents)}
+      note={summary.marketCents === null ? th("kpis.marketNeedsValue") : th("kpis.marketNote")}
+    />,
+    <Kpi
+      key="fees"
+      testId="kpi-fees"
+      label={th("kpis.fees")}
+      value={money(-summary.feesCents, summary.feesCents !== 0n)}
+      note={
+        summary.feesPartial
+          ? th("kpis.feesUnknown")
+          : summary.paidInCents === 0n && summary.feesCents === 0n
+            ? th("kpis.nothingPaid")
+            : th("kpis.feesNote")
+      }
+    />,
+    debit && (
+      <Kpi
+        key="debit"
+        testId="kpi-debit"
+        label={ts("debit.kpi")}
+        value={debit.source.amountCents === null ? NULL_DISPLAY : money(debit.source.amountCents)}
+        note={debitNote()}
+      />
+    ),
+    state === "payslips_only" && (
+      <Kpi
+        key="accrued"
+        testId="kpi-accrued"
+        label={th("kpis.accrued")}
+        value={money(summary.accruedCents)}
+      />
+    ),
+  ].filter((tile) => tile !== null && tile !== false);
+  // Three tiles in three columns, four in four; five wrap as two and three. On a phone they are two by
+  // two, and the last of an odd number takes the whole row (§5.2, §11.1).
   const kpis = (
     <div
       className={cn(
         "grid grid-cols-2 gap-4",
-        !isPension || showDeductible || state === "payslips_only" ? "@4xl:grid-cols-4" : "@4xl:grid-cols-3",
+        tiles.length === 3 && "@4xl:grid-cols-3",
+        tiles.length === 4 && "@4xl:grid-cols-4",
+        tiles.length === 5 && "@4xl:grid-cols-6",
       )}
     >
-      <Kpi testId="kpi-paid" label={paidLabel} value={money(summary.paidInCents)} note={paidNote} />
-      <Kpi
-        testId="kpi-market"
-        label={th("kpis.market")}
-        value={summary.marketCents === null ? NULL_DISPLAY : money(summary.marketCents, true)}
-        tone={toneOfSign(summary.marketCents)}
-        note={summary.marketCents === null ? th("kpis.marketNeedsValue") : th("kpis.marketNote")}
-      />
-      <Kpi
-        testId="kpi-fees"
-        label={th("kpis.fees")}
-        value={money(-summary.feesCents, summary.feesCents !== 0n)}
-        note={
-          summary.feesPartial
-            ? th("kpis.feesUnknown")
-            : summary.paidInCents === 0n && summary.feesCents === 0n
-              ? th("kpis.nothingPaid")
-              : !isPension && fund.depositFeeCents !== null
-                ? tf("kpis.perDeposit", { fee: money(fund.depositFeeCents) })
-                : th("kpis.feesNote")
-        }
-      />
-      {showDeductible && (
-        <Kpi
-          testId="kpi-deductible"
-          label={tf("kpis.deductible")}
-          value={money(deductible.usedCents)}
-          note={
-            deductible.usedCents <= deductible.limitCents
-              ? tf("kpis.deductibleNote", { limit: money(deductible.limitCents), year: period.year! })
-              : tf("kpis.deductibleOver", {
-                  limit: money(deductible.limitCents),
-                  year: period.year!,
-                  over: money(deductible.usedCents - deductible.limitCents),
-                })
-          }
-        />
-      )}
-      {state === "payslips_only" && (
-        <Kpi testId="kpi-accrued" label={th("kpis.accrued")} value={money(summary.accruedCents)} />
-      )}
-      {!isPension && (
-        <Kpi
-          testId="kpi-plan"
-          label={tf("kpis.plan")}
-          value={fund.monthlyCents === null ? NULL_DISPLAY : money(fund.monthlyCents)}
-          note={planNote}
-        />
-      )}
+      {tiles.map((tile, index) => (
+        <div
+          key={tile.key}
+          className={cn(
+            "grid min-w-0",
+            tiles.length % 2 === 1 && index === tiles.length - 1 && "col-span-2",
+            tiles.length === 3 && "@4xl:col-span-1",
+            tiles.length === 5 && (index < 2 ? "@4xl:col-span-3" : "@4xl:col-span-2"),
+          )}
+        >
+          {tile}
+        </div>
+      ))}
     </div>
   );
 
@@ -631,88 +643,100 @@ async function FundDetail({
       />
     );
 
-  // ——— The money of the period (§6) —————————————————————————————————————————————————————————————
-  const recent = recentFlows(home.flows, period);
-  // A label only where a date means one quarter: two quarters credited on one day keep the date.
-  const quartersOn = new Map<string, Set<string>>();
-  for (const operation of pension?.operations ?? []) {
-    if (operation.classification !== "contribution") continue;
-    if (operation.competenceYear === null || operation.competenceQuarter === null) continue;
-    const labels = quartersOn.get(operation.operationDate) ?? new Set<string>();
-    labels.add(quarterLabel(operation.competenceYear, operation.competenceQuarter));
-    quartersOn.set(operation.operationDate, labels);
-  }
-  const quarterOf = (on: string) => {
-    const labels = quartersOn.get(on);
-    return labels?.size === 1 ? [...labels][0] : null;
-  };
-  /** Of whom the money is, when the flow says. An exit or a switch says nothing, so neither does its row. */
-  const originOf = ({ origin: from }: (typeof recent)[number]) =>
-    from.youCents === 0n && from.employerCents === 0n && from.tfrCents === 0n && from.otherCents === 0n
-      ? null
-      : th(from.otherCents === 0n ? "kpis.origin" : "kpis.originOther", {
-          you: money(from.youCents),
-          employer: money(from.employerCents),
-          tfr: money(from.tfrCents),
-          other: money(from.otherCents),
-        });
+  // ——— The money of the period (§6): the last lines of the register ————————————————————————————————
+  // A change of compartment moves no money, so only its cost is a line: it stays in the fees.
+  const recent = operations
+    .filter((operation) => operationGross(operation) !== 0n)
+    .reverse()
+    .slice(0, 5);
+  const firstStep = !archived && detail.operations.length === 0 && detail.competences.length === 0;
   const recentCard = (
     <Card padded={false} className="min-w-0" data-testid="fund-recent">
       <CardHeader
         title={tf("recent.title")}
         actions={
           <Link
-            href={tabHref(isPension ? "contributions" : "deposits")}
+            href={tabHref("contributions")}
             className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent hover:underline"
           >
-            {isPension ? tf("recent.allContributions") : tf("recent.allDeposits")}
+            {tf("recent.allContributions")}
           </Link>
         }
       />
       {recent.length === 0 ? (
-        <p className="px-4 pb-4 text-sm text-muted">{tf("recent.empty")}</p>
+        <div className="flex flex-col items-start gap-2 px-4 pb-4 text-sm">
+          <p className="text-muted">{tf("recent.empty")}</p>
+          {firstStep && recordContribution("secondary")}
+        </div>
       ) : (
         <ul className="flex flex-col">
-          {recent.map((flow, index) => (
-            <li
-              key={`${flow.on}-${index}`}
-              data-testid="recent-flow"
-              className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5"
-            >
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-medium">{quarterOf(flow.on) ?? day(flow.on)}</span>
-                <span className="text-sm text-muted tabular-nums">
-                  {isPension
-                    ? [quarterOf(flow.on) ? day(flow.on) : null, originOf(flow)].filter(Boolean).join(" · ")
-                    : flow.recurring
-                      ? tf("recent.sourceRule")
-                      : tf("recent.sourceHand")}
-                </span>
-              </span>
-              <span className="flex shrink-0 flex-col items-end gap-0.5 text-right tabular-nums">
-                <span className="font-semibold">{money(flow.chargedCents)}</span>
-                {flow.feeCents !== null && flow.feeCents !== 0n && (
-                  <span className="text-sm text-muted">
-                    {tf("recent.fee", { amount: money(-flow.feeCents) })}
+          {recent.map((operation) => {
+            const competence =
+              operation.competenceYear === null || operation.competenceQuarter === null
+                ? null
+                : label(operation.competenceYear, operation.competenceQuarter);
+            const contribution = operation.classification === "contribution";
+            return (
+              <li
+                key={operation.id}
+                data-testid="recent-flow"
+                className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5"
+              >
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-medium">{competence ?? day(operation.operationDate)}</span>
+                    <Badge tone="neutral">
+                      {tf(`contributions.register.origins.${operationOrigin(operation, detail.sources)}`)}
+                    </Badge>
                   </span>
-                )}
-              </span>
-            </li>
-          ))}
+                  <span className="text-sm text-muted tabular-nums">
+                    {[
+                      competence ? day(operation.operationDate) : null,
+                      contribution
+                        ? originText(
+                            originParts(
+                              {
+                                youCents: operation.workerCents,
+                                employerCents: operation.employerCents,
+                                tfrCents: operation.tfrCents,
+                                otherCents: operation.otherCents,
+                              },
+                              0n,
+                            ),
+                          )
+                        : operation.classification === "voluntary"
+                          ? null
+                          : tp(`classes.${operation.classification}`),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+                <span className="flex shrink-0 flex-col items-end gap-0.5 text-right tabular-nums">
+                  <span className="font-semibold">{money(operationGross(operation))}</span>
+                  {!operation.feesUnknown && operation.feesCents !== 0n && (
+                    <span className="text-sm text-muted">
+                      {tf("recent.fee", { amount: money(-operation.feesCents) })}
+                    </span>
+                  )}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </Card>
   );
 
-  const bridgeCard = pension && (
+  const bridgeCard = payroll !== null && (
     <Card className="flex min-w-0 flex-col gap-3" data-testid="fund-bridge">
       <h2 className="text-lg font-semibold">{tf("bridge.title")}</h2>
-      {pension.bridge === null ? (
+      {detail.bridge === null ? (
         <p className="text-sm text-muted">{tf("bridgeNoValue")}</p>
       ) : (
         <>
           <dl className="flex flex-col gap-1 text-sm">
-            {pension.bridge.map((bridgeLine) => (
+            {detail.bridge.map((bridgeLine) => (
               <div
                 key={bridgeLine.key}
                 className={cn(
@@ -730,16 +754,21 @@ async function FundDetail({
             ))}
           </dl>
           <p className="text-sm text-muted">
-            {tf("bridge.note", { date: long(pension.metrics.value?.on ?? null) })}
+            {tf("bridge.note", { date: long(detail.metrics.value?.on ?? null) })}
           </p>
         </>
       )}
     </Card>
   );
 
+  // ——— The projection (§5.2): short for a fund fed by a recurring debit alone, closed otherwise ————
+  const shortProjection = debit !== null && payroll === null;
+  const forecast = hypothesesOnly(detail.forecast);
+  // A fund with nothing in it yet: the two things to do first, in one card (§10.5).
+  const firstSteps = firstStep && home.points.length === 0;
+
   return shell(
     <>
-      {alert}
       <section aria-labelledby="fund-gain" className="flex min-w-0 flex-col gap-1">
         <h2 id="fund-gain" className="text-sm font-medium text-muted">
           {th("gainTitle", { period: name })}
@@ -782,35 +811,44 @@ async function FundDetail({
             {note}
           </p>
         ))}
-        {(noValueYet || (!measured && state === "paid_no_value")) && !archived && (
+        {(noValueYet || (!measured && state === "paid_no_value")) && !archived && !firstSteps && (
           <div className="pt-1">
-            <ValuationButton
-              fundId={fund.id}
-              fundName={fund.name}
-              today={todayOn}
-              lastLine={lastLine}
-              label={line.status === "never_valued" ? th("list.first") : tf("recordValue")}
-              place="card"
-            />
+            {valuationButton(line.status === "never_valued" ? th("list.first") : tf("recordValue"), "card")}
           </div>
         )}
       </section>
+      {firstSteps && (
+        <Card data-testid="fund-first-steps" className="flex min-w-0 flex-col items-start gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold">{tf("firstSteps.title")}</h2>
+            <p className="text-sm text-muted">{tf("firstSteps.text")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {recordContribution("primary")}
+            {valuationButton(tf("recordValue"), "card")}
+          </div>
+        </Card>
+      )}
+      {alerts}
       {onTheWay}
       {kpis}
       {performance}
-      <div className="grid min-w-0 items-start gap-4 @4xl:grid-cols-2">
-        {recentCard}
-        {pension ? (
-          bridgeCard
-        ) : (
-          <ShortProjection
-            ctx={ctx}
-            forecast={hypothesesOnly(pac!.forecast)}
-            plan={fund.state === "active" && fund.monthlyCents !== null}
-          />
-        )}
-      </div>
-      {pension && <ClosedProjection ctx={ctx} forecast={hypothesesOnly(pension.forecast)} />}
+      {shortProjection || bridgeCard ? (
+        <div className="grid min-w-0 items-start gap-4 @4xl:grid-cols-2">
+          {recentCard}
+          {bridgeCard}
+          {shortProjection && (
+            <ShortProjection
+              ctx={ctx}
+              forecast={forecast}
+              plan={fund.state === "active" && debit.source.amountCents !== null}
+            />
+          )}
+        </div>
+      ) : (
+        recentCard
+      )}
+      {!shortProjection && <ClosedProjection ctx={ctx} forecast={forecast} />}
     </>,
   );
 }

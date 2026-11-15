@@ -7,11 +7,10 @@ import {
   documentedEntries,
   documentedPoints,
   type FundFlow,
+  fundFlows,
   latestDocumented,
   measurePeriod,
   onTheWay,
-  pacFlows,
-  pensionFlows,
   projectionMonthly,
   yearPeriod,
 } from "./period";
@@ -25,7 +24,6 @@ const flow = (on: CivilDate, chargedCents: Cents, feeCents: Cents | null = 0n): 
   feeCents,
   origin: { youCents: chargedCents, employerCents: 0n, tfrCents: 0n, otherCents: 0n },
   recurring: true,
-  deductible: true,
 });
 
 const operation = (overrides: Partial<OperationLike>): OperationLike => ({
@@ -43,6 +41,26 @@ const operation = (overrides: Partial<OperationLike>): OperationLike => ({
   units: "0",
   ...overrides,
 });
+
+/**
+ * The payments of a fund with a recurring debit, as its register holds them: a voluntary operation
+ * each, written by the job (`rule`) or by hand, with the fee unknown while nobody has stated it.
+ */
+const debitFlows = (
+  rows: readonly { on: CivilDate; chargedCents: Cents; feeCents: Cents | null; source: "rule" | "manual" }[],
+): FundFlow[] =>
+  fundFlows(
+    rows.map((row) =>
+      operation({
+        classification: "voluntary",
+        operationDate: row.on,
+        workerCents: row.chargedCents,
+        feesCents: row.feeCents ?? 0n,
+        feesUnknown: row.feeCents === null,
+        source: row.source,
+      }),
+    ),
+  );
 
 const quarter = (overrides: Partial<QuarterStatus>, accrued: Record<string, Cents> = {}): QuarterStatus => ({
   year: 2026,
@@ -193,7 +211,7 @@ describe("the flows of a period", () => {
   });
 
   it("nets a transfer in out of the gain, like any money that came in", () => {
-    const [transfer] = pensionFlows([
+    const [transfer] = fundFlows([
       operation({ classification: "transfer_in", operationDate: "2026-02-01", otherCents: 1_000_00n }),
     ]);
     const measure = measurePeriod({
@@ -208,7 +226,7 @@ describe("the flows of a period", () => {
 
   it("adds an exit back: the money left, it was not lost", () => {
     for (const signedGross of [200_00n, -200_00n]) {
-      const flows = pensionFlows([
+      const flows = fundFlows([
         operation({ operationDate: "2026-02-01", workerCents: 1_000_00n }),
         operation({ classification: "withdrawal", operationDate: "2026-05-01", otherCents: signedGross }),
       ]);
@@ -228,7 +246,7 @@ describe("the flows of a period", () => {
   });
 
   it("carries a switch's cost in the fees, and no money across the boundary", () => {
-    const flows = pensionFlows([
+    const flows = fundFlows([
       operation({ operationDate: "2026-02-01", workerCents: 100_00n }),
       operation({ classification: "switch", operationDate: "2026-02-10", feesCents: 5_00n }),
     ]);
@@ -306,7 +324,7 @@ describe("a fund without a value", () => {
   });
 
   it("takes an exit or a switch before the first value for no money in", () => {
-    const flows = pensionFlows([
+    const flows = fundFlows([
       operation({ classification: "withdrawal", operationDate: "2026-01-10", otherCents: 200_00n }),
       operation({ classification: "switch", operationDate: "2026-01-11", feesCents: 5_00n }),
     ]);
@@ -319,7 +337,7 @@ describe("a fund without a value", () => {
   });
 
   it("nets a reversed contribution out of what was paid in", () => {
-    const flows = pensionFlows([
+    const flows = fundFlows([
       operation({ operationDate: "2026-01-10", workerCents: 100_00n }),
       operation({ operationDate: "2026-01-20", workerCents: -40_00n }),
     ]);
@@ -398,8 +416,8 @@ describe("the documented value (funds-ux §5.2)", () => {
 });
 
 describe("where the money comes from (§5.3)", () => {
-  it("splits a pension fund's money, and a PAC's is yours", () => {
-    const flows = pensionFlows([
+  it("splits the money of a payslip, and a debit is yours", () => {
+    const flows = fundFlows([
       operation({ workerCents: 10_00n, employerCents: 20_00n, tfrCents: 50_00n, feesCents: 3_00n }),
       operation({
         classification: "enrollment",
@@ -414,12 +432,12 @@ describe("where the money comes from (§5.3)", () => {
       tfrCents: 50_00n,
       otherCents: 0n,
     });
-    const pac = pacFlows([{ on: "2026-01-01", chargedCents: 40_00n, feeCents: 1_00n, source: "rule" }]);
-    expect(pac[0].origin.youCents).toBe(40_00n);
+    const debit = debitFlows([{ on: "2026-01-01", chargedCents: 40_00n, feeCents: 1_00n, source: "rule" }]);
+    expect(debit[0].origin.youCents).toBe(40_00n);
   });
 
   it("stands on the transferred quarters when the fund has no operation of its own", () => {
-    const flows = pensionFlows(
+    const flows = fundFlows(
       [],
       [
         quarter({}, { worker: 10_00n, employer: 20_00n, tfr: 50_00n, enrollment: 8_00n }),
@@ -437,8 +455,8 @@ describe("where the money comes from (§5.3)", () => {
 describe("the projection (decision 8)", () => {
   const months = ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01"];
 
-  it("runs on the plan of a PAC, whatever went in", () => {
-    const flows = pacFlows([
+  it("runs on the plan of a recurring debit, whatever went in", () => {
+    const flows = debitFlows([
       { on: "2026-01-01", chargedCents: 3_250_00n, feeCents: 0n, source: "manual" },
       { on: "2026-02-17", chargedCents: 251_00n, feeCents: 1_00n, source: "rule" },
     ]);
@@ -446,7 +464,7 @@ describe("the projection (decision 8)", () => {
   });
 
   it("with no plan, averages the recurring deposits and leaves the one-offs out", () => {
-    const flows = pacFlows([
+    const flows = debitFlows([
       { on: "2026-01-01", chargedCents: 3_250_00n, feeCents: 0n, source: "manual" },
       { on: "2026-02-17", chargedCents: 200_00n, feeCents: 1_00n, source: "rule" },
     ]);
@@ -454,7 +472,7 @@ describe("the projection (decision 8)", () => {
   });
 
   it("on a pension fund, counts only the contributions", () => {
-    const flows = pensionFlows([
+    const flows = fundFlows([
       operation({ operationDate: "2026-01-20", workerCents: 400_00n }),
       operation({ classification: "enrollment", operationDate: "2026-01-20", workerCents: 1_000_00n }),
       operation({ classification: "voluntary", operationDate: "2026-02-20", workerCents: 2_000_00n }),

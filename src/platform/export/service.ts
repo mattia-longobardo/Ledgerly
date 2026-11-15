@@ -1,7 +1,7 @@
 import "server-only";
 import { balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { budgetsView } from "@/modules/budgets/queries";
-import { fundsView } from "@/modules/funds/queries";
+import { fundsConfiguration, fundsOverview } from "@/modules/funds/overview";
 import { interestsView } from "@/modules/interests/queries";
 import { investmentOperationsExport, investmentServices } from "@/modules/investments/queries";
 import { DOCUMENT_KINDS } from "@/modules/imports/rules";
@@ -30,6 +30,9 @@ import { type ZipEntry, zipStream, zipToBytes } from "./zip";
 
 /** Far enough back to hold every leave day anyone could have recorded, and a fixed string. */
 const LEAVE_WINDOW = { from: "1970-01-01", to: "2999-12-31" } as const;
+
+/** Every fund is a pension fund (rewrite plan, decision H12): the column stays, with one value. */
+const FUND_KIND = "pension";
 
 async function allTransactions(ctx: Ctx): Promise<Row[]> {
   const rows: Row[] = [];
@@ -94,6 +97,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     pockets,
     budgets,
     funds,
+    fundSetup,
     interests,
     allowances,
     leave,
@@ -105,7 +109,8 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     subscriptionsView(ctx, now),
     pocketsView(ctx, now),
     budgetsView(ctx, month),
-    fundsView(ctx, now),
+    fundsOverview(ctx, now),
+    fundsConfiguration(ctx),
     interestsView(ctx, now),
     listAllowances(ctx),
     listLeaveDays(ctx, LEAVE_WINDOW),
@@ -224,20 +229,20 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
       rows: [
         ...funds.rows.map((row) => ({
           name: row.fund.name,
-          kind: row.fund.type,
+          kind: FUND_KIND,
           provider: row.fund.provider,
-          isin: row.fund.isin,
-          paidIn: amount(row.metrics.paidInCents),
-          value: amount(row.metrics.valueCents),
-          gain: amount(row.metrics.gainCents),
+          isin: row.fund.code,
+          paidIn: amount(row.paidInCents),
+          value: amount(row.valueCents),
+          gain: amount(row.gainCents),
           lastValuation: row.lastValuation,
           state: row.fund.state,
         })),
         ...funds.archived.map((fund) => ({
           name: fund.name,
-          kind: fund.type,
+          kind: FUND_KIND,
           provider: fund.provider,
-          isin: fund.isin,
+          isin: fund.code,
           paidIn: null,
           value: null,
           gain: null,
@@ -245,6 +250,79 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
           state: fund.state,
         })),
       ],
+    },
+    // Where each fund's money comes from and what it costs (release N6, exception X3): additive.
+    {
+      name: "fund-sources",
+      columns: [
+        "fund",
+        "kind",
+        "state",
+        "components",
+        "accrualPeriod",
+        "employer",
+        "dueDay",
+        "dueOffsetMonths",
+        "toleranceDays",
+        "account",
+        "payeeMatch",
+        "amount",
+        "debitDay",
+        "every",
+        "unit",
+        "validFrom",
+        "validTo",
+        "note",
+      ],
+      rows: fundSetup.sources.map((source) => ({
+        fund: source.fundName,
+        kind: source.kind,
+        state: source.state,
+        components: source.components?.join(" ") ?? null,
+        accrualPeriod: source.accrualPeriod,
+        employer: source.employer,
+        dueDay: source.dueDay,
+        dueOffsetMonths: source.dueOffsetMonths,
+        toleranceDays: source.toleranceDays,
+        account: source.accountName,
+        payeeMatch: source.payeeMatch,
+        amount: amount(source.amountCents),
+        debitDay: source.debitDay,
+        every: source.intervalCount,
+        unit: source.intervalUnit,
+        validFrom: source.validFrom,
+        validTo: source.validTo,
+        note: source.note,
+      })),
+    },
+    {
+      name: "fund-fees",
+      columns: [
+        "fund",
+        "label",
+        "basis",
+        "amount",
+        "rate",
+        "period",
+        "source",
+        "component",
+        "validFrom",
+        "validTo",
+        "note",
+      ],
+      rows: fundSetup.fees.map((fee) => ({
+        fund: fee.fundName,
+        label: fee.label,
+        basis: fee.basis,
+        amount: amount(fee.amountCents),
+        rate: fee.rate,
+        period: fee.period,
+        source: fee.sourceKind,
+        component: fee.component,
+        validFrom: fee.validFrom,
+        validTo: fee.validTo,
+        note: fee.note,
+      })),
     },
     {
       name: "investment-services",
@@ -368,7 +446,7 @@ opens it as it is) and once inside ledgerly.json. Amounts are plain decimal stri
 in the account's own currency, never a locale's formatting, so a script can read them. An unknown
 amount is empty in the CSV and null in the JSON; the two mean the same thing.
 
-documents/ holds the originals still kept: payslips and Cometa files, under the names you
+documents/ holds the originals still kept, under the names you
 uploaded them with, prefixed by the id they have in documents.csv. An original whose retention has
 run out is listed there and is not in the folder.
 `;

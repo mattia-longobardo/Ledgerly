@@ -169,9 +169,9 @@ As the admin, in the app:
 1. **Payroll → Add payslip**: upload the real payslips, oldest first. Each opens its review beside
    the PDF; confirm or correct anything marked *inferred*, acknowledge any failed check you accept,
    then **Verify** and **Apply to payroll**. Nothing enters the register until you apply it.
-2. **Funds → Add fund → Pension fund**: create the fund, then **Import documents** for the Cometa
-   operations export and the position summary. Operations are previewed row by row before anything
-   is applied.
+2. **Funds → Add fund**: create the fund in four steps. Switch on **Payslip** if your payslip pays
+   into it: the contributions of the payslips already applied arrive at once. Then **Update value**
+   with the value the fund reports.
 3. Check **Time off**: the residual should now come from the payslips, with the payslip it read
    named beside it.
 

@@ -650,7 +650,7 @@
       "scopeHints": {
         "read": "conti, saldi, transazioni e riepilogo",
         "write": "registrare la lettura di un saldo",
-        "imports": "caricare cedolini e documenti Cometa",
+        "imports": "caricare buste paga",
         "investments:read": "servizi di investimento, rendimenti e posizioni"
       },
       "cancel": "Annulla",
@@ -2315,10 +2315,6 @@
     "kpis": {
       "paidIn": "Versato"
     },
-    "types": {
-      "pac": "PAC",
-      "pension": "Fondo pensione"
-    },
     "month": {
       "found": "Versamento trovato · {date}",
       "awaited": "Atteso",
@@ -2326,7 +2322,7 @@
       "none": "—"
     },
     "alert": {
-      "missing": "nessun versamento trovato entro il {date} ({amount} attesi).",
+      "missing": "nessun addebito trovato entro il {date} ({amount} attesi).",
       "cta": "Controlla le spese"
     },
     "archived": {
@@ -2334,12 +2330,11 @@
       "restore": "Ripristina"
     },
     "empty": {
-      "title": "Nessun fondo",
-      "description": "Aggiungi un fondo per seguire versamenti e rendimenti.",
+      "title": "Nessun fondo pensione",
+      "description": "Aggiungi un fondo pensione per seguire contributi, valore e rendimento.",
       "cta": "Aggiungi fondo"
     },
     "detail": {
-      "kind": "Piano di accumulo (PAC)",
       "since": "dal {date}",
       "tabs": {
         "label": "Fondo"
@@ -2377,24 +2372,11 @@
       "saved": "{count, plural, one {# addebito acquisito} other {# addebiti acquisiti}}; i prossimi seguiranno da soli.",
       "failed": "Non è riuscito. Riprova."
     },
-    "deposits": {
-      "add": {
-        "title": "Aggiungi versamento",
-        "hint": "Inserisci l'importo addebitato; la commissione viene sottratta.",
-        "date": "Data",
-        "debited": "Addebitato (€)",
-        "fee": "Commissione (€)",
-        "invested": "Investito",
-        "note": "Nota",
-        "save": "Salva versamento"
-      },
-      "editTitle": "Modifica versamento"
-    },
     "valuations": {
       "editTitle": "Modifica valore",
       "form": {
-        "title": "Registra valore · {name}",
-        "description": "Inserisci il valore dell'ultimo estratto. Si salva come saldo del conto del fondo.",
+        "title": "Aggiorna valore · {name}",
+        "description": "Scrivi il valore che il fondo ti comunica. Si salva come saldo del conto del fondo.",
         "date": "Data del valore",
         "value": "Valore (€)",
         "note": "Nota",
@@ -2408,56 +2390,25 @@
         "title": "Generale",
         "name": "Nome",
         "provider": "Gestore",
-        "compartment": "Tipo / comparto",
-        "kind": "Tipo di fondo",
-        "kindPac": "Piano di accumulo (PAC)",
-        "kindPension": "Fondo pensione",
-        "kindHelp": "Il PAC riceve un versamento mensile da un tuo conto, con una commissione su ognuno; il fondo pensione riceve le competenze dei cedolini e i documenti del fondo.",
-        "kindFixed": "Il tipo si sceglie alla creazione del fondo: un PAC tiene i versamenti, un fondo pensione tiene contributi e operazioni, quindi non si può cambiare dopo.",
-        "isin": "ISIN",
-        "start": "Data di inizio",
-        "memberSince": "Iscritto dal"
-      },
-      "plan": {
-        "description": "Il piano mensile e la commissione su ogni versamento.",
-        "monthly": "Importo mensile addebitato (€)",
-        "fee": "Commissione per versamento (€)",
-        "debitAccount": "Conto di addebito",
-        "noAccount": "Nessuno",
-        "debitDay": "Giorno di addebito",
-        "ter": "Commissione di gestione annua (%)"
-      },
-      "rule": {
-        "title": "Abbinamento delle spese",
-        "description": "Crea un versamento da solo quando sul conto di addebito compare una spesa corrispondente.",
-        "active": "Abbina le spese ai versamenti",
-        "match": "Il beneficiario contiene",
-        "account": "Sul conto",
-        "anyAccount": "Qualunque conto",
-        "save": "Salva regola"
-      },
-      "valuations": {
-        "title": "Valori",
-        "description": "Il valore sta sul conto del fondo: le sue impostazioni decidono patrimonio, snapshot e promemoria.",
-        "open": "Apri le impostazioni di {account}"
+        "compartment": "Linea o comparto",
+        "memberSince": "Data di adesione",
+        "description": "Nome, gestore e linea del fondo.",
+        "advanced": "Avanzate",
+        "code": "Codice",
+        "codeHint": "Identificativo del fondo o della tua posizione.",
+        "currency": "Valuta",
+        "currencyFixed": "La valuta non si cambia dopo la creazione.",
+        "valueAccount": "Il valore sta sul conto «{account}».",
+        "openAccount": "Apri {account}"
       },
       "danger": {
         "title": "Zona pericolosa",
         "description": "Archiviare nasconde il fondo ma ne conserva la storia.",
-        "text": "Archivia {name}. Versamenti e valori restano leggibili.",
+        "text": "Archivia {name}. Contributi e valori restano leggibili.",
         "archive": "Archivia fondo",
         "restore": "Ripristina fondo"
       },
       "save": "Salva"
-    },
-    "form": {
-      "newTitle": "Nuovo fondo",
-      "description": "Scegli il tipo, poi compila quello che serve. Il valore sta su un conto suo, così il patrimonio lo conta una volta sola.",
-      "valuationAccount": "Il valore sta su",
-      "newAccount": "Un conto nuovo con il nome del fondo",
-      "initial": "Capitale iniziale (€)",
-      "cancel": "Annulla",
-      "save": "Salva fondo"
     },
     "toasts": {
       "saved": "Fondo salvato",
@@ -2465,47 +2416,29 @@
       "restored": "Fondo ripristinato",
       "valuation": "Valore registrato",
       "valuationUpdated": "Valore aggiornato",
-      "deposit": "Versamento salvato",
-      "depositDeleted": "Versamento eliminato",
-      "rule": "Regola salvata"
+      "deposit": "Contributo salvato",
+      "depositDeleted": "Contributo eliminato"
     },
     "errors": {
-      "invalid": "Controlla i valori: un nome, importi maggiori di zero, una commissione non oltre l'importo, una commissione di gestione fra 0 e 100 %.",
+      "invalid": "Controlla i valori: un nome, importi maggiori di zero, una commissione non oltre l'importo.",
       "not_found": "Quel fondo non esiste più.",
       "invalid_account": "Scegli un conto aperto; il valore vuole un conto manuale che nessun altro fondo usa.",
       "duplicate_name": "Esiste già un fondo con quel nome.",
       "archived": "Un fondo archiviato non cambia. Ripristinalo prima.",
-      "linked": "Questo versamento viene da un movimento: nascondi il movimento in Spese per toglierlo.",
+      "linked": "Questo contributo viene da un movimento: nascondi il movimento in Spese per toglierlo.",
       "future_date": "La data non può essere nel futuro.",
-      "movement_taken": "Quel movimento è già collegato a un'altra operazione.",
-      "failed": "Salvataggio non riuscito. Riprova."
+      "movement_taken": "Quel movimento è già collegato a un altro contributo.",
+      "failed": "Salvataggio non riuscito. Riprova.",
+      "load": "Fondi non caricati. Riprova.",
+      "undo": "Non ripristinato. Ricarica la pagina."
     },
     "account": {
       "label": "Fondo"
     },
     "pension": {
-      "kind": "Fondo pensione",
-      "tabs": {
-        "overview": "Riepilogo",
-        "contributions": "Contributi",
-        "valuations": "Valorizzazioni",
-        "settings": "Impostazioni"
-      },
-      "kpis": {
-        "paidIn": "Versato al fondo"
-      },
       "notice": {
         "pending": "{amount} maturati nei cedolini non sono ancora nel fondo: {quarters}.",
-        "pendingQuarter": "{quarter}, {amount}, versamento aziendale previsto il {date}"
-      },
-      "operations": {
-        "title": "Operazioni del fondo",
-        "empty": "Nessuna operazione importata.",
-        "date": "Data operazione",
-        "fees": "Spese",
-        "net": "Netto investito",
-        "remove": "Elimina",
-        "removed": "Operazione eliminata"
+        "pendingQuarter": "{quarter}, {amount}, versamento previsto il {date}"
       },
       "classes": {
         "contribution": "Contributo",
@@ -2540,25 +2473,6 @@
         "bonus": "Premio",
         "settlement": "Conguaglio"
       },
-      "quarters": {
-        "title": "Versamenti aziendali",
-        "hint": "Trimestrali · {days} giorni di tolleranza prima di segnalare un accredito mancante",
-        "empty": "Niente di maturato o accreditato.",
-        "due": "scadenza {date}",
-        "credited": "accreditato il {date}",
-        "credited2": "nel fondo",
-        "accrued": "maturato",
-        "difference": "differenza",
-        "accept": "Accetta differenza",
-        "clear": "Riapri",
-        "missing": "Manca il cedolino di {months}."
-      },
-      "components": {
-        "worker": "Lavoratore",
-        "employer": "Azienda",
-        "tfr": "TFR",
-        "enrollment": "Iscrizione"
-      },
       "statuses": {
         "accrued_not_due": "Maturato, non scaduto",
         "transferred": "Versato",
@@ -2582,247 +2496,6 @@
           "submit": "Accetta",
           "cancel": "Annulla"
         }
-      },
-      "voluntary": {
-        "title": "Versamento volontario",
-        "description": "I versamenti diretti al fondo, fuori dal cedolino, sono un flusso a sé e si possono collegare al movimento che li ha pagati.",
-        "add": "Aggiungi versamento",
-        "date": "Data",
-        "amount": "Importo (€)",
-        "fee": "Spese (€)",
-        "movement": "Movimento collegato",
-        "noMovement": "Nessun movimento",
-        "note": "Nota",
-        "submit": "Aggiungi",
-        "cancel": "Annulla",
-        "added": "Versamento aggiunto"
-      },
-      "statements": {
-        "title": "Riepiloghi della posizione",
-        "empty": "Nessun riepilogo importato.",
-        "employer": "Azienda",
-        "tfr": "TFR",
-        "inflows": "Totale entrate",
-        "outflows": "Totale uscite",
-        "gain": "Rendimento riportato"
-      },
-      "documents": {
-        "title": "Documenti Cometa",
-        "import": "Importa documenti",
-        "empty": "Nessun documento.",
-        "state": "Stato",
-        "kinds": {
-          "cometa_operations": "Dettaglio operazioni",
-          "cometa_position": "Riepilogo posizione"
-        }
-      },
-      "documentStates": {
-        "received": "Ricevuto",
-        "scanning": "Scansione",
-        "extracting": "In lettura",
-        "needs_review": "Da rivedere",
-        "needs_ocr": "Serve OCR",
-        "verified": "Verificato",
-        "applied": "Applicato",
-        "superseded": "Sostituito",
-        "rejected": "Messo da parte",
-        "failed": "Non riuscito"
-      },
-      "import": {
-        "title": "Importa documenti Cometa",
-        "description": "Il dettaglio operazioni e il riepilogo della posizione. Il tipo di ogni file si riconosce dal contenuto.",
-        "choose": "Scegli i file",
-        "drop": "oppure trascinali qui · PDF, tabella XLS o XLSX, fino a 10 MB ciascuno",
-        "submit": "Carica",
-        "cancel": "Annulla",
-        "uploaded": "{count, plural, one {# documento caricato} other {# documenti caricati}}",
-        "duplicates": "{count, plural, one {# file era già stato importato} other {# file erano già stati importati}}",
-        "refused": "{name} è stato rifiutato"
-      },
-      "review": {
-        "title": "Revisione documento",
-        "back": "Fondo",
-        "subtitle": "{file} · ricevuto il {date}",
-        "values": "Valori letti",
-        "confirm": "Conferma",
-        "correct": "Correggi",
-        "save": "Salva",
-        "cancel": "Annulla",
-        "saved": "Salvato",
-        "originalValue": "letto come {value}",
-        "apply": "Applica",
-        "applied": "Applicato al fondo",
-        "retry": "Riprova",
-        "delete": "Elimina documento",
-        "deleted": "Documento eliminato",
-        "verification": {
-          "unverified": "Da controllare",
-          "confirmed": "Confermato",
-          "corrected": "Corretto"
-        },
-        "viewer": {
-          "page": "Pagina {page} di {pages}",
-          "previous": "Pagina precedente",
-          "next": "Pagina successiva",
-          "zoomIn": "Ingrandisci",
-          "zoomOut": "Riduci",
-          "open": "Apri l'originale",
-          "loading": "Caricamento del documento…",
-          "failed": "Non è stato possibile mostrare il documento.",
-          "deleted": "L'originale è stato eliminato a fine conservazione; i dati letti restano."
-        },
-        "fields": {
-          "valuationDate": "Data valorizzazione",
-          "value": "Valore posizione",
-          "tfr": "TFR",
-          "worker": "Aderente",
-          "employer": "Azienda",
-          "transfersIn": "Trasferimenti",
-          "inflows": "Totale entrate",
-          "advances": "Anticipi",
-          "redemptions": "Riscatti",
-          "rita": "Rate R.I.T.A.",
-          "outflows": "Totale uscite",
-          "reportedGain": "Rendimento riportato"
-        },
-        "preview": {
-          "title": "Operazioni in questo export",
-          "hint": "{count, plural, one {# operazione} other {# operazioni}} · {added} nuove",
-          "state": {
-            "new": "Nuova",
-            "known": "Già nel fondo",
-            "changed": "Aggiornata"
-          },
-          "competence": "Competenza",
-          "date": "Data operazione",
-          "type": "Come nell'export",
-          "worker": "Aderente",
-          "employer": "Azienda",
-          "tfr": "TFR",
-          "fees": "Spese",
-          "net": "Netto",
-          "units": "Quote",
-          "empty": "Questo export non contiene operazioni.",
-          "enrollmentNote": "Un contributo con netto zero che non ha acquistato quote è la quota d'iscrizione."
-        },
-        "states": {
-          "reading": "Il documento è in lettura.",
-          "failed": "Non è stato possibile leggere il documento: {error}.",
-          "applied": "Applicato al fondo."
-        }
-      },
-      "create": {
-        "created": "Fondo creato",
-        "published": "{count, plural, one {# cedolino pubblicato} other {# cedolini pubblicati}} nel fondo"
-      },
-      "settings": {
-        "general": "Generale",
-        "generalDescription": "Nome, fondo e comparto.",
-        "name": "Nome visualizzato",
-        "provider": "Fondo",
-        "compartment": "Comparto",
-        "start": "Iscritto dal",
-        "save": "Salva",
-        "saved": "Salvato",
-        "payroll": "Origine: cedolini",
-        "payrollDescription": "Quali codici del cedolino alimentano ogni componente, e se questo fondo li riceve. Specifico del tracciato Reply / TeamSystem.",
-        "payrollOn": "Questo fondo riceve i contributi di ogni cedolino applicato.",
-        "payrollOff": "I contributi dei cedolini vanno a un altro fondo.",
-        "codes": "I codici di ogni componente sono quelli della mappa dei codici, in Payroll › Impostazioni.",
-        "takePayroll": "Ricevi i contributi dei cedolini",
-        "rebuild": "Ricostruisci dai cedolini",
-        "rebuilt": "{count, plural, one {# cedolino riletto} other {# cedolini riletti}}",
-        "transfers": "Versamenti aziendali",
-        "transfersDescription": "Quando i contributi sono attesi nel fondo. Calcolato automaticamente, nessuna conferma richiesta.",
-        "schedule": "Scadenze il {dates} del mese successivo al trimestre.",
-        "source": "Fonte: {source} · verificata il {date}",
-        "tolerance": "Tolleranza di visualizzazione (giorni)",
-        "toleranceHint": "Per quanto tempo dopo la scadenza un accredito mancante è ancora mostrato come in arrivo.",
-        "rules": "Regole contributive",
-        "rulesDescription": "Facoltativa. Serve solo a confrontare quello che il contratto prevede con quello che il cedolino trattiene; non entra in nessun calcolo.",
-        "from": "Dal",
-        "ccnl": "CCNL",
-        "worker": "% lavoratore",
-        "employer": "% azienda",
-        "tfrShare": "% TFR",
-        "sourceColumn": "Fonte",
-        "removeRule": "Elimina regola",
-        "addRule": "Aggiungi regola",
-        "ruleAdded": "Regola aggiunta",
-        "validFrom": "Valida dal",
-        "validTo": "Valida fino al",
-        "base": "Base di calcolo",
-        "workerPct": "% lavoratore",
-        "employerPct": "% azienda",
-        "tfrPct": "% TFR",
-        "verifiedOn": "Verificata il",
-        "sourceHint": "La pagina o il documento da cui viene la regola.",
-        "valuationAccount": "Conto del valore",
-        "valuationDescription": "Il conto su cui si scrive il valore del fondo.",
-        "openAccount": "Apri {account}",
-        "danger": "Zona pericolosa",
-        "dangerDescription": "L'archiviazione nasconde il fondo ma ne conserva la storia.",
-        "codesTitle": "Codici che alimentano ogni componente",
-        "codeGroups": {
-          "worker": "Contributo lavoratore",
-          "employer": "Contributo azienda",
-          "tfr": "Contributo TFR",
-          "enrollment": "Quote di iscrizione",
-          "adjustment": "Rettifiche"
-        },
-        "openCodeMap": "Apri Payroll › Impostazioni",
-        "frequency": "Frequenza",
-        "frequencies": {
-          "quarterly": "Trimestrale",
-          "monthly": "Mensile",
-          "custom": "Personalizzata"
-        },
-        "dueDay": "Giorno di scadenza del mese successivo",
-        "noSchedule": "Nessuna regola di versamento registrata per questo fondo.",
-        "ruleOnly": "Frequenza e giorno di scadenza vengono dalla regola versionata, non da un'impostazione: qui si cambia solo la tolleranza qui sotto.",
-        "fees": "Spese",
-        "feesDescription": "Le spese esplicite vengono dalle operazioni importate; il tariffario serve solo a spiegare e a stimare.",
-        "feeItems": {
-          "enrollmentWorker": "Iscrizione · lavoratore",
-          "enrollmentEmployer": "Iscrizione · azienda",
-          "association": "Quota associativa",
-          "management": "Commissione di gestione"
-        },
-        "feeUnits": {
-          "once": "una tantum",
-          "year": "all'anno, addebitata per trimestri",
-          "yearOfAssets": "all'anno sul patrimonio"
-        },
-        "tariffFrom": "Tariffario pubblico di {provider}, in vigore dal {date}.",
-        "feesActual": "Senza import, queste spese stimano quanto trattenuto da ogni versamento; importate le operazioni, contano le loro spese effettive.",
-        "noTariff": "Nessun tariffario caricato per questo gestore.",
-        "saveRule": "Salva regola",
-        "enrollmentFee": "Quota d'iscrizione",
-        "enrollmentFeeHint": "Una tantum, dalle quote d'iscrizione.",
-        "quarterFee": "Spesa per trimestre",
-        "quarterFeeHint": "Trattenuta da ogni contributo trimestrale."
-      },
-      "errors": {
-        "failed": "Qualcosa è andato storto. Riprova.",
-        "invalid": "Controlla i valori inseriti.",
-        "not_found": "Non trovato.",
-        "linked": "Un'operazione che viene da un documento non si elimina.",
-        "duplicate_name": "Esiste già un fondo con questo nome.",
-        "empty": "Il file è vuoto.",
-        "too_large": "Il file supera i 10 MB.",
-        "too_many": "Troppi file in una volta.",
-        "unsupported_format": "Questo file non è né un PDF né una tabella di operazioni.",
-        "invalid_state": "Il documento non è nello stato giusto.",
-        "no_table": "Nel file non c'è nessuna tabella di operazioni. Carica il «Dettaglio operazioni» esportato dal portale Cometa (la tabella .xls o un .xlsx).",
-        "missing_columns": "Alla tabella mancano colonne necessarie alla lettura.",
-        "bad_value": "Un valore della tabella non è leggibile.",
-        "binary_xls": "Questo è un vecchio XLS binario: esportalo in XLSX o HTML.",
-        "storage_failed": "Non è stato possibile archiviare il file.",
-        "not_an_export": "Questo foglio non è il «Dettaglio operazioni» di Cometa: non contiene la tabella delle operazioni, quella con la colonna «Tipo Operazione». Scarica il dettaglio operazioni dal portale Cometa e carica quello; questo documento si può eliminare.",
-        "extraction_failed": "Non è stato possibile leggere il documento. Riprova; se continua a fallire, il file non è di un tipo che il lettore conosce.",
-        "parse_failed": "Non è stato possibile leggere il documento fino in fondo.",
-        "original_missing": "L'originale non è più in archivio, quindi non si può rileggere.",
-        "unreadable_pdf": "Questo PDF non si è potuto aprire. Riscarica il riepilogo della posizione dal portale Cometa."
       }
     },
     "home": {
@@ -2857,20 +2530,25 @@
         "paidIn": "Versato",
         "paidInYear": "Versato nel {year}",
         "paidInPeriod": "Versato nel periodo",
-        "origin": "tu {you} · azienda {employer} · TFR {tfr}",
-        "originOther": "tu {you} · azienda {employer} · TFR {tfr} · altro {other}",
-        "paidInFirst": "il primo versamento è del {date}",
-        "nothingPaid": "nessun versamento",
+        "paidInFirst": "il primo contributo è del {date}",
+        "nothingPaid": "nessun contributo",
         "market": "Andamento del mercato",
-        "marketNote": "variazione del valore, senza i versamenti",
+        "marketNote": "variazione del valore, senza i contributi",
         "marketNeedsValue": "serve un valore",
         "fees": "Commissioni",
-        "feesNote": "sui versamenti, già nel guadagno",
+        "feesNote": "sui contributi, già nel guadagno",
         "feesUnknown": "una commissione è sconosciuta",
         "onTheWay": "In arrivo",
         "onTheWayNote": "maturati in busta, non ancora nel fondo",
         "accrued": "Maturato in busta",
-        "accruedNote": "{name}, arriva a {date}"
+        "accruedNote": "{name}, arriva a {date}",
+        "originParts": {
+          "you": "tu {amount}",
+          "employer": "datore {amount}",
+          "tfr": "TFR {amount}",
+          "voluntary": "volontari {amount}",
+          "other": "altro {amount}"
+        }
       },
       "chart": {
         "title": "Andamento",
@@ -2924,29 +2602,25 @@
         "rate": "Rend.",
         "value": "Valore",
         "updated": "Aggiornato",
-        "plan": "Piano {amount} al mese · {status}",
-        "planOff": "Piano {amount} al mese",
-        "onTheWay": "In arrivo {amount} · {count, plural, one {# trimestre} other {# trimestri}}",
-        "noPlan": "Nessun piano",
+        "onTheWay": "In arrivo {amount} · {count, plural, one {# periodo} other {# periodi}}",
         "archived": "Archiviato",
         "highlight": "Evidenzia {name} nel grafico",
         "undetermined": "non determinabile",
         "first": "Registra il primo valore",
         "total": "Totale",
         "xirr": "Annualizzato (XIRR) {rate}",
-        "updatedShort": "aggiornato il {date}"
+        "updatedShort": "aggiornato il {date}",
+        "debit": "Addebito {amount} {frequency}",
+        "debitStatus": "Addebito {amount} {frequency} · {status}"
       },
       "who": {
         "title": "Chi ha versato {when}",
-        "you": "Tu",
-        "employer": "Azienda",
+        "you": "Il mio contributo",
+        "employer": "Datore di lavoro",
         "tfr": "TFR",
         "other": "Altro",
-        "empty": "Nessun versamento in questo periodo.",
-        "deductible": "Deducibile usato nel {year}",
-        "deductibleOf": "{used} di {limit}",
-        "deductibleNote": "Tu e azienda, senza TFR. Per data operazione: l'anno certificato può differire. Resta spazio per {left}.",
-        "deductibleOver": "Tu e azienda, senza TFR. Per data operazione: l'anno certificato può differire. Oltre il limite di {over}."
+        "empty": "Nessun contributo in questo periodo.",
+        "voluntary": "Volontario"
       },
       "when": {
         "year": "nel {year}",
@@ -2966,16 +2640,7 @@
         "accrued": "Maturato in busta finora: {amount}."
       },
       "kpis": {
-        "deposits": "{recurring, plural, one {# versamento} other {# versamenti}}, {oneOff, plural, one {# una tantum} other {# una tantum}}",
-        "perDeposit": "{fee} per versamento",
-        "deductible": "Deducibile usato",
-        "deductibleNote": "di {limit} nel {year}, senza TFR e quota di iscrizione, per data operazione",
-        "deductibleOver": "di {limit} nel {year}: oltre di {over}. Senza TFR e quota di iscrizione, per data operazione",
-        "plan": "Piano",
-        "planDay": "al mese, il giorno {day}",
-        "planStatus": "al mese, il giorno {day} · {status}",
-        "planMonth": "al mese",
-        "noPlan": "nessun piano"
+        "debitDay": "{frequency}, il giorno {day}"
       },
       "onTheWay": {
         "link": "Vedi i contributi"
@@ -2986,13 +2651,10 @@
         "stretch": "Tra una valutazione e la successiva · la linea è il totale progressivo"
       },
       "recent": {
-        "title": "Ultimi versamenti",
+        "title": "Ultimi contributi",
         "allContributions": "Tutti i contributi",
-        "allDeposits": "Tutti i versamenti",
-        "sourceRule": "Trovato dalla regola",
-        "sourceHand": "Una tantum",
         "fee": "commissione {amount}",
-        "empty": "Nessun versamento in questo periodo."
+        "empty": "Nessun contributo in questo periodo."
       },
       "bridge": {
         "title": "Dal maturato al valore",
@@ -3008,11 +2670,10 @@
       "tabs": {
         "overview": "Panoramica",
         "contributions": "Contributi",
-        "deposits": "Versamenti",
-        "valuations": "Valutazioni",
+        "valuations": "Valori",
         "settings": "Impostazioni"
       },
-      "recordValue": "Registra valore",
+      "recordValue": "Aggiorna valore",
       "bridgeValue": "Valore",
       "bridgeNoValue": "Serve un valore per raccordare le cifre.",
       "valuations": {
@@ -3037,99 +2698,430 @@
         "bestWorst": "Tratto migliore {best}, fino al {bestOn}. Tratto peggiore {worst}, fino al {worstOn}.",
         "notInValue": "{amount} versati dopo l'ultimo valore: nessun valore li comprende ancora.",
         "statements": {
-          "title": "Estratti del fondo",
-          "empty": "Nessun estratto {when}.",
-          "you": "Tu",
-          "employer": "Azienda",
+          "you": "Il mio contributo",
+          "employer": "Datore di lavoro",
           "tfr": "TFR",
           "inflows": "Entrate",
           "outflows": "Uscite",
           "gain": "Guadagno dichiarato"
         },
-        "documents": {
-          "title": "Documenti del fondo",
-          "kinds": {
-            "cometa_operations": "Operazioni",
-            "cometa_position": "Estratto"
-          }
+        "read": {
+          "title": "Estratti già letti",
+          "note": "Dati letti dai documenti prima che l'import fosse tolto. Restano parte del fondo."
         }
       },
-      "deposits": {
-        "title": "Versamenti",
-        "count": "{count, plural, one {# versamento} other {# versamenti}}",
-        "date": "Data",
-        "charged": "Addebitato",
-        "fee": "Commissione",
-        "invested": "Investito",
-        "source": "Origine",
-        "sourceRule": "Trovato dalla regola",
-        "sourceHand": "Una tantum",
-        "edit": "Modifica",
-        "delete": "Elimina",
-        "total": "Totale",
-        "empty": "Nessun versamento {when}.",
-        "rule": {
-          "title": "La regola",
-          "text": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento, meno {fee} di commissione.",
-          "anyAccount": "qualunque conto",
-          "active": "Attiva",
-          "paused": "In pausa",
-          "edit": "Modifica la regola",
-          "none": "Nessuna regola: inserisci i versamenti a mano.",
-          "textNoFee": "Le spese su {account} il cui beneficiario contiene {match} diventano un versamento. Nessuna commissione impostata."
-        },
-        "feeUnknown": "Una commissione è sconosciuta: i totali la contano come 0."
-      },
       "contributions": {
-        "you": "Tu",
-        "employer": "Azienda",
-        "tfr": "TFR",
         "other": "Altro",
         "total": "Totale",
-        "operations": {
-          "title": "Operazioni del fondo",
-          "count": "{count, plural, one {# operazione} other {# operazioni}}",
-          "empty": "Nessuna operazione {when}.",
-          "quarter": "Trimestre",
-          "date": "Data",
-          "fees": "Spese",
-          "net": "Investito",
-          "remove": "Elimina"
-        },
         "payslips": {
           "title": "Buste paga",
           "hint": "quote d'iscrizione escluse",
           "empty": "Nessuna busta paga {when}.",
           "month": "Mese",
-          "quarter": "Trimestre",
           "status": "Stato",
-          "open": "Apri la busta paga"
+          "open": "Apri la busta paga",
+          "period": "Periodo"
         },
         "quarters": {
-          "title": "Trimestri",
+          "title": "Periodi",
           "hint": "{days} giorni di tolleranza prima di segnalare un accredito mancante",
-          "empty": "Nessun trimestre {when}.",
-          "missing": "Manca la busta paga di {months}."
+          "empty": "Nessun periodo {when}.",
+          "missing": "Manca la busta paga di {months}.",
+          "due": "scadenza {date}",
+          "credited": "accreditato il {date}",
+          "inFund": "nel fondo",
+          "accrued": "maturato",
+          "difference": "differenza",
+          "accept": "Accetta differenza",
+          "clear": "Riapri"
         },
         "components": {
-          "worker": "Tu",
-          "employer": "Azienda",
+          "worker": "Il mio contributo",
+          "employer": "Datore di lavoro",
           "tfr": "TFR",
           "enrollment": "Iscrizione"
         },
-        "deductible": {
-          "title": "Deducibile per anno",
-          "empty": "Nessuna somma deducibile {when}.",
-          "year": "Anno",
-          "used": "Usato",
-          "limit": "Limite",
-          "note": "Tu + azienda, senza TFR e quota di iscrizione, per data dell'operazione. L'anno certificato dal fondo può differire: per la dichiarazione usa la certificazione del fondo."
+        "register": {
+          "title": "Contributi",
+          "count": "{count, plural, one {# contributo} other {# contributi}}",
+          "date": "Data",
+          "origin": "Origine",
+          "origins": {
+            "payroll": "Busta paga",
+            "rule": "Addebito",
+            "manual": "A mano",
+            "import": "Importato"
+          },
+          "period": "Periodo",
+          "quarter": "{index}° trim. {year}",
+          "voluntary": "Volontario",
+          "charged": "Addebitato",
+          "fees": "Commissioni",
+          "invested": "Investito",
+          "actions": "Azioni",
+          "edit": "Modifica",
+          "delete": "Elimina",
+          "editLabel": "Modifica il contributo del {date}",
+          "deleteLabel": "Elimina il contributo del {date}",
+          "feeUnknownCell": "Commissione sconosciuta",
+          "feeUnknown": "Una commissione è sconosciuta: i totali la contano come 0.",
+          "empty": "Nessun contributo {when}.",
+          "emptyEver": "Ancora nessun contributo.",
+          "fromSources": "I contributi delle sorgenti arrivano da soli."
         },
-        "voluntary": {
-          "title": "Versamento volontario",
-          "description": "Denaro versato direttamente al fondo, fuori dalla busta paga. Puoi collegarlo al movimento che lo ha pagato.",
-          "add": "Aggiungi un versamento"
+        "debit": {
+          "amount": "{amount} {frequency}",
+          "day": "il giorno {day}",
+          "account": "da {account}",
+          "anyAccount": "da qualunque conto",
+          "match": "beneficiario contiene «{match}»",
+          "active": "Attiva",
+          "paused": "In pausa",
+          "edit": "Modifica"
         }
+      },
+      "firstSteps": {
+        "title": "Primi passi",
+        "text": "Registra un contributo o scrivi il valore di oggi per vedere il fondo."
+      }
+    },
+    "wizard": {
+      "title": "Aggiungi fondo pensione",
+      "steps": {
+        "label": "Passi",
+        "fund": "Il fondo",
+        "sources": "Come versi",
+        "fees": "Commissioni",
+        "review": "Riepilogo",
+        "done": "completato"
+      },
+      "fund": {
+        "intro": "Scrivi i dati che conosci. Puoi cambiare tutto dopo, nelle impostazioni del fondo.",
+        "name": "Nome",
+        "provider": "Gestore",
+        "memberSince": "Data di adesione",
+        "line": "Linea o comparto",
+        "value": "Valore di oggi",
+        "valueOn": "Data del valore",
+        "template": "Modello",
+        "templateNone": "Nessun modello",
+        "templateHint": "Un modello copia scadenze e commissioni di un fondo noto. Puoi cambiarle.",
+        "templateReplace": "Il modello sostituisce le scelte dei passi 2 e 3.",
+        "templateReplaceYes": "Sostituisci",
+        "templateReplaceNo": "Tieni le mie scelte",
+        "advanced": "Avanzate",
+        "currency": "Valuta",
+        "currencyFixed": "La valuta non si cambia dopo la creazione.",
+        "code": "Codice",
+        "codeHint": "Identificativo del fondo o della tua posizione."
+      },
+      "fromTemplate": "Dal modello «{model}». Controlla e cambia quello che non vale per te.",
+      "sources": {
+        "intro": "Scegli da dove arriva il denaro. Nessuna scelta è obbligatoria.",
+        "payrollQuestion": "Versi dalla busta paga?",
+        "payrollHelp": "I contributi trattenuti in busta paga arrivano da soli nel fondo.",
+        "payrollOff": "Senza il modulo Payroll registri a mano anche i contributi della busta paga.",
+        "debitQuestion": "Hai un addebito periodico su un conto?",
+        "debitHelp": "Ledgerly trova l'addebito tra i movimenti del conto e crea il contributo.",
+        "manualQuestion": "Fai versamenti liberi?",
+        "manualHelp": "Aggiunge il pulsante «Registra contributo» in testa alla pagina del fondo."
+      },
+      "fees": {
+        "intro": "Le commissioni servono a spiegare e a stimare i costi. Conta sempre la commissione che scrivi sul singolo contributo.",
+        "empty": "Nessuna commissione. Puoi aggiungerle dopo, nelle impostazioni."
+      },
+      "review": {
+        "fund": "Il fondo",
+        "sources": "Come versi",
+        "fees": "Commissioni",
+        "edit": "Modifica",
+        "noSources": "Nessuna sorgente: registri contributi e valori a mano.",
+        "noFees": "Nessuna commissione.",
+        "valueLine": "{value} al {date}"
+      },
+      "continue": "Continua",
+      "back": "Indietro",
+      "cancel": "Annulla",
+      "skip": "Salta per ora",
+      "create": "Crea fondo",
+      "creating": "Creo il fondo…",
+      "created": "Fondo creato",
+      "leave": {
+        "title": "Uscire senza creare il fondo?",
+        "text": "Quello che hai scritto va perso.",
+        "stay": "Resta",
+        "leave": "Esci"
+      },
+      "errors": {
+        "name": "Scrivi un nome.",
+        "memberSince": "Scegli la data di adesione.",
+        "future": "La data non può essere nel futuro.",
+        "value": "Scrivi un valore di zero o più.",
+        "valueOn": "Scegli la data del valore.",
+        "valueBeforeStart": "Il valore non può avere una data prima dell'adesione.",
+        "duplicate": "Esiste già un fondo con quel nome.",
+        "failed": "Fondo non creato. Riprova."
+      }
+    },
+    "sources": {
+      "title": "Contributi",
+      "description": "Da dove arriva il denaro. Una sorgente descrive il piano: il versato viene sempre dai contributi registrati.",
+      "kinds": {
+        "payroll": "Busta paga",
+        "bank_debit": "Addebito periodico",
+        "manual": "Versamenti liberi"
+      },
+      "add": "Aggiungi sorgente",
+      "edit": "Modifica",
+      "editLabel": "Modifica {kind}",
+      "actions": "Azioni per {kind}",
+      "dialog": {
+        "add": "Una sorgente nuova di questo fondo.",
+        "edit": "I contributi già registrati non cambiano."
+      },
+      "save": "Salva sorgente",
+      "cancel": "Annulla",
+      "pause": "Metti in pausa",
+      "resume": "Riattiva",
+      "remove": "Rimuovi",
+      "removeBlocked": "Rimuovi · ha {count, plural, one {# contributo} other {# contributi}}",
+      "paused": "In pausa",
+      "active": "Attiva",
+      "empty": {
+        "title": "Nessuna sorgente",
+        "text": "Registri contributi e valori a mano. Aggiungi una sorgente se il denaro arriva dalla busta paga o da un addebito."
+      },
+      "components": {
+        "label": "Voci",
+        "worker": "Il mio contributo",
+        "employer": "Datore di lavoro",
+        "tfr": "TFR",
+        "taken": "Già assegnata a «{fund}»"
+      },
+      "period": {
+        "label": "Periodo di competenza",
+        "month": "Mese",
+        "quarter": "Trimestre"
+      },
+      "employer": "Datore di lavoro (facoltativo)",
+      "employerLine": "Datore di lavoro: {employer}",
+      "due": {
+        "switch": "Il versamento ha una scadenza",
+        "day": "Giorno di scadenza",
+        "offset": "Mesi dopo la fine del periodo",
+        "sameMonth": "Nello stesso mese",
+        "tolerance": "Tolleranza (giorni)",
+        "toleranceHint": "Per quanti giorni dopo la scadenza un versamento mancante resta \"in arrivo\".",
+        "next": "Prossime scadenze: {dates}",
+        "none": "Senza scadenza un contributo conta nel giorno in cui lo registri.",
+        "custom": "Scadenze personalizzate: {dates}",
+        "replace": "Sostituisci con una regola"
+      },
+      "note": "Nota",
+      "debit": {
+        "amount": "Importo previsto",
+        "frequency": "Frequenza",
+        "every": "Ogni",
+        "unit": "Unità di tempo",
+        "units": {
+          "week": "{count, plural, one {settimana} other {settimane}}",
+          "month": "{count, plural, one {mese} other {mesi}}",
+          "year": "{count, plural, one {anno} other {anni}}"
+        },
+        "frequencyText": "ogni {count, plural, one {{unit}} other {# {unit}}}",
+        "day": "Giorno di addebito",
+        "from": "Data di inizio",
+        "fromHint": "Vuota: dalla data di adesione.",
+        "to": "Data di fine",
+        "account": "Conto di addebito",
+        "anyAccount": "Qualunque conto",
+        "otherAccount": "Conto non più aperto",
+        "match": "Il beneficiario contiene",
+        "matchHint": "Una parte del nome che compare nel movimento.",
+        "kpi": "Addebito periodico",
+        "kpiNote": "{frequency}, il giorno {day} · {status}",
+        "listLine": "Addebito {amount} {frequency} · {status}"
+      },
+      "summary": {
+        "payroll": "{components} · per {period}",
+        "due": "scadenza il {day} {offset, plural, =0 {dello stesso mese} one {del mese dopo} other {di # mesi dopo}} · tolleranza {days, plural, one {# giorno} other {# giorni}}",
+        "debit": "{amount} {frequency}, il giorno {day} · da {account} · beneficiario contiene «{match}»",
+        "debitAmount": "{amount} {frequency}",
+        "debitDay": "il giorno {day}",
+        "debitAccount": "da {account}",
+        "debitMatch": "beneficiario contiene «{match}»",
+        "debitFrom": "dal {date}",
+        "debitTo": "fino al {date}",
+        "manual": "Contributi inseriti a mano."
+      },
+      "payrollInactive": "Il modulo Payroll non è attivo: registra a mano i contributi della busta paga.",
+      "codes": {
+        "title": "Codici della busta paga",
+        "open": "Apri Payroll › Impostazioni",
+        "groups": {
+          "worker": "Il mio contributo",
+          "employer": "Datore di lavoro",
+          "tfr": "TFR",
+          "enrollment": "Quote di iscrizione",
+          "adjustment": "Rettifiche"
+        }
+      },
+      "rebuild": "Ricostruisci dalle buste paga",
+      "rebuilt": "{count, plural, one {# busta paga riletta} other {# buste paga rilette}}",
+      "saved": "Sorgente salvata",
+      "removed": "Sorgente rimossa",
+      "undo": "Annulla",
+      "undoFailed": "Non ripristinato. Ricarica la pagina.",
+      "detect": {
+        "button": "Trova dai movimenti",
+        "movement": "Un addebito di questo fondo",
+        "pick": "Scegli un addebito…",
+        "looking": "Cerco…",
+        "nothing": "Questo addebito non porta nulla per riconoscerlo. Scegline un altro, oppure scrivi il testo a mano.",
+        "kinds": {
+          "creditor": "Creditore della domiciliazione",
+          "mandate": "Riferimento del mandato",
+          "payee": "Beneficiario"
+        },
+        "charges": "Trovati",
+        "chargesValue": "{count, plural, one {# addebito} other {# addebiti}} · {from} → {to}",
+        "usual": "Di solito",
+        "every": "ogni {days, plural, one {# giorno} other {# giorni}}",
+        "use": "Usa questo",
+        "failed": "Non è riuscito. Riprova."
+      },
+      "errors": {
+        "component": "Scegli almeno una voce.",
+        "componentTaken": "Una voce è già assegnata a «{fund}». Toglila qui o dal fondo «{fund}».",
+        "onePayroll": "Un fondo ha una sola sorgente «Busta paga» attiva. Metti in pausa l'altra.",
+        "amount": "Scrivi l'importo previsto.",
+        "match": "Scrivi una parte del nome del beneficiario.",
+        "dueDay": "Scrivi il giorno di scadenza.",
+        "tolerance": "Scrivi una tolleranza tra 0 e 120 giorni.",
+        "frequency": "Scrivi un numero tra 1 e 120.",
+        "debitDay": "Scrivi un giorno tra 1 e 31.",
+        "dates": "La data di fine non può essere prima della data di inizio.",
+        "account": "Scegli un conto aperto.",
+        "archived": "Un fondo archiviato non cambia. Ripristinalo prima.",
+        "failed": "Salvataggio non riuscito. Riprova."
+      }
+    },
+    "fees": {
+      "title": "Commissioni",
+      "description": "Le commissioni spiegano e stimano i costi. Conta sempre la commissione scritta sul singolo contributo.",
+      "add": "Aggiungi commissione",
+      "editTitle": "Modifica commissione",
+      "edit": "Modifica",
+      "editLabel": "Modifica {label}",
+      "removeLabel": "Rimuovi {label}",
+      "cancel": "Annulla",
+      "advanced": "Avanzate",
+      "columns": {
+        "label": "Nome",
+        "basis": "Tipo",
+        "amount": "Importo",
+        "scope": "Si applica a",
+        "validity": "Validità"
+      },
+      "basis": {
+        "one_off": "All'ingresso",
+        "per_contribution": "Su ogni contributo",
+        "periodic": "Periodica",
+        "on_assets": "Sul patrimonio",
+        "per_request": "A richiesta"
+      },
+      "basisHelp": {
+        "one_off": "Si paga una volta, all'adesione.",
+        "per_contribution": "Si toglie da ogni contributo.",
+        "periodic": "Si paga a intervalli fissi, dai contributi.",
+        "on_assets": "Percentuale annua sul valore. È già dentro il valore del fondo.",
+        "per_request": "Si paga solo per un'operazione che chiedi tu."
+      },
+      "mode": {
+        "label": "Importo o percentuale",
+        "amount": "Importo",
+        "rate": "Percentuale"
+      },
+      "value": "Valore",
+      "valueRate": "Valore (percentuale)",
+      "every": "Ogni",
+      "periods": {
+        "month": "mese",
+        "quarter": "trimestre",
+        "year": "anno"
+      },
+      "amountOnce": "{amount} una volta",
+      "amountEach": "{amount} a contributo",
+      "amountPer": "{amount} {period, select, year {all'anno} quarter {al trimestre} other {al mese}}",
+      "rateEach": "{rate} di ogni contributo",
+      "ratePer": "{rate} {period, select, year {all'anno} quarter {al trimestre} other {al mese}}",
+      "amountOnRequest": "{amount} a richiesta",
+      "scope": {
+        "all": "Tutto",
+        "component": "{source} · {component}"
+      },
+      "validFrom": "Valida dal",
+      "validTo": "Valida fino al",
+      "from": "dal {date}",
+      "to": "fino al {date}",
+      "note": "Nota o fonte",
+      "expired": "Non più valide ({count})",
+      "save": "Salva commissione",
+      "saved": "Commissione salvata",
+      "remove": "Rimuovi",
+      "removed": "Commissione rimossa",
+      "undo": "Annulla",
+      "undoFailed": "Non ripristinato. Ricarica la pagina.",
+      "estimate": "Costo annuo stimato sul patrimonio: circa {amount} ({rate} di {value}, valore del {date}). È già dentro il valore: Ledgerly non lo sottrae.",
+      "estimateNeedsValue": "Serve un valore per stimare il costo sul patrimonio.",
+      "empty": {
+        "title": "Commissioni non indicate",
+        "text": "Ledgerly non stima i costi di questo fondo. I numeri non cambiano: conta la commissione di ogni contributo."
+      },
+      "errors": {
+        "label": "Scrivi un nome.",
+        "value": "Scrivi un valore maggiore di zero.",
+        "rate": "Scrivi una percentuale tra 0 e 100.",
+        "validity": "«Valida fino al» non può essere prima di «Valida dal».",
+        "archived": "Un fondo archiviato non cambia. Ripristinalo prima.",
+        "failed": "Salvataggio non riuscito. Riprova."
+      }
+    },
+    "contribution": {
+      "record": "Registra contributo",
+      "title": "Registra contributo · {name}",
+      "editTitle": "Modifica contributo",
+      "kind": "Tipo di contributo",
+      "kinds": {
+        "voluntary": "Volontario",
+        "payroll": "Dalla busta paga",
+        "other": "Altra operazione"
+      },
+      "payrollHelp": "Scrivi quanto è arrivato nel fondo, come lo dice il fondo. Ledgerly lo confronta con le buste paga.",
+      "operation": "Operazione",
+      "otherHelp": "Per un'uscita scrivi quanto ha lasciato il fondo: non conta come perdita.",
+      "date": "Data",
+      "amount": "Importo",
+      "period": "Periodo",
+      "noPeriod": "Nessun periodo",
+      "fee": "Commissione",
+      "feeUnknown": "Non conosco la commissione",
+      "invested": "Investito: {amount}",
+      "movement": "Movimento collegato",
+      "noMovement": "Nessun movimento",
+      "currentMovement": "Il movimento già collegato",
+      "note": "Nota",
+      "cancel": "Annulla",
+      "save": "Salva contributo",
+      "delete": {
+        "title": "Elimina contributo",
+        "text": "Elimini il contributo del {date}? Il versato e i totali del fondo cambiano.",
+        "confirm": "Elimina"
+      },
+      "errors": {
+        "amount": "Scrivi un importo maggiore di zero.",
+        "components": "Scrivi almeno un importo.",
+        "fee": "La commissione non può superare l'importo."
       }
     }
   },
@@ -3245,11 +3237,10 @@
     },
     "funds": {
       "title": "Fondi",
-      "description": "Fondi pensione e PAC restano in Fondi; qui sono in sola lettura.",
+      "description": "I fondi pensione restano in Fondi; qui sono in sola lettura.",
       "empty": "Nessun fondo.",
       "types": {
-        "pension": "Fondo pensione",
-        "pac": "PAC"
+        "pension": "Fondo pensione"
       }
     },
     "catalog": {

@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
+import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
@@ -131,6 +132,32 @@ describe("the reference user", () => {
     const second = canonical(await numbersSnapshot(ctx, REFERENCE_NOW));
     expect(second).toBe(first);
     await expect(first).toMatchFileSnapshot(join(BASELINES, "numbers/reference.json"));
+  });
+
+  it("reads every number in a session that cannot write (release N6: no read writes)", async () => {
+    // Before N6 the fund pages wrote the public tariff on every read, so the production snapshot
+    // could not run in a read-only transaction. Every read service of the snapshot now runs on a
+    // pool whose sessions are read-only: one that writes fails here, with the name of its table.
+    const cache = globalThis as unknown as { ledgerlyPool?: Pool; ledgerlyDb?: unknown };
+    const { ledgerlyPool: pool, ledgerlyDb: db } = cache;
+    const readOnly = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 2,
+      options: "-c default_transaction_read_only=on",
+    });
+    cache.ledgerlyPool = readOnly;
+    cache.ledgerlyDb = undefined;
+    try {
+      await expect(readOnly.query("create temporary table writes_are_refused (n int)")).rejects.toThrow(
+        /read-only/,
+      );
+      const read = canonical(await numbersSnapshot(ctx, REFERENCE_NOW));
+      await expect(read).toMatchFileSnapshot(join(BASELINES, "numbers/reference.json"));
+    } finally {
+      cache.ledgerlyPool = pool;
+      cache.ledgerlyDb = db;
+      await readOnly.end();
+    }
   });
 
   it("gets the same answers from every route of /api/v1 (B4)", async () => {

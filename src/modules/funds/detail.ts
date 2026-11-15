@@ -2,7 +2,7 @@
 // a fund's page is the home of that one fund, so its gain and its return cannot differ from its row.
 import type { CivilDate } from "@/platform/dates";
 import { type FundLine, firstDataOn, type HomeFund, type HomeSummary, homeSummary, lineOf } from "./home";
-import type { FundFlow, FundPeriod } from "./period";
+import type { FundPeriod } from "./period";
 import type { FundForecast } from "./rules";
 
 export interface FundSummary {
@@ -33,31 +33,6 @@ export function fundSummary(input: {
     line,
     beforeFirst: summary.state === "before_first" && line.status !== "measured",
   };
-}
-
-/**
- * The money of the period, newest first. A switch moves no money, so only its cost is a flow: it
- * stays in the fees and not in this list.
- */
-export function recentFlows(flows: readonly FundFlow[], period: FundPeriod, limit = 4): FundFlow[] {
-  return flows
-    .filter((flow) => flow.chargedCents !== 0n)
-    .filter((flow) => (period.from === null || flow.on >= period.from) && flow.on <= period.to)
-    .sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))
-    .slice(0, limit);
-}
-
-/** How many deposits of the period the plan made, and how many were one-offs. */
-export function flowCounts(
-  flows: readonly FundFlow[],
-  period: FundPeriod,
-): { recurring: number; oneOff: number } {
-  const paid = flows.filter(
-    (flow) =>
-      flow.chargedCents > 0n && (period.from === null || flow.on >= period.from) && flow.on <= period.to,
-  );
-  const recurring = paid.filter((flow) => flow.recurring).length;
-  return { recurring, oneOff: paid.length - recurring };
 }
 
 /**

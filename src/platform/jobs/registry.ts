@@ -1,6 +1,6 @@
 import { accountAlertsJob, accountsSnapshotJob } from "@/modules/accounts/jobs";
 import { budgetAlertsJob } from "@/modules/budgets/jobs";
-import { cometaSweepJob, fundsDepositsJob } from "@/modules/funds/jobs";
+import { fundsDepositsJob } from "@/modules/funds/jobs";
 import { documentsRetentionJob } from "@/modules/imports/jobs";
 import { interestsAccrualJob, interestsRematchJob } from "@/modules/interests/jobs";
 import { payslipsSweepJob } from "@/modules/payroll/jobs";
@@ -71,7 +71,6 @@ export const JOBS: readonly JobDefinition[] = [
   pocketsPlannedCleanupJob,
   documentsRetentionJob,
   payslipsSweepJob,
-  cometaSweepJob,
   // The subscribed holiday calendars, kept current from their sources (M3).
   holidaysRefreshJob,
   // The ECB exchange rates of the day, and on its first run the history (investments.md §1.8).

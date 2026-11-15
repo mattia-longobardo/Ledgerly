@@ -2,14 +2,13 @@ import "server-only";
 import { after } from "next/server";
 import { Hono } from "hono";
 import { z } from "zod";
-import { processCometaDocument, uploadCometaDocument } from "@/modules/funds/pension/imports";
 import { processPayslip, uploadPayslip } from "@/modules/payroll/service";
 import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
-import { DOCUMENT_KINDS, MAX_DOCUMENT_BYTES } from "./rules";
+import { DOCUMENT_KINDS, isReadKind, MAX_DOCUMENT_BYTES, type ReadKind } from "./rules";
 import { ImportError } from "./service";
 
 /**
@@ -18,20 +17,22 @@ import { ImportError } from "./service";
  *
  * One endpoint, as the spec names it, so one router owns it — and the router belongs to the module
  * that owns the pipeline. It has to know which module reads which kind of document, because only
- * the caller knows whether a PDF is a payslip or a Cometa statement; the alternative, a route in
- * `platform/api` that knows three modules, would put that knowledge further from the pipeline
- * rather than closer to it.
+ * the caller knows what a PDF is; the alternative, a route in `platform/api` that knows the modules,
+ * would put that knowledge further from the pipeline rather than closer to it.
+ *
+ * A fund's documents are not read any more (rewrite plan, decision H19). Their two kinds stay in
+ * the contract, which only grows: a file sent with one of them is refused with `unsupported_format`
+ * and is not stored (decision ST-26).
  */
 export const importsApi = new Hono<ApiEnv>();
 
 const kindSchema = z.enum(DOCUMENT_KINDS);
 
 /** Reads the document after the answer has gone out, exactly as the Server Actions do (§7.8). */
-function readLater(ctx: Ctx, kind: z.infer<typeof kindSchema>, documentId: string): void {
+function readLater(ctx: Ctx, kind: ReadKind, documentId: string): void {
   after(async () => {
     try {
       if (kind === "payslip") await processPayslip(ctx, documentId);
-      else await processCometaDocument(ctx, documentId);
     } catch (error) {
       // Left `extracting`: the hourly sweep reads it again (spec §10.2), but said out loud here.
       console.error(`[api] reading ${documentId} failed`, redactForLog(error));
@@ -57,14 +58,13 @@ importsApi.post("/imports", withToken("imports"), async (c) => {
   const kind = kindSchema.safeParse(form.get("kind"));
   const file = form.get("file");
   if (!kind.success || !(file instanceof File)) return fail(c, "invalid");
+  // Before the size and before any read of the file: nothing of it is kept.
+  if (!isReadKind(kind.data)) return fail(c, "unsupported_format");
   if (file.size > MAX_DOCUMENT_BYTES) return fail(c, "too_large");
 
   const upload = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
   try {
-    const result =
-      kind.data === "payslip"
-        ? await uploadPayslip(ctx, upload)
-        : await uploadCometaDocument(ctx, kind.data, upload);
+    const result = await uploadPayslip(ctx, upload);
     if (!result.duplicate) readLater(ctx, kind.data, result.document.id);
     return c.json(
       {
