@@ -91,7 +91,7 @@ describe("the report of a connection (ux §8.4)", () => {
       ...leaky(INPUT),
       connections: INPUT.connections.map(leaky),
       runs: INPUT.runs.map(leaky),
-    } as ReportInput);
+    } as unknown as ReportInput);
     expect(report).not.toContain(SECRET);
     expect(report).toBe(connectionReport(INPUT));
   });

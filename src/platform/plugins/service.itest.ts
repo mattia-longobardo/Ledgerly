@@ -5,13 +5,19 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { pluginProvider, TREK_PROVIDER } from "@/platform/integrations/rules";
 import { integrationConnections } from "@/platform/integrations/schema";
-import { listConnections, listRuns, saveConnection } from "@/platform/integrations/service";
+import { type Connection, listConnections, listRuns, saveConnection } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import type { Fetch } from "./client";
 import { PLUGIN_PATHS, SECRET_HEADER } from "./contract/calls";
 import type { PluginManifest } from "./contract/manifest";
-import { credentialsStatus, isPluginActive, listPluginConnections, listUserPlugins } from "./queries";
+import {
+  credentialsStatus,
+  isPluginActive,
+  listPluginConnections,
+  listUserPlugins,
+  pluginDiagnostics,
+} from "./queries";
 import { hashState } from "./rules";
 import { pluginActivations, pluginAuthStates, plugins, pluginUserCredentials } from "./schema";
 import {
@@ -734,7 +740,7 @@ describe("an access to a bank", () => {
     ).toEqual({ ok: false, error, bank: "Zeta Bank" });
   });
 
-  it("is one bank per person until the old key goes: a second bank is refused before the provider is asked", async () => {
+  it("is one connection per bank: a second bank is a second connection, the same bank a renewal", async () => {
     const ctx = await readyContext();
     await completeAccess(
       ctx,
@@ -742,16 +748,34 @@ describe("an access to a bank", () => {
       NOW,
       fakePlugin().deps,
     );
-    const plugin = fakePlugin();
-    const second = startAccess(
+    // From N2 a person connects more than one bank (rewrite plan, N2, criterion 5).
+    const OTHER = { name: "Alfa Bank", country: "IT" };
+    const second = fakePlugin({
+      [PLUGIN_PATHS.authComplete]: {
+        body: {
+          session: { id: "session-alfa", expiresAt: "2027-06-01T00:00:00.000Z" },
+          institution: OTHER,
+          accounts: [{ ...ACCOUNT, externalId: "u-alfa", stableId: "stable-alfa" }],
+        },
+      },
+    });
+    await startAccess(ctx, { pluginId: PLUGIN, sessionId: "s", institution: OTHER }, NOW, second.deps);
+    const state = second.of(PLUGIN_PATHS.authStart).at(-1)?.body?.state as string;
+    const outcome = await completeAccess(
       ctx,
-      { pluginId: PLUGIN, sessionId: "s", institution: { name: "Alfa Bank", country: "IT" } },
+      { pluginId: PLUGIN, sessionId: "s", query: returned(state), presence: null },
       NOW,
-      plugin.deps,
+      second.deps,
     );
-    expect(await rejection(second)).toBe("one_bank");
-    expect(plugin.calls).toEqual([]);
-    // The same bank again is a renewal: it replaces the access of the one connection.
+    expect(outcome).toMatchObject({ ok: true, renewed: false });
+    expect((await listPluginConnections(ctx, PLUGIN)).map((one) => one.instanceKey).sort()).toEqual([
+      "IT:Alfa Bank",
+      "IT:Zeta Bank",
+    ]);
+    // The first bank's access is not closed by the second bank's.
+    expect(second.of(PLUGIN_PATHS.authRevoke)).toEqual([]);
+
+    // The same bank again is a renewal: it replaces the access of that bank's connection only.
     const renewed = fakePlugin({
       [PLUGIN_PATHS.authComplete]: {
         body: {
@@ -761,16 +785,60 @@ describe("an access to a bank", () => {
         },
       },
     });
-    const state = await started(ctx, "s", renewed);
     await completeAccess(
       ctx,
-      { pluginId: PLUGIN, sessionId: "s", query: returned(state), presence: null },
+      { pluginId: PLUGIN, sessionId: "s", query: returned(await started(ctx, "s", renewed)), presence: null },
       NOW,
       renewed.deps,
     );
     const connections = await listPluginConnections(ctx, PLUGIN);
-    expect(connections).toHaveLength(1);
-    expect(connections[0].expiresAt).toEqual(new Date("2027-08-01T00:00:00.000Z"));
+    expect(connections).toHaveLength(2);
+    expect(connections.find((one) => one.instanceKey === "IT:Zeta Bank")?.expiresAt).toEqual(
+      new Date("2027-08-01T00:00:00.000Z"),
+    );
+    expect(connections.find((one) => one.instanceKey === "IT:Alfa Bank")?.expiresAt).toEqual(
+      new Date("2027-06-01T00:00:00.000Z"),
+    );
+
+    // Disconnecting one bank gives back that bank's accounts, and leaves the other connected.
+    const released: [string, readonly string[]][] = [];
+    const alfa = connections.find((one) => one.instanceKey === "IT:Alfa Bank") as Connection;
+    await disconnectBank(
+      ctx,
+      { pluginId: PLUGIN, connectionId: alfa.id },
+      { releaseAccounts: async (_ctx, provider, ids) => void released.push([provider, ids]) },
+      fakePlugin().deps,
+    );
+    expect(released).toEqual([["plugin:enablebanking", ["stable-alfa"]]]);
+    expect((await listPluginConnections(ctx, PLUGIN)).map((one) => one.instanceKey)).toEqual([
+      "IT:Zeta Bank",
+    ]);
+  });
+
+  it("says in the diagnostics whether each plugin answers, and since when it does not", async () => {
+    expect(await pluginDiagnostics("en")).toEqual([
+      { id: PLUGIN, name: MANIFEST.labels.name.en, version: "0.1.0", contract: "1", state: "up", at: NOW },
+    ]);
+    // Two failed checks: the series started at the first one.
+    const later = (hours: number) => new Date(NOW.getTime() + hours * 3_600_000);
+    const down = fakePlugin({ [PLUGIN_PATHS.manifest]: { status: 502, body: {} } });
+    await refreshManifests(later(2), down.deps);
+    await refreshManifests(later(4), down.deps);
+    expect(await pluginDiagnostics("en")).toMatchObject([{ state: "down", at: later(2) }]);
+    // A plugin that speaks a contract this core does not: kept as it answered, used by nobody.
+    await refreshManifests(
+      later(6),
+      fakePlugin({ [PLUGIN_PATHS.manifest]: { body: { ...MANIFEST, contract: "9" } } }).deps,
+    );
+    expect(await pluginDiagnostics("en")).toMatchObject([{ state: "incompatible", contract: "9" }]);
+    expect(await listUserPlugins(await newContext())).toEqual([]);
+    await refreshManifests(later(8), fakePlugin().deps);
+    expect(await pluginDiagnostics("en")).toMatchObject([{ state: "up", at: later(8) }]);
+
+    await resetDatabase();
+    expect(await pluginDiagnostics("en")).toEqual([
+      { id: PLUGIN, name: PLUGIN, version: null, contract: null, state: "never", at: null },
+    ]);
   });
 
   it("is closed at the provider and forgotten here on disconnect, credentials kept", async () => {

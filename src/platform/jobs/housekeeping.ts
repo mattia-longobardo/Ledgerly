@@ -19,15 +19,6 @@ export const housekeepingJob: JobDefinition = {
   async run() {
     const now = new Date();
     const cutoff = new Date(now.getTime() - RETENTION_MS);
-    // A run left `running` by a process that died is closed as failed, with its reason (N2).
-    const orphanJobs = await getDb()
-      .update(jobRuns)
-      .set({ status: "failed", finishedAt: now, error: "orphaned" })
-      .where(
-        and(eq(jobRuns.status, "running"), lt(jobRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS))),
-      )
-      .returning({ id: jobRuns.id });
-    const orphanSyncRuns = await closeOrphanRuns(now);
     // A run that never finished (crashed mid-job) is orphaned, not retained forever: it ages out
     // by its start time.
     const runs = await getDb()
@@ -46,9 +37,19 @@ export const housekeepingJob: JobDefinition = {
     // Thirty dumps, not ninety days: a backup's worth is measured in how far back it reaches, and
     // thirty daily ones is what spec §10.2 asks for.
     const backupsDeleted = await pruneBackups();
+    // After the pruning, so an orphan past the retention goes as it always did: a run left
+    // `running` by a process that died is closed as failed, with its reason (rewrite plan, N2).
+    // The dispatcher closes the sync runs every time it passes; this is the net under it, and the
+    // only one for the jobs. Not in the detail: nothing was deleted.
+    await getDb()
+      .update(jobRuns)
+      .set({ status: "failed", finishedAt: now, error: "orphaned" })
+      .where(
+        and(eq(jobRuns.status, "running"), lt(jobRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS))),
+      );
+    await closeOrphanRuns(now);
     return {
       jobRunsDeleted: runs.length,
-      orphansClosed: orphanJobs.length + orphanSyncRuns,
       syncRunsDeleted,
       invitationsDeleted,
       notificationsDeleted,

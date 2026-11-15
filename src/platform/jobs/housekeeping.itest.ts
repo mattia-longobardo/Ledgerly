@@ -6,7 +6,7 @@ import { hashToken } from "@/platform/auth/invitations";
 import { invitations } from "@/platform/auth/schema";
 import { getDb } from "@/platform/db/client";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { syncRuns } from "@/platform/integrations/schema";
+import { integrationConnections, syncRuns } from "@/platform/integrations/schema";
 import { saveConnection } from "@/platform/integrations/service";
 import { housekeepingJob } from "./housekeeping";
 import { jobRuns } from "./schema";
@@ -69,8 +69,9 @@ describe("housekeepingJob", () => {
     expect(remainingInvitations.map((r) => r.email)).toEqual(["pending@example.test"]);
   });
 
-  // Spec §10.2 prunes "executions and logs older than 90 days", and a sync run is an execution:
-  // a revoked connection writes two skipped runs an hour and nothing else collects them.
+  // Spec §10.2 prunes the executions past their retention, and a sync run is an execution: a
+  // revoked connection writes two skipped runs an hour and nothing else collects them. From N2 a
+  // sync run is kept for 30 days, the window of the log under "Advanced" (rewrite plan, N2).
   it("prunes the sync runs past the retention window, orphans included", async () => {
     const db = getDb();
     const { userId, connectionId } = await walletConnection();
@@ -84,11 +85,11 @@ describe("housekeepingJob", () => {
       error: finishedAt === null ? null : "token rejected",
     });
     await db.insert(syncRuns).values([
-      run("accounts", daysAgo(91), daysAgo(91)),
-      run("transactions", daysAgo(91), daysAgo(91)),
-      run("accounts", daysAgo(89), daysAgo(89)),
-      // Killed mid-pass 91 days ago: aged out by `started_at`, or it would be kept for ever.
-      run("transactions", daysAgo(91), null),
+      run("accounts", daysAgo(31), daysAgo(31)),
+      run("transactions", daysAgo(31), daysAgo(31)),
+      run("accounts", daysAgo(29), daysAgo(29)),
+      // Killed mid-pass 31 days ago: aged out by `started_at`, or it would be kept for ever.
+      run("transactions", daysAgo(31), null),
       run("transactions", daysAgo(1), null),
     ]);
 
@@ -99,6 +100,48 @@ describe("housekeepingJob", () => {
       .from(syncRuns)
       .orderBy(asc(syncRuns.startedAt));
     expect(left).toHaveLength(2);
-    expect(left.every((row) => row.startedAt.getTime() > daysAgo(90).getTime())).toBe(true);
+    expect(left.every((row) => row.startedAt.getTime() > daysAgo(30).getTime())).toBe(true);
+  });
+
+  it("closes the runs a dead process left running, and leaves a reading in progress alone", async () => {
+    const db = getDb();
+    const { userId, connectionId } = await walletConnection();
+    const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+    await db.insert(jobRuns).values([
+      { job: "dead", tier: "daily", status: "running", startedAt: minutesAgo(61), finishedAt: null },
+      { job: "alive", tier: "daily", status: "running", startedAt: minutesAgo(59), finishedAt: null },
+    ]);
+    await db.insert(syncRuns).values([
+      { userId, connectionId, kind: "accounts", state: "running", startedAt: minutesAgo(61) },
+      { userId, connectionId, kind: "transactions", state: "running", startedAt: minutesAgo(59) },
+    ]);
+
+    await housekeepingJob.run();
+
+    const jobs = await db
+      .select({
+        job: jobRuns.job,
+        status: jobRuns.status,
+        error: jobRuns.error,
+        finishedAt: jobRuns.finishedAt,
+      })
+      .from(jobRuns)
+      .orderBy(asc(jobRuns.job));
+    expect(jobs.map(({ job, status, error }) => [job, status, error])).toEqual([
+      ["alive", "running", null],
+      ["dead", "failed", "orphaned"],
+    ]);
+    expect(jobs[1].finishedAt).not.toBeNull();
+    const runs = await db
+      .select({ kind: syncRuns.kind, state: syncRuns.state, error: syncRuns.error })
+      .from(syncRuns)
+      .orderBy(asc(syncRuns.kind));
+    expect(runs).toEqual([
+      { kind: "accounts", state: "failed", error: "orphaned" },
+      { kind: "transactions", state: "running", error: null },
+    ]);
+    // The connection's health is not the run's to change: nothing was learnt about it.
+    const [connection] = await db.select().from(integrationConnections);
+    expect(connection).toMatchObject({ state: "active", errorCode: null, consecutiveFailures: 0 });
   });
 });
