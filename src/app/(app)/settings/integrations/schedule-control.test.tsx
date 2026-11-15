@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -209,19 +209,18 @@ describe("ScheduleControl", () => {
     expect(within(dialog).getByRole("button", { name: T.save })).toBeEnabled();
   });
 
-  // A blur can come before the render of the last keystroke (typing, then "Add" at once): the
-  // field then holds a text its own `value` does not have yet. The time added is the field's.
-  it("adds the time the field holds when it is left, not the one of the render before", async () => {
+  // The button that removes a time leaves the page with its time: the focus must not be left on
+  // nothing (the dialog would take it back a moment later, from whatever is typed by then).
+  it("moves the focus to the field for a new time when a time is removed", async () => {
     renderControl();
     const dialog = await openDialog();
     await userEvent.click(within(dialog).getByRole("radio", { name: new RegExp(T.modes.times) }));
-    const input = within(dialog).getByLabelText(T.newTimeSimple) as HTMLInputElement;
-    const write = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    write?.call(input, "643");
-    fireEvent.blur(input);
-    await userEvent.click(within(dialog).getByRole("button", { name: T.addTime }));
-    expect(within(dialog).getByRole("button", { name: "Remove 06:43" })).toBeInTheDocument();
-    expect(within(dialog).queryByRole("button", { name: "Remove 12:00" })).not.toBeInTheDocument();
+    const input = within(dialog).getByLabelText(T.newTimeSimple);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove 07:30" }));
+    expect(input).toHaveFocus();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove 22:30" }));
+    expect(input).toHaveFocus();
+    expect(within(dialog).queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
   });
 
   it("fills in what is recommended for this connection", async () => {
