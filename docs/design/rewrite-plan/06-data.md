@@ -53,7 +53,7 @@ I nomi sono indicativi: il numero e il nome definitivi nascono con `npm run db:g
 | R5f | Rimozioni: `user_preferences.default_range` (USR-5); `account_groups` e `accounts.group_id` (ACC-12); `sync_jobs.next_run_at`, kind `documents`, lettura dello schedule D7 (INTG-8); tier `quarter` (JOB-7); tipi `withdrawal` e `adjustment` dei pocket se senza righe (POC-4); colonne `trek_*` di timeoff (TOF-2); `investment_superseded_entries` e motivo `migration` se senza uso (INV-11) | Contrazione | **No.** Dump obbligatorio. Ogni rimozione parte solo dopo un rilascio stabile di chi l'ha resa inutile, e dopo una query di controllo «zero righe, zero usi» |
 
 Migrazioni di N1 nel repo: `0049_plugin_runtime` (passo 1: tabelle dei plugin, `instance_key`, `expires_at`, chiave unica
-nuova). Le tabelle dei plugin non sono nel barrel `src/platform/db/tables.ts`: si leggono con il query builder, e una
+nuova) e `0050_bank_raw_fields` (le quattro colonne grezze di `transactions`). Le tabelle dei plugin non sono nel barrel `src/platform/db/tables.ts`: si leggono con il query builder, e una
 riga nel barrel aggiungerebbe una coppia di import reciproci alle liste note (M4).
 
 Migrazioni di N6 nel repo: `0046_single_fund_model` (A1), `0047_migrate_fund_data` (A2, con la parità della copia

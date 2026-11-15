@@ -1080,6 +1080,7 @@
         "step1": "Open <link>enablebanking.com</link> and create an account.",
         "step2": "Register a Production application with this return address:",
         "step3": "Copy the application ID and download the private key.",
+        "step4": "In the Enable Banking panel link the accounts you want to read (\"Link accounts\"). With a free application Ledgerly reads only the accounts linked there.",
         "returnAddress": "Return address",
         "copy": "Copy",
         "copied": "Copied",

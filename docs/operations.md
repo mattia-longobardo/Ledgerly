@@ -34,6 +34,18 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
 - **Each person turns a plugin on for themselves**, in Settings › Integrations, and enters their own
   credentials. The app seals them (`APP_ENCRYPTION_KEY`) and sends them to the plugin in the body of
   each call. Turning the plugin off stops every call for that person; what is saved stays.
+- **Reading a bank.** After the access the person chooses what each account of the bank is here
+  (a new account, one of theirs kept by hand, or nothing), and the app reads the bank at once.
+  Then it reads three times a day (07:10, 13:10, 19:10 in the person's zone) through the same
+  dispatcher as every other connection, and when the person presses "Sync now". A bank that
+  answers "no more calls" puts the automatic readings on hold for six hours; "Sync now" still
+  works. A movement is recognised by the bank's reference, or by a hash when it gives none, so a
+  second reading writes nothing twice. "Disconnect" closes the access and leaves the accounts,
+  with their balances and movements, as accounts kept by hand.
+- **Where the pieces join.** The runtime (`src/platform/plugins/`) states a port for the writes;
+  `src/app/(app)/banks/sink.ts` fills it with the services of the accounts and of the
+  transactions; `src/app/plugin-wiring.ts` registers the dispatcher's pass. The tick route and
+  "Run now" import the wiring.
 - **The shared secret** proves to the plugin that the app is calling. It is in two files, with the
   same value: `PLUGIN_SECRETS=<id>=<secret>` in `.env.homelab`, and `PLUGIN_SHARED_SECRET=<secret>`
   in `.env.plugin-<id>` (one line, mode `600`, not committed). The plugin does not read

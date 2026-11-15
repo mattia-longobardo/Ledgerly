@@ -233,6 +233,7 @@ export function BanksCard({ pluginId, credentials, returnAddress, banks, openRep
             </div>
           </li>
           <li>{t("setup.step3")}</li>
+          <li>{t("setup.step4")}</li>
         </ol>
         <div>
           <Button variant="primary" size="sm" onClick={() => open("new")}>

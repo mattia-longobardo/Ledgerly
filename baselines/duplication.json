@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 79638,
-    "duplicatedLines": 16014,
-    "percent": 20.11,
-    "blocks": 1107
+    "lines": 81133,
+    "duplicatedLines": 16156,
+    "percent": 19.91,
+    "blocks": 1119
   },
   "units": {
     "app": {
-      "lines": 16453,
-      "duplicatedLines": 3924,
-      "percent": 23.85,
-      "blocks": 278
+      "lines": 17184,
+      "duplicatedLines": 4014,
+      "percent": 23.36,
+      "blocks": 287
     },
     "global.d": {
       "lines": 6,
@@ -29,9 +29,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 3569,
+      "lines": 3684,
       "duplicatedLines": 1038,
-      "percent": 29.08,
+      "percent": 28.18,
       "blocks": 70
     },
     "modules/budgets": {
@@ -42,7 +42,7 @@
     },
     "modules/funds": {
       "lines": 10642,
-      "duplicatedLines": 2130,
+      "duplicatedLines": 2131,
       "percent": 20.02,
       "blocks": 152
     },
@@ -60,21 +60,21 @@
     },
     "modules/investments": {
       "lines": 10373,
-      "duplicatedLines": 1969,
-      "percent": 18.98,
-      "blocks": 131
+      "duplicatedLines": 1978,
+      "percent": 19.07,
+      "blocks": 132
     },
     "modules/payroll": {
       "lines": 3469,
-      "duplicatedLines": 817,
-      "percent": 23.55,
+      "duplicatedLines": 818,
+      "percent": 23.58,
       "blocks": 43
     },
     "modules/pockets": {
       "lines": 1655,
       "duplicatedLines": 772,
       "percent": 46.65,
-      "blocks": 42
+      "blocks": 41
     },
     "modules/subscriptions": {
       "lines": 1877,
@@ -89,10 +89,10 @@
       "blocks": 21
     },
     "modules/transactions": {
-      "lines": 5242,
-      "duplicatedLines": 958,
+      "lines": 5285,
+      "duplicatedLines": 966,
       "percent": 18.28,
-      "blocks": 74
+      "blocks": 75
     },
     "modules/users": {
       "lines": 1271,
@@ -185,9 +185,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 1215,
+      "lines": 1233,
       "duplicatedLines": 270,
-      "percent": 22.22,
+      "percent": 21.9,
       "blocks": 20
     },
     "platform/integrations/ccxt": {
@@ -263,10 +263,10 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 1134,
-      "duplicatedLines": 144,
-      "percent": 12.7,
-      "blocks": 10
+      "lines": 1722,
+      "duplicatedLines": 177,
+      "percent": 10.28,
+      "blocks": 12
     },
     "platform/ranges": {
       "lines": 59,
@@ -327,7 +327,10 @@
     "app/(app)/accounts/[id]/page.tsx": 63,
     "app/(app)/accounts/new/page.tsx": 7,
     "app/(app)/accounts/page.tsx": 133,
+    "app/(app)/banks/connect/accounts-step.tsx": 40,
+    "app/(app)/banks/connect/actions.ts": 24,
     "app/(app)/banks/connect/bank-step.tsx": 13,
+    "app/(app)/banks/connect/outcome-actions.tsx": 17,
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/budgets/page.tsx": 8,
     "app/(app)/expenses/page.tsx": 30,
@@ -360,10 +363,11 @@
     "app/(app)/settings/categories/page.tsx": 18,
     "app/(app)/settings/data/page.tsx": 30,
     "app/(app)/settings/integrations/actions.ts": 127,
+    "app/(app)/settings/integrations/bank-row.tsx": 8,
     "app/(app)/settings/integrations/banks-card.tsx": 73,
     "app/(app)/settings/integrations/page.tsx": 15,
     "app/(app)/settings/integrations/plugin-actions.ts": 6,
-    "app/(app)/settings/integrations/plugin-row.tsx": 8,
+    "app/(app)/settings/integrations/plugin-row.tsx": 9,
     "app/(app)/settings/integrations/schedule-control.tsx": 61,
     "app/(app)/settings/integrations/trek-card.tsx": 193,
     "app/(app)/settings/integrations/wallet-card.tsx": 195,
@@ -431,7 +435,7 @@
     "modules/funds/service.ts": 211,
     "modules/funds/sources.ts": 13,
     "modules/funds/ui/compact-empty.tsx": 7,
-    "modules/funds/ui/contribution-dialog.tsx": 106,
+    "modules/funds/ui/contribution-dialog.tsx": 107,
     "modules/funds/ui/fee-dialog.tsx": 100,
     "modules/funds/ui/fee-list.tsx": 40,
     "modules/funds/ui/fee-text.ts": 10,
@@ -477,9 +481,9 @@
     "modules/investments/schema.ts": 447,
     "modules/investments/service.ts": 264,
     "modules/investments/sync.ts": 448,
-    "modules/investments/ui/dialogs.tsx": 407,
+    "modules/investments/ui/dialogs.tsx": 416,
     "modules/payroll/actions.ts": 70,
-    "modules/payroll/fields.ts": 55,
+    "modules/payroll/fields.ts": 56,
     "modules/payroll/parse/reply-teamsystem.ts": 53,
     "modules/payroll/pension.ts": 13,
     "modules/payroll/queries.ts": 19,
@@ -517,7 +521,7 @@
     "modules/transactions/jobs.ts": 79,
     "modules/transactions/queries.ts": 214,
     "modules/transactions/rules.ts": 10,
-    "modules/transactions/schema.ts": 144,
+    "modules/transactions/schema.ts": 152,
     "modules/transactions/service.ts": 99,
     "modules/transactions/taxonomy.ts": 127,
     "modules/transactions/ui/breakdown-card.tsx": 6,
@@ -568,6 +572,7 @@
     "platform/money.ts": 9,
     "platform/notifications/schema.ts": 20,
     "platform/plugins/queries.ts": 14,
+    "platform/plugins/rules.ts": 33,
     "platform/plugins/schema.ts": 86,
     "platform/plugins/service.ts": 44,
     "platform/settings/schema.ts": 19,

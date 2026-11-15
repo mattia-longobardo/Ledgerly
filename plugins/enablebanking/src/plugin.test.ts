@@ -12,6 +12,7 @@ import {
   verifyResponseSchema,
 } from "../../../src/platform/plugins/contract/calls";
 import { errorBodySchema } from "../../../src/platform/plugins/contract/errors";
+import { checkPlugin } from "../../../src/platform/plugins/contract/kit";
 import { manifestSchema } from "../../../src/platform/plugins/contract/manifest";
 import { PluginFailure } from "./failure";
 import {
@@ -629,6 +630,15 @@ describe("the server", () => {
       },
       body: JSON.stringify(body),
     });
+
+  it("keeps the contract: the kit finds nothing wrong", async () => {
+    expect(await checkPlugin({ origin, secret: SECRET, id: "enablebanking" })).toEqual([]);
+  });
+
+  it("is told apart by the kit from a plugin that does not keep it", async () => {
+    const failures = await checkPlugin({ origin, secret: SECRET, id: "another-plugin" });
+    expect(failures).toEqual(["the manifest must carry the plugin's own id"]);
+  });
 
   it("answers the health check without the secret, and nothing else", async () => {
     expect(await (await fetch(`${origin}${PLUGIN_PATHS.health}`)).json()).toEqual({ status: "ok" });
