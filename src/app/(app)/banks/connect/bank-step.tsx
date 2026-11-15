@@ -14,7 +14,7 @@ import { type BankChoice, listBanksAction, startBankAccessAction } from "./actio
 
 /** Why the person is back on this step, from the return route (ux/n1-plugin-bank.md §6.3). */
 export type BankStepError =
-  "denied" | "expired" | "session" | "no_accounts" | "unreachable" | "bank_unavailable";
+  "denied" | "expired" | "session" | "no_accounts" | "unreachable" | "unreadable" | "bank_unavailable";
 
 export interface BankStepProps {
   countries: { code: string; name: string }[];
@@ -91,6 +91,7 @@ export function BankStep({ countries, defaultCountry, returned }: BankStepProps)
     if (returned.error === "expired") return t("return.expired");
     if (returned.error === "session") return t("return.session");
     if (returned.error === "bank_unavailable") return t("return.bankUnavailable", { bank });
+    if (returned.error === "unreadable") return t("return.unreadable");
     return t("return.unreachable");
   }
 

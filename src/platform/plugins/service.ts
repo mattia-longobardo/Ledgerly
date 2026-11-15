@@ -13,7 +13,7 @@ import { and, eq, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
-import { civilDateIn } from "@/platform/dates";
+import type { BankSink } from "./ports";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
@@ -21,10 +21,8 @@ import { pluginProvider } from "@/platform/integrations/rules";
 import {
   type Connection,
   deleteConnection,
-  finishRun,
   IntegrationError,
   readCredentials,
-  recordRun,
   savePluginConnection,
 } from "@/platform/integrations/service";
 import { callPlugin, type Fetch, PluginCallError } from "./client";
@@ -37,8 +35,6 @@ import {
   institutionsResponseSchema,
   PLUGIN_PATHS,
   type PluginAccount,
-  type SyncResponse,
-  syncResponseSchema,
   verifyResponseSchema,
 } from "./contract/calls";
 import { acceptsContract, manifestSchema } from "./contract/manifest";
@@ -54,7 +50,6 @@ import {
   hashState,
   instanceKeyOf,
   looksLikePrivateKey,
-  measureReading,
   normalizePrivateKey,
   type ReturnError,
 } from "./rules";
@@ -78,6 +73,7 @@ export type PluginActionCode =
   | "invalid_data"
   | "connected"
   | "one_bank"
+  | "no_choice"
   | "failed";
 
 export class PluginActionError extends Error {
@@ -167,7 +163,10 @@ async function requirePlugin(pluginId: string): Promise<InstancePlugin> {
 }
 
 /** The plugin, for an action only a person who has turned it on may take (H25). */
-async function requireActivePlugin(ctx: Pick<Ctx, "userId">, pluginId: string): Promise<InstancePlugin> {
+export async function requireActivePlugin(
+  ctx: Pick<Ctx, "userId">,
+  pluginId: string,
+): Promise<InstancePlugin> {
   const plugin = await requirePlugin(pluginId);
   if (!(await isPluginActive(ctx, pluginId))) throw new PluginActionError("not_active");
   return plugin;
@@ -208,7 +207,7 @@ async function readUserCredentials(
   return row ? openJson(keyRing(), row.credentials) : null;
 }
 
-async function requireUserCredentials(
+export async function requireUserCredentials(
   ctx: Pick<Ctx, "userId">,
   pluginId: string,
 ): Promise<Record<string, string>> {
@@ -218,7 +217,11 @@ async function requireUserCredentials(
 }
 
 /** Records that the provider refuses this person's credentials, so the screens can say so (§4.4). */
-async function markCredentialsInvalid(ctx: Pick<Ctx, "userId">, pluginId: string, now: Date): Promise<void> {
+export async function markCredentialsInvalid(
+  ctx: Pick<Ctx, "userId">,
+  pluginId: string,
+  now: Date,
+): Promise<void> {
   await getDb()
     .update(pluginUserCredentials)
     .set({ invalidAt: now })
@@ -392,9 +395,13 @@ export async function startAccess(
   return { url };
 }
 
-/** What a return ended with: a connection read for the first time, or why there is none (§6.3). */
+/**
+ * What a return ended with: the bank's connection, or why there is none (§6.3). `renewed`: the
+ * bank was already connected and its accounts chosen, so this access replaced the one before.
+ */
 export type ReturnOutcome =
-  { ok: true; connectionId: string } | { ok: false; error: ReturnError; bank: string | null };
+  | { ok: true; connectionId: string; renewed: boolean }
+  | { ok: false; error: ReturnError; bank: string | null };
 
 /** The person's address and browser, when they are the one asking (04-now.md §4.2, `Psu-*`). */
 export interface Presence {
@@ -445,19 +452,46 @@ async function consumeState(
 const accountsSchema = z.array(accountSchema);
 
 /** What a bank's connection seals: the access, and the accounts the bank exposed with it. */
-function connectionBag(sessionId: string, accounts: readonly PluginAccount[]): Record<string, string> {
-  return { sessionId, accounts: JSON.stringify(accounts) };
+export function connectionBag(
+  sessionId: string,
+  accounts: readonly PluginAccount[],
+  choice: { chosen: boolean; skipped: readonly string[] },
+): Record<string, string> {
+  return {
+    sessionId,
+    accounts: JSON.stringify(accounts),
+    ...(choice.chosen ? { chosen: "1" } : {}),
+    ...(choice.skipped.length > 0 ? { skipped: JSON.stringify(choice.skipped) } : {}),
+  };
 }
 
-function readBag(bag: Record<string, string>): { sessionId: string; accounts: PluginAccount[] } {
-  let accounts: unknown;
+function parsedJson(text: string | undefined): unknown {
   try {
-    accounts = JSON.parse(bag.accounts ?? "[]");
+    return JSON.parse(text ?? "[]");
   } catch {
-    accounts = [];
+    return [];
   }
-  const parsed = accountsSchema.safeParse(accounts);
-  return { sessionId: bag.sessionId ?? "", accounts: parsed.success ? parsed.data : [] };
+}
+
+/**
+ * `chosen`: the person has chosen what each account is here; before that the connection is "to
+ * complete". `skipped`: the accounts they chose not to import, so a renewed access does not ask
+ * about them again.
+ */
+export function readBag(bag: Record<string, string>): {
+  sessionId: string;
+  accounts: PluginAccount[];
+  chosen: boolean;
+  skipped: string[];
+} {
+  const accounts = accountsSchema.safeParse(parsedJson(bag.accounts));
+  const skipped = z.array(z.string()).safeParse(parsedJson(bag.skipped));
+  return {
+    sessionId: bag.sessionId ?? "",
+    accounts: accounts.success ? accounts.data : [],
+    chosen: bag.chosen === "1",
+    skipped: skipped.success ? skipped.data : [],
+  };
 }
 
 /** Closes an access at the provider, without a word if that fails: it ends by itself anyway. */
@@ -531,21 +565,30 @@ export async function completeAccess(
     if (error.code === "auth") await markCredentialsInvalid(ctx, input.pluginId, now);
     const step = `exchange failed with ${error.code}`;
     if (error.code === "consent_expired") return refused("expired", bank, step);
-    return refused(error.code === "institution_unavailable" ? "bank_unavailable" : "unreachable", bank, step);
+    if (error.code === "institution_unavailable") return refused("bank_unavailable", bank, step);
+    // The bank answered, and the answer could not be read: a different sentence from "no answer".
+    return refused(error.code === "invalid_data" ? "unreadable" : "unreachable", bank, step);
   }
   if (access.accounts.length === 0) {
     await revokeQuietly(plugin, credentials, access.session.id, deps);
     return refused("no_accounts", bank, "no readable account in the access");
   }
 
+  // The same bank again is a renewal: what the person chose for its accounts stays (§6.7).
+  const key = instanceKeyOf(access.institution);
+  const previous = (await listPluginConnections(ctx, input.pluginId)).find((one) => one.instanceKey === key);
+  const before = previous ? readBag(await readCredentials(ctx, previous.id)) : null;
   let connection: Connection;
   try {
     connection = await savePluginConnection(
       ctx,
       {
         provider: pluginProvider(input.pluginId),
-        instanceKey: instanceKeyOf(access.institution),
-        credentials: connectionBag(access.session.id, access.accounts),
+        instanceKey: key,
+        credentials: connectionBag(access.session.id, access.accounts, {
+          chosen: before?.chosen ?? false,
+          skipped: before?.skipped ?? [],
+        }),
         expiresAt: access.session.expiresAt === null ? null : new Date(access.session.expiresAt),
       },
       now,
@@ -555,99 +598,39 @@ export async function completeAccess(
     await revokeQuietly(plugin, credentials, access.session.id, deps);
     return refused("unreachable", bank, `connection not saved: ${error.code}`);
   }
-  await measureFirstReading(ctx, { plugin, connection, credentials, presence: input.presence }, now, deps);
-  return { ok: true, connectionId: connection.id };
-}
-
-/* Reading a bank */
-
-const SYNC_TIMEOUT_MS = 60_000;
-/** The calls one reading makes at most: a reading that does not end is cut, not left running. */
-const MAX_SYNC_CALLS = 12;
-/**
- * After this long the first reading starts no new call: it runs inside the person's return from
- * the bank, and a browser — or a proxy in front of the app — does not wait for ever.
- */
-const FIRST_READING_BUDGET_MS = 30_000;
-
-/**
- * Step 1 of N1: reads everything the bank gives right after the access and records what it found
- * as numbers on a sync run (`measureReading`). Nothing of the reading itself is stored.
- */
-async function measureFirstReading(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  input: {
-    plugin: InstancePlugin;
-    connection: Connection;
-    credentials: Record<string, string>;
-    presence: Presence | null;
-  },
-  now: Date,
-  deps: Deps,
-): Promise<void> {
-  const { sessionId, accounts } = readBag(await readCredentials(ctx, input.connection.id));
-  const run = await recordRun(ctx, { connectionId: input.connection.id, kind: "accounts" });
-  const batches: SyncResponse[] = [];
-  let failure: string | undefined;
-  let cursor: string | null = null;
-  const started = Date.now();
-  try {
-    do {
-      const batch: SyncResponse = await callPlugin(
-        input.plugin.config,
-        PLUGIN_PATHS.sync,
-        syncResponseSchema,
-        {
-          body: {
-            credentials: input.credentials,
-            session: { id: sessionId },
-            accounts: accounts.map((account) => account.externalId),
-            from: null,
-            cursor,
-            // The person is here: this reading starts from their own return from the bank.
-            userPresent: input.presence,
-          },
-          timeoutMs: SYNC_TIMEOUT_MS,
-          fetchFn: deps.fetchFn,
-        },
-      );
-      batches.push(batch);
-      cursor = batch.cursor;
-    } while (
-      cursor !== null &&
-      batches.length < MAX_SYNC_CALLS &&
-      Date.now() - started < FIRST_READING_BUDGET_MS
-    );
-  } catch (error) {
-    if (!(error instanceof PluginCallError)) throw error;
-    if (error.code === "auth") await markCredentialsInvalid(ctx, input.plugin.config.id, now);
-    failure = error.code;
+  // The access before is closed only now that the new one is saved.
+  if (before && before.sessionId !== "" && before.sessionId !== access.session.id) {
+    await revokeQuietly(plugin, credentials, before.sessionId, deps);
   }
-  const today = civilDateIn(now, ctx.timeZone);
-  // `incomplete`: the reading was cut before the plugin had given everything.
-  const counts = { ...measureReading(accounts, batches, today), incomplete: cursor === null ? 0 : 1 };
-  await finishRun(ctx, run.id, { counts, error: failure }, now);
+  return { ok: true, connectionId: connection.id, renewed: before?.chosen === true };
 }
 
 /** What a page may know of a bank's connection: no access, no account number in full. */
 export interface ConnectionSummary {
+  /** The accounts the bank exposes with this access. */
   accounts: number;
+  /** Whether the person has chosen what each account is here. */
+  chosen: boolean;
 }
 
 export async function connectionSummary(
   ctx: Pick<Ctx, "userId">,
   connectionId: string,
 ): Promise<ConnectionSummary> {
-  return { accounts: readBag(await readCredentials(ctx, connectionId)).accounts.length };
+  const bag = readBag(await readCredentials(ctx, connectionId));
+  return { accounts: bag.accounts.length, chosen: bag.chosen };
 }
 
 /**
- * Disconnects a bank (§5.4): closes the access at the provider, then forgets it here. The second
- * happens even when the first fails — a person who disconnects must end up disconnected.
+ * Disconnects a bank (§5.4): closes the access at the provider, forgets it here, and gives its
+ * accounts back to the person as accounts kept by hand — balances and movements stay. The access
+ * is forgotten even when the provider does not answer: a person who disconnects must end up
+ * disconnected.
  */
 export async function disconnectBank(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   input: { pluginId: string; connectionId: string },
+  sink: Pick<BankSink, "releaseAccounts">,
   deps: Deps = {},
 ): Promise<void> {
   const plugin = await requireActivePlugin(ctx, input.pluginId);
@@ -659,6 +642,8 @@ export async function disconnectBank(
   const { sessionId } = readBag(await readCredentials(ctx, connection.id));
   if (credentials !== null && sessionId !== "") await revokeQuietly(plugin, credentials, sessionId, deps);
   await deleteConnection(ctx, connection.id);
+  // Until N2 a person has one connection per plugin, so the provider's accounts are this bank's.
+  await sink.releaseAccounts(ctx, connection.provider);
 }
 
 /** Drops the pending accesses nobody came back for. Called when one is started: no job of its own. */

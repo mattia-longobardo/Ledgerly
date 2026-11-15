@@ -14,7 +14,7 @@ import { backfillDepth } from "@/platform/integrations/wallet/depth";
 import { civilDateIn } from "@/platform/dates";
 import { formatDate } from "@/platform/format";
 import { credentialsStatus, listPluginConnections, listUserPlugins } from "@/platform/plugins/queries";
-import { bankState, institutionOf } from "@/platform/plugins/rules";
+import { bankState, institutionOf, isReadingError } from "@/platform/plugins/rules";
 import { connectionSummary, keepManifestsFresh, returnAddress } from "@/platform/plugins/service";
 import { providerOf } from "@/modules/investments/catalog";
 import { listInvestmentAccounts } from "@/modules/investments/service";
@@ -110,6 +110,13 @@ export default async function SettingsIntegrationsPage({
       }
     : null;
   const now = new Date();
+  // The wait a bank asked for after "no more calls for now": the end of it, by connection.
+  const waits = new Map<string, Date>();
+  for (const { connection } of banks?.connections ?? []) {
+    const until = (await readSyncJob(ctx, connection.id, "transactions"))?.cursor?.retryAfter;
+    if (until && new Date(until).getTime() > now.getTime()) waits.set(connection.id, new Date(until));
+  }
+  const bankRows = banks ? { ...banks, waits } : null;
   const [connections, runs] = await Promise.all([listConnections(ctx), listRuns(ctx, { limit: RUNS_LIMIT })]);
 
   const wallet = connections.find((connection) => connection.provider === WALLET_PROVIDER) ?? null;
@@ -178,7 +185,7 @@ export default async function SettingsIntegrationsPage({
         ))}
       </SettingsSection>
 
-      {bankPlugin && banks && (
+      {bankPlugin && banks && bankRows && (
         <SettingsSection title={banksText("title")} description={banksText("description")} padded={false}>
           <BanksCard
             pluginId={bankPlugin.id}
@@ -188,14 +195,23 @@ export default async function SettingsIntegrationsPage({
               invalid: banks.credentials.invalid,
             }}
             returnAddress={returnAddress(bankPlugin.id)}
-            banks={banks.connections.map(({ connection, summary }) => ({
-              id: connection.id,
-              name: institutionOf(connection.instanceKey).name,
-              state: bankState(connection, now),
-              accounts: summary.accounts,
-              lastSync: connection.lastOkAt ? formatInstant(connection.lastOkAt, ctx) : null,
-              validUntil: connection.expiresAt ? day(connection.expiresAt) : null,
-            }))}
+            banks={banks.connections.map(({ connection, summary }) => {
+              const state = bankState({ ...connection, chosen: summary.chosen }, now);
+              // During the wait a bank asked for, the next reading is the end of the wait.
+              const next = bankRows.waits.get(connection.id) ?? connection.nextSyncAt;
+              return {
+                id: connection.id,
+                name: institutionOf(connection.instanceKey).name,
+                state,
+                errorCode:
+                  state === "error" && isReadingError(connection.lastError) ? connection.lastError : null,
+                waiting: bankRows.waits.has(connection.id),
+                accounts: summary.accounts,
+                lastSync: connection.lastOkAt ? formatInstant(connection.lastOkAt, ctx) : null,
+                nextSync: next ? formatInstant(next, ctx) : null,
+                validUntil: connection.expiresAt ? day(connection.expiresAt) : null,
+              };
+            })}
             openReplace={banks.openReplace}
           />
         </SettingsSection>

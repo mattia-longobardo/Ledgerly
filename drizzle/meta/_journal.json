@@ -351,6 +351,13 @@
       "when": 1794752154193,
       "tag": "0049_plugin_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794767407448,
+      "tag": "0050_bank_raw_fields",
+      "breakpoints": true
     }
   ]
 }

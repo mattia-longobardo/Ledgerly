@@ -46,8 +46,30 @@ export const PASSES: readonly ProviderPass[] = [
   { provider: BINANCE_PROVIDER, kinds: KINDS_OF[BINANCE_PROVIDER], run: runInvestmentPass },
 ];
 
+/**
+ * The passes that are not in the list above because this file must not import who owns them: a
+ * plugin's pass is registered by the application when it starts (rewrite plan, rule M8 — only
+ * the application joins a port and its adapter).
+ */
+const registered: ProviderPass[] = [];
+
+/** Adds a pass, or replaces the one registered for the same provider. */
+export function registerPass(pass: ProviderPass): void {
+  const at = registered.findIndex((one) => one.provider === pass.provider);
+  if (at >= 0) registered[at] = pass;
+  else registered.push(pass);
+}
+
+/** Every pass the dispatcher can make: the ones of this file, then the registered ones. */
+export function allPasses(): readonly ProviderPass[] {
+  return [...PASSES, ...registered];
+}
+
 /** The pass for `provider`: an exact id first, then the longest prefix; `null` when nobody owns it. */
-export function passFor(provider: string, passes: readonly ProviderPass[] = PASSES): ProviderPass | null {
+export function passFor(
+  provider: string,
+  passes: readonly ProviderPass[] = allPasses(),
+): ProviderPass | null {
   const exact = passes.find((pass) => pass.provider === provider);
   if (exact) return exact;
   const prefixed = passes

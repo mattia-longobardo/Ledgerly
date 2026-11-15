@@ -554,10 +554,18 @@ async function createFromProvider(
 ): Promise<{ id: string; transferGroupId: string | null }> {
   const values = toNewTransaction(movement, resolution);
   const { labelIds, ...columns } = values;
+  const raw = movement.raw
+    ? {
+        rawText: movement.raw.text,
+        counterpartyName: movement.raw.counterparty,
+        merchantCategoryCode: movement.raw.merchantCategoryCode,
+        bankTransactionCode: movement.raw.bankTransactionCode,
+      }
+    : {};
   return getDb().transaction(async (tx) => {
     const [row] = await tx
       .insert(transactions)
-      .values(userScoped(ctx).stamp(columns))
+      .values(userScoped(ctx).stamp({ ...columns, ...raw }))
       .returning({ id: transactions.id, transferGroupId: transactions.transferGroupId });
     await writeLabels(tx, ctx, row.id, labelIds);
     await linkExternal(

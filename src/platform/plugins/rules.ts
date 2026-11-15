@@ -3,7 +3,7 @@
  * §4.1 and §4.2; ux/n1-plugin-bank.md §2.2, §5.1, §7).
  */
 import { createHash } from "node:crypto";
-import type { PluginAccount, SyncResponse } from "./contract/calls";
+import type { PluginAccount, PluginTransaction, SyncResponse } from "./contract/calls";
 
 /** How long a person has to come back from the provider's site. */
 export const AUTH_STATE_MINUTES = 15;
@@ -46,16 +46,136 @@ export function maskIdentifier(identifier: string | null): string | null {
   return `${compact.slice(0, 4)} •••• ${compact.slice(-4)}`;
 }
 
-/** A connection of a bank as its row says it (§5.1). `pending` joins with the choice of the accounts. */
-export type BankState = "active" | "error" | "expired";
+/** A connection of a bank as its row says it (§5.1). */
+export type BankState = "pending" | "active" | "error" | "expired";
 
+/** The codes a bank's row can show under its state (§7): the ones N2 keeps. */
+export const READING_ERRORS = [
+  "auth",
+  "consent_expired",
+  "rate_limited",
+  "provider_down",
+  "invalid_data",
+  "plugin_down",
+  "failed",
+] as const;
+export type ReadingError = (typeof READING_ERRORS)[number];
+
+export function isReadingError(value: string | null | undefined): value is ReadingError {
+  return (READING_ERRORS as readonly string[]).includes(value ?? "");
+}
+
+/**
+ * The state of a bank's row. An access past its end, or refused, is `expired` whatever else is
+ * true; a connection whose accounts were never chosen is `pending`; a bank that only asked to
+ * wait (`rate_limited`) is still `active` — the wait is a detail of the row, not an error (§5.1).
+ */
 export function bankState(
-  connection: { state: "active" | "error" | "revoked"; expiresAt: Date | null },
+  connection: {
+    state: "active" | "error" | "revoked";
+    expiresAt: Date | null;
+    lastError: string | null;
+    chosen: boolean;
+  },
   now: Date,
 ): BankState {
   if (connection.state === "revoked") return "expired";
   if (connection.expiresAt !== null && connection.expiresAt.getTime() <= now.getTime()) return "expired";
-  return connection.state === "error" ? "error" : "active";
+  if (!connection.chosen) return "pending";
+  if (connection.state === "error" && connection.lastError !== "rate_limited") return "error";
+  return "active";
+}
+
+/** How long the automatic readings wait after a bank said it accepts no more (04-now.md §4.2). */
+export const RATE_LIMIT_WAIT_HOURS = 6;
+
+/** The days a reading goes back before the last day it covered: a bank books late. */
+export const REREAD_DAYS = 10;
+
+/** Three automatic readings a day, in the person's zone (04-now.md §4.2). */
+export const BANK_SCHEDULE = {
+  rules: [{ kind: "times" as const, times: ["07:10", "13:10", "19:10"], days: { kind: "every" as const } }],
+};
+
+/** The id of a bank's account that this app keeps: the one that survives a new access, when there is one. */
+export function providerAccountIdOf(account: Pick<PluginAccount, "externalId" | "stableId">): string {
+  return account.stableId ?? account.externalId;
+}
+
+function digest(text: string, length: number): string {
+  return createHash("sha256").update(text).digest("hex").slice(0, length);
+}
+
+/** A movement's text for comparing: one case, one kind of space. */
+function normalized(text: string): string {
+  return text.normalize("NFKC").toLocaleLowerCase("en").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * The identity of every booked movement of one account (04-now.md §4.2): the bank's own
+ * reference when it gives one; otherwise a hash of the account, the booking day, the amount, the
+ * direction, the text, the other party and the place among the equal movements of that day —
+ * two coffees at the same bar on the same day are two movements.
+ *
+ * The id starts with a digest of the account, so the same reference at two accounts stays two
+ * ids. Pending movements are left out: only a booked movement is a fact.
+ */
+export function movementIds(
+  accountKey: string,
+  transactions: readonly PluginTransaction[],
+): { transaction: PluginTransaction; externalId: string }[] {
+  const account = digest(accountKey, 16);
+  const seen = new Map<string, number>();
+  const identified: { transaction: PluginTransaction; externalId: string }[] = [];
+  for (const transaction of transactions) {
+    if (transaction.status !== "booked") continue;
+    if (transaction.externalId !== null) {
+      const reference = transaction.externalId;
+      const own = reference.length <= 120 ? reference : `h:${digest(reference, 40)}`;
+      identified.push({ transaction, externalId: `${account}:${own}` });
+      continue;
+    }
+    const facts = [
+      transaction.bookingDate ?? transaction.valueDate ?? "",
+      transaction.amount,
+      transaction.direction,
+      transaction.currency,
+      normalized(transaction.text.join(" ")),
+      normalized(transaction.counterparty ?? ""),
+    ].join("\u0000");
+    const ordinal = seen.get(facts) ?? 0;
+    seen.set(facts, ordinal + 1);
+    identified.push({ transaction, externalId: `${account}:x:${digest(`${facts}\u0000${ordinal}`, 40)}` });
+  }
+  // A reference the bank repeats inside one account names one movement: the last one read wins,
+  // as it does at the next reading.
+  const unique = new Map(identified.map((one) => [one.externalId, one]));
+  return [...unique.values()];
+}
+
+/** The balances a bank can give, from the one that says most about the account to the least. */
+const BALANCE_ORDER = [
+  "CLBD",
+  "ITBD",
+  "XPCD",
+  "ITAV",
+  "CLAV",
+  "OPBD",
+  "OPAV",
+  "PRCD",
+  "FWAV",
+  "VALU",
+  "INFO",
+  "OTHR",
+];
+
+/** The one balance of an answer to keep: the booked one when there is one, by the order above. */
+export function pickBalance<T extends { type: string }>(balances: readonly T[]): T | null {
+  const rank = (type: string) => {
+    const at = BALANCE_ORDER.indexOf(type);
+    return at < 0 ? BALANCE_ORDER.length : at;
+  };
+  return [...balances].sort((a, b) => rank(a.type) - rank(b.type))[0] ?? null;
 }
 
 /** Why the return from the provider's site did not end with a connection (§6.3). */
@@ -65,6 +185,7 @@ export const RETURN_ERRORS = [
   "session",
   "no_accounts",
   "unreachable",
+  "unreadable",
   "bank_unavailable",
 ] as const;
 export type ReturnError = (typeof RETURN_ERRORS)[number];
