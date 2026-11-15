@@ -334,7 +334,7 @@ export async function removePerson(ctx: Pick<Ctx, "role" | "userId">, userId: st
   const target = await requirePerson(userId);
   await guard(ctx, "remove", target);
   await getDb().delete(users).where(eq(users.id, target.id));
-  for (const folder of [`payslips/${target.id}/`, `cometa/${target.id}/`, `exports/${target.id}/`]) {
+  for (const folder of [`payslips/${target.id}/`, `exports/${target.id}/`]) {
     try {
       await deleteFolder(folder);
     } catch (error) {
