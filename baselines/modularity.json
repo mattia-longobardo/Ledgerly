@@ -330,7 +330,6 @@
     "modules/transactions/ui/view.ts: wallet",
     "modules/users/actions.ts: authentik",
     "modules/users/admin.ts: authentik",
-    "modules/users/admin.ts: cometa",
     "platform/auth/access-token.ts: authentik",
     "platform/auth/accounts.ts: authentik",
     "platform/auth/auth.ts: authentik",

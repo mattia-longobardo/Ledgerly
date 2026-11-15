@@ -155,7 +155,7 @@ Ledgerly uses the shared homelab services (`/home/mattia/docker`, conventions in
 | Service    | Use                                                                                     |
 | ---------- | --------------------------------------------------------------------------------------- |
 | Postgres   | Database `ledgerly`, role `ledgerly`. Tests use `ledgerly_test`.                        |
-| Silo (S3)  | Bucket `ledgerly`, one folder per area: `payslips/`, `cometa/`, `exports/`, `backups/`. |
+| Silo (S3)  | Bucket `ledgerly`, one folder per area: `payslips/`, `exports/`, `backups/`.            |
 | Authentik  | OIDC application `ledgerly`. Members of `OIDC_ADMIN_GROUP` become admins at sign-in.    |
 | Stalwart   | Mail from `no-reply@longobardo.me`, implicit TLS on port 465.                           |
 | Prometheus | Scrapes `GET /api/metrics` on `ledgerly:3000`, with `METRICS_TOKEN` as bearer token.    |
