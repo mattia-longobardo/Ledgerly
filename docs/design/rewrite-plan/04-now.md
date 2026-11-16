@@ -15,14 +15,6 @@ Questo lavoro si fa sul codice attuale (una sola app Next.js). Regola per limita
 
 ## 4.1 Runtime minimo dei plugin (N1)
 
-**Nota del 16/11/2026 (H48, H49).** Questa sezione e §4.2 descrivono N1 com'è in produzione. Per un rilascio futuro
-Mattia ha deciso: l'admin gestisce e aggiunge i plugin; l'applicazione Enable Banking è una per istanza. Sono
-sostituiti, da quel rilascio: nel diagramma «Inserisce id applicazione e chiave» e «Cifra e salva per utente» (lo fa
-l'admin, per l'istanza); le righe «Segreti» (le credenziali dell'applicazione sono dell'istanza), «Installazione»
-(«nessun passo dell'admin») e «Attivazione» (l'utente attiva solo un plugin aggiunto dall'admin); la frase
-«aggiornamento e rimozione … non arrivano in nessun rilascio»; in §4.2 la riga «Credenziali». Il manifest dovrà
-distinguere i campi dell'istanza dai campi dell'utente. Dettaglio e domande: [`13-plugins-addons.md`](13-plugins-addons.md).
-
 ```mermaid
 sequenceDiagram
   participant U as Utente (browser)

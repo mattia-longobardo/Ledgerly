@@ -86,12 +86,6 @@ una sotto-issue separata (decisione H4). È in `main` a `86e3d43`, tag `v0.10.2`
 | Dipende da | N0 |
 | Dimensione | L |
 
-**Nota del 16/11/2026 (H48, H49).** N1 è in produzione come scritto sopra: credenziali Enable Banking per utente, nessun
-passo dell'admin. Mattia ha deciso, per un rilascio futuro, che l'admin gestisce e aggiunge i plugin e che
-l'applicazione Enable Banking è una sola per istanza. Le parti «credenziali per utente», «inserisce la sua
-applicazione», «l'admin non fa niente» e i criteri 6 e 9 valgono fino a quel rilascio. Rilascio e regola di passaggio:
-[`13-plugins-addons.md`](13-plugins-addons.md) §13.3 e §13.5.
-
 ### N2 · Stato dei collegamenti
 
 | | |
@@ -394,18 +388,10 @@ resta l'ultimo. Ognuno ha le regole comuni di §3.1.
 
 Nota su R5a: con le voci della revisione la dimensione può passare da M a L. Si valuta alla conferma di R5a (rischio R-15).
 
-**Nota del 16/11/2026 su R5a e R5c (H48-H50).** Tre punti delle colonne sopra sono sostituiti dalla decisione di
-Mattia; le colonne si riscrivono dopo le risposte alle domande PA1-PA16 ([`13-plugins-addons.md`](13-plugins-addons.md) §13.6).
-
-- **R5a, «Moduli attivabili per utente»:** diventano la sezione **Addons** (H50), con un elenco di partenza e i moduli
-  di base non disattivabili. Il posto di «tab Plugin» in Settings è la domanda PA16.
-- **R5c, «i plugin arrivano e si aggiornano con l'istanza», senza azioni nell'interfaccia (H27):** l'admin gestisce e
-  aggiunge i plugin (H48). Wallet e Trek compaiono a un utente solo se l'admin li ha aggiunti.
-- **R5c, credenziali:** l'applicazione Enable Banking diventa una per istanza, dell'admin (H49), con una regola di
-  passaggio per le credenziali e i collegamenti di oggi. Criterio §6 in più: #4 (azioni riservate all'admin).
-
-La proposta di default mette H50 in R5a e H48-H49 in R5c. Le alternative (rilascio nuovo N7 nella fase A) sono in
-[`13-plugins-addons.md`](13-plugins-addons.md) §13.5: decide Mattia (PA1).
+**Nota del 16/11/2026 su R5a (H50).** «Moduli attivabili per utente» diventa la sezione **Addons**, con un elenco di
+partenza e i moduli di base non disattivabili. La colonna si riscrive dopo le risposte alle domande sugli addon
+([`13-plugins-addons.md`](13-plugins-addons.md) §13.5). La proposta di default tiene gli addon in R5a; l'alternativa è un rilascio nuovo N7
+nella fase A: decide Mattia (PA1). R5c non cambia: i plugin restano di ogni utente (H51).
 
 | | R5d · Portafoglio manuale | R5e · Avvisi | R5f · Pulizia dello schema |
 |---|---|---|---|
@@ -469,9 +455,5 @@ di un altro (decisione H6). Due parti nello stesso passo (decisione I17):
 - **Codice:** il risultato contro le tre priorità di [`10-modularity.md`](10-modularity.md) e contro questo piano.
 - **Sicurezza:** login nativo e client OAuth di prima parte, CORS, rete e contratto dei plugin, credenziali per utente,
   cache sui dispositivi, avvisi.
-- **Sicurezza, punto aggiunto il 16/11/2026 (H48, H49):** applicazione Enable Banking unica dell'istanza. Una chiave
-  sola firma le richieste di tutti gli utenti: custodia e rotazione della chiave, isolamento tra le sessioni degli
-  utenti, azioni dell'admin sui plugin, regola di passaggio dalle credenziali per utente. Rischi R-37…R-40
-  ([`09-risks.md`](09-risks.md) §9.2); fatti in [`13-plugins-addons.md`](13-plugins-addons.md) §13.3.
 
 I finding diventano correzioni con il loro rilascio.

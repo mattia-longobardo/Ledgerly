@@ -82,9 +82,7 @@ Cosa fa l'app Android («compagno»):
 | Budget, abbonamenti, pocket: creazione e modifica | Admin: Utenti, Server, diagnostica |
 | Profilo, moduli attivi, dispositivi collegati | Password, 2FA, esportazione dei dati, impostazioni di Payroll e Time Off |
 
-Nota del 16/11/2026 (H48-H50): «moduli attivi» diventa «Addons». L'applicazione Enable Banking è dell'admin, non una
-chiave dell'utente. La gestione dei plugin torna tra le funzioni dell'admin, solo sul web. Dettaglio:
-[`13-plugins-addons.md`](13-plugins-addons.md) §13.8.
+Nota del 16/11/2026 (H50): «moduli attivi» diventa «Addons» ([`13-plugins-addons.md`](13-plugins-addons.md)).
 
 Build e installazione, senza distribuzione:
 

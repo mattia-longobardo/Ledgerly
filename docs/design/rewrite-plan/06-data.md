@@ -8,11 +8,8 @@ Le applica il container che serve l'API, all'avvio; il worker aspetta.
 
 ## 6.1 Migrazioni previste
 
-**Nota del 16/11/2026 (H48-H50).** La decisione su plugin e addon chiede migrazioni non ancora in questa tabella:
-stato «aggiunto dall'admin» del plugin nell'istanza; credenziali del plugin per istanza, cifrate; dati: copia
-dell'applicazione Enable Banking dell'admin da `plugin_user_credentials`. `plugin_user_credentials` diventa un
-candidato alla rimozione in R5f. `user_preferences.modules` (R5a) è il dato degli addon. Forma e rilascio: **[DEV]**
-e domanda PA1 ([`13-plugins-addons.md`](13-plugins-addons.md) §13.5).
+**Nota del 16/11/2026 (H50).** `user_preferences.modules` (R5a) è il dato degli addon: quali moduli del core sono
+attivi per l'utente. Forma e rilascio: **[DEV]** e domanda PA1 ([`13-plugins-addons.md`](13-plugins-addons.md) §13.4).
 
 I nomi sono indicativi: il numero e il nome definitivi nascono con `npm run db:generate`.
 

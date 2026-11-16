@@ -1,10 +1,5 @@
 # N1 · Specifica UX: plugin Enable Banking per utente e «Collega una banca»
 
-> **Nota del 16/11/2026 (H48, H49).** Questa specifica descrive il rilascio com'è in produzione: plugin attivati per
-> utente, credenziali Enable Banking per utente, nessun passo dell'admin. Per un rilascio futuro Mattia ha deciso che
-> l'admin gestisce e aggiunge i plugin e che l'applicazione Enable Banking è una per istanza. Le schermate nuove
-> nascono con quel rilascio: [`../13-plugins-addons.md`](../13-plugins-addons.md).
-
 Indice del piano: [`../../rewrite-plan.md`](../../rewrite-plan.md). Rilascio: [`../03-releases.md`](../03-releases.md) «N1».
 Regole tecniche: [`../04-now.md`](../04-now.md) §4.1 e §4.2. Decisioni: [`../01-decisions.md`](../01-decisions.md) C1, C1c, C1d, C4, P2, H25, H26.
 
