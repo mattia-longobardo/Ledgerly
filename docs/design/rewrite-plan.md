@@ -12,7 +12,7 @@ Portafoglio manuale; nessuna funzione su misura per un fornitore, una banca, un 
 Revisione del 15/11/2026 (decisioni H31-H35): tre modalità di conto («a mano», «lettura e scrittura», «sola lettura»);
 un movimento a mano cambia il saldo; le categorie di una sorgente che le dà già si associano o si aggiungono. Il
 invio alla sorgente e l'associazione delle categorie sono un rilascio nuovo, N3.1 (H36).
-Revisione del 16/11/2026 (decisioni H39-H44, su N4): ogni conto può avere un IBAN e un conto già aggiunto non si
+Revisione del 16/11/2026 (decisioni H39-H47, su N4): ogni conto può avere un IBAN e un conto già aggiunto non si
 aggiunge una seconda volta; i giroconti di un conto passato si riconoscono su tutto lo storico, eccezione dichiarata a
 «stessi numeri».
 

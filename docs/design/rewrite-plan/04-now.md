@@ -195,10 +195,10 @@ flowchart TB
 - La prova a secco copia la categoria di Wallet sul testo della banca per i movimenti abbinati: sono esempi di addestramento nel formato giusto.
 - I gruppi con conteggio diverso («Da controllare») sono solo da leggere: nessun collegamento a mano (H44).
 
-Decisioni del 16/11/2026 (H39-H44). Righe del rilascio, eccezioni e punti aperti: [`03-releases.md`](03-releases.md) «N4».
+Decisioni del 16/11/2026 (H39-H47). Righe del rilascio ed eccezioni: [`03-releases.md`](03-releases.md) «N4».
 Interfaccia: [`ux/n4-account-switch.md`](ux/n4-account-switch.md). I punti **[DEV]** li conferma lo sviluppatore.
 
-**IBAN sul conto (H39).** Regola generale: vale per ogni conto con movimenti e per ogni sorgente, senza nomi di fornitore.
+**IBAN sul conto (H39, H45-H47).** Regola generale: vale per ogni conto con una modalità (H32) e per ogni sorgente, senza nomi di fornitore. I conti di investimento e i fondi pensione non hanno il campo (H47).
 
 | Tema | Regola |
 |---|---|
@@ -208,8 +208,8 @@ Interfaccia: [`ux/n4-account-switch.md`](ux/n4-account-switch.md). I punti **[DE
 | Tre strade di creazione | 1) Procedura di collegamento di una sorgente. 2) Aggiornamento automatico che trova un conto nuovo. 3) Creazione o modifica a mano. Tutte chiamano lo stesso controllo, sul server. Esito con un IBAN già presente: nessun conto creato, codice `iban_exists`, avviso con il nome del conto |
 | Conto senza IBAN | Nessun blocco. La banca non dà l'IBAN per ogni conto: nella prova di N1, 1 conto su 3 lo aveva |
 | Conti già doppi | Due conti di oggi con lo stesso IBAN restano. Il controllo vale per le scritture nuove **[DEV]**. Il passaggio non li unisce: specifica §2.4.2, caso 7 |
-| Dato personale | Mai in URL, toast, log, registro e «Copia rapporto». API, MCP ed export: punto aperto P1 di [`03-releases.md`](03-releases.md) «N4» |
-| Primo riempimento | La sorgente riempie il campo al primo aggiornamento dopo il rilascio. Il campo «IBAN o riferimento» di oggi (`accounts.reference`): punto aperto P2 |
+| Dato personale | Mai in URL, toast, log, registro e «Copia rapporto». API, MCP ed export non lo contengono, né intero né mascherato: le rotte di scrittura lo accettano, nessuna risposta lo restituisce (H45) |
+| Primo riempimento | La sorgente riempie il campo al primo aggiornamento dopo il rilascio. In più, al rilascio: i valori di «IBAN o riferimento» (`accounts.reference`) che sono un IBAN valido si copiano nel campo IBAN. Il campo vecchio resta, con il nome «Riferimento», e il suo valore non cambia (H46) |
 
 **Giroconti su tutto lo storico (H40).** Regola nuova del dominio `transactions`. Oggi un giroconto si riconosce
 solo dal riferimento della controparte dato dalla sorgente (`pairTransfers`) o dall'IBAN nel testo

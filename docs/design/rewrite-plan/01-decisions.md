@@ -3,7 +3,7 @@
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**, del **15/11/2026**
-(H31-H38) e del **16/11/2026** (H39-H44). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
+(H31-H38) e del **16/11/2026** (H39-H47). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
 ([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
@@ -114,7 +114,8 @@ Due risposte sono regole nuove (H32-H34). H36-H38 sono le risposte alle tre doma
 Risposte di Mattia alle 6 domande della specifica UX di N4 ([`ux/n4-account-switch.md`](ux/n4-account-switch.md) §17).
 H39 è una regola nuova: vale per ogni conto e per ogni sorgente, non solo per il passaggio. H40 cambia numeri
 esistenti: è un'eccezione dichiarata a «comportamento invariato», e questa riga è la decisione scritta. Righe del
-piano, eccezioni, effetti sugli altri rilasci e punti aperti: [`03-releases.md`](03-releases.md) «N4».
+piano, eccezioni ed effetti sugli altri rilasci: [`03-releases.md`](03-releases.md) «N4». H45-H47 sono le risposte
+ai tre punti nati dal controllo del piano (P1-P3 di N4): Mattia ha scelto il default per tutti e tre.
 
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
@@ -124,6 +125,9 @@ piano, eccezioni, effetti sugli altri rilasci e punti aperti: [`03-releases.md`]
 | H42 | **Q4, con il default (A).** «Annulla passaggio» non ha un limite di tempo: resta disponibile finché la sorgente di partenza è collegata | L'opzione B («30 giorni») | N4 |
 | H43 | **Q5, con il default (A).** Il tipo di saldo della banca per il controllo lo sceglie Ledgerly: un tipo per banca, deciso dal dominio. La pagina dice quale tipo usa. La persona non lo cambia | L'opzione B («Confronta con un altro saldo»). Precisa `04-now.md` §4.6 «il tipo di saldo si sceglie per banca»: lo sceglie Ledgerly | N4 |
 | H44 | **Q6, con il default (A).** La sezione «Da controllare» del rapporto è solo da leggere: la persona non collega i movimenti a mano | L'opzione B («scegli le coppie a mano»). Conferma il criterio 2 di N4 | N4 |
+| H45 | **P1 di N4, con il default (A): l'IBAN non esce da Ledgerly.** L'IBAN di un conto si vede solo nelle pagine di Ledgerly. API, MCP ed export non lo contengono, né intero né mascherato. I log non lo contengono in nessun caso. Le rotte di scrittura del conto accettano l'IBAN; nessuna risposta lo restituisce | L'opzione B («API e MCP mascherato, export intero»). Precisa H39 e la regola «mai in log, API, MCP, export» di §1.5, che ora vale anche per l'IBAN | N4, R2 |
+| H46 | **P2 di N4, con il default (A): due campi.** Il conto ha il campo «IBAN» e il campo «Riferimento». Al rilascio Ledgerly copia nel campo «IBAN» i valori di «IBAN o riferimento» che sono un IBAN valido. Il campo vecchio resta, con il nome «Riferimento», e il suo valore non cambia | L'opzione B («un campo solo, come oggi»). Il nome «IBAN o riferimento» del campo di oggi | N4 |
+| H47 | **P3 di N4, con il default (A): il campo IBAN è dei conti con movimenti.** Hanno il campo i conti con una modalità (H32): «a mano», «lettura e scrittura», «sola lettura». I conti di investimento e i fondi pensione non lo hanno | L'opzione B («ogni conto, di ogni tipo»). Precisa H39: «ogni conto» vuol dire ogni conto con una modalità | N4 |
 
 ## 1.1 Premesse
 

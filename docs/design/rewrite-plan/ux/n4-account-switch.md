@@ -11,7 +11,7 @@ La regola che decide quali movimenti sono gli stessi, i suoi numeri e la tollera
 Revisione del 16/11/2026: applica le risposte di Mattia alle 6 domande della prima versione (§17). Q1 è una regola nuova: Ledgerly
 impedisce di aggiungere un conto che è già in Ledgerly, con l'IBAN, e ogni conto può avere un IBAN (§2.4, precisata da Mattia il 16/11/2026). Q2 è l'opzione B: i giroconti si riconoscono su tutto lo storico (§9.3).
 Q3-Q6 sono il default. Le 6 risposte sono le decisioni H39-H44 del registro. Nessuna domanda di questa specifica è aperta;
-i punti aperti nati dal controllo del piano (P1-P3) sono in [`../03-releases.md`](../03-releases.md) «N4». I dati negli esempi sono inventati.
+i tre punti nati dal controllo del piano (P1-P3) sono decisi con il default (H45-H47): [`../03-releases.md`](../03-releases.md) «N4». I dati negli esempi sono inventati.
 
 ## 0. Riepilogo
 
@@ -237,8 +237,8 @@ Sostituita: la guardia «stessa valuta e stesso saldo» della revisione preceden
 | Controllo | Paese, lunghezza e cifre di controllo. Errore sotto il campo: «Questo IBAN non è valido. Controlla le cifre.» |
 | Unico per utente | Due conti non archiviati dello stesso utente non hanno lo stesso IBAN. Errore sotto il campo: «Questo IBAN è già del conto «{other}».» Il salvataggio non parte |
 | Conto archiviato con lo stesso IBAN | L'errore diventa: «Questo IBAN è del conto archiviato «{other}». Ripristina quel conto oppure togli l'IBAN da lì.» |
-| Dato personale | L'IBAN è della persona. Non entra in URL, toast, registro e «Copia rapporto» (N2 §8.4) |
-| Primo rilascio | I conti di oggi ricevono l'IBAN al primo aggiornamento della loro sorgente. Nessun passo della persona |
+| Dato personale | L'IBAN è della persona. Non entra in URL, toast, registro e «Copia rapporto» (N2 §8.4). Non esce con API, MCP ed export (H45) |
+| Primo rilascio | I conti di oggi ricevono l'IBAN al primo aggiornamento della loro sorgente. In più, al rilascio, un IBAN valido scritto in «IBAN o riferimento» si copia nel campo «IBAN»; il campo vecchio resta, con il nome «Riferimento» (H46). Nessun passo della persona |
 
 #### 2.4.2 Controllo quando si aggiunge un conto
 
@@ -1209,4 +1209,4 @@ Non sono decisioni di prodotto: sono dati e regole tecniche che l'interfaccia ri
 14. **N1.** `accounts-step.tsx`: gruppo nuovo nel `Select`, decisione nuova `{ kind: "sameAs", accountId }` trattata come `skip` nell'importazione, e riga nuova nell'esito. La specifica di N1 non cambia: §6.4 e §11 di N1 rimandano a questo documento.
 15. **Movimento.** Vale la nota di N1 §13, punto 6, su `prefers-reduced-motion`.
 16. **IBAN e conti doppi (decisione Q1).** Serve un campo IBAN sul conto, con una regola «unico per utente tra i conti non archiviati»: è una migrazione di schema. `03-releases.md` «N4» dice «Migrazioni: nessuna di schema»: la riga va aggiornata (punto 17). **[DEV]** Da confermare: 1) la sorgente di partenza dà l'IBAN del conto in ogni caso (decisione di Mattia: sì); 2) la banca non dà l'IBAN per ogni conto: nella prova di N1 solo 1 conto su 3 lo aveva, quindi il caso 6 di §2.4.2 è frequente per i conti di risparmio; 3) cosa fa la migrazione se due conti di oggi ricevono lo stesso IBAN al primo aggiornamento (proposta: l'IBAN si salva su tutti e due, la regola «unico» vale per le scritture nuove, e vale il caso 7); 4) l'eliminazione di un conto creato dalla banca libera il conto della banca; 5) IBAN fuori da registro, export dei rapporti e log, cifrato o no come gli altri dati del conto.
-17. **Piano.** Fatto il 16/11/2026: le decisioni sono H39-H44 in `01-decisions.md`; `03-releases.md` «N4», `04-now.md` §4.6, `06-data.md` §6.1 e `09-risks.md` (R-34…R-36) sono aggiornati. Q1 aggiunge a N4 il campo IBAN (migrazione di schema) e la regola «unico per utente». Q2 aggiunge una regola del dominio e cambia numeri esistenti: è l'eccezione dichiarata X1 di `03-releases.md` «N4». Punti aperti per Mattia: P1-P3, nello stesso punto.
+17. **Piano.** Fatto il 16/11/2026: le decisioni sono H39-H44 in `01-decisions.md`; `03-releases.md` «N4», `04-now.md` §4.6, `06-data.md` §6.1 e `09-risks.md` (R-34…R-36) sono aggiornati. Q1 aggiunge a N4 il campo IBAN (migrazione di schema) e la regola «unico per utente». Q2 aggiunge una regola del dominio e cambia numeri esistenti: è l'eccezione dichiarata X1 di `03-releases.md` «N4». I punti P1-P3 sono decisi con il default (H45-H47): l'IBAN non esce con API, MCP ed export; due campi, «IBAN» e «Riferimento», con copia dei valori validi al rilascio; nessun campo IBAN sui conti di investimento e sui fondi.
