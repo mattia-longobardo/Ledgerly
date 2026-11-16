@@ -154,7 +154,12 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     interests: { rules: interests, details: interestDetails },
     investments: {
       totals: investments.totals,
-      services: investments.services,
+      // The account of a service is printed whole, but never its IBAN (rewrite plan N4, H45): the two
+      // fields are left out, so the file is the same as before the release.
+      services: investments.services.map((service) => ({
+        ...service,
+        account: withoutIban(service.account),
+      })),
       byClass: investments.byClass,
       byService: investments.byService,
       funds: investments.funds,
@@ -179,6 +184,16 @@ function periodsFrom(firstOn: string | null, thisYear: number): string[] {
 }
 
 /** One user's numbers at `now`, ready for `canonical`. */
+/** An account as the file prints it: every field but the IBAN's two (H45). */
+function withoutIban<T extends { iban: string | null; ibanFromSource: boolean }>(
+  account: T,
+): Omit<T, "iban" | "ibanFromSource"> {
+  const copy: Partial<T> = { ...account };
+  delete copy.iban;
+  delete copy.ibanFromSource;
+  return copy as Omit<T, "iban" | "ibanFromSource">;
+}
+
 export async function numbersSnapshot(ctx: SnapshotCtx, now: Date): Promise<Json> {
   const read = await views(ctx, now);
   return project(read, namesIn(read)) ?? {};

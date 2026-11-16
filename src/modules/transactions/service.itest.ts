@@ -62,6 +62,8 @@ async function anAccount(ctx: Ctx, name = "ING Conto Arancio", reference = ""): 
     currency: "EUR",
     color: null,
     reference,
+    // From N4 the giroconti by IBAN read the IBAN field (H46); the reference keeps its value.
+    iban: reference,
     purpose: "",
     openedOn: null,
     notes: "",

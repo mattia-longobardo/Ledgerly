@@ -298,3 +298,17 @@ describe("the data of the release (H46, 06-data.md §6.1)", () => {
     expect((await listAccounts(ctx)).map((row) => row.iban)).toEqual(rows.map((row) => row.iban));
   });
 });
+
+describe('the numbers snapshot (03-releases.md N4, "Dump e fotografia dei numeri")', () => {
+  it("never holds an IBAN", async () => {
+    const { numbersSnapshot } = await import("../../../scripts/numbers-snapshot");
+    await createAccount(ctx, { ...ACCOUNT, iban: IBAN });
+    await createAccount(ctx, { ...ACCOUNT, name: "Broker", type: "investment" });
+    const text = JSON.stringify(await numbersSnapshot(ctx, new Date()), (_key, value) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    expect(text).toContain("Current");
+    expect(text).not.toContain(IBAN);
+    expect(text).not.toContain("ibanFromSource");
+  });
+});
