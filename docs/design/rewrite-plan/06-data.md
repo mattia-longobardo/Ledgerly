@@ -9,7 +9,7 @@ Le applica il container che serve l'API, all'avvio; il worker aspetta.
 ## 6.1 Migrazioni previste
 
 **Nota del 16/11/2026 (H50).** `user_preferences.modules` (R5a) è il dato degli addon: quali moduli del core sono
-attivi per l'utente. Forma e rilascio: **[DEV]** e domanda PA1 ([`13-plugins-addons.md`](13-plugins-addons.md) §13.4).
+attivi per l'utente. Rilascio: R5a (H52). Forma: **[DEV]** ([`13-plugins-addons.md`](13-plugins-addons.md)).
 
 I nomi sono indicativi: il numero e il nome definitivi nascono con `npm run db:generate`.
 

@@ -1,15 +1,15 @@
 # 13. Sezione Addons (e plugin dell'admin, ritirati)
 
-Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Registro: [`01-decisions.md`](01-decisions.md) H48-H51.
+Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md). Registro: [`01-decisions.md`](01-decisions.md) H48-H52.
 
-Decisioni di Mattia del **16/11/2026**. Questo documento scrive la decisione sugli addon, le domande aperte e gli
+Decisioni di Mattia del **16/11/2026**. Questo documento scrive la decisione sugli addon, le domande decise e gli
 effetti sugli altri rilasci. Non riscrive i rilasci e non contiene codice.
 
-**Stato: la sezione Addons è decisa (H50); rilascio e dettagli sono da decidere (§13.4, §13.5).** Nessuno sviluppo
-parte prima delle risposte. La parte sui plugin dell'admin è ritirata (§13.2): per i plugin il piano non cambia.
+**Stato: deciso.** La sezione Addons è la decisione H50. Mattia ha risposto «ok default» alle 9 domande (H52): vale
+l'opzione A di ogni domanda. Nessuna domanda è aperta. Rilascio: R5a. La parte sui plugin dell'admin è ritirata
+(§13.2): per i plugin il piano non cambia.
 
-Segni usati: **[PROPOSTA]** = default proposto da questo documento, non deciso da Mattia. **[DEV]** = stima o scelta
-tecnica da confermare con lo sviluppo.
+Segno usato: **[DEV]** = stima o scelta tecnica da confermare con lo sviluppo.
 
 ## 13.1 La decisione
 
@@ -31,7 +31,7 @@ Due parole, due cose:
 | **Addon** | Un modulo del core, già dentro Ledgerly | Ogni utente, per sé (H50) |
 
 H50 precisa D2 («moduli attivabili») e la riga R5a «Moduli attivabili per utente»: dà il nome, l'elenco di partenza
-e la regola dei moduli di base. D3 (tab di Settings) è da rivedere con la domanda PA16.
+e la regola dei moduli di base. D3 (tab di Settings) ha in più il tab «Addons» (H52).
 
 ## 13.2 Parte ritirata: plugin dell'admin e applicazione Enable Banking unica
 
@@ -54,11 +54,9 @@ Motivo, da ricordare se il tema torna:
 
 Le domande PA2-PA8, le ipotesi A17-A19 e i rischi R-37…R-40 riguardavano questa parte: non servono più.
 
-## 13.3 Modello proposto degli addon **[PROPOSTA]**
+## 13.3 Modello degli addon (H52)
 
-Tutto in questa sezione è una proposta: serve a rendere concrete le domande di §13.5.
-
-Elenco proposto (domanda PA9). I nomi sono quelli del menu di oggi.
+Elenco deciso (PA9). I nomi sono quelli del menu di oggi.
 
 | Tipo | Voce | Disattivabile | Nota |
 |---|---|---|---|
@@ -73,7 +71,7 @@ Elenco proposto (domanda PA9). I nomi sono quelli del menu di oggi.
 | Addon, sotto-categoria | **Budgets** | Sì | — |
 | Addon, sotto-categoria | **Subscriptions** | Sì | — |
 | Addon, sotto-categoria | **Pockets** | Sì | — |
-| Addon, sotto-categoria | **Interests** | Sì **[PROPOSTA]** | Mattia non l'ha nominato. Funds e Pockets lo usano |
+| Addon, sotto-categoria | **Interests** | Sì | Funds e Pockets lo usano |
 
 Dipendenze tra i moduli, misurate sul codice (`main` a `b3ab940`, import tra moduli, file non di test):
 
@@ -85,11 +83,11 @@ Dipendenze tra i moduli, misurate sul codice (`main` a `b3ab940`, import tra mod
 | `funds` | `investments`, `payroll` | — |
 | `accounts`, `transactions` | Quasi tutti | Sono moduli di base |
 
-Regola proposta per le dipendenze (domanda PA12): la disattivazione di un addon non spegne un altro addon. La
+Regola per le dipendenze (PA12): la disattivazione di un addon non spegne un altro addon. La
 funzione che dipende dall'addon spento resta, senza la parte che manca. Esempio: senza Payroll, Time Off resta e non
 calcola la maturazione dalle buste paga.
 
-Cosa fa la disattivazione, proposta (domande PA10 e PA11):
+Cosa fa la disattivazione (PA10 e PA11):
 
 | Superficie | Addon disattivato |
 |---|---|
@@ -101,11 +99,11 @@ Cosa fa la disattivazione, proposta (domande PA10 e PA11):
 | API e MCP | Le rotte e gli strumenti del modulo rispondono con un errore dichiarato «modulo non attivo» |
 | Esportazione | Contiene anche i dati dei moduli disattivati |
 
-## 13.4 Dove entra nei rilasci: domanda PA1
+## 13.4 Dove entra nei rilasci: PA1, decisa (A)
 
 Le dimensioni sono stime **[DEV]**.
 
-| | A · Dentro R5a **[PROPOSTA]** | B · Rilascio nuovo N7, fase A, dopo N4 |
+| | A · Dentro R5a (**scelta**) | B · Rilascio nuovo N7, fase A, dopo N4 |
 |---|---|---|
 | Contenuto | La sezione Addons prende il posto di «moduli attivabili» in R5a, con il menu a 3 gruppi e il primo avvio | Sezione Addons sul menu e sulle impostazioni di oggi |
 | Migrazioni | `user_preferences.modules` (già prevista in R5a). Additiva | La stessa, anticipata. Additiva |
@@ -114,14 +112,14 @@ Le dimensioni sono stime **[DEV]**.
 | Effetto sul piano | Nessun rilascio nuovo. La fase A non si allunga | R0 parte dopo N7. Menu e schermate nascono sul codice che R3 riscrive e sul menu che R5a cambia: lavoro doppio |
 | Quando sceglierla | Gli addon possono aspettare la navigazione nuova | Vuoi spegnere i moduli prima della riscrittura |
 
-Motivo della proposta A: R5a ha già i moduli per utente, il menu nuovo e il primo avvio; nessun lavoro si fa due volte.
+Motivo della scelta A: R5a ha già i moduli per utente, il menu nuovo e il primo avvio; nessun lavoro si fa due volte.
 
-## 13.5 Domande per Mattia
+## 13.5 Domande: decise
 
-Ogni domanda ha un esempio, l'opzione A (default proposto), l'opzione B e l'effetto. «ok default» vale per tutte;
-le eccezioni si scrivono come «PA9 B». I numeri PA2-PA8 erano le domande sui plugin, ritirate con H51.
+Mattia ha risposto «ok default» il 16/11/2026: vale la colonna «A (scelta)» di ogni riga (H52). La colonna B è
+l'alternativa scartata. I numeri PA2-PA8 erano le domande sui plugin, ritirate con H51.
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
+| # | Domanda | Esempio | A (scelta) | B (scartata) | Effetto |
 |---|---|---|---|---|---|
 | PA1 | In quale rilascio entra la sezione Addons? | Oggi il piano ha i «moduli attivabili» in R5a | Dentro R5a. Nessun rilascio nuovo | Rilascio nuovo N7 nella fase A, dopo N4. Dettaglio in §13.4 | A: la fase A non si allunga. B: R0 parte dopo; parte del lavoro si rifà nella riscrittura |
 | PA9 | Quali sono i moduli di base e quali gli addon? | Un utente usa Ledgerly solo per conti e spese | Base: Overview, Accounts, Expenses con le categorie, Settings, collegamenti, avvisi, esportazione. Addon: Investments (con i fondi pensione), Work (Payroll, Time Off), Budgets, Subscriptions, Pockets, Interests. Tabella in §13.3 | Il tuo elenco, senza Interests: Interests resta di base | A: tutto ciò che non serve ai conti e alle spese si spegne. B: una voce in meno da gestire; Interests resta nel menu di tutti |
@@ -137,7 +135,7 @@ le eccezioni si scrivono come «PA9 B». I numeri PA2-PA8 erano le domande sui p
 
 | # | Punto del piano | Nota |
 |---|---|---|
-| 1 | `01-decisions.md` D2, D3 | I moduli attivabili sono la sezione Addons (H50); posto in Settings da decidere |
+| 1 | `01-decisions.md` D2, D3 | I moduli attivabili sono la sezione Addons (H50); Settings ha il tab «Addons» (H52) |
 | 2 | `03-releases.md` R5a: «Contenuto», «Per l'utente», «Migrazioni», criteri | «Moduli attivabili per utente» diventa la sezione Addons. Nota sotto le tabelle di R5 |
 | 3 | `06-data.md` §6.1, `user_preferences.modules` | È il dato degli addon |
 | 4 | `07-apps.md` §7.4, «moduli attivi» | Diventa «Addons» |
@@ -149,18 +147,17 @@ restano come prima del 16/11/2026.
 
 ## 13.7 Effetti sugli altri rilasci
 
-Questa sezione elenca gli effetti. Non riscrive i rilasci: ogni rilascio si aggiorna dopo le risposte di §13.5.
+Questa sezione elenca gli effetti. Non riscrive i rilasci: ogni rilascio applica H52 con la sua specifica.
 
-| Rilascio | Effetto | Da confermare |
+| Rilascio | Effetto | Regola |
 |---|---|---|
 | **N1-N4, N3.1** | Nessun effetto | — |
 | **N5, N5.1, N6** | Nessun effetto ora. Con gli addon: Time Off senza Payroll non ha la maturazione; la sorgente «busta paga» di un fondo non riceve contributi | PA12 |
-| **N7** (solo con PA1 = B) | Rilascio nuovo della fase A. R0 parte dopo N7 | PA1 |
 | **R1** | I job di un addon disattivato non girano per quell'utente | PA10 |
-| **R2** | 1) Risposta dichiarata «modulo non attivo» per le rotte e gli strumenti MCP di un addon spento. 2) `GET /api/v1/meta` espone gli addon attivi dell'utente | PA10. **[DEV]** L'errore nuovo è un cambio additivo del contratto (F5b)? |
+| **R2** | 1) Risposta dichiarata «modulo non attivo» per le rotte e gli strumenti MCP di un addon spento. 2) `GET /api/v1/meta` espone gli addon attivi dell'utente | PA10 (H52). **[DEV]** L'errore nuovo è un cambio additivo del contratto (F5b)? |
 | **R3** | La sezione Addons nasce in `packages/ui` | — |
 | **R5a** | «Moduli attivabili» diventa la sezione Addons: elenco, moduli di base, dipendenze, valori di partenza. Il primo avvio propone gli addon. Il menu a 3 gruppi mostra solo gli addon attivi | PA9-PA16 |
-| **R5b** | Investments unificata: l'addon Investments comprende i fondi pensione. Overview mostra o no il gruppo di un addon spento | PA9, PA11 |
+| **R5b** | Investments unificata: l'addon Investments comprende i fondi pensione. Overview mostra la riga del gruppo di un addon spento, senza il link al modulo | PA9, PA11 |
 | **R5c, R5d** | Nessun effetto: i plugin restano di ogni utente (H51) | — |
 | **R5e** | Nessun avviso per un addon spento | PA10 |
 | **R5g** | Nessun effetto sul contenuto. Payroll e Time Off sono addon: i tipi di assenza e i profili restano dati dell'utente anche con l'addon spento | — |

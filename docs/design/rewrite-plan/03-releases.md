@@ -388,10 +388,21 @@ resta l'ultimo. Ognuno ha le regole comuni di §3.1.
 
 Nota su R5a: con le voci della revisione la dimensione può passare da M a L. Si valuta alla conferma di R5a (rischio R-15).
 
-**Nota del 16/11/2026 su R5a (H50).** «Moduli attivabili per utente» diventa la sezione **Addons**, con un elenco di
-partenza e i moduli di base non disattivabili. La colonna si riscrive dopo le risposte alle domande sugli addon
-([`13-plugins-addons.md`](13-plugins-addons.md) §13.5). La proposta di default tiene gli addon in R5a; l'alternativa è un rilascio nuovo N7
-nella fase A: decide Mattia (PA1). R5c non cambia: i plugin restano di ogni utente (H51).
+**Nota del 16/11/2026 su R5a (H50, H52).** «Moduli attivabili per utente» è la sezione **Addons**. Regole decise da
+Mattia, che valgono per le colonne sopra:
+
+- **Contenuto:** tab Settings › Addons. Moduli di base non disattivabili: Overview, Accounts, Expenses, Settings,
+  collegamenti, avvisi, esportazione. Addon: Investments (con i fondi pensione), Work (Payroll, Time Off), Budgets,
+  Subscriptions, Pockets, Interests. Il primo avvio propone gli addon a un utente nuovo; per gli utenti di oggi sono
+  tutti attivi.
+- **Addon disattivato:** spento in menu, pagine, Overview, job, avvisi, API e MCP. I dati restano. Patrimonio e totali
+  non cambiano. Un addon che dipende da un altro resta, senza la parte che manca.
+- **Criteri di accettazione in più:** 1) un addon spento non ha job, avvisi o mail; 2) la fotografia dei numeri è
+  uguale prima e dopo una disattivazione; 3) dopo la riattivazione i dati sono quelli di prima; 4) un modulo di base
+  non ha un interruttore; 5) per gli utenti di oggi niente cambia al rilascio.
+- **Migrazioni, git, dimensione:** come sopra (`user_preferences.modules`, #1, M con il rischio R-15).
+
+Dettaglio: [`13-plugins-addons.md`](13-plugins-addons.md). R5c non cambia: i plugin restano di ogni utente (H51).
 
 | | R5d · Portafoglio manuale | R5e · Avvisi | R5f · Pulizia dello schema |
 |---|---|---|---|

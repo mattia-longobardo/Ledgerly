@@ -3,7 +3,7 @@
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**, del **15/11/2026**
-(H31-H38) e del **16/11/2026** (H39-H51). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
+(H31-H38) e del **16/11/2026** (H39-H52). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
 ([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
@@ -129,7 +129,7 @@ ai tre punti nati dal controllo del piano (P1-P3 di N4): Mattia ha scelto il def
 | H46 | **P2 di N4, con il default (A): due campi.** Il conto ha il campo «IBAN» e il campo «Riferimento». Al rilascio Ledgerly copia nel campo «IBAN» i valori di «IBAN o riferimento» che sono un IBAN valido. Il campo vecchio resta, con il nome «Riferimento», e il suo valore non cambia | L'opzione B («un campo solo, come oggi»). Il nome «IBAN o riferimento» del campo di oggi | N4 |
 | H47 | **P3 di N4, con il default (A): il campo IBAN è dei conti con movimenti.** Hanno il campo i conti con una modalità (H32): «a mano», «lettura e scrittura», «sola lettura». I conti di investimento e i fondi pensione non lo hanno | L'opzione B («ogni conto, di ogni tipo»). Precisa H39: «ogni conto» vuol dire ogni conto con una modalità | N4 |
 
-### Sezione Addons; plugin dell'admin ritirati (seconda e terza decisione del 16/11/2026)
+### Sezione Addons; plugin dell'admin ritirati (seconda, terza e quarta decisione del 16/11/2026)
 
 Seconda decisione, parole di Mattia: «i plugin vengono gestiti e aggiunti dall'admin, poi gli utenti possono decidere
 se attivarli oppure no. Nello specifico Enable Banking: l'application è gestita dall'admin, le altre persone ci si
@@ -138,14 +138,16 @@ singolo utente».
 Terza decisione, dopo il fatto che l'applicazione Enable Banking gratuita è «Restricted» (legge solo i conti collegati
 nel pannello del proprietario): «annulla la parte dei plugin, la gestiscono gli utenti come nel piano originale».
 Risultato: **H48 e H49 sono ritirate (H51); H50 resta.** Per i plugin valgono di nuovo, senza cambi, H25-H30, C1c e C4.
-Domande aperte sugli addon ed effetti sugli altri rilasci: [`13-plugins-addons.md`](13-plugins-addons.md).
+Quarta decisione: «ok default» alle 9 domande sugli addon (PA1, PA9-PA16): è H52. Nessuna domanda è aperta.
+Modello, domande decise ed effetti sugli altri rilasci: [`13-plugins-addons.md`](13-plugins-addons.md).
 
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
 | H48 | **Ritirata lo stesso giorno (H51).** Testo: «I plugin sono gestiti e aggiunti dall'admin. Ogni utente decide solo se attivare un plugin che l'admin ha aggiunto» | Niente: H25 e H27 restano valide | — |
 | H49 | **Ritirata lo stesso giorno (H51).** Testo: «Enable Banking: una sola applicazione per istanza, gestita dall'admin. Gli altri utenti collegano solo la loro banca» | Niente: C1c resta valida | — |
-| H50 | **Sezione Addons.** Un addon è un modulo del core che il singolo utente può disattivare: un modulo intero (Investments, Work) oppure una sotto-categoria (Payroll, Subscriptions, Budgets, Pockets, Time Off). I moduli necessari al funzionamento di base dell'applicazione non si disattivano. Da decidere: elenco completo e moduli di base, effetto della disattivazione, dipendenze, valori di partenza, limiti dell'admin, nome e posizione (PA9-PA16) | Precisa D2 «moduli attivabili» e R5a «Moduli attivabili per utente»: nome, elenco di partenza e regola dei moduli di base. D3 per i tab di Settings: da rivedere (PA16) | Da decidere (PA1): R5a, oppure un rilascio nuovo N7 |
+| H50 | **Sezione Addons.** Un addon è un modulo del core che il singolo utente può disattivare: un modulo intero (Investments, Work) oppure una sotto-categoria (Payroll, Subscriptions, Budgets, Pockets, Time Off). I moduli necessari al funzionamento di base dell'applicazione non si disattivano. Dettagli: H52 | Precisa D2 «moduli attivabili» e R5a «Moduli attivabili per utente»: nome, elenco di partenza e regola dei moduli di base. D3: Settings ha in più il tab «Addons» | R5a |
 | H51 | **I plugin li gestiscono gli utenti, come nel piano prima di H48.** Ogni utente attiva e gestisce i suoi plugin; l'admin non fa niente nell'interfaccia (H25, H27). Enable Banking: ogni utente registra la sua applicazione e inserisce le sue credenziali (C1c). Motivo: l'applicazione gratuita è «Restricted»; con un'applicazione unica l'admin dovrebbe collegare a mano, nel suo pannello di Enable Banking, i conti di ogni altro utente | H48 e H49. Le domande PA2-PA8 non servono più | N1 (già in produzione), R5a, R5c: nessun cambio |
+| H52 | **Addons, con i default (PA1, PA9-PA16).** PA1: la sezione Addons entra in R5a; nessun rilascio nuovo. PA9: moduli di base, non disattivabili: Overview, Accounts, Expenses con le categorie, Settings, collegamenti e sorgenti, avvisi, esportazione. Addon: Investments (con i fondi pensione), Work (Payroll, Time Off), Budgets, Subscriptions, Pockets, Interests. PA10: un addon disattivato è spento ovunque: menu, pagine, riquadri di Overview, job, avvisi e mail, API e MCP (errore dichiarato «modulo non attivo»); i dati restano e tornano alla riattivazione. PA11: patrimonio e totali non cambiano; i conti del modulo continuano a contare, con l'ultimo valore letto. PA12: la disattivazione di un addon non spegne e non blocca un altro addon; la funzione che ne dipende resta senza la parte che manca, e Ledgerly elenca cosa si ferma prima della conferma. PA13: per gli utenti di oggi tutti gli addon sono attivi; un utente nuovo sceglie nel primo avvio. PA14: l'admin non limita gli addon. PA15: il nome nelle schermate è «Addons», in italiano e in inglese. PA16: tab proprio, Settings › Addons | Le opzioni B delle domande PA1 e PA9-PA16: rilascio nuovo N7; Interests di base; spento solo nell'interfaccia; conti fuori dai totali; blocco delle dipendenze; tutti attivi per l'utente nuovo; limiti dell'admin; nome «Moduli»; sezione nel tab «Profilo» | R5a; R1, R2, R5b, R5e per gli effetti |
 
 ## 1.1 Premesse
 
@@ -187,9 +189,9 @@ Domande aperte sugli addon ed effetti sugli altri rilasci: [`13-plugins-addons.m
 | G10 (rev.) | Movimento manuale disponibile su ogni conto con una modalità (H32): «a mano», «lettura e scrittura», «sola lettura». Su un conto «sola lettura» resta l'avviso. Il movimento cambia il saldo (H33). Non vale per i conti di investimento | — | N3 |
 | C5 | Sync log: stato semplice per collegamento. Registro grezzo per utente, sotto «Avanzate», 30 giorni; l'admin vede solo lo stato dei plugin (H29) | — | N2 |
 | D1 | Time Off: selezione di primo e ultimo giorno + pannello (tipo, durata), pulsante «Aggiungi assenza». Nessun gesto nascosto | — | N5 |
-| D2 | Menu a 3 gruppi («Ogni giorno», «Risparmi e investimenti», «Lavoro»), moduli attivabili, primo avvio guidato. **(H50)** I moduli attivabili sono la sezione «Addons»; i moduli di base non si disattivano | — | R5a |
+| D2 | Menu a 3 gruppi («Ogni giorno», «Risparmi e investimenti», «Lavoro»), moduli attivabili, primo avvio guidato. **(H50, H52)** I moduli attivabili sono la sezione «Addons»; i moduli di base non si disattivano | — | R5a |
 | D2d | Tab mobile: Overview · Accounts · Expenses · Investments · More | — | R5a |
-| D3 | Settings: tab Finance e tab Plugin (di ogni utente: H27). Integrations e Categories spariscono. **(H50)** Posto della sezione Addons: da decidere (PA16) | `investments.md` §4.2 | R5a |
+| D3 | Settings: tab Finance e tab Plugin (di ogni utente: H27). Integrations e Categories spariscono. **(H52)** In più il tab «Addons» | `investments.md` §4.2 | R5a |
 | O1 | Overview: lista dei conti a gruppi, subtotale = riquadro. Mostra anche i conti di investimento. (rev.) Il gruppo degli investimenti ha i 2 sottogruppi di B1 | — | R5b |
 
 ## 1.3 Architettura (fase 2)
