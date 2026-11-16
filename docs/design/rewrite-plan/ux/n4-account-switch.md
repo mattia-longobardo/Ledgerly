@@ -8,21 +8,24 @@ Decisioni: [`../01-decisions.md`](../01-decisions.md) C2, S1, H32, H37, H38. Spe
 Questa specifica descrive solo l'interfaccia. Il piano ha priorità: se un punto è in conflitto con il piano, vale il piano.
 La regola che decide quali movimenti sono gli stessi, i suoi numeri e la tolleranza del saldo sono del dominio: qui non sono descritti e non cambiano.
 
-Versione del 16/11/2026. Le decisioni di prodotto che il piano non scrive sono in §17, «Domande per Mattia»: **6 domande aperte**.
-Il testo applica l'opzione A (default) di ogni domanda. I dati negli esempi sono inventati.
+Revisione del 16/11/2026: applica le risposte di Mattia alle 6 domande della prima versione (§17). Q1 è una regola nuova: Ledgerly
+impedisce di aggiungere un conto che è già in Ledgerly (§2.4). Q2 è l'opzione B: i giroconti si riconoscono su tutto lo storico (§9.3).
+Q3-Q6 sono il default. Nessuna domanda è aperta. I dati negli esempi sono inventati.
 
 ## 0. Riepilogo
 
 | Voce del «Contenuto» di N4 | Dove | Sezione |
 |---|---|---|
 | Scelta «È lo stesso conto di…» nella procedura della banca | `/banks/connect`, passo «Conti» ed esito | §2.1 |
+| Nessun conto aggiunto due volte (decisione Q1) | `/banks/connect`, passo «Conti» | §2.4 |
 | Ingresso da un conto che esiste già | `/accounts/[id]`, scheda Impostazioni, «Origine dei dati» | §2.2 |
 | Un conto per volta | Pagina `/accounts/[id]/switch` | §3 |
 | Movimenti a mano non inviati (H38) | Passo «Prova», blocco in alto | §5 |
 | Prova obbligatoria e rapporto | Passo «Prova» | §6 |
 | Controllo del saldo bloccante, tipo di saldo per banca | Passo «Prova», card «Saldo» | §7 |
 | «Applica» | Dialogo di conferma, attesa, esito | §8 |
-| Dopo il passaggio: conto, riga del collegamento, giroconti, interessi | Conto, `Settings › Integrations`, `Expenses`, `Interests` | §9 |
+| Dopo il passaggio: conto, riga del collegamento, interessi | Conto, `Settings › Integrations`, `Interests` | §9 |
+| Giroconti tra i conti della stessa banca, su tutto lo storico (decisione Q2) | Passo «Prova», card «Giroconti»; `Expenses` | §9.3 |
 | La sorgente di partenza salta i conti passati | Nessuna schermata propria: effetto in §9.2 | §9.2 |
 | «Annulla passaggio» | `/accounts/[id]`, «Origine dei dati»; esito del passaggio | §10 |
 | Stati: vuoto, caricamento, errore, rapporto lungo | Tabella unica | §11 |
@@ -137,7 +140,7 @@ In Ledgerly
 | Conti nel gruppo | Conti dell'utente che ricevono saldo e movimenti da una sorgente diversa da quella di questo collegamento; non archiviati; non di investimento; stessa valuta del conto della banca. La regola non contiene nomi di fornitore |
 | Testo dell'opzione | «{account} · {source}» |
 | Gruppo vuoto | Non compare |
-| Default | Resta «Crea un conto nuovo». Ledgerly non propone da solo un conto uguale |
+| Default | «Crea un conto nuovo», tranne quando Ledgerly trova un conto che può essere lo stesso: vale §2.4 |
 | Nota sotto il `Select` | `text-sm text-muted`: «Questo conto non viene importato ora. Dopo questo passo Ledgerly confronta {source} e la banca e ti mostra il risultato. Niente cambia finché non scegli «Applica».» |
 | Stesso conto scelto due volte | Errore esistente `accounts.duplicate` |
 | Più conti con questa scelta | Permesso. Ogni conto ha la sua prova e la sua applicazione, una per volta (§3.3) |
@@ -209,7 +212,46 @@ Un solo ingresso dal conto. Nessuna voce in Accounts (elenco), in Overview o nel
 | Conto non ammesso (a mano, investimento, archiviato) | Redirect a `/accounts/<id>?tab=settings` |
 | Conto già passato | Redirect a `/accounts/<id>?tab=settings` |
 | `c` o `b` non validi o di un altro utente | La pagina apre il passo «Conto» senza selezione |
-| Conto della banca già importato come conto di Ledgerly | Passo «Conto», con il conto non selezionabile (§4, domanda Q1) |
+| Conto della banca già importato come conto di Ledgerly | Passo «Conto», con il conto non selezionabile (§2.4, §4) |
+
+### 2.4 Nessun conto aggiunto due volte (decisione Q1)
+
+Decisione di Mattia del 16/11/2026: il caso «lo stesso conto vero è due volte in Ledgerly» non deve accadere. Ledgerly impedisce di
+aggiungere un conto che è già in Ledgerly. Per questo N4 non ha una funzione che unisce due conti.
+
+Fatto tecnico: un conto di Ledgerly non ha un IBAN. Ledgerly non ha un dato certo per dire che un conto della banca e un conto di
+un'altra sorgente sono lo stesso conto. La guardia usa il segnale più forte che esiste: stessa valuta e stesso saldo. **[DEV]** (§18, punto 16)
+
+| # | Regola | Dove |
+|---|---|---|
+| 1 | Lo stesso conto della banca non si importa due volte. Un conto della banca già collegato non torna tra i conti da scegliere | N1 §6.7 (esiste già) |
+| 2 | **Conto probabilmente uguale.** Il conto della banca ha la stessa valuta e lo stesso saldo di un conto che arriva da un'altra sorgente: per quel conto «Crea un conto nuovo» **non è disponibile**. Il `Select` parte da «{account} · {source}» nel gruppo «È lo stesso conto di…». Restano «Usa un conto esistente» e «Non importare» | Passo «Conti» di `/banks/connect` |
+| 3 | **Conto forse uguale.** Nessun saldo uguale, ma esiste almeno un conto di un'altra sorgente nella stessa valuta: «Crea un conto nuovo» resta, con un avviso sotto il `Select` | Lo stesso passo |
+| 4 | **Conto già doppio** (creato prima di N4). Nel passo «Conto» del passaggio il conto della banca non è selezionabile. Il testo dice come uscire dal caso | §4 |
+
+Regola 2, sotto il `Select` (avviso `warn` di §1.3):
+
+```text
+┌ Conto corrente · IT60 •••• 4821 · EUR ─────────────────┐
+│ In Ledgerly                                            │
+│ [Conto corrente · Wallet                           ▾]  │
+│ ⚠ Ledgerly ha già un conto con lo stesso saldo:        │
+│   «Conto corrente» su Wallet. Per non avere due volte  │
+│   lo stesso conto, non puoi crearne uno nuovo.         │
+│   È un altro conto                                     │
+└────────────────────────────────────────────────────────┘
+```
+
+- L'opzione «Crea un conto nuovo» resta in elenco con `disabled`: l'utente vede che esiste e perché non si può scegliere.
+- `LinkButton` «È un altro conto»: serve per due conti diversi con lo stesso saldo (esempio: due conti a 0,00 €). Dopo il clic «Crea un conto nuovo» torna disponibile per quel conto e l'avviso diventa `text-sm text-muted`: «Hai detto che è un altro conto.» Il clic vale solo per questa apertura della pagina.
+- Più conti con lo stesso saldo: l'avviso nomina il primo per nome e il `Select` parte da quello.
+- L'avviso ha `role="status"`: non blocca la lettura degli altri conti.
+
+Regola 3, sotto il `Select`, solo con «Crea un conto nuovo» scelto (`text-sm text-muted`): «Controlla che questo conto non sia già in Ledgerly
+da {source}. Se è lo stesso, scegli «È lo stesso conto di…».»
+
+Regola 4, testo nel passo «Conto» (§4): «Già in Ledgerly come «{other}». Per passare questo conto, elimina prima «{other}» dalle sue impostazioni.»
+Dopo l'eliminazione il conto della banca torna tra i conti da scegliere. **[DEV]** (§18, punto 16)
 
 ## 3. Pagina del passaggio
 
@@ -265,7 +307,7 @@ la pagina si ricarica senza perdere il punto.
 | Testo della riga | Nome dato dalla banca · IBAN mascherato (N1 §6.4) · valuta |
 | Default | Nessuna selezione. Se c'è un solo conto, è già scelto |
 | Pulsante | `primary` «Avvia la prova», disattivato senza selezione, con il testo «Scegli un conto.» sotto |
-| Conto della banca già in Ledgerly | In elenco, `aria-disabled`, con il testo «Già in Ledgerly come «{other}».» (domanda Q1) |
+| Conto della banca già in Ledgerly | In elenco, `aria-disabled`, con il testo di §2.4, regola 4 (decisione Q1) |
 | Banca con accesso scaduto o «Serve un'azione» | Titolo della banca + «L'accesso a {bank} è scaduto.» + `LinkButton` «Rinnova accesso». I suoi conti non sono selezionabili |
 | Banca «In pausa» (fornitore non attivo) | Non raggiungibile: la pagina è 404 (§2.3) |
 
@@ -366,7 +408,7 @@ Movimenti confrontati dal 4 nov al 14 nov 2026. Niente è stato cambiato.
 ```
 
 - Intestazione: `h1` `text-xl font-semibold`; riga «{source} → {bank} · conto della banca» `text-muted`; riga del periodo `text-sm text-muted`.
-- Tre card, sempre in questo ordine. La card «Saldo» è la prima: decide se «Applica» esiste.
+- Tre card, sempre in questo ordine. La card «Saldo» è la prima: decide se «Applica» esiste. Se la prova trova giroconti, una quarta card «Giroconti» sta tra «Movimenti» e «Cosa cambia con «Applica»» (§9.3).
 - «Cosa cambia con «Applica»»: elenco `<ul>`. La riga degli interessi compare solo se il conto ha una regola di interessi che pubblica. La riga dei movimenti nuovi compare solo con almeno un movimento nuovo.
 - Pulsanti in fondo, a destra, primario per ultimo. «Applica» esiste solo se niente blocca (§7.3).
 
@@ -410,7 +452,7 @@ Tabella a 1440 px, lista a 400 px (§12). Colonne per sezione:
 
 - Titolo della card interna: «{amount} in uscita» o «{amount} in entrata».
 - Due colonne affiancate, ognuna con il conteggio e l'elenco per data. A 400 px le colonne vanno una sotto l'altra.
-- Nessuna azione nella card: nessun collegamento a mano (domanda Q6).
+- Nessuna azione nella card: nessun collegamento a mano (decisione Q6).
 - L'ordine delle card interne: per importo assoluto, dal più grande.
 
 Regole comuni:
@@ -449,7 +491,7 @@ Regole comuni:
 | Saldo locale | Saldo del conto dalla sorgente di partenza, all'ultimo giorno letto. Senza i movimenti a mano non inviati (`12-account-modes.md` §12.5) | «In Ledgerly (da {source}), {date}» |
 | Saldo della banca | Saldo del tipo scelto per quella banca, alla stessa data | «In {bank}, {balanceKind}, {date}» |
 
-Il tipo di saldo si sceglie per banca (`04-now.md` §4.6). Lo sceglie Ledgerly (domanda Q5). L'interfaccia non mostra codici: mostra il nome in parole.
+Il tipo di saldo si sceglie per banca (`04-now.md` §4.6). Lo sceglie Ledgerly (decisione Q5). L'interfaccia non mostra codici: mostra il nome in parole.
 
 | Tipo (dominio) | `{balanceKind}` in italiano | In inglese |
 |---|---|---|
@@ -582,7 +624,7 @@ Scheda Impostazioni, «Origine dei dati», al posto del blocco di §2.2:
 ```
 
 - Riga `text-sm text-muted`; `Button` `secondary` `sm` «Annulla passaggio».
-- Il blocco resta finché il passaggio si può annullare (domanda Q4: sempre).
+- Il blocco resta finché il passaggio si può annullare (decisione Q4: sempre).
 
 ### 9.2 Righe dei collegamenti (`Settings › Integrations`)
 
@@ -596,20 +638,58 @@ Scheda Impostazioni, «Origine dei dati», al posto del blocco di §2.2:
 - «Scollega» della banca dopo un passaggio: vale N1 §5.4, senza regole nuove. Il conto resta in Ledgerly e non viene più aggiornato. Il dialogo di «Scollega» aggiunge una riga se la banca ha conti passati: ««{account}» non torna da solo a {source}. Per riportarlo, usa prima «Annulla passaggio».»
 - «Scollega» della sorgente di partenza dopo un passaggio: il dialogo aggiunge la riga «Dopo, il passaggio di «{account}» non si può più annullare.» (§10.4).
 
-### 9.3 Giroconti tra i conti della stessa banca
+### 9.3 Giroconti tra i conti della stessa banca (decisione Q2)
 
 Caso d'uso del rilascio: il conto corrente arrivava da {source}, i conti di risparmio dalla banca. I giroconti tra loro contavano come un'uscita e un'entrata.
 
+Decisione di Mattia del 16/11/2026, opzione B: i giroconti si riconoscono **su tutto lo storico**, non solo dal periodo del confronto.
+La prova elenca ogni coppia prima di «Applica». La decisione cambia numeri esistenti: entrate e uscite dei mesi passati scendono.
+
 | Tema | Regola dell'interfaccia |
 |---|---|
-| Dopo il passaggio | Un giroconto tra «{account}» e un altro conto della stessa banca è una riga «Giroconto» sui due conti, come ogni giroconto di oggi. Non conta in entrate, uscite e budget. Non entra in «Da rivedere» (N3 §1.2) |
-| Da quando | Dai movimenti che la banca conosce: il periodo del confronto e i giorni seguenti (domanda Q2, opzione A) |
-| Nel rapporto | Riga in più in «Cosa cambia con «Applica»», solo se la prova ne trova: «{count} movimenti tra questo conto e gli altri conti di {bank} diventano giroconti: non contano più come entrate e uscite.» Il pulsante «Mostra» apre l'elenco (data, conto di arrivo o di partenza, importo) |
+| Cos'è una coppia | Un movimento di «{account}» e un movimento di un altro conto della stessa banca, che insieme sono uno spostamento di denaro. Come si riconosce è una regola del dominio (§18, punto 6): l'interfaccia riceve l'elenco |
+| Periodo | Tutto lo storico di «{account}» e degli altri conti di {bank} in Ledgerly |
+| Dopo il passaggio | Ogni coppia è una riga «Giroconto» sui due conti, come ogni giroconto di oggi. Non conta in entrate, uscite e budget. Non entra in «Da rivedere» (N3 §1.2). Vale anche per i giroconti futuri |
+| Categoria | Un movimento che diventa giroconto non conta più nella sua categoria. La categoria di prima torna con «Annulla passaggio» |
 | Nell'esito | «{count} giroconti riconosciuti tra i conti di {bank}.» |
-| Numeri che cambiano | Entrate e uscite del periodo scendono dello stesso importo. Il patrimonio non cambia. La frase nel rapporto lo dice: «Entrate e uscite del periodo scendono di {amount}. Il patrimonio non cambia.» |
-| Dopo «Annulla passaggio» | I giroconti riconosciuti dal passaggio tornano com'erano (criterio 5) |
+| Dopo «Annulla passaggio» | Tutte le coppie riconosciute dal passaggio tornano un'entrata e un'uscita, con la categoria di prima (criterio 5) |
 
-Come si riconosce un giroconto è una regola del dominio (§18, punto 6). L'interfaccia riceve solo l'elenco.
+Card «Giroconti» nel rapporto, solo se la prova trova almeno una coppia:
+
+```text
+┌ Giroconti ───────────────────────────────────────────────────────────┐
+│ 38 spostamenti tra «Conto corrente» e gli altri conti di Banca       │
+│ Esempio diventano giroconti. Oggi contano come entrate e uscite.     │
+│ Entrate e uscite scendono di 14.300,00 € in totale. Il patrimonio    │
+│ non cambia.                                                          │
+│                                                                      │
+│ Anno      Giroconti      Entrate e uscite in meno                    │
+│ 2026             21                    8.100,00 €                    │
+│ 2025             17                    6.200,00 €                    │
+│                                                                      │
+│ Mostra i 38 giroconti ⌄                                              │
+│ 10 nov 2026   Conto corrente → Risparmi              500,00 €        │
+│ 5 mar 2026    Conto corrente → Risparmi              500,00 €        │
+│ 2 feb 2026    Risparmi → Conto corrente              200,00 €        │
+│ …                                          Mostra altri 18 · 20 di 38│
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+| Tema | Regola |
+|---|---|
+| Frase iniziale | Numero delle coppie e effetto sul totale. «Il patrimonio non cambia.» chiude la frase |
+| Tabella per anno | Colonne: «Anno», «Giroconti», «Entrate e uscite in meno». Anni dal più recente. È il dato che dice quali numeri passati cambiano |
+| Elenco | Chiuso all'inizio. Colonne: data · conto di partenza → conto di arrivo · importo senza segno. Se le due date sono diverse: tutte e due, «5 mar → 6 mar 2026» |
+| Rapporto lungo | Regole di §6.5: 20 righe per volta, «Mostra altri {count}», «{shown} di {total}» |
+| Azioni | Nessuna: l'elenco è da leggere. Nessuna esclusione di una coppia (§16, decisione 15) |
+| Nessuna coppia | La card non si disegna. Nessuna frase sui giroconti |
+| Saldi diversi | La card resta, per lettura. «Applica» non esiste (§7.3) |
+| 400 px | Tabella per anno su tre colonne strette; elenco su due righe: data e importo, poi i due conti |
+| A11y | `<table>` con `<caption>` nascosta «Giroconti per anno»; l'elenco è un `<ul>`; la freccia «→» ha il testo nascosto «verso» |
+
+- «Cosa cambia con «Applica»» ha la riga «{count} movimenti … diventano giroconti» (`changes.transfers`), senza l'elenco: l'elenco è nella card.
+- Il dialogo di conferma (§8.1) ha una riga in più quando ci sono coppie: «Entrate e uscite dei mesi passati scendono di {amount} in totale.»
+- Budget e grafici dei mesi passati cambiano dopo «Applica». Nessun avviso in quelle pagine: la prova lo ha già detto.
 
 ### 9.4 Interessi
 
@@ -652,7 +732,7 @@ Non sta nel menu della riga del collegamento: il passaggio è di un conto, non d
   - Con giroconti riconosciuti: «{count} giroconti tornano un'entrata e un'uscita.»
   - Con una regola di interessi che pubblicava: «Le liquidazioni degli interessi tornano a pubblicarsi su {source}. Quelle chiuse nel frattempo non si pubblicano da sole.»
 - Elenco «Cosa sapere» (`<ul>`):
-  - Con movimenti entrati dalla banca dopo il passaggio: «{count} movimenti arrivati dalla banca dopo il {date} non contano più. {source} li porta di nuovo, se li ha.» (domanda Q3)
+  - Con movimenti entrati dalla banca dopo il passaggio: «{count} movimenti arrivati dalla banca dopo il {date} non contano più. {source} li porta di nuovo, se li ha.» (decisione Q3)
   - Con movimenti a mano scritti dopo il passaggio: «{count} movimenti a mano restano sul conto.»
   - «{bank} resta collegata. Gli altri conti non cambiano.»
 - Pulsanti: «Lascia il conto su {bank}» (`secondary`, focus iniziale), «Annulla passaggio» (`danger`).
@@ -663,7 +743,7 @@ Non sta nel menu della riga del collegamento: il passaggio è di un conto, non d
 |---|---|
 | Sorgente del conto | «{source}», modalità «lettura e scrittura» |
 | Movimenti trovati in tutte e due | Tornano movimenti di {source}. Categoria, note ed etichette restano quelle di ora |
-| Movimenti entrati dalla banca dopo il passaggio | Non contano più in saldo, entrate, uscite e budget; nessuna riga cancellata (domanda Q3) |
+| Movimenti entrati dalla banca dopo il passaggio | Non contano più in saldo, entrate, uscite e budget; nessuna riga cancellata (decisione Q3) |
 | Giroconti riconosciuti dal passaggio | Tornano un'entrata e un'uscita |
 | Regola di interessi | Torna al modo di prima |
 | Riga della banca | Un conto in meno nel dettaglio. Il conto della banca torna «non importato» e si può scegliere di nuovo |
@@ -717,7 +797,7 @@ Gli errori del passo «Prova» stanno in una card con `role="alert"`, al posto d
 ### 12.1 1440 px
 
 - Passo «Conto» e passo «Fatto»: colonna di 560 px a sinistra. Pulsanti a destra nella card.
-- Passo «Prova»: colonna di 880 px. Tre card in colonna. Le tabelle usano tutta la larghezza della card; «Testo su {source}» e «Testo in banca» hanno la stessa larghezza.
+- Passo «Prova»: colonna di 880 px. Tre o quattro card in colonna. Le tabelle usano tutta la larghezza della card; «Testo su {source}» e «Testo in banca» hanno la stessa larghezza.
 - Card «Saldo»: etichetta a sinistra, importo a destra (`tabular-nums`), una riga per saldo.
 - «Da controllare»: due colonne affiancate dentro la card interna.
 - Barra dei pulsanti in fondo, `sticky`, allineata a destra dentro la colonna.
@@ -809,6 +889,10 @@ Chiavi proposte. I nomi di banche e fornitori sono sempre parametri.
 | `accounts.sameAs` | {account} · {source} | {account} · {source} |
 | `accounts.sameAsNote` | Questo conto non viene importato ora. Dopo questo passo Ledgerly confronta {source} e la banca e ti mostra il risultato. Niente cambia finché non scegli «Applica». | This account is not imported now. After this step Ledgerly compares {source} and the bank and shows you the result. Nothing changes until you choose “Apply”. |
 | `accounts.continue` | Continua | Continue |
+| `accounts.sameGuard` | Ledgerly ha già un conto con lo stesso saldo: «{account}» su {source}. Per non avere due volte lo stesso conto, non puoi crearne uno nuovo. | Ledgerly already has an account with the same balance: “{account}” on {source}. To avoid the same account twice, you cannot create a new one. |
+| `accounts.notSame` | È un altro conto | It is a different account |
+| `accounts.notSameDone` | Hai detto che è un altro conto. | You said it is a different account. |
+| `accounts.sameWarning` | Controlla che questo conto non sia già in Ledgerly da {source}. Se è lo stesso, scegli «È lo stesso conto di…». | Check that this account is not in Ledgerly already from {source}. If it is the same, choose “It is the same account as…”. |
 | `done.toSwitch` | Da completare: è lo stesso conto di «{account}» su {source}. | To complete: it is the same account as “{account}” on {source}. |
 | `done.switchAction` | Controlla e passa | Check and switch |
 
@@ -841,7 +925,7 @@ Chiavi proposte. I nomi di banche e fornitori sono sempre parametri.
 | `account.intro` | Ledgerly mostra i conti delle tue banche che non sono ancora in Ledgerly, in {currency}. | Ledgerly shows the accounts of your banks that are not in Ledgerly yet, in {currency}. |
 | `account.start` | Avvia la prova | Start the trial |
 | `account.choose` | Scegli un conto. | Choose an account. |
-| `account.alreadyHere` | Già in Ledgerly come «{other}». | Already in Ledgerly as “{other}”. |
+| `account.alreadyHere` | Già in Ledgerly come «{other}». Per passare questo conto, elimina prima «{other}» dalle sue impostazioni. | Already in Ledgerly as “{other}”. To switch this account, first delete “{other}” from its settings. |
 | `account.expired` | L'accesso a {bank} è scaduto. | The access to {bank} has expired. |
 | `account.renew` | Rinnova accesso | Renew access |
 | `account.empty.noBank.title` | Nessuna banca collegata | No bank connected |
@@ -903,8 +987,16 @@ Chiavi proposte. I nomi di banche e fornitori sono sempre parametri.
 | `changes.manual` | Scrivi i movimenti a mano con l'avviso dei conti di una banca. | You add transactions by hand with the notice of bank accounts. |
 | `changes.interests` | Le liquidazioni degli interessi non si pubblicano più su {source}. | Interest settlements are no longer published on {source}. |
 | `changes.transfers` | {count, plural, one {# movimento} other {# movimenti}} tra questo conto e gli altri conti di {bank} diventano giroconti: non contano più come entrate e uscite. | {count, plural, one {# transaction} other {# transactions}} between this account and the other accounts of {bank} become transfers: they no longer count as income and expenses. |
-| `changes.transfersEffect` | Entrate e uscite del periodo scendono di {amount}. Il patrimonio non cambia. | Income and expenses of the period go down by {amount}. Net worth does not change. |
-| `changes.show` | Mostra | Show |
+| `transfers.title` | Giroconti | Transfers |
+| `transfers.intro` | {count, plural, one {# spostamento} other {# spostamenti}} tra «{account}» e gli altri conti di {bank} {count, plural, one {diventa un giroconto} other {diventano giroconti}}. Oggi {count, plural, one {conta} other {contano}} come entrate e uscite. | {count, plural, one {# movement} other {# movements}} between “{account}” and the other accounts of {bank} {count, plural, one {becomes a transfer} other {become transfers}}. Today {count, plural, one {it counts} other {they count}} as income and expenses. |
+| `transfers.effect` | Entrate e uscite scendono di {amount} in totale. Il patrimonio non cambia. | Income and expenses go down by {amount} in total. Net worth does not change. |
+| `transfers.columns.year` | Anno | Year |
+| `transfers.columns.count` | Giroconti | Transfers |
+| `transfers.columns.less` | Entrate e uscite in meno | Less income and expenses |
+| `transfers.caption` | Giroconti per anno | Transfers by year |
+| `transfers.showAll` | Mostra {count, plural, one {il giroconto} other {i # giroconti}} | Show {count, plural, one {the transfer} other {the # transfers}} |
+| `transfers.to` | verso | to |
+| `confirm.transfers` | Entrate e uscite dei mesi passati scendono di {amount} in totale. | Income and expenses of the past months go down by {amount} in total. |
 | `changes.learn` | Ledgerly usa le categorie di {count, plural, one {# movimento} other {# movimenti}} per riconoscere i prossimi movimenti della banca. | Ledgerly uses the categories of {count, plural, one {# transaction} other {# transactions}} to recognize the next bank transactions. |
 | `changes.undo` | Puoi tornare indietro con «Annulla passaggio». | You can go back with “Undo switch”. |
 | `balance.title` | Saldo | Balance |
@@ -1004,7 +1096,7 @@ Le altre chiavi di `interests` con il nome del fornitore non cambiano in N4: le 
 | N4 2 · Con conteggi diversi nessun movimento della banca si lega: va nel rapporto | §6.3, §6.4 («Da controllare», senza azioni) |
 | N4 3 · Una differenza di saldo blocca l'applicazione | §7.3 (nessun «Applica», nessuna forzatura) |
 | N4 4 · Dopo il passaggio: saldo della banca = saldo locale alla stessa data | §8.3 (riga dell'esito e variante «i saldi non tornano») |
-| N4 5 · Dopo «Annulla passaggio» la fotografia dei numeri è uguale a prima | §10.2, §10.3; dipende dalla domanda Q3 |
+| N4 5 · Dopo «Annulla passaggio» la fotografia dei numeri è uguale a prima | §10.2, §10.3 (decisione Q3) |
 | H38 · Prima l'invio dei movimenti a mano; se uno resta non inviato, il passaggio si ferma e dice perché | §5 |
 | Un conto per volta | §3.3 |
 | Fine della pubblicazione degli interessi per i conti passati | §9.4 |
@@ -1030,19 +1122,23 @@ Scelte di interazione, non di prodotto. Si cambiano senza toccare il piano.
 | 12 | Nessun export del rapporto | Il piano non lo chiede; il rapporto si rifà in un minuto |
 | 13 | Dopo il passaggio la regola di interessi passa a «Solo analisi»; dopo l'annullamento torna al modo di prima, senza pubblicare da sola le liquidazioni chiuse nel frattempo | Il piano dice solo «la pubblicazione finisce». Pubblicare dopo creerebbe un doppione dell'accredito già arrivato dalla banca |
 | 14 | Gli esempi usano «Banca Esempio» e importi inventati | Nessun valore personale nel repo |
+| 15 | La card «Giroconti» è solo da leggere: nessuna esclusione di una coppia | La regola è del dominio. Se sui dati reali la prova mostra coppie sbagliate, l'esclusione si aggiunge come punto nuovo |
+| 16 | La guardia di §2.4 ha l'uscita «È un altro conto» | Due conti diversi possono avere lo stesso saldo. Senza un'uscita la guardia bloccherebbe un conto vero |
+| 17 | La card «Giroconti» mostra il totale per anno | Dice quali numeri passati cambiano, senza leggere ogni riga |
 
-## 17. Domande per Mattia
+## 17. Decisioni prese
 
-Decisioni di prodotto che il piano non scrive. Il testo applica l'opzione A. Una risposta B cambia le sezioni indicate.
+Risposte di Mattia del 16/11/2026 alle 6 domande della prima versione. Il testo applica queste decisioni. Nessuna domanda è aperta.
+Q2 cambia numeri esistenti (entrate e uscite dei mesi passati): la decisione scritta è questa. Q1 e Q2 vanno riportate in `01-decisions.md` e in `03-releases.md` «N4» (§18, punto 17).
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
-|---|---|---|---|---|---|
-| Q1 | Il conto della banca è già in Ledgerly come conto separato: si può unire al conto di {source}? | Alla prima connessione hai importato «Banca Esempio Conto corrente» come conto nuovo. Ora in Ledgerly hai due conti per lo stesso conto vero: quello di Wallet e quello della banca | No, non in N4. Il passo «Conto» mostra il conto come non selezionabile: «Già in Ledgerly come…». Il passaggio vale solo per un conto della banca non ancora importato | Sì: il passaggio unisce i due conti. Il conto creato dalla banca sparisce e i suoi movimenti passano nel conto di Wallet, dopo la stessa prova | A: nessuna unione di conti da scrivere; chi ha già importato il conto resta con due conti (il tuo conto corrente non è importato: il caso non ti tocca). B: copre ogni caso; aggiunge l'unione di due conti con saldi, budget e regole, e un annullamento più difficile. N4 passa da M a L **[DEV]**. Tocca §2.3, §4 |
-| Q2 | Da quale data i movimenti tra il conto passato e gli altri conti della stessa banca diventano giroconti? | Il 5 marzo hai spostato 500 € dal conto corrente al conto di risparmio. Oggi Ledgerly conta 500 € di uscite e 500 € di entrate. Lo stesso per uno spostamento del 10 novembre | Dal periodo del confronto in poi: il giroconto del 10 novembre e tutti i prossimi. Il 5 marzo resta un'uscita e un'entrata | Su tutto lo storico: anche il 5 marzo diventa un giroconto. La prova elenca ogni coppia prima di «Applica» | A: i numeri dei mesi passati non cambiano; la regola usa solo movimenti che la banca conosce. B: entrate e uscite dei mesi passati scendono; serve una regola nuova per importo e data sui movimenti vecchi, non scritta nel piano, con il rischio di coppie sbagliate. In tutti e due i casi cambiano numeri esistenti: serve la tua decisione scritta. Tocca §9.3 |
-| Q3 | «Annulla passaggio»: cosa succede ai movimenti arrivati dalla banca dopo il passaggio? | Passi il conto il 16 novembre. Il 20 la banca porta 6 movimenti nuovi. Il 21 annulli | I 6 movimenti non contano più e non si vedono (restano in archivio, nessuna riga cancellata). Wallet li porta di nuovo se li ha. I numeri sono quelli di Wallet | I 6 movimenti restano sul conto come movimenti a mano | A: i numeri tornano quelli della sorgente (criterio 5); un movimento che Wallet non ha sparisce dai conti. B: niente sparisce; se Wallet ha gli stessi movimenti, risultano doppi e li devi eliminare a mano. Tocca §10.2, §10.3 |
-| Q4 | «Annulla passaggio» ha un limite di tempo? | Passi il conto a novembre. A marzo vuoi tornare a Wallet | No: resta disponibile finché Wallet è collegato | Sì: 30 giorni. Dopo, il pulsante sparisce | A: sempre reversibile; dopo mesi l'annullamento tocca molti movimenti arrivati dalla banca (Q3). B: effetti piccoli e chiari; dopo 30 giorni non si torna indietro dall'interfaccia. Tocca §9.1, §10.4 |
-| Q5 | Chi sceglie il saldo della banca da confrontare? | La banca dà due saldi per il 14 novembre: 2.150,00 € «contabile» e 2.138,00 € «previsto» (con un pagamento non ancora registrato). Wallet dice 2.138,00 € | Ledgerly: un tipo per banca, deciso dal dominio. La pagina mostra quale: «saldo contabile di fine giornata». Nell'esempio il passaggio è bloccato finché la banca registra il pagamento | Tu: nel blocco compare «Confronta con un altro saldo» con i saldi che la banca dà. Nell'esempio scegli «previsto» e il passaggio parte | A: una regola sola, nessuna scelta che può nascondere una differenza vera; a volte devi aspettare un giorno. B: meno attese; l'utente può scegliere il saldo che torna anche quando i movimenti non tornano. Tocca §7.1, §7.3 |
-| Q6 | «Da controllare»: puoi dire tu quali movimenti sono gli stessi? | Wallet ha 3 «Mensa» da 12,00 €, la banca 2. Tu sai quale manca | No: la sezione è solo da leggere. I 3 movimenti di Wallet restano; quelli della banca non entrano. Se il saldo torna, il passaggio parte | Sì: nella card scegli le coppie a mano; i movimenti scelti si collegano | A: nessun collegamento sbagliato fatto a mano; rispetta alla lettera il criterio 2. B: un rapporto più pulito; una schermata in più e una scelta a mano che il criterio 2 oggi esclude. Tocca §6.4 |
+| # | Domanda | Esempio | A (default) | B | Effetto | Decisione |
+|---|---|---|---|---|---|---|
+| Q1 | Il conto della banca è già in Ledgerly come conto separato: si può unire al conto di {source}? | Alla prima connessione hai importato «Banca Esempio Conto corrente» come conto nuovo. Ora in Ledgerly hai due conti per lo stesso conto vero: quello di Wallet e quello della banca | No, non in N4. Il passo «Conto» mostra il conto come non selezionabile: «Già in Ledgerly come…». Il passaggio vale solo per un conto della banca non ancora importato | Sì: il passaggio unisce i due conti. Il conto creato dalla banca sparisce e i suoi movimenti passano nel conto di Wallet, dopo la stessa prova | A: nessuna unione di conti da scrivere; chi ha già importato il conto resta con due conti (il tuo conto corrente non è importato: il caso non ti tocca). B: copre ogni caso; aggiunge l'unione di due conti con saldi, budget e regole, e un annullamento più difficile. N4 passa da M a L **[DEV]**. Tocca §2.3, §4 | **Regola nuova.** Il caso non deve accadere: Ledgerly impedisce di aggiungere un conto già aggiunto. Nessuna unione di conti in N4 (§2.4) |
+| Q2 | Da quale data i movimenti tra il conto passato e gli altri conti della stessa banca diventano giroconti? | Il 5 marzo hai spostato 500 € dal conto corrente al conto di risparmio. Oggi Ledgerly conta 500 € di uscite e 500 € di entrate. Lo stesso per uno spostamento del 10 novembre | Dal periodo del confronto in poi: il giroconto del 10 novembre e tutti i prossimi. Il 5 marzo resta un'uscita e un'entrata | Su tutto lo storico: anche il 5 marzo diventa un giroconto. La prova elenca ogni coppia prima di «Applica» | A: i numeri dei mesi passati non cambiano; la regola usa solo movimenti che la banca conosce. B: entrate e uscite dei mesi passati scendono; serve una regola nuova per importo e data sui movimenti vecchi, non scritta nel piano, con il rischio di coppie sbagliate. In tutti e due i casi cambiano numeri esistenti: serve la tua decisione scritta. Tocca §9.3 | **B** (§9.3) |
+| Q3 | «Annulla passaggio»: cosa succede ai movimenti arrivati dalla banca dopo il passaggio? | Passi il conto il 16 novembre. Il 20 la banca porta 6 movimenti nuovi. Il 21 annulli | I 6 movimenti non contano più e non si vedono (restano in archivio, nessuna riga cancellata). Wallet li porta di nuovo se li ha. I numeri sono quelli di Wallet | I 6 movimenti restano sul conto come movimenti a mano | A: i numeri tornano quelli della sorgente (criterio 5); un movimento che Wallet non ha sparisce dai conti. B: niente sparisce; se Wallet ha gli stessi movimenti, risultano doppi e li devi eliminare a mano. Tocca §10.2, §10.3 | **A** |
+| Q4 | «Annulla passaggio» ha un limite di tempo? | Passi il conto a novembre. A marzo vuoi tornare a Wallet | No: resta disponibile finché Wallet è collegato | Sì: 30 giorni. Dopo, il pulsante sparisce | A: sempre reversibile; dopo mesi l'annullamento tocca molti movimenti arrivati dalla banca (Q3). B: effetti piccoli e chiari; dopo 30 giorni non si torna indietro dall'interfaccia. Tocca §9.1, §10.4 | **A** |
+| Q5 | Chi sceglie il saldo della banca da confrontare? | La banca dà due saldi per il 14 novembre: 2.150,00 € «contabile» e 2.138,00 € «previsto» (con un pagamento non ancora registrato). Wallet dice 2.138,00 € | Ledgerly: un tipo per banca, deciso dal dominio. La pagina mostra quale: «saldo contabile di fine giornata». Nell'esempio il passaggio è bloccato finché la banca registra il pagamento | Tu: nel blocco compare «Confronta con un altro saldo» con i saldi che la banca dà. Nell'esempio scegli «previsto» e il passaggio parte | A: una regola sola, nessuna scelta che può nascondere una differenza vera; a volte devi aspettare un giorno. B: meno attese; l'utente può scegliere il saldo che torna anche quando i movimenti non tornano. Tocca §7.1, §7.3 | **A** |
+| Q6 | «Da controllare»: puoi dire tu quali movimenti sono gli stessi? | Wallet ha 3 «Mensa» da 12,00 €, la banca 2. Tu sai quale manca | No: la sezione è solo da leggere. I 3 movimenti di Wallet restano; quelli della banca non entrano. Se il saldo torna, il passaggio parte | Sì: nella card scegli le coppie a mano; i movimenti scelti si collegano | A: nessun collegamento sbagliato fatto a mano; rispetta alla lettera il criterio 2. B: un rapporto più pulito; una schermata in più e una scelta a mano che il criterio 2 oggi esclude. Tocca §6.4 | **A** |
 
 ## 18. Passaggi per lo sviluppo
 
@@ -1053,7 +1149,7 @@ Non sono decisioni di prodotto: sono dati e regole tecniche che l'interfaccia ri
 3. **Prova senza scritture.** La lettura dalla banca per un conto non importato non deve salvare movimenti, saldi o righe di cronologia. L'aggiornamento della sorgente di partenza è un aggiornamento normale: scrive come sempre, prima della prova. **[DEV]** Da confermare che questo rispetta il test «prova a secco senza scritture».
 4. **Conti della banca non importati.** Il passo «Conto» ha bisogno dell'elenco dei conti che ogni banca condivide e che non sono in Ledgerly, anche giorni dopo il collegamento. **[DEV]** Da dove si legge (ultima lettura o una chiamata nuova).
 5. **Movimenti della banca fino all'ultimo giorno letto dalla sorgente.** Dopo il passaggio le letture della banca non devono inserire i movimenti «Solo in banca» e quelli di «Da controllare» con data fino a quel giorno: altrimenti nascono doppioni. **[DEV]**
-6. **Giroconti.** Oggi `pairTransfers` abbina solo sul riferimento della controparte dato dal fornitore (`src/modules/transactions/rules.ts`). La banca non dà questo riferimento. Serve una regola del dominio per i due lati di un giroconto tra conti dello stesso collegamento. Dipende dalla domanda Q2. **[DEV]**
+6. **Giroconti (decisione Q2, opzione B).** Oggi `pairTransfers` abbina solo sul riferimento della controparte dato dal fornitore (`src/modules/transactions/rules.ts`). La banca non dà questo riferimento e i movimenti vecchi di «{source}» non hanno un riferimento della banca. Serve una regola nuova del dominio, per importo e data, tra il conto passato e gli altri conti dello stesso collegamento, su tutto lo storico. Il piano non la scrive: regola, finestra dei giorni e casi ambigui (due spostamenti uguali nello stesso giorno) vanno scritti nel piano prima dello sviluppo. Proposta per i casi ambigui: come per «Da controllare», con conteggi diversi nessuna coppia. La prova restituisce le coppie e il totale per anno (§9.3). «Annulla passaggio» ha bisogno dell'elenco delle coppie e della categoria di prima. **[DEV]**
 7. **Tipo di saldo per banca.** `pickBalance` (`src/platform/plugins/rules.ts`) ha già un ordine di preferenza. Serve il tipo usato, per collegamento, nella risposta della prova (§7.1). **[DEV]** `12-account-modes.md` §12.5: quale saldo locale legge il controllo.
 8. **Impronta del rapporto.** «Applica» riceve l'impronta e rifà il confronto dentro la transazione. Se l'esito è diverso, risponde `stale`.
 9. **Una applicazione per volta.** Un blocco per utente durante «Applica» e «Annulla passaggio» (`busy`).
@@ -1063,3 +1159,5 @@ Non sono decisioni di prodotto: sono dati e regole tecniche che l'interfaccia ri
 13. **Descrittore del fornitore.** `{source}` e `{provider}` arrivano dal registro (`platform/integrations/registry.ts`) e dal manifest. Nessun file nuovo contiene un nome di fornitore (lista nota di M12).
 14. **N1.** `accounts-step.tsx`: gruppo nuovo nel `Select`, decisione nuova `{ kind: "sameAs", accountId }` trattata come `skip` nell'importazione, e riga nuova nell'esito. La specifica di N1 non cambia: §6.4 e §11 di N1 rimandano a questo documento.
 15. **Movimento.** Vale la nota di N1 §13, punto 6, su `prefers-reduced-motion`.
+16. **Guardia sui conti doppi (decisione Q1).** Un conto non ha un IBAN: la regola 2 di §2.4 usa «stessa valuta e stesso saldo». **[DEV]** Da confermare: quale saldo della banca si confronta nel passo «Conti» (il tipo di §7.1) e con quale saldo locale; se il confronto è possibile dentro il tempo del passo; se un IBAN sul conto (campo nuovo, migrazione) è preferibile in un rilascio seguente. Da confermare anche che l'eliminazione di un conto creato dalla banca libera il conto della banca (regola 4).
+17. **Piano.** Le decisioni Q1 e Q2 non sono ancora in `01-decisions.md`, `03-releases.md` «N4» e `04-now.md` §4.6. Q2 aggiunge una regola del dominio e cambia numeri esistenti: la fotografia dei numeri dopo il primo passaggio reale non è uguale a prima, per decisione. Questo documento non cambia quei file.
