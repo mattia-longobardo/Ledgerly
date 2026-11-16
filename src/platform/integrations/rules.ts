@@ -76,6 +76,19 @@ export function syncsTransactions(provider: string | null): boolean {
   return isKnownProvider(provider) && (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions");
 }
 
+/**
+ * The providers of the core that take a movement written here and create it on their side: what
+ * makes their accounts "read and write" (rewrite plan, 12-account-modes.md §12.1). A plugin says
+ * the same with the capability `createRecord` of its manifest. The rule that reads this
+ * (`accountMode`) never sees a provider's name.
+ */
+const CREATES_RECORDS: readonly Provider[] = [WALLET_PROVIDER];
+
+/** Whether a provider of the core creates on its side the movements written here. */
+export function coreCreatesRecords(provider: string): boolean {
+  return (CREATES_RECORDS as readonly string[]).includes(provider);
+}
+
 /** What the pass of a plugin syncs, in order: the accounts' balances, then the movements. */
 export const PLUGIN_KINDS = ["accounts", "transactions"] as const satisfies readonly SyncKind[];
 

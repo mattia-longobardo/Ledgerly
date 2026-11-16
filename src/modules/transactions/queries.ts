@@ -82,6 +82,8 @@ export interface TransactionRow {
   hiddenAt: Date | null;
   removedUpstreamAt: Date | null;
   locallyEdited: string[];
+  /** Who wrote it: a provider's reading, or the person by hand. */
+  origin: TransactionRecord["origin"];
   hidden: boolean;
   edited: boolean;
 }
@@ -496,6 +498,8 @@ export async function transactionsInWindow(
       and(
         userScoped(ctx).owns(transactions),
         eq(transactions.accountId, accountId),
+        // A reading says nothing about a movement written by hand: it is never declared gone.
+        eq(transactions.origin, "provider"),
         gte(transactions.occurredAt, dayStart(window.from, ctx.timeZone)),
         lt(transactions.occurredAt, dayStart(addDays(window.to, 1), ctx.timeZone)),
       ),
@@ -510,7 +514,8 @@ export async function transactionsInWindow(
  *
  * Everything that moved the balance counts: hidden movements (hiding is about totals, not about
  * the money) and giroconti (they are exactly money leaving or entering this account). A movement
- * the provider stopped returning does not: it is no longer in the balance the provider reads.
+ * the provider stopped returning does not: it is no longer in the balance the provider reads. Nor
+ * does one written by hand: the provider's balance never held it ({@link manualMovementsByAccount}).
  */
 export async function dailyNetByAccount(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -526,6 +531,7 @@ export async function dailyNetByAccount(
         userScoped(ctx).owns(transactions),
         inArray(transactions.accountId, [...accountIds]),
         isNull(transactions.removedUpstreamAt),
+        eq(transactions.origin, "provider"),
       ),
     )
     // By position, for the same reason as `monthlyTotals`.
@@ -536,6 +542,48 @@ export async function dailyNetByAccount(
     const days = byAccount.get(row.accountId) ?? [];
     days.push({ on: row.on, cents: cents(row.cents) });
     byAccount.set(row.accountId, days);
+  }
+  return byAccount;
+}
+
+/**
+ * The movements a person wrote by hand, by account and in date order: what the accounts module
+ * works the balance after them out from (rewrite plan, 12-account-modes.md §12.2). A hidden one is
+ * out of the balance as it is out of the totals.
+ */
+export async function manualMovementsByAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+): Promise<Map<string, { id: string; on: CivilDate; cents: Cents; writtenAt: Date }[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      cents: transactions.amountCents,
+      writtenAt: transactions.createdAt,
+    })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        eq(transactions.origin, "manual"),
+        isNull(transactions.hiddenAt),
+        inArray(transactions.accountId, [...accountIds]),
+      ),
+    )
+    .orderBy(asc(transactions.accountId), asc(transactions.occurredAt), asc(transactions.id));
+  const byAccount = new Map<string, { id: string; on: CivilDate; cents: Cents; writtenAt: Date }[]>();
+  for (const row of rows) {
+    const list = byAccount.get(row.accountId) ?? [];
+    list.push({
+      id: row.id,
+      on: civilDateIn(row.occurredAt, ctx.timeZone),
+      cents: row.cents,
+      writtenAt: row.writtenAt,
+    });
+    byAccount.set(row.accountId, list);
   }
   return byAccount;
 }
@@ -887,6 +935,7 @@ export async function listTransactions(
     hiddenAt: transaction.hiddenAt,
     removedUpstreamAt: transaction.removedUpstreamAt,
     locallyEdited: transaction.locallyEdited,
+    origin: transaction.origin,
     hidden: isHidden(transaction),
     edited: transaction.locallyEdited.length > 0,
   }));

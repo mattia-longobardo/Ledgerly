@@ -8,6 +8,7 @@ import type { RowBadge } from "./display";
 import type { Tone } from "@/ui/tone";
 import type { CategoryOption } from "@/ui/category-picker";
 import type { TransactionType } from "../rules";
+import type { ManualFieldsView } from "./manual-types";
 
 export type { CategoryOption };
 
@@ -38,6 +39,11 @@ export interface RowView {
    * edits type, amount, payee and note, and saves them to Wallet (owner, 2026-09-24).
    */
   wallet?: WalletFieldsView | null;
+  /**
+   * Present when the person wrote the movement by hand: every field is theirs, so the row opens
+   * the manual movement's dialog and can be deleted without being hidden first.
+   */
+  manual?: ManualFieldsView | null;
 }
 
 /** What the panel prefills for a Wallet movement. */

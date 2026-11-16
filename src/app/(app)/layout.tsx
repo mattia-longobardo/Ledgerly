@@ -59,6 +59,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           ),
         )
       : []),
+    // The manual movement, as a command: the Expenses page opens its dialog (N3).
+    { ...settingsLink("add-transaction", "/expenses?add=1", t("expenses.manual.palette")), icon: "expenses" },
     settingsLink(
       "timeoff-settings",
       "/timeoff/settings",

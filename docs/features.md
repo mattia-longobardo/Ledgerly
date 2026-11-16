@@ -58,6 +58,16 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
   secret in it, to ask for help.
 - **What belongs to whom.** Payee, amount and date come from Wallet. Category, labels, note and
   visibility are yours.
+- **A transaction by hand.** "Add transaction" writes a movement that no source gives: cash, or
+  a payment the bank has not listed yet. You choose money out or money in, the amount, the day,
+  the account, and optionally a payee, a category and a note. The row carries the badge "Manual";
+  its menu changes it or deletes it. It is offered on the accounts you keep by hand and on the
+  accounts a bank only reads, not on investment accounts.
+- **The balance follows.** A transaction by hand changes the balance of its account at once, in
+  Accounts, Overview and the net worth: last known balance plus the transactions by hand after
+  it. A day before the last balance you wrote changes nothing: that balance already holds it. On
+  an account a bank reads, the bank's balance applies again after its next reading, and the
+  transaction stays in Expenses and in the budgets. The dialog warns that it can appear twice.
 - **Hide** removes a movement from the totals. You can undo it. A movement that Wallet stops
   returning is treated the same way.
 - **Transfers** are paired only by the reference that Wallet gives them, never by amount and date.

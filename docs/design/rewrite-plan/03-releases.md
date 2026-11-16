@@ -118,6 +118,16 @@ una sotto-issue separata (decisione H4). È in `main` a `86e3d43`, tag `v0.10.2`
 | Dipende da | N1 (campi grezzi), N2 |
 | Dimensione | L |
 
+N3 arriva in due PR di seguito, ognuna con il suo OK ([`12-account-modes.md`](12-account-modes.md) §12.8, punto 14):
+
+| Parte | Contenuto | Criteri di N3 | Rollback |
+|---|---|---|---|
+| 1 · Movimento a mano | Dialogo di Expenses (crea, modifica, elimina), badge «A mano», modalità del conto, regola del saldo, chiave di idempotenza. Migrazione `0053_manual_movement` | 5, 6 (saldo), 7, 8 | Immagine `pre-n3-1`; dump `n3-1` |
+| 2 · Categorie automatiche | Cascata, «Da rivedere», azioni di gruppo, proposta di unione, gruppi predefiniti, revisione guidata, suggerimento nel dialogo del movimento a mano, «Da categorizzare» al posto di «Senza categoria» | 1, 2, 3, 4, 6 (fotografia) | Immagine `pre-n3-2`; dump `n3-2` |
+
+Nella parte 1 il dialogo non chiede ancora un suggerimento di categoria e il campo vuoto si chiama «Senza categoria»:
+i due punti arrivano con la cascata.
+
 ### N3.1 · Invio dei movimenti a mano e categorie delle sorgenti
 
 Rilascio nato dalla decisione H36 (Mattia, 15/11/2026). Concetto: [`12-account-modes.md`](12-account-modes.md) §12.1-§12.3.

@@ -51,7 +51,16 @@ import { type ProviderGroupRef, TaxonomyError, adoptOrCreateCategory, adoptOrCre
  * amount and date belong to Wallet and no local edit may claim them. `invalid_reference` is a
  * category or label that is not this user's — the isolation of §4.4 seen from the write side.
  */
-export type TransactionErrorCode = "not_found" | "provider_owned" | "invalid_reference" | "invalid";
+export type TransactionErrorCode =
+  | "not_found"
+  | "provider_owned"
+  | "invalid_reference"
+  | "invalid"
+  /** A manual movement dated after today, or one of the manual writes asked of a provider's row. */
+  | "future_date"
+  | "not_manual"
+  /** The account a manual movement names is not there, or takes no manual movement. */
+  | "account_unavailable";
 
 export class TransactionError extends Error {
   constructor(readonly code: TransactionErrorCode) {
@@ -102,20 +111,33 @@ export interface UpsertOptions {
 
 /* Reads the writes need */
 
-async function requireTransaction(ctx: Pick<Ctx, "userId">, id: string): Promise<Transaction> {
+export async function requireTransaction(ctx: Pick<Ctx, "userId">, id: string): Promise<Transaction> {
   const row = await getTransaction(ctx, id);
   if (!row) throw new TransactionError("not_found");
   return row;
 }
 
 /** A category is only ever the acting user's own: a forged id from another user is a refusal. */
-async function requireOwnCategory(ctx: Pick<Ctx, "userId">, categoryId: string | null): Promise<void> {
+export async function requireOwnCategory(ctx: Pick<Ctx, "userId">, categoryId: string | null): Promise<void> {
   if (categoryId === null) return;
   const [row] = await getDb()
     .select({ id: categories.id })
     .from(categories)
     .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)));
   if (!row) throw new TransactionError("invalid_reference");
+}
+
+/**
+ * The account a movement is written on: the acting user's own, and one that still takes movements.
+ * The module's one way to the accounts, with `upsertFromProvider`.
+ */
+export async function requireMovementAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<{ id: string; currency: string }> {
+  const account = await getAccount(ctx, accountId);
+  if (!account || account.state === "archived") throw new TransactionError("account_unavailable");
+  return { id: account.id, currency: account.currency };
 }
 
 async function requireOwnLabels(ctx: Pick<Ctx, "userId">, labelIds: readonly string[]): Promise<void> {

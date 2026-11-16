@@ -5,7 +5,7 @@
  */
 
 import { PALETTE } from "@/modules/accounts/ui/display";
-import type { TransactionState, TransactionType } from "@/modules/transactions/rules";
+import type { TransactionOrigin, TransactionState, TransactionType } from "@/modules/transactions/rules";
 import type { MonthKey } from "@/platform/dates";
 import { formatDate, type UiLocale } from "@/platform/format";
 import type { Cents } from "@/platform/money";
@@ -46,7 +46,15 @@ export function categoryColors(
  * `transfer` on a giroconto with no other leg here (F2.5): it is still not spending, but it usually
  * means the other account is not linked.
  */
-export const ROW_BADGES = ["hidden", "removedUpstream", "edited", "transfer", "unpaired", "pending"] as const;
+export const ROW_BADGES = [
+  "manual",
+  "hidden",
+  "removedUpstream",
+  "edited",
+  "transfer",
+  "unpaired",
+  "pending",
+] as const;
 
 export type RowBadge = (typeof ROW_BADGES)[number];
 
@@ -57,6 +65,8 @@ export interface BadgeSource {
   type: TransactionType;
   transferGroupId: string | null;
   state: TransactionState;
+  /** Left out for a row read before the origin existed: a provider's. */
+  origin?: TransactionOrigin;
 }
 
 /**
@@ -66,9 +76,12 @@ export interface BadgeSource {
  */
 export function badgesOf(row: BadgeSource): RowBadge[] {
   const badges: RowBadge[] = [];
+  const manual = row.origin === "manual";
+  if (manual) badges.push("manual");
   if (row.hiddenAt !== null) badges.push("hidden");
   if (row.removedUpstreamAt !== null) badges.push("removedUpstream");
-  if (row.locallyEdited.length > 0) badges.push("edited");
+  // "Edited here" says a row left what its provider gave: a manual movement has no provider.
+  if (row.locallyEdited.length > 0 && !manual) badges.push("edited");
   if (row.type === "transfer" && row.transferGroupId === null) badges.push("unpaired");
   else if (row.type === "transfer" || row.transferGroupId !== null) badges.push("transfer");
   if (row.state === "pending") badges.push("pending");

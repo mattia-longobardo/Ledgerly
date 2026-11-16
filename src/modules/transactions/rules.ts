@@ -11,9 +11,15 @@ import type { Cents } from "@/platform/money";
 export const TRANSACTION_TYPES = ["income", "expense", "transfer"] as const;
 export const TRANSACTION_STATES = ["cleared", "pending"] as const;
 export const CATEGORY_TYPES = ["income", "expense", "transfer"] as const;
+/**
+ * Who wrote a movement (rewrite plan, 04-now.md §4.5): a provider's reading, or the person, by
+ * hand. A reading never changes, removes or declares gone a `manual` movement.
+ */
+export const TRANSACTION_ORIGINS = ["provider", "manual"] as const;
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export type TransactionState = (typeof TRANSACTION_STATES)[number];
+export type TransactionOrigin = (typeof TRANSACTION_ORIGINS)[number];
 export type CategoryType = (typeof CATEGORY_TYPES)[number];
 
 /**

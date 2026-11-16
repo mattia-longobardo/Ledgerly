@@ -1393,6 +1393,7 @@
       "cancel": "Annulla"
     },
     "badges": {
+      "manual": "A mano",
       "hidden": "Nascosto",
       "removedUpstream": "Sparito dal provider",
       "edited": "Modificato qui",
@@ -1419,8 +1420,8 @@
       "action": "Azzera i filtri"
     },
     "unsynced": {
-      "title": "Ancora niente di sincronizzato",
-      "description": "Collega Budget Makers Wallet per importare i tuoi movimenti.",
+      "title": "Ancora nessun movimento",
+      "description": "Collega una sorgente oppure scrivi il primo movimento a mano.",
       "action": "Apri le integrazioni"
     },
     "toasts": {
@@ -1484,6 +1485,60 @@
         "refused": "Wallet ha rifiutato la modifica: qui non è cambiato niente.",
         "failed": "Wallet non ha risposto: qui non è cambiato niente. Riprova tra un minuto."
       }
+    },
+    "manual": {
+      "add": "Aggiungi movimento",
+      "addShort": "Aggiungi",
+      "editTitle": "Modifica movimento",
+      "type": "Tipo",
+      "types": {
+        "expense": "Uscita",
+        "income": "Entrata"
+      },
+      "amount": "Importo",
+      "amountHint": "Senza segno: lo decide il tipo.",
+      "date": "Data",
+      "account": "Conto",
+      "accounts": {
+        "manual": "Conti tenuti a mano",
+        "bank": "Conti collegati a una banca"
+      },
+      "payee": "Beneficiario (facoltativo)",
+      "category": "Categoria",
+      "noCategories": "Crea le categorie in Impostazioni",
+      "note": "Nota (facoltativa)",
+      "bankWarning": "Questo conto riceve i movimenti dalla banca. Un movimento a mano può risultare doppio.",
+      "bankBalance": "Il saldo cambia subito. Alla prossima lettura vale il saldo della banca.",
+      "balance": {
+        "change": "Saldo di «{account}»: da {before} a {after}.",
+        "unchanged": "Il saldo di «{account}» è stato scritto il {date} e comprende già questo giorno: non cambia."
+      },
+      "saving": "Salvataggio…",
+      "toasts": {
+        "added": "Movimento aggiunto",
+        "addedElsewhere": "Movimento aggiunto il {date}, fuori da quello che vedi ora",
+        "show": "Mostra",
+        "saved": "Movimento salvato"
+      },
+      "delete": {
+        "title": "Eliminare questo movimento?",
+        "description": "Lo hai scritto a mano il {date}. Viene rimosso definitivamente."
+      },
+      "noAccount": {
+        "title": "Serve un conto",
+        "description": "Crea un conto per scrivere movimenti a mano.",
+        "action": "Crea un conto"
+      },
+      "errors": {
+        "amount": "Scrivi un importo maggiore di zero.",
+        "date": "Scegli una data fino a oggi.",
+        "account": "Questo conto non esiste più. Scegline un altro.",
+        "failed": "Non è stato possibile salvare. Riprova."
+      },
+      "row": {
+        "edit": "Modifica movimento"
+      },
+      "palette": "Aggiungi movimento"
     }
   },
   "overview": {
@@ -1800,7 +1855,8 @@
         "system": "Snapshot",
         "import": "Importazione",
         "derived": "Ricostruito",
-        "portfolio": "Portafoglio"
+        "portfolio": "Portafoglio",
+        "movement": "Movimenti a mano"
       },
       "updated": "Saldo aggiornato",
       "edit": {

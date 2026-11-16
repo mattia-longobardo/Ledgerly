@@ -20,7 +20,7 @@ import {
   ACCOUNT_ORIGINS,
   ACCOUNT_STATES,
   ACCOUNT_TYPES,
-  BALANCE_SOURCES,
+  ENTRY_SOURCES,
   CONNECTION_CHANNELS,
   REMINDERS,
   SNAPSHOT_STATES,
@@ -126,7 +126,7 @@ export const balanceEntries = pgTable(
     on: date("on").notNull(),
     balanceCents: bigint("balance_cents", { mode: "bigint" }).notNull(),
     availableCents: bigint("available_cents", { mode: "bigint" }),
-    source: text("source", { enum: BALANCE_SOURCES }).notNull(),
+    source: text("source", { enum: ENTRY_SOURCES }).notNull(),
     note: text("note"),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -139,8 +139,29 @@ export const balanceEntries = pgTable(
     unique("balance_entries_account_on_source_uq").on(table.accountId, table.on, table.source),
     index("balance_entries_account_on_idx").on(table.accountId, table.on.desc()),
     index("balance_entries_user_idx").on(table.userId),
-    check("balance_entries_source_ck", sql`${table.source} in (${sql.raw(inList(BALANCE_SOURCES))})`),
+    check("balance_entries_source_ck", sql`${table.source} in (${sql.raw(inList(ENTRY_SOURCES))})`),
   ],
+);
+
+/**
+ * The accounts a person wrote a movement by hand on (rewrite plan, 12-account-modes.md §12.2): one
+ * row while the account has one that counts. Kept by the rebuild of the balances after those
+ * movements and read with the accounts it works on, so a balance written on an account with no
+ * manual movement starts no rebuild and costs no read. A table of its own, not a column of
+ * `accounts`: an account's row is what every screen and every snapshot of the numbers reads.
+ */
+export const manualMovementAccounts = pgTable(
+  "manual_movement_accounts",
+  {
+    accountId: uuid("account_id")
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("manual_movement_accounts_user_idx").on(table.userId)],
 );
 
 export const snapshotRuns = pgTable(

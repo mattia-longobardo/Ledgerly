@@ -18,16 +18,18 @@ import type { Cents } from "@/platform/money";
 import {
   type AccountAlert,
   type BalancePoint,
+  type BalanceReading,
   type Bucket,
   alertsFor,
   bucketOf,
   estimatedMonths,
   isStale,
   monthEndSeries,
+  MOVEMENT_SOURCE,
   SOURCE_PRECEDENCE,
   totalSeries,
 } from "./rules";
-import { accountGroups, accounts, balanceEntries, snapshotRuns } from "./schema";
+import { accountGroups, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
 
 export type Account = typeof accounts.$inferSelect;
 export type BalanceEntry = typeof balanceEntries.$inferSelect;
@@ -39,11 +41,17 @@ export type AccountGroup = typeof accountGroups.$inferSelect;
  * named, so a new one cannot fall into a tie by accident.
  */
 export const SOURCE_RANK = sql`case ${balanceEntries.source} ${sql.raw(
-  SOURCE_PRECEDENCE.map((source, rank) => `when '${source}' then ${rank}`).join(" "),
-)} else ${SOURCE_PRECEDENCE.length} end`;
+  [MOVEMENT_SOURCE, ...SOURCE_PRECEDENCE].map((source, rank) => `when '${source}' then ${rank}`).join(" "),
+)} else ${SOURCE_PRECEDENCE.length + 1} end`;
 
 /** The sources that are not a reading of the account: the snapshot's copies and the rebuilt ends. */
 const NOT_OBSERVED = ["system", "derived"] as const;
+
+/**
+ * What is not a reading somebody took: the copies above, and the balance after the manual
+ * movements, which the app works out from the readings (`movementBalances`).
+ */
+const NOT_A_READING = [...NOT_OBSERVED, "movement"] as const;
 
 const MONTH_OF = sql`date_trunc('month', ${balanceEntries.on})`;
 
@@ -142,7 +150,7 @@ export async function observedDays(
       and(
         userScoped(ctx).owns(balanceEntries),
         inArray(balanceEntries.accountId, [...accountIds]),
-        notInArray(balanceEntries.source, [...NOT_OBSERVED]),
+        notInArray(balanceEntries.source, [...NOT_A_READING]),
       ),
     )
     .orderBy(
@@ -156,6 +164,64 @@ export async function observedDays(
     const points = byAccount.get(row.accountId) ?? [];
     points.push({ on: row.on, cents: row.balanceCents });
     byAccount.set(row.accountId, points);
+  }
+  return byAccount;
+}
+
+/** What the balance after the manual movements is worked out from (`movementBalances`). */
+export interface MovementBasis {
+  /** One reading per day: the best source's value, and the latest moment any of them was taken. */
+  readings: BalanceReading[];
+  /** The days the app copied or rebuilt a balance on. */
+  copies: CivilDate[];
+  /** The points written by the last rebuild. */
+  points: BalancePoint[];
+}
+
+/**
+ * The readings, the copied days and the current movement points of each account, in date order.
+ * A day read by two sources is one reading: the value of the first in `SOURCE_PRECEDENCE`, taken
+ * at the latest of their moments — a bank's reading of this evening holds what was written this
+ * morning even when a correction typed yesterday still decides the number.
+ */
+export async function movementBasis(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, MovementBasis>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+      source: balanceEntries.source,
+      capturedAt: balanceEntries.capturedAt,
+    })
+    .from(balanceEntries)
+    .where(and(userScoped(ctx).owns(balanceEntries), inArray(balanceEntries.accountId, [...accountIds])))
+    .orderBy(
+      asc(balanceEntries.accountId),
+      asc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const copied: readonly string[] = NOT_OBSERVED;
+  const byAccount = new Map<string, MovementBasis>();
+  for (const row of rows) {
+    const basis = byAccount.get(row.accountId) ?? { readings: [], copies: [], points: [] };
+    byAccount.set(row.accountId, basis);
+    if (row.source === "movement") {
+      basis.points.push({ on: row.on, cents: row.balanceCents });
+    } else if (copied.includes(row.source)) {
+      if (basis.copies.at(-1) !== row.on) basis.copies.push(row.on);
+    } else {
+      const last = basis.readings.at(-1);
+      if (last?.on !== row.on) {
+        basis.readings.push({ on: row.on, cents: row.balanceCents, capturedAt: row.capturedAt });
+      } else if (row.capturedAt > last.capturedAt) {
+        last.capturedAt = row.capturedAt;
+      }
+    }
   }
   return byAccount;
 }
@@ -207,6 +273,22 @@ export async function listAccounts(
     .where(userScoped(ctx).owns(accounts))
     .orderBy(asc(accounts.sortOrder), asc(accounts.id));
   return options.includeArchived ? rows : rows.filter((row) => row.state !== "archived");
+}
+
+/**
+ * Every account of the user with whether it has a movement written by hand, in one read: what the
+ * rebuild of the derived balances starts from (`rebuildDerivedBalances`). Archived ones too.
+ */
+export async function accountsToRebuild(
+  ctx: Pick<Ctx, "userId">,
+): Promise<{ account: Account; hasManualMovements: boolean }[]> {
+  const rows = await getDb()
+    .select({ account: accounts, marked: manualMovementAccounts.accountId })
+    .from(accounts)
+    .leftJoin(manualMovementAccounts, eq(manualMovementAccounts.accountId, accounts.id))
+    .where(userScoped(ctx).owns(accounts))
+    .orderBy(asc(accounts.sortOrder), asc(accounts.id));
+  return rows.map((row) => ({ account: row.account, hasManualMovements: row.marked !== null }));
 }
 
 export async function getAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Account | null> {
