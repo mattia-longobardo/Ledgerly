@@ -50,8 +50,12 @@ npm run format && npm run lint && npm run typecheck && npm run format:check && n
 | `npm test`                 | Unit tests. Needs only Node.                                                    |
 | `npm run test:integration` | Integration tests in a container, against the `ledgerly_test` database and S3.  |
 | `npm run e2e`              | End-to-end tests against the deployed site, with temporary test users.          |
-| `npm run perf`             | Times the heaviest views against a large test user. Run by hand.                |
+| `npm run test:select`      | Prints the tests that a diff starts, as commands ([testing.md](testing.md)).    |
+| `npm run perf`             | Times the heaviest views against a large test user. `-- --queries`: counts only.|
 | `npm run docs:shots`       | Takes the screenshots in `docs/screenshots/` again. Run by hand.                |
+
+Which of these a change needs is in [testing.md](testing.md): the map from the changed files to the
+tests, the `@smoke` set and the local preview for the E2E tests.
 
 ### Integration tests
 

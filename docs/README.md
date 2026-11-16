@@ -10,6 +10,7 @@ Start here. These guides describe Ledgerly as it is today.
 | [API and MCP](api.md)              | OAuth2, the REST API, the MCP server, the document import.        |
 | [Development](development.md)      | Setup, code layout, code rules, tests.                            |
 | [Operations](operations.md)        | Containers, jobs, deploy, configuration, backups, admin tasks.    |
+| [Which tests to run](testing.md)   | The map from changed files to tests, `@smoke`, the preview.       |
 | [Release checklist](RELEASE.md)    | A release step by step, with checks and rollback.                 |
 | [API changelog](api-changelog.md)  | Changes to `/api/v1` and to the MCP tools.                        |
 

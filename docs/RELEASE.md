@@ -37,18 +37,29 @@ release, not during one.
 
 ## 1. The gate
 
-Nothing is released that has not passed all of it. The checks that need the new build deployed come
-back in step 4. The names `G1`…`G9` are those of the rewrite plan
+Nothing is released that has not passed its gate. The gate of a release is the tests of what the
+release changed: [`testing.md`](testing.md) has the map `changed files → module → command`, and
+`npm run test:select` reads the release diff (highest tag `vX.Y.Z` → `HEAD`) with it and prints the
+commands. The names `G1`…`G10` are those of the rewrite plan
 ([`design/rewrite-plan/03-releases.md`](design/rewrite-plan/03-releases.md) §3.1).
 
 ```bash
-npm run format:check && npm run lint && npm run typecheck   # G1
-npm test                          # G2 and G4: the unit tests, with `src/architecture.test.ts`
+npm run format:check && npm run lint && npm run typecheck   # G1, always
+npm test                          # G2 and G4, always complete: the unit tests, with `src/architecture.test.ts`
 npm run assertions-diff           # G2: no refactor commit changed a test besides its imports
-npm run test:integration          # G3 and G5: container on db_internal, `ledgerly_test` only
-npm run perf                      # G9: no view or route slower or with more queries than its baseline
+npm run test:select               # prints the rest: what follows is its answer for this release
+sh scripts/test-integration.sh <the modules of the selection>   # G3 and G5; with no argument, all of it
+npm run perf -- --queries         # G9, always: no view or route with more queries than its baseline
+npm run perf                      # G9, the times: only when the selection says so, one series
+npx playwright test -c playwright.preview.config.ts <the specs of the selection>   # G6, on the local preview
 npm run db:generate               # must report no new migration to write
 ```
+
+The gate runs **one time, on the final SHA**. On the commits before it: G1, `npm test` and the tests
+of the files of the commit. The E2E run on the local preview before the deploy
+([`testing.md`](testing.md), "The E2E tests, one time, on the local preview"); the deployed site
+gets `@smoke` and the `@site` tests in step 4. The full suite runs before a deploy only when
+`npm run test:select` prints `FULL SUITE`; it runs each night and at the end of a phase (G10).
 
 `npm run db:generate` printing a new migration file means the schema in the code and the migrations
 on disk have drifted: commit the generated migration before going further, never after.
@@ -147,7 +158,8 @@ container will not serve a half-configured app.
 curl -s https://dash.longobardo.me/api/health     # G8: status ok, db up
 npm run numbers -- "$folder" after --as-of <the instant step 2 printed>
 npm run numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json"   # G5: "uguale"
-npm run e2e                                        # G6: drives the deployed site
+npx playwright test -g @smoke                      # G6: the smoke tests, on the deployed site
+npx playwright test <specs> -g @site               # G6: the tests the preview cannot run, for the selected specs
 ```
 
 The two snapshots must be equal: `uguale`. Anything else prints how many numbers differ and their
@@ -155,9 +167,11 @@ names, never their values — a difference stops the release until it is explain
 between the two is an explanation; a number the release was not meant to move is a rollback). Only
 the verdict and the names go in a comment: the files stay in the folder.
 
-`npm run e2e` is the real check: it creates its `@example.test` users, walks every journey,
-measures **every screen** at 1440 and 400 px in both themes, crosses the app from the keyboard, and
-deletes the users and everything they own afterwards. It never touches anybody else's data.
+`scripts/release.sh` runs the first three commands and `@smoke` itself; a red smoke test is a failed
+deploy, with the rollback of step 8. The `@site` tests are the ones `npm run test:select` printed
+under "After the deploy". The E2E tests create their `@example.test` users before the run and delete
+them, with everything they own, after it: they never touch anybody else's data. The rest of the
+suite already ran on the preview, before the deploy: it does not run again here.
 
 Then open the site yourself and look at it. The e2e suite cannot tell you that a screen is ugly.
 

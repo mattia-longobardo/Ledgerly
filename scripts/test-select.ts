@@ -1,0 +1,191 @@
+// scripts/test-select.ts — `npm run test:select -- [<base>..<head>] [--files <file> …] [--doc]`.
+//
+// Reads a diff with the map of `scripts/test-map.ts` and prints the tests it starts, as commands
+// (docs/testing.md). The default range is the release diff: the highest tag `vX.Y.Z` to `HEAD`.
+// For the work before a push: `npm run test:select -- origin/main...HEAD`. `--files` reads a list
+// instead of a diff; `--doc` prints the two tables of docs/testing.md.
+import { execFileSync } from "node:child_process";
+import {
+  CRITICAL,
+  CROSS_CUTTING,
+  FLOWS,
+  MODULES,
+  NESTED_MESSAGES,
+  type Selection,
+  SITE_ONLY,
+  select,
+} from "./test-map";
+
+const PREVIEW = "npx playwright test -c playwright.preview.config.ts";
+const INTEGRATION = "sh scripts/test-integration.sh";
+export const ALWAYS = "npm run format:check && npm run lint && npm run typecheck && npm test";
+
+const quote = (text: string) => `'${text.replaceAll("'", "'\\''")}'`;
+const flow = (id: string) => FLOWS.find((one) => one.id === id)!;
+
+/** The commands of a selection, in the order they run. */
+export function commands(selection: Selection): { before: string[]; after: string[] } {
+  if (selection.full.length > 0) {
+    return {
+      before: [ALWAYS, INTEGRATION, "npm run perf", PREVIEW],
+      after: ["npx playwright test -g @smoke", "npx playwright test -g @site"],
+    };
+  }
+  const before = [ALWAYS];
+  if (selection.integration === "*") before.push(INTEGRATION);
+  else if (selection.integration.length > 0) {
+    before.push(`${INTEGRATION} ${selection.integration.map(quote).join(" ")}`);
+  }
+  before.push(selection.perf ? "npm run perf" : "npm run perf -- --queries");
+  const specs = [...new Set(selection.flows.flatMap((id) => flow(id).specs))];
+  if (specs.length > 0) before.push(`${PREVIEW} ${specs.join(" ")}`);
+  const screens = selection.screens.flatMap((id) => flow(id).screens ?? []);
+  if (screens.length > 0) {
+    before.push(`${PREVIEW} ${CROSS_CUTTING.join(" ")} -g ${quote(screens.join("|"))}`);
+  }
+  before.push(`${PREVIEW} -g @smoke`);
+  const site = specs.filter((spec) => SITE_ONLY.includes(spec));
+  const after = ["npx playwright test -g @smoke"];
+  if (site.length > 0) after.push(`npx playwright test ${site.join(" ")} -g @site`);
+  return { before, after };
+}
+
+// ——— The tables of docs/testing.md ————————————————————————————————————————————————————————————
+
+const code = (text: string) => `\`${text.replaceAll("|", "\\|")}\``;
+const list = (items: readonly string[]) => items.map(code).join(", ");
+
+export function mapTable(): string {
+  const rows = MODULES.map((module) => {
+    const run: string[] = [];
+    if (module.integration) run.push(code(`${INTEGRATION} ${module.integration.map(quote).join(" ")}`));
+    for (const id of module.flows ?? []) run.push(`flow ${code(id)}`);
+    const usedBy = (module.usedBy ?? []).map((user) =>
+      user === "integration:*"
+        ? "every integration test"
+        : user === "perf"
+          ? code("npm run perf")
+          : code(user),
+    );
+    return `| ${list(module.files)} | ${code(module.id)} | ${run.join("<br>") || "—"} | ${usedBy.join(", ") || "—"} |`;
+  });
+  return ["| Changed files | Module | Command | Used by |", "|---|---|---|---|", ...rows].join("\n");
+}
+
+export function flowTable(): string {
+  const rows = FLOWS.map((one) => {
+    const specs = `${PREVIEW} ${one.specs.join(" ")}`;
+    const screens = one.screens
+      ? code(`${PREVIEW} ${CROSS_CUTTING.join(" ")} -g ${quote(one.screens)}`)
+      : "—";
+    return `| ${code(one.id)} | ${code(specs)} | ${screens} |`;
+  });
+  return ["| Flow | Command | Its screens in the cross-cutting specs |", "|---|---|---|", ...rows].join("\n");
+}
+
+export function criticalTable(): string {
+  const rows = CRITICAL.map((group) => `| ${list(group.files)} | ${group.why} |`);
+  return ["| Files | Why |", "|---|---|", ...rows].join("\n");
+}
+
+// ——— The diff ————————————————————————————————————————————————————————————————————————————————
+
+const git = (...args: string[]) =>
+  execFileSync("git", args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 }).trim();
+
+function show(revision: string, file: string): unknown {
+  try {
+    return JSON.parse(git("show", `${revision}:${file}`));
+  } catch {
+    return null;
+  }
+}
+
+type Messages = Record<string, unknown>;
+const differing = (before: Messages, after: Messages) =>
+  [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+    (key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]),
+  );
+
+/** The namespaces of a messages file that differ between two revisions (`settings`: one level down). */
+function changedKeys(base: string, head: string, file: string): string[] {
+  const before = (show(base, file) ?? {}) as Messages;
+  const after = (show(head, file) ?? {}) as Messages;
+  return differing(before, after).flatMap((key) =>
+    NESTED_MESSAGES.includes(key)
+      ? differing((before[key] ?? {}) as Messages, (after[key] ?? {}) as Messages).map(
+          (sub) => `${key}.${sub}`,
+        )
+      : [key],
+  );
+}
+
+/** `package.json` and its lockfile, when the version number is all that changed. */
+function versionOnly(base: string, head: string, file: string): boolean {
+  const without = (revision: string) => {
+    const json = show(revision, file) as {
+      version?: string;
+      packages?: Record<string, { version?: string }>;
+    };
+    if (json === null) return null;
+    delete json.version;
+    if (json.packages?.[""]) delete json.packages[""].version;
+    return JSON.stringify(json);
+  };
+  const before = without(base);
+  return before !== null && before === without(head);
+}
+
+function main(): void {
+  const args = process.argv.slice(2);
+  if (args.includes("--doc")) {
+    console.log(`${mapTable()}\n\n${flowTable()}\n\n${criticalTable()}`);
+    return;
+  }
+  let files: string[];
+  let diff: Parameters<typeof select>[1] = {};
+  let title: string;
+  const at = args.indexOf("--files");
+  if (at >= 0) {
+    files = args.slice(at + 1);
+    title = `${files.length} files`;
+  } else {
+    const previous = git("tag", "--list", "v*", "--sort=-v:refname")
+      .split("\n")
+      .find((tag) => /^v\d+\.\d+\.\d+$/.test(tag));
+    const range = args.find((one) => one.includes("..")) ?? `${previous}..HEAD`;
+    const [base, head] = range.split(/\.{2,3}/);
+    files = git("diff", "--name-only", range).split("\n").filter(Boolean);
+    diff = {
+      messages: [
+        ...new Set(
+          files.filter((file) => /^messages\//.test(file)).flatMap((file) => changedKeys(base, head, file)),
+        ),
+      ],
+      versionOnly: ["package.json", "package-lock.json"].filter(
+        (file) => files.includes(file) && versionOnly(base, head, file),
+      ),
+    };
+    title = `${range}, ${files.length} files`;
+  }
+
+  const selection = select(files, diff);
+  console.log(`Tests of ${title}`);
+  if (selection.full.length > 0) {
+    console.log(`\nFULL SUITE, for ${selection.full.length} files:`);
+    for (const reason of selection.full) console.log(`  ${reason}`);
+  } else {
+    console.log("\nFull suite: no, every file is in the map and none is critical.");
+    console.log("\nModules:");
+    for (const [id, changed] of selection.modules) console.log(`  ${id} (${changed.length} files)`);
+    console.log(`Flows: ${selection.flows.join(", ") || "none"}`);
+    console.log(`Screens in ${CROSS_CUTTING.join(", ")}: ${selection.screens.join(", ") || "none"}`);
+  }
+  const { before, after } = commands(selection);
+  console.log("\nBefore the deploy (E2E on the local preview):");
+  for (const command of before) console.log(`  ${command}`);
+  console.log("\nAfter the deploy, on the site:");
+  for (const command of after) console.log(`  ${command}`);
+}
+
+if (process.argv[1]?.endsWith("test-select.ts")) main();
