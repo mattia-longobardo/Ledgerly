@@ -510,6 +510,34 @@ const PAGES: Screen[] = [
   // hand, so the row with its badge is measured, in the table and in the phone's list.
   { name: "/expenses (a manual movement)", session: "manual", open: go("/expenses?preset=last3Months") },
 
+  // Release N3, second part (ux/n3-categories-manual.md §12, §13): the `review` user has movements
+  // in every state of a category; `reviewNew` has movements and no category.
+  { name: "/expenses (automatic categories)", session: "review", open: go("/expenses?preset=last3Months") },
+  { name: "/expenses/review (groups)", session: "review", open: go("/expenses/review") },
+  {
+    name: "/expenses/review (a group open)",
+    session: "review",
+    open: async (page) => {
+      await page.goto("/expenses/review");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /^(Show all|Mostra tutti)/ })
+        .first()
+        .click();
+    },
+  },
+  {
+    name: "/expenses/review (nothing in the period)",
+    session: "review",
+    open: go("/expenses/review?from=2020-01-01&to=2020-01-31"),
+  },
+  {
+    name: "/expenses/review (guided, the groups)",
+    session: "reviewNew",
+    open: go("/expenses/review?guide=1&bank=Zeta%20Bank"),
+  },
+  { name: "/settings/categories (a merge proposal)", session: "review", open: go("/settings/categories") },
+
   // Release N2 (ux/n2-connection-status.md §12): the `connections` user has a connection in each
   // of the five states, a warning that an access is about to end, and more than one bank.
   {
@@ -752,6 +780,39 @@ const OVERLAYS: Screen[] = [
       await form.getByLabel(/^(Account|Conto)$/).selectOption({ label: "Zeta Bank conto" });
       await form.getByLabel(/^(Amount|Importo)$/).fill("12,34");
       await expect(page.getByTestId("manual-balance-line")).toBeVisible();
+    },
+  },
+  {
+    name: "the reason of an automatic category",
+    session: "review",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page.getByTestId("auto-mark").locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "a suggestion and its reason",
+    session: "review",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page.getByTestId("suggestion-chip").locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the merge categories dialog",
+    session: "review",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/categories");
+      await settled(page);
+      await page.getByTestId("merge-proposal").getByRole("button").last().click();
+      await settledDialog(page);
     },
   },
   {

@@ -31,9 +31,13 @@ import { connectInvestmentProvider, setSourcesForTests } from "../src/modules/in
 import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
 import { accounts } from "../src/modules/accounts/schema";
 import { setLimit } from "../src/modules/budgets/service";
-import { upsertFromProvider } from "../src/modules/transactions/service";
+import { categorisableAccountIds, upsertFromProvider } from "../src/modules/transactions/service";
 import { createCategory, listCategories } from "../src/modules/transactions/taxonomy";
 import { createManual } from "../src/app/(app)/expenses/manual";
+import { createManualTransaction } from "../src/modules/transactions/manual";
+import { createDefaultGroups } from "../src/modules/transactions/categorize/review";
+import { categorise } from "../src/modules/transactions/categorize/service";
+import { DEFAULT_GROUPS } from "../src/modules/transactions/categorize/tables";
 import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { createAuth } from "../src/platform/auth/auth";
 import { oauthClients } from "../src/platform/auth/oauth/schema";
@@ -1408,6 +1412,74 @@ async function seedManual(): Promise<void> {
   });
 }
 
+/**
+ * Release N3, second part (ux/n3-categories-manual.md): movements in every state of a category, on
+ * an account kept by hand — the cascade reads it as it reads a bank's, and the seed needs no bank.
+ * The default groups let the static tables answer: a brand with one meaning is automatic, a brand
+ * that sells everything is a suggestion, an invented shop has nothing. "Bars" beside "Restaurants
+ * and bars" is a pair that looks like one category.
+ */
+async function seedReview(): Promise<void> {
+  const ctx = await contextOf(USERS.review.email);
+  const on = today(ctx.timeZone);
+  await createDefaultGroups(
+    ctx,
+    DEFAULT_GROUPS.map((group) => group.key),
+    "en",
+  );
+  await createCategory(ctx, { name: "Bars", type: "expense" });
+  const cash = await createAccount(ctx, {
+    name: "Contanti",
+    type: "cash",
+    currency: "EUR",
+    openingBalance: { on: addDays(on, -20), cents: 100_000n },
+  });
+  const movements: [string, number, bigint][] = [
+    ["TRENITALIA SPA 1021", 9, 2_950n],
+    ["AMZN Mktp IT 11", 8, 1_999n],
+    ["AMZN Mktp IT 22", 6, 3_450n],
+    ["AMZN Mktp IT 33", 4, 1_200n],
+    ["Bottega Verdi 1", 7, 800n],
+    ["Bottega Verdi 2", 5, 950n],
+    ["Edicola Centrale", 3, 350n],
+  ];
+  for (const [payee, back, amountCents] of movements) {
+    await createManualTransaction(ctx, {
+      kind: "expense",
+      amountCents,
+      on: addDays(on, -back),
+      accountId: cash.id,
+      categoryId: null,
+      payee,
+      note: "",
+    });
+  }
+  await categorise(ctx, await categorisableAccountIds(ctx));
+}
+
+/** A person with movements and no category at all: the guided review starts from the groups. */
+async function seedReviewNew(): Promise<void> {
+  const ctx = await contextOf(USERS.reviewNew.email);
+  const on = today(ctx.timeZone);
+  const cash = await createAccount(ctx, { name: "Contanti", type: "cash", currency: "EUR" });
+  for (const [payee, back] of [
+    ["TRENITALIA SPA 1021", 3],
+    ["Bottega Verdi 1", 2],
+    ["Bottega Verdi 2", 1],
+  ] as const) {
+    await createManualTransaction(ctx, {
+      kind: "expense",
+      amountCents: 1_000n,
+      on: addDays(on, -back),
+      accountId: cash.id,
+      categoryId: null,
+      payee,
+      note: "",
+    });
+  }
+  await categorise(ctx, await categorisableAccountIds(ctx));
+}
+
 async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
   // The bank plugin, turned on with nothing saved: the section "Banks" opens on its guide and the
@@ -1795,6 +1867,8 @@ await seedTimeOff();
 await seedLayout();
 await seedConnections();
 await seedManual();
+await seedReview();
+await seedReviewNew();
 await seedCurrency();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 

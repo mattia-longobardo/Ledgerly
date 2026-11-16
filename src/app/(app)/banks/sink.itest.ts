@@ -5,6 +5,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import { createAccount } from "@/modules/accounts/service";
 import { transactionIdsOfAccount, transactionsByIds } from "@/modules/transactions/queries";
+import { categorisableAccountIds } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
 import { passFor } from "@/platform/integrations/registry";
@@ -378,6 +379,34 @@ describe("the reading of a real bank (anonymous fixture)", () => {
     expect(first).toMatchObject({ ok: true, created: REAL.transactions.length });
     expect(second).toMatchObject({ ok: true, created: 0, updated: 0 });
     expect((await rowsOf(ctx)).map((row) => row.id)).toEqual(before.map((row) => row.id));
+  });
+});
+
+describe("the categories after a reading (rewrite plan N3)", () => {
+  it("are looked for by the cascade on every movement the bank brought, and on nothing else", async () => {
+    const plugin = fakePlugin({ accounts: REAL.accounts });
+    const { ctx, connectionId } = await connected(plugin);
+    const target = { pluginId: PLUGIN, connectionId };
+    await chooseAccounts(
+      ctx,
+      { ...target, decisions: [asNew("stable-1", "A"), asNew("stable-2", "B"), asNew("stable-3", "C")] },
+      bankSink,
+      NOW,
+    );
+    plugin.gives(REAL_ANSWER);
+
+    await read(ctx, target, plugin);
+
+    // The bank's manifest says it gives no category: its accounts are the ones the cascade reads.
+    const bankAccounts = (await listAccounts(ctx)).map((account) => account.id);
+    expect((await categorisableAccountIds(ctx)).sort()).toEqual([...bankAccounts].sort());
+    const rows = await rowsOf(ctx);
+    expect(rows.length).toBe(REAL.transactions.length);
+    // Each one was read: it has the key of its text. This person has no label and no group, so
+    // none is given a category, and none is marked as a choice of theirs.
+    expect(rows.every((row) => row.categoryKey !== null)).toBe(true);
+    expect(rows.every((row) => row.categoryId === null && row.categoryOrigin === null)).toBe(true);
+    expect(rows.every((row) => row.locallyEdited.length === 0)).toBe(true);
   });
 });
 
