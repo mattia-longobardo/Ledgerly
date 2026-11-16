@@ -1,5 +1,10 @@
 # N2 · Specifica UX: stato dei collegamenti
 
+> **Nota del 16/11/2026 (H48, H49).** Questa specifica descrive il rilascio com'è in produzione: plugin attivati per
+> utente, credenziali Enable Banking per utente, nessun passo dell'admin. Per un rilascio futuro Mattia ha deciso che
+> l'admin gestisce e aggiunge i plugin e che l'applicazione Enable Banking è una per istanza. Le schermate nuove
+> nascono con quel rilascio: [`../13-plugins-addons.md`](../13-plugins-addons.md).
+
 Indice del piano: [`../../rewrite-plan.md`](../../rewrite-plan.md). Rilascio: [`../03-releases.md`](../03-releases.md) «N2».
 Regole tecniche: [`../04-now.md`](../04-now.md) §4.3. Decisioni: [`../01-decisions.md`](../01-decisions.md) C5, H25-H30.
 Anticipo AN3: [`../11-standardization.md`](../11-standardization.md). Specifica precedente: [`n1-plugin-bank.md`](n1-plugin-bank.md) §11.
