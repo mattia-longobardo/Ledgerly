@@ -4,7 +4,7 @@
 //
 // The `sources` user is this spec's own (scripts/seed-e2e.ts): "Conto corrente app", an account of
 // a source with 500,00 € read yesterday, one manual movement that waits ("Bar Centrale", 4,50 €,
-// today) and one the source did not take ("Edicola", 2,00 €, yesterday). The account has no
+// today) and one the source did not take ("Edicola", 2,00 €, yesterday): 493,50 € in all. The account has no
 // connection behind it: nothing in this spec is sent anywhere, "Retry sending" included. Each test
 // puts back what it changes.
 import { expect, type Page, test } from "@playwright/test";
@@ -45,9 +45,8 @@ test("the rows of the movements on their way say where they stand, and the balan
   // A movement of the source itself carries neither.
   await expect(rowOf(page, "Zoo Market").getByText("Manual", { exact: true })).toHaveCount(0);
 
-  // 500,00 read yesterday, less the movement written today. The one dated yesterday is a day the
-  // reading already holds.
-  expect(await balanceOf(page, ACCOUNT)).toContain("495,50 €");
+  // 500,00 read yesterday, less the two movements written after that reading.
+  expect(await balanceOf(page, ACCOUNT)).toContain("493,50 €");
 });
 
 test("'Retry sending' is offered on a movement the source did not take, and only there", async ({ page }) => {
@@ -79,7 +78,7 @@ test("the dialog offers the account under its source, says when the movement goe
     await dialog(page).getByLabel("Amount").fill("10");
     await dialog(page).getByLabel("Payee (optional)").fill("Forno Antico");
     await expect(page.getByTestId("manual-balance-line")).toHaveText(
-      `Balance of “${ACCOUNT}”: from 495,50 € to 485,50 €.`,
+      `Balance of “${ACCOUNT}”: from 493,50 € to 483,50 €.`,
     );
   });
 
@@ -88,7 +87,7 @@ test("the dialog offers the account under its source, says when the movement goe
     await expect(dialog(page)).toHaveCount(0);
     await expect(page.getByText("Transaction added", { exact: true })).toBeVisible();
     await expect(rowOf(page, "Forno Antico").getByText("To send", { exact: true })).toBeVisible();
-    expect(await balanceOf(page, ACCOUNT)).toContain("485,50 €");
+    expect(await balanceOf(page, ACCOUNT)).toContain("483,50 €");
   });
 
   await test.step("while it waits it is deleted like every manual movement, and the balance comes back", async () => {
@@ -101,7 +100,7 @@ test("the dialog offers the account under its source, says when the movement goe
       .click();
     await expect(page.getByText("1 transaction deleted")).toBeVisible();
     await expect(rowOf(page, "Forno Antico")).toHaveCount(0);
-    expect(await balanceOf(page, ACCOUNT)).toContain("495,50 €");
+    expect(await balanceOf(page, ACCOUNT)).toContain("493,50 €");
   });
 });
 

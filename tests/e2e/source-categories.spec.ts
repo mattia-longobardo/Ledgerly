@@ -13,14 +13,15 @@ import { sessionState } from "./env";
 test.use({ storageState: sessionState("sources") });
 
 const section = (page: Page) => page.getByTestId("source-categories");
-/** The row of one category of the source, in the layout that is on screen. */
+const chooserName = (name: string) => `Ledgerly category for “${name}”`;
+/** The row of one category of the source, in the layout that is on screen: found by its chooser. */
 const rowOf = (page: Page, name: string): Locator =>
   section(page)
     .getByTestId("source-category-row")
     .locator("visible=true")
-    .filter({ hasText: `${name} ·` });
+    .filter({ has: page.getByRole("button", { name: chooserName(name), exact: true }) });
 const chooser = (page: Page, name: string): Locator =>
-  rowOf(page, name).getByRole("button", { name: `Ledgerly category for “${name}”` });
+  rowOf(page, name).getByRole("button", { name: chooserName(name), exact: true });
 
 async function open(page: Page) {
   await page.goto("/settings/categories");
