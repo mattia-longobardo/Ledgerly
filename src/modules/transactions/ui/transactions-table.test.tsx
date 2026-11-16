@@ -113,7 +113,7 @@ describe("TransactionsTable", () => {
   it("names a movement with no payee and no category rather than leaving a blank", () => {
     const table = renderTable();
     expect(table.getByText("No payee")).toBeInTheDocument();
-    expect(table.getByText("Uncategorised")).toBeInTheDocument();
+    expect(table.getByText("To categorise")).toBeInTheDocument();
   });
 
   it("badges what keeps a row out of the totals and what the user changed", () => {

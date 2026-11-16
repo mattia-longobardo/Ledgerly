@@ -35,7 +35,7 @@ import {
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
-import { isHidden, type TransactionType } from "./rules";
+import { type CategoryState, categoryStateOf, isHidden, type TransactionType } from "./rules";
 import { categories, labels, recurringPatterns, transactionLabels, transactions } from "./schema";
 import { type Label, listCategories, listLabels, type TreeCategory } from "./taxonomy";
 
@@ -84,6 +84,15 @@ export interface TransactionRow {
   locallyEdited: string[];
   /** Who wrote it: a provider's reading, or the person by hand. */
   origin: TransactionRecord["origin"];
+  /**
+   * How the category stands (rewrite plan N3; ux/n3-categories-manual.md §1.2): chosen by a person
+   * or a source, given automatically, only suggested, or absent. With the reason of an automatic
+   * one or of a suggestion — a code and what its sentence names, never a number of the model.
+   */
+  categoryState: CategoryState;
+  categoryReason: { code: string; params: Record<string, string> } | null;
+  /** The category suggested, which does not count until a person confirms it. */
+  suggestion: { id: string; name: string; color: string | null } | null;
   hidden: boolean;
   edited: boolean;
 }
@@ -896,14 +905,21 @@ export async function listTransactions(
 ): Promise<TransactionRow[]> {
   // The accounts come first: the table shows their names, and the account sort orders by them.
   const accounts = await listAccounts(ctx, { includeArchived: true });
+  const suggested = alias(categories, "suggested");
   const rows = await getDb()
     .select({
       transaction: transactions,
       categoryName: categories.name,
       categoryColor: categories.color,
+      suggestedName: suggested.name,
+      suggestedColor: suggested.color,
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+    .leftJoin(
+      suggested,
+      and(eq(suggested.id, transactions.suggestedCategoryId), eq(suggested.userId, ctx.userId)),
+    )
     .where(conditions(ctx, filters))
     .orderBy(...ordering(filters, accounts))
     .limit(boundedLimit(filters.limit))
@@ -915,30 +931,43 @@ export async function listTransactions(
   );
   const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
 
-  return rows.map(({ transaction, categoryName, categoryColor }) => ({
-    id: transaction.id,
-    accountId: transaction.accountId,
-    accountName: accountNames.get(transaction.accountId) ?? null,
-    occurredAt: transaction.occurredAt,
-    on: civilDateIn(transaction.occurredAt, ctx.timeZone),
-    amountCents: transaction.amountCents,
-    currency: transaction.currency,
-    type: transaction.type,
-    state: transaction.state,
-    categoryId: transaction.categoryId,
-    categoryName,
-    categoryColor,
-    payee: transaction.payee,
-    note: transaction.note,
-    labels: chips.get(transaction.id) ?? [],
-    transferGroupId: transaction.transferGroupId,
-    hiddenAt: transaction.hiddenAt,
-    removedUpstreamAt: transaction.removedUpstreamAt,
-    locallyEdited: transaction.locallyEdited,
-    origin: transaction.origin,
-    hidden: isHidden(transaction),
-    edited: transaction.locallyEdited.length > 0,
-  }));
+  return rows.map(({ transaction, categoryName, categoryColor, suggestedName, suggestedColor }) => {
+    const categoryState = categoryStateOf(transaction);
+    return {
+      id: transaction.id,
+      accountId: transaction.accountId,
+      accountName: accountNames.get(transaction.accountId) ?? null,
+      occurredAt: transaction.occurredAt,
+      on: civilDateIn(transaction.occurredAt, ctx.timeZone),
+      amountCents: transaction.amountCents,
+      currency: transaction.currency,
+      type: transaction.type,
+      state: transaction.state,
+      categoryId: transaction.categoryId,
+      categoryName,
+      categoryColor,
+      payee: transaction.payee,
+      note: transaction.note,
+      labels: chips.get(transaction.id) ?? [],
+      transferGroupId: transaction.transferGroupId,
+      hiddenAt: transaction.hiddenAt,
+      removedUpstreamAt: transaction.removedUpstreamAt,
+      locallyEdited: transaction.locallyEdited,
+      origin: transaction.origin,
+      categoryState,
+      categoryReason:
+        (categoryState === "automatic" || categoryState === "suggestion") &&
+        transaction.categoryReason !== null
+          ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
+          : null,
+      suggestion:
+        categoryState === "suggestion" && transaction.suggestedCategoryId !== null && suggestedName !== null
+          ? { id: transaction.suggestedCategoryId, name: suggestedName, color: suggestedColor }
+          : null,
+      hidden: isHidden(transaction),
+      edited: transaction.locallyEdited.length > 0,
+    };
+  });
 }
 
 /**

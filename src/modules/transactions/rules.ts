@@ -32,6 +32,28 @@ export const CATEGORY_ORIGINS = ["user", "provider", "memory", "model", "table"]
 export type CategoryOrigin = (typeof CATEGORY_ORIGINS)[number];
 /** The origins of an automatic category. */
 export const AUTOMATIC_CATEGORY_ORIGINS: readonly CategoryOrigin[] = ["memory", "model", "table"];
+
+export type CategoryState = "chosen" | "automatic" | "suggestion" | "none";
+
+/**
+ * The state of a movement's category, from the columns that hold it (ux/n3-categories-manual.md
+ * §1.2): `chosen` by a person or a source, `automatic`, a `suggestion` that does not count yet, or
+ * `none`.
+ */
+export function categoryStateOf(row: {
+  categoryId: string | null;
+  categoryOrigin: string | null;
+  suggestedCategoryId: string | null;
+}): CategoryState {
+  if (row.categoryId !== null) {
+    return row.categoryOrigin !== null &&
+      AUTOMATIC_CATEGORY_ORIGINS.includes(row.categoryOrigin as CategoryOrigin)
+      ? "automatic"
+      : "chosen";
+  }
+  return row.suggestedCategoryId === null ? "none" : "suggestion";
+}
+
 export type CategoryType = (typeof CATEGORY_TYPES)[number];
 
 /**
