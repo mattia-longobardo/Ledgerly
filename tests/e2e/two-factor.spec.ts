@@ -10,7 +10,7 @@ import { totpCode, totpSecretFor } from "./totp";
 test.describe("a password account without TOTP", () => {
   test.use({ storageState: sessionState("enroll") });
 
-  test("is held at the setup until a code confirms it, then reaches the app", async ({ page }) => {
+  test("is held at the setup until a code confirms it, then reaches the app @site", async ({ page }) => {
     await page.goto("/settings/profile");
     await expect(page).toHaveURL("/sign-in/two-factor/setup");
     await expect(page.getByRole("heading", { name: "Set up two-factor authentication" })).toBeVisible();
@@ -36,7 +36,7 @@ test.describe("a password account without TOTP", () => {
 test.describe("a password account with TOTP", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("gets no session from the password alone, and a wrong code is refused", async ({ page }) => {
+  test("gets no session from the password alone, and a wrong code is refused @site", async ({ page }) => {
     await page.goto("/sign-in");
     await page.getByLabel("Email").fill(USERS.prefs.email);
     await page.getByLabel("Password").fill(USERS.prefs.password);

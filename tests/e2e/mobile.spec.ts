@@ -3,7 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { sessionState, USERS } from "./env";
 import { signInWithPassword } from "./helpers";
 
-test("phones get bottom tabs and a More sheet instead of the sidebar", async ({ page }) => {
+test("phones get bottom tabs and a More sheet instead of the sidebar @site", async ({ page }) => {
   await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
   const tabs = page
     .getByRole("navigation", { name: "Primary" })

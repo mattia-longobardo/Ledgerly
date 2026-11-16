@@ -7,7 +7,7 @@ import { sessionState } from "./env";
 
 test.use({ storageState: sessionState("layout") });
 
-test("a signed-in page names a manifest the browser accepts for installing", async ({ page }) => {
+test("a signed-in page names a manifest the browser accepts for installing @smoke", async ({ page }) => {
   await page.goto("/");
   const link = page.locator('head link[rel="manifest"]');
   await expect(link).toHaveAttribute("href", "/manifest.webmanifest");

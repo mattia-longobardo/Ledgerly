@@ -3,14 +3,14 @@ import { expect, test } from "@playwright/test";
 import { USERS } from "./env";
 import { pageAlert, signInWithPassword } from "./helpers";
 
-test("anonymous visitors are sent to sign-in", async ({ page }) => {
+test("anonymous visitors are sent to sign-in @smoke", async ({ page }) => {
   await page.goto("/settings/profile");
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page).toHaveTitle("Sign in · Ledgerly");
 });
 
-test("a wrong password is refused with a message", async ({ page }) => {
+test("a wrong password is refused with a message @site", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(USERS.owner.email);
   await page.getByLabel("Password").fill("not-the-password");
@@ -19,7 +19,7 @@ test("a wrong password is refused with a message", async ({ page }) => {
 });
 
 // The site already has its admin, so a test user is an ordinary one: no admin pages for it.
-test("a user signs in with a password, reaches the app and signs out", async ({ page }) => {
+test("a user signs in with a password, reaches the app and signs out @smoke @site", async ({ page }) => {
   await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
   await expect(page.getByRole("heading", { name: "No accounts yet" })).toBeVisible();
   await expect(page).toHaveTitle("Overview · Ledgerly");

@@ -13,7 +13,9 @@ function nextActionResponse(page: Page) {
 
 // One sign-in for the whole journey: the suite's password sign-ins are at Better Auth's per-client
 // limit (tests/e2e/env.ts).
-test("theme and language preferences apply at once, persist, and come from the account", async ({ page }) => {
+test("theme and language preferences apply at once, persist, and come from the account @site", async ({
+  page,
+}) => {
   const html = page.locator("html");
   await signInWithPassword(page, USERS.prefs.email, USERS.prefs.password);
   await expect(html).toHaveAttribute("data-theme", "light");

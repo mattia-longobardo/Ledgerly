@@ -47,7 +47,7 @@ async function tabUntil(page: Page, limit: number, stop: () => Promise<boolean>)
   return -1;
 }
 
-test("the command palette opens, filters, moves and goes, all from the keyboard", async ({ page }) => {
+test("the command palette opens, filters, moves and goes, all from the keyboard @smoke", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(500);
 

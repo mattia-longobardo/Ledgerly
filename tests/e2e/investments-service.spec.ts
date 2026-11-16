@@ -64,7 +64,7 @@ test("the service's P&L in the display currency is its row on the home, to the c
   }
 });
 
-test("home → service → positions: the rows of Positions add up to the Overview's P&L (§3.4, U4)", async ({
+test("home → service → positions: the rows of Positions add up to the Overview's P&L (§3.4, U4) @site", async ({
   page,
 }) => {
   for (const [name, query] of [

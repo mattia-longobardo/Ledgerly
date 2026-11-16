@@ -67,7 +67,7 @@ test("the sign-in pages link to both documents", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Privacy" })).toBeVisible();
 });
 
-test("nothing else became public: the app's pages still send an anonymous visitor to sign-in", async ({
+test("nothing else became public: the app's pages still send an anonymous visitor to sign-in @smoke", async ({
   request,
 }) => {
   for (const path of [

@@ -18,7 +18,10 @@ async function integrations(page: Page) {
 test.describe("a person who is not an admin", () => {
   test.use({ storageState: sessionState("pockets") });
 
-  test("turns the plugin on, sees the section Banks, and turns it off, alone", async ({ page, browser }) => {
+  test("turns the plugin on, sees the section Banks, and turns it off, alone @site", async ({
+    page,
+    browser,
+  }) => {
     await integrations(page);
     const row = page.locator(ROW);
     const banks = page.getByRole("region", { name: "Banks" });

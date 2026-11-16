@@ -44,6 +44,8 @@ interface Screen {
   only?: Size;
   /** Measured at the design's four widths and not the usual two. */
   everyWidth?: boolean;
+  /** One screen of each area: at the desktop width it is a `@smoke` test (docs/testing.md). */
+  smoke?: boolean;
 }
 
 // ——— Getting to a screen ———————————————————————————————————————————————————————————————————
@@ -243,8 +245,8 @@ async function layoutFund(page: Page, fund: RegExp, query: string): Promise<void
 // ——— The screens ———————————————————————————————————————————————————————————————————————————
 
 const PAGES: Screen[] = [
-  { name: "/", session: "layout", open: go("/") },
-  { name: "/accounts", session: "layout", open: go("/accounts") },
+  { name: "/", session: "layout", smoke: true, open: go("/") },
+  { name: "/accounts", session: "layout", smoke: true, open: go("/accounts") },
   { name: "/accounts/new", session: "layout", open: go("/accounts/new") },
   {
     name: "/accounts/[id]",
@@ -261,8 +263,8 @@ const PAGES: Screen[] = [
       await openTab(page, tab);
     },
   })),
-  { name: "/expenses", session: "layout", open: go("/expenses") },
-  { name: "/budgets", session: "layout", open: go("/budgets") },
+  { name: "/expenses", session: "layout", smoke: true, open: go("/expenses") },
+  { name: "/budgets", session: "layout", smoke: true, open: go("/budgets") },
   {
     name: "/budgets/[id]",
     session: "layout",
@@ -286,7 +288,7 @@ const PAGES: Screen[] = [
     session: "layout",
     open: (page) => follow(page, "/interests", "Revolut Saving"),
   },
-  { name: "/funds", session: "layout", open: go("/funds"), everyWidth: true },
+  { name: "/funds", session: "layout", smoke: true, open: go("/funds"), everyWidth: true },
   // The form "Add pension fund" (release N6), at each of its four steps.
   ...(["fund", "sources", "fees", "review"] as const).map((step): Screen => ({
     name: `/funds/new?step=${step}`,
@@ -412,7 +414,7 @@ const PAGES: Screen[] = [
     },
     everyWidth: true,
   })),
-  { name: "/investments", session: "layout", open: go("/investments") },
+  { name: "/investments", session: "layout", smoke: true, open: go("/investments") },
   {
     name: "/investments · All, the value chart, by class",
     session: "layout",
@@ -462,7 +464,7 @@ const PAGES: Screen[] = [
       await settled(page);
     },
   },
-  { name: "/payroll", session: "layout", open: go("/payroll") },
+  { name: "/payroll", session: "layout", smoke: true, open: go("/payroll") },
   {
     name: "/payroll/[id]",
     session: "layout",
@@ -473,7 +475,7 @@ const PAGES: Screen[] = [
       await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"]):not([href$="/settings"])');
     },
   },
-  { name: "/timeoff", session: "layout", open: go("/timeoff") },
+  { name: "/timeoff", session: "layout", smoke: true, open: go("/timeoff") },
   { name: "/timeoff/settings", session: "layout", open: go("/timeoff/settings") },
   {
     // A range with its first day chosen: the preview under the pointer and the bar (rewrite plan N5).
@@ -494,7 +496,7 @@ const PAGES: Screen[] = [
   { name: "/settings/security", session: "layout", open: go("/settings/security") },
   { name: "/settings/categories", session: "layout", open: go("/settings/categories") },
   { name: "/settings/data", session: "layout", open: go("/settings/data") },
-  { name: "/settings/integrations", session: "layout", open: go("/settings/integrations") },
+  { name: "/settings/integrations", session: "layout", smoke: true, open: go("/settings/integrations") },
   // Release N1: the layout user has the bank plugin on with nothing saved, so the page above has
   // the plugin's row "Active" and the section "Banks" on its guide; the admin's has "Not active".
   // The procedure, for the same user, stops at its guard.
@@ -587,7 +589,7 @@ const PAGES: Screen[] = [
   },
 
   // Signed out.
-  { name: "/sign-in", session: null, open: go("/sign-in") },
+  { name: "/sign-in", session: null, smoke: true, open: go("/sign-in") },
   { name: "/forgot-password", session: null, open: go("/forgot-password") },
   { name: "/sign-in/two-factor", session: null, open: go("/sign-in/two-factor") },
   { name: "/privacy", session: null, open: go("/privacy") },
@@ -1161,7 +1163,8 @@ function audit(screens: readonly Screen[]): void {
       for (const screen of screens.filter((one) => one.session === session)) {
         for (const { width, height, name: size } of screen.everyWidth ? EVERY_WIDTH : WIDTHS) {
           if (screen.only !== undefined && screen.only !== size) continue;
-          test(`${screen.name} at ${size} width`, async ({ page }) => {
+          const smoke = screen.smoke && size === "desktop" ? " @smoke" : "";
+          test(`${screen.name} at ${size} width${smoke}`, async ({ page }) => {
             await page.setViewportSize({ width, height });
             await setTheme(page, "light");
             await screen.open(page);

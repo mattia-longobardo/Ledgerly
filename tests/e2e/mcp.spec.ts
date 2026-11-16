@@ -64,7 +64,9 @@ class MemoryProvider implements OAuthClientProvider {
   }
 }
 
-test("an MCP client discovers, registers, gets consent and reads only through /api/mcp", async ({ page }) => {
+test("an MCP client discovers, registers, gets consent and reads only through /api/mcp @site", async ({
+  page,
+}) => {
   const provider = new MemoryProvider();
   const transport = () => new StreamableHTTPClientTransport(MCP_URL, { authProvider: provider });
 

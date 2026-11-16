@@ -8,7 +8,7 @@ test.use({ storageState: sessionState("tokens") });
 
 test.describe.configure({ mode: "serial" });
 
-test("a Client API is shown once, gets a token, works on /api/v1 and stops the moment it is deleted", async ({
+test("a Client API is shown once, gets a token, works on /api/v1 and stops the moment it is deleted @site", async ({
   page,
 }) => {
   await page.goto("/settings/security");
@@ -62,7 +62,7 @@ test("a Client API is shown once, gets a token, works on /api/v1 and stops the m
   await script.dispose();
 });
 
-test("/api/v1 refuses a call with no token at all, and says where to get one", async ({ request }) => {
+test("/api/v1 refuses a call with no token at all, and says where to get one @smoke", async ({ request }) => {
   const response = await request.get("/api/v1/summary");
   expect(response.status()).toBe(401);
   expect(response.headers()["www-authenticate"]).toMatch(

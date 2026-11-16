@@ -5,7 +5,7 @@ import { sessionState } from "./env";
 // The seed gives this user an account in EUR and one in USD (scripts/seed-e2e.ts, `seedCurrency`).
 test.use({ storageState: sessionState("currency") });
 
-test("the totals follow the display currency chosen in Settings, each account keeps its own", async ({
+test("the totals follow the display currency chosen in Settings, each account keeps its own @site", async ({
   page,
 }) => {
   const hero = page.locator(".text-hero");
