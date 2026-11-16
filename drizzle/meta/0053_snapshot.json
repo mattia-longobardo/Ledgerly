@@ -1,5 +1,5 @@
 {
-  "id": "08304fd2-429e-4c12-9596-1c40f0acb126",
+  "id": "73309bd1-7d21-47bc-ab49-0a64824759f0",
   "prevId": "28a3beec-e943-40af-9556-d3788729ec51",
   "version": "7",
   "dialect": "postgresql",
@@ -3841,13 +3841,6 @@
           "notNull": true,
           "default": false
         },
-        "has_manual_movements": {
-          "name": "has_manual_movements",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "last_synced_at": {
           "name": "last_synced_at",
           "type": "timestamp with time zone",
@@ -4159,6 +4152,81 @@
           "value": "\"balance_entries\".\"source\" in ('manual', 'provider', 'system', 'import', 'derived', 'portfolio', 'movement')"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.manual_movement_accounts": {
+      "name": "manual_movement_accounts",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "manual_movement_accounts_user_idx": {
+          "name": "manual_movement_accounts_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "manual_movement_accounts_account_id_accounts_id_fk": {
+          "name": "manual_movement_accounts_account_id_accounts_id_fk",
+          "tableFrom": "manual_movement_accounts",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "manual_movement_accounts_user_id_users_id_fk": {
+          "name": "manual_movement_accounts_user_id_users_id_fk",
+          "tableFrom": "manual_movement_accounts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.snapshot_runs": {

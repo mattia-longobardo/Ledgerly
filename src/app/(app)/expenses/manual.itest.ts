@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
+import { accountsToRebuild, balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import {
   accountDailyBalances,
   applyProviderAccounts,
@@ -232,7 +232,7 @@ describe("an account kept by hand", () => {
     const ctx = await newContext();
     const account = await cash(ctx, 8_000n);
     const marked = async () =>
-      (await listAccounts(ctx)).find((one) => one.id === account.id)?.hasManualMovements;
+      (await accountsToRebuild(ctx)).find((one) => one.account.id === account.id)?.hasManualMovements;
     expect(await marked()).toBe(false);
 
     const { transaction } = await createManual(ctx, movement(account.id));

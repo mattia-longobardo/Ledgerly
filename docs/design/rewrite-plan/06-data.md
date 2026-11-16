@@ -68,8 +68,11 @@ dei collegamenti dei plugin da `last_error` a `error_code`; righe `running` orfa
 `wallet_sync_failed` e `wallet_sync_stale` di `notifications_log` portate a `sync_failed` e `sync_stale`).
 
 Migrazioni di N3 nel repo, prima parte (movimento a mano): `0053_manual_movement` (additiva: `transactions.origin`
-con il default `provider`, `transactions.idempotency_key` con la sua chiave unica per utente, check
-`balance_entries_source_ck` allargato con `movement`). Nessun dato esistente cambia. Le colonne della categoria,
+con il default `provider`, `transactions.idempotency_key` con la sua chiave unica per utente, indice parziale
+`transactions_manual_idx` sui movimenti a mano, check `balance_entries_source_ck` allargato con `movement`, tabella
+`manual_movement_accounts` con una riga per ogni conto che ha un movimento a mano, `on delete cascade`). La tabella
+serve al gate G9: un saldo scritto su un conto senza movimenti a mano non fa una query in più. Non è una colonna di
+`accounts`, perché la riga di un conto entra per intero nella fotografia dei numeri. Nessun dato esistente cambia. Le colonne della categoria,
 `category_memory`, `category_models` e il riempimento di `category_origin` arrivano con la seconda parte. File di
 recupero: [`n3-rollback.sql`](n3-rollback.sql).
 

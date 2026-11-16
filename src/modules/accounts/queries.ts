@@ -29,7 +29,7 @@ import {
   SOURCE_PRECEDENCE,
   totalSeries,
 } from "./rules";
-import { accountGroups, accounts, balanceEntries, snapshotRuns } from "./schema";
+import { accountGroups, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
 
 export type Account = typeof accounts.$inferSelect;
 export type BalanceEntry = typeof balanceEntries.$inferSelect;
@@ -273,6 +273,22 @@ export async function listAccounts(
     .where(userScoped(ctx).owns(accounts))
     .orderBy(asc(accounts.sortOrder), asc(accounts.id));
   return options.includeArchived ? rows : rows.filter((row) => row.state !== "archived");
+}
+
+/**
+ * Every account of the user with whether it has a movement written by hand, in one read: what the
+ * rebuild of the derived balances starts from (`rebuildDerivedBalances`). Archived ones too.
+ */
+export async function accountsToRebuild(
+  ctx: Pick<Ctx, "userId">,
+): Promise<{ account: Account; hasManualMovements: boolean }[]> {
+  const rows = await getDb()
+    .select({ account: accounts, marked: manualMovementAccounts.accountId })
+    .from(accounts)
+    .leftJoin(manualMovementAccounts, eq(manualMovementAccounts.accountId, accounts.id))
+    .where(userScoped(ctx).owns(accounts))
+    .orderBy(asc(accounts.sortOrder), asc(accounts.id));
+  return rows.map((row) => ({ account: row.account, hasManualMovements: row.marked !== null }));
 }
 
 export async function getAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Account | null> {

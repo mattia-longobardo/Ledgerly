@@ -49,13 +49,14 @@ import {
 } from "./rules";
 import {
   type Account,
+  accountsToRebuild,
   type BalanceEntry,
   balancesOn,
   listAccounts,
   movementBasis,
   observedDays,
 } from "./queries";
-import { accountConnections, accounts, balanceEntries, snapshotRuns } from "./schema";
+import { accountConnections, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type AccountErrorCode =
@@ -544,18 +545,21 @@ export async function rebuildDerivedBalances(
   accountIds?: readonly string[],
   options: { manualChanged?: boolean } = {},
 ): Promise<{ written: number }> {
-  const wanted = (await listAccounts(ctx, { includeArchived: true })).filter(
-    (account) => accountIds === undefined || accountIds.includes(account.id),
+  const wanted = (await accountsToRebuild(ctx)).filter(
+    ({ account }) => accountIds === undefined || accountIds.includes(account.id),
   );
-  const monthEnds = await rebuildMonthEnds(ctx, wanted);
+  const monthEnds = await rebuildMonthEnds(
+    ctx,
+    wanted.map(({ account }) => account),
+  );
   // After the month ends: a rebuilt end that follows a manual movement has to show it too. Only
   // the accounts that have a manual movement, or whose manual movements the caller just changed:
   // a balance written on any other account starts nothing here.
-  const manual = options.manualChanged ? wanted : wanted.filter((account) => account.hasManualMovements);
+  const manual = options.manualChanged ? wanted : wanted.filter((one) => one.hasManualMovements);
   if (manual.length > 0) {
     await rebuildMovementBalances(
       ctx,
-      manual.map((account) => ({ id: account.id, marked: account.hasManualMovements })),
+      manual.map((one) => ({ id: one.account.id, marked: one.hasManualMovements })),
     );
   }
   return monthEnds;
@@ -567,7 +571,7 @@ export async function rebuildDerivedBalances(
  * `movementBalances` writes the ones the readings and the manual movements support, in one
  * transaction. It runs wherever a reading or a manual movement changes, so every read of a
  * balance — Accounts, Overview, the net worth, the API — finds the number already there. The same
- * transaction keeps `has_manual_movements` true to the account.
+ * transaction keeps the mark of the account (`manual_movement_accounts`) true to it.
  */
 async function rebuildMovementBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -600,15 +604,24 @@ async function rebuildMovementBalances(
         ),
       );
     if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
-    for (const has of [true, false]) {
-      const changed = wanted
-        .filter((account) => manual.has(account.id) === has && account.marked !== has)
-        .map((account) => account.id);
-      if (changed.length === 0) continue;
+    const marked = wanted.filter((account) => manual.has(account.id) && !account.marked);
+    if (marked.length > 0) {
       await tx
-        .update(accounts)
-        .set({ hasManualMovements: has })
-        .where(and(userScoped(ctx).owns(accounts), inArray(accounts.id, changed)));
+        .insert(manualMovementAccounts)
+        .values(marked.map((account) => userScoped(ctx).stamp({ accountId: account.id })))
+        .onConflictDoNothing();
+    }
+    const unmarked = wanted.filter((account) => !manual.has(account.id) && account.marked);
+    if (unmarked.length > 0) {
+      await tx.delete(manualMovementAccounts).where(
+        and(
+          userScoped(ctx).owns(manualMovementAccounts),
+          inArray(
+            manualMovementAccounts.accountId,
+            unmarked.map((account) => account.id),
+          ),
+        ),
+      );
     }
   });
 }

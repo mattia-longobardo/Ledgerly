@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 84235,
-    "duplicatedLines": 16334,
-    "percent": 19.39,
+    "lines": 84271,
+    "duplicatedLines": 16350,
+    "percent": 19.4,
     "blocks": 1146
   },
   "units": {
@@ -29,9 +29,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 3951,
-      "duplicatedLines": 1065,
-      "percent": 26.96,
+      "lines": 3987,
+      "duplicatedLines": 1080,
+      "percent": 27.09,
       "blocks": 71
     },
     "modules/budgets": {
@@ -114,8 +114,8 @@
     },
     "platform/auth": {
       "lines": 1506,
-      "duplicatedLines": 356,
-      "percent": 23.64,
+      "duplicatedLines": 357,
+      "percent": 23.71,
       "blocks": 22
     },
     "platform/backup": {
@@ -405,9 +405,9 @@
     "modules/accounts/actions.ts": 77,
     "modules/accounts/api.ts": 27,
     "modules/accounts/jobs.ts": 18,
-    "modules/accounts/queries.ts": 136,
+    "modules/accounts/queries.ts": 137,
     "modules/accounts/rules.ts": 49,
-    "modules/accounts/schema.ts": 156,
+    "modules/accounts/schema.ts": 170,
     "modules/accounts/service.ts": 206,
     "modules/accounts/ui/account-form.tsx": 63,
     "modules/accounts/ui/balance-entries.tsx": 165,
@@ -549,7 +549,7 @@
     "platform/api/summary.ts": 16,
     "platform/auth/api-clients.ts": 23,
     "platform/auth/emails.ts": 10,
-    "platform/auth/oauth-grants.ts": 22,
+    "platform/auth/oauth-grants.ts": 23,
     "platform/auth/oauth/schema.ts": 170,
     "platform/auth/schema.ts": 131,
     "platform/db/tables.ts": 20,

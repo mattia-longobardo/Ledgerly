@@ -82,12 +82,6 @@ export const accounts = pgTable(
     renamedLocally: boolean("renamed_locally").notNull().default(false),
     /** The provider's type is followed until the type is changed here, like the name. */
     retypedLocally: boolean("retyped_locally").notNull().default(false),
-    /**
-     * Whether a person wrote a movement by hand on the account (rewrite plan, 12-account-modes.md
-     * §12.2). Kept by the rebuild of the balances after those movements, and read with the account:
-     * a balance written on an account with none starts no rebuild and costs no read.
-     */
-    hasManualMovements: boolean("has_manual_movements").notNull().default(false),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     notes: text("notes"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
@@ -147,6 +141,27 @@ export const balanceEntries = pgTable(
     index("balance_entries_user_idx").on(table.userId),
     check("balance_entries_source_ck", sql`${table.source} in (${sql.raw(inList(ENTRY_SOURCES))})`),
   ],
+);
+
+/**
+ * The accounts a person wrote a movement by hand on (rewrite plan, 12-account-modes.md §12.2): one
+ * row while the account has one that counts. Kept by the rebuild of the balances after those
+ * movements and read with the accounts it works on, so a balance written on an account with no
+ * manual movement starts no rebuild and costs no read. A table of its own, not a column of
+ * `accounts`: an account's row is what every screen and every snapshot of the numbers reads.
+ */
+export const manualMovementAccounts = pgTable(
+  "manual_movement_accounts",
+  {
+    accountId: uuid("account_id")
+      .primaryKey()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("manual_movement_accounts_user_idx").on(table.userId)],
 );
 
 export const snapshotRuns = pgTable(
