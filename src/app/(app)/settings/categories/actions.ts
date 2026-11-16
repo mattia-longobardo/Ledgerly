@@ -3,6 +3,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { TransactionError } from "@/modules/transactions/service";
 import {
   archiveCategory,
   createCategory,
@@ -15,6 +17,7 @@ import {
   updateLabel,
 } from "@/modules/transactions/taxonomy";
 import { requireSession } from "@/platform/auth/session";
+import { mergeTwoCategories } from "./merge";
 import {
   deleteWalletCategories,
   type WalletDeletionOutcome,
@@ -131,6 +134,33 @@ export async function deleteCategoryAction(
     };
   } catch (error) {
     if (error instanceof TaxonomyError) return { ok: false, error: error.code };
+    throw error;
+  }
+}
+
+/**
+ * "Merge" of two categories that look like the same one (rewrite plan N3): the movements, the
+ * sub-categories and the budget limits of one go to the other, in one transaction. `error` is
+ * `failed` whatever went wrong: the dialog has one sentence, and nothing was changed.
+ */
+export async function mergeCategoriesAction(
+  keepId: string,
+  dropId: string,
+): Promise<{ ok: true; moved: number } | { ok: false; error: "failed" }> {
+  const ctx = await requireSession();
+  if (!z.uuid().safeParse(keepId).success || !z.uuid().safeParse(dropId).success) {
+    return { ok: false, error: "failed" };
+  }
+  try {
+    const { moved } = await mergeTwoCategories(ctx, { keepId, dropId });
+    revalidatePath("/settings/categories");
+    revalidatePath("/expenses");
+    revalidatePath("/budgets");
+    revalidatePath("/");
+    return { ok: true, moved };
+  } catch (error) {
+    if (error instanceof TransactionError || error instanceof z.ZodError)
+      return { ok: false, error: "failed" };
     throw error;
   }
 }

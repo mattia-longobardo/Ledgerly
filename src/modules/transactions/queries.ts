@@ -35,9 +35,12 @@ import {
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
-import { isHidden, type TransactionType } from "./rules";
+import { type CategoryState, categoryStateOf, isHidden, type TransactionType } from "./rules";
 import { categories, labels, recurringPatterns, transactionLabels, transactions } from "./schema";
 import { type Label, listCategories, listLabels, type TreeCategory } from "./taxonomy";
+
+/** A movement the cascade has read and that still has no category: what "To review" lists. */
+const WAITING_FOR_CATEGORY = sql`${transactions.categoryId} is null and ${transactions.categoryKey} is not null and ${transactions.type} <> 'transfer' and ${transactions.hiddenAt} is null and ${transactions.removedUpstreamAt} is null`;
 
 /** The stored row on its own; `Transaction` adds the label ids the rules reason about. */
 export type TransactionRecord = typeof transactions.$inferSelect;
@@ -84,6 +87,24 @@ export interface TransactionRow {
   locallyEdited: string[];
   /** Who wrote it: a provider's reading, or the person by hand. */
   origin: TransactionRecord["origin"];
+  /**
+   * How the category stands (rewrite plan N3; ux/n3-categories-manual.md §1.2): chosen by a person
+   * or a source, given automatically, only suggested, or absent. With the reason of an automatic
+   * one or of a suggestion — a code and what its sentence names, never a number of the model.
+   */
+  categoryState: CategoryState;
+  categoryReason: { code: string; params: Record<string, string> } | null;
+  /**
+   * Whether the cascade reads the movement: its source gives no category, so the category is never
+   * one a source could disagree with.
+   */
+  categoryIsOwn: boolean;
+  /**
+   * The category suggested, which does not count until a person confirms it. The id only: its
+   * name and its colour are the caller's to read from the categories it already has — a second
+   * join here would be paid by every list, with or without a suggestion in it.
+   */
+  suggestedCategoryId: string | null;
   hidden: boolean;
   edited: boolean;
 }
@@ -207,6 +228,8 @@ export interface ExpensesView {
   truncated: boolean;
   /** Whether the user has any movement at all: tells "empty range" from "nothing synced yet". */
   hasAny: boolean;
+  /** The movements of the range that wait for a category: what the notice over the table says. */
+  review: WaitingForCategory;
   accounts: Account[];
   /**
    * The chips of the filter bar, in tree order (F2.5): archived categories stay out of a picker
@@ -653,12 +676,19 @@ export async function movementsByAccount(
 export async function monthSpending(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   month: MonthKey,
-): Promise<{ categoryId: string | null; accountId: string; cents: Cents }[]> {
+): Promise<
+  { categoryId: string | null; accountId: string; cents: Cents; waiting: number; waitingCents: Cents }[]
+> {
   const rows = await getDb()
     .select({
       categoryId: transactions.categoryId,
       accountId: transactions.accountId,
       cents: sum(transactions.amountCents),
+      // How many of them wait in "To review" (rewrite plan N3): zero for a row with a category.
+      waiting: sql<number>`count(*) filter (where ${WAITING_FOR_CATEGORY})::int`,
+      waitingCents: sql<
+        string | null
+      >`sum(${transactions.amountCents}) filter (where ${WAITING_FOR_CATEGORY})`,
     })
     .from(transactions)
     .where(and(conditions(ctx, { from: month, to: lastDayOfMonth(month) }), eq(transactions.type, "expense")))
@@ -668,6 +698,8 @@ export async function monthSpending(
     categoryId: row.categoryId,
     accountId: row.accountId,
     cents: -cents(row.cents),
+    waiting: row.waiting,
+    waitingCents: -cents(row.waitingCents),
   }));
 }
 
@@ -864,6 +896,45 @@ export async function listRecurringPatterns(ctx: Pick<Ctx, "userId">): Promise<R
     .orderBy(asc(recurringPatterns.nextExpectedOn), asc(recurringPatterns.id));
 }
 
+/** The movements of a range that wait for a category: how many, how many with a suggestion, their sum. */
+export interface WaitingForCategory {
+  count: number;
+  suggested: number;
+  cents: Cents;
+}
+
+/**
+ * How many movements the user has at all, and the ones of the range that wait for a category
+ * (rewrite plan N3) — one statement: the second is a sub-query of the first, answered by the
+ * partial index on the waiting movements, so the notice of Expenses costs the screen no read of
+ * its own. The range and the accounts narrow it; the other filters are about the list.
+ */
+export async function countAllAndWaiting(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters = {},
+): Promise<{ total: number; review: WaitingForCategory }> {
+  const waiting = getDb()
+    .select({
+      packed: sql`json_build_array(count(*), count(*) filter (where ${transactions.suggestedCategoryId} is not null), coalesce(sum(${transactions.amountCents}), 0)::text)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        conditions(ctx, { from: filters.from, to: filters.to, accountIds: filters.accountIds }),
+        WAITING_FOR_CATEGORY,
+      ),
+    );
+  const [row] = await getDb()
+    .select({ total: count(), waiting: sql<[number, number, string]>`(${waiting})` })
+    .from(transactions)
+    .where(userScoped(ctx).owns(transactions));
+  const [waitingCount, suggested, sum] = row?.waiting ?? [0, 0, "0"];
+  return {
+    total: Number(row?.total ?? 0),
+    review: { count: Number(waitingCount), suggested: Number(suggested), cents: BigInt(sum) },
+  };
+}
+
 /** How many movements the user has at all: the "Nothing synced yet" answer (spec §7.2). */
 export async function countAllTransactions(ctx: Pick<Ctx, "userId">): Promise<number> {
   const [row] = await getDb()
@@ -915,30 +986,41 @@ export async function listTransactions(
   );
   const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
 
-  return rows.map(({ transaction, categoryName, categoryColor }) => ({
-    id: transaction.id,
-    accountId: transaction.accountId,
-    accountName: accountNames.get(transaction.accountId) ?? null,
-    occurredAt: transaction.occurredAt,
-    on: civilDateIn(transaction.occurredAt, ctx.timeZone),
-    amountCents: transaction.amountCents,
-    currency: transaction.currency,
-    type: transaction.type,
-    state: transaction.state,
-    categoryId: transaction.categoryId,
-    categoryName,
-    categoryColor,
-    payee: transaction.payee,
-    note: transaction.note,
-    labels: chips.get(transaction.id) ?? [],
-    transferGroupId: transaction.transferGroupId,
-    hiddenAt: transaction.hiddenAt,
-    removedUpstreamAt: transaction.removedUpstreamAt,
-    locallyEdited: transaction.locallyEdited,
-    origin: transaction.origin,
-    hidden: isHidden(transaction),
-    edited: transaction.locallyEdited.length > 0,
-  }));
+  return rows.map(({ transaction, categoryName, categoryColor }) => {
+    const categoryState = categoryStateOf(transaction);
+    return {
+      id: transaction.id,
+      accountId: transaction.accountId,
+      accountName: accountNames.get(transaction.accountId) ?? null,
+      occurredAt: transaction.occurredAt,
+      on: civilDateIn(transaction.occurredAt, ctx.timeZone),
+      amountCents: transaction.amountCents,
+      currency: transaction.currency,
+      type: transaction.type,
+      state: transaction.state,
+      categoryId: transaction.categoryId,
+      categoryName,
+      categoryColor,
+      payee: transaction.payee,
+      note: transaction.note,
+      labels: chips.get(transaction.id) ?? [],
+      transferGroupId: transaction.transferGroupId,
+      hiddenAt: transaction.hiddenAt,
+      removedUpstreamAt: transaction.removedUpstreamAt,
+      locallyEdited: transaction.locallyEdited,
+      origin: transaction.origin,
+      categoryState,
+      categoryIsOwn: transaction.categoryKey !== null,
+      categoryReason:
+        (categoryState === "automatic" || categoryState === "suggestion") &&
+        transaction.categoryReason !== null
+          ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
+          : null,
+      suggestedCategoryId: categoryState === "suggestion" ? transaction.suggestedCategoryId : null,
+      hidden: isHidden(transaction),
+      edited: transaction.locallyEdited.length > 0,
+    };
+  });
 }
 
 /**
@@ -1260,7 +1342,7 @@ export async function expensesView(
     monthlyTotals(ctx, filters),
     categoryTotals(ctx, filters),
     facetCounts(ctx, filters),
-    countAllTransactions(ctx),
+    countAllAndWaiting(ctx, filters),
     listAccounts(ctx, { includeArchived: true }),
     listCategories(ctx),
     listLabels(ctx),
@@ -1274,7 +1356,8 @@ export async function expensesView(
     summary,
     listCount,
     truncated: rows.length < listCount,
-    hasAny: hasAny > 0,
+    hasAny: hasAny.total > 0,
+    review: hasAny.review,
     accounts,
     categories: categoryList,
     labels: labelList,

@@ -276,7 +276,7 @@ describe("the manual movement's dialog", () => {
     expect(dialog.getByRole("button", { name: "Category" })).toHaveTextContent("Bars");
 
     await user.click(dialog.getByRole("button", { name: "Money in" }));
-    expect(dialog.getByRole("button", { name: "Category" })).toHaveTextContent("Uncategorised");
+    expect(dialog.getByRole("button", { name: "Category" })).toHaveTextContent("To categorise");
     await user.click(dialog.getByRole("button", { name: "Category" }));
     expect(await screen.findByRole("option", { name: "Salary" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Bars" })).not.toBeInTheDocument();

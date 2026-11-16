@@ -379,6 +379,13 @@
       "when": 1794787082057,
       "tag": "0053_manual_movement",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794824350166,
+      "tag": "0054_auto_categories",
+      "breakpoints": true
     }
   ]
 }

@@ -5,10 +5,17 @@ import {
   listCategoriesWithUsage,
   listLabelsWithUsage,
 } from "@/modules/transactions/taxonomy";
+import { createDefaultGroupsAction, dismissMergeAction } from "@/modules/transactions/categorize/actions";
+import { DEFAULT_GROUPS } from "@/modules/transactions/categorize/tables";
+import { categoryColor } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { type CategoryGroup, type CategoryNode, CategoryTree } from "./category-tree";
+import { mergeCategoriesAction } from "./actions";
+import { DefaultGroupsButton } from "./default-groups";
 import { type LabelRow, LabelsCard } from "./labels-card";
+import { mergeProposalsView } from "./merge";
+import { type MergeSide, MergeProposals } from "./merge-proposals";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
@@ -24,10 +31,11 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function SettingsCategoriesPage() {
   const ctx = await requireSession();
-  const [t, categories, labels] = await Promise.all([
+  const [t, categories, labels, proposals] = await Promise.all([
     getTranslations("settings"),
     listCategoriesWithUsage(ctx, { includeArchived: true }),
     listLabelsWithUsage(ctx),
+    mergeProposalsView(ctx),
   ]);
 
   const byId = new Map(categories.map(({ category }) => [category.id, category]));
@@ -61,10 +69,55 @@ export default async function SettingsCategoriesPage() {
     usage,
   }));
 
+  /** One side of a proposal: a category that has sub-categories can only stay under a group. */
+  const side = (category: { id: string; name: string; usage: number }, other: { id: string }): MergeSide => {
+    const own = byId.get(category.id);
+    const otherHasChildren = categories.some((row) => row.category.parentId === other.id);
+    return {
+      id: category.id,
+      name: category.name,
+      color: own ? colorOfCategory(own, byId) : categoryColor(null, 0),
+      usage: category.usage,
+      hasChildren: categories.some((row) => row.category.parentId === category.id),
+      canKeepOther: !(otherHasChildren && own?.parentId !== null),
+    };
+  };
+  const noCategories = !categories.some(({ category }) => category.archivedAt === null);
+
   return (
     <SettingsGrid>
+      {proposals.length > 0 && (
+        <SettingsSection
+          title={t("categories.merge.title")}
+          description={t("categories.merge.description")}
+          padded={false}
+        >
+          <MergeProposals
+            proposals={proposals.map((proposal) => ({
+              first: side(proposal.first, proposal.second),
+              second: side(proposal.second, proposal.first),
+              sumsBudgets: proposal.sumsBudgets,
+            }))}
+            merge={mergeCategoriesAction}
+            dismiss={dismissMergeAction}
+          />
+        </SettingsSection>
+      )}
       <SettingsSection title={t("categories.title")} description={t("categories.description")} padded={false}>
         <CategoryTree groups={groups} />
+        {noCategories && (
+          <div className="border-t border-border px-4 py-3">
+            <DefaultGroupsButton
+              groups={DEFAULT_GROUPS.map((group, index) => ({
+                key: group.key,
+                name: group[ctx.locale],
+                examples: group.examples[ctx.locale],
+                color: categoryColor(null, index),
+              }))}
+              create={createDefaultGroupsAction}
+            />
+          </div>
+        )}
       </SettingsSection>
       <SettingsSection title={t("labels.title")} description={t("labels.description")} padded={false}>
         <LabelsCard rows={labelRows} />

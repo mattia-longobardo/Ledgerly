@@ -79,6 +79,10 @@ function row(on: CivilDate, amountCents: Cents, id = on + amountCents): Transact
     removedUpstreamAt: null,
     locallyEdited: [],
     origin: "provider",
+    categoryState: "none",
+    categoryIsOwn: false,
+    categoryReason: null,
+    suggestedCategoryId: null,
     hidden: false,
     edited: false,
   };

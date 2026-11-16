@@ -13,7 +13,14 @@ import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
 import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
-import { type EntityType, WALLET_PROVIDER } from "@/platform/integrations/rules";
+import {
+  coreProvidesCategories,
+  type EntityType,
+  isPluginProvider,
+  pluginProvider,
+  WALLET_PROVIDER,
+} from "@/platform/integrations/rules";
+import { listInstancePlugins } from "@/platform/plugins/queries";
 import {
   externalIdsOf,
   IntegrationError,
@@ -194,6 +201,20 @@ async function applyPatch(
   const { labelIds, ...columns } = patch;
   const values = {
     ...columns,
+    // Whoever writes the category is who chose it: the person (a local edit) or the source. An
+    // automatic category and a suggestion end there, with what explained them.
+    ...(columns.categoryId === undefined
+      ? {}
+      : locallyEdited === undefined
+        ? chosenBy(columns.categoryId === null ? null : "provider")
+        : {
+            ...chosenBy("user"),
+            // What is left of an automatic category a person replaced: the threshold of the
+            // classifier counts how often that happens (`categorize/service.ts`).
+            categoryReason: sql<
+              string | null
+            >`case when ${transactions.categoryOrigin} in ('memory', 'model', 'table') then 'corrected' else null end`,
+          }),
     ...(locallyEdited === undefined ? {} : { locallyEdited: [...locallyEdited] }),
   };
   if (Object.keys(values).length > 0) {
@@ -203,6 +224,44 @@ async function applyPatch(
       .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
   }
   if (labelIds !== undefined) await writeLabels(tx, ctx, id, labelIds);
+}
+
+/**
+ * The columns that say who chose a movement's category, for a category written by a person or by
+ * a source: nothing automatic and nothing suggested is left on the row.
+ */
+export function chosenBy(origin: "user" | "provider" | null) {
+  return {
+    categoryOrigin: origin,
+    categoryConfidence: null,
+    categoryModelVersion: null,
+    suggestedCategoryId: null,
+    categoryReason: null,
+    categoryReasonParams: null,
+  };
+}
+
+/**
+ * The accounts whose movements the automatic categories read (rewrite plan, 04-now.md §4.4, "Dove
+ * gira"): the ones kept by hand, and the ones of a source that gives no category. A source says
+ * whether it does — a plugin in its manifest, a provider of the core in the integrations' own
+ * rules — so the movements of one that does are never read, and never recategorised.
+ */
+export async function categorisableAccountIds(ctx: Pick<Ctx, "userId">): Promise<string[]> {
+  const accounts = await listAccounts(ctx, { includeArchived: true });
+  const fromPlugin = accounts.some(
+    (account) => account.provider !== null && isPluginProvider(account.provider),
+  );
+  const plugins = fromPlugin ? await listInstancePlugins() : [];
+  const gives = (provider: string): boolean => {
+    if (!isPluginProvider(provider)) return coreProvidesCategories(provider);
+    const plugin = plugins.find((one) => provider === pluginProvider(one.manifest.id));
+    // A plugin whose manifest was never read says nothing: its movements are left alone.
+    return plugin === undefined || plugin.manifest.providesCategories;
+  };
+  return accounts
+    .filter((account) => account.provider === null || !gives(account.provider))
+    .map((account) => account.id);
 }
 
 /* Provider upsert */
@@ -587,7 +646,13 @@ async function createFromProvider(
   return getDb().transaction(async (tx) => {
     const [row] = await tx
       .insert(transactions)
-      .values(userScoped(ctx).stamp({ ...columns, ...raw }))
+      .values(
+        userScoped(ctx).stamp({
+          ...columns,
+          ...raw,
+          categoryOrigin: columns.categoryId === null ? null : ("provider" as const),
+        }),
+      )
       .returning({ id: transactions.id, transferGroupId: transactions.transferGroupId });
     await writeLabels(tx, ctx, row.id, labelIds);
     await linkExternal(

@@ -12,6 +12,9 @@ import type { ManualFieldsView } from "./manual-types";
 
 export type { CategoryOption };
 
+/** The state of a movement's category, as the cell draws it. */
+export type CategoryStateView = "chosen" | "automatic" | "suggestion" | "none";
+
 /** One movement, as the table and the mobile list draw it. */
 export interface RowView {
   id: string;
@@ -23,6 +26,15 @@ export interface RowView {
   categoryId: string | null;
   categoryName: string | null;
   categoryColor: string | null;
+  /**
+   * How the category stands (ux/n3-categories-manual.md §1.2). Left out, the category is a chosen
+   * one or none, as before the automatic categories.
+   */
+  categoryState?: CategoryStateView;
+  /** Why an automatic category was given or a suggestion made: a code and what its sentence names. */
+  categoryReason?: { code: string; params: Readonly<Record<string, string>> } | null;
+  /** The category suggested, with its colour: it does not count until it is confirmed. */
+  suggestion?: { id: string; name: string; color: string } | null;
   /** The signed amount, formatted. */
   amount: string;
   amountTone: Tone;

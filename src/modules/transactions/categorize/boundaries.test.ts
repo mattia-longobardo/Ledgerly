@@ -1,0 +1,57 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+// "The model does not leave" (rewrite plan N3, "Test e gate"; 04-now.md §4.4 "Dati"): the memory,
+// the model, the confidence and the model's version are for the cascade only. What a person takes
+// out of the app — the export, the API, MCP — is built field by field from the modules' read
+// models, so it is enough that none of those files, and no shape a browser is handed, names them.
+
+const SRC = join(__dirname, "../../..");
+const read = (path: string) => readFileSync(join(SRC, path), "utf8");
+
+const PRIVATE = [
+  "categoryModels",
+  "category_models",
+  "categoryMemory",
+  "category_memory",
+  "categoryConfidence",
+  "category_confidence",
+  "categoryModelVersion",
+  "category_model_version",
+  "automaticThreshold",
+  "suggestionThreshold",
+];
+
+describe("what the automatic categories keep to themselves", () => {
+  it.each([
+    "platform/export/service.ts",
+    "platform/mcp/tools.ts",
+    "modules/transactions/api.ts",
+    "modules/accounts/api.ts",
+  ])("is named nowhere in %s", (path) => {
+    const source = read(path);
+    for (const name of PRIVATE) expect(source).not.toContain(name);
+  });
+
+  it.each([
+    "modules/transactions/ui/view.ts",
+    "modules/transactions/ui/category-cell.tsx",
+    "modules/transactions/ui/category-actions.tsx",
+    "modules/transactions/ui/review-list.tsx",
+    "modules/transactions/ui/similar-dialog.tsx",
+    "modules/transactions/categorize/actions.ts",
+  ])("is in no shape %s hands a browser", (path) => {
+    const source = read(path);
+    for (const name of PRIVATE) expect(source).not.toContain(name);
+    // No number of the model either: a page gets a state, a category and the code of a reason.
+    expect(source).not.toMatch(/\bconfidence\b(?!,| or| and)/);
+  });
+
+  it("is in no column the list of the movements returns", () => {
+    const queries = read("modules/transactions/queries.ts");
+    const row = queries.slice(queries.indexOf("export interface TransactionRow {"));
+    const shape = row.slice(0, row.indexOf("\n}\n"));
+    for (const name of PRIVATE) expect(shape).not.toContain(name);
+  });
+});

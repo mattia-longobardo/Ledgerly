@@ -8,8 +8,10 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
+  real,
   smallint,
   text,
   timestamp,
@@ -19,7 +21,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema";
 import { users } from "../../platform/auth/schema";
-import { CATEGORY_TYPES, TRANSACTION_ORIGINS, TRANSACTION_STATES, TRANSACTION_TYPES } from "./rules";
+import {
+  CATEGORY_ORIGINS,
+  CATEGORY_TYPES,
+  TRANSACTION_ORIGINS,
+  TRANSACTION_STATES,
+  TRANSACTION_TYPES,
+} from "./rules";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
@@ -161,6 +169,23 @@ export const transactions = pgTable(
     counterpartyName: text("counterparty_name"),
     merchantCategoryCode: text("merchant_category_code"),
     bankTransactionCode: text("bank_transaction_code"),
+    // The automatic categories (rewrite plan N3, 04-now.md §4.4). `categoryOrigin` says who chose
+    // `categoryId`; the confidence and the model's version describe an automatic choice and never
+    // leave the server. A suggestion is a category that does not count yet: it is kept apart from
+    // `categoryId`, so every total reads the movement as it reads one with no category.
+    categoryOrigin: text("category_origin", { enum: CATEGORY_ORIGINS }),
+    categoryConfidence: real("category_confidence"),
+    categoryModelVersion: integer("category_model_version"),
+    suggestedCategoryId: uuid("suggested_category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    // Why the category was given or suggested: a code of a closed list, and what its sentence names.
+    categoryReason: text("category_reason"),
+    categoryReasonParams: jsonb("category_reason_params").$type<Record<string, string>>(),
+    // The key of the movement's text (`memoryKey`), written when the cascade reads the movement:
+    // what "similar movements" and the groups of "To review" are found by. `null` on a movement
+    // the cascade never reads — one of a source that gives its own categories.
+    categoryKey: text("category_key"),
     transferGroupId: uuid("transfer_group_id").references((): AnyPgColumn => transactions.id, {
       onDelete: "set null",
     }),
@@ -191,6 +216,18 @@ export const transactions = pgTable(
     index("transactions_manual_idx")
       .on(table.accountId, table.occurredAt)
       .where(sql`${table.origin} = 'manual'`),
+    // The movements that wait for a category, for the count the notice of Expenses reads: a few
+    // rows found without walking the range.
+    index("transactions_waiting_idx")
+      .on(table.userId, table.occurredAt)
+      .where(sql`${table.categoryId} is null and ${table.categoryKey} is not null`),
+    index("transactions_user_category_key_idx")
+      .on(table.userId, table.categoryKey)
+      .where(sql`${table.categoryKey} is not null`),
+    check(
+      "transactions_category_origin_ck",
+      sql`${table.categoryOrigin} is null or ${table.categoryOrigin} in (${sql.raw(inList(CATEGORY_ORIGINS))})`,
+    ),
     uniqueIndex("transactions_user_idempotency_uq")
       .on(table.userId, table.idempotencyKey)
       .where(sql`${table.idempotencyKey} is not null`),
@@ -260,4 +297,123 @@ export const recurringPatterns = pgTable(
     check("recurring_patterns_interval_ck", sql`${table.intervalDays} between 1 and 400`),
     check("recurring_patterns_occurrences_ck", sql`${table.occurrences} >= 3`),
   ],
+);
+
+/* The automatic categories (rewrite plan N3, 04-now.md §4.4). Everything below is one person's:
+   it goes with them (`on delete cascade`), and none of it is in an export, the API or MCP. */
+
+/**
+ * The strict memory: the texts a person or a source put in the same category the last three
+ * times. Rewritten at every training from the confirmed labels (`strictMemory`).
+ */
+export const categoryMemory = pgTable(
+  "category_memory",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ name: "category_memory_pk", columns: [table.userId, table.key] })],
+);
+
+/**
+ * A person's classifier, one row: the model as it was last trained, its two thresholds, and what it
+ * was trained from — so a reading that brings no new label trains nothing again. `preparing` is
+ * true while a pass of the cascade is running, for the screen that waits for it.
+ */
+export const categoryModels = pgTable("category_models", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  version: integer("version").notNull().default(0),
+  /** How many confirmed labels the model was trained from, and the newest of them. */
+  examples: integer("examples").notNull().default(0),
+  labelledThrough: timestamp("labelled_through", { withTimezone: true }),
+  automaticThreshold: real("automatic_threshold"),
+  suggestionThreshold: real("suggestion_threshold"),
+  model: jsonb("model"),
+  preparing: boolean("preparing").notNull().default(false),
+  trainedAt: timestamp("trained_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/** The category a person made from a default group: what a static table points at for them. */
+export const categoryGroupMarks = pgTable(
+  "category_group_marks",
+  {
+    categoryId: uuid("category_id")
+      .primaryKey()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    groupKey: text("group_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("category_group_marks_user_group_uq").on(table.userId, table.groupKey)],
+);
+
+/** Two categories a person said are not the same: the proposal to merge them does not come back. */
+export const categoryMergeDismissals = pgTable(
+  "category_merge_dismissals",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The two ids in order, the smaller first: a pair is one row whichever way it is said. */
+    firstId: uuid("first_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    secondId: uuid("second_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      name: "category_merge_dismissals_pk",
+      columns: [table.userId, table.firstId, table.secondId],
+    }),
+  ],
+);
+
+/** What a movement's category was before an action on several movements, for "Undo". */
+export interface CategoryUndoRow {
+  id: string;
+  categoryId: string | null;
+  categoryOrigin: string | null;
+  categoryConfidence: number | null;
+  categoryModelVersion: number | null;
+  suggestedCategoryId: string | null;
+  categoryReason: string | null;
+  categoryReasonParams: Record<string, string> | null;
+  locallyEdited: string[];
+}
+
+/**
+ * The state before an action on several movements (a group of "To review", "Apply to N"): "Undo"
+ * puts it back and removes the row. Kept on the server so a browser never says what a movement's
+ * category was. Old rows are removed when a new one is written.
+ */
+export const categoryUndos = pgTable(
+  "category_undos",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rows: jsonb("rows").$type<CategoryUndoRow[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("category_undos_user_idx").on(table.userId, table.createdAt)],
 );

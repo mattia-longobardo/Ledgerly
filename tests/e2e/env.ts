@@ -91,6 +91,11 @@ export const USERS = {
   // an account kept by hand, an account a bank only reads and one manual movement: the journey
   // changes balances, and no other journey's numbers may move with it.
   manual: { email: "manual@example.test", password: "manual-password-123", name: "Manual" },
+  // Release N3, second part: the automatic categories (ux/n3-categories-manual.md). `review` has
+  // the default groups and movements in every state — automatic, suggested, with no category;
+  // `reviewNew` has movements and no category at all, for the first step of the guided review.
+  review: { email: "review@example.test", password: "review-password-123", name: "Review" },
+  reviewNew: { email: "review-new@example.test", password: "review-new-password-123", name: "Review New" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
   // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
   // the instance's real users too, and a spec must never touch one.
@@ -144,6 +149,9 @@ export const SESSIONS = {
   connections: { user: "connections", file: "connections-session.json" },
   // Release N3: the manual movement (tests/e2e/manual-movement.spec.ts).
   manual: { user: "manual", file: "manual-session.json" },
+  // Release N3: "To review" and the automatic categories (tests/e2e/review.spec.ts).
+  review: { user: "review", file: "review-session.json" },
+  reviewNew: { user: "reviewNew", file: "review-new-session.json" },
   // TOTP: sessions of users who still have to set it up, so they land on the setup page.
   enroll: { user: "enroll", file: "enroll-session.json" },
   pending: { user: "pending", file: "pending-session.json" },

@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { budgetsView } from "@/modules/budgets/queries";
 import { AddBudget } from "@/modules/budgets/ui/add-budget";
@@ -7,7 +8,7 @@ import { presentRows } from "@/modules/budgets/ui/present";
 import { PeriodStepper } from "@/modules/accounts/ui/controls";
 import { percentOf } from "@/modules/budgets/rules";
 import { requireSession } from "@/platform/auth/session";
-import { addMonths, monthKey, today } from "@/platform/dates";
+import { addMonths, lastDayOfMonth, monthKey, today } from "@/platform/dates";
 import { formatDate, formatMoney, formatWholePercent } from "@/platform/format";
 import { Card } from "@/ui/card";
 import { cn } from "@/ui/cn";
@@ -106,6 +107,21 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
               {view.unbudgetedCents > 0n && (
                 <p className="text-sm text-muted">
                   {t("total.unbudgeted", { amount: money(view.unbudgetedCents) })}
+                </p>
+              )}
+              {view.toCategorise.count > 0 && (
+                <p className="text-sm text-muted">
+                  {t("total.toCategorise", {
+                    count: view.toCategorise.count,
+                    month: monthLabel,
+                    amount: money(view.toCategorise.cents),
+                  })}{" "}
+                  <Link
+                    href={`/expenses/review?from=${view.month}&to=${lastDayOfMonth(view.month)}` as Route}
+                    className="focus-ring inline-flex min-h-6 items-center font-medium text-accent hover:underline"
+                  >
+                    {t("total.review")}
+                  </Link>
                 </p>
               )}
             </div>

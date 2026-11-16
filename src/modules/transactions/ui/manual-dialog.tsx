@@ -95,6 +95,10 @@ export function ManualTransactionDialog({
   });
   const [chosenLabels, setChosenLabels] = useState<readonly string[]>(row?.labelIds ?? []);
   const [picking, setPicking] = useState(false);
+  /** The category Ledgerly suggests while the person has chosen none; theirs once they save. */
+  const [suggestedId, setSuggestedId] = useState<string | null>(null);
+  /** The person touched the category: from then on the dialog asks for no suggestion. */
+  const [categoryChosen, setCategoryChosen] = useState(row !== null);
   const [preview, setPreview] = useState<ManualPreviewView>(null);
   const [fieldError, setFieldError] = useState<"amount" | "date" | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -154,6 +158,26 @@ export function ManualTransactionDialog({
     };
   }, [commands, kind, amount, on, accountId, editingId]);
 
+  const { payee, note } = form;
+  const suggest = commands.suggest;
+  // The suggestion: asked for a little after the last key, while the person has chosen nothing.
+  useEffect(() => {
+    if (!suggest || categoryChosen || amount.trim() === "" || accountId === "") return;
+    let live = true;
+    const timer = window.setTimeout(() => {
+      suggest({ kind, amount, accountId, payee, note })
+        .then((answer) => {
+          if (live) setSuggestedId(answer?.categoryId ?? null);
+        })
+        // A suggestion is a help: a failed request shows nothing.
+        .catch(() => undefined);
+    }, PREVIEW_DELAY_MS);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [suggest, categoryChosen, kind, amount, accountId, payee, note]);
+
   function change(patch: Partial<ManualForm>) {
     setForm((current) => ({ ...current, ...patch }));
     setFieldError(null);
@@ -163,6 +187,7 @@ export function ManualTransactionDialog({
     const category = categories.find((one) => one.id === form.categoryId);
     // A category of the other kind does not follow the movement to the new one.
     change({ kind: next, categoryId: category && category.type !== next ? null : form.categoryId });
+    if (category && category.type !== next) setCategoryChosen(false);
   }
 
   function focusAmount() {
@@ -176,8 +201,11 @@ export function ManualTransactionDialog({
   }
 
   async function save(): Promise<void> {
+    // A suggestion left in the field is saved as the person's choice: they saw it in the form
+    // they are sending (ux §9.3).
+    const sent = { ...form, categoryId: form.categoryId ?? suggested?.id ?? null };
     const result =
-      row === null ? await commands.create(form, idempotencyKey) : await commands.update(row.id, form);
+      row === null ? await commands.create(sent, idempotencyKey) : await commands.update(row.id, sent);
     if (!result.ok) {
       if (result.error === "amount" || result.error === "date") {
         setFieldError(result.error);
@@ -224,6 +252,8 @@ export function ManualTransactionDialog({
   const account = accounts?.find((one) => one.id === form.accountId) ?? null;
   const offered = categories.filter((category) => category.type === form.kind);
   const category = offered.find((one) => one.id === form.categoryId) ?? null;
+  const suggested =
+    category === null && !categoryChosen ? (offered.find((one) => one.id === suggestedId) ?? null) : null;
   const groups = (["manual", "read_only"] as const)
     .map((mode) => ({ mode, accounts: (accounts ?? []).filter((one) => one.mode === mode) }))
     .filter((group) => group.accounts.length > 0);
@@ -410,22 +440,44 @@ export function ManualTransactionDialog({
             currentId={category?.id ?? null}
             open={picking}
             onOpenChange={setPicking}
-            onPick={(categoryId) => change({ categoryId })}
+            onPick={(categoryId) => {
+              setCategoryChosen(true);
+              change({ categoryId });
+            }}
             uncategorisedLabel={t("row.uncategorised")}
             searchLabel={t("row.searchCategory")}
             noMatchLabel={t("row.noCategoryMatch")}
             triggerLabel={t("manual.category")}
             triggerId={`${ids}-category`}
             disabled={pending}
-            triggerClassName="focus-ring flex h-8 w-full items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-left text-base hover:bg-hover"
+            triggerClassName={cn(
+              "focus-ring flex h-8 w-full items-center gap-1.5 rounded-ctl border bg-card px-2.5 text-left text-base hover:bg-hover",
+              suggested ? "border-dashed border-muted text-muted" : "border-border",
+            )}
           >
-            <span
-              aria-hidden
-              className={cn("size-[7px] shrink-0 rounded-[2px]", category === null && "bg-faint")}
-              style={category === null ? undefined : { background: category.color }}
-            />
-            <span className="min-w-0 truncate">{category?.name ?? t("row.uncategorised")}</span>
+            {suggested ? (
+              <>
+                <span
+                  aria-hidden
+                  className="size-[7px] shrink-0 rounded-[2px] border"
+                  style={{ borderColor: suggested.color }}
+                />
+                <span data-testid="manual-suggestion" className="min-w-0 truncate">
+                  {t("auto.suggestion.chip", { category: suggested.name })}
+                </span>
+              </>
+            ) : (
+              <>
+                <span
+                  aria-hidden
+                  className={cn("size-[7px] shrink-0 rounded-[2px]", category === null && "bg-faint")}
+                  style={category === null ? undefined : { background: category.color }}
+                />
+                <span className="min-w-0 truncate">{category?.name ?? t("row.uncategorised")}</span>
+              </>
+            )}
           </CategoryPicker>
+          {suggested && <p className="text-sm text-muted">{t("manual.categoryHint")}</p>}
           {offered.length === 0 && (
             <Link href="/settings/categories" className="focus-ring self-start text-sm text-accent underline">
               {t("manual.noCategories")}

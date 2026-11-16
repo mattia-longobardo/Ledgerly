@@ -20,6 +20,40 @@ export const TRANSACTION_ORIGINS = ["provider", "manual"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export type TransactionState = (typeof TRANSACTION_STATES)[number];
 export type TransactionOrigin = (typeof TRANSACTION_ORIGINS)[number];
+
+/**
+ * Who chose the category of a movement (rewrite plan, 04-now.md §4.4). `user` and `provider` are
+ * confirmed labels: a person or a source gave them, and the classifier learns from them. `memory`,
+ * `model` and `table` are the levels of the cascade that gave it by itself: an automatic category,
+ * which counts like any other and is never learnt from. `null` on a row with no category, and on a
+ * row written by an image that knew no origin — there the category is a confirmed one.
+ */
+export const CATEGORY_ORIGINS = ["user", "provider", "memory", "model", "table"] as const;
+export type CategoryOrigin = (typeof CATEGORY_ORIGINS)[number];
+/** The origins of an automatic category. */
+export const AUTOMATIC_CATEGORY_ORIGINS: readonly CategoryOrigin[] = ["memory", "model", "table"];
+
+export type CategoryState = "chosen" | "automatic" | "suggestion" | "none";
+
+/**
+ * The state of a movement's category, from the columns that hold it (ux/n3-categories-manual.md
+ * §1.2): `chosen` by a person or a source, `automatic`, a `suggestion` that does not count yet, or
+ * `none`.
+ */
+export function categoryStateOf(row: {
+  categoryId: string | null;
+  categoryOrigin: string | null;
+  suggestedCategoryId: string | null;
+}): CategoryState {
+  if (row.categoryId !== null) {
+    return row.categoryOrigin !== null &&
+      AUTOMATIC_CATEGORY_ORIGINS.includes(row.categoryOrigin as CategoryOrigin)
+      ? "automatic"
+      : "chosen";
+  }
+  return row.suggestedCategoryId === null ? "none" : "suggestion";
+}
+
 export type CategoryType = (typeof CATEGORY_TYPES)[number];
 
 /**

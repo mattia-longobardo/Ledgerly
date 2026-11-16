@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 84271,
-    "duplicatedLines": 16350,
-    "percent": 19.4,
-    "blocks": 1146
+    "lines": 88044,
+    "duplicatedLines": 16805,
+    "percent": 19.09,
+    "blocks": 1183
   },
   "units": {
     "app": {
-      "lines": 18426,
-      "duplicatedLines": 3949,
-      "percent": 21.43,
-      "blocks": 293
+      "lines": 19197,
+      "duplicatedLines": 4036,
+      "percent": 21.02,
+      "blocks": 303
     },
     "global.d": {
       "lines": 6,
@@ -30,15 +30,15 @@
     },
     "modules/accounts": {
       "lines": 3987,
-      "duplicatedLines": 1080,
-      "percent": 27.09,
+      "duplicatedLines": 1085,
+      "percent": 27.21,
       "blocks": 71
     },
     "modules/budgets": {
-      "lines": 1212,
-      "duplicatedLines": 229,
-      "percent": 18.89,
-      "blocks": 18
+      "lines": 1305,
+      "duplicatedLines": 242,
+      "percent": 18.54,
+      "blocks": 19
     },
     "modules/funds": {
       "lines": 10642,
@@ -66,8 +66,8 @@
     },
     "modules/payroll": {
       "lines": 3469,
-      "duplicatedLines": 827,
-      "percent": 23.84,
+      "duplicatedLines": 829,
+      "percent": 23.9,
       "blocks": 44
     },
     "modules/pockets": {
@@ -84,20 +84,20 @@
     },
     "modules/timeoff": {
       "lines": 3501,
-      "duplicatedLines": 200,
-      "percent": 5.71,
+      "duplicatedLines": 201,
+      "percent": 5.74,
       "blocks": 21
     },
     "modules/transactions": {
-      "lines": 6062,
-      "duplicatedLines": 1044,
-      "percent": 17.22,
-      "blocks": 83
+      "lines": 8966,
+      "duplicatedLines": 1395,
+      "percent": 15.56,
+      "blocks": 111
     },
     "modules/users": {
       "lines": 1271,
-      "duplicatedLines": 312,
-      "percent": 24.55,
+      "duplicatedLines": 317,
+      "percent": 24.94,
       "blocks": 24
     },
     "platform/alerts": {
@@ -185,9 +185,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 1970,
+      "lines": 1975,
       "duplicatedLines": 353,
-      "percent": 17.92,
+      "percent": 17.87,
       "blocks": 27
     },
     "platform/integrations/ccxt": {
@@ -266,7 +266,7 @@
       "lines": 1769,
       "duplicatedLines": 188,
       "percent": 10.63,
-      "blocks": 12
+      "blocks": 11
     },
     "platform/ranges": {
       "lines": 59,
@@ -318,9 +318,9 @@
     },
     "ui": {
       "lines": 3663,
-      "duplicatedLines": 413,
-      "percent": 11.27,
-      "blocks": 25
+      "duplicatedLines": 404,
+      "percent": 11.03,
+      "blocks": 24
     }
   },
   "files": {
@@ -333,12 +333,15 @@
     "app/(app)/banks/connect/outcome-actions.tsx": 17,
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/budgets/page.tsx": 8,
-    "app/(app)/expenses/page.tsx": 14,
+    "app/(app)/expenses/manual-actions.ts": 14,
+    "app/(app)/expenses/manual.ts": 8,
+    "app/(app)/expenses/page.tsx": 28,
+    "app/(app)/expenses/review/page.tsx": 25,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,
-    "app/(app)/funds/fund-setup.ts": 11,
+    "app/(app)/funds/fund-setup.ts": 22,
     "app/(app)/funds/home-skeleton.tsx": 20,
-    "app/(app)/funds/page.tsx": 243,
+    "app/(app)/funds/page.tsx": 244,
     "app/(app)/interests/[id]/page.tsx": 52,
     "app/(app)/interests/page.tsx": 57,
     "app/(app)/investments/[accountId]/activity/page.tsx": 95,
@@ -360,7 +363,8 @@
     "app/(app)/settings/categories/actions.ts": 29,
     "app/(app)/settings/categories/category-tree.tsx": 113,
     "app/(app)/settings/categories/labels-card.tsx": 129,
-    "app/(app)/settings/categories/page.tsx": 18,
+    "app/(app)/settings/categories/merge-proposals.tsx": 18,
+    "app/(app)/settings/categories/page.tsx": 16,
     "app/(app)/settings/data/page.tsx": 26,
     "app/(app)/settings/integrations/actions.ts": 127,
     "app/(app)/settings/integrations/advanced/history-depth.tsx": 12,
@@ -381,7 +385,7 @@
     "app/(app)/settings/security/api-clients-table.tsx": 88,
     "app/(app)/settings/security/connected-apps-table.tsx": 86,
     "app/(app)/settings/security/new-api-client.tsx": 24,
-    "app/(app)/settings/security/page.tsx": 34,
+    "app/(app)/settings/security/page.tsx": 32,
     "app/(app)/settings/security/password-form.tsx": 10,
     "app/(app)/settings/security/sessions-list.tsx": 10,
     "app/(app)/settings/security/two-factor-card.tsx": 10,
@@ -406,7 +410,7 @@
     "modules/accounts/api.ts": 27,
     "modules/accounts/jobs.ts": 18,
     "modules/accounts/queries.ts": 137,
-    "modules/accounts/rules.ts": 49,
+    "modules/accounts/rules.ts": 54,
     "modules/accounts/schema.ts": 170,
     "modules/accounts/service.ts": 206,
     "modules/accounts/ui/account-form.tsx": 63,
@@ -421,7 +425,7 @@
     "modules/budgets/queries.ts": 36,
     "modules/budgets/rules.ts": 7,
     "modules/budgets/schema.ts": 52,
-    "modules/budgets/service.ts": 9,
+    "modules/budgets/service.ts": 22,
     "modules/budgets/ui/add-budget.tsx": 48,
     "modules/budgets/ui/budgets-table.tsx": 54,
     "modules/funds/actions.ts": 44,
@@ -492,7 +496,7 @@
     "modules/payroll/pension.ts": 13,
     "modules/payroll/queries.ts": 19,
     "modules/payroll/rules.ts": 101,
-    "modules/payroll/schema.ts": 208,
+    "modules/payroll/schema.ts": 210,
     "modules/payroll/service.ts": 134,
     "modules/payroll/ui/present.ts": 9,
     "modules/payroll/ui/register-table.tsx": 59,
@@ -516,33 +520,40 @@
     "modules/subscriptions/ui/suggestions-dialog.tsx": 15,
     "modules/timeoff/rules.ts": 16,
     "modules/timeoff/schema.ts": 62,
-    "modules/timeoff/service.ts": 58,
+    "modules/timeoff/service.ts": 59,
     "modules/timeoff/ui/leave-board.tsx": 12,
     "modules/timeoff/ui/leave-panel.tsx": 14,
     "modules/timeoff/ui/settings-forms.tsx": 38,
-    "modules/transactions/actions.ts": 53,
+    "modules/transactions/actions.ts": 59,
     "modules/transactions/api.ts": 26,
+    "modules/transactions/categorize/actions.ts": 42,
+    "modules/transactions/categorize/review.ts": 98,
+    "modules/transactions/categorize/service.ts": 47,
     "modules/transactions/jobs.ts": 56,
     "modules/transactions/manual.ts": 6,
-    "modules/transactions/queries.ts": 240,
-    "modules/transactions/rules.ts": 9,
-    "modules/transactions/schema.ts": 165,
-    "modules/transactions/service.ts": 95,
+    "modules/transactions/queries.ts": 252,
+    "modules/transactions/rules.ts": 6,
+    "modules/transactions/schema.ts": 249,
+    "modules/transactions/service.ts": 103,
     "modules/transactions/taxonomy.ts": 127,
     "modules/transactions/ui/breakdown-card.tsx": 6,
+    "modules/transactions/ui/category-cell.tsx": 9,
+    "modules/transactions/ui/default-groups-form.tsx": 28,
     "modules/transactions/ui/details-modal.tsx": 53,
     "modules/transactions/ui/filter-bar.tsx": 54,
     "modules/transactions/ui/filters.ts": 10,
-    "modules/transactions/ui/manual-dialog.tsx": 29,
+    "modules/transactions/ui/manual-dialog.tsx": 40,
     "modules/transactions/ui/manual-movement.tsx": 16,
     "modules/transactions/ui/range-picker.tsx": 9,
+    "modules/transactions/ui/review-list.tsx": 9,
+    "modules/transactions/ui/similar-dialog.tsx": 9,
     "modules/transactions/ui/spending-card.tsx": 20,
-    "modules/transactions/ui/transactions-table.tsx": 70,
+    "modules/transactions/ui/transactions-table.tsx": 61,
     "modules/users/actions.ts": 83,
     "modules/users/admin.ts": 15,
     "modules/users/schema.ts": 38,
-    "modules/users/service.ts": 21,
-    "modules/users/ui/invite-person.tsx": 27,
+    "modules/users/service.ts": 22,
+    "modules/users/ui/invite-person.tsx": 31,
     "modules/users/ui/people-table.tsx": 107,
     "modules/users/ui/two-factor-setup.tsx": 21,
     "platform/api/errors.ts": 15,
@@ -585,7 +596,6 @@
     "platform/plugins/service.ts": 47,
     "platform/settings/schema.ts": 19,
     "platform/settings/service.ts": 44,
-    "ui/category-picker.tsx": 9,
     "ui/chart.tsx": 243,
     "ui/date-range-picker.tsx": 20,
     "ui/input.tsx": 28,

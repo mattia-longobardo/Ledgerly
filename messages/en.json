@@ -463,6 +463,38 @@
         "deleted": "{count, plural, one {# category deleted in Wallet too} other {# categories deleted in Wallet too}}",
         "refused": "Wallet did not delete it: {reason}",
         "failed": "Wallet could not be reached: {reason}"
+      },
+      "merge": {
+        "title": "Duplicate categories",
+        "description": "Ledgerly proposes to merge categories that look the same. You decide.",
+        "pair": "{name} · {count, plural, =0 {not used} one {# transaction} other {# transactions}}",
+        "and": "and",
+        "same": "They look like the same category.",
+        "open": "Merge…",
+        "dismiss": "They are different",
+        "dismissed": "Proposal dismissed",
+        "undo": "Undo",
+        "dialog": {
+          "title": "Merge categories",
+          "keep": "Which name stays?",
+          "moves": "{count, plural, =0 {No transactions to move.} one {The transaction in “{from}” moves to “{to}”.} other {The # transactions in “{from}” move to “{to}”.}}",
+          "archived": "“{from}” is archived.",
+          "budgets": "The budget limits of the two categories are added together.",
+          "children": "The sub-categories of “{from}” move to “{to}”.",
+          "confirm": "Merge"
+        },
+        "done": "Categories merged: {count, plural, one {# transaction moved} other {# transactions moved}}",
+        "failed": "Couldn't merge the categories. Try again.",
+        "cancel": "Cancel"
+      },
+      "defaults": {
+        "open": "Use the default groups",
+        "title": "Choose the groups for your spending",
+        "description": "Ledgerly uses these groups to give a category to transactions. You can change them at any time in Settings › Categories.",
+        "create": "{count, plural, one {Create # group} other {Create # groups}}",
+        "later": "Not now",
+        "created": "{count, plural, one {# group created} other {# groups created}}",
+        "failed": "Couldn't create the groups. Try again."
       }
     },
     "labels": {
@@ -1331,7 +1363,7 @@
         "all": "All categories",
         "some": "{count, plural, one {# category} other {# categories}}",
         "clear": "Clear",
-        "none": "Uncategorised"
+        "none": "To categorise"
       },
       "accounts": {
         "all": "All accounts",
@@ -1385,7 +1417,7 @@
       "note": "Note",
       "labels": "Labels",
       "noLabels": "No labels",
-      "uncategorised": "Uncategorised",
+      "uncategorised": "To categorise",
       "searchCategory": "Search categories…",
       "noCategoryMatch": "No category matches",
       "noPayee": "No payee",
@@ -1538,7 +1570,137 @@
       "row": {
         "edit": "Edit transaction"
       },
-      "palette": "Add transaction"
+      "palette": "Add transaction",
+      "categoryHint": "Ledgerly's suggestion. Change it if it is not right."
+    },
+    "auto": {
+      "mark": "Automatic",
+      "markLabel": "Automatic category: show the reason",
+      "title": "Automatic category",
+      "confirm": "Confirm",
+      "change": "Change category",
+      "confirmed": "Category confirmed",
+      "failed": "Couldn't save. Try again.",
+      "suggestion": {
+        "chip": "Suggestion: {category}",
+        "chipLabel": "Suggestion: {category}. Not confirmed",
+        "title": "Suggestion",
+        "notCounted": "It does not count in this category until you confirm.",
+        "other": "Choose another"
+      },
+      "reason": {
+        "memory": "The last 3 times you chose this category for “{text}”.",
+        "similar": "It is similar to other transactions you put in this category.",
+        "merchant_type": "The bank gives a merchant type that matches this category.",
+        "brand": "“{brand}” is a known brand in this category.",
+        "salary": "The bank marks this transaction as a salary.",
+        "fee": "The bank marks this transaction as a fee.",
+        "other": "Ledgerly chose this category from the transaction data."
+      },
+      "selection": {
+        "confirm": "Confirm suggestions ({count})"
+      }
+    },
+    "review": {
+      "title": "To review",
+      "summary": "{count, plural, one {# transaction} other {# transactions}} · {groups, plural, one {# group} other {# groups}} · {total}",
+      "sections": {
+        "suggested": "With a suggestion",
+        "unsuggested": "Without a suggestion",
+        "singles": "Single transactions",
+        "count": "{groups, plural, one {# group} other {# groups}} · {count, plural, one {# transaction} other {# transactions}}",
+        "singlesCount": "{count, plural, one {# transaction} other {# transactions}}",
+        "more": "Show {count} more"
+      },
+      "aside": {
+        "title": "Summary",
+        "merge": "{count, plural, one {# category merge proposal} other {# category merge proposals}}",
+        "mergeLink": "View"
+      },
+      "group": {
+        "summary": "{count, plural, one {# transaction} other {# transactions}} · {total}",
+        "suggestion": "Suggestion:",
+        "showAll": "Show all {count}",
+        "hide": "Show fewer",
+        "confirm": "Confirm for {count}",
+        "confirmLabel": "Confirm “{category}” for {count, plural, one {# transaction} other {# transactions}} of {text}",
+        "change": "Change category",
+        "choose": "Choose category",
+        "chooseLabel": "Choose a category for {count, plural, one {# transaction} other {# transactions}} of {text}",
+        "saving": "Saving…",
+        "done": "{text} · {count, plural, one {# transaction} other {# transactions}} in “{category}”",
+        "undo": "Undo",
+        "failed": "Couldn't save. Try again.",
+        "row": "{date} · {account}",
+        "select": "Include the transaction of {date}"
+      },
+      "noSuggestions": "Ledgerly has no suggestions for these transactions yet. It learns from the categories you choose: the more you choose, the more suggestions you get.",
+      "empty": {
+        "done": {
+          "title": "All done",
+          "description": "No transactions to categorise.",
+          "action": "Back to Expenses"
+        },
+        "filtered": {
+          "title": "Nothing to review in this period",
+          "description": "Try another period or all accounts.",
+          "action": "Clear filters"
+        },
+        "source": {
+          "title": "Categories come from the source",
+          "description": "Transactions from connected banks and those you add by hand appear here."
+        }
+      },
+      "notice": {
+        "expenses": "{count, plural, one {# transaction to categorise} other {# transactions to categorise}} in this range ({amount}).",
+        "suggested": "{count, plural, one {# has a suggestion.} other {# have a suggestion.}}",
+        "action": "Review"
+      },
+      "accounts": "Accounts",
+      "allAccounts": "All accounts",
+      "palette": "To review",
+      "guide": {
+        "steps": {
+          "groups": "Groups",
+          "categories": "Categories",
+          "done": "Done"
+        },
+        "intro": {
+          "title": "First reading of {bank}",
+          "body": "Ledgerly grouped the transactions with the same text. Confirm or choose a category for each group: it applies to all the transactions in the group. You can finish later: you find them in Expenses › To review."
+        },
+        "later": "Finish later",
+        "progress": {
+          "label": "Groups done",
+          "text": "{done} of {total} groups done",
+          "detail": "{done, plural, one {# transaction with a category} other {# transactions with a category}} · {left} to do"
+        },
+        "preparing": {
+          "title": "Ledgerly is looking for a category for {count, plural, one {# transaction} other {# transactions}}…",
+          "hint": "This can take a few seconds.",
+          "slow": "This takes longer than expected. You can continue later: the transactions wait for you in Expenses › To review.",
+          "toExpenses": "Go to Expenses",
+          "retry": "Try again"
+        },
+        "done": {
+          "title": "Review finished",
+          "categorised": "{count, plural, one {# transaction from {bank} has a category.} other {# transactions from {bank} have a category.}}",
+          "left": "{count, plural, one {# is still to categorise: you find it} other {# are still to categorise: you find them}} in Expenses › To review.",
+          "expenses": "Go to Expenses",
+          "accounts": "Go to accounts"
+        }
+      }
+    },
+    "similar": {
+      "title": "Apply to {count, plural, one {# similar transaction} other {# similar transactions}}?",
+      "chosen": "You put “{text}” in {category}.",
+      "body": "{count, plural, one {One other transaction has the same text and has} other {# other transactions have the same text and have}} no category chosen by you.",
+      "showAll": "Show all {count}",
+      "apply": "Apply to {count}",
+      "skip": "No, only this one",
+      "applied": "{count, plural, one {# transaction updated} other {# transactions updated}}",
+      "undo": "Undo",
+      "failed": "Couldn't apply the category. The first transaction is saved. Try again."
     }
   },
   "overview": {
@@ -1995,7 +2157,9 @@
       "spent": "Spent",
       "limit": "Limit",
       "progress": "Spent of the total limit",
-      "unbudgeted": "Not budgeted this month: {amount}"
+      "unbudgeted": "Not budgeted this month: {amount}",
+      "toCategorise": "{count, plural, one {# transaction in {month} is to categorise} other {# transactions in {month} are to categorise}} ({amount}): {count, plural, one {it is} other {they are}} not in any category budget.",
+      "review": "Review"
     },
     "columns": {
       "category": "Budget",
@@ -5092,7 +5256,14 @@
         "retrying": "Reading in progress…",
         "rateLimited": "The bank reached its reading limit. The next reading starts by itself at {time}.",
         "partial": "Some accounts were not read. Ledgerly tries again at the next automatic reading.",
-        "accountGone": "The bank no longer shares this account. It stays in Ledgerly and is no longer updated."
+        "accountGone": "The bank no longer shares this account. It stays in Ledgerly and is no longer updated.",
+        "categories": {
+          "title": "Categories",
+          "summary": "{done, plural, one {# transaction already has} other {# transactions already have}} a category. {suggested} have a suggestion and {open} are to categorise.",
+          "all": "All {count} transactions already have a category.",
+          "noGroups": "To give a category to the {count} transactions, choose your groups first.",
+          "action": "Review categories"
+        }
       },
       "errors": {
         "pluginDown": "The connection to banks is not available now. Try again later or tell the administrator.",

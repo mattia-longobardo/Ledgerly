@@ -14,6 +14,8 @@ import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 import { TONE_TEXT } from "@/ui/tone";
 import { CategoryPicker } from "@/ui/category-picker";
+import { useCategoryActions } from "./category-actions";
+import { CategoryCell, CHIP } from "./category-cell";
 import { type CommandResult, hide, removeHidden, restore, setCategory } from "./commands";
 import { TransactionDetails } from "./details-modal";
 import type { RowBadge } from "./display";
@@ -44,9 +46,6 @@ const COLUMNS: readonly { name: SortKey; align: "left" | "right" }[] = [
 
 /** Seven cells: the checkbox, the five columns, the row menu. */
 const COLUMN_COUNT = COLUMNS.length + 2;
-
-// 24 px, not 22: the category chip is a button, and a button is a target (plan F9 §3.4).
-const CHIP = "focus-ring inline-flex h-6 items-center gap-1.5 rounded-[4px] px-1.5 text-sm";
 
 /**
  * What the shortcuts keep their hands off. Fields and popups are the obvious ones; every kind of
@@ -99,6 +98,7 @@ export function TransactionsTable({
   sort,
   direction,
   path = "/expenses",
+  sortable = true,
 }: {
   groups: readonly GroupView[];
   categories: readonly CategoryOption[];
@@ -108,6 +108,8 @@ export function TransactionsTable({
   sort: SortKey;
   direction: SortDirection;
   path?: string;
+  /** `false` where the order is the page's own and no heading changes it ("To review"). */
+  sortable?: boolean;
 }) {
   const t = useTranslations("expenses");
   const router = useRouter();
@@ -119,6 +121,8 @@ export function TransactionsTable({
   const [pending, startTransition] = useTransition();
   /** The manual movement's dialogs and writes, where the page set them up. */
   const manual = useManualMovement();
+  /** The automatic categories: "Confirm" and "Apply to N similar?", where the page set them up. */
+  const automatic = useCategoryActions();
 
   /**
    * Double-click a row to open it for editing (owner, 2026-09-20). The same panel the row menu's
@@ -213,9 +217,26 @@ export function TransactionsTable({
 
   function onSetCategory(ids: readonly string[], categoryId: string | null) {
     run(
-      () => setCategory(ids, categoryId),
+      async () => {
+        const result = await setCategory(ids, categoryId);
+        // One movement, one category: the similar ones may follow (decision K3). Never after a
+        // choice on several rows, where the person already said which ones.
+        if (result.ok && result.count > 0 && ids.length === 1 && categoryId !== null) {
+          automatic?.afterChoice(ids[0], categoryId);
+        }
+        return result;
+      },
       (count) => t("toasts.categorySet", { count }),
     );
+  }
+
+  /** "Confirm" on one row or on the selection: only the automatic and the suggested ones change. */
+  function onConfirm(ids: readonly string[]): Promise<boolean> {
+    if (!automatic) return Promise.resolve(false);
+    return automatic.confirm(ids).then((saved) => {
+      if (saved) setSelection([]);
+      return saved;
+    });
   }
 
   /** Spec §7.2 and D10: the design's "Delete" hides, and "Show hidden" undoes it. */
@@ -253,6 +274,9 @@ export function TransactionsTable({
   /** The row whose details panel is open, if it is still in the list after a revalidation. */
   const opened = rows.find((row) => row.id === detailsFor);
 
+  /** The selected rows that carry a suggestion: what "Confirm suggestions" confirms. */
+  const suggested = chosen.filter((row) => row.categoryState === "suggestion");
+
   /** Every selected row is already hidden: the only thing left to offer is putting them back. */
   const chosenHidden = chosen.length > 0 && chosen.every((row) => row.hidden);
 
@@ -263,31 +287,16 @@ export function TransactionsTable({
   function categoryTrigger(row: RowView, variant: "table" | "list") {
     const key = `${variant}:${row.id}`;
     return (
-      <CategoryPicker
+      <CategoryCell
+        row={row}
         categories={categories}
-        currentId={row.categoryId}
         open={editing === key}
         onOpenChange={(open) => setEditing(open ? key : null)}
         onPick={(categoryId) => onSetCategory([row.id], categoryId)}
-        uncategorisedLabel={t("row.uncategorised")}
-        searchLabel={t("row.searchCategory")}
-        noMatchLabel={t("row.noCategoryMatch")}
-        triggerLabel={t("row.editCategory")}
+        onConfirm={automatic ? () => onConfirm([row.id]) : undefined}
         disabled={pending}
-        triggerClassName={cn(
-          CHIP,
-          // As wide as its column allows (the table's layout is fixed), and truncated past that.
-          "max-w-full border border-transparent hover:border-border hover:bg-card",
-          editing === key && "border-accent bg-card",
-        )}
-      >
-        <span
-          aria-hidden
-          className={cn("size-[7px] shrink-0 rounded-[2px]", row.categoryColor === null && "bg-faint")}
-          style={row.categoryColor === null ? undefined : { background: row.categoryColor }}
-        />
-        <span className="min-w-0 truncate">{row.categoryName ?? t("row.uncategorised")}</span>
-      </CategoryPicker>
+        wide={variant === "list"}
+      />
     );
   }
 
@@ -414,6 +423,15 @@ export function TransactionsTable({
           >
             {t("selection.setCategory")}
           </CategoryPicker>
+          {automatic && suggested.length > 0 && (
+            <Button
+              size="xs"
+              disabled={pending}
+              onClick={() => void onConfirm(suggested.map((row) => row.id))}
+            >
+              {t("auto.selection.confirm", { count: suggested.length })}
+            </Button>
+          )}
           <Button
             size="xs"
             variant={chosenHidden ? "secondary" : "danger"}
@@ -468,17 +486,26 @@ export function TransactionsTable({
               <Th
                 key={column.name}
                 align={column.align}
-                sort={{
-                  direction: column.name === sort ? direction : null,
-                  onSort: () => sortBy(column.name),
-                }}
+                sort={
+                  sortable
+                    ? {
+                        direction: column.name === sort ? direction : null,
+                        onSort: () => sortBy(column.name),
+                      }
+                    : undefined
+                }
               >
-                {t(`columns.${column.name}`)}{" "}
-                <span className="sr-only">
-                  {nextDirection(column.name, sort, direction) === "asc"
-                    ? t("sort.ascending")
-                    : t("sort.descending")}
-                </span>
+                {t(`columns.${column.name}`)}
+                {sortable && (
+                  <>
+                    {" "}
+                    <span className="sr-only">
+                      {nextDirection(column.name, sort, direction) === "asc"
+                        ? t("sort.ascending")
+                        : t("sort.descending")}
+                    </span>
+                  </>
+                )}
               </Th>
             ))}
             <Th align="right">

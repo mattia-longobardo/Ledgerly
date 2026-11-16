@@ -463,6 +463,38 @@
         "deleted": "{count, plural, one {# categoria eliminata anche su Wallet} other {# categorie eliminate anche su Wallet}}",
         "refused": "Wallet non l'ha eliminata: {reason}",
         "failed": "Non si raggiunge Wallet: {reason}"
+      },
+      "merge": {
+        "title": "Categorie doppie",
+        "description": "Ledgerly propone di unire le categorie che sembrano uguali. Decidi tu.",
+        "pair": "{name} · {count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
+        "and": "e",
+        "same": "Sembrano la stessa categoria.",
+        "open": "Unisci…",
+        "dismiss": "Non sono uguali",
+        "dismissed": "Proposta ignorata",
+        "undo": "Annulla",
+        "dialog": {
+          "title": "Unisci le categorie",
+          "keep": "Quale nome resta?",
+          "moves": "{count, plural, =0 {Nessun movimento da spostare.} one {Il movimento di «{from}» passa a «{to}».} other {I # movimenti di «{from}» passano a «{to}».}}",
+          "archived": "«{from}» viene archiviata.",
+          "budgets": "I limiti dei budget delle due categorie si sommano.",
+          "children": "Le sottocategorie di «{from}» passano a «{to}».",
+          "confirm": "Unisci"
+        },
+        "done": "Categorie unite: {count, plural, one {# movimento spostato} other {# movimenti spostati}}",
+        "failed": "Non è stato possibile unire le categorie. Riprova.",
+        "cancel": "Annulla"
+      },
+      "defaults": {
+        "open": "Usa i gruppi predefiniti",
+        "title": "Scegli i gruppi delle tue spese",
+        "description": "Ledgerly usa questi gruppi per dare una categoria ai movimenti. Puoi cambiarli quando vuoi in Impostazioni › Categorie.",
+        "create": "{count, plural, one {Crea # gruppo} other {Crea # gruppi}}",
+        "later": "Non ora",
+        "created": "{count, plural, one {# gruppo creato} other {# gruppi creati}}",
+        "failed": "Non è stato possibile creare i gruppi. Riprova."
       }
     },
     "labels": {
@@ -1331,7 +1363,7 @@
         "all": "Tutte le categorie",
         "some": "{count, plural, one {# categoria} other {# categorie}}",
         "clear": "Azzera",
-        "none": "Senza categoria"
+        "none": "Da categorizzare"
       },
       "accounts": {
         "all": "Tutti i conti",
@@ -1385,7 +1417,7 @@
       "note": "Nota",
       "labels": "Etichette",
       "noLabels": "Nessuna etichetta",
-      "uncategorised": "Senza categoria",
+      "uncategorised": "Da categorizzare",
       "searchCategory": "Cerca categoria…",
       "noCategoryMatch": "Nessuna categoria trovata",
       "noPayee": "Senza beneficiario",
@@ -1538,7 +1570,137 @@
       "row": {
         "edit": "Modifica movimento"
       },
-      "palette": "Aggiungi movimento"
+      "palette": "Aggiungi movimento",
+      "categoryHint": "Suggerimento di Ledgerly. Cambialo se non va bene."
+    },
+    "auto": {
+      "mark": "Automatica",
+      "markLabel": "Categoria automatica: mostra il motivo",
+      "title": "Categoria automatica",
+      "confirm": "Conferma",
+      "change": "Cambia categoria",
+      "confirmed": "Categoria confermata",
+      "failed": "Non è stato possibile salvare. Riprova.",
+      "suggestion": {
+        "chip": "Suggerimento: {category}",
+        "chipLabel": "Suggerimento: {category}. Non confermato",
+        "title": "Suggerimento",
+        "notCounted": "Non conta in questa categoria finché non confermi.",
+        "other": "Scegli un'altra"
+      },
+      "reason": {
+        "memory": "Le ultime 3 volte hai scelto questa categoria per «{text}».",
+        "similar": "Somiglia ad altri movimenti che hai messo in questa categoria.",
+        "merchant_type": "La banca indica un tipo di esercizio che corrisponde a questa categoria.",
+        "brand": "«{brand}» è un marchio noto di questa categoria.",
+        "salary": "La banca indica questo movimento come stipendio.",
+        "fee": "La banca indica questo movimento come commissione.",
+        "other": "Ledgerly ha scelto questa categoria dai dati del movimento."
+      },
+      "selection": {
+        "confirm": "Conferma i suggerimenti ({count})"
+      }
+    },
+    "review": {
+      "title": "Da rivedere",
+      "summary": "{count, plural, one {# movimento} other {# movimenti}} · {groups, plural, one {# gruppo} other {# gruppi}} · {total}",
+      "sections": {
+        "suggested": "Con un suggerimento",
+        "unsuggested": "Senza suggerimento",
+        "singles": "Movimenti singoli",
+        "count": "{groups, plural, one {# gruppo} other {# gruppi}} · {count, plural, one {# movimento} other {# movimenti}}",
+        "singlesCount": "{count, plural, one {# movimento} other {# movimenti}}",
+        "more": "Mostra altri {count}"
+      },
+      "aside": {
+        "title": "Riepilogo",
+        "merge": "{count, plural, one {# proposta di unione delle categorie} other {# proposte di unione delle categorie}}",
+        "mergeLink": "Vedi"
+      },
+      "group": {
+        "summary": "{count, plural, one {# movimento} other {# movimenti}} · {total}",
+        "suggestion": "Suggerimento:",
+        "showAll": "Mostra tutti i {count}",
+        "hide": "Mostra meno",
+        "confirm": "Conferma per {count}",
+        "confirmLabel": "Conferma «{category}» per {count, plural, one {# movimento} other {# movimenti}} di {text}",
+        "change": "Cambia categoria",
+        "choose": "Scegli categoria",
+        "chooseLabel": "Scegli una categoria per {count, plural, one {# movimento} other {# movimenti}} di {text}",
+        "saving": "Salvataggio…",
+        "done": "{text} · {count, plural, one {# movimento} other {# movimenti}} in «{category}»",
+        "undo": "Annulla",
+        "failed": "Non è stato possibile salvare. Riprova.",
+        "row": "{date} · {account}",
+        "select": "Includi il movimento del {date}"
+      },
+      "noSuggestions": "Ledgerly non ha ancora suggerimenti per questi movimenti. Impara dalle categorie che scegli: più ne scegli, più suggerimenti arrivano.",
+      "empty": {
+        "done": {
+          "title": "Tutto a posto",
+          "description": "Nessun movimento da categorizzare.",
+          "action": "Torna a Spese"
+        },
+        "filtered": {
+          "title": "Niente da rivedere in questo periodo",
+          "description": "Prova con un altro periodo o con tutti i conti.",
+          "action": "Azzera i filtri"
+        },
+        "source": {
+          "title": "Le categorie arrivano dalla sorgente",
+          "description": "Qui compaiono i movimenti delle banche collegate e quelli scritti a mano."
+        }
+      },
+      "notice": {
+        "expenses": "{count, plural, one {# movimento da categorizzare} other {# movimenti da categorizzare}} in questo intervallo ({amount}).",
+        "suggested": "{count, plural, one {# ha un suggerimento.} other {# hanno un suggerimento.}}",
+        "action": "Rivedi"
+      },
+      "accounts": "Conti",
+      "allAccounts": "Tutti i conti",
+      "palette": "Da rivedere",
+      "guide": {
+        "steps": {
+          "groups": "Gruppi",
+          "categories": "Categorie",
+          "done": "Fatto"
+        },
+        "intro": {
+          "title": "Prima lettura di {bank}",
+          "body": "Ledgerly ha raggruppato i movimenti con lo stesso testo. Conferma o scegli una categoria per gruppo: vale per tutti i movimenti del gruppo. Puoi finire dopo: li ritrovi in Spese › Da rivedere."
+        },
+        "later": "Finisci dopo",
+        "progress": {
+          "label": "Gruppi fatti",
+          "text": "Fatti {done} gruppi di {total}",
+          "detail": "{done, plural, one {# movimento con una categoria} other {# movimenti con una categoria}} · {left} da fare"
+        },
+        "preparing": {
+          "title": "Ledgerly sta cercando una categoria per {count, plural, one {# movimento} other {# movimenti}}…",
+          "hint": "Può servire qualche secondo.",
+          "slow": "Serve più tempo del previsto. Puoi continuare dopo: i movimenti ti aspettano in Spese › Da rivedere.",
+          "toExpenses": "Vai a Spese",
+          "retry": "Riprova"
+        },
+        "done": {
+          "title": "Revisione finita",
+          "categorised": "{count, plural, one {# movimento di {bank} ha una categoria.} other {# movimenti di {bank} hanno una categoria.}}",
+          "left": "{count, plural, one {# è ancora da categorizzare: lo trovi} other {# sono ancora da categorizzare: li trovi}} in Spese › Da rivedere.",
+          "expenses": "Vai a Spese",
+          "accounts": "Vai ai conti"
+        }
+      }
+    },
+    "similar": {
+      "title": "Applicare a {count, plural, one {# movimento simile} other {# movimenti simili}}?",
+      "chosen": "Hai messo «{text}» in {category}.",
+      "body": "{count, plural, one {Un altro movimento ha lo stesso testo e non ha} other {Altri # movimenti hanno lo stesso testo e non hanno}} una categoria scelta da te.",
+      "showAll": "Mostra tutti i {count}",
+      "apply": "Applica a {count}",
+      "skip": "No, solo questo",
+      "applied": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
+      "undo": "Annulla",
+      "failed": "Non è stato possibile applicare la categoria. Il primo movimento è salvato. Riprova."
     }
   },
   "overview": {
@@ -1995,7 +2157,9 @@
       "spent": "Speso",
       "limit": "Limite",
       "progress": "Speso sul limite totale",
-      "unbudgeted": "Fuori budget questo mese: {amount}"
+      "unbudgeted": "Fuori budget questo mese: {amount}",
+      "toCategorise": "{count, plural, one {# movimento di {month} è da categorizzare} other {# movimenti di {month} sono da categorizzare}} ({amount}): non {count, plural, one {è} other {sono}} in nessun budget di categoria.",
+      "review": "Rivedi"
     },
     "columns": {
       "category": "Budget",
@@ -5092,7 +5256,14 @@
         "retrying": "Lettura in corso…",
         "rateLimited": "La banca ha raggiunto il limite di letture. La prossima lettura parte da sola alle {time}.",
         "partial": "Alcuni conti non sono stati letti. Ledgerly riprova alla prossima lettura automatica.",
-        "accountGone": "La banca non condivide più questo conto. Resta in Ledgerly e non viene più aggiornato."
+        "accountGone": "La banca non condivide più questo conto. Resta in Ledgerly e non viene più aggiornato.",
+        "categories": {
+          "title": "Categorie",
+          "summary": "{done, plural, one {# movimento ha} other {# movimenti hanno}} già una categoria. {suggested} hanno un suggerimento e {open} sono da categorizzare.",
+          "all": "Tutti i {count} movimenti hanno già una categoria.",
+          "noGroups": "Per dare una categoria ai {count} movimenti scegli prima i tuoi gruppi.",
+          "action": "Rivedi le categorie"
+        }
       },
       "errors": {
         "pluginDown": "Il collegamento con le banche non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",

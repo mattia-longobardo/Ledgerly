@@ -1,10 +1,10 @@
 import "server-only";
-import { and, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
 import { getAccount } from "@/modules/accounts/queries";
 import { getCategory, TaxonomyError } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import type { MonthKey } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
 import {
@@ -140,4 +140,99 @@ export async function saveAlerts(
       set: { enabled: parsed.enabled, thresholds: parsed.thresholds, updatedAt: new Date() },
     });
   return { enabled: parsed.enabled, thresholds: parsed.thresholds };
+}
+
+/**
+ * The limits of two categories that become one (rewrite plan N3; ux/n3-categories-manual.md §6.3,
+ * decision H35 point 7): from `month` on, the category that stays has the sum of the two limits,
+ * scope by scope — the budget on the category and each budget on the category and an account —
+ * and the other has none. The months before keep what they had. Inside the caller's transaction,
+ * with the merge of the categories. Returns how many limits were summed.
+ */
+export async function mergeLimits(
+  ctx: Pick<Ctx, "userId">,
+  input: { keepId: string; dropId: string; month: MonthKey },
+  tx: Tx,
+): Promise<number> {
+  const rows = await tx
+    .select()
+    .from(budgetLimits)
+    .where(
+      and(
+        userScoped(ctx).owns(budgetLimits),
+        inArray(budgetLimits.categoryId, [input.keepId, input.dropId]),
+        lte(budgetLimits.fromMonth, input.month),
+      ),
+    )
+    .orderBy(asc(budgetLimits.fromMonth), asc(budgetLimits.id));
+  /** The limit in force in `month` for a category and an account: the latest version, if not stopped. */
+  const inForce = (categoryId: string, accountId: string | null): Cents | null => {
+    const last = rows.filter((row) => row.categoryId === categoryId && row.accountId === accountId).at(-1);
+    return last && !last.stopped ? last.amountCents : null;
+  };
+  const scopes = [
+    ...new Set(rows.filter((row) => row.categoryId === input.dropId).map((row) => row.accountId)),
+  ];
+  let summed = 0;
+  for (const accountId of scopes) {
+    const dropped = inForce(input.dropId, accountId);
+    if (dropped === null) continue;
+    const kept = inForce(input.keepId, accountId) ?? 0n;
+    for (const categoryId of [input.keepId, input.dropId]) {
+      await tx
+        .delete(budgetLimits)
+        .where(and(sameScope(ctx, { categoryId, accountId }), gte(budgetLimits.fromMonth, input.month)));
+    }
+    await tx.insert(budgetLimits).values([
+      userScoped(ctx).stamp({
+        categoryId: input.keepId,
+        accountId,
+        fromMonth: input.month,
+        amountCents: kept + dropped,
+        stopped: false,
+      }),
+      userScoped(ctx).stamp({
+        categoryId: input.dropId,
+        accountId,
+        fromMonth: input.month,
+        amountCents: null,
+        stopped: true,
+      }),
+    ]);
+    summed += 1;
+  }
+  return summed;
+}
+
+/** Whether each of some categories has a limit in force in `month`: what a merge says it will sum. */
+export async function categoriesWithLimit(
+  ctx: Pick<Ctx, "userId">,
+  categoryIds: readonly string[],
+  month: MonthKey,
+): Promise<Set<string>> {
+  if (categoryIds.length === 0) return new Set();
+  const rows = await getDb()
+    .select({
+      categoryId: budgetLimits.categoryId,
+      accountId: budgetLimits.accountId,
+      stopped: budgetLimits.stopped,
+    })
+    .from(budgetLimits)
+    .where(
+      and(
+        userScoped(ctx).owns(budgetLimits),
+        inArray(budgetLimits.categoryId, [...categoryIds]),
+        lte(budgetLimits.fromMonth, month),
+      ),
+    )
+    .orderBy(asc(budgetLimits.fromMonth), asc(budgetLimits.id));
+  const latest = new Map<string, { categoryId: string; stopped: boolean }>();
+  for (const row of rows) {
+    if (row.categoryId !== null)
+      latest.set(`${row.categoryId}|${row.accountId ?? ""}`, {
+        categoryId: row.categoryId,
+        stopped: row.stopped,
+      });
+  }
+  return new Set([...latest.values()].filter((one) => !one.stopped).map((one) => one.categoryId));
 }

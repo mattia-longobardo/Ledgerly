@@ -14,7 +14,13 @@ import { userScoped } from "@/platform/db/scope";
 import { isAfterToday, manualColumns, manualMovementSchema } from "./manual-rules";
 import { type Transaction, getTransaction } from "./queries";
 import { transactions } from "./schema";
-import { requireMovementAccount, requireOwnCategory, requireTransaction, TransactionError } from "./service";
+import {
+  chosenBy,
+  requireMovementAccount,
+  requireOwnCategory,
+  requireTransaction,
+  TransactionError,
+} from "./service";
 
 type ManualCtx = Pick<Ctx, "userId" | "timeZone">;
 
@@ -23,7 +29,9 @@ async function parsed(ctx: ManualCtx, input: unknown) {
   if (isAfterToday(movement.on, today(ctx.timeZone))) throw new TransactionError("future_date");
   const account = await requireMovementAccount(ctx, movement.accountId);
   await requireOwnCategory(ctx, movement.categoryId);
-  return manualColumns(movement, account.currency, ctx.timeZone);
+  const columns = manualColumns(movement, account.currency, ctx.timeZone);
+  // A category the person left in the dialog is their choice, a suggestion they saw included.
+  return { ...columns, ...chosenBy(columns.categoryId === null ? null : "user") };
 }
 
 async function byKey(ctx: ManualCtx, idempotencyKey: string): Promise<Transaction | null> {

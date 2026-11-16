@@ -67,6 +67,8 @@ export interface BadgeSource {
   state: TransactionState;
   /** Left out for a row read before the origin existed: a provider's. */
   origin?: TransactionOrigin;
+  /** Whether the movement's source gives no category (`TransactionRow.categoryIsOwn`). */
+  categoryIsOwn?: boolean;
 }
 
 /**
@@ -81,7 +83,12 @@ export function badgesOf(row: BadgeSource): RowBadge[] {
   if (row.hiddenAt !== null) badges.push("hidden");
   if (row.removedUpstreamAt !== null) badges.push("removedUpstream");
   // "Edited here" says a row left what its provider gave: a manual movement has no provider.
-  if (row.locallyEdited.length > 0 && !manual) badges.push("edited");
+  // Nor does a category chosen where the source gives none: there is no category of the source
+  // the movement moved away from (ux/n3-categories-manual.md §2.3).
+  const edited = row.categoryIsOwn
+    ? row.locallyEdited.filter((field) => field !== "categoryId")
+    : row.locallyEdited;
+  if (edited.length > 0 && !manual) badges.push("edited");
   if (row.type === "transfer" && row.transferGroupId === null) badges.push("unpaired");
   else if (row.type === "transfer" || row.transferGroupId !== null) badges.push("transfer");
   if (row.state === "pending") badges.push("pending");
