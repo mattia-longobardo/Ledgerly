@@ -11,8 +11,10 @@ import {
   accountsOpenToProvider,
   linkProviderAccounts,
   rebuildDerivedBalances,
+  ibanOwnersOf,
   releaseProviderAccounts,
   saveProviderBalance,
+  saveSourceIbans,
 } from "@/modules/accounts/service";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import { categorise } from "@/modules/transactions/categorize/service";
@@ -73,13 +75,24 @@ export const bankSink: BankSink = {
             choice.target.kind === "new"
               ? { kind: "new", name: choice.target.name, type: accountType(choice.target.type) }
               : choice.target,
+          iban: choice.iban ?? null,
         })),
         now,
       );
     } catch (error) {
-      if (error instanceof AccountError) throw new SinkRefusal();
+      if (error instanceof AccountError) {
+        throw new SinkRefusal(error.code === "iban_exists" ? "iban_exists" : "refused");
+      }
       throw error;
     }
+  },
+
+  async ibanOwners(ctx, numbers) {
+    return ibanOwnersOf(ctx, numbers);
+  },
+
+  async saveIbans(ctx, given) {
+    await saveSourceIbans(ctx, given);
   },
 
   async linkedAccounts(ctx, provider) {

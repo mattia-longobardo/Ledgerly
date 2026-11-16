@@ -19,6 +19,7 @@ import {
   saveAccountSettingsAction,
 } from "../actions";
 import { colorField } from "./display";
+import { ibanErrorText } from "./iban-field";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "../rules";
 
 export interface SettingsValues {
@@ -31,6 +32,12 @@ export interface SettingsValues {
   state: "active" | "unavailable" | "archived";
   color: string | null;
   reference: string | null;
+  /** The account's IBAN, grouped by four for the field; `null` when none or the type has no field (H47). */
+  iban: string | null;
+  /** The IBAN came from the source: the field is read-only. */
+  ibanFromSource: boolean;
+  /** The type has the IBAN field (H47). */
+  ibanField: boolean;
   purpose: string | null;
   openedOn: string | null;
   notes: string | null;
@@ -65,6 +72,7 @@ export function AccountSettingsForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [ibanError, setIbanError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const unsaved = useUnsavedForm(formRef, pending);
@@ -86,6 +94,7 @@ export function AccountSettingsForm({
           currency: text("currency") || "EUR",
           color: automatic ? null : text("color") || null,
           reference: text("reference"),
+          iban: account.ibanField && !account.ibanFromSource ? text("iban") : "",
           purpose: text("purpose"),
           openedOn: text("openedOn") || null,
           notes: text("notes"),
@@ -98,10 +107,15 @@ export function AccountSettingsForm({
           betweenEntries: text("betweenEntries"),
         });
         if (!result.ok) {
-          setError(t(result.error === "managed_locked" ? "errors.managed" : "errors.invalid"));
+          const onIban = ibanErrorText(result, t);
+          setIbanError(onIban);
+          if (onIban === null) {
+            setError(t(result.error === "managed_locked" ? "errors.managed" : "errors.invalid"));
+          } else setError(null);
           return;
         }
         setError(null);
+        setIbanError(null);
         unsaved.saved();
         notify(t("saved"));
       } catch {
@@ -195,6 +209,30 @@ export function AccountSettingsForm({
               className="font-mono"
             />
           </Field>
+          {account.ibanField && (
+            <Field
+              label={t("general.iban")}
+              htmlFor="iban"
+              hint={
+                account.ibanFromSource
+                  ? t("general.ibanFromSource", { provider: account.provider ?? "" })
+                  : undefined
+              }
+              error={ibanError ?? undefined}
+            >
+              <Input
+                id="iban"
+                name="iban"
+                defaultValue={account.iban ?? ""}
+                readOnly={account.ibanFromSource}
+                maxLength={64}
+                autoComplete="off"
+                spellCheck={false}
+                inputMode="text"
+                className="font-mono tabular-nums"
+              />
+            </Field>
+          )}
           <Field label={t("general.color")} htmlFor="color" hint={t("general.colorHint")}>
             <div className="flex items-center gap-3">
               <Input

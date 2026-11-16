@@ -10,7 +10,8 @@ import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
 import { createAccountAction } from "../actions";
 import { colorField } from "./display";
-import { ACCOUNT_TYPES } from "../rules";
+import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "../rules";
+import { ibanErrorText } from "./iban-field";
 
 /**
  * A new manual account, with the optional opening balance of spec §7.1. The amount stays text all
@@ -19,7 +20,10 @@ import { ACCOUNT_TYPES } from "../rules";
 export function AccountForm({ today, index }: { today: string; index: number }) {
   const t = useTranslations("accounts.new");
   const types = useTranslations("accounts.types");
+  const settings = useTranslations("accounts.settings");
   const common = useTranslations("common");
+  const [type, setType] = useState<AccountType>("checking");
+  const [ibanError, setIbanError] = useState<string | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -41,13 +45,19 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
           currency: text("currency") || "EUR",
           color: automatic ? null : text("color") || null,
           reference: text("reference"),
+          iban: hasIbanField(type) ? text("iban") : "",
           purpose: text("purpose"),
           openedOn: text("openedOn") || null,
           notes: "",
           openingBalance: balance === "" ? null : { on: text("balanceOn") || today, amount: balance },
         });
         if (!result.ok) {
-          setError(t(`errors.${result.error === "future_date" ? "futureDate" : "invalid"}`));
+          // The IBAN's error goes under its field (ux/n4-account-switch.md §2.4.1).
+          const onIban = ibanErrorText(result, settings);
+          setIbanError(onIban);
+          setError(
+            onIban !== null ? null : t(`errors.${result.error === "future_date" ? "futureDate" : "invalid"}`),
+          );
           return;
         }
         router.push(`/accounts/${result.id}` as Route);
@@ -68,7 +78,12 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
         <Input id="name" name="name" maxLength={80} required autoFocus />
       </Field>
       <Field label={t("type")} htmlFor="type">
-        <Select id="type" name="type" defaultValue="checking">
+        <Select
+          id="type"
+          name="type"
+          value={type}
+          onChange={(event) => setType(event.currentTarget.value as AccountType)}
+        >
           {ACCOUNT_TYPES.map((type) => (
             <option key={type} value={type}>
               {types(type)}
@@ -82,6 +97,19 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
       <Field label={t("reference")} htmlFor="reference">
         <Input id="reference" name="reference" maxLength={64} className="font-mono" />
       </Field>
+      {hasIbanField(type) && (
+        <Field label={settings("general.iban")} htmlFor="iban" error={ibanError ?? undefined}>
+          <Input
+            id="iban"
+            name="iban"
+            maxLength={64}
+            autoComplete="off"
+            spellCheck={false}
+            inputMode="text"
+            className="font-mono tabular-nums"
+          />
+        </Field>
+      )}
       <Field label={t("currency")} htmlFor="currency">
         <Input id="currency" name="currency" defaultValue="EUR" maxLength={3} readOnly />
       </Field>

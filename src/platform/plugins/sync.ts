@@ -130,6 +130,7 @@ export async function chooseAccounts(
       providerAccountId: decision.providerAccountId,
       currency: account.currency,
       target: decision.target,
+      iban: account.identifier,
     });
   }
   const before = await sink.linkedAccounts(ctx, connection.provider);
@@ -138,7 +139,9 @@ export async function chooseAccounts(
   try {
     await sink.linkAccounts(ctx, connection.provider, choices, now);
   } catch (error) {
-    if (error instanceof SinkRefusal) throw new PluginActionError("failed");
+    if (error instanceof SinkRefusal) {
+      throw new PluginActionError(error.reason === "iban_exists" ? "iban_exists" : "failed");
+    }
     throw error;
   }
   await savePluginConnection(
@@ -298,6 +301,14 @@ async function reading(
   }
 
   const written = await write(ctx, { connection, accounts, linked, batches }, sink, now);
+  // The bank gives the number of each account with the access: the domain keeps the IBANs (H39).
+  await sink.saveIbans(
+    ctx,
+    accounts.flatMap((account) => {
+      const local = linked.get(providerAccountIdOf(account));
+      return local ? [{ accountId: local.id, iban: account.identifier }] : [];
+    }),
+  );
   const today = civilDateIn(now, ctx.timeZone);
   // The next reading starts from here only when this one read everything it asked for.
   const complete = cursor === null;

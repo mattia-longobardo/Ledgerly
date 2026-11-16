@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -159,5 +159,36 @@ describe("the choice of the accounts of a bank", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(cancelConnection).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith("/settings/integrations");
+  });
+});
+
+describe("an account whose IBAN is already here (rewrite plan N4, H39)", () => {
+  const withOwner = (owner: { id: string; name: string; manual: boolean }) => ({
+    accounts: [{ ...PROPS.accounts[0], ibanOwner: owner }, PROPS.accounts[1]],
+  });
+  const legend = PROPS.accounts[0].legend;
+
+  it("starts on the account kept by hand that has the IBAN, and offers no new account", () => {
+    renderStep(withOwner({ id: "x-1", name: "Risparmi", manual: true }));
+    expect(targetOf(legend).value).toBe("x-1");
+    expect(within(group(legend)).getByRole("option", { name: "Create a new account" })).toBeDisabled();
+    expect(within(group(legend)).getByRole("status")).toHaveTextContent(
+      "This account is already in Ledgerly: “Risparmi” has the same IBAN.",
+    );
+  });
+
+  it("is not imported when the account with the IBAN comes from another source", () => {
+    renderStep(withOwner({ id: "w-1", name: "Current", manual: false }));
+    expect(targetOf(legend).value).toBe("skip");
+    expect(within(group(legend)).getByRole("status")).toHaveTextContent("“Current”, from another source");
+  });
+
+  it("says why when the server refuses an account with an IBAN already here", async () => {
+    importAccounts.mockResolvedValueOnce({ ok: false, error: "iban_exists" });
+    renderStep();
+    await userEvent.click(screen.getByRole("button", { name: /Import/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "An account has the IBAN of an account already in Ledgerly",
+    );
   });
 });

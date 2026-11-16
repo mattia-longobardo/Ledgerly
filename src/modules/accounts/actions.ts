@@ -31,15 +31,20 @@ import {
  * Forms call these inside a transition with no error boundary, so a rejected input comes back as a
  * message key under the calling component's own namespace instead of throwing (as in users).
  */
-export type ActionResult = { ok: true } | { ok: false; error: string };
-export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
+export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
+export type CreateResult = { ok: true; id: string } | { ok: false; error: string; other?: string };
 
 function amount(value: string, ctx: Ctx): bigint {
   return parseAmount(value, ctx.numberFormat);
 }
 
-function failed(error: unknown): { ok: false; error: string } {
-  if (error instanceof AccountError) return { ok: false, error: error.code };
+function failed(error: unknown): { ok: false; error: string; other?: string } {
+  // `other` is the name of the account that has the IBAN: never the IBAN itself (H45).
+  if (error instanceof AccountError) {
+    return error.other === null
+      ? { ok: false, error: error.code }
+      : { ok: false, error: error.code, other: error.other };
+  }
   if (error instanceof z.ZodError) return { ok: false, error: "invalid" };
   if (error instanceof RangeError) return { ok: false, error: "invalid" };
   throw error;
@@ -51,6 +56,7 @@ export interface NewAccountInput {
   currency: string;
   color: string | null;
   reference: string;
+  iban: string;
   purpose: string;
   openedOn: string | null;
   notes: string;
@@ -80,6 +86,7 @@ export interface AccountSettingsFormInput {
   currency: string;
   color: string | null;
   reference: string;
+  iban: string;
   purpose: string;
   openedOn: string | null;
   notes: string;

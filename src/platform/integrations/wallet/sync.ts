@@ -49,6 +49,7 @@ import {
   readCredentials,
   readSyncJob,
   recordRun,
+  saveIbanConflicts,
   saveSyncJob,
   skipRun,
 } from "../service";
@@ -370,6 +371,7 @@ export function toRemoteAccount(account: WalletAccount): RemoteAccount {
     name: account.name,
     type: account.type,
     currency: account.currency,
+    ...(account.iban ? { iban: account.iban } : {}),
   };
 }
 
@@ -440,6 +442,7 @@ interface AccountsPass {
  */
 async function syncAccounts(
   ctx: Pick<Ctx, "userId" | "timeZone">,
+  connectionId: string,
   client: WalletClient,
   now: Date,
 ): Promise<AccountsPass> {
@@ -447,7 +450,8 @@ async function syncAccounts(
   const balances = await client.balances();
 
   const before = await linkedAccounts(ctx);
-  await applyProviderAccounts(ctx, WALLET_PROVIDER, remote.map(toRemoteAccount), now);
+  const applied = await applyProviderAccounts(ctx, WALLET_PROVIDER, remote.map(toRemoteAccount), now);
+  await saveIbanConflicts(ctx, connectionId, applied.ibanConflicts);
   const after = await linkedAccounts(ctx);
 
   const on = today(ctx.timeZone, now);
@@ -804,7 +808,7 @@ async function walletPass(
     try {
       let counts: Record<string, number>;
       if (kind === "accounts") {
-        const pass = await syncAccounts(ctx, client, now);
+        const pass = await syncAccounts(ctx, connectionId, client, now);
         covered = pass.present;
         counts = pass.counts;
       } else {

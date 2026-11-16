@@ -9,6 +9,8 @@ import { listTransactions } from "@/modules/transactions/queries";
 import { listCategories } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { addDays } from "@/platform/dates";
+
+const addMinutes = (instant: Date, minutes: number) => new Date(instant.getTime() + minutes * 60_000);
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
 import { WALLET_PROVIDER } from "../rules";
@@ -193,6 +195,56 @@ describe("syncWalletNow", () => {
     expect(runs.transactions).toMatchObject({ state: "success", error: null });
     expect(runs.accounts.counts).toMatchObject({ created: 10 });
     expect(runs.accounts.finishedAt).not.toBeNull();
+  });
+
+  it("does not add an account whose IBAN is already here, and the connection says which (rewrite plan N4)", async () => {
+    const iban = "IT60X0542811101000000123456";
+    const { createAccount } = await import("@/modules/accounts/service");
+    const mine = await createAccount(ctx, {
+      name: "Kept by hand",
+      type: "savings",
+      currency: "EUR",
+      color: null,
+      reference: "",
+      iban,
+      purpose: "",
+      openedOn: null,
+      notes: "",
+      openingBalance: null,
+    });
+    const withNumbers = ACCOUNTS.map((account) =>
+      account.id === "wa-saving"
+        ? { ...account, bankAccountNumber: "IT60 X054 2811 1010 0000 0123 456" }
+        : account.id === "wa-general"
+          ? { ...account, bankAccountNumber: "GB82 WEST 1234 5698 7654 32" }
+          : account,
+    );
+    await syncWalletNow(ctx, connectionId, {
+      now: NOW,
+      clientOptions: walletStub({ accounts: withNumbers }).options,
+    });
+
+    const accounts = await listAccounts(ctx, { includeArchived: true });
+    expect(accounts.some((account) => account.providerAccountId === "wa-saving")).toBe(false);
+    expect(accounts.find((account) => account.providerAccountId === "wa-general")).toMatchObject({
+      iban: "GB82WEST12345698765432",
+      ibanFromSource: true,
+    });
+    expect((await listConnections(ctx)).find((one) => one.id === connectionId)?.ibanConflicts).toEqual([
+      mine.id,
+    ]);
+
+    // Without the number the account comes in, and the notice goes.
+    await syncWalletNow(ctx, connectionId, {
+      now: addMinutes(NOW, 60),
+      clientOptions: walletStub({ accounts: ACCOUNTS }).options,
+    });
+    expect(
+      (await listAccounts(ctx, { includeArchived: true })).some(
+        (one) => one.providerAccountId === "wa-saving",
+      ),
+    ).toBe(true);
+    expect((await listConnections(ctx)).find((one) => one.id === connectionId)?.ibanConflicts).toBeNull();
   });
 
   it("reads twelve monthly windows on the first link and only the last seven days afterwards", async () => {

@@ -56,6 +56,9 @@ export const integrationConnections = pgTable(
     // there is no rule (manual only).
     schedule: jsonb("schedule").$type<SyncSchedule>().notNull().default(DEFAULT_SYNC_SCHEDULE),
     nextSyncAt: timestamp("next_sync_at", { withTimezone: true }),
+    // The accounts here whose IBAN a new account of the source carries, at the last reading: the
+    // source's account was not added (rewrite plan N4, H39, case 5). Ids only, never an IBAN.
+    ibanConflicts: jsonb("iban_conflicts").$type<string[]>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

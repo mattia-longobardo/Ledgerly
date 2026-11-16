@@ -65,6 +65,11 @@ export interface ConnectionFacts {
   keyRefused?: boolean;
   /** The end of a wait the provider asked for, when it is later than the schedule's next time. */
   nextAttempt?: Date | null;
+  /**
+   * The names of the accounts here whose IBAN a new account of the source carries, at the last
+   * reading (rewrite plan N4, case 5): that account was not added. Never an IBAN.
+   */
+  ibanConflicts?: readonly string[];
 }
 
 /** The readings a row shows, and how many runs are read to make them. */
@@ -250,10 +255,13 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
 
     // The end of the access, from 14 days before it; after it the state says so itself.
     const days = daysToExpiry(connection.expiresAt, now, ctx.timeZone);
+    const conflict = facts.ibanConflicts?.[0];
     const notice =
       days !== null && days <= 14 && !off && status.value !== "action"
         ? { text: t("expiry.days", { days, name: label.name }), action: actionOf("renew", facts) }
-        : null;
+        : conflict !== undefined && !off
+          ? { text: t("notices.ibanExists", { name: label.name, account: conflict }), action: null }
+          : null;
 
     const history = historyItems(facts);
     return {

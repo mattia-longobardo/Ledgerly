@@ -1332,6 +1332,9 @@
           "action": "Scarica di nuovo",
           "hint": "Importa soltanto: non toglie mai nulla di ciò che c'è già."
         }
+      },
+      "notices": {
+        "ibanExists": "{name} ha un conto nuovo con l'IBAN di «{account}». Ledgerly non lo ha aggiunto."
       }
     },
     "diagnostics": {
@@ -1935,7 +1938,7 @@
       "type": "Tipo",
       "purpose": "Scopo",
       "purposeHint": "A cosa serve, per esempio stipendio e bollette.",
-      "reference": "IBAN o riferimento",
+      "reference": "Riferimento",
       "currency": "Valuta",
       "color": "Colore",
       "openedOn": "Aperto il",
@@ -2077,7 +2080,10 @@
       "errors": {
         "invalid": "Controlla i campi segnalati e riprova.",
         "failed": "Non è stato possibile salvare. Riprova.",
-        "managed": "Un conto gestito in Investimenti resta un conto di investimento o crypto."
+        "managed": "Un conto gestito in Investimenti resta un conto di investimento o crypto.",
+        "ibanInvalid": "Questo IBAN non è valido. Controlla le cifre.",
+        "ibanExists": "Questo IBAN è già del conto «{other}».",
+        "ibanArchived": "Questo IBAN è del conto archiviato «{other}». Ripristina quel conto oppure togli l'IBAN da lì."
       },
       "general": {
         "title": "Generale",
@@ -2089,7 +2095,9 @@
         "locked": "Deciso dal provider.",
         "typeSynced": "Arriva da Wallet e lo segue finché non lo cambi qui. Wallet non accetta modifiche al tipo di conto dalla sua API: una modifica fatta qui resta qui.",
         "purpose": "Scopo",
-        "reference": "IBAN o riferimento",
+        "reference": "Riferimento",
+        "iban": "IBAN (facoltativo)",
+        "ibanFromSource": "L'IBAN arriva da {provider}.",
         "color": "Colore",
         "currency": "Valuta",
         "openedOn": "Aperto il",
@@ -5326,7 +5334,10 @@
         "submit": "{count, plural, =0 {Importa} one {Importa # conto} other {Importa # conti}}",
         "linked": "Già collegato a «{account}»",
         "nameRequired": "Scrivi un nome per il conto.",
-        "failed": "Non è stato possibile importare i conti. Riprova."
+        "failed": "Non è stato possibile importare i conti. Riprova.",
+        "ibanExists": "Questo conto è già in Ledgerly: «{account}» ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta.",
+        "ibanExistsSource": "Questo conto è già in Ledgerly: «{account}», da un'altra sorgente, ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta.",
+        "failedIban": "Un conto ha l'IBAN di un conto già in Ledgerly: Ledgerly non lo aggiunge una seconda volta. Scegli «Usa» o «Non importare» per quel conto."
       },
       "cancel": {
         "title": "Annullare il collegamento?",

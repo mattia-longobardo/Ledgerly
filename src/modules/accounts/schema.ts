@@ -69,6 +69,12 @@ export const accounts = pgTable(
     state: text("state", { enum: ACCOUNT_STATES }).notNull().default("active"),
     color: text("color"),
     reference: text("reference"),
+    // The account's IBAN (rewrite plan N4, H39): compact and upper case, checked. Written by the
+    // source when it gives one (`ibanFromSource`, read-only for the person), or by hand. One IBAN,
+    // one account: the services check it, not an index (04-now.md §4.6.1, point 2). Never leaves
+    // Ledgerly through the API, MCP, an export or a log (H45).
+    iban: text("iban"),
+    ibanFromSource: boolean("iban_from_source").notNull().default(false),
     purpose: text("purpose"),
     openedOn: date("opened_on"),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -107,6 +113,13 @@ export const accounts = pgTable(
       "accounts_synced_provider_ck",
       sql`${table.origin} = 'manual' or (${table.provider} is not null and ${table.providerAccountId} is not null)`,
     ),
+    check(
+      "accounts_iban_ck",
+      sql`${table.iban} is null or ${table.iban} ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'`,
+    ),
+    index("accounts_user_iban_idx")
+      .on(table.userId, table.iban)
+      .where(sql`${table.iban} is not null`),
     check("accounts_archived_ck", sql`(${table.state} = 'archived') = (${table.archivedAt} is not null)`),
   ],
 );

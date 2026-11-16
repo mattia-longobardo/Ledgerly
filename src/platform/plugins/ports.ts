@@ -22,6 +22,16 @@ export interface AccountChoice {
   providerAccountId: string;
   currency: string;
   target: { kind: "new"; name: string; type: string } | { kind: "existing"; accountId: string };
+  /** The number the bank gives for the account; the domain keeps it when it is an IBAN. */
+  iban?: string | null;
+}
+
+/** The account of the person that already has an IBAN (rewrite plan N4, H39). Never the IBAN. */
+export interface IbanOwner {
+  id: string;
+  name: string;
+  /** Kept by hand (it can be the target of "Use an existing account") or tied to a source. */
+  manual: boolean;
 }
 
 /** One booked movement of a bank, ready for the domain: its identity is already decided. */
@@ -51,8 +61,9 @@ export interface MovementsWritten {
 
 /** Thrown by an adapter for a choice the domain refuses (an account that is not the person's, a wrong currency). */
 export class SinkRefusal extends Error {
-  constructor() {
-    super("refused");
+  /** `iban_exists`: a new account would take an IBAN an open account has; `refused` otherwise. */
+  constructor(readonly reason: "refused" | "iban_exists" = "refused") {
+    super(reason);
     this.name = "SinkRefusal";
   }
 }
@@ -83,6 +94,10 @@ export interface BankSink {
     movements: readonly ReadingMovement[],
     now: Date,
   ): Promise<MovementsWritten>;
+  /** For each number given, the open account that has it as its IBAN; numbers that are no IBAN are left out. */
+  ibanOwners(ctx: Who, numbers: readonly (string | null)[]): Promise<Map<string, IbanOwner>>;
+  /** The numbers the bank gives for the tied accounts: the domain keeps those that are an IBAN. */
+  saveIbans(ctx: Who, given: readonly { accountId: string; iban: string | null }[]): Promise<void>;
   /** Once per reading, after the writes: what the domain derives from the movements. */
   afterReading(ctx: Who, accountIds: readonly string[]): Promise<void>;
 }

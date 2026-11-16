@@ -104,6 +104,30 @@ describe("exportUser", () => {
     expect(zip.get("transactions.csv")!.toString("utf8")).toContain("Esselunga");
   });
 
+  it("never holds the IBAN of an account, neither whole nor masked (rewrite plan N4, H45)", async () => {
+    const ctx = await newContext();
+    const iban = "IT60X0542811101000000123456";
+    await createAccount(ctx, {
+      name: "Savings box",
+      type: "savings",
+      currency: "EUR",
+      color: null,
+      reference: "",
+      iban,
+      purpose: "",
+      openedOn: null,
+      notes: "",
+      openingBalance: null,
+    });
+    const zip = await readZip(await exportUserBytes(ctx, NOW));
+    expect(zip.get("accounts.csv")!.toString("utf8")).toContain("Savings box");
+    for (const [path, bytes] of zip) {
+      const text = bytes.toString("utf8");
+      expect(text, path).not.toContain(iban);
+      expect(text, path).not.toContain("0123 456");
+    }
+  });
+
   it("contains none of another person's rows and none of their documents", async () => {
     const mine = await newContext();
     const theirs = await newContext();

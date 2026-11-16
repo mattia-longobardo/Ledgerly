@@ -75,6 +75,8 @@ export type PluginActionCode =
   | "invalid_data"
   | "connected"
   | "no_choice"
+  /** A new account would take an IBAN an account here already has (rewrite plan N4, H39). */
+  | "iban_exists"
   | "failed";
 
 export class PluginActionError extends Error {

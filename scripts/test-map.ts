@@ -129,6 +129,8 @@ export const MODULES: Module[] = [
       "api",
       "jobs",
       "export",
+      "connections",
+      "e2e:connections",
       "e2e:transactions",
       "e2e:investments",
       "e2e:funds",

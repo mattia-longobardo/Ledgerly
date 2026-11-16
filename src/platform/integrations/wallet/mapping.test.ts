@@ -163,6 +163,17 @@ describe("mapWalletAccount", () => {
   });
 });
 
+describe("mapWalletAccount and the IBAN (rewrite plan N4, 04-now.md §4.6.1)", () => {
+  it("keeps the account number when it is an IBAN, compact, and leaves any other number out", () => {
+    const raw = byId(accountsFixture(), "wa-cash");
+    expect(mapWalletAccount({ ...raw, bankAccountNumber: "it60 x054 2811 1010 0000 0123 456" }).iban).toBe(
+      "IT60X0542811101000000123456",
+    );
+    expect(mapWalletAccount({ ...raw, bankAccountNumber: "123-456789" })).not.toHaveProperty("iban");
+    expect(mapWalletAccount(raw)).not.toHaveProperty("iban");
+  });
+});
+
 describe("mapWalletBalance", () => {
   it("converts every balance through its decimal text", () => {
     const balances = accountsFixture().map(mapWalletBalance);
