@@ -133,6 +133,13 @@ docker compose build ledgerly ledgerly-cron
 docker compose up -d ledgerly ledgerly-cron
 ```
 
+`scripts/release.sh` does not build the application when the image `ledgerly:preview` carries the
+commit of the release (`sh scripts/preview-on-test.sh build`, from a clean tree): it gives that
+image the tag `ledgerly:latest` and starts it — the image the E2E tests ran on. It says which of
+the two it did (`image: …`). To build in any case, remove the image first
+(`docker image rm ledgerly:preview`) or set `LEDGERLY_PREVIEW_IMAGE=none`. The way back does not
+change: `ledgerly:pre-<id>` is tagged before `latest` moves (§8).
+
 Migrations are applied by the container's entrypoint before the server starts
 (`entrypoint.sh` → `migrate.mjs`), so there is no migration command to run by hand. The process
 **refuses to start** if any environment value is missing or malformed, and says which one:
@@ -159,7 +166,7 @@ curl -s https://dash.longobardo.me/api/health     # G8: status ok, db up
 npm run numbers -- "$folder" after --as-of <the instant step 2 printed>
 npm run numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json"   # G5: "uguale"
 npx playwright test -g @smoke                      # G6: the smoke tests, on the deployed site
-npx playwright test <specs> -g @site               # G6: the tests the preview cannot run, for the selected specs
+npx playwright test <specs> -g @site               # G6: the tests about the site itself, for the selected specs
 ```
 
 The two snapshots must be equal: `uguale`. Anything else prints how many numbers differ and their

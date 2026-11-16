@@ -118,6 +118,50 @@ describe("scripts/release.sh", () => {
     expect(run.stdout).toContain("uguale");
   });
 
+  // A `docker` that answers `image inspect --format …` of the preview with the commit it was built from.
+  function previewOf(revision: string): void {
+    const docker = join(work, "bin", "docker");
+    writeFileSync(
+      docker,
+      `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\n[ "$1 $2 $3" = "image inspect --format" ] && echo "${revision}"\nexit 0\n`,
+    );
+    chmodSync(docker, 0o755);
+  }
+
+  it("starts the image of the preview, and builds nothing, when it was built from the same commit", () => {
+    previewOf("abc1234abc1234abc1234abc1234abc1234abc123");
+    const run = release("ok");
+    expect(run.status).toBe(0);
+    const at = (start: string) => run.calls.findIndex((call) => call.startsWith(start));
+    // The way back is kept before the tag `latest` moves to the preview's image.
+    expect(at("docker tag ledgerly:latest ledgerly:pre-t1")).toBeGreaterThanOrEqual(0);
+    expect(at("docker tag ledgerly:latest ledgerly:pre-t1")).toBeLessThan(
+      at("docker tag ledgerly:preview ledgerly:latest"),
+    );
+    expect(at("npm")).toBeLessThan(at("docker tag ledgerly:preview ledgerly:latest"));
+    expect(run.calls.some((call) => call.startsWith("docker compose build"))).toBe(false);
+    expect(at("docker tag ledgerly:preview ledgerly:latest")).toBeLessThan(
+      at("docker compose up -d --wait ledgerly"),
+    );
+    expect(run.stdout).toContain("not built again");
+  });
+
+  it("builds the application when the image of the preview is of another commit", () => {
+    previewOf("fffffffffffffffffffffffffffffffffffffff0");
+    const run = release("ok");
+    expect(run.status).toBe(0);
+    expect(run.calls).toContain("docker compose build ledgerly");
+    expect(run.calls.some((call) => call.startsWith("docker tag ledgerly:preview"))).toBe(false);
+  });
+
+  it("with the image of the preview, still builds the other services of the release", () => {
+    previewOf("abc1234abc1234abc1234abc1234abc1234abc123");
+    const run = release("ok", ["--plugin", "enablebanking"]);
+    expect(run.status).toBe(0);
+    expect(run.calls).toContain("docker compose build ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain("docker compose up -d --wait ledgerly ledgerly-plugin-enablebanking");
+  });
+
   it("tags, builds and starts a plugin with the app when asked", () => {
     const run = release("ok", ["--plugin", "enablebanking"]);
     expect(run.status).toBe(0);

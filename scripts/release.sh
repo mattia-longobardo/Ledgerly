@@ -11,7 +11,8 @@
 #      with `--plugin <id>`; a service deployed for the first time has no image to keep);
 #   3. the release's folder and its dump (`scripts/release-dump.sh`; `--no-dump`: the folder only);
 #   4. the numbers snapshot "before" (`npm run numbers`), with its checksum verified;
-#   5. the build and the start, waiting for the health check;
+#   5. the build and the start, waiting for the health check. The application is not built again
+#      when the image of the preview was built from the same commit (`preview-on-test.sh build`);
 #   6. the health of the site, the numbers "after" at the same instant, and their comparison;
 #   7. the `@smoke` tests on the site (docs/testing.md).
 #
@@ -125,8 +126,25 @@ failed() {
   echo "Rollback: docker tag ledgerly:pre-$release ledgerly:latest && docker compose up -d --no-build ledgerly" >&2
   exit 1
 }
-# shellcheck disable=SC2086 — the services are separate words.
-docker compose build $services || failed "the build failed (the running containers are still the old ones)"
+# The image of the preview, when it was built from this commit and from a clean tree
+# (`scripts/preview-on-test.sh build` writes the commit on it): the tests of the release ran on that
+# image, and the release starts the same one instead of building it a second time. Any other image
+# — no preview, another commit, a tree with changes — is not used, and the application is built here.
+preview=${LEDGERLY_PREVIEW_IMAGE:-ledgerly:preview}
+revision=$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
+  "$preview" 2> /dev/null || true)
+to_build=$services
+if [ "$revision" = "$sha" ]; then
+  docker tag "$preview" ledgerly:latest || failed "the image of the preview could not be tagged"
+  echo "image: ledgerly is the image of the preview, built from $sha: not built again"
+  to_build=${services#ledgerly}
+else
+  echo "image: no preview image of $sha: ledgerly is built here"
+fi
+if [ -n "${to_build# }" ]; then
+  # shellcheck disable=SC2086 — the services are separate words.
+  docker compose build $to_build || failed "the build failed (the running containers are still the old ones)"
+fi
 # shellcheck disable=SC2086
 docker compose up -d --wait $services || failed "the containers did not become healthy"
 
