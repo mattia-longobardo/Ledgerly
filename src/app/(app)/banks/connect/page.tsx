@@ -2,8 +2,11 @@ import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import { balancesOn } from "@/modules/accounts/queries";
+import { categoryCounts } from "@/modules/transactions/categorize/review";
+import { listCategories } from "@/modules/transactions/taxonomy";
 import { accountsOfProvider } from "@/modules/accounts/service";
 import { movementSpanByAccount } from "@/modules/transactions/queries";
+import { withParams } from "@/ui/url";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today } from "@/platform/dates";
 import { formatDate, formatMoney } from "@/platform/format";
@@ -151,6 +154,11 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       balancesOn(ctx, ids, today(ctx.timeZone)),
       readSyncJob(ctx, connection.id, "transactions"),
     ]);
+    // How the movements of this bank stand after the cascade read them (rewrite plan N3).
+    const [categoryState, ownCategories] = await Promise.all([categoryCounts(ctx, ids), listCategories(ctx)]);
+    const waiting = categoryState.suggested + categoryState.open;
+    const read = categoryState.categorised + waiting;
+    const reviewHref = withParams("/expenses/review", {}, { guide: "1", acc: ids.join(","), bank });
     const failed = run?.state === "failed";
     const wait =
       failed && run.error === "rate_limited" && job?.cursor?.retryAfter
@@ -200,6 +208,22 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
         ) : (
           (run?.counts?.accountErrors ?? 0) > 0 && <p className="text-sm text-neg">{t("done.partial")}</p>
         )}
+        {read > 0 && (
+          <div className="flex flex-col gap-1 border-t border-border pt-3">
+            <h2 className="font-semibold">{t("done.categories.title")}</h2>
+            <p className="text-sm text-muted">
+              {waiting === 0
+                ? t("done.categories.all", { count: read })
+                : ownCategories.length === 0
+                  ? t("done.categories.noGroups", { count: read })
+                  : t("done.categories.summary", {
+                      done: categoryState.categorised,
+                      suggested: categoryState.suggested,
+                      open: categoryState.open,
+                    })}
+            </p>
+          </div>
+        )}
         <p className="text-sm text-muted">
           {t("done.schedule")}{" "}
           {connection.expiresAt && t("done.validUntil", { date: day(connection.expiresAt) })}
@@ -209,9 +233,16 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
           {failed && wait === null ? (
             <RetryReading connectionId={connection.id} />
           ) : (
-            <ButtonLink href={"/accounts" as Route} variant="primary">
-              {t("done.toAccounts")}
-            </ButtonLink>
+            <>
+              <ButtonLink href={"/accounts" as Route} variant={waiting > 0 ? "secondary" : "primary"}>
+                {t("done.toAccounts")}
+              </ButtonLink>
+              {waiting > 0 && (
+                <ButtonLink href={reviewHref} variant="primary">
+                  {t("done.categories.action")}
+                </ButtonLink>
+              )}
+            </>
           )}
         </div>
       </Card>,

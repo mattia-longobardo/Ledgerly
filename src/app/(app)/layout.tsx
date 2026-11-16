@@ -59,6 +59,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           ),
         )
       : []),
+    // "To review", which has no place in the menu until the menu changes (R5a).
+    { ...settingsLink("to-review", "/expenses/review", t("expenses.review.palette")), icon: "expenses" },
     // The manual movement, as a command: the Expenses page opens its dialog (N3).
     { ...settingsLink("add-transaction", "/expenses?add=1", t("expenses.manual.palette")), icon: "expenses" },
     settingsLink(

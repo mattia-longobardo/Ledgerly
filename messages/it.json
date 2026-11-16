@@ -484,7 +484,8 @@
           "confirm": "Unisci"
         },
         "done": "Categorie unite: {count, plural, one {# movimento spostato} other {# movimenti spostati}}",
-        "failed": "Non è stato possibile unire le categorie. Riprova."
+        "failed": "Non è stato possibile unire le categorie. Riprova.",
+        "cancel": "Annulla"
       },
       "defaults": {
         "open": "Usa i gruppi predefiniti",
@@ -1654,9 +1655,6 @@
         "expenses": "{count, plural, one {# movimento da categorizzare} other {# movimenti da categorizzare}} in questo intervallo ({amount}).",
         "suggested": "{count, plural, one {# ha un suggerimento.} other {# hanno un suggerimento.}}",
         "action": "Rivedi"
-      },
-      "period": {
-        "all": "Tutto"
       },
       "accounts": "Conti",
       "allAccounts": "Tutti i conti",

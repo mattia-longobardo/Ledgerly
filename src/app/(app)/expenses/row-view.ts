@@ -1,6 +1,7 @@
 // src/app/(app)/expenses/row-view.ts — one movement as the table of Expenses draws it, built on the
 // server: every text already formatted, every colour already decided. Shared by Expenses and by
-// "To review", which shows its single movements in the same table.
+// "To review", which shows its single movements in the same table. What only one source can do
+// with a row is added by the page that knows that source.
 import type { TransactionRow } from "@/modules/transactions/queries";
 import { displayPayee, isHidden } from "@/modules/transactions/rules";
 import { amountToneOf, badgesOf, categoryColor } from "@/modules/transactions/ui/display";
@@ -13,13 +14,10 @@ export function rowViewOf(
   {
     ctx,
     colorOf,
-    walletIds,
   }: {
     ctx: Pick<Ctx, "locale" | "numberFormat">;
     /** One colour per category, decided once for the screen (`categoryColors`). */
     colorOf: ReadonlyMap<string, string>;
-    /** The movements whose fields the details panel may write to their source. */
-    walletIds: ReadonlySet<string>;
   },
 ): RowView {
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
@@ -61,14 +59,5 @@ export function rowViewOf(
             payee: row.payee ?? "",
           }
         : null,
-    wallet: walletIds.has(row.id)
-      ? {
-          type: row.type,
-          amount: formatAmountInput(
-            row.amountCents < 0n ? -row.amountCents : row.amountCents,
-            ctx.numberFormat,
-          ),
-        }
-      : null,
   };
 }

@@ -484,7 +484,8 @@
           "confirm": "Merge"
         },
         "done": "Categories merged: {count, plural, one {# transaction moved} other {# transactions moved}}",
-        "failed": "Couldn't merge the categories. Try again."
+        "failed": "Couldn't merge the categories. Try again.",
+        "cancel": "Cancel"
       },
       "defaults": {
         "open": "Use the default groups",
@@ -1654,9 +1655,6 @@
         "expenses": "{count, plural, one {# transaction to categorise} other {# transactions to categorise}} in this range ({amount}).",
         "suggested": "{count, plural, one {# has a suggestion.} other {# have a suggestion.}}",
         "action": "Review"
-      },
-      "period": {
-        "all": "All"
       },
       "accounts": "Accounts",
       "allAccounts": "All accounts",

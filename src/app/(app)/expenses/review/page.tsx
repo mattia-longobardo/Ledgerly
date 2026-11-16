@@ -23,9 +23,8 @@ import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guid
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
+import { isCivilDate, today } from "@/platform/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
-import { walletEditableIds } from "@/platform/integrations/wallet/records";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { cn } from "@/ui/cn";
@@ -68,8 +67,16 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   const raw = await searchParams;
   const todayOn = today(ctx.timeZone);
 
-  const preset: Preset = PRESETS.find((key) => key === one(raw.preset)) ?? "all";
-  const range = preset === "all" ? {} : presetRange(preset, todayOn);
+  // The days another page asked for (a month of Budgets, the range of Expenses) win over a preset.
+  const from = one(raw.from);
+  const to = one(raw.to);
+  const custom = isCivilDate(from) && isCivilDate(to) && from <= to;
+  const preset: Preset | null = custom ? null : (PRESETS.find((key) => key === one(raw.preset)) ?? "all");
+  const range = custom
+    ? { from, to }
+    : preset === "all" || preset === null
+      ? {}
+      : presetRange(preset, todayOn);
   const guided = one(raw.guide) === "1";
   const bank = one(raw.bank).slice(0, 60);
 
@@ -87,7 +94,9 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
     .filter((id) => eligibleIds.includes(id));
   const accountIds = selected.length > 0 ? selected : eligibleIds;
   const params = {
-    preset: preset === "all" ? undefined : preset,
+    preset: preset === "all" || preset === null ? undefined : preset,
+    from: custom ? from : undefined,
+    to: custom ? to : undefined,
     acc: selected.length > 0 ? selected.join(",") : undefined,
     guide: guided ? "1" : undefined,
     bank: guided && bank !== "" ? bank : undefined,
@@ -139,11 +148,6 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
       : (await listTransactions(ctx, { ...range, accountIds, categoryIds: [null], limit: 2000 })).filter(
           (row) => singleIds.has(row.id),
         );
-  const walletIds = await walletEditableIds(
-    ctx,
-    singleRows.map((row) => row.id),
-  );
-
   const title = t("review.title");
   const parent = { href: "/expenses" as Route, label: t("title") };
   const link = (changes: Record<string, string | undefined>) => withParams(HERE, params, changes);
@@ -237,11 +241,11 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
             <ButtonLink
               key={key}
               size="sm"
-              href={link({ preset: key === "all" ? undefined : key })}
+              href={link({ preset: key === "all" ? undefined : key, from: undefined, to: undefined })}
               aria-current={key === preset ? "page" : undefined}
               className={cn(key === preset && "border-accent bg-sel")}
             >
-              {key === "all" ? t("review.period.all") : t(`filters.presets.${key}`)}
+              {t(`filters.presets.${key}`)}
             </ButtonLink>
           ))}
         </nav>
@@ -343,7 +347,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
                   label: null,
                   count: singleRows.length,
                   total: "",
-                  rows: singleRows.map((row) => rowViewOf(row, { ctx, colorOf, walletIds })),
+                  rows: singleRows.map((row) => rowViewOf(row, { ctx, colorOf })),
                 },
               ]}
               categories={options}

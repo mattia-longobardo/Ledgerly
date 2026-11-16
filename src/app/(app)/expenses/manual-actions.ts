@@ -6,6 +6,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { parseAmount } from "@/modules/accounts/rules";
+import { suggestFor } from "@/modules/transactions/categorize/service";
 import { MANUAL_KINDS } from "@/modules/transactions/manual-rules";
 import { TransactionError } from "@/modules/transactions/service";
 import { requireSession } from "@/platform/auth/session";
@@ -193,4 +194,33 @@ export async function previewManualAction(input: z.input<typeof previewSchema>):
     before: formatMoney(preview.effect.before, ctx.numberFormat),
     after: formatMoney(preview.effect.after, ctx.numberFormat),
   };
+}
+
+const suggestSchema = formSchema.pick({ kind: true, amount: true, accountId: true, payee: true, note: true });
+
+/**
+ * The category the cascade would give the manual movement being written, from what is already
+ * known about the person: nothing is learnt and nothing is written. `null` for none and for
+ * anything the action cannot read — a suggestion is a help, never an error.
+ */
+export async function suggestManualAction(
+  input: z.input<typeof suggestSchema>,
+): Promise<{ categoryId: string } | null> {
+  const ctx = await requireSession();
+  const form = suggestSchema.safeParse(input);
+  if (!form.success) return null;
+  const size = sizeOf(form.data.amount, ctx.numberFormat);
+  if (size === null) return null;
+  const answer = await suggestFor(ctx, {
+    payee: form.data.payee,
+    counterparty: null,
+    rawText: null,
+    note: form.data.note,
+    accountId: form.data.accountId,
+    amountCents: form.data.kind === "expense" ? -size : size,
+    kind: form.data.kind,
+    merchantCategoryCode: null,
+    bankTransactionCode: null,
+  });
+  return answer === null ? null : { categoryId: answer.categoryId };
 }

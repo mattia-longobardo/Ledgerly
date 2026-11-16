@@ -39,6 +39,9 @@ import { type CategoryState, categoryStateOf, isHidden, type TransactionType } f
 import { categories, labels, recurringPatterns, transactionLabels, transactions } from "./schema";
 import { type Label, listCategories, listLabels, type TreeCategory } from "./taxonomy";
 
+/** A movement the cascade has read and that still has no category: what "To review" lists. */
+const WAITING_FOR_CATEGORY = sql`${transactions.categoryId} is null and ${transactions.categoryKey} is not null and ${transactions.type} <> 'transfer' and ${transactions.hiddenAt} is null and ${transactions.removedUpstreamAt} is null`;
+
 /** The stored row on its own; `Transaction` adds the label ids the rules reason about. */
 export type TransactionRecord = typeof transactions.$inferSelect;
 
@@ -91,6 +94,11 @@ export interface TransactionRow {
    */
   categoryState: CategoryState;
   categoryReason: { code: string; params: Record<string, string> } | null;
+  /**
+   * Whether the cascade reads the movement: its source gives no category, so the category is never
+   * one a source could disagree with.
+   */
+  categoryIsOwn: boolean;
   /** The category suggested, which does not count until a person confirms it. */
   suggestion: { id: string; name: string; color: string | null } | null;
   hidden: boolean;
@@ -170,6 +178,11 @@ export interface CategoryTotal {
  * others hold, so a chip never claims zero for something that is only hidden by itself.
  */
 export interface Facets {
+  /**
+   * The movements of the range that wait for a category (rewrite plan N3): how many, how many of
+   * them carry a suggestion, and their sum. What the notice over the table says.
+   */
+  review: { count: number; suggested: number; cents: Cents };
   accounts: { accountId: string; count: number }[];
   categories: { categoryId: string | null; count: number }[];
   types: { type: TransactionType; count: number }[];
@@ -662,12 +675,19 @@ export async function movementsByAccount(
 export async function monthSpending(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   month: MonthKey,
-): Promise<{ categoryId: string | null; accountId: string; cents: Cents }[]> {
+): Promise<
+  { categoryId: string | null; accountId: string; cents: Cents; waiting: number; waitingCents: Cents }[]
+> {
   const rows = await getDb()
     .select({
       categoryId: transactions.categoryId,
       accountId: transactions.accountId,
       cents: sum(transactions.amountCents),
+      // How many of them wait in "To review" (rewrite plan N3): zero for a row with a category.
+      waiting: sql<number>`count(*) filter (where ${WAITING_FOR_CATEGORY})::int`,
+      waitingCents: sql<
+        string | null
+      >`sum(${transactions.amountCents}) filter (where ${WAITING_FOR_CATEGORY})`,
     })
     .from(transactions)
     .where(and(conditions(ctx, { from: month, to: lastDayOfMonth(month) }), eq(transactions.type, "expense")))
@@ -677,6 +697,8 @@ export async function monthSpending(
     categoryId: row.categoryId,
     accountId: row.accountId,
     cents: -cents(row.cents),
+    waiting: row.waiting,
+    waitingCents: -cents(row.waitingCents),
   }));
 }
 
@@ -955,6 +977,7 @@ export async function listTransactions(
       locallyEdited: transaction.locallyEdited,
       origin: transaction.origin,
       categoryState,
+      categoryIsOwn: transaction.categoryKey !== null,
       categoryReason:
         (categoryState === "automatic" || categoryState === "suggestion") &&
         transaction.categoryReason !== null
@@ -1171,7 +1194,18 @@ export async function facetCounts(
       .groupBy(transactions.accountId)
       .orderBy(asc(transactions.accountId)),
     getDb()
-      .select({ categoryId: transactions.categoryId, total: count() })
+      .select({
+        categoryId: transactions.categoryId,
+        total: count(),
+        // The movements that wait in "To review", read with the counts this query already makes:
+        // the cascade has read them (`category_key`), they have no category, they are not a
+        // giroconto. On every group but the one with no category the three are zero.
+        waiting: sql<number>`count(*) filter (where ${WAITING_FOR_CATEGORY})::int`,
+        suggested: sql<number>`count(*) filter (where ${WAITING_FOR_CATEGORY} and ${transactions.suggestedCategoryId} is not null)::int`,
+        waitingCents: sql<
+          string | null
+        >`sum(${transactions.amountCents}) filter (where ${WAITING_FOR_CATEGORY})`,
+      })
       .from(transactions)
       .where(conditions(ctx, { ...filters, categoryIds: undefined }))
       .groupBy(transactions.categoryId)
@@ -1190,6 +1224,11 @@ export async function facetCounts(
       count: Number(row.total),
     })),
     types: typeRows.map((row) => ({ type: row.type, count: Number(row.total) })),
+    review: {
+      count: categoryRows.reduce((sum, row) => sum + row.waiting, 0),
+      suggested: categoryRows.reduce((sum, row) => sum + row.suggested, 0),
+      cents: categoryRows.reduce((sum, row) => sum + cents(row.waitingCents), 0n),
+    },
   };
 }
 

@@ -38,7 +38,7 @@ import type {
 import { requireSession } from "@/platform/auth/session";
 import { rowViewOf } from "./row-view";
 import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { walletEditableIds } from "@/platform/integrations/wallet/records";
 import type { Cents } from "@/platform/money";
 import { ButtonLink } from "@/ui/button";
@@ -52,6 +52,7 @@ import {
   deleteManualAction,
   manualFormAction,
   previewManualAction,
+  suggestManualAction,
   updateManualAction,
 } from "./manual-actions";
 
@@ -62,6 +63,7 @@ import {
 const MANUAL_COMMANDS: ManualCommands = {
   form: manualFormAction,
   preview: previewManualAction,
+  suggest: suggestManualAction,
   create: createManualAction,
   update: updateManualAction,
   remove: deleteManualAction,
@@ -154,7 +156,18 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     ...new Set([...view.rows, ...view.months.flatMap((month) => month.rows)].map((row) => row.id)),
   ]);
 
-  const toRow = (row: QueryRow): RowView => rowViewOf(row, { ctx, colorOf, walletIds });
+  const toRow = (row: QueryRow): RowView => ({
+    ...rowViewOf(row, { ctx, colorOf }),
+    wallet: walletIds.has(row.id)
+      ? {
+          type: row.type,
+          amount: formatAmountInput(
+            row.amountCents < 0n ? -row.amountCents : row.amountCents,
+            ctx.numberFormat,
+          ),
+        }
+      : null,
+  });
 
   /** Month headings only mean something in date order; any other sort is one flat list. */
   const groups: GroupView[] =
@@ -316,6 +329,34 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
             typeCounts={typeCounts}
             locale={ctx.locale}
           />
+
+          {view.facets.review.count > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-ctl bg-hover px-3 py-2 text-sm">
+              <p>
+                {t("review.notice.expenses", {
+                  count: view.facets.review.count,
+                  amount: money(view.facets.review.cents),
+                })}
+                {view.facets.review.suggested > 0 &&
+                  ` ${t("review.notice.suggested", { count: view.facets.review.suggested })}`}
+              </p>
+              <ButtonLink
+                size="sm"
+                className="max-sm:w-full"
+                href={withParams(
+                  "/expenses/review",
+                  {},
+                  {
+                    from: query.range.from,
+                    to: query.range.to,
+                    acc: query.accountSelection.length > 0 ? query.accountSelection.join(",") : undefined,
+                  },
+                )}
+              >
+                {t("review.notice.action")}
+              </ButtonLink>
+            </div>
+          )}
 
           <SpendingCard
             bands={bands}

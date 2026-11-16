@@ -80,6 +80,7 @@ function row(on: CivilDate, amountCents: Cents, id = on + amountCents): Transact
     locallyEdited: [],
     origin: "provider",
     categoryState: "none",
+    categoryIsOwn: false,
     categoryReason: null,
     suggestion: null,
     hidden: false,

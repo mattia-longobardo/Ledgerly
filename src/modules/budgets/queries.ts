@@ -32,6 +32,11 @@ export interface BudgetsView {
   rows: BudgetRow[];
   totals: { limitCents: Cents; spentCents: Cents };
   unbudgetedCents: Cents;
+  /**
+   * The spending of the month that waits for a category (rewrite plan N3): in no category budget
+   * until a person files it. How many movements, and their sum.
+   */
+  toCategorise: { count: number; cents: Cents };
   /** What "Add budget" offers: the open spending categories and the open accounts. */
   categories: BudgetOption[];
   accounts: { id: string; name: string }[];
@@ -94,6 +99,10 @@ export async function budgetsView(
   return {
     month,
     ...result,
+    toCategorise: {
+      count: spending.reduce((sum, row) => sum + row.waiting, 0),
+      cents: spending.reduce((sum, row) => sum + row.waitingCents, 0n),
+    },
     categories: options,
     accounts: accounts
       .filter((account) => account.state !== "archived")
