@@ -1269,6 +1269,17 @@ Scelte di interazione, non di prodotto. Si cambiano senza toccare il piano.
 | 16 | Gruppi predefiniti offerti anche nello stato vuoto di `Settings › Categories` | Serve a chi non collega una banca; il primo avvio guidato arriva solo in R5a |
 | 17 | Nessuna voce di menu e nessun contatore nel menu per «Da rivedere» | Il menu cambia in R5a |
 
+### 16.1 Non in N3 (16/11/2026)
+
+Scostamenti dalla specifica accettati alla verifica del rilascio. Restano voci aperte, non decisioni di prodotto.
+
+| Punto della specifica | Stato in N3 | Motivo |
+|---|---|---|
+| §13 · scorciatoie in «Da rivedere» (`J` / `K` tra i gruppi; Invio, `E`, Spazio sul gruppo) | Non ci sono. I gruppi si usano con Tab e con i loro pulsanti; i movimenti singoli hanno le scorciatoie della tabella di Spese | Le scorciatoie a un carattere valgono su tutta la pagina e non si possono spegnere (WCAG 2.1.4, §13): aggiungerne altre prima di quella correzione peggiora il problema |
+| Piano §4.4 · riaddestramento «la notte» | Non c'è. Il modello si riaddestra dopo la lettura di una sorgente e dopo la creazione dei gruppi | La lista dei job è fissata da un test; con tre letture al giorno una notte non aggiunge etichette |
+| §8.1 · `/expenses/review?guide=<id del collegamento>` | L'indirizzo porta i conti e il nome della banca: `?guide=1&acc=<conti>&bank=<nome>` | L'esito di «Collega una banca» conosce già i conti di quella banca: la pagina non li ricalcola |
+| §11 · «Le categorie arrivano da Wallet» | Il testo dice «dalla sorgente»; la chiave è `review.empty.source` | Nessun nome di fornitore in una chiave o in un testo fisso (regola M14) |
+
 ## 17. Decisioni prese
 
 ### 17.1 Decisioni prese (Mattia, 15/11/2026)

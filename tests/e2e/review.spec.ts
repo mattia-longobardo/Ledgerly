@@ -120,6 +120,17 @@ test.describe("the automatic categories", () => {
       );
     });
 
+    await test.step("the period is the control of Expenses: a stepper, a day picker and the presets", async () => {
+      await page.goto(`${REVIEW}?preset=thisMonth`);
+      await expect(page.getByTestId("period-text")).toBeVisible();
+      await expect(page.getByRole("link", { name: "Previous period" })).toBeVisible();
+      await page.getByRole("link", { name: "Previous period" }).click();
+      await expect(page).toHaveURL(/off=1/);
+      await page.getByRole("link", { name: "All", exact: true }).click();
+      await expect(page).toHaveURL(/preset=all/);
+      await expect(page.getByRole("heading", { name: "Single transactions", level: 2 })).toBeVisible();
+    });
+
     await test.step("a period with nothing in it says so, with a way back to everything", async () => {
       await page.goto(`${REVIEW}?from=2020-01-01&to=2020-01-31`);
       await expect(page.getByText("Nothing to review in this period")).toBeVisible();

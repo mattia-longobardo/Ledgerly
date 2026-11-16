@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 88044,
+    "lines": 88054,
     "duplicatedLines": 16805,
-    "percent": 19.09,
+    "percent": 19.08,
     "blocks": 1183
   },
   "units": {
     "app": {
-      "lines": 19197,
+      "lines": 19207,
       "duplicatedLines": 4036,
-      "percent": 21.02,
+      "percent": 21.01,
       "blocks": 303
     },
     "global.d": {

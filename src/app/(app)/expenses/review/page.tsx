@@ -18,12 +18,14 @@ import { categorisableAccountIds } from "@/modules/transactions/service";
 import { listCategories, listLabels } from "@/modules/transactions/taxonomy";
 import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
 import { categoryColor, categoryColors } from "@/modules/transactions/ui/display";
+import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { presetRange, RANGE_PRESETS } from "@/modules/transactions/ui/filters";
 import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guide";
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
 import { isCivilDate, today } from "@/platform/dates";
+import { shiftRange } from "@/platform/ranges";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -72,11 +74,13 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   const to = one(raw.to);
   const custom = isCivilDate(from) && isCivilDate(to) && from <= to;
   const preset: Preset | null = custom ? null : (PRESETS.find((key) => key === one(raw.preset)) ?? "all");
-  const range = custom
-    ? { from, to }
-    : preset === "all" || preset === null
-      ? {}
-      : presetRange(preset, todayOn);
+  // The stepper moves a window back by periods of its own length; "All" has no window to move.
+  const offset = preset === "all" ? 0 : Math.max(0, Math.trunc(Number(one(raw.off))) || 0);
+  const window =
+    preset === "all"
+      ? null
+      : shiftRange(custom ? { from, to } : presetRange(preset ?? "thisMonth", todayOn), -offset);
+  const range = window ?? {};
   const guided = one(raw.guide) === "1";
   const bank = one(raw.bank).slice(0, 60);
 
@@ -97,6 +101,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
     preset: preset === "all" || preset === null ? undefined : preset,
     from: custom ? from : undefined,
     to: custom ? to : undefined,
+    off: offset > 0 ? String(offset) : undefined,
     acc: selected.length > 0 ? selected.join(",") : undefined,
     guide: guided ? "1" : undefined,
     bank: guided && bank !== "" ? bank : undefined,
@@ -148,6 +153,10 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
       : (await listTransactions(ctx, { ...range, accountIds, categoryIds: [null], limit: 2000 })).filter(
           (row) => singleIds.has(row.id),
         );
+  // What "All" spans, for the day picker to start from: from the oldest movement waiting to today.
+  const days = [...groups.flatMap((group) => group.rows), ...review.singles].map((row) => row.on).sort();
+  const whole = { from: days[0] ?? todayOn, to: todayOn };
+
   const title = t("review.title");
   const parent = { href: "/expenses" as Route, label: t("title") };
   const link = (changes: Record<string, string | undefined>) => withParams(HERE, params, changes);
@@ -235,20 +244,26 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
 
   const controls = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      {/* The period control of Expenses and Accounts, the same one: the stepper, the day picker and
+          the presets, with "All" for a page that empties a queue. */}
       {!guided && (
-        <nav aria-label={t("filters.range.label")} className="flex flex-wrap gap-1">
-          {PRESETS.map((key) => (
-            <ButtonLink
-              key={key}
-              size="sm"
-              href={link({ preset: key === "all" ? undefined : key, from: undefined, to: undefined })}
-              aria-current={key === preset ? "page" : undefined}
-              className={cn(key === preset && "border-accent bg-sel")}
-            >
-              {t(`filters.presets.${key}`)}
-            </ButtonLink>
-          ))}
-        </nav>
+        <PeriodBar
+          period={{
+            preset,
+            offset,
+            range: window,
+            stepperParams: {
+              preset: preset === "all" || preset === null ? undefined : preset,
+              from: custom ? from : undefined,
+              to: custom ? to : undefined,
+            },
+          }}
+          path={HERE}
+          carry={{ acc: params.acc }}
+          locale={ctx.locale}
+          presets={PRESETS}
+          whole={{ range: whole, text: t("filters.presets.all") }}
+        />
       )}
       {!guided && eligible.length > 1 && (
         <nav aria-label={t("review.accounts")} className="flex flex-wrap gap-1">
@@ -281,7 +296,9 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   );
 
   let body;
-  if (preparing && count === 0) {
+  // The card that waits is the guided review's (ux §8.4): anywhere else a pass that runs for a
+  // moment after an action must not take the place of what the page has to say.
+  if (guided && preparing && count === 0) {
     const waiting = await categoryCounts(ctx, accountIds);
     body = <PreparingCard count={waiting.open + waiting.suggested} />;
   } else if (eligible.length === 0) {
